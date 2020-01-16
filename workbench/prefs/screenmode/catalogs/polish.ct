@@ -1,33 +1,33 @@
-## version $VER: screenmode.catalog 2.0 (11.09.2018)
+## version $VER: screenmode.catalog 2.2 (11.01.2020)
 ## codeset 5
 ## language polski
 ;
 MSG_NAME
-Ustawienia rozdzielczosci ekranu
+Ustawienia rozdzielczoÅ›ci ekranu
 ; ScreenMode Preferences
 ;
 MSG_WIDTH
-\33lSzeroko¶æ:
+\33lSzerokoÅ›Ä‡:
 ; \33lWidth:
 ;
 MSG_DEFAULT
-\33l_domy¶lna
+\33l_domyÅ›lna
 ; \33l_default
 ;
 MSG_HEIGHT
-\33lWysoko¶æ:
+\33lWysokoÅ›Ä‡:
 ; \33lHeight:
 ;
 MSG_DEPTH
-\33lG³êbia:
+\33lGÅ‚Ä™bia:
 ; \33lDepth:
 ;
 MSG_AUTOSCROLL
-\33lAutomatyczne przewijanie
+\33lAuto przewijanie
 ; \33lAutoscroll
 ;
 MSG_DISPLAY_MODE
-Tryb wy¶wietlania
+Tryb wyÅ›wietlania
 ; Display Mode
 ;
 MSG_MODE_ID
@@ -39,22 +39,54 @@ Opis
 ; Description
 ;
 MSG_MODE_ATTRIBUTES
-Informace o trybie
+Informacje o trybie
 ; Mode Attributes
 ;
 MSG_VISIBLE_SIZE
-Wielko¶æ widoczna:
-; Visible Size:
+WielkoÅ›Ä‡ widoczna
+; Visible Size
 ;
 MSG_MINIMUM_SIZE
-Wielko¶æ minimalna:
-; Minimum Size:
+WielkoÅ›Ä‡ minimalna
+; Minimum Size
 ;
 MSG_MAXIMUM_SIZE
-Wielko¶æ maksymalna:
-; Maximum Size:
+WielkoÅ›Ä‡ maksymalna
+; Maximum Size
 ;
 MSG_MAXIMUM_COLORS
-Maksymalna g³êbia barw:
-; Maximum Colors:
+IloÅ›Ä‡ barw
+; Maximum Colors
+;
+MSG_FREQUENCY
+CzÄ™stotliwoÅ›Ä‡
+; Frequency
+;
+MSG_INTERLACED
+Z przeplotem\n
+; Interlaced\n
+;
+MSG_WANTS_ECS
+Wymaga ECS\n
+; Requires ECS\n
+;
+MSG_DUALP
+Dual Playfields
+; Dual playfields\n
+;
+MSG_GENLOCK
+ObsÅ‚uguje genlock\n
+; Supports genlock\n
+;
+MSG_DRAGGABLE
+PrzeciÄ…galny\n
+; Draggable\n
+;
+MSG_PANELLED
+Dzielony dla konwersji skanÃ³w\n
+; Panelled for scan conversion\n
+;
+MSG_BEAM_SYNC
+ObsÅ‚uguje synchronizacjÄ™ wiÄ…zki\n
+; Supports beam synchronization\n
 ;

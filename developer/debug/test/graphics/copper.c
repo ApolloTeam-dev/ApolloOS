@@ -1,5 +1,5 @@
 /*
-    Copyright © 2019, The AROS Development Team. All rights reserved.
+    Copyright © 2019-2020, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -94,17 +94,17 @@ int main(int argc, char **argv)
 						
 						CWait(uCop, (top >> 2),0);
 						CBump(uCop);
-						CMove(uCop, 0x0180, 0xF00);
+						CMove(uCop, (APTR)0x0180, 0xF00);
 						CBump(uCop);
 
 						CWait(uCop, (top >> 1),0);
 						CBump(uCop);
-						CMove(uCop, 0x0180, 0xF0);
+						CMove(uCop, (APTR)0x0180, 0xF0);
 						CBump(uCop);
 
 						CWait(uCop, (top >> 1) +  (top >> 2),0);
 						CBump(uCop);
-						CMove(uCop, 0x0180, 0xF);
+						CMove(uCop, (APTR)0x0180, 0xF);
 						CBump(uCop);
 
 						CWait(uCop, 10000, 0xFF);
@@ -129,8 +129,8 @@ int main(int argc, char **argv)
 				RethinkDisplay();
 				printf("Done\n");
 			}
-			CloseLibrary(GfxBase);
+			CloseLibrary((struct Library *)GfxBase);
 		}
-		CloseLibrary(IntuitionBase);
+		CloseLibrary((struct Library *)IntuitionBase);
 	}
 }

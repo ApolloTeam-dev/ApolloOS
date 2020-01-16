@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: X11 gfx HIDD for AROS.
@@ -11,6 +11,7 @@
 #define __OOP_NOATTRBASES__
 
 #include <proto/utility.h>
+#include <graphics/monitor.h>
 
 #include <X11/cursorfont.h>
 #include <signal.h>
@@ -19,6 +20,8 @@
 #include LC_LIBDEFS_FILE
 #include "x11_hostlib.h"
 #include "x11_xshm.h"
+
+#define XVIDMODETAGS            11
 
 #define XFLUSH(x) XCALL(XFlush, x)
 
@@ -55,6 +58,28 @@ static ULONG mask_to_shift(ULONG mask);
 
 /****************************************************************************************/
 
+static inline ULONG fakeCLOCK(ULONG width, ULONG height)
+{
+    ULONG retval;
+    retval = (1000000000 / STANDARD_COLORCLOCKS);
+    return retval;
+}
+static inline ULONG fakeHTOTAL(ULONG width, ULONG height)
+{
+    ULONG retval;
+    retval = (fakeCLOCK(width, height) / (100000000 / STANDARD_COLORCLOCKS / 22));
+    return retval;
+}
+
+static inline BOOL matchModes(struct TagItem *resolution, XF86VidModeModeInfo *xfmode)
+{
+    if ((resolution[3].ti_Data == xfmode->hdisplay) && (resolution[4].ti_Data == xfmode->vdisplay))
+        return TRUE;
+    return FALSE;
+}
+
+/****************************************************************************************/
+
 OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg)
 {
     struct TagItem pftags[] =
@@ -80,54 +105,68 @@ OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg
 
     struct TagItem tags_160_160[] =
     {
-        { aHidd_Sync_HDisp      , 160                     },
-        { aHidd_Sync_VDisp      , 160                     },
-        { aHidd_Sync_Description, (IPTR)"X11:160x160"     },
-        { TAG_DONE              , 0UL                     }
+        { aHidd_Sync_PixelClock , fakeCLOCK(160,160)    },
+        { aHidd_Sync_HTotal     , fakeHTOTAL(160,160)   },
+        { aHidd_Sync_HDisp      , 160                   },
+        { aHidd_Sync_VDisp      , 160                   },
+        { aHidd_Sync_Description, (IPTR)"X11:160x160"   },
+        { TAG_DONE              , 0UL                   }
     };
     
     struct TagItem tags_240_320[] =
     {
-        { aHidd_Sync_HDisp      , 240                     },
-        { aHidd_Sync_VDisp      , 320                     },
-        { aHidd_Sync_Description, (IPTR)"X11:240x320"     },
-        { TAG_DONE              , 0UL                     }
+        { aHidd_Sync_PixelClock , fakeCLOCK(240,320)    },
+        { aHidd_Sync_HTotal     , fakeHTOTAL(240,320)   },
+        { aHidd_Sync_HDisp      , 240                   },
+        { aHidd_Sync_VDisp      , 320                   },
+        { aHidd_Sync_Description, (IPTR)"X11:240x320"   },
+        { TAG_DONE              , 0UL                   }
     };
 
     struct TagItem tags_320_240[] = 
     {
-        { aHidd_Sync_HDisp      , 320                     },
-        { aHidd_Sync_VDisp      , 240                     },
-        { aHidd_Sync_Description, (IPTR)"X11:320x240"     },
-        { TAG_DONE              , 0UL                     }
+        { aHidd_Sync_PixelClock , fakeCLOCK(320,240)    },
+        { aHidd_Sync_HTotal     , fakeHTOTAL(320,240)   },
+        { aHidd_Sync_HDisp      , 320                   },
+        { aHidd_Sync_VDisp      , 240                   },
+        { aHidd_Sync_Description, (IPTR)"X11:320x240"   },
+        { TAG_DONE              , 0UL                   }
     };
 
     struct TagItem tags_512_384[] = 
     {
-        { aHidd_Sync_HDisp      , 512                     },
-        { aHidd_Sync_VDisp      , 384                     },
-        { aHidd_Sync_Description, (IPTR)"X11:512x384"     },
-        { TAG_DONE              , 0UL                     }
+        { aHidd_Sync_PixelClock , fakeCLOCK(512,384)    },
+        { aHidd_Sync_HTotal     , fakeHTOTAL(512,384)   },
+        { aHidd_Sync_HDisp      , 512                   },
+        { aHidd_Sync_VDisp      , 384                   },
+        { aHidd_Sync_Description, (IPTR)"X11:512x384"   },
+        { TAG_DONE              , 0UL                   }
     };
 
     struct TagItem tags_640_480[] = 
     {
-        { aHidd_Sync_HDisp      , 640                     },
-        { aHidd_Sync_VDisp      , 480                     },
-        { aHidd_Sync_Description, (IPTR)"X11:640x480"     },
-        { TAG_DONE              , 0UL                     }
+        { aHidd_Sync_PixelClock , fakeCLOCK(640,480)    },
+        { aHidd_Sync_HTotal     , fakeHTOTAL(640,480)   },
+        { aHidd_Sync_HDisp      , 640                   },
+        { aHidd_Sync_VDisp      , 480                   },
+        { aHidd_Sync_Description, (IPTR)"X11:640x480"   },
+        { TAG_DONE              , 0UL                   }
     };
 
     struct TagItem tags_800_600[] = 
     {
-        { aHidd_Sync_HDisp      , 800                     },
-        { aHidd_Sync_VDisp      , 600                     },
-        { aHidd_Sync_Description, (IPTR)"X11:800x600"     },
-        { TAG_DONE              , 0UL                     }
+        { aHidd_Sync_PixelClock , fakeCLOCK(800,600)    },
+        { aHidd_Sync_HTotal     , fakeHTOTAL(800,600)   },
+        { aHidd_Sync_HDisp      , 800                   },
+        { aHidd_Sync_VDisp      , 600                   },
+        { aHidd_Sync_Description, (IPTR)"X11:800x600"   },
+        { TAG_DONE              , 0UL                   }
     };
 
     struct TagItem tags_1024_768[] = 
     {
+        { aHidd_Sync_PixelClock , fakeCLOCK(1024,768)   },
+        { aHidd_Sync_HTotal     , fakeHTOTAL(1024,768)  },
         { aHidd_Sync_HDisp      , 1024                  },
         { aHidd_Sync_VDisp      , 768                   },
         { aHidd_Sync_Description, (IPTR)"X11:1024x768"  },
@@ -136,6 +175,8 @@ OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg
     
     struct TagItem tags_1152_864[] = 
     {
+        { aHidd_Sync_PixelClock , fakeCLOCK(1152,864)   },
+        { aHidd_Sync_HTotal     , fakeHTOTAL(1152,864)  },
         { aHidd_Sync_HDisp      , 1152                  },
         { aHidd_Sync_VDisp      , 864                   },
         { aHidd_Sync_Description, (IPTR)"X11:1152x864"  },
@@ -144,6 +185,8 @@ OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg
     
     struct TagItem tags_1280_800[] =
     {
+        { aHidd_Sync_PixelClock , fakeCLOCK(1280,800)   },
+        { aHidd_Sync_HTotal     , fakeHTOTAL(1280,800)  },
         { aHidd_Sync_HDisp      , 1280                  },
         { aHidd_Sync_VDisp      , 800                   },
         { aHidd_Sync_Description, (IPTR)"X11:1280x800"  },
@@ -152,6 +195,8 @@ OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg
 
     struct TagItem tags_1280_960[] = 
     {
+        { aHidd_Sync_PixelClock , fakeCLOCK(1280,960)   },
+        { aHidd_Sync_HTotal     , fakeHTOTAL(1280,960)  },
         { aHidd_Sync_HDisp      , 1280                  },
         { aHidd_Sync_VDisp      , 960                   },
         { aHidd_Sync_Description, (IPTR)"X11:1280x960"  },
@@ -160,6 +205,8 @@ OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg
     
     struct TagItem tags_1280_1024[] =
     {
+        { aHidd_Sync_PixelClock , fakeCLOCK(1280,1024)  },
+        { aHidd_Sync_HTotal     , fakeHTOTAL(1280,1024) },
         { aHidd_Sync_HDisp      , 1280                  },
         { aHidd_Sync_VDisp      , 1024                  },
         { aHidd_Sync_Description, (IPTR)"X11:1280x1024" },
@@ -168,14 +215,18 @@ OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg
 
     struct TagItem tags_1400_1050[] = 
     {
+        { aHidd_Sync_PixelClock , fakeCLOCK(1400,1050)  },
+        { aHidd_Sync_HTotal     , fakeHTOTAL(1400,1050) },
         { aHidd_Sync_HDisp      , 1400                  },
-        { aHidd_Sync_VDisp      , 1050                   },
-        { aHidd_Sync_Description, (IPTR)"X11:1400x1050"  },
+        { aHidd_Sync_VDisp      , 1050                  },
+        { aHidd_Sync_Description, (IPTR)"X11:1400x1050" },
         { TAG_DONE              , 0UL                   }
     };
     
     struct TagItem tags_1600_1200[] = 
     {
+        { aHidd_Sync_PixelClock , fakeCLOCK(1600,1200)  },
+        { aHidd_Sync_HTotal     , fakeHTOTAL(1600,1200) },
         { aHidd_Sync_HDisp      , 1600                  },
         { aHidd_Sync_VDisp      , 1200                  },
         { aHidd_Sync_Description, (IPTR)"X11:1600x1200" },
@@ -184,6 +235,8 @@ OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg
     
     struct TagItem tags_1680_1050[] =
     {
+        { aHidd_Sync_PixelClock , fakeCLOCK(1680,1050)  },
+        { aHidd_Sync_HTotal     , fakeHTOTAL(1680,1050) },
         { aHidd_Sync_HDisp      , 1680                  },
         { aHidd_Sync_VDisp      , 1050                  },
         { aHidd_Sync_Description, (IPTR)"X11:1680x1050" },
@@ -192,6 +245,8 @@ OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg
 
     struct TagItem tags_1920_1080[] =
     {
+        { aHidd_Sync_PixelClock , fakeCLOCK(1920,1080)  },
+        { aHidd_Sync_HTotal     , fakeHTOTAL(1920,1080) },
         { aHidd_Sync_HDisp      , 1920                  },
         { aHidd_Sync_VDisp      , 1080                  },
         { aHidd_Sync_Description, (IPTR)"X11:1920x1080" },
@@ -200,6 +255,8 @@ OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg
 
     struct TagItem tags_1920_1200[] =
     {
+        { aHidd_Sync_PixelClock , fakeCLOCK(1920,1200)  },
+        { aHidd_Sync_HTotal     , fakeHTOTAL(1920,1200) },
         { aHidd_Sync_HDisp      , 1920                  },
         { aHidd_Sync_VDisp      , 1200                  },
         { aHidd_Sync_Description, (IPTR)"X11:1920x1200" },
@@ -233,11 +290,11 @@ OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg
 
     struct TagItem mytags[] =
     {
-        { aHidd_Gfx_ModeTags    , (IPTR)default_mode_tags   },
-        { aHidd_Name            , (IPTR)"X11"     },
-        { aHidd_HardwareName    , (IPTR)"X Window Gfx Host"   },
-        { aHidd_ProducerName    , (IPTR)"X.Org Foundation"  },
-        { TAG_MORE              , (IPTR)msg->attrList       }
+        { aHidd_Gfx_ModeTags    , (IPTR)default_mode_tags       },
+        { aHidd_Name            , (IPTR)"X11"                   },
+        { aHidd_HardwareName    , (IPTR)"X Window Gfx Host"     },
+        { aHidd_ProducerName    , (IPTR)"X.Org Foundation"      },
+        { TAG_MORE              , (IPTR)msg->attrList           }
     };
  
     struct pRoot_New mymsg = { msg->mID, mytags };
@@ -273,7 +330,7 @@ OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg
         if (modeNum)
         {
             /* Got XF86VidMode data, use it */
-            if ((resolution = AllocMem(modeNum * sizeof(struct TagItem) * 4, MEMF_PUBLIC)) == NULL)
+            if ((resolution = AllocMem(modeNum * sizeof(struct TagItem) * XVIDMODETAGS, MEMF_PUBLIC)) == NULL)
             {
                 D(bug("[X11] failed to allocate memory for %d modes: %d !!!\n", modeNum, XSD(cl)->vi->class));
 
@@ -292,7 +349,7 @@ OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg
                 /* avoid duplicated resolution */
                 for(j = 0; j < realmode; j++)
                 {
-                    if(resolution[j * 4].ti_Data == modes[i]->hdisplay && resolution[j * 4 + 1].ti_Data == modes[i]->vdisplay)
+                    if(matchModes(&resolution[j * XVIDMODETAGS], modes[i]))
                     { /* Found a matching resolution. Don't insert ! */
                         insert = FALSE;
                     }
@@ -300,17 +357,38 @@ OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg
 
                 if(insert)
                 {
-                    resolution[realmode * 4 + 0].ti_Tag = aHidd_Sync_HDisp;
-                    resolution[realmode * 4 + 0].ti_Data = modes[i]->hdisplay;
+                    resolution[realmode * XVIDMODETAGS + 0].ti_Tag = aHidd_Sync_PixelClock;
+                    resolution[realmode * XVIDMODETAGS + 0].ti_Data = (modes[i]->dotclock * 1000);
 
-                    resolution[realmode * 4 + 1].ti_Tag = aHidd_Sync_VDisp;
-                    resolution[realmode * 4 + 1].ti_Data = modes[i]->vdisplay;
+                    resolution[realmode * XVIDMODETAGS + 1].ti_Tag = aHidd_Sync_HTotal;
+                    resolution[realmode * XVIDMODETAGS + 1].ti_Data = modes[i]->htotal;
 
-                    resolution[realmode * 4 + 2].ti_Tag = aHidd_Sync_Description;
-                    resolution[realmode * 4 + 2].ti_Data = (IPTR)"X11: %hx%v";
+                    resolution[realmode * XVIDMODETAGS + 2].ti_Tag = aHidd_Sync_VTotal;
+                    resolution[realmode * XVIDMODETAGS + 2].ti_Data = modes[i]->vtotal;
 
-                    resolution[realmode * 4 + 3].ti_Tag = TAG_DONE;
-                    resolution[realmode * 4 + 3].ti_Data = 0UL;
+                    resolution[realmode * XVIDMODETAGS + 3].ti_Tag = aHidd_Sync_HDisp;
+                    resolution[realmode * XVIDMODETAGS + 3].ti_Data = modes[i]->hdisplay;
+
+                    resolution[realmode * XVIDMODETAGS + 4].ti_Tag = aHidd_Sync_VDisp;
+                    resolution[realmode * XVIDMODETAGS + 4].ti_Data = modes[i]->vdisplay;
+
+                    resolution[realmode * XVIDMODETAGS + 5].ti_Tag = aHidd_Sync_HSyncStart;
+                    resolution[realmode * XVIDMODETAGS + 5].ti_Data = modes[i]->hsyncstart;
+
+                    resolution[realmode * XVIDMODETAGS + 6].ti_Tag = aHidd_Sync_HSyncEnd;
+                    resolution[realmode * XVIDMODETAGS + 6].ti_Data = modes[i]->hsyncend;
+
+                    resolution[realmode * XVIDMODETAGS + 7].ti_Tag = aHidd_Sync_VSyncStart;
+                    resolution[realmode * XVIDMODETAGS + 7].ti_Data = modes[i]->vsyncstart;
+
+                    resolution[realmode * XVIDMODETAGS + 8].ti_Tag = aHidd_Sync_VSyncEnd;
+                    resolution[realmode * XVIDMODETAGS + 8].ti_Data = modes[i]->vsyncend;
+
+                    resolution[realmode * XVIDMODETAGS + 9].ti_Tag = aHidd_Sync_Description;
+                    resolution[realmode * XVIDMODETAGS + 9].ti_Data = (IPTR)"X11: %hx%v";
+
+                    resolution[realmode * XVIDMODETAGS + 10].ti_Tag = TAG_DONE;
+                    resolution[realmode * XVIDMODETAGS + 10].ti_Data = 0UL;
 
                     realmode++;
                 }
@@ -320,7 +398,7 @@ OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg
             {
                 D(bug("[X11] failed to allocate memory for mode tag's: %d !!!\n", XSD(cl)->vi->class));
 
-                FreeMem(resolution, modeNum * sizeof(struct TagItem) * 4);
+                FreeMem(resolution, modeNum * sizeof(struct TagItem) * XVIDMODETAGS);
                 XCALL(XCloseDisplay, disp);
                 cleanupx11stuff(XSD(cl));
 
@@ -334,7 +412,7 @@ OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg
             for(i=0; i < realmode; i++)
             {
                 mode_tags[1 + i].ti_Tag = aHidd_Gfx_SyncTags;
-                mode_tags[1 + i].ti_Data = (IPTR)(resolution + i*4);
+                mode_tags[1 + i].ti_Data = (IPTR)(resolution + i * XVIDMODETAGS);
             }
 
             mode_tags[1 + i].ti_Tag = TAG_DONE;
@@ -379,7 +457,7 @@ OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg
         D(bug("[X11Gfx] unsupported color model: %d\n", XSD(cl)->vi->class));
         if (resolution)
         {
-            FreeMem(resolution, modeNum * sizeof(struct TagItem) * 4);
+            FreeMem(resolution, modeNum * sizeof(struct TagItem) * XVIDMODETAGS);
             FreeMem(mode_tags, sizeof(struct TagItem) * (realmode + 2));
         }
         XCALL(XCloseDisplay, disp);
@@ -404,7 +482,7 @@ OOP_Object *X11Cl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg
 
     D(bug("Super method returned\n"));
 
-    FreeMem(resolution, modeNum * sizeof(struct TagItem) * 4);
+    FreeMem(resolution, modeNum * sizeof(struct TagItem) * XVIDMODETAGS);
     FreeMem(mode_tags, sizeof(struct TagItem) * (realmode + 2));
     XCALL(XCloseDisplay, disp);
 

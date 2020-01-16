@@ -933,19 +933,6 @@ endif
 
 
 #------------------------------------------------------------------------------
-# Make an alias from one arch specific build to another arch.
-# arguments:
-# - mainmmake: the mmake of the module in the main tree
-# - arch: the current arch
-# - alias: the alias to which this should point
-%define rule_archalias mainmmake=\A arch=\A alias=\A
-
-#MM- %(mainmmake)-%(arch) : %(mainmmake)-%(alias)
-%end
-#------------------------------------------------------------------------------
-
-
-#------------------------------------------------------------------------------
 # Generate a rule to assemble a source file to an object file. Basename may
 # contain a directory part, then the source file has to be in that directory.
 # The generated file will be put in the object directory without the directory.
@@ -2827,7 +2814,13 @@ endif
 
 %(dir)/%/%(subdir)/%(name).catalog : %(srcdir)/%.ct $(%(mmake)_DESC).cd
 	$(Q)$(ECHO) "Creating   %(name) catalog for language $*."
-	$(Q)$(FLEXCAT) $(%(mmake)_DESC).cd $< CATALOG="%(dir)/$*/%(subdir)/%(name).catalog" || [ $$? -lt 10 ]
+	$(Q)$(IF) $(TEST) "$*" = "polish"; then \
+	    $(FLEXCAT) iso88592toamigapl $(%(mmake)_DESC).cd $< CATALOG="%(dir)/$*/%(subdir)/%(name).catalog" || [ $$? -lt 10 ] ; \
+	elif $(TEST) "$*" = "russian"; then \
+	    $(FLEXCAT) win1251toamiga1251 $(%(mmake)_DESC).cd $< CATALOG="%(dir)/$*/%(subdir)/%(name).catalog" || [ $$? -lt 10 ] ; \
+	else \
+	    $(FLEXCAT) $(%(mmake)_DESC).cd $< CATALOG="%(dir)/$*/%(subdir)/%(name).catalog" || [ $$? -lt 10 ] ; \
+	fi
 
 ifneq (%(source),)
 %(source) : %(mmake)_DESC := $(%(mmake)_DESC)
@@ -2857,7 +2850,7 @@ endif
 # - srcdir is where *.png and *.info.src are sought
 #-----------------------------------------------------------------------------
 
-%define build_icons mmake=/A icons=/A dir=/A srcdir=$(SRCDIR)/$(CURDIR) image=
+%define build_icons mmake=/A icons=/A fmt=png dir=/A srcdir=$(SRCDIR)/$(CURDIR) image=
 
 BD_OBJS := $(addprefix  %(dir)/, $(addsuffix .info,%(icons)))
 
@@ -2866,7 +2859,7 @@ BD_OBJS := $(addprefix  %(dir)/, $(addsuffix .info,%(icons)))
 
 ifeq (%(image),)
 
-%(dir)/%.info : %(srcdir)/%.info.src %(srcdir)/%.png
+%(dir)/%.info : %(srcdir)/%.info.src %(srcdir)/%.%(fmt)
 	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
 	$(Q)$(ILBMTOICON) $+ $@
 
@@ -2890,6 +2883,61 @@ endif
 %end
 #-----------------------------------------------------------------------------
 
+
+#-----------------------------------------------------------------------------
+# Build dual state icon.
+# - mmake is the mmaketarget
+# - icon is the icon base name (i.e. without the .info suffix)
+# - normal is the unselected state image name (i.e. without the .png suffix)
+# - selected is the selected state image name (i.e. without the .png suffix)
+# - dir is the destination directory
+# - srcdir is where *.png and *.info.src are sought
+#-----------------------------------------------------------------------------
+
+%define build_dualicon mmake=/A icon=/A normal=/A selected=/A fmt=png dir=/A srcdir=$(SRCDIR)/$(CURDIR)
+
+BD_OBJ := $(addprefix  %(dir)/, $(addsuffix .info,%(icon)))
+
+#MM
+%(mmake) : $(BD_OBJ)
+
+%(dir)/%(icon).info : %(srcdir)/%(icon).info.src %(srcdir)/%(normal).%(fmt) %(srcdir)/%(selected).%(fmt)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+%rule_makedirs dirs="%(dir)" setuptarget=$(BD_OBJ)
+
+%(mmake)-clean : FILES := $(BD_OBJ)
+#MM
+%(mmake)-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: %(mmake) %(mmake)-clean
+
+%end
+#-----------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Make an alias from one arch specific build to another arch.
+# arguments:
+# - mainmmake: the mmake of the module in the main tree
+# - arch: the current arch
+# - alias: the alias to which this should point
+%define rule_archalias mainmmake=\A arch=\A alias=\A
+
+#MM- %(mainmmake)-%(arch) : %(mainmmake)-%(alias)
+%end
+
+#------------------------------------------------------------------------------
+
+%define gen_archfamilyrules mainmmake=/A family=/A arch=/A
+%rule_archalias mainmmake=%(mainmmake) arch=%(arch) alias=%(family)
+%rule_archalias mainmmake=%(mainmmake) arch=%(arch)-quick alias=%(family)-quick
+%rule_archalias mainmmake=%(mainmmake) arch=%(arch)-includes alias=%(family)-includes
+%rule_archalias mainmmake=%(mainmmake) arch=%(arch)-linklib alias=%(family)-linklib
+%rule_archalias mainmmake=%(mainmmake) arch=%(arch)-kobj alias=%(family)-kobj
+%rule_archalias mainmmake=%(mainmmake) arch=%(arch)-kobj-quick alias=%(family)-kobj-quick
+%end
 
 #------------------------------------------------------------------------------
 # Compile files for an arch-specific replacement of code for a module
@@ -2922,21 +2970,41 @@ endif
 
 %buildid targets="%(mainmmake)-%(arch)"
 
-#MM- %(mainmmake) : 	    %(mainmmake)-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT) %(mainmmake)-$(ARCH)-$(CPU) \
-#MM			    %(mainmmake)-$(ARCH)-$(AROS_TARGET_VARIANT) %(mainmmake)-$(ARCH) \
-#MM			    %(mainmmake)-$(FAMILY) %(mainmmake)-$(CPU)
-#MM- %(mainmmake)-linklib : %(mainmmake)-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT) %(mainmmake)-$(ARCH)-$(CPU) \
-#MM			    %(mainmmake)-$(ARCH)-$(AROS_TARGET_VARIANT) %(mainmmake)-$(ARCH) \
-#MM			    %(mainmmake)-$(FAMILY) %(mainmmake)-$(CPU)
-#MM- %(mainmmake)-kobj :    %(mainmmake)-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT) %(mainmmake)-$(ARCH)-$(CPU) \
-#MM			    %(mainmmake)-$(ARCH)-$(AROS_TARGET_VARIANT) %(mainmmake)-$(ARCH) \
-#MM			    %(mainmmake)-$(FAMILY) %(mainmmake)-$(CPU)
-#MM- %(mainmmake)-kobj-quick : %(mainmmake)-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT)-quick %(mainmmake)-$(ARCH)-$(CPU)-quick \
-#MM			    %(mainmmake)-$(ARCH)-$(AROS_TARGET_VARIANT)-quick %(mainmmake)-$(ARCH)-quick \
-#MM			    %(mainmmake)-$(FAMILY)-quick %(mainmmake)-$(CPU)-quick
-#MM- %(mainmmake)-quick :   %(mainmmake)-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT)-quick %(mainmmake)-$(ARCH)-$(CPU)-quick \
-#MM			    %(mainmmake)-$(ARCH)-$(AROS_TARGET_VARIANT)-quick %(mainmmake)-$(ARCH)-quick \
-#MM			    %(mainmmake)-$(FAMILY)-quick %(mainmmake)-$(CPU)-quick
+#MM- %(mainmmake) : \
+#MM			    %(mainmmake)-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT) \
+#MM			    %(mainmmake)-$(ARCH)-$(CPU) \
+#MM			    %(mainmmake)-$(ARCH)-$(AROS_TARGET_VARIANT) \
+#MM			    %(mainmmake)-$(ARCH) \
+#MM			    %(mainmmake)-$(FAMILY) \
+#MM			    %(mainmmake)-$(CPU)
+#MM- %(mainmmake)-linklib : \
+#MM			    %(mainmmake)-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT) \
+#MM			    %(mainmmake)-$(ARCH)-$(CPU) \
+#MM			    %(mainmmake)-$(ARCH)-$(AROS_TARGET_VARIANT) \
+#MM			    %(mainmmake)-$(ARCH) \
+#MM			    %(mainmmake)-$(FAMILY) \
+#MM			    %(mainmmake)-$(CPU)
+#MM- %(mainmmake)-kobj : \
+#MM			    %(mainmmake)-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT) \
+#MM			    %(mainmmake)-$(ARCH)-$(CPU) \
+#MM			    %(mainmmake)-$(ARCH)-$(AROS_TARGET_VARIANT) \
+#MM			    %(mainmmake)-$(ARCH) \
+#MM			    %(mainmmake)-$(FAMILY) \
+#MM			    %(mainmmake)-$(CPU)
+#MM- %(mainmmake)-kobj-quick : \
+#MM			    %(mainmmake)-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT)-quick \
+#MM			    %(mainmmake)-$(ARCH)-$(CPU)-quick \
+#MM			    %(mainmmake)-$(ARCH)-$(AROS_TARGET_VARIANT)-quick \
+#MM			    %(mainmmake)-$(ARCH)-quick \
+#MM			    %(mainmmake)-$(FAMILY)-quick \
+#MM			    %(mainmmake)-$(CPU)-quick
+#MM- %(mainmmake)-quick : \
+#MM			    %(mainmmake)-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT)-quick \
+#MM			    %(mainmmake)-$(ARCH)-$(CPU)-quick \
+#MM			    %(mainmmake)-$(ARCH)-$(AROS_TARGET_VARIANT)-quick \
+#MM			    %(mainmmake)-$(ARCH)-quick \
+#MM			    %(mainmmake)-$(FAMILY)-quick \
+#MM			    %(mainmmake)-$(CPU)-quick
 
 #MM %(mainmmake)-%(arch) : %(mainmmake)-includes
 
