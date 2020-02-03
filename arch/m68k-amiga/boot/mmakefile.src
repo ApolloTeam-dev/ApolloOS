@@ -124,9 +124,9 @@ FILES=start early debug mmu
 AFILES=rom_entry rom_init cpu_detect superstack_swap
 
 KLIBS   := exec aros dos utility oop expansion partition debug
-KDEVS   := timer input keyboard console trackdisk gameport audio
+KDEVS   := timer input keyboard console gameport audio
 KHNDLRS := con afs ram
-KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse p96gfx
+KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse
 KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem misc shell card bootloader vampire
 KHOOKS  := diag romboot
 
@@ -150,8 +150,8 @@ AFILES  := ext_entry
 KLIBS   :=  keymap graphics layers intuition gadtools icon workbench \
             mathffp mathieeesingbas freeanim lowlevel nonvolatile nvdisk \
             setpatch
-KDEVS   := cd ata
-KHNDLRS := cdrom
+KDEVS   := ata
+KHNDLRS := 
 KHIDDS  := bus storage system
 KRSRCS  := shellcommands workbook wbtag
 KHOOKS  := alert
