@@ -286,7 +286,7 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
 
     /*
         The instance of driver object is created by the wrapper from
-        DEVS:Monitory through a call to AddDisplayDriver(). The wrapper
+        DEVS:Monitors through a call to AddDisplayDriver(). The wrapper
         has set the current directory properly and we can extract its name.
 
         We use this knowledge to eventually open the corresponding Icon and
