@@ -78,7 +78,7 @@
                                 mode ID bits are the monitor ID and what bits
                                 actually specify the mode. The default value
                                 is 0xFFFF0000.
-	    			
+
                                 Using the mask you can split your monitor ID
                                 into 'sub-Ids'. Example:
 
@@ -365,11 +365,18 @@
 	 * Amiga(tm) chipset driver does not become a default.
 	 * This is done because RTG modes (if any) are commonly preferred
 	 * over it.
+	 *
+	 * NOTE: as long as the above is true, all the legacy software opening
+	 * a screen without PAL or NTSC ModeID provided will fail or crash entire
+	 * AROS if it attempts to use low-level components such as blitter. I would
+	 * suggest chaning this behavior to be AmigaOS-compatible until we find a better
+	 * solution.
+	 *
 	 * TODO: in future some prefs program could be implemented. It would
 	 * allow the user to describe the physical placement of several displays
 	 * in his environment, and explicitly set the preferred display.
 	 */
-	if (!IS_CLASS(gfxclass, "hidd.gfx.amigavideo"))
+	if (1) //!IS_CLASS(gfxclass, "hidd.gfx.amigavideo"))
 	{
 	    /*
 	     * graphics.library uses struct MonitorSpec pointers for historical reasons,
