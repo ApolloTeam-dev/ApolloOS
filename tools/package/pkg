@@ -1,10 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: iso-8859-1 -*-
 
 import os, sys, struct
 from stat import ST_SIZE
 
-PKG_PREFIX                 = 'PKG'
 PKG_VERSION                = 1
 
 PKG_HEADER_FORMAT          = '3cB' 
@@ -35,7 +34,7 @@ def writeHeader( file, version ):
     file.write( 
         struct.pack( 
             PKG_HEADER_FORMAT, 
-            PKG_PREFIX[0], PKG_PREFIX[1], PKG_PREFIX[2], PKG_VERSION
+            b'P', b'K', b'G', version
         )
     )
     
@@ -71,7 +70,7 @@ def readFile( file ):
 def writeFile( file, path, data ):
     'writeFile( file, path, data ) -> None'
     
-    file.write( struct.pack( "!I" + str( ( len( path ) + 4 ) & ~3 ) + "sI", -1 + ( ( len( path ) + 4 ) & ~3 ), path, len( data ) ) )
+    file.write( struct.pack( "!I" + str( ( len( path ) + 4 ) & ~3 ) + "sI", -1 + ( ( len( path ) + 4 ) & ~3 ), bytes(path, "iso-8859-1"), len( data ) ) )
     file.write( data )
 
 
@@ -107,7 +106,7 @@ def unpack( source, destination ):
     while input.tell() < inputSize:
         (path, data) = readFile( input )
         
-        print '« %s (%d bytes)' % (path, len( data ))
+        print('« %s (%d bytes)' % (path, len( data )))
         
         directory = os.path.dirname( path )
         if directory != '' and not os.path.exists( directory ):
@@ -136,7 +135,7 @@ def pack( destination, files ):
     writeHeader( output, PKG_VERSION )
     
     for path in files:
-        print '» %s (%d bytes)' % (path, os.path.getsize( path ))
+        print('» %s (%d bytes)' % (path, os.path.getsize( path )))
         
         input = open( path, 'rb' )
         writeFile( output, path, input.read() )
@@ -170,5 +169,5 @@ if __name__ == '__main__':
         destination = sys.argv[3]
         unpack( source, destination )
     else:
-        print 'Invalid mode.'
+        print('Invalid mode.')
 

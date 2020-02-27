@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
+    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -21,10 +21,15 @@ static FILE *my_popen(const char *command, const char *file)
 
     FILE *pipe;
 
+    if (command_len >= sizeof(command_buf) - 1)
+        fatal("collect_sets()", strerror(ENAMETOOLONG));
+    memcpy(command_buf, command, command_len);
+    if (command[command_len - 1] != ' ')
+    {
+        command_buf[command_len++] = ' ';
+    }
     if (file_len + command_len >= sizeof(command_buf))
         fatal("collect_sets()", strerror(ENAMETOOLONG));
-
-    memcpy(command_buf, command, command_len);
     memcpy(command_buf + command_len, file, file_len + 1);
 
     set_compiler_path();
@@ -122,7 +127,17 @@ int check_and_print_undefined_symbols(const char *file)
     char buf[200];
     size_t cnt;
 
-    FILE *pipe = my_popen(NM_NAME " -ulC ", file);
+    strcpy(buf, NM_NAME);
+    if (!strstr(buf, "--demangle"))
+        strcat(buf, " --demangle");
+    if (!strstr(buf, "--undefined-only"))
+        strcat(buf, " --undefined-only");
+#if (0)
+    //TODO: if we are using gnu nm, we should add --line-numbers
+    if (!strstr(buf, "--line-numbers"))
+        strcat(buf, " --line-numbers");
+#endif
+    FILE *pipe = my_popen(buf, file);
 
     while ((cnt = fread(buf, 1, sizeof(buf), pipe)) != 0)
     {

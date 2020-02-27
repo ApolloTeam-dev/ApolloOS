@@ -662,6 +662,19 @@ AC_CHECK_FUNCS([getpagesize kqueue statfs statvfs \
 
 AC_FUNC_MMAP
 
+#
+# Disable common symbols
+AC_MSG_CHECKING([whether ${CC_BASE} accepts -fno-common])
+save_cflags="$CFLAGS"
+CFLAGS="$CFLAGS -fno-common"
+AC_TRY_COMPILE(,, use_no_common="yes", use_no_common="no")
+AC_MSG_RESULT($use_no_common)
+if test "x-$use_no_common" = "x-yes" ; then
+    aros_host_cflags="$aros_host_cflags -fno-common"
+fi
+CFLAGS="$save_cflags"
+
+
 #-----------------------------------------------------------------------------
 
 #
@@ -767,7 +780,7 @@ aros_kernel_ldflags="-Wl,-rpath,./lib"
 
 aros_kernel_ar_flags="cr"
 aros_target_ar_flags="cr"
-aros_target_nm_flags="-C -ul"
+aros_target_nm_flags="--demangle --undefined-only"
 aros_target_strip_flags="--strip-unneeded -R.comment"
 
 aros_c_libs=
@@ -825,13 +838,15 @@ case "$aros_toolchain" in
         toolchain_ar="llvm-ar"
         toolchain_ranlib="llvm-ranlib"
         toolchain_nm="llvm-nm"
-        toolchain_strip="true"
+        toolchain_strip="${NOP}"
         toolchain_objcopy="llvm-objcopy"
         toolchain_objdump="llvm-objdump"
         use_libatomic=yes
         toolchain_def_opt_lvl="-O2"
         toolchain_debug_opt_lvl="-O0"
         toolchain_size_opt_lvl="-Os"
+        aros_cxx_ldflags="-L $""(CROSSTOOLSDIR)/lib -stdlib=libc++"
+        aros_nowarn_flags="$aros_nowarn_flags NOWARN_IGNORED_OPTIMIZATION_ARGUMENT"
         ;;
     *gnu*)
         toolchain_c_compiler="gcc"
@@ -851,6 +866,7 @@ case "$aros_toolchain" in
             toolchain_ranlib="gcc-ranlib"
             toolchain_nm="gcc-nm"
         fi
+        aros_target_nm_flags="$aros_target_nm_flags --line-numbers"
         toolchain_strip="strip"
         toolchain_objcopy="objcopy"
         toolchain_objdump="objdump"
@@ -858,6 +874,7 @@ case "$aros_toolchain" in
         toolchain_def_opt_lvl="-O2"
         toolchain_debug_opt_lvl="-O0"
         toolchain_size_opt_lvl="-Os"
+        aros_cxx_ldflags="-static-libstdc++"
         ;;
     *)
         AC_MSG_WARN("Unknown toolchain family!")
@@ -2117,6 +2134,10 @@ if test "$aros_toolchain" = "gnu" ; then
         fi
     fi
 
+    if test "$GCC_VERSION_MAJOR" -lt "10" ; then
+        aros_config_cflags="$aros_config_cflags $""(CFLAGS_NO_COMMON)"
+    fi
+
     if test "$gcc_fix_bitfields" = "true" ; then
         case "$aros_target_cpu" in
         *x86_64* | *i?86*)
@@ -2158,6 +2179,7 @@ else
 fi
 if test "$aros_toolchain" = "llvm" ; then
     AC_MSG_RESULT($target_llvm_version)
+    aros_config_cflags="$aros_config_cflags $""(CFLAGS_NO_COMMON)"
 fi
 
 AC_MSG_CHECKING([whether to enable Objective-C suppport])
@@ -2552,7 +2574,11 @@ if test "$aros_target_toolchain" = "yes"; then
     orig_target_ar="${tmp_tool_prefix}${toolchain_ar}"
     orig_target_ranlib="${tmp_tool_prefix}${toolchain_ranlib}"
     orig_target_nm="${tmp_tool_prefix}${toolchain_nm}"
-    orig_target_strip="${tmp_tool_prefix}${toolchain_strip}"
+    if ! test "$toolchain_strip" = "${NOP}"; then
+        orig_target_strip="${tmp_tool_prefix}${toolchain_strip}"
+    else
+        orig_target_strip="${toolchain_strip}"
+    fi
     orig_target_objcopy="${tmp_tool_prefix}${toolchain_objcopy}"
     orig_target_objdump="${tmp_tool_prefix}${toolchain_objdump}"
 else
@@ -2579,8 +2605,12 @@ else
     AROS_REQUIRED(ranlib,$orig_target_ranlib)
     AROS_TOOL_TARGET(orig_target_nm,nm,${aros_tool_prefix}${toolchain_nm})
     AROS_REQUIRED(nm,$orig_target_nm)
-    AROS_TOOL_TARGET(orig_target_strip,strip,${aros_tool_prefix}${toolchain_strip})
-    AROS_REQUIRED(strip,$orig_target_strip)
+    if ! test "$toolchain_strip" = "${NOP}"; then
+            AROS_TOOL_TARGET(orig_target_strip,strip,${aros_tool_prefix}${toolchain_strip})
+            AROS_REQUIRED(strip,$orig_target_strip)
+    else
+        orig_target_strip="${toolchain_strip}"
+    fi
     AROS_TOOL_TARGET(orig_target_objcopy,objcopy,${aros_tool_prefix}${toolchain_objcopy})
     AROS_REQUIRED(objcopy,$orig_target_objcopy)
     AROS_TOOL_TARGET(orig_target_objdump,objdump,${aros_tool_prefix}${toolchain_objdump})
@@ -2709,7 +2739,11 @@ aros_target_objcopy="${prefix}${toolchain_objcopy}"
 aros_target_objdump="${prefix}${toolchain_objdump}"
 aros_target_ranlib="${prefix}${toolchain_ranlib} $aros_target_ranlib_flags"
 aros_target_nm="${prefix}${toolchain_nm} $aros_target_nm_flags"
-aros_target_strip="${prefix}${toolchain_strip}"
+if ! test "$toolchain_strip" = "${NOP}"; then
+    aros_target_strip="${prefix}${toolchain_strip}"
+else
+    aros_target_strip="${toolchain_strip}"
+fi
 aros_plain_nm="${prefix}${toolchain_nm}"
 aros_plain_ar="${prefix}${toolchain_ar}"
 
@@ -2833,6 +2867,7 @@ fi
 save_cc="$CC"
 save_cflags="$CFLAGS"
 if test "x$test_kernel_cc" != "xno"; then
+    AC_MSG_NOTICE([Testing kernel compiler...])
     CFLAGS="-iquote."
     kernel_cflags_iquote=$host_cflags_iquote
     kernel_cflags_iquote_end=$host_cflags_iquote_end
@@ -2863,6 +2898,9 @@ if test "x$test_kernel_cc" != "xno"; then
             kernel_cflags_iquote=-I
             kernel_cflags_iquote_end=-I-
         fi
+    fi
+    if test "x-$use_no_common" = "x-yes" ; then
+        aros_kernel_cflags="$aros_kernel_cflags -fno-common"
     fi
     if test "x-$use_no_stack_protector" = "x-yes" ; then
         aros_kernel_cflags="$aros_kernel_cflags -fno-stack-protector"
@@ -3356,6 +3394,7 @@ AC_SUBST(aros_shared_ld)
 AC_SUBST(aros_object_format)
 AC_SUBST(spec_obj_format)
 AC_SUBST(aros_c_libs)
+AC_SUBST(aros_cxx_ldflags)
 AC_SUBST(aros_cxx_libs)
 
 AC_SUBST(aros_shared_cflags)

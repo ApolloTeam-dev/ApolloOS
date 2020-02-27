@@ -57,6 +57,7 @@ AC_MSG_RESULT($aros_targetcfg_dir)
 #  -ftest-coverage
 #  -finstrument-functions
 #  -faligned-new
+#  -fcommon
 
 #  -fno-builtin
 #  -fno-builtin-floor
@@ -264,6 +265,15 @@ AC_MSG_RESULT($aros_aligned_new)
 if test "x-$aros_aligned_new" = "x-yes" ; then
     aros_cflags_alignednew=-faligned-new
     aros_cflags_noalignednew=-fno-aligned-new
+fi
+
+AC_MSG_CHECKING([whether ${CC} accepts -fcommon])
+CFLAGS=-fcommon
+AC_TRY_COMPILE(,, aros_common="yes", aros_common="no")
+AC_MSG_RESULT($aros_common)
+if test "x-$aros_common" = "x-yes" ; then
+    aros_cflags_common=-fcommon
+    aros_cflags_no_common=-fno-common
 fi
 
 AC_MSG_CHECKING([whether ${CC} accepts -fbuiltin])
@@ -596,6 +606,7 @@ CFLAGS="$save_cflags"
 #  -Wmissing-prototypes
 #  -Wclass-memaccess
 #  -Wint-in-bool-context
+#  -Wignored-optimization-argument
 
 # C warnings first
 AC_LANG_PUSH(C)
@@ -1250,6 +1261,15 @@ if test "x-$aros_int_in_bool_context" = "x-yes" ; then
     aros_warnflags_int_in_bool_context=-Wint-in-bool-context
     aros_nowarnflags_int_in_bool_context=-Wno-int-in-bool-context
 fi
+
+AC_MSG_CHECKING([whether ${CC} accepts -Wignored-optimization-argument])
+CFLAGS=-Wignored-optimization-argument
+AC_TRY_COMPILE(,, aros_ignored_optimization_argument="yes", aros_ignored_optimization_argument="no")
+AC_MSG_RESULT($aros_ignored_optimization_argument)
+if test "x-$aros_ignored_optimization_argument" = "x-yes" ; then
+    aros_warnflags_ignored_optimization_argument=-Wignored-optimization-argument
+    aros_nowarnflags_ignored_optimization_argument=-Wno-ignored-optimization-argument
+fi
 CFLAGS="$save_cflags"
 
 # Check the C++ warnings
@@ -1360,6 +1380,9 @@ AC_SUBST(aros_cflags_noinstrfuncs)
 
 AC_SUBST(aros_cflags_alignednew)
 AC_SUBST(aros_cflags_noalignednew)
+
+AC_SUBST(aros_cflags_common)
+AC_SUBST(aros_cflags_no_common)
 
 AC_SUBST(aros_cflags_builtin)
 AC_SUBST(aros_cflags_no_builtin)
@@ -1554,6 +1577,8 @@ AC_SUBST(aros_warnflags_class_memaccess)
 AC_SUBST(aros_nowarnflags_class_memaccess)
 AC_SUBST(aros_warnflags_int_in_bool_context)
 AC_SUBST(aros_nowarnflags_int_in_bool_context)
+AC_SUBST(aros_warnflags_ignored_optimization_argument)
+AC_SUBST(aros_nowarnflags_ignored_optimization_argument)
 
 # Additional toolchain support ...
 AC_SUBST(aros_toolchain_sysroot)

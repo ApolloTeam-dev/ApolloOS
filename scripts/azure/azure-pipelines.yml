@@ -31,22 +31,37 @@ jobs:
 
   steps:
   - script: |
+      if [ "$AROSBUILD_TOOLCHAIN_FAMILY" != ""]; then
+        TARGET_TOOLCHAIN_OPTS="--with-toolchain=$(arosbuild.toolchain.family)"
+        TARGET_TOOLCHAIN="$(arosbuild.toolchain.family)"
+      else
+        TARGET_TOOLCHAIN="gnu"
+      fi
+      echo "Preparing environment for build with $(TARGET_TOOLCHAIN) toolchain"
+      echo "##vso[task.setvariable variable=TOOLCHAIN]$(TARGET_TOOLCHAIN)"
+      echo "##vso[task.setvariable variable=TOOLCHAINOPTS]$(TARGET_TOOLCHAIN_OPTS)"
+    displayName: 'Preparing common environment...'
+
+  - script: |
       if [ "$AROSBUILD_CONFIG_EXTRA" != "" ]; then
-        CONFIGOPTS="$(arosbuild.config.extra)"
+        CONFIGOPTS="$CONFIGOPTS $(arosbuild.config.extra)"
       fi
       CONFIGOPTS="$CONFIGOPTS --target=$(arosbuild.target)"
       if [ "$AROSBUILD_VARIANT" != "" ]; then
         CONFIGOPTS="$CONFIGOPTS --enable-target-variant=$(arosbuild.variant)"
       fi
+      CONFIGOPTS="$CONFIGOPTS $(TOOLCHAINOPTS)"
       if [ "$AROSBUILD_GCC_VERSION" != "" ]; then
         CONFIGOPTS="$CONFIGOPTS --with-gcc-version=$(arosbuild.gcc.version)"
       fi
       sudo apt-key adv --keyserver packages.microsoft.com --recv-keys B02C46DF417A0893
       sudo apt-get update -y
-      sudo ACCEPT_EULA=Y apt-get upgrade -y
+      if [ "$AROSBUILD_AGENT_UPGRADE" != "" ]; then
+        sudo ACCEPT_EULA=Y apt-get upgrade -y
+      fi
       sudo apt-get install -y libpng-dev zlib1g-dev libxcursor-dev libgl1-mesa-dev libasound2-dev
       sudo apt-get install -y gawk bison flex netpbm automake cmake genisoimage sshpass
-      sudo apt-get install -y python3-mako libswitch-perl gperf gcc-multilib g++ ccache
+      sudo apt-get install -y python3-mako python3-distutils libswitch-perl gperf gcc-multilib g++ ccache
       sudo apt-get install -y jlha-utils wget
       if [ "$AROSBUILD_TARGET" = "mingw32-i386" ]; then
         sudo apt-get install -y mingw-w64-i686-dev gcc-mingw-w64-i686 g++-mingw-w64-i686 mingw-w64-tools
@@ -65,6 +80,7 @@ jobs:
       if [ "$AROSBUILD_VARIANT" != "" ]; then
         CONFIGOPTS="$CONFIGOPTS --enable-target-variant=$(arosbuild.variant)"
       fi
+      CONFIGOPTS="$CONFIGOPTS $(TOOLCHAINOPTS)"
       if [ "$AROSBUILD_GCC_VERSION" != "" ]; then
         CONFIGOPTS="$CONFIGOPTS --with-gcc-version=$(arosbuild.gcc.version)"
       fi
@@ -255,7 +271,7 @@ jobs:
       }
       execute $(AROSSRCDIR)/configure $(AROSCONFIGOPTIONS) --with-aros-toolchain-install=$(AROSBUILDTOOLCHAINDIR)
     workingDirectory: '$(AROSBUILDDIR)'
-    displayName: 'Configuring $(arosbuild.name) Toolchain'
+    displayName: 'Configuring $(arosbuild.name) $(TOOLCHAIN) Toolchain'
 
   - script: |
       function execute {
@@ -273,7 +289,7 @@ jobs:
       execute make -j 2 crosstools
       rm -Rf $(AROSBUILDDIR)/*
     workingDirectory: '$(AROSBUILDDIR)'
-    displayName: 'Build $(arosbuild.name) Toolchain'
+    displayName: 'Build $(arosbuild.name) $(TOOLCHAIN) Toolchain'
 
   - script: |
       function execute {
