@@ -73,6 +73,7 @@ include $(SRCDIR)/config/aros.cfg
 #MM     kernel-usb-amiga-m68k \
 #MM     kernel-workbook-kobj \
 #MM     kernel-workbench-devs-amiga-m68k \
+#MM     kernel-vampire-amiga-m68k \
 #MM     workbench-libs-gadtools-kobj \
 #MM     workbench-libs-icon-kobj \
 #MM     workbench-libs-lowlevel-kobj \
@@ -123,10 +124,10 @@ FILES=start early debug mmu
 AFILES=rom_entry rom_init cpu_detect superstack_swap
 
 KLIBS   := exec aros dos utility oop expansion partition debug
-KDEVS   := timer input keyboard console trackdisk gameport audio
+KDEVS   := timer input keyboard console gameport audio
 KHNDLRS := con afs ram
-KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse p96gfx
-KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem misc shell card bootloader
+KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse
+KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem misc shell card bootloader vampire
 KHOOKS  := diag romboot
 
 KOBJS_rom := $(addprefix $(KOBJSDIR)/,$(addsuffix _library.ko ,$(KLIBS))) \
@@ -149,8 +150,8 @@ AFILES  := ext_entry
 KLIBS   :=  keymap graphics layers intuition gadtools icon workbench \
             mathffp mathieeesingbas freeanim lowlevel nonvolatile nvdisk \
             setpatch
-KDEVS   := cd ata
-KHNDLRS := cdrom
+KDEVS   := ata
+KHNDLRS := 
 KHIDDS  := bus storage system
 KRSRCS  := shellcommands workbook wbtag
 KHOOKS  := alert
@@ -315,7 +316,7 @@ KDEVS   := timer input keyboard console trackdisk gameport audio ata cd
 KHNDLRS := cdrom con afs ram
 KHIDDS  := amigakbd amigamouse amigavideo ata_gayle bus gfx hiddclass keyboard mouse storage system p96gfx
 KRSRCS  := battclock processor task lddemon dosboot cia potgo disk \
-           misc shell shellcommands workbook wbtag card FileSystem
+           misc shell shellcommands workbook wbtag card FileSystem vampire
 KHOOKS  := alert romboot
 
 KOBJS_any := \

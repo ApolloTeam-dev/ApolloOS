@@ -286,7 +286,7 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
 
     /*
         The instance of driver object is created by the wrapper from
-        DEVS:Monitory through a call to AddDisplayDriver(). The wrapper
+        DEVS:Monitors through a call to AddDisplayDriver(). The wrapper
         has set the current directory properly and we can extract its name.
 
         We use this knowledge to eventually open the corresponding Icon and
@@ -610,14 +610,14 @@ void METHOD(SAGAGfx, Hidd_Gfx, CopyBox)
     ULONG mode = GC_DRMD(msg->gc);
     IPTR src=0, dst=0;
 
-bug("[SAGA] CopyBox(%p, %p, dx:%d, dy:%d, sx:%d, sy:%d, w:%d, h:%d)\n", msg->src, msg->dest, msg->destX, msg->destY,
-msg->srcX, msg->srcY, msg->width, msg->height);
+D(bug("[SAGA] CopyBox(%p, %p, dx:%d, dy:%d, sx:%d, sy:%d, w:%d, h:%d)\n", msg->src, msg->dest, msg->destX, msg->destY,
+msg->srcX, msg->srcY, msg->width, msg->height));
 
     if (OOP_OCLASS(msg->src) != XSD(cl)->bmclass ||
         OOP_OCLASS(msg->dest) != XSD(cl)->bmclass)
     {
-        bug("[SAGA] CopyBox - either source or dest is not SAGA bitmap\n");
-        bug("[SAGA] oclass src: %p, oclass dst: %p, bmclass: %p\n", OOP_OCLASS(msg->src), OOP_OCLASS(msg->dest), XSD(cl)->bmclass);
+        D(bug("[SAGA] CopyBox - either source or dest is not SAGA bitmap\n"));
+        D(bug("[SAGA] oclass src: %p, oclass dst: %p, bmclass: %p\n", OOP_OCLASS(msg->src), OOP_OCLASS(msg->dest), XSD(cl)->bmclass));
         OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
     }
     else
@@ -627,12 +627,12 @@ msg->srcX, msg->srcY, msg->width, msg->height);
 
         if (bm_src->bitsperpix <= 8 || bm_dst->bitsperpix <= 8 || (bm_src->bitsperpix != bm_dst->bitsperpix))
         {
-            bug("[SAGA] bpp_src=%d, bpp_dst=%d\n", bm_src->bitsperpix, bm_dst->bitsperpix);
+            D(bug("[SAGA] bpp_src=%d, bpp_dst=%d\n", bm_src->bitsperpix, bm_dst->bitsperpix));
             OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
         }
         else
         {
-            bug("[SAGA] both bitmaps compatible. drmd=%d\n", mode);
+            D(bug("[SAGA] both bitmaps compatible. drmd=%d\n", mode));
             OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
         }
     }
