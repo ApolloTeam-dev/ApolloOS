@@ -3,6 +3,7 @@
     $Id$
 */
 
+#define DEBUG 0
 #include <proto/exec.h>
 #include <proto/graphics.h>
 #include <proto/cia.h>

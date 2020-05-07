@@ -17,7 +17,7 @@
 
 void Early_ScreenCode(ULONG code)
 {
-	reg_w(BPLCON0, 0x0200);
+	reg_w(BPLCON0, 0x8200);
 	reg_w(BPL1DAT, 0x0000);
 	reg_w(COLOR00, code & RGB_MASK);
 }

@@ -4,13 +4,16 @@
     $Id$
 */
 
-#define DEBUG 0
+#define DEBUG 1
 #include <aros/config.h>
 #include <intuition/intuition.h>
 #include <proto/intuition.h>
 #include <proto/graphics.h>
 
 #include "intuition_intern.h"
+
+#undef AROS_NOMINAL_DEPTH
+#define AROS_NOMINAL_DEPTH 4
 
 static ULONG FindMode(ULONG width, ULONG height, ULONG depth, struct IntuitionBase *IntuitionBase)
 {
@@ -30,11 +33,11 @@ static ULONG FindMode(ULONG width, ULONG height, ULONG depth, struct IntuitionBa
 
     if (modeid == INVALID_ID)
     {
-    	/* If failed, we can have this resolution, but not this depth. Try 4 colors. */
-	modetags[2].ti_Data = 2;
+    	/* If failed, we can have this resolution, but not this depth. Try 16 colors. */
+	modetags[2].ti_Data = AROS_NOMINAL_DEPTH;
 
     	modeid = BestModeIDA(modetags);
-	D(bug("[OpenWorkbench] Size: %dx%d, depth: 2, ModeID 0x%08X\n", width, height, modeid));
+	D(bug("[OpenWorkbench] Size: %dx%d, depth: %d, ModeID 0x%08X\n", width, height, depth, modeid));
     }
 
     return modeid;
@@ -116,7 +119,7 @@ static ULONG FindMode(ULONG width, ULONG height, ULONG depth, struct IntuitionBa
         {
             { SA_Width,                0                  }, /* 0 */
             { SA_Height,               0                  }, /* 1 */
-            { SA_Depth,                0              }, /* 2 */
+            { SA_Depth,                0                  }, /* 2 */
 	    { SA_DisplayID,            0                  }, /* 3 */
             { SA_LikeWorkbench,        TRUE               }, /* 4 */
             { SA_Type,                 WBENCHSCREEN       }, /* 5 */
@@ -162,9 +165,10 @@ static ULONG FindMode(ULONG width, ULONG height, ULONG depth, struct IntuitionBa
 	        D(bug("[OpenWorkbench] Using default height %d\n", GfxBase->NormalDisplayRows));
 	        height = GfxBase->NormalDisplayRows;
 	    }
-	    if (depth == -1)
-	        depth = AROS_NOMINAL_DEPTH;
+	    if (depth < 4 || depth > 32)
+	        depth = 4;
 
+#if 0       // (Alynna): I have a feeling on Vampire v2+ this hack makes the whole system fail to boot.
 #ifdef __mc68000
 	    /* FIXME: less hacky RTG detection */
 	    /* select 640x480 if we appear to have RTG hardware (instead of standard PAL/NTSC mode) */
@@ -179,6 +183,7 @@ static ULONG FindMode(ULONG width, ULONG height, ULONG depth, struct IntuitionBa
 		    height = 480;
 	    	}
 	    }
+#endif
 #endif
 
 	    modeid = FindMode(width, height, depth, IntuitionBase);
@@ -199,6 +204,7 @@ static ULONG FindMode(ULONG width, ULONG height, ULONG depth, struct IntuitionBa
 	if (modeid == INVALID_ID)
 	{
 	    /* We don't have any modes with the specified resolution. Try Amiga default (640x200) */
+	    depth = 4;
 	    modeid = FindMode(640, 200, depth, IntuitionBase);
 	}
 

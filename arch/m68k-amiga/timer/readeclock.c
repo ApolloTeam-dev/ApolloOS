@@ -9,7 +9,7 @@
 #include <devices/timer.h>
 #include <proto/timer.h>
 #include <proto/exec.h>
-
+#include <aros/debug.h>
 #include <timer_intern.h>
 
 /* See rom/timer/readeclock.c for documentation */
@@ -30,7 +30,6 @@ AROS_LH1(ULONG, ReadEClock,
     dest->ev_lo += eclock;
     if (old > dest->ev_lo)
     	dest->ev_hi++;
-
     return TimerBase->tb_eclock_rate;
 
     AROS_LIBFUNC_EXIT

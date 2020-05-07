@@ -88,7 +88,6 @@ static AROS_INTH1(keyboard_interrupt, struct kbd_data *, kbddata)
     	if ((LONG)(eclock2.ev_lo - eclock1.ev_lo) >= 80)
     	    break;
     }
-
     ciaa->ciacra &= ~CIACRAF_SPMODE; // end handshake
 
     return 0;
