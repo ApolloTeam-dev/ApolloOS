@@ -1,0 +1,3 @@
+[submodule "developer/debug/test/datatypes"]
+	path = developer/debug/test/datatypes
+	url = https://github.com/aros-development-team/datatype-test-binaries.git

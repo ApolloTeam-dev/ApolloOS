@@ -59,15 +59,15 @@ struct TimerBase
     struct Resource *tb_micro_res;
     volatile struct CIA *tb_micro_cia;
     volatile UBYTE *tb_micro_cr, *tb_micro_lo, *tb_micro_hi;
-    volatile struct Interrupt tb_ciaint_timer;
+    struct Interrupt tb_ciaint_timer;
     UWORD tb_micro_intbit;
     ULONG tb_micro_started;
-    volatile struct timeval tb_micro_count;
+    struct timeval tb_micro_count;
     ULONG tb_micro_micros;
     BOOL tb_micro_on;
 
-    volatile struct Interrupt tb_vbint;
-    volatile struct timeval tb_vb_count;
+    struct Interrupt tb_vbint;
+    struct timeval tb_vb_count;
     UWORD tb_vblank_rate;
     UWORD tb_vblank_micros;
     BOOL tb_vblank_on;
