@@ -144,7 +144,7 @@ ULONG GetEClock(struct TimerBase *TimerBase)
 {
 	UBYTE lo, hi;
 	ULONG diff, val;
-
+	
 	/* Disable() assumed */
 	for (;;) {
 		hi = *TimerBase->tb_eclock_hi;
@@ -174,6 +174,7 @@ AROS_INTH1(ciab_eclock, struct TimerBase *, TimerBase)
 	AROS_INTFUNC_INIT
 
 	D(bug("eclock int\n"));
+
 	// e-clock counter, counts full ECLOCK_BASE cycles
 	ULONG old = TimerBase->tb_eclock.ev_lo;
 	TimerBase->tb_eclock.ev_lo += ECLOCK_BASE;
@@ -188,6 +189,7 @@ AROS_INTH1(ciab_eclock, struct TimerBase *, TimerBase)
 	}
 
 	return FALSE;	
+
 	AROS_INTFUNC_EXIT
 }
 
@@ -199,6 +201,7 @@ AROS_INTH1(ciaint_timer, struct TimerBase *, TimerBase)
 	ULONG old;
 
 	D(bug("ciaint_timer\n"));
+
 	if (TimerBase->tb_micro_on == FALSE)
 		return 0;
 
@@ -245,6 +248,7 @@ AROS_INTH1(ciaint_timer, struct TimerBase *, TimerBase)
 	}
 
 	Enable();
+
 	return 0;	
 
 	AROS_INTFUNC_EXIT
@@ -254,7 +258,8 @@ AROS_INTH1(cia_vbint, struct TimerBase *, TimerBase)
 {
     	AROS_INTFUNC_INIT
 	
-   	struct timerequest *tr, *next;
+   	 struct timerequest *tr, *next;
+
 	if (TimerBase->tb_vblank_on == FALSE)
 		return 0;
 	inc64(&TimerBase->tb_vb_count);
@@ -276,6 +281,7 @@ AROS_INTH1(cia_vbint, struct TimerBase *, TimerBase)
 		TimerBase->tb_vblank_on = FALSE;
 	}
 	Enable();
+	
 	return 0;	
 
 	AROS_INTFUNC_EXIT

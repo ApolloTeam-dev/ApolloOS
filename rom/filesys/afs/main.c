@@ -7,7 +7,6 @@
 #define DEBUG 0
 #endif
 
-#define DEBUG 1
 #include <proto/dos.h>
 #include <proto/exec.h>
 

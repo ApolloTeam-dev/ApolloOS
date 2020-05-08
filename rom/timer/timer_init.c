@@ -12,7 +12,6 @@
 
 /****************************************************************************************/
 
-#define DEBUG 1
 #include <exec/types.h>
 #include <exec/io.h>
 #include <exec/errors.h>
@@ -73,9 +72,10 @@ static int GM_UNIQUENAME(Init)(LIBBASETYPEPTR LIBBASE)
         LIBBASE->tb_ListLock = AllocLock();
     }
 #endif
+
     /* If no frequency is set, assume 50Hz */
     if (SysBase->VBlankFrequency == 0)
-        SysBase->VBlankFrequency = 60;
+        SysBase->VBlankFrequency = 50;
 
     /*
      * Here we do no checks, we simply assume we have working VBlank interrupt,
@@ -104,7 +104,7 @@ static int GM_UNIQUENAME(Init)(LIBBASETYPEPTR LIBBASE)
 
 	AddIntServer(INTB_VERTB, is);
 	LIBBASE->tb_TimerIRQHandle = is;
-
+	
 	return TRUE;
     }
 

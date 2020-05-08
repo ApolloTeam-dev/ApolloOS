@@ -61,6 +61,7 @@ AROS_UFH3(static APTR, ata_Wait,
 	  AROS_UFPA(struct ExecBase *, SysBase, A6))
 {
     AROS_USERFUNC_INIT
+
     struct ataBase *ATABase;
 #if defined(__AROSPLATFORM_SMP__)
     void *ExecLockBase = OpenResource("execlock.resource");
@@ -93,6 +94,7 @@ AROS_UFH3(static APTR, ata_Wait,
         ObtainSemaphore(&ATABase->DetectionSem);
         ReleaseSemaphore(&ATABase->DetectionSem);
     }
+    
     return NULL;
     
     AROS_USERFUNC_EXIT

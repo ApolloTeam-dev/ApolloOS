@@ -6,15 +6,6 @@
 
     This include file can be included several times !
 */
-
-// Defines for turtling and unturtling an Apollo 68080
-#ifndef TURTLE
-# define TURTLE   UWORD __CACRF__; __CACRF__ = CacheControl(0,0); CacheControl(0,CACRF_EnableI);
-# define UNTURTLE UWORD __CACRF__; __CACRF__ = CacheControl(0,0); CacheControl(CACRF_EnableI,CACRF_EnableI);
-# define RETURTLE CacheControl(__CACRF__,CACRF_EnableI);
-#endif
-
-
 #ifndef CLIB_AROSSUPPORT_PROTOS_H
 //#   include <proto/arossupport.h>
 #endif

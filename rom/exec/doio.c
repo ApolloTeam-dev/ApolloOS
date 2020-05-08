@@ -5,14 +5,12 @@
     Desc: Start an IO request and wait until it completes.
     Lang: english
 */
-#define DEBUG 1
 #include <exec/execbase.h>
 #include <exec/io.h>
 #include <aros/libcall.h>
 #include <proto/exec.h>
 #include <aros/debug.h>
-#include <exec/nodes.h>
-#include <exec/libraries.h>
+
 /*****************************************************************************
 
     NAME */
@@ -54,13 +52,13 @@
 	Prepare the message. Tell the device that it is OK to wait in the
 	BeginIO() call by setting the quick bit.
     */
-    //ASSERT_VALID_PTR(iORequest);
+    ASSERT_VALID_PTR(iORequest);
     if (!iORequest) return -1;
 
     iORequest->io_Flags=IOF_QUICK;
     iORequest->io_Message.mn_Node.ln_Type=0;
 
-    //ASSERT_VALID_PTR(iORequest->io_Device);
+    ASSERT_VALID_PTR(iORequest->io_Device);
     if (!iORequest->io_Device) return -1;
 
     /* Call BeginIO() vector */
@@ -70,9 +68,9 @@
     );
 
     /* If the quick flag is cleared it wasn't done quickly. Wait for completion. */
-    if(!(iORequest->io_Flags&IOF_QUICK)) {
+    if(!(iORequest->io_Flags&IOF_QUICK))
 	WaitIO(iORequest);
-    }
+
     /* All done. Get returncode. */
     return iORequest->io_Error;
     AROS_LIBFUNC_EXIT

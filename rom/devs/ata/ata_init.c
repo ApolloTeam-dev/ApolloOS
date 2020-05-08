@@ -6,7 +6,6 @@
     Lang: English
 */
 
-#define DEBUG 1
 #include <aros/debug.h>
 
 #include <proto/exec.h>
@@ -145,7 +144,7 @@ static int ATA_init(struct ataBase *ATABase)
     NEWLIST(&ATABase->ata_Controllers);
 
     /* Set default ata.device config options */
-    ATABase->ata_32bit   = TRUE;
+    ATABase->ata_32bit   = FALSE;
     ATABase->ata_NoMulti = FALSE;
     ATABase->ata_NoDMA   = FALSE;
     ATABase->ata_Poll    = FALSE;

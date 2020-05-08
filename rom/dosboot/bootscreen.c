@@ -3,7 +3,6 @@
     $Id$
 */
 
-#define DEBUG 1
 #include <aros/debug.h>
 #include <exec/alerts.h>
 #include <exec/libraries.h>
@@ -16,13 +15,10 @@
 
 #include "dosboot_intern.h"
 
-static struct Screen *OpenBootScreenType(struct DOSBootBase *DOSBootBase, BYTE SquarePixels)
+static struct Screen *OpenBootScreenType(struct DOSBootBase *DOSBootBase, BYTE MinDepth, BYTE SquarePixels)
 {
     UWORD height;
     ULONG mode;
-    // It turns out that in AROS, the minimum bitdepth that actually works right is 4.
-
-    BYTE MinDepth = 4;
 
     GfxBase = (void *)TaggedOpenLibrary(TAGGEDOPEN_GRAPHICS);
     IntuitionBase = (void *)TaggedOpenLibrary(TAGGEDOPEN_INTUITION);
@@ -31,26 +27,6 @@ static struct Screen *OpenBootScreenType(struct DOSBootBase *DOSBootBase, BYTE S
 	/* We failed to open one of system libraries. AROS is in utterly broken state */
 	Alert(AT_DeadEnd|AN_BootStrap|AG_OpenLib);
 
-// (Alynna): New boot screen init code
-//  Attempt to get a 640x480 mode
-    height = 480;
-    mode = BestModeID(BIDTAG_DesiredWidth, 640, BIDTAG_DesiredHeight, height,
-	BIDTAG_Depth, MinDepth, TAG_DONE);
-// On failure, try to get a PAL or NTSC mode (In resolution size order)
-    if (mode == INVALID_ID)
-	if (GfxBase->DisplayFlags & PAL) {
-    	    height = 256;
-	    if (SquarePixels) { height = height << 1; } // promote mode for bootanim
-	    mode = BestModeID(BIDTAG_DesiredWidth, 640, BIDTAG_DesiredHeight, height,
-		BIDTAG_Depth, MinDepth, TAG_DONE);
-	} else {
-    	    height = 200;
-	    if (SquarePixels) { height = height << 1; } // promote mode for bootanim
-	    mode = BestModeID(BIDTAG_DesiredWidth, 640, BIDTAG_DesiredHeight, height,
-		BIDTAG_Depth, MinDepth, TAG_DONE);
-	}
-
-/* (Alynna): Redundant
     height = 480;
     mode = BestModeID(BIDTAG_DesiredWidth, 640, BIDTAG_DesiredHeight, height,
 	BIDTAG_Depth, MinDepth, TAG_DONE);
@@ -61,7 +37,7 @@ static struct Screen *OpenBootScreenType(struct DOSBootBase *DOSBootBase, BYTE S
      * We also need to check if this is really PAL or NTSC mode because we have to
      * use PC 640x480 mode if user has Amiga hardware + RTG board.
      * Check DisplayFlags first because non-Amiga modeIDs use different format.
-     *
+     */
     if (GfxBase->DisplayFlags & (NTSC | PAL)) {
     	if ((mode & MONITOR_ID_MASK) == NTSC_MONITOR_ID)
 	    height = SquarePixels ? 400 : 200;
@@ -70,11 +46,9 @@ static struct Screen *OpenBootScreenType(struct DOSBootBase *DOSBootBase, BYTE S
     }
 
     /* We want the screen to occupy the whole display, so we find best maching
-       mode ID and then open a screen with that mode *
+       mode ID and then open a screen with that mode */
     mode = BestModeID(BIDTAG_DesiredWidth, 640, BIDTAG_DesiredHeight, height,
 	BIDTAG_Depth, MinDepth, TAG_DONE);
-*/
-    D(bug("[bootscreen.c] Requesting %dx%dx%d, modeid %08lx ... ",640,height,MinDepth,mode));
 
     if (mode != INVALID_ID)
     {
@@ -92,13 +66,13 @@ static struct Screen *OpenBootScreenType(struct DOSBootBase *DOSBootBase, BYTE S
 struct Screen *OpenBootScreen(struct DOSBootBase *DOSBootBase)
 {   
     /* Boot menu requires basic 4+ color screen */
-    return OpenBootScreenType(DOSBootBase, FALSE);
+    return OpenBootScreenType(DOSBootBase, 2, FALSE);
 }
 
 struct Screen *NoBootMediaScreen(struct DOSBootBase *DOSBootBase)
 {
     /* Boot anim requires 16+ color screen and 1:1 pixels */
-    struct Screen *scr = OpenBootScreenType(DOSBootBase, TRUE);
+    struct Screen *scr = OpenBootScreenType(DOSBootBase, 4, TRUE);
 
     if (!anim_Init(scr, DOSBootBase))
     {

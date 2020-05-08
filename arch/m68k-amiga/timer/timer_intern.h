@@ -9,8 +9,6 @@
     Lang: english
 */
 
-//#define DEBUG 1
-
 #ifndef EXEC_TYPES_H
 #include <exec/types.h>
 #endif

@@ -66,7 +66,7 @@
     struct Task *thisTask = GET_THIS_TASK;
     ULONG rcvd;
 
-    //D(bug("[Exec] Wait(%08lX)\n", signalSet);)
+    D(bug("[Exec] Wait(%08lX)\n", signalSet);)
     Disable();
 
     /* If at least one of the signals is already set do not wait. */
@@ -75,7 +75,8 @@
 	/* Set the wait signal mask */
 	thisTask->tc_SigWait = signalSet;
 
-        D(bug("[Exec] Wait: Moving '%s' @ 0x%p to Task Wait queue (%08x)\n", thisTask->tc_Node.ln_Name, thisTask, thisTask->tc_State);)
+        D(bug("[Exec] Wait: Moving '%s' @ 0x%p to Task Wait queue\n", thisTask->tc_Node.ln_Name, thisTask);)
+        D(bug("[Exec] Wait: Task state = %08x\n", thisTask->tc_State);)
 
         /*
             Clear TDNestCnt (because Switch() will not care about it),
@@ -100,7 +101,7 @@
 	    signals are there or it's just a finished task exception.
 	    Test again to be sure (see above).
 	*/
-        D(bug("[Exec] Wait: Waking '%s' @ 0x%p (%08x)\n", thisTask->tc_Node.ln_Name, thisTask, thisTask->tc_State);)
+        D(bug("[Exec] Wait: Awoken...\n");)
 
 	/* Restore TDNestCnt. */
 	TDNESTCOUNT_SET(thisTask->tc_TDNestCnt);

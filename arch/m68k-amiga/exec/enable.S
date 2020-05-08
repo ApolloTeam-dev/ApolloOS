@@ -73,7 +73,11 @@ AROS_SLIB_ENTRY(Enable,Exec,21):
 	bge.s	0f
 	move.w	#0xc000,0xdff09a
 <<<<<<< HEAD
+<<<<<<< HEAD
 	tst.b 0xbfe001
+=======
+        tst.b 0xbfe001
+>>>>>>> parent of fae510ec8a... Loads of fixes to make AROS bootable and somewhat usable on NTSC and PAL systems.  Some debug helpers for vamp.  Promote bootscreen and workbench to 16 colors until we figure out why 1-3 bpp don't work
 	tst.b 0xbfe001
 =======
 >>>>>>> parent of f6d702e93a... Added short delay after re-enabling interrupts

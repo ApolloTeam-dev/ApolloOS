@@ -76,6 +76,7 @@ include $(SRCDIR)/config/aros.cfg
 #MM     kernel-vampire-amiga-m68k \
 #MM     workbench-libs-gadtools-kobj \
 #MM     workbench-libs-icon-kobj \
+#MM     workbench-libs-lowlevel-kobj \
 #MM     workbench-libs-mathffp-kobj \
 #MM     workbench-libs-mathieeesingbas-kobj \
 #MM     workbench-libs-nonvolatile-kobj \
@@ -88,9 +89,6 @@ include $(SRCDIR)/config/aros.cfg
 #MM     compiler-posixc
 
 #MM- kernel-workbench-devs-amiga-m68k : workbench-devs-amiga-m68k
-
-###MM     workbench-libs-lowlevel-kobj 
-
 
 # Make sure we optimize this code for size ..
 OPTIMIZATION_CFLAGS := -Os
@@ -150,7 +148,7 @@ FILES   :=
 AFILES  := ext_entry
 
 KLIBS   :=  keymap graphics layers intuition gadtools icon workbench \
-            mathffp mathieeesingbas freeanim nonvolatile nvdisk \
+            mathffp mathieeesingbas freeanim lowlevel nonvolatile nvdisk \
             setpatch
 KDEVS   := ata
 KHNDLRS := 
