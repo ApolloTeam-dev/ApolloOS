@@ -72,9 +72,6 @@ AROS_SLIB_ENTRY(Enable,Exec,21):
 	subq.b	#1,%a6@(IDNestCnt)
 	bge.s	0f
 	move.w	#0xc000,0xdff09a
-<<<<<<< HEAD
+        tst.b 0xbfe001
 	tst.b 0xbfe001
-	tst.b 0xbfe001
-=======
->>>>>>> parent of f6d702e93a... Added short delay after re-enabling interrupts
 0:	rts

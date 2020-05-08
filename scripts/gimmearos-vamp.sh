@@ -313,11 +313,7 @@ do
         5 ) echo -e "\nConfiguring amiga-m68k V1 (NTSC, KPRINTF)...\n"
             mkdir -p aros-amiga-a68080
             cd aros-amiga-a68080
-<<<<<<< HEAD
-            "../$srcdir/configure" --target=amiga-m68k --with-cpu=68020-40 --with-fpu=68020 --with-resolution=640x200x4 --enable-debug=none --with-serial-debug=yes $configopts
-=======
             "../$srcdir/configure" --target=amiga-m68k --with-cpu=68020-40 --with-fpu=68020 --with-resolution=640x200x4 --enable-debug=messages --with-serial-debug=yes $configopts
->>>>>>> parent of a43adf1258... Loads of fixes to make AROS bootable and somewhat usable on NTSC and PAL systems.  Some debug helpers for vamp.  Promote bootscreen and workbench to 16 colors until we figure out why 1-3 bpp don't work
             ;;
 
         0 ) exit 0

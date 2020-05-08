@@ -75,7 +75,7 @@ AROS_UFH2(struct InputEvent *, LowLevelInputHandler,
 BOOL LowLevelInputInit(LIBBASETYPEPTR LowLevelBase)
 {
     D(bug("[lowlevel] %s()\n", __func__);)
-    
+
     NEWLIST(&LowLevelBase->ll_KBInterrupts);
     LowLevelBase->ll_LastKey = 0xFF;
 
@@ -104,29 +104,28 @@ BOOL LowLevelInputInit(LIBBASETYPEPTR LowLevelBase)
                     LowLevelBase->ll_InputHandler->is_Node.ln_Name  = "lowlevel input handler";
 
                     LowLevelBase->ll_InputIO->io_Data = (APTR)LowLevelBase->ll_InputHandler;
-                    ALIVE LowLevelBase->ll_InputIO->io_Command = IND_ADDHANDLER;
-                    ALIVE DoIO((struct IORequest *)LowLevelBase->ll_InputIO);
-                    ALIVE
+                    LowLevelBase->ll_InputIO->io_Command = IND_ADDHANDLER;
+                    DoIO((struct IORequest *)LowLevelBase->ll_InputIO);
                 }
             }
             else
             {
                 D(bug("[lowlevel] %s: failed to open 'input.device'\n", __func__);)
-                ALIVE return FALSE;
+                return FALSE;
             }
         }
         else
         {
             D(bug("[lowlevel] %s: failed to create input iorequest\n", __func__);)
-            ALIVE return FALSE;
+            return FALSE;
         }
     }
     else
     {
         D(bug("[lowlevel] %s: failed to create input msgport\n", __func__);)
-        ALIVE return FALSE;
+        return FALSE;
     }
-    ALIVE return TRUE;
+    return TRUE;
 }
 
 VOID LowLevelInputClose(LIBBASETYPEPTR LowLevelBase)
@@ -205,8 +204,10 @@ static int Init(LIBBASETYPEPTR LowLevelBase)
         bug("[lowlevel] %s()\n", __func__);
         bug("[lowlevel] %s: LowLevelBase @ 0x%p\n", __func__, LowLevelBase);
     )
+
     NEWLIST(&LowLevelBase->ll_KBInterrupts);
     LowLevelBase->ll_LastKey = 0xFF;
+
     if (LowLevelInputInit(LowLevelBase))
     {
         if (!LowLevelTimerInit(LowLevelBase))
@@ -214,6 +215,7 @@ static int Init(LIBBASETYPEPTR LowLevelBase)
             D(bug("[lowlevel] %s: failed to initialise timer device\n", __func__);)
 
             LowLevelInputClose(LowLevelBase);
+
             return FALSE;
         }
     }
@@ -222,9 +224,11 @@ static int Init(LIBBASETYPEPTR LowLevelBase)
         D(bug("[lowlevel] %s: failed to initialise input device\n", __func__);)
         return FALSE;
     }
+
     InitSemaphore(&LowLevelBase->ll_Lock);
     LowLevelBase->ll_VBlank.is_Data = NULL;
     LowLevelBase->ll_VBlank.is_Code = NULL;
+
     return TRUE;
 }
 

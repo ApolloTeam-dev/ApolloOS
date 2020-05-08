@@ -5,7 +5,7 @@
     Desc: Start an IO request and wait until it completes.
     Lang: english
 */
-#define DEBUG 1
+#define DEBUG 0
 #include <exec/execbase.h>
 #include <exec/io.h>
 #include <aros/libcall.h>

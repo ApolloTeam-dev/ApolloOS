@@ -75,7 +75,7 @@ static int GM_UNIQUENAME(Init)(LIBBASETYPEPTR LIBBASE)
 #endif
     /* If no frequency is set, assume 50Hz */
     if (SysBase->VBlankFrequency == 0)
-        SysBase->VBlankFrequency = 60;
+        SysBase->VBlankFrequency = (GfxBase->DisplayFlags & PAL ? 50 : 60);
 
     /*
      * Here we do no checks, we simply assume we have working VBlank interrupt,

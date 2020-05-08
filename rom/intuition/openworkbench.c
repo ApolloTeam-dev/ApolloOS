@@ -4,7 +4,7 @@
     $Id$
 */
 
-#define DEBUG 1
+#define DEBUG 0
 #include <aros/config.h>
 #include <intuition/intuition.h>
 #include <proto/intuition.h>
