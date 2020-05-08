@@ -653,19 +653,19 @@ static void SAGASD_Detect(struct Library *SysBase, struct SAGASDUnit *sdu)
             /* Re-run the identify */
             sderr = sdcmd_detect(&sdu->sdu_SDCmd);
 
-            //Forbid();
+            Forbid();
             /* Make the drive present. */
             sdu->sdu_Present = TRUE;
             sdu->sdu_ChangeNum++;
             sdu->sdu_Valid = (sderr == 0) ? TRUE : FALSE;
             debug("========= sdu_Valid: %s", sdu->sdu_Valid ? "TRUE" : "FALSE");
             debug("========= Blocks: %ld", sdu->sdu_SDCmd.info.blocks);
-            //Permit();
+            Permit();
         } else {
-            //Forbid();
+            Forbid();
             sdu->sdu_Present = FALSE;
             sdu->sdu_Valid = FALSE;
-            //Permit();
+            Permit();
         }
     }
 }
@@ -841,9 +841,9 @@ AROS_LH1(LONG, AbortIO,
 
     debug("");
 
-    //Forbid();
+    Forbid();
     io->io_Error = IOERR_ABORTED;
-    //Permit();
+    Permit();
 
     return 0;
 
@@ -857,7 +857,7 @@ static void SAGASD_BootNode(
         ULONG unit)
 {
     struct SAGASDUnit *sdu = &SAGASDBase->sd_Unit[unit];
-    TEXT dosdevname[4] = "DS0";
+    TEXT dosdevname[4] = "SD0";
     IPTR pp[4 + DE_BOOTBLOCKS + 1] = {};
     struct DeviceNode *devnode;
 
