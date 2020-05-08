@@ -46,9 +46,9 @@
 #define warn(fmt,args...)       sdcmd_log(sd, SDLOG_WARN, fmt ,##args)
 #define error(fmt,args...)      sdcmd_log(sd, SDLOG_ERROR, fmt ,##args)
 
-#define SDCMD_CLKDIV_SLOW       0xff
-#define SDCMD_CLKDIV_FAST       0x01
-#define SDCMD_CLKDIV_FASTER     0x00
+#define SDCMD_CLKDIV_SLOW       0xFF
+#define SDCMD_CLKDIV_FAST       0x02
+#define SDCMD_CLKDIV_FASTER     0x01
 
 static UBYTE crc7(UBYTE crc, UBYTE byte)
 {

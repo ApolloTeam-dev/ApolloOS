@@ -969,9 +969,7 @@ static int GM_UNIQUENAME(init)(struct SAGASDBase * SAGASDBase)
 
     debug("");
     UWORD *SAGA_GFX_VIDMODE = (UWORD*) 0xDFF1F4;
-    *SAGA_GFX_VIDMODE = 0x0000;      // Touch the cow, do it now
     asm ( "tst.b 0xbfe001\r\n" );    // Wait a moment, then...
-    *SAGA_GFX_VIDMODE = 0x8000;      // hopefully turn off vamp video until the actual driver loads
 
     ExpansionBase = TaggedOpenLibrary(TAGGEDOPEN_EXPANSION);
     if (!ExpansionBase)

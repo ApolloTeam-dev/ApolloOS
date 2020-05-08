@@ -123,17 +123,24 @@ static void BestModeIDForMonitor(struct monitor_driverdata *mdd, struct MatchDat
 	     && gm_height      >= args->desired_height)
 	{
 	    /* Check if this mode matches closer than the one we already found */
-	    if ((dims.MaxDepth <= args->found_depth) &&
-	        (gm_width <= args->found_width) && (gm_height <= args->found_height) &&
-	    // (Alynna): If NTSC system, disclude any modes between 242 and 399 lines (only PAL valid)
-		((GfxBase->DisplayFlags & NTSC) && (gm_height < 242 || gm_height > 399) &&
-	    //  also prevent NTSC system from getting an NTSC interlace mode when PAL mode requested
-		((args->desired_height < 242) || (args->desired_height > 399))))
+	    if ((dims.MaxDepth <= args->found_depth) && (gm_width <= args->found_width) && (gm_height <= args->found_height))
 	    {
+		// (Alynna): If NTSC mode, disclude any modes between 242 and 399 lines (only PAL valid)
+		//  also prevent NTSC system from getting an NTSC interlace mode when PAL mode requested
+		if ((GfxBase->DisplayFlags & NTSC) && (gm_height < 242 || gm_height > 399) &&
+		    ((args->desired_height < 242) || (args->desired_height > 399)))
+		{
+		    args->found_id     = modeid;
+		    args->found_depth  = dims.MaxDepth;
+		    args->found_width  = gm_width;
+		    args->found_height = gm_height;
+
+		    D(bug(" Match!\n"));
+		}
 		/* Remember the new mode only if something changed. This prevents unwanted
 		   jumping to another display (several displays may have the same modes,
 		   in this case the last display will be picked up without this check. */
-		if ((dims.MaxDepth < args->found_depth) ||
+		else if ((dims.MaxDepth < args->found_depth) ||
                     (gm_width < args->found_width) || (gm_height < args->found_height))
 		{
 		    args->found_id     = modeid;
