@@ -1081,6 +1081,22 @@ static const char THIS_FILE[] = __FILE__;
         }
         #endif
 
+	/* Alynna: Handle NTSC/PAL modes.   This is apparently totally forgotten by AROS here. */
+        modetags[0].ti_Data = 4;
+	if (modeid == INVALID_ID) { // PAL first
+	    modetags[1].ti_Data = 640;
+            modetags[2].ti_Data = 256;
+            modetags[3].ti_Data = 640;
+            modetags[4].ti_Data = 256;
+	}
+	if (modeid == INVALID_ID) { // NTSC next
+	    modetags[1].ti_Data = 640;
+            modetags[2].ti_Data = 200;
+            modetags[3].ti_Data = 640;
+            modetags[4].ti_Data = 200;
+	}
+        modeid = BestModeIDA(modetags);
+
         if (INVALID_ID == modeid)
         {
             // wtf? no monitors??

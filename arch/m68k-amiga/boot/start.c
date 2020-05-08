@@ -6,7 +6,9 @@
     Lang: english
  */
 
-#define DEBUG 0
+#define SLOMO 0
+#define DEBUG 1
+#define SDEBUG 1
 #include <aros/debug.h>
 
 #include <aros/kernel.h>
@@ -678,7 +680,7 @@ void exec_boot(ULONG *membanks, ULONG *cpupcr)
 #if AROS_SERIAL_DEBUG
     DebugInit();
 #endif
-
+    ULONG *queue; queue=(ULONG *)0xC7FF00; *queue=0; // God, please don't kill us
     trap = (APTR *)(NULL);
 
     /* Set all the exceptions to the Early_Exception */
@@ -920,7 +922,11 @@ void exec_boot(ULONG *membanks, ULONG *cpupcr)
     trap[8] = (SysBase->AttnFlags & AFF_68010) ? Exec_Supervisor_Trap : Exec_Supervisor_Trap_00;
 
     /* SysBase is complete, now we can enable instruction caches safely. */
+#if SLOMO==1
+    CacheControl(0, CACRF_EnableI);
+#else
     CacheControl(CACRF_EnableI, CACRF_EnableI);
+#endif
     CacheClearU();
 
     oldmem = AvailMem(MEMF_FAST);

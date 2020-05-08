@@ -158,10 +158,6 @@ AROS_UFH3(IPTR, signal_hook,
 
         D(
             bug("[Exec] Signal: Signaling '%s', state = %08x\n", task->tc_Node.ln_Name, task->tc_State);
-            if (((struct KernelBase *)KernelBase)->kb_ICFlags & KERNBASEF_IRQPROCESSING)
-                bug("[Exec] Signal: (Called from Interrupt)\n");
-            else
-                bug("[Exec] Signal: (Called from '%s')\n", thisTask->tc_Node.ln_Name);
         )
 
         Disable();
@@ -221,7 +217,6 @@ AROS_UFH3(IPTR, signal_hook,
         (task->tc_SigRecvd & (task->tc_SigWait | task->tc_SigExcept)))
         {
             D(bug("[Exec] Signal: Signaling 'waiting' Task\n");)
-
             /* Yes. Move it to the ready list. */
 #if defined(__AROSEXEC_SMP__)
             krnSysCallReschedTask(task, TS_READY);

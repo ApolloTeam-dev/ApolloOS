@@ -8,6 +8,8 @@
 #ifndef __LOWLEVEL_INTERN_H__
 #define __LOWLEVEL_INTERN_H__
 
+//#define DEBUG 1
+
 #include <proto/exec.h>
 
 #include <exec/types.h>
