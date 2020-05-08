@@ -13,10 +13,10 @@
 # This one modded for vampire use
 
 curdir="`pwd`"
-srcdir="aros-src-vampv2"
+srcdir="aros-src-vamp"
 portsdir="$HOME/aros-ports-src"
-makeopts="-j36 -s" # maybe change this on lame systems
-configopts="--enable-ccache --with-portssources=$portsdir --with-optimization=-Os  --with-aros-prefs=classic"
+makeopts="-j24 -s" # maybe change this on lame systems
+configopts="--enable-ccache --with-portssources=$portsdir --with-optimization=-Os  --with-aros-prefs=classic --with-theme=AmigaOS3.x"
 
 USER_CFLAGS=""
 
@@ -292,28 +292,28 @@ do
             mkdir -p "$portsdir"
             mkdir -p aros-amiga-a68080
             cd aros-amiga-a68080
-            "../$srcdir/configure" --target=amiga-m68k --with-cpu=68020-40 --with-fpu=68020 --with-resolution=640x256x4 $configopts
+            "../$srcdir/configure" --target=amiga-m68k --with-cpu=68020-40 --with-fpu=68040 --with-resolution=640x256x4 $configopts
             ;;
         2 ) echo -e "\nConfiguring amiga-m68k V1 (PAL, DEBUG)...\n"
             mkdir -p aros-amiga-a68080
             cd aros-amiga-a68080
-            "../$srcdir/configure" --target=amiga-m68k --with-cpu=68020-40 --with-fpu=68020 --with-resolution=640x256x4 --enable-debug=all --with-serial-debug=yes $configopts
+            "../$srcdir/configure" --target=amiga-m68k --with-cpu=68020-40 --with-fpu=68040 --with-resolution=640x256x4 --enable-debug=all --with-serial-debug=yes $configopts
             ;;
         3 ) echo -e "\nConfiguring amiga-m68k V1 (NTSC)...\n"
             mkdir -p aros-amiga-a68080
             cd aros-amiga-a68080
-            "../$srcdir/configure" --target=amiga-m68k --with-cpu=68020-40 --with-fpu=68020 --with-resolution=640x200x4 $configopts
+            "../$srcdir/configure" --target=amiga-m68k --with-cpu=68020-40 --with-fpu=68040 --with-resolution=640x200x4 $configopts
             ;;
         4 ) echo -e "\nConfiguring amiga-m68k V1 (NTSC, DEBUG)...\n"
             mkdir -p aros-amiga-a68080
             cd aros-amiga-a68080
-            "../$srcdir/configure" --target=amiga-m68k --with-cpu=68020-40 --with-fpu=68020 --with-resolution=640x200x4 --enable-debug=all --with-serial-debug=yes $configopts
+            "../$srcdir/configure" --target=amiga-m68k --with-cpu=68020-40 --with-fpu=68040 --with-resolution=640x200x4 --enable-debug=all --with-serial-debug=yes $configopts
             ;;
 
         5 ) echo -e "\nConfiguring amiga-m68k V1 (NTSC, KPRINTF)...\n"
             mkdir -p aros-amiga-a68080
             cd aros-amiga-a68080
-            "../$srcdir/configure" --target=amiga-m68k --with-cpu=68020-40 --with-fpu=68020 --with-resolution=640x200x4 --enable-debug=messages --with-serial-debug=yes $configopts
+            "../$srcdir/configure" --target=amiga-m68k --with-cpu=68020-40 --with-fpu=68040 --with-resolution=640x200x4 --enable-debug=messages --with-serial-debug=yes $configopts
             ;;
 
         0 ) exit 0
