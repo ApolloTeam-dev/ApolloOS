@@ -13,7 +13,7 @@
 # This one modded for vampire use
 
 curdir="`pwd`"
-srcdir="aros-src-vamp"
+srcdir="aros-src-vampv2"
 portsdir="$HOME/aros-ports-src"
 makeopts="-j36 -s" # maybe change this on lame systems
 configopts="--enable-ccache --with-portssources=$portsdir --with-optimization=-Os  --with-aros-prefs=classic"
