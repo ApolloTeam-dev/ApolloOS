@@ -2,7 +2,7 @@
 #define SAGAGFX_BITMAP_H
 
 /*
-    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: SAGAGfx header.
@@ -10,7 +10,7 @@
 */
 
 #include "sagagfx_hidd.h"
-#include "sagagfx_hw_v2.h"
+#include "sagagfx_hw.h"
 
 #include <hidd/gfx.h>
 

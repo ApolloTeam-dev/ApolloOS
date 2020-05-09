@@ -1,11 +1,13 @@
 /*
-    Copyright Â© 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
      $Id$
 
-    Desc: SAGA Gfx Hidd for V2 AROS
+    Desc: SAGA Gfx Hidd for AROS (V2)
     Lang: english
 */
+
 #define DEBUG 0
+
 #include <aros/debug.h>
 
 #include <exec/exec.h>
@@ -13,16 +15,12 @@
 #include <proto/exec.h>
 #include <proto/input.h>
 
-#include "sagagfx_hw_v2.h"
+#include "sagagfx_hw.h"
 
-#define SAGA_PLL_PAL       0
-#define SAGA_PLL_NTSC      1
-
-
-static struct saga_pll_data {
+static struct saga_pll_v2_data {
     ULONG freq[2];
     UBYTE data[18];
-} saga_pll[] = {
+} saga_pll_v2[] = {
     { .freq = { 20267942, 20454542 },
       .data = { 0x09,0xC0,0x60,0x00,0x01,0x90,0xC8,0x25,0x11,0x02,0x40,0xE0,0x00,0x08,0x00,0x02,0x00,0x00 } },
     { .freq = { 20288210, 20474997 },
@@ -1103,26 +1101,26 @@ static struct saga_pll_data {
       .data = { 0x08,0x40,0x60,0x00,0x02,0x79,0x3C,0x11,0x07,0x01,0x40,0x60,0x00,0x08,0x00,0x02,0x00,0x00 } },
 };
 
-#define PLL_CLOCKS (sizeof(saga_pll)/sizeof(saga_pll[0]))
+#define PLL_V2_CLOCKS (sizeof(saga_pll_v2)/sizeof(saga_pll_v2[0]))
 
-int saga_pll_clock_count(void)
+int saga_pll_v2_clock_count(void)
 {
-    return PLL_CLOCKS;
+    return PLL_V2_CLOCKS;
 }
 
-int saga_pll_clock_freq(int id, BOOL is_ntsc, ULONG *freq)
+int saga_pll_v2_clock_freq(int id, BOOL is_ntsc, ULONG *freq)
 {
     int type = is_ntsc ? SAGA_PLL_NTSC : SAGA_PLL_PAL;
 
-    if (id < 0 || id >= PLL_CLOCKS)
+    if (id < 0 || id >= PLL_V2_CLOCKS)
         return -1;
 
-    *freq = saga_pll[id].freq[type];
+    *freq = saga_pll_v2[id].freq[type];
 
     return 0;
 }
 
-int saga_pll_clock_lookup(BOOL is_ntsc, ULONG *freqp)
+int saga_pll_v2_clock_lookup(BOOL is_ntsc, ULONG *freqp)
 {
     int type = is_ntsc ? SAGA_PLL_NTSC : SAGA_PLL_PAL;
     int i;
@@ -1134,19 +1132,19 @@ int saga_pll_clock_lookup(BOOL is_ntsc, ULONG *freqp)
     freq = *freqp;
 
     /* Find the closest clock */
-    for (i = 0; i < PLL_CLOCKS-1; i++) {
+    for (i = 0; i < PLL_V2_CLOCKS-1; i++) {
         ULONG split;
 
-        if (freq <= saga_pll[i].freq[type])
+        if (freq <= saga_pll_v2[i].freq[type])
             break;
 
-        split = (saga_pll[i].freq[type] + saga_pll[i+1].freq[type])/2;
+        split = (saga_pll_v2[i].freq[type] + saga_pll_v2[i+1].freq[type])/2;
 
         if (freq < split)
             break;
     }
 
-    *freqp = saga_pll[i].freq[type];
+    *freqp = saga_pll_v2[i].freq[type];
 
     /* If we didn't find a match, we will return the largest
      * valid clock.
@@ -1154,15 +1152,15 @@ int saga_pll_clock_lookup(BOOL is_ntsc, ULONG *freqp)
     return i;
 }
 
-int saga_pll_clock_program(int clock)
+int saga_pll_v2_clock_program(int clock)
 {
     int i;
 
-    if (clock < 0 || clock >= PLL_CLOCKS)
+    if (clock < 0 || clock >= PLL_V2_CLOCKS)
          return -1;
 
     for (i = 0; i < 18; i++) {
-        UBYTE byte = saga_pll[clock].data[17 - i];
+        UBYTE byte = saga_pll_v2[clock].data[17 - i];
         int j;
 
         WRITE32(SAGA_VIDEO_PLLW, SAGA_VIDEO_PLLW_MAGIC |
@@ -1170,11 +1168,11 @@ int saga_pll_clock_program(int clock)
                                  SAGA_VIDEO_PLLW_CLK(0));
 
         for (j = 0; j < 8; j++, byte >>= 1) {
-        	WRITE32(SAGA_VIDEO_PLLW, SAGA_VIDEO_PLLW_MAGIC |
+            WRITE32(SAGA_VIDEO_PLLW, SAGA_VIDEO_PLLW_MAGIC |
                                      SAGA_VIDEO_PLLW_MOSI(byte & 1) |
                                      SAGA_VIDEO_PLLW_CS(0) |
                                      SAGA_VIDEO_PLLW_CLK(0));
-        	WRITE32(SAGA_VIDEO_PLLW, SAGA_VIDEO_PLLW_MAGIC |
+            WRITE32(SAGA_VIDEO_PLLW, SAGA_VIDEO_PLLW_MAGIC |
                                      SAGA_VIDEO_PLLW_MOSI(byte & 1) |
                                      SAGA_VIDEO_PLLW_CS(0) |
                                      SAGA_VIDEO_PLLW_CLK(1));
@@ -1195,12 +1193,13 @@ int saga_pll_clock_program(int clock)
                              SAGA_VIDEO_PLLW_CS(1) |
                              SAGA_VIDEO_PLLW_CLK(1) |
                              SAGA_VIDEO_PLLW_UPDATE(1));
+	
     /* Send 128 clock cycles to allow the PLL to update */
     for (i = 0; i < 128; i++) {
-    	WRITE32(SAGA_VIDEO_PLLW, SAGA_VIDEO_PLLW_MAGIC |
+        WRITE32(SAGA_VIDEO_PLLW, SAGA_VIDEO_PLLW_MAGIC |
                                  SAGA_VIDEO_PLLW_CS(1) |
                                  SAGA_VIDEO_PLLW_CLK(0));
-    	WRITE32(SAGA_VIDEO_PLLW, SAGA_VIDEO_PLLW_MAGIC |
+        WRITE32(SAGA_VIDEO_PLLW, SAGA_VIDEO_PLLW_MAGIC |
                                  SAGA_VIDEO_PLLW_CS(1) |
                                  SAGA_VIDEO_PLLW_CLK(1));
     }
@@ -1208,58 +1207,20 @@ int saga_pll_clock_program(int clock)
     return 0;
 }
 
-void SAGA_SetPLL(ULONG clock)
+void SAGA_SetPLL_V2(ULONG clock)
 {
     ULONG clk = clock;
     int idx = 0;
-
-    D(bug("[SAGA] SAGA_SetPLL(%d)\n", clock));
-    idx = saga_pll_clock_lookup(FALSE, &clk);
-    D(bug("[SAGA] Clock %d found at index %d\n", clk, idx));
-    D(bug("SAGA_SetPLL(%d) -> %08x\n", clock, pll));
+	
+    D(bug("[SAGA] SAGA_SetPLL_V2(%d)\n", clock));
+	
+	idx = saga_pll_v2_clock_lookup(FALSE, &clk);
+	D(bug("[SAGA] Clock %d found at index %d\n", clk, idx));
+	
+	saga_pll_v2_clock_program(idx);
+	D(bug("[SAGA] Clock modified\n"));
 }
 
-void SAGA_LoadCLUT(ULONG *palette, UWORD startIndex, UWORD count)
-{
-    if (palette)
-    {
-        if(startIndex > 255)
-            return;
 
-        if(startIndex + count > 256)
-            count = 256 - startIndex;
 
-        for (int i=0; i < count; i++)
-        {
-            WRITE32(SAGA_VIDEO_CLUT(startIndex + i), palette[startIndex + i]);
-        }
-    }
-}
-
-/* Attempts to detect SAGA. */
-BOOL SAGA_Init()
-{
-    struct IORequest io;
-
-    /* Do we have V4 detected? */
-    if ((READ16(VREG_BOARD) >> 8) == 5)
-    {
-        // TODO: Accepts all Vampire V2 models
-		return FALSE;
-    }
-
-    /* If SHIFT key was pressed during boot, do not initialize SAGA Gfx hidd */
-    if (0 == OpenDevice("input.device", 0, &io, 0))
-    {
-        struct Library *InputBase = (struct Library *)io.io_Device;
-        UWORD qual = PeekQualifier();
-        CloseDevice(&io);
-
-        if (qual & (IEQUALIFIER_LSHIFT | IEQUALIFIER_RSHIFT))
-        {
-            return FALSE;
-        }
-    }
-
-    return TRUE;
-}
+/* END OF FILE */

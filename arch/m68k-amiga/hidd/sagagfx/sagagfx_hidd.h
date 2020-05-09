@@ -41,8 +41,8 @@ struct SAGAGfx_staticdata
 
     WORD            cursorX;
     WORD            cursorY;
-    WORD			hotX;
-    WORD			hotY;
+    WORD            hotX;
+    WORD            hotY;
     APTR            mempool;
 
     BOOL            useHWSprite;

@@ -31,7 +31,7 @@
 
 #include "sagagfx_hidd.h"
 #include "sagagfx_bitmap.h"
-#include "sagagfx_hw_v2.h"
+#include "sagagfx_hw.h"
 
 #define MAKE_SYNC(name,clock,hdisp,hstart,hend,htotal,vdisp,vstart,vend,vtotal,flags,descr)   \
     struct TagItem sync_ ## name[]={            \
@@ -286,7 +286,7 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
 
     /*
         The instance of driver object is created by the wrapper from
-        DEVS:Monitors through a call to AddDisplayDriver(). The wrapper
+        DEVS:Monitory through a call to AddDisplayDriver(). The wrapper
         has set the current directory properly and we can extract its name.
 
         We use this knowledge to eventually open the corresponding Icon and
@@ -429,8 +429,8 @@ BOOL METHOD(SAGAGfx, Hidd_Gfx, SetCursorPos)
 
         if (XSD(cl)->cursor_visible)
         {
-            x += XSD(cl)->hotX;
-            y += XSD(cl)->hotY;
+        	x += XSD(cl)->hotX;
+        	y += XSD(cl)->hotY;
             WRITE16(SAGA_VIDEO_SPRITEX, x);
             WRITE16(SAGA_VIDEO_SPRITEY, y);
         }
@@ -694,7 +694,7 @@ OOP_Object *METHOD(SAGAGfx, Hidd_Gfx, Show)
         WRITE16(SAGA_VIDEO_MODE, bmdata->hwregs.video_mode);
 
         {
-            IPTR ptr = 0xdff800;
+            IPTR ptr = SAGA_VIDEO_SPRITEBPL;
 
             for (int y = 0; y < 16; y++)
             {
@@ -724,7 +724,7 @@ OOP_Object *METHOD(SAGAGfx, Hidd_Gfx, Show)
             }
 
             for (int i=1; i < 4; i++) {
-                WRITE16(0xdff3a0 + (i << 1), XSD(cl)->cursor_pal[i]);
+                WRITE16(SAGA_VIDEO_SPRITECOL0 + (i << 1), XSD(cl)->cursor_pal[i]);
             }
 
             if (XSD(cl)->cursor_visible)
