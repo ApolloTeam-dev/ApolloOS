@@ -5,7 +5,7 @@
     Desc: SAGA Gfx Hidd for V2 AROS
     Lang: english
 */
-#define DEBUG 1
+#define DEBUG 0
 #include <aros/debug.h>
 
 #include <exec/exec.h>
@@ -17,6 +17,7 @@
 
 #define SAGA_PLL_PAL       0
 #define SAGA_PLL_NTSC      1
+
 
 static struct saga_pll_data {
     ULONG freq[2];

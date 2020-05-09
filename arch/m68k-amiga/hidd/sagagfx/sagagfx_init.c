@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: SAGA Gfx Hidd for V4 AROS
@@ -24,7 +24,7 @@
 #include <aros/symbolsets.h>
 
 #include "sagagfx_hidd.h"
-#include "sagagfx_hw.h"
+#include "sagagfx_hw_v2.h"
 
 #include LC_LIBDEFS_FILE
 
