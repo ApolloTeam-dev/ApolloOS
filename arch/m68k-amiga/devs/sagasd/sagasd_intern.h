@@ -14,8 +14,10 @@
 #include "sdcmd.h"
 
 #define SAGASD_UNITS    1       /* Only one chip select for now */
-
 #define SDU_STACK_SIZE  (4096 / sizeof(ULONG))
+#define SAGASD_VERSION 3
+#define SAGASD_REVISION 1
+#define SAGASD_VSTRING "sagasd.device v#VERSION##.#REVISION"
 
 struct SAGASDBase {
     struct Device       sd_Device;

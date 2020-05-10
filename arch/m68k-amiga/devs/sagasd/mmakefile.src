@@ -27,8 +27,8 @@ include $(SRCDIR)/config/aros.cfg
 USER_INCLUDES := -I$(SRCDIR)/$(CURDIR)/include \
                  -I$(SRCDIR)/$(CURDIR)/../include
 
-USER_CFLAGS := -D__NOLIBBASE__ -O2 -DDEBUG=0 -DSIMULATE=0 \
-               -DADATE="\"$(shell date "+%d.%m.%Y")\""
+USER_CFLAGS := -D__NOLIBBASE__ -Os -DDEBUG=0 -DSIMULATE=0 \
+               -DADATE="\"$(shell date "+%d.%m.%Y")\"" -fdata-sections -ffunction-sections -fno-zero-initialized-in-bss -fno-common
 
 USER_LDFLAGS := -static
 

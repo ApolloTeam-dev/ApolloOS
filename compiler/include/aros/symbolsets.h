@@ -41,6 +41,8 @@ const void * const SETNAME(set)[] __attribute__((weak))={0,0};
 #define ADD2SET(symbol, _set, pri)\
 	static const void * const __aros_set_##_set##_##symbol __attribute__((__section__(".aros.set." #_set "." #pri))) __used = (void *)&symbol;
 
+#define SET_IS(symbol, _set) __aros_set_##_set##_##symbol
+
 #define SETELEM(symbol, _set)                        \
 ({                                                   \
     extern const void * const __aros_set_##_set##_##symbol; \

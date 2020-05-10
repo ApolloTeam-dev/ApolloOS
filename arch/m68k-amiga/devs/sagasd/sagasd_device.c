@@ -51,7 +51,7 @@
 
 #include "common.h"
 
-#include <saga/sd.h>
+#include "sd.h"
 
 #include LC_LIBDEFS_FILE
 
@@ -70,6 +70,8 @@
 #define debug(x,args...) do { } while (0)
 #endif
 
+extern const char terminator;
+
 static VOID SAGASD_log(struct sdcmd *sd, int level, const char *format, ...)
 {
     va_list args;
@@ -87,6 +89,8 @@ static VOID SAGASD_log(struct sdcmd *sd, int level, const char *format, ...)
  */
 static LONG SAGASD_ReadWrite(struct IORequest *io, UQUAD off64, BOOL is_write)
 {
+    struct SAGASDBase *sd = (struct SAGASDBase *)io->io_Device;
+    struct Library *SysBase = sd->sd_ExecBase;
     struct IOStdReq *iostd = (struct IOStdReq *)io;
     struct IOExtTD *iotd = (struct IOExtTD *)io;
     struct SAGASDUnit *sdu = (struct SAGASDUnit *)io->io_Unit;
@@ -166,7 +170,7 @@ static LONG SAGASD_ReadWrite(struct IORequest *io, UQUAD off64, BOOL is_write)
 static LONG SAGASD_PerformSCSI(struct IORequest *io)
 {
     struct SAGASDBase *sd = (struct SAGASDBase *)io->io_Device;
-    //struct Library *SysBase = sd->sd_ExecBase;
+    struct Library *SysBase = sd->sd_ExecBase;
     struct SAGASDUnit *sdu = (struct SAGASDUnit *)io->io_Unit;
     struct IOStdReq *iostd = (struct IOStdReq *)io;
     struct SCSICmd *scsi = iostd->io_Data;
@@ -856,6 +860,7 @@ static void SAGASD_BootNode(
         struct Library *ExpansionBase,
         ULONG unit)
 {
+    struct Library *SysBase = SAGASDBase->sd_ExecBase;
     struct SAGASDUnit *sdu = &SAGASDBase->sd_Unit[unit];
     TEXT dosdevname[4] = "SD0";
     IPTR pp[4 + DE_BOOTBLOCKS + 1] = {};
@@ -961,14 +966,14 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
     debug("unit=%d enabled=%d", id, SAGASDBase->sd_Unit[id].sdu_Enabled ? 1 : 0);
 }
 
+// Direct init routine
 static int GM_UNIQUENAME(init)(struct SAGASDBase * SAGASDBase)
 {
+
     struct Library *SysBase = SAGASDBase->sd_ExecBase;
     struct Library *ExpansionBase;
     ULONG i;
 
-    debug("");
-    UWORD *SAGA_GFX_VIDMODE = (UWORD*) 0xDFF1F4;
     asm ( "tst.b 0xbfe001\r\n" );    // Wait a moment, then...
 
     ExpansionBase = TaggedOpenLibrary(TAGGEDOPEN_EXPANSION);
@@ -1014,6 +1019,7 @@ static int GM_UNIQUENAME(open)(struct SAGASDBase * SAGASDBase,
                                struct IOExtTD *iotd, ULONG unitnum,
                                ULONG flags)
 {
+    struct Library *SysBase = SAGASDBase->sd_ExecBase;
     iotd->iotd_Req.io_Error = IOERR_OPENFAIL;
 
     /* Is the requested unitNumber valid? */
@@ -1040,6 +1046,7 @@ static int GM_UNIQUENAME(open)(struct SAGASDBase * SAGASDBase,
 static int GM_UNIQUENAME(close)(struct SAGASDBase *SAGASDBase,
                                 struct IOExtTD *iotd)
 {
+    struct Library *SysBase = SAGASDBase->sd_ExecBase;
     iotd->iotd_Req.io_Unit->unit_OpenCnt --;
 
     return TRUE;
