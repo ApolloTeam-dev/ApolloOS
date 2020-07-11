@@ -693,6 +693,7 @@ OOP_Object *METHOD(SAGAGfx, Hidd_Gfx, Show)
 
         WRITE16(SAGA_VIDEO_MODE, bmdata->hwregs.video_mode);
 
+        WRITE16(0xdff100, 0x0280);
         {
             IPTR ptr = SAGA_VIDEO_SPRITEBPL;
 
