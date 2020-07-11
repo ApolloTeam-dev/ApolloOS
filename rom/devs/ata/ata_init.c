@@ -138,7 +138,7 @@ static int ATA_init(struct ataBase *ATABase)
 {
     struct BootLoaderBase	*BootLoaderBase;
 
-    D(bug("[ATA--] %s: ata.device Initialization\n", __PRETTY_FUNCTION__));
+    D(bug("[ATA--] %s: ata.device Initialization\n", __func__));
 
     /* Prepare the list of detected controllers */
     NEWLIST(&ATABase->ata_Controllers);
@@ -154,7 +154,7 @@ static int ATA_init(struct ataBase *ATABase)
      * obtain kernel parameters
      */
     BootLoaderBase = OpenResource("bootloader.resource");
-    D(bug("[ATA--] %s: BootloaderBase = %p\n", __PRETTY_FUNCTION__, BootLoaderBase));
+    D(bug("[ATA--] %s: BootloaderBase = %p\n", __func__, BootLoaderBase));
     if (BootLoaderBase != NULL)
     {
         struct List *list;
@@ -171,27 +171,27 @@ static int ATA_init(struct ataBase *ATABase)
 
                     if (strstr(CmdLine, "disable"))
                     {
-                        D(bug("[ATA  ] %s: Disabling ATA support\n", __PRETTY_FUNCTION__));
+                        D(bug("[ATA  ] %s: Disabling ATA support\n", __func__));
                         return FALSE;
                     }
                     if (strstr(CmdLine, "32bit"))
                     {
-                        D(bug("[ATA  ] %s: Using 32-bit IO transfers\n", __PRETTY_FUNCTION__));
+                        D(bug("[ATA  ] %s: Using 32-bit IO transfers\n", __func__));
                         ATABase->ata_32bit = TRUE;
                     }
                     if (strstr(CmdLine, "nomulti"))
                     {
-                        D(bug("[ATA  ] %s: Disabled multisector transfers\n", __PRETTY_FUNCTION__));
+                        D(bug("[ATA  ] %s: Disabled multisector transfers\n", __func__));
                         ATABase->ata_NoMulti = TRUE;
                     }
                     if (strstr(CmdLine, "nodma"))
                     {
-                        D(bug("[ATA  ] %s: Disabled DMA transfers\n", __PRETTY_FUNCTION__));
+                        D(bug("[ATA  ] %s: Disabled DMA transfers\n", __func__));
                         ATABase->ata_NoDMA = TRUE;
                     }
                     if (strstr(CmdLine, "poll"))
                     {
-                        D(bug("[ATA  ] %s: Using polling to detect end of busy state\n", __PRETTY_FUNCTION__));
+                        D(bug("[ATA  ] %s: Using polling to detect end of busy state\n", __func__));
                         ATABase->ata_Poll = TRUE;
                     }
                 }
@@ -202,7 +202,7 @@ static int ATA_init(struct ataBase *ATABase)
     ATABase->ata_UtilityBase = TaggedOpenLibrary(TAGGEDOPEN_UTILITY);
     if (!ATABase->ata_UtilityBase)
     {
-        bug("[ATA--] %s: Failed to open utility.library v36\n", __PRETTY_FUNCTION__);
+        bug("[ATA--] %s: Failed to open utility.library v36\n", __func__);
         return FALSE;
     }
     /*
@@ -212,16 +212,16 @@ static int ATA_init(struct ataBase *ATABase)
     ATABase->ata_MemPool = CreatePool(MEMF_CLEAR | MEMF_PUBLIC | MEMF_SEM_PROTECTED , 8192, 4096);
     if (ATABase->ata_MemPool == NULL)
     {
-        bug("[ATA--] %s: Failed to Allocate MemPool!\n", __PRETTY_FUNCTION__);
+        bug("[ATA--] %s: Failed to Allocate MemPool!\n", __func__);
         return FALSE;
     }
 
-    D(bug("[ATA--] %s: MemPool @ %p\n", __PRETTY_FUNCTION__, ATABase->ata_MemPool));
+    D(bug("[ATA--] %s: MemPool @ %p\n", __func__, ATABase->ata_MemPool));
 
 #if defined(__OOP_NOATTRBASES__)
     if (OOP_ObtainAttrBasesArray(&ATABase->unitAttrBase, attrBaseIDs))
     {
-        bug("[ATA--] %s: Failed to obtain AttrBases!\n", __PRETTY_FUNCTION__);
+        bug("[ATA--] %s: Failed to obtain AttrBases!\n", __func__);
         return FALSE;
     }
     D(
@@ -233,10 +233,10 @@ static int ATA_init(struct ataBase *ATABase)
 #if defined(__OOP_NOMETHODBASES__)
     if (OOP_ObtainMethodBasesArray(&ATABase->hwMethodBase, methBaseIDs))
     {
-        bug("[ATA--] %s: Failed to obtain MethodBases!\n", __PRETTY_FUNCTION__);
-        bug("[ATA--] %s:     %s = %p\n", __PRETTY_FUNCTION__, methBaseIDs[0], ATABase->hwMethodBase);
-        bug("[ATA--] %s:     %s = %p\n", __PRETTY_FUNCTION__, methBaseIDs[1], ATABase->busMethodBase);
-        bug("[ATA--] %s:     %s = %p\n", __PRETTY_FUNCTION__, methBaseIDs[2], ATABase->HiddSCMethodBase);
+        bug("[ATA--] %s: Failed to obtain MethodBases!\n", __func__);
+        bug("[ATA--] %s:     %s = %p\n", __func__, methBaseIDs[0], ATABase->hwMethodBase);
+        bug("[ATA--] %s:     %s = %p\n", __func__, methBaseIDs[1], ATABase->busMethodBase);
+        bug("[ATA--] %s:     %s = %p\n", __func__, methBaseIDs[2], ATABase->HiddSCMethodBase);
 #if defined(__OOP_NOATTRBASES__)
          OOP_ReleaseAttrBasesArray(&ATABase->unitAttrBase, attrBaseIDs);
 #endif
@@ -244,32 +244,11 @@ static int ATA_init(struct ataBase *ATABase)
     }
 #endif
 
-    D(bug("[ATA  ] %s: Base ATA Hidd Class @ 0x%p\n", __PRETTY_FUNCTION__, ATABase->ataClass));
-
-    /* Try to setup daemon task looking for diskchanges */
-    NEWLIST(&ATABase->Daemon_ios);
-    InitSemaphore(&ATABase->DaemonSem);
     InitSemaphore(&ATABase->DetectionSem);
-    ATABase->daemonParent = FindTask(NULL);
-    SetSignal(0, SIGF_SINGLE);
 
-    if (!NewCreateTask(TASKTAG_PC, DaemonCode,
-                       TASKTAG_NAME       , "ATA.daemon",
-                       TASKTAG_STACKSIZE  , STACK_SIZE,
-                       TASKTAG_TASKMSGPORT, &ATABase->DaemonPort,
-                       TASKTAG_PRI        , TASK_PRI - 1,	/* The daemon should have a little bit lower Pri than handler tasks */
-                       TASKTAG_ARG1       , ATABase,
-                       TAG_DONE))
-    {
-        bug("[ATA  ] %s: Failed to start up daemon!\n", __PRETTY_FUNCTION__);
-        return FALSE;
-    }
+    D(bug("[ATA  ] %s: Base ATA Hidd Class @ 0x%p\n", __func__, ATABase->ataClass));
 
-    /* Wait for handshake */
-    Wait(SIGF_SINGLE);
-    D(bug("[ATA  ] %s: Daemon task set to 0x%p\n", __PRETTY_FUNCTION__, ATABase->ata_Daemon));
-
-    return ATABase->ata_Daemon ? TRUE : FALSE;
+    return TRUE;
 }
 
 static int ata_expunge(struct ataBase *ATABase)
@@ -293,13 +272,7 @@ static int ata_expunge(struct ataBase *ATABase)
             /* Destroy our singletone */
             OOP_MethodID disp_msg = OOP_GetMethodID(IID_Root, moRoot_Dispose);
 
-            D(bug("[ATA  ] ata_expunge: Stopping Daemon...\n"));
-            ATABase->daemonParent = FindTask(NULL);
-            SetSignal(0, SIGF_SINGLE);
-            Signal(ATABase->ata_Daemon, SIGBREAKF_CTRL_C);
-            Wait(SIGF_SINGLE);
-
-            D(bug("[ATA  ] ata_expunge: Done, destroying subystem object\n"));
+            D(bug("[ATA  ] ata_expunge: destroying subystem object\n"));
             OOP_DoSuperMethod(ataNode->ac_Class, ataNode->ac_Object, &disp_msg);
             FreeMem(ataNode, sizeof(struct ata_Controller));
         }
