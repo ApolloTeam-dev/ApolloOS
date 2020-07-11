@@ -538,7 +538,8 @@ static BOOL initScreen(LIBBASETYPEPTR DOSBootBase, struct BootConfig *bcfg)
     DOSBootBase->bm_Screen = OpenBootScreen(DOSBootBase);
     if (DOSBootBase->bm_Screen)
     {
-        DOSBootBase->bottomY = DOSBootBase->bm_Screen->Height - (DOSBootBase->bm_Screen->Height > 256 ? 32 : 16);
+        // DOSBootBase->bottomY = DOSBootBase->bm_Screen->Height - (DOSBootBase->bm_Screen->Height > 256 ? 32 : 16);
+        DOSBootBase->bottomY =190;
         D(bug("[BootMenu] initScreen: Screen opened @ %p\n",  DOSBootBase->bm_Screen));
 
         page = PAGE_MAIN;
