@@ -49,7 +49,7 @@ USER_INCLUDES += $(PRIV_EXEC_INCLUDES)
 USER_CPPFLAGS := -DAROS_ARCH_$(ARCH)
 ifeq ($(AROS_TARGET_CPU),m68k)
 # Make sure we optimize this code for size on m68k..
-OPTIMIZATION_CFLAGS := -O2
+OPTIMIZATION_CFLAGS := -Os
 endif
 
 # Use customized entry code which declares SysBase suitable
