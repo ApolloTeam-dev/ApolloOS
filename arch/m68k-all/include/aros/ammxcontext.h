@@ -5,7 +5,7 @@
 #include <exec/types.h>
 
 struct AMMXContext {
-    ULONG DnHigh[8];
+    UQUAD Dn[8];
     UQUAD En[24];
     ULONG Bn[8];
 };

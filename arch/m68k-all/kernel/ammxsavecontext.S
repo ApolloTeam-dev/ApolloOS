@@ -38,50 +38,49 @@ AROS_UFH1(void, AMMXSaveContext,
     .globl	AMMXSaveContext
 
 AMMXSaveContext:
-    movem.l %d2/%d4/%d6, -(%sp)
-    .short	0xFE3F,0x7606,0x0123,0x89AB	//vperm	#0x012389ab,d6,d7,d6
-    .short	0xFE3F,0x5404,0x0123,0x89AB	//vperm	#0x012389ab,d4,d5,d4
-    .short	0xFE3F,0x3202,0x0123,0x89AB	//vperm	#0x012389ab,d2,d3,d2
-    .short	0xFE3F,0x1000,0x0123,0x89AB	//vperm	#0x012389ab,d0,d1,d0
-    .short	0xFE20,0x6004		//store	d6,-(a0)
-    .short	0xFE20,0x4004		//store	d4,-(a0)
-    .short	0xFE20,0x2004		//store	d2,-(a0)
-    .short	0xFE20,0x0004		//store	d0,-(a0)
 
-    .short	0xFE20,0xF004		//store	e7,-(a0)
-    .short	0xFE20,0xE004		//store	e6,-(a0)
-    .short	0xFE20,0xD004		//store	e5,-(a0)
-    .short	0xFE20,0xC004		//store	e4,-(a0)
-    .short	0xFE20,0xB004		//store	e3,-(a0)
-    .short	0xFE20,0xA004		//store	e2,-(a0)
-    .short	0xFE20,0x9004		//store	e1,-(a0)
-    .short	0xFE20,0x8004		//store	e0,-(a0)
+    .short    0x10C8		//move.l (a0)+,b0
+    .short    0x10C9		//move.l (a0)+,b1
+    .short    0x10CA		//move.l (a0)+,b2
+    .short    0x10CB		//move.l (a0)+,b3
+    .short    0x10CC		//move.l (a0)+,b4
+    .short    0x10CD		//move.l (a0)+,b5
+    .short    0x10CE		//move.l (a0)+,b6
+    .short    0x10CF		//move.l (a0)+,b7
 
-    .short	0xFEA0,0xf004		//store   e23,-(a0)
-    .short	0xFEA0,0xe004		//store   e22,-(a0)
-    .short	0xFEA0,0xd004		//store   e21,-(a0)
-    .short	0xFEA0,0xc004		//store   e20,-(a0)
-    .short	0xFEA0,0xb004		//store   e19,-(a0)
-    .short	0xFEA0,0xa004		//store   e18,-(a0)
-    .short	0xFEA0,0x9004		//store   e17,-(a0)
-    .short	0xFEA0,0x8004		//store   e16,-(a0)
-    .short	0xFEA0,0x7004		//store   e15,-(a0)
-    .short	0xFEA0,0x6004		//store   e14,-(a0)
-    .short	0xFEA0,0x5004		//store   e13,-(a0)
-    .short	0xFEA0,0x4004		//store   e12,-(a0)
-    .short	0xFEA0,0x3004		//store   e11,-(a0)
-    .short	0xFEA0,0x2004		//store   e10,-(a0)
-    .short	0xFEA0,0x1004		//store   e9 ,-(a0)
-    .short	0xFEA0,0x0004		//store   e8 ,-(a0)
+    .short    0xFE58,0x0004		//Load (a0)+,B0
+    .short    0xFE58,0x1004		//Load (a0)+,B1
+    .short    0xFE58,0x2004		//Load (a0)+,B2
+    .short    0xFE58,0x3004		//Load (a0)+,B3
+    .short    0xFE58,0x4004		//Load (a0)+,B4
+    .short    0xFE58,0x5004		//Load (a0)+,B5
+    .short    0xFE58,0x6004		//Load (a0)+,B6
+    .short    0xFE58,0x7004		//Load (a0)+,B7
+    .short    0xFE58,0x8004		//Load (a0)+,B8
+    .short    0xFE58,0x9004		//Load (a0)+,B9
+    .short    0xFE58,0xa004		//Load (a0)+,B10
+    .short    0xFE58,0xb004		//Load (a0)+,B11
+    .short    0xFE58,0xc004		//Load (a0)+,B12
+    .short    0xFE58,0xd004		//Load (a0)+,B13
+    .short    0xFE58,0xe004		//Load (a0)+,B14
+    .short    0xFE58,0xf004		//Load (a0)+,B15
 
-    .short	0x110F			//move.l  b7,-(a0)
-    .short	0x110E			//move.l  b6,-(a0)
-    .short	0x110D			//move.l  b5,-(a0)
-    .short	0x110C			//move.l  b4,-(a0)
-    .short	0x110B			//move.l  b3,-(a0)
-    .short	0x110A			//move.l  b2,-(a0)
-    .short	0x1109			//move.l  b1,-(a0)
-    .short	0x1108			//move.l  b0,-(a0)
+    .short    0xFE18,0x8004		//Load (a0)+,e0
+    .short    0xFE18,0x9004		//Load (a0)+,e1
+    .short    0xFE18,0xA004		//Load (a0)+,e2
+    .short    0xFE18,0xB004		//Load (a0)+,e3
+    .short    0xFE18,0xC004		//Load (a0)+,e4
+    .short    0xFE18,0xD004		//Load (a0)+,e5
+    .short    0xFE18,0xE004		//Load (a0)+,e6
+    .short    0xFE18,0xF004		//Load (a0)+,e7
 
-    movem.l (%sp)+, %d2/%d4/%d6
+    .short    0xFE18,0x0004		//Load (a0)+,d0	
+    .short    0xFE18,0x1004		//Load (a0)+,d1	
+    .short    0xFE18,0x2004		//Load (a0)+,d2	
+    .short    0xFE18,0x3004		//Load (a0)+,d3	
+    .short    0xFE18,0x4004		//Load (a0)+,d4	
+    .short    0xFE18,0x5004		//Load (a0)+,d5	
+    .short    0xFE18,0x6004		//Load (a0)+,d6	
+    .short    0xFE18,0x7004		//Load (a0)+,d7	
+
     rts
