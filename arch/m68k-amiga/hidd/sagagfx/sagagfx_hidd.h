@@ -2,7 +2,7 @@
 #define SAGAGFX_HIDD_H
 
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: SAGAGfx header.
@@ -41,8 +41,8 @@ struct SAGAGfx_staticdata
 
     WORD            cursorX;
     WORD            cursorY;
-    UBYTE           hotX;
-    UBYTE           hotY;
+    WORD            hotX;
+    WORD            hotY;
     APTR            mempool;
 
     BOOL            useHWSprite;

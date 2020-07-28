@@ -9,6 +9,8 @@ USER_LDFLAGS := -static
 SAGA_HIDD_SOURCES := \
         sagagfx_init \
         sagagfx_hw \
+        sagagfx_hw_v2 \
+        sagagfx_hw_v4 \
         sagagfx_hiddclass \
         sagagfx_onbitmap
 

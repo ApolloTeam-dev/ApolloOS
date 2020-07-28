@@ -2,7 +2,7 @@
 #define SAGAGFX_HW_H
 
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: SAGAGfx hardware header.
@@ -14,6 +14,9 @@
 #include <aros/debug.h>
 #include <exec/types.h>
 
+#include "sagagfx_hw_v2.h"
+#include "sagagfx_hw_v4.h"
+
 BOOL SAGA_Init();
 void SAGA_SetPLL(ULONG clock);
 void SAGA_LoadCLUT(ULONG *palette, UWORD startIndex, UWORD count);
@@ -23,13 +26,48 @@ static inline __attribute__((always_inline)) ULONG READ32(IPTR a) { return (*(vo
 static inline __attribute__((always_inline)) void WRITE16(IPTR a, UWORD b) { D(bug("WRITE16(%p,%04x)\n", a, b)); *(volatile UWORD *)(a) = (b); }
 static inline __attribute__((always_inline)) void WRITE32(IPTR a, ULONG b) { D(bug("WRITE32(%p,%08x)\n", a, b)); *(volatile ULONG *)(a) = (b); }
 
+/* Vampire Boards **********************************************************/
+
+#define VREG_BOARD_Unknown          0x00
+#define VREG_BOARD_V600             0x01
+#define VREG_BOARD_V500             0x02
+#define VREG_BOARD_V4               0x03
+#define VREG_BOARD_V666             0x04
+#define VREG_BOARD_V4SA             0x05
+#define VREG_BOARD_V1200            0x06
+#define VREG_BOARD_V4000            0x07
+#define VREG_BOARD_VCD32            0x08
+#define VREG_BOARD_Future           0x09
+
 /* SAGA Registers **********************************************************/
 
 #define VREG_BOARD                  0xDFF3FC
 
-/* SAGA VIDEO definitions***************************************************/
+/* SAGA VIDEO definitions **************************************************/
+
+#define SAGA_PLL_PAL                0
+#define SAGA_PLL_NTSC               1
+
+/* SAGA VIDEO definitions for V2 *******************************************/
+
+#define SAGA_VIDEO_PLLR             0xDFF1FA
+#define SAGA_VIDEO_PLLW             0xDFF1F8
+
+#define SAGA_VIDEO_PLLW_MAGIC       0x43430000
+#define SAGA_VIDEO_PLLW_CS(x)       (((x) & 1) << 0)
+#define SAGA_VIDEO_PLLW_CLK(x)      (((x) & 1) << 1)
+#define SAGA_VIDEO_PLLW_MOSI(x)     (((x) & 1) << 2)
+#define SAGA_VIDEO_PLLW_UPDATE(x)   (((x) & 1) << 3)
+
+/* SAGA VIDEO definitions for V4 *******************************************/
+
+#define SAGA_VIDEO_PLLV4            0xDFF3F8
+#define SAGA_VIDEO_PLLWV4_MAGIC       0x24000000
 
 #define SAGA_PIXELCLOCK             (28375000)
+
+/* SAGA VIDEO definitions **************************************************/
+
 #define SAGA_MEMORYSIZE             (4*1024*1024)
 
 #define SAGA_MOUSE_DELTAX           16
@@ -40,10 +78,11 @@ static inline __attribute__((always_inline)) void WRITE32(IPTR a, ULONG b) { D(b
 #define SAGA_VIDEO_MAXVV            16384 // AROS=16384, AOS=2048
 #define SAGA_VIDEO_MAXVR            16384 // AROS=16384, AOS=2048
 
-#define SAGA_VIDEO_SPRITEX          0xDFF1d0
-#define SAGA_VIDEO_SPRITEY          0xDFF1d2
+#define SAGA_VIDEO_SPRITEX          0xDFF1D0
+#define SAGA_VIDEO_SPRITEY          0xDFF1D2
 #define SAGA_VIDEO_SPRITECLUT       0xDFF3A2
 #define SAGA_VIDEO_SPRITEBPL        0xDFF800
+#define SAGA_VIDEO_SPRITECOL0		0xDFF3A0
 
 #define SAGA_VIDEO_BPLHMOD          0xDFF1E6
 #define SAGA_VIDEO_BPLPTR           0xDFF1EC
@@ -57,7 +96,6 @@ static inline __attribute__((always_inline)) void WRITE32(IPTR a, ULONG b) { D(b
 #define SAGA_VIDEO_VSSTOP           0xDFF30C
 #define SAGA_VIDEO_VTOTAL           0xDFF30E
 #define SAGA_VIDEO_HVSYNC           0xDFF310
-#define SAGA_VIDEO_PLLV4            0xDFF3F8
 #define SAGA_VIDEO_CLUT(x)          (0xDFF400 + (((x) & 0xFF) << 2))
 
 #define SAGA_VIDEO_FORMAT_AMIGA     0x0000

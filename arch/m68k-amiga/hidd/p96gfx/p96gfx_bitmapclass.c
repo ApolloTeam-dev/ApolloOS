@@ -435,13 +435,13 @@ VOID P96GFXBitmap__Root__Set(OOP_Class *cl, OOP_Object *o, struct pRoot_Set *msg
                     {
                         ULONG boardType = gl(data->gfxCardData->boardinfo + PSSO_BoardInfo_BoardType);
                         DB2(bug("[P96Gfx:Bitmap] %s: aoHidd_BitMap_Focus\n", __func__);)
-                        if (boardType == P96BoardType_Vampire)
-                        {
+//                        if (boardType == P96BoardType_Vampire)
+//                        {
                             struct GfxBase *GfxBase = (struct GfxBase *)csd->cs_GfxBase;
                             volatile struct Custom *custom = (struct Custom*)0xdff000;
                             /* Tell the Vampire SAGA chipset we are visible */
                             custom->bplcon0 = GfxBase->system_bplcon0 | 0x80;
-                        }
+//                        }
                     }
                     break;
 

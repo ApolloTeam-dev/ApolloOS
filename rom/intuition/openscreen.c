@@ -1,6 +1,6 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2013, The MorphOS Development Team. All Rights Reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2001-2013, The MorphOS Development Team. All Rights Reserved.
     $Id$
 
     Open a new screen.

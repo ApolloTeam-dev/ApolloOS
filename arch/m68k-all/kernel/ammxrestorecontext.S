@@ -38,7 +38,6 @@ AROS_UFH1(void, AMMXRestoreContext,
     .globl	AMMXRestoreContext
 
 AMMXRestoreContext:
-    movem.l %d2/%d4/%d6, -(%sp)
 
     .short    0x1058		//move.l (a0)+,b0
     .short    0x1258		//move.l (a0)+,b1
@@ -75,14 +74,13 @@ AMMXRestoreContext:
     .short    0xFE18,0x0E01		//Load (a0)+,e6
     .short    0xFE18,0x0F01		//Load (a0)+,e7
 
-    .short    0xFE18,0x0001		//Load (a0)+,d0	//D0 D1 high
-    .short    0xFE18,0x0201		//Load (a0)+,d2	//D2 D3 high
-    .short    0xFE18,0x0401		//Load (a0)+,d4	//D4 D5 high
-    .short    0xFE18,0x0601		//Load (a0)+,d6	//D6 D7 high
-    .short    0xFE3F,0x1100,0x4567,0xcdef	//vperm	#0x...,d0,d1,d1
-    .short    0xFE3F,0x3302,0x4567,0xcdef	//vperm	#0x...,d2,d3,d3
-    .short    0xFE3F,0x5504,0x4567,0xcdef	//vperm	#0x...,d4,d5,d5
-    .short    0xFE3F,0x7706,0x4567,0xcdef	//vperm	#0x...,d6,d7,d7
+    .short    0xFE18,0x0001		//Load (a0)+,d0	
+    .short    0xFE18,0x0101		//Load (a0)+,d1	
+    .short    0xFE18,0x0201		//Load (a0)+,d2	
+    .short    0xFE18,0x0301		//Load (a0)+,d3	
+    .short    0xFE18,0x0401		//Load (a0)+,d4	
+    .short    0xFE18,0x0501		//Load (a0)+,d5	
+    .short    0xFE18,0x0601		//Load (a0)+,d6	
+    .short    0xFE18,0x0701		//Load (a0)+,d7	
 
-    movem.l (%sp)+, %d2/%d4/%d6
     rts

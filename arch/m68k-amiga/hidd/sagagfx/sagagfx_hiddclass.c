@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Gfx Hidd class for SM502.
@@ -286,7 +286,7 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
 
     /*
         The instance of driver object is created by the wrapper from
-        DEVS:Monitors through a call to AddDisplayDriver(). The wrapper
+        DEVS:Monitory through a call to AddDisplayDriver(). The wrapper
         has set the current directory properly and we can extract its name.
 
         We use this knowledge to eventually open the corresponding Icon and
@@ -429,6 +429,8 @@ BOOL METHOD(SAGAGfx, Hidd_Gfx, SetCursorPos)
 
         if (XSD(cl)->cursor_visible)
         {
+        	x += XSD(cl)->hotX;
+        	y += XSD(cl)->hotY;
             WRITE16(SAGA_VIDEO_SPRITEX, x);
             WRITE16(SAGA_VIDEO_SPRITEY, y);
         }
@@ -502,7 +504,7 @@ BOOL METHOD(SAGAGfx, Hidd_Gfx, SetCursorShape)
 
     HIDD_BM_GetImageLUT(msg->shape, XSD(cl)->cursor_clut, 16, 0, 0, width, height, NULL);
 
-    bug("Shape:\n");
+    D( bug("Shape:\n") );
     ptr = 0xdff800;
 
     for (int y = 0; y < 16; y++)
@@ -512,14 +514,14 @@ BOOL METHOD(SAGAGfx, Hidd_Gfx, SetCursorShape)
 
         for (int x = 0; x < 16; x++)
         {
-            bug("%d ", XSD(cl)->cursor_clut[y *16 + x]);
+            D( bug("%d ", XSD(cl)->cursor_clut[y *16 + x]) );
             switch (XSD(cl)->cursor_clut[y*16 + x])
             {
                 case 1:
-                    val |= pix & 0xffff;
+                    val |= pix & 0xffff0000;
                     break;
                 case 2:
-                    val |= pix & 0xffff0000;
+                    val |= pix & 0x0000ffff;
                     break;
                 case 3:
                     val |= pix;
@@ -531,7 +533,7 @@ BOOL METHOD(SAGAGfx, Hidd_Gfx, SetCursorShape)
         }
         WRITE32(ptr, val);
         ptr += 4;
-        bug("\n");
+        D( bug("\n") );
     }
 
     for (int i=1; i < 4; i++) {
@@ -691,8 +693,9 @@ OOP_Object *METHOD(SAGAGfx, Hidd_Gfx, Show)
 
         WRITE16(SAGA_VIDEO_MODE, bmdata->hwregs.video_mode);
 
+        WRITE16(0xdff100, 0x0280);
         {
-            IPTR ptr = 0xdff800;
+            IPTR ptr = SAGA_VIDEO_SPRITEBPL;
 
             for (int y = 0; y < 16; y++)
             {
@@ -704,10 +707,10 @@ OOP_Object *METHOD(SAGAGfx, Hidd_Gfx, Show)
                     switch (XSD(cl)->cursor_clut[y*16 + x])
                     {
                         case 1:
-                            val |= pix & 0xffff;
+                            val |= pix & 0xffff0000;
                             break;
                         case 2:
-                            val |= pix & 0xffff0000;
+                            val |= pix & 0x0000ffff;
                             break;
                         case 3:
                             val |= pix;
@@ -722,7 +725,7 @@ OOP_Object *METHOD(SAGAGfx, Hidd_Gfx, Show)
             }
 
             for (int i=1; i < 4; i++) {
-                WRITE16(0xdff3a0 + (i << 1), XSD(cl)->cursor_pal[i]);
+                WRITE16(SAGA_VIDEO_SPRITECOL0 + (i << 1), XSD(cl)->cursor_pal[i]);
             }
 
             if (XSD(cl)->cursor_visible)

@@ -82,7 +82,7 @@ static int SAGAGfx_Init(LIBBASETYPEPTR LIBBASE)
 
     D(bug("[SAGA] SAGAGfx_Init() called\n"));
 
-    /* Check if Vampire V4 is detected */
+    /* Check if Vampire is detected */
     if (SAGA_Init() == FALSE)
         return FALSE;
 
