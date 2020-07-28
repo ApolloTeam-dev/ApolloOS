@@ -19,7 +19,7 @@ void DebugInit(void)
 	*ciab_pra = 0;      /* Turn on DTR and RTS */
 
 	/* Set the debug UART to 115200 */
-	reg_w(SERPER, SERPER_BAUD(SERPER_BASE_PAL, 115200));
+	reg_w(SERPER, SERPER_BAUD(SERPER_BASE_NTSC, 19200));
 }
 
 int DebugPutChar(register int chr)

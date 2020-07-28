@@ -28,17 +28,17 @@
 
 #include <exec/types.h>
 
-#include "sd.h"
+#include  "sd.h"
 
 #include "sdcmd.h"
 
 #include "common.h"
 
-#define sdcmd_log(sd,level,fmt,args...) \
-    do { \
-        if (sd->func.log) \
-            sd->func.log(sd, level, "%s:%ld " fmt, __func__, (ULONG)__LINE__ ,##args); \
-    } while (0)
+#define sdcmd_log(sd,level,fmt,args...) ;
+//    do { \
+//        if (sd->func.log) \
+//            sd->func.log(sd, level, "%s:%ld " fmt, __func__, (ULONG)__LINE__ ,##args); \
+//    } while (0)
 
 #define diag(fmt,args...)       sdcmd_log(sd, SDLOG_DIAG, fmt ,##args)
 #define debug(fmt,args...)      sdcmd_log(sd, SDLOG_DEBUG, fmt ,##args)
@@ -46,7 +46,7 @@
 #define warn(fmt,args...)       sdcmd_log(sd, SDLOG_WARN, fmt ,##args)
 #define error(fmt,args...)      sdcmd_log(sd, SDLOG_ERROR, fmt ,##args)
 
-#define SDCMD_CLKDIV_SLOW       0x10
+#define SDCMD_CLKDIV_SLOW       0xff
 #define SDCMD_CLKDIV_FAST       0x02
 #define SDCMD_CLKDIV_FASTER     0x01
 
@@ -79,7 +79,6 @@ static UWORD crc16(UWORD crc, UBYTE byte)
 }
 #else
 /* Table based CRC16 */
-/* Alynna: Lets initialize this inside a function.  It should make this ROMmable */
 static const UWORD crc16_ccitt_table[256] = {
     0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50a5, 0x60c6, 0x70e7,
     0x8108, 0x9129, 0xa14a, 0xb16b, 0xc18c, 0xd1ad, 0xe1ce, 0xf1ef,
@@ -195,11 +194,12 @@ VOID sdcmd_select(struct sdcmd *sd, BOOL cs)
     /*  Wait for card ready */
     if (cs) {
         int i;
-        for (i = 0; i < SDCMD_TIMEOUT; i++) {
-            UBYTE r1 = sdcmd_in(sd);
-            if (r1 == 0xff)
-                break;
-        }
+        for (i = 0; i < SDCMD_TIMEOUT; i++) 
+			if (!(i % DELTA)) {
+				UBYTE r1 = sdcmd_in(sd);
+				if (r1 == 0xff)
+					break;
+        } else asm("nop\r\n");
     }
 }
 
@@ -239,12 +239,12 @@ static UBYTE sdcmd_r1a(struct sdcmd *sd)
     UBYTE r1;
     int i;
 
-    for (i = 0; i < SDCMD_TIMEOUT; i++) {
-        r1 = sdcmd_in(sd);
-        if (!(r1 & SDERRF_TIMEOUT))
-            return r1;
-    }
-
+    for (i = 0; i < SDCMD_TIMEOUT; i++) 
+		if (!(i % DELTA)) {
+			r1 = sdcmd_in(sd);
+			if (!(r1 & SDERRF_TIMEOUT))
+				return r1;
+    } else asm("nop\r\n");
     return SDERRF_TIMEOUT;
 }
 
@@ -343,11 +343,12 @@ UBYTE sdcmd_read_packet(struct sdcmd *sd, UBYTE *buff, int len)
     int i;
 
     /* Wait for the Data Token */
-    for (i = 0; i < SDCMD_TIMEOUT; i++) {
+    for (i = 0; i < SDCMD_TIMEOUT; i++) 
+		if (!(i % DELTA)) {
         byte = sdcmd_in(sd);
         if (byte == token)
             break;
-    }
+    } else asm("nop\r\n");
 
     if (i == SDCMD_TIMEOUT) {
         sdcmd_select(sd, FALSE);
@@ -396,12 +397,13 @@ UBYTE sdcmd_stop_transmission(struct sdcmd *sd)
     r1 = 0;
 
     /* Wait until not busy */
-    for (i = 0; i < SDCMD_TIMEOUT; i++) {
+    for (i = 0; i < SDCMD_TIMEOUT; i++) 
+		if (!(i % DELTA)) {
         tmp = sdcmd_in(sd);
         debug("tmp=$%02lx", tmp);
         if (tmp == 0xff)
            break;
-    }
+    } else asm("nop\r\n");
 
 exit:
     sdcmd_select(sd, FALSE);
@@ -446,12 +448,13 @@ UBYTE sdcmd_write_packet(struct sdcmd *sd, UBYTE token, CONST UBYTE *buff, int l
 
     /* Wait for the idle pattern */
     /* Wait until not busy */
-    for (i = 0; i < SDCMD_TIMEOUT; i++) {
+    for (i = 0; i < SDCMD_TIMEOUT; i++) 
+		if (!(i % DELTA)) {
         UBYTE tmp = sdcmd_in(sd);
         debug("ptmp = $%02lx", tmp);
         if (tmp == 0xff)
             break;
-    }
+    } else asm("nop\r\n");
 
     return (i == SDCMD_TIMEOUT) ? SDERRF_TIMEOUT : r1;
 }
@@ -498,9 +501,8 @@ UBYTE sdcmd_detect(struct sdcmd *sd)
 
     /* Emit at least 74 clocks of idle */
     sdcmd_select(sd, TRUE);
-    for (i = 0; i < 16; i++) {
+    for (i = 0; i < 10; i++)
         sdcmd_out(sd, 0xff);
-    }
     sdcmd_select(sd, FALSE);
 
     /* Stuff two idle bytes while deasserted */
@@ -534,7 +536,8 @@ UBYTE sdcmd_detect(struct sdcmd *sd)
     }
 
     /* Wait for card to complete idle */
-    for (i = 0; i < SDCMD_IDLE_RETRY; i++) {
+    for (i = 0; i < SDCMD_IDLE_RETRY; i++) 
+		if (!(i % DELTA)) {
         UBYTE err;
        
         /* Initiate SDC init process */
@@ -545,7 +548,7 @@ UBYTE sdcmd_detect(struct sdcmd *sd)
         r1 = sdcmd_r1(sd);
         if (!(r1 & SDERRF_IDLE))
             break;
-    }
+    } else asm("nop\r\n");
 
     debug("r1=0x%lx", r1);
     if (r1)
@@ -814,12 +817,13 @@ UBYTE sdcmd_write_blocks(struct sdcmd *sd, ULONG addr, CONST UBYTE *buff, int bl
         sdcmd_in(sd);
 
         /* Wait until not busy */
-        for (i = 0; i < SDCMD_TIMEOUT; i++) {
+        for (i = 0; i < SDCMD_TIMEOUT; i++) 
+			if (!(i % DELTA)) {
             tmp = sdcmd_in(sd);
             debug("tmp=$%02lx", tmp);
             if (tmp == 0xff)
                 break;
-        }
+        } else asm("nop\r\n");
 
         sdcmd_select(sd, FALSE);
 
@@ -831,4 +835,5 @@ UBYTE sdcmd_write_blocks(struct sdcmd *sd, ULONG addr, CONST UBYTE *buff, int bl
 
     return r1;
 }
+
 /* vim: set shiftwidth=4 expandtab:  */

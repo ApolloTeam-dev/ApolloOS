@@ -1,3 +1,4 @@
+  
 /* Raw SD interface
  *
  * Copyright (C) 2016, Jason S. McMullan <jason.mcmullan@gmail.com>
@@ -29,10 +30,7 @@
 
 #include <exec/types.h>
 
-#define SDSIZ_BLOCK        512          /* Block size in bytes */
-
-#define SDCMD_TIMEOUT      512000       /* Times to read for new status */
-#define SDCMD_IDLE_RETRY   10000
+#define SDSIZ_BLOCK        512  /* Block size in bytes */
 
 #define SDERRF_TIMEOUT  (1 << 7)
 #define SDERRF_PARAM    (1 << 6)
