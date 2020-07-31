@@ -42,6 +42,13 @@ FpuSaveContext:
 	fsave		%a0@(3*4 + 8*12)
 	tst.b		3*4 + 8*12(%a0,%d0.w)
 	beq.s		0f
-	fmovem.x	%fp0-%fp7,%a0@(3*4)
-	fmovem.l	%fpcr/%fpsr/%fpiar,%a0@
+        fmovem.l        %fpcr/%fpsr/%fpiar,%a0@(8*8)
+        fmove.d         %fp0,(%a0)+
+        fmove.d         %fp1,(%a0)+
+        fmove.d         %fp2,(%a0)+
+        fmove.d         %fp3,(%a0)+
+        fmove.d         %fp4,(%a0)+
+        fmove.d         %fp5,(%a0)+
+        fmove.d         %fp6,(%a0)+
+        fmove.d         %fp7,(%a0)+
 0:	rts
