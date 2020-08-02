@@ -5,7 +5,7 @@
     Copyright © 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
-    Desc: SAGAGfx header.
+    Desc: Bitmap class for SAGAGfx Hidd.
     Lang: English.
 */
 
@@ -14,11 +14,12 @@
 
 #include <hidd/gfx.h>
 
-#define IS_BM_ATTR(attr, idx) ( ( (idx) = (attr) - HiddBitMapAttrBase) < num_Hidd_BitMap_Attrs)
+#define IS_BM_ATTR(attr, idx) (((idx) = (attr) - HiddBitMapAttrBase) < num_Hidd_BitMap_Attrs)
 
 struct SAGARegs {
-    ULONG       pixelclock;
-    UWORD       video_mode;
+    ULONG       pixclk;
+    UBYTE       pixfmt;
+    UBYTE       modeid;
     UWORD       hpixel;
     UWORD       hsstart;
     UWORD       hsstop;
@@ -35,23 +36,24 @@ struct SAGARegs {
 /*
    This structure is used as instance data for the bitmap class.
 */
+
 struct SAGAGfxBitmapData
 {
-    UBYTE       *VideoBuffer;   /* Start of framebuffer, as allocated */
-    UBYTE       *VideoData;	    /* Start of aligned framebuffer */
-    LONG        width;          /* Bitmap size */
-    LONG        height;
-    UBYTE       bytesperpix;
-    UBYTE       bitsperpix;
-    ULONG       bytesperline;
-    ULONG *     CLUT;           /* Hardware palette registers */
-    struct SAGARegs hwregs;     /* Hardware registers */
-    BYTE        bpp;            /* Cached bits per pixel */
-    BYTE        disp;           /* !=0 - displayable */
-    OOP_Object  *pixfmtobj;     /* Cached pixelformat object */
-    OOP_Object  *gfxhidd;       /* Cached driver object */
-    LONG        xoffset;        /* Bitmap offset */
-    LONG        yoffset;
+    UBYTE           *VideoBuffer;    /* Start of framebuffer, as allocated */
+    UBYTE           *VideoData;      /* Start of aligned framebuffer */
+    LONG            width;           /* Bitmap Width */
+    LONG            height;          /* Bitmap Height */
+    UBYTE           bytesperpix;     /* Bytes Per Pixel */
+    UBYTE           bitsperpix;      /* Bits Per Pixel */
+    ULONG           bytesperline;    /* Bytes Per Line */
+    ULONG           *CLUT;           /* Hardware palette registers */
+    struct SAGARegs hwregs;          /* Hardware registers */
+    BYTE            bpp;             /* Cached bits per pixel */
+    BYTE            disp;            /* !=0 - displayable */
+    OOP_Object      *pixfmtobj;      /* Cached pixelformat object */
+    OOP_Object      *gfxhidd;        /* Cached driver object */
+    LONG            xoffset;         /* Bitmap X offset */
+    LONG            yoffset;         /* Bitmap Y offset */
 };
 
 #endif /* SAGAGFX_BITMAP_H */

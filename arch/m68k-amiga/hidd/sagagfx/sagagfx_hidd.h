@@ -2,12 +2,15 @@
 #define SAGAGFX_HIDD_H
 
 /*
-    Copyright � 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
-    Desc: SAGAGfx header.
+    Desc: SAGAGfx Hidd header.
     Lang: English.
 */
+
+#undef DEBUG
+#define DEBUG 1
 
 #include <exec/interrupts.h>
 #include <exec/semaphores.h>
@@ -34,19 +37,34 @@ struct SAGAGfx_staticdata
     OOP_Object *    sagagfxhidd;
     OOP_Object *    visible;        /* Currently visible bitmap */
     OOP_AttrBase    attrBases[ATTRBASES_NUM];
-
+    
     UBYTE           cursor_clut[16*16];
     UWORD           cursor_pal[4];
     UBYTE           cursor_visible;
-
+    
     WORD            cursorX;
     WORD            cursorY;
     WORD            hotX;
     WORD            hotY;
     APTR            mempool;
-
+    
     BOOL            useHWSprite;
-//    struct SignalSemaphore  framebufferlock;
+    UBYTE           boardModel;
+    
+    UBYTE           (*SAGAGfx_GetPixFmt        ) (UBYTE bpp);
+    UBYTE           (*SAGAGfx_GetModeID        ) (UWORD w, UWORD h);
+    VOID            (*SAGAGfx_SetColors        ) (ULONG *palette, UWORD startIndex, UWORD count);
+    VOID            (*SAGAGfx_SetModulo        ) (WORD modulo);
+    VOID            (*SAGAGfx_SetMemory        ) (ULONG memory);
+    VOID            (*SAGAGfx_SetMode          ) (UBYTE modeid, UBYTE pixfmt);
+    VOID            (*SAGAGfx_SetModeline      ) (UWORD a, UWORD b, UWORD c, UWORD d, UWORD e, UWORD f, UWORD g, UWORD h, UWORD i);
+    VOID            (*SAGAGfx_SetPLL           ) (ULONG clock);
+    VOID            (*SAGAGfx_SetSpriteHide    ) (VOID);
+    VOID            (*SAGAGfx_SetSpriteColors  ) (UWORD *colors);
+    VOID            (*SAGAGfx_SetSpriteMemory  ) (UBYTE *memory);
+    VOID            (*SAGAGfx_SetSpritePosition) (WORD x, WORD y);
+    
+//  struct SignalSemaphore  framebufferlock;
 };
 
 struct SAGAGfxBase
@@ -65,7 +83,7 @@ struct SAGAGfxBase
 #undef HiddAttrBase
 #undef HiddColorMapAttrBase
 
-/* These must stay in the same order as interfaces[] array in sm502gfx_init.c */
+/* These must stay in the same order as interfaces[] array in sagagfx_init.c */
 #define HiddChunkyBMAttrBase  XSD(cl)->attrBases[0]
 #define HiddBitMapAttrBase    XSD(cl)->attrBases[1]
 #define HiddGfxAttrBase       XSD(cl)->attrBases[2]
