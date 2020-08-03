@@ -10,7 +10,7 @@
 */
 
 #undef DEBUG
-#define DEBUG 1
+#define DEBUG 0
 
 #include <exec/interrupts.h>
 #include <exec/semaphores.h>
