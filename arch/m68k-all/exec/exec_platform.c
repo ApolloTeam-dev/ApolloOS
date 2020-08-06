@@ -32,7 +32,7 @@ static int Exec_init_platform(struct ExecBase *lh)
     if (lh->AttnFlags & AFF_68080) {
         /* AC68080 */
         __AROS_SETVECADDR(lh, 104, AROS_SLIB_ENTRY(CopyMem_ac080, Exec, 104));
-        __AROS_SETVECADDR(lh, 105, AROS_SLIB_ENTRY(CopyMemQuick_040, Exec, 105));
+        __AROS_SETVECADDR(lh, 105, AROS_SLIB_ENTRY(CopyMemQuick, Exec, 105));
     }
     else if (lh->AttnFlags & AFF_68060) {
         /* MC68060+ */
