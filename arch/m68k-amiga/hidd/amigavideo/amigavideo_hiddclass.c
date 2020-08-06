@@ -333,18 +333,6 @@ OOP_Object *AmigaVideoCl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_N
     cnt = 0;
     for (y = 0; heighttable[y]; y++) {
         WORD h = heighttable[y];
-#if !defined(USE_ALIEN_DISPLAYMODES)
-        if (GfxBase->DisplayFlags & NTSC)
-        {
-            if (h != REZ_Y_MIN && h != (REZ_Y_MIN << 1))
-                continue;
-        }
-        else
-        {
-            if (h == REZ_Y_MIN || h == (REZ_Y_MIN << 1))
-                continue;
-        }
-#endif
         for (x = 0; widthtable[x]; x++) {
             WORD w = widthtable[x];
             WORD d, res;
