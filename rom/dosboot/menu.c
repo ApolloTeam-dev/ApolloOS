@@ -460,7 +460,7 @@ static void initPage(LIBBASETYPEPTR DOSBootBase, WORD page)
     else if (page == PAGE_BOOT)
         text = "Boot Options";
     else
-        text = "AROS Early Startup Control";
+        text = "ApolloOS Early Startup Control";
     centertext(DOSBootBase, 2, 10, text);
     
     if (page == PAGE_BOOT)
@@ -480,7 +480,7 @@ static void initPage(LIBBASETYPEPTR DOSBootBase, WORD page)
     if (page == PAGE_MAIN && (GfxBase->DisplayFlags & (NTSC | PAL))) {
             ULONG modeid = GetVPModeID(&DOSBootBase->bm_Screen->ViewPort);
             if (modeid != INVALID_ID && (((modeid & MONITOR_ID_MASK) == NTSC_MONITOR_ID) || ((modeid & MONITOR_ID_MASK) == PAL_MONITOR_ID))) {
-            centertext(DOSBootBase, 1, 30, "(press a key to toggle the display between PAL and NTSC)");
+            centertext(DOSBootBase, 1, 30, "(Release 2, 2020-08-09)");
         }
     }
 
@@ -538,8 +538,7 @@ static BOOL initScreen(LIBBASETYPEPTR DOSBootBase, struct BootConfig *bcfg)
     DOSBootBase->bm_Screen = OpenBootScreen(DOSBootBase);
     if (DOSBootBase->bm_Screen)
     {
-        DOSBootBase->bottomY = (DOSBootBase->bm_Screen->Height <= 256 ? 190 : DOSBootBase->bm_Screen->Height - 16);
-        D(bug("[BootMenu] initScreen: Screen opened @ %p\n",  DOSBootBase->bm_Screen));
+        DOSBootBase->bottomY = 190;
 
         page = PAGE_MAIN;
         do {

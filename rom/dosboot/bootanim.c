@@ -102,7 +102,7 @@ APTR anim_Init(struct Screen *scr, struct DOSBootBase *DOSBootBase)
 void anim_Animate(struct Screen *scr, struct DOSBootBase *DOSBootBase)
 {
     struct AnimData *ad = DOSBootBase->animData;
-    
+/*    
     ad->frame = !ad->frame;
     if (ad->frame)
     	RectFill(&scr->RastPort, ad->x + FLASH_X, ad->y + FLASH_Y,
@@ -113,6 +113,7 @@ void anim_Animate(struct Screen *scr, struct DOSBootBase *DOSBootBase)
     			  ad->x + FLASH_X + FLASH_WIDTH - 1, ad->y + FLASH_Y + FLASH_HEIGHT - 1,
     			  ad->picture + FLASH_X, NOMEDIA_WIDTH);
     }
+*/
 }
 
 void anim_Stop(struct DOSBootBase *DOSBootBase)
