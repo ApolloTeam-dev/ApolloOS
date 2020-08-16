@@ -29,12 +29,12 @@
 /*
     Firstly, include the sub-include file for a particular CPU.
 */
-#if defined __mc68000__
-#   include <aros/m68k/cpu.h>
-#elif defined __i386__
+#if defined __i386__
 #   include <aros/i386/cpu.h>
 #elif defined __x86_64__
 #   include <aros/x86_64/cpu.h>
+#elif defined __mc68000__
+#   include <aros/m68k/cpu.h>
 #elif defined __MORPHOS__
 #   include <aros/morphos/cpu.h>
 #elif defined __powerpc__
