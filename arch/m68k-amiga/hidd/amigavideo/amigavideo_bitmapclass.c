@@ -407,6 +407,7 @@ static void flushpixelcache(struct amigabm_data *data)
     data->writemask = 0;
 }
 
+/*
 VOID AmigaVideoBM__Hidd_BitMap__PutPixel(OOP_Class *cl, OOP_Object *o,
                                 struct pHidd_BitMap_PutPixel *msg)
 {
@@ -422,11 +423,87 @@ VOID AmigaVideoBM__Hidd_BitMap__PutPixel(OOP_Class *cl, OOP_Object *o,
         data->pixelcacheoffset = offset & ~3;
     }
     bit = (offset - data->pixelcacheoffset) * 8 + (msg->x & 7);
-    data->pixelcache[bit] = msg->pixel;
+    data->pixelcache[bit] = ~msg->pixel;
     data->writemask |= 1 << bit;
 
     CMDDEBUGPIXEL(bug("[AmigaVideo:Bitmap] %s: %dx%d %x\n", __func__, msg->x, msg->y, msg->pixel);)
 }
+
+*/
+
+
+VOID AmigaVideoBM__Hidd_BitMap__PutPixel(OOP_Class *cl, OOP_Object *o, struct pHidd_BitMap_PutPixel *msg)
+{
+    UBYTE                   **plane;
+    UBYTE                   *PTR;
+    struct amigabm_data     *data;
+    ULONG                   offset;
+    UWORD                   mask;
+    UBYTE                   pixel, notpixel;
+    UBYTE                   i;
+    UBYTE 		    thisbyte;
+    struct BitMap *bm;
+
+
+
+    data = OOP_INST_DATA(cl, o);
+    bm = data->pbm;
+
+
+    /* bitmap in plane-mode */
+
+    plane     = bm->Planes;
+    offset    = (msg->x >>3) + msg->y * bm->BytesPerRow;
+    pixel     = 128 >> (msg->x & 0x7);
+    notpixel  = ~pixel;
+    mask      = 1;
+
+    for (i = bm->Depth; i; i--, mask <<=1, plane ++)
+    {
+    //    if ((*plane != NULL) && (*plane != (UBYTE *)-1))
+        {
+         PTR = (UBYTE *)(*plane + offset);
+            thisbyte =*PTR;  
+	    thisbyte = thisbyte & notpixel;
+            if(msg->pixel & mask)
+            {
+                thisbyte = thisbyte | pixel;
+            }
+            *PTR =thisbyte;  
+        }
+    }
+
+
+}
+/*
+VOID AmigaVideoBM__Hidd_BitMap__PutPixel(OOP_Class *cl, OOP_Object *o,
+                                struct pHidd_BitMap_PutPixel *msg)
+{
+    UBYTE                   **plane;
+    struct planarbm_data    *data;
+    struct BitMap *bm;
+    ULONG                   offset;
+    UWORD                   mask;
+    UBYTE                   pixel, notpixel;
+    UBYTE                   i;
+   
+    data = OOP_INST_DATA(cl, o);
+    bm= data->pbm;
+
+
+    plane     = bm->Planes;
+    offset    = (msg->x >> 3) + (msg->y * bm->BytesPerRow);
+    pixel     = 128 >> (msg->x & 0x7);
+    notpixel  = ~pixel;
+    mask      = 1;
+
+    for (i = 0; i < bm->Depth; i++, mask <<=1, plane ++)
+    {  
+        *(*plane + offset) = *(*plane + offset) & notpixel;
+        *(*plane + offset) = *(*plane + offset) | pixel;
+    }  
+}
+*/
 
 /****************************************************************************************/
 

@@ -1,2 +1,0 @@
-KERNEL_LDFLAGS += $(IOS_LDFLAGS) -framework Foundation -framework UIKit
-EXEDIR	       := $(TARGETDIR)/Payload/$(PROG).app

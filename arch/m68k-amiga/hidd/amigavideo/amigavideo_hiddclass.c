@@ -34,14 +34,11 @@
 static const UWORD widthtable[] = {
     REZ_X_MIN,
     (REZ_X_MIN << 1),
-    (REZ_X_MIN << 2),
     0
 };
 static const UWORD heighttable[] = {
     REZ_Y_MIN,
     (REZ_Y_MIN + REZ_PAL_LINES),
-    (REZ_Y_MIN << 1),
-    ((REZ_Y_MIN + REZ_PAL_LINES) << 1),
     0
 };
 static const ULONG specialmask_aga[] = {

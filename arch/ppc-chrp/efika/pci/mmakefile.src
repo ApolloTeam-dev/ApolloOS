@@ -1,7 +1,0 @@
-# $Id$
-
-include $(SRCDIR)/config/aros.cfg
-
-%build_module mmake=kernel-hidd-pci-efika \
-  modname=pci-efika modtype=hidd \
-  files="pci_efika_init driverclass"

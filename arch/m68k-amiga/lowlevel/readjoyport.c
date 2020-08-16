@@ -41,64 +41,6 @@
  *     port 0: pin 9 (1 << 10), pin 5 (1 << 8)
  *     port 1: pin 9 (1 << 14), pin 5 (1 << 12)
  */
-static inline ULONG llPollGameCtrl(int port)
-{
-    volatile struct Custom *custom = (struct Custom*)0xdff000;
-    volatile struct CIA *cia = (struct CIA *)0xbfe001;
-    UWORD pot;
-    ULONG bits = 0;
-    UWORD joydat;
-    int i;
-    UBYTE cmask = (port == 0) ? (1 << 6) : (1 << 7);
-
-    /* Set Pin 5 as output, shift mode */
-    pot = custom->potinp;
-    pot &= ~((port == 0) ? (3 << 8) : (3 << 12));
-    custom->potgo = pot | (port == 0) ? (2 << 8) : (2 << 12);
-    cia->ciapra  &= ~cmask;
-    cia->ciaddra |= cmask;
-
-    /* Shift in the button values */
-    D(bug("Sin: \n"));
-    for (i = 0; i < 9; i++) {
-        cia->ciapra |= cmask;
-        cia->ciapra &= ~cmask;
-        bits <<= 1;
-        bits |= ((custom->potinp >> ((port == 0) ? 10 : 14)) & 1) ? 0 : 1;
-        D(bug(" %d", bits & 1));
-    }
-    D(bug("\n"));
-
-    cia->ciapra &= ~cmask;
-    custom->potgo = pot;
-
-    if ((bits & 3) != 2) {
-        /* Stuck bits? Probably not a game controller */
-        D(bug("%s: Stuck bits? (0x%04x)\n", __func__, bits));
-        /* Revert to autosense */
-        return 0;
-    }
-    bits &= ~3;
-    bits <<= 15;
-
-    /* Get the joypad bits */
-    joydat = (port == 0) ? custom->joy0dat : custom->joy1dat;
-   
-    if ((joydat >> 1) & 1) {
-        bits |= JPF_JOY_RIGHT;
-    }
-    if ((joydat >> 9) & 1) {
-        bits |= JPF_JOY_LEFT;
-    }
-    if (((joydat >> 0) ^ (joydat >> 1)) & 1) {
-        bits |= JPF_JOY_DOWN;
-    }
-    if (((joydat >> 8) ^ (joydat >> 9)) & 1) {
-        bits |= JPF_JOY_UP;
-    }
-
-    return JP_TYPE_GAMECTLR | bits;
-}
 
 /*
  * ciaapra - (1 << 7) is /FIR1 (port 2, pin 6)
@@ -160,32 +102,15 @@ ULONG llPortOpen(struct LowLevelBase *LowLevelBase, int port, UWORD *bits)
         else 
             potbits = POTGO_GAMEPAD_PORT1;
         potres = AllocPotBits(potbits);
-        if (potres != potbits) {
-            D(bug("%s: Can't allocate PotGo bits 0x%04x\n", __func__));
-
-            FreePotBits(potres);
-            type = JP_TYPE_NOTAVAIL;
-            PotgoBase = NULL;
-        } else {
-            /* Set Pin 5 as output, load mode */
-            UWORD pot;
-            pot = custom->potinp;
-            pot &= ~((port == 0) ? (3 << 8) : (3 << 12));
-            custom->potgo = pot | ((port == 0) ? (3 << 8) : (3 << 12));
-        }
     } else {
         /* No Potgo bits allocated */
         potbits = 0;
     }
 
     /* Handle autosense */
-    if (type == 0) {
-        type = llPollGameCtrl(port);
-        if (type == 0)
-            type = JP_TYPE_JOYSTK;
+        type = JP_TYPE_JOYSTK;
         LowLevelBase->ll_Arch.llad_PortType[port] = type & JP_TYPE_MASK;
         D(bug("%s: Autosense: 0x%08x\n", __func__, LowLevelBase->ll_Arch.llad_PortType[port]));
-    }
 
     *bits = potbits;
     return type;
@@ -214,17 +139,7 @@ AROS_LH1(ULONG, ReadJoyPort,
       UWORD potbits;
 
       type = llPortOpen(LowLevelBase, port, &potbits);
-      switch (type) {
-      case JP_TYPE_GAMECTLR:
-          state = llPollGameCtrl(port);
-          break;
-      case JP_TYPE_JOYSTK:
-          state = llPollJoystick(port);
-          break;
-      default:
-          state = JP_TYPE_UNKNOWN;
-          break;
-      }
+      state = llPollJoystick(port);
       llPortClose(LowLevelBase, port, potbits);
 
       return state;
