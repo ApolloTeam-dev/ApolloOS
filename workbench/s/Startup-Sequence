@@ -1,4 +1,4 @@
-SetClock LOAD
+c:setclock
 
 FailAt 21
 
@@ -13,6 +13,7 @@ If NOT EXISTS "RAM:ENV"
     Assign "ENV:" "RAM:ENV"
 EndIf
 
+;echo "Assigns"
 Assign "T:"       "RAM:T"
 Assign "CLIPS:"   "RAM:Clipboards"
 
@@ -26,19 +27,15 @@ Assign "IMAGES:"  "SYS:System/Images" DEFER
 Assign "PRINTERS:" "DEVS:Printers"
 Assign "WANDERER:" "SYS:System/Wanderer" DEFER
 
-If EXISTS "C:SetPatch"
-    C:SetPatch QUIET
-EndIf
+C:SetPatch QUIET
 
 If EXISTS "SYS:Classes/USB"
     Assign "USBCLASSES:" "SYS:Classes/USB"
     AddUSBClasses >NIL:
 EndIf
 
-If EXISTS "SYS:DiskImages"
-    Assign "FDSK:" "SYS:DiskImages"
-EndIf
 
+;echo "Automount"
 Automount >NIL:
 Mount >NIL: "DEVS:DOSDrivers/~((.#?)|(#?.info)|(#?.dbg))"
 
@@ -46,12 +43,9 @@ Dir >NIL: "PIPE:"
 
 Path "C:" "SYS:System" "S:" "SYS:Prefs" "SYS:Tools" "SYS:Utilities" QUIET
 
+;echo "Conditional assigns"
 If EXISTS "SYS:Tools/Commodities"
     Path "SYS:Tools/Commodities" QUIET ADD
-EndIf
-
-If EXISTS "SYS:Demos"
-    Path "SYS:Demos" ADD QUIET
 EndIf
 
 If EXISTS "Sys:RexxC"
@@ -69,7 +63,7 @@ If EXISTS "THEME:Images"
     Assign "IMAGES:"  "THEME:Images" PREPEND
 endif
 
-Touch >NIL: "FONTS:__TEST__"
+;echo "Fonts"
 If WARN
     Makedir "RAM:Fonts"
     Assign "FONTS:" "RAM:Fonts"
@@ -77,24 +71,25 @@ If WARN
 Endif
 Assign >NIL: "FONTS:" "FONTS:Russian" ADD
 
-IF EXISTS "FONTS:__TEST__"
-    Delete "FONTS:__TEST__" QUIET
-Endif
-
 If NOT EXISTS "FONTS:fixed.font"
     FixFonts
 EndIf
 
+;echo "Add datatypes"
 AddDatatypes REFRESH QUIET
 IPrefs
-PsdStackLoader >NIL:
+;PsdStackLoader >NIL:
+;c:FPPrefs
+
 Run <NIL: >NIL: QUIET ConClip
 
+;echo "AREXX"
 If EXISTS "C:RexxMast"
     Assign "REXX:" "S:"
     Run <NIL: >NIL: QUIET C:RexxMast
 EndIf
 
+;echo "Decorator"
 If EXISTS "C:Decoration"
     If EXISTS "ENV:SYS/theme.var"
         C:Decoration <NIL: >NIL:
@@ -105,6 +100,7 @@ If EXISTS "C:Decoration"
         EndIf
     EndIf
 Endif
+
 
 Assign EXISTS "Extras:" >NIL:
 If WARN
@@ -118,6 +114,7 @@ If WARN
     EndIf
 Endif
 
+;echo "packages"
 If EXISTS "ENV:SYS/Packages"
     List "ENV:SYS/Packages" NOHEAD FILES TO "T:P" LFORMAT="If EXISTS ${SYS/Packages/%N}*NCD ${SYS/Packages/%N}*NIf EXISTS S/%N-Startup*NExecute S/%N-Startup*NElse*NIf EXISTS S/Package-Startup*NExecute S/Package-Startup*NEndif*NEndif*NEndif*N"
     Execute "T:P"
@@ -125,18 +122,10 @@ If EXISTS "ENV:SYS/Packages"
     CD "SYS:"
 EndIf
 
-Protect "S:PCD" "s" ADD QUIET
-Protect "S:SPat" "s" ADD QUIET
-Protect "S:DPat" "s" ADD QUIET
-
+;echo "User Startup"
 If EXISTS "S:User-Startup"
     Execute "S:User-Startup"
 EndIf
 
-If EXISTS "WANDERER:Wanderer"
-    WANDERER:Wanderer
-
-    If NOT ERROR
-        EndCLI
-    EndIf
-EndIf
+;echo "Wanderer"
+WANDERER:Wanderer
