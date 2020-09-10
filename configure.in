@@ -2958,6 +2958,8 @@ if test "$nonvampire_support" = "yes"; then
 	AC_MSG_RESULT(Enabling nonvampire support)
 	aros_config_cppflags="$aros_config_cppflags -DNONVAMPIRE"
 	aros_config_cflags="$aros_config_cflags -DNONVAMPIRE"
+	aros_kernel_cppflags="$aros_kernel_cppflags -DNONVAMPIRE"
+	aros_kernel_cflags="$aros_kernel_cflags -DNONVAMPIRE"
 else
 	AC_MSG_RESULT(no)
 fi
