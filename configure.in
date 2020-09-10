@@ -2951,6 +2951,17 @@ aros_cv_nominal_width=$aros_nominal_width
 aros_cv_nominal_height=$aros_nominal_height
 aros_cv_nominal_depth=$aros_nominal_depth
 
+dnl check to see if we are enabling generic Amiga Support (for non-vampire platforms)
+AC_MSG_CHECKING([whether we are compiling for non-vampires] --with-nonvampire-support )
+AC_ARG_WITH(nonvampire-support,AC_HELP_STRING([--with-nonvampire-support],[Enable support for non-vampires  (default=no)]),nonvampire_support=$withval,nonvampire_support=none)
+if test "$nonvampire_support" = "yes"; then
+	AC_MSG_RESULT(Enabling nonvampire support)
+	aros_config_cppflags="$aros_config_cppflags -DNONVAMPIRE"
+	aros_config_cflags="$aros_config_cflags -DNONVAMPIRE"
+else
+	AC_MSG_RESULT(no)
+fi
+
 dnl See if the user wants the serial debug output for native flavour
 AC_MSG_CHECKING([whether serial debug is enabled])
 AC_ARG_WITH(serial-debug,AC_HELP_STRING([--with-serial-debug],[Enable serial debug output in native (default=no)]),serial_debug=$withval,serial_debug=none)

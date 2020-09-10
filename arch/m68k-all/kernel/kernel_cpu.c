@@ -53,10 +53,12 @@ void cpu_Switch(regs_t *regs)
                             AROS_UFCA(struct FpuContext *, &ctx->fpu, A0),
                             AROS_UFCA(UWORD, (SysBase->AttnFlags & AFF_68060) ? 2 : 0, D0));
 
+#ifdef NONVAMPIRE
+#warning Compiling for non-vampire platform
     /* IF we have AMMX (68080) *and* if AMMX bit in SR is set, save AMMX context */
-//    if (SysBase->AttnFlags & AFF_68080) // && (ctx->cpu.sr & 0x800))
-        AROS_UFC1NR(void, AMMXSaveContext,
-                            AROS_UFCA(struct AMMXContext *, &ctx->ammx, A0));
+    if (SysBase->AttnFlags & AFF_68080) // && (ctx->cpu.sr & 0x800))
+#endif
+        AROS_UFC1NR(void, AMMXSaveContext,AROS_UFCA(struct AMMXContext *, &ctx->ammx, A0));
 
     /* Update tc_SPReg */
     task->tc_SPReg = (APTR)regs->a[7];
@@ -133,11 +135,12 @@ void cpu_Dispatch(regs_t *regs)
             AROS_UFC2NR(void, FpuRestoreContext,
                             AROS_UFCA(struct FpuContext *, &ctx->fpu, A0),
                             AROS_UFCA(UWORD, (SysBase->AttnFlags & AFF_68060) ? 2 : 0, D0));
-
+#ifdef NONVAMPIRE
+#warning Compiling for non-vampire platform
     /* IF we have AMMX (68080) *and* if AMMX bit in SR is set, save AMMX context */
-//    if (SysBase->AttnFlags & AFF_68080) // && (ctx->cpu.sr & 0x800))
-            AROS_UFC1NR(void, AMMXRestoreContext,
-                            AROS_UFCA(struct AMMXContext *, &ctx->ammx, A0));
+    if (SysBase->AttnFlags & AFF_68080) // && (ctx->cpu.sr & 0x800))
+#endif
+            AROS_UFC1NR(void, AMMXRestoreContext, AROS_UFCA(struct AMMXContext *, &ctx->ammx, A0));
 
     /* Re-enable interrupts if needed */
     if (SysBase->IDNestCnt < 0) {

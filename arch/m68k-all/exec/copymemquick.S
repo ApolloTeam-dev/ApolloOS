@@ -24,7 +24,7 @@ prem4:
 m4loop:
 	move.l (%a0)+,(%a1)+
 	move.l (%a0)+,(%a1)+
-	subq.w #8,%d0			// 8 less bytes to MOVE
+	subq.l #8,%d0			// 8 less bytes to MOVE
 	bhi.b m4loop			// if d0>0
 ism4or0:
 	beq.b lastm4
