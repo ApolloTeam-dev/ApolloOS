@@ -1,4 +1,4 @@
-c:setclock
+c:setclock load
 
 FailAt 21
 
