@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2014, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -54,7 +54,6 @@ void cpu_Switch(regs_t *regs)
                             AROS_UFCA(UWORD, (SysBase->AttnFlags & AFF_68060) ? 2 : 0, D0));
 
 #ifdef NONVAMPIRE
-#warning Compiling for non-vampire platform
     /* IF we have AMMX (68080) *and* if AMMX bit in SR is set, save AMMX context */
     if (SysBase->AttnFlags & AFF_68080) // && (ctx->cpu.sr & 0x800))
 #endif
@@ -136,7 +135,6 @@ void cpu_Dispatch(regs_t *regs)
                             AROS_UFCA(struct FpuContext *, &ctx->fpu, A0),
                             AROS_UFCA(UWORD, (SysBase->AttnFlags & AFF_68060) ? 2 : 0, D0));
 #ifdef NONVAMPIRE
-#warning Compiling for non-vampire platform
     /* IF we have AMMX (68080) *and* if AMMX bit in SR is set, save AMMX context */
     if (SysBase->AttnFlags & AFF_68080) // && (ctx->cpu.sr & 0x800))
 #endif
