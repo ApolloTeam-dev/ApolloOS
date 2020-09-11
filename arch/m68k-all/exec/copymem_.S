@@ -1,5 +1,5 @@
 /*
-    Copyright © 2017, The AROS Development Team. All rights reserved.
+    Copyright Â© 2017, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Optimized CopyMem by Gunnar
@@ -14,7 +14,6 @@
 	.type	AROS_SLIB_ENTRY(CopyMem,Exec,104),@function
 AROS_SLIB_ENTRY(CopyMem,Exec,104):
 #ifdef NONVAMPIRE
-#warning Building for nonvampire
 	cmp.l #8,%d0		// max. 8 left, 7 right and at least 8 in the middle (the latter two are checked against 0)
 	blt   zend
 
