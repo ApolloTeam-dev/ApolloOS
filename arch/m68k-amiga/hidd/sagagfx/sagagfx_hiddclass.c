@@ -524,11 +524,18 @@ BOOL METHOD(SAGAGfx, Hidd_Gfx, SetCursorShape)
     OOP_GetAttr(msg->shape, aHidd_BitMap_Height,   &height);
     OOP_GetAttr(msg->shape, aHidd_BitMap_Depth,    &depth );
     OOP_GetAttr(msg->shape, aHidd_BitMap_ColorMap, &cmap  );
+    OOP_GetAttr(cmap, aHidd_ColorMap_NumEntries, &num_colors);
     
+    //Debug
+    D(bug( "Mouse height: %ld\n", height ));
+    D(bug( "Mouse width: %ld\n", width ));
+    D(bug( "Mouse depth: %ld\n", depth ));
+    D(bug( "Mouse cmap: 0x%lx\n", cmap ));
+    D(bug( "Mouse colour count: 0x%lx\n", num_colors ));
+
+
     if (cmap)
     {
-        OOP_GetAttr(cmap, aHidd_ColorMap_NumEntries, &num_colors);
-        
         if (num_colors > 4)
         {
             num_colors = 4;
@@ -780,3 +787,4 @@ OOP_Object *METHOD(SAGAGfx, Hidd_Gfx, Show)
     
     return msg->bitMap;
 }
+
