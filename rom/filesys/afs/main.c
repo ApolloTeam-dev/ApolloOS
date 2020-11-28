@@ -9,6 +9,8 @@
 #include <aros/macros.h>
 #include <aros/debug.h>
 
+#include <string.h>
+
 #include "afshandler.h"
 #include "cache.h"
 #include "error.h"
