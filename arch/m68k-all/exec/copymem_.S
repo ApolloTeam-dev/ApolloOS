@@ -70,14 +70,13 @@ aligned2:
 aligned4:
 
 	move.l  %d0,%d1		// bytes remaining after phase 1
-	and.l 	#7,%d0		// leftover bytes for phase 3
-	lsr.l 	#3,%d1		// remaining bytes / 8 (for main phase)
+	and.l 	#15,%d0		// leftover bytes for phase 3
+	lsr.l 	#4,%d1		// remaining bytes / 16 (for main phase)
 	beq	zend
 
 	// phase 2: main copy loop (8 Bytes)
 xloop:
-	move.l (%a0)+,(%a1)+
-	move.l (%a0)+,(%a1)+
+	move16 (%a0)+,(%a1)+
 	subq.l #1,%d1
 	bnes   xloop
 

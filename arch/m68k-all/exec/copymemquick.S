@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2012, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Optimized CopyMemQuick by Gunnar von Boehn.
@@ -32,26 +32,28 @@ lastm4:
 	move.l (%a0),(%a1)
 	rts
 #else
-	tst.l %d0		// 
+	lsr.l #2,%d0		//
 	beq   exit
 
 	.short 0x0809,0x0002	//	btst   #2,%a1	
 	beq    aligned
 	move.l (%a0)+,(%a1)+
-	subq.l	#4,%d0
+	subq.l	#1,%d0
 aligned:
-	
-	lsr.l #3,%d0
-	bcc   no4
-	move.l (%a0)+,(%a1)+
-no4:
-	tst.l %d0
-	beq   exit
+	move.l	%d0,%d1
+	and.l	#3,%d0
+	lsr.l	#2,%d1
+	beq	zend
+
 loop:
+	move16 (%a0)+,(%a1)+
+	subq.l #1,%d1
+	bne.b  loop
+	bra    zend
+zloop:
 	move.l (%a0)+,(%a1)+
-	move.l (%a0)+,(%a1)+
-	subq.l #1,%d0			
-	bne.b  loop			
+zend:
+	dbra %d0,zloop
 
 exit:	rts
 #endif
