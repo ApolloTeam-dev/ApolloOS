@@ -2,7 +2,7 @@
 #define SAGAGFX_BITMAP_H
 
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Bitmap class for SAGAGfx Hidd.
@@ -43,7 +43,7 @@ struct SAGAGfxBitmapData
     UBYTE           *VideoData;      /* Start of aligned framebuffer */
     LONG            width;           /* Bitmap Width */
     LONG            height;          /* Bitmap Height */
-    UBYTE           bytesperpix;     /* Bytes Per Pixel */
+    UBYTE           bytesperpixel;	/* Bytes Per Pixel */
     UBYTE           bitsperpix;      /* Bits Per Pixel */
     ULONG           bytesperline;    /* Bytes Per Line */
     ULONG           *CLUT;           /* Hardware palette registers */
@@ -54,6 +54,12 @@ struct SAGAGfxBitmapData
     OOP_Object      *gfxhidd;        /* Cached driver object */
     LONG            xoffset;         /* Bitmap X offset */
     LONG            yoffset;         /* Bitmap Y offset */
+    struct SignalSemaphore	bmLock;		/* For locking the surface*/
+    WORD 			locked;
 };
+
+#define LOCK_BITMAP(data)       {ObtainSemaphore(&(data)->bmLock);}
+#define TRYLOCK_BITMAP(data)    (AttemptSemaphore(&(data)->bmLock))
+#define UNLOCK_BITMAP(data)     {ReleaseSemaphore(&(data)->bmLock);}
 
 #endif /* SAGAGFX_BITMAP_H */
