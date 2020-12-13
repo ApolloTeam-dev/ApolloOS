@@ -18,19 +18,14 @@ then
 fi
 
 echo "##############################################"
-echo "# Rebuilding rom"
+echo "# Rebuilding all"
 echo "# CPU Count: ${CPU_COUNT}"
 echo "# Rebuilding with ${THREADS} parallel tasks"
 if [ $# -gt 0 ]; then echo "# Building with $@"; fi
 echo "##############################################"
 sleep 3
 
-make clean
-git clean -df
-rm -rf bin/amiga-m68k
-./configure --target=amiga-m68k --with-optimization="-Os" --enable-ccache --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68020 --disable-mmu $@
-make -j${THREADS}
-make -j${THREADS} kernel-amiga-m68k
+make -j${THREADS} distfiles
 cat bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin > aros.rom
 ls -lah aros.rom
 

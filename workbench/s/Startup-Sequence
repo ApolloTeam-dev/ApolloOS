@@ -131,3 +131,4 @@ EndIf
 ;echo "Wanderer"
 WANDERER:Wanderer
 
+EndCli

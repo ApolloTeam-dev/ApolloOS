@@ -664,6 +664,7 @@ OOP_Object *METHOD(SAGABitMap, Root, New)
         data->height         = OOP_GET(o, aHidd_BitMap_Height);
         data->bytesperline   = OOP_GET(o, aHidd_BitMap_BytesPerRow);
         data->bytesperpixel  = OOP_GET(data->pixfmtobj, aHidd_PixFmt_BytesPerPixel);
+        //bug( "Created bitmap with %ld bytes per line.\n", data->bytesperline );
         data->bitsperpix     = OOP_GET(data->pixfmtobj, aHidd_PixFmt_BitsPerPixel);
         
         data->VideoBuffer    = AllocVecPooled(XSD(cl)->mempool, 64 + data->bytesperline * (data->height + 10));
@@ -753,17 +754,55 @@ VOID METHOD(SAGABitMap, Root, Get)
     {
         switch (idx)
         {
+        //case aoHidd_BitMap_GfxHidd:
+        //	*msg->storage = data->gfxhidd;
+        //	return;
         case aoHidd_BitMap_Visible:
-            *msg->storage = data->disp;
+			*msg->storage = data->disp;
             return;
-            
+        //case aoHidd_BitMap_Width:
+        //	*msg->storage = data->width;
+        //	return;
+        //case aoHidd_BitMap_Height:
+        //	*msg->storage = data->height;
+        //	return;
+        //case aoHidd_BitMap_Align:
+        //	//What do we do here?
+        //	OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
+        //	return;
+        //case aoHidd_BitMap_Depth:
+        //	*msg->storage = OOP_GET(o, aoHidd_BitMap_Depth);
+        //	bug( "Screen depth requested.  Answering with %ld.\n", *msg->storage );
+        //	return;
         case aoHidd_BitMap_LeftEdge:
             *msg->storage = data->xoffset;
             return;
-            
         case aoHidd_BitMap_TopEdge:
             *msg->storage = data->yoffset;
             return;
+        case aoHidd_BitMap_BytesPerRow:
+        {
+        //Returning OP_GET(o, aHidd_BitMap_BytesPerRow) causes a crash.............
+		//	*msg->storage = OOP_GET(o, aHidd_BitMap_BytesPerRow);
+        //	*msg->storage = data->bytesperline;
+        	ULONG bytesPerLine = data->width * data->bytesperpixel;
+        	//bug( "Bytes per row: %ld\n", bytesPerLine );
+        	OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
+        	return;
+        }
+        case aoHidd_BitMap_StdPixFmt:
+        	//bug( "Standard pixel format was asked.\n" );
+        	//*msg->storage = vHidd_StdPixFmt_RGB16;
+        	*msg->storage = OOP_GET(data->pixfmtobj, aoHidd_BitMap_StdPixFmt);
+        	//bug( "Answered with %ld.\n", *msg->storage );
+        	return;
+        //case aoHidd_BitMap_PixFmt:
+        //	*msg->storage = OOP_GET(o, aoHidd_BitMap_PixFmt);
+        //	return;
+        default:
+        	//bug( "SAGAGFX was asked for aspect %ld\n", idx );
+        	OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
+        	return;
         }
     }
     
