@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2019, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2019, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -363,6 +363,7 @@ static void addmergedchunks(struct MinList *chunkList)
 
 static void findmbram(struct ExpansionBase *ExpansionBase)
 {
+#ifdef NONVAMPIRE
     D(bug("[expansion:am68k] %s()\n", __func__));
 
     if (!(SysBase->AttnFlags & AFF_68020))
@@ -390,6 +391,7 @@ static void findmbram(struct ExpansionBase *ExpansionBase)
     ret = scanmbregion(ExpansionBase, &mbchunks, &start, &end, step, 40);
 
     addmergedchunks(&mbchunks);
+#endif
 }
 
 static void detectexpram(struct ExpansionBase *ExpansionBase)
