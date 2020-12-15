@@ -59,8 +59,13 @@ static inline ULONG llPollJoystick(int port)
 {
     volatile struct Custom *custom = (struct Custom*)0xdff000;
     volatile struct CIA *cia = (struct CIA *)0xbfe001;
+
+    volatile UWORD* const newjoy0   = (UWORD*) 0xDFF222;
+    volatile UWORD* const newjoy1   = (UWORD*) 0xDFF220;
+
     ULONG bits = 0;
     UWORD joydat;
+    UWORD newjoydat;
     UBYTE cmask = (port == 0) ? (1 << 6) : (1 << 7);
 
     /* 'red' - /FIRn on CIA Port A */
@@ -69,9 +74,17 @@ static inline ULONG llPollJoystick(int port)
     /* 'blue' - Pin 9 on POTINP */
     bits |= ((custom->potinp >> ((port == 0) ? 10 : 14)) & 1) ? 0 : JPF_BUTTON_BLUE;
 
+
     /* Get the joypad bits */
     joydat = (port == 0) ? custom->joy0dat : custom->joy1dat;
-   
+    newjoydat = (port == 0) ? *newjoy0 : *newjoy1;
+    if ((newjoydat&1)!=0){  // Joy Actice
+      if ((newjoydat & 2)!=0) bits |= JPF_BUTTON_RED;
+      if ((newjoydat & 4)!=0) bits |= JPF_BUTTON_BLUE;
+      if ((newjoydat & 16)!=0) bits |= JPF_BUTTON_YELLOW;
+      if ((newjoydat & 8)!=0) bits |= JPF_BUTTON_GREEN;
+    } 
+
     if ((joydat >> 1) & 1) {
         bits |= JPF_JOY_RIGHT;
     }
