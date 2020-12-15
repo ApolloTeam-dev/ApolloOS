@@ -40,10 +40,11 @@ lastm4:
 	move.l (%a0)+,(%a1)+
 	subq.l	#1,%d0
 aligned:
+
 	move.l	%d0,%d1
 	and.l	#3,%d0
 	lsr.l	#2,%d1
-	beq	zend
+        beq	zend
 
 loop:
 	move16 (%a0)+,(%a1)+
@@ -52,8 +53,7 @@ loop:
 	bra    zend
 zloop:
 	move.l (%a0)+,(%a1)+
-zend:
-	dbra %d0,zloop
+zend:	dbra   %d0,zloop
 
 exit:	rts
 #endif
