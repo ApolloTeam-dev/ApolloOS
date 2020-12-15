@@ -50,6 +50,10 @@
 #define SAGA_V4_VIDEO_MODEID_640x480     0x05      // [x1, x1]
 #define SAGA_V4_VIDEO_MODEID_640x512     0x06      // [x1, x1]
 #define SAGA_V4_VIDEO_MODEID_960x540     0x07      // [x1, x1]
+#define SAGA_V4_VIDEO_MODEID_480x270     0x08      // [x2, x2]
+#define SAGA_V4_VIDEO_MODEID_304x224     0x09      // [x2, x2]
+#define SAGA_V4_VIDEO_MODEID_1280x720    0x0A      // [x2, x2]
+#define SAGA_V4_VIDEO_MODEID_640x360     0x0B      // [x2, x2]
 
 // VIDEO DAC
 
@@ -59,6 +63,7 @@
 #define SAGA_V4_VIDEO_HMOD               0xDFF1E6  // [16-bits] Horizontal Modulo
 #define SAGA_V4_VIDEO_DATA               0xDFF1EC  // [32-bits] Memory Data
 #define SAGA_V4_VIDEO_MODE               0xDFF1F4  // [16-bits] DAC Mode
+#define SAGA_V4_VIDEO_ON                 0xDFF1F6  // [16-bits] DAC Mode
 #define SAGA_V4_VIDEO_CLUT               0xDFF388  // [16-bits] Palette
 
 /*

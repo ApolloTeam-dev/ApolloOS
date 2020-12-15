@@ -43,6 +43,10 @@ UBYTE SAGAHW_V4_GetModeID(UWORD w, UWORD h)
     else if (w == 640 && h == 480) return(SAGA_V4_VIDEO_MODEID_640x480);
     else if (w == 640 && h == 512) return(SAGA_V4_VIDEO_MODEID_640x512);
     else if (w == 960 && h == 540) return(SAGA_V4_VIDEO_MODEID_960x540);
+    else if (w == 480 && h == 270) return(SAGA_V4_VIDEO_MODEID_480x270);
+    else if (w == 304 && h == 224) return(SAGA_V4_VIDEO_MODEID_304x224);
+    else if (w == 1280 && h == 720) return(SAGA_V4_VIDEO_MODEID_1280x720);
+    else if (w == 640 && h == 360) return(SAGA_V4_VIDEO_MODEID_640x360);
     
     return(0);
 }
@@ -180,6 +184,7 @@ VOID SAGAHW_V4_SetSpriteMemory(UBYTE *memory)
 VOID SAGAHW_V4_SetSpritePosition(WORD x, WORD y)
 {
     D(bug("[SAGA] SAGAHW_V4_SetSpritePosition(%d, %d)\n", x, y));
+    WRITE16(SAGA_V4_VIDEO_ON, 0x0001);
     
     WRITE16(SAGA_V4_VIDEO_SPRITE_POSX, SAGA_V4_VIDEO_SPRITE_DELTAX + x);
     WRITE16(SAGA_V4_VIDEO_SPRITE_POSY, SAGA_V4_VIDEO_SPRITE_DELTAY + y);

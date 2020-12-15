@@ -195,22 +195,30 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
     // Predefined resolutions
     
     MAKE_SYNC(320x200, 28375, 320, 688,  720,  800, 200, 483, 487, 494, 1, "SAGA:320x200");
+    MAKE_SYNC(304x224, 28375, 304, 304, 1000, 1040, 224, 542, 550, 556, 1, "SAGA:304x224");
     MAKE_SYNC(320x240, 28375, 320, 688,  720,  800, 240, 483, 487, 494, 1, "SAGA:320x240");
     MAKE_SYNC(320x256, 28375, 320, 688,  720,  800, 256, 483, 487, 494, 1, "SAGA:320x256");
+    MAKE_SYNC(480x270, 28375, 480, 480, 1000, 1040, 270, 542, 550, 556, 1, "SAGA:480x270");
+    MAKE_SYNC(640x360, 28375, 640, 640, 1000, 1040, 360, 542, 550, 556, 1, "SAGA:640x360");
     MAKE_SYNC(640x400, 28375, 640, 688,  720,  800, 400, 483, 487, 494, 1, "SAGA:640x400");
     MAKE_SYNC(640x480, 28375, 640, 688,  720,  800, 480, 483, 487, 494, 1, "SAGA:640x480");
     MAKE_SYNC(640x512, 28375, 640, 648,  680,  720, 512, 516, 524, 530, 1, "SAGA:640x512");
     MAKE_SYNC(960x540, 28375, 960, 968, 1000, 1040, 540, 542, 550, 556, 1, "SAGA:960x540");
+    MAKE_SYNC(1280x720,28375,1280,1280, 1000, 1040, 720, 542, 550, 556, 1, "SAGA:1280x720");
     
     struct TagItem syncs[] = 
     {
         { aHidd_Gfx_SyncTags,         (IPTR)sync_320x200         }, // syncs[0]
+        { aHidd_Gfx_SyncTags,         (IPTR)sync_304x224         }, // syncs[6]
         { aHidd_Gfx_SyncTags,         (IPTR)sync_320x240         }, // syncs[1]
         { aHidd_Gfx_SyncTags,         (IPTR)sync_320x256         }, // syncs[2]
+        { aHidd_Gfx_SyncTags,         (IPTR)sync_480x270         }, // syncs[6]
+        { aHidd_Gfx_SyncTags,         (IPTR)sync_640x360        }, // syncs[6]
         { aHidd_Gfx_SyncTags,         (IPTR)sync_640x400         }, // syncs[3]
         { aHidd_Gfx_SyncTags,         (IPTR)sync_640x480         }, // syncs[4]
         { aHidd_Gfx_SyncTags,         (IPTR)sync_640x512         }, // syncs[5]
         { aHidd_Gfx_SyncTags,         (IPTR)sync_960x540         }, // syncs[6]
+        { aHidd_Gfx_SyncTags,         (IPTR)sync_1280x720        }, // syncs[6]
         { TAG_DONE,                   0UL                        }, // syncs[7] <<< INSERT USERSYNCS HERE
         { TAG_DONE,                   0UL                        }  // syncs[8]
     };
