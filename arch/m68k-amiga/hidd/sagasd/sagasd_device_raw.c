@@ -60,9 +60,6 @@
 #define SAGASD_SECTORS  64
 #define SAGASD_RETRY    5      /* By default, retry up to N times */
 
-#undef DEBUG
-#define DEBUG 1
-
 #define VERSION 2
 #define REVISION 1
 #define LIBNAME "sagasd.device"
