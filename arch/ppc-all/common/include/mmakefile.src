@@ -1,7 +1,0 @@
-# $Id$
-
-include $(SRCDIR)/config/aros.cfg
-
-%copy_includes includes=multiboot.h dir=aros
-
-%common

@@ -34,14 +34,11 @@
 static const UWORD widthtable[] = {
     REZ_X_MIN,
     (REZ_X_MIN << 1),
-    (REZ_X_MIN << 2),
     0
 };
 static const UWORD heighttable[] = {
     REZ_Y_MIN,
     (REZ_Y_MIN + REZ_PAL_LINES),
-    (REZ_Y_MIN << 1),
-    ((REZ_Y_MIN + REZ_PAL_LINES) << 1),
     0
 };
 static const ULONG specialmask_aga[] = {
@@ -333,18 +330,6 @@ OOP_Object *AmigaVideoCl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_N
     cnt = 0;
     for (y = 0; heighttable[y]; y++) {
         WORD h = heighttable[y];
-#if !defined(USE_ALIEN_DISPLAYMODES)
-        if (GfxBase->DisplayFlags & NTSC)
-        {
-            if (h != REZ_Y_MIN && h != (REZ_Y_MIN << 1))
-                continue;
-        }
-        else
-        {
-            if (h == REZ_Y_MIN || h == (REZ_Y_MIN << 1))
-                continue;
-        }
-#endif
         for (x = 0; widthtable[x]; x++) {
             WORD w = widthtable[x];
             WORD d, res;

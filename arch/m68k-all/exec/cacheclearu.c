@@ -11,9 +11,6 @@
 #include <aros/libcall.h>
 
 extern void AROS_SLIB_ENTRY(CacheClearU_00,Exec,106)(void);
-extern void AROS_SLIB_ENTRY(CacheClearU_20,Exec,106)(void);
-extern void AROS_SLIB_ENTRY(CacheClearU_40,Exec,106)(void);
-extern void AROS_SLIB_ENTRY(CacheClearU_60,Exec,106)(void);
 
 #include <proto/exec.h>
 
@@ -39,20 +36,8 @@ AROS_LH0(void, CacheClearU,
      */
 
     Disable();
-    if (SysBase->AttnFlags & AFF_68060) {
-        /* 68060 support */
-        func = AROS_SLIB_ENTRY(CacheClearU_60, Exec, 106);
-    } else if (SysBase->AttnFlags & AFF_68040) {
-        /* 68040 support */
-        func = AROS_SLIB_ENTRY(CacheClearU_40, Exec, 106);
-    } else if (SysBase->AttnFlags & AFF_68020) {
-        /* 68020 support */
-        func = AROS_SLIB_ENTRY(CacheClearU_20, Exec, 106);
-    } else {
-        /* Everybody else (68000, 68010) */
-        func = AROS_SLIB_ENTRY(CacheClearU_00, Exec, 106);
-    }
-    func();
+    /* Everybody else (68000, 68010) */
+    func = AROS_SLIB_ENTRY(CacheClearU_00, Exec, 106);
     SetFunction((struct Library *)SysBase, -LIB_VECTSIZE * 106, func);
     Enable();
 

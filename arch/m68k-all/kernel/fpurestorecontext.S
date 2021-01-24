@@ -41,7 +41,14 @@ AROS_UFH2(void, FpuRestoreContext,
 FpuRestoreContext:
 	tst.b		3*4 + 8*12(%a0,%d0.w)
 	beq.s		0f
-	fmovem.l	%a0@,%fpcr/%fpsr/%fpiar
-	fmovem.x	%a0@(3*4),%fp0-%fp7
+        fmove.d        (%a0)+,%fp0
+        fmove.d        (%a0)+,%fp1
+        fmove.d        (%a0)+,%fp2
+        fmove.d        (%a0)+,%fp3
+        fmove.d        (%a0)+,%fp4
+        fmove.d        (%a0)+,%fp5
+        fmove.d        (%a0)+,%fp6
+        fmove.d        (%a0)+,%fp7
+        fmovem.l        %a0@,%fpcr/%fpsr/%fpiar
 0:	frestore	%a0@(3*4 + 8*12)
 	rts

@@ -158,23 +158,25 @@ static BOOL wbMenuEnable(Class *cl, Object *obj, int id, BOOL onoff)
 
 AROS_UFH3(ULONG, wbFilterIcons_Hook,
     AROS_UFHA(struct Hook*, hook, A0),
-    AROS_UFHA(struct ExAllData*, ead, A2),
-    AROS_UFHA(LONG *, type, A1))
+    AROS_UFHA(struct ExAllData*, ead, A1),
+    AROS_UFHA(LONG *, type, A2))
 {
     AROS_USERFUNC_INIT
     int i;
 
-    if (stricmp(ead->ed_Name, "disk.info") == 0)
+    if (stricmp(ead->ed_Name, "disk.info") == 0) {
         return FALSE;
+    }
 
     i = strlen(ead->ed_Name);
     if (i >= 5 && stricmp(&ead->ed_Name[i-5], ".info") == 0) {
-        ead->ed_Name[i-5] = 0;
+        ead->ed_Name[i-5] = '\0';
         return TRUE;
     }
 
-    if (stricmp(ead->ed_Name, ".backdrop") == 0)
+    if (stricmp(ead->ed_Name, ".backdrop") == 0) {
         return FALSE;
+    }
 
     return FALSE;
     
@@ -183,8 +185,8 @@ AROS_UFH3(ULONG, wbFilterIcons_Hook,
 
 AROS_UFH3(ULONG, wbFilterAll_Hook,
     AROS_UFHA(struct Hook*, hook, A0),
-    AROS_UFHA(struct ExAllData*, ead, A2),
-    AROS_UFHA(LONG *, type, A1))
+    AROS_UFHA(struct ExAllData*, ead, A1),
+    AROS_UFHA(LONG *, type, A2))
 {
     AROS_USERFUNC_INIT
 
@@ -195,8 +197,7 @@ AROS_UFH3(ULONG, wbFilterAll_Hook,
 
     i = strlen(ead->ed_Name);
     if (i >= 5 && stricmp(&ead->ed_Name[i-5], ".info") == 0) {
-        ead->ed_Name[i-5] = 0;
-        return TRUE;
+        return FALSE;
     }
 
     if (stricmp(ead->ed_Name, ".backdrop") == 0)

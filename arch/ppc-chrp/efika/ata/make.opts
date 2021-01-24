@@ -1,2 +1,0 @@
-# Do not include default bus drivers
-BUS_DRIVERS :=

@@ -2,7 +2,7 @@
 #define GRAPHICS_GFXBASE_H
 
 /*
-    Copyright © 1995-2010, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2010, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: graphics.library
@@ -183,7 +183,7 @@ struct GfxBase
 /* For use in SetChipRev() */
 #define SETCHIPREV_A    GFXF_HR_AGNUS
 #define SETCHIPREV_ECS  (GFXF_HR_AGNUS | GFXF_HR_DENISE)
-#define SETCHIPREV_AA   (SETCHIPREV_ECS | GFXF_AA_ALICE | GFXF_AA_LISA)
+#define SETCHIPREV_AA   (SETCHIPREV_ECS | GFXF_AA_MLISA | GFXF_AA_ALICE | GFXF_AA_LISA)
 #define SETCHIPREV_BEST 0xFFFFFFFF
 
 /* Memory type flags */

@@ -48,39 +48,39 @@ AMMXRestoreContext:
     .short    0x1C58		//move.l (a0)+,b6
     .short    0x1E58		//move.l (a0)+,b7
 
-    .short    0xFE58,0x0001		//Load (a0)+,B0
-    .short    0xFE58,0x0101		//Load (a0)+,B1
-    .short    0xFE58,0x0201		//Load (a0)+,B2
-    .short    0xFE58,0x0301		//Load (a0)+,B3
-    .short    0xFE58,0x0401		//Load (a0)+,B4
-    .short    0xFE58,0x0501		//Load (a0)+,B5
-    .short    0xFE58,0x0601		//Load (a0)+,B6
-    .short    0xFE58,0x0701		//Load (a0)+,B7
-    .short    0xFE58,0x0801		//Load (a0)+,B8
-    .short    0xFE58,0x0901		//Load (a0)+,B9
-    .short    0xFE58,0x0a01		//Load (a0)+,B10
-    .short    0xFE58,0x0b01		//Load (a0)+,B11
-    .short    0xFE58,0x0c01		//Load (a0)+,B12
-    .short    0xFE58,0x0d01		//Load (a0)+,B13
-    .short    0xFE58,0x0e01		//Load (a0)+,B14
-    .short    0xFE58,0x0f01		//Load (a0)+,B15
+    .short    0xFE18,0x0001		//Load (a0)+,D0
+    .short    0xFE18,0x0101		//Load (a0)+,D1
+    .short    0xFE18,0x0201		//Load (a0)+,D2
+    .short    0xFE18,0x0301		//Load (a0)+,D3
+    .short    0xFE18,0x0401		//Load (a0)+,D4
+    .short    0xFE18,0x0501		//Load (a0)+,D5
+    .short    0xFE18,0x0601		//Load (a0)+,D6
+    .short    0xFE18,0x0701		//Load (a0)+,D7
+    .short    0xFE18,0x0801		//Load (a0)+,E0
+    .short    0xFE18,0x0901		//Load (a0)+,E1
+    .short    0xFE18,0x0a01		//Load (a0)+,E2
+    .short    0xFE18,0x0b01		//Load (a0)+,E3
+    .short    0xFE18,0x0c01		//Load (a0)+,E4
+    .short    0xFE18,0x0d01		//Load (a0)+,E5
+    .short    0xFE18,0x0e01		//Load (a0)+,E6
+    .short    0xFE18,0x0f01		//Load (a0)+,E7
 
-    .short    0xFE18,0x0801		//Load (a0)+,e0
-    .short    0xFE18,0x0901		//Load (a0)+,e1
-    .short    0xFE18,0x0A01		//Load (a0)+,e2
-    .short    0xFE18,0x0B01		//Load (a0)+,e3
-    .short    0xFE18,0x0C01		//Load (a0)+,e4
-    .short    0xFE18,0x0D01		//Load (a0)+,e5
-    .short    0xFE18,0x0E01		//Load (a0)+,e6
-    .short    0xFE18,0x0F01		//Load (a0)+,e7
+    .short    0xFE58,0x0001		//Load (a0)+,E8
+    .short    0xFE58,0x0101		//Load (a0)+,E9
+    .short    0xFE58,0x0201		//Load (a0)+,E10
+    .short    0xFE58,0x0301		//Load (a0)+,E11
+    .short    0xFE58,0x0401		//Load (a0)+,E12
+    .short    0xFE58,0x0501		//Load (a0)+,E13
+    .short    0xFE58,0x0601		//Load (a0)+,E14
+    .short    0xFE58,0x0701		//Load (a0)+,E15
+    .short    0xFE58,0x0801		//Load (a0)+,E16
+    .short    0xFE58,0x0901		//Load (a0)+,E17
+    .short    0xFE58,0x0a01		//Load (a0)+,E18
+    .short    0xFE58,0x0b01		//Load (a0)+,E19
+    .short    0xFE58,0x0c01		//Load (a0)+,E20
+    .short    0xFE58,0x0d01		//Load (a0)+,E21
+    .short    0xFE58,0x0e01		//Load (a0)+,E22
+    .short    0xFE58,0x0f01		//Load (a0)+,E23
 
-    .short    0xFE18,0x0001		//Load (a0)+,d0	
-    .short    0xFE18,0x0101		//Load (a0)+,d1	
-    .short    0xFE18,0x0201		//Load (a0)+,d2	
-    .short    0xFE18,0x0301		//Load (a0)+,d3	
-    .short    0xFE18,0x0401		//Load (a0)+,d4	
-    .short    0xFE18,0x0501		//Load (a0)+,d5	
-    .short    0xFE18,0x0601		//Load (a0)+,d6	
-    .short    0xFE18,0x0701		//Load (a0)+,d7	
 
     rts

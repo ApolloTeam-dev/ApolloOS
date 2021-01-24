@@ -49,7 +49,7 @@ ELF2HUNK_FILES := \
     S/Shell-Startup
 
 OTHER_FILES := \
-    $(AROS_DIR_ARCH)/aros.hunk.gz \
+    $(AROS_DIR_ARCH)/aros.elf.gz \
     Disk.info \
     README.txt \
     README.txt.info \
@@ -82,7 +82,8 @@ $(GENDIR)/boot/bootdisk-amiga-m68k.adf: \
 	    $(GENDIR)/$(CURDIR)/install-$(AROS_HOST_ARCH)-$(AROS_HOST_CPU) \
 	    | $(GENDIR)/boot
 	$(RM) $@
-	$(COPYTOAFS) $@ --type OFS --name "AROS Kickstart" --size 1760 $(BOOT_DEST_DIR)
+##	$(COPYTOAFS) $@ --type OFS --name "AROS Kickstart" --size 1760 $(BOOT_DEST_DIR)
+	$(COPYTOAFS) $@ --type OFS --name "AROS Kickstart" --size 3520 $(BOOT_DEST_DIR)
 	$(GENDIR)/$(CURDIR)/install-$(AROS_HOST_ARCH)-$(AROS_HOST_CPU) $@
 
 $(DISTDIR)/bootdisk-amiga-m68k.adf: $(GENDIR)/boot/bootdisk-amiga-m68k.adf | $(DISTDIR)
@@ -101,8 +102,11 @@ $(BOOT_DEST_DIR)/Disk.info: $(SRCDIR)/$(CURDIR)/AROSBoot.info.src $(SRCDIR)/$(CU
 $(BOOT_DEST_DIR).info: $(SRCDIR)/$(CURDIR)/Emergency-Boot.info.src $(SRCDIR)/$(CURDIR)/AROSBoot.png
 	@$(ILBMTOICON) $^ $@
 
-$(BOOT_DEST_DIR)/$(AROS_DIR_ARCH)/aros.hunk.gz : $(BOOT_SRC_DIR)/$(AROS_DIR_ARCH)/aros.elf | $(BOOT_DEST_DIR)/$(AROS_DIR_ARCH)
-	@$(ELF2HUNK) $(QE2H) $< - | gzip -c -9 - >$@
+##$(BOOT_DEST_DIR)/$(AROS_DIR_ARCH)/aros.hunk.gz : $(BOOT_SRC_DIR)/$(AROS_DIR_ARCH)/aros.elf | $(BOOT_DEST_DIR)/$(AROS_DIR_ARCH)
+##	@$(ELF2HUNK) $(QE2H) $< - | gzip -c -9 - >$@
+
+$(BOOT_DEST_DIR)/$(AROS_DIR_ARCH)/aros.elf.gz : $(BOOT_SRC_DIR)/$(AROS_DIR_ARCH)/aros.elf | $(BOOT_DEST_DIR)/$(AROS_DIR_ARCH)
+	@cat $< | gzip -c -9 - >$@
 
 $(GENDIR)/$(CURDIR)/install-$(AROS_HOST_ARCH)-$(AROS_HOST_CPU): $(SRCDIR)/$(CURDIR)/install.c
 	echo $(GENDIR)/$(CURDIR)

@@ -1,7 +1,0 @@
-# $Id$
-
-include $(SRCDIR)/config/aros.cfg
-
-%build_module mmake=kernel-gpio-bcm2708 	\
-  modname=gpio modtype=resource		\
-  files="gpio_init"

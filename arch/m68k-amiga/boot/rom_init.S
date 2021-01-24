@@ -89,26 +89,26 @@ arosbootstrap_init:
 	swap	%d6
 
 	move.l	%a5,%a4	/* Space for CPU/FPU data array */
-	lea		16(%a5),%a5	/* Space also reserved for extra membank */
+	lea	16(%a5),%a5	/* Space also reserved for extra membank */
 	move.l	%a4,%a0
 	jsr	_cpu_detect
 	/* High word = gayle flag, low word = AttnFlags */
 	move.w	%a4@(2),%d6
 
-	btst	#2,%d6		/* AttnFlags AFB_68030? */
-	bne.s	.is32bit
-	btst	#1,%d6		/* AttnFlags AFB_68020? */
-	beq.s	.test32bit
-	/* 32-bit CPU check only, no memory tested */
+
+	/* set AttnFlags AFB_ADDR32 */
+	or.w	#0x2000,%a4@(2)
+
 	move.l	#0x08000000,%a0
+	move.l	#0x20000000,%a1
+	move.l	#0x00100000,%d0
+	jsr	__MemoryTest
+
+	move.l	#0x01000000,%a0
 	move.l	#0x08000000,%a1
 	move.l	#0x00100000,%d0
 	jsr	__MemoryTest
-	bmi.s	.test32bit
-.is32bit:
-	/* set AttnFlags AFB_ADDR32 */
-	or.w	#0x2000,%a4@(2)
-.test32bit:
+
 
 	/* Memory region array is put into the
 	 * system stack from the bottom up, so
@@ -120,22 +120,12 @@ arosbootstrap_init:
 	/* slow ram */
 	move.l	#0x00c00000,%a0
 	move.l	#0x00d80000,%a1
-	/* Limit max size if Gayle */
-	btst #16,%d6
-	bne.s	0f
-	move.l	#0x00dc0000,%a1
-0:	move.l	#0x00040000,%d0
+	move.l	#0x00040000,%d0
 	jsr	__MemoryTest
 	
 	/* chip ram */
 	sub.l	%a0,%a0
-	btst	#10,%d6		/* AttnFlags AFB_68080? */
-	beq.s	.sndrdchip
 	move.l	#0x00B80000,%a1
-	bra	.chiptest
-.sndrdchip:
-	move.l	#0x00200000,%a1
-.chiptest:
 	move.l	#0x00040000,%d0
 	jsr	__MemoryTest
 	beq	chipfault

@@ -13,7 +13,6 @@
 #include <aros/libcall.h>
 
 extern void AROS_SLIB_ENTRY(CachePreDMA_00,Exec,127)(void);
-extern void AROS_SLIB_ENTRY(CachePreDMA_40,Exec,127)(void);
 
 #include <proto/exec.h>
 
@@ -32,14 +31,7 @@ AROS_LH3(APTR, CachePreDMA,
      * Exec syscall table to directly point to the right routine.
      */
     Disable();
-    if (SysBase->AttnFlags & AFF_68040) {
-        /* 68040 support */
-        func = AROS_SLIB_ENTRY(CachePreDMA_40, Exec, 127);
-    } else {
-        /* Everybody else (68000, 68010) */
-        func = AROS_SLIB_ENTRY(CachePreDMA_00, Exec, 127);
-    }
-
+    func = AROS_SLIB_ENTRY(CachePreDMA_00, Exec, 127);
     SetFunction((struct Library *)SysBase, -LIB_VECTSIZE * 127, func);
     Enable();
 

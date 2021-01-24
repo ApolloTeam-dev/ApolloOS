@@ -48,39 +48,39 @@ AMMXSaveContext:
     .short    0x10CE		//move.l (a0)+,b6
     .short    0x10CF		//move.l (a0)+,b7
 
-    .short    0xFE58,0x0004		//Load (a0)+,B0
-    .short    0xFE58,0x1004		//Load (a0)+,B1
-    .short    0xFE58,0x2004		//Load (a0)+,B2
-    .short    0xFE58,0x3004		//Load (a0)+,B3
-    .short    0xFE58,0x4004		//Load (a0)+,B4
-    .short    0xFE58,0x5004		//Load (a0)+,B5
-    .short    0xFE58,0x6004		//Load (a0)+,B6
-    .short    0xFE58,0x7004		//Load (a0)+,B7
-    .short    0xFE58,0x8004		//Load (a0)+,B8
-    .short    0xFE58,0x9004		//Load (a0)+,B9
-    .short    0xFE58,0xa004		//Load (a0)+,B10
-    .short    0xFE58,0xb004		//Load (a0)+,B11
-    .short    0xFE58,0xc004		//Load (a0)+,B12
-    .short    0xFE58,0xd004		//Load (a0)+,B13
-    .short    0xFE58,0xe004		//Load (a0)+,B14
-    .short    0xFE58,0xf004		//Load (a0)+,B15
+    .short    0xFE18,0x0004		//Store (a0)+,D0
+    .short    0xFE18,0x1004		//Store (a0)+,D1
+    .short    0xFE18,0x2004		//Store (a0)+,D2
+    .short    0xFE18,0x3004		//Store (a0)+,D3
+    .short    0xFE18,0x4004		//Store (a0)+,D4
+    .short    0xFE18,0x5004		//Store (a0)+,D5
+    .short    0xFE18,0x6004		//Store (a0)+,D6
+    .short    0xFE18,0x7004		//Store (a0)+,D7
+    .short    0xFE18,0x8004		//Store (a0)+,E0
+    .short    0xFE18,0x9004		//Store (a0)+,E1
+    .short    0xFE18,0xa004		//Store (a0)+,E2
+    .short    0xFE18,0xb004		//Store (a0)+,E3
+    .short    0xFE18,0xc004		//Store (a0)+,E4
+    .short    0xFE18,0xd004		//Store (a0)+,E5
+    .short    0xFE18,0xe004		//Store (a0)+,E6
+    .short    0xFE18,0xf004		//Store (a0)+,E7
 
-    .short    0xFE18,0x8004		//Load (a0)+,e0
-    .short    0xFE18,0x9004		//Load (a0)+,e1
-    .short    0xFE18,0xA004		//Load (a0)+,e2
-    .short    0xFE18,0xB004		//Load (a0)+,e3
-    .short    0xFE18,0xC004		//Load (a0)+,e4
-    .short    0xFE18,0xD004		//Load (a0)+,e5
-    .short    0xFE18,0xE004		//Load (a0)+,e6
-    .short    0xFE18,0xF004		//Load (a0)+,e7
 
-    .short    0xFE18,0x0004		//Load (a0)+,d0	
-    .short    0xFE18,0x1004		//Load (a0)+,d1	
-    .short    0xFE18,0x2004		//Load (a0)+,d2	
-    .short    0xFE18,0x3004		//Load (a0)+,d3	
-    .short    0xFE18,0x4004		//Load (a0)+,d4	
-    .short    0xFE18,0x5004		//Load (a0)+,d5	
-    .short    0xFE18,0x6004		//Load (a0)+,d6	
-    .short    0xFE18,0x7004		//Load (a0)+,d7	
+    .short    0xFE98,0x0004		//Store (a0)+,E8
+    .short    0xFE98,0x1004		//Store (a0)+,E9
+    .short    0xFE98,0x2004		//Store (a0)+,E10
+    .short    0xFE98,0x3004		//Store (a0)+,E11
+    .short    0xFE98,0x4004		//Store (a0)+,E12
+    .short    0xFE98,0x5004		//Store (a0)+,E13
+    .short    0xFE98,0x6004		//Store (a0)+,E14
+    .short    0xFE98,0x7004		//Store (a0)+,E15
+    .short    0xFE98,0x8004		//Store (a0)+,E16
+    .short    0xFE98,0x9004		//Store (a0)+,E17
+    .short    0xFE98,0xa004		//Store (a0)+,E18
+    .short    0xFE98,0xb004		//Store (a0)+,E19
+    .short    0xFE98,0xc004		//Store (a0)+,E20
+    .short    0xFE98,0xd004		//Store (a0)+,E21
+    .short    0xFE98,0xe004		//Store (a0)+,E22
+    .short    0xFE98,0xf004		//Store (a0)+,E23
 
     rts

@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2014, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -112,11 +112,11 @@ ULONG do_render_with_gc(struct RastPort *rp, Point *src, struct Rectangle *rr,
     if (NULL != src)
     {
         srcx = src->x;
-	srcy = src->y;
+        srcy = src->y;
     } else
     {
     	srcx = 0;
-	srcy = 0;
+    	srcy = 0;
     }
     
     if (NULL == L)
@@ -124,103 +124,102 @@ ULONG do_render_with_gc(struct RastPort *rp, Point *src, struct Rectangle *rr,
         /* No layer, probably a screen, but may be a user inited bitmap */
     	struct Rectangle torender = *rr;
 
-	have_rp_cliprectangle = GetRPClipRectangleForBitMap(rp, bm, &rp_clip_rectangle, GfxBase);
+    	have_rp_cliprectangle = GetRPClipRectangleForBitMap(rp, bm, &rp_clip_rectangle, GfxBase);
     	if (have_rp_cliprectangle && !(_AndRectRect(rr, &rp_clip_rectangle, &torender)))
-	{
-	    return 0;
-	}
+		{
+			return 0;
+		}
 
-	srcx += (torender.MinX - rr->MinX);
-	srcy += (torender.MinY - rr->MinY);
+		srcx += (torender.MinX - rr->MinX);
+		srcy += (torender.MinY - rr->MinY);
+
+		if (get_special_info)
+		{
+			RSI(funcdata)->curbm = rp->BitMap;
+		}
 	
-	if (get_special_info)
-	{
-	    RSI(funcdata)->curbm = rp->BitMap;
-	}
-
-	pixwritten = CallRenderFunc(render_func, funcdata, srcx, srcy,
-				    bm, gc, &torender, do_update, GfxBase);
+		pixwritten = CallRenderFunc(render_func, funcdata, srcx, srcy, bm, gc, &torender, do_update, GfxBase);
     }
     else
     {
         struct ClipRect *CR;
-	WORD xrel;
+        WORD xrel;
         WORD yrel;
-	struct Rectangle torender, intersect;
+        struct Rectangle torender, intersect;
 
-	LockLayerRom(L);
+        LockLayerRom(L);
 	
-	have_rp_cliprectangle = GetRPClipRectangleForLayer(rp, L, &rp_clip_rectangle, GfxBase);
+		have_rp_cliprectangle = GetRPClipRectangleForLayer(rp, L, &rp_clip_rectangle, GfxBase);
+
+		xrel = L->bounds.MinX;
+		yrel = L->bounds.MinY;
+
+		torender.MinX = rr->MinX + xrel - L->Scroll_X;
+		torender.MinY = rr->MinY + yrel - L->Scroll_Y;
+		torender.MaxX = rr->MaxX + xrel - L->Scroll_X;
+		torender.MaxY = rr->MaxY + yrel - L->Scroll_Y;
+
+		CR = L->ClipRect;
 	
-	xrel = L->bounds.MinX;
-	yrel = L->bounds.MinY;
-
-	torender.MinX = rr->MinX + xrel - L->Scroll_X;
-	torender.MinY = rr->MinY + yrel - L->Scroll_Y;
-	torender.MaxX = rr->MaxX + xrel - L->Scroll_X;
-	torender.MaxY = rr->MaxY + yrel - L->Scroll_Y;
-
-	CR = L->ClipRect;
-
-	for (;NULL != CR; CR = CR->Next)
-	{
-	    D(bug("Cliprect (%d, %d, %d, %d), lobs=%p\n",
-	    	CR->bounds.MinX, CR->bounds.MinY, CR->bounds.MaxX, CR->bounds.MaxY,
-		CR->lobs));
-		
-	    /* Does this cliprect intersect with area to rectfill ? */
-	    if (_AndRectRect(&CR->bounds, &torender, &intersect))
-	    {		
-		if (!have_rp_cliprectangle || _AndRectRect(&rp_clip_rectangle, &intersect, &intersect))
+		for (;NULL != CR; CR = CR->Next)
 		{
-    		    WORD xoffset, yoffset;
+			D(bug("Cliprect (%d, %d, %d, %d), lobs=%p\n",
+			CR->bounds.MinX, CR->bounds.MinY, CR->bounds.MaxX, CR->bounds.MaxY,
+			CR->lobs));
 
-		    xoffset = intersect.MinX - torender.MinX;
-		    yoffset = intersect.MinY - torender.MinY;
-
-	            if (NULL == CR->lobs)
-		    {
-			if (get_special_info)
+			/* Does this cliprect intersect with area to rectfill ? */
+			if (_AndRectRect(&CR->bounds, &torender, &intersect))
 			{
-			    RSI(funcdata)->curbm = bm;
-			}
+				if (!have_rp_cliprectangle || _AndRectRect(&rp_clip_rectangle, &intersect, &intersect))
+				{
+						WORD xoffset, yoffset;
 
-			pixwritten += CallRenderFunc(render_func, funcdata, srcx + xoffset, srcy + yoffset,
-		        			     bm, gc, &intersect, do_update, GfxBase);
-		    }
-		    else
-		    {
-			/* Render into offscreen cliprect bitmap */
-			if (L->Flags & LAYERSIMPLE)
-		    	    continue;
-			else if (L->Flags & LAYERSUPER)
-			{
-		    	    D(bug("do_render_func(): Superbitmap not handled yet\n"));
-			}
-			else
-			{
+					xoffset = intersect.MinX - torender.MinX;
+					yoffset = intersect.MinY - torender.MinY;
 
-		    	    if (get_special_info)
-			    {
-				RSI(funcdata)->curbm = CR->BitMap;
-		    	    }
+						if (NULL == CR->lobs)
+					{
+					if (get_special_info)
+					{
+						RSI(funcdata)->curbm = bm;
+					}
 
-			    intersect.MinX = intersect.MinX - CR->bounds.MinX + ALIGN_OFFSET(CR->bounds.MinX);
-			    intersect.MinY = intersect.MinY - CR->bounds.MinY;
-			    intersect.MaxX = intersect.MaxX - CR->bounds.MinX + ALIGN_OFFSET(CR->bounds.MinX);
-			    intersect.MaxY = intersect.MaxY - CR->bounds.MinY;
+					pixwritten += CallRenderFunc(render_func, funcdata, srcx + xoffset, srcy + yoffset,
+										 bm, gc, &intersect, do_update, GfxBase);
+					}
+					else
+					{
+					/* Render into offscreen cliprect bitmap */
+					if (L->Flags & LAYERSIMPLE)
+							continue;
+					else if (L->Flags & LAYERSUPER)
+					{
+							D(bug("do_render_func(): Superbitmap not handled yet\n"));
+					}
+					else
+					{
 
-			    pixwritten += CallRenderFunc(render_func, funcdata, srcx + xoffset, srcy + yoffset,
-			    				 CR->BitMap, gc, &intersect, do_update, GfxBase);
-			}
+							if (get_special_info)
+						{
+						RSI(funcdata)->curbm = CR->BitMap;
+							}
 
-		    } /* if (CR->lobs == NULL) */
-		
-		} /* if it also intersects with possible rastport clip rectangle */
-		
-	    } /* if (cliprect intersects with area to render into) */
-	    
-	} /* for (each cliprect in the layer) */
+						intersect.MinX = intersect.MinX - CR->bounds.MinX + ALIGN_OFFSET(CR->bounds.MinX);
+						intersect.MinY = intersect.MinY - CR->bounds.MinY;
+						intersect.MaxX = intersect.MaxX - CR->bounds.MinX + ALIGN_OFFSET(CR->bounds.MinX);
+						intersect.MaxY = intersect.MaxY - CR->bounds.MinY;
+
+						pixwritten += CallRenderFunc(render_func, funcdata, srcx + xoffset, srcy + yoffset,
+										 CR->BitMap, gc, &intersect, do_update, GfxBase);
+					}
+
+					} /* if (CR->lobs == NULL) */
+
+				} /* if it also intersects with possible rastport clip rectangle */
+
+			} /* if (cliprect intersects with area to render into) */
+
+		} /* for (each cliprect in the layer) */
 	
         UnlockLayerRom(L);
     } /* if (rp->Layer) */
