@@ -22,10 +22,10 @@
 #define ISLBA (0xffffff || 0xfeffff)
 #define CYLINDER(x) x / (LBA_HEADS*LBA_SECTORS)
 
-#if 0		// Fast inline endian change
+#if 0		// Fast inline endian change on Apollo 68080 - TODO: Detection
 #define be.l(x) register ULONG _l080_ = x; asm inline ("movex.l %0,%0" : "r" (_l080_)); _l080_;
 #define be.w(x) register UWORD _w080_ = x; asm inline ("movex.w %0,%0" : "r" (_w080_)); _w080_;
-#else				// Not so fast inline endian change
+#else		// Not so fast inline endian change
 #define be.l(x) __builtin_bswap32(x)
 #define be.w(x) __builtin_bswap16(x)
 #endif
@@ -43,35 +43,34 @@ static const MBRTable fsinfo[] = {
 //  TYPE  FLAG  Amiga Type          Amiga Handler
 	0x01, 0x50,	"MSD"+(char)0, 		"fat-handler",		// Flags
 	0x04, 0xD0,	"MSD"+(char)0, 		"fat-handler",		// Bit 7: Check for LBA
-	0x05, 0x20,	"EBR"+(char)0,	 	"",					// Bit 6: Check for CHS
-	0x06, 0xC0,	"FAT"+(char)95, 	"fat95",			// Bit 5: Extended partition type
-	0x07, 0x80,	"NTFS", 			"ntfs-handler",		// Bit 4: Check for Atari FATFS
-	0x08, 0x40,	"C=FT", 			"fat-handler",		// // Commodore used this in their own roll of MS-DOS
-	0x0B, 0xC0,	"FAT"+(char)95, 	"fat95",			// Bit 3: Amiga Native type
-	0x0C, 0x80,	"FAT"+(char)95, 	"fat95",            // Bit 2: Declare Bootable
-	0x0E, 0x80,	"MSD"+(char)1,	 	"fat-handler",      // Bit 1: Seek partition for filesystems
-	0x0F, 0x80,	"EBR"+(char)1,	 	"",                 // Bit 0: 
+	0x05, 0x20,	"EBR"+(char)0,	 	"",			// Bit 6: Check for CHS
+	0x06, 0xC0,	"FAT"+(char)95, 	"fat95",		// Bit 5: Extended partition type
+	0x07, 0x80,	"NTFS", 		"ntfs-handler",		// Bit 4: Check for Atari FATFS
+	0x08, 0x40,	"C=FT", 		"fat-handler",		// Commodore used this in their own roll of MS-DOS
+	0x0B, 0xC0,	"FAT"+(char)95, 	"fat95",		// Bit 3: Amiga Native type
+	0x0C, 0x80,	"FAT"+(char)95, 	"fat95",            	// Bit 2: Declare Bootable
+	0x0E, 0x80,	"MSD"+(char)1,	 	"fat-handler",      	// Bit 1: Seek partition for filesystems
+	0x0F, 0x80,	"EBR"+(char)1,	 	"",                 	// Bit 0:
 	0x27, 0x80,	"MSW"+(char)10, 	"ntfs-handler",		// Recovery partition
-	0x30, 0x8C,	"RDSK",	 			"",					// RDB disk inside partition (Amithlon, WinUAE)
+	0x30, 0x8C,	"RDSK",	 		"",			// RDB disk inside partition (Amithlon, WinUAE)
 	0x42, 0x8C,	"DOS"+(char)0,	 	"sfs-handler",		// Amiga SFS on MBR, some emulators
-	0x76, 0xAC,	"RDSK",				"",					// RDB disk inside partition (Amithlon, WinUAE)
-	0x82, 0xC0,	"SWAP",			 	"",					// Linux Swap
+	0x76, 0xAC,	"RDSK",			"",			// RDB disk inside partition (Amithlon, WinUAE)
+	0x82, 0xC0,	"SWAP",			"",			// Linux Swap
 	0x83, 0xC0,	"EXT"+(char)2,	 	"ext-handler",		// Linux Ext. Filesystem
 	0x9C, 0x8C,	"DOS"+(char)0,	 	"afs-handler",		// Amiga FFS on MBR  	// These are set up so
 	0x9D, 0x8C,	"SFS"+(char)0,	 	"sfs-handler",		// Amiga SFS on MBR  	// that, in theory, you
 	0x9E, 0x8C,	"PFS"+(char)3,	 	"pfs3aio",	     	// Amiga PFS on MBR  	// can boot from MBR
-	0xAF, 0x80,	"HFS+",			 	"hfs-handler",		// Apple HFS
+	0xAF, 0x80,	"HFS+",			"hfs-handler",		// Apple HFS
 	0xD8, 0x40,	"CPM"+char(86),	 	"cpm-handler",		// CP/M-86 or CP/M-68k
-	0xDA, 0xC0,	"DATA",				"",					// Non-FS data	
-	0xEF, 0x80,	"EFI"+char(0),		"",					// EFI 	
-	0xFB, 0xC0,	"RAID",				"",					// Linux RAID	
-	0x00, 0x00, "NULL",				"",					// End of List
+	0xDA, 0xC0,	"DATA",			"",			// Non-FS data
+	0xEF, 0x80,	"EFI"+char(0),		"",			// EFI (Location of ApolloOS ROM?)
+	0xFB, 0xC0,	"RAID",			"",			// Linux RAID (Future)
+	0x00, 0x00, 	"NULL",			"",			// End of List
 };
 // MBR decision table
 #define DosTypeOf(type) UBYTE _type_=0; while (fsinfo[_type_].htype) if (type == fsinfo[_type_].htype) { fsinfo[_type_].atype; break; }
 #define DosHandlerOf(type) UBYTE _type_=0; while (fsinfo[_type_].htype) if ((char[4])type == fsinfo[_type_].htype) { fsinfo[_type_].handler; break; }
 #define AmigaHandlerOf(type) UBYTE _type_=0; while (fsinfo[_type_].htype) if ((char[4])type == fsinfo[_type_].atype) { fsinfo[_type_].handler; break; }
-
 
 // Structure of an MBR
 struct MBR {
@@ -126,12 +125,13 @@ struct PART {
 	DosEnvec env;
 };
 
+// AOS: Directly imported DosPacket struct to eliminate a dependency in AROS
 struct DosPacket {
 	IPTR dp_DosName;        /* DOS name (like DH0) */
 	IPTR dp_ExecName;       /* Exec Name (like sagasd.device) */
 	IPTR dp_Unit;           /* Unit # */
-	IPTR dp_Flags;			/* For OpenDevice() */
-  union { 					/* You'll see why I did this soon */
+	IPTR dp_Flags;		/* For OpenDevice() */
+  union { 			/* You'll see why I did this soon */
 	DosEnvec env;           /* Start of DosEnvec */
 	IPTR dp_TableSize;      /* Size of this structure. Must be at least 11 (DE_NUMBUFFERS). */
   }

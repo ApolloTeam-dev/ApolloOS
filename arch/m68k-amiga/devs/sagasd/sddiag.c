@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016, Jason S. McMullan <jason.mcmullan@gmail.com>
+ * Copyright (C) 2020, Alynna Trypnotk <alynna@kitsunet.net>
  * All rights reserved.
  *
  * Licensed under the MIT License:
@@ -24,6 +25,8 @@
  */
 
 #include <aros/debug.h>
+#undef DEBUG
+
 #include <exec/memory.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -34,13 +37,11 @@
 #include "sdcmd.h"
 #include "common.h"
 
-#include "sd.h"
+#include <saga/sd.h>
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x)   (sizeof(x)/sizeof((x)[0]))
 #endif
-void DebugSerial(const char *x, UBYTE b, const char *f, int l, ...) {};
-#undef DEBUG
 
 struct Library *SysBase, *DOSBase;
 

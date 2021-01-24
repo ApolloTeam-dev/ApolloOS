@@ -5,9 +5,9 @@
 
 // Configuration section
 #define DEVICE_NAME 	"sagasd.device"				// Exec device name
-#define DEVICE_TEMPLATE "SD@P$"						// DOS device template:  @=unit number, $=Partition #
-#define LBA_HEADS 		16							// Should match your driver, or LBA spec
-#define LBA_SECTORS 	64							// Should match your driver, or LBA spec
+#define DEVICE_TEMPLATE "SD@P$"					// DOS device template:  @=unit number, $=Partition #
+#define LBA_HEADS 	16					// Should match your driver, or LBA spec
+#define LBA_SECTORS 	64					// Should match your driver, or LBA spec
 
 // For porting to other drivers:  Put a routine that reads 512 bytes from a disk block into a buffer here.
 #define READBLOCK(block, buffer) sdcmd_read_blocks(&sdu->sdu_SDCmd, block, buffer, 512);
@@ -29,12 +29,12 @@ static BOOL ParseRDB(struct SAGASDBase * SAGASDBase, ULONG unit, UBYTE data[], s
 	struct Library *SysBase = SAGASDBase->sd_ExecBase;
 	struct SAGASDUnit *sdu = &SAGASDBase->sd_Unit[unit];
 	UBYTE i=0;
-	if (db(0x1c) == 0xffffffff) return FALSE;	// RDB without partitions 
-	
+	if (db(0x1c) == 0xffffffff) return FALSE;		// RDB without partitions 
+
 	while (TRUE) {
 		sderr = READBLOCK(blk, data);
 		if (sderr) return FALSE;
-		
+
 		if ((ULONG)data[0x0x14] & (1<<2)) continue;  	// Skip drives marked no automount
 		data[0x24+db(0x24)+1] = (UBYTE)0;           	// BSTR to string		
 		// Finish naming unit
@@ -42,10 +42,10 @@ static BOOL ParseRDB(struct SAGASDBase * SAGASDBase, ULONG unit, UBYTE data[], s
 			if (db(0x24+j) == '$') dos->dp_DosName[j] = 48+i;
 			else dos->dp_DosName[j] = db(0x24+j);
 		dos->dp_DosName[j+1] = 0;
-		
+
 		// Fill in DosPacket
-		dos->dp_ExecName = DEVICE_NAME;						// Exec device
-		dos->dp_Flags |= dl(0x20);							// Merge requested DosFlags with ones on partition
+		dos->dp_ExecName = DEVICE_NAME;			// Exec device
+		dos->dp_Flags |= dl(0x20);			// Merge requested DosFlags with ones on partition
 		memcpy(&dos->env,&data[0x80],sizeof(DosEnvec));	// Copy partitions DosEnvec into our packet.
 		// Add DevNode with a ConfigDev
 		struct DeviceNode *devnode = MakeDosNode(dos);
@@ -65,16 +65,16 @@ static BOOL ParseRDB(struct SAGASDBase * SAGASDBase, ULONG unit, UBYTE data[], s
 static BOOL ParseMBR(struct SAGASDBase * SAGASDBase, ULONG unit, UBYTE data[], struct DosPacket *dos, UBYTE parttype) {
 	struct Library *SysBase = SAGASDBase->sd_ExecBase;
 	struct SAGASDUnit *sdu = &SAGASDBase->sd_Unit[unit];
-	
+
 	// Get partition data .. not going to bother with extended partitions for now.  Maybe later.
 	MBR part[4];
 	part[0] = *(char[16] *)data[0x1be];
 	part[1] = *(char[16] *)data[0x1ce];
 	part[2] = *(char[16] *)data[0x1de];
 	part[3] = *(char[16] *)data[0x1ee];
-	
+
     struct Library *ExpansionBase = TaggedOpenLibrary(TAGGEDOPEN_EXPANSION);
-	
+
 	// Read all 4 partitions
 	for(UBYTE j=0; j<4; j++) {
 		if (part[j].status) {  // Has partition ID?
@@ -82,24 +82,24 @@ static BOOL ParseMBR(struct SAGASDBase * SAGASDBase, ULONG unit, UBYTE data[], s
 				dos->dp_BlocksPerTrack = 	(IPTR) LBA_SECTORS;
 				dos->dp_Surfaces = 			(IPTR) LBA_HEADS;
 				dos->dp_LowCyl = 			(IPTR) CYLINDER(part[j].lbas);
-				dos->dp_HighCyl = 			(IPTR) CYLINDER(part[j].lbac) + dos->dp_LowCyl;				
+				dos->dp_HighCyl = 			(IPTR) CYLINDER(part[j].lbac) + dos->dp_LowCyl;
 			} else {	// For CHS we should base it on whats in the partition table
 				dos->dp_BlocksPerTrack = 	(IPTR) CHS_HISECT(j)+1;
 				dos->dp_Surfaces = 			(IPTR) CHS_HIHEAD(j)+1;
 				dos->dp_LowCyl = 			(IPTR) CHS_LOCYLN(j);
 				dos->dp_HighCyl = 			(IPTR) CHS_HICYLN(j);
 			}
-			dos->dp_DosType =			(IPTR) DosTypeOf(part[j].type);  // Make MBR type into Amiga type
-			dos->dp_SectorsPerBlock = 	(IPTR) 1;				// All the rest of this stuff pretty standard
+			dos->dp_DosType =		(IPTR) DosTypeOf(part[j].type); // Make MBR type into Amiga type
+			dos->dp_SectorsPerBlock = 	(IPTR) 1;			// All the rest of this stuff pretty standard
 			dos->dp_SizeBlock = 		(IPTR) 512;
-			dos->dp_PreAlloc = 			(IPTR) 0;
+			dos->dp_PreAlloc = 		(IPTR) 0;
 			dos->dp_Interleave = 		(IPTR) 0;
-			dos->dp_SecOrg = 			(IPTR) 0;
+			dos->dp_SecOrg = 		(IPTR) 0;
 			dos->dp_NumBuffers = 		(IPTR) MEMF_PUBLIC;
-			dos->dp_Mask = 				(IPTR) 0xFFFFFFFE;
-			dos->dp_BootPri = 			(IPTR) -128;
-			dos->dp_Baud =				(IPTR) 0;
-			dos->dp_Control =			(IPTR) 0;
+			dos->dp_Mask = 			(IPTR) 0xFFFFFFFE;
+			dos->dp_BootPri = 		(IPTR) -128;
+			dos->dp_Baud =			(IPTR) 0;
+			dos->dp_Control =		(IPTR) 0;
 			dos->dp_BootBlocks =		(IPTR) 2;
 			// Finish naming unit
 			for (j=0; (UBYTE)dos->dp_DosName[j] == 0;, j++)
@@ -109,7 +109,7 @@ static BOOL ParseMBR(struct SAGASDBase * SAGASDBase, ULONG unit, UBYTE data[], s
 			if (devnode) {
 				struct ConfigDev *configdev = AllocConfigDev();
 				// Fill in DosPacket
-				dos->dp_ExecName = DEVICE_NAME;						// Exec device
+				dos->dp_ExecName = DEVICE_NAME;					// Exec device
 				dos->dp_Flags |= dl(0x20);					// Merge requested DosFlags with ones on partition
 				configdev->cd_Flags = 0x9;
 				configdev->cd_Driver = SAGASDBase.sd_Device;
@@ -127,15 +127,15 @@ static BOOL Part2DOSList(struct SAGASDBase * SAGASDBase, ULONG unit, UBYTE data[
 	struct SAGASDUnit *sdu = &SAGASDBase->sd_Unit[unit];
 
 	// Set up stuff we already know.    
-    dos.dp_DosName = (IPTR)DEVICE_TEMPLATE;
-    dos.dp_ExecName = (IPTR)DEVICE_NAME;
-    dos.dp_Unit = unit;
-    dos.dp_Flags = 0;
+	dos.dp_DosName = (IPTR)DEVICE_TEMPLATE;
+	dos.dp_ExecName = (IPTR)DEVICE_NAME;
+	dos.dp_Unit = unit;
+	dos.dp_Flags = 0;
 
 	// Set the unit number in the template
 	for (UBYTE i=0; (UBYTE)dos.dp_DosName[i] == 0;, i++)
 		if (dos.dp_DosNamet[i] == '@') dos.dp_Unit[i] = 48+unit;
-	
+
 	sderr = READBLK(0, data);
 	if (sderr) return FALSE;
  

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016, Jason S. McMullan <jason.mcmullan@gmail.com>
+ * Copyright (C) 2020, Alynna Trypnotk <alynna@kitsunet.net>
  * All rights reserved.
  *
  * Licensed under the MIT License:
@@ -22,19 +23,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
- 
 
 #ifndef SAGA_SD_H
 #define SAGA_SD_H
-#define SAGASD_HEADS 		16		// Probably don't change this
-#define SAGASD_SECTORS  	64		// This either
-#define SAGASD_RETRY    	16		// Times to retry an I/O operation
-#define IO_TIMINGLOOP_MSEC	100000		// Time to wait for an I/O response
-#define SDCMD_TIMEOUT       	65536	      	// Times to read for new status
-#define SDCMD_IDLE_RETRY    	16384		// Number of idle retries
-#define DELTA               	16              // Number of loops to wait before checking
-                                                // Applies to TIMEOUT and IDLE RETRY
-
 
 #define SAGA_SD_BASE            0xde0000        /* Base address */
 
@@ -51,4 +42,3 @@
 
 #endif /* SAGA_SD_H */
 /* vim: set shiftwidth=4 expandtab:  */
-

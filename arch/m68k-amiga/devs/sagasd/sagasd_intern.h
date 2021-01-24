@@ -1,19 +1,25 @@
 /*
  * Copyright (C) 2016, Netronome Systems, Inc.
+ * Copyright (C) 2020, Alynna Trypnotk <alynna@kitsunet.net>
  * All rights reserved.
  *
  */
 
-#undef SysBase
 #ifndef SAGASD_INTERN_H
 #define SAGASD_INTERN_H
+
 #include <exec/libraries.h>
 #include <exec/devices.h>
 #include <exec/tasks.h>
-#include <exec/interrupts.h>
+
 #include "sdcmd.h"
+
 #define SAGASD_UNITS    1       /* Only one chip select for now */
-#define SDU_STACK_SIZE          (4096 / sizeof(ULONG))
+#define SDU_STACK_SIZE  (4096 / sizeof(ULONG))
+#define SAGASD_VERSION 3
+#define SAGASD_REVISION 1
+#define SAGASD_VSTRING "sagasd.device v#VERSION##.#REVISION"
+#define IO_TIMINGLOOP_MSEC 20000
 
 struct SAGASDBase {
     struct Device       sd_Device;
@@ -30,24 +36,14 @@ struct SAGASDBase {
         struct MsgPort *sdu_MsgPort;
 
         BOOL sdu_Present;               /* Is a device detected? */
-        BOOL sdu_WasPresent;            /* Is a device detected? */
         BOOL sdu_Valid;                 /* Is the device ready for IO? */
-        BOOL sdu_WasValid;              /* Did the device status change? */
         BOOL sdu_ReadOnly;              /* Is the device read-only? */
         BOOL sdu_Motor;                 /* TD_MOTOR state */
         ULONG sdu_ChangeNum;
 
         struct Library *sdu_ExecBase;
-		struct SAGASDBase *sdu_Parent;         // Used for restarting the unit
-		UBYTE sdu_ID;
-		struct IRQVars {
-			struct IOExtTD *irq_iotd;
-		} sdu_IRQ;
-		struct Interrupt sdu_CardChangeIRQ;
-		struct List sdu_IRQChain;
     } sd_Unit[SAGASD_UNITS];
-	struct IOExtSer * sd_SerialIO;
 };
-extern void DebugSerial(const char *x, UBYTE b, const char *f, int l, ...); 
+
 #endif /* SAGASD_INTERN_H */
 /* vim: set shiftwidth=4 expandtab:  */
