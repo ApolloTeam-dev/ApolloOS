@@ -19,7 +19,7 @@
 #define SAGASD_VERSION 3
 #define SAGASD_REVISION 1
 #define SAGASD_VSTRING "sagasd.device v#VERSION##.#REVISION"
-#define IO_TIMINGLOOP_MSEC 20000
+#define IO_TIMINGLOOP_MSEC 25000
 
 struct SAGASDBase {
     struct Device       sd_Device;

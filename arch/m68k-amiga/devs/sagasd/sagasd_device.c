@@ -58,7 +58,7 @@
 
 #define SAGASD_HEADS    16
 #define SAGASD_SECTORS  64
-#define SAGASD_RETRY    6      /* By default, retry up to N times */
+#define SAGASD_RETRY    512      /* By default, retry up to N times */
 
 #undef DEBUG
 #define DEBUG 0
@@ -647,7 +647,7 @@ static void SAGASD_Detect(struct Library *SysBase, struct SAGASDUnit *sdu)
 
     /* Update sdu_Present, regardless */
 
-    asm ( "tst.b 0xbfe001\r\n" );
+    //asm ( "tst.b 0xbfe001\r\n" );
     present = sdcmd_present(&sdu->sdu_SDCmd);
     if (present != sdu->sdu_Present) {
         if (present) {

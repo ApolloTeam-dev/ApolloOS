@@ -48,8 +48,8 @@
 #define error(fmt,args...)      sdcmd_log(sd, SDLOG_ERROR, fmt ,##args)
 
 #define SDCMD_CLKDIV_SLOW       0xFF
-#define SDCMD_CLKDIV_FAST       0x02
-#define SDCMD_CLKDIV_FASTER     0x01
+#define SDCMD_CLKDIV_FAST       0x03
+#define SDCMD_CLKDIV_FASTER     0x02
 
 static UBYTE crc7(UBYTE crc, UBYTE byte)
 {
