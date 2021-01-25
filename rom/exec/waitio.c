@@ -5,12 +5,10 @@
     Desc: Wait until IO request completes.
     Lang: english
 */
-#define DEBUG_WAITIO 0
 #include <exec/execbase.h>
 #include <exec/io.h>
 #include <aros/libcall.h>
 #include <proto/exec.h>
-#include <aros/debug.h>
 
 /*****************************************************************************
 
@@ -50,6 +48,7 @@
 ******************************************************************************/
 {
     AROS_LIBFUNC_INIT
+
     /*
 	The I/O request is still in use if it wasn't done quick
 	and isn't yet replied (ln_Type==NT_MESSAGE).
@@ -57,20 +56,14 @@
 	Note that the port may be used for other things as well - so
 	don't just wait but repeat the check.
     */
-
-    // HaX
-#if DEBUG_WAITIO==1
-    ULONG *queue; queue=(ULONG *)0xC7FF00; //somewhere outta the way
-    kprintf("[%d] -> WaitIO($%08lx): %s",*queue,iORequest,iORequest->io_Device->dd_Library.lib_IdString); (*queue)++;
-#endif
-    while(!(iORequest->io_Flags&IOF_QUICK) && iORequest->io_Message.mn_Node.ln_Type==NT_MESSAGE ) {
+    while(!(iORequest->io_Flags&IOF_QUICK)&&
+	  iORequest->io_Message.mn_Node.ln_Type==NT_MESSAGE)
 	/*
 	    Wait at the reply port. Don't use WaitPort() - there may
 	    already be other messages waiting at it.
 	*/
-	// asm ( "nop\r\n" );
 	Wait(1<<iORequest->io_Message.mn_ReplyPort->mp_SigBit);
-    }
+
     /*
 	If ln_Type is NT_REPLYMSG the I/O request must be removed from
 	the replyport's waiting queue.
@@ -85,11 +78,9 @@
 	Enable();
     }
 
-#if DEBUG_WAITIO==1
-    (*queue)--; kprintf("[%d] <- WaitIO($%08lx): %s",*queue,iORequest,iORequest->io_Device->dd_Library.lib_IdString);
-#endif
     /* All done. Get returncode. */
     return iORequest->io_Error;
+
     AROS_LIBFUNC_EXIT
 } /* WaitIO */
 

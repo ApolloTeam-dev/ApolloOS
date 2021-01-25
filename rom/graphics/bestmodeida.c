@@ -6,7 +6,6 @@
     Lang: english
 */
 
-#define DEBUG 1
 #include <aros/debug.h>
 #include <cybergraphx/cybergraphics.h>
 #include <graphics/modeid.h>
@@ -123,24 +122,13 @@ static void BestModeIDForMonitor(struct monitor_driverdata *mdd, struct MatchDat
 	     && gm_height      >= args->desired_height)
 	{
 	    /* Check if this mode matches closer than the one we already found */
-	    if ((dims.MaxDepth <= args->found_depth) && (gm_width <= args->found_width) && (gm_height <= args->found_height))
+	    if ((dims.MaxDepth <= args->found_depth) &&
+	        (gm_width <= args->found_width) && (gm_height <= args->found_height))
 	    {
-		// (Alynna): If NTSC mode, disclude any modes between 242 and 399 lines (only PAL valid)
-		//  also prevent NTSC system from getting an NTSC interlace mode when PAL mode requested
-		if ((GfxBase->DisplayFlags & NTSC) && (gm_height < 242 || gm_height > 399) &&
-		    ((args->desired_height < 242) || (args->desired_height > 399)))
-		{
-		    args->found_id     = modeid;
-		    args->found_depth  = dims.MaxDepth;
-		    args->found_width  = gm_width;
-		    args->found_height = gm_height;
-
-		    D(bug(" Match!\n"));
-		}
 		/* Remember the new mode only if something changed. This prevents unwanted
 		   jumping to another display (several displays may have the same modes,
 		   in this case the last display will be picked up without this check. */
-		else if ((dims.MaxDepth < args->found_depth) ||
+		if ((dims.MaxDepth < args->found_depth) ||
                     (gm_width < args->found_width) || (gm_height < args->found_height))
 		{
 		    args->found_id     = modeid;
@@ -207,7 +195,7 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
                                               DIPFMustHave and DIPFMustNotHave are unchanged.
 	BIDTAG_Depth (UBYTE)                - Minimal depth. Default:
                                               if BIDTAG_ViewPort is passed: vp->RasInfo->BitMap->Depth,
-                                              else 2.
+                                              else 1.
 	BIDTAG_NominalWidth (UWORD),
 	BIDTAG_NominalHeight (UWORD)        - Aspect ratio. Default:
                                               if BIDTAG_SourceID: SourceID NominalDimensionInfo
@@ -255,10 +243,10 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
     {
         0, SPECIAL_FLAGS, /* DIPF         */
         4, 4, 4,          /* RGB bits     */
-        4,                /* Depth        */
+        1,                /* Depth        */
         INVALID_ID,       /* Monitor ID   */
         NULL,             /* Board name   */
-        0, 0,             /* Nominal size */
+        0, 0,         /* Nominal size */
         0, 0,             /* Desired size */
         INVALID_ID,       /* Found ID     */
         -1,               /* Found depth  */
@@ -308,8 +296,7 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
 	/* Offer some help to cybergraphics.library */
 	case CYBRBIDTG_BoardName:
 	    args.boardname = (STRPTR)tag->ti_Data;
-    
-    break;
+	    break;
 	}
     }
 
@@ -358,23 +345,10 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
         else
         {
             //  fallback to hardcoded values..
-	    // (Alynna): Use different nominal heights for real Amigas with only PAL or NTSC
             args.nominal_width  = 640;
+            args.nominal_height = 480;
             args.depth = 1;
-	    if (GfxBase->DisplayFlags & PAL) {
-		args.nominal_height = 256;
-		args.depth = 2;
-	    } else if (GfxBase->DisplayFlags & NTSC) {
-		args.nominal_height = 200;
-		args.depth = 2;
-	    } else
-		args.nominal_height = 480;
         }
-	// (Alynna): If native Amiga chipset, ensure that the returned mode has at least a bitdepth of 4
-	//           NTSC and PAL seem to hate 1bpp.
-	if (GfxBase->DisplayFlags & (PAL | NTSC))
-	    if (args.depth < 2 || args.depth > 32)
-		args.depth = 4;
     }
 
     D(bug("[Gfx] %s: Desired mode: %dx%dx%d, MonitorID 0x%08lX, MustHave 0x%08lX, MustNotHave 0x%08lX\n", __PRETTY_FUNCTION__,
@@ -385,10 +359,7 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
 
     /* First try to find exact match */
     FindBestModeIDForMonitor(monitor, &args, ~0, GfxBase);
-
-// was: #ifdef __mc68000__ -- this code should no longer be needed
-#if 0
-
+#ifdef __mc68000
     /* Handle situation where program only asks for specific monitor
      * (for example only PAL_MONITOR_ID or NTSC_MONITOR_ID bits set)
      * but it also requests hires or larger resolution.

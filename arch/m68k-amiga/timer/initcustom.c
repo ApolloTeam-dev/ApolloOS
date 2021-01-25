@@ -12,6 +12,7 @@
 #include <graphics/gfxbase.h>
 #include <hardware/custom.h>
 #include <hardware/cia.h>
+
 #include <timer_platform.h>
 
 static UWORD getline(void)
@@ -52,6 +53,7 @@ void InitCustom(struct GfxBase *gfx)
 	UWORD pos;
 
 	Disable();
+
 	custom->vposw = 0x8000;
 	custom->bplcon0 = 0x0200;
 
@@ -61,7 +63,7 @@ void InitCustom(struct GfxBase *gfx)
 		flags |= PAL;
 	else
 		flags |= NTSC;
-
+	
    	vposr = custom->vposr & 0x7f00;
    	if (!(vposr & 0x1000))
    		flags |= REALLY_PAL;
@@ -73,7 +75,6 @@ void InitCustom(struct GfxBase *gfx)
 		gfx->MemType = BUS_32 | DBL_CAS;
 	}
 
-	// Umm...
 	gfx->DisplayFlags = flags;
 
 	SysBase->VBlankFrequency = (flags & PAL) ? 50 : 60;
