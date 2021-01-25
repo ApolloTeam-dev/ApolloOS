@@ -58,7 +58,7 @@
 
 #define SAGASD_HEADS    16
 #define SAGASD_SECTORS  64
-#define SAGASD_RETRY    512      /* By default, retry up to N times */
+#define SAGASD_RETRY    16      /* By default, retry up to N times */
 
 #undef DEBUG
 #define DEBUG 0
@@ -520,7 +520,7 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
     struct NSDeviceQueryResult *nsqr;
     LONG err = IOERR_NOCMD;
 
-    debug("");
+    //debug("");
 
     if (io->io_Error == IOERR_ABORTED)
         return io->io_Error;
@@ -541,7 +541,6 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
             err = IOERR_BADLENGTH;
             break;
         }
-
         nsqr = data;
         nsqr->DevQueryFormat = 0;
         nsqr->SizeAvailable  = sizeof(struct NSDeviceQueryResult);
@@ -582,7 +581,6 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
             err = IOERR_BADLENGTH;
             break;
         }
-
         geom = data;
         memset(geom, 0, len);
         geom->dg_SectorSize   = sdu->sdu_SDCmd.info.block_size;
@@ -635,7 +633,6 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         err = IOERR_NOCMD;
         break;
     }
-
     //debug("io_Actual = %d", iostd->io_Actual);
     //debug("io_Error = %d", err);
     return err;
@@ -684,6 +681,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
     struct timerequest *treq = NULL;
     ULONG sigset;
     struct Message status;
+    ULONG i = 0;
 
     //debug("");
 
@@ -736,7 +734,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
     for (;;) {
         struct IORequest *io;
 
-        SAGASD_Detect(SysBase, sdu);
+	if (!(i++ % SD_DETECT_DELTA)) SAGASD_Detect(SysBase, sdu);
 
         io = (struct IORequest *)GetMsg(mport);
         if (!io) {

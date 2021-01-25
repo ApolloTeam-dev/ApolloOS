@@ -19,7 +19,11 @@
 #define SAGASD_VERSION 3
 #define SAGASD_REVISION 1
 #define SAGASD_VSTRING "sagasd.device v#VERSION##.#REVISION"
-#define IO_TIMINGLOOP_MSEC 25000
+
+// How long to wait for IO before checking SD_Detect again
+#define SD_DETECT_MSEC 1000000
+#define IO_TIMINGLOOP_MSEC 10000
+
 
 struct SAGASDBase {
     struct Device       sd_Device;
@@ -45,5 +49,6 @@ struct SAGASDBase {
     } sd_Unit[SAGASD_UNITS];
 };
 
+#define SD_DETECT_DELTA SD_DETECT_MSEC / IO_TIMINGLOOP_MSEC
 #endif /* SAGASD_INTERN_H */
 /* vim: set shiftwidth=4 expandtab:  */
