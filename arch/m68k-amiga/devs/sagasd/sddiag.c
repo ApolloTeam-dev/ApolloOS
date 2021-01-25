@@ -37,7 +37,7 @@
 #include "sdcmd.h"
 #include "common.h"
 
-#include <saga/sd.h>
+#include "sd.h"
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x)   (sizeof(x)/sizeof((x)[0]))
