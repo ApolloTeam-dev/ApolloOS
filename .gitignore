@@ -1,5 +1,6 @@
 
 # /
+**/mmakefile
 /config.log
 /local
 /mmake.cache
@@ -18,6 +19,10 @@
 /autom4te.cache
 /.vscode
 /binaries
+/snapshots
+/compiler/include/geninc.cfg
+/config/config.log
+/config/features.status
 
 # /arch/.unmaintained/amiga/workbench/hidds/graphics/intuition/
 /arch/.unmaintained/amiga/workbench/hidds/graphics/intuition/*.bak

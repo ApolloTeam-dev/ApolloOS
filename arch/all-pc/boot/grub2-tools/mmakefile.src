@@ -3,8 +3,8 @@
 
 include $(SRCDIR)/config/aros.cfg
 
-#MM- workbench-c : grub2-aros-installer
-#MM- workbench-c-quick : grub2-aros-installer-quick
+#$MM- workbench-c : grub2-aros-installer
+#$MM- workbench-c-quick : grub2-aros-installer-quick
  
 FILES := Install-grub2
 

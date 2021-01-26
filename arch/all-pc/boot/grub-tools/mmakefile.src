@@ -3,13 +3,13 @@
 
 include $(SRCDIR)/config/aros.cfg
 
-#MM- workbench-c : grub-aros-installer
-#MM- workbench-c-quick : grub-aros-installer-quick
+#$MM- workbench-c : grub-aros-installer
+#$MM- workbench-c-quick : grub-aros-installer-quick
 
 FILES := Install-grub
 
 USER_CPPFLAGS := -DADATE="\"$(shell date "+%d.%m.%Y")\""
-USER_INCLUDES := -isystem $(SRCDIR)/arch/all-pc/boot/grub-aros/include
+USER_INCLUDES := -isystem $(SRCDIR)/arch/all-pc/boot/grub-aros/include -I $(SRCDIR)/rom/partition/include
 
 %build_progs mmake=grub-aros-installer \
     files=$(FILES) targetdir=$(AROS_C) \
