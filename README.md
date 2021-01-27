@@ -2,6 +2,9 @@
 
 This is the main repository for the ApolloOS flavoured version of AROS.
 
+## Build Your Own
+
+Use this script to compile your own ApolloOS on any Debian based distro: [mkapollo.sh|https://github.com/ApolloTeam-dev/AROS/blob/v4-alynna/mkapollo.sh]
 
 ## Contributing
 
