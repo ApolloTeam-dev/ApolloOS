@@ -204,6 +204,8 @@ done
 help () {
 cat << EOF
 mkapollo.sh -- Roll your own ApolloOS image and ROM
+ (C) 2021 Alynna Trypnotk, License APL 1.1:
+ https://github.com/ApolloTeam-dev/AROS/blob/master-new/LICENSE
 
  It does what NintenDon't.
  Syntax: mkapollo.sh [options] <command> [args]
