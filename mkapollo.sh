@@ -18,6 +18,7 @@ CONF=0
 DEBUG=0
 CONFO=""
 MAKEO=""
+EXCLUDE=0
 ## END Configuration ##
 
 ## BEGIN Variables ##
@@ -42,9 +43,18 @@ defaults () {
               if [ $REZ = "640x200x4" ]; then echo -n "-n"; else echo -n "-p"; fi
               echo " --work=$WORK --conf=\"$CONFO\" --make=\"$MAKEO\" --cpu=$CPU --fpu=$FPU --opt=$OPT"
 }
-deposit-rom () { if [ -e bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin ]; then
+deposit-rom () { 
+		 if [ -e $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf ]; then
+                  cp $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf $WORK/
+                  echo ">>> ADF RESULT: $(du --apparent-size -h $WORK/bootdisk-amiga-m68k.adf)"
+                 fi
+		 if [ -e $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin ]; then
                   cat $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin >$WORK/AROS.ROM
-                  echo ">>> RESULT: $(du $WORK/AROS.ROM)"
+                  echo ">>> ROM RESULT: $(du --apparent-size -h $WORK/AROS.ROM)"
+                 fi
+		 if [ -e $BIN/distfiles/aros-amiga-m68k.iso ]; then
+                  cp $BIN/distfiles/aros-amiga-m68k.iso $WORK/
+                  echo ">>> ISO RESULT: $(du --apparent-size -h $WORK/aros-amiga-m68k.iso)"
                  fi
 }
 makeclean () { cd $BIN; make clean; cd $DIR; }
@@ -70,7 +80,6 @@ valid-fpu () {
   if [ "$1" == "68881|soft-float|hard-float" ]; then return 1; else return 0; fi
  fi
 }
-
 
 loop-through-opts () {
 for i in "$@"; do
@@ -155,6 +164,14 @@ for i in "$@"; do
    WORK="${i#*=}"
    shift
   ;;
+  -x|-x1|--exclude)
+   EXCLUDE=1
+   shift
+  ;;
+  -x0|--no-exclude)
+   EXCLUDE=0
+   shift
+  ;;
   --cpu=*)
    CPU="${i#*=}"
    shift
@@ -180,7 +197,7 @@ for i in "$@"; do
    else (echo "!!! There seems to be an issue with your Options." >&2); shift; exit 2
    fi
  esac
- export BRANCH CLEAN DL CONF CONFO GITCLEAN JOBS MAKEO REZ VAMP WORK CMD CPU FPU OPT DEBUG
+ export BRANCH CLEAN DL CONF CONFO GITCLEAN JOBS MAKEO REZ VAMP WORK CMD CPU FPU OPT DEBUG EXCLUDE
 done
 }
 
@@ -188,6 +205,7 @@ help () {
 cat << EOF
 mkapollo.sh -- Roll your own ApolloOS image and ROM
 
+ It does what NintenDon't.
  Syntax: mkapollo.sh [options] <command> [args]
 
  Commands:
@@ -212,20 +230,22 @@ mkapollo.sh -- Roll your own ApolloOS image and ROM
   -p,--pal                    Select PAL build
   -v,--vamp                   Compile for True Vampires
   -w,--work=<dir>             Work directory (will be created if not present)
+  -x,--exclude                When wiping, do not save cross compile tools
   --cpu=<cpu>                 Specify target CPU
   --fpu=<fpu>                 Specify target FPU
   --debug                     Enable debugging
 
   Defaults can be changed at the top of this file.
   Nearly all options take a boolean 0/1 to override defaults, as well as --no-<option>
-  
+
   Valid optimization levels: s 0 1 2 3
 EOF
 echo "  Valid CPUs               : $(valid-cpu)"
 echo "  Valid FPUs               : $(valid-fpu)"
 cat << EOF
 
- Note that source will be downloaded if it is not found at the location.
+ It will automatically install the packages needed for Vampire Goodness.
+ Note that sources will be downloaded if it is not found at the location.
  If you just want your ROM, just do:  mkapollo.sh all
  Then go get a coffee. Or a meal.
 
@@ -241,7 +261,7 @@ loop-through-opts $@
 if [ "$CMD" = "" ]; 	then help; exit 1; 	fi
 
 setvars
-echo "Making ApolloOS:     $(defaults)"
+echo "Making ApolloOS:     $CMD $(defaults)"
 echo "Configuration:       $CONFOPTS"
 echo "Make options:        $MAKEOPTS"
 echo "Work directory:      $WORK"
@@ -270,14 +290,24 @@ case $CMD in
  ;;
  all)
   configure
-  compile
   compile distfiles
-  compile kernel
   deposit-rom
  ;;
  wipe)
+  echo "!!! CTRL-AMIGA-AMIGA Pressed !!!"
+  echo ">>> Removing sources"
   rm -rf $SRC
+  if [ "$EXCLUDE" = "0" ]; then
+   echo ">>> Preserving Crosstools (saves serious recompile time)"
+   mv $BIN/bin/linux* $PORTS/
+  fi
+  echo ">>> Removing Binaries (Things in the work dir root are preserved)"
   rm -rf $BIN
+  if [ "$EXCLUDE" = "0" ]; then
+   echo ">>> Restoring Crosstools"
+   mv $PORTS/linux* $BIN/bin/
+  fi
+  echo ">>> Done.  You may now redownload or even choose another branch."
  ;;
  *)
   help
