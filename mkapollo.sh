@@ -256,7 +256,7 @@ if [ $(pkgcheck; echo $?) = 1 ]; then
 fi
 if [ $DL = 1 ]; 	         then echo ">>> Source wipe requested, deleting."; 	rm -rf $SRC; 	fi
 if [ ! -e $SRC ]; 	         then echo ">>> Source not detected, downloading.";	download;	fi
-if [ $CLEAN = 1 ]; 	         then echo ">>> Fresh build requested, cleaning.";	makeeclean; 	fi
+if [ $CLEAN = 1 ]; 	         then echo ">>> Fresh build requested, cleaning.";	makeclean; 	fi
 
 case $CMD in
  dist)
