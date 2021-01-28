@@ -56,6 +56,10 @@ deposit-rom () {
                   cp $BIN/distfiles/aros-amiga-m68k.iso $WORK/
                   echo ">>> ISO RESULT: $(du --apparent-size -h $WORK/aros-amiga-m68k.iso)"
                  fi
+		 if [ -e $BIN/bin/amiga-m68k/AROS.HUNK/Devs/sagasd.device ]; then
+                  cp $BIN/bin/amiga-m68k/AROS.HUNK/Devs/sagasd.device $WORK/
+                  echo ">>> SD0 RESULT: $(du --apparent-size -h $WORK/sagasd.device)"
+                 fi
 }
 makeclean () { cd $BIN; make clean; cd $DIR; }
 gitclean () { cd $SRC; git clean -df; cd $DIR; }
@@ -310,6 +314,9 @@ case $CMD in
    mv $PORTS/linux* $BIN/bin/
   fi
   echo ">>> Done.  You may now redownload or even choose another branch."
+ ;;
+ deposit-rom)
+  deposit-rom
  ;;
  *)
   help

@@ -41,6 +41,7 @@
 #include <devices/trackdisk.h>
 #include <devices/timer.h>
 #include <devices/scsidisk.h>
+#include <devices/hardblocks.h>
 
 #include <aros/symbolsets.h>
 
@@ -75,8 +76,8 @@ static VOID SAGASD_log(struct sdcmd *sd, int level, const char *format, ...)
 {
     va_list args;
 
-    if (level > DEBUG)
-        return;
+//    if (level > DEBUG)
+//        return;
 
     va_start(args, format);
     vkprintf(format, args);
@@ -143,6 +144,7 @@ static LONG SAGASD_ReadWrite(struct IORequest *io, UQUAD off64, BOOL is_write)
     debug("sderr=$%02x", sderr);
 
     if (sderr) {
+        debug("sderr=$%02x", sderr);
         iostd->io_Actual = 0;
 
         /* Decode sderr into IORequest io_Errors */
@@ -529,18 +531,22 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
 
     switch (io->io_Command) {
     case CMD_CLEAR:     /* Invalidate read buffer */
+    	bug( "%s CMD_CLEAR\n", __FUNCTION__ );
         iostd->io_Actual = 0;
         err = 0;
         break;
     case CMD_UPDATE:    /* Flush write buffer */
+    	bug( "%s CMD_UPDATE\n", __FUNCTION__ );
         iostd->io_Actual = 0;
         err = 0;
         break;
     case NSCMD_DEVICEQUERY:
+    	bug( "%s NSCMD_DEVICEQUERY\n", __FUNCTION__ );
         if (len < sizeof(*nsqr)) {
             err = IOERR_BADLENGTH;
             break;
         }
+
         nsqr = data;
         nsqr->DevQueryFormat = 0;
         nsqr->SizeAvailable  = sizeof(struct NSDeviceQueryResult);
@@ -551,14 +557,17 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         err = 0;
         break;
     case TD_PROTSTATUS:
+    	bug( "%s TD_PROTSTATUS\n", __FUNCTION__ );
         iostd->io_Actual = sdu->sdu_ReadOnly ? 1 : 0;
         err = 0;
         break;
     case TD_CHANGENUM:
+    	bug( "%s TD_CHANGENUM\n", __FUNCTION__ );
         iostd->io_Actual = sdu->sdu_ChangeNum;
         err = 0;
         break;
     case TD_CHANGESTATE:
+    	bug( "%s TD_CHANGESTATE\n", __FUNCTION__ );
         Forbid();
         iostd->io_Actual = sdu->sdu_Present ? 0 : 1;
         Permit();
@@ -567,20 +576,24 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
     case TD_EJECT:
         // Eject removable media
         // We mark is as invalid, then wait for Present to toggle.
+    	bug( "%s TD_EJECT\n", __FUNCTION__ );
         Forbid();
         sdu->sdu_Valid = FALSE;
         Permit();
         err = 0;
         break;
     case TD_GETDRIVETYPE:
+    	bug( "%s TD_GETDRIVETYPE\n", __FUNCTION__ );
         iostd->io_Actual = DRIVE_NEWSTYLE;
         err = 0;
         break;
     case TD_GETGEOMETRY:
+    	bug( "%s TD_GETGEOMETRY\n", __FUNCTION__ );
         if (len < sizeof(*geom)) {
             err = IOERR_BADLENGTH;
             break;
         }
+
         geom = data;
         memset(geom, 0, len);
         geom->dg_SectorSize   = sdu->sdu_SDCmd.info.block_size;
@@ -596,11 +609,13 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         err = 0;
         break;
     case TD_FORMAT:
+    	bug( "%s TD_FORMAT\n", __FUNCTION__ );
         off64  = iotd->iotd_Req.io_Offset;
         err = SAGASD_ReadWrite(io, off64, TRUE);
         break;
     case TD_MOTOR:
         // FIXME: Tie in with power management
+    	//bug( "%s TD_MOTOR\n", __FUNCTION__ );
         iostd->io_Actual = sdu->sdu_Motor;
         sdu->sdu_Motor = iostd->io_Length ? 1 : 0;
         err = 0;
@@ -633,6 +648,7 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         err = IOERR_NOCMD;
         break;
     }
+
     //debug("io_Actual = %d", iostd->io_Actual);
     //debug("io_Error = %d", err);
     return err;
@@ -852,13 +868,28 @@ AROS_LH1(LONG, AbortIO,
 }
 
 
+static void printBufferHex( UBYTE *buffer, ULONG size )
+{
+	for( ULONG byte = 0; byte < size; byte++ )
+	{
+		kprintf( "%x", buffer[ byte ] );
+	}
+	kprintf( "\n" );
+}
+
+static UBYTE* BSTRtoCSTR( BSTR string )
+{
+	UBYTE size = ((UBYTE*)string)[0];
+	UBYTE *output = &((UBYTE*)string)[1];
+	output[ size ] = 0;
+	return output;
+}
+
 static void SAGASD_BootNode(
         struct SAGASDBase *SAGASDBase,
         struct Library *ExpansionBase,
         ULONG unit)
 {
-    // NOTE!  This routine is only correct for a limited number of cases
-    // and will use the partparser.c to correctly add bootnodes soon!
     struct Library *SysBase = SAGASDBase->sd_ExecBase;
     struct SAGASDUnit *sdu = &SAGASDBase->sd_Unit[unit];
     TEXT dosdevname[4] = "SD0";
@@ -870,6 +901,108 @@ static void SAGASD_BootNode(
     dosdevname[2] += unit;
     debug("Adding bootnode %s %d x %d", dosdevname,sdu->sdu_SDCmd.info.blocks, sdu->sdu_SDCmd.info.block_size);
 
+    //const ULONG IdDOS = AROS_MAKE_ID('D','O','S','\001');
+	if (!SAGASDBase->sd_IsAROS) {
+		//See if we have an RDB block
+		UBYTE rdbBuffer[ 512 ];
+		UBYTE partBuffer[ 512 ];
+		struct RigidDiskBlock *rdbBlock = (struct RigidDiskBlock*)rdbBuffer;
+		struct PartitionBlock *partBlock = (struct PartitionBlock*)partBuffer;
+		for( ULONG block = 0; block < 16; block++ )
+		{
+			//Get the block
+			debug( "%s Checking block %d\n", __FUNCTION__, block );
+			sdcmd_read_block( &sdu->sdu_SDCmd, block, rdbBuffer );
+
+			//Is this an RDB Block?
+			if( rdbBlock->rdb_ID == IDNAME_RIGIDDISK )
+			{
+				bug( "%s Found RDB block at block %d\n", __FUNCTION__, block );
+				bug( "%s Disk Vendor %s\n", __FUNCTION__, rdbBlock->rdb_DiskVendor );
+				bug( "%s Disk Product %s\n", __FUNCTION__, rdbBlock->rdb_DiskProduct );
+				bug( "%s Disk Revision %s\n", __FUNCTION__, rdbBlock->rdb_DiskRevision );
+
+				//Can we load the partition tables?
+				if( rdbBlock->rdb_PartitionList )
+				{
+					//Is the partition block beyond our disk size?
+					if( rdbBlock->rdb_PartitionList > sdu->sdu_SDCmd.info.blocks )
+					{
+						bug( "%s Partition block is at block %d but we only have %d blocks on disk.\n", __FUNCTION__, rdbBlock->rdb_PartitionList, sdu->sdu_SDCmd.info.blocks );
+						return;
+					}
+
+					//Try to load the partition block
+					sdcmd_read_block( &sdu->sdu_SDCmd, rdbBlock->rdb_PartitionList, partBuffer );
+					while( partBlock->pb_ID == IDNAME_PARTITION )
+					{
+						//We found a valid partition block it seems
+						UBYTE *partName = BSTRtoCSTR( (BSTR)partBlock->pb_DriveName );
+
+						//Form our parameters for forming the device node
+						pp[0] = (IPTR)partName;
+						pp[1] = (IPTR)"sagasd.device";
+						pp[2] = unit;
+						pp[3] = partBlock->pb_DevFlags;
+						CopyMem( partBlock->pb_Environment, &pp[ 4 ], sizeof( partBlock->pb_Environment ) );
+
+						bug( "%s Found partition list at block 0x%0.8lx\n", __FUNCTION__, rdbBlock->rdb_PartitionList );
+						bug( "%s Partition name %s\n", __FUNCTION__, partName );
+						bug( "%s Low Cylinder 0x%0.8lx\n", __FUNCTION__, pp[DE_LOWCYL + 4] );
+						bug( "%s High Cylinder 0x%0.8lx\n", __FUNCTION__, pp[DE_LOWCYL + 4] );
+						bug( "%s DOS Type 0x%0.8lx\n", __FUNCTION__, pp[DE_DOSTYPE + 4] );
+						bug( "%s Max Transfer 0x%0.8lx\n", __FUNCTION__, pp[DE_MAXTRANSFER + 4] );
+						bug( "%s Boot priority %d\n", __FUNCTION__, pp[DE_BOOTPRI + 4] );
+
+						//Create the dos node and add it to the boot node list
+						devnode = MakeDosNode(pp);
+						if( devnode )
+						{
+							//If this is bootable, add this as a boot node.
+							if( partBlock->pb_Flags != PBFF_NOMOUNT)
+							{
+								if( partBlock->pb_Flags == PBFF_BOOTABLE )
+								{
+									//To make this bootable, we need a ConfigDev object
+									struct ConfigDev *configDev = AllocConfigDev();
+									if( AddBootNode( pp[DE_BOOTPRI + 4], ADNF_STARTPROC, devnode, configDev ) )
+										bug( "%s failed to add partition %s to boot node list.\n", __FUNCTION__, partName );
+								}else
+								{
+									if( AddBootNode( pp[DE_BOOTPRI + 4], ADNF_STARTPROC, devnode, NULL ) )
+										bug( "%s failed to add partition %s to boot node list.\n", __FUNCTION__, partName );
+								}
+							}
+						}
+						else
+						{
+							bug( "%s failed to create device for partition %s.\n", __FUNCTION__, partName );
+						}
+
+						//Check the next partition
+						ULONG nextPartitionBlock = partBlock->pb_Next;
+						if( nextPartitionBlock == 0 || nextPartitionBlock > sdu->sdu_SDCmd.info.blocks)
+							break;	//No more partitions it seems
+						//Read the partition block
+						sdcmd_read_block( &sdu->sdu_SDCmd, nextPartitionBlock, partBuffer );
+					}
+				}
+
+				//We are done adding partitions.  Time to go back.
+				return;
+			}
+#if 0
+			else
+			{
+				bug( "%s Didn't find RDB block.  Found 0x%0.8lx at block %d\n", __FUNCTION__, rdbBlock->rdb_ID, block );
+				printBufferHex( rdbBuffer, 512 );
+			}
+#endif
+		}
+	}
+    //If we are this far, then no RDB partition is found
+    //Let's assume (for better or worse) it is to be used as a fat drive
+    //TODO:  This isn't implemented as described above.....
     pp[0] = (IPTR)dosdevname;
     pp[1] = (IPTR)"sagasd.device";
     pp[2] = unit;
@@ -885,14 +1018,15 @@ static void SAGASD_BootNode(
     pp[DE_NUMBUFFERS + 4] = 1;
     pp[DE_BUFMEMTYPE + 4] = MEMF_PUBLIC;
     pp[DE_MAXTRANSFER + 4] = 0x00200000;
-    pp[DE_MASK + 4] = 0xFFFFFFFE;
+    pp[DE_MASK + 4] = 0x7FFFFFFE;
     pp[DE_BOOTPRI + 4] = 5 - (unit * 10);
-    pp[DE_DOSTYPE + 4] = 0x444f5303;
+    pp[DE_DOSTYPE + 4] = 0x444f5305;
+    pp[DE_CONTROL + 4] = 0;
     pp[DE_BOOTBLOCKS + 4] = 2;
     devnode = MakeDosNode(pp);
 
     if (devnode)
-   	AddBootNode(pp[DE_BOOTPRI + 4], 0 & ADNF_STARTPROC, devnode, NULL);
+    	AddBootNode(pp[DE_BOOTPRI + 4], ADNF_STARTPROC, devnode, NULL);
 }
 
 #define PUSH(task, type, value) do {\
@@ -973,7 +1107,8 @@ static int GM_UNIQUENAME(init)(struct SAGASDBase * SAGASDBase)
     struct Library *ExpansionBase;
     ULONG i;
 
-    asm ( "tst.b 0xbfe001\r\n" );    // Wait a moment, then...
+    //asm ( "tst.b 0xbfe001\r\n" );
+
 
     ExpansionBase = TaggedOpenLibrary(TAGGEDOPEN_EXPANSION);
     if (!ExpansionBase)
@@ -983,12 +1118,18 @@ static int GM_UNIQUENAME(init)(struct SAGASDBase * SAGASDBase)
 	SAGASD_InitUnit(SAGASDBase, i);
 
     /* Only add bootnode if recalibration succeeded */
-    for (i = 0; i < SAGASD_UNITS; i++) {
-	if (SAGASDBase->sd_Unit[i].sdu_Valid)
-	    SAGASD_BootNode(SAGASDBase, ExpansionBase, i);
+    for (i = 0; i < SAGASD_UNITS; i++)
+    {
+    	if (SAGASDBase->sd_Unit[i].sdu_Valid)
+    		SAGASD_BootNode(SAGASDBase, ExpansionBase, i);
     }
 
     CloseLibrary((struct Library *)ExpansionBase);
+
+    // Are we in AROS or AmigaOS?
+    struct Library *IsAROS = OpenLibrary("aros.library",0);
+    SAGASDBase->sd_IsAROS = (IsAROS ? TRUE : FALSE);
+    if (SAGASDBase->sd_IsAROS) CloseLibrary(IsAROS);
 
     return TRUE;
 }
