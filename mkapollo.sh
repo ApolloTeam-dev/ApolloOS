@@ -51,6 +51,16 @@ check-deps () {
   if [ ! -e "${BIN}/bin/linux-x86_64/tools/sfdc" ]; then compile sfdc; fi
 }
 
+print_bold () {
+	# shellcheck disable=SC2059
+	printf "\033[1m${1}\033[0m"
+}
+
+print_bold_nl () {
+	# shellcheck disable=SC2059
+	print_bold "${1}\n"
+}
+
 deposit-rom () {
 		 if [ -e $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf ]; then
                   cp $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf $WORK/
@@ -145,7 +155,7 @@ for i in "$@"; do
    shift
   ;;
   -j)
-   JOBS=$(cat /proc/cpuinfo | grep "processor" | wc -l)
+   JOBS=$(nproc)
    shift
   ;;
   -m=*|--make=*)
@@ -276,22 +286,30 @@ loop-through-opts $@
 if [ "$CMD" = "" ]; 	then help; exit 1; 	fi
 
 setvars
-echo "Making ApolloOS:     $CMD $(defaults)"
-echo "Configuration:       $CONFOPTS"
-echo "Make options:        $MAKEOPTS"
-echo "Work directory:      $WORK"
-echo -n "3..."; sleep 1; echo -n "2..."; sleep 1; echo -n "1..."; sleep 1; echo "Go!";
+print_bold "Making ApolloOS: "
+printf "%s %s\n" "${CMD}" "$(defaults)"
 
-mkdir -p $BIN
+print_bold "Configuration:   "
+printf "%s\n" "${CONFOPTS}"
+
+print_bold "Make options:    "
+printf "%s\n" "${MAKEOPTS}"
+
+print_bold "Work directory:  "
+printf "%s\n" "${WORK}"
+
+echo -n "3..."; sleep 1; echo -n "2..."; sleep 1; echo -n "1..."; sleep 1; print_bold_nl "Go!";
+
+mkdir -p "${BIN}"
 
 if [ $(pkgcheck; echo $?) = 1 ]; then
- echo ">>> You are missing required packages to build ApolloOS.  Attempting to install."
+ print_bold_nl ">>> You are missing required packages to build ApolloOS.  Attempting to install..."
  apt -y update
- apt -y install $PKGS
+ apt -y install "${PKGS}"
 fi
-if [ $DL = 1 ]; 	         then echo ">>> Source wipe requested, deleting."; 	rm -rf $SRC; 	fi
-if [ ! -e $SRC ]; 	         then echo ">>> Source not detected, downloading.";	download;	fi
-if [ $CLEAN = 1 ]; 	         then echo ">>> Fresh build requested, cleaning.";	makeclean; 	fi
+if [ $DL = 1 ]; 	         then print_bold_nl ">>> Source wipe requested, deleting."; 	rm -rf $SRC; 	fi
+if [ ! -e $SRC ]; 	         then print_bold_nl ">>> Source not detected, downloading.";	download;	fi
+if [ $CLEAN = 1 ]; 	         then print_bold_nl ">>> Fresh build requested, cleaning.";	makeclean; 	fi
 
 case $CMD in
  dist)
@@ -306,9 +324,11 @@ case $CMD in
  list-rom-contents)
   check-deps
   if [ ! -e "${WORK}/AROS.ROM" ]; then compile kernel; fi
-  printf "\033[1m ---- Start ROM Contents: ----\033[0m\n"
+  print_bold_nl ""
+  print_bold_nl " ---- Start ROM Contents: ----"
   strings "${WORK}/AROS.ROM" | grep "\$VER" | sed "s/i\$VER: //g" | sed "s/\$VER: //g" | sed "s/i\$VER://g" | sed "s/\$VER://g"
-  printf "\033[1m ----- End ROM Contents: -----\033[0m\n"
+  print_bold_nl " ----- End ROM Contents: -----"
+  print_bold_nl ""
  ;;
  all)
   check-deps
@@ -316,20 +336,20 @@ case $CMD in
   deposit-rom
  ;;
  wipe)
-  echo "!!! CTRL-AMIGA-AMIGA Pressed !!!"
-  echo ">>> Removing sources"
+  print_bold_nl "!!! CTRL-AMIGA-AMIGA Pressed !!!"
+  print_bold_nl ">>> Removing sources"
   rm -rf $SRC
   if [ "$EXCLUDE" = "0" ]; then
-   echo ">>> Preserving Crosstools (saves serious recompile time)"
-   mv $BIN/bin/linux* $PORTS/
+   print_bold_nl ">>> Preserving Crosstools (saves serious recompile time)"
+   mv ${BIN}/bin/linux* ${PORTS}/
   fi
-  echo ">>> Removing Binaries (Things in the work dir root are preserved)"
+  print_bold_nl ">>> Removing Binaries (Things in the work dir root are preserved)"
   rm -rf $BIN
   if [ "$EXCLUDE" = "0" ]; then
-   echo ">>> Restoring Crosstools"
+   print_bold_nl ">>> Restoring Crosstools"
    mv $PORTS/linux* $BIN/bin/
   fi
-  echo ">>> Done.  You may now redownload or even choose another branch."
+  print_bold_nl ">>> Done.  You may now redownload or even choose another branch."
  ;;
  deposit-rom)
   deposit-rom
@@ -339,7 +359,7 @@ case $CMD in
   exit 1
  ;;
 esac
-if [ $GITCLEAN = 1 ]; 	then echo ">>> Cleaning git artifacts.";		gitclean; 	fi
+if [ $GITCLEAN = 1 ]; 	then print_bold_nl ">>> Cleaning git artifacts.";		gitclean; 	fi
 freevars
-echo "Please Amiga responsibly."
+print_bold_nl "Please Amiga responsibly!"
 ## END MAIN ##
