@@ -37,7 +37,6 @@ NC="$(tput sgr0)"
 ARROWS="${BOLD}${YELLOW}>>>${NC}"
 ## BEGIN Beauty Variables ##
 
-
 ## BEGIN Variables ##
 setvars () {
 	DIR="$(pwd)"
@@ -66,22 +65,6 @@ defaults () {
 	echo " --work=${WORK} --conf=\"${CONFO}\" --make=\"${MAKEO}\" --cpu=${CPU} --fpu=${FPU} --opt=${OPT}"
 }
 
-check-deps () {
-	if [ ${CONF} = 1 ] || [ ! -e "${BIN}/config.status" ];	then configure;			fi
-	if [ ! -e "${BIN}/bin/linux-x86_64/tools/mmake" ];			then compile mmake;	fi
-	if [ ! -e "${BIN}/bin/linux-x86_64/tools/sfdc" ];				then compile sfdc;	fi
-}
-
-print_bold () {
-	# shellcheck disable=SC2059
-	printf "${BOLD}${1}${BOLDEND}"
-}
-
-print_bold_nl () {
-	# shellcheck disable=SC2059
-	print_bold "${1}\n"
-}
-
 deposit-rom () {
 	if [ -e $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf ]; then
 		cp $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf $WORK/
@@ -102,6 +85,22 @@ deposit-rom () {
 		cp $BIN/bin/amiga-m68k/AROS.HUNK/Devs/sagasd.device $WORK/
 		echo "${ARROWS} SD0 RESULT: $(du --apparent-size -h $WORK/sagasd.device)"
 	fi
+}
+
+check-deps () {
+	if [ ${CONF} = 1 ] || [ ! -e "${BIN}/config.status" ];	then configure;			fi
+	if [ ! -e "${BIN}/bin/linux-x86_64/tools/mmake" ];			then compile mmake;	fi
+	if [ ! -e "${BIN}/bin/linux-x86_64/tools/sfdc" ];				then compile sfdc;	fi
+}
+
+print_bold () {
+	# shellcheck disable=SC2059
+	printf "${BOLD}${1}${BOLDEND}"
+}
+
+print_bold_nl () {
+	# shellcheck disable=SC2059
+	print_bold "${1}\n"
 }
 
 makeclean () { cd "${BIN}" || exit; make clean; cd "${DIR}" || exit; }
