@@ -25,7 +25,7 @@ EXCLUDE=0
 ## BEGIN Variables ##
 setvars () {
  DIR="$(pwd)"
- SRC="$DIR/$WORK/src"
+ SRC="$DIR/"
  PORTS="$DIR/$WORK/prt"
  BIN="$DIR/$WORK/bin"
  CONFOPTS="--target=amiga-m68k --with-optimization=-O$OPT --with-aros-prefs=classic --with-resolution=$REZ --with-cpu=$CPU --with-fpu=$FPU --disable-mmu --with-portssources=$PORTS"
@@ -287,16 +287,18 @@ if [ $CLEAN = 1 ]; 	         then echo ">>> Fresh build requested, cleaning.";	m
 
 case $CMD in
  dist)
-  if [ $CONF = 1 ] || [ ! -e $BIN/config.status ]; then configure; fi
+  if [ $CONF = 1 ] || [ ! -e "${BIN}/config.status" ]; then configure; fi
   compile distfiles
  ;;
  kernel)
-  if [ $CONF = 1 ] || [ ! -e $BIN/config.status ]; then configure; fi
+  if [ $CONF = 1 ] || [ ! -e "${BIN}/config.status" ]; then configure; fi
   compile kernel
   deposit-rom
  ;;
  all)
   configure
+  if [ ! -e "${BIN}/bin/linux-x86_64/tools/mmake" ]; then compile mmake; fi
+  if [ ! -e "${BIN}/bin/linux-x86_64/tools/sfdc" ]; then compile sfdc; fi
   compile distfiles
   deposit-rom
  ;;
