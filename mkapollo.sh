@@ -337,7 +337,7 @@ print_bold "${YELLOW}Work directory:  "
 printf "%s\n" "${WORK}"
 
 print_bold "${YELLOW}Starting in:     "
-#echo -n "3..."; sleep 1; echo -n "2..."; sleep 1; echo -n "1..."; sleep 1; print_bold_nl "${GREEN}Go!";
+echo -n "3..."; sleep 1; echo -n "2..."; sleep 1; echo -n "1..."; sleep 1; print_bold_nl "${GREEN}Go!";
 
 mkdir -p "${BIN}"
 
@@ -365,7 +365,6 @@ case $CMD in
   if [ ! -e "${WORK}/AROS.ROM" ]; then compile kernel; fi
   print_bold_nl ""
   print_bold_nl "${YELLOW} ---- ${GREEN}Start ROM Contents: ${YELLOW}----${NC}"
-  #strings "${WORK}/AROS.ROM" | grep "\$VER" | sed "s/i\$VER: //g" | sed "s/\$VER: //g" | sed "s/i\$VER://g" | sed "s/\$VER://g"
   readarray a <<< $(strings "${WORK}/AROS.ROM" | grep "\$VER" | sed -re 's|.*\$VER\:\s*([\.\-\_a-Z0-9]+)\s*([-a-Z0-9\_]*)\s([\.0-9]+)\s([0-9\(\)\.]+)(.*)|\1 \"\2\" \3 \4|g')
 
   for element in "${a[@]}"; do
