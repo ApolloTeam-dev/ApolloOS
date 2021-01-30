@@ -7,9 +7,14 @@ CLEAN=0
 GITCLEAN=0
 DL=0
 WORK="apollo-os"
-BRANCH="$(git branch --show-current)"
-REMOTE=$(git status -sb | sed "s/\#\#\ ${BRANCH}\.\.\.//g" | sed "s/\/${BRANCH}//g" | head -n 1)
-REPO="$(git remote get-url ${REMOTE})"
+if [ -e ".git" ]; then
+	BRANCH="$(git branch --show-current)"
+	REMOTE=$(git status -sb | sed "s/\#\#\ ${BRANCH}\.\.\.//g" | sed "s/\/${BRANCH}//g" | head -n 1)
+	REPO="$(git remote get-url ${REMOTE})"
+else
+	REPO="https://github.com/ApolloTeam-dev/AROS"
+	BRANCH="v4-alynna"
+fi
 REZ=640x256x4
 CPU=68040
 FPU=68881
@@ -22,38 +27,54 @@ MAKEO=""
 EXCLUDE=0
 ## END Configuration ##
 
+## BEGIN Beauty Variables ##
+BOLD="$(tput bold)"
+BOLDEND="$(tput sgr0)"
+RED="$(tput setaf 1)"
+GREEN="$(tput setaf 2)"
+YELLOW="$(tput setaf 3)"
+NC="$(tput sgr0)"
+ARROWS="${BOLD}${YELLOW}>>>${NC}"
+## BEGIN Beauty Variables ##
+
+
 ## BEGIN Variables ##
 setvars () {
- DIR="$(pwd)"
- SRC="$DIR/"
- PORTS="$DIR/$WORK/prt"
- BIN="$DIR/$WORK/bin"
- CONFOPTS="--target=amiga-m68k --with-optimization=-O$OPT --with-aros-prefs=classic --with-resolution=$REZ --with-cpu=$CPU --with-fpu=$FPU --disable-mmu --with-portssources=$PORTS"
- if [ $VAMP = 0 ]; then CONFOPTS="$CONFOPTS --with-nonvampire-support"; fi
- if [ $DEBUG = 1 ]; then CONFOPTS="$CONFOPTS --enable-debug --with-serial-debug"; fi
- MAKEOPTS="-j$JOBS"
- PKGS="git gcc g++ make cmake gawk bison flex bzip2 netpbm autoconf automake libx11-dev libxext-dev libc6-dev liblzo2-dev libxxf86vm-dev libpng-dev libsdl1.2-dev byacc python-mako libxcursor-dev gcc-multilib"
- export CONFOPTS MAKEOPTS SRC PORTS BIN DIR PKGS
+	DIR="$(pwd)"
+	if [ -e "${DIR}/.git" ]; then
+		SRC="${DIR}/"
+	else
+		SRC="${DIR}/${WORK}/src"
+	fi
+	PORTS="${DIR}/${WORK}/prt"
+	BIN="${DIR}/${WORK}/bin"
+	CONFOPTS="--target=amiga-m68k --with-optimization=-O${OPT} --with-aros-prefs=classic --with-resolution=${REZ} --with-cpu=${CPU} --with-fpu=${FPU} --disable-mmu --with-portssources=${PORTS}"
+	if [ ${VAMP} = 0 ];		then CONFOPTS="${CONFOPTS} --with-nonvampire-support"; fi
+	if [ ${DEBUG} = 1 ];	then CONFOPTS="${CONFOPTS} --enable-debug --with-serial-debug"; fi
+	MAKEOPTS="-j${JOBS}"
+	PKGS="git gcc g++ make cmake gawk bison flex bzip2 netpbm autoconf automake libx11-dev libxext-dev libc6-dev liblzo2-dev libxxf86vm-dev libpng-dev libsdl1.2-dev byacc python-mako libxcursor-dev gcc-multilib"
+	export CONFOPTS MAKEOPTS SRC PORTS BIN DIR PKGS
 }
+
 freevars () { unset CONFOPTS MAKEOPTS SRC PORTS BIN DIR BRANCH CLEAN DL CONF CONFO GITCLEAN JOBS MAKEO REZ VAMP WORK DEBUG CPU FPU OPT; }
 ## END Variables ##
 
 ## BEGIN FUNCTIONS ##
 defaults () {
-              echo -n "--branch=$BRANCH -c$CLEAN -d$DL -f$CONF -g$GITCLEAN --jobs=$JOBS -v$VAMP "
-              if [ $REZ = "640x200x4" ]; then echo -n "-n"; else echo -n "-p"; fi
-              echo " --work=$WORK --conf=\"$CONFO\" --make=\"$MAKEO\" --cpu=$CPU --fpu=$FPU --opt=$OPT"
+	echo -n "--branch=${BRANCH} -c${CLEAN} -d${DL} -f${CONF} -g${GITCLEAN} --jobs=${JOBS} -v${VAMP} "
+	if [ $REZ = "640x200x4" ]; then echo -n "-n"; else echo -n "-p"; fi
+	echo " --work=${WORK} --conf=\"${CONFO}\" --make=\"${MAKEO}\" --cpu=${CPU} --fpu=${FPU} --opt=${OPT}"
 }
 
 check-deps () {
-	if [ $CONF = 1 ] || [ ! -e "${BIN}/config.status" ]; then configure; fi
-  if [ ! -e "${BIN}/bin/linux-x86_64/tools/mmake" ]; then compile mmake; fi
-  if [ ! -e "${BIN}/bin/linux-x86_64/tools/sfdc" ]; then compile sfdc; fi
+	if [ ${CONF} = 1 ] || [ ! -e "${BIN}/config.status" ];	then configure;			fi
+	if [ ! -e "${BIN}/bin/linux-x86_64/tools/mmake" ];			then compile mmake;	fi
+	if [ ! -e "${BIN}/bin/linux-x86_64/tools/sfdc" ];				then compile sfdc;	fi
 }
 
 print_bold () {
 	# shellcheck disable=SC2059
-	printf "\033[1m${1}\033[0m"
+	printf "${BOLD}${1}${BOLDEND}"
 }
 
 print_bold_nl () {
@@ -62,37 +83,41 @@ print_bold_nl () {
 }
 
 deposit-rom () {
-		 if [ -e $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf ]; then
-                  cp $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf $WORK/
-                  echo ">>> ADF RESULT: $(du --apparent-size -h $WORK/bootdisk-amiga-m68k.adf)"
-                 fi
-		 if [ -e $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin ]; then
-                  cat $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin >$WORK/AROS.ROM
-                  echo ">>> ROM RESULT: $(du --apparent-size -h $WORK/AROS.ROM)"
-                 fi
-		 if [ -e $BIN/distfiles/aros-amiga-m68k.iso ]; then
-                  cp $BIN/distfiles/aros-amiga-m68k.iso $WORK/
-                  echo ">>> ISO RESULT: $(du --apparent-size -h $WORK/aros-amiga-m68k.iso)"
-                 fi
-		 if [ -e $BIN/bin/amiga-m68k/AROS.HUNK/Devs/sagasd.device ]; then
-                  cp $BIN/bin/amiga-m68k/AROS.HUNK/Devs/sagasd.device $WORK/
-                  echo ">>> SD0 RESULT: $(du --apparent-size -h $WORK/sagasd.device)"
-                 fi
+	if [ -e $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf ]; then
+		cp $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf $WORK/
+		print_bold_nl "${ARROWS} ADF RESULT: $(du --apparent-size -h $WORK/bootdisk-amiga-m68k.adf)"
+	fi
+
+	if [ -e $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin ]; then
+		cat $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin >$WORK/AROS.ROM
+		echo "${ARROWS} ROM RESULT: $(du --apparent-size -h $WORK/AROS.ROM)"
+	fi
+
+	if [ -e $BIN/distfiles/aros-amiga-m68k.iso ]; then
+		cp $BIN/distfiles/aros-amiga-m68k.iso $WORK/
+		echo "${ARROWS} ISO RESULT: $(du --apparent-size -h $WORK/aros-amiga-m68k.iso)"
+	fi
+
+	if [ -e $BIN/bin/amiga-m68k/AROS.HUNK/Devs/sagasd.device ]; then
+		cp $BIN/bin/amiga-m68k/AROS.HUNK/Devs/sagasd.device $WORK/
+		echo "${ARROWS} SD0 RESULT: $(du --apparent-size -h $WORK/sagasd.device)"
+	fi
 }
-makeclean () { cd $BIN; make clean; cd $DIR; }
-gitclean () { cd $SRC; git clean -df; cd $DIR; }
-pkgcheck () { if [ $(dpkg-query -W -f '${Binary:Package} ${Status}\n' $PKGS | wc -l) -eq $(echo $PKGS | wc -w) ]; then return 0; else return 1; fi; }
-download () { cd $WORK; if [ ! -d $SRC ]; then git clone --recursive $REPO --branch=$BRANCH $SRC; cd $DIR; fi }
-configure () { cd $BIN; $SRC/configure $CONFOPTS $CONFO; cd $DIR; }
-compile () { cd $BIN; make $1 $MAKEOPTS $MAKEO; cd $DIR; }
+
+makeclean () { cd "${BIN}" || exit; make clean; cd "${DIR}" || exit; }
+gitclean  () { cd "${SRC}" || exit; git clean -df; cd "${DIR}" || exit; }
+pkgcheck  () { if [ $(dpkg-query -W -f '${Binary:Package} ${Status}\n' $PKGS | wc -l) -eq $(echo $PKGS | wc -w) ]; then return 0; else return 1; fi; }
+download  () { cd "${WORK}" || exit; if [ ! -d $SRC ]; then git clone --recursive $REPO --branch=$BRANCH $SRC; cd $DIR; fi }
+configure () { cd "${BIN}" || exit; ${SRC}/configure $CONFOPTS $CONFO; cd $DIR; }
+compile   () { cd "${BIN}" || exit; make $1 $MAKEOPTS $MAKEO; cd $DIR; }
 
 valid-cpu () {
- if [ "$1" = "" ]; then
-  echo "68000 68010 68020 68030 68040 68060"
-  return 0
- else
-  if [ "$1" == "680[12346]0" ]; then return 1; else return 0; fi
- fi
+	if [ "$1" = "" ]; then
+		echo "68000 68010 68020 68030 68040 68060"
+		return 0
+	else
+		if [ "$1" == "680[12346]0" ]; then return 1; else return 0; fi
+	fi
 }
 
 valid-fpu () {
@@ -215,7 +240,7 @@ for i in "$@"; do
    shift
   ;;
   *)
-   if [ "$CMD" = "" ]; then CMD=$i; shift;
+   if [ "${CMD}" = "" ]; then CMD=${i}; shift;
    else (echo "!!! There seems to be an issue with your Options." >&2); shift; exit 2
    fi
  esac
@@ -225,22 +250,23 @@ done
 
 help () {
 cat << EOF
-mkapollo.sh -- Roll your own ApolloOS image and ROM
- (C) 2021 Alynna Trypnotk, License APL 1.1:
+${BOLD}mkapollo.sh -- Roll your own ApolloOS image and ROM${NC}
+ (C) 2021 Alynna Trypnotk, License APL 1.1 & (C) 2021 Marlon Beijer (marlon@amigadev.com), License APL 1.1:
  https://github.com/ApolloTeam-dev/AROS/blob/master-new/LICENSE
 
  It does what NintenDon't.
- Syntax: mkapollo.sh [options] <command> [args]
+ ${BOLD}Syntax:${NC} mkapollo.sh [options] <command> [args]
 
- Commands:
+ ${BOLD}Commands:${NC}
   all                         Run configure, make distfiles and ROM (Start here!)
   dist                        Just make distfiles
   kernel                      Just make ROM
-  list-rom-contents						List the contents of the built rom
+  deposit-rom                 List paths to built files
+  list-rom-contents           List the contents of the built rom
   wipe                        Starts from near fresh (leaves ports)
   null                        Just parse options
 
- Options:
+ ${BOLD}Options:${NC}
   -b,--branch=<branch>        Select different branch
   -c,--clean                  Make clean first
   -d,--download               Delete source and redownload
@@ -269,47 +295,50 @@ echo "  Valid CPUs               : $(valid-cpu)"
 echo "  Valid FPUs               : $(valid-fpu)"
 cat << EOF
 
- It will automatically install the packages needed for Vampire Goodness.
+ It will automatically install the packages needed for Vampire Goodness,
+ assuming that you use a Debian based distribution.
  Note that sources will be downloaded if it is not found at the location.
  If you just want your ROM, just do:  mkapollo.sh all
  Then go get a coffee. Or a meal.
 
  The current defaults are:
 EOF
-echo "  $(defaults)"
-echo -e "\nPlease Amiga responsibly."
+printf "%s\n\n" "$(defaults)"
+print_bold_nl "Please Amiga responsibly."
 }
 ## END FUNCTIONS ##
 
 ## BEGIN MAIN ##
+# shellcheck disable=SC2068
 loop-through-opts $@
 if [ "$CMD" = "" ]; 	then help; exit 1; 	fi
 
 setvars
-print_bold "Making ApolloOS: "
+print_bold "${YELLOW}Making ApolloOS: "
 printf "%s %s\n" "${CMD}" "$(defaults)"
 
-print_bold "Configuration:   "
+print_bold "${YELLOW}Configuration:   "
 printf "%s\n" "${CONFOPTS}"
 
-print_bold "Make options:    "
+print_bold "${YELLOW}Make options:    "
 printf "%s\n" "${MAKEOPTS}"
 
-print_bold "Work directory:  "
+print_bold "${YELLOW}Work directory:  "
 printf "%s\n" "${WORK}"
 
-echo -n "3..."; sleep 1; echo -n "2..."; sleep 1; echo -n "1..."; sleep 1; print_bold_nl "Go!";
+print_bold "${YELLOW}Starting in:     "
+#echo -n "3..."; sleep 1; echo -n "2..."; sleep 1; echo -n "1..."; sleep 1; print_bold_nl "${GREEN}Go!";
 
 mkdir -p "${BIN}"
 
 if [ $(pkgcheck; echo $?) = 1 ]; then
- print_bold_nl ">>> You are missing required packages to build ApolloOS.  Attempting to install..."
+ print_bold_nl "${ARROWS} ${BOLD}${RED}You are missing required packages to build ApolloOS!  ${GREEN}Attempting to install...${NC}"
  apt -y update
  apt -y install "${PKGS}"
 fi
-if [ $DL = 1 ]; 	         then print_bold_nl ">>> Source wipe requested, deleting."; 	rm -rf $SRC; 	fi
-if [ ! -e $SRC ]; 	         then print_bold_nl ">>> Source not detected, downloading.";	download;	fi
-if [ $CLEAN = 1 ]; 	         then print_bold_nl ">>> Fresh build requested, cleaning.";	makeclean; 	fi
+if [ $DL = 1 ];                 then print_bold_nl "${ARROWS} Source wipe requested, ${RED}deleting${NC}.";     rm -rf "${SRC}"; fi
+if [ ! -e "${SRC}/configure" ]; then print_bold_nl "${ARROWS} Source not detected, ${GREEN}downloading${NC}.";  download;	       fi
+if [ $CLEAN = 1 ];              then print_bold_nl "${ARROWS} Fresh build requested, ${YELLOW}cleaning${NC}.";  makeclean;       fi
 
 case $CMD in
  dist)
@@ -325,9 +354,9 @@ case $CMD in
   check-deps
   if [ ! -e "${WORK}/AROS.ROM" ]; then compile kernel; fi
   print_bold_nl ""
-  print_bold_nl " ---- Start ROM Contents: ----"
+  print_bold_nl "${YELLOW} ---- ${GREEN}Start ROM Contents: ${YELLOW}----${NC}"
   strings "${WORK}/AROS.ROM" | grep "\$VER" | sed "s/i\$VER: //g" | sed "s/\$VER: //g" | sed "s/i\$VER://g" | sed "s/\$VER://g"
-  print_bold_nl " ----- End ROM Contents: -----"
+  print_bold_nl "${YELLOW} ----- ${GREEN}End ROM Contents: ${YELLOW}-----${NC}"
   print_bold_nl ""
  ;;
  all)
@@ -337,19 +366,19 @@ case $CMD in
  ;;
  wipe)
   print_bold_nl "!!! CTRL-AMIGA-AMIGA Pressed !!!"
-  print_bold_nl ">>> Removing sources"
+  print_bold_nl "${ARROWS} Removing sources"
   rm -rf $SRC
   if [ "$EXCLUDE" = "0" ]; then
-   print_bold_nl ">>> Preserving Crosstools (saves serious recompile time)"
+   print_bold_nl "${ARROWS} Preserving Crosstools (saves serious recompile time)"
    mv ${BIN}/bin/linux* ${PORTS}/
   fi
-  print_bold_nl ">>> Removing Binaries (Things in the work dir root are preserved)"
-  rm -rf $BIN
-  if [ "$EXCLUDE" = "0" ]; then
-   print_bold_nl ">>> Restoring Crosstools"
-   mv $PORTS/linux* $BIN/bin/
+  print_bold_nl "${ARROWS} Removing Binaries (Things in the work dir root are preserved)"
+  rm -rf "${BIN}"
+  if [ "${EXCLUDE}" = "0" ]; then
+   print_bold_nl "${ARROWS} Restoring Crosstools"
+   mv ${PORTS}/linux* ${BIN}/bin/
   fi
-  print_bold_nl ">>> Done.  You may now redownload or even choose another branch."
+  print_bold_nl "${ARROWS} Done.  You may now redownload or even choose another branch."
  ;;
  deposit-rom)
   deposit-rom
@@ -359,7 +388,7 @@ case $CMD in
   exit 1
  ;;
 esac
-if [ $GITCLEAN = 1 ]; 	then print_bold_nl ">>> Cleaning git artifacts.";		gitclean; 	fi
+if [ $GITCLEAN = 1 ]; 	then print_bold_nl "${ARROWS} Cleaning git artifacts.";		gitclean; 	fi
 freevars
 print_bold_nl "Please Amiga responsibly!"
 ## END MAIN ##
