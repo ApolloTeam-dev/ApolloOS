@@ -74,7 +74,7 @@ deposit-rom () {
 		 if [ -e $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin ]; then
                   cat $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin >$WORK/AROS.ROM
                   print_bold "${ARROWS} ${BOLD}${GREEN}ROM RESULT:${NC} "
-                  read -r ROMSIZE ROMSIZETYPE ROMFILEPATH <<<$(du --apparent-size -h apollo-os/AROS.ROM |sed -re "s|([0-9\.]+)([a-Z])\t([-/a-Z\.]+)|\1 \2 \3|g")
+                  read -r ROMSIZE ROMSIZETYPE ROMFILEPATH <<< "$(du --apparent-size -h apollo-os/AROS.ROM |sed -re "s|([0-9\.]+)([a-Z])\t([-/a-Z\.]+)|\1 \2 \3|g")"
 
                   # shellcheck disable=SC2072
                   MAXROMSIZE=1.0
@@ -365,7 +365,13 @@ case $CMD in
   if [ ! -e "${WORK}/AROS.ROM" ]; then compile kernel; fi
   print_bold_nl ""
   print_bold_nl "${YELLOW} ---- ${GREEN}Start ROM Contents: ${YELLOW}----${NC}"
-  strings "${WORK}/AROS.ROM" | grep "\$VER" | sed "s/i\$VER: //g" | sed "s/\$VER: //g" | sed "s/i\$VER://g" | sed "s/\$VER://g"
+  #strings "${WORK}/AROS.ROM" | grep "\$VER" | sed "s/i\$VER: //g" | sed "s/\$VER: //g" | sed "s/i\$VER://g" | sed "s/\$VER://g"
+  readarray a <<< $(strings "${WORK}/AROS.ROM" | grep "\$VER" | sed -re 's|.*\$VER\:\s*([\.\-\_a-Z0-9]+)\s*([-a-Z0-9\_]*)\s([\.0-9]+)\s([0-9\(\)\.]+)(.*)|\1 \"\2\" \3 \4|g')
+
+  for element in "${a[@]}"; do
+   readarray -td ' ' b  <<< "$(printf "%s" "${element}"| tr -d "\n")"; printf "${BOLD}${YELLOW}%s${NC} %s %s\n" ${b[0]} ${b[2]} ${b[3]};
+  done
+
   print_bold_nl "${YELLOW} ----- ${GREEN}End ROM Contents: ${YELLOW}-----${NC}"
   print_bold_nl ""
  ;;
