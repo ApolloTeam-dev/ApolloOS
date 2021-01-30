@@ -66,25 +66,25 @@ defaults () {
 }
 
 deposit-rom () {
-	if [ -e $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf ]; then
-		cp $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf $WORK/
-		print_bold_nl "${ARROWS} ADF RESULT: $(du --apparent-size -h $WORK/bootdisk-amiga-m68k.adf)"
-	fi
+		 if [ -e $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf ]; then
+                  cp $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf $WORK/
+                  print_bold_nl "${ARROWS} ADF RESULT: $(du --apparent-size -h $WORK/bootdisk-amiga-m68k.adf)"
+                 fi
 
-	if [ -e $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin ]; then
-		cat $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin >$WORK/AROS.ROM
-		echo "${ARROWS} ROM RESULT: $(du --apparent-size -h $WORK/AROS.ROM)"
-	fi
+		 if [ -e $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin ]; then
+                  cat $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin >$WORK/AROS.ROM
+                  echo "${ARROWS} ROM RESULT: $(du --apparent-size -h $WORK/AROS.ROM)"
+                 fi
 
-	if [ -e $BIN/distfiles/aros-amiga-m68k.iso ]; then
-		cp $BIN/distfiles/aros-amiga-m68k.iso $WORK/
-		echo "${ARROWS} ISO RESULT: $(du --apparent-size -h $WORK/aros-amiga-m68k.iso)"
-	fi
+		 if [ -e $BIN/distfiles/aros-amiga-m68k.iso ]; then
+                  cp $BIN/distfiles/aros-amiga-m68k.iso $WORK/
+                  echo "${ARROWS} ISO RESULT: $(du --apparent-size -h $WORK/aros-amiga-m68k.iso)"
+                 fi
 
-	if [ -e $BIN/bin/amiga-m68k/AROS.HUNK/Devs/sagasd.device ]; then
-		cp $BIN/bin/amiga-m68k/AROS.HUNK/Devs/sagasd.device $WORK/
-		echo "${ARROWS} SD0 RESULT: $(du --apparent-size -h $WORK/sagasd.device)"
-	fi
+		 if [ -e $BIN/bin/amiga-m68k/AROS.HUNK/Devs/sagasd.device ]; then
+                  cp $BIN/bin/amiga-m68k/AROS.HUNK/Devs/sagasd.device $WORK/
+                  echo "${ARROWS} SD0 RESULT: $(du --apparent-size -h $WORK/sagasd.device)"
+                 fi
 }
 
 check-deps () {
