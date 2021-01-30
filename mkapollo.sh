@@ -68,22 +68,33 @@ defaults () {
 deposit-rom () {
 		 if [ -e $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf ]; then
                   cp $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf $WORK/
-                  print_bold_nl "${ARROWS} ADF RESULT: $(du --apparent-size -h $WORK/bootdisk-amiga-m68k.adf)"
+                  print_bold_nl "${ARROWS} ${BOLD}${GREEN}ADF RESULT:${NC} $(du --apparent-size -h $WORK/bootdisk-amiga-m68k.adf)"
                  fi
 
 		 if [ -e $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin ]; then
                   cat $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin >$WORK/AROS.ROM
-                  echo "${ARROWS} ROM RESULT: $(du --apparent-size -h $WORK/AROS.ROM)"
+                  print_bold "${ARROWS} ${BOLD}${GREEN}ROM RESULT:${NC} "
+                  read -r ROMSIZE ROMSIZETYPE ROMFILEPATH <<<$(du --apparent-size -h apollo-os/AROS.ROM |sed -re "s|([0-9\.]+)([a-Z])\t([-/a-Z\.]+)|\1 \2 \3|g")
+
+                  # shellcheck disable=SC2072
+                  MAXROMSIZE=1.0
+                  printf "%s%s\t%s" "${ROMSIZE}" "${ROMSIZETYPE}" "${ROMFILEPATH}"
+
+                  if [[ ((${ROMSIZE} > ${MAXROMSIZE})) ]] && [ "${ROMSIZETYPE}" == "M" ]; then
+                   print_bold_nl " -- ${RED}BAD ROM SIZE${NC}"
+                  else
+                   print_bold_nl " -- ${GREEN}ROM SIZE OK${NC}"
+                  fi
                  fi
 
 		 if [ -e $BIN/distfiles/aros-amiga-m68k.iso ]; then
                   cp $BIN/distfiles/aros-amiga-m68k.iso $WORK/
-                  echo "${ARROWS} ISO RESULT: $(du --apparent-size -h $WORK/aros-amiga-m68k.iso)"
+                  echo "${ARROWS} ${BOLD}${GREEN}ISO RESULT:${NC} $(du --apparent-size -h $WORK/aros-amiga-m68k.iso)"
                  fi
 
 		 if [ -e $BIN/bin/amiga-m68k/AROS.HUNK/Devs/sagasd.device ]; then
                   cp $BIN/bin/amiga-m68k/AROS.HUNK/Devs/sagasd.device $WORK/
-                  echo "${ARROWS} SD0 RESULT: $(du --apparent-size -h $WORK/sagasd.device)"
+                  echo "${ARROWS} ${BOLD}${GREEN}SD0 RESULT:${NC} $(du --apparent-size -h $WORK/sagasd.device)"
                  fi
 }
 
