@@ -44,6 +44,13 @@ defaults () {
               if [ $REZ = "640x200x4" ]; then echo -n "-n"; else echo -n "-p"; fi
               echo " --work=$WORK --conf=\"$CONFO\" --make=\"$MAKEO\" --cpu=$CPU --fpu=$FPU --opt=$OPT"
 }
+
+check-deps () {
+	if [ $CONF = 1 ] || [ ! -e "${BIN}/config.status" ]; then configure; fi
+  if [ ! -e "${BIN}/bin/linux-x86_64/tools/mmake" ]; then compile mmake; fi
+  if [ ! -e "${BIN}/bin/linux-x86_64/tools/sfdc" ]; then compile sfdc; fi
+}
+
 deposit-rom () {
 		 if [ -e $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf ]; then
                   cp $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf $WORK/
@@ -219,6 +226,7 @@ mkapollo.sh -- Roll your own ApolloOS image and ROM
   all                         Run configure, make distfiles and ROM (Start here!)
   dist                        Just make distfiles
   kernel                      Just make ROM
+  list-rom-contents						List the contents of the built rom
   wipe                        Starts from near fresh (leaves ports)
   null                        Just parse options
 
@@ -287,18 +295,23 @@ if [ $CLEAN = 1 ]; 	         then echo ">>> Fresh build requested, cleaning.";	m
 
 case $CMD in
  dist)
-  if [ $CONF = 1 ] || [ ! -e "${BIN}/config.status" ]; then configure; fi
+  check-deps
   compile distfiles
  ;;
  kernel)
-  if [ $CONF = 1 ] || [ ! -e "${BIN}/config.status" ]; then configure; fi
+  check-deps
   compile kernel
   deposit-rom
  ;;
+ list-rom-contents)
+  check-deps
+	if [ ! -e "${WORK}/AROS.ROM" ]; then compile kernel; fi
+	printf "\033[1m ---- Start ROM Contents: ----\033[0m\n"
+  strings "${WORK}/AROS.ROM" | grep "\$VER" | sed "s/i\$VER: //g" | sed "s/\$VER: //g" | sed "s/i\$VER://g" | sed "s/\$VER://g"
+  printf "\033[1m ----- End ROM Contents: -----\033[0m\n"
+ ;;
  all)
-  configure
-  if [ ! -e "${BIN}/bin/linux-x86_64/tools/mmake" ]; then compile mmake; fi
-  if [ ! -e "${BIN}/bin/linux-x86_64/tools/sfdc" ]; then compile sfdc; fi
+  check-deps
   compile distfiles
   deposit-rom
  ;;
