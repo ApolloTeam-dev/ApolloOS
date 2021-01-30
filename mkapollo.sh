@@ -2,13 +2,14 @@
 shopt -s extglob
 
 ## BEGIN Configuration ## Place your favorite configuration here.
-JOBS="$(cat /proc/cpuinfo | grep "processor" | wc -l)"
+JOBS="$(nproc)"
 CLEAN=0
 GITCLEAN=0
 DL=0
 WORK="apollo-os"
-REPO="https://github.com/ApolloTeam-dev/AROS"
-BRANCH="v4-alynna"
+BRANCH="$(git branch --show-current)"
+REMOTE=$(git status -sb | sed "s/\#\#\ ${BRANCH}\.\.\.//g" | sed "s/\/${BRANCH}//g" | head -n 1)
+REPO="$(git remote get-url ${REMOTE})"
 REZ=640x256x4
 CPU=68040
 FPU=68881
@@ -43,7 +44,7 @@ defaults () {
               if [ $REZ = "640x200x4" ]; then echo -n "-n"; else echo -n "-p"; fi
               echo " --work=$WORK --conf=\"$CONFO\" --make=\"$MAKEO\" --cpu=$CPU --fpu=$FPU --opt=$OPT"
 }
-deposit-rom () { 
+deposit-rom () {
 		 if [ -e $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf ]; then
                   cp $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf $WORK/
                   echo ">>> ADF RESULT: $(du --apparent-size -h $WORK/bootdisk-amiga-m68k.adf)"
@@ -68,11 +69,11 @@ download () { cd $WORK; if [ ! -d $SRC ]; then git clone --recursive $REPO --bra
 configure () { cd $BIN; $SRC/configure $CONFOPTS $CONFO; cd $DIR; }
 compile () { cd $BIN; make $1 $MAKEOPTS $MAKEO; cd $DIR; }
 
-valid-cpu () { 
+valid-cpu () {
  if [ "$1" = "" ]; then
   echo "68000 68010 68020 68030 68040 68060"
   return 0
- else 
+ else
   if [ "$1" == "680[12346]0" ]; then return 1; else return 0; fi
  fi
 }
