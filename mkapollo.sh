@@ -60,9 +60,9 @@ freevars () { unset CONFOPTS MAKEOPTS SRC PORTS BIN DIR BRANCH CLEAN DL CONF CON
 
 ## BEGIN FUNCTIONS ##
 defaults () {
-	echo -n "--branch=${BRANCH} -c${CLEAN} -d${DL} -f${CONF} -g${GITCLEAN} --jobs=${JOBS} -v${VAMP} "
-	if [ $REZ = "640x200x4" ]; then echo -n "-n"; else echo -n "-p"; fi
-	echo " --work=${WORK} --conf=\"${CONFO}\" --make=\"${MAKEO}\" --cpu=${CPU} --fpu=${FPU} --opt=${OPT}"
+              echo -n "--branch=${BRANCH} -c${CLEAN} -d${DL} -f${CONF} -g${GITCLEAN} --jobs=${JOBS} -v${VAMP} "
+              if [ $REZ = "640x200x4" ]; then echo -n "-n"; else echo -n "-p"; fi
+              echo " --work=${WORK} --conf=\"${CONFO}\" --make=\"${MAKEO}\" --cpu=${CPU} --fpu=${FPU} --opt=${OPT}"
 }
 
 deposit-rom () {
