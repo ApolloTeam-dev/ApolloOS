@@ -305,8 +305,8 @@ case $CMD in
  ;;
  list-rom-contents)
   check-deps
-	if [ ! -e "${WORK}/AROS.ROM" ]; then compile kernel; fi
-	printf "\033[1m ---- Start ROM Contents: ----\033[0m\n"
+  if [ ! -e "${WORK}/AROS.ROM" ]; then compile kernel; fi
+  printf "\033[1m ---- Start ROM Contents: ----\033[0m\n"
   strings "${WORK}/AROS.ROM" | grep "\$VER" | sed "s/i\$VER: //g" | sed "s/\$VER: //g" | sed "s/i\$VER://g" | sed "s/\$VER://g"
   printf "\033[1m ----- End ROM Contents: -----\033[0m\n"
  ;;
