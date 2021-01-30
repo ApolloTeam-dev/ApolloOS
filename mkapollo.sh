@@ -87,22 +87,6 @@ deposit-rom () {
                  fi
 }
 
-check-deps () {
-	if [ ${CONF} = 1 ] || [ ! -e "${BIN}/config.status" ];	then configure;			fi
-	if [ ! -e "${BIN}/bin/linux-x86_64/tools/mmake" ];			then compile mmake;	fi
-	if [ ! -e "${BIN}/bin/linux-x86_64/tools/sfdc" ];				then compile sfdc;	fi
-}
-
-print_bold () {
-	# shellcheck disable=SC2059
-	printf "${BOLD}${1}${BOLDEND}"
-}
-
-print_bold_nl () {
-	# shellcheck disable=SC2059
-	print_bold "${1}\n"
-}
-
 makeclean () { cd "${BIN}" || exit; make clean; cd "${DIR}" || exit; }
 gitclean  () { cd "${SRC}" || exit; git clean -df; cd "${DIR}" || exit; }
 pkgcheck  () { if [ $(dpkg-query -W -f '${Binary:Package} ${Status}\n' $PKGS | wc -l) -eq $(echo $PKGS | wc -w) ]; then return 0; else return 1; fi; }
@@ -304,6 +288,22 @@ cat << EOF
 EOF
 printf "%s\n\n" "$(defaults)"
 print_bold_nl "Please Amiga responsibly."
+}
+
+check-deps () {
+	if [ ${CONF} = 1 ] || [ ! -e "${BIN}/config.status" ];	then configure;			fi
+	if [ ! -e "${BIN}/bin/linux-x86_64/tools/mmake" ];			then compile mmake;	fi
+	if [ ! -e "${BIN}/bin/linux-x86_64/tools/sfdc" ];				then compile sfdc;	fi
+}
+
+print_bold () {
+	# shellcheck disable=SC2059
+	printf "${BOLD}${1}${BOLDEND}"
+}
+
+print_bold_nl () {
+	# shellcheck disable=SC2059
+	print_bold "${1}\n"
 }
 ## END FUNCTIONS ##
 
