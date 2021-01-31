@@ -10,6 +10,8 @@ WORK="apollo-os"
 DISTRONAME="ApolloOS"
 DISTROVERSION="$(cat version)"
 DISTRODATE="$(date +%Y-%m-%d)"
+AMIGADATE="$(date +"%-d.%-m.%Y")"
+
 if [ -e ".git" ]; then
 	BRANCH="$(git branch --show-current)"
 	REMOTE=$(git status -sb | sed "s/\#\#\ ${BRANCH}\.\.\.//g" | sed "s/\/${BRANCH}//g" | head -n 1)
@@ -19,7 +21,6 @@ else
 	BRANCH="v4-alynna"
 fi
 
-TEST_CFLAGS="-D__DISTRONAME__='\"${DISTRONAME}\"' -D__DISTROVERSION__='\"${DISTROVERSION}\"' -D__DISTRODATE__='\"${DISTRODATE}\"'"
 REZ=640x256x4
 CPU=68040
 FPU=68881
@@ -50,6 +51,7 @@ setvars () {
 	else
 		SRC="${DIR}/${WORK}/src"
 	fi
+	TEST_CFLAGS="" #-I${DIR}/${WORK}"
 	PORTS="${DIR}/${WORK}/prt"
 	BIN="${DIR}/${WORK}/bin"
 	CONFOPTS="--target=amiga-m68k --with-optimization=-O${OPT} --with-aros-prefs=classic --with-resolution=${REZ} --with-cpu=${CPU} --with-fpu=${FPU} --disable-mmu --with-portssources=${PORTS}"
@@ -57,6 +59,17 @@ setvars () {
 	if [ ${DEBUG} = 1 ];	then CONFOPTS="${CONFOPTS} --enable-debug --with-serial-debug"; fi
 	MAKEOPTS="-j${JOBS}"
 	PKGS="git gcc g++ make cmake gawk bison flex bzip2 netpbm autoconf automake libx11-dev libxext-dev libc6-dev liblzo2-dev libxxf86vm-dev libpng-dev libsdl1.2-dev byacc python-mako libxcursor-dev gcc-multilib"
+
+	VERSION_FILE="${DIR}/${WORK}/dist_config.h"
+
+	printf "#ifndef AROS_DIST_CONFIG_H\n#define AROS_DIST_CONFIG_H\n\n" > "${VERSION_FILE}"
+	# shellcheck disable=SC2129
+	printf "#define __DISTRONAME__\t\t\"%s\"\n" "${DISTRONAME}" >> "${VERSION_FILE}"
+	printf "#define __DISTROVERSION__\t\"%s\"\n" "${DISTROVERSION}" >> "${VERSION_FILE}"
+	printf "#define __DISTRODATE__\t\t\"%s\"\n" "${DISTRODATE}" >> "${VERSION_FILE}"
+	printf "#define __AMIGADATE__\t\t\"%s\"\n" "${AMIGADATE}" >> "${VERSION_FILE}"
+	printf "\n#endif //AROS_DIST_CONFIG_H\n" >> "${VERSION_FILE}"
+
 	export CONFOPTS MAKEOPTS SRC PORTS BIN DIR PKGS
 }
 
@@ -106,9 +119,10 @@ deposit-rom () {
 makeclean () { cd "${BIN}" || exit; make clean; cd "${DIR}" || exit; }
 gitclean  () { cd "${SRC}" || exit; git clean -df; cd "${DIR}" || exit; }
 pkgcheck  () { if [ $(dpkg-query -W -f '${Binary:Package} ${Status}\n' $PKGS | wc -l) -eq $(echo $PKGS | wc -w) ]; then return 0; else return 1; fi; }
-download  () { cd "${WORK}" || exit; if [ ! -d $SRC ]; then git clone --recursive $REPO --branch=$BRANCH $SRC; cd $DIR; fi }
-configure () { cd "${BIN}" || exit; ${SRC}/configure $CONFOPTS $CONFO; cd $DIR; }
-compile   () { cd "${BIN}" || exit; touch "${SRC}/rom/dosboot/menu.c"; make CFLAGS="${TEST_CFLAGS}" ${1} ${MAKEOPTS} ${MAKEO}; cd ${DIR}; }
+download  () { cd "${WORK}" || exit; if [ ! -d $SRC ]; then git clone --recursive ${REPO} --branch=${BRANCH} ${SRC}; cd ${DIR}; else git checkout ${REMOTE}/${BRANCH} --recurse-submodules -f; fi }
+configure () { cd "${BIN}" || exit; ${SRC}/configure ${CONFOPTS} ${CONFO}; cd ${DIR}; }
+#compile   () { cd "${BIN}" || exit; make CFLAGS="${TEST_CFLAGS}" ${1} ${MAKEOPTS} ${MAKEO}; cd ${DIR}; }
+compile () { cd "${BIN}" || exit; touch "${SRC}/rom/dosboot/menu.c"; make ${1} ${MAKEOPTS} ${MAKEO}; cd ${DIR}; }
 
 valid-cpu () {
 	if [ "$1" = "" ]; then
@@ -307,9 +321,23 @@ print_bold_nl "Please Amiga responsibly."
 }
 
 check-deps () {
-	if [ ${CONF} = 1 ] || [ ! -e "${BIN}/config.status" ];	then configure;			fi
-	if [ ! -e "${BIN}/bin/linux-x86_64/tools/mmake" ];			then compile mmake;	fi
-	if [ ! -e "${BIN}/bin/linux-x86_64/tools/sfdc" ];				then compile sfdc;	fi
+	if [ ${CONF} = 1 ] || [ ! -e "${BIN}/config.status" ];								then configure;												fi
+	if [ ! -e "${BIN}/bin/linux-x86_64/tools/crosstools/m68k-aros-gcc" ];	then compile tools-crosstools-gcc;	fi
+	if [ ! -e "${BIN}/bin/linux-x86_64/tools/mmake" ];										then compile mmake;								fi
+	if [ ! -e "${BIN}/bin/linux-x86_64/tools/sfdc" ];											then compile sfdc;									fi
+}
+
+list-rom-contents () {
+	print_bold_nl ""
+	print_bold_nl "${YELLOW} ---- ${GREEN}Start ROM Contents: ${YELLOW}----${NC}"
+	readarray a <<< $(strings "${WORK}/AROS.ROM" | grep "\$VER" | sed -re 's|.*\$VER\:\s*([\.\-\_a-Z0-9]+)\s*([-a-Z0-9\_]*)\s([\.0-9]+)\s([0-9\(\)\.]+)(.*)|\1 \"\2\" \3 \4|g')
+
+	for element in "${a[@]}"; do
+		readarray -td ' ' b  <<< "$(printf "%s" "${element}"| tr -d "\n")"; printf "${BOLD}${YELLOW}%s${NC} %s %s\n" ${b[0]} ${b[2]} ${b[3]};
+	done
+
+	print_bold_nl "${YELLOW} ----- ${GREEN}End ROM Contents: ${YELLOW}-----${NC}"
+	print_bold_nl ""
 }
 
 print_bold () {
@@ -368,16 +396,7 @@ case $CMD in
  list-rom-contents)
   check-deps
   if [ ! -e "${WORK}/AROS.ROM" ]; then compile kernel; fi
-  print_bold_nl ""
-  print_bold_nl "${YELLOW} ---- ${GREEN}Start ROM Contents: ${YELLOW}----${NC}"
-  readarray a <<< $(strings "${WORK}/AROS.ROM" | grep "\$VER" | sed -re 's|.*\$VER\:\s*([\.\-\_a-Z0-9]+)\s*([-a-Z0-9\_]*)\s([\.0-9]+)\s([0-9\(\)\.]+)(.*)|\1 \"\2\" \3 \4|g')
-
-  for element in "${a[@]}"; do
-   readarray -td ' ' b  <<< "$(printf "%s" "${element}"| tr -d "\n")"; printf "${BOLD}${YELLOW}%s${NC} %s %s\n" ${b[0]} ${b[2]} ${b[3]};
-  done
-
-  print_bold_nl "${YELLOW} ----- ${GREEN}End ROM Contents: ${YELLOW}-----${NC}"
-  print_bold_nl ""
+  list-rom-contents
  ;;
  all)
   check-deps
@@ -386,8 +405,10 @@ case $CMD in
  ;;
  wipe)
   print_bold_nl "!!! CTRL-AMIGA-AMIGA Pressed !!!"
-  print_bold_nl "${ARROWS} Removing sources"
-  rm -rf $SRC
+  if [ ! -e ".git" ]; then
+   print_bold_nl "${ARROWS} Removing sources"
+   rm -rf $SRC
+  fi
   if [ "$EXCLUDE" = "0" ]; then
    print_bold_nl "${ARROWS} Preserving Crosstools (saves serious recompile time)"
    mv ${BIN}/bin/linux* ${PORTS}/
@@ -396,6 +417,7 @@ case $CMD in
   rm -rf "${BIN}"
   if [ "${EXCLUDE}" = "0" ]; then
    print_bold_nl "${ARROWS} Restoring Crosstools"
+   mkdir -p ${BIN}/bin/
    mv ${PORTS}/linux* ${BIN}/bin/
   fi
   print_bold_nl "${ARROWS} Done.  You may now redownload or even choose another branch."
@@ -408,7 +430,7 @@ case $CMD in
   exit 1
  ;;
 esac
-if [ $GITCLEAN = 1 ]; 	then print_bold_nl "${ARROWS} Cleaning git artifacts.";		gitclean; 	fi
+if [ ${GITCLEAN} = 1 ]; then print_bold_nl "${ARROWS} Cleaning git artifacts.";		gitclean; 	fi
 freevars
 print_bold_nl "Please Amiga responsibly!"
 ## END MAIN ##
