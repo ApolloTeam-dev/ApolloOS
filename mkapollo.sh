@@ -20,7 +20,7 @@ else
 	REPO="https://github.com/ApolloTeam-dev/AROS"
 	BRANCH="v4-alynna"
 fi
-
+SRC=""
 REZ=640x256x4
 CPU=68040
 FPU=68881
@@ -84,13 +84,13 @@ defaults () {
 }
 
 deposit-rom () {
-		 if [ -e $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf ]; then
-                  cp $BIN/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf $WORK/
-                  print_bold_nl "${ARROWS} ${BOLD}${GREEN}ADF RESULT:${NC} $(du --apparent-size -h $WORK/bootdisk-amiga-m68k.adf)"
+		 if [ -e "${BIN}/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf" ]; then
+                  cp "${BIN}/bin/amiga-m68k/gen/boot/bootdisk-amiga-m68k.adf" ${WORK}/
+                  print_bold_nl "${ARROWS} ${BOLD}${GREEN}ADF RESULT:${NC} $(du --apparent-size -h ${WORK}/bootdisk-amiga-m68k.adf)"
                  fi
 
-		 if [ -e $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin ]; then
-                  cat $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin $BIN/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin >$WORK/AROS.ROM
+		 if [ -e "${BIN}/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin" ]; then
+                  cat "${BIN}/bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin" "${BIN}/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin" > "${WORK}/AROS.ROM"
                   print_bold "${ARROWS} ${BOLD}${GREEN}ROM RESULT:${NC} "
                   read -r ROMSIZE ROMSIZETYPE ROMFILEPATH <<< "$(du --apparent-size -h apollo-os/AROS.ROM |sed -re "s|([0-9\.]+)([a-Z])\t([-/a-Z\.]+)|\1 \2 \3|g")"
 
@@ -105,25 +105,33 @@ deposit-rom () {
                   fi
                  fi
 
-		 if [ -e $BIN/distfiles/aros-amiga-m68k.iso ]; then
-                  cp $BIN/distfiles/aros-amiga-m68k.iso $WORK/
-                  echo "${ARROWS} ${BOLD}${GREEN}ISO RESULT:${NC} $(du --apparent-size -h $WORK/aros-amiga-m68k.iso)"
+		 if [ -e "${BIN}/distfiles/aros-amiga-m68k.iso" ]; then
+                  cp "${BIN}/distfiles/aros-amiga-m68k.iso" ${WORK}/
+                  echo "${ARROWS} ${BOLD}${GREEN}ISO RESULT:${NC} $(du --apparent-size -h ${WORK}/aros-amiga-m68k.iso)"
                  fi
 
-		 if [ -e $BIN/bin/amiga-m68k/AROS.HUNK/Devs/sagasd.device ]; then
-                  cp $BIN/bin/amiga-m68k/AROS.HUNK/Devs/sagasd.device $WORK/
-                  echo "${ARROWS} ${BOLD}${GREEN}SD0 RESULT:${NC} $(du --apparent-size -h $WORK/sagasd.device)"
+		 if [ -e "${BIN}/bin/amiga-m68k/AROS.HUNK/Devs/sagasd.device" ]; then
+                  cp "${BIN}/bin/amiga-m68k/AROS.HUNK/Devs/sagasd.device" ${WORK}/
+                  echo "${ARROWS} ${BOLD}${GREEN}SD0 RESULT:${NC} $(du --apparent-size -h ${WORK}/sagasd.device)"
                  fi
+}
+
+update-distro-files () {
+	touch "${SRC}/rom/dosboot/menu.c";
+	touch "${SRC}/rom/dos/boot.c";
+	touch "${SRC}/rom/dos/banner.c";
 }
 
 makeclean () { cd "${BIN}" || exit; make clean; cd "${DIR}" || exit; }
 gitclean  () { cd "${SRC}" || exit; git clean -df; cd "${DIR}" || exit; }
 pkgcheck  () { if [ $(dpkg-query -W -f '${Binary:Package} ${Status}\n' $PKGS | wc -l) -eq $(echo $PKGS | wc -w) ]; then return 0; else return 1; fi; }
 download  () { cd "${WORK}" || exit; if [ ! -d $SRC ]; then git clone --recursive ${REPO} --branch=${BRANCH} ${SRC}; cd ${DIR}; else git checkout ${REMOTE}/${BRANCH} --recurse-submodules -f; fi }
-configure () { cd "${BIN}" || exit; ${SRC}/configure ${CONFOPTS} ${CONFO}; cd ${DIR}; }
-#compile   () { cd "${BIN}" || exit; make CFLAGS="${TEST_CFLAGS}" ${1} ${MAKEOPTS} ${MAKEO}; cd ${DIR}; }
-compile () { cd "${BIN}" || exit; touch "${SRC}/rom/dosboot/menu.c"; make ${1} ${MAKEOPTS} ${MAKEO}; cd ${DIR}; }
+# shellcheck disable=SC2086
+configure () { cd "${BIN}" || exit; ${SRC}/configure ${CONFOPTS} ${CONFO}; cd "${DIR}" || exit; }
+# shellcheck disable=SC2086
+compile () { cd "${BIN}" || exit; update-distro-files; make ${1} ${MAKEOPTS} ${MAKEO}; cd "${DIR}" || exit; }
 
+# shellcheck disable=SC2120
 valid-cpu () {
 	if [ "$1" = "" ]; then
 		echo "68000 68010 68020 68030 68040 68060"
@@ -133,12 +141,13 @@ valid-cpu () {
 	fi
 }
 
+# shellcheck disable=SC2120
 valid-fpu () {
- if [ "$1" = "" ]; then
-  echo "68881 soft-float hard-float"
- else
-  if [ "$1" == "68881|soft-float|hard-float" ]; then return 1; else return 0; fi
- fi
+	if [ "$1" = "" ]; then
+		echo "68881 soft-float hard-float"
+	else
+		if [ "$1" == "68881|soft-float|hard-float" ]; then return 1; else return 0; fi
+	fi
 }
 
 loop-through-opts () {
@@ -430,7 +439,7 @@ case $CMD in
   exit 1
  ;;
 esac
-if [ ${GITCLEAN} = 1 ]; then print_bold_nl "${ARROWS} Cleaning git artifacts.";		gitclean; 	fi
+if [ ${GITCLEAN} = 1 ]; then print_bold_nl "${ARROWS} Cleaning git artifacts."; gitclean; fi
 freevars
 print_bold_nl "Please Amiga responsibly!"
 ## END MAIN ##
