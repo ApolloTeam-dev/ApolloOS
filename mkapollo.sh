@@ -330,10 +330,11 @@ print_bold_nl "Please Amiga responsibly."
 }
 
 check-deps () {
-	if [ ${CONF} = 1 ] || [ ! -e "${BIN}/config.status" ];								then configure;												fi
-	if [ ! -e "${BIN}/bin/linux-x86_64/tools/crosstools/m68k-aros-gcc" ];	then compile tools-crosstools-gcc;	fi
-	if [ ! -e "${BIN}/bin/linux-x86_64/tools/mmake" ];										then compile mmake;								fi
-	if [ ! -e "${BIN}/bin/linux-x86_64/tools/sfdc" ];											then compile sfdc;									fi
+	if [ ${CONF} = 1 ] || [ ! -e "${BIN}/config.status" ];								then configure;													fi
+	if [ ! -e "${BIN}/bin/linux-x86_64/tools/crosstools/m68k-aros-gcc" ];	then compile tools-crosstools-gcc;			fi
+	if [ ! -e "${BIN}/bin/linux-x86_64/tools/mmake" ];										then compile mmake;											fi
+	if [ ! -e "${BIN}/bin/linux-x86_64/tools/sfdc" ];											then compile sfdc;											fi
+	if [ ! -e "${BIN}/bin/amiga-m68k/gen/include/zconf.h" ];							then compile workbench-libs-z-includes;	fi
 }
 
 list-rom-contents () {
@@ -416,7 +417,7 @@ case $CMD in
   print_bold_nl "!!! CTRL-AMIGA-AMIGA Pressed !!!"
   if [ ! -e ".git" ]; then
    print_bold_nl "${ARROWS} Removing sources"
-   rm -rf $SRC
+   rm -rf "${SRC}"
   fi
   if [ "$EXCLUDE" = "0" ]; then
    print_bold_nl "${ARROWS} Preserving Crosstools (saves serious recompile time)"
