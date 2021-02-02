@@ -15,7 +15,7 @@ AMIGADATE="$(date +"%-d.%-m.%Y")"
 if [ -e ".git" ]; then
 	BRANCH="$(git branch --show-current)"
 	REMOTE=$(git status -sb | sed "s/\#\#\ ${BRANCH}\.\.\.//g" | sed "s/\/${BRANCH}//g" | head -n 1)
-	REPO="$(git remote get-url ${REMOTE})"
+	REPO="$(git remote get-url "${REMOTE}")"
 else
 	REPO="https://github.com/ApolloTeam-dev/AROS"
 	BRANCH="v4-alynna"
@@ -60,6 +60,7 @@ setvars () {
 	MAKEOPTS="-j${JOBS}"
 	PKGS="git gcc g++ make cmake gawk bison flex bzip2 netpbm autoconf automake libx11-dev libxext-dev libc6-dev liblzo2-dev libxxf86vm-dev libpng-dev libsdl1.2-dev byacc python-mako libxcursor-dev gcc-multilib"
 
+	mkdir -p "${DIR}/${WORK}"
 	VERSION_FILE="${DIR}/${WORK}/dist_config.h"
 
 	printf "#ifndef AROS_DIST_CONFIG_H\n#define AROS_DIST_CONFIG_H\n\n" > "${VERSION_FILE}"
@@ -92,7 +93,7 @@ deposit-rom () {
 		 if [ -e "${BIN}/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin" ]; then
                   cat "${BIN}/bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin" "${BIN}/bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin" > "${WORK}/AROS.ROM"
                   print_bold "${ARROWS} ${BOLD}${GREEN}ROM RESULT:${NC} "
-                  read -r ROMSIZE ROMSIZETYPE ROMFILEPATH <<< "$(du --apparent-size -h apollo-os/AROS.ROM |sed -re "s|([0-9\.]+)([a-Z])\t([-/a-Z\.]+)|\1 \2 \3|g")"
+                  read -r ROMSIZE ROMSIZETYPE ROMFILEPATH <<< "$(du --apparent-size -h ${WORK}/AROS.ROM |sed -re "s|([0-9\.]+)([a-Z])\t([-/a-Z\.]+)|\1 \2 \3|g")"
 
                   # shellcheck disable=SC2072
                   MAXROMSIZE=1.0
@@ -425,6 +426,7 @@ case $CMD in
   fi
   print_bold_nl "${ARROWS} Removing Binaries (Things in the work dir root are preserved)"
   rm -rf "${BIN}"
+
   if [ "${EXCLUDE}" = "0" ]; then
    print_bold_nl "${ARROWS} Restoring Crosstools"
    mkdir -p ${BIN}/bin/
@@ -434,6 +436,9 @@ case $CMD in
  ;;
  deposit-rom)
   deposit-rom
+ ;;
+ i2c)
+  compile workbench-c-i2c-quick
  ;;
  *)
   help
