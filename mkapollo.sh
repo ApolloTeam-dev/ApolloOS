@@ -58,7 +58,7 @@ setvars () {
 	if [ ${VAMP} = 0 ];		then CONFOPTS="${CONFOPTS} --with-nonvampire-support"; fi
 	if [ ${DEBUG} = 1 ];	then CONFOPTS="${CONFOPTS} --enable-debug --with-serial-debug"; fi
 	MAKEOPTS="-j${JOBS}"
-	PKGS="git gcc g++ make cmake gawk bison flex bzip2 netpbm autoconf automake libx11-dev libxext-dev libc6-dev liblzo2-dev libxxf86vm-dev libpng-dev libsdl1.2-dev byacc python-mako libxcursor-dev gcc-multilib"
+	PKGS="git gcc g++ make cmake gawk bison flex bzip2 netpbm autoconf automake libx11-dev libxext-dev libc6-dev liblzo2-dev libxxf86vm-dev libpng-dev libsdl1.2-dev byacc python3-mako libxcursor-dev gcc-multilib"
 
 	mkdir -p "${DIR}/${WORK}"
 	VERSION_FILE="${DIR}/${WORK}/dist_config.h"
@@ -387,8 +387,8 @@ mkdir -p "${BIN}"
 
 if [ $(pkgcheck; echo $?) = 1 ]; then
  print_bold_nl "${ARROWS} ${BOLD}${RED}You are missing required packages to build ApolloOS!  ${GREEN}Attempting to install...${NC}"
- apt -y update
- apt -y install "${PKGS}"
+ sudo apt -y update
+ sudo apt -y install ${PKGS}
 fi
 if [ $DL = 1 ];                 then print_bold_nl "${ARROWS} Source wipe requested, ${RED}deleting${NC}.";     rm -rf "${SRC}"; fi
 if [ ! -e "${SRC}/configure" ]; then print_bold_nl "${ARROWS} Source not detected, ${GREEN}downloading${NC}.";  download;	       fi
