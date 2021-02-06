@@ -6,8 +6,8 @@ include $(SRCDIR)/config/aros.cfg
 
 FILES	:= \
     I2CScan \
-    SendI2C \
-    ReceiveI2C
+##    SendI2C \
+##   ReceiveI2C
 
 USER_INCLUDES :=
 USER_CFLAGS := -DUSE_EMBEDDED_COMMANDS -DADATE="\"$(shell date "+%d.%m.%Y")\"" -I$(OBJDIR)
@@ -57,10 +57,10 @@ OBJDIR := $(OBJDIR).kernel
 
 # These are the built-ins for AmigaOS 3.x and above
 FILES := \
-	 I2CScan \
-	 SendI2C \
-	 ReceiveI2C \
-	# End of list
+	 I2CScan
+## SendI2C
+## ReceiveI2C
+## End of list
 
 ##%build_module mmake=kernel-i2c \
 ##  modname=i2c modtype=resource \
