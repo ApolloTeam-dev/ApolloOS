@@ -23,7 +23,6 @@ $(CROSSTOOLSDIR)/vasmm68k_mot : $(HOSTGENDIR)/$(CURDIR)/vasm/Makefile
 	$(Q)$(MV) -f $(HOSTGENDIR)/$(CURDIR)/vasm/vobjdumptools-crosstools-vasm68k_mot $(HOSTGENDIR)/$(CURDIR)/vasm/vobjdump
 	$(Q)$(ECHO)"install vasm" && install $(HOSTGENDIR)/$(CURDIR)/vasm/vasmm68k_mot $(CROSSTOOLSDIR)/ ;\
 	install $(HOSTGENDIR)/$(CURDIR)/vasm/vobjdump $(CROSSTOOLSDIR)/
-	$(Q)$(ECHO) "done" >$@
 
 $(HOSTGENDIR)/$(CURDIR)/vasm/Makefile :
 	@$(MKDIR) -p $(HOSTGENDIR)/$(CURDIR)
