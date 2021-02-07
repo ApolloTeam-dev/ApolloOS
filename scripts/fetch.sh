@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright © 2004-2017, The AROS Development Team. All rights reserved.
+# Copyright ï¿½ 2004-2017, The AROS Development Team. All rights reserved.
 # $Id$
 
 
@@ -207,8 +207,8 @@ unpack()
 	    if ! tar xfJ "$archivepath/$archive"; then ret=false; fi
 	    ;;
         *.lha)
-            if ! lha x "$archivepath/$archive"; then ret=false; fi
-            ;;
+      if ! ${TOOLDIR}lha x "$archivepath/$archive"; then ret=false; fi
+      ;;
 	*)
 	    echo "Unknown archive format for \`$archive'."
 	    ret=false
