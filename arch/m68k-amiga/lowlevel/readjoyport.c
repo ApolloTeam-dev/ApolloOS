@@ -1,5 +1,5 @@
 /*
-    Copyright © 2013-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2013-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: 
@@ -82,7 +82,9 @@ static inline ULONG llPollJoystick(int port)
       if ((newjoydat & 2)!=0) bits |= JPF_BUTTON_RED;
       if ((newjoydat & 4)!=0) bits |= JPF_BUTTON_BLUE;
       if ((newjoydat & 16)!=0) bits |= JPF_BUTTON_YELLOW;
-      if ((newjoydat & 8)!=0) bits |= JPF_BUTTON_GREEN;
+      if ((newjoydat & 8)!=0)  bits |= JPF_BUTTON_GREEN;
+      if ((newjoydat & 32)!=0) bits |= JPF_BUTTON_REVERSE;
+      if ((newjoydat & 64)!=0) bits |= JPF_BUTTON_FORWARD;
     } 
 
     if ((joydat >> 1) & 1) {
