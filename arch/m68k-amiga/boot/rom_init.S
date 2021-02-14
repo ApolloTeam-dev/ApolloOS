@@ -98,11 +98,24 @@ arosbootstrap_init:
 
 	/* set AttnFlags AFB_ADDR32 */
 	or.w	#0x2000,%a4@(2)
-
+	
+	#if 0
+	//V4 version
 	move.l	#0x01000000,%a0
 	move.l	#0x20000000,%a1
 	move.l	#0x00100000,%d0
 	jsr	__MemoryTest
+	#else
+	move.l	#0x08000000,%a0
+	move.l	#0x20000000,%a1
+	move.l	#0x00100000,%d0
+	jsr	__MemoryTest
+
+	move.l	#0x01000000,%a0
+	move.l	#0x08000000,%a1
+	move.l	#0x00100000,%d0
+	jsr	__MemoryTest
+	#endif
 
 
 	/* Memory region array is put into the
