@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2013, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Graphics function SetChipRev()
@@ -48,7 +48,7 @@ AROS_LH1(ULONG, SetChipRev,
         else if (ChipRev == SETCHIPREV_AA && chipflags >= SETCHIPREV_AA)
             chipflags = SETCHIPREV_AA;
     }
-    GfxBase->ChipRevBits0 = 0x1F; //chipflags;
+    GfxBase->ChipRevBits0 = chipflags; //chipflags;
 
     return GfxBase->ChipRevBits0;
 
