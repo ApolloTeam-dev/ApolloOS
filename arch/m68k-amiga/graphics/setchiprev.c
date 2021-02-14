@@ -48,7 +48,7 @@ AROS_LH1(ULONG, SetChipRev,
         else if (ChipRev == SETCHIPREV_AA && chipflags >= SETCHIPREV_AA)
             chipflags = SETCHIPREV_AA;
     }
-    GfxBase->ChipRevBits0 = chipflags;
+    GfxBase->ChipRevBits0 = 0x1F; //chipflags;
 
     return GfxBase->ChipRevBits0;
 
