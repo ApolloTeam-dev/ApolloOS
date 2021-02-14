@@ -193,35 +193,40 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
     struct TagItem *userSyncs = NULL;
     
     // Predefined resolutions
+    MAKE_SYNC(320x200, 28375, 320, 320, 320, 908,  200, 200, 200, 524, 1, "SAGA:320x200");
+    MAKE_SYNC(320x240, 28375, 320, 320, 320, 908,  240, 240, 240, 524, 1, "SAGA:320x240");
+    MAKE_SYNC(320x256, 28375, 320, 320, 320, 908,  256, 256, 256, 524, 1, "SAGA:320x256");
+    MAKE_SYNC(640x400, 28375, 640, 640, 640, 908,  400, 400, 400, 524, 1, "SAGA:640x400");
+    MAKE_SYNC(640x480, 28375, 640, 640, 640, 908,  480, 480, 480, 524, 1, "SAGA:640x480");
+    MAKE_SYNC(640x512, 28375, 640, 640, 640, 908,  512, 512, 512, 524, 1, "SAGA:640x512");
+    MAKE_SYNC(960x540, 28375*2, 960, 960, 960, 1516,  540, 540, 540, 626, 1, "SAGA:960x540");
+    MAKE_SYNC(480x270, 28375, 480, 480, 480, 1516,  270, 270, 270, 626, 1, "SAGA:480x270");
+    MAKE_SYNC(304x224, 28375, 304, 304, 304, 908,  224, 224, 224, 524, 1, "SAGA:304x224");
+    MAKE_SYNC(1280x720,28375*2,1280,1280,1280,1516,  720, 720, 720, 750, 1, "SAGA1280x720");
+    MAKE_SYNC(640x360, 28375*2, 640, 640, 640,1516,  360, 360, 360, 750, 1, "SAGA:640x360");
+    MAKE_SYNC(800x600, 28375*2, 800, 800, 800, 1352,  600, 600, 600, 700, 1, "SAGA:800x600");
+    MAKE_SYNC(1024x768, 28375*2,1024,1024,1024,1216,  768, 768, 768, 780, 1, "SAGA1024x768");
+    MAKE_SYNC(720x576, 28375, 720, 720, 720, 908,  576, 576, 576, 626, 1, "SAGA:720x576");
+    MAKE_SYNC(1920x1080,28375*2,1920,1920,1920,2100, 1080,1080,1080,1127, 1, "SAGA1920x108");
     
-    MAKE_SYNC(320x200, 28375, 320, 688,  720,  800, 200, 483, 487, 494, 1, "SAGA:320x200");
-    MAKE_SYNC(304x224, 28375, 304, 304, 1000, 1040, 224, 542, 550, 556, 1, "SAGA:304x224");
-    MAKE_SYNC(320x240, 28375, 320, 688,  720,  800, 240, 483, 487, 494, 1, "SAGA:320x240");
-    MAKE_SYNC(320x256, 28375, 320, 688,  720,  800, 256, 483, 487, 494, 1, "SAGA:320x256");
-    MAKE_SYNC(480x270, 28375, 480, 480, 1000, 1040, 270, 542, 550, 556, 1, "SAGA:480x270");
-    MAKE_SYNC(640x360, 28375, 640, 640, 1000, 1040, 360, 542, 550, 556, 1, "SAGA:640x360");
-    MAKE_SYNC(640x400, 28375, 640, 688,  720,  800, 400, 483, 487, 494, 1, "SAGA:640x400");
-    MAKE_SYNC(640x480, 28375, 640, 688,  720,  800, 480, 483, 487, 494, 1, "SAGA:640x480");
-    MAKE_SYNC(640x512, 28375, 640, 648,  680,  720, 512, 516, 524, 530, 1, "SAGA:640x512");
-    MAKE_SYNC(960x540, 28375, 960, 968, 1000, 1040, 540, 542, 550, 556, 1, "SAGA:960x540");
-    MAKE_SYNC(1280x720,28375,1280,1280, 1000, 1040, 720, 542, 550, 556, 1, "SAGA:1280x720");
-    
-    struct TagItem syncs[] = 
-    {
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_320x200         }, // syncs[0]
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_304x224         }, // syncs[6]
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_320x240         }, // syncs[1]
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_320x256         }, // syncs[2]
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_480x270         }, // syncs[6]
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_640x360        }, // syncs[6]
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_640x400         }, // syncs[3]
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_640x480         }, // syncs[4]
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_640x512         }, // syncs[5]
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_960x540         }, // syncs[6]
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_1280x720        }, // syncs[6]
-        { TAG_DONE,                   0UL                        }, // syncs[7] <<< INSERT USERSYNCS HERE
-        { TAG_DONE,                   0UL                        }  // syncs[8]
-    };
+    struct TagItem syncs[] =
+	{
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_320x240         },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_320x256         },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_480x270         },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_640x360         },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_640x400         },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_640x480         },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_640x512         },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_960x540         },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_1280x720        },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_800x600         },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_1024x768        },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_720x576         },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_1920x1080       },
+		{ TAG_DONE,                   0UL                        }
+	};
+
     
     struct TagItem pftags_32bpp[] = 
     {

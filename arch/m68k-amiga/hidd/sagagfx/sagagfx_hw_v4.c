@@ -36,18 +36,22 @@ UBYTE SAGAHW_V4_GetModeID(UWORD w, UWORD h)
 {
     D(bug("[SAGA] SAGAHW_V4_GetModeID(%d, %d)\n", w, h));
     
-    if      (w == 320 && h == 200) return(SAGA_V4_VIDEO_MODEID_320x200);
+    if		(w == 304 && h == 224) return(SAGA_V4_VIDEO_MODEID_304x224);
+    else if (w == 320 && h == 200) return(SAGA_V4_VIDEO_MODEID_320x200);
     else if (w == 320 && h == 240) return(SAGA_V4_VIDEO_MODEID_320x240);
     else if (w == 320 && h == 256) return(SAGA_V4_VIDEO_MODEID_320x256);
+	else if (w == 480 && h == 270) return(SAGA_V4_VIDEO_MODEID_480x270);
+	else if (w == 640 && h == 360) return(SAGA_V4_VIDEO_MODEID_640x360);
     else if (w == 640 && h == 400) return(SAGA_V4_VIDEO_MODEID_640x400);
     else if (w == 640 && h == 480) return(SAGA_V4_VIDEO_MODEID_640x480);
     else if (w == 640 && h == 512) return(SAGA_V4_VIDEO_MODEID_640x512);
-    else if (w == 960 && h == 540) return(SAGA_V4_VIDEO_MODEID_960x540);
     else if (w == 480 && h == 270) return(SAGA_V4_VIDEO_MODEID_480x270);
-    else if (w == 304 && h == 224) return(SAGA_V4_VIDEO_MODEID_304x224);
-    else if (w == 1280 && h == 720) return(SAGA_V4_VIDEO_MODEID_1280x720);
     else if (w == 640 && h == 360) return(SAGA_V4_VIDEO_MODEID_640x360);
-    
+    else if (w == 960 && h == 540) return(SAGA_V4_VIDEO_MODEID_960x540);
+    else if (w == 1280 && h == 720) return(SAGA_V4_VIDEO_MODEID_1280x720);
+    else if (w == 1024 && h == 768) return(SAGA_V4_VIDEO_MODEID_1024x768);
+    else if (w == 1920 && h == 1080) return(SAGA_V4_VIDEO_MODEID_1920x1080);
+
     return(0);
 }
 

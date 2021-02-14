@@ -43,17 +43,22 @@
 
 // RESOLUTION MODE IDS
 
-#define SAGA_V4_VIDEO_MODEID_320x200     0x01      // [x2, x2]
-#define SAGA_V4_VIDEO_MODEID_320x240     0x02      // [x2, x2]
-#define SAGA_V4_VIDEO_MODEID_320x256     0x03      // [x2, x2]
-#define SAGA_V4_VIDEO_MODEID_640x400     0x04      // [x1, x1]
-#define SAGA_V4_VIDEO_MODEID_640x480     0x05      // [x1, x1]
-#define SAGA_V4_VIDEO_MODEID_640x512     0x06      // [x1, x1]
-#define SAGA_V4_VIDEO_MODEID_960x540     0x07      // [x1, x1]
-#define SAGA_V4_VIDEO_MODEID_480x270     0x08      // [x2, x2]
-#define SAGA_V4_VIDEO_MODEID_304x224     0x09      // [x2, x2]
-#define SAGA_V4_VIDEO_MODEID_1280x720    0x0A      // [x2, x2]
-#define SAGA_V4_VIDEO_MODEID_640x360     0x0B      // [x2, x2]
+#define SAGA_V4_VIDEO_MODEID_320x200     0x01
+#define SAGA_V4_VIDEO_MODEID_320x240     0x02
+#define SAGA_V4_VIDEO_MODEID_320x256     0x03
+#define SAGA_V4_VIDEO_MODEID_640x400     0x04
+#define SAGA_V4_VIDEO_MODEID_640x480     0x05
+#define SAGA_V4_VIDEO_MODEID_640x512     0x06
+#define SAGA_V4_VIDEO_MODEID_960x540     0x07
+#define SAGA_V4_VIDEO_MODEID_480x270     0x08
+#define SAGA_V4_VIDEO_MODEID_304x224     0x09
+#define SAGA_V4_VIDEO_MODEID_1280x720    0x0A
+#define SAGA_V4_VIDEO_MODEID_640x360     0x0B
+#define SAGA_V4_VIDEO_MODEID_800x600     0x0C
+#define SAGA_V4_VIDEO_MODEID_1024x768    0x0D
+#define SAGA_V4_VIDEO_MODEID_720x576     0x0E
+#define SAGA_V4_VIDEO_MODEID_1920x1080   0x0F
+
 
 // VIDEO DAC
 
