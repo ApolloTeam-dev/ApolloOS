@@ -85,7 +85,8 @@ include $(SRCDIR)/config/aros.cfg
 #MM     linklibs-loadseg \
 #MM     compiler-stdc \
 #MM     compiler-stdcio \
-#MM     hidd-m68k-sagagfx \
+#MM     kernel-sagasd-device-kobj \
+#MM     sagasd-device \
 #MM     compiler-posixc
 
 #MM- kernel-workbench-devs-amiga-m68k : workbench-devs-amiga-m68k
@@ -150,7 +151,7 @@ AFILES  := ext_entry
 KLIBS   :=  keymap graphics layers intuition gadtools icon workbench \
             mathffp mathieeesingbas freeanim lowlevel nonvolatile nvdisk \
             setpatch
-KDEVS   := ata
+KDEVS   := ata sagasd
 KHNDLRS := 
 KHIDDS  := bus storage system
 KRSRCS  := shellcommands workbook wbtag
@@ -312,7 +313,7 @@ AFILES  :=
 
 KLIBS   := aros utility dos oop mathffp mathieeesingbas partition \
            keymap graphics layers intuition gadtools icon workbench setpatch
-KDEVS   := timer input keyboard console trackdisk gameport audio ata cd
+KDEVS   := timer input keyboard console trackdisk gameport audio ata cd sagasd
 KHNDLRS := cdrom con afs ram
 KHIDDS  := amigakbd amigamouse amigavideo ata_gayle bus gfx hiddclass keyboard mouse storage system p96gfx
 KRSRCS  := battclock processor task lddemon dosboot cia potgo disk \

@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2019, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2019, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Discover all mountable partitions
@@ -326,8 +326,13 @@ void dosboot_BootScan(LIBBASETYPEPTR LIBBASE)
             AddTail(&rootList, (struct Node *) temp);
 
         ForeachNodeSafe (&rootList, bootNode, temp)
-            CheckPartitions(ExpansionBase, PartitionBase, SysBase,
-                bootNode);
+        {
+        	struct DeviceNode *deviceNode = bootNode->bn_DeviceNode;
+        	char deviceName[ 256 ];
+        	UBYTE deviceNameLength = *(char*)deviceNode->dn_Name;
+        	if( deviceNameLength) {	CopyMem( (char*)deviceNode->dn_Name, deviceName, deviceNameLength );	deviceName[ deviceNameLength ] = 0; }
+            CheckPartitions(ExpansionBase, PartitionBase, SysBase, bootNode);
+        }
 
         ReleaseSemaphore(&IntExpBase(ExpansionBase)->BootSemaphore);
 
