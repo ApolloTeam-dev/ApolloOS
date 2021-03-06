@@ -1,6 +1,5 @@
 /*
-    Copyright � 1995-2008, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2008, The AROS Development Team. All rights reserved.
 */
 /*
  * -date------ -name------------------- -description-----------------------------
@@ -8,6 +7,10 @@
  * 04-jan-2008 [Tomasz Wiszkowski]      corrected tabulation
  */
 
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
 
 #include "os.h"
 #include "misc.h"

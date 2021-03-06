@@ -1,6 +1,5 @@
 /*
-    Copyright � 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 */
 
 /*
@@ -16,6 +15,10 @@
 
 #include "validator.h"
 #include "volumes.h"
+
+#undef SDEBUG
+#undef DEBUG
+#define DEBUG 0
 
 #ifdef __AROS__
 #include <dos/dostags.h>
@@ -91,7 +94,7 @@ LONG checkValid(struct AFSBase *afsbase, struct Volume *vol)
 LONG launchValidator(struct AFSBase *afsbase, struct Volume *volume)
 {
 #ifdef __AROS__
-	D(bug("[AFS]: flushing cache...\n"));
+	D(bug("[afs]: flushing cache...\n"));
 	flushCache(afsbase, volume);
 
 	/*

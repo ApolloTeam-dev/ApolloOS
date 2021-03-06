@@ -1,7 +1,11 @@
 /*
-    Copyright � 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 */
+
+#ifdef DEBUG
+#undef DEBUG
+#endif
+#define DEBUG 0
 
 #include "os.h"
 #include "filehandles1.h"
@@ -37,7 +41,7 @@ struct BlockCache *getHeaderBlock
 {
 ULONG key;
 
-	D(bug("[AFS]    getHeaderBlock: searching for block of '%s'\n",name));
+	D(bug("[afs]    getHeaderBlock: searching for block of '%s'\n",name));
 	key = getHashKey(name,volume->SizeBlock-56,volume->dosflags)+BLK_TABLE_START;
 	*block = blockbuffer->blocknum;
 	if (blockbuffer->buffer[key] == 0)
@@ -56,7 +60,7 @@ D
 	{
 		char *name;
 		name = (char *)blockbuffer->buffer+(BLK_DIRECTORYNAME_START(volume)*4);
-		kprintf("[AFS] %.*s\n", name[0], name+1);
+		kprintf("[afs] %.*s\n", name[0], name+1);
 	}
 );
 	if (calcChkSum(volume->SizeBlock, blockbuffer->buffer) != 0)
@@ -158,19 +162,19 @@ UBYTE buffer[32];
 
         if ((dirah->volume->dostype != ID_DOS_DISK) && (dirah->volume->dostype != ID_DOS_muFS_DISK))
 	{
-		D(bug("[AFS] Unknown dostype 0x%08x\n", dirah->volume->dostype));
+		D(bug("[afs] Unknown dostype 0x%08x\n", dirah->volume->dostype));
 		*error = ERROR_NOT_A_DOS_DISK;
 		return 0;
 	}
 	*block = dirah->header_block;
 
-	D(bug("[AFS]    findBlock: startblock=%ld\n",*block));
+	D(bug("[afs]    findBlock: startblock=%ld\n",*block));
 	/* get first entry (root or filelock refers to) */
 	blockbuffer = getBlock(afsbase, dirah->volume, *block);
 	if (blockbuffer == NULL)
 	{
 		*error = ERROR_UNKNOWN;
-		D(bug("[AFS]    error blockbuffer\n"));
+		D(bug("[afs]    error blockbuffer\n"));
 		return NULL;
 	}
 	if (calcChkSum(dirah->volume->SizeBlock, blockbuffer->buffer) != 0)
@@ -183,7 +187,7 @@ UBYTE buffer[32];
 			launchValidator(afsbase, dirah->volume);
 
 		*error = ERROR_UNKNOWN;
-		D(bug("[AFS]    error checksum\n"));
+		D(bug("[afs]    error checksum\n"));
 		return NULL;
 	}
 	if (OS_BE2LONG(blockbuffer->buffer[BLK_PRIMARY_TYPE]) != T_SHORT)
@@ -195,7 +199,7 @@ UBYTE buffer[32];
 			launchValidator(afsbase, dirah->volume);
 
 		*error = ERROR_OBJECT_WRONG_TYPE;
-		D(bug("[AFS]    error wrong type\n"));
+		D(bug("[afs]    error wrong type\n"));
 		return NULL;
 	}
 	while (*name)
@@ -205,10 +209,10 @@ UBYTE buffer[32];
 			if (blockbuffer->buffer[BLK_PARENT(dirah->volume)] == 0)
 			{
 				*error = ERROR_OBJECT_NOT_FOUND;
-				D(bug("[AFS]    object not found\n"));
+				D(bug("[afs]    object not found\n"));
 				return NULL;
 			}
-			D(bug("[AFS]   findBlock: getting parent\n"));
+			D(bug("[afs]   findBlock: getting parent\n"));
 			blockbuffer = getBlock
 				(
 					afsbase,
@@ -218,7 +222,7 @@ UBYTE buffer[32];
 			if (blockbuffer == NULL)
 			{
 				*error = ERROR_UNKNOWN;
-				D(bug("[AFS]    error no blockbuffer\n"));
+				D(bug("[afs]    error no blockbuffer\n"));
 				return NULL;
 			}
 			name++;
@@ -240,7 +244,7 @@ UBYTE buffer[32];
 						) != ST_LINKDIR))
 			{
 				*error = ERROR_OBJECT_WRONG_TYPE;
-				D(bug("[AFS]    error wrong type\n"));
+				D(bug("[afs]    error wrong type\n"));
 				return NULL;
 			}
 			pos = buffer;
@@ -253,7 +257,7 @@ UBYTE buffer[32];
 			*pos=0;
 			D(bug
 				(
-					"[AFS]   findBlock: searching for header block of %s\n",
+					"[afs]   findBlock: searching for header block of %s\n",
 					buffer
 				));
 			blockbuffer =
@@ -264,9 +268,9 @@ UBYTE buffer[32];
 	}
 	D(
 		if (blockbuffer != NULL)
-			bug("[AFS]   findBlock: block=%ld\n",blockbuffer->blocknum);
+			bug("[afs]   findBlock: block=%ld\n",blockbuffer->blocknum);
 		else
-			bug("[AFS]   findBlock: error\n");
+			bug("[afs]   findBlock: error\n");
 	);
 	return blockbuffer;
 }
@@ -394,7 +398,7 @@ struct AfsHandle *ah;
 
 	D(bug
 		(
-			"[AFS]    getHandle: trying to get handle for block %lu\n",
+			"[afs]    getHandle: trying to get handle for block %lu\n",
 			fileblock->blocknum)
 		);
 
@@ -449,7 +453,7 @@ struct AfsHandle *ah = NULL;
 struct BlockCache *fileblock;
 ULONG block;
 
-	D(bug("[AFS] openf(%ld,%s,0x%8lx)\n",dirah->header_block,filename,mode));
+	D(bug("[afs] openf(%ld,%s,0x%8lx)\n",dirah->header_block,filename,mode));
 	fileblock = findBlock(afsbase, dirah, filename, &block, error);
 	if (fileblock != NULL)
 		ah = getHandle(afsbase, dirah->volume, fileblock, mode, error);
@@ -485,7 +489,7 @@ ULONG fileblocknum = -1;
 	/*
 	 * nicely say what's going on
 	 */
-	D(bug("[AFS] openfile(%lu,%s,0x%lx,%lu)\n", dirah->header_block,name,mode,protection));
+	D(bug("[afs] openfile(%lu,%s,0x%lx,%lu)\n", dirah->header_block,name,mode,protection));
 	*error = 0;
 	
 	/*
@@ -510,7 +514,7 @@ ULONG fileblocknum = -1;
 		if ((OS_BE2LONG(dirblock->buffer[BLK_SECONDARY_TYPE(dirah->volume)]) == ST_USERDIR) || 
 			(OS_BE2LONG(dirblock->buffer[BLK_SECONDARY_TYPE(dirah->volume)]) == ST_ROOT))
 		{
-			D(bug("[AFS]    parent of %s is on block %lu\n", name, dirblock->blocknum));
+			D(bug("[afs]    parent of %s is on block %lu\n", name, dirblock->blocknum));
 
 			/* 
 			 * get the header block of the file to open 
@@ -589,7 +593,7 @@ ULONG fileblocknum = -1;
 ************************************/
 void closef(struct AFSBase *afsbase, struct AfsHandle *ah) {
 
-	D(bug("[AFS] closef(%lu)\n",ah->header_block));
+	D(bug("[afs] closef(%lu)\n",ah->header_block));
 	remHandle(afsbase, ah);
 	FreeMem(ah,sizeof(struct AfsHandle));
 }
@@ -623,7 +627,7 @@ char *source;
 	{
 		length = ah->filesize-ah->current.offset; /* we can't read more bytes than left in file! */
 	}
-	D(bug("[AFS]   readData: offset=%ld\n", ah->current.offset));
+	D(bug("[afs]   readData: offset=%ld\n", ah->current.offset));
 	extensionbuffer = getBlock(afsbase, ah->volume, ah->current.block);
 	if (extensionbuffer == NULL)
 	{
@@ -633,7 +637,7 @@ char *source;
 	extensionbuffer->flags |= BCF_USED; /* don't overwrite that cache block! */
 	while (length != 0)
 	{
-		D(bug("[AFS]   readData: bytes left=%ld\n",length));
+		D(bug("[afs]   readData: bytes left=%ld\n",length));
 		/*
 			block, filekey always point to the next block
 			so update them if we have read a whole block
@@ -645,7 +649,7 @@ char *source;
 				OS_BE2LONG(extensionbuffer->buffer[BLK_EXTENSION(ah->volume)]);
 			ah->current.filekey = BLK_TABLE_END(ah->volume);
 			extensionbuffer->flags &= ~BCF_USED;		//we can now overwrite that cache block
-			D(bug("[AFS]   readData: reading extensionblock=%ld\n",ah->current.block));
+			D(bug("[afs]   readData: reading extensionblock=%ld\n",ah->current.block));
 			if (ah->current.block != 0)
 			{
 				extensionbuffer = getBlock(afsbase, ah->volume,ah->current.block);
@@ -670,7 +674,7 @@ D(
 		}
 		D(bug
 			(
-				"[AFS]   readData: reading datablock %ld\n",
+				"[afs]   readData: reading datablock %ld\n",
 				OS_BE2LONG(extensionbuffer->buffer[ah->current.filekey]))
 			);
 		databuffer = getBlock
@@ -719,7 +723,7 @@ LONG readf
 {
 LONG readbytes;
 
-	D(bug("[AFS]   read(%ld,buffer,%ld)\n", ah->header_block, length));
+	D(bug("[afs]   read(%ld,buffer,%ld)\n", ah->header_block, length));
 	readbytes = readData(afsbase, ah,buffer,length, error);
 	if (readbytes != ENDSTREAMCH)
 		ah->current.offset = ah->current.offset+readbytes;
@@ -779,7 +783,7 @@ LONG writtenbytes = 0, sumoffset;
 char *destination;
 BOOL extensionModified = FALSE;
 
-	D(bug("[AFS]   writeData: offset=%ld\n", ah->current.offset));
+	D(bug("[afs]   writeData: offset=%ld\n", ah->current.offset));
 	extensionbuffer = getBlock(afsbase, ah->volume, ah->current.block);
 	if (extensionbuffer == NULL)
 	{
@@ -797,7 +801,7 @@ BOOL extensionModified = FALSE;
 		{
 			lastblock = OS_BE2LONG(extensionbuffer->buffer[ah->current.filekey+1]);
 			D(bug
-				("[AFS]   writeData: for OFS last datablock was %lu\n", lastblock));
+				("[afs]   writeData: for OFS last datablock was %lu\n", lastblock));
 		}
 		/*
 			block, filekey always point to the last block
@@ -820,7 +824,7 @@ BOOL extensionModified = FALSE;
 			}
 			else
 			{
-				D(bug("[AFS]   writeData: need new extensionblock\n"));
+				D(bug("[afs]   writeData: need new extensionblock\n"));
 				block = allocBlock(afsbase, ah->volume);
 				writeExtensionBlock
 					(
@@ -853,7 +857,7 @@ BOOL extensionModified = FALSE;
 		{
 			D(bug
 				(
-					"[AFS]   writeData: using old datablock %lu\n",
+					"[afs]   writeData: using old datablock %lu\n",
 					OS_BE2LONG(extensionbuffer->buffer[ah->current.filekey]))
 				);
 			/* Only get the block's old contents if some of it won't be overwritten
@@ -882,7 +886,7 @@ BOOL extensionModified = FALSE;
 		else
 		{
 			extensionModified = TRUE;
-			D(bug("[AFS]   writeData: need a new datablock\n"));
+			D(bug("[afs]   writeData: need a new datablock\n"));
 			block=allocBlock(afsbase, ah->volume);
 			if (block == 0)
 			{
@@ -901,7 +905,7 @@ BOOL extensionModified = FALSE;
 			extensionbuffer->buffer[ah->current.filekey] = OS_LONG2BE(block);
 			if ((ah->volume->dosflags==0) && (lastblock != 0))
 			{
-				D(bug("[AFS]   writeData: OFS->fill in %ld BLK_NEXT_DATA\n",lastblock));
+				D(bug("[afs]   writeData: OFS->fill in %ld BLK_NEXT_DATA\n",lastblock));
 				/*
 					 we allocated a new block
 					so there MUST be an initialized lastblock
@@ -997,7 +1001,7 @@ BOOL extensionModified = FALSE;
 			);
 	}
 	extensionbuffer->flags &= ~BCF_USED;
-	D(bug("[AFS]   writeData=%ld\n", writtenbytes));
+	D(bug("[afs]   writeData=%ld\n", writtenbytes));
 	return writtenbytes;
 }
 
@@ -1008,7 +1012,7 @@ struct BlockCache *headerblock;
 LONG writtenbytes;
 struct DateStamp ds;
 
-	D(bug("[AFS] write(ah,buffer,%ld)\n", length));
+	D(bug("[afs] write(ah,buffer,%ld)\n", length));
 	if (0 == checkValid(afsbase, ah->volume))
 	{
 		*error = ERROR_DISK_WRITE_PROTECTED;
@@ -1049,7 +1053,7 @@ UWORD blocksize, tablesize;
 ULONG newoffset;
 struct BlockCache *blockbuffer;
 
-	D(bug("[AFS] seek(%ld,%ld,%ld)\n", ah->header_block, offset, mode));
+	D(bug("[afs] seek(%ld,%ld,%ld)\n", ah->header_block, offset, mode));
 	*error = ERROR_SEEK_ERROR;
 	if (mode == OFFSET_BEGINNING)
 	{
@@ -1137,7 +1141,7 @@ struct AfsHandle *ah2;
 	}
 
 	/* Get absolute new length */
-	D(bug("[AFS] setfilesize(%ld,%ld,%ld)\n", ah->header_block, size, mode));
+	D(bug("[afs] setfilesize(%ld,%ld,%ld)\n", ah->header_block, size, mode));
 	*error = ERROR_SEEK_ERROR;
 	if (mode == OFFSET_BEGINNING)
 	{
