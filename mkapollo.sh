@@ -7,6 +7,9 @@ CLEAN=0
 GITCLEAN=0
 DL=0
 WORK="apollo-os"
+DISTRONAME="ApolloOS"
+DISTROVERSION="$(cat version)"
+DISTRODATE="$(date +%Y-%m-%d)"
 if [ -e ".git" ]; then
 	BRANCH="$(git branch --show-current)"
 	REMOTE=$(git status -sb | sed "s/\#\#\ ${BRANCH}\.\.\.//g" | sed "s/\/${BRANCH}//g" | head -n 1)
@@ -15,6 +18,8 @@ else
 	REPO="https://github.com/ApolloTeam-dev/AROS"
 	BRANCH="v4-alynna"
 fi
+
+TEST_CFLAGS="-D__DISTRONAME__='\"${DISTRONAME}\"' -D__DISTROVERSION__='\"${DISTROVERSION}\"' -D__DISTRODATE__='\"${DISTRODATE}\"'"
 REZ=640x256x4
 CPU=68040
 FPU=68881
@@ -103,7 +108,7 @@ gitclean  () { cd "${SRC}" || exit; git clean -df; cd "${DIR}" || exit; }
 pkgcheck  () { if [ $(dpkg-query -W -f '${Binary:Package} ${Status}\n' $PKGS | wc -l) -eq $(echo $PKGS | wc -w) ]; then return 0; else return 1; fi; }
 download  () { cd "${WORK}" || exit; if [ ! -d $SRC ]; then git clone --recursive $REPO --branch=$BRANCH $SRC; cd $DIR; fi }
 configure () { cd "${BIN}" || exit; ${SRC}/configure $CONFOPTS $CONFO; cd $DIR; }
-compile   () { cd "${BIN}" || exit; make $1 $MAKEOPTS $MAKEO; cd $DIR; }
+compile   () { cd "${BIN}" || exit; touch "${SRC}/rom/dosboot/menu.c"; make CFLAGS="${TEST_CFLAGS}" ${1} ${MAKEOPTS} ${MAKEO}; cd ${DIR}; }
 
 valid-cpu () {
 	if [ "$1" = "" ]; then
