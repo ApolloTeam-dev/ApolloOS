@@ -1,0 +1,78 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the master-new branch
+  push:
+    branches: [ master-new ]
+  pull_request:
+    branches: [ master-new ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    #runs-on: [self-hosted, linux, X64]
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+        with: 
+            submodules: recursive
+      
+      # Install pre-reuisites
+      - name: Install Prerequisites
+        run: sudo apt-get install git-core gcc g++ make cmake gawk bison flex bzip2 netpbm autoconf automake libx11-dev libxext-dev libc6-dev liblzo2-dev libxxf86vm-dev libpng-dev libsdl1.2-dev byacc python-mako libxcursor-dev gcc-multilib zip genisoimage
+
+      # Runs a single command using the runners shell
+      - name: configure
+        run: ./configure --target=amiga-m68k --with-optimization="-Os" --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68020 --disable-mmu
+      
+      # build the compilers
+      - name: Compiler Build
+        run: make -j6 compiler
+
+      # Runs a set of commands using the runners shell
+      - name: make
+        run: make -j6
+        
+      # make dist files
+      - name: distfiles
+        run: make -j6 distfiles
+        
+      # Make the rom
+      - name: aros.rom
+        run: cat bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin > aros.rom
+      
+      # Make the rom
+      - name: AROS.HUNK Image
+        run: zip -9r aros.hunk.zip bin/amiga-m68k/AROS.HUNK
+      
+      #Upload the ROM
+      - name: Upload ROM
+        uses: actions/upload-artifact@v2
+        with:
+          name: AROS ROM
+          path: aros.rom
+        
+      #Upload the ISO
+      - name: Upload ISO
+        uses: actions/upload-artifact@v2
+        with:
+          name: ISO Image
+          path: distfiles/aros-amiga-m68k.iso
+          
+      #Upload the Installation as a ZIP File
+      - name: AROS.HUNK image
+        uses: actions/upload-artifact@v2
+        with:
+          name: AROS.HUNK image
+          path: aros.hunk.zip
