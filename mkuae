@@ -1,0 +1,2 @@
+#!/bin/bash
+./mkapollo.sh -v0 $@
