@@ -15,3 +15,6 @@ printf "#define __DISTROVERSION__\t\"%s\"\n" "${DISTROVERSION}" >> "${VERSION_FI
 printf "#define __DISTRODATE__\t\t\"%s\"\n" "${DISTRODATE}" >> "${VERSION_FILE}"
 printf "#define __AMIGADATE__\t\t\"%s\"\n" "${AMIGADATE}" >> "${VERSION_FILE}"
 printf "\n#endif //AROS_DIST_CONFIG_H\n" >> "${VERSION_FILE}"
+
+printf "%s (%s, %s)\n" "${DISTRONAME}" "${DISTROVERSION}" "${DISTRODATE}"
+echo "dist_config.h created!"
