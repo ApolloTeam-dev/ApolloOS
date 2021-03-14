@@ -1,10 +1,4 @@
 #!/bin/bash
-WORK="apollo-os"
-DISTRONAME="ApolloOS"
-DISTROVERSION="$(cat version)"
-DISTRODATE="$(date +%Y-%m-%d)"
-AMIGADATE="$(date +"%-d.%-m.%Y")"
-
 CPU_COUNT=$(grep processor /proc/cpuinfo | wc -l)
 THREADS=${CPU_COUNT}
 
@@ -37,16 +31,7 @@ git clean -df
 rm -rf bin/amiga-m68k
 ./configure --target=amiga-m68k --with-optimization="-Os" --enable-ccache --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68020 --with-serial-debug --enable-debug=all $@
 
-mkdir -p "bin/amiga-m68k/gen/"
-VERSION_FILE="bin/amiga-m68k/gen/dist_config.h"
-
-printf "#ifndef AROS_DIST_CONFIG_H\n#define AROS_DIST_CONFIG_H\n\n" > "${VERSION_FILE}"
-# shellcheck disable=SC2129
-printf "#define __DISTRONAME__\t\t\"%s\"\n" "${DISTRONAME}" >> "${VERSION_FILE}"
-printf "#define __DISTROVERSION__\t\"%s\"\n" "${DISTROVERSION}" >> "${VERSION_FILE}"
-printf "#define __DISTRODATE__\t\t\"%s\"\n" "${DISTRODATE}" >> "${VERSION_FILE}"
-printf "#define __AMIGADATE__\t\t\"%s\"\n" "${AMIGADATE}" >> "${VERSION_FILE}"
-printf "\n#endif //AROS_DIST_CONFIG_H\n" >> "${VERSION_FILE}"
+./make_dist_config.sh
 
 make -j${THREADS}
 make -j${THREADS} kernel-amiga-m68k
