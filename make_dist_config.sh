@@ -1,12 +1,11 @@
 #!/bin/bash
-WORK="apollo-os"
-DISTRONAME="ApolloOS"
+DISTRONAME="$(cat distname)"
 DISTROVERSION="$(cat version)"
 DISTRODATE="$(date +%Y-%m-%d)"
 AMIGADATE="$(date +"%-d.%-m.%Y")"
 
-mkdir -p "bin/amiga-m68k/gen/"
-VERSION_FILE="bin/amiga-m68k/gen/dist_config.h"
+mkdir -p "${1}"
+VERSION_FILE="${1}/dist_config.h"
 
 printf "#ifndef AROS_DIST_CONFIG_H\n#define AROS_DIST_CONFIG_H\n\n" > "${VERSION_FILE}"
 # shellcheck disable=SC2129
