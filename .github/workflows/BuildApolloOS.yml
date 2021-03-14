@@ -38,7 +38,7 @@ jobs:
 
       # Make dist config
       - name: Make dist_config.h
-        run: ./make_dist_config.sh
+        run: ./make_dist_config.sh "bin/amiga-m68k/gen"
       
       # build the compilers
       - name: Compiler Build
