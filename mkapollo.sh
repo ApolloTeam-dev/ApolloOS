@@ -125,7 +125,7 @@ update-distro-files () {
 
 makeclean () { cd "${BIN}" || exit; make clean; cd "${DIR}" || exit; }
 gitclean  () { cd "${SRC}" || exit; git clean -df; cd "${DIR}" || exit; }
-pkgcheck  () { if [ $(dpkg-query -W -f '${Binary:Package} ${Status}\n' $PKGS | wc -l) -eq $(echo $PKGS | wc -w) ]; then return 0; else return 1; fi; }
+#pkgcheck  () { if [ $(dpkg-query -W -f '${Binary:Package} ${Status}\n' $PKGS | wc -l) -eq $(echo $PKGS | wc -w) ]; then return 0; else return 1; fi; }
 download  () { cd "${WORK}" || exit; if [ ! -d $SRC ]; then git clone --recursive ${REPO} --branch=${BRANCH} ${SRC}; cd ${DIR}; else git checkout ${REMOTE}/${BRANCH} --recurse-submodules -f; fi }
 # shellcheck disable=SC2086
 configure () { cd "${BIN}" || exit; ${SRC}/configure ${CONFOPTS} ${CONFO}; cd "${DIR}" || exit; }
@@ -385,11 +385,11 @@ echo -n "3..."; sleep 1; echo -n "2..."; sleep 1; echo -n "1..."; sleep 1; print
 
 mkdir -p "${BIN}"
 
-if [ $(pkgcheck; echo $?) = 1 ]; then
- print_bold_nl "${ARROWS} ${BOLD}${RED}You are missing required packages to build ApolloOS!  ${GREEN}Attempting to install...${NC}"
- apt -y update
- apt -y install "${PKGS}"
-fi
+#if [ $(pkgcheck; echo $?) = 1 ]; then
+# print_bold_nl "${ARROWS} ${BOLD}${RED}You are missing required packages to build ApolloOS!  ${GREEN}Attempting to install...${NC}"
+# apt -y update
+# apt -y install "${PKGS}"
+#fi
 if [ $DL = 1 ];                 then print_bold_nl "${ARROWS} Source wipe requested, ${RED}deleting${NC}.";     rm -rf "${SRC}"; fi
 if [ ! -e "${SRC}/configure" ]; then print_bold_nl "${ARROWS} Source not detected, ${GREEN}downloading${NC}.";  download;	       fi
 if [ $CLEAN = 1 ];              then print_bold_nl "${ARROWS} Fresh build requested, ${YELLOW}cleaning${NC}.";  makeclean;       fi
