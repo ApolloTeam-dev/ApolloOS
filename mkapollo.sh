@@ -14,8 +14,8 @@ AMIGADATE="$(date +"%-d.%-m.%Y")"
 
 if [ -e ".git" ]; then
 	BRANCH="$(git branch --show-current)"
-	REMOTE=$(git status -sb | sed "s/\#\#\ ${BRANCH}\.\.\.//g" | sed "s/\/${BRANCH}//g" | head -n 1)
-	REPO="$(git remote get-url "${REMOTE}")"
+	#REMOTE=$(git status -sb | sed "s/\#\#\ ${BRANCH}\.\.\.//g" | sed "s/\/${BRANCH}//g" | head -n 1)
+	REPO="$(git remote get-url "origin")"
 else
 	REPO="https://github.com/ApolloTeam-dev/AROS"
 	BRANCH="v4-alynna"
