@@ -16,7 +16,7 @@ https://github.com/ApolloTeam-dev/AROS/issues/8
 
 The general build instructions are at:
 https://github.com/ApolloTeam-dev/AROS/wiki/Building
-Do not forget the `--recursive` option with `git clone`!
+**Do not forget the `--recursive` option with `git clone`!**
 
 Documentation from AROS:
 http://www.aros.org/documentation/developers/
