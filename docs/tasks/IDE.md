@@ -3,7 +3,7 @@
 Source code:
 
 - [`rom/devs/ata/`](https://github.com/ApolloTeam-dev/AROS/tree/master/rom/devs/ata)
-- [`arch/m68k-all/`](https://github.com/ApolloTeam-dev/AROS/tree/master-new/arch/m68k-all)
+- [`arch/m68k-all/`](https://github.com/ApolloTeam-dev/AROS/tree/master/arch/m68k-all)
 - [`arch/m68k-amiga/`](https://github.com/ApolloTeam-dev/AROS/tree/master-new/arch/m68k-amiga)
 
 IDE is part of the kernel (the Kickstart) and today the IDE is split in several pieces:
