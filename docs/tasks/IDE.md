@@ -2,7 +2,7 @@
 
 Source code:
 
-- [`rom/devs/ata/`](https://github.com/ApolloTeam-dev/AROS/tree/master-new/rom/devs/ata)
+- [`rom/devs/ata/`](https://github.com/ApolloTeam-dev/AROS/tree/master/rom/devs/ata)
 - [`arch/m68k-all/`](https://github.com/ApolloTeam-dev/AROS/tree/master-new/arch/m68k-all)
 - [`arch/m68k-amiga/`](https://github.com/ApolloTeam-dev/AROS/tree/master-new/arch/m68k-amiga)
 
