@@ -59,6 +59,7 @@ ifneq (,$(findstring arm,$(AROS_TARGET_CPU)))
 #GCC_COMMON_OPTS += --with-arch=$(GCC_DEFAULT_CPU)
 #GCC_COMMON_OPTS += --with-mode=$(GCC_DEFAULT_MODE)
 GCC_COMMON_OPTS += --disable-libunwind-exceptions
+GCC_COMMON_OPTS += --disable-libstdcxx-verbose
 GCC_COMMON_OPTS += --with-multilib
 ifneq (,$(findstring big-endian,$(ISA_ARM_FLAGS)))
 GCC_LIBATOMIC_MULTILIB_TARGETS := \
@@ -106,7 +107,7 @@ ifeq (,$(GCC_EXTRA_OPTS))
 GCC_EXTRA_OPTS += $(GCC_COMMON_OPTS)
 endif
 
-# Disable libatomic until we are ready to build it...
+# Disable libatomic - we build it manually later...
 gcc_build_libatomic?=enable_libatomic=no
 GCC_ENV=$(gcc_build_libatomic)
 
@@ -263,6 +264,10 @@ tools-crosstools-gcc :
 	    $(SED) -i -e "s|@aros_target_cc_path@|$(GCC_PATH)|g" $(TOOLDIR)/$(AROS_TARGET_CPU)-$(AROS_TARGET_ARCH)$(AROS_TARGET_SUFFIX)-aros-ld ; \
 	fi
 
+
+#MM tools-crosstools-gcc : includes-copy
+#MM crosstools-gcc : includes-copy
+
 #MM tools-crosstools-gcc : crosstools-gcc--fetch crosstools-gcc--configure
 
 #MM tools-crosstools-gcc-libatomic : crosstools-gcc--fetch gnu-gcc-autolibs
@@ -309,21 +314,6 @@ tools-crosstools-gcc :
 	usecppflags=no usecflags=no usecxxflags=no \
 	extraoptions="$(GCC_EXTRA_OPTS)" config_env_extra="$(GCC_ENV)"
 
-#MM
-tools-crosstools-gcc-libatomic :
-	@$(IF) ! $(TEST) -f $(libatomic-installflag) ; then \
-	    $(IF) $(TEST) -f $(crosstools-gcc--configflag) ; then \
-	        $(RM) $(crosstools-gcc--configflag) ; \
-	    fi ; \
-	    $(IF) ! $(TEST) "$(GCC_LIBATOMIC_MULTILIB_TARGETS)" = "" ; then \
-	        $(ECHO) "$(GCC_LIBATOMIC_MULTILIB_TARGETS)" > $(HOSTGENDIR)/$(CURDIR)/gcc/$(AROS_TARGET_CPU)-aros/libatomic/multilib.out ; \
-	    fi ; \
-	    gcc_build_libatomic="" $(MAKE) -f ./mmakefile crosstools-gcc--configure \
-	    && $(MAKE) -C $(HOSTGENDIR)/$(CURDIR)/gcc all-target-libatomic \
-	    && $(MAKE) -j1 -C $(HOSTGENDIR)/$(CURDIR)/gcc install-target-libatomic \
-	    && $(TOUCH) $(libatomic-installflag) ; \
-	fi
-
 ## GDB ###
 
 #MM
@@ -340,4 +330,14 @@ tools-crosstools-gdb :
 	package_repo="$(GNU_REPOSITORY)/gdb" \
 	patch=yes \
 	prefix="$(CROSSTOOLSDIR)" \
-        extraoptions="$(GDB_EXTRA_OPTS)"
+	extraoptions="$(GDB_EXTRA_OPTS)"
+
+# libatomic
+
+LIBATOMIC_OBJDIR := $(HOSTGENDIR)/$(CURDIR)/gcc/$(AROS_TARGET_CPU)-aros/libatomic
+LIBATOMIC_SRCDIR := $(HOSTDIR)/Ports/host/gcc/gcc-$(GCC_VERSION)/libatomic
+ifeq ($(AROS_TARGET_CPU),m68k)
+ISA_FLAGS:=$(ISA_FLOAT_FLAGS)
+endif
+%build_with_configure mmake=tools-crosstools-gcc-libatomic srcdir="$(LIBATOMIC_SRCDIR)" \
+	basedir= gendir="$(LIBATOMIC_OBJDIR)"
