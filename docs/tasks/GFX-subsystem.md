@@ -2,7 +2,7 @@
 
 ## Source code
 
-- [`rom/graphics/`](https://github.com/ApolloTeam-dev/AROS/tree/master-new/rom/graphics/)
+- [`rom/graphics/`](https://github.com/ApolloTeam-dev/AROS/tree/master/rom/graphics/)
 
 ## Documentation from AROS
 
