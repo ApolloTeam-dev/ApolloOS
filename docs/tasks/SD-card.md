@@ -1,7 +1,7 @@
 # SD card
 
 Source code:
-[`rom/devs/sdcard/`](https://github.com/ApolloTeam-dev/AROS/tree/master-new/rom/devs/sdcard)
+[`rom/devs/sdcard/`](https://github.com/ApolloTeam-dev/AROS/tree/master/rom/devs/sdcard)
 
 The SD card can only be used for reading files, not writing.
 
