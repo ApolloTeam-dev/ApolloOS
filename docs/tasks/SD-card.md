@@ -6,7 +6,7 @@ Source code:
 The SD card can only be used for reading files, not writing.
 
 The empty functions where the write operations should go are in
-[`rom/devs/sdcard/sdcard_ioops.c`](https://github.com/ApolloTeam-dev/AROS/tree/master-new/rom/devs/sdcard/sdcard_ioops.c)
+[`rom/devs/sdcard/sdcard_ioops.c`](https://github.com/ApolloTeam-dev/AROS/tree/master/rom/devs/sdcard/sdcard_ioops.c)
 
 Documentation from AROS:
 
