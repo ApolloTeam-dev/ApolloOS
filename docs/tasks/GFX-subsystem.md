@@ -1,6 +1,6 @@
 # GFX subsystem
 
-Source code:
+## Source code
 
 - [`rom/graphics/`](https://github.com/ApolloTeam-dev/AROS/tree/master-new/rom/graphics/)
 
