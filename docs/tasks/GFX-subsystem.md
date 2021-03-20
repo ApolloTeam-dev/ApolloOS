@@ -4,7 +4,7 @@
 
 - [`rom/graphics/`](https://github.com/ApolloTeam-dev/AROS/tree/master-new/rom/graphics/)
 
-Documentation from AROS:
+## Documentation from AROS
 
 - http://www.aros.org/documentation/developers/app-dev/graphics-library.php
 - http://www.aros.org/documentation/developers/sys-dev/index.php
