@@ -2,7 +2,7 @@
 
 Source code:
 
-- [`workbench/libs/workbench/`](https://github.com/ApolloTeam-dev/AROS/tree/master-new/workbench/libs/workbench)
+- [`workbench/libs/workbench/`](https://github.com/ApolloTeam-dev/AROS/tree/master/workbench/libs/workbench)
 
 Documentation from the [Amiga Developer CD v2.1 (OS 3.5)](http://amigadev.elowar.com/):
 
