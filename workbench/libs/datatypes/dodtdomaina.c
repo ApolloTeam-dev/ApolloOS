@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 #include <proto/intuition.h>
@@ -46,7 +44,7 @@
 
     RESULT
 
-    The return value of GM_DOMAIN or 0 if an error occurred. The 'domain' 
+    The return value of GM_DOMAIN or 0 if an error occurred. The 'domain'
     IBox will be filled with the requested values as a side effect.
 
     NOTES

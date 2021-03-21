@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 #include <proto/intuition.h>
 #include <proto/utility.h>
@@ -11,9 +9,11 @@
 #include <proto/dos.h>
 #include <utility/tagitem.h>
 #include <intuition/intuition.h>
-#include "datatypes_intern.h"	/* Must be after <intuition/intuition.h> */
+#include "datatypes_intern.h"   /* Must be after <intuition/intuition.h> */
 
 #include <aros/debug.h>
+
+#include <string.h>
 
 /*****************************************************************************
 
