@@ -1,12 +1,12 @@
 /*
-    Copyright © 2011-2020, The AROS Development Team. All rights reserved.
+    Copyright Â© 2011, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Workbook Window Class
     Lang: english
 */
 
-#define DEBUG 0
+#define DEBUG 1
 #include <aros/debug.h>
 
 #include <string.h>
@@ -30,13 +30,24 @@
 #include "workbook_intern.h"
 #include "workbook_menu.h"
 #include "classes.h"
+#include "wbreq.h"
 
 #include <clib/boopsistubs.h>
+#include <stdio.h>
 
 static inline WORD max(WORD a, WORD b)
 {
     return (a > b) ? a : b;
 }
+
+struct EasyStruct aboutES =
+        {
+                sizeof(struct EasyStruct),
+                0,
+                "About Workbook",
+                "Workbook 0.1Alpha \n(c) Vampires and CO",
+                "OK",
+        };
 
 struct wbWindow_Icon {
     struct MinNode wbwiNode;
@@ -56,6 +67,13 @@ struct wbWindow {
 
     ULONG          Flags;
     IPTR           Tick;
+    /* Last MEMF_ANY, to reduce flicker when memory use stays same.
+     * Keeping MEMF_ANY is probably enough, as it would only miss when
+     * releasing X amuonts of chip and allocating identical amount of
+     * fast memory (or vice versa) is unlikely to happen, and it is
+     * "just" information anyway.
+     */
+    ULONG          LastMemAny;
 
     /* Temporary path buffer */
     TEXT           PathBuffer[PATH_MAX];
@@ -158,25 +176,25 @@ static BOOL wbMenuEnable(Class *cl, Object *obj, int id, BOOL onoff)
 
 AROS_UFH3(ULONG, wbFilterIcons_Hook,
     AROS_UFHA(struct Hook*, hook, A0),
-    AROS_UFHA(struct ExAllData*, ead, A1),
-    AROS_UFHA(LONG *, type, A2))
+    AROS_UFHA(struct ExAllData*, ead, A2),
+    AROS_UFHA(LONG *, type, A1))
 {
     AROS_USERFUNC_INIT
     int i;
 
-    if (stricmp(ead->ed_Name, "disk.info") == 0) {
+    D(bug("Icons Only Found file: %s\n",&ead->ed_Name));
+
+    if (stricmp(ead->ed_Name, "disk.info") == 0)
         return FALSE;
-    }
 
     i = strlen(ead->ed_Name);
     if (i >= 5 && stricmp(&ead->ed_Name[i-5], ".info") == 0) {
-        ead->ed_Name[i-5] = '\0';
+        ead->ed_Name[i-5] = 0;
         return TRUE;
     }
 
-    if (stricmp(ead->ed_Name, ".backdrop") == 0) {
+    if (stricmp(ead->ed_Name, ".backdrop") == 0)
         return FALSE;
-    }
 
     return FALSE;
     
@@ -185,19 +203,22 @@ AROS_UFH3(ULONG, wbFilterIcons_Hook,
 
 AROS_UFH3(ULONG, wbFilterAll_Hook,
     AROS_UFHA(struct Hook*, hook, A0),
-    AROS_UFHA(struct ExAllData*, ead, A1),
-    AROS_UFHA(LONG *, type, A2))
+    AROS_UFHA(struct ExAllData*, ead, A2),
+    AROS_UFHA(LONG *, type, A1))
 {
     AROS_USERFUNC_INIT
 
     int i;
+
+    D(bug("All Found file: %s\n",&ead->ed_Name));
 
     if (stricmp(ead->ed_Name, "disk.info") == 0)
         return FALSE;
 
     i = strlen(ead->ed_Name);
     if (i >= 5 && stricmp(&ead->ed_Name[i-5], ".info") == 0) {
-        return FALSE;
+        ead->ed_Name[i-5] = 0;
+        return TRUE;
     }
 
     if (stricmp(ead->ed_Name, ".backdrop") == 0)
@@ -297,6 +318,7 @@ static void wbAddFiles(Class *cl, Object *obj)
 		    Object *iobj;
 		    path[file_part] = 0;
 		    if (AddPart(path, tmp->ed_Name, 1024)) {
+            D(bug("Found item: %s\n", path));
 		        iobj = NewObject(WBIcon, NULL,
 		                WBIA_File, path,
 		                WBIA_Label, tmp->ed_Name,
@@ -436,7 +458,6 @@ static void wbRedimension(Class *cl, Object *obj)
 /* Rescan the Lock for new entries */
 static void wbRescan(Class *cl, Object *obj)
 {
-    struct opMember opmmsg;
     struct WorkbookBase *wb = (APTR)cl->cl_UserData;
     struct wbWindow *my = INST_DATA(cl, obj);
     struct wbWindow_Icon *wbwi;
@@ -446,10 +467,8 @@ static void wbRescan(Class *cl, Object *obj)
     SetWindowPointer(my->Window, WA_BusyPointer, TRUE, TAG_END);
 
     /* Remove and undisplay any existing icons */
-    opmmsg.MethodID = OM_REMMEMBER;
     while ((wbwi = (struct wbWindow_Icon *)REMHEAD(&my->IconList)) != NULL) {
-        opmmsg.opam_Object = wbwi->wbwiObject;
-        DoMethodA(my->Set, &opmmsg);
+        DoMethod(my->Set, OM_REMMEMBER, wbwi->wbwiObject);
         DisposeObject(wbwi->wbwiObject);
         FreeMem(wbwi, sizeof(*wbwi));
     }
@@ -466,12 +485,8 @@ static void wbRescan(Class *cl, Object *obj)
     }
 
     /* Display the new icons */
-    opmmsg.MethodID = OM_ADDMEMBER;
     ForeachNode(&my->IconList, wbwi)
-    {
-        opmmsg.opam_Object = wbwi->wbwiObject;
-        DoMethodA(my->Set, &opmmsg);
-    }
+        DoMethod(my->Set, OM_ADDMEMBER, wbwi->wbwiObject);
 
     /* Adjust the scrolling regions */
     wbRedimension(cl, obj);
@@ -495,8 +510,8 @@ static void wbFixBorders(struct Window *win)
 {
     int bb, br;
 
-    bb = 16 - win->BorderBottom;
-    br = 16 - win->BorderRight;
+    bb = 10 - win->BorderBottom;
+    br = 10 - win->BorderRight;
 
     win->BorderBottom += bb;
     win->BorderRight += br;
@@ -581,8 +596,8 @@ static IPTR WBWindowNew(Class *cl, Object *obj, struct opSet *ops)
     	idcmp |= IDCMP_NEWSIZE | IDCMP_CLOSEWINDOW;
     	my->Window = OpenWindowTags(nwin,
     			WA_IDCMP, 0,
-    			WA_MinWidth, 100,
-    			WA_MinHeight, 100,
+    			WA_MinWidth, 150,
+    			WA_MinHeight, 150,
     			WA_MaxWidth, ~0,
     			WA_MaxHeight, ~0,
     			WA_Backdrop, FALSE,
@@ -851,6 +866,20 @@ static IPTR WBWindowRefresh(Class *cl, Object *obj, Msg msg)
 
     return 0;
 }
+static void About(Class *cl, Object *obj) {
+    struct WorkbookBase *wb = (APTR)cl->cl_UserData;
+    struct wbWindow *my = INST_DATA(cl, obj);
+    extern struct EasyStruct aboutES;
+
+    EasyRequest(my->Window,&aboutES,NULL);
+}
+
+static void ExecuteCommand(struct WorkbookBase *wb) {
+    char *commandToExecute = RequestText("Execute Command", "Command", "Execute", wb);
+    if (strlen(commandToExecute)>0) {
+        Execute(commandToExecute, BNULL, BNULL);
+    }
+}
 
 static void NewCLI(Class *cl, Object *obj)
 {
@@ -861,7 +890,7 @@ static void NewCLI(Class *cl, Object *obj)
 
     SetWindowPointer(my->Window, WA_BusyPointer, TRUE, TAG_END);
     dir = CurrentDir(my->Lock);
-    Execute("", BNULL, BNULL);
+    Execute("newshell", BNULL, BNULL);
     CurrentDir(dir);
     SetWindowPointer(my->Window, WA_BusyPointer, FALSE, TAG_END);
 }
@@ -914,6 +943,11 @@ static IPTR WBWindowMenuPick(Class *cl, Object *obj, struct wbwm_MenuPick *wbwmp
     case WBMENU_ID(WBMENU_WB_SHELL):
     	NewCLI(cl, obj);
     	break;
+    case WBMENU_ID(WBMENU_WB_EXECUTE):
+        ExecuteCommand(wb);
+        break;
+    case WBMENU_ID(WBMENU_WB_ABOUT):
+        About(cl, obj);
     case WBMENU_ID(WBMENU_IC_OPEN):
     	rc = WBWindowForSelectedIcons(cl, obj, WBIM_Open);
     	break;
@@ -921,7 +955,7 @@ static IPTR WBWindowMenuPick(Class *cl, Object *obj, struct wbwm_MenuPick *wbwmp
     	rc = WBWindowForSelectedIcons(cl, obj, WBIM_Copy);
     	break;
     case WBMENU_ID(WBMENU_IC_RENAME):
-    	rc = WBWindowForSelectedIcons(cl, obj, WBIM_Rename);
+    	ExecuteCommand(wb);
     	break;
     case WBMENU_ID(WBMENU_IC_INFO):
     	rc = WBWindowForSelectedIcons(cl, obj, WBIM_Info);
@@ -939,7 +973,7 @@ static IPTR WBWindowMenuPick(Class *cl, Object *obj, struct wbwm_MenuPick *wbwmp
     	rc = WBWindowForSelectedIcons(cl, obj, WBIM_Put_Away);
     	break;
     case WBMENU_ID(WBMENU_IC_DELETE):
-    	rc = WBWindowForSelectedIcons(cl, obj, WBIM_Delete);
+    	ExecuteCommand(wb);
     	break;
     case WBMENU_ID(WBMENU_IC_FORMAT):
     	rc = WBWindowForSelectedIcons(cl, obj, WBIM_Format);
@@ -971,11 +1005,14 @@ static IPTR WBWindowIntuiTick(Class *cl, Object *obj, Msg msg)
 	val[3] = AvailMem(MEMF_FAST) / 1024;
 	val[4] = AvailMem(MEMF_ANY) / 1024;
 
-	/* Update the window's title */
-	RawDoFmt("Workbook %ld.%ld  Chip: %ldk, Fast: %ldk, Any: %ldk", (RAWARG)val, 
-		 RAWFMTFUNC_STRING, my->ScreenTitle);
+	if (val[4] != my->LastMemAny) {
+	  /* Update the window's title, when relevant, avoiding flicker */
+	  RawDoFmt("Workbook V4 %ld.%ld  Chip: %ldk, Fast: %ldk, Any: %ldk", (RAWARG)val,
+		   RAWFMTFUNC_STRING, my->ScreenTitle);
 
-	SetWindowTitles(my->Window, (CONST_STRPTR)-1, my->ScreenTitle);
+	  SetWindowTitles(my->Window, (CONST_STRPTR)-1, my->ScreenTitle);
+	  my->LastMemAny = val[4];
+	}
 	rc = TRUE;
     }
 

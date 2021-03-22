@@ -1,5 +1,5 @@
 /*
-    Copyright © 2011-2020, The AROS Development Team. All rights reserved.
+    Copyright Â© 2011, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Workbook Virtual Area Class
@@ -130,13 +130,9 @@ static IPTR WBVirtualNew(Class *cl, Object *obj, struct opSet *ops)
     if (rc == 0)
     	return rc;
 
-    struct opSet smsg;
     obj = (Object *)rc;
-    smsg.MethodID = OM_SET;
-    smsg.ops_GInfo = ops->ops_GInfo;
-    smsg.ops_AttrList = ops->ops_AttrList;
 
-    DoMethodA(obj, &smsg);
+    DoMethod(obj, OM_SET, ops->ops_AttrList, ops->ops_GInfo);
 
     return rc;
 }

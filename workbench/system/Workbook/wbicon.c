@@ -1,5 +1,5 @@
 /*
-    Copyright © 2011-2020, The AROS Development Team. All rights reserved.
+    Copyright Â© 2011, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Workbook Icon Class
@@ -223,20 +223,14 @@ static IPTR wbIconGoActive(Class *cl, Object *obj, struct gpInput *gpi)
     struct RastPort *rp;
 
     if ((rp = ObtainGIRPort(gpi->gpi_GInfo))) {
-        struct gpRender rmsg;
-        rmsg.MethodID = GM_RENDER;
-        rmsg.gpr_GInfo = gpi->gpi_GInfo;
-        rmsg.gpr_RPort = rp;
-        rmsg.gpr_Redraw = GREDRAW_TOGGLE;
-
         gadget->Flags ^= GFLG_SELECTED;
         /* Clip to the window for drawing */
         clip = wbClipWindow(wb, gpi->gpi_GInfo->gi_Window);
-        DoMethodA(obj, &rmsg);
+        DoMethod(obj, GM_RENDER, gpi->gpi_GInfo, rp, GREDRAW_TOGGLE);
         wbUnclipWindow(wb, gpi->gpi_GInfo->gi_Window, clip);
         ReleaseGIRPort(rp);
     }
-
+    
     /* On a double-click, don't go 'active', just
      * do the action.
      */
@@ -248,11 +242,7 @@ static IPTR wbIconGoActive(Class *cl, Object *obj, struct gpInput *gpi)
     my->LastActive = gpi->gpi_IEvent->ie_TimeStamp;
 
     if (dclicked)
-    {
-        STACKED ULONG openmethodID;
-        openmethodID = WBIM_Open;
-    	DoMethodA(obj, (Msg)&openmethodID);
-    }
+    	DoMethod(obj, WBIM_Open);
 
     return GMR_MEACTIVE;
 }

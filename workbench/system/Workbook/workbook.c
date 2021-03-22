@@ -1,5 +1,5 @@
 /*
-    Copyright © 2011-2020, The AROS Development Team. All rights reserved.
+    Copyright Â© 2011, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Workbook Main
@@ -44,10 +44,8 @@ static int WB_Main(struct WorkbookBase *wb)
     	goto exit;
 
     wb->wb_App = NewObject(WBApp, NULL, TAG_END);
-    if (wb->wb_App) {
-        STACKED ULONG wbmethodID;
-        wbmethodID = WBAM_WORKBENCH;
-    	DoMethodA(wb->wb_App, &wbmethodID);
+    if (wb->wb_App) { 
+    	DoMethod(wb->wb_App, WBAM_WORKBENCH, 0);
     	DisposeObject(wb->wb_App);
     	rc = 0;
     }

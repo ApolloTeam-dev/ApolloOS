@@ -43,14 +43,8 @@ struct WorkbookBase {
 /* FIXME: Remove these #define xxxBase hacks
    Do not use this in new code !
 */
-#define IntuitionBase wb->wb_IntuitionBase
 #define DOSBase       wb->wb_DOSBase
-#define UtilityBase   wb->wb_UtilityBase
-#define GadToolsBase  wb->wb_GadToolsBase
-#define IconBase      wb->wb_IconBase
 #define WorkbenchBase wb->wb_WorkbenchBase
-#define GfxBase       wb->wb_GfxBase
-#define LayersBase    wb->wb_LayersBase
 
 extern struct ExecBase *SysBase;
 
