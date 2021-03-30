@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2014, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -52,11 +52,11 @@ struct ButtonGadget *createButton
 		button->XY2[2] = width;
 		button->XY2[3] = height;
 		button->XY2[5] = height;
-		button->uborder1.FrontPen = 1;
+		button->uborder1.FrontPen = 1;  //old 1
 		button->uborder1.DrawMode = JAM1;
 		button->uborder1.Count = 3;
 		button->uborder1.XY = button->XY2;
-		button->uborder2.FrontPen = 2;
+		button->uborder2.FrontPen = 2  ;  //old 2
 		button->uborder2.DrawMode = JAM1;
 		button->uborder2.Count = 3;
 		button->uborder2.XY = button->XY1;
