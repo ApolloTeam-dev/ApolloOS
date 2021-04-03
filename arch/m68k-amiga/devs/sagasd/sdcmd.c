@@ -47,8 +47,8 @@
 #define error(fmt,args...)      sdcmd_log(sd, SDLOG_ERROR, fmt ,##args)
 
 #define SDCMD_CLKDIV_SLOW       0xFF
-#define SDCMD_CLKDIV_FAST       0x02
-#define SDCMD_CLKDIV_FASTER     0x01
+#define SDCMD_CLKDIV_FAST       0x01
+#define SDCMD_CLKDIV_FASTER     0x00
 
 static UBYTE crc7(UBYTE crc, UBYTE byte)
 {
@@ -169,11 +169,11 @@ static UWORD sdcmd_ins(struct sdcmd *sd, UWORD crc, UBYTE *buff, size_t len)
 
     return crc;
 }
-            
+
 BOOL sdcmd_present(struct sdcmd *sd)
 {
     UWORD val;
-    
+
     val = Read16(sd->iobase + SAGA_SD_STAT);
 
     //diag("SD_STAT => $%04lx", val);
@@ -744,7 +744,7 @@ UBYTE sdcmd_read_blocks(struct sdcmd *sd, ULONG addr, UBYTE *buff, int blocks)
 
         if (r1)
             continue;
-              
+  
         /* Terminate the read */
         r1 = sdcmd_stop_transmission(sd);
     } while ((r1 & SDERRF_CRC) && (crc_retry-- > 0));

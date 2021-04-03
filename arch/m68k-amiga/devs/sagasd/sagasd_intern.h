@@ -18,17 +18,22 @@
 #define SAGASD_VERSION 3
 #define SAGASD_REVISION 1
 #define SAGASD_VSTRING "sagasd.device v#VERSION##.#REVISION"
-#define IO_TIMINGLOOP_MSEC 20000
+
+// How long to wait for IO before checking SD_Detect again
+#define SD_DETECT_MSEC 1000000
+#define IO_TIMINGLOOP_MSEC 10000
+
 
 struct SAGASDBase {
     struct Device       sd_Device;
     struct Library *    sd_ExecBase;
     IPTR                sd_SegList;
+    BOOL		sd_IsAROS;
     struct SAGASDUnit {
         struct Unit sdu_Unit;
         struct Task sdu_Task;
         TEXT        sdu_Name[6];                /* "SDIOx" */
-        ULONG       sdu_Stack[1024];          /* 4K stack */
+        ULONG       sdu_Stack[1024];            /* 4K stack */
         BOOL        sdu_Enabled;
 
         struct sdcmd sdu_SDCmd;
@@ -44,5 +49,6 @@ struct SAGASDBase {
     } sd_Unit[SAGASD_UNITS];
 };
 
+#define SD_DETECT_DELTA SD_DETECT_MSEC / IO_TIMINGLOOP_MSEC
 #endif /* SAGASD_INTERN_H */
 /* vim: set shiftwidth=4 expandtab:  */

@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2016, Jason S. McMullan <jason.mcmullan@gmail.com>
+ * (c) 2021 Apollo Team Devs
  * All rights reserved.
- *
+ * 
  * Licensed under the MIT License:
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -58,7 +59,10 @@
 
 #define SAGASD_HEADS    16
 #define SAGASD_SECTORS  64
-#define SAGASD_RETRY    6      /* By default, retry up to N times */
+#define SAGASD_RETRY    12      /* By default, retry up to N times */
+
+#undef DEBUG
+#define DEBUG 0
 
 #if DEBUG
 #define bug(x,args...)   kprintf(x ,##args)
@@ -71,10 +75,6 @@
 static VOID SAGASD_log(struct sdcmd *sd, int level, const char *format, ...)
 {
     va_list args;
-
-//    if (level > DEBUG)
-//        return;
-
     va_start(args, format);
     vkprintf(format, args);
     kprintf("\n");
@@ -94,12 +94,6 @@ static LONG SAGASD_ReadWrite(struct IORequest *io, UQUAD off64, BOOL is_write)
     ULONG len = iotd->iotd_Req.io_Length;
     ULONG block, block_size, bmask;
     UBYTE sderr;
-
-    //debug("%s: Flags: $%lx, Command: $%04lx, Offset: $%lx%08lx Length: %5ld, Data: $%08lx",
-            //is_write ? "write" : "read",
-            //io->io_Flags, io->io_Command,
-            //(ULONG)(off64 >> 32), (ULONG)off64, len, data);
-
     block_size = sdu->sdu_SDCmd.info.block_size;
     bmask = block_size - 1;
 
@@ -114,7 +108,6 @@ static LONG SAGASD_ReadWrite(struct IORequest *io, UQUAD off64, BOOL is_write)
         return IOERR_BADADDRESS;
 
     if ((len & bmask) || len == 0) {
-        //debug("IO %p Fault, io_Flags = %d, io_Command = %d, IOERR_BADLENGTH (len=0x%x, bmask=0x%x)", io, io->io_Flags, io->io_Command, len, bmask);
         return IOERR_BADLENGTH;
     }
 
@@ -136,6 +129,8 @@ static LONG SAGASD_ReadWrite(struct IORequest *io, UQUAD off64, BOOL is_write)
     } else {
         sderr = sdcmd_read_blocks(&sdu->sdu_SDCmd, block, data, len);
     }
+
+    debug("sderr=$%02x", sderr);
 
     if (sderr) {
         debug("sderr=$%02x", sderr);
@@ -174,14 +169,8 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
     ULONG i, block, blocks;
     LONG err;
     UBYTE r1;
-
-    //debug("len=%ld, cmd = %02lx %02lx %02lx ... (%ld)",
-            //iostd->io_Length, scsi->scsi_Command[0],
-            //scsi->scsi_Command[1], scsi->scsi_Command[2],
-            //scsi->scsi_CmdLength);
     if (iostd->io_Length < sizeof(*scsi)) {
         // RDPrep sends a bad io_Length sometimes
-        debug("====== BAD PROGRAM: iostd->io_Length < sizeof(struct SCSICmd)");
         //return IOERR_BADLENGTH;
     }
 
@@ -470,7 +459,6 @@ static inline const char *cmd_name(int cmd)
     CMD_NAME(NSCMD_TD_READ64);
     CMD_NAME(NSCMD_TD_WRITE64);
     CMD_NAME(HD_SCSICMD);
-
     return "Unknown";
 }
 
@@ -516,12 +504,8 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
     struct NSDeviceQueryResult *nsqr;
     LONG err = IOERR_NOCMD;
 
-    //debug("");
-
     if (io->io_Error == IOERR_ABORTED)
         return io->io_Error;
-
-    //debug("IO %p Start, io_Flags = %d, io_Command = %d (%s)", io, io->io_Flags, io->io_Command, cmd_name(io->io_Command));
 
     switch (io->io_Command) {
     case CMD_CLEAR:     /* Invalidate read buffer */
@@ -653,7 +637,8 @@ static void SAGASD_Detect(struct Library *SysBase, struct SAGASDUnit *sdu)
     BOOL present;
 
     /* Update sdu_Present, regardless */
-    asm ( "tst.b 0xbfe001\r\n" );
+
+    //asm ( "tst.b 0xbfe001\r\n" );
     present = sdcmd_present(&sdu->sdu_SDCmd);
     if (present != sdu->sdu_Present) {
         if (present) {
@@ -690,6 +675,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
     struct timerequest *treq = NULL;
     ULONG sigset;
     struct Message status;
+    ULONG i = 0;
 
     //debug("");
 
@@ -710,22 +696,18 @@ static void SAGASD_IOTask(struct Library *SysBase)
         }
     }
 
-    //debug("mport=%p", mport);
     sdu->sdu_MsgPort = status.mn_ReplyPort;
 
     /* Update status, for the boot node */
     SAGASD_Detect(SysBase, sdu);
 
     /* Send the 'I'm Ready' message */
-    //debug("sdu_MsgPort=%p", sdu->sdu_MsgPort);
     PutMsg(mport, &status);
 
-    //debug("ReplyPort=%p%s empty", status.mn_ReplyPort, IsListEmpty(&status.mn_ReplyPort->mp_MsgList) ? "" : " not");
     if (status.mn_ReplyPort) {
         WaitPort(status.mn_ReplyPort);
         GetMsg(status.mn_ReplyPort);
     }
-    //debug("");
 
     if (status.mn_Length) {
         /* There was an error... */
@@ -734,7 +716,6 @@ static void SAGASD_IOTask(struct Library *SysBase)
         return;
     }
 
-    //debug("");
     mport = sdu->sdu_MsgPort;
        
     sigset = (1 << tport->mp_SigBit) | (1 << mport->mp_SigBit);
@@ -742,7 +723,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
     for (;;) {
         struct IORequest *io;
 
-        SAGASD_Detect(SysBase, sdu);
+	if (!(i++ % SD_DETECT_DELTA)) SAGASD_Detect(SysBase, sdu);
 
         io = (struct IORequest *)GetMsg(mport);
         if (!io) {
@@ -806,9 +787,6 @@ AROS_LH1(void, BeginIO,
     struct SAGASDBase *, SAGASDBase, 5, SAGASD)
 {
     AROS_LIBFUNC_INIT
-
-    //debug("io_Command = %d, io_Flags = 0x%x", io->io_Command, io->io_Flags);
-
     struct Library *SysBase = SAGASDBase->sd_ExecBase;
     struct SAGASDUnit *sdu = (struct SAGASDUnit *)io->io_Unit;
 
@@ -834,7 +812,6 @@ AROS_LH1(void, BeginIO,
     io->io_Flags &= ~IOF_QUICK;
 
     /* Forward to the unit's IO task */
-    //debug("Msg %p (reply %p) => MsgPort %p", &io->io_Message, io->io_Message.mn_ReplyPort, sdu->sdu_MsgPort);
     PutMsg(sdu->sdu_MsgPort, &io->io_Message);
 
     AROS_LIBFUNC_EXIT
@@ -845,11 +822,7 @@ AROS_LH1(LONG, AbortIO,
     struct SAGASDBase *, SAGASDBase, 6, SAGASD)
 {
     AROS_LIBFUNC_INIT
-
     struct Library *SysBase = SAGASDBase->sd_ExecBase;
-
-    //debug("");
-
     Forbid();
     io->io_Error = IOERR_ABORTED;
     Permit();
@@ -888,110 +861,104 @@ static void SAGASD_BootNode(
     IPTR pp[4 + DE_BOOTBLOCKS + 1] = {};
     struct DeviceNode *devnode;
 
-    //debug("");
-
     dosdevname[2] += unit;
     debug("Adding bootnode %s %d x %d", dosdevname,sdu->sdu_SDCmd.info.blocks, sdu->sdu_SDCmd.info.block_size);
 
     //const ULONG IdDOS = AROS_MAKE_ID('D','O','S','\001');
+	if (!SAGASDBase->sd_IsAROS) {
+		//See if we have an RDB block
+		UBYTE rdbBuffer[ 512 ];
+		UBYTE partBuffer[ 512 ];
+		struct RigidDiskBlock *rdbBlock = (struct RigidDiskBlock*)rdbBuffer;
+		struct PartitionBlock *partBlock = (struct PartitionBlock*)partBuffer;
+		for( ULONG block = 0; block < 16; block++ )
+		{
+			//Get the block
+			debug( "%s Checking block %d\n", __FUNCTION__, block );
+			sdcmd_read_block( &sdu->sdu_SDCmd, block, rdbBuffer );
 
-    //See if we have an RDB block
-    UBYTE rdbBuffer[ 512 ];
-    UBYTE partBuffer[ 512 ];
-    struct RigidDiskBlock *rdbBlock = (struct RigidDiskBlock*)rdbBuffer;
-    struct PartitionBlock *partBlock = (struct PartitionBlock*)partBuffer;
-    for( ULONG block = 0; block < 16; block++ )
-    {
-    	//Get the block
-    	debug( "%s Checking block %d\n", __FUNCTION__, block );
-    	sdcmd_read_block( &sdu->sdu_SDCmd, block, rdbBuffer );
+			//Is this an RDB Block?
+			if( rdbBlock->rdb_ID == IDNAME_RIGIDDISK )
+			{
+				bug( "%s Found RDB block at block %d\n", __FUNCTION__, block );
+				bug( "%s Disk Vendor %s\n", __FUNCTION__, rdbBlock->rdb_DiskVendor );
+				bug( "%s Disk Product %s\n", __FUNCTION__, rdbBlock->rdb_DiskProduct );
+				bug( "%s Disk Revision %s\n", __FUNCTION__, rdbBlock->rdb_DiskRevision );
 
-    	//Is this an RDB Block?
-    	if( rdbBlock->rdb_ID == IDNAME_RIGIDDISK )
-    	{
-    		bug( "%s Found RDB block at block %d\n", __FUNCTION__, block );
-    		bug( "%s Disk Vendor %s\n", __FUNCTION__, rdbBlock->rdb_DiskVendor );
-    		bug( "%s Disk Product %s\n", __FUNCTION__, rdbBlock->rdb_DiskProduct );
-    		bug( "%s Disk Revision %s\n", __FUNCTION__, rdbBlock->rdb_DiskRevision );
-
-    		//Can we load the partition tables?
-    		if( rdbBlock->rdb_PartitionList )
-    		{
-    			//Is the partition block beyond our disk size?
-				if( rdbBlock->rdb_PartitionList > sdu->sdu_SDCmd.info.blocks )
+				//Can we load the partition tables?
+				if( rdbBlock->rdb_PartitionList )
 				{
-					bug( "%s Partition block is at block %d but we only have %d blocks on disk.\n", __FUNCTION__, rdbBlock->rdb_PartitionList, sdu->sdu_SDCmd.info.blocks );
-					return;
+					//Is the partition block beyond our disk size?
+					if( rdbBlock->rdb_PartitionList > sdu->sdu_SDCmd.info.blocks )
+					{
+						bug( "%s Partition block is at block %d but we only have %d blocks on disk.\n", __FUNCTION__, rdbBlock->rdb_PartitionList, sdu->sdu_SDCmd.info.blocks );
+						return;
+					}
+
+					//Try to load the partition block
+					sdcmd_read_block( &sdu->sdu_SDCmd, rdbBlock->rdb_PartitionList, partBuffer );
+					while( partBlock->pb_ID == IDNAME_PARTITION )
+					{
+						//We found a valid partition block it seems
+						UBYTE *partName = BSTRtoCSTR( (BSTR)partBlock->pb_DriveName );
+
+						//Form our parameters for forming the device node
+						pp[0] = (IPTR)partName;
+						pp[1] = (IPTR)"sagasd.device";
+						pp[2] = unit;
+						pp[3] = partBlock->pb_DevFlags;
+						CopyMem( partBlock->pb_Environment, &pp[ 4 ], sizeof( partBlock->pb_Environment ) );
+
+						bug( "%s Found partition list at block 0x%0.8lx\n", __FUNCTION__, rdbBlock->rdb_PartitionList );
+						bug( "%s Partition name %s\n", __FUNCTION__, partName );
+						bug( "%s Low Cylinder 0x%0.8lx\n", __FUNCTION__, pp[DE_LOWCYL + 4] );
+						bug( "%s High Cylinder 0x%0.8lx\n", __FUNCTION__, pp[DE_LOWCYL + 4] );
+						bug( "%s DOS Type 0x%0.8lx\n", __FUNCTION__, pp[DE_DOSTYPE + 4] );
+						bug( "%s Max Transfer 0x%0.8lx\n", __FUNCTION__, pp[DE_MAXTRANSFER + 4] );
+						bug( "%s Boot priority %d\n", __FUNCTION__, pp[DE_BOOTPRI + 4] );
+
+						//Create the dos node and add it to the boot node list
+						devnode = MakeDosNode(pp);
+						if( devnode )
+						{
+							//If this is bootable, add this as a boot node.
+							if( partBlock->pb_Flags != PBFF_NOMOUNT)
+							{
+								if( partBlock->pb_Flags == PBFF_BOOTABLE )
+								{
+									//To make this bootable, we need a ConfigDev object
+									struct ConfigDev *configDev = AllocConfigDev();
+									if( AddBootNode( pp[DE_BOOTPRI + 4], ADNF_STARTPROC, devnode, configDev ) )
+										bug( "%s failed to add partition %s to boot node list.\n", __FUNCTION__, partName );
+								}else
+								{
+									if( AddBootNode( pp[DE_BOOTPRI + 4], ADNF_STARTPROC, devnode, NULL ) )
+										bug( "%s failed to add partition %s to boot node list.\n", __FUNCTION__, partName );
+								}
+							}
+						}
+						else
+						{
+							bug( "%s failed to create device for partition %s.\n", __FUNCTION__, partName );
+						}
+
+						//Check the next partition
+						ULONG nextPartitionBlock = partBlock->pb_Next;
+						if( nextPartitionBlock == 0 || nextPartitionBlock > sdu->sdu_SDCmd.info.blocks)
+							break;	//No more partitions it seems
+						//Read the partition block
+						sdcmd_read_block( &sdu->sdu_SDCmd, nextPartitionBlock, partBuffer );
+					}
 				}
 
-				//Try to load the partition block
-				sdcmd_read_block( &sdu->sdu_SDCmd, rdbBlock->rdb_PartitionList, partBuffer );
-				while( partBlock->pb_ID == IDNAME_PARTITION )
-				{
-					//We found a valid partition block it seems
-					UBYTE *partName = BSTRtoCSTR( (BSTR)partBlock->pb_DriveName );
-
-					//Form our parameters for forming the device node
-				    pp[0] = (IPTR)partName;
-				    pp[1] = (IPTR)"sagasd.device";
-				    pp[2] = unit;
-				    pp[3] = partBlock->pb_DevFlags;
-				    CopyMem( partBlock->pb_Environment, &pp[ 4 ], sizeof( partBlock->pb_Environment ) );
-
-					bug( "%s Found partition list at block 0x%0.8lx\n", __FUNCTION__, rdbBlock->rdb_PartitionList );
-					bug( "%s Partition name %s\n", __FUNCTION__, partName );
-					bug( "%s Low Cylinder 0x%0.8lx\n", __FUNCTION__, pp[DE_LOWCYL + 4] );
-					bug( "%s High Cylinder 0x%0.8lx\n", __FUNCTION__, pp[DE_LOWCYL + 4] );
-					bug( "%s DOS Type 0x%0.8lx\n", __FUNCTION__, pp[DE_DOSTYPE + 4] );
-					bug( "%s Max Transfer 0x%0.8lx\n", __FUNCTION__, pp[DE_MAXTRANSFER + 4] );
-					bug( "%s Boot priority %d\n", __FUNCTION__, pp[DE_BOOTPRI + 4] );
-
-				    //Create the dos node and add it to the boot node list
-				    devnode = MakeDosNode(pp);
-				    if( devnode )
-				    {
-				    	//If this is bootable, add this as a boot node.
-				    	if( partBlock->pb_Flags != PBFF_NOMOUNT)
-				    	{
-				    		if( partBlock->pb_Flags == PBFF_BOOTABLE )
-				    		{
-								//To make this bootable, we need a ConfigDev object
-								struct ConfigDev *configDev = AllocConfigDev();
-								if( AddBootNode( pp[DE_BOOTPRI + 4], ADNF_STARTPROC, devnode, configDev ) )
-									bug( "%s failed to add partition %s to boot node list.\n", __FUNCTION__, partName );
-				    		}else
-				    		{
-				    			if( AddBootNode( pp[DE_BOOTPRI + 4], ADNF_STARTPROC, devnode, NULL ) )
-				    				bug( "%s failed to add partition %s to boot node list.\n", __FUNCTION__, partName );
-				    		}
-				    	}
-				    }
-				    else
-				    {
-				    	bug( "%s failed to create device for partition %s.\n", __FUNCTION__, partName );
-				    }
-
-					//Check the next partition
-					ULONG nextPartitionBlock = partBlock->pb_Next;
-					if( nextPartitionBlock == 0 || nextPartitionBlock > sdu->sdu_SDCmd.info.blocks)
-						break;	//No more partitions it seems
-					//Read the partition block
-					sdcmd_read_block( &sdu->sdu_SDCmd, nextPartitionBlock, partBuffer );
-				}
-    		}
-
-    		//We are done adding partitions.  Time to go back.
-    		return;
-    	}
+				//We are done adding partitions.  Time to go back.
+				return;
+			}
 #if 0
-    	else
-    	{
-    		bug( "%s Didn't find RDB block.  Found 0x%0.8lx at block %d\n", __FUNCTION__, rdbBlock->rdb_ID, block );
-    		printBufferHex( rdbBuffer, 512 );
-    	}
+		
 #endif
-    }
-
+		}
+	}
     //If we are this far, then no RDB partition is found
     //Let's assume (for better or worse) it is to be used as a fat drive
     //TODO:  This isn't implemented as described above.....
@@ -1011,7 +978,7 @@ static void SAGASD_BootNode(
     pp[DE_BUFMEMTYPE + 4] = MEMF_PUBLIC;
     pp[DE_MAXTRANSFER + 4] = 0x00200000;
     pp[DE_MASK + 4] = 0x7FFFFFFE;
-    pp[DE_BOOTPRI + 4] = 5 - (unit * 10);
+    pp[DE_BOOTPRI + 4] = 5;                     /* - (unit * 10);*/
     pp[DE_DOSTYPE + 4] = 0x444f5305;
     pp[DE_CONTROL + 4] = 0;
     pp[DE_BOOTBLOCKS + 4] = 2;
@@ -1033,8 +1000,7 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
     struct Library *SysBase = SAGASDBase->sd_ExecBase;
     struct SAGASDUnit *sdu = &SAGASDBase->sd_Unit[id];
 
-    //debug("");
-    switch (id) {
+     switch (id) {
     case 0:
         sdu->sdu_SDCmd.iobase  = SAGA_SD_BASE;
         sdu->sdu_Enabled = TRUE;
@@ -1057,9 +1023,9 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
             struct Message *msg;
 
             strncpy(sdu->sdu_Name, "SDIO0", sizeof(sdu->sdu_Name));
-            sdu->sdu_Name[4] += id;
             sdu->sdu_MsgPort = initport;
-
+            sdu->sdu_Name[4] += id;
+           
             /* Initialize the task */
             memset(utask, 0, sizeof(*utask));
             utask->tc_Node.ln_Pri = 1;
@@ -1077,9 +1043,7 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
 
             WaitPort(initport);
             msg = GetMsg(initport);
-            //debug("StartMsg=%p (%ld)", msg, msg->mn_Length);
             sdu->sdu_Enabled = (msg->mn_Length == 0) ? TRUE : FALSE;
-            //debug("  ReplyPort=%p", msg->mn_ReplyPort);
             ReplyMsg(msg);
 
             DeleteMsgPort(initport);
@@ -1088,7 +1052,7 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
         }
     }
 
-    debug("unit=%d enabled=%d", id, SAGASDBase->sd_Unit[id].sdu_Enabled ? 1 : 0);
+    //debug("unit=%d enabled=%d", id, SAGASDBase->sd_Unit[id].sdu_Enabled ? 1 : 0);
 }
 
 // Direct init routine
@@ -1098,8 +1062,6 @@ static int GM_UNIQUENAME(init)(struct SAGASDBase * SAGASDBase)
     struct Library *SysBase = SAGASDBase->sd_ExecBase;
     struct Library *ExpansionBase;
     ULONG i;
-
-    asm ( "tst.b 0xbfe001\r\n" );    // Wait a moment, then...
 
     ExpansionBase = TaggedOpenLibrary(TAGGEDOPEN_EXPANSION);
     if (!ExpansionBase)
@@ -1117,6 +1079,11 @@ static int GM_UNIQUENAME(init)(struct SAGASDBase * SAGASDBase)
 
     CloseLibrary((struct Library *)ExpansionBase);
 
+    // Are we in AROS or AmigaOS?
+    struct Library *IsAROS = OpenLibrary("aros.library",0);
+    SAGASDBase->sd_IsAROS = (IsAROS ? TRUE : FALSE);
+    if (SAGASDBase->sd_IsAROS) CloseLibrary(IsAROS);
+
     return TRUE;
 }
 
@@ -1125,8 +1092,6 @@ static int GM_UNIQUENAME(expunge)(struct SAGASDBase * SAGASDBase)
     struct Library *SysBase = SAGASDBase->sd_ExecBase;
     struct IORequest io = {};
     int i;
-
-    //debug("");
 
     for (i = 0; i < SAGASD_UNITS; i++) {
         io.io_Device = &SAGASDBase->sd_Device;

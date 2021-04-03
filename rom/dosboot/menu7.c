@@ -1,5 +1,5 @@
 /*
-   (c) 2021 Apollo Team Devs
+   Copyright (c) 2021 Vampires and Co LtD 
  
    Desc: Main bootmenu code
    Lang: english
@@ -140,12 +140,11 @@ static struct Gadget *createGadgetsBoot(LIBBASETYPEPTR DOSBootBase)
                                                         100, 183, 150, 10, 
                                                         DOSBootBase->bm_MainGadgets.bootopt->gadget, "AMIGA OS 3.1.4.1",
                                                         BUTTON_BOOT, (struct DOSBootBase *)DOSBootBase); 
-/*
+
     DOSBootBase->bm_MainGadgets.displayopt = createButton(
                                                         330, 63 , 150, 10, 
                                                         DOSBootBase->bm_MainGadgets.bootopt->gadget, "Boot from Floppy",
                                                         BUTTON_BOOT, (struct DOSBootBase *)DOSBootBase);
-                                                        */
 
     DOSBootBase->bm_MainGadgets.displayopt = createButton(
                                                         380, 75, 50, 10, 
@@ -262,7 +261,7 @@ static UWORD msgLoop(LIBBASETYPEPTR DOSBootBase, struct Window *win, WORD page)
                         if (DOSBootBase->bm_BootNode != NULL)
                         {
                            
-                            exit = PAGE_MAIN;
+                        //    exit = PAGE_BOOT;
                             break;
                         }
                         
@@ -345,13 +344,6 @@ static void initPageBoot(LIBBASETYPEPTR DOSBootBase)
         Move(win->RPort, 0 + xoff, y);
         //Text(win->RPort, text, strlen(text));
         SetAPen(win->RPort, 3);
-
-        magenta_pen=ObtainBestPen(Win->WScreen->ViewPort.ColorMap,
-                                  0xFFFFFFFF,0x00000000,0xFFFFFFFF,
-                                  OBP_Precision,PRECISION_EXACT,TAG_DONE);
-
-        SetBPen(win->RPort,magenta_pen)                          
-
         Text(win->RPort, text, 12);
 
         textp = NULL;
@@ -378,7 +370,7 @@ static void initPageBoot(LIBBASETYPEPTR DOSBootBase)
             for (i = 0; i < 4; i++) {
                 dostype[i] = (de->de_DosType >> ((3 - i) * 8)) & 0xff;
                 //if (dostype[i] < 9) oryginał
-                if (dostype[i] < 9)
+                if (dostype[i] < 12)
                     dostype[i] += '0';
                 else if (dostype[i] < 32)
                     dostype[i] = '.';
@@ -419,8 +411,6 @@ static void initPageBoot(LIBBASETYPEPTR DOSBootBase)
     }
 }
 
-
-
 static void centertext(LIBBASETYPEPTR DOSBootBase, BYTE pen, WORD y, const char *text)
 {
     struct Window *win = DOSBootBase->bm_Window;
@@ -457,7 +447,7 @@ static void initPage(LIBBASETYPEPTR DOSBootBase, WORD page)
             //writetext(DOSBootBase, 3, 0, 149, "DH8:");
             //writetext(DOSBootBase, 3, 0, 161, "DH9:");
             //writetext(DOSBootBase, 3, 0, 173, "DH10:");
-            writetext(DOSBootBase, 2, 63, 63, "Boot from Floppy");
+            //writetext(DOSBootBase, 3, 0, 185, "SD CARD:");
             writetext(DOSBootBase, 3, 310, 120, "DF0:");
             writetext(DOSBootBase, 3, 310, 132, "DF1:");
             writetext(DOSBootBase, 3, 310, 144, "DF2:");
@@ -466,9 +456,8 @@ static void initPage(LIBBASETYPEPTR DOSBootBase, WORD page)
             writetext(DOSBootBase, 3, 130, 240, "SpaceBar toggle between PAL and NTSC");
 
         initPageBoot(DOSBootBase);
-        //centertext(DOSBootBase, 1, 34, "Press A-J to select boot device");
-        //centertext(DOSBootBase, 3, 46, "\"+\" are bootable, \"*\" => selected for boot");
-        entertext(DOSBootBase, 1, 34, "(Core Release 6 build 8923, 2021-03-28)");
+        centertext(DOSBootBase, 1, 34, "Press A-J to select boot device");
+        centertext(DOSBootBase, 3, 46, "\"+\" are bootable, \"*\" => selected for boot");
             //centertext(DOSBootBase, 3, 240, "SpaceBar toggle between PAL and NTSC:");        
         }
     }    

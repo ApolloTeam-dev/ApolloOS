@@ -1,0 +1,156 @@
+    case TD_CHANGESTATE:
+        Forbid();
+        iostd->io_Actual = sdu->sdu_Present ? 0 : 1;		
+        Permit();
+		/*
+		if (sdu->sdu_Present != sdu->sdu_WasPresent) {
+			ForeachNode(&sdu->sdu_DiskChange,iostd) {
+				Cause((struct Interrupt *)((struct IOStdReq *)iostd->io_Data));
+			}
+			sdu->sdu_WasPresent = sdu->sdu_Present;
+		}
+        ForeachNode(&sdu->sdu_DiskChange,iostd) {
+            Cause((struct Interrupt *)((struct IOStdReq *)iostd->io_Data));
+        }
+		*/
+		if (sdu->sdu_Present != sdu->sdu_WasPresent) {
+			SAGASD_UnitChange(iostd);
+			sdu->sdu_WasPresent = sdu->sdu_Present;
+		}		
+        err = 0;
+        break;
+    case TD_EJECT:
+        // Eject removable media
+        // We mark is as invalid, then wait for Present to toggle.
+        Forbid();
+        sdu->sdu_Valid = FALSE;
+        Permit();
+		/*
+		if (sdu->sdu_Valid != sdu->sdu_WasValid) {
+			ForeachNode(&sdu->sdu_DiskChange,iostd) {
+				Cause((struct Interrupt *)((struct IOStdReq *)iostd->io_Data));
+			}
+			sdu->sdu_WasValid = sdu->sdu_Valid;
+		}
+		*/
+		if (sdu->sdu_Valid != sdu->sdu_WasValid) {
+			SAGASD_UnitChange(iostd);
+			sdu->sdu_WasValid = sdu->sdu_Valid;
+		}		
+        err = 0;
+        break;
+static int SAGASD_AddChangeInt(struct IOStdReq *iostd) {
+    struct SAGASDBase *sd = (struct SAGASDBase *)iostd->io_Device;
+    struct Library *SysBase = sd->sd_ExecBase;
+	int unit = 0;
+	debug("Entered.");
+    for (;unit < SAGASD_UNITS;) {
+		if (&sd->sd_Unit[unit].sdu_Unit == iostd->io_Unit) break;
+		unit++;
+	}	
+    struct SAGASDUnit *sdu = (struct SAGASDUnit *)&sd->sd_Unit[unit];
+	debug("Using unit %d, @ $%08lx",unit,sdu);
+	struct DriveGeometry geometry;
+	debug("Geometry @ $%08lx",&geometry);
+	NEWLIST(&sdu->sdu_DiskChange);	
+	struct Interrupt DiskChange = {
+		.is_Node.ln_Type = NT_INTERRUPT,
+		.is_Node.ln_Pri = -5,
+		.is_Node.ln_Name = "SDIO0 Card Monitor",
+		.is_Data = &geometry,
+		.is_Code = &SAGASD_UnitChange
+	};
+	DiskChange.is_Node.ln_Name[4] = (UBYTE)(48+unit);
+	debug("Unit change vector will be $%08lx.",&SAGASD_UnitChange);
+	iostd->io_Length=sizeof(struct Interrupt);
+	iostd->io_Data=&DiskChange;
+	debug("Interrupt struct built, DiskChange @ $%08lx.",iostd->io_Data);
+	Forbid();
+	AddTail(&sdu->sdu_DiskChange, (struct Node *)iostd);
+	Permit();
+	debug("Added to DiskChange handler @ $%08lx",iostd);
+	debug("Diskchange vector set for sagasd.device unit %d being activated ...",unit);
+	SendIO(iostd);
+	debug("STRANGE: I exited..");
+	return -1;
+}
+
+static int SAGASD_RemChangeInt(struct IOStdReq *io) { 
+    struct SAGASDBase *sd = (struct SAGASDBase *)io->io_Device;
+    struct Library *SysBase = sd->sd_ExecBase;
+	int unit = 0;
+    for (;unit < SAGASD_UNITS;) {
+		if (&sd->sd_Unit[unit].sdu_Unit == io->io_Unit) break;
+		unit++;
+	}	
+	debug("Removing diskchange vector for sagasd.device unit %d",unit);
+	Forbid();
+	Remove((struct Node *)io);
+	Permit();
+	AbortIO(&io);
+	debug("Diskchange vector cleared for sagasd.device unit %d",unit);
+	return -1;
+}
+
+	case TD_ADDCHANGEINT:
+		iotd->iotd_Req.io_Length  = sizeof(IOToUnit((struct IORequest *)iostd)->sdu_CardChangeIRQ);
+		iotd->iotd_Req.io_Data    = (APTR)&(IOToUnit((struct IORequest *)iostd)->sdu_CardChangeIRQ);
+		iotd->iotd_Req.io_Command = TD_ADDCHANGEINT;
+		IOToUnit((struct IORequest *)iostd)->sdu_IRQ.irq_iotd = iotd;
+		SendIO(iotd);
+		if (CheckIO(iotd) == NULL)
+		{
+			iotd->iotd_Req.io_Command = TD_REMCHANGEINT;
+			DoIO(iotd);
+		} else WaitIO(iotd);
+		err = 0;
+		break;
+	case TD_REMCHANGEINT:
+		iotd->iotd_Req.io_Length  = sizeof(IOToUnit((struct IORequest *)iostd)->sdu_CardChangeIRQ);
+		iotd->iotd_Req.io_Data    = (APTR)&(IOToUnit((struct IORequest *)iostd)->sdu_CardChangeIRQ);
+		iotd->iotd_Req.io_Command = TD_REMCHANGEINT;
+		struct IOExtTD *irq_iotd = IOToUnit((struct IORequest *)iostd)->sdu_IRQ.irq_iotd;
+		DoIO(irq_iotd);
+		if (CheckIO(irq_iotd) == NULL)
+		{
+			irq_iotd->iotd_Req.io_Command = TD_REMCHANGEINT;
+			DoIO(irq_iotd);
+		} else WaitIO(irq_iotd);
+		memset(&(IOToUnit((struct IORequest *)iostd)->sdu_CardChangeIRQ),0,sizeof(struct Interrupt));
+		err = 0;
+		break;
+
+static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id);
+
+static struct SAGASDUnit *IOToUnit(struct IORequest * io) {
+	struct SAGASDBase *sd = (struct SAGASDBase *)io->io_Device;
+	// get my unit
+	int unit = 0;
+	while (unit < SAGASD_UNITS) {
+		if (&sd->sd_Unit[unit].sdu_Unit == io->io_Unit) break;
+		unit++;
+	}
+	if (unit == SAGASD_UNITS) {
+		return NULL;
+	} 	
+	return 	&sd->sd_Unit[unit];
+}
+
+static void SAGASD_UnitChangeHandler(void) {
+	// We'll need this to set up eject/insert handlers
+	sdu->sdu_CardChangeIRQ = (struct Interrupt) {
+		.is_Node.ln_Succ = &sdu->sdu_CardChangeIRQ.is_Node,
+		.is_Node.ln_Pred = &sdu->sdu_CardChangeIRQ.is_Node,
+		.is_Node.ln_Type = NT_INTERRUPT,
+		.is_Node.ln_Pri = -5,
+		.is_Node.ln_Name = "SDIOx CardChange IRQ",
+		.is_Data = &sdu->sdu_IRQ,
+		.is_Code = SAGASD_UnitChange
+	};
+	sdu->sdu_CardChangeIRQ.is_Node.ln_Name[4] = (UBYTE)(48+id);
+	debug("%s: CCIRQ=$%08lx; CODE=$%08lx; DATA=$%08lx; NODE=$%08lx",
+		sdu->sdu_CardChangeIRQ.is_Node.ln_Name,
+		&sdu->sdu_CardChangeIRQ,sdu->sdu_CardChangeIRQ.is_Data,
+		sdu->sdu_CardChangeIRQ.is_Code,&sdu->sdu_CardChangeIRQ.is_Node);
+
+
