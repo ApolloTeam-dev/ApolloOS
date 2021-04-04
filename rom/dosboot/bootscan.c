@@ -76,7 +76,6 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
     BOOL appended, changed;
     struct Node *fsnode;
 
-    D(bug("[Boot] AddPartitionVolume\n"));
     GetPartitionTableAttrsTags(table, PTT_TYPE, &pttype, TAG_DONE);
 
     attrs = QueryPartitionAttrs(table);
@@ -85,8 +84,6 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
 
     if (attrs->attribute != TAG_DONE)
     {
-        D(bug("[Boot] RDB/GPT partition\n"));
-
         /* partition has a name => RDB/GPT partition */
         tags[0] = PT_NAME;
         tags[1] = (IPTR)name;
@@ -97,12 +94,10 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
         tags[6] = TAG_DONE;
         GetPartitionAttrs(pn, (struct TagItem *)tags);
 
-        D(bug("[Boot] Partition name: %s bootable: %d\n", name, bootable));
     }
     else
     {
-        D(bug("[Boot] MBR/EBR partition\n"));
-
+       
         /* partition doesn't have a name => MBR/EBR partition */
         tags[0] = PT_POSITION;
         tags[1] = (IPTR)&ppos;
@@ -150,8 +145,7 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
     	 * Here we ignore partitions with DosType == 0 and won't enter them into
     	 * mountlist.
     	 */
-    	D(bug("[Boot] Unknown DosType for %s, skipping partition\n"));
-    	return;
+        	return;
     }
 
     if (pttype != PHPTT_RDB)
@@ -215,7 +209,7 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
             if (stricmp(AROS_BSTR_ADDR(((struct DeviceNode*)bn->bn_DeviceNode)->dn_Name), name) == 0)
             {
                 if (!appended)
-                    strcat(name, ".1");
+                    strcat(name, ".x");
                 else
                     name[strlen(name) - 1]++;
                 appended = TRUE;

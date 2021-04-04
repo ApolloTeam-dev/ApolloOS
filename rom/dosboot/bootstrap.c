@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2016, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2016, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Boot AROS
@@ -38,19 +38,15 @@
 #include "dosboot_intern.h"
 #include "../expansion/expansion_intern.h"
 
-#ifdef __mc68000
-
 /* These two functions are implemented in arch/m68k/all/dosboot/bootcode.c */
 
 extern VOID_FUNC CallBootBlockCode(APTR bootcode, struct IOStdReq *io, struct ExpansionBase *ExpansionBase);
 extern void dosboot_BootPoint(struct BootNode *bn);
 
-#else
-
+/*
 #define CallBootBlockCode(bootcode, io, ExpansionBase) NULL
-#define dosboot_BootPoint(bn)
+#define dosboot_BootPoint(bn) */
 
-#endif
 
 static BOOL GetBootNodeDeviceUnit(struct BootNode *bn, BPTR *device, IPTR *unit, ULONG *bootblocks)
 {

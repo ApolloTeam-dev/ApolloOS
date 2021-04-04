@@ -1,6 +1,7 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2014, The AROS Development Team. All rights reserved.
     $Id$
+    We should back to This EFI BOOt env idea for 68k Amigas. 
 */
 
 #include <aros/debug.h>

@@ -36,7 +36,6 @@
 #include <string.h>  //my
 #include <stdlib.h> //my
 
-
 #include LC_LIBDEFS_FILE
 
 #include "dosboot_intern.h"
@@ -54,7 +53,6 @@
 
 #endif
 
- 
 
 static LONG centerx(LIBBASETYPEPTR DOSBootBase, LONG width)
 {
@@ -304,6 +302,17 @@ static UWORD msgLoop(LIBBASETYPEPTR DOSBootBase, struct Window *win, WORD page)
     return exit;
 }
 
+
+/*
+static struct ColorSpec colors[] =
+{
+    {0, 240, 100, 0},  // Color 0 is background
+    {1, 240, 0, 0},
+    {2, 0, 0, 240},
+    {-1}               // Array must be terminated with -1
+};
+*/
+
 static void initPageBoot(LIBBASETYPEPTR DOSBootBase)
 {
     struct Window *win = DOSBootBase->bm_Window;
@@ -313,7 +322,16 @@ static void initPageBoot(LIBBASETYPEPTR DOSBootBase)
     char text[100], *textp;
 
     SetAPen(win->RPort, 1);
-   
+    /*
+    volatile UBYTE *color0 = (APTR)0xDFF180;
+    volatile UBYTE *color1 = (APTR)0xDFF182;
+    *color0 = 0; 
+    *color1 = 77;
+    */
+
+    SetRGB4(&DOSBootBase->bm_Screen->ViewPort, 0, 80, 80, 80);  //4bit background colour
+    SetRGB4(&DOSBootBase->bm_Screen->ViewPort, 3, 146,146,146);  //file systems colour
+
     ForeachNode(&DOSBootBase->bm_ExpansionBase->MountList, bn)
     {
         struct DeviceNode *dn = bn->bn_DeviceNode;
@@ -326,6 +344,18 @@ static void initPageBoot(LIBBASETYPEPTR DOSBootBase)
         ULONG size;
         BOOL devopen, ismedia;
 
+       
+
+/*
+void SetPointer(
+         struct Window * window,
+         const UWORD   * pointer,
+         LONG height,
+         LONG width,
+         LONG xOffset,
+         LONG yOffset );
+         */
+
         if (y >= DOSBootBase->bottomY + 10) //???
             break;
         if (!fssm || !fssm->fssm_Device)
@@ -336,22 +366,15 @@ static void initPageBoot(LIBBASETYPEPTR DOSBootBase)
                 de = NULL;
         }
 
-        NewRawDoFmt("%c%10s: %4d %s-%ld", RAWFMTFUNC_STRING, text,
-            (DOSBootBase->bm_BootNode == bn) ? '*' : IsBootableNode(bn) ? '+' : ' ',
+        NewRawDoFmt("%c%10s: %4d %s-%ld", RAWFMTFUNC_STRING, text,' ',
+           // (DOSBootBase->bm_BootNode == bn) ? '*' : IsBootableNode(bn) ? '+' : ' ',
             AROS_BSTR_ADDR(dn->dn_Name),
             bn->bn_Node.ln_Pri,
             AROS_BSTR_ADDR(fssm->fssm_Device),
             fssm->fssm_Unit);
         Move(win->RPort, 0 + xoff, y);
         //Text(win->RPort, text, strlen(text));
-        SetAPen(win->RPort, 3);
-
-        magenta_pen=ObtainBestPen(Win->WScreen->ViewPort.ColorMap,
-                                  0xFFFFFFFF,0x00000000,0xFFFFFFFF,
-                                  OBP_Precision,PRECISION_EXACT,TAG_DONE);
-
-        SetBPen(win->RPort,magenta_pen)                          
-
+        SetAPen(win->RPort, 2);
         Text(win->RPort, text, 12);
 
         textp = NULL;
@@ -377,8 +400,8 @@ static void initPageBoot(LIBBASETYPEPTR DOSBootBase)
 
             for (i = 0; i < 4; i++) {
                 dostype[i] = (de->de_DosType >> ((3 - i) * 8)) & 0xff;
-                //if (dostype[i] < 9) oryginał
-                if (dostype[i] < 9)
+                //if (dostype[i] < 9) oryginal
+                if (dostype[i] < 12)
                     dostype[i] += '0';
                 else if (dostype[i] < 32)
                     dostype[i] = '.';
@@ -409,6 +432,7 @@ static void initPageBoot(LIBBASETYPEPTR DOSBootBase)
             textp = "[no media]";
         }
         if (textp) {
+            SetAPen(win->RPort, 3);
             Move(win->RPort, 255+ xoff, y);
             Text(win->RPort, textp, 4);
             //Text(win->RPort, textp, strlen(textp));
@@ -457,18 +481,18 @@ static void initPage(LIBBASETYPEPTR DOSBootBase, WORD page)
             //writetext(DOSBootBase, 3, 0, 149, "DH8:");
             //writetext(DOSBootBase, 3, 0, 161, "DH9:");
             //writetext(DOSBootBase, 3, 0, 173, "DH10:");
-            writetext(DOSBootBase, 2, 63, 63, "Boot from Floppy");
-            writetext(DOSBootBase, 3, 310, 120, "DF0:");
-            writetext(DOSBootBase, 3, 310, 132, "DF1:");
-            writetext(DOSBootBase, 3, 310, 144, "DF2:");
-            writetext(DOSBootBase, 3, 310, 156, "DF3:");
-            writetext(DOSBootBase, 3, 310, 168, "ROM:");
-            writetext(DOSBootBase, 3, 130, 240, "SpaceBar toggle between PAL and NTSC");
+            writetext(DOSBootBase, 2, 343, 68, "Boot from Floppy"); //2 white
+            writetext(DOSBootBase, 2, 310, 120, "DF0:");
+            writetext(DOSBootBase, 2, 310, 132, "DF1:");
+            writetext(DOSBootBase, 2, 310, 144, "DF2:");
+            writetext(DOSBootBase, 2, 310, 156, "DF3:");
+            writetext(DOSBootBase, 2, 310, 168, "ROM:");
+            writetext(DOSBootBase, 2, 130, 240, "SpaceBar toggle between PAL and NTSC");
 
         initPageBoot(DOSBootBase);
         //centertext(DOSBootBase, 1, 34, "Press A-J to select boot device");
         //centertext(DOSBootBase, 3, 46, "\"+\" are bootable, \"*\" => selected for boot");
-        entertext(DOSBootBase, 1, 34, "(Core Release 6 build 8923, 2021-03-28)");
+        centertext(DOSBootBase, 1, 24, "(Core Release 6 build 8923, 2021-03-28)");
             //centertext(DOSBootBase, 3, 240, "SpaceBar toggle between PAL and NTSC:");        
         }
     }    

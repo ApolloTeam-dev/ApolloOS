@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2013, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -46,8 +46,7 @@ AROS_UFH3(static APTR, dosboot_Cleanup,
     
     if (!base)
     {
-    	/* ??? What ??? */
-    	return NULL;
+    	    	return NULL;
     }
 
     D(bug("[dosboot cleanup] Boot screen 0x%p\n", base->bm_Screen));

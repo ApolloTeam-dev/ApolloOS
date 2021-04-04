@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2013, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -20,9 +20,7 @@ static LONG common_Init(struct ProcessorBase *ProcessorBase)
     	return FALSE;
 
     ProcessorBase->cpucount = KrnGetCPUCount();
-    D(bug("[processor] System has %u CPUs\n", ProcessorBase->cpucount));
-
-    return TRUE;
+   return TRUE;
 }
 
 ADD2INITLIB(common_Init, 0)

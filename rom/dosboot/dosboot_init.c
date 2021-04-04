@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Boot AROS
@@ -60,7 +60,6 @@ static void bootDelay(ULONG timeout)
     timerio.tr_node.io_Message.mn_Length        = sizeof(timermp);
 
     if (OpenDevice("timer.device", UNIT_VBLANK, (struct IORequest *)&timerio, 0) != 0) {
-        D(bug("dosboot: Can't open timer.device unit 0\n"));
         return;
     }
 
@@ -140,10 +139,7 @@ static void setBootDevice(LIBBASETYPEPTR DOSBootBase)
         Remove((struct Node *)bn);
         bn->bn_Node.ln_Type = NT_BOOTNODE;
         bn->bn_Node.ln_Pri = 127;
-        /* We use AddHead() instead of Enqueue() here
-         * to *insure* that this gets to the front of
-         * the boot list.
-         */
+        
         AddHead(&DOSBootBase->bm_ExpansionBase->MountList, (struct Node *)bn);
     }
 
@@ -160,15 +156,10 @@ int dosboot_Init(LIBBASETYPEPTR LIBBASE)
     STRPTR bootDeviceName = NULL;
 
     LIBBASE->delayTicks = 50;
-
-    D(bug("dosboot_Init: GO GO GO!\n"));
-
     ExpansionBase = (APTR)TaggedOpenLibrary(TAGGEDOPEN_EXPANSION);
-
-    D(bug("[Strap] ExpansionBase 0x%p\n", ExpansionBase));
+    
     if( ExpansionBase == NULL )
     {
-        D(bug( "Could not open expansion.library, something's wrong!\n"));
         Alert(AT_DeadEnd | AG_OpenLib | AN_BootStrap | AO_ExpansionLib);
     }
 
@@ -253,10 +244,6 @@ int dosboot_Init(LIBBASETYPEPTR LIBBASE)
         if (!LIBBASE->bm_Screen)
             LIBBASE->bm_Screen = NoBootMediaScreen(LIBBASE);
 
-        D(bug("No bootable disk was found.\n"));
-        D(bug("Please insert a bootable disk in any drive.\n"));
-        D(bug("Retrying in 3 seconds...\n"));
-
         for (t = 0; t < 150; t += LIBBASE->delayTicks)
         {
             bootDelay(LIBBASE->delayTicks);
@@ -266,7 +253,6 @@ int dosboot_Init(LIBBASETYPEPTR LIBBASE)
         }
     }
 
-    /* We never get here */
     return FALSE;
 }
 

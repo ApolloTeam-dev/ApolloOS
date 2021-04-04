@@ -19,13 +19,12 @@ struct ButtonGadget {
 struct MainGadgets {
 	struct ButtonGadget *boot;
 	struct ButtonGadget *bootnss;
-	struct ButtonGadget *bootopt;
+
 };
 
 #define BUTTON_BOOT            1
 #define BUTTON_BOOT_WNSS       2
-#define BUTTON_BOOT_OPTIONS    3
-#define BUTTON_CONTINUE        8
+
 
 struct ButtonGadget *createButton(ULONG, ULONG, ULONG, ULONG, struct Gadget *, STRPTR, UWORD, struct DOSBootBase *);
 void freeButtonGadget(struct ButtonGadget *, struct DOSBootBase *);

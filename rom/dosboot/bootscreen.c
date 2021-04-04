@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2014, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -106,7 +106,7 @@ struct Screen *NoBootMediaScreen(struct DOSBootBase *DOSBootBase)
     {
     	SetAPen(&scr->RastPort, 1);
     	Move(&scr->RastPort, 215, 120);
-    	Text(&scr->RastPort, "No bootable media found...", 26);
+    	Text(&scr->RastPort, "Vampire wants your media blood", 26);
     }
 
     return scr;
