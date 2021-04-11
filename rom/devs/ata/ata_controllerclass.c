@@ -39,29 +39,6 @@ OOP_Object *ATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg)
         data->ac_Class = cl;
         data->ac_Object = ataController;
 
-        /* Try to setup daemon task looking for diskchanges */
-        NEWLIST(&data->Daemon_ios);
-        InitSemaphore(&data->DaemonSem);
-        data->ac_daemonParent = FindTask(NULL);
-        SetSignal(0, SIGF_SINGLE);
-
-        if (!NewCreateTask(TASKTAG_PC, DaemonCode,
-                           TASKTAG_NAME       , "ATA.daemon",
-                           TASKTAG_STACKSIZE  , STACK_SIZE,
-                           TASKTAG_TASKMSGPORT, &data->DaemonPort,
-                           TASKTAG_PRI        , TASK_PRI - 1,	/* The daemon should have a little bit lower Pri than handler tasks */
-                           TASKTAG_ARG1       , ATABase,
-                           TASKTAG_ARG2       , data,
-                           TAG_DONE))
-        {
-            bug("[ATA:Controller] %s: Failed to start up daemon!\n", __func__);
-            return FALSE;
-        }
-
-        /* Wait for handshake */
-        Wait(SIGF_SINGLE);
-        D(bug("[ATA:Controller] %s: Daemon task set to 0x%p\n", __func__, data->ata_Daemon));
-
         AddTail(&ATABase->ata_Controllers, &data->ac_Node);
     }
     return ataController;
@@ -78,12 +55,6 @@ VOID ATA__Root__Dispose(OOP_Class *cl, OOP_Object *o, OOP_Msg msg)
     {
         if (ataNode->ac_Object == o)
         {
-            D(bug("[ATA:Controller] %s: Stopping Daemon...\n", __func__));
-            ataNode->ac_daemonParent = FindTask(NULL);
-            SetSignal(0, SIGF_SINGLE);
-            Signal(ataNode->ac_Daemon, SIGBREAKF_CTRL_C);
-            Wait(SIGF_SINGLE);
-            D(bug("[ATA:Controller] %s: Daemon stopped\n", __func__));
 
             D(bug ("[ATA:Controller] %s: Destroying Controller Entry @ 0x%p\n", __func__, ataNode);)
             Remove(&ataNode->ac_Node);
