@@ -140,6 +140,10 @@
             wDelta = 0;
         }
 
+        SetAPen(rp, Pens[BACKGROUNDPEN]);
+        Move(rp, leftEdge + textLeft - 1, topEdge + textTop - extent.te_Extent.MinY - 1);
+        Text(rp, label, txtlen);
+
         SetAPen(rp, Pens[FILLTEXTPEN]);
         SetOutlinePen(rp, selected ? Pens[HIGHLIGHTTEXTPEN] : Pens[TEXTPEN]);
         SetBPen(rp, Pens[BACKGROUNDPEN]);
