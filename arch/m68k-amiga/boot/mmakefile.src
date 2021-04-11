@@ -92,7 +92,7 @@ include $(SRCDIR)/config/aros.cfg
 #MM- kernel-workbench-devs-amiga-m68k : workbench-devs-amiga-m68k
 
 # Make sure we optimize this code for size ..
-OPTIMIZATION_CFLAGS := -Os
+OPTIMIZATION_CFLAGS := -O2
 
 USELIBS := amiga arossupport autoinit libinit stdc.static
 LIBS    := -L$(GENDIR)/lib -lloadseg $(addprefix -l,$(USELIBS))
@@ -125,9 +125,9 @@ FILES=start early debug mmu
 AFILES=rom_entry rom_init cpu_detect superstack_swap
 
 KLIBS   := exec aros dos utility oop expansion partition debug
-KDEVS   := timer input keyboard console trackdisk gameport audio
+KDEVS   := timer input keyboard console gameport audio
 KHNDLRS := con afs ram
-KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse
+KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse 
 KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem misc shell card bootloader vampire
 KHOOKS  := diag romboot
 
@@ -148,13 +148,13 @@ $(GENDIR)/boot/aros-amiga-m68k-rom.elf: $(KOBJS_rom) $(OBJS_rom)
 FILES   := 
 AFILES  := ext_entry
 
-KLIBS   :=  keymap graphics layers intuition gadtools icon workbench \
-            mathffp mathieeesingbas freeanim lowlevel nonvolatile nvdisk \
+KLIBS   :=  keymap graphics layers intuition gadtools workbench \
+            mathffp mathieeesingbas freeanim nvdisk \
             setpatch
-KDEVS   := ata sagasd
+KDEVS   := ata sagasd trackdisk
 KHNDLRS := 
 KHIDDS  := bus storage system
-KRSRCS  := shellcommands workbook wbtag
+KRSRCS  := shellcommands wbtag
 KHOOKS  := alert
 
 ROMLOC_ext := 0xe00000
@@ -315,7 +315,7 @@ KLIBS   := aros utility dos oop mathffp mathieeesingbas partition \
            keymap graphics layers intuition gadtools icon workbench setpatch
 KDEVS   := timer input keyboard console trackdisk gameport audio ata cd sagasd
 KHNDLRS := cdrom con afs ram
-KHIDDS  := amigakbd amigamouse amigavideo ata_gayle bus gfx hiddclass keyboard mouse storage system p96gfx
+KHIDDS  := amigakbd amigamouse amigavideo ata_gayle bus gfx hiddclass keyboard mouse storage system
 KRSRCS  := battclock processor task lddemon dosboot cia potgo disk \
            misc shell shellcommands workbook wbtag card FileSystem vampire
 KHOOKS  := alert romboot

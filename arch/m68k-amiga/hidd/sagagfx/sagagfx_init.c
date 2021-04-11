@@ -82,23 +82,6 @@ static int SAGAGfx_Init(LIBBASETYPEPTR LIBBASE)
     struct GfxBase *GfxBase;
     struct IORequest io;
     
-    D(bug("[SAGAGfx_Init] \n"));
-    
-    /* SHIFT key pressed during boot => Skip */
-    
-    if (0 == OpenDevice("input.device", 0, &io, 0))
-    {
-        struct Library *InputBase = (struct Library *)io.io_Device;
-        UWORD qual = PeekQualifier();
-        CloseDevice(&io);
-        
-        if (qual & (IEQUALIFIER_LSHIFT | IEQUALIFIER_RSHIFT))
-        {
-            D(bug("[SAGAGfx_Init] SHIFT KEY pressed => Skipped \n"));
-            return(FALSE);
-        }
-    }
-    
     /* Vampire board model */
     
     xsd->boardModel = (READ16(VREG_BOARD) >> 8);
@@ -113,7 +96,7 @@ static int SAGAGfx_Init(LIBBASETYPEPTR LIBBASE)
         case VREG_BOARD_VCD32:
             // SAGA V2 METHODS
             xsd->SAGAGfx_GetPixFmt         = SAGAHW_V2_GetPixFmt;
-            xsd->SAGAGfx_GetModeID         = SAGAHW_V2_GetModeID;
+            xsd->SAGAGfx_GetModeID         = SAGAHW_V4_GetModeID;
             xsd->SAGAGfx_SetColors         = SAGAHW_V2_SetColors;
             xsd->SAGAGfx_SetModulo         = SAGAHW_V2_SetModulo;
             xsd->SAGAGfx_SetMemory         = SAGAHW_V2_SetMemory;
@@ -144,7 +127,6 @@ static int SAGAGfx_Init(LIBBASETYPEPTR LIBBASE)
             break;
             
         default:
-            D(bug("[SAGAGfx_Init] Failed to detect a Vampire board. \n"));
             return(FALSE);
             break;
 	}
@@ -155,7 +137,6 @@ static int SAGAGfx_Init(LIBBASETYPEPTR LIBBASE)
     
     if (xsd->mempool == NULL)
     {
-        D(bug("[SAGAGfx_Init] Failed to create memory pool. \n"));
         return(FALSE);
     }
     
@@ -169,7 +150,6 @@ static int SAGAGfx_Init(LIBBASETYPEPTR LIBBASE)
     
     if (!GetAttrBases(interfaces, xsd->attrBases, ATTRBASES_NUM))
     {
-        D(bug("[SAGAGfx_Init] Failed to get attributes. \n"));
         return(FALSE);
     }
     
@@ -182,7 +162,6 @@ static int SAGAGfx_Init(LIBBASETYPEPTR LIBBASE)
     
     if (!GfxBase)
     {
-        D(bug("[SAGAGfx_Init] Failed to open graphics.library!\n"));
         return(FALSE);
     }
     
@@ -194,7 +173,7 @@ static int SAGAGfx_Init(LIBBASETYPEPTR LIBBASE)
     return(TRUE);
 }
 
-ADD2LIBS((STRPTR)"gfx.hidd", 0, static struct Library *, __gfxbase);
+// ADD2LIBS((STRPTR)"gfx.hidd", 0, static struct Library *, __gfxbase);
 ADD2INITLIB(SAGAGfx_Init, 0)
 
 /* END OF FILE */
