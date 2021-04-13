@@ -460,7 +460,7 @@ static void initPage(LIBBASETYPEPTR DOSBootBase, WORD page)
     else if (page == PAGE_BOOT)
         text = "Boot Options";
     else
-        text = "ApollOS Early Startup Control";
+        text = "ApolloOS Early Startup Control";
     centertext(DOSBootBase, 2, 10, text);
     
     if (page == PAGE_BOOT)
@@ -480,7 +480,7 @@ static void initPage(LIBBASETYPEPTR DOSBootBase, WORD page)
     if (page == PAGE_MAIN && (GfxBase->DisplayFlags & (NTSC | PAL))) {
             ULONG modeid = GetVPModeID(&DOSBootBase->bm_Screen->ViewPort);
             if (modeid != INVALID_ID && (((modeid & MONITOR_ID_MASK) == NTSC_MONITOR_ID) || ((modeid & MONITOR_ID_MASK) == PAL_MONITOR_ID))) {
-            centertext(DOSBootBase, 1, 30, "(Release 5, 2020-12-12)");
+            centertext(DOSBootBase, 1, 30, "(Release 6, 2021-04-08)");
         }
     }
 

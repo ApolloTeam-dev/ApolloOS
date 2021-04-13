@@ -68,46 +68,46 @@ struct amiga_busdata
 
 static void ata_insw(APTR address, UWORD port, ULONG count, void *data)
 {
-    struct amiga_busdata *bdata = data;
-    volatile ULONG *addr = (ULONG*)(bdata->port + (port & ~3));
-    ULONG *dst = address;
-
-    count /= 4;
-    while (count-- != 0)
-        *dst++ = *addr;
+//       struct amiga_busdata *bdata = data;
+//       volatile ULONG *addr = (ULONG*)(bdata->port + (port & ~3));
+//       ULONG *dst = address;
+//   
+//       count /= 4;
+//       while (count-- != 0)
+//           *dst++ = *addr;
 }
 
 static void ata_outsw(APTR address, UWORD port, ULONG count, APTR data)
 {
-    struct amiga_busdata *bdata = data;
-    volatile ULONG *addr = (ULONG*)(bdata->port + (port & ~3));
-    ULONG *dst = address;
-
-    count /= 4;
-    while (count-- != 0)
-        *addr = *dst++;
+//    struct amiga_busdata *bdata = data;
+//    volatile ULONG *addr = (ULONG*)(bdata->port + (port & ~3));
+//   ULONG *dst = address;
+//
+//    count /= 4;
+//    while (count-- != 0)
+//        *addr = *dst++;
 }
 
 static void ata_pcmcia_insw(APTR address, UWORD port, ULONG count, void *data)
 {
-    struct amiga_busdata *bdata = data;
-    volatile UWORD *addr = (UWORD*)(bdata->port + port);
-    UWORD *dst = address;
-
-    count /= 2;
-    while (count-- != 0)
-        *dst++ = *addr;
+//    struct amiga_busdata *bdata = data;
+//    volatile UWORD *addr = (UWORD*)(bdata->port + port);
+//    UWORD *dst = address;
+//
+//    count /= 2;
+//    while (count-- != 0)
+//        *dst++ = *addr;
 }
 
 static void ata_pcmcia_outsw(APTR address, UWORD port, ULONG count, APTR data)
 {
-    struct amiga_busdata *bdata = data;
-    volatile UWORD *addr = (UWORD*)(bdata->port + port);
-    UWORD *dst = address;
-
-    count /= 2;
-    while (count-- != 0)
-        *addr = *dst++;
+//    struct amiga_busdata *bdata = data;
+//    volatile UWORD *addr = (UWORD*)(bdata->port + port);
+//    UWORD *dst = address;
+//
+//    count /= 2;
+//    while (count-- != 0)
+//        *addr = *dst++;
 }
 
 
@@ -117,44 +117,44 @@ static void ata_outl(ULONG val, UWORD offset, IPTR port, APTR data)
 
 static void ata_out(UBYTE val, UWORD offset, IPTR port, APTR data)
 {
-    struct amiga_busdata *bdata = data;
-    volatile UBYTE *addr;
-
-#if IDE_DEBUG
-    bug("ata_out(%x,%x)=%x:%x\n", offset, port, (UBYTE*)(bdata->port + port) + offset * 4, val);
-#endif
-    /* IDE doubler hides Alternate Status/Device Control register */
-    if (port == -1) {
-	if (bdata->reset == 0 && (val & 4)) {
-	    ata_out(0x40, ata_DevHead, 0, bdata);
- 	    D(bug("[ATA] Emulating reset\n"));
- 	    ata_out(ATA_EXECUTE_DIAG, ata_Command, 0, bdata); 
-	}
-	bdata->reset = (val & 4) != 0;
-	return;
-    }
-    addr = (UBYTE*)(bdata->port + port);
-    addr[offset * 4] = val;
+//       struct amiga_busdata *bdata = data;
+//       volatile UBYTE *addr;
+//   
+//   #if IDE_DEBUG
+//       bug("ata_out(%x,%x)=%x:%x\n", offset, port, (UBYTE*)(bdata->port + port) + offset * 4, val);
+//   #endif
+//       /* IDE doubler hides Alternate Status/Device Control register */
+//       if (port == -1) {
+//   	if (bdata->reset == 0 && (val & 4)) {
+//   	    ata_out(0x40, ata_DevHead, 0, bdata);
+//    	    D(bug("[ATA] Emulating reset\n"));
+//    	    ata_out(ATA_EXECUTE_DIAG, ata_Command, 0, bdata); 
+//   	}
+//   	bdata->reset = (val & 4) != 0;
+//   	return;
+//       }
+//       addr = (UBYTE*)(bdata->port + port);
+//       addr[offset * 4] = val;
 }
 
 static UBYTE ata_in(UWORD offset, IPTR port, APTR data)
 {
-    struct amiga_busdata *bdata = data;
-    volatile UBYTE *addr;
-    UBYTE v;
-
-#if IDE_DEBUG
-    bug("ata_in(%x,%x)=%x\n", offset, port, (UBYTE*)(bdata->port + port) + offset * 4);
-#endif
-    if (port == -1) {
-    	port = 0;
-    	offset = ata_Status;
-    }
-    addr = (UBYTE*)(bdata->port + port);
-    v = addr[offset * 4];
-#if IDE_DEBUG
-    bug("=%x\n", v);
-#endif
+//       struct amiga_busdata *bdata = data;
+//       volatile UBYTE *addr;
+//       UBYTE v;
+//   
+//   #if IDE_DEBUG
+//       bug("ata_in(%x,%x)=%x\n", offset, port, (UBYTE*)(bdata->port + port) + offset * 4);
+//   #endif
+//       if (port == -1) {
+//       	port = 0;
+//       	offset = ata_Status;
+//       }
+//       addr = (UBYTE*)(bdata->port + port);
+//       v = addr[offset * 4];
+//   #if IDE_DEBUG
+//       bug("=%x\n", v);
+//   #endif
     return v;
 }
 
@@ -173,44 +173,44 @@ static void gayledebug(void)
 
 static void ata_pcmcia_out(UBYTE val, UWORD offset, IPTR port, APTR data)
 {
-    volatile UBYTE *addr;
-
-    addr = (UBYTE*)port;
-    if (offset == 1) {
-        /* Error / Feature not available when using Amiga PCMCIA */
-        return;
-    } else if (offset & 1) {
-        addr += 0x10000;
-    }
-    addr[offset] = val;
-
-#if PCMCIA_DEBUG
-    bug("pcmcia_ata_out(%x,%x)=%p=%x\n", offset, port, &addr[offset], val);
-#endif
+//       volatile UBYTE *addr;
+//   
+//       addr = (UBYTE*)port;
+//       if (offset == 1) {
+//           /* Error / Feature not available when using Amiga PCMCIA */
+//           return;
+//       } else if (offset & 1) {
+//           addr += 0x10000;
+//       }
+//       addr[offset] = val;
+//   
+//   #if PCMCIA_DEBUG
+//       bug("pcmcia_ata_out(%x,%x)=%p=%x\n", offset, port, &addr[offset], val);
+//   #endif
 }
 
 static UBYTE ata_pcmcia_in(UWORD offset, IPTR port, APTR data)
 {
-    volatile UBYTE *addr;
-    UBYTE v;
-
-    gayledebug();
-
-    addr = (UBYTE*)port;
-    if (offset == 1) {
-        /* Error / Feature not available when using Amiga PCMCIA */
-        return 1;
-    } else if (offset & 1) {
-        addr += 0x10000;
-    }
-    v = addr[offset];
-
-#if PCMCIA_DEBUG
-    bug("pcmcia_ata_in(%x,%x)=%p=%x (%02X)\n", offset, port, &addr[offset], v);
-#endif
-
-    gayledebug();
-    
+//       volatile UBYTE *addr;
+//       UBYTE v;
+//   
+//       gayledebug();
+//   
+//       addr = (UBYTE*)port;
+//       if (offset == 1) {
+//           /* Error / Feature not available when using Amiga PCMCIA */
+//           return 1;
+//       } else if (offset & 1) {
+//           addr += 0x10000;
+//       }
+//       v = addr[offset];
+//   
+//   #if PCMCIA_DEBUG
+//       bug("pcmcia_ata_in(%x,%x)=%p=%x (%02X)\n", offset, port, &addr[offset], v);
+//   #endif
+//   
+//       gayledebug();
+//       
     return v;
 }
 
@@ -222,127 +222,127 @@ static BOOL custom_check(APTR addr)
     UWORD intena;
     BOOL iscustom = TRUE;
     
-    intena = custom->intenar;
-    custom->intena = 0x7fff;
-    custom->intena = 0xc000;
-    maybe_custom->intena = 0x7fff;
-    if (custom->intenar == 0x4000) {
-    	maybe_custom->intena = 0x7fff;
-    	if (custom->intenar == 0x4000)
-    	    iscustom = FALSE;
-    }
-    custom->intena = 0x7fff;
-    custom->intena = intena | 0x8000;
+//       intena = custom->intenar;
+//       custom->intena = 0x7fff;
+//       custom->intena = 0xc000;
+//       maybe_custom->intena = 0x7fff;
+//       if (custom->intenar == 0x4000) {
+//       	maybe_custom->intena = 0x7fff;
+//       	if (custom->intenar == 0x4000)
+//       	    iscustom = FALSE;
+//       }
+//       custom->intena = 0x7fff;
+//       custom->intena = intena | 0x8000;
     return iscustom;
 }
 
 static UBYTE *getport(struct amiga_driverdata *ddata)
 {
-    UBYTE id, status1, status2;
-    volatile UBYTE *port, *altport;
-    struct GfxBase *gfx;
-
-    port = NULL;
-    gfx = (struct GfxBase*)TaggedOpenLibrary(TAGGEDOPEN_GRAPHICS);
-    Disable();
-    id = ReadGayle();
-    if (id) {
-        port = (UBYTE*)GAYLE_BASE_1200;
-	ddata->gayleirqbase = (UBYTE*)GAYLE_IRQ_1200;
-    } else {
-    	// in AGA this area is never custom mirror but lets make sure..
-    	if (!custom_check((APTR)0xdd4000) && (gfx->ChipRevBits0 & GFXF_AA_ALICE)) {
-            port = (UBYTE*)GAYLE_BASE_4000;
-	    ddata->a4000 = TRUE;
-	    ddata->gayleirqbase = (UBYTE*)GAYLE_IRQ_4000;
-        }
-    }
-    Enable();
-    CloseLibrary((struct Library*)gfx);
-
-    D(bug("[ATA] Gayle ID=%02x. Possible IDE port=%08x.\n", id, (ULONG)port & ~3));
-    if (port == NULL)
-    	return NULL;
-
-    altport = port + 0x1010;
-    Disable();
-    port[ata_DevHead * 4] = ATAF_ERROR;
-    /* If nothing connected, we get back what we wrote, ATAF_ERROR set */
-    status1 = port[ata_Status * 4];
-    port[ata_DevHead * 4] = ATAF_DATAREQ;
-    status2 = port[ata_Status * 4];
-    port[ata_DevHead * 4] = 0;
-    Enable();
-    D(bug("[ATA] Status=%02x,%02x\n", status1, status2));
-    // BUSY and DRDY both active or ERROR/DATAREQ = no drive(s) = do not install driver
-    if (   (((status1 | status2) & (ATAF_BUSY | ATAF_DRDY)) == (ATAF_BUSY | ATAF_DRDY))
-    	|| ((status1 | status2) & (ATAF_ERROR | ATAF_DATAREQ)))
-    {
-    	D(bug("[ATA] Drives not detected\n"));
-    	return NULL;
-    }
-    if (ddata->doubler) {
-    	UBYTE v1, v2;
-    	/* check if AltControl is both readable and writable
-    	 * It is either floating or DevHead if IDE doubler is connected.
-    	 * AltControl = DevHead (R)
-    	 * Device Control = DevHead (W)
-    	 */
-    	Disable();
-	altport[ata_AltControl * 4] = 0;
-    	port[ata_DevHead * 4] = 1;
-	v1 = altport[ata_AltControl * 4];
-	altport[ata_AltControl * 4] = 2;
-    	port[ata_DevHead * 4] = 4;
-	v2 = altport[ata_AltControl * 4];
-	altport[ata_AltControl * 4] = 0;
-    	port[ata_DevHead * 4] = 0;
-	Enable();
-	if ((v1 == 0 && v2 == 2) || (v1 == 1 && v2 == 4) || (v1 == 0xff && v2 == 0xff)) {
-    	    ddata->doubler = 2;
-	} else {
-    	    ddata->doubler = 0;
-	}
-	D(bug("[ATA] IDE doubler check (%02X, %02X) = %d\n", v1, v2, ddata->doubler));
-    }
+//       UBYTE id, status1, status2;
+//       volatile UBYTE *port, *altport;
+//       struct GfxBase *gfx;
+//   
+//       port = NULL;
+//       gfx = (struct GfxBase*)TaggedOpenLibrary(TAGGEDOPEN_GRAPHICS);
+//       Disable();
+//       id = ReadGayle();
+//       if (id) {
+//           port = (UBYTE*)GAYLE_BASE_1200;
+//   	ddata->gayleirqbase = (UBYTE*)GAYLE_IRQ_1200;
+//       } else {
+//       	// in AGA this area is never custom mirror but lets make sure..
+//       	if (!custom_check((APTR)0xdd4000) && (gfx->ChipRevBits0 & GFXF_AA_ALICE)) {
+//               port = (UBYTE*)GAYLE_BASE_4000;
+//   	    ddata->a4000 = TRUE;
+//   	    ddata->gayleirqbase = (UBYTE*)GAYLE_IRQ_4000;
+//           }
+//       }
+//       Enable();
+//       CloseLibrary((struct Library*)gfx);
+//   
+//       D(bug("[ATA] Gayle ID=%02x. Possible IDE port=%08x.\n", id, (ULONG)port & ~3));
+//       if (port == NULL)
+//       	return NULL;
+//   
+//       altport = port + 0x1010;
+//       Disable();
+//       port[ata_DevHead * 4] = ATAF_ERROR;
+//       /* If nothing connected, we get back what we wrote, ATAF_ERROR set */
+//       status1 = port[ata_Status * 4];
+//       port[ata_DevHead * 4] = ATAF_DATAREQ;
+//       status2 = port[ata_Status * 4];
+//       port[ata_DevHead * 4] = 0;
+//       Enable();
+//       D(bug("[ATA] Status=%02x,%02x\n", status1, status2));
+//       // BUSY and DRDY both active or ERROR/DATAREQ = no drive(s) = do not install driver
+//       if (   (((status1 | status2) & (ATAF_BUSY | ATAF_DRDY)) == (ATAF_BUSY | ATAF_DRDY))
+//       	|| ((status1 | status2) & (ATAF_ERROR | ATAF_DATAREQ)))
+//       {
+//       	D(bug("[ATA] Drives not detected\n"));
+//       	return NULL;
+//       }
+//       if (ddata->doubler) {
+//       	UBYTE v1, v2;
+//       	/* check if AltControl is both readable and writable
+//       	 * It is either floating or DevHead if IDE doubler is connected.
+//       	 * AltControl = DevHead (R)
+//       	 * Device Control = DevHead (W)
+//       	 */
+//       	Disable();
+//   	altport[ata_AltControl * 4] = 0;
+//       	port[ata_DevHead * 4] = 1;
+//   	v1 = altport[ata_AltControl * 4];
+//   	altport[ata_AltControl * 4] = 2;
+//       	port[ata_DevHead * 4] = 4;
+//   	v2 = altport[ata_AltControl * 4];
+//   	altport[ata_AltControl * 4] = 0;
+//       	port[ata_DevHead * 4] = 0;
+//   	Enable();
+//   	if ((v1 == 0 && v2 == 2) || (v1 == 1 && v2 == 4) || (v1 == 0xff && v2 == 0xff)) {
+//       	    ddata->doubler = 2;
+//   	} else {
+//       	    ddata->doubler = 0;
+//   	}
+//   	D(bug("[ATA] IDE doubler check (%02X, %02X) = %d\n", v1, v2, ddata->doubler));
+//       }
     /* we may have connected drives */
     return (UBYTE*)port;
 }
 static void ackint(struct amiga_driverdata *ddata)
 {
-    if (ddata->a4000)
-        return;
-    /* Clear A600/A1200 IDE interrupt. (Stupid Gayle hardware) */
-    *ddata->gayleirqbase = 0x7c | (*ddata->gayleirqbase & 3);
+//       if (ddata->a4000)
+//           return;
+//       /* Clear A600/A1200 IDE interrupt. (Stupid Gayle hardware) */
+//       *ddata->gayleirqbase = 0x7c | (*ddata->gayleirqbase & 3);
 }
 static void ata_AckInterrupt(struct ata_Bus *bus)
 {
-    struct amiga_busdata *bdata = bus->ab_DriverData;
-    struct amiga_driverdata *ddata = bdata->ddata;
-    ackint(ddata);
+//       struct amiga_busdata *bdata = bus->ab_DriverData;
+//       struct amiga_driverdata *ddata = bdata->ddata;
+//       ackint(ddata);
 }
 
 static void callbusirq(struct amiga_driverdata *ddata)
 {
-    volatile UBYTE *port;
-    UBYTE status1, status2;
-    BOOL handled = FALSE;
-
-    if (ddata->bus[0])
-        handled |= ata_HandleIRQ(ddata->bus[0]->bus);
-    if (ddata->bus[1])
-        handled |= ata_HandleIRQ(ddata->bus[1]->bus);
-    if (handled)
-        return;
-
-    /* Handle spurious interrupt */
-    port = ddata->gaylebase;
-    status1 = port[ata_Status * 4];
-    status2 = 0;
-    if (ddata->doubler == 2)
-        status2 = port[0x1000 + ata_Status * 4];
-    ackint(ddata);
-    bug("[ATA] Spurious interrupt: %02X %02X\n", status1, status2);
+//       volatile UBYTE *port;
+//       UBYTE status1, status2;
+//       BOOL handled = FALSE;
+//   
+//       if (ddata->bus[0])
+//           handled |= ata_HandleIRQ(ddata->bus[0]->bus);
+//       if (ddata->bus[1])
+//           handled |= ata_HandleIRQ(ddata->bus[1]->bus);
+//       if (handled)
+//           return;
+//   
+//       /* Handle spurious interrupt */
+//       port = ddata->gaylebase;
+//       status1 = port[ata_Status * 4];
+//       status2 = 0;
+//       if (ddata->doubler == 2)
+//           status2 = port[0x1000 + ata_Status * 4];
+//       ackint(ddata);
+//       bug("[ATA] Spurious interrupt: %02X %02X\n", status1, status2);
 }
 
 AROS_INTH1(IDE_Handler_A1200, struct amiga_driverdata *, ddata)

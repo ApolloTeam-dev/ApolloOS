@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -56,7 +56,7 @@ VOID resetcustom(struct amigavideo_staticdata *csd)
     custom->vposw = 0x8000;
     custom->color[0] = DEFAULT_BORDER_GRAY;
 
-
+    custom->dmacon = 0x8180;
     custom->intena = 0x8020; /* VBL ON*/ 
 
     // Use AGA modes and create AGA copperlists only if AGA is "enabled"
@@ -168,7 +168,7 @@ VOID resetmode(struct amigavideo_staticdata *csd)
 
     D(bug("[AmigaVideo] %s()\n", __func__));
 
-    custom->dmacon = 0x0100;
+    //wrong custom->dmacon = 0x0100;
     csd->palmode = (GfxBase->DisplayFlags & NTSC) == 0;
     setpalntsc(csd);
 

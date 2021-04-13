@@ -2,7 +2,7 @@
 
 include $(SRCDIR)/config/aros.cfg
 
-FILES := class_init probe gayleata_busclass fastata_busclass interface_pio 
+FILES := class_init probe gayleata_busclass interface_pio 
 
 USER_CPPFLAGS := -D__OOP_NOMETHODBASES__ -D__OOP_NOATTRBASES__
 #USER_CPPFLAGS += -DDEBUG

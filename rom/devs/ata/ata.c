@@ -51,12 +51,6 @@ static void cmd_Read32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
     struct ata_Unit *unit = (struct ata_Unit *)IOStdReq(io)->io_Unit;
 
-    if (AF_Removable == (unit->au_Flags & (AF_Removable | AF_DiscPresent)))
-    {
-        D(bug("[ATA%02ld] %s: USUALLY YOU'D WANT TO CHECK IF DISC IS PRESENT FIRST\n", unit->au_UnitNum, __func__));
-        io->io_Error = TDERR_DiskChanged;
-        return;
-    }
 
     ULONG block = IOStdReq(io)->io_Offset;
     ULONG count = IOStdReq(io)->io_Length;
@@ -87,9 +81,77 @@ static void cmd_Read32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
             return;
         }
 
-        /* Call the Unit's access funtion */
-        io->io_Error = unit->au_Read32(unit, block, count,
-            IOStdReq(io)->io_Data, &cnt);
+        if (unit->au_SectorShift == 9) /* use cache with 512 Byte sectors only */
+        {
+            struct ata_Bus *bus = unit->au_Bus;
+            struct ataBase *base = bus->ab_Base;
+            ULONG unitNum = unit->au_UnitNum;
+
+            ULONG start;
+            ULONG i;
+            for (start = 0, i = 0; i < count; i++)
+            {
+                ULONG blockAdr = (block + i) & CACHE_MASK;
+                UQUAD blockTag = (block + i) & ~CACHE_MASK;
+
+                if ((unitNum < (1<<9)) &&
+                    (base->ata_CacheTags[blockAdr] == (blockTag | unitNum))) /* cache hit */
+                {
+                    CopyMem(base->ata_CacheData + blockAdr*512, IOStdReq(io)->io_Data + i*512, 512);
+
+                    if (start != i)
+                    {
+                        /* Call the Unit's access funtion */
+                        io->io_Error = unit->au_Read32(unit, block + start, i - start,
+                            IOStdReq(io)->io_Data + start*512, &cnt);
+
+                        if (io->io_Error)
+                        {
+                            IOStdReq(io)->io_Actual = 0;
+                            return;
+                        }
+
+                        blockAdr = (block + start) & CACHE_MASK;
+                        CopyMem(IOStdReq(io)->io_Data + start*512, base->ata_CacheData + blockAdr*512, (i - start)*512);
+                        for (ULONG j = start; j < i; j++)
+                        {
+                            blockAdr = (block + j) & CACHE_MASK;
+                            blockTag = (block + j) & ~CACHE_MASK;
+                            base->ata_CacheTags[blockAdr] = blockTag | unitNum;
+                        }
+                    }
+                    start = i + 1;
+                }
+            }
+            if (start != i)
+            {
+                /* Call the Unit's access funtion */
+                io->io_Error = unit->au_Read32(unit, block + start, i - start,
+                    IOStdReq(io)->io_Data + start*512, &cnt);
+
+                if (io->io_Error)
+                {
+                    IOStdReq(io)->io_Actual = 0;
+                    return;
+                }
+
+                ULONG blockAdr = (block + start) & CACHE_MASK;
+                CopyMem(IOStdReq(io)->io_Data + start*512, base->ata_CacheData + blockAdr*512, (i - start)*512);
+                for (ULONG j = start; j < i; j++)
+                {
+                    blockAdr = (block + j) & CACHE_MASK;
+                    ULONG blockTag = (block + j) & ~CACHE_MASK;
+                    base->ata_CacheTags[blockAdr] = blockTag | unitNum;
+                }
+            }
+            cnt = count << unit->au_SectorShift;
+        }
+        else
+        {
+            /* Call the Unit's access funtion */
+            io->io_Error = unit->au_Read32(unit, block, count,
+                IOStdReq(io)->io_Data, &cnt);
+        }
 
         IOStdReq(io)->io_Actual = cnt;
     }
@@ -103,12 +165,6 @@ static void cmd_Read64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
     struct ata_Unit *unit = (struct ata_Unit *)IOStdReq(io)->io_Unit;
 
-    if (AF_Removable == (unit->au_Flags & (AF_Removable | AF_DiscPresent)))
-    {
-        D(bug("[ATA%02ld] %s: USUALLY YOU'D WANT TO CHECK IF DISC IS PRESENT FIRST\n", unit->au_UnitNum, __func__));
-        io->io_Error = TDERR_DiskChanged;
-        return;
-    }
 
     UQUAD block = IOStdReq(io)->io_Offset | (UQUAD)(IOStdReq(io)->io_Actual) << 32;
     ULONG count = IOStdReq(io)->io_Length;
@@ -141,7 +197,76 @@ static void cmd_Read64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
                 io->io_Error = IOERR_BADADDRESS;
                 return;
             }
-            io->io_Error = unit->au_Read32(unit, (ULONG)(block & 0x0fffffff), count, IOStdReq(io)->io_Data, &cnt);
+
+            if (unit->au_SectorShift == 9) /* use cache with 512 Byte sectors only */
+            {
+                struct ata_Bus *bus = unit->au_Bus;
+                struct ataBase *base = bus->ab_Base;
+                ULONG unitNum = unit->au_UnitNum;
+
+                ULONG start;
+                ULONG i;
+                for (start = 0, i = 0; i < count; i++)
+                {
+                    ULONG blockAdr = (block + i) & CACHE_MASK;
+                    UQUAD blockTag = (block + i) & ~CACHE_MASK;
+    
+                    if ((unitNum < (1<<9)) &&
+                        (base->ata_CacheTags[blockAdr] == (blockTag | unitNum))) /* cache hit */
+                    {
+                        CopyMem(base->ata_CacheData + blockAdr*512, IOStdReq(io)->io_Data + i*512, 512);
+
+                        if (start != i)
+                        {
+                            /* Call the Unit's access funtion */
+                            io->io_Error = unit->au_Read32(unit, (ULONG)(block & 0x0fffffff) + start, i - start,
+                                IOStdReq(io)->io_Data + start*512, &cnt);
+        
+                            if (io->io_Error)
+                            {
+                                IOStdReq(io)->io_Actual = 0;
+                                return;
+                            }
+        
+                            blockAdr = (block + start) & CACHE_MASK;
+                            CopyMem(IOStdReq(io)->io_Data + start*512, base->ata_CacheData + blockAdr*512, (i - start)*512);
+                            for (ULONG j = start; j < i; j++)
+                            {
+                                blockAdr = (block + j) & CACHE_MASK;
+                                blockTag = (block + j) & ~CACHE_MASK;
+                                base->ata_CacheTags[blockAdr] = blockTag | unitNum;
+                            }
+                        }
+                        start = i + 1;
+                    }
+                }
+                if (start != i)
+                {
+                    /* Call the Unit's access funtion */
+                    io->io_Error = unit->au_Read32(unit, (ULONG)(block & 0x0fffffff) + start, i - start,
+                        IOStdReq(io)->io_Data + start*512, &cnt);
+    
+                    if (io->io_Error)
+                    {
+                        IOStdReq(io)->io_Actual = 0;
+                        return;
+                    }
+    
+                    ULONG blockAdr = (block + start) & CACHE_MASK;
+                    CopyMem(IOStdReq(io)->io_Data + start*512, base->ata_CacheData + blockAdr*512, (i - start)*512);
+                    for (ULONG j = start; j < i; j++)
+                    {
+                        blockAdr = (block + j) & CACHE_MASK;
+                        ULONG blockTag = (block + j) & ~CACHE_MASK;
+                        base->ata_CacheTags[blockAdr] = blockTag | unitNum;
+                    }
+                }
+                cnt = count << unit->au_SectorShift;
+            }
+            else
+            {
+                io->io_Error = unit->au_Read32(unit, (ULONG)(block & 0x0fffffff), count, IOStdReq(io)->io_Data, &cnt);
+            }
         }
         else
         {
@@ -152,7 +277,75 @@ static void cmd_Read64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
                 return;
             }
 
-            io->io_Error = unit->au_Read64(unit, block, count, IOStdReq(io)->io_Data, &cnt);
+            if (unit->au_SectorShift == 9) /* use cache with 512 Byte sectors only */
+            {
+                struct ata_Bus *bus = unit->au_Bus;
+                struct ataBase *base = bus->ab_Base;
+                ULONG unitNum = unit->au_UnitNum;
+    
+                ULONG start;
+                ULONG i;
+                for (start = 0, i = 0; i < count; i++)
+                {
+                    ULONG blockAdr = (block + i) & CACHE_MASK;
+                    UQUAD blockTag = (block + i) & ~CACHE_MASK;
+    
+                    if ((unitNum < (1<<9)) &&
+                        (base->ata_CacheTags[blockAdr] == (blockTag | unitNum ))) /* cache hit */
+                    {
+                        CopyMem(base->ata_CacheData + blockAdr*512, IOStdReq(io)->io_Data + i*512, 512);
+
+                        if (start != i)
+                        {
+                            /* Call the Unit's access funtion */
+                            io->io_Error = unit->au_Read64(unit, block + start, i - start,
+                                IOStdReq(io)->io_Data + start*512, &cnt);
+    
+                            if (io->io_Error)
+                            {
+                                IOStdReq(io)->io_Actual = 0;
+                                return;
+                            }
+    
+                            blockAdr = (block + start) & CACHE_MASK;
+                            CopyMem(IOStdReq(io)->io_Data + start*512, base->ata_CacheData + blockAdr*512, (i - start)*512);
+                            for (ULONG j = start; j < i; j++)
+                            {
+                                blockAdr = (block + j) & CACHE_MASK;
+                                blockTag = (block + j) & ~CACHE_MASK;
+                                base->ata_CacheTags[blockAdr] = blockTag | unitNum;
+                            }
+                        }
+                        start = i + 1;
+                    }
+                }
+                if (start != i)
+                {
+                    /* Call the Unit's access funtion */
+                    io->io_Error = unit->au_Read64(unit, block + start, i - start,
+                        IOStdReq(io)->io_Data + start*512, &cnt);
+    
+                    if (io->io_Error)
+                    {
+                        IOStdReq(io)->io_Actual = 0;
+                        return;
+                    }
+    
+                    ULONG blockAdr = (block + start) & CACHE_MASK;
+                    CopyMem(IOStdReq(io)->io_Data + start*512, base->ata_CacheData + blockAdr*512, (i - start)*512);
+                    for (ULONG j = start; j < i; j++)
+                    {
+                        blockAdr = (block + j) & CACHE_MASK;
+                        ULONG blockTag = (block + j) & ~CACHE_MASK;
+                        base->ata_CacheTags[blockAdr] = blockTag | unitNum;
+                    }
+                }
+                cnt = count << unit->au_SectorShift;
+            }
+            else
+            {
+                io->io_Error = unit->au_Read64(unit, block, count, IOStdReq(io)->io_Data, &cnt);
+            }
         }
 
         IOStdReq(io)->io_Actual = cnt;
@@ -163,13 +356,6 @@ static void cmd_Read64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 static void cmd_Write32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
     struct ata_Unit *unit = (struct ata_Unit *)IOStdReq(io)->io_Unit;
-
-    if (AF_Removable == (unit->au_Flags & (AF_Removable | AF_DiscPresent)))
-    {
-        D(bug("[ATA%02ld] %s: USUALLY YOU'D WANT TO CHECK IF DISC IS PRESENT FIRST\n", unit->au_UnitNum, __func__));
-        io->io_Error = TDERR_DiskChanged;
-        return;
-    }
 
     ULONG block = IOStdReq(io)->io_Offset;
     ULONG count = IOStdReq(io)->io_Length;
@@ -207,6 +393,14 @@ static void cmd_Write32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
         io->io_Error = unit->au_Write32(unit, block, count,
             IOStdReq(io)->io_Data, &cnt);
 
+        struct ata_Bus *bus = unit->au_Bus;
+        struct ataBase *base = bus->ab_Base;
+        for (int i = 0; i < count; i++)
+        {
+            ULONG blockAdr = (block + i) & CACHE_MASK;
+            base->ata_CacheTags[blockAdr] = 0xfffffffffffffffful;
+        }
+
         IOStdReq(io)->io_Actual = cnt;
     }
 }
@@ -218,13 +412,6 @@ static void cmd_Write32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 static void cmd_Write64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
     struct ata_Unit *unit = (struct ata_Unit *)IOStdReq(io)->io_Unit;
-
-    if (AF_Removable == (unit->au_Flags & (AF_Removable | AF_DiscPresent)))
-    {
-        D(bug("[ATA%02ld] %s: USUALLY YOU'D WANT TO CHECK IF DISC IS PRESENT FIRST\n", unit->au_UnitNum, __func__));
-        io->io_Error = TDERR_DiskChanged;
-        return;
-    }
 
     UQUAD block = IOStdReq(io)->io_Offset | (UQUAD)(IOStdReq(io)->io_Actual) << 32;
     ULONG count = IOStdReq(io)->io_Length;
@@ -280,8 +467,17 @@ static void cmd_Write64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
             io->io_Error = unit->au_Write64(unit, block, count,
                 IOStdReq(io)->io_Data, &cnt);
         }
+
+        struct ata_Bus *bus = unit->au_Bus;
+        struct ataBase *base = bus->ab_Base;
+        for (int i = 0; i < count; i++)
+        {
+            ULONG blockAdr = (block + i) & CACHE_MASK;
+            base->ata_CacheTags[blockAdr] = 0xfffffffffffffffful;
+        }
+
         IOStdReq(io)->io_Actual = cnt;
-   }
+    }
 }
 
 
@@ -310,35 +506,6 @@ static void cmd_Flush(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 */
 static void cmd_TestChanged(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
-    struct ata_Unit *unit = (struct ata_Unit *)io->io_Unit;
-    struct IORequest *msg;
-
-    D(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
-
-    if ((unit->au_XferModes & AF_XFER_PACKET) && (unit->au_Flags & AF_Removable))
-    {
-        atapi_TestUnitOK(unit);
-        if (unit->au_Flags & AF_DiscChanged)
-        {
-            unit->au_ChangeNum++;
-
-            Forbid();
-
-            /* old-fashioned RemoveInt call first */
-            if (unit->au_RemoveInt)
-                Cause(unit->au_RemoveInt);
-
-            /* And now the whole list of possible calls */
-            ForeachNode(&unit->au_SoftList, msg)
-            {
-                Cause((struct Interrupt *)IOStdReq(msg)->io_Data);
-            }
-
-            unit->au_Flags &= ~AF_DiscChanged;
-
-            Permit();
-        }
-    }
 }
 
 static void cmd_Update(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
@@ -874,98 +1041,6 @@ AROS_LH1(ULONG, GetBlkSize,
  * The check is done by sending HD_SCSICMD+1 command (internal testchanged
  * command). ATAPI units should already handle the command further.
  */
-void DaemonCode(struct ataBase *ATABase, struct ata_Controller *ataNode)
-{
-    struct IORequest *timer;	// timer
-    UBYTE b = 0;
-    ULONG sigs;
-
-    D(bug("[ATA**] ATA DAEMON woke for controller @ 0x%p\n", ataNode));
-
-    /*
-     * Prepare message ports and timer.device's request
-     */
-    timer  = ata_OpenTimer(ATABase);
-    if (!timer)
-    {
-        D(bug("[ATA++] Failed to open timer!\n"));
-
-        Forbid();
-        Signal(ataNode->ac_daemonParent, SIGF_SINGLE);
-        return;
-    }
-
-    /* Calibrate 400ns delay */
-    if (!ata_Calibrate(timer, ATABase))
-    {
-        ata_CloseTimer(timer);
-        Forbid();
-        Signal(ataNode->ac_daemonParent, SIGF_SINGLE);
-        return;
-    }
-
-    /* This also signals that we have initialized successfully */
-    ataNode->ac_Daemon = FindTask(NULL);
-    Signal(ataNode->ac_daemonParent, SIGF_SINGLE);
-
-    D(bug("[ATA++] Starting sweep medium presence detection\n"));
-
-    /*
-     * Endless loop
-     */
-    do
-    {
-        /*
-         * call separate IORequest for every ATAPI device
-         * we're calling HD_SCSICMD+1 command here -- anything like test unit ready?
-         * FIXME: This is not a very nice approach in terms of performance.
-         * This inserts own command into command queue every 2 seconds, so
-         * this would give periodic performance drops under high loads.
-         * It would be much better if unit tasks ping their devices by themselves,
-         * when idle. This would also save us from lots of headaches with dealing
-         * with list of these requests. Additionally i start disliking all these
-         * semaphores.
-         */
-        if (0 == (b & 1))
-        {
-            struct IOStdReq *ios;
-
-            DB2(bug("[ATA++] Detecting media presence\n"));
-            ObtainSemaphore(&ataNode->DaemonSem);
-
-            ForeachNode(&ataNode->Daemon_ios, ios)
-            {
-                /* Using the request will clobber its Node. Save links. */
-                struct Node *s = ios->io_Message.mn_Node.ln_Succ;
-                struct Node *p = ios->io_Message.mn_Node.ln_Pred;
-
-                DoIO((struct IORequest *)ios);
-
-                ios->io_Message.mn_Node.ln_Succ = s;
-                ios->io_Message.mn_Node.ln_Pred = p;
-            }
-
-            ReleaseSemaphore(&ataNode->DaemonSem);
-        }
-
-        /*
-         * And then hide and wait for 1 second
-         */
-        DB2(bug("[ATA++] 1 second delay, timer 0x%p...\n", timer));
-        sigs = ata_WaitTO(timer, 1, 0, SIGBREAKF_CTRL_C);
-
-        DB2(bug("[ATA++] Delay completed\n"));
-        b++;
-    } while (!sigs);
-
-    ataNode->ac_Daemon = NULL;
-    D(bug("[ATA++] Daemon quits\n"));
-
-    ata_CloseTimer(timer);
-
-    Forbid();
-    Signal(ataNode->ac_daemonParent, SIGF_SINGLE);
-}
 
 /*
     Bus task body. It doesn't really do much. It receives simply all IORequests
@@ -983,7 +1058,7 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
     DINIT(bug("[ATA**] Task started (bus: %u)\n", bus->ab_BusNum));
 
     bus->ab_Timer = ata_OpenTimer(ATABase);
-    bus->ab_BounceBufferPool = CreatePool(MEMF_CLEAR | MEMF_31BIT, 131072, 65536);
+//    bus->ab_BounceBufferPool = CreatePool(MEMF_CLEAR | MEMF_31BIT, 131072, 65536);
 
     /* Get the signal used for sleeping */
     bus->ab_Task = FindTask(0);
@@ -1020,27 +1095,6 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
                         ata_RegisterVolume(0, 0, unit);
 
                         OOP_GetAttr(bus->ab_Object, aHidd_ATABus_Controller, (IPTR *)&ataNode);
-                        if (ataNode)
-                        {
-                            /* For ATAPI device we also submit media presence detection request */
-                            unit->DaemonReq = (struct IOStdReq *)CreateIORequest(ataNode->DaemonPort, sizeof(struct IOStdReq));
-                            if (unit->DaemonReq)
-                            {
-                                /*
-                                 * We don't want to keep stalled open count of 1, so we
-                                 * don't call OpenDevice() here. Instead we fill in the needed
-                                 * fields manually.
-                                 */
-                                unit->DaemonReq->io_Device = &ATABase->ata_Device;
-                                unit->DaemonReq->io_Unit   = &unit->au_Unit;
-                                unit->DaemonReq->io_Command = HD_SCSICMD+1;
-
-                                ObtainSemaphore(&ataNode->DaemonSem);
-                                AddTail((struct List *)&ataNode->Daemon_ios,
-                                        &unit->DaemonReq->io_Message.mn_Node);
-                                ReleaseSemaphore(&ataNode->DaemonSem);
-                            }
-                        }
                     }
                     else
                     {

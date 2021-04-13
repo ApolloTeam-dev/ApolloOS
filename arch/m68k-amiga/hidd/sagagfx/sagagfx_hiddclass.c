@@ -65,126 +65,6 @@ enum {
     ML_COUNT
 };
 
-struct TagItem * LoadExternalSyncs(OOP_Class *cl)
-{
-    struct Process *pr      = NULL;
-    struct TagItem *retVal  = NULL;
-    struct TagItem *lastTag = NULL;
-    
-    pr = (struct Process *)FindTask(NULL);
-    
-    if (pr->pr_Task.tc_Node.ln_Type == NT_PROCESS)
-    {
-        struct DOSBase *DOSBase;
-        
-        APTR winptr = pr->pr_WindowPtr;
-        pr->pr_WindowPtr = (APTR)-1;
-        
-        DOSBase = (struct DOSBase *)OpenLibrary("dos.library", 0UL);
-        
-        if (DOSBase)
-        {
-            BPTR fp = Open("DEVS:modelines.txt", MODE_OLDFILE);
-            
-            if (fp)
-            {
-                TEXT buf[512];
-                
-                while (FGets(fp, buf, 512))
-                {
-                    char *p = buf;
-                    ULONG i, Modeline[ML_COUNT];
-                    
-                    if (p[0] != '#')
-                    {
-                        for (i = 0; i < ML_COUNT; i++)
-                        {
-                            LONG n = StrToLong(p, (LONG *)&Modeline[i]);
-                            
-                            if (n == -1 || Modeline[i] == 0 || (i != ML_PIXCLK && Modeline[i] > 4000))
-                            {
-                                break;
-                            }
-                            
-                            p += n;
-                        }
-                        
-                        if (i == ML_COUNT)
-                        {
-                            struct TagItem *tags = AllocVecPooled(XSD(cl)->mempool, sizeof(struct TagItem)*14);
-                            char *desc = AllocVecPooled(XSD(cl)->mempool, 32);
-                            
-                            if (lastTag != NULL)
-                            {
-                                lastTag[1].ti_Tag  = TAG_MORE;
-                                lastTag[1].ti_Data = (IPTR)tags;
-                            }
-                            
-                            snprintf(desc, 32, "SAGA(User):%dx%d", Modeline[ML_HPIXEL], Modeline[ML_VPIXEL]);
-                            
-                            tags[0].ti_Tag   = aHidd_Gfx_SyncTags;
-                            tags[0].ti_Data  = (IPTR)&tags[2];
-                            
-                            tags[1].ti_Tag   = TAG_DONE;
-                            tags[1].ti_Data  = 0;
-                            
-                            tags[2].ti_Tag   = aHidd_Sync_PixelClock;
-                            tags[2].ti_Data  = Modeline[ML_PIXCLK] * 1000;
-                            
-                            tags[3].ti_Tag   = aHidd_Sync_HDisp;
-                            tags[3].ti_Data  = Modeline[ML_HPIXEL];
-                            
-                            tags[4].ti_Tag   = aHidd_Sync_HSyncStart;
-                            tags[4].ti_Data  = Modeline[ML_HSSTRT];
-                            
-                            tags[5].ti_Tag   = aHidd_Sync_HSyncEnd;
-                            tags[5].ti_Data  = Modeline[ML_HSSTOP];
-                            
-                            tags[6].ti_Tag   = aHidd_Sync_HTotal;
-                            tags[6].ti_Data  = Modeline[ML_HTOTAL];
-                            
-                            tags[7].ti_Tag   = aHidd_Sync_VDisp;
-                            tags[7].ti_Data  = Modeline[ML_VPIXEL];
-                            
-                            tags[8].ti_Tag   = aHidd_Sync_VSyncStart;
-                            tags[8].ti_Data  = Modeline[ML_VSSTRT];
-                            
-                            tags[9].ti_Tag   = aHidd_Sync_VSyncEnd;
-                            tags[9].ti_Data  = Modeline[ML_VSSTOP];
-                            
-                            tags[10].ti_Tag  = aHidd_Sync_VTotal;
-                            tags[10].ti_Data = Modeline[ML_VTOTAL];
-                            
-                            tags[11].ti_Tag  = aHidd_Sync_Flags;
-                            tags[11].ti_Data = Modeline[ML_HVSYNC];
-                            
-                            tags[12].ti_Tag  = aHidd_Sync_Description;
-                            tags[12].ti_Data = (IPTR)desc;
-                            
-                            tags[13].ti_Tag  = TAG_DONE;
-                            tags[13].ti_Data = 0UL;
-                            
-                            lastTag = tags;
-                            
-                            if (retVal == 0)
-                            {
-                                retVal = tags;
-                            }
-                        }
-                    }
-                }
-                
-                Close(fp);
-            }
-            
-            CloseLibrary((struct Library *)DOSBase);
-        }
-        
-        pr->pr_WindowPtr = winptr;
-    }
-
-    return(retVal);
-}
 
 OOP_Object *METHOD(SAGAGfx, Root, New)
 {
@@ -193,42 +73,47 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
     struct TagItem *userSyncs = NULL;
     
     // Predefined resolutions
-    MAKE_SYNC(320x200, 28375, 320, 320, 320, 908,  200, 200, 200, 524, 1, "SAGA:320x200");
-    MAKE_SYNC(320x240, 28375, 320, 320, 320, 908,  240, 240, 240, 524, 1, "SAGA:320x240");
-    MAKE_SYNC(320x256, 28375, 320, 320, 320, 908,  256, 256, 256, 524, 1, "SAGA:320x256");
-    MAKE_SYNC(640x400, 28375, 640, 640, 640, 908,  400, 400, 400, 524, 1, "SAGA:640x400");
-    MAKE_SYNC(640x480, 28375, 640, 640, 640, 908,  480, 480, 480, 524, 1, "SAGA:640x480");
-    MAKE_SYNC(640x512, 28375, 640, 640, 640, 908,  512, 512, 512, 524, 1, "SAGA:640x512");
-    MAKE_SYNC(960x540, 28375*2, 960, 960, 960, 1516,  540, 540, 540, 626, 1, "SAGA:960x540");
-    MAKE_SYNC(480x270, 28375, 480, 480, 480, 1516,  270, 270, 270, 626, 1, "SAGA:480x270");
-    MAKE_SYNC(304x224, 28375, 304, 304, 304, 908,  224, 224, 224, 524, 1, "SAGA:304x224");
-    MAKE_SYNC(1280x720,28375*2,1280,1280,1280,1516,  720, 720, 720, 750, 1, "SAGA1280x720");
-    MAKE_SYNC(640x360, 28375*2, 640, 640, 640,1516,  360, 360, 360, 750, 1, "SAGA:640x360");
-    MAKE_SYNC(800x600, 28375*2, 800, 800, 800, 1352,  600, 600, 600, 700, 1, "SAGA:800x600");
-    MAKE_SYNC(1024x768, 28375*2,1024,1024,1024,1216,  768, 768, 768, 780, 1, "SAGA1024x768");
-    MAKE_SYNC(720x576, 28375, 720, 720, 720, 908,  576, 576, 576, 626, 1, "SAGA:720x576");
-    MAKE_SYNC(1920x1080,28375*2,1920,1920,1920,2100, 1080,1080,1080,1127, 1, "SAGA1920x108");
+
+   MAKE_SYNC(320x200, 28375, 640/2, 753/2, 817/2, 908/2,  400/2, 490/2, 492/2, 524/2, 1, "SAGA:320x200");
+   MAKE_SYNC(320x240, 28375, 640/2, 753/2, 817/2, 908/2,  480/2, 490/2, 492/2, 524/2, 1, "SAGA:320x240");
+   MAKE_SYNC(320x256, 28375, 640/2, 704/2, 763/2, 800/2,  512/2, 544/2, 554/2, 592/2, 1, "SAGA:320x256");
+   MAKE_SYNC(640x400, 28375, 640, 753, 817, 908,  400, 490, 492, 524, 1, "SAGA:640x400");
+   MAKE_SYNC(640x480, 28375, 640, 753, 817, 908,  480, 490, 492, 524, 1, "SAGA:640x480");
+   MAKE_SYNC(640x512, 28375, 640, 704, 763, 800,  512, 544, 554, 592, 1, "SAGA:640x512");
+    MAKE_SYNC(960x540, 28375*2, 960, 1024, 1124, 1516,  540, 552, 556, 626, 1, "SAGA:960x540");
+    MAKE_SYNC(480x270, 28375*2, 960/2, 1024/2, 1124/2, 1516/2,  540/2, 552/2, 556/2, 626/2, 1, "SAGA:480x270");
+    MAKE_SYNC(304x224, 28375, 304, 753/2, 817/2, 908/2,  224, 490/2, 492/2, 524/2, 1, "SAGA:304x224");
+    MAKE_SYNC(1280x720,28375*2,1280,1390,1430,1516,  720, 725, 730, 750, 1, "SAGA1280x720");
+    MAKE_SYNC(640x360, 28375*2, 640, 1390, 1430,1516,  360, 725, 730, 750, 1, "SAGA:640x360");
+    MAKE_SYNC(800x600, 28375*2, 800, 900, 1000, 1352,  600, 620, 640, 700, 1, "SAGA:800x600");
+    MAKE_SYNC(1024x768, 28375*2,1024,1100,1150,1216,  768, 770, 774, 780, 1, "SAGA1024x768");
+    MAKE_SYNC(720x576, 28375, 720, 753, 817, 908,  576, 582, 586, 626, 1, "SAGA:720x576");
+    MAKE_SYNC(848x480, 28375*2, 848, 936, 984, 1516,  480, 490, 492, 626, 1, "SAGA:848x480");
+
+
     
-    struct TagItem syncs[] =
+    const struct TagItem syncs[] =
 	{
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_320x200         },
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_320x240         },
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_320x256         },
-		{ aHidd_Gfx_SyncTags,         (IPTR)sync_480x270         },
-		{ aHidd_Gfx_SyncTags,         (IPTR)sync_640x360         },
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_640x400         },
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_640x480         },
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_640x512         },
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_960x540         },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_480x270         },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_304x224         },
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_1280x720        },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_640x360         },
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_800x600         },
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_1024x768        },
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_720x576         },
-		{ aHidd_Gfx_SyncTags,         (IPTR)sync_1920x1080       },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_848x480       },
 		{ TAG_DONE,                   0UL                        }
 	};
 
     
-    struct TagItem pftags_32bpp[] = 
+    const struct TagItem pftags_32bpp[] = 
     {
         { aHidd_PixFmt_RedShift,      8                          }, /* 0 */
         { aHidd_PixFmt_GreenShift,    16                         }, /* 1 */
@@ -247,7 +132,7 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
         { TAG_DONE,                   0UL                        }
     };
     
-    struct TagItem pftags_24bpp[] = 
+    const struct TagItem pftags_24bpp[] = 
     {
         { aHidd_PixFmt_RedShift,      8                          }, /* 0 */
         { aHidd_PixFmt_GreenShift,    16                         }, /* 1 */
@@ -266,7 +151,7 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
         { TAG_DONE,                   0UL                        }
     };
     
-    struct TagItem pftags_16bpp[] = 
+    const struct TagItem pftags_16bpp[] = 
     {
         { aHidd_PixFmt_RedShift,      16                         }, /* 0 */
         { aHidd_PixFmt_GreenShift,    21                         }, /* 1 */
@@ -285,7 +170,7 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
         { TAG_DONE,                   0UL                        }
     };
     
-    struct TagItem pftags_8bpp[] = 
+    const struct TagItem pftags_8bpp[] = 
     {
         { aHidd_PixFmt_RedShift,      8                          }, /* 0 */
         { aHidd_PixFmt_GreenShift,    16                         }, /* 1 */
@@ -306,21 +191,13 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
         { TAG_DONE,                   0UL                        }
     };
     
-    struct TagItem modetags[] = 
+    const struct TagItem modetags[] = 
     {
         { aHidd_Gfx_PixFmtTags,       (IPTR)pftags_32bpp         },
         { aHidd_Gfx_PixFmtTags,       (IPTR)pftags_24bpp         },
         { aHidd_Gfx_PixFmtTags,       (IPTR)pftags_16bpp         },
         { aHidd_Gfx_PixFmtTags,       (IPTR)pftags_8bpp          },
-/*
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_320x200         }, // syncs[0]
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_320x240         }, // syncs[1]
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_320x256         }, // syncs[2]
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_640x400         }, // syncs[3]
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_640x480         }, // syncs[4]
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_640x512         }, // syncs[5]
-        { aHidd_Gfx_SyncTags,         (IPTR)sync_960x540         }, // syncs[6]
-*/
+
         { TAG_MORE,                   (IPTR)syncs                },
         { TAG_DONE,                   0UL                        }
     };
@@ -340,7 +217,6 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
     
     if (data->sagagfxhidd)
     {
-        D(bug("[SAGAGfx] New() => Already instanciated. \n"));
         return(NULL);
     }
     
@@ -353,62 +229,9 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
         read the driver specific tooltypes. Eventually we parse those needed.
     */
     
-    D(bug("[SAGAGfx] New() => Read Icon Tooltypes. \n"));
-    
-    struct Library *IconBase = OpenLibrary("icon.library", 0);
-    
     data->useHWSprite = TRUE;
     
-    if (IconBase)
-    {
-        struct DiskObject *icon;
-        STRPTR myName = FindTask(NULL)->tc_Node.ln_Name;
-        
-        icon = GetDiskObject(myName);
-        
-        if (icon)
-        {
-            // TOOLTYPE: HWSPRITE=(YES|NO)
-            
-            STRPTR hwSprite = FindToolType(icon->do_ToolTypes, "HWSPRITE");
-            
-            if (hwSprite && MatchToolValue(hwSprite, "No"))
-            {
-                data->useHWSprite = FALSE;
-            }
-            
-            // TOOLTYPE: ...
-            
-            // TOOLTYPE: ...
-            
-            // TOOLTYPE: ...
-            
-            FreeDiskObject(icon);
-        }
-        
-        CloseLibrary(IconBase);
-    }
     
-    D(bug("[SAGAGfx] Load UserSyncs. \n"));
-    
-	switch (data->boardModel)
-    {
-        case VREG_BOARD_V4:
-        case VREG_BOARD_V4SA:
-            // V4 METHOD
-            break;
-        default:
-            // V2 METHOD
-            userSyncs = LoadExternalSyncs(cl);
-            if (userSyncs)
-            {
-                syncs[7].ti_Tag  = TAG_MORE;
-                syncs[7].ti_Data = (IPTR)userSyncs;
-            }
-            break;
-	}
-    
-    D(bug("[SAGAGfx] New() called. \n"));
     
     data->SAGAGfx_SetSpriteHide();
     
@@ -423,16 +246,12 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
         data->sagagfxhidd = o;
     }
     
-    D(bug("[SAGAGfx] New() = %p\n", o));
-    
     return(o);
 }
 
 VOID METHOD(SAGAGfx, Root, Dispose)
 {
     struct SAGAGfx_staticdata *data = XSD(cl);
-    
-    D(bug("[SAGA] Root::Dispose()\n"));
     
     data->sagagfxhidd = NULL;
     DeletePool(data->mempool);
@@ -487,8 +306,6 @@ BOOL METHOD(SAGAGfx, Hidd_Gfx, SetCursorPos)
     {
         struct SAGAGfxBitmapData *bmdata = OOP_INST_DATA(data->bmclass, data->visible);
         
-        D(bug("[SAGA] SetCursorPos(%d, %d)\n", msg->x, msg->y));
-        
         WORD x = msg->x;
         WORD y = msg->y;
         
@@ -509,8 +326,6 @@ BOOL METHOD(SAGAGfx, Hidd_Gfx, SetCursorPos)
 VOID METHOD(SAGAGfx, Hidd_Gfx, SetCursorVisible)
 {
     struct SAGAGfx_staticdata *data = XSD(cl);
-    
-    D(bug("[SAGA] SetCursorVisible(%d)\n", msg->visible));
     
     if (msg->visible)
     {
@@ -539,12 +354,6 @@ BOOL METHOD(SAGAGfx, Hidd_Gfx, SetCursorShape)
     OOP_GetAttr(msg->shape, aHidd_BitMap_ColorMap, &cmap  );
     OOP_GetAttr(cmap, aHidd_ColorMap_NumEntries, &num_colors);
     
-    //Debug
-    D(bug( "Mouse height: %ld\n", height ));
-    D(bug( "Mouse width: %ld\n", width ));
-    D(bug( "Mouse depth: %ld\n", depth ));
-    D(bug( "Mouse cmap: 0x%lx\n", cmap ));
-    D(bug( "Mouse colour count: 0x%lx\n", num_colors ));
 
 
     if (cmap)
@@ -553,8 +362,6 @@ BOOL METHOD(SAGAGfx, Hidd_Gfx, SetCursorShape)
         {
             num_colors = 4;
         }
-        
-        D(bug("[SAGA] number of colors: %d\n", num_colors));
         
         for (int i = 0; i < num_colors; i++)
         {
@@ -566,19 +373,9 @@ BOOL METHOD(SAGAGfx, Hidd_Gfx, SetCursorShape)
                 ((c.green >> 12) & 15) << 4 |
                 ((c.blue  >> 12) & 15) << 0;
             
-            D(bug("[SAGA] c%02x: %x %x %x %x %08x\n", i, 
-                c.red, 
-                c.green, 
-                c.blue, 
-                c.alpha, 
-                c.pixval));
         }
     }
     
-    D(bug("[SAGA] SetCursorShape(%p, %d, %d, %d)\n", msg->shape, 
-        width, 
-        height, 
-        depth));
     
     if (width  > 16) width  = 16;
     if (height > 16) height = 16;
@@ -608,7 +405,6 @@ OOP_Object *METHOD(SAGAGfx, Hidd_Gfx, CreateObject)
     
     OOP_Object *object = NULL;
     
-    D(bug("[SAGA] Hidd_Gfx::CreateObject()\n"));
     
     if (msg->cl == data->basebm)
     {
@@ -626,14 +422,9 @@ OOP_Object *METHOD(SAGAGfx, Hidd_Gfx, CreateObject)
         displayable = GetTagData(aHidd_BitMap_Displayable, FALSE, msg->attrList);
         framebuffer = GetTagData(aHidd_BitMap_FrameBuffer, FALSE, msg->attrList);
         
-        D(bug("[SAGA] displayable=%d, framebuffer=%d\n", 
-            displayable, 
-            framebuffer));
         
         if (displayable)
         {
-            D(bug("[SAGA] Displayable bitmap.\n"));
-            
             /* Only displayable bitmaps are bitmaps of our class */
             tags[0].ti_Tag  = aHidd_BitMap_ClassPtr;
             tags[0].ti_Data = (IPTR)data->bmclass;
@@ -643,12 +434,9 @@ OOP_Object *METHOD(SAGAGfx, Hidd_Gfx, CreateObject)
             /* Non-displayable friends of our bitmaps are our bitmaps too */
             OOP_Object *friend = (OOP_Object *)GetTagData(aHidd_BitMap_Friend, 0, msg->attrList);
             
-            D(bug("[SAGA] Not displayable. Friend=%p.\n", friend));
             
             if (friend && (OOP_OCLASS(friend) == data->bmclass))
             {
-                D(bug("[SAGA] ClassID = ChunkyBM, friend is OK, returning correct class\n"));
-                
                 tags[0].ti_Tag  = aHidd_BitMap_ClassPtr;
                 tags[0].ti_Data = (IPTR)data->bmclass;
             }
@@ -665,8 +453,6 @@ OOP_Object *METHOD(SAGAGfx, Hidd_Gfx, CreateObject)
         object = (OOP_Object *)OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
     }
     
-    D(bug("[SAGA] CreateObject returns %p\n", object));
-
     return object;
 }
 
@@ -680,25 +466,10 @@ void METHOD(SAGAGfx, Hidd_Gfx, CopyBox)
     IPTR  src  = 0;
     IPTR  dst  = 0;
     
-    D(bug("[SAGA] CopyBox(%p, %p, dx:%d, dy:%d, sx:%d, sy:%d, w:%d, h:%d)\n", 
-        msg->src, 
-        msg->dest, 
-        msg->destX, 
-        msg->destY, 
-        msg->srcX, 
-        msg->srcY, 
-        msg->width, 
-        msg->height));
     
     if (OOP_OCLASS(msg->src ) != data->bmclass ||
         OOP_OCLASS(msg->dest) != data->bmclass)
     {
-        D(bug("[SAGA] CopyBox - either source or dest is not SAGA bitmap\n"));
-        
-        D(bug("[SAGA] oclass src: %p, oclass dst: %p, bmclass: %p\n", 
-            OOP_OCLASS(msg->src), 
-            OOP_OCLASS(msg->dest), 
-            data->bmclass));
         
         OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
     }
@@ -711,15 +482,11 @@ void METHOD(SAGAGfx, Hidd_Gfx, CopyBox)
             bm_dst->bitsperpix <= 8 || 
            (bm_src->bitsperpix != bm_dst->bitsperpix))
         {
-            D(bug("[SAGA] bpp_src=%d, bpp_dst=%d\n", 
-                bm_src->bitsperpix, 
-                bm_dst->bitsperpix));
             
             OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
         }
         else
         {
-            D(bug("[SAGA] both bitmaps compatible. drmd=%d\n", mode));
             
             OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
         }
@@ -738,13 +505,11 @@ OOP_Object *METHOD(SAGAGfx, Hidd_Gfx, Show)
         { TAG_DONE,             0UL   }
     };
     
-    D(bug("[SAGA] Show(0x%p), old visible 0x%p\n", msg->bitMap, data->visible));
     
     /* Remove old bitmap from the screen */
     
     if (data->visible)
     {
-        D(bug("[SAGA] Hiding old bitmap\n"));
 //      OOP_SetAttrs(data->visible, tags);
     }
     
@@ -754,7 +519,6 @@ OOP_Object *METHOD(SAGAGfx, Hidd_Gfx, Show)
         
         /* If we have a bitmap to show, set it as visible */
         
-        D(bug("[SAGA] Showing new bitmap\n"));
         tags[0].ti_Data = TRUE;
 //      OOP_SetAttrs(msg->bitMap, tags);
         
@@ -789,14 +553,11 @@ OOP_Object *METHOD(SAGAGfx, Hidd_Gfx, Show)
     }
     else
     {
-        D(bug("[SAGA] No bitmap to show? Falling back to AGA...\n"));
         
         data->SAGAGfx_SetMode(0,0);
     }
     
     data->visible = msg->bitMap;
-    
-    D(bug("[SAGA] Show() done\n"));
     
     return msg->bitMap;
 }
