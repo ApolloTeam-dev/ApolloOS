@@ -1,13 +1,11 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 #include <proto/intuition.h>
 #include <intuition/intuition.h>
-#include "datatypes_intern.h"	/* Must be after <intuition/intuition.h> */
+#include "datatypes_intern.h"   /* Must be after <intuition/intuition.h> */
 
 /*****************************************************************************
 

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 #include <datatypes/datatypesclass.h>
 #include <proto/dos.h>
@@ -54,9 +52,9 @@
 
     if(o != NULL)
     {
-        struct DTSpecialInfo 	*dtsi = ((struct Gadget *)o)->SpecialInfo;
-        struct IClass 		*cl = OCLASS(o);
-        struct Library 		*DTClassBase = (struct Library *)cl->cl_UserData;
+        struct DTSpecialInfo    *dtsi = ((struct Gadget *)o)->SpecialInfo;
+        struct IClass           *cl = OCLASS(o);
+        struct Library          *DTClassBase = (struct Library *)cl->cl_UserData;
         
         while(dtsi->si_Flags & (DTSIF_PRINTING | DTSIF_LAYOUTPROC))
         {

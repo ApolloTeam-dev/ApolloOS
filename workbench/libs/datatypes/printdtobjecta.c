@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 #define USE_BOOPSI_STUBS
@@ -102,7 +100,7 @@ void AsyncPrinter(void)
              TAG_DONE);
    
     DoGad_OM_NOTIFY(object, pm->pm_window,
-                    pm->pm_requester, 0, GA_ID, 
+                    pm->pm_requester, 0, GA_ID,
                     (ULONG)((struct Gadget*)object)->GadgetID,
                     DTA_PrinterStatus, result, TAG_DONE);
    
