@@ -436,8 +436,6 @@ static void initPageBoot(LIBBASETYPEPTR DOSBootBase)
         }
 
         y += 16;
-
-
     }
 }
 
