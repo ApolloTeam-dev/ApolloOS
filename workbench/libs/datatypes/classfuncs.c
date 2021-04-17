@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 */
 
 #include <proto/intuition.h>
@@ -16,7 +15,7 @@ BOOL InstallClass(struct Library *DataTypesBase)
 {
     BOOL Success = FALSE;
 
-    if((GPB(DataTypesBase)->dtb_DataTypesClass = MakeClass(DATATYPESCLASS, 
+    if((GPB(DataTypesBase)->dtb_DataTypesClass = MakeClass(DATATYPESCLASS,
                                                     GADGETCLASS, NULL,
                                                     sizeof(struct DTObject),
                                                     0)))

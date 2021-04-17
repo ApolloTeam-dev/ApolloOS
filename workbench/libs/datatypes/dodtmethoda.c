@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 #define USE_BOOPSI_STUBS
 #include <proto/intuition.h>
@@ -37,7 +35,7 @@
     o    --  pointer to data type object
     win  --  window the object is attached to
     req  --  requester the object is attached to
-    msg  --  the message to send to the object    
+    msg  --  the message to send to the object
 
     RESULT
 

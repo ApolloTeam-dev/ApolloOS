@@ -16,7 +16,6 @@ static void ata_out(struct pio_data *data, UBYTE val, UWORD offset)
 {
     volatile UBYTE *addr;
     addr = data->port;
-    DIO(bug("%p REG %d <- %02X\n", addr, offset, val));
     addr[offset * 4] = val;
 }
 
@@ -27,7 +26,6 @@ static UBYTE ata_in(struct pio_data *data, UWORD offset)
 
     addr = data->port;
     v = addr[offset * 4];
-    DIO(bug("%p REG %d -> %02X\n", addr, offset, v));
     return v;
 }
 
@@ -36,11 +34,10 @@ static void ata_outsl(struct pio_data *data, APTR address, ULONG count)
 {
     volatile ULONG *addr = (ULONG*)data->dataport;
 
-    DDATA(bug("LOUT %p %p %d\n", addr, address, count));
 
     asm volatile(
-"1:     move.l (%[address])+,(%[port])  \n"
-"       move.l (%[address])+,(%[port])  \n"
+"1:     move.l (%[address])+,(0xDA2000)  \n"
+"       move.l (%[address])+,(0xDA2000)  \n"
 "       subq.l #1,%[count]              \n"
 "       bnes 1b                         \n"
         ::[count]"d"(count >> 3),[address]"a"(address),[port]"a"(addr));
@@ -51,14 +48,14 @@ static void ata_insl(struct pio_data *data, APTR address, ULONG count)
 {
     volatile ULONG *addr = (ULONG*)data->dataport;
 
-    DDATA(bug("LIN %p %p %d\n", addr, address, count));
 
     asm volatile(
-"1:     move.l (%[port]),(%[address])+  \n"
-"       move.l (%[port]),(%[address])+  \n"
-"       subq.l #1,%[count]              \n"
-"       bnes 1b                         \n"
-        ::[count]"d"(count >> 3),[address]"a"(address),[port]"a"(addr));
+"       bra 2f                          \n"
+"1:                                     \n"
+"       move16 0x00da6000,(%[address])+ \n"
+"       move16 0x00da6000,(%[address])+ \n"
+"2:     dbra   %[count],1b              \n"
+        ::[count]"d"(count >> 5),[address]"a"(address));
 }
 
 const APTR bus_FuncTable[] =

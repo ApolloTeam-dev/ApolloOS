@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 */
 
 #include "datatypes_intern.h"
@@ -158,7 +157,7 @@ void dt__sprintf(struct Library *DataTypesBase, UBYTE *buffer,
                     
                     success = OpenWorkbenchObject
                     (
-                        tool->tn_Program, 
+                        tool->tn_Program,
                         WBOPENA_ArgLock, (IPTR) parent,
                         WBOPENA_ArgName, (IPTR) FilePart(project),
                         TAG_DONE
@@ -171,7 +170,7 @@ void dt__sprintf(struct Library *DataTypesBase, UBYTE *buffer,
             }
             
             if (!success) return 0;
-        }	
+        }
         break;
 
     case TF_RX:

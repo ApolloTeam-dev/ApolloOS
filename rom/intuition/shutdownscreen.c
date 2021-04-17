@@ -13,7 +13,6 @@
 
 #include "intuition_intern.h"
 #include "monitorclass_private.h"
-#include "shutdown_image.h"
 
 static VOID ShowShutdownScreen();
 static struct Screen *OpenFinalScreen(BYTE MinDepth, BOOL squarePixels,
@@ -127,37 +126,37 @@ static VOID ShowPic(struct Screen *scr, struct IntuitionBase *IntuitionBase)
     UBYTE *picture;
     UWORD x, y;
 
-    if ((scr->Width >= SHUTDOWN_WIDTH) && (scr->Height >= SHUTDOWN_HEIGHT)
-        && (scr->RastPort.BitMap->Depth >= SHUTDOWN_PLANES))
-    {
-        ULONG size = SHUTDOWN_WIDTH * SHUTDOWN_HEIGHT;
-
-        picture = AllocVec(size, MEMF_ANY);
-
-        if (picture != NULL)
-        {
-            ULONG i;
-
-            UnpackByterun(shutdown_data, picture, size);
-
-            for (i = 0; i < SHUTDOWN_COLORS; i++)
-                SetRGB32(&scr->ViewPort, i,
-                    (shutdown_pal[i] << 8) & 0xFF000000,
-                    (shutdown_pal[i] << 16) & 0xFF000000,
-                    (shutdown_pal[i] << 24) & 0xFF000000);
-
-            SetAPen(&scr->RastPort, 0);
-            RectFill(&scr->RastPort, 0, 0, scr->Width, scr->Height);
-
-            x = (scr->Width - SHUTDOWN_WIDTH) >> 1;
-            y = (scr->Height - SHUTDOWN_HEIGHT) >> 1;
-            WriteChunkyPixels(&scr->RastPort, x, y,
-                x + SHUTDOWN_WIDTH - 1, y + SHUTDOWN_HEIGHT - 1,
-                picture, SHUTDOWN_WIDTH);
-
-            return;
-        }
-    }
+//       if ((scr->Width >= SHUTDOWN_WIDTH) && (scr->Height >= SHUTDOWN_HEIGHT)
+//           && (scr->RastPort.BitMap->Depth >= SHUTDOWN_PLANES))
+//       {
+//           ULONG size = SHUTDOWN_WIDTH * SHUTDOWN_HEIGHT;
+//   
+//           picture = AllocVec(size, MEMF_ANY);
+//   
+//           if (picture != NULL)
+//           {
+//               ULONG i;
+//   
+//               UnpackByterun(shutdown_data, picture, size);
+//   
+//               for (i = 0; i < SHUTDOWN_COLORS; i++)
+//                   SetRGB32(&scr->ViewPort, i,
+//                       (shutdown_pal[i] << 8) & 0xFF000000,
+//                       (shutdown_pal[i] << 16) & 0xFF000000,
+//                       (shutdown_pal[i] << 24) & 0xFF000000);
+//   
+//               SetAPen(&scr->RastPort, 0);
+//               RectFill(&scr->RastPort, 0, 0, scr->Width, scr->Height);
+//   
+//               x = (scr->Width - SHUTDOWN_WIDTH) >> 1;
+//               y = (scr->Height - SHUTDOWN_HEIGHT) >> 1;
+//               WriteChunkyPixels(&scr->RastPort, x, y,
+//                   x + SHUTDOWN_WIDTH - 1, y + SHUTDOWN_HEIGHT - 1,
+//                   picture, SHUTDOWN_WIDTH);
+//   
+//               return;
+//           }
+//       }
     return;
 }
 

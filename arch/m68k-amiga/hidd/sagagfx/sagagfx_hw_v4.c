@@ -34,30 +34,30 @@
 
 UBYTE SAGAHW_V4_GetModeID(UWORD w, UWORD h)
 {
-    D(bug("[SAGA] SAGAHW_V4_GetModeID(%d, %d)\n", w, h));
     
     if		(w == 304 && h == 224) return(SAGA_V4_VIDEO_MODEID_304x224);
     else if (w == 320 && h == 200) return(SAGA_V4_VIDEO_MODEID_320x200);
     else if (w == 320 && h == 240) return(SAGA_V4_VIDEO_MODEID_320x240);
     else if (w == 320 && h == 256) return(SAGA_V4_VIDEO_MODEID_320x256);
-	else if (w == 480 && h == 270) return(SAGA_V4_VIDEO_MODEID_480x270);
-	else if (w == 640 && h == 360) return(SAGA_V4_VIDEO_MODEID_640x360);
+    else if (w == 480 && h == 270) return(SAGA_V4_VIDEO_MODEID_480x270);
+    else if (w == 640 && h == 360) return(SAGA_V4_VIDEO_MODEID_640x360);
     else if (w == 640 && h == 400) return(SAGA_V4_VIDEO_MODEID_640x400);
     else if (w == 640 && h == 480) return(SAGA_V4_VIDEO_MODEID_640x480);
     else if (w == 640 && h == 512) return(SAGA_V4_VIDEO_MODEID_640x512);
     else if (w == 480 && h == 270) return(SAGA_V4_VIDEO_MODEID_480x270);
     else if (w == 640 && h == 360) return(SAGA_V4_VIDEO_MODEID_640x360);
     else if (w == 960 && h == 540) return(SAGA_V4_VIDEO_MODEID_960x540);
+    else if (w == 800 && h == 600) return(SAGA_V4_VIDEO_MODEID_800x600);
     else if (w == 1280 && h == 720) return(SAGA_V4_VIDEO_MODEID_1280x720);
     else if (w == 1024 && h == 768) return(SAGA_V4_VIDEO_MODEID_1024x768);
-    else if (w == 1920 && h == 1080) return(SAGA_V4_VIDEO_MODEID_1920x1080);
+    else if (w == 720 && h == 576) return(SAGA_V4_VIDEO_MODEID_720x576);
+    else if (w == 848 && h == 480) return(SAGA_V4_VIDEO_MODEID_848x480);
 
     return(0);
 }
 
 UBYTE SAGAHW_V4_GetPixFmt(UBYTE bpp)
 {
-    D(bug("[SAGA] SAGAHW_V4_GetPixFmt(%d)\n", bpp));
     
     if      (bpp == 15) return(SAGA_V4_VIDEO_PIXFMT_RGB15);
     else if (bpp == 16) return(SAGA_V4_VIDEO_PIXFMT_RGB16);
@@ -71,7 +71,6 @@ VOID SAGAHW_V4_SetColors(ULONG *colors, UWORD startIndex, UWORD count)
 {
     ULONG i;
     
-    D(bug("[SAGA] SAGAHW_V4_SetColors(%d, %d)\n", startIndex, count));
     
     if (colors)
     {
@@ -97,51 +96,37 @@ VOID SAGAHW_V4_SetColors(ULONG *colors, UWORD startIndex, UWORD count)
 
 VOID SAGAHW_V4_SetMemory(ULONG memory)
 {
-    D(bug("[SAGA] SAGAHW_V4_SetMemory(%d)\n", memory));
-    
     WRITE32(SAGA_V4_VIDEO_DATA, memory);
 }
 
 VOID SAGAHW_V4_SetMode(UBYTE modeid, UBYTE pixfmt)
 {
-    D(bug("[SAGA] SAGAHW_V4_SetMode(%d, %d)\n", modeid, pixfmt));
-    
     WRITE16(SAGA_V4_VIDEO_MODE, (modeid << 8) | pixfmt);
 }
 
 VOID SAGAHW_V4_SetModulo(WORD modulo)
 {
-    D(bug("[SAGA] SAGAHW_V4_SetModulo(%d)\n", modulo));
-    
     WRITE16(SAGA_V4_VIDEO_HMOD, modulo);
 }
 
 VOID SAGAHW_V4_SetModeline(UWORD a, UWORD b, UWORD c, UWORD d, UWORD e, UWORD f, UWORD g, UWORD h, UWORD i)
 {
-    D(bug("[SAGA] SAGAHW_V4_SetModeline()\n"));
-    
     return;
 }
 
 VOID SAGAHW_V4_SetPLL(ULONG clock)
 {
-    D(bug("[SAGA] SAGAHW_V4_SetPLL(%d)\n", clock));
-    
     return;
 }
 
 VOID SAGAHW_V4_SetSpriteHide(VOID)
 {
-    D(bug("[SAGA] SAGAHW_V4_SetSpriteHide()\n"));
-    
     WRITE16(SAGA_V4_VIDEO_SPRITE_POSX, SAGA_V4_VIDEO_MAXH - 1);
     WRITE16(SAGA_V4_VIDEO_SPRITE_POSY, SAGA_V4_VIDEO_MAXV - 1);
 }
 
 VOID SAGAHW_V4_SetSpriteColors(UWORD *colors)
 {
-    D(bug("[SAGA] SAGAHW_V4_SetSpriteColors(%d)\n", colors));
-    
     for (int i = 1; i < 4; i++)
     {
         WRITE16(SAGA_V4_VIDEO_SPRITE_CLUT + (i << 1), colors[i]);
@@ -153,8 +138,6 @@ VOID SAGAHW_V4_SetSpriteMemory(UBYTE *memory)
     IPTR ptr = SAGA_V4_VIDEO_SPRITE_DATA;
     
     ULONG x, y, pix, val;
-    
-    D(bug("[SAGA] SAGAHW_V4_SetSpriteMemory(%d)\n", memory));
     
     for (y = 0; y < 16; y++)
     {
@@ -187,9 +170,7 @@ VOID SAGAHW_V4_SetSpriteMemory(UBYTE *memory)
 
 VOID SAGAHW_V4_SetSpritePosition(WORD x, WORD y)
 {
-    D(bug("[SAGA] SAGAHW_V4_SetSpritePosition(%d, %d)\n", x, y));
     WRITE16(SAGA_V4_VIDEO_ON, 0x0001);
-    
     WRITE16(SAGA_V4_VIDEO_SPRITE_POSX, SAGA_V4_VIDEO_SPRITE_DELTAX + x);
     WRITE16(SAGA_V4_VIDEO_SPRITE_POSY, SAGA_V4_VIDEO_SPRITE_DELTAY + y);
 }

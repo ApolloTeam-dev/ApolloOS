@@ -52,41 +52,13 @@ AROS_INTH1(IDE_Handler_A1200, struct ATA_BusData *, bus)
     AROS_INTFUNC_EXIT
 }
 
-AROS_INTH1(IDE_Handler_A4000, struct ATA_BusData *, bus)
-{
-    AROS_INTFUNC_INIT
-
-    /* A4000 interrupt clears when register is read */
-    volatile UWORD *irqbase = (UWORD*)bus->gayleirqbase;
-    UWORD irqmask = *irqbase;
-    if (irqmask & (GAYLE_IRQ_IDE << 8)) {
-        volatile UBYTE *port;
-        UBYTE status;
-
-        port = bus->gaylebase;
-        status = port[ata_Status * 4];
-        if (status & ATAF_BUSY) {
-            bug("[ATA:Gayle] ATA interrupt but BUSY flag set!?\n");
-            return FALSE;
-        }
-        bus->ata_HandleIRQ(status, bus->irqData);
-        return TRUE;
-    }
-    return FALSE;
-
-    AROS_INTFUNC_EXIT
-}
 
 static BOOL ata_CreateGayleInterrupt(struct ATA_BusData *bus, UBYTE num)
 {
     struct Interrupt *irq = &bus->ideint;
 
-    if (bus->bus->a4000) {
-        irq->is_Code = (APTR)IDE_Handler_A4000;
-    } else {
         bus->gayleintbase = (UBYTE*)GAYLE_INT_1200;
         irq->is_Code = (APTR)IDE_Handler_A1200;
-    }
 
     irq->is_Node.ln_Pri = 20;
     irq->is_Node.ln_Type = NT_INTERRUPT;
@@ -140,7 +112,7 @@ OOP_Object *GAYLEATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *
         data->bus->atapb_Node.ln_Succ = (struct Node *)-1;
         data->gaylebase = data->bus->port;
         data->gayleirqbase = data->bus->gayleirqbase;
-        ata_CreateGayleInterrupt(data, 0);
+        //ata_CreateGayleInterrupt(data, 0);
 
         //mDispose = msg->mID - moRoot_New + moRoot_Dispose;
         //OOP_DoSuperMethod(cl, o, &mDispose);
@@ -234,8 +206,7 @@ APTR GAYLEATA__Hidd_ATABus__GetPIOInterface(OOP_Class *cl, OOP_Object *o, OOP_Ms
          * This shadow bank is for 16/32-bit data transfers, while the
          * other one is much slower due to 8-bit transfers, only.
          */
-        if (!data->bus->a4000)
-            pio->dataport = (UBYTE*)(((ULONG)pio->port) + 0x2000);
+         pio->dataport = (UBYTE*)(((ULONG)pio->port) + 0x2000);
     }
 
     return pio;

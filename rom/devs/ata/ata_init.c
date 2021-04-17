@@ -218,6 +218,31 @@ static int ATA_init(struct ataBase *ATABase)
 
     D(bug("[ATA--] %s: MemPool @ %p\n", __func__, ATABase->ata_MemPool));
 
+    /*
+     * ata drive cache memory allocation
+     */
+    ATABase->ata_CacheData = AllocMem(CACHE_SIZE*512, MEMF_CLEAR | MEMF_PUBLIC);
+    if (ATABase->ata_CacheData == NULL)
+    {
+        bug("[ATA--] %s: Failed to Allocate CacheData!\n", __func__);
+        return FALSE;
+    }
+
+    D(bug("[ATA--] %s: CacheData @ %p\n", __func__, ATABase->ata_CacheData));
+
+    ATABase->ata_CacheTags = AllocMem(CACHE_SIZE*8, MEMF_CLEAR | MEMF_PUBLIC);
+    if (ATABase->ata_CacheTags == NULL)
+    {
+        bug("[ATA--] %s: Failed to Allocate CacheTags!\n", __func__);
+        return FALSE;
+    }
+    for (int i = 0; i < CACHE_SIZE; i++)
+    {
+        ATABase->ata_CacheTags[i] = 0xfffffffffffffffful;
+    }
+
+    D(bug("[ATA--] %s: CacheTags @ %p\n", __func__, ATABase->ata_CacheTags));
+
 #if defined(__OOP_NOATTRBASES__)
     if (OOP_ObtainAttrBasesArray(&ATABase->unitAttrBase, attrBaseIDs))
     {

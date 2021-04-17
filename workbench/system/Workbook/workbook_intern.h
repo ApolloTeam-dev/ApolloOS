@@ -9,8 +9,8 @@
 #ifndef WORKBOOK_H
 #define WORKBOOK_H
 
-#define WB_VERSION	1
-#define WB_REVISION	0
+#define WB_VERSION	0
+#define WB_REVISION	6
 
 #include <dos/bptr.h>
 #include <intuition/classes.h>
