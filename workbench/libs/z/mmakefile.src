@@ -46,7 +46,7 @@ USER_CPPFLAGS := $(LIBZ_CPPFLAGS) -DNO_STRERROR -DNO_POSIX_WRAPPERS
 
 %build_linklib mmake=linklibs-z-static libname=z.static files="$(FILES)"
 
-INCLUDE_FILES := zlib.h zconf.h
+INCLUDE_FILES := zlib.h zconf.h zutil.h
 %copy_includes
 
 #MM

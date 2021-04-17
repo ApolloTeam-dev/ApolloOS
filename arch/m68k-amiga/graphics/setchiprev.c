@@ -27,7 +27,7 @@ AROS_LH1(ULONG, SetChipRev,
     if (vposr >= 0x2000)
         chipflags |= GFXF_HR_AGNUS;
     if (vposr >= 0x2200) {
-        chipflags |= GFXF_AA_ALICE | GFXF_AA_LISA | GFXF_HR_DENISE;
+        chipflags |= GFXF_AA_ALICE | GFXF_AA_LISA | GFXF_HR_DENISE | GFXF_AA_MLISA;
     } else {
         Disable();
         deniseid1 = custom->deniseid & 0x00ff;

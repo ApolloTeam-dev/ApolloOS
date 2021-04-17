@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: BuildApolloOS
+name: BuildApolloOS_UAE
 
 # Controls when the action will run. 
 on:
@@ -32,11 +32,7 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: configure
-        run: ./configure --target=amiga-m68k --with-optimization="-O2" --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68040 --disable-mmu
-
-      # Make dist config
-      - name: Make dist_config.h
-        run: ./make_dist_config.sh "bin/amiga-m68k/gen"
+        run: ./configure --target=amiga-m68k --with-optimization="-O2" --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68040 --disable-mmu --with-nonvampire-support
       
       # build the compilers
       - name: Compiler Build

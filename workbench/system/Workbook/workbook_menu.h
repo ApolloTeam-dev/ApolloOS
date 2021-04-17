@@ -25,13 +25,11 @@
 #define WBMENU_ITEM_ID(item) ((IPTR)GTMENUITEM_USERDATA(item))
 
 /* Workbench Menu */
-#define WBMENU_WB               "Workbook"
+#define WBMENU_WB               "ApolloOS"
 #define WBMENU_WB_BACKDROP	0, "Backdrop",  "B", Broken 0, 0
 #define WBMENU_WB_EXECUTE	1, "Execute",   "E", Broken 0, 0
 #define WBMENU_WB_SHELL		2, "Shell",     "W", 0, 0
 #define WBMENU_WB_ABOUT		3, "About...",    0, Broken 0, 0
-#define WBMENU_WB_QUIT		4, "Quit",      "Q", 0, 0
-#define WBMENU_WB_SHUTDOWN	5, "Shutdown",    0, 0, 0
 
 /* Window Menu */
 #define WBMENU_WN               "Window"

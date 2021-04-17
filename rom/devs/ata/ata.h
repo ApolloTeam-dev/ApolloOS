@@ -38,6 +38,9 @@
 #define STACK_SIZE              16384
 #define TASK_PRI                10
 #define TIMEOUT                 30
+#define CACHE_SIZE_BITS         17      /* 2^11 * 512 byte blocks (min 9)*/
+#define CACHE_SIZE              (1<<CACHE_SIZE_BITS)
+#define CACHE_MASK              (CACHE_SIZE-1)
 
 /*
    Don't blame me for information redundance here!
@@ -71,6 +74,12 @@ struct ataBase
      * memory pool
      */
     APTR                    	ata_MemPool;
+
+    /*
+     * ata drive cache
+     */
+    UBYTE                    	*ata_CacheData;
+    UQUAD                   	*ata_CacheTags;
 
     ULONG                   	ata_ItersPer100ns;
 

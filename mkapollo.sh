@@ -10,11 +10,11 @@ WORK="apollo-os"
 
 if [ -e ".git" ]; then
 	BRANCH="$(git branch --show-current)"
-	REMOTE=$(git status -sb | sed "s/\#\#\ ${BRANCH}\.\.\.//g" | sed "s/\/${BRANCH}//g" | head -n 1)
-	REPO="$(git remote get-url "${REMOTE}")"
+	#REMOTE=$(git status -sb | sed "s/\#\#\ ${BRANCH}\.\.\.//g" | sed "s/\/${BRANCH}//g" | head -n 1)
+	REPO="$(git remote get-url "origin")"
 else
 	REPO="https://github.com/ApolloTeam-dev/AROS"
-	BRANCH="v4-alynna"
+	BRANCH="master"
 fi
 SRC=""
 REZ=640x256x4
@@ -51,8 +51,8 @@ setvars () {
 	PORTS="${DIR}/${WORK}/prt"
 	BIN="${DIR}/${WORK}/bin"
 	CONFOPTS="--target=amiga-m68k --with-optimization=-O${OPT} --with-aros-prefs=classic --with-resolution=${REZ} --with-cpu=${CPU} --with-fpu=${FPU} --disable-mmu --with-portssources=${PORTS}"
-	if [ ${VAMP} = 0 ];		then CONFOPTS="${CONFOPTS} --with-nonvampire-support"; fi
-	if [ ${DEBUG} = 1 ];	then CONFOPTS="${CONFOPTS} --enable-debug --with-serial-debug"; fi
+	if [ ${VAMP}  = 0 ]; then CONFOPTS="${CONFOPTS} --with-nonvampire-support";          fi
+	if [ ${DEBUG} = 1 ]; then CONFOPTS="${CONFOPTS} --enable-debug --with-serial-debug"; fi
 	MAKEOPTS="-j${JOBS}"
 	PKGS="git gcc g++ make cmake gawk bison flex bzip2 netpbm autoconf automake libx11-dev libxext-dev libc6-dev liblzo2-dev libxxf86vm-dev libpng-dev libsdl1.2-dev byacc python-mako libxcursor-dev gcc-multilib"
 
@@ -112,7 +112,7 @@ update-distro-files () {
 
 makeclean () { cd "${BIN}" || exit; make clean; cd "${DIR}" || exit; }
 gitclean  () { cd "${SRC}" || exit; git clean -df; cd "${DIR}" || exit; }
-pkgcheck  () { if [ $(dpkg-query -W -f '${Binary:Package} ${Status}\n' $PKGS | wc -l) -eq $(echo $PKGS | wc -w) ]; then return 0; else return 1; fi; }
+#pkgcheck  () { if [ $(dpkg-query -W -f '${Binary:Package} ${Status}\n' $PKGS | wc -l) -eq $(echo $PKGS | wc -w) ]; then return 0; else return 1; fi; }
 download  () { cd "${WORK}" || exit; if [ ! -d $SRC ]; then git clone --recursive ${REPO} --branch=${BRANCH} ${SRC}; cd ${DIR}; else git checkout ${REMOTE}/${BRANCH} --recurse-submodules -f; fi }
 # shellcheck disable=SC2086
 configure () { cd "${BIN}" || exit; ${SRC}/configure ${CONFOPTS} ${CONFO}; cd "${DIR}" || exit; }
@@ -262,7 +262,7 @@ help () {
 cat << EOF
 ${BOLD}mkapollo.sh -- Roll your own ApolloOS image and ROM${NC}
  (C) 2021 Alynna Trypnotk, License APL 1.1 & (C) 2021 Marlon Beijer (marlon@amigadev.com), License APL 1.1:
- https://github.com/ApolloTeam-dev/AROS/blob/master-new/LICENSE
+ https://github.com/ApolloTeam-dev/AROS/blob/master/LICENSE
 
  It does what NintenDon't.
  ${BOLD}Syntax:${NC} mkapollo.sh [options] <command> [args]
@@ -318,11 +318,15 @@ print_bold_nl "Please Amiga responsibly."
 }
 
 check-deps () {
-	if [ ${CONF} = 1 ] || [ ! -e "${BIN}/config.status" ];								then configure;													fi
-	if [ ! -e "${BIN}/bin/linux-x86_64/tools/crosstools/m68k-aros-gcc" ];	then compile tools-crosstools-gcc;			fi
-	if [ ! -e "${BIN}/bin/linux-x86_64/tools/mmake" ];										then compile mmake;											fi
-	if [ ! -e "${BIN}/bin/linux-x86_64/tools/sfdc" ];											then compile sfdc;											fi
-	if [ ! -e "${BIN}/bin/amiga-m68k/gen/include/zconf.h" ];							then compile workbench-libs-z-includes;	fi
+	if [ ${CONF} = 1 ] || [ ! -e "${BIN}/config.status" ];                            then configure;                         fi
+	if [ ! -e "${BIN}/bin/linux-x86_64/tools/crosstools/m68k-aros-gcc" ];             then compile tools-crosstools-gcc;      fi
+	if [ ! -e "${BIN}/bin/linux-x86_64/tools/mmake" ];                                then compile mmake;                     fi
+	if [ ! -e "${BIN}/bin/linux-x86_64/tools/sfdc" ];                                 then compile sfdc;                      fi
+	if [ ! -e "${BIN}/bin/amiga-m68k/gen/include/zconf.h" ];                          then compile workbench-libs-z-includes; fi
+	if [ ! -e "${BIN}/bin/amiga-m68k/gen/include/zutil.h" ];                          then compile workbench-libs-z-includes; fi
+  if [ ! -e "bin/amiga-m68k/gen/compiler/posixc/posixc/linklib/posixc_startup.c" ]; then compile compiler-posixc-includes;  fi
+
+  compiler-posixc
 }
 
 list-rom-contents () {
@@ -372,11 +376,11 @@ echo -n "3..."; sleep 1; echo -n "2..."; sleep 1; echo -n "1..."; sleep 1; print
 
 mkdir -p "${BIN}"
 
-if [ $(pkgcheck; echo $?) = 1 ]; then
- print_bold_nl "${ARROWS} ${BOLD}${RED}You are missing required packages to build ApolloOS!  ${GREEN}Attempting to install...${NC}"
- apt -y update
- apt -y install "${PKGS}"
-fi
+#if [ $(pkgcheck; echo $?) = 1 ]; then
+# print_bold_nl "${ARROWS} ${BOLD}${RED}You are missing required packages to build ApolloOS!  ${GREEN}Attempting to install...${NC}"
+# apt -y update
+# apt -y install "${PKGS}"
+#fi
 if [ $DL = 1 ];                 then print_bold_nl "${ARROWS} Source wipe requested, ${RED}deleting${NC}.";     rm -rf "${SRC}"; fi
 if [ ! -e "${SRC}/configure" ]; then print_bold_nl "${ARROWS} Source not detected, ${GREEN}downloading${NC}.";  download;	       fi
 if [ $CLEAN = 1 ];              then print_bold_nl "${ARROWS} Fresh build requested, ${YELLOW}cleaning${NC}.";  makeclean;       fi

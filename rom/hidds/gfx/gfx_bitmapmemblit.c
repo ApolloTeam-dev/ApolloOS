@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -15,7 +15,8 @@
 VOID BM__Hidd_BitMap__FillMemRect8(OOP_Class *cl, OOP_Object *o, struct pHidd_BitMap_FillMemRect8 *msg)
 {
     UBYTE *start;
-    LONG phase, width, height, w, p;
+    LONG phase, width, height;
+    LONG p,count,rest;
     ULONG fill32;
     ULONG start_add;
     
@@ -24,9 +25,8 @@ VOID BM__Hidd_BitMap__FillMemRect8(OOP_Class *cl, OOP_Object *o, struct pHidd_Bi
     height = msg->maxY - msg->minY + 1;
     start_add = msg->dstMod - width;
         
-    if ((phase = (IPTR)start & 3L))
-    {
-    	phase = 4 - phase;
+    if ((phase = (IPTR)start & 7L)) {
+    	phase = 8 - phase;
 	if (phase > width) phase = width;
 	width -= phase;
     }
@@ -35,27 +35,35 @@ VOID BM__Hidd_BitMap__FillMemRect8(OOP_Class *cl, OOP_Object *o, struct pHidd_Bi
     fill32 |= (fill32 << 8);
     fill32 |= (fill32 << 16);
     
-    while(height--)
-    {
-    	w = width;
-	p = phase;
-	
-	while(p--)
-	{
-	    *start++ = (UBYTE)fill32;
-	}
-	while(w >= 4)
-	{
-	    *((ULONG *)start) = fill32;
-	    w -= 4; start += 4;
-	}
-	while(w--)
-	{
-	    *start++ = (UBYTE)fill32;
-	}
-	start += start_add;
-    }
-    
+
+    count=width>>3;
+       asm volatile(
+       "       bra 7f                        \n"
+       "0:                                  \n"
+       "       move.l %[phase],%[count]     \n"
+       "       bra 2f                       \n"
+       "1:     move.b %[color],(%[address])+ \n"
+       "2:     dbra   %[count],1b           \n"
+       "                                    \n"
+       "       move.l %[width],%[count]     \n"
+       "       lsr.l  #3,%[count]           \n" 
+       "       bra 4f                        \n"
+       "3:     move.l %[color],(%[address])+ \n"
+       "       move.l %[color],(%[address])+ \n"
+       "4:     dbra   %[count],3b           \n"
+       "                                    \n"
+       "       move.l %[width],%[count]     \n"
+       "       and.l  #7,%[count]           \n" 
+       "       bra 6f                       \n"
+       "5:     move.b %[color],(%[address])+ \n"
+       "6:     dbra   %[count],5b          \n"
+       "                                    \n"
+       "       adda.l %[modulo],%[address]  \n"
+       "7:     dbra   %[yloop],0b           \n"
+       :[count]"+d"(count), [yloop]"+d"(height)
+       :[address]"a"(start), [color]"d"(fill32), [phase]"r"(phase), [width]"r"(width), [modulo]"r"(start_add) 
+       :"cc");
+
 };
 
 /****************************************************************************************/
@@ -63,7 +71,8 @@ VOID BM__Hidd_BitMap__FillMemRect8(OOP_Class *cl, OOP_Object *o, struct pHidd_Bi
 VOID BM__Hidd_BitMap__FillMemRect16(OOP_Class *cl, OOP_Object *o, struct pHidd_BitMap_FillMemRect16 *msg)
 {
     UBYTE *start;
-    LONG phase, width, height, w, p;
+    LONG phase, width, height;
+    LONG p, count, rest;
     ULONG fill32;
     ULONG start_add;
     
@@ -72,9 +81,8 @@ VOID BM__Hidd_BitMap__FillMemRect16(OOP_Class *cl, OOP_Object *o, struct pHidd_B
     height = msg->maxY - msg->minY + 1;
     start_add = msg->dstMod - width * 2;
         
-    if ((phase = (IPTR)start & 1L))
-    {
-    	phase = 2 - phase;
+    if ((phase = ((IPTR)start & 7L)>>1)) {
+    	phase = 4 - phase;
 	if (phase > width) phase = width;
 	width -= phase;
     }
@@ -82,29 +90,34 @@ VOID BM__Hidd_BitMap__FillMemRect16(OOP_Class *cl, OOP_Object *o, struct pHidd_B
     fill32 = msg->fill;
     fill32 |= (fill32 << 16);
     
-    while(height--)
-    {
-    	w = width;
-	p = phase;
-	
-	while(p--)
-	{
-	    *((UWORD *)start) = (UWORD)fill32;
-	    start += 2; 
-	}
-	while(w >= 2)
-	{
-	    *((ULONG *)start) = fill32;
-	    w -= 2; start += 4;
-	}
-	while(w--)
-	{
-	    *((UWORD *)start) = (UWORD)fill32;
-	    start += 2;
-	}
-	start += start_add;
-    }
-    
+
+    count=width>>2;
+       asm volatile(
+       "       bra 7f                        \n"
+       "0:                                  \n"
+       "       move.l %[phase],%[count]     \n"
+       "       bra 2f                       \n"
+       "1:     move.w %[color],(%[address])+ \n"
+       "2:     dbra   %[count],1b           \n"
+       "                                    \n"
+       "       move.l %[width],%[count]     \n"
+       "       lsr.l  #2,%[count]           \n" 
+       "       bra 4f                        \n"
+       "3:     move.l %[color],(%[address])+ \n"
+       "       move.l %[color],(%[address])+ \n"
+       "4:     dbra   %[count],3b           \n"
+       "                                    \n"
+       "       move.l %[width],%[count]     \n"
+       "       and.l  #3,%[count]           \n" 
+       "       bra 6f                       \n"
+       "5:     move.w %[color],(%[address])+ \n"
+       "6:     dbra   %[count],5b          \n"
+       "                                    \n"
+       "       adda.l %[modulo],%[address]  \n"
+       "7:     dbra   %[yloop],0b           \n"
+       :[count]"+d"(count), [yloop]"+d"(height)
+       :[address]"a"(start), [color]"d"(fill32), [phase]"r"(phase), [width]"r"(width), [modulo]"r"(start_add) 
+       :"cc");
 }
 
 /****************************************************************************************/
@@ -115,35 +128,45 @@ VOID BM__Hidd_BitMap__FillMemRect24(OOP_Class *cl, OOP_Object *o, struct pHidd_B
     LONG width, height, w;
     UBYTE fill1, fill2, fill3;
     ULONG start_add;
-    
+    ULONG fillL, fillW;
+ 
     start = msg->dstBuf + msg->minY * msg->dstMod + msg->minX * 3;
     width = msg->maxX - msg->minX + 1;
     height = msg->maxY - msg->minY + 1;
     start_add = msg->dstMod - width * 3;
 
-#if AROS_BIG_ENDIAN        
     fill1 = (msg->fill >> 16) & 0xFF;
     fill2 = (msg->fill >> 8) & 0xFF;
     fill3 =  msg->fill & 0xFF;
-#else
-    fill1 =  msg->fill & 0xFF;
-    fill2 = (msg->fill >> 8) & 0xFF;
-    fill3 = (msg->fill >> 16) & 0xFF;
-#endif
 
-    while(height--)
-    {
-    	w = width;
-	
-	while(w--)
-	{
-	    *start++ = fill1;
-	    *start++ = fill2;
-	    *start++ = fill3;
-	}
+    fillL = (msg->fill <<8) | fill1;
+    fillW = msg->fill;
 
-	start += start_add;
-    }
+     w=width>>1; 
+       asm volatile(
+       "       bra 7f                        \n"
+       "0:                                  \n"
+       "       move.l %[width],%[count]     \n"
+       "       lsr.l  #1,%[count]           \n" 
+       "       bra 4f                        \n"
+       "3:     move.l %[colorL],(%[address])+ \n"
+       "       move.w %[colorW],(%[address])+ \n"
+       "4:     dbra   %[count],3b           \n"
+       "                                    \n"
+       "       move.l %[width],%[count]     \n"
+       "       and.l  #1,%[count]           \n" 
+       "       bra 6f                       \n"
+       "5:     move.b %[colorB],(%[address])+ \n"
+       "       move.w %[colorW],(%[address])+ \n"
+       "6:     dbra   %[count],5b          \n"
+       "                                    \n"
+       "       adda.l %[modulo],%[address]  \n"
+       "7:     dbra   %[yloop],0b           \n"
+       :[count]"+d"(w), [yloop]"+d"(height)
+       :[address]"a"(start), [colorL]"r"(fillL), [colorW]"r"(fillW), [colorB]"r"(fill1), [width]"r"(width), [modulo]"r"(start_add) 
+       :"cc");
+
+
 }
 
 /****************************************************************************************/
@@ -151,7 +174,8 @@ VOID BM__Hidd_BitMap__FillMemRect24(OOP_Class *cl, OOP_Object *o, struct pHidd_B
 VOID BM__Hidd_BitMap__FillMemRect32(OOP_Class *cl, OOP_Object *o, struct pHidd_BitMap_FillMemRect32 *msg)
 {
     UBYTE *start;
-    LONG width, height, w;
+    LONG phase, width, height;
+    LONG p, count, rest;
     ULONG fill32;
     ULONG start_add;
     
@@ -160,20 +184,42 @@ VOID BM__Hidd_BitMap__FillMemRect32(OOP_Class *cl, OOP_Object *o, struct pHidd_B
     height = msg->maxY - msg->minY + 1;
     start_add = msg->dstMod - width * 4;
         
+    phase = 0;
+    if ((phase = (IPTR)start & 7L)) {
+    	phase = 1;
+	if (phase > width) phase = width;
+	width -= phase;
+    }
+
     fill32 = msg->fill;
         
-    while(height--)
-    {
-    	w = width;
-	
-	while(w--)
-	{
-	    *((ULONG *)start) = fill32;
-	    start += 4;
-	}
-
-	start += start_add;
-    }
+    count=width>>1;
+       asm volatile(
+       "       bra 7f                        \n"
+       "0:                                  \n"
+       "       move.l %[phase],%[count]     \n"
+       "       bra 2f                       \n"
+       "1:     move.l %[color],(%[address])+ \n"
+       "2:     dbra   %[count],1b           \n"
+       "                                    \n"
+       "       move.l %[width],%[count]     \n"
+       "       lsr.l  #1,%[count]           \n" 
+       "       bra 4f                        \n"
+       "3:     move.l %[color],(%[address])+ \n"
+       "       move.l %[color],(%[address])+ \n"
+       "4:     dbra   %[count],3b           \n"
+       "                                    \n"
+       "       move.l %[width],%[count]     \n"
+       "       and.l  #1,%[count]           \n" 
+       "       bra 6f                       \n"
+       "5:     move.l %[color],(%[address])+ \n"
+       "6:     dbra   %[count],5b          \n"
+       "                                    \n"
+       "       adda.l %[modulo],%[address]  \n"
+       "7:     dbra   %[yloop],0b           \n"
+       :[count]"+d"(count), [yloop]"+d"(height)
+       :[address]"a"(start), [color]"d"(fill32), [phase]"r"(phase), [width]"r"(width), [modulo]"r"(start_add) 
+       :"cc");
 }
 
 /****************************************************************************************/
@@ -229,8 +275,9 @@ VOID BM__Hidd_BitMap__InvertMemRect(OOP_Class *cl, OOP_Object *o, struct pHidd_B
 
 VOID BM__Hidd_BitMap__CopyMemBox8(OOP_Class *cl, OOP_Object *o, struct pHidd_BitMap_CopyMemBox8 *msg)
 {
-    UBYTE *src_start, *dst_start;
-    LONG phase, width, height, w, p;
+    UBYTE *src_start, *src_end, *dst_start;
+    LONG phase, width, height, w;
+    LONG p, count, rest;
     ULONG src_start_add, dst_start_add;
     BOOL descending;
     
@@ -238,85 +285,93 @@ VOID BM__Hidd_BitMap__CopyMemBox8(OOP_Class *cl, OOP_Object *o, struct pHidd_Bit
     height = msg->height;
 
     src_start = msg->src + msg->srcY * msg->srcMod + msg->srcX;
+    src_end   = msg->src + (msg->srcY+height) * msg->srcMod + (msg->srcX + msg->width);
     src_start_add = msg->srcMod - width;
 
     dst_start = msg->dst + msg->dstY * msg->dstMod + msg->dstX;
     dst_start_add = msg->dstMod - width;
         
-    if ((IPTR)src_start > (IPTR)dst_start)
-    {
-	if ((phase = (IPTR)src_start & 3L))
-	{
-    	    phase = 4 - phase;
+    if( ((IPTR)src_start > (IPTR)dst_start) || ((IPTR)src_end < (IPTR)dst_start) ){
+	if ((phase = (IPTR)dst_start & 7L)) {
+    	    phase = 8 - phase;
 	    if (phase > width) phase = width;
 	    width -= phase;
 	}
     	descending = FALSE;
-    }
-    else
-    {
-    	src_start += (height - 1) * msg->srcMod + width;
-	dst_start += (height - 1) * msg->dstMod + width;
-	
-	phase = ((IPTR)src_start & 3L);
-	if (phase > width) phase = width;
-	width -= phase;
-	
-	descending = TRUE;
+    }else{
+      	src_start += (height - 1) * msg->srcMod + width;
+   	dst_start += (height - 1) * msg->dstMod + width;
+   	
+   	phase = ((IPTR)dst_start & 7L);
+   	if (phase > width) phase = width;
+   	width -= phase;
+   	
+   	descending = TRUE;
     }
  
     /* NOTE: This can write LONGs to odd addresses, which might not work
        on some CPUs (MC68000) */
 
-    if (!descending)
-    {
-	while(height--)
-	{
-    	    w = width;
-	    p = phase;
+  if (!descending) {
+    count=width>>3;
+    rest =width & 7;
+    p=phase;
+  
+    asm volatile(
+    "       bra 7f                       \n"
+    "0:                                  \n"
+    "       move.l %[phase],%[count]     \n"
+    "       bra 2f                       \n"
+    "1:     move.b (%[src])+,(%[dst])+   \n"
+    "2:     dbra   %[count],1b           \n"
+    "                                    \n"
+    "       move.l %[width],%[count]     \n"
+    "       lsr.l  #4,%[count]           \n"
+    "       bra 4f                       \n"
+//    "3:     move.l (%[src])+,(%[dst])+   \n"
+//    "       move.l (%[src])+,(%[dst])+   \n"
+    "3:     move16 (%[src])+,(%[dst])+   \n"
+    "4:     dbra   %[count],3b           \n"
+    "                                    \n"
+    "       move.l %[width],%[count]     \n"
+    "       and.l  #15,%[count]           \n"
+    "       bra 6f                       \n"
+    "5:     move.b (%[src])+,(%[dst])+   \n"
+    "6:     dbra   %[count],5b           \n"
+    "                                    \n"
+    "       adda.l %[srcmodulo],%[src]   \n"
+    "       adda.l %[dstmodulo],%[dst]   \n"
+    "                                    \n"
+    "7:     dbra %[yloop],0b             \n"
 
-	    while(p--)
-	    {
-		*dst_start++ = *src_start++;
-	    }
-	    while(w >= 4)
-	    {
-		*((ULONG *)dst_start) = *((ULONG *)src_start);
-		w -= 4; dst_start += 4; src_start += 4;
-	    }
-	    while(w--)
-	    {
-		*dst_start++ = *src_start++;
-	    }
-	    src_start += src_start_add;
-	    dst_start += dst_start_add;
-	}
-    }
-    else
-    {
-	while(height--)
-	{
-    	    w = width;
-	    p = phase;
+    :[count]"+d"(count), [yloop]"+d"(height)
+    :[dst]"a"(dst_start), [src]"a"(src_start), [width]"r"(width), [phase]"r"(phase), [srcmodulo]"r"(src_start_add), [dstmodulo]"r"(dst_start_add)
+    :"cc");
 
-	    while(p--)
-	    {
-		*--dst_start = *--src_start;
-	    }
-	    while(w >= 4)
-	    {
-	        dst_start -= 4; src_start -= 4;
-		*(ULONG *)dst_start = *(ULONG *)src_start;
-		w -= 4;
-	    }
-	    while(w--)
-	    {
-		*--dst_start = *--src_start;
-	    }
-	    src_start -= src_start_add;
-	    dst_start -= dst_start_add;
-	}
-     }
+  }else{
+   	while(height--)
+   	{
+       	    w = width;
+   	    p = phase;
+   
+   	    while(p--)
+   	    {
+   		*--dst_start = *--src_start;
+   	    }
+   	    while(w >= 4)
+   	    {
+   	        dst_start -= 4; src_start -= 4;
+   		*(ULONG *)dst_start = *(ULONG *)src_start;
+   		w -= 4;
+   	    }
+   	    while(w--)
+   	    {
+   		*--dst_start = *--src_start;
+   	    }
+   	    src_start -= src_start_add;
+   	    dst_start -= dst_start_add;
+   	}
+  }
     
 }
 
@@ -324,8 +379,9 @@ VOID BM__Hidd_BitMap__CopyMemBox8(OOP_Class *cl, OOP_Object *o, struct pHidd_Bit
 
 VOID BM__Hidd_BitMap__CopyMemBox16(OOP_Class *cl, OOP_Object *o, struct pHidd_BitMap_CopyMemBox16 *msg)
 {
-    UBYTE *src_start, *dst_start;
-    LONG phase, width, height, w, p;
+    UBYTE *src_start, *src_end, *dst_start;
+    LONG phase, width, height, w;
+    LONG p, count, rest;
     ULONG src_start_add, dst_start_add;
     BOOL descending;
     
@@ -333,86 +389,92 @@ VOID BM__Hidd_BitMap__CopyMemBox16(OOP_Class *cl, OOP_Object *o, struct pHidd_Bi
     height = msg->height;
 
     src_start = msg->src + msg->srcY * msg->srcMod + msg->srcX * 2;
-    src_start_add = msg->srcMod - width * 2;
-
+    src_end   = msg->src + (msg->srcY+height) * msg->srcMod + (msg->srcX + msg->width)*2;
     dst_start = msg->dst + msg->dstY * msg->dstMod + msg->dstX * 2;
+    src_start_add = msg->srcMod - width * 2;
     dst_start_add = msg->dstMod - width * 2;
         
-    if ((IPTR)src_start > (IPTR)dst_start)
-    {
-	if ((phase = (IPTR)src_start & 1L))
-	{
-    	    phase = 2 - phase;
+    if( ((IPTR)src_start > (IPTR)dst_start) || ((IPTR)src_end < (IPTR)dst_start) ){
+	if (phase = (((IPTR)dst_start & 7L)>>1)) {
+    	    phase = 4 - phase;
 	    if (phase > width) phase = width;
 	    width -= phase;
 	}
     	descending = FALSE;
-    }
-    else
-    {
-    	src_start += (height - 1) * msg->srcMod + width * 2;
-	dst_start += (height - 1) * msg->dstMod + width * 2;
-	
-	phase = ((IPTR)src_start & 1L);
-	if (phase > width) phase = width;
-	width -= phase;
-	
-	descending = TRUE;
+    }else{
+      	src_start += (height - 1) * msg->srcMod + width * 2;
+   	dst_start += (height - 1) * msg->dstMod + width * 2;
+   	
+   	phase = (((IPTR)dst_start & 7L)>>1);
+   	if (phase > width) phase = width;
+   	width -= phase;
+   	
+   	descending = TRUE;
     }
  
-    if (!descending)
-    {
-	while(height--)
-	{
-    	    w = width;
-	    p = phase;
+ if (!descending){
+    count=width>>2;
+    rest =width &3;
+    p=phase;
 
-	    while(p--)
-	    {
-		*((UWORD *)dst_start) = *((UWORD *)src_start);
-		dst_start += 2; src_start += 2;
-	    }
-	    while(w >= 2)
-	    {
-		*((ULONG *)dst_start) = *((ULONG *)src_start);
-		w -= 2; dst_start += 4; src_start += 4;
-	    }
-	    while(w--)
-	    {
-		*((UWORD *)dst_start) = *((UWORD *)src_start);
-		dst_start += 2; src_start += 2;
-	    }
-	    src_start += src_start_add;
-	    dst_start += dst_start_add;
-	}
-    }
-    else
-    {
-	while(height--)
-	{
-    	    w = width;
-	    p = phase;
+    asm volatile(
+    "       bra 7f                       \n"
+    "0:                                  \n"
+    "       move.l %[phase],%[count]     \n"
+    "       bra 2f                       \n"
+    "1:     move.w (%[src])+,(%[dst])+   \n"
+    "2:     dbra   %[count],1b           \n"
+    "                                    \n"
+    "       move.l %[width],%[count]     \n"
+    "       lsr.l  #3,%[count]           \n"
+    "       bra 4f                       \n"
+//    "3:     move.l (%[src])+,(%[dst])+   \n"
+//    "       move.l (%[src])+,(%[dst])+   \n"
+    "3:     move16 (%[src])+,(%[dst])+   \n"
+    "4:     dbra   %[count],3b           \n"
+    "                                    \n"
+    "       move.l %[width],%[count]     \n"
+    "       and.l  #7,%[count]           \n"
+    "       bra 6f                       \n"
+    "5:     move.w (%[src])+,(%[dst])+   \n"
+    "6:     dbra   %[count],5b           \n"
+    "                                    \n"
+    "       adda.l %[srcmodulo],%[src]   \n"
+    "       adda.l %[dstmodulo],%[dst]   \n"
+    "                                    \n"
+    "7:     dbra %[yloop],0b             \n"
 
-	    while(p--)
-	    {
-	        dst_start -= 2; src_start -= 2;
-		*(UWORD *)dst_start = *(UWORD *)src_start;
-	    }
-	    while(w >= 2)
-	    {
-	        dst_start -= 4; src_start -= 4;
-		*(ULONG *)dst_start = *(ULONG *)src_start;
-		w -= 2;
-	    }
-	    while(w--)
-	    {
-	        dst_start -= 2; src_start -= 2;
-		*(UWORD *)dst_start = *(UWORD *)src_start;
-	    }
-	    src_start -= src_start_add;
-	    dst_start -= dst_start_add;
-	}
-     }
+    :[count]"+d"(count), [yloop]"+d"(height)
+    :[dst]"a"(dst_start), [src]"a"(src_start), [width]"r"(width), [phase]"r"(phase), [srcmodulo]"r"(src_start_add), [dstmodulo]"r"(dst_start_add)
+    :"cc");
+
+
+       } else {
+   	while(height--)
+   	{
+       	    w = width;
+   	    p = phase;
+   
+   	    while(p--)
+   	    {
+   	        dst_start -= 2; src_start -= 2;
+   		*(UWORD *)dst_start = *(UWORD *)src_start;
+  	    }
+   	    while(w >= 2)
+   	    {
+   	        dst_start -= 4; src_start -= 4;
+   		*(ULONG *)dst_start = *(ULONG *)src_start;
+   		w -= 2;
+   	    }
+   	    while(w--)
+   	    {
+   	        dst_start -= 2; src_start -= 2;
+   		*(UWORD *)dst_start = *(UWORD *)src_start;
+   	    }
+   	    src_start -= src_start_add;
+   	    dst_start -= dst_start_add;
+   	}
+   }
     
 }
 
@@ -420,7 +482,7 @@ VOID BM__Hidd_BitMap__CopyMemBox16(OOP_Class *cl, OOP_Object *o, struct pHidd_Bi
 
 VOID BM__Hidd_BitMap__CopyMemBox24(OOP_Class *cl, OOP_Object *o, struct pHidd_BitMap_CopyMemBox24 *msg)
 {
-    UBYTE *src_start, *dst_start;
+    UBYTE *src_start, *src_end, *dst_start;
     LONG width, height, w;
     ULONG src_start_add, dst_start_add;
     BOOL descending;
@@ -429,57 +491,65 @@ VOID BM__Hidd_BitMap__CopyMemBox24(OOP_Class *cl, OOP_Object *o, struct pHidd_Bi
     height = msg->height;
 
     src_start = msg->src + msg->srcY * msg->srcMod + msg->srcX * 3;
+    src_end   = msg->src + (msg->srcY+height) * msg->srcMod + (msg->srcX + msg->width)*3;
     src_start_add = msg->srcMod - width * 3;
 
     dst_start = msg->dst + msg->dstY * msg->dstMod + msg->dstX * 3;
     dst_start_add = msg->dstMod - width * 3;
         
-    if ((IPTR)src_start > (IPTR)dst_start)
-    {
-    	descending = FALSE;
+    if( ((IPTR)src_start > (IPTR)dst_start) || ((IPTR)src_end < (IPTR)dst_start) ){
+       	descending = FALSE;
+    }else{
+      	src_start += (height - 1) * msg->srcMod + width * 3;
+   	dst_start += (height - 1) * msg->dstMod + width * 3;
+   	
+   	descending = TRUE;
     }
-    else
-    {
-    	src_start += (height - 1) * msg->srcMod + width * 3;
-	dst_start += (height - 1) * msg->dstMod + width * 3;
-	
-	descending = TRUE;
-    }
+    
+    if (!descending){
+       asm volatile(
+       "       bra 7f                     \n"
+       "0:                                \n"
+       "       move.l %[width],%[count]   \n"
+       "       lsr.l  #2,%[count]         \n" 
+       "       bra 4f                     \n"
+       "3:     move.l (%[src])+,(%[dst])+ \n"
+       "       move.l (%[src])+,(%[dst])+ \n"
+       "       move.l (%[src])+,(%[dst])+ \n"
+       "4:     dbra   %[count],3b         \n"
+       "                                  \n"
+       "       move.l %[width],%[count]   \n"
+       "       and.l  #3,%[count]         \n" 
+       "       bra 6f                     \n"
+       "5:     move.b (%[src])+,(%[dst])+ \n"
+       "       move.w (%[src])+,(%[dst])+ \n"
+       "6:     dbra   %[count],5b         \n"
+       "                                  \n"
+       "       adda.l %[src_modulo],%[src]\n"
+       "       adda.l %[dst_modulo],%[dst]\n"
+       "7:     dbra   %[yloop],0b         \n"
+       :[count]"+d"(w), [yloop]"+d"(height)
+       :[dst]"a"(dst_start),[src]"a"(src_start), [width]"r"(width), [src_modulo]"r"(src_start_add),[dst_modulo]"r"(dst_start_add)
  
-    if (!descending)
-    {
-	while(height--)
-	{
-    	    w = width;
+       :"cc");
 
-	    while(w--)
-	    {
-		*dst_start++ = *src_start++;
-		*dst_start++ = *src_start++;
-		*dst_start++ = *src_start++;
-	    }
 
-	    src_start += src_start_add;
-	    dst_start += dst_start_add;
-	}
-    }
-    else
-    {
-	while(height--)
-	{
-    	    w = width;
-
-	    while(w--)
-	    {
-		*--dst_start = *--src_start;
-		*--dst_start = *--src_start;
-		*--dst_start = *--src_start;
-	    }
-	    
-	    src_start -= src_start_add;
-	    dst_start -= dst_start_add;
-	}
-     }
+  } else {
+   	while(height--)
+   	{
+       	    w = width;
+   
+   	    while(w--)
+   	    {
+   		*--dst_start = *--src_start;
+   		*--dst_start = *--src_start;
+   		*--dst_start = *--src_start;
+   	    }
+   	    
+   	    src_start -= src_start_add;
+   	    dst_start -= dst_start_add;
+   	}
+  }
     
 }
 
@@ -487,8 +557,9 @@ VOID BM__Hidd_BitMap__CopyMemBox24(OOP_Class *cl, OOP_Object *o, struct pHidd_Bi
 
 VOID BM__Hidd_BitMap__CopyMemBox32(OOP_Class *cl, OOP_Object *o, struct pHidd_BitMap_CopyMemBox32 *msg)
 {
-    UBYTE *src_start, *dst_start;
-    LONG width, height, w;
+    UBYTE *src_start, *src_end,  *dst_start;
+    LONG phase, width, height, w;
+    LONG p, count, rest;
     ULONG src_start_add, dst_start_add;
     BOOL descending;
     
@@ -496,55 +567,84 @@ VOID BM__Hidd_BitMap__CopyMemBox32(OOP_Class *cl, OOP_Object *o, struct pHidd_Bi
     height = msg->height;
 
     src_start = msg->src + msg->srcY * msg->srcMod + msg->srcX * 4;
+    src_end   = msg->src + (msg->srcY+height) * msg->srcMod + (msg->srcX + msg->width)*4;
     src_start_add = msg->srcMod - width * 4;
 
     dst_start = msg->dst + msg->dstY * msg->dstMod + msg->dstX * 4;
     dst_start_add = msg->dstMod - width * 4;
+
         
-    if ((IPTR)src_start > (IPTR)dst_start)
-    {
-    	descending = FALSE;
+    if( ((IPTR)src_start > (IPTR)dst_start) || ((IPTR)src_end < (IPTR)dst_start) ){
+       	descending = FALSE;
+
+       phase=0;
+       if (((IPTR)dst_start & 7L)!=0) {
+       	 phase = 1;
+	 if (phase > width) phase = width;
+ 	 width -= phase;
+       }
+
+    }else{
+       	src_start += (height - 1) * msg->srcMod + width * 4;
+   	dst_start += (height - 1) * msg->dstMod + width * 4;
+   	
+   	descending = TRUE;
     }
-    else
-    {
-    	src_start += (height - 1) * msg->srcMod + width * 4;
-	dst_start += (height - 1) * msg->dstMod + width * 4;
-	
-	descending = TRUE;
-    }
+   
  
-    if (!descending)
-    {
-	while(height--)
-	{
-    	    w = width;
+ if (!descending) {
 
-	    while(w--)
-	    {    
-		*((ULONG *)dst_start) = *((ULONG *)src_start);
-		dst_start += 4; src_start += 4;
-	    }
 
-	    src_start += src_start_add;
-	    dst_start += dst_start_add;
-	}
+    count=width>>1;
+    rest =width &1;
+    p=phase;
+
+    asm volatile(
+    "       bra 7f                       \n"
+    "0:                                  \n"
+    "       move.l %[phase],%[count]     \n"
+    "       bra 2f                       \n"
+    "1:     move.l (%[src])+,(%[dst])+   \n"
+    "2:     dbra   %[count],1b           \n"
+    "                                    \n"
+    "       move.l %[width],%[count]     \n"
+    "       lsr.l  #1,%[count]           \n"
+    "       bra 4f                       \n"
+    "3:     move.l (%[src])+,(%[dst])+   \n"
+    "       move.l (%[src])+,(%[dst])+   \n"
+    "4:     dbra   %[count],3b           \n"
+    "                                    \n"
+    "       move.l %[width],%[count]     \n"
+    "       and.l  #1,%[count]           \n"
+    "       bra 6f                       \n"
+    "5:     move.l (%[src])+,(%[dst])+   \n"
+    "6:     dbra   %[count],5b           \n"
+    "                                    \n"
+    "       adda.l %[srcmodulo],%[src]   \n"
+    "       adda.l %[dstmodulo],%[dst]   \n"
+    "                                    \n"
+    "7:     dbra %[yloop],0b             \n"
+
+    :[count]"+d"(count), [yloop]"+d"(height)
+    :[dst]"a"(dst_start), [src]"a"(src_start), [width]"r"(width), [phase]"r"(phase), [srcmodulo]"r"(src_start_add), [dstmodulo]"r"(dst_start_add)
+    :"cc");
+
+
+    } else {
+   	while(height--)
+   	{
+       	    w = width;
+   
+   	    while(w--)
+   	    {
+   	        dst_start -= 4; src_start -= 4;
+   		*(ULONG *)dst_start = *(ULONG *)src_start;
+   	    }
+   	    
+   	    src_start -= src_start_add;
+   	    dst_start -= dst_start_add;
+   	}
     }
-    else
-    {
-	while(height--)
-	{
-    	    w = width;
-
-	    while(w--)
-	    {
-	        dst_start -= 4; src_start -= 4;
-		*(ULONG *)dst_start = *(ULONG *)src_start;
-	    }
-	    
-	    src_start -= src_start_add;
-	    dst_start -= dst_start_add;
-	}
-     }
     
 }
 
@@ -554,7 +654,8 @@ VOID BM__Hidd_BitMap__CopyLUTMemBox16(OOP_Class *cl, OOP_Object *o, struct pHidd
 {
     HIDDT_Pixel *pixlut = msg->pixlut->pixels;
     UBYTE *src_start, *dst_start;
-    LONG width, height, w;
+    LONG width, height, w, count=0;
+    ULONG pix1=1,pix2=2,pix3=3,pix4=4;
     ULONG src_start_add, dst_start_add;
     
     if (!pixlut) return;
@@ -568,18 +669,55 @@ VOID BM__Hidd_BitMap__CopyLUTMemBox16(OOP_Class *cl, OOP_Object *o, struct pHidd
     dst_start = msg->dst + msg->dstY * msg->dstMod + msg->dstX * 2;
     dst_start_add = msg->dstMod - width * 2;
         
-    while(height--)
-    {
-    	w = width;
+//          while(height--)
+//          {
+//          	w = width;
+//      
+//      	while(w--)
+//      	{
+//         	    *(UWORD *)dst_start = (UWORD)(pixlut[*src_start++]);
+//         	    dst_start += 2;
+//      	}
+//      	src_start += src_start_add;
+//      	dst_start += dst_start_add;
+//          }
 
-	while(w--)
-	{
-	    *(UWORD *)dst_start = (UWORD)(pixlut[*src_start++]);
-	    dst_start += 2;
-	}
-	src_start += src_start_add;
-	dst_start += dst_start_add;
-    }
+       asm volatile(
+       "       clr.l  %[pix1]               \n"
+       "       clr.l  %[pix2]               \n"
+       "       clr.l  %[pix3]               \n"
+       "       clr.l  %[pix4]               \n"
+       "       bra 7f                       \n"
+       "0:                                  \n"
+             "       move.l %[width],%[count]     \n"
+             "       lsr.l  #2,%[count]           \n"
+             "       bra 4f                       \n"
+             "3:     move.b (%[src])+,%[pix1]     \n"
+             "       move.b (%[src])+,%[pix2]     \n"
+             "       move.b (%[src])+,%[pix3]     \n"
+             "       move.b (%[src])+,%[pix4]     \n"
+             "       move.w 2(%[pixlut],%[pix1]*4),(%[dst])+\n"
+             "       move.w 2(%[pixlut],%[pix2]*4),(%[dst])+\n"
+             "       move.w 2(%[pixlut],%[pix3]*4),(%[dst])+\n"
+             "       move.w 2(%[pixlut],%[pix4]*4),(%[dst])+\n"
+             "4:     dbra   %[count],3b           \n"
+       "                                    \n"
+       "       move.l %[width],%[count]     \n"
+       "       and.l  #3,%[count]           \n"
+       "       bra 6f                       \n"
+       "5:     move.b (%[src])+,%[pix1]     \n"
+       "       move.w 2(%[pixlut],%[pix1]*4),(%[dst])+\n"
+       "6:     dbra   %[count],5b           \n"
+       "                                    \n"
+       "       adda.l %[srcmodulo],%[src]   \n"
+       "       adda.l %[dstmodulo],%[dst]   \n"
+       "                                    \n"
+       "7:     dbra %[yloop],0b             \n"
+   
+       :[count]"+d"(count), [yloop]"+d"(height), [pix1]"+d"(pix1), [pix2]"+d"(pix2), [pix3]"+d"(pix3), [pix4]"+d"(pix4)
+       :[pixlut]"a"(pixlut), [dst]"a"(dst_start), [src]"a"(src_start), [width]"r"(width), [srcmodulo]"r"(src_start_add), [dstmodulo]"r"(dst_start_add)
+       :"cc");
+
 }
 
 /****************************************************************************************/
@@ -608,17 +746,17 @@ VOID BM__Hidd_BitMap__CopyLUTMemBox24(OOP_Class *cl, OOP_Object *o, struct pHidd
 
 	while(w--)
 	{
-	    HIDDT_Pixel pix = pixlut[*src_start++];
-	    
-	#if AROS_BIG_ENDIAN
-	    *dst_start++ = (pix >> 16) & 0xFF;
-	    *dst_start++ = (pix >> 8) & 0xFF;
-	    *dst_start++ =  pix & 0xFF;
-	#else
-	    *dst_start++ =  pix & 0xFF;
-	    *dst_start++ = (pix >> 8) & 0xFF;
-	    *dst_start++ = (pix >> 16) & 0xFF;
-	#endif
+   	    HIDDT_Pixel pix = pixlut[*src_start++];
+   	    
+   	#if AROS_BIG_ENDIAN
+   	    *dst_start++ = (pix >> 16) & 0xFF;
+   	    *dst_start++ = (pix >> 8) & 0xFF;
+   	    *dst_start++ =  pix & 0xFF;
+   	#else
+   	    *dst_start++ =  pix & 0xFF;
+   	    *dst_start++ = (pix >> 8) & 0xFF;
+   	    *dst_start++ = (pix >> 16) & 0xFF;
+   	#endif
 	}
 	src_start += src_start_add;
 	dst_start += dst_start_add;
@@ -631,8 +769,9 @@ VOID BM__Hidd_BitMap__CopyLUTMemBox32(OOP_Class *cl, OOP_Object *o, struct pHidd
 {
     HIDDT_Pixel *pixlut = msg->pixlut->pixels;
     UBYTE *src_start, *dst_start;
-    LONG width, height, w;
+    LONG width, height, w, count=0;
     ULONG src_start_add, dst_start_add;
+    ULONG pix1=1,pix2=2,pix3=3,pix4=4;
 
     if (!pixlut) return;
     
@@ -645,18 +784,44 @@ VOID BM__Hidd_BitMap__CopyLUTMemBox32(OOP_Class *cl, OOP_Object *o, struct pHidd
     dst_start = msg->dst + msg->dstY * msg->dstMod + msg->dstX * 4;
     dst_start_add = msg->dstMod - width * 4;
         
-    while(height--)
-    {
-    	w = width;
 
-	while(w--)
-	{
-	    *((ULONG *)dst_start) = (ULONG)(pixlut[*src_start++]);
-	    dst_start += 4;
-	}
-	src_start += src_start_add;
-	dst_start += dst_start_add;
-    }
+       asm volatile(
+       "       clr.l  %[pix1]               \n"
+       "       clr.l  %[pix2]               \n"
+       "       clr.l  %[pix3]               \n"
+       "       clr.l  %[pix4]               \n"
+       "       bra 7f                       \n"
+       "0:                                  \n"
+             "       move.l %[width],%[count]     \n"
+             "       lsr.l  #2,%[count]           \n"
+             "       bra 4f                       \n"
+             "3:     move.b (%[src])+,%[pix1]     \n"
+             "       move.b (%[src])+,%[pix2]     \n"
+             "       move.b (%[src])+,%[pix3]     \n"
+             "       move.b (%[src])+,%[pix4]     \n"
+             "       move.l (%[pixlut],%[pix1]*4),(%[dst])+\n"
+             "       move.l (%[pixlut],%[pix2]*4),(%[dst])+\n"
+             "       move.l (%[pixlut],%[pix3]*4),(%[dst])+\n"
+             "       move.l (%[pixlut],%[pix4]*4),(%[dst])+\n"
+             "4:     dbra   %[count],3b           \n"
+       "                                    \n"
+       "       move.l %[width],%[count]     \n"
+       "       and.l  #3,%[count]           \n"
+       "       bra 6f                       \n"
+       "5:     move.b (%[src])+,%[pix1]     \n"
+       "       move.l (%[pixlut],%[pix1]*4),(%[dst])+\n"
+       "6:     dbra   %[count],5b           \n"
+       "                                    \n"
+       "       adda.l %[srcmodulo],%[src]   \n"
+       "       adda.l %[dstmodulo],%[dst]   \n"
+       "                                    \n"
+       "7:     dbra %[yloop],0b             \n"
+   
+       :[count]"+d"(count), [yloop]"+d"(height), [pix1]"+d"(pix1), [pix2]"+d"(pix2), [pix3]"+d"(pix3), [pix4]"+d"(pix4)
+       :[pixlut]"a"(pixlut), [dst]"a"(dst_start), [src]"a"(src_start), [width]"r"(width), [srcmodulo]"r"(src_start_add), [dstmodulo]"r"(dst_start_add)
+       :"cc");
+
+
 }
 
 /****************************************************************************************/
@@ -682,8 +847,8 @@ VOID BM__Hidd_BitMap__PutMem32Image8(OOP_Class *cl, OOP_Object *o, struct pHidd_
 
 	while(w--)
 	{
-	    *dst_start++ = (UBYTE)(*(ULONG *)src_start);
-	    src_start += 4;
+  	    *dst_start++ = (UBYTE)(*(ULONG *)src_start);
+   	    src_start += 4;
 	}
 	src_start += src_start_add;
 	dst_start += dst_start_add;
@@ -713,8 +878,10 @@ VOID BM__Hidd_BitMap__PutMem32Image16(OOP_Class *cl, OOP_Object *o, struct pHidd
 
 	while(w--)
 	{
-	    *(UWORD *)dst_start = (UWORD)(*(ULONG *)src_start);
-	    dst_start += 2; src_start += 4;
+
+//7
+   	    *(UWORD *)dst_start = (UWORD)(*(ULONG *)src_start);
+   	    dst_start += 2; src_start += 4;
 	}
 	src_start += src_start_add;
 	dst_start += dst_start_add;
@@ -748,16 +915,17 @@ VOID BM__Hidd_BitMap__PutMem32Image24(OOP_Class *cl, OOP_Object *o, struct pHidd
 
 	    src_start += 4;
 	    
-	#if AROS_BIG_ENDIAN
-	    *dst_start++ = (pix >> 16) & 0xFF;
-	    *dst_start++ = (pix >> 8) & 0xFF;
-	    *dst_start++ =  pix & 0xFF;
-	#else
-	    *dst_start++ =  pix & 0xFF;
-	    *dst_start++ = (pix >> 8) & 0xFF;
-	    *dst_start++ = (pix >> 16) & 0xFF;
-	#endif
-
+//7
+   	#if AROS_BIG_ENDIAN
+   	    *dst_start++ = (pix >> 16) & 0xFF;
+   	    *dst_start++ = (pix >> 8) & 0xFF;
+   	    *dst_start++ =  pix & 0xFF;
+   	#else
+   	    *dst_start++ =  pix & 0xFF;
+   	    *dst_start++ = (pix >> 8) & 0xFF;
+   	    *dst_start++ = (pix >> 16) & 0xFF;
+   	#endif
+   
 	}
 	src_start += src_start_add;
 	dst_start += dst_start_add;
@@ -787,8 +955,8 @@ VOID BM__Hidd_BitMap__GetMem32Image8(OOP_Class *cl, OOP_Object *o, struct pHidd_
 
 	while(w--)
 	{
-	    *(ULONG *)dst_start = (ULONG)(*src_start++);
-	    dst_start += 4; 
+   	    *(ULONG *)dst_start = (ULONG)(*src_start++);
+   	    dst_start += 4; 
 	}
 	src_start += src_start_add;
 	dst_start += dst_start_add;
@@ -818,8 +986,8 @@ VOID BM__Hidd_BitMap__GetMem32Image16(OOP_Class *cl, OOP_Object *o, struct pHidd
 
 	while(w--)
 	{
-	    *(ULONG *)dst_start = (ULONG)(*(UWORD *)src_start);
-	    dst_start += 4; src_start += 2;
+   	    *(ULONG *)dst_start = (ULONG)(*(UWORD *)src_start);
+   	    dst_start += 4; src_start += 2;
 	}
 	src_start += src_start_add;
 	dst_start += dst_start_add;
@@ -849,16 +1017,16 @@ VOID BM__Hidd_BitMap__GetMem32Image24(OOP_Class *cl, OOP_Object *o, struct pHidd
 
 	while(w--)
 	{
-	    UBYTE pix1 = *src_start++;
-	    UBYTE pix2 = *src_start++;
-	    UBYTE pix3 = *src_start++;
-	    
-	#if AROS_BIG_ENDIAN
-	    *(ULONG *)dst_start = (pix1 << 16) | (pix2 << 8) | pix3;
-	#else
-	    *(ULONG *)dst_start = (pix3 << 16) | (pix2 << 8) | pix1;
-	#endif
-	
+   	    UBYTE pix1 = *src_start++;
+   	    UBYTE pix2 = *src_start++;
+   	    UBYTE pix3 = *src_start++;
+   	    
+   	#if AROS_BIG_ENDIAN
+   	    *(ULONG *)dst_start = (pix1 << 16) | (pix2 << 8) | pix3;
+   	#else
+   	    *(ULONG *)dst_start = (pix3 << 16) | (pix2 << 8) | pix1;
+   	#endif
+   	
 	    dst_start += 4;
 	}
 	src_start += src_start_add;

@@ -42,6 +42,7 @@
 #define ATAB_ERROR                              0
 #define ATAB_BUSY                               7
 
+#define ATAF_DF                                 0x20
 #define ATAF_SLAVE                              0x10
 #define ATAF_LBA                                0x40
 #define ATAF_ATAPI                              0x80

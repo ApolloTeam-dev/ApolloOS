@@ -76,8 +76,6 @@ static const struct NewMenu WBWindow_menu[] =  {
         WBMENU_ITEM(WBMENU_WB_SHELL),
         WBMENU_ITEM(WBMENU_WB_ABOUT),
         WBMENU_BAR,
-        WBMENU_ITEM(WBMENU_WB_QUIT),
-        WBMENU_ITEM(WBMENU_WB_SHUTDOWN),
     WBMENU_TITLE(WBMENU_WN),
         WBMENU_ITEM(WBMENU_WN_NEW_DRAWER),
         WBMENU_ITEM(WBMENU_WN_OPEN_PARENT),
@@ -972,7 +970,7 @@ static IPTR WBWindowIntuiTick(Class *cl, Object *obj, Msg msg)
 	val[4] = AvailMem(MEMF_ANY) / 1024;
 
 	/* Update the window's title */
-	RawDoFmt("Workbook %ld.%ld  Chip: %ldk, Fast: %ldk, Any: %ldk", (RAWARG)val, 
+	RawDoFmt("ApolloOS %ld.%ld  Chip: %ldk, Fast: %ldk, Any: %ldk", (RAWARG)val, 
 		 RAWFMTFUNC_STRING, my->ScreenTitle);
 
 	SetWindowTitles(my->Window, (CONST_STRPTR)-1, my->ScreenTitle);

@@ -40,11 +40,87 @@ static ULONG rl(UBYTE *p)
 
 static UBYTE scsi_read32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG len, ULONG *outlen)
 {
-     return unit->au_Read32(unit, offset, len, data, outlen);
+     if (unit->au_SectorShift == 9) /* use cache with 512 Byte sectors only */
+     {
+         UBYTE io_Error = 0;
+         struct ata_Bus *bus = unit->au_Bus;
+         struct ataBase *base = bus->ab_Base;
+         ULONG unitNum = unit->au_UnitNum;
+
+         ULONG start;
+         ULONG i;
+         for (start = 0, i = 0; i < len; i++)
+         {
+             ULONG blockAdr = (offset + i) & CACHE_MASK;
+             UQUAD blockTag = (offset + i) & ~CACHE_MASK;
+
+             if ((unitNum < (1<<9)) &&
+                 (base->ata_CacheTags[blockAdr] == (blockTag | unitNum))) /* cache hit */
+             {
+                 CopyMem(base->ata_CacheData + blockAdr*512, data + i*512, 512);
+
+                 if (start != i)
+                 {
+                     /* Call the Unit's access funtion */
+                     io_Error = unit->au_Read32(unit, offset + start, i - start,
+                         data + start*512, outlen);
+
+                     if (io_Error)
+                     {
+                         return io_Error;
+                     }
+
+                     blockAdr = (offset + start) & CACHE_MASK;
+                     CopyMem(data + start*512, base->ata_CacheData + blockAdr*512, (i - start)*512);
+                     for (ULONG j = start; j < i; j++)
+                     {
+                         blockAdr = (offset + j) & CACHE_MASK;
+                         blockTag = (offset + j) & ~CACHE_MASK;
+                         base->ata_CacheTags[blockAdr] = blockTag | unitNum;
+                     }
+                 }
+                 start = i + 1;
+             }
+         }
+         if (start != i)
+         {
+             /* Call the Unit's access funtion */
+             io_Error = unit->au_Read32(unit, offset + start, i - start,
+                 data + start*512, outlen);
+
+             if (io_Error)
+             {
+                 return io_Error;
+             }
+
+             ULONG blockAdr = (offset + start) & CACHE_MASK;
+             CopyMem(data + start*512, base->ata_CacheData + blockAdr*512, (i - start)*512);
+             for (ULONG j = start; j < i; j++)
+             {
+                 blockAdr = (offset + j) & CACHE_MASK;
+                 ULONG blockTag = (offset + j) & ~CACHE_MASK;
+                 base->ata_CacheTags[blockAdr] = blockTag | unitNum;
+             }
+         }
+         *outlen = len << unit->au_SectorShift;
+         return io_Error;
+     }
+     else
+     {
+         /* Call the Unit's access funtion */
+         return unit->au_Read32(unit, offset, len, data, outlen);
+     }
 }
 
 static UBYTE scsi_write32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG len, ULONG *outlen)
 {
+     struct ata_Bus *bus = unit->au_Bus;
+     struct ataBase *base = bus->ab_Base;
+     for (int i = 0; i < len; i++)
+     {
+         ULONG blockAdr = (offset + i) & CACHE_MASK;
+         base->ata_CacheTags[blockAdr] = 0xfffffffffffffffful;
+     }
      return unit->au_Write32(unit, offset, len, data, outlen);
 }
 
