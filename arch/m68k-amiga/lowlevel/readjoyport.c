@@ -85,6 +85,7 @@ static inline ULONG llPollJoystick(int port)
       if ((newjoydat & 8)!=0)  bits |= JPF_BUTTON_GREEN;
       if ((newjoydat & 32)!=0) bits |= JPF_BUTTON_REVERSE;
       if ((newjoydat & 64)!=0) bits |= JPF_BUTTON_FORWARD;
+      if ((newjoydat & 1024)!=0) bits |= JPF_BUTTON_PLAY;
     } 
 
     if ((joydat >> 1) & 1) {
