@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 */
 
 #include "datatypes_intern.h"
@@ -130,7 +129,7 @@ static inline struct DataType *DataTypeFromANode(struct Node *aNode)
             cbh->cbh_Req.io_Length = sizeof(CheckArray);
 
             if(DoIO((struct IORequest*)&cbh->cbh_Req))
-            {	    
+            {
                 SetIoErr(ERROR_OBJECT_NOT_FOUND);
             }
             else

@@ -150,7 +150,7 @@ FILES   :=
 AFILES  := ext_entry
 
 KLIBS   :=  keymap graphics layers intuition gadtools workbench \
-            mathffp mathieeesingbas freeanim nvdisk \
+            mathffp mathieeesingbas freeanim lowlevel nvdisk \
             setpatch
 KDEVS   := ata sagasd trackdisk
 KHNDLRS := 
