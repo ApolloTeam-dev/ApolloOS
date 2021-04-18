@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2011, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Open a file with the specified mode.
@@ -69,7 +69,7 @@ static LONG InternalOpen(CONST_STRPTR name, LONG accessMode,
     LONG error;
 
     /* Sanity check */
-    if (name == NULL) return BNULL;
+    if (name == NULL || *((char*)name)==0 ) return BNULL;
 
     /* Create filehandle */
     ret = (struct FileHandle *)AllocDosObject(DOS_FILEHANDLE,NULL);
