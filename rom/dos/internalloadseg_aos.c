@@ -178,7 +178,7 @@ BPTR InternalLoadSeg_AOS(BPTR fh,
 
     lcount = AROS_BE2LONG(lcount);
     tmp = lcount & (HUNKF_FAST | HUNKF_CHIP);
-    lcount &= 0xFFFFFF;
+    lcount &= 0x3FFFFFFF;
     D(bug("\tHunk %d size: 0x%06lx bytes in ", i, lcount*4));
     req = MEMF_CLEAR | MEMF_PUBLIC;
     if (tmp == (HUNKF_FAST | HUNKF_CHIP)) {
