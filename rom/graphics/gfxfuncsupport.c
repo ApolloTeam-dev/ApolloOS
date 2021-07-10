@@ -1,5 +1,5 @@
 /*
-    Copyright � 1995-2014, The AROS Development Team. All rights reserved.
+    Copyright ? 1995-2014, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -732,12 +732,19 @@ LONG write_transp_pixels_8(struct RastPort *rp, UBYTE *array, ULONG modulo,
 BOOL MoveRaster (struct RastPort * rp, WORD dx, WORD dy, WORD x1, WORD y1,
     	    	 WORD x2, WORD y2, BOOL UpdateDamageList, struct GfxBase * GfxBase)
 {
+    if (0 == dx && 0 == dy)
+    	return TRUE;
+
+    return MoveRasteWithMInterm (rp, dx, dy, x1, y1, x2, y2, 0xC0, UpdateDamageList, GfxBase);
+}
+
+BOOL MoveRasteWithMInterm (struct RastPort * rp, WORD dx, WORD dy, WORD x1, WORD y1,
+    	    	 WORD x2, WORD y2, UBYTE minterm, BOOL UpdateDamageList, struct GfxBase * GfxBase)
+{
     struct Layer     *L       = rp->Layer;
     struct Rectangle  ScrollRect;
     struct Rectangle  Rect;
 
-    if (0 == dx && 0 == dy)
-    	return TRUE;
 
     ScrollRect.MinX = x1;
     ScrollRect.MinY = y1;
@@ -753,12 +760,12 @@ BOOL MoveRaster (struct RastPort * rp, WORD dx, WORD dy, WORD x1, WORD y1,
             BltBitMap(rp->BitMap,
                       Rect.MinX + dx,
                       Rect.MinY + dy,
-	              rp->BitMap,
+                      rp->BitMap,
                       Rect.MinX,
                       Rect.MinY,
                       Rect.MaxX - Rect.MinX + 1,
                       Rect.MaxY - Rect.MinY + 1,
-		      0xc0, /* copy */
+                      minterm,
                       0xff,
                       NULL );
 	}
@@ -908,20 +915,17 @@ BOOL MoveRaster (struct RastPort * rp, WORD dx, WORD dy, WORD x1, WORD y1,
 		if (!SrcCR->_p1 && !SrcCR->lobs)
 		{
 		    /* there are no hidden/obscured rectangles this recrtangle has to deal with*/
-		    BltBitMap
-                    (
-                        rp->BitMap,
-                        Rect.MinX + dx,
-        		Rect.MinY + dy,
-	          	rp->BitMap,
-                    	Rect.MinX,
-                   	Rect.MinY,
-                  	Rect.MaxX - Rect.MinX + 1,
-                  	Rect.MaxY - Rect.MinY + 1,
-			0xc0, /* copy */
-         		0xff,
-                 	NULL
- 		    );
+		    BltBitMap(rp->BitMap,
+                      Rect.MinX + dx,
+                      Rect.MinY + dy,
+                      rp->BitMap,
+                      Rect.MinX,
+                      Rect.MinY,
+                      Rect.MaxX - Rect.MinX + 1,
+                      Rect.MaxY - Rect.MinY + 1,
+                      minterm,
+                      0xff,
+                      NULL );
 		}
 		else
 		{
@@ -984,20 +988,17 @@ BOOL MoveRaster (struct RastPort * rp, WORD dx, WORD dy, WORD x1, WORD y1,
 				}
 
 
-				BltBitMap
-                                (
-                                    srcbm,
-				    Tmp.MinX + corrsrcx + dx,
-				    Tmp.MinY + corrsrcy + dy,
-				    HiddCR->BitMap,
-				    Tmp.MinX + corrdstx,
-				    Tmp.MinY + corrdsty,
-				    Tmp.MaxX - Tmp.MinX + 1,
-                	      	    Tmp.MaxY - Tmp.MinY + 1,
-			      	    0xc0, /* copy */
-         		      	    0xff,
-                 	   	    NULL
-                                );
+				BltBitMap(srcbm,
+				          Tmp.MinX + corrsrcx + dx,
+				          Tmp.MinY + corrsrcy + dy,
+				          HiddCR->BitMap,
+				          Tmp.MinX + corrdstx,
+				          Tmp.MinY + corrdsty,
+				          Tmp.MaxX - Tmp.MinX + 1,
+				          Tmp.MaxY - Tmp.MinY + 1,
+				          minterm,
+				          0xff,
+				          NULL );
 			    }
 
 			    if (!ClearRectRegion(RectRegion, &Tmp))
@@ -1019,38 +1020,32 @@ BOOL MoveRaster (struct RastPort * rp, WORD dx, WORD dy, WORD x1, WORD y1,
 
 		    for (rr = RectRegion->RegionRectangle; rr; rr = rr->Next)
 		    {
-			BltBitMap
-                        (
-                            srcbm,
-			    MinX(rr) + MinX(RectRegion) + corrsrcx + dx,
-                	    MinY(rr) + MinY(RectRegion) + corrsrcy + dy,
-	          	    rp->BitMap,
-                	    MinX(rr) + MinX(RectRegion),
-        		    MinY(rr) + MinY(RectRegion),
-                	    Width(rr),
-                	    Height(rr),
-			    0xc0, /* copy */
-         		    0xff,
-                 	    NULL
-                        );
+			BltBitMap(srcbm,
+			          MinX(rr) + MinX(RectRegion) + corrsrcx + dx,
+			          MinY(rr) + MinY(RectRegion) + corrsrcy + dy,
+			          rp->BitMap,
+			          MinX(rr) + MinX(RectRegion),
+			          MinY(rr) + MinY(RectRegion),
+			          Width(rr),
+			          Height(rr),
+			          minterm,
+			          0xff,
+                 	  NULL );
 		    }
 
                     if (dosrcsrc)
 		    {
-			BltBitMap
-                        (
-                            srcbm,
-			    Tmp.MinX + corrsrcx + dx,
-                	    Tmp.MinY + corrsrcy + dy,
-	      		    srcbm,
-			    Tmp.MinX + corrsrcx,
-                	    Tmp.MinY + corrsrcy,
-       			    Tmp.MaxX - Tmp.MinX + 1,
-                	    Tmp.MaxY - Tmp.MinY + 1,
-			    0xc0, /* copy */
-         		    0xff,
-                 	    NULL
-                        );
+			BltBitMap(srcbm,
+			          Tmp.MinX + corrsrcx + dx,
+                	  Tmp.MinY + corrsrcy + dy,
+	      		      srcbm,
+			          Tmp.MinX + corrsrcx,
+                	  Tmp.MinY + corrsrcy,
+       			      Tmp.MaxX - Tmp.MinX + 1,
+                	  Tmp.MaxY - Tmp.MinY + 1,
+			          minterm,
+         		      0xff,
+                 	  NULL );
 
 		    }
 
@@ -1133,20 +1128,17 @@ BOOL MoveRaster (struct RastPort * rp, WORD dx, WORD dy, WORD x1, WORD y1,
 	        	        dstbm = rp->BitMap;
 	    	            }
 
-                            BltBitMap
-                            (
-                                srcbm,
-                                Rect2.MinX + corrsrcx + dx,
-                                Rect2.MinY + corrsrcy + dy,
-                                dstbm,
-                                Rect2.MinX + corrdstx,
-                                Rect2.MinY + corrdsty,
-				Rect2.MaxX - Rect2.MinX + 1,
-				Rect2.MaxY - Rect2.MinY + 1,
-                                0xC0,
-                                0xFF,
-                                NULL
-			    );
+                            BltBitMap(srcbm,
+                                      Rect2.MinX + corrsrcx + dx,
+                                      Rect2.MinY + corrsrcy + dy,
+                                      dstbm,
+                                      Rect2.MinX + corrdstx,
+                                      Rect2.MinY + corrdsty,
+                                      Rect2.MaxX - Rect2.MinX + 1,
+                                      Rect2.MaxY - Rect2.MinY + 1,
+                                      minterm,
+                                      0xFF,
+                                      NULL );
 			}
             	    }
         	}
