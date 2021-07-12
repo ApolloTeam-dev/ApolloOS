@@ -499,9 +499,7 @@ void RefreshPropGadget (struct Gadget * gadget, struct Window * window,
                 if (bbox.Width <= 0 || bbox.Height <= 0)
                     break;
 
-
                 RenderPropLabel(rp, gadget, &bbox, dri, IntuitionBase);
-
 
                 if (CalcKnobSize (gadget, &kbox))
                 {
