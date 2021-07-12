@@ -500,7 +500,7 @@ void RefreshPropGadget (struct Gadget * gadget, struct Window * window,
                     break;
 
 
-			    RenderPropLabel(rp, gadget, &bbox, dri, IntuitionBase);
+                RenderPropLabel(rp, gadget, &bbox, dri, IntuitionBase);
 
 
                 if (CalcKnobSize (gadget, &kbox))
