@@ -735,7 +735,7 @@ BOOL MoveRaster (struct RastPort * rp, WORD dx, WORD dy, WORD x1, WORD y1,
     if (0 == dx && 0 == dy)
     	return TRUE;
 
-    return MoveRasteWithMInterm (rp, dx, dy, x1, y1, x2, y2, 0xC0, UpdateDamageList, GfxBase);
+    return MoveRasterWithMinterm (rp, dx, dy, x1, y1, x2, y2, 0xC0, UpdateDamageList, GfxBase);
 }
 
 BOOL MoveRasteWithMInterm (struct RastPort * rp, WORD dx, WORD dy, WORD x1, WORD y1,
