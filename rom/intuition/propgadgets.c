@@ -115,6 +115,61 @@ static void RenderPropBackground(struct Gadget *gad, struct Window *win, struct 
 }
 
 
+static void RenderPropLabel(struct RastPort *rp, struct Gadget *gadget, struct BBox *bbox,
+                            struct DrawInfo *dri, struct IntuitionBase *IntuitionBase)
+{
+    struct GfxBase *GfxBase = GetPrivIBase(IntuitionBase)->GfxBase;
+    /* FIXME: Amiga handmade (non-boopsi) bool gadgets do not seem to know anything about
+     * GFLG_LABELSTRING/GFLG_LABELIMAGE. Instead they always assume GadgetText to
+     * point to a struct IntuiText!!!
+     */
+
+    if (gadget->GadgetText)
+    {
+        SetFont(rp, dri->dri_Font);
+
+        switch (gadget->Flags & GFLG_LABELMASK)
+        {
+            case GFLG_LABELITEXT:
+        	PrintIText (rp, gadget->GadgetText, bbox->Left, bbox->Top);
+        	break;
+
+            case GFLG_LABELSTRING:
+        	{
+                    STRPTR text = (STRPTR) gadget->GadgetText;
+                    int    len, labelwidth, labelheight;
+
+                    len = strlen (text);
+
+                    labelwidth = LabelWidth (rp, text, len, IntuitionBase);
+                    labelheight = rp->Font->tf_YSize;
+
+                    SetAPen (rp, 1);
+                    SetDrMd (rp, JAM1);
+
+                    Move (rp, bbox->Left + bbox->Width  / 2 - labelwidth / 2,
+                	  bbox->Top  + bbox->Height / 2 - labelheight / 2 + rp->Font->tf_Baseline);
+
+                    RenderLabel (rp, text, len, IntuitionBase);
+                    break;
+        	}
+
+            case GFLG_LABELIMAGE:
+        	DrawImageState (rp, (struct Image *)gadget->GadgetText,
+                        	bbox->Left,
+                        	bbox->Top,
+                        	IDS_NORMAL,
+                        	dri);
+        	break;
+
+        } /* switch (gadget->Flags & GFLG_LABELMASK) */
+
+    } /* GadgetText */
+
+}
+
+
+
 VOID HandlePropSelectDown(struct Gadget *gadget, struct Window *w, struct Requester *req,
     	    	    	  UWORD mouse_x, UWORD mouse_y, struct IntuitionBase *IntuitionBase)
 {
@@ -443,6 +498,8 @@ void RefreshPropGadget (struct Gadget * gadget, struct Window * window,
 
                 if (bbox.Width <= 0 || bbox.Height <= 0)
                     break;
+
+                RenderPropLabel(rp, gadget, &bbox, dri, IntuitionBase);
 
                 if (CalcKnobSize (gadget, &kbox))
                 {
