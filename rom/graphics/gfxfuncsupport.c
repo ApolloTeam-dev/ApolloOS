@@ -738,7 +738,7 @@ BOOL MoveRaster (struct RastPort * rp, WORD dx, WORD dy, WORD x1, WORD y1,
     return MoveRasterWithMinterm (rp, dx, dy, x1, y1, x2, y2, 0xC0, UpdateDamageList, GfxBase);
 }
 
-BOOL MoveRasteWithMInterm (struct RastPort * rp, WORD dx, WORD dy, WORD x1, WORD y1,
+BOOL MoveRasterWithMinterm (struct RastPort * rp, WORD dx, WORD dy, WORD x1, WORD y1,
     	    	 WORD x2, WORD y2, UBYTE minterm, BOOL UpdateDamageList, struct GfxBase * GfxBase)
 {
     struct Layer     *L       = rp->Layer;
