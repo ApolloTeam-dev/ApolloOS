@@ -49,7 +49,7 @@
     AROS_LIBFUNC_INIT
 
     /* Protection against erroneous programs */
-    if (intHandle != NULL ||
+    if (intHandle == NULL ||
 	((struct Interrupt *)intHandle) != &LowLevelBase->ll_VBlank)
     {
 	return;
