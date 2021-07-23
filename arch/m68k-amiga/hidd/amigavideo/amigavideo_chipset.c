@@ -1,5 +1,5 @@
 /*
-    Copyright Â© 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -56,7 +56,7 @@ VOID resetcustom(struct amigavideo_staticdata *csd)
     custom->vposw = 0x8000;
     custom->color[0] = DEFAULT_BORDER_GRAY;
 
-    custom->dmacon = 0x8180;
+    custom->dmacon = 0x8180; /* GUNNAR PLANE/COP ON*/ 
     custom->intena = 0x8020; /* VBL ON*/ 
 
     // Use AGA modes and create AGA copperlists only if AGA is "enabled"
@@ -266,6 +266,9 @@ static VOID setcopperscroll2(struct amigavideo_staticdata *csd, struct amigabm_d
     // Modulo (even)
     copptr[19] = modulo;
 
+    copptr[20] = (ystart+4 << 8) | 0x01;
+    copptr[21] = 0xFFFE;
+
     // DIWHIGH
     if ((copptr = c2d->copper2_fmode) != NULL)
     {
@@ -283,7 +286,7 @@ static VOID setcopperscroll2(struct amigavideo_staticdata *csd, struct amigabm_d
         copptr[0] = 0xffdf;
     else
         copptr[0] = 0x01fe;  // NOP
-    copptr[2] = (ystart << 8) | 0x05;
+    copptr[2] = (ystart << 8) | 0x01;
 
     copptr = c2d->copper2_tail;
     if (copptr[0] != 0x0084)
@@ -392,6 +395,7 @@ UWORD *populatebmcopperlist(struct amigavideo_staticdata *csd, struct amigabm_da
     /* NOP + WAIT - to store start co-ords */
     COPPEROUT(c, 0x01fe, 0xfffe)
     COPPEROUT(c, 0xffff, 0xfffe)
+    COPPEROUT(c, 0x0100, bplcon0_null )               // Push the screens bplcon0
 
     bm->use_colors = 1 << bm->depth;
 
@@ -452,11 +456,23 @@ UWORD *populatebmcopperlist(struct amigavideo_staticdata *csd, struct amigabm_da
         bplcon0 |= 0x0800;
 //    D(bug("[AmigaVideo] %s: copper bplcon0 = %04x\n", __func__, bplcon0));
 
+
+
+    c2d->copper2_bpl = c;
+    for (i = 0; i < bm->depth; i++) {
+        pptr = (ULONG)(bm->pbm->Planes[bm->bploffsets[i]]);
+        if (lace)
+            pptr += bm->bytesperrow;
+        COPPEROUT(c, 0x00e0 + i * 4, (UWORD)(pptr >> 16)) // Push the bitplane registers
+        COPPEROUT(c, 0x00e2 + i * 4, (UWORD)(pptr >> 0))
+    }
+
+
     c2d->copper2_scroll = c;
 
     COPPEROUT(c, 0x008e, 0)                     // Push (DIWSTRT) Display window start
+    COPPEROUT(c, 0x01FE, bplcon0)     //
 
-    COPPEROUT(c, 0x0100, bplcon0)               // Push the screens bplcon0
     COPPEROUT(c, 0x0104, csd->bplcon2 | ((csd->aga && !(bm->modeid & EXTRAHALFBRITE_KEY)) ? 0x0200 : 0))  // Push the screens bplcon2
     COPPEROUT(c, 0x0106, bplcon3)               // Push the screens bplcon3
 
@@ -467,14 +483,8 @@ UWORD *populatebmcopperlist(struct amigavideo_staticdata *csd, struct amigabm_da
     COPPEROUT(c, 0x0108, 0)                     // Push Bitplane modulo (odd planes)
     COPPEROUT(c, 0x010a, 0)                     // Push Bitplane modulo (even planes)
 
-    c2d->copper2_bpl = c;
-    for (i = 0; i < bm->depth; i++) {
-        pptr = (ULONG)(bm->pbm->Planes[bm->bploffsets[i]]);
-        if (lace)
-            pptr += bm->bytesperrow;
-        COPPEROUT(c, 0x00e0 + i * 4, (UWORD)(pptr >> 16)) // Push the bitplane registers
-        COPPEROUT(c, 0x00e2 + i * 4, (UWORD)(pptr >> 0))
-    }
+    COPPEROUT(c, 0x00df, 0x00FE)     //
+    COPPEROUT(c, 0x0100, bplcon0)     //
 
     COPPEROUT(c, 0x01e4, 0)                     // Push (DIWHIGH) Display window
 
@@ -925,32 +935,32 @@ static void updatecopper1frombm(struct amigavideo_staticdata *csd, struct amigab
 {
     D(bug("[AmigaVideo] %s(0x%p)\n", __func__, bm));
 
-    csd->copper1[5] = csd->bplcon3 | bm->bplcon3 | ((bm->sprite_res + 1) << 6);
-    csd->copper1[9] = csd->bplcon3 | bm->bplcon3 | (1 << 9) | ((bm->sprite_res + 1) << 6);
-    csd->copper1[13] = csd->bplcon3 | bm->bplcon3 | ((bm->sprite_res + 1) << 6);
-    csd->copper1[27] = csd->bplcon2 | ((csd->aga && !(bm->modeid & EXTRAHALFBRITE_KEY)) ? 0x0200 : 0);
-    if (bm->copld.copper2_palette)
-    {
-        if (csd->aga && csd->aga_enabled)
-        {
-            csd->copper1[7] = bm->copld.copper2_palette[3];
-            csd->copper1[11] = bm->copld.copper2_palette[3];
-        }
-        else
-        {
-            csd->copper1[7] = bm->copld.copper2_palette[1];
-            csd->copper1[11] = bm->copld.copper2_palette[1];
-        }
-    }
-    else
-    {
-        csd->copper1[7] = DEFAULT_BORDER_GRAY;
-        csd->copper1[11] = DEFAULT_BORDER_GRAY;
-    }
-    if (bm->copld.copper2_fmode)
-        csd->copper1[15] = *bm->copld.copper2_fmode;
-    else
-        csd->copper1[15] = 0;
+//    csd->copper1[5] = csd->bplcon3 | bm->bplcon3 | ((bm->sprite_res + 1) << 6);
+//    csd->copper1[9] = csd->bplcon3 | bm->bplcon3 | (1 << 9) | ((bm->sprite_res + 1) << 6);
+//    csd->copper1[13] = csd->bplcon3 | bm->bplcon3 | ((bm->sprite_res + 1) << 6);
+//    csd->copper1[27] = csd->bplcon2 | ((csd->aga && !(bm->modeid & EXTRAHALFBRITE_KEY)) ? 0x0200 : 0);
+//    if (bm->copld.copper2_palette)
+//    {
+//        if (csd->aga && csd->aga_enabled)
+//        {
+//            csd->copper1[7] = bm->copld.copper2_palette[3];
+//            csd->copper1[11] = bm->copld.copper2_palette[3];
+//        }
+//        else
+//        {
+//            csd->copper1[7] = bm->copld.copper2_palette[1];
+//            csd->copper1[11] = bm->copld.copper2_palette[1];
+//        }
+//    }
+//    else
+//    {
+//        csd->copper1[7] = DEFAULT_BORDER_GRAY;
+//        csd->copper1[11] = DEFAULT_BORDER_GRAY;
+//    }
+//    if (bm->copld.copper2_fmode)
+//        csd->copper1[15] = *bm->copld.copper2_fmode;
+//    else
+//        csd->copper1[15] = 0;
 }
 
 /* attach a hidden screen to the visible copperlist chains */
@@ -1214,21 +1224,21 @@ static VOID gfx_vblank_detachbm(struct amigavideo_staticdata *csd, struct amigab
                 D(bug("[AmigaVideo] %s: CopL @ 0x%p point to CopL @ 0x%p\n", __func__, c2t, &bmtmp->copld);)
             }
 
-            /* update the copper1 data to reflect the topmost screen */
-            csd->copper1[5] = csd->bplcon3 | bmtmp->bplcon3 | ((bmtmp->sprite_res + 1) << 6);
-            csd->copper1[9] = csd->bplcon3 | bmtmp->bplcon3 | (1 << 9) | ((bmtmp->sprite_res + 1) << 6);
-            csd->copper1[13] = csd->bplcon3 | bmtmp->bplcon3 | ((bmtmp->sprite_res + 1) << 6);
-            csd->copper1[27] = csd->bplcon2 | ((csd->aga && !(bmtmp->modeid & EXTRAHALFBRITE_KEY)) ? 0x0200 : 0);
-            if (csd->aga && csd->aga_enabled)
-            {
-                csd->copper1[7] = bmtmp->copld.copper2_palette[3];
-                csd->copper1[11] = bmtmp->copld.copper2_palette[3];
-            }
-            else
-            {
-                csd->copper1[7] = bmtmp->copld.copper2_palette[1];
-                csd->copper1[11] = bmtmp->copld.copper2_palette[1];
-            }
+//            /* update the copper1 data to reflect the topmost screen */
+//            csd->copper1[5] = csd->bplcon3 | bmtmp->bplcon3 | ((bmtmp->sprite_res + 1) << 6);
+//            csd->copper1[9] = csd->bplcon3 | bmtmp->bplcon3 | (1 << 9) | ((bmtmp->sprite_res + 1) << 6);
+//            csd->copper1[13] = csd->bplcon3 | bmtmp->bplcon3 | ((bmtmp->sprite_res + 1) << 6);
+//            csd->copper1[27] = csd->bplcon2 | ((csd->aga && !(bmtmp->modeid & EXTRAHALFBRITE_KEY)) ? 0x0200 : 0);
+//            if (csd->aga && csd->aga_enabled)
+//            {
+//                csd->copper1[7] = bmtmp->copld.copper2_palette[3];
+//                csd->copper1[11] = bmtmp->copld.copper2_palette[3];
+//            }
+//            else
+//            {
+//                csd->copper1[7] = bmtmp->copld.copper2_palette[1];
+//                csd->copper1[11] = bmtmp->copld.copper2_palette[1];
+//            }
 
             /* now adjust the list(s) ... */
             GfxBase->LOFlist = bmtmp->bmcl->CopLStart;
@@ -1489,20 +1499,6 @@ VOID initcustom(struct amigavideo_staticdata *csd)
 
     D(bug("[AmigaVideo] %s()\n", __func__));
 
-#if (1)
-    /* TODO: This shouldnt be done in the gfx driver!
-     * move to somewhere more appropriate */
-
-    /* Reset audio registers to values that help emulation
-     * if some program enables audio DMA without setting period
-     * or length. Very high period emulation is very CPU intensive.
-     */
-    for (i = 0; i < 4; i++) {
-        custom->aud[i].ac_vol = 0;
-        custom->aud[i].ac_per = 100;
-        custom->aud[i].ac_len = 1000;
-    }
-#endif
 
     /* csd->cs_OOPBase was already set up.
      * See amigavideo.conf's 'oopbase_field' config
@@ -1591,18 +1587,19 @@ VOID initcustom(struct amigavideo_staticdata *csd)
     COPPEROUT(c, 0x00e0, 0)
     COPPEROUT(c, 0x0100, csd->bplcon0_null)
 
-    COPPEROUT(c, 0x0106, csd->bplcon3 | (1 << 6))               // Push the default display bplcon3 (ecs sprites)
-    COPPEROUT(c, 0x0180, DEFAULT_BORDER_GRAY)			// Pen = 0
-    COPPEROUT(c, 0x0106, csd->bplcon3 | (1 << 9) | (1 << 6))    // Push subsequent color palette bplcon3 
-    COPPEROUT(c, 0x0180, DEFAULT_BORDER_GRAY)			// Pen = 0
-    COPPEROUT(c, 0x0106, csd->bplcon3 | (1 << 6))               // Push the default display bplcon3 again
+//    COPPEROUT(c, 0x0106, csd->bplcon3 | (1 << 6))               // Push the default display bplcon3 (ecs sprites)
+//    COPPEROUT(c, 0x0180, DEFAULT_BORDER_GRAY)			// Pen = 0
+//    COPPEROUT(c, 0x0106, csd->bplcon3 | (1 << 9) | (1 << 6))    // Push subsequent color palette bplcon3 
+//    COPPEROUT(c, 0x0180, DEFAULT_BORDER_GRAY)			// Pen = 0
+//    COPPEROUT(c, 0x0106, csd->bplcon3 | (1 << 6))               // Push the default display bplcon3 again
 
-    COPPEROUT(c, 0x01fc, 0)					// Push fmode
-    COPPEROUT(c, 0x008e, (1 << 8) | 0x81)			// Push (DIWSTRT) Display window start
-    COPPEROUT(c, 0x0090, (2 << 8) | 0x81)			// Push (DIWSTOP) Display window stop
-    COPPEROUT(c, 0x01e4, 0)					// Push (DIWHIGH) Display window
-    COPPEROUT(c, 0x0092, 0)					// Push (DDFSTRT) Display bitplane data fetch start
-    COPPEROUT(c, 0x0094, 0)					// Push (DDFSTOP) Display bitplane data fetch stop
+
+//    COPPEROUT(c, 0x008e, (1 << 8) | 0x81)			// Push (DIWSTRT) Display window start
+//    COPPEROUT(c, 0x0090, (2 << 8) | 0x81)			// Push (DIWSTOP) Display window stop
+//    COPPEROUT(c, 0x01e4, 0)					// Push (DIWHIGH) Display window
+
+//    COPPEROUT(c, 0x0092, 0)					// Push (DDFSTRT) Display bitplane data fetch start
+//    COPPEROUT(c, 0x0094, 0)					// Push (DDFSTOP) Display bitplane data fetch stop
     COPPEROUT(c, 0x0104, csd->bplcon2)                          // Push the screens bplcon2
 
     /* initialize SPRxPOS */
@@ -1622,8 +1619,8 @@ VOID initcustom(struct amigavideo_staticdata *csd)
             csd->copper1_spritept = &c[-1];
         COPPEROUT(c, 0x0122 + (i << 2), (UWORD)(((ULONG)csd->sprite_null) >> 0))
     }
-    COPPEROUT(c, 0x0c03, 0xfffe)        // Wait for VPOS = 0c, HPOS = 2
-    COPPEROUT(c, 0x0c03, 0xfffe)        // Wait for VPOS = 0c, HPOS = 2
+    COPPEROUT(c, 0x0C01, 0xfffe)        // Wait for VPOS = 0c, HPOS = 2
+    COPPEROUT(c, 0x0C01, 0xfffe)        // Wait for VPOS = 0c, HPOS = 2
     COPPEROUT(c, 0x008a, 0x0000)        // COPJMP2
 
     csd->copper2_backup = c;
