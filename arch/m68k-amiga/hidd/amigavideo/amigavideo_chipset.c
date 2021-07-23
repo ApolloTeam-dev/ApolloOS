@@ -33,14 +33,14 @@ VOID resetcustom(struct amigavideo_staticdata *csd)
     volatile struct Custom *custom = (struct Custom*)0xdff000;
     struct GfxBase *GfxBase = (APTR)csd->cs_GfxBase;
 
-    D(
-      bug("[AmigaVideo] %s()\n", __func__);
-      bug("[AmigaVideo] %s: GfxBase @ 0x%p\n", __func__, GfxBase);
-     )
+//    D(
+//      bug("[AmigaVideo] %s()\n", __func__);
+//      bug("[AmigaVideo] %s: GfxBase @ 0x%p\n", __func__, GfxBase);
+//     )
 
     GfxBase->system_bplcon0 &= ~BPLCONMASKFULL;
     GfxBase->system_bplcon0 |= 0x0200;
-    D(bug("[AmigaVideo] %s: system_bplcon0 = %04x\n", __func__, GfxBase->system_bplcon0));
+//    D(bug("[AmigaVideo] %s: system_bplcon0 = %04x\n", __func__, GfxBase->system_bplcon0));
 
     custom->fmode = 0x0000;
     custom->bplcon0 = GfxBase->system_bplcon0;
@@ -104,11 +104,11 @@ VOID setcoppercolors(struct amigavideo_staticdata *csd, struct amigabm_data *bm,
 {
     struct copper2data *c2d = &bm->copld, *c2di = &bm->copsd;
 
-    D(bug("[AmigaVideo] %s()\n", __func__));
+//    D(bug("[AmigaVideo] %s()\n", __func__));
 
     if (!(palette))
     {
-        D(bug("[AmigaVideo] %s: missing palette data!\n", __func__));
+//        D(bug("[AmigaVideo] %s: missing palette data!\n", __func__));
         return;
     }
     if (!c2d->copper2_palette)
@@ -118,7 +118,7 @@ VOID setcoppercolors(struct amigavideo_staticdata *csd, struct amigabm_data *bm,
 
     if (csd->aga && csd->aga_enabled) {
         UWORD off = 1;
-        D(bug("[AmigaVideo] %s: AGA\n", __func__));
+//        D(bug("[AmigaVideo] %s: AGA\n", __func__));
         for (i = 0; i < bm->use_colors; i++) {
             UWORD vallo, valhi;
             UBYTE r = palette[i * 3 + 0];
@@ -136,7 +136,7 @@ VOID setcoppercolors(struct amigavideo_staticdata *csd, struct amigabm_data *bm,
             }	
         }   
     } else if (bm->res == 2 && !csd->aga) {
-        D(bug("[AmigaVideo] %s: ECS\n", __func__));
+//        D(bug("[AmigaVideo] %s: ECS\n", __func__));
         /* ECS "scrambled" superhires */
         for (i = 0; i < bm->use_colors; i++) {
             UBYTE offset = i < 16 ? 0 : 16;
@@ -158,7 +158,7 @@ VOID setcoppercolors(struct amigavideo_staticdata *csd, struct amigabm_data *bm,
                 c2di->copper2_palette[i * 2 + 1] = val;
         }
     }
-    D(bug("[AmigaVideo] %s: copper colors set\n", __func__));
+//    D(bug("[AmigaVideo] %s: copper colors set\n", __func__));
 }
 
 VOID resetmode(struct amigavideo_staticdata *csd)
@@ -166,7 +166,7 @@ VOID resetmode(struct amigavideo_staticdata *csd)
     volatile struct Custom *custom = (struct Custom*)0xdff000;
     struct GfxBase *GfxBase = (APTR)csd->cs_GfxBase;
 
-    D(bug("[AmigaVideo] %s()\n", __func__));
+//    D(bug("[AmigaVideo] %s()\n", __func__));
 
     //wrong custom->dmacon = 0x0100;
     csd->palmode = (GfxBase->DisplayFlags & NTSC) == 0;
@@ -369,12 +369,12 @@ UWORD *populatebmcopperlist(struct amigavideo_staticdata *csd, struct amigabm_da
     UWORD bplcon0, bplcon0_res, bplcon0_null, bplcon3;
     ULONG pptr;
 
-    D(bug("[AmigaVideo] %s()\n", __func__));
+//    D(bug("[AmigaVideo] %s()\n", __func__));
 
-    D(bug("[AmigaVideo] %s: Copperlist%d @ 0x%p\n", __func__,  lace ? 2 : 1, c));
+//    D(bug("[AmigaVideo] %s: Copperlist%d @ 0x%p\n", __func__,  lace ? 2 : 1, c));
 
     bplcon0_res = *system_bplcon0 & ~BPLCONMASK;
-    D(bug("[AmigaVideo] %s: initial bplcon0 = %04x\n", __func__, bplcon0_res));
+//    D(bug("[AmigaVideo] %s: initial bplcon0 = %04x\n", __func__, bplcon0_res));
 
     if (bm->res == 1)
          bplcon0_res |= 0x8000;
@@ -386,8 +386,8 @@ UWORD *populatebmcopperlist(struct amigavideo_staticdata *csd, struct amigabm_da
     bplcon0_null = csd->bplcon0_null | (bm->interlace ? 4 : 0) | bplcon0_res;
     bplcon3 = csd->bplcon3 | bm->bplcon3 | ((bm->sprite_res + 1) << 6);
 
-    D(bug("[AmigaVideo] %s: bplcon0_null = %04x\n", __func__, bplcon0_null));
-    D(bug("[AmigaVideo] %s: bm bplcon3 = %04x\n", __func__, bplcon3));
+//    D(bug("[AmigaVideo] %s: bplcon0_null = %04x\n", __func__, bplcon0_null));
+//    D(bug("[AmigaVideo] %s: bm bplcon3 = %04x\n", __func__, bplcon3));
 
     /* NOP + WAIT - to store start co-ords */
     COPPEROUT(c, 0x01fe, 0xfffe)
@@ -450,7 +450,7 @@ UWORD *populatebmcopperlist(struct amigavideo_staticdata *csd, struct amigabm_da
         bplcon0 |= bm->depth << 12;
     if (bm->modeid & HAM_KEY)
         bplcon0 |= 0x0800;
-    D(bug("[AmigaVideo] %s: copper bplcon0 = %04x\n", __func__, bplcon0));
+//    D(bug("[AmigaVideo] %s: copper bplcon0 = %04x\n", __func__, bplcon0));
 
     c2d->copper2_scroll = c;
 
@@ -1581,6 +1581,7 @@ VOID initcustom(struct amigavideo_staticdata *csd)
                 csd->ecs_denise = TRUE;
         }
     }
+
     csd->max_colors = csd->aga ? 256 : 32;
 
     csd->sprite_null = AllocMem((2 << 3) + (46 * (sizeof(WORD) << 1)), MEMF_CLEAR | MEMF_CHIP);
