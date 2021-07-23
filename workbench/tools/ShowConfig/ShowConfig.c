@@ -216,7 +216,7 @@ int main()
 	}
     }
 
-    printf("RAM:");
+    printf("RAM:\n");
     for (mh = (struct MemHeader *)SysBase->MemList.lh_Head; mh->mh_Node.ln_Succ; mh = (struct MemHeader *)mh->mh_Node.ln_Succ) {
         char *memtype = "ROM";
 
