@@ -150,9 +150,9 @@ FILES   :=
 AFILES  := ext_entry
 
 KLIBS   :=  keymap graphics layers intuition gadtools workbench \
-            mathffp mathieeesingbas freeanim lowlevel nvdisk \
+            mathffp mathieeesingbas freeanim lowlevel \
             setpatch
-KDEVS   := ata sagasd trackdisk
+KDEVS   := ata trackdisk
 KHNDLRS := 
 KHIDDS  := bus storage system
 KRSRCS  := shellcommands wbtag
@@ -313,8 +313,8 @@ FILES   :=
 AFILES  := 
 
 KLIBS   := aros utility dos oop mathffp mathieeesingbas partition \
-           keymap graphics layers intuition gadtools icon workbench setpatch
-KDEVS   := timer input keyboard console trackdisk gameport audio ata cd sagasd
+           keymap graphics layers intuition gadtools workbench setpatch
+KDEVS   := timer input keyboard console trackdisk gameport audio ata cd
 KHNDLRS := cdrom con afs ram
 KHIDDS  := amigakbd amigamouse amigavideo ata_gayle bus gfx hiddclass keyboard mouse storage system
 KRSRCS  := battclock processor task lddemon dosboot cia potgo disk \
