@@ -38,7 +38,7 @@
 #define STACK_SIZE              16384
 #define TASK_PRI                10
 #define TIMEOUT                 30
-#define CACHE_SIZE_BITS         15      /* 2^11 * 512 byte blocks (min 9)*/
+#define CACHE_SIZE_BITS         17      /* 2^11 * 512 byte blocks (min 9)*/
 #define CACHE_SIZE              (1<<CACHE_SIZE_BITS)
 #define CACHE_MASK              (CACHE_SIZE-1)
 
