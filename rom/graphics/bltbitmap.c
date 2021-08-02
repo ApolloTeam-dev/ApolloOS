@@ -16,7 +16,7 @@
 #include "objcache.h"
 
 static void copyonepixel (PLANEPTR src, ULONG xsrc, PLANEPTR dest,
-	ULONG xdest, ULONG minterm);
+	ULONG xdest, UBYTE minterm);
 
 /*****************************************************************************
 
@@ -28,15 +28,15 @@ static void copyonepixel (PLANEPTR src, ULONG xsrc, PLANEPTR dest,
 
 /*  SYNOPSIS */
 	AROS_LHA(struct BitMap *, srcBitMap, A0),
-	AROS_LHA(LONG           , xSrc, D0),
-	AROS_LHA(LONG           , ySrc, D1),
+	AROS_LHA(WORD           , xSrc, D0),
+	AROS_LHA(WORD           , ySrc, D1),
 	AROS_LHA(struct BitMap *, destBitMap, A1),
-	AROS_LHA(LONG           , xDest, D2),
-	AROS_LHA(LONG           , yDest, D3),
-	AROS_LHA(LONG           , xSize, D4),
-	AROS_LHA(LONG           , ySize, D5),
-	AROS_LHA(ULONG          , minterm, D6),
-	AROS_LHA(ULONG          , mask, D7),
+	AROS_LHA(WORD           , xDest, D2),
+	AROS_LHA(WORD           , yDest, D3),
+	AROS_LHA(WORD           , xSize, D4),
+	AROS_LHA(WORD           , ySize, D5),
+	AROS_LHA(UBYTE          , minterm, D6),
+	AROS_LHA(UBYTE          , mask, D7),
 	AROS_LHA(PLANEPTR       , tempA, A2),
 
 /*  LOCATION */
@@ -377,7 +377,7 @@ static void copyonepixel (PLANEPTR src, ULONG xsrc, PLANEPTR dest,
 /****************************************************************************************/
 
 static void copyonepixel (PLANEPTR src, ULONG xsrc, PLANEPTR dest, ULONG xdest,
-	ULONG minterm)
+	UBYTE minterm)
 {
     ULONG sByte, sSet;
     ULONG dByte, dSet;
@@ -404,22 +404,22 @@ static void copyonepixel (PLANEPTR src, ULONG xsrc, PLANEPTR dest, ULONG xdest,
 
     set = 0;
 
-    if (minterm & 0x0010)
+    if (minterm & 0x10)
     {
 	if (!sSet && !dSet)
 	    set = 1;
     }
-    if (minterm & 0x0020)
+    if (minterm & 0x20)
     {
 	if (!sSet && dSet)
 	    set = 1;
     }
-    if (minterm & 0x0040)
+    if (minterm & 0x40)
     {
 	if (sSet && !dSet)
 	    set = 1;
     }
-    if (minterm & 0x0080)
+    if (minterm & 0x80)
     {
 	if (sSet && dSet)
 	    set = 1;

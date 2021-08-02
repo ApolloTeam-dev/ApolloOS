@@ -1,5 +1,5 @@
 /*
-   Copyright � 1995-2020, The AROS Development Team. All rights reserved.
+   Copyright (c) 1995-2020, The AROS Development Team. All rights reserved.
    $Id$
 
    Desc: Main bootmenu code
@@ -480,7 +480,7 @@ static void initPage(LIBBASETYPEPTR DOSBootBase, WORD page)
     if (page == PAGE_MAIN && (GfxBase->DisplayFlags & (NTSC | PAL))) {
             ULONG modeid = GetVPModeID(&DOSBootBase->bm_Screen->ViewPort);
             if (modeid != INVALID_ID && (((modeid & MONITOR_ID_MASK) == NTSC_MONITOR_ID) || ((modeid & MONITOR_ID_MASK) == PAL_MONITOR_ID))) {
-            centertext(DOSBootBase, 1, 30, "(Release 6, 2021-04-08)");
+            centertext(DOSBootBase, 1, 30, "(POST-Release 7 (DEVELOPMENT ROM), 2021-08-01)");
         }
     }
 
