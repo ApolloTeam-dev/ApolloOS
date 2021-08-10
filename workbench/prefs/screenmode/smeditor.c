@@ -300,7 +300,7 @@ static IPTR SMEditor__MUIM_PrefsEditor_Test
                 D(bug("[smeditor] timer.device opened\n");)
 
                 timer->tr_node.io_Command = TR_ADDREQUEST;
-                timer->tr_time.tv_secs    = 6;
+                timer->tr_time.tv_secs    = 7;
                 timer->tr_time.tv_micro   = 0;
 
                 modeid = XGET(data->properties, MUIA_ScreenModeProperties_DisplayID);
@@ -322,28 +322,15 @@ static IPTR SMEditor__MUIM_PrefsEditor_Test
                 if (testScreen)
                 {
                     struct RastPort *rp;
-                    int col, colwidth, colheight, rowheight;
-                    UWORD areawidth = ((width << 1) /3);
-                    UWORD areaheight = ((height << 1) /3);
-                    UBYTE r, g, b, maxcolor;
+                    int col;
+                    UBYTE r, g, b;
                     char *display_string;
 
-                    colwidth = areawidth / 7;
-                    colheight = (areaheight / 100) * 70;
-                    rowheight = (areaheight - colheight) / 3;
+                    UBYTE maxcolor = (depth > 2 ? 9 : 1 << depth);
 
                     D(bug("[SMPrefs] testScreen @ 0x%p\n", testScreen);)
                     GET(data->selector, MUIA_ScreenModeSelector_Mode, (IPTR *)&display_string);
 
-                    ULONG rgbPens[] = {
-                       0x9F9F9F, // Gray
-                       0xFFFF00, // Yellow
-                       0x00FFFF, // Turqouise
-                       0x00FF00, // Green
-                       0xFF00FF, // Purple
-                       0xFF0000, // Red
-                       0x0000FF, // Blue
-                    };
 
                     rp = CreateRastPort();
                     rp->BitMap = testScreen->RastPort.BitMap;
@@ -353,88 +340,167 @@ static IPTR SMEditor__MUIM_PrefsEditor_Test
                         bug("[SMPrefs] bm @ 0x%p\n", rp->BitMap);
                     )
 
-                    SetRGB32(&testScreen->ViewPort, 0, 0, 0, 0);
-                    SetRGB32(&testScreen->ViewPort, 1, 0XFFFFFFFF, 0XFFFFFFFF, 0XFFFFFFFF);
 
-                    if (depth > 2)
-                        maxcolor = 7;
-                    else
-                        maxcolor = (1 << depth);
+                    ULONG rgbPens[] = {
+                       0x000000, // black
+					   0xffffff, // white
+                       0x9F9F9F, // Gray
+                       0xFFFF00, // Yellow
+                       0x00FFFF, // Turquoise
+                       0x00FF00, // Green
+                       0xFF00FF, // Purple
+                       0xFF0000, // Red
+                       0x0000FF, // Blue
+                    };
 
-                    SetAPen(rp, 0);
+
+
+                    // populate pens with RGB
+                    for (col = 0; col < maxcolor; col ++)
+                    {
+						r = (rgbPens[col % maxcolor] & 0xFF0000) >> 16;
+						g = (rgbPens[col % maxcolor] & 0x00FF00) >> 8;
+						b = (rgbPens[col % maxcolor] & 0x0000FF);
+
+						if (col < maxcolor)
+						{
+							SetRGB32(&testScreen->ViewPort,
+								(col),
+								r + (r << 8) + (r << 16) + (r << 24),
+								g + (g << 8) + (g << 16) + (g << 24),
+								b + (b << 8) + (b << 16) + (b << 24));
+						}
+                    }
+
+
                     SetBPen(rp, 0);
-                    RectFill(rp, 0, 0, width - 1, height -1);
+
+
+                    // fill screen (black)
+                    SetAPen(rp, 0);
+                    RectFill(rp, 0, 0, width - 1, height - 1);
+
+
+                    // draw grid (white)
                     SetAPen(rp, 1);
-                    for (col = 0; col < (width / 10); col ++)
+                    for (col = 1; col < 10; col ++)
                     {
-                        Move(rp, (col * (width / 10)), 0);
-                        Draw(rp, (col * (width / 10)), height - 1);
-                    }
-                    for (col = 0; col < (height / 10); col ++)
-                    {
-                        Move(rp, 0, (col * (height / 10)));
-                        Draw(rp, width - 1, (col * (height / 10)));
-                    }
-                    DrawEllipse(rp, (width >> 1), (height >> 1), (width >> 1), (height >> 1));
+                    	UWORD ix = (col * (width-1)) / 10;
 
-                    for (col = 0; col < 7; col ++)
-                    {
-                        r = (rgbPens[col % maxcolor] & 0xFF0000) >> 16;
-                        g = (rgbPens[col % maxcolor] & 0x00FF00) >> 8;
-                        b = rgbPens[col % maxcolor] & 0x0000FF;
+                        Move(rp, ix, 0);
+                        Draw(rp, ix, height - 1);
 
-                        if (col + 2 < maxcolor)
-                        {
-                            SetRGB32(&testScreen->ViewPort,
-                                (col + 2),
-                                r + (r << 8) + (r << 16) + (r << 24),
-                                g + (g << 8) + (g << 16) + (g << 24),
-                                b + (b << 8) + (b << 16) + (b << 24));
-                        }
-                        SetAPen(rp, (col + 2) % maxcolor);
-                        RectFill(rp, (areawidth >> 2) + (col * colwidth), (areaheight >> 2), (areawidth >> 2) + ((col + 1) * colwidth) - 1, (areaheight >> 2) + colheight);
-                    }
-                    for (col = 0; col < 7; col ++)
-                    {
-                        if (col % 2 == 0)
-                        {
-                            r = (rgbPens[6 - col % maxcolor] & 0xFF0000) >> 16;
-                            g = (rgbPens[6 - col % maxcolor] & 0x00FF00) >> 8;
-                            b = rgbPens[6 - col % maxcolor] & 0x0000FF;
-                        }
-                        else
-                        {
-                            r = 0;
-                            g = 0;
-                            b = 0;
-                        }
+                    	UWORD iy = (col * (height-1)) / 10;
 
-                        SetAPen(rp, (col + 2) % maxcolor);
-                        RectFill(rp, (areawidth >> 2) + (col * colwidth), (areaheight >> 2) + colheight, (areawidth >> 2) + ((col + 1) * colwidth) - 1, (areaheight >> 2) + colheight + rowheight);
+                        Move(rp, 0, iy);
+                        Draw(rp, width - 1, iy);
                     }
+
+
+                    // draw ellipse
+                    DrawEllipse(rp, (width >> 1)+0, (height >> 1)+0, ((width-4) >> 1), ((height-4) >> 1));
+                    DrawEllipse(rp, (width >> 1)-1, (height >> 1)-1, ((width-4) >> 1), ((height-4) >> 1));
+
+
+                    // draw borders (Green + Red)
+                    SetAPen(rp, 7 % maxcolor);
+                    Move(rp, width-1, 0);
+                    Draw(rp, width - 1, height -1);
+                    Draw(rp, 0, height -1);
+                    SetAPen(rp, 5 % maxcolor);
+                    Draw(rp, 0, 0);
+                    Draw(rp, width-1, 0);
+
+
+
+                    // draw color bars
+                    {
+						UWORD baseLeft  = ((2 * (width-1)) / 10);
+						UWORD baseWidth = ((8 * (width-1)) / 10) - baseLeft;
+
+						UWORD baseTop =    ((2 * (height-1)) / 10) + 1;
+						UWORD baseHeight = ((6 * (height-1)) / 10) - baseTop - 1;
+
+						UWORD x1 = 1;
+
+						for (col = 0; col < 6; col ++)
+						{
+							UWORD x2 = ((col+1) * (baseWidth)) / 6;
+
+							SetAPen(rp, (col+3) % maxcolor);
+
+							RectFill(rp, baseLeft + x1, baseTop, baseLeft + x2 - 1, baseTop + baseHeight);
+
+							x1 = x2;
+						}
+                    }
+
+
+                    // draw bottom color bars
+                    {
+						UWORD baseLeft  = ((2 * (width-1)) / 10);
+						UWORD baseWidth = ((8 * (width-1)) / 10) - baseLeft;
+
+						UWORD baseTop =    ((6 * (height-1)) / 10) + 1;
+						UWORD baseHeight = ((7 * (height-1)) / 10) - baseTop - 1;
+
+						UWORD x1 = 1;
+
+						for (col = 0; col < 6; col++)
+						{
+							UWORD x2 = ((col+1) * (baseWidth)) / 6;
+
+							SetAPen(rp, (8-col) % maxcolor);
+
+							RectFill(rp, baseLeft + x1, baseTop, baseLeft + x2 - 1, baseTop + baseHeight);
+
+							x1 = x2;
+						}
+                    }
+
+
+                    // draw greyscale
                     if (depth > 4)
                     {
-                        /* Draw greyscale */
-                        colwidth = areawidth / 12;
+                    	UWORD baseLeft  = ((2 * (width-1)) / 10);
+                    	UWORD baseWidth = ((8 * (width-1)) / 10) - baseLeft;
+
+                    	UWORD baseTop =    ((7 * (height-1)) / 10) + 1;
+                    	UWORD baseHeight = ((8 * (height-1)) / 10) - baseTop - 1;
+
+                        UWORD x1 = 1;
+
                         for (col = 0; col < 12; col ++)
                         {
-                            r = col * (0xFF/12);
-                            g = col * (0xFF/12);
-                            b = col * (0xFF/12);
+                        	UWORD x2 = ((col+1) * (baseWidth)) / 12;
 
-                            if (col != 0)
+                            if (col == 0)
                             {
+                            	SetAPen(rp, 0);
+                            }
+                            else
+                            {
+                                r = col * (0xFF/12);
+                                g = col * (0xFF/12);
+                                b = col * (0xFF/12);
+
                                 SetRGB32(&testScreen->ViewPort,
                                     (col + 10),
                                     r + (r << 8) + (r << 16) + (r << 24),
                                     g + (g << 8) + (g << 16) + (g << 24),
                                     b + (b << 8) + (b << 16) + (b << 24));
+
+                                SetAPen(rp, col + 9);
                             }
-                            SetAPen(rp, col + 9);
-                            RectFill(rp, (areawidth >> 2) + (col * colwidth), (areaheight >> 2) + colheight + rowheight, (areawidth >> 2) + ((col + 1) * colwidth) - 1, (areaheight >> 2) + colheight + (rowheight << 1));
+
+                            RectFill(rp, baseLeft + x1, baseTop, baseLeft + x2 - 1, baseTop + baseHeight);
+
+                            x1 = x2;
                         }
                     }
 
+
+                    // draw Text
                     {
                         struct Rectangle infobox;
                         struct TextExtent textExtent;
