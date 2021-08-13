@@ -737,7 +737,7 @@ D(bug("]\n"));
         MUIA_Window_TopEdge,                                   _newIconWin__WindowTop,
         (!isBackdrop) ? MUIA_Window_AltWidth : TAG_IGNORE,     100,
         (!isBackdrop) ? MUIA_Window_AltHeight : TAG_IGNORE,    80,
-        MUIA_Window_Title,                                   (IPTR)_newIconWin__Title,
+        MUIA_Window_Title,                                     (IPTR) "", //_newIconWin__Title, // Title is set later using 'data->iwd_Title' pointer
 
         MUIA_Window_DragBar,                                   (!isBackdrop) ? TRUE : FALSE,
         MUIA_Window_CloseGadget,                               (!isBackdrop) ? TRUE : FALSE,
@@ -784,7 +784,9 @@ D(bug("]\n"));
         data->iwd_VolViewMode                           = _newIconWin__VOLVIEWMODE;
 
         data->iwd_Screen                                = _newIconWin__Screen;
-        data->iwd_Title                                 = _newIconWin__Title;
+
+        data->iwd_Title                                 = StrDup(_newIconWin__Title);
+        set(self, MUIA_Window_Title, data->iwd_Title);
 
         data->iwd_RootViewObj                           = _newIconWin__RootViewObj;
         data->iwd_IconListObj                           = _newIconWin__IconListObj;
