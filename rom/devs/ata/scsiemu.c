@@ -44,9 +44,9 @@ static ULONG rw(UBYTE *p)
 
 static UBYTE scsi_read32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG len, ULONG *outlen)
 {
+     UBYTE io_Error = 0;
      if (unit->au_SectorShift == 9) /* use cache with 512 Byte sectors only */
      {
-         UBYTE io_Error = 0;
          struct ata_Bus *bus = unit->au_Bus;
          struct ataBase *base = bus->ab_Base;
          ULONG unitNum = unit->au_UnitNum;
@@ -66,12 +66,13 @@ static UBYTE scsi_read32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG l
                  if (start != i)
                  {
                      /* Call the Unit's access funtion */
-                     io_Error = unit->au_Read32(unit, offset + start, i - start,
-                         data + start*512, outlen);
-
+                     io_Error = unit->au_Read32(unit, offset + start, i - start, data + start*512, outlen);
                      if (io_Error)
                      {
-                         return io_Error;
+                        io_Error = unit->au_Read32(unit, offset + start, i - start, data + start*512, outlen);
+                        if (io_Error) {
+                          return io_Error;
+                        }
                      }
 
                      blockAdr = (offset + start) & CACHE_MASK;
@@ -89,12 +90,12 @@ static UBYTE scsi_read32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG l
          if (start != i)
          {
              /* Call the Unit's access funtion */
-             io_Error = unit->au_Read32(unit, offset + start, i - start,
-                 data + start*512, outlen);
-
-             if (io_Error)
-             {
-                 return io_Error;
+             io_Error = unit->au_Read32(unit, offset + start, i - start, data + start*512, outlen);
+             if (io_Error) {
+                 io_Error = unit->au_Read32(unit, offset + start, i - start, data + start*512, outlen);
+                 if (io_Error) {
+                   return io_Error;
+                 }
              }
 
              ULONG blockAdr = (offset + start) & CACHE_MASK;
@@ -112,7 +113,12 @@ static UBYTE scsi_read32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG l
      else
      {
          /* Call the Unit's access funtion */
-         return unit->au_Read32(unit, offset, len, data, outlen);
+        // return unit->au_Read32(unit, offset, len, data, outlen);
+         io_Error = unit->au_Read32(unit, offset, len, data, outlen);
+         if (io_Error) /* on error try again */
+           return unit->au_Read32(unit, offset, len, data, outlen);
+         return io_Error;
+
      }
 }
 
