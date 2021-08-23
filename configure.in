@@ -1066,7 +1066,7 @@ AC_MSG_RESULT($enableval)
 
 #-----------------------------------------------------------------------------
 AC_MSG_CHECKING([what distro name to use])
-AC_ARG_ENABLE(dist_name,AC_HELP_STRING([--enable-dist-name=NAME],[Enable a specific distro name (default=AROS)]),dist_name=$enableval,dist_name="")
+AC_ARG_ENABLE(dist_name,AC_HELP_STRING([--enable-dist-name=NAME],[Enable a specific distro name (default=AROS)]),dist_name="$enableval",dist_name="")
 if test "$dist_name" = ""; then
     aros_dist_name="$aros_dist_name"
 else
@@ -1076,7 +1076,7 @@ AC_MSG_RESULT($aros_dist_name)
 
 #-----------------------------------------------------------------------------
 AC_MSG_CHECKING([what distro version])
-AC_ARG_ENABLE(dist_version,AC_HELP_STRING([--enable-dist-version=NAME],[Enable a specific distro version (default=ABIv1)]),dist_version=$enableval,dist_version="")
+AC_ARG_ENABLE(dist_version,AC_HELP_STRING([--enable-dist-version=NAME],[Enable a specific distro version (default=ABIv1)]),dist_version="$enableval",dist_version="")
 if test "$dist_version" = ""; then
     aros_dist_version="$aros_dist_version"
 else

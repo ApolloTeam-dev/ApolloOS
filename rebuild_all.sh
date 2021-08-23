@@ -29,9 +29,12 @@ make clean
 git clean -df
 rm -rf bin/amiga-m68k
 
-./configure --target=amiga-m68k --with-optimization="-O2" --enable-ccache --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68040 --disable-mmu $@
+source ./make_dist_config.sh
+DISTOPTNAME="--enable-dist-name=${DISTRONAME}"
+DISTOPTVER="--enable-dist-version=${DISTROVERSION}"
 
-./make_dist_config.sh "bin/amiga-m68k/gen"
+./configure "${DISTOPTNAME}" "${DISTOPTVER}" --target=amiga-m68k --with-optimization="-O2" --enable-ccache --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68040 --disable-mmu $@
+
 
 make -j${THREADS}
 make -j${THREADS} distfiles

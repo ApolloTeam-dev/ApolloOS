@@ -29,9 +29,13 @@ sleep 3
 make clean
 git clean -df
 rm -rf bin/amiga-m68k
-./configure --target=amiga-m68k --with-optimization="-Os" --enable-ccache --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68020 --with-serial-debug --enable-debug=all $@
 
-./make_dist_config.sh "bin/amiga-m68k/gen"
+DISTOPTNAME="--enable-dist-name=${DISTRONAME}"
+DISTOPTVER="--enable-dist-version=${DISTROVERSION}"
+
+source ./make_dist_config.sh
+
+./configure "${DISTOPTNAME}" "${DISTOPTVER}" --target=amiga-m68k --with-optimization="-Os" --enable-ccache --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68020 --with-serial-debug --enable-debug=all $@
 
 make -j${THREADS}
 make -j${THREADS} kernel-amiga-m68k

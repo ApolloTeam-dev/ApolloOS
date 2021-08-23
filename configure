@@ -8574,7 +8574,7 @@ $as_echo "$enableval" >&6; }
 $as_echo_n "checking what distro name to use... " >&6; }
 # Check whether --enable-dist_name was given.
 if test "${enable_dist_name+set}" = set; then :
-  enableval=$enable_dist_name; dist_name=$enableval
+  enableval=$enable_dist_name; dist_name="$enableval"
 else
   dist_name=""
 fi
@@ -8592,7 +8592,7 @@ $as_echo "$aros_dist_name" >&6; }
 $as_echo_n "checking what distro version... " >&6; }
 # Check whether --enable-dist_version was given.
 if test "${enable_dist_version+set}" = set; then :
-  enableval=$enable_dist_version; dist_version=$enableval
+  enableval=$enable_dist_version; dist_version="$enableval"
 else
   dist_version=""
 fi
