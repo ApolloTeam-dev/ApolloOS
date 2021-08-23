@@ -8,8 +8,6 @@
 
 #include <string.h>
 
-#include "../../../dist_config.h"
-
 char *generate_banner()
 {
 #if defined(__DISTRONAME__)

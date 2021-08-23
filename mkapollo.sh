@@ -52,7 +52,7 @@ setvars () {
 	BIN="${DIR}/${WORK}/bin"
 	source ${SRC}/make_dist_config.sh
 	DISTOPTNAME="--enable-dist-name=${DISTRONAME}"
-	DISTOPTVER="--enable-dist-version=${DISTROVERSION} "
+	DISTOPTVER="--enable-dist-version=${DISTROVERSION}"
 	CONFOPTS="--target=amiga-m68k --with-optimization=-O${OPT} --with-aros-prefs=classic --with-resolution=${REZ} --with-cpu=${CPU} --with-fpu=${FPU} --disable-mmu --with-portssources=${PORTS}"
 	if [ ${VAMP}  = 0 ]; then CONFOPTS="${CONFOPTS} --with-nonvampire-support";          fi
 	if [ ${DEBUG} = 1 ]; then CONFOPTS="${CONFOPTS} --enable-debug --with-serial-debug"; fi
