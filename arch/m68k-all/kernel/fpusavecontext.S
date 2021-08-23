@@ -39,10 +39,7 @@ AROS_UFH1(void, FpuSaveContext,
 	.globl	FpuSaveContext
 
 FpuSaveContext:
-	fsave		%a0@(3*4 + 8*12)
-	tst.b		3*4 + 8*12(%a0,%d0.w)
-	beq.s		0f
-        fmovem.l        %fpcr/%fpsr/%fpiar,%a0@(8*8)
+        fmovem.l        %fpcr/%fpsr/%fpiar,64(%a0)
         fmove.d         %fp0,(%a0)+
         fmove.d         %fp1,(%a0)+
         fmove.d         %fp2,(%a0)+

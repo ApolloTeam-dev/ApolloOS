@@ -4,7 +4,7 @@
 /****************************************************************************************/
 
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -204,6 +204,9 @@ void amiga2hidd_fast(APTR src_info, OOP_Object *hidd_gc, WORD x_src , WORD y_src
 
 BOOL MoveRaster (struct RastPort * rp, WORD dx, WORD dy, WORD x1, WORD y1,
     	    	 WORD x2, WORD y2, BOOL UpdateDamageList, struct GfxBase * GfxBase);
+
+BOOL MoveRasterWithMinterm (struct RastPort * rp, WORD dx, WORD dy, WORD x1, WORD y1,
+    	    	 WORD x2, WORD y2, UBYTE minterm, BOOL UpdateDamageList, struct GfxBase * GfxBase);
 
 BOOL GetRPClipRectangleForRect(struct RastPort *rp, struct Rectangle *rect, struct Rectangle *r);
 BOOL GetRPClipRectangleForBitMap(struct RastPort *rp, struct BitMap *bm,

@@ -282,6 +282,7 @@ IPTR GTText__OM_NEW(Class * cl, Object * o, struct opSet *msg)
 		{IA_Resolution	, (data->dri->dri_Resolution.X << 16) + data->dri->dri_Resolution.Y	},
 		{IA_FrameType	, FRAME_BUTTON								},
 		{IA_Recessed	, TRUE									},
+		{IA_EdgesOnly	, TRUE									},
 		{TAG_DONE	, 0UL									}
 	    };
 

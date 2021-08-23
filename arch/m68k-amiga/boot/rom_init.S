@@ -51,10 +51,8 @@ normal_init:
 0:
 
 	/* Disable the overlay, power led off. */
-	moveq	#0,%d0
-	move.b	%d0,0xbfe001
-	moveq	#0x3,%d0
-	move.b	%d0,0xbfe201
+	move.b	#00,0xbfe001
+	move.b	#03,0xbfe201
 
 arosbootstrap_init:
 
