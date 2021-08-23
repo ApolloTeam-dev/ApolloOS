@@ -7,6 +7,8 @@ on:
   # Triggers the workflow on push or pull request events but only for the master-new branch
   push:
     branches: [ master ]
+    tags: 
+      - '**'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -25,6 +27,10 @@ jobs:
       - uses: actions/checkout@v2
         with: 
             submodules: recursive
+
+      # Update apt sources
+      - name: Update apt sources
+        run: sudo apt-get update
       
       # Install pre-reuisites
       - name: Install Prerequisites
@@ -32,8 +38,8 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: configure
-        run: ./configure --target=amiga-m68k --with-optimization="-O2" --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68040 --disable-mmu --with-nonvampire-support
-      
+        run: source ./make_dist_config.sh && ./configure "--enable-dist-name=${DISTRONAME}" "--enable-dist-version=${DISTROVERSION}" --target=amiga-m68k --with-optimization="-O2" --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68040 --disable-mmu --with-nonvampire-support
+
       # build the compilers
       - name: Compiler Build
         run: make -j6 compiler

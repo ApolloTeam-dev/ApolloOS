@@ -661,6 +661,10 @@ aros_enable_mmu
 ENABLE_EXECSMP
 PLATFORM_EXECSMP
 aros_serial_debug
+aros_dist_amigadate
+aros_dist_date
+aros_dist_version
+aros_dist_name
 aros_nominal_depth
 aros_nominal_height
 aros_nominal_width
@@ -904,6 +908,7 @@ infodir
 docdir
 oldincludedir
 includedir
+runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -941,6 +946,10 @@ with_kernel_gcc_version
 with_optimization
 with_paranoia
 enable_target_variant
+enable_dist_name
+enable_dist_version
+enable_dist_date
+enable_dist_amigadate
 with_xcode
 with_sdk_version
 with_sdk
@@ -1035,6 +1044,7 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
+runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE}'
@@ -1287,6 +1297,15 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
+  -runstatedir | --runstatedir | --runstatedi | --runstated \
+  | --runstate | --runstat | --runsta | --runst | --runs \
+  | --run | --ru | --r)
+    ac_prev=runstatedir ;;
+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
+  | --run=* | --ru=* | --r=*)
+    runstatedir=$ac_optarg ;;
+
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1424,7 +1443,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir
+		libdir localedir mandir runstatedir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1577,6 +1596,7 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
+  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -1635,6 +1655,12 @@ Optional Features:
                           (default=no).
   --enable-target-variant=NAME
                           Enable a specific target variant (default=none)
+  --enable-dist-name=NAME Enable a specific distro name (default=AROS)
+  --enable-dist-version=NAME
+                          Enable a specific distro version (default=ABIv1)
+  --enable-dist-date=NAME Enable a specific distro date (default=xxxx-xx-xx)
+  --enable-dist-amigadate=NAME
+                          Enable a specific distro name (default=xx.x.xxxx)
   --enable-amigaos-compliance=VERSION
                           Enforce userspace AmigaOS compliance to a specific
                           KickStart version (default=none).
@@ -2908,6 +2934,11 @@ else
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $msg_result" >&5
 $as_echo "$msg_result" >&6; }
+
+aros_dist_name=AROS
+aros_dist_version=ABIv1
+aros_dist_date=$(date +%Y-%m-%d)
+aros_dist_amigadate=$(date +"%-d.%-m.%Y")
 
 aros_nominal_width=800
 aros_nominal_height=600
@@ -7870,6 +7901,8 @@ main ()
     if (*(data + i) != *(data3 + i))
       return 14;
   close (fd);
+  free (data);
+  free (data3);
   return 0;
 }
 _ACEOF
@@ -8535,6 +8568,79 @@ else
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $enableval" >&5
 $as_echo "$enableval" >&6; }
+
+#-----------------------------------------------------------------------------
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking what distro name to use" >&5
+$as_echo_n "checking what distro name to use... " >&6; }
+# Check whether --enable-dist_name was given.
+if test "${enable_dist_name+set}" = set; then :
+  enableval=$enable_dist_name; dist_name="$enableval"
+else
+  dist_name=""
+fi
+
+if test "$dist_name" = ""; then
+    aros_dist_name="$aros_dist_name"
+else
+    aros_dist_name="$dist_name"
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $aros_dist_name" >&5
+$as_echo "$aros_dist_name" >&6; }
+
+#-----------------------------------------------------------------------------
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking what distro version" >&5
+$as_echo_n "checking what distro version... " >&6; }
+# Check whether --enable-dist_version was given.
+if test "${enable_dist_version+set}" = set; then :
+  enableval=$enable_dist_version; dist_version="$enableval"
+else
+  dist_version=""
+fi
+
+if test "$dist_version" = ""; then
+    aros_dist_version="$aros_dist_version"
+else
+    aros_dist_version="$dist_version"
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $aros_dist_version" >&5
+$as_echo "$aros_dist_version" >&6; }
+
+#-----------------------------------------------------------------------------
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking what distro date" >&5
+$as_echo_n "checking what distro date... " >&6; }
+# Check whether --enable-dist_date was given.
+if test "${enable_dist_date+set}" = set; then :
+  enableval=$enable_dist_date; dist_date=$enableval
+else
+  dist_date=""
+fi
+
+if test "$dist_date" = ""; then
+    aros_dist_date="$aros_dist_date"
+else
+    aros_dist_date="$dist_date"
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $aros_dist_date" >&5
+$as_echo "$aros_dist_date" >&6; }
+
+#-----------------------------------------------------------------------------
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking what distro amigadate" >&5
+$as_echo_n "checking what distro amigadate... " >&6; }
+# Check whether --enable-dist_amigadate was given.
+if test "${enable_dist_amigadate+set}" = set; then :
+  enableval=$enable_dist_amigadate; dist_amigadate=$enableval
+else
+  dist_amigadate=""
+fi
+
+if test "$dist_amigadate" = ""; then
+    aros_dist_amigadate="$aros_dist_amigadate"
+else
+    aros_dist_amigadate="$dist_amigadate"
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $aros_dist_amigadate" >&5
+$as_echo "$aros_dist_amigadate" >&6; }
+
 
 #-----------------------------------------------------------------------------
 # Target-specific defaults. You can override then on a per-target basis.
@@ -15197,6 +15303,8 @@ if test "$nonvampire_support" = "yes"; then
 $as_echo "Enabling nonvampire support" >&6; }
 	aros_config_cppflags="$aros_config_cppflags -DNONVAMPIRE"
 	aros_config_cflags="$aros_config_cflags -DNONVAMPIRE"
+	aros_kernel_cppflags="$aros_kernel_cppflags -DNONVAMPIRE"
+	aros_kernel_cflags="$aros_kernel_cflags -DNONVAMPIRE"
 else
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
@@ -16297,6 +16405,12 @@ aros_kernel_ranlib=$aros_kernel_ranlib
 
 
 
+
+
+
+
+
+# Distro specific stuff
 
 
 
