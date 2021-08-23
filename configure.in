@@ -88,6 +88,14 @@ fi
 AC_MSG_RESULT($msg_result)
 
 dnl --------------------------------------------------------------------
+dnl Set the distro specifics
+dnl --------------------------------------------------------------------
+aros_dist_name=AROS
+aros_dist_version=ABIv1
+aros_dist_date=$(date +%Y-%m-%d)
+aros_dist_amigadate=$(date +"%-d.%-m.%Y")
+
+dnl --------------------------------------------------------------------
 dnl Set the default Workbench resolution
 dnl --------------------------------------------------------------------
 aros_nominal_width=800
@@ -1055,6 +1063,47 @@ else
     aros_target_suffix="-$target_variant"
 fi
 AC_MSG_RESULT($enableval)
+
+#-----------------------------------------------------------------------------
+AC_MSG_CHECKING([what distro name to use])
+AC_ARG_ENABLE(dist_name,AC_HELP_STRING([--enable-dist-name=NAME],[Enable a specific distro name (default=AROS)]),dist_name=$enableval,dist_name="")
+if test "$dist_name" = ""; then
+    aros_dist_name="$aros_dist_name"
+else
+    aros_dist_name="$dist_name"
+fi
+AC_MSG_RESULT($aros_dist_name)
+
+#-----------------------------------------------------------------------------
+AC_MSG_CHECKING([what distro version])
+AC_ARG_ENABLE(dist_version,AC_HELP_STRING([--enable-dist-version=NAME],[Enable a specific distro version (default=ABIv1)]),dist_version=$enableval,dist_version="")
+if test "$dist_version" = ""; then
+    aros_dist_version="$aros_dist_version"
+else
+    aros_dist_version="$dist_version"
+fi
+AC_MSG_RESULT($aros_dist_version)
+
+#-----------------------------------------------------------------------------
+AC_MSG_CHECKING([what distro date])
+AC_ARG_ENABLE(dist_date,AC_HELP_STRING([--enable-dist-date=NAME],[Enable a specific distro date (default=xxxx-xx-xx)]),dist_date=$enableval,dist_date="")
+if test "$dist_date" = ""; then
+    aros_dist_date="$aros_dist_date"
+else
+    aros_dist_date="$dist_date"
+fi
+AC_MSG_RESULT($aros_dist_date)
+
+#-----------------------------------------------------------------------------
+AC_MSG_CHECKING([what distro amigadate])
+AC_ARG_ENABLE(dist_amigadate,AC_HELP_STRING([--enable-dist-amigadate=NAME],[Enable a specific distro name (default=xx.x.xxxx)]),dist_amigadate=$enableval,dist_amigadate="")
+if test "$dist_amigadate" = ""; then
+    aros_dist_amigadate="$aros_dist_amigadate"
+else
+    aros_dist_amigadate="$dist_amigadate"
+fi
+AC_MSG_RESULT($aros_dist_amigadate)
+
 
 #-----------------------------------------------------------------------------
 # Target-specific defaults. You can override then on a per-target basis.
@@ -3453,6 +3502,12 @@ AC_SUBST(pci_hidd_target)
 AC_SUBST(aros_nominal_width)
 AC_SUBST(aros_nominal_height)
 AC_SUBST(aros_nominal_depth)
+
+# Distro specific stuff
+AC_SUBST(aros_dist_name)
+AC_SUBST(aros_dist_version)
+AC_SUBST(aros_dist_date)
+AC_SUBST(aros_dist_amigadate)
 
 # Native version related
 AC_SUBST(aros_serial_debug)

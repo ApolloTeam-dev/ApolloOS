@@ -50,7 +50,7 @@ setvars () {
 	TEST_CFLAGS="" #-I${DIR}/${WORK}"
 	PORTS="${DIR}/${WORK}/prt"
 	BIN="${DIR}/${WORK}/bin"
-	CONFOPTS="--target=amiga-m68k --with-optimization=-O${OPT} --with-aros-prefs=classic --with-resolution=${REZ} --with-cpu=${CPU} --with-fpu=${FPU} --disable-mmu --with-portssources=${PORTS}"
+	CONFOPTS="--enable-dist-name=${DISTRONAME} --enable-dist-version=${DISTROVERSION} --target=amiga-m68k --with-optimization=-O${OPT} --with-aros-prefs=classic --with-resolution=${REZ} --with-cpu=${CPU} --with-fpu=${FPU} --disable-mmu --with-portssources=${PORTS}"
 	if [ ${VAMP}  = 0 ]; then CONFOPTS="${CONFOPTS} --with-nonvampire-support";          fi
 	if [ ${DEBUG} = 1 ]; then CONFOPTS="${CONFOPTS} --enable-debug --with-serial-debug"; fi
 	MAKEOPTS="-j${JOBS}"
