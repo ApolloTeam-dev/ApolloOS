@@ -1,6 +1,5 @@
 /*
-    Copyright © 2007-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2007-2013, The AROS Development Team. All rights reserved.
 
     C99 function mbstowcs().
 */
@@ -10,12 +9,12 @@
     NAME
 #include <stdlib.h>
 
-	size_t mbstowcs(
+        size_t mbstowcs(
 
     SYNOPSIS
-	wchar_t * restrict pwcs,
-	const char * restrict s,
-	size_t n)
+        wchar_t * restrict pwcs,
+        const char * restrict s,
+        size_t n)
 
     FUNCTION
         C99 function mbstowcs.
@@ -25,7 +24,7 @@
     RESULT
 
     NOTES
-        stdc.library currenlty only implements "C" locale.
+        stdc.library currently only implements "C" locale.
 
     EXAMPLE
 

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: AmigaGuide function AddAmigaGuideHostA()
-    Lang: english
 */
 #include "amigaguide_intern.h"
 
@@ -18,7 +16,7 @@
         AROS_LHA(struct Hook *, hook, A0),
         AROS_LHA(STRPTR, name, D0),
         AROS_LHA(struct TagItem *, attrs, A1),
-	
+        
 /*  LOCATION */
         struct Library *, AmigaGuideBase, 23, AmigaGuide)
 

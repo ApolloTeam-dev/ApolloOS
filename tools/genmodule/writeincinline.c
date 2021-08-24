@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Function to write inline/modulename.h. Part of genmodule.
 */
@@ -65,9 +64,9 @@ void writeincinline(struct config *cfg)
                 "#    define __%s_LIBBASE %s\n"
                 "#endif\n"
                 "\n",
-                cfg->includenameupper, 
+                cfg->includenameupper,
                 cfg->includenameupper, cfg->libbase
-        );        
+        );
     freeBanner(banner);
 
     for (funclistit = cfg->funclist; funclistit!=NULL; funclistit = funclistit->next)

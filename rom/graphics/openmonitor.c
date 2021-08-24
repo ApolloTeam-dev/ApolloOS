@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function OpenMonitor()
-    Lang: english
 */
 
 #include <aros/atomic.h>
@@ -12,6 +10,7 @@
 #include <proto/oop.h>
 
 #include <stddef.h>
+#include <string.h>
 
 #include "graphics_intern.h"
 #include "dispinfo.h"
@@ -64,24 +63,24 @@
 
     if (monitor_name)
     {
-	if (stricmp(monitor_name, DEFAULT_MONITOR_NAME))
-	{
-	    ObtainSemaphoreShared(GfxBase->MonitorListSemaphore);
+        if (stricmp(monitor_name, DEFAULT_MONITOR_NAME))
+        {
+            ObtainSemaphoreShared(GfxBase->MonitorListSemaphore);
 
-	    mspc = (struct MonitorSpec *)FindName(&GfxBase->MonitorList, monitor_name);
-	    D(bug("[OpenMonitor] Found spec 0x%p\n", mspc));
+            mspc = (struct MonitorSpec *)FindName(&GfxBase->MonitorList, monitor_name);
+            D(bug("[OpenMonitor] Found spec 0x%p\n", mspc));
 
-	    ReleaseSemaphore(GfxBase->MonitorListSemaphore);
-	}
-	else
-	    mspc = GfxBase->default_monitor;
+            ReleaseSemaphore(GfxBase->MonitorListSemaphore);
+        }
+        else
+            mspc = GfxBase->default_monitor;
     }
     else if (display_id != INVALID_ID)
     {
         struct MonitorInfo info;
 
-	if (GetDisplayInfoData(NULL, (UBYTE *)&info, sizeof(info), DTAG_MNTR, display_id) >= offsetof(struct MonitorInfo, ViewPosition))
-	    mspc = info.Mspc;
+        if (GetDisplayInfoData(NULL, (UBYTE *)&info, sizeof(info), DTAG_MNTR, display_id) >= offsetof(struct MonitorInfo, ViewPosition))
+            mspc = info.Mspc;
     }
     else
         mspc = GfxBase->default_monitor;

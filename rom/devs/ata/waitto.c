@@ -1,6 +1,5 @@
 /*
-    Copyright © 2013-2014, The AROS Development Team. All rights reserved
-    $Id$
+    Copyright (C) 2013-2014, The AROS Development Team. All rights reserved
 */
 
 #include <aros/debug.h>
@@ -40,8 +39,8 @@ ULONG ata_WaitTO(struct IORequest* tmr, ULONG secs, ULONG micro, ULONG sigs)
     D(bug("[ATA  ] Signals received: %lx ('%s')\n", sigs, t->ln_Name));
     if (0 == (sigs & sig))
     {
-	if (!CheckIO(tmr))
-	    AbortIO(tmr);
+        if (!CheckIO(tmr))
+            AbortIO(tmr);
     }
     WaitIO(tmr);
 

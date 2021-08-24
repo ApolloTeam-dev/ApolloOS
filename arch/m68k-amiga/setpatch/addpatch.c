@@ -1,9 +1,8 @@
 /*
-    Copyright © <year>, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 */
 
-#include <string.h>
+#include <aros/crt_replacement.h>
 
 #include <proto/exec.h>
 
@@ -31,7 +30,7 @@
     RESULT
 
         TRUE  - Patch entry is added to the master patch list
-        FALSE - Patch with matching name already in the list 
+        FALSE - Patch with matching name already in the list
 
     NOTES
 
@@ -55,7 +54,7 @@
     ObtainSemaphore(&SetPatchBase->sp_Patch3.sp_Semaphore);
 
     ForeachNode(&SetPatchBase->sp_Patch3.sp_PatchList, tmp) {
-        if (strcmp(pe->pe_Name, tmp->pe_Name) == 0) {
+        if (Strcmp(pe->pe_Name, tmp->pe_Name) == 0) {
             found = TRUE;
             break;
         }

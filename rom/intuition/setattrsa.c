@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <proto/alib.h>
@@ -55,7 +54,7 @@
     AROS_LIBFUNC_INIT
 
     struct opSet ops;
-    ULONG   	 result;
+    ULONG        result;
 
     DEBUG_SETATTRS(dprintf("SetAttrs[0x%p]: Object 0x%p Tags 0x%p\n", &ops, object, tagList));
 

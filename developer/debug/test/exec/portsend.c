@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <proto/exec.h>
@@ -17,14 +16,14 @@ int main(void)
     port = FindPort("PORTTEST");
     if (port==NULL)
     {
-	puts("Port not found");
-	return 20;
+        puts("Port not found");
+        return 20;
     }
     msg.mn_ReplyPort = CreatePort(NULL, 0);
     if (msg.mn_ReplyPort==NULL)
     {
-	puts("Error creating port");
-	return 20;
+        puts("Error creating port");
+        return 20;
     }
     
     PutMsg(port, &msg);
@@ -32,9 +31,9 @@ int main(void)
     msg2 = GetMsg(msg.mn_ReplyPort);
     DeletePort(msg.mn_ReplyPort);
     if (msg2!=&msg)
-	puts("Wrong message returned");
+        puts("Wrong message returned");
     else
-	puts("Message returned");
+        puts("Message returned");
     
     return 0;
 }

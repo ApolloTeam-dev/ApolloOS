@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 #include <exec/memory.h>
@@ -20,11 +18,11 @@
 
 /*  SYNOPSIS */
 
-	AROS_LHA(struct ViewPort *, vp, A0),
+        AROS_LHA(struct ViewPort *, vp, A0),
 
 /*  LOCATION */
 
-	struct GfxBase *, GfxBase, 161, Graphics)
+        struct GfxBase *, GfxBase, 161, Graphics)
 
 /*  FUNCTION
 
@@ -59,7 +57,7 @@
     AROS_LIBFUNC_INIT
 
     return (struct DBufInfo *)AllocMem(MEMF_ANY | MEMF_CLEAR,
-				       sizeof(struct DBufInfo));
+                                       sizeof(struct DBufInfo));
     
     AROS_LIBFUNC_EXIT
 } /* AllocDBufInfo */

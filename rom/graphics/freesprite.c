@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function FreeSprite()
-    Lang: english
 */
 #include <graphics/gfxbase.h>
 #include <proto/exec.h>
@@ -24,7 +22,7 @@
 
 /*  FUNCTION
         Free a via GetSprite previously allocated sprite.
-        Don't even dare to free a sprite you didn't allocate.   
+        Don't even dare to free a sprite you didn't allocate.
 
     INPUTS
         pick - number of sprite in range 0-7

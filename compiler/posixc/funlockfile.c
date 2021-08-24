@@ -1,6 +1,5 @@
 /*
-    Copyright © 2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2017, The AROS Development Team. All rights reserved.
 */
 
 #include <sys/types.h>
@@ -14,13 +13,13 @@
     NAME */
 #include <stdio.h>
 
-	void funlockfile(
+        void funlockfile(
 
 /*  SYNOPSIS */
-	FILE *file)
+        FILE *file)
 
 /*  FUNCTION
-	Relinquish exclusive access to the file.
+        Relinquish exclusive access to the file.
 
     INPUTS
 

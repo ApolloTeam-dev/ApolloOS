@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 
 /******************************************************************************
@@ -57,6 +55,8 @@ int __nocommandline;
 #include <proto/task.h>
 
 #include <resources/task.h>
+
+#include <string.h>
 
 const TEXT version[] = "$VER: TaskList 42.2 (21.01.2017)\n";
 
@@ -161,7 +161,7 @@ static int fillbuffer(struct List *tasks)
 #if !defined(__AROS__)
     Disable();
 
-    if (!addtask(task, FindTask(NULL)))
+    if (!addtask(tasks, FindTask(NULL)))
     {
         Enable();
         return RETURN_FAIL;

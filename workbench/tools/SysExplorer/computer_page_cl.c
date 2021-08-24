@@ -1,6 +1,5 @@
 /*
-    Copyright (C) 2013-2019, The AROS Development Team.
-    $Id$
+    Copyright (C) 2013-2021, The AROS Development Team.
 */
 
 #include <aros/debug.h>
@@ -20,7 +19,7 @@
 #include <proto/aros.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
-#include <proto/hpet.h>
+#include <proto/clocksource.h>
 #include <proto/kernel.h>
 #include <proto/muimaster.h>
 #include <proto/utility.h>
@@ -30,6 +29,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "classes.h"
 #include "cpuspecific.h"
@@ -58,15 +58,15 @@ ULONG ExtUDivMod32(ULONG a, ULONG b, ULONG *mod)
 void PrintNum(char *buffer, LONG bufsize, ULONG num)
 {
     /* MBytes ? */
-    if(num > 1023) 
+    if(num > 1023)
     {
         ULONG  x, xx;
         char* fmt = "meg";
         
         /* GBytes ? */
         if(num > 0xfffff)
-        { 
-            num >>= 10; 
+        {
+            num >>= 10;
             fmt = "gig";
         }
         
@@ -86,7 +86,7 @@ void PrintNum(char *buffer, LONG bufsize, ULONG num)
 
         snprintf(buffer, bufsize, "%d.%d %s", (int)num, (int)x, fmt);
     }
-    else 
+    else
     {
         snprintf(buffer, bufsize, "%d K", (int)num);
     }
@@ -102,13 +102,13 @@ ULONG ComputeKBytes(APTR a, APTR b)
 static ULONG GetProcessorsCount()
 {
     ULONG count = 0;
-    struct TagItem tags [] = 
+    struct TagItem cpuCountTags [] =
     {
         {GCIT_NumberOfProcessors, (IPTR)&count},
         {TAG_DONE, TAG_DONE}
     };
 
-    GetCPUInfo(tags);
+    GetCPUInfo(cpuCountTags);
 
     return count;
 }
@@ -119,12 +119,12 @@ struct
     STRPTR Description;
 } ProcessorArchitecture [] =
 {
-    { PROCESSORARCH_UNKNOWN, "Unknown" },
+    { PROCESSORARCH_UNKNOWN, "<Unknown CPU Family>" },
     { PROCESSORARCH_M68K, "Motorola 68K" },
     { PROCESSORARCH_PPC, "PowerPC" },
-    { PROCESSORARCH_X86, "X86" },
+    { PROCESSORARCH_X86, "x86" },
     { PROCESSORARCH_ARM, "ARM" },
-    { 0, NULL }   
+    { 0, NULL }
 };
 
 struct
@@ -133,95 +133,128 @@ struct
     STRPTR Description;
 } CurrentEndianness [] =
 {
-    { ENDIANNESS_UNKNOWN, "Unknown" },
-    { ENDIANNESS_LE, "LE" },
-    { ENDIANNESS_BE, "BE" },
+    { ENDIANNESS_UNKNOWN, "<Unknown Endian-ness>" },
+    { ENDIANNESS_LE, "Little-Endian" },
+    { ENDIANNESS_BE, "Big-Endian" },
     { 0, NULL}
 };
 
+#if (__WORDSIZE == 64)
+#define CPU_PLATFORM_ARCH   "64bit"
+#else
+#define CPU_PLATFORM_ARCH   "32bit"
+#endif
 static VOID ParseProcessorInformation(Object *GrpProcessors)
 {
-    ULONG count = GetProcessorsCount();
-    ULONG i, j;
-    CONST_STRPTR modelstring;
-    ULONG architecture, endianness;
     CONST_STRPTR architecturestring = "", endiannessstring = "";
-    UQUAD cpuspeed;
+    CONST_STRPTR modelstring;
+    char    *CPUInfoLabelStr, *CPUInfoStr;
+    Object  *CPUInfoLabelObj, *CPUInfoStrObj;
+    ULONG architecture, endianness, count, i, j;
+    struct TagItem cpuArchTags [] =
+    {
+        {GCIT_SelectedProcessor, 0},
+        {GCIT_Architecture, (IPTR)&architecture},
+        {GCIT_Endianness, (IPTR)&endianness},
+        {TAG_DONE, TAG_DONE}
+    };
 
     D(bug("[SysExplorer] %s()\n", __func__));
 
+    GetCPUInfo(cpuArchTags);
+    count = GetProcessorsCount();
+
+    j = 0;
+    while(ProcessorArchitecture[j].Description != NULL)
+    {
+        if (ProcessorArchitecture[j].Architecture == architecture)
+        {
+            architecturestring = ProcessorArchitecture[j].Description;
+            break;
+        }
+        j++;
+    }
+
+    j = 0;
+    while(CurrentEndianness[j].Description != NULL)
+    {
+        if (CurrentEndianness[j].Endianness == endianness)
+        {
+            endiannessstring = CurrentEndianness[j].Description;
+            break;
+        }
+        j++;
+    }
+
+    CPUInfoLabelStr = AllocVec(14, MEMF_PUBLIC);
+    sprintf(CPUInfoLabelStr, "Archictecture");
+    CPUInfoLabelObj = Label(CPUInfoLabelStr);
+
+    CPUInfoStr = AllocVec(strlen(architecturestring) + strlen(endiannessstring) + 8, MEMF_PUBLIC);
+    sprintf(CPUInfoStr,
+            "%s %s/%s",
+            CPU_PLATFORM_ARCH,
+            architecturestring, endiannessstring);
+    CPUInfoStrObj = TextObject,
+            TextFrame,
+            MUIA_Background, MUII_TextBack,
+            MUIA_CycleChain, 1,
+            MUIA_Text_Contents, (IPTR)CPUInfoStr,
+        End;
+    
+    if (DoMethod(GrpProcessors, MUIM_Group_InitChange))
+    {
+        DoMethod(GrpProcessors, OM_ADDMEMBER, CPUInfoLabelObj);
+        DoMethod(GrpProcessors, OM_ADDMEMBER, CPUInfoStrObj);
+        DoMethod(GrpProcessors, MUIM_Group_ExitChange);
+    }
+
     for (i = 0; i < count; i++)
     {
-        Object  *CoreIDLabelObj, *CoreIDStrObj,
-                *CoreSpdLabelObj, *CoreSpdStrObj,
-                *CoreFeatLabelObj, *CoreFeatStrObj;
-
-        char    *CoreIDLabelStr, *CoreIDStr;
-
-        struct TagItem tags [] =
+        Object  *CoreFeatLabelObj, *CoreFeatStrObj;
+        UQUAD cpuspeed;
+        struct TagItem cpuTags [] =
         {
             {GCIT_SelectedProcessor, i},
             {GCIT_ModelString, (IPTR)&modelstring},
-            {GCIT_Architecture, (IPTR)&architecture},
-            {GCIT_Endianness, (IPTR)&endianness},
             {GCIT_ProcessorSpeed, (IPTR)&cpuspeed},
             {TAG_DONE, TAG_DONE}
         };
-        
-        GetCPUInfo(tags);
+
+        GetCPUInfo(cpuTags);
         D(bug("[SysExplorer] %s: CPU #%d\n", __func__, i));
-
-        j = 0;
-        while(ProcessorArchitecture[j].Description != NULL)
-        {
-            if (ProcessorArchitecture[j].Architecture == architecture)
-            {
-                architecturestring = ProcessorArchitecture[j].Description;
-                break;
-            }
-            j++;
-        }
-
-        j = 0;
-        while(CurrentEndianness[j].Description != NULL)
-        {
-            if (CurrentEndianness[j].Endianness == endianness)
-            {
-                endiannessstring = CurrentEndianness[j].Description;
-                break;
-            }
-            j++;
-        }       
 
         if (!modelstring)
             modelstring = "Unknown";
 
-        CoreIDLabelStr = AllocVec(14, MEMF_PUBLIC);
-        snprintf(CoreIDLabelStr, 14, "CPU Core #%u", (int)(i + 1));
-        CoreIDLabelObj = Label(CoreIDLabelStr);
+        CPUInfoLabelStr = AllocVec(14, MEMF_PUBLIC);
+        snprintf(CPUInfoLabelStr, 14, "CPU Core #%u", (unsigned int)(i + 1));
+        CPUInfoLabelObj = Label(CPUInfoLabelStr);
 
-        CoreIDStr = AllocVec(strlen(architecturestring) + strlen(endiannessstring) + strlen(modelstring) + 4, MEMF_PUBLIC);
-        snprintf(CoreIDStr,
-                strlen(architecturestring) + strlen(endiannessstring) + strlen(modelstring) + 4,
-                "%s/%s %s",
-                architecturestring, endiannessstring, modelstring);
-        CoreIDStrObj = TextObject,
+        CPUInfoStr = AllocVec(strlen(modelstring) + 2, MEMF_PUBLIC);
+        snprintf(CPUInfoStr,
+                strlen(modelstring) + 2,
+                "%s",
+                modelstring);
+        CPUInfoStrObj = TextObject,
                 TextFrame,
                 MUIA_Background, MUII_TextBack,
                 MUIA_CycleChain, 1,
-                MUIA_Text_Contents, (IPTR)CoreIDStr,
+                MUIA_Text_Contents, (IPTR)CPUInfoStr,
             End;
         
         if (DoMethod(GrpProcessors, MUIM_Group_InitChange))
         {
-            DoMethod(GrpProcessors, OM_ADDMEMBER, CoreIDLabelObj);
-            DoMethod(GrpProcessors, OM_ADDMEMBER, CoreIDStrObj);
+            DoMethod(GrpProcessors, OM_ADDMEMBER, CPUInfoLabelObj);
+            DoMethod(GrpProcessors, OM_ADDMEMBER, CPUInfoStrObj);
             DoMethod(GrpProcessors, MUIM_Group_ExitChange);
         }
 
         if (cpuspeed)
         {
+            Object  *CoreSpdLabelObj, *CoreSpdStrObj;
             char *CoreSpdStr;
+
             CoreSpdLabelObj = Label("Speed");
             CoreSpdStr = AllocVec(20, MEMF_PUBLIC);
             snprintf(CoreSpdStr, 20, "%llu MHz", (unsigned long long)(cpuspeed / 1000000));
@@ -265,7 +298,7 @@ static VOID ParseProcessorInformation(Object *GrpProcessors)
 static inline void VersionStr(char *ptr, int len, struct Library *base)
 {
     snprintf(ptr, len, "%d.%d", base->lib_Version, base->lib_Revision);
-}    
+}
 
 char *SplitBootArgs(struct TagItem *bootinfo, char *buffer, LONG bufsize)
 {
@@ -306,7 +339,7 @@ static Object *ComputerWindow__OM_NEW(Class *cl, Object *self, struct opSet *msg
     IPTR bootldr = 0;
     IPTR args = 0;
     APTR KernelBase;
-    APTR HPETBase;
+    APTR CSBase;
 
     STRPTR pagetitles[5];
     int pagecnt = 0;
@@ -333,7 +366,7 @@ static Object *ComputerWindow__OM_NEW(Class *cl, Object *self, struct opSet *msg
         pagetitles[pagecnt++] = (STRPTR)_(MSG_PROCESSORS);
     }
     pagetitles[pagecnt++] = (STRPTR)_(MSG_RAM);
-    if ((HPETBase = OpenResource("hpet.resource")) != NULL)
+    if ((CSBase = OpenResource("hpet.resource")) != NULL)
     {
         pagetitles[pagecnt++] = (STRPTR)_(MSG_HPET);
     }
@@ -397,7 +430,13 @@ static Object *ComputerWindow__OM_NEW(Class *cl, Object *self, struct opSet *msg
                 End),
             End),
             ProcessorBase ? Child : TAG_IGNORE, (IPTR)(HGroup,
-                Child, (IPTR)(GrpProcessors = ColGroup(2),
+                Child, (IPTR)(ScrollgroupObject,
+                    MUIA_Scrollgroup_FreeHoriz, FALSE,
+                    MUIA_Scrollgroup_FreeVert, TRUE,
+                    MUIA_Scrollgroup_Contents, (IPTR)(VirtgroupObject,
+                        Child, (IPTR)(GrpProcessors = ColGroup(2),
+                        End),
+                    End),
                 End),
             End),
             Child, (IPTR)(VGroup,
@@ -410,7 +449,7 @@ static Object *ComputerWindow__OM_NEW(Class *cl, Object *self, struct opSet *msg
                     End),
                 End),
             End),
-            HPETBase ? Child : TAG_IGNORE, (IPTR)(VGroup,
+            CSBase ? Child : TAG_IGNORE, (IPTR)(VGroup,
                 Child, (IPTR)(NListviewObject,
                     TextFrame,
                     MUIA_Background, MUII_TextBack,
@@ -445,17 +484,21 @@ static Object *ComputerWindow__OM_NEW(Class *cl, Object *self, struct opSet *msg
         bufptr = buffer;
         bufsize = sizeof(buffer);
 
-        if (HPETBase)
+        if (CSBase)
         {
-            const char *owner;
+            const struct Node *owner;
+            struct Node unusedtsunit =
+            {
+                .ln_Name = _(MSG_AVAILABLE)
+            };
             ULONG i = 0;
 
-            while (bufsize > 5 && GetUnitAttrs(i, HPET_UNIT_OWNER, &owner, TAG_DONE))
+            while (bufsize > 5 && GetCSUnitAttrs(i, CLOCKSOURCE_UNIT_OWNER, &owner, TAG_DONE))
             {
                 if (!owner)
-                    owner = _(MSG_AVAILABLE);
+                    owner = &unusedtsunit;
 
-                snprintf(bufptr, bufsize, "HPET %u:\t\t%s\n", (unsigned)(++i), owner);
+                snprintf(bufptr, bufsize, "HPET %u:\t\t%s\n", (unsigned)(++i), owner->ln_Name);
 
                 slen = strlen(bufptr);
                 bufptr += slen;

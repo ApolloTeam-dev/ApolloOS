@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/types.h>
@@ -47,10 +46,10 @@ int main(int argc, char **argv)
     if (msg)
     {
         printf("notified\n");
-	ReplyMsg(msg);
+        ReplyMsg(msg);
     }
     else
-    	printf("CTRL-C received\n");
+        printf("CTRL-C received\n");
 
     EndNotify(nr);
     DeleteMsgPort(port);

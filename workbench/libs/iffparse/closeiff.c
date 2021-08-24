@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 */
 
 #include "iffparse_intern.h"
@@ -36,7 +35,7 @@
     EXAMPLE
 
     BUGS
-    Errors during writing of any of the remaining chunks are just 
+    Errors during writing of any of the remaining chunks are just
     ignored and both the faulty and all following chunks are not written.
 
     SEE ALSO

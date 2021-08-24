@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Removes a resource from the list of public resources.
-    Lang: english
 */
 #include <exec/execbase.h>
 #include <aros/libcall.h>
@@ -13,19 +11,19 @@
 
     NAME */
 
-	AROS_LH1(void, RemResource,
+        AROS_LH1(void, RemResource,
 
 /*  SYNOPSIS */
-	AROS_LHA(APTR, resource,A1),
+        AROS_LHA(APTR, resource,A1),
 
 /*  LOCATION */
-	struct ExecBase *, SysBase, 82, Exec)
+        struct ExecBase *, SysBase, 82, Exec)
 
 /*  FUNCTION
-	Removes a resource from the system resource list.
+        Removes a resource from the system resource list.
 
     INPUTS
-	resource - Pointer to the resource.
+        resource - Pointer to the resource.
 
     RESULT
 
@@ -36,7 +34,7 @@
     BUGS
 
     SEE ALSO
-	AddResource(), OpenResource()
+        AddResource(), OpenResource()
 
     INTERNALS
 

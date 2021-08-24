@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 
     Desc: Free memory allocated by AllocMem()
-    Lang: english
 */
 
 #include <exec/alerts.h>
@@ -11,7 +9,6 @@
 #include <aros/libcall.h>
 #include <aros/config.h>
 #include <aros/macros.h>
-#include <aros/rt.h>
 #include <exec/memory.h>
 #include <exec/memheaderext.h>
 #include <proto/exec.h>
@@ -67,8 +64,6 @@
     /* If there is nothing to free do nothing. */
     if(!byteSize || !memoryBlock)
         ReturnVoid ("FreeMem");
-
-    RT_Free (RTT_MEMORY, memoryBlock, byteSize);
 
     memoryBlock = MungWall_Check(memoryBlock, byteSize, &tp, SysBase);
 

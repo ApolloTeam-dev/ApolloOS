@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <bootconsole.h>
@@ -11,11 +10,11 @@ void con_Clear(void)
     switch (scr_Type)
     {
     case SCR_TEXT:
-    	txt_Clear();
-    	break;
+        txt_Clear();
+        break;
 
     case SCR_GFX:
-    	fb_Clear();
-    	break;
+        fb_Clear();
+        break;
     }
 }

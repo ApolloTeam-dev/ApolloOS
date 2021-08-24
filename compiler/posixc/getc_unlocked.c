@@ -1,36 +1,36 @@
 /*
-    Copyright © 2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2017-2021, The AROS Development Team. All rights reserved.
 */
 
-#include <errno.h>
+#include <aros/debug.h>
+
 #include <dos/dos.h>
 #include <dos/dosextens.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
+
+#include <errno.h>
+
 #include "__fdesc.h"
 #include "__stdio.h"
-
-#define DEBUG 0
-#include <aros/debug.h>
 
 /*****************************************************************************
 
     NAME */
 #include <stdio.h>
 
-	int getc_unlocked (
+        int getc_unlocked (
 
 /*  SYNOPSIS */
-	FILE * stream)
+        FILE * stream)
 
 /*  FUNCTION
 
     INPUTS
-	stream - Read from this stream
+        stream - Read from this stream
 
     RESULT
-	The character read or EOF on end of file or error.
+        The character read or EOF on end of file or error.
 
     NOTES
 
@@ -39,11 +39,11 @@
     BUGS
 
     SEE ALSO
-	getc(), fputc(), putc()
+        getc(), __posixc_fputc(), putc()
 
     INTERNALS
 
 ******************************************************************************/
 {
-    return getc(stream);
+    return fgetc(stream);
 }

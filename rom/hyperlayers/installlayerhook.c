@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 #include <aros/libcall.h>
 #include <utility/hooks.h>
@@ -19,14 +17,14 @@
 #include <proto/layers.h>
 #include "layers_intern.h"
 
-	AROS_LH2(struct Hook *, InstallLayerHook,
+        AROS_LH2(struct Hook *, InstallLayerHook,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct Layer *, layer, A0),
-	AROS_LHA(struct Hook  *, hook, A1),
+        AROS_LHA(struct Layer *, layer, A0),
+        AROS_LHA(struct Hook  *, hook, A1),
 
 /*  LOCATION */
-	struct LayersBase *, LayersBase, 33, Layers)
+        struct LayersBase *, LayersBase, 33, Layers)
 
 /*  FUNCTION
         Safely install a new backfill hook. Return the old hook.
@@ -49,8 +47,8 @@
     INTERNALS
 
     HISTORY
-	27-11-96    digulla automatically created from
-			    layers_lib.fd and clib/layers_protos.h
+        27-11-96    digulla automatically created from
+                            layers_lib.fd and clib/layers_protos.h
 
 *****************************************************************************/
 {
@@ -61,7 +59,7 @@
     D(bug("InstallLayerHook(layer @ $%lx, hook @ $%lx)\n", layer, hook));
 
     if(layer == NULL)
-	return NULL;
+        return NULL;
 
     LockLayer(0, layer);
 

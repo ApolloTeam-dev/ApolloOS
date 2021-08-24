@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     BSD legacy function setlinebuf().
     Function is deprecated and not part of POSIX standard.
@@ -11,10 +10,10 @@
     NAME */
 #include <stdio.h>
 
-	void setlinebuf (
+        void setlinebuf (
 
 /*  SYNOPSIS */
-	FILE *stream)
+        FILE *stream)
 
 /*  FUNCTION
 
@@ -23,8 +22,8 @@
     RESULT
 
     NOTES
-	This is a simpler alias for setvbuf() according to manpage.
-        This function is not part of POSIX and programmers are advised 
+        This is a simpler alias for setvbuf() according to manpage.
+        This function is not part of POSIX and programmers are advised
         to use setvbuf() function directly.
         Legacy functions may be removed in the future.
 
@@ -33,7 +32,7 @@
     BUGS
 
     SEE ALSO
-        setvbuf()
+        __posixc_setvbuf()
 
     INTERNALS
         This function is part of the static link lib and not in

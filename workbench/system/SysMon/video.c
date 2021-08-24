@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2019, The AROS Development Team. All rights reserved.
 */
 
 #include "sysmon_intern.h"
@@ -24,7 +23,7 @@ OOP_Object * gfxhidd;
 /* Videofunctions */
 static BOOL InitVideo(struct SysMonData *smdata)
 {
-    struct OOP_ABDescr attrbases[] = 
+    struct OOP_ABDescr attrbases[] =
     {
         { IID_Hidd_Gfx,         &HiddGfxAttrBase        },
         { IID_Hidd_BitMap,      &HiddBitMapAttrBase     },

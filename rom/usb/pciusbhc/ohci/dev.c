@@ -1,7 +1,6 @@
 /*
-   Copyright © 2002-2009, Chris Hodges. All rights reserved.
-   Copyright © 2010-2012, The AROS Development Team. All rights reserved.
-   $Id$
+   Copyright (C) 2002-2009, Chris Hodges. All rights reserved.
+   Copyright (C) 2010-2012, The AROS Development Team. All rights reserved.
 */
 
 #include <proto/exec.h>
@@ -13,7 +12,7 @@
 #include "cmd_protos.h"
 #include "pci_protos.h"
 
-#define	UtilityBase	base->hd_UtilityBase
+#define UtilityBase     base->hd_UtilityBase
 
 const char devname[] = MOD_NAME_STRING;
 CONST_STRPTR xfer_names[] = {"CONTROL", "BULK", "ISO", "INT"};

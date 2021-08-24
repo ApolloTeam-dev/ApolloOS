@@ -1,6 +1,5 @@
 /*
-    Copyright © 2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2003, The AROS Development Team. All rights reserved.
 */
 
 #include <sys/time.h>
@@ -16,7 +15,7 @@
 
 int main()
 {
-    struct timeval  tv_start, 
+    struct timeval  tv_start,
                     tv_end;
     APTR            buffer = NULL;
     UBYTE           patterns[] = { 0x15, 0x25, 0x65, 0x42 };
@@ -35,7 +34,7 @@ int main()
     
     gettimeofday(&tv_end, NULL);
     
-    elapsed = ((double)(((tv_end.tv_sec * 1000000) + tv_end.tv_usec) 
+    elapsed = ((double)(((tv_end.tv_sec * 1000000) + tv_end.tv_usec)
             - ((tv_start.tv_sec * 1000000) + tv_start.tv_usec)))/1000000.;
     
     printf
@@ -45,7 +44,7 @@ int main()
         "Elapsed time:     %f seconds\n"
         "Number of bytes:  %f\n"
         "Bytes per second: %f\n",
-        elapsed, (double) count * BUFFERSIZE, 
+        elapsed, (double) count * BUFFERSIZE,
         (double) count * BUFFERSIZE / elapsed
     );
    
@@ -58,7 +57,7 @@ int main()
     
     gettimeofday(&tv_end, NULL);
     
-    elapsed = ((double)(((tv_end.tv_sec * 1000000) + tv_end.tv_usec) 
+    elapsed = ((double)(((tv_end.tv_sec * 1000000) + tv_end.tv_usec)
             - ((tv_start.tv_sec * 1000000) + tv_start.tv_usec)))/1000000.;
     
     printf
@@ -68,7 +67,7 @@ int main()
         "Elapsed time:     %f seconds\n"
         "Number of bytes:  %f\n"
         "Bytes per second: %f\n",
-        elapsed, (double) count * BUFFERSIZE, 
+        elapsed, (double) count * BUFFERSIZE,
         (double) count * BUFFERSIZE / elapsed
     );
     FreeVec(buffer);

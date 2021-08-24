@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Change the position in a stream.
 */
@@ -26,9 +25,9 @@
  */
 
 int __fseeko (
-	FILE * stream,
-	off_t  offset,
-	int    whence)
+        FILE * stream,
+        off_t  offset,
+        int    whence)
 {
     off_t cnt = 0;
     off_t finalseekposition = 0;
@@ -39,8 +38,8 @@ int __fseeko (
 
     if (!fdesc)
     {
-	    errno = EBADF;
-	    return -1;
+            errno = EBADF;
+            return -1;
     }
 
     fh = fdesc->fcb->handle;
@@ -85,8 +84,8 @@ int __fseeko (
         case SEEK_CUR: finalseekposition = cnt + offset; break;
         case SEEK_END: finalseekposition = eofposition + offset; break;
         default:
-    	    errno = EINVAL;
-    	    return -1;
+            errno = EINVAL;
+            return -1;
     }
 
     /* Check conditions */
@@ -128,7 +127,7 @@ int __fseeko (
            so here we go.
         */
         stream->flags &= ~(__POSIXC_STDIO_EOF);
-    	cnt = 0;
+        cnt = 0;
     }
 
     return cnt;
@@ -140,9 +139,9 @@ int __fseeko (
  */
 
 int __fseeko64 (
-	FILE * stream,
-	off64_t  offset,
-	int    whence)
+        FILE * stream,
+        off64_t  offset,
+        int    whence)
 {
     off_t cnt = 0;
     off_t finalseekposition = 0;
@@ -153,8 +152,8 @@ int __fseeko64 (
 
     if (!fdesc)
     {
-	    errno = EBADF;
-	    return -1;
+            errno = EBADF;
+            return -1;
     }
 
     if (((offset <= LONG_MIN) || (offset >= LONG_MAX)) && !(fdesc->fcb->privflags & _FCB_FS64))
@@ -206,8 +205,8 @@ int __fseeko64 (
         case SEEK_CUR: finalseekposition = cnt + offset; break;
         case SEEK_END: finalseekposition = eofposition + offset; break;
         default:
-    	    errno = EINVAL;
-    	    return -1;
+            errno = EINVAL;
+            return -1;
     }
 
     /* Check conditions */
@@ -249,7 +248,7 @@ int __fseeko64 (
            so here we go.
         */
         stream->flags &= ~(__POSIXC_STDIO_EOF);
-    	cnt = 0;
+        cnt = 0;
     }
 
     return cnt;

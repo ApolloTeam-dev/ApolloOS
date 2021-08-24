@@ -1,6 +1,5 @@
 /*
-    Copyright © 2006-2016, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2006-2016, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/symbolsets.h>
@@ -11,7 +10,7 @@
 #include "strings.h"
 
 #define CATALOG_NAME     "System/System/Wanderer/Tools/WBNewDrawer.catalog"
-#define CATALOG_VERSION  2
+#include "catalogs/catalog_version.h"
 
 /*** Variables **************************************************************/
 static struct Catalog *catalog;
@@ -24,8 +23,8 @@ CONST_STRPTR _(ULONG id)
     if (LocaleBase != NULL && catalog != NULL)
     {
         return GetCatalogStr(catalog, id, CatCompArray[id].cca_Str);
-    } 
-    else 
+    }
+    else
     {
         return CatCompArray[id].cca_Str;
     }
@@ -37,8 +36,8 @@ BOOL Locale_Initialize(VOID)
     if (LocaleBase != NULL)
     {
         catalog = OpenCatalog
-        ( 
-            NULL, CATALOG_NAME, OC_Version, CATALOG_VERSION, TAG_DONE 
+        (
+            NULL, CATALOG_NAME, OC_Version, CATALOG_VERSION, TAG_DONE
         );
     }
     else

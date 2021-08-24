@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc: Create a new message port.
-    Lang: english
 */
 
 #include <exec/memory.h>
@@ -17,21 +15,21 @@
 
     NAME */
 
-	AROS_LH0(struct MsgPort *, CreateMsgPort,
+        AROS_LH0(struct MsgPort *, CreateMsgPort,
 
 /*  SYNOPSIS */
 
 /*  LOCATION */
-	struct ExecBase *, SysBase, 111, Exec)
+        struct ExecBase *, SysBase, 111, Exec)
 
 /*  FUNCTION
-	Create a new message port. A signal will be allocated and the message
-	port set to signal you task
+        Create a new message port. A signal will be allocated and the message
+        port set to signal you task
 
     INPUTS
 
     RESULT
-	Pointer to messageport structure
+        Pointer to messageport structure
 
     NOTES
 
@@ -53,24 +51,24 @@
     ret=(struct MsgPort *)AllocMem(sizeof(struct MsgPort),MEMF_PUBLIC|MEMF_CLEAR);
     if(ret!=NULL)
     {
-	BYTE sb;
+        BYTE sb;
 
-	/* Allocate a signal bit */
-	sb=AllocSignal(-1);
-	if (sb != -1)
-	{
-	    /* Initialize messageport structure */
-	    InitMsgPort(ret);
-	    /* Set signal bit. */
-	    ret->mp_SigBit=sb;
-	    /* Set task to send the signal to. */
-	    ret->mp_SigTask=GET_THIS_TASK;
+        /* Allocate a signal bit */
+        sb=AllocSignal(-1);
+        if (sb != -1)
+        {
+            /* Initialize messageport structure */
+            InitMsgPort(ret);
+            /* Set signal bit. */
+            ret->mp_SigBit=sb;
+            /* Set task to send the signal to. */
+            ret->mp_SigTask=GET_THIS_TASK;
 
-	    /* Now the port is ready for use. */
-	    return ret;
-	}
-	/* Couldn't get the signal bit. Free the memory. */
-	FreeMem(ret,sizeof(struct MsgPort));
+            /* Now the port is ready for use. */
+            return ret;
+        }
+        /* Couldn't get the signal bit. Free the memory. */
+        FreeMem(ret,sizeof(struct MsgPort));
     }
     /* function failed */
     return NULL;

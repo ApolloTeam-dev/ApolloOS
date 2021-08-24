@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2010, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2010, The AROS Development Team. All rights reserved.
 */
 
 #include <string.h>
@@ -121,7 +120,7 @@ AROS_UFH2S(void, len_func,
 
         RawDoFmt(format, params, (VOID_FUNC)AROS_ASMSYMNAME(cpy_func),
             &reqtxtptr);
-    }  
+    }
 #else
     RawDoFmt(format, params, (void(*)())&cpy_func, reqtxt);
 #endif

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 */
 
 /* Supported Attributes (Init (new), Set, Get)
@@ -130,7 +129,7 @@ struct Gadget *DT_NewMethod(struct IClass *cl, Object *o, struct opSet *msg)
     struct TagItem *ti;
     struct Picture_Data *pd;
 
-#if 0	/* DTA_SourceType is handled by subclasses */
+#if 0   /* DTA_SourceType is handled by subclasses */
     IPTR sourcetype;
     IPTR handle;
 
@@ -170,7 +169,7 @@ struct Gadget *DT_NewMethod(struct IClass *cl, Object *o, struct opSet *msg)
 #if (0)
     pd->DestMode = FALSE;
 #else
-    pd->DestMode = TRUE;	/* needs to be changed to FALSE after Multiview adaptation */
+    pd->DestMode = TRUE;        /* needs to be changed to FALSE after Multiview adaptation */
 #endif
 
     /* Prefs overrides default, but application overrides Prefs */
@@ -285,6 +284,15 @@ IPTR DT_SetMethod(struct IClass *cl, struct Gadget *g, struct opSet *msg)
                 pd->NumColors = (UWORD) ti->ti_Data;
                 DGS(bug("picture.datatype/OM_SET: Tag PDTA_NumColors: %ld\n", (long)pd->NumColors));
                 break;
+	    case PDTA_GetNumPictures:
+                pd->NumPictures = (UWORD) ti->ti_Data;
+                DGS(bug("picture.datatype/OM_SET: Tag PDTA_GetNumPictures: %ld\n", (long)pd->NumPictures));
+                break;
+	    
+	    case PDTA_WhichPicture:
+                pd->WhichPicture = (UWORD) ti->ti_Data;
+                DGS(bug("picture.datatype/OM_SET: Tag PDTA_WhichPicture: %ld\n", (long)pd->WhichPicture));
+                break;
 
             case PDTA_Grab:
             {
@@ -335,10 +343,10 @@ IPTR DT_SetMethod(struct IClass *cl, struct Gadget *g, struct opSet *msg)
                 DGS(bug("picture.datatype/OM_SET: Tag PDTA_ScaleQuality: %ld\n", (long)pd->ScaleQuality));
                 break;
 
-            case PDTA_Remap:                
+            case PDTA_Remap:
                 pd->Remap = (BOOL) ti->ti_Data;
                 DGS(bug("picture.datatype/OM_SET: Tag ID PDTA_Remap: %ld\n", (long)pd->Remap));
-                break;    
+                break;
                 
 #ifdef __AROS__
             case PDTA_DelayedRead:
@@ -487,6 +495,16 @@ IPTR DT_GetMethod(struct IClass *cl, struct Gadget *g, struct opGet *msg)
             DGS(bug("picture.datatype/OM_GET: Tag PDTA_NumColors: %ld\n", (long)pd->NumColors));
             *(msg->opg_Storage)=(IPTR) pd->NumColors;
             break;
+		    
+	case PDTA_GetNumPictures:
+	    DGS(bug("picture.datatype/OM_GET: Tag PDTA_NumPictures: %ld\n", (long)pd->NumPictures));
+	    *(msg->opg_Storage)=(IPTR) pd->NumPictures;
+	    break;
+	
+	case PDTA_WhichPicture:
+	    DGS(bug("picture.datatype/OM_GET: Tag PDTA_WhichPicture: %ld\n", (long)pd->WhichPicture));
+	    *(msg->opg_Storage)=(IPTR) pd->WhichPicture;
+	    break;
 
         case PDTA_NumAlloc:
             DGS(bug("picture.datatype/OM_GET: Tag PDTA_NumAlloc: %ld\n", (long)pd->NumAlloc));
@@ -577,16 +595,16 @@ IPTR DT_GetMethod(struct IClass *cl, struct Gadget *g, struct opGet *msg)
     return TRUE;
 }
 /**************************************************************************************************/
-static void render_on_rastport(struct Picture_Data *pd, struct Gadget *g, LONG SrcX, LONG SrcY, struct RastPort * destRP, 
+static void render_on_rastport(struct Picture_Data *pd, struct Gadget *g, LONG SrcX, LONG SrcY, struct RastPort * destRP,
     LONG DestX, LONG DestY, LONG SizeX, LONG SizeY)
 {
+    struct BitMapHeader * bmhd = NULL;
     ULONG depth;
-    struct BitMapHeader * bmhd;
 
     depth = (ULONG) GetBitMapAttr(destRP->BitMap, BMA_DEPTH);
     GetDTAttrs((Object *) g, PDTA_BitMapHeader, (IPTR)&bmhd, TAG_DONE);
 
-    if ((depth >= 15) && (bmhd->bmh_Masking == mskHasAlpha))
+    if ((depth >= 15) && (bmhd && (bmhd->bmh_Masking == mskHasAlpha)))
     {
         /* Transparency on high color rast port with alpha channel in picture */
         struct RastPort srcRP;
@@ -603,16 +621,16 @@ static void render_on_rastport(struct Picture_Data *pd, struct Gadget *g, LONG S
         }
     }
     else
-    {   
-        if ((bmhd->bmh_Masking == mskHasMask) || (bmhd->bmh_Masking == mskHasTransparentColor))
+    {
+        if (bmhd && ((bmhd->bmh_Masking == mskHasMask) || (bmhd->bmh_Masking == mskHasTransparentColor)))
         {
             /* Transparency with mask */
             APTR mask = NULL;
 
             GetDTAttrs((Object *) g, PDTA_MaskPlane, (IPTR)&mask, TAG_DONE);
 
-            if (mask) 
-                BltMaskBitMapRastPort(pd->DestBM, 
+            if (mask)
+                BltMaskBitMapRastPort(pd->DestBM,
                                     SrcX,
                                     SrcY,
                                     destRP,
@@ -708,7 +726,7 @@ IPTR DT_GoActiveMethod(struct IClass *cl, struct Gadget *g, struct gpInput *msg)
 {
     struct DTSpecialInfo *dtsi = (struct DTSpecialInfo *)g->SpecialInfo;
     struct Picture_Data  *pd = INST_DATA(cl, g);
-    IPTR    	    	  retval = GMR_NOREUSE;
+    IPTR                  retval = GMR_NOREUSE;
     
     if (!AttemptSemaphore(&dtsi->si_Lock))
     {
@@ -744,7 +762,7 @@ IPTR DT_HandleInputMethod(struct IClass *cl, struct Gadget *g, struct gpInput *m
 {
     struct DTSpecialInfo *dtsi = (struct DTSpecialInfo *)g->SpecialInfo;
     struct Picture_Data  *pd = INST_DATA(cl, g);
-    IPTR    	    	  retval = GMR_MEACTIVE;
+    IPTR                  retval = GMR_MEACTIVE;
     
     if (!AttemptSemaphore(&dtsi->si_Lock))
     {
@@ -998,9 +1016,9 @@ IPTR DT_AsyncLayout(struct IClass *cl, struct Gadget *g, struct gpLayout *msg)
 
     {
         struct IBox *domain;
-        IPTR Width, Height;
+        IPTR VWidth = 0, VHeight = 0, Width, Height;
         STRPTR Title;
-    
+
         /*
          *  get attributes
          */
@@ -1012,7 +1030,7 @@ IPTR DT_AsyncLayout(struct IClass *cl, struct Gadget *g, struct gpLayout *msg)
         {
             return FALSE;
         }
-    
+
 #ifdef __AROS__
         si->si_VertUnit = 1;
         si->si_VisVert = domain->Height;
@@ -1022,16 +1040,22 @@ IPTR DT_AsyncLayout(struct IClass *cl, struct Gadget *g, struct gpLayout *msg)
         si->si_VisHoriz = domain->Width;
         si->si_TotHoriz = Width;
 #endif
-    
+
+        if (domain)
+        {
+            VWidth = domain->Width;
+            VHeight = domain->Height;
+        }
+
         NotifyAttrChanges((Object *) g, msg->gpl_GInfo, 0,
                                      GA_ID, g->GadgetID,
     
-                                     DTA_VisibleVert, domain->Height,
+                                     (domain) ? DTA_VisibleVert : TAG_IGNORE, VHeight,
                                      DTA_TotalVert, Height,
                                      DTA_NominalVert, Height,
                                      DTA_VertUnit, 1,
     
-                                     DTA_VisibleHoriz, domain->Width,
+                                     (domain) ? DTA_VisibleHoriz : TAG_IGNORE, VWidth,
                                      DTA_TotalHoriz, Width,
                                      DTA_NominalHoriz, Width,
                                      DTA_HorizUnit, 1,
@@ -1072,7 +1096,7 @@ IPTR PDT_WritePixelArray(struct IClass *cl, struct Gadget *g, struct pdtBlitPixe
 
     /* Do some checks first */
     pixelformat = (long)msg->pbpa_PixelFormat;
-    if ( pixelformat != pd->SrcPixelFormat )	/* This also checks for pd->SrcBuffer */
+    if ( pixelformat != pd->SrcPixelFormat )    /* This also checks for pd->SrcBuffer */
     {
         if( !pd->SrcBuffer )
         {
@@ -1111,7 +1135,7 @@ IPTR PDT_WritePixelArray(struct IClass *cl, struct Gadget *g, struct pdtBlitPixe
                     InitRGBColTable( pd );
                     pixelbytes = 4;
                     pd->TrueColorSrc = TRUE;
-                    break;    
+                    break;
                 default:
                     D(bug("picture.datatype/DTM_WRITEPIXELARRAY: Unknown PixelFormat mode %d !\n", pixelformat));
                     return FALSE;
@@ -1177,7 +1201,7 @@ IPTR PDT_WritePixelArray(struct IClass *cl, struct Gadget *g, struct pdtBlitPixe
         }
     }
 
-    pd->Layouted = FALSE;	/* re-layout required */
+    pd->Layouted = FALSE;       /* re-layout required */
     return TRUE;
 }
 
@@ -1286,7 +1310,7 @@ IPTR PDT_ReadPixelArray(struct IClass *cl, struct Gadget *g, struct pdtBlitPixel
                     case PBPAFMT_RGBA:
                         r = *srcptr++;
                         g = *srcptr++;
-                        b = *srcptr++;   
+                        b = *srcptr++;
                         a = *srcptr++;
                         break;
                 }
@@ -1321,15 +1345,15 @@ IPTR PDT_Scale(struct IClass *cl, struct Gadget *g, struct pdtScale *msg)
     pd = (struct Picture_Data *) INST_DATA(cl, g);
     si = (struct DTSpecialInfo *) g->SpecialInfo;
 
-    ObtainSemaphore( &(si->si_Lock) );	/* lock object data */
+    ObtainSemaphore( &(si->si_Lock) );  /* lock object data */
     D(bug("picture.datatype/PDTM_SCALE: newwidth %ld newheight %ld flags %08lx\n", msg->ps_NewWidth, msg->ps_NewHeight, msg->ps_Flags));
 
     pd->DestWidth = msg->ps_NewWidth;
     pd->DestHeight = msg->ps_NewHeight;
     
     /* FIXME: PDT_Scale() set bmh_Width/bmh_Height to new size yes or no? */
-    pd->bmhd.bmh_Width = msg->ps_NewWidth;   
-    pd->bmhd.bmh_Height = msg->ps_NewHeight;   
+    pd->bmhd.bmh_Width = msg->ps_NewWidth;
+    pd->bmhd.bmh_Height = msg->ps_NewHeight;
 
     if( pd->SrcWidth == pd->DestWidth && pd->SrcHeight == pd->DestHeight )
         pd->Scale = FALSE;
@@ -1354,7 +1378,7 @@ IPTR PDT_Scale(struct IClass *cl, struct Gadget *g, struct pdtScale *msg)
                         DTA_NominalHoriz, pd->DestWidth,
                         DTA_NominalVert , pd->DestHeight,
                         TAG_DONE);
-    pd->Layouted = FALSE;	/* re-layout required */
+    pd->Layouted = FALSE;       /* re-layout required */
 
     ReleaseSemaphore( &si->si_Lock );   /* unlock object data */
     return TRUE;
@@ -1383,8 +1407,8 @@ IPTR DT_FrameBox(struct IClass *cl, struct Gadget *g, struct dtFrameBox *msg)
     /* FIXME: DT_FrameBox implementation may need to be checked */
 
     /* It is not really clear/documented what's the correct thing to do
-       here. And what effect FRAMEF_SPECIFY has *here*. The demo sources on 
-       the Amiga Dev CD 2.1 are conflicting. 
+       here. And what effect FRAMEF_SPECIFY has *here*. The demo sources on
+       the Amiga Dev CD 2.1 are conflicting.
        
        ClipView source on Amiga Dev CD 2.1 uses ContentsInfo and FRAMEF_SPECIFY
        and (!) uninitialized FrameInfo. So accessing FrameInfo here would crash.
@@ -1601,6 +1625,22 @@ IPTR DT_Print(struct IClass *cl, Object *o, struct dtPrint *msg)
 
 /**************************************************************************************************/
 
+LONG WriteBytes(BPTR file, char *data, LONG offset, LONG length)
+{
+    //Write data buffer to file
+    LONG count = 0;
+    Seek(file,offset,OFFSET_BEGINNING);    	
+    count = Write(file, data, length);
+    if (count != length)
+    {
+    	//("Write error!");
+	    return 0;
+    }
+    return count;
+}
+
+/**************************************************************************************************/
+
 IPTR DT_Write(struct IClass *cl, Object *o, struct dtWrite *msg)
 {
     bug("picture.datatype/DTM_Write fh %d mode %d\n", msg->dtw_FileHandle, msg->dtw_Mode);
@@ -1611,9 +1651,441 @@ IPTR DT_Write(struct IClass *cl, Object *o, struct dtWrite *msg)
         return TRUE;
     }
     
-    bug("picture.datatype/DTM_Write not implemented\n");
+    D(bug("picture.datatype/DTM_Write is now implemented - DTWM_IFF.\n"));
+    
+    BPTR fileHandle;
+    int transparent, pad, mask;
+    unsigned char *chunkID; 
+    unsigned int width, height, numplanes, y, p;
+    int numcolors, alignwidth, bytesPerRow, i, j, k;
+    struct BitMapHeader *bmhd;
+    struct BitMap *bm;
+    struct ColorRegister *colormap;    
+    ULONG *colorregs;
+    ULONG ulbuff;
+    UBYTE byteBuffer[4];    
+        
 
-    return 0;
+	//* A NULL file handle is a NOP *//
+	if( !msg->dtw_FileHandle )
+	{
+		D(bug("picture.datatype/DTM_Write - empty Filehandle - just testing\n"));
+		return TRUE;
+	}
+	fileHandle = msg->dtw_FileHandle;    
+    	
+
+	//* Get DataType Attribute BMHD *//		
+	if( GetDTAttrs( o,  PDTA_BitMapHeader, (IPTR) &bmhd,                                
+			TAG_DONE ) != 1UL ||
+			!bmhd )
+	{
+		D(bug("picture.datatype/DTM_Write - missing attributes\n"));
+		SetIoErr(ERROR_OBJECT_WRONG_TYPE);
+		return FALSE;
+	}
+        
+        //* Prepare Some Simple Values *//
+        int comp = 0;
+	LONG iffOffset = 0;
+        width = bmhd->bmh_Width;
+        height = bmhd->bmh_Height;
+        pad = bmhd->bmh_Pad;
+        numplanes = bmhd->bmh_Depth;
+	mask = bmhd->bmh_Masking;
+        transparent = bmhd->bmh_Transparent;
+    
+        
+        //* Used to get correct filesize *//
+	alignwidth = (width + 15) & ~15;
+        bytesPerRow = (alignwidth / 8);
+	int scanLength = (alignwidth * 3);
+	
+	
+	//* Set Number of Colors & Iff Offset *//
+	if ( numplanes <= 8 )
+	{
+		iffOffset = 48;
+		numcolors = 1<<( numplanes );
+	}
+	if ( numplanes == 24 ) 
+	{
+		iffOffset = 40;
+		numcolors = 0;
+	}
+    
+	
+	if( numplanes > 24 )
+	{
+		D(bug("picture.datatype/DTM_Write --- color depth %d, can save only depths up to 24", numplanes));
+		SetIoErr(ERROR_OBJECT_WRONG_TYPE);
+		return FALSE;
+	}
+	D(bug("picture.datatype/DTM_Write --- Picture size %d x %d (x %d bit)\n", width, height, numplanes));
+	
+
+     //* PREPARE TO WRITE IFF FILE HEADER TO FILE *//
+        
+   
+     //* Write fileID 'FORM' and typeID 'ILBM' and chunkID 'BMHD'. *//
+     D(bug("picture.datatype/DTM_Write - DTWM_IFF/Write File Header to File \n"));
+    
+    
+    //* Write IFF fileID 'FORM'. *//    
+    LONG offset = 0;
+    LONG length = 4;    
+    WriteBytes( fileHandle, "FORM", offset, length );    
+    
+        
+    //* Calculate file size less (4+4=8, FORM+size). *//
+    //Add padding byte at end of file if needed.    
+    LONG bodySize = ((bytesPerRow * numplanes) * height); 
+    LONG fileSize = (bodySize + (numcolors * 3) + iffOffset);
+    //LONG fileSize = (bodySize + (numcolors * 3) + 48); //SaveBitmapPic 0xF0
+    //LONG fileSize = (bodySize + (numcolors * 3) + 40);   //SaveRGBPic  0xE8
+      
+        
+    //* Write ILBM fileSize *// 
+    offset += 4; //4    
+    ulbuff = AROS_LONG2BE(fileSize);
+    memcpy(byteBuffer, &ulbuff, 4);
+    WriteBytes(fileHandle, byteBuffer, offset, 4);
+    
+    //* Write typeID 'ILBM'.  *//
+    offset += 4; //8   
+    WriteBytes( fileHandle, "ILBM", offset, 4 );
+
+    //* Write typeID BMHD'.  *//
+    offset += 4; //12        
+    WriteBytes( fileHandle, "BMHD", offset, 4 );      
+    
+    //* Write chunkSize for  'BMHD'. *// 
+    offset += 4; //16
+    LONG chunkSize = 20;
+    ulbuff = AROS_LONG2BE(chunkSize);
+    memcpy(byteBuffer, &ulbuff, 4);    
+    WriteBytes( fileHandle, byteBuffer, offset, 4 );
+    
+    
+    //* PREPARE TO WRITE BMHD TO FILE *//
+    
+    
+    //* Prepare BMHD information. *//
+    
+    UBYTE BMHD[20];    
+    BMHD[0] =  (UBYTE)(width >> 8); //Width
+    BMHD[1] =  (UBYTE)(width & 0xFF);
+    BMHD[2] =  (UBYTE)(height >> 8); //Height
+    BMHD[3] =  (UBYTE)(height & 0xFF);
+    BMHD[4] =  BMHD[5] = 0; //Left Offset
+    BMHD[6] =  BMHD[7] = 0; //Top Offset
+    BMHD[8] =  numplanes;
+    BMHD[9] =  mask; //Masking 
+    BMHD[10] = 0; //Compression
+    BMHD[11] = pad; //Padding
+    BMHD[12] = (UBYTE)(transparent >> 8); 
+    BMHD[13] = (UBYTE)(transparent & 0xFF);
+    BMHD[14] = 10; //XAspect;
+    BMHD[15] = 11; //YAspect;
+    BMHD[16] = (UBYTE)(width >> 8); //PageWidth
+    BMHD[17] = (UBYTE)(width & 0xFF);
+    BMHD[18] = (UBYTE)(height >> 8); //PageHeight
+    BMHD[19] = (UBYTE)(height & 0xFF);
+        
+    //* Write BMHD to File. *//   
+    offset += 4; //offset = 20;    
+    WriteBytes( fileHandle, BMHD, offset, 20 );
+
+    D(bug("picture.datatype/DTM_Write - DTWM_IFF/Write BMHD to File \n"));
+		
+	
+    //* PREPARE TO WRITE ILBM BODY TO FILE *//
+	
+    	
+    if ( numplanes <= 8 )
+    { 
+	//* Prepare CMAP & Pixel Data for LUT8. *//	
+		    
+	D(bug("picture.datatype/DTM_Write - DTWM_IFF/SaveBitMapPic() \n"));
+	    
+	//* Prepare CMAP Information. *//
+
+	D(bug("picture.datatype/DTM_Write - DTWM_IFF/Get ColorMap Attributes \n"));
+
+	//* Get DataType Attributes *//
+	if( GetDTAttrs( o,  PDTA_CRegs,        (IPTR)&colorregs, 
+                        PDTA_ColorRegisters,     (IPTR)&colormap,
+			PDTA_BitMap,       &bm,
+                        TAG_DONE ) != 3UL ||
+			!colorregs || !colormap || !bm)
+	{		
+		D(bug("picture.datatype/DTM_Write - missing attributes\n"));
+		SetIoErr(ERROR_OBJECT_WRONG_TYPE);
+		return FALSE;
+	}	    
+	
+	//* Write chunkID 'CMAP'. *//    
+	offset = 40;        
+	WriteBytes( fileHandle, "CMAP", offset, 4 );	    
+        
+        offset += 4;
+        LONG cmapChunkSize = numcolors*3;
+        ulbuff = AROS_LONG2BE(cmapChunkSize);
+        memcpy(byteBuffer, &ulbuff, 4);
+        WriteBytes( fileHandle, byteBuffer, offset, 4 ); 
+
+        //* Convert ColorMap to CMAP. *//
+        UBYTE Cmap[numcolors * 3];
+        for( i = 0; i < numcolors ; i++)
+        {
+	    Cmap[(i*3)] = colormap[i].red;
+            Cmap[(i*3)+1] = colormap[i].green;
+            Cmap[(i*3)+2] = colormap[i].blue;
+        }        
+        //* Write CMAP to File. *//
+        offset += 4;        
+        WriteBytes( fileHandle, Cmap, offset, (numcolors*3) );       
+    
+    
+    bug("picture.datatype/DTM_Write - DTWM_IFF/Write CMAP to File \n");
+    
+    
+    //* Prepare BODY Information. *//
+    offset = (numcolors * 3) + 48;    
+    WriteBytes( fileHandle, "BODY", offset, 4 );    
+          
+    if (comp == 0)
+    {
+        //bodySize = (bytesPerRow * numplanes) * height;        
+        chunkSize = bodySize;
+    }    
+
+     //* Write bodySize to File. *// 
+    offset += 4;    
+    ulbuff = AROS_LONG2BE(bodySize);
+    memcpy(byteBuffer, &ulbuff, 4);
+    WriteBytes( fileHandle, byteBuffer, offset, 4 );    
+    
+    
+    //* WRITE ILBM BODY TO FILE *//
+    
+    //* Now read the picture data line by line and write it to a chunky buffer *//	
+    bug("picture.datatype/DTM_Write - DTWM_IFF/copying picture using CopyFromBitplanes \n");
+    
+    offset += 4;
+    UBYTE *src;    
+    bytesPerRow = bm->BytesPerRow;
+    
+    //* Copy planar data from the bitplanes of the bitmap. *//
+    for(y = 0; y < height; y++)
+    {
+        for(p = 0; p < numplanes; p++)
+        {
+            src = bm->Planes[p] + (y * bytesPerRow);            
+
+            WriteBytes(fileHandle, src, offset, bytesPerRow);
+            offset += bytesPerRow;
+        }
+    }
+    
+  } //End if numplanes <= 8
+  else if ( numplanes == 24 )
+  {
+	//* Prepare Pixel Data for RGB. *//
+		  
+	D(bug("picture.datatype/DTM_Write - DTWM_IFF/SaveRGBPic() \n"));
+	  
+	 //* Prepare BODY Information. *//
+	offset = (numcolors * 3) + 48;    
+	WriteBytes( fileHandle, "BODY", offset, 4 );    
+		  
+	if (comp == 0)
+	{
+		//bodySize = bytesPerRow * numplanes * height;        
+		chunkSize = bodySize;
+	}    
+
+	//* Write bodySize to File. *// 
+	offset += 4;    
+	ulbuff = AROS_LONG2BE(bodySize);
+	memcpy(byteBuffer, &ulbuff, 4);
+	WriteBytes( fileHandle, byteBuffer, offset, 4 );    
+	    
+	    
+	//* WRITE ILBM BODY TO FILE *//
+	
+	UBYTE  r,g,b,a;
+	int pBufferOffset = 0;
+	int pBufferLength = (bytesPerRow * 8);
+	int rowSize = (bytesPerRow * 8);
+	UBYTE colorBytes[8]; //Block of 8 colors
+	UBYTE *Buffer;	    
+	UBYTE *planarScanLine;
+	UBYTE bitBuffer[rowSize];
+	UBYTE planarR[rowSize];
+	UBYTE planarG[rowSize];
+	UBYTE planarB[rowSize];
+	UBYTE planarA[rowSize];
+	UBYTE redBuffer[rowSize];
+	UBYTE greenBuffer[rowSize];
+	UBYTE blueBuffer[rowSize];
+	UBYTE chunkyBuffer[bytesPerRow * numplanes];
+	UBYTE planarBuffer[bytesPerRow * numplanes];
+	int scanLineSize = (bytesPerRow * numplanes);
+        
+	int bytesPerPixel;	
+	UBYTE *pixelArray;	
+	struct pdtBlitPixelArray pbpa;	
+	int lineSize = (bytesPerRow * numplanes);
+
+	if (numplanes == 24)
+		bytesPerPixel = 3;        
+        
+    
+	//* Now read the picture data line by line and write it to a chunky buffer *//
+	if( !(pixelArray = (UBYTE *)AllocVec(lineSize, MEMF_ANY)) ) //RGB
+	{
+		SetIoErr(ERROR_NO_FREE_STORE);
+		return FALSE;
+	}
+        D(bug("picture.datatype/DTM_Write --- pixelArray AllocVec to Store Pixel Data\n"));
+	              
+    
+
+	//* BEGIN WRITING TO FILE *//
+	
+	D(bug("picture.datatype/DTM_Write --- begin copying picture data with READPIXELARRAY\n"));
+	
+	//* Begin Loop for C2P & Write Planar Data to File *//
+	for (y=0; y<height; y++) //For - Loop ( y-offset )
+	{
+		//* Read Chunky RGB ScanLine then Convert to Planar RGB ScanLine. *//		
+		//UBYTE *ScanLineFromBitplanes(Object *DTImage, struct BitMapHeader *bmhd, int numplanes, int bytesPerRow, int yoffset)
+		
+		pbpa.MethodID = PDTM_READPIXELARRAY;
+		pbpa.pbpa_PixelData = pixelArray;
+		pbpa.pbpa_PixelFormat = PBPAFMT_RGB;
+		pbpa.pbpa_PixelArrayMod = bmhd->bmh_Width * bytesPerPixel;
+		pbpa.pbpa_Left = 0;
+		pbpa.pbpa_Top = y; //Top = yoffset = 0,1,2;
+		pbpa.pbpa_Width = bmhd->bmh_Width;
+		pbpa.pbpa_Height = 1;
+		
+		DoMethodA( o, (Msg)&pbpa);	    		
+		
+		//D(bug("picture.datatype/DTM_Write --- get r,g,b components into 3 sets of 8 bitplanes\n"));
+		
+		//* 24bit is saved as r0..r7g0..g7b0..b7 *//
+		if (bmhd->bmh_Depth == 24)
+		{
+		    //for (j = 0; j < (scanWidth); j++)
+		    pBufferOffset = 0;
+		    for (j = 0; j < bmhd->bmh_Width; j++)
+		    {
+			r = pixelArray[pBufferOffset];
+			g = pixelArray[pBufferOffset+1];
+			b = pixelArray[pBufferOffset+2];
+
+			planarR[pBufferOffset/3] = r;
+			planarG[pBufferOffset/3] = g;
+			planarB[pBufferOffset/3] = b;
+			pBufferOffset += 3;
+		    }
+		}
+		
+		//D(bug("picture.datatype/DTM_Write --- copy chunky scanline segments to chunky buffers\n"));
+		
+		//* 24bit is r,g,b *//
+		if (bmhd->bmh_Depth == 24)
+		{
+		     // Note: pBufferLength is the length of a set of 8 bitplanes.
+		     pBufferOffset = 0;
+		     memcpy(chunkyBuffer, planarR, pBufferLength);
+		     pBufferOffset += pBufferLength;
+		     memcpy(chunkyBuffer + pBufferOffset, planarG, pBufferLength);
+		     pBufferOffset += pBufferLength;
+		     memcpy(chunkyBuffer + pBufferOffset, planarB, pBufferLength);            
+		}
+		
+		//D(bug("picture.datatype/DTM_Write --- prepare chunky buffers & variables before conversion.\n"));
+		
+		//* Convert Chunky ScanLine to Planar ScanLine. *//	    
+		UBYTE *bytesBuffer[4];
+		bytesBuffer[0] = planarR;
+		bytesBuffer[1] = planarG;
+		bytesBuffer[2] = planarB;
+		bytesBuffer[3] = planarA;
+		UBYTE bitBuffer[bytesPerRow * 8];
+		    
+		//* Setup & Initialize Variables. *//
+		int bit = 0;
+		int hOffset = 0;
+		int bitplaneIndex = 0;
+		pBufferOffset = 0;
+		    
+		//* Setup Variables for 'K Loop'. *//
+		UBYTE *source;
+		int x, y, p, bpr, bpl;		
+		bpr = bytesPerRow;
+		
+		//D(bug("picture.datatype/DTM_Write --- convert one chunky scanline to planar data\n"));
+		
+		//** Chunky to Planar Conversion using 'K Loop' **//
+
+		//Use bytesPerPixel (3 or 4) for 'K Loop'. //bpp.
+		int bpp = (bmhd->bmh_Depth / 8); //bpp = 3, 4.
+		for (k = 0; k < bpp; k++)
+		{
+			source = bytesBuffer[k];
+			for(x = 0; x < bmhd->bmh_Width; x++)
+			{
+			    LONG mask   = 0x80 >> (x & 7);
+			    LONG offset = x / 8;
+			    UBYTE chunkypix = source[x];
+
+			    for(p = 0; p < 8; p++)
+			    {
+				    if (chunkypix & (1 << p))
+				    bitBuffer[p * bpr + offset] |= mask;
+				    else
+					bitBuffer[p * bpr + offset] &= ~mask;
+			    }
+			}
+			//* Copy planar data to correct location in planar buffer. *//
+			memcpy(planarBuffer + pBufferOffset, bitBuffer, pBufferLength);
+			pBufferOffset +=  pBufferLength;    
+
+		} /* End For - Loop ('k Loop') */
+		
+		//D(bug("picture.datatype/DTM_Write --- write planar scanline data to file\n"));
+		
+		//* Write Planar ScanLine to File. *//		
+		int pOffset = offset;        
+		WriteBytes(fileHandle, planarBuffer, pOffset, (bytesPerRow * numplanes));        
+		offset += scanLength;		
+	
+	} //End For - Loop ( y-offset )
+    
+	if (pixelArray) FreeVec(pixelArray);
+	
+	/* END WRITING TO FILE */
+	
+	D(bug("picture.datatype/DTM_Write --- end copying picture data with READPIXELARRAY\n"));
+	
+  } //End if numplanes == 24
+  else
+  {        
+        D(bug("picture.datatype/DTM_Write --- color depth %d, can save only depths less than or eq to 24.\n", numplanes));
+		SetIoErr(ERROR_OBJECT_WRONG_TYPE);
+		return FALSE;
+  }
+  
+    
+	
+	D(bug("picture.datatype/DTM_Write - DTWM_IFF/Normal Exit\n"));
+	
+	SetIoErr(0);
+	return TRUE;    
 }
 
 /**************************************************************************************************/

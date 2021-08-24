@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2008, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2008, The AROS Development Team. All rights reserved.
 */
 
 #include "mathtrans_intern.h"
@@ -105,7 +104,7 @@
     
     ld_M = intern_SPLd((fnum1 & FFPMantisse_Mask) | 0x40);
     
-    /*               
+    /*
                       ld M + E
         log(fnum1) =  --------
                         ld 10

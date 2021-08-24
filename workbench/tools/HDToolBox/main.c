@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 */
 
 #include <proto/alib.h>
@@ -24,6 +23,7 @@
 #include "platform.h"
 #include "ptclass.h"
 #include "prefs.h"
+#include "catalogs/catalog_version.h"
 
 #include "debug.h"
 
@@ -101,7 +101,7 @@ int main(int argc, char **argv)
 
     D(bug("[HDToolBox] main()\n"));
 
-    InitLocale("System/Tools/HDToolBox.catalog", 2);
+    InitLocale("System/Tools/HDToolBox.catalog", CATALOG_VERSION);
     device = argc > 1 ? argv[1] : NULL;
     if ((error=initEnv(device))==ERR_NONE)
     {

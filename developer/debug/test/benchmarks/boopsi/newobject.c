@@ -1,6 +1,5 @@
 /*
-    Copyright © 2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2003-2021, The AROS Development Team. All rights reserved.
 */
 
 #include "common.c"
@@ -8,7 +7,7 @@
 /*** Main *******************************************************************/
 int main()
 {
-    struct timeval  tv_start, 
+    struct timeval  tv_start,
                     tv_end;
     int             count   = 1000000;
     double          elapsed = 0.0;
@@ -20,24 +19,24 @@ int main()
     gettimeofday(&tv_start, NULL);
     
     for(i = 0; i < count; i++)
-    {    
+    {
         object = TestObject, End;
         DisposeObject(object);
     }
     
     gettimeofday(&tv_end, NULL);
     
-    elapsed = ((double)(((tv_end.tv_sec * 1000000) + tv_end.tv_usec) 
-            - ((tv_start.tv_sec * 1000000) + tv_start.tv_usec)))/1000000.;
+    elapsed = ((double)(((tv_end.tv_sec * 1000000) + tv_end.tv_usec)
+            - ((tv_start.tv_sec * 1000000) + tv_start.tv_usec)))/1000000.0;
     
     printf
     (
-        "Elapsed time:       %f seconds\n"
-        "Number of objects:  %d\n"
-        "Objects per second: %f\n"
-        "Seconds per object: %f\n",
-        elapsed, count, (double) count / elapsed, (double) elapsed / count
-    );    
+        "Elapsed time:            %f seconds\n"
+        "Number of objects:       %d\n"
+        "Objects per second:      %f\n"
+        "Milliseconds per object: %f\n",
+        elapsed, count, (double) count / elapsed, (double) elapsed * 1000.0 / count
+    );
    
     Test_Deinitialize();
    

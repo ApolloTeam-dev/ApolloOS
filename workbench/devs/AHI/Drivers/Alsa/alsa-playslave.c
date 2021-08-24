@@ -1,6 +1,5 @@
 /*
-    Copyright © 2015-2016, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2015-2016, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -79,6 +78,9 @@ Slave( struct ExecBase* SysBase )
   ULONG                   signals;
   LONG                    framesready = 0;
   APTR                    framesptr = NULL;
+  LONG                    i = 0;
+
+  Wait(SIGF_SINGLE);
 
   AudioCtrl  = (struct AHIAudioCtrlDrv*) FindTask(NULL)->tc_UserData;
   AHIsubBase = (struct DriverBase*) dd->ahisubbase;
@@ -141,6 +143,17 @@ Slave( struct ExecBase* SysBase )
             CallHookPkt(AudioCtrl->ahiac_MixerFunc, AudioCtrl, dd->mixbuffer );
             framesready = AudioCtrl->ahiac_BuffSamples;
             framesptr = dd->mixbuffer;
+            /*
+             * Increase volume of buffer so that 100% of volume on AROS side matches
+             * 100% volume of host applications.
+             *
+             * This is to compensate for (volume >> 1) in _AHI_SetVol
+             */
+            for (i = 0; i < framesready << 1; i+=2)
+            {
+                ((WORD *)dd->mixbuffer)[i] = ((WORD *)dd->mixbuffer)[i] << 1;
+                ((WORD *)dd->mixbuffer)[i + 1] = ((WORD *)dd->mixbuffer)[i + 1] << 1;
+            }
             readcycles--;
           }
 

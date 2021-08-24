@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Layout a gadtools menu item
-    Lang: english
 */
 
 #include <exec/types.h>
@@ -22,13 +20,13 @@ extern struct Library * GadToolsBase;
 #define NO_INLINE_STDARG /* turn off inline def */
 #include <proto/gadtools.h>
 
-	BOOL LayoutMenuItems (
+        BOOL LayoutMenuItems (
 
 /*  SYNOPSIS */
-	struct MenuItem * menuitem,
-	APTR              vi,
-	Tag		  tag1,
-	...		  )
+        struct MenuItem * menuitem,
+        APTR              vi,
+        Tag               tag1,
+        ...               )
 
 /*  FUNCTION
         Varargs version of gadtools.library/LayoutMenuItemsA().
@@ -44,7 +42,7 @@ extern struct Library * GadToolsBase;
     BUGS
 
     SEE ALSO
-	gadtools.library/LayoutMenuItemsA()
+        gadtools.library/LayoutMenuItemsA()
 
     INTERNALS
 

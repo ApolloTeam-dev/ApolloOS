@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2019, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -12,14 +11,14 @@
 /*****************************************************************************
 
     NAME */
-	AROS_LH1(BOOL, secAddMonitor,
+        AROS_LH1(BOOL, secAddMonitor,
 
 /*  SYNOPSIS */
-	/* (monitor) */
-	AROS_LHA(struct secMonitor *, monitor, A0),
+        /* (monitor) */
+        AROS_LHA(struct secMonitor *, monitor, A0),
 
 /*  LOCATION */
-	struct SecurityBase *, secBase, 28, Security)
+        struct SecurityBase *, secBase, 28, Security)
 
 /*  FUNCTION
 

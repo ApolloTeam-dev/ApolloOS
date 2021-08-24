@@ -1,9 +1,7 @@
 /*
-    Copyright © 2010-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2010-2020, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 /*********************************************************************************************/
@@ -91,7 +89,7 @@ int main(int argc, char **argv)
                     SA_SharePens, TRUE,
                     SA_Title, "",
                     TAG_END);
-            }                
+            }
 
             application = (Object *)ApplicationObject,
                 MUIA_Application_Title, __(MSG_WINTITLE),

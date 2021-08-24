@@ -1,9 +1,8 @@
 /*
-    Copyright © 2004, The AROS Development Team. All rights reserved.
+    Copyright (C) 2004, The AROS Development Team. All rights reserved.
     This file is part of the Wanderer Preferences program, which is distributed
     under the terms of version 2 of the GNU General Public License.
 
-    $Id$
 */
 
 #include <exec/types.h>
@@ -13,7 +12,7 @@
 #include "strings.h"
 
 #define CATALOG_NAME     "System/Prefs/Wanderer.catalog"
-#define CATALOG_VERSION  3
+#include "catalogs/catalog_version.h"
 
 /*** Variables **************************************************************/
 struct Catalog *catalog;
@@ -26,8 +25,8 @@ CONST_STRPTR _(ULONG id)
     if (LocaleBase != NULL && catalog != NULL)
     {
         return GetCatalogStr(catalog, id, CatCompArray[id].cca_Str);
-    } 
-    else 
+    }
+    else
     {
         return CatCompArray[id].cca_Str;
     }
@@ -39,8 +38,8 @@ VOID Locale_Initialize(VOID)
     if (LocaleBase != NULL)
     {
         catalog = OpenCatalog
-        ( 
-            NULL, CATALOG_NAME, OC_Version, CATALOG_VERSION, TAG_DONE 
+        (
+            NULL, CATALOG_NAME, OC_Version, CATALOG_VERSION, TAG_DONE
         );
     }
     else

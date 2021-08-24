@@ -1,12 +1,11 @@
 /*
-    Copyright © 2008-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2008-2014, The AROS Development Team. All rights reserved.
 */
 
 #include "benchmark.h"
 #include <string.h>
 
-int main() 
+int main()
 {
     #define BUFSIZE 1000000UL
     char *src = malloc(BUFSIZE);

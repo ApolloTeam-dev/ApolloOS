@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <proto/layers.h>
@@ -13,9 +12,9 @@
 struct ChangeWindowShapeActionMsg
 {
     struct IntuiActionMsg    msg;
-    struct Window   	    *window;
-    struct Region   	    *shape;
-    struct Hook     	    *callback;
+    struct Window           *window;
+    struct Region           *shape;
+    struct Hook             *callback;
 };
 
 static VOID int_changewindowshape(struct ChangeWindowShapeActionMsg *msg,

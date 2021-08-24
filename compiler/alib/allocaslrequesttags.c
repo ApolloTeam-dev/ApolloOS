@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Varargs version of AllocAslRequestA()
-    Lang: english
 */
 #define AROS_TAGRETURNTYPE APTR
 #include <utility/tagitem.h>
@@ -17,20 +15,20 @@
 extern struct Library *AslBase;
 #undef AllocAslRequestTags /* Get rid of the macro from inline/ */
 
-	APTR AllocAslRequestTags (
+        APTR AllocAslRequestTags (
 
 /*  SYNOPSIS */
-	ULONG   reqType,
-	Tag     tag1,
-	...)
+        ULONG   reqType,
+        Tag     tag1,
+        ...)
 
 /*  FUNCTION
-	This is the varargs version of the asl.library AllocAslRequest().
-	For information see asl.library/AllocAslRequest().
+        This is the varargs version of the asl.library AllocAslRequest().
+        For information see asl.library/AllocAslRequest().
 
     INPUTS
-	reqType     -   Type of requester to allocate.
-	tag1        -   TagList of extra arguments.
+        reqType     -   Type of requester to allocate.
+        tag1        -   TagList of extra arguments.
 
     NOTES
 
@@ -39,12 +37,11 @@ extern struct Library *AslBase;
     BUGS
 
     SEE ALSO
-	asl.library/AllocAslRequest()
+        asl.library/AllocAslRequest()
 
     INTERNALS
 
     HISTORY
-	23-03-2000  bernie  Wrote.
 
 *****************************************************************************/
 {

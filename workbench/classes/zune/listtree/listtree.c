@@ -1,6 +1,5 @@
 /*
-    Copyright © 2012-2015, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2012-2020, The AROS Development Team. All rights reserved.
 */
 
 #include <proto/intuition.h>
@@ -82,7 +81,7 @@ static IPTR NotifySimulate_Function(struct Hook *hook, Object *obj, void ** msg)
         setti[0].ti_Data    = val;
         break;
     default:
-        bug("[Listtree] NotifySimulate_Function - unhandled attribute %x\n", attr);
+        bug("[Listtree] NotifySimulate_Function - unhandled attribute %08x\n", (ULONG)attr);
     }
 
     /* Super method OM_SET call will go to Notify class and trigger notifications */

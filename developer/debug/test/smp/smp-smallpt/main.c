@@ -1,6 +1,5 @@
 /*
-    Copyright 2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright 2017-2020, The AROS Development Team. All rights reserved.
 */
 
 #define DEBUG 1
@@ -26,7 +25,7 @@
 
 #include "renderer.h"
 
-CONST_STRPTR version = "$VER: SMP-Smallpt 1.0 (03.03.2017) ©2017 The AROS Development Team";
+CONST_STRPTR version = "$VER: SMP-Smallpt 1.0 (03.03.2017) \xA9 2017 The AROS Development Team";
 
 APTR KernelBase;
 
@@ -142,7 +141,7 @@ int main()
 
     GetCPUInfo(tags);
 
-    D(bug("[SMP-Smallpt] %s: detected %d CPU cores\n", __func__, coreCount);)
+    D(bug("[SMP-Smallpt] %s: detected %d CPU cores\n", __func__, (int)coreCount);)
 
     rda = ReadArgs(ARG_TEMPLATE, args, NULL);
     if (rda != NULL)
@@ -237,7 +236,7 @@ int main()
 
         BltBitMapRastPort (outputBMap, 0, 0,
             displayWin->RPort, displayWin->BorderLeft, displayWin->BorderTop,
-            width, height, 0xC0); 
+            width, height, 0xC0);
 
         D(bug("[SMP-Smallpt] %s: Creating renderer task\n", __func__);)
 
@@ -292,7 +291,7 @@ int main()
 
                 BltBitMapRastPort (outputBMap, 0, 0,
                     displayWin->RPort, displayWin->BorderLeft, displayWin->BorderTop,
-                    width, height, 0xC0); 
+                    width, height, 0xC0);
             }
             if (signals & (1 << displayWin->UserPort->mp_SigBit))
             {
@@ -331,19 +330,19 @@ int main()
                         {
                             case MSG_REDRAWTILE:
                                 WritePixelArray(workBuffer,
-                                            msg->mm_Body.RedrawTile.TileX * TILE_SIZE, 
+                                            msg->mm_Body.RedrawTile.TileX * TILE_SIZE,
                                             msg->mm_Body.RedrawTile.TileY * TILE_SIZE, width * sizeof(ULONG),
                                             outBMRastPort,
                                             msg->mm_Body.RedrawTile.TileX * TILE_SIZE,
                                             msg->mm_Body.RedrawTile.TileY * TILE_SIZE,
                                             TILE_SIZE, TILE_SIZE, RECTFMT_ARGB);
 
-                                BltBitMapRastPort (outputBMap, 
-                                            msg->mm_Body.RedrawTile.TileX * TILE_SIZE, 
+                                BltBitMapRastPort (outputBMap,
+                                            msg->mm_Body.RedrawTile.TileX * TILE_SIZE,
                                             msg->mm_Body.RedrawTile.TileY * TILE_SIZE,
-                                            displayWin->RPort, 
+                                            displayWin->RPort,
                                             displayWin->BorderLeft + msg->mm_Body.RedrawTile.TileX * TILE_SIZE, displayWin->BorderTop + msg->mm_Body.RedrawTile.TileY * TILE_SIZE,
-                                            TILE_SIZE, TILE_SIZE, 0xC0); 
+                                            TILE_SIZE, TILE_SIZE, 0xC0);
                                 break;
                             
                             case MSG_STATS:
@@ -425,7 +424,7 @@ D(bug("[SMP-Smallpt] %s: goodbye\n", __func__);)
 
                 BltBitMapRastPort (outputBMap, tx*32, ty*32,
                     displayWin->RPort, displayWin->BorderLeft + tx*32, displayWin->BorderTop + ty*32,
-                    32, 32, 0xC0); 
+                    32, 32, 0xC0);
             }
         }
 #endif

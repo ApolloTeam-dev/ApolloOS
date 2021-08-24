@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/types.h>
@@ -1343,7 +1342,7 @@ struct MemHeader * krnConvertMemHeaderToTLSF(struct MemHeader * source)
     struct MemChunk * mc = source->mh_First->mc_Next;
     APTR mh = source->mh_First;
     IPTR fsize = source->mh_First->mc_Bytes;
-    APTR mhUpper = source->mh_Upper;	// Cache the mh_Upper value
+    APTR mhUpper = source->mh_Upper;    // Cache the mh_Upper value
     if (source->mh_Attributes & MEMF_MANAGED)
         return NULL;
 

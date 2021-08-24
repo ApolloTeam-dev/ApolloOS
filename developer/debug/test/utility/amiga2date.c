@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -10,6 +9,8 @@
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <proto/utility.h>
+
+#include <string.h>
 
 struct DateTime dt;
 struct ClockData cd;
@@ -41,7 +42,7 @@ int main(void)
                     (long)dt.dat_Stamp.ds_Tick);
             }
 
-            Amiga2Date(dt.dat_Stamp.ds_Days * 60 * 60 * 24 + 
+            Amiga2Date(dt.dat_Stamp.ds_Days * 60 * 60 * 24 +
                        dt.dat_Stamp.ds_Minute * 60 +
                        dt.dat_Stamp.ds_Tick / 50, &cd);
 
@@ -64,7 +65,7 @@ int main(void)
                 bug("wday  = %d\n", cd.wday);
             }
 
-            Amiga2Date((dt.dat_Stamp.ds_Days + 1) * 60 * 60 * 24 + 
+            Amiga2Date((dt.dat_Stamp.ds_Days + 1) * 60 * 60 * 24 +
                        dt.dat_Stamp.ds_Minute * 60 +
                        dt.dat_Stamp.ds_Tick / 50, &cd);
 

@@ -1,6 +1,5 @@
 /*
-    Copyright © 2004, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004, The AROS Development Team. All rights reserved.
 */
 
 /*****************************************************************************
@@ -9,11 +8,11 @@
 
 #include <stdlib.h>
 
-	int getloadavg(
+        int getloadavg(
 
 /*  SYNOPSIS */
-	double loadavg[],
-	int n)
+        double loadavg[],
+        int n)
 
 /*  FUNCTION
 

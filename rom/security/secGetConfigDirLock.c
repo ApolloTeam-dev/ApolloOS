@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2019, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -13,13 +12,13 @@
 /*****************************************************************************
 
     NAME */
-	AROS_LH0(BPTR, secGetConfigDirLock,
+        AROS_LH0(BPTR, secGetConfigDirLock,
 
 /*  SYNOPSIS */
-	/* void */
+        /* void */
 
 /*  LOCATION */
-	struct SecurityBase *, secBase, 20, Security)
+        struct SecurityBase *, secBase, 20, Security)
 
 /*  FUNCTION
               Get a Shared Lock on the Directory of the Configuration File

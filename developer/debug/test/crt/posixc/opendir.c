@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <sys/types.h>
@@ -21,5 +20,5 @@ int main()
 void cleanup()
 {
     if(dir)
-	closedir(dir);
+        closedir(dir);
 }

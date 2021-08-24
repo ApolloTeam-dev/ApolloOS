@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     C99 function strxfrm().
 */
@@ -10,12 +9,12 @@
     NAME */
 #include <string.h>
 
-	size_t strxfrm (
+        size_t strxfrm (
 
 /*  SYNOPSIS */
         char * restrict dst,
-	const char * restrict src,
-	size_t n)
+        const char * restrict src,
+        size_t n)
 
 /*  FUNCTION
         The strxfrm() function transforms a null-terminated string pointed to by
@@ -29,9 +28,9 @@
         ing two original strings with strcoll().
 
     INPUTS
-	dst - the destination string's buffer
-	src - the source string
-	n   - the size of the dst buffer.
+        dst - the destination string's buffer
+        src - the source string
+        n   - the size of the dst buffer.
 
     RESULT
         Upon successful completion, strxfrm() returns the length of the trans-

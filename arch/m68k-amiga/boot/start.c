@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc: m68k-amiga bootstrap to exec.
-    Lang: english
  */
 
 #define DEBUG 0
@@ -15,6 +13,10 @@
 #include <exec/execbase.h>
 #include <proto/exec.h>
 #include <hardware/cpu/memory.h>
+
+#include <defines/exec_LVO.h>
+
+#include <string.h>
 
 #include "memory.h"
 
@@ -30,7 +32,7 @@
 #include "early.h"
 #include "debug.h"
 
-#define SS_STACK_SIZE	0x02000
+#define SS_STACK_SIZE   0x02000
 
  #ifndef DEFKRN_CMDLINE
 #if AROS_SERIAL_DEBUG
@@ -84,7 +86,7 @@ static void dumpallmemory(struct ExecBase *SysBase)
         dumpmemory(node);
     }
 }
-#endif	
+#endif
 
 extern const struct Resident Exec_resident;
 extern struct ExecBase *AbsExecBase;
@@ -92,41 +94,41 @@ extern struct ExecBase *AbsExecBase;
 extern void __attribute__((interrupt)) Exec_Supervisor_Trap (void);
 extern void __attribute__((interrupt)) Exec_Supervisor_Trap_00 (void);
 
-#define _AS_STRING(x)	#x
-#define AS_STRING(x)	_AS_STRING(x)
-	
+#define _AS_STRING(x)   #x
+#define AS_STRING(x)    _AS_STRING(x)
+        
 /* Create a sign extending call stub:
  * foo:
  *   jsr AROS_SLIB_ENTRY(funcname, libname, funcid)
  *     0x4eb9 .... ....
- *   ext.w %d0	// EXT_BYTE only
- *     0x4880	
- *   ext.l %d0	// EXT_BYTE and EXT_WORD
+ *   ext.w %d0  // EXT_BYTE only
+ *     0x4880
+ *   ext.l %d0  // EXT_BYTE and EXT_WORD
  *     0x48c0
  *   rts
  *     0x4e75
  */
 #define EXT_BYTE(lib, libname, funcname, funcid) \
-	do { \
-		void libname##_##funcname##_Wrapper(void) \
-		{ asm volatile ( \
-			"jsr " AS_STRING(AROS_SLIB_ENTRY(funcname, libname, funcid)) "\n" \
-			"ext.w %d0\n" \
-			"ext.l %d0\n" \
-			"rts\n"); } \
-		/* Insert into the library's jumptable */ \
-		__AROS_SETVECADDR(lib, funcid, libname##_##funcname##_Wrapper); \
-	} while (0)
+        do { \
+                void libname##_##funcname##_Wrapper(void) \
+                { asm volatile ( \
+                        "jsr " AS_STRING(AROS_SLIB_ENTRY(funcname, libname, funcid)) "\n" \
+                        "ext.w %d0\n" \
+                        "ext.l %d0\n" \
+                        "rts\n"); } \
+                /* Insert into the library's jumptable */ \
+                __AROS_SETVECADDR(lib, funcid, libname##_##funcname##_Wrapper); \
+        } while (0)
 #define EXT_WORD(lib, libname, funcname, funcid) \
-	do { \
-		void libname##_##funcname##_Wrapper(void) \
-		{ asm volatile ( \
-			"jsr " AS_STRING(AROS_SLIB_ENTRY(funcname, libname, funcid)) "\n" \
-			"ext.l %d0\n" \
-			"rts\n"); } \
-		/* Insert into the library's jumptable */ \
-		__AROS_SETVECADDR(lib, funcid, libname##_##funcname##_Wrapper); \
-	} while (0)
+        do { \
+                void libname##_##funcname##_Wrapper(void) \
+                { asm volatile ( \
+                        "jsr " AS_STRING(AROS_SLIB_ENTRY(funcname, libname, funcid)) "\n" \
+                        "ext.l %d0\n" \
+                        "rts\n"); } \
+                /* Insert into the library's jumptable */ \
+                __AROS_SETVECADDR(lib, funcid, libname##_##funcname##_Wrapper); \
+        } while (0)
 /*
  * Create a register preserving call stub:
  * foo:
@@ -140,32 +142,32 @@ extern void __attribute__((interrupt)) Exec_Supervisor_Trap_00 (void);
  *     0x4e75
  */
 #define PRESERVE_ALL(lib, libname, funcname, funcid) \
-	do { \
-		void libname##_##funcname##_Wrapper(void) \
-	        { asm volatile ( \
-	        	"movem.l %d0-%d1/%a0-%a1,%sp@-\n" \
-	        	"jsr " AS_STRING(AROS_SLIB_ENTRY(funcname, libname, funcid)) "\n" \
-	        	"movem.l %sp@+,%d0-%d1/%a0-%a1\n" \
-	        	"rts\n" ); } \
-		/* Insert into the library's jumptable */ \
-		__AROS_SETVECADDR(lib, funcid, libname##_##funcname##_Wrapper); \
-	} while (0)
+        do { \
+                void libname##_##funcname##_Wrapper(void) \
+                { asm volatile ( \
+                        "movem.l %d0-%d1/%a0-%a1,%sp@-\n" \
+                        "jsr " AS_STRING(AROS_SLIB_ENTRY(funcname, libname, funcid)) "\n" \
+                        "movem.l %sp@+,%d0-%d1/%a0-%a1\n" \
+                        "rts\n" ); } \
+                /* Insert into the library's jumptable */ \
+                __AROS_SETVECADDR(lib, funcid, libname##_##funcname##_Wrapper); \
+        } while (0)
 /* Inject arbitrary code into the jump table
  * Used for GetCC and nano-stubs
  */
 #define FAKE_IT(lib, libname, funcname, funcid, ...) \
-	do { \
-		UWORD *asmcall = (UWORD *)__AROS_GETJUMPVEC(lib, funcid); \
-		const UWORD code[] = { __VA_ARGS__ }; \
-		asmcall[0] = code[0]; \
-		asmcall[1] = code[1]; \
-		asmcall[2] = code[2]; \
-	} while (0)
+        do { \
+                UWORD *asmcall = (UWORD *)__AROS_GETJUMPVEC(lib, funcid); \
+                const UWORD code[] = { __VA_ARGS__ }; \
+                asmcall[0] = code[0]; \
+                asmcall[1] = code[1]; \
+                asmcall[2] = code[2]; \
+        } while (0)
 /* Inject a 'move.w #value,%d0; rts" sequence into the
  * jump table, to fake an private syscall.
  */
 #define FAKE_ID(lib, libname, funcname, funcid, value) \
-	FAKE_IT(lib, libname, funcname, funcid, 0x303c, value, 0x4e75)
+        FAKE_IT(lib, libname, funcname, funcid, 0x303c, value, 0x4e75)
 
 extern void SuperstackSwap(void);
 /* This calls the register-ABI library
@@ -221,7 +223,7 @@ static LONG doInitCode(struct BootStruct *BootS)
             size = 0;
             bootmsg = PrivExecBase(SysBase)->PlatformData.BootMsg;
              while (bootmsg[size].ti_Tag) {
-                 newbootmsg[size].ti_Tag = bootmsg[size].ti_Tag; 
+                 newbootmsg[size].ti_Tag = bootmsg[size].ti_Tag;
                  newbootmsg[size].ti_Data = bootmsg[size].ti_Data;
                  size++;
              }
@@ -243,8 +245,8 @@ extern BYTE _ss_end;
 
 static BOOL IsSysBaseValidNoVersion(struct ExecBase *sysbase)
 {
-	if (!iseven(sysbase))
-		return FALSE;
+        if (!iseven(sysbase))
+                return FALSE;
     if (sysbase == NULL || (((ULONG)sysbase) & 0x80000001))
         return FALSE;
     if (sysbase->ChkBase != ~(IPTR)sysbase)
@@ -288,7 +290,7 @@ static void allocKickMem(struct ExecBase *SysBase, struct BootStruct *bs, struct
     ForeachNode(bs->mlist, ml) {
         DEBUGPUTHEX(("Type   ", ml->ml_Node.ln_Type));
         for(i = 0; i < ml->ml_NumEntries; i++) {
-        	WORD ok = -1;
+                WORD ok = -1;
             APTR start = ml->ml_ME[i].me_Addr;
             ULONG len = ml->ml_ME[i].me_Length;
             DEBUGPUTHEX(("Address", (ULONG)start));
@@ -344,7 +346,7 @@ static struct MemHeader *addmemoryregion(ULONG startaddr, ULONG size, struct Boo
     if (size < 65536)
         return NULL;
     if (magicfast) {
-        krnCreateMemHeader("magic fast memory", -8, 
+        krnCreateMemHeader("magic fast memory", -8,
             (APTR)startaddr, size,
             MEMF_FAST | MEMF_PUBLIC | ((startaddr & 0xff000000) == 0 ? MEMF_24BITDMA : 0));
     } else if (startaddr < 0x00c00000) {
@@ -352,7 +354,7 @@ static struct MemHeader *addmemoryregion(ULONG startaddr, ULONG size, struct Boo
             (APTR)startaddr, size,
             MEMF_CHIP | MEMF_KICK | MEMF_PUBLIC | MEMF_LOCAL | MEMF_24BITDMA);
     } else {
-        krnCreateMemHeader("memory", -5, 
+        krnCreateMemHeader("memory", -5,
             (APTR)startaddr, size,
             MEMF_FAST | MEMF_KICK | MEMF_PUBLIC | MEMF_LOCAL | ((startaddr & 0xff000000) == 0 ? MEMF_24BITDMA : 0));
     }
@@ -725,12 +727,12 @@ void exec_boot(ULONG *membanks, ULONG *cpupcr)
         DEBUGPUTS(("'\n"));
     }
 
-	if (wasvalid) {
+        if (wasvalid) {
         /* Save reset proof vectors */
         ColdCapture  = oldSysBase->ColdCapture;
         CoolCapture  = oldSysBase->CoolCapture;
         WarmCapture  = oldSysBase->WarmCapture;
-        KickMemPtr   = oldSysBase->KickMemPtr; 
+        KickMemPtr   = oldSysBase->KickMemPtr;
         KickTagPtr   = oldSysBase->KickTagPtr;
         KickCheckSum = oldSysBase->KickCheckSum;
 
@@ -850,7 +852,7 @@ void exec_boot(ULONG *membanks, ULONG *cpupcr)
         SysBase->CoolCapture = CoolCapture;
         SysBase->WarmCapture = WarmCapture;
         SysBase->ChkSum = 0;
-        SysBase->ChkSum = GetSysBaseChkSum(SysBase) ^ 0xffff; 
+        SysBase->ChkSum = GetSysBaseChkSum(SysBase) ^ 0xffff;
         SysBase->KickMemPtr = KickMemPtr;
         SysBase->KickTagPtr = KickTagPtr;
         SysBase->KickCheckSum = KickCheckSum;
@@ -868,25 +870,25 @@ void exec_boot(ULONG *membanks, ULONG *cpupcr)
     /* Inject code for GetCC, depending on CPU model */
     if (SysBase->AttnFlags & AFF_68010) {
         /* move.w %ccr,%d0; rts; nop */
-        FAKE_IT(SysBase, Exec, GetCC, 88, 0x42c0, 0x4e75, 0x4e71);
+        FAKE_IT(SysBase, Exec, GetCC, LVOGetCC, 0x42c0, 0x4e75, 0x4e71);
     } else {
         /* move.w %sr,%d0; rts; nop */
-        FAKE_IT(SysBase, Exec, GetCC, 88, 0x40c0, 0x4e75, 0x4e71);
+        FAKE_IT(SysBase, Exec, GetCC, LVOGetCC, 0x40c0, 0x4e75, 0x4e71);
     }
 
 #ifdef THESE_ARE_KNOWN_SAFE_ASM_ROUTINES
-    PRESERVE_ALL(SysBase, Exec, Disable, 20);
-    PRESERVE_ALL(SysBase, Exec, Enable, 21);
-    PRESERVE_ALL(SysBase, Exec, Forbid, 22);
+    PRESERVE_ALL(SysBase, Exec, Disable, LVODisable);
+    PRESERVE_ALL(SysBase, Exec, Enable, LVOEnable);
+    PRESERVE_ALL(SysBase, Exec, Forbid, LVOForbid);
 #endif
-    PRESERVE_ALL(SysBase, Exec, Permit, 23);
-    PRESERVE_ALL(SysBase, Exec, ObtainSemaphore, 94);
-    PRESERVE_ALL(SysBase, Exec, ReleaseSemaphore, 95);
-    PRESERVE_ALL(SysBase, Exec, ObtainSemaphoreShared, 113);
+    PRESERVE_ALL(SysBase, Exec, Permit, LVOPermit);
+    PRESERVE_ALL(SysBase, Exec, ObtainSemaphore, LVOObtainSemaphore);
+    PRESERVE_ALL(SysBase, Exec, ReleaseSemaphore, LVOReleaseSemaphore);
+    PRESERVE_ALL(SysBase, Exec, ObtainSemaphoreShared, LVOObtainSemaphoreShared);
 
     /* Functions that need sign extension */
-    EXT_BYTE(SysBase, Exec, SetTaskPri, 50);
-    EXT_BYTE(SysBase, Exec, AllocSignal, 55);
+    EXT_BYTE(SysBase, Exec, SetTaskPri, LVOSetTaskPri);
+    EXT_BYTE(SysBase, Exec, AllocSignal, LVOAllocSignal);
 
     /* Only add the 2 standard ROM locations, since
      * we may get memory at 0x00f00000, or when we
@@ -973,7 +975,7 @@ void exec_boot(ULONG *membanks, ULONG *cpupcr)
         SysBase->CoolCapture  = oldSysBase->CoolCapture;
         SysBase->WarmCapture  = oldSysBase->WarmCapture;
         /* Save KickData */
-        SysBase->KickMemPtr   = oldSysBase->KickMemPtr; 
+        SysBase->KickMemPtr   = oldSysBase->KickMemPtr;
         SysBase->KickTagPtr   = oldSysBase->KickTagPtr;
         SysBase->KickCheckSum = oldSysBase->KickCheckSum;
         doColdCapture();
@@ -1027,7 +1029,7 @@ void exec_boot(ULONG *membanks, ULONG *cpupcr)
 
         /* Leave supervisor mode, switch power led on */
         asm volatile (
-            "or.b	#2,0xbfe001\n"
+            "or.b       #2,0xbfe001\n"
             "move.l %0,%%usp\n"
             "move.w #0,%%sr\n"
             "move.l %2,%%sp@-\n"

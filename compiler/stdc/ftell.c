@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     C99 function ftell()
 */
@@ -10,28 +9,29 @@
 
 #include "__stdio.h"
 
-#define DEBUG 0
 #include <aros/debug.h>
+
+#include "debug.h"
 
 /*****************************************************************************
 
     NAME */
 #include <stdio.h>
 
-	long int ftell (
+        long int ftell (
 
 /*  SYNOPSIS */
-	FILE * stream)
+        FILE * stream)
 
 /*  FUNCTION
-	Tell the current position in a stream.
+        Tell the current position in a stream.
 
     INPUTS
-	stream - Obtain position of this stream
+        stream - Obtain position of this stream
 
     RESULT
-	The position on success and -1 on error.
-	If an error occurred, the global variable errno is set.
+        The position on success and -1 on error.
+        If an error occurred, the global variable errno is set.
 
     NOTES
 
@@ -40,7 +40,7 @@
     BUGS
 
     SEE ALSO
-	fopen(), fseek(), fwrite()
+        fopen(), fseek(), fwrite()
 
     INTERNALS
 
@@ -49,7 +49,7 @@
     LONG cnt;
     BPTR fh = stream->fh;
 
-    D(bug("[stdcio/ftell()] Entering\n"));
+    D(bug("[%s] %s: Entering\n", STDCNAME, __func__));
 
     Flush (fh);
     cnt = Seek (fh, 0, OFFSET_CURRENT);
@@ -57,7 +57,7 @@
     if (cnt == -1)
         errno = __stdc_ioerr2errno (IoErr ());
 
-    D(bug("[stdcio/ftell()] Leaving cnt=%d\n", cnt));
+    D(bug("[%s] %s: Leaving cnt=%d\n", STDCNAME, __func__, cnt));
 
     return (long int)cnt;
 } /* ftell */

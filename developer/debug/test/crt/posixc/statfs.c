@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <string.h>
@@ -13,7 +12,7 @@
 
 char testfilename[] = "RAM:__TEST__";
 
-int main() 
+int main()
 {
     struct statfs buf;
     int fd;
@@ -21,7 +20,7 @@ int main()
     fd = creat(testfilename, 0777);
     TEST((fd != -1));
     close(fd);
-    TEST((statfs(testfilename, &buf) != -1));  
+    TEST((statfs(testfilename, &buf) != -1));
     
     printf("Name:\t\t\t%s\n", buf.f_mntonname);
     printf("Fundamental block size:\t%ld\n", buf.f_fsize);
@@ -34,7 +33,7 @@ int main()
     return OK;
 }
 
-void cleanup() 
+void cleanup()
 {
     remove(testfilename);
 }

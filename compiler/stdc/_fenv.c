@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2018, The AROS Development Team. All rights reserved.
 */
 
 /* The functions of fenv.h may be static inline functions which may not be
@@ -8,7 +7,7 @@
  * on cpu arch.
  * Add some stub function to make them available. In stdc.conf the
  * function name with _ prepended will be used.
- */ 
+ */
 
 #include "__stdc_intbase.h"
 #include <fenv.h>

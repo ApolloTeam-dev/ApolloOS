@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/memory.h>
@@ -60,9 +59,9 @@
 
             if (root->table)
             {
-            	LONG retval;
+                LONG retval;
 
-	        NEWLIST(&root->table->list);
+                NEWLIST(&root->table->list);
 
                 root->table->type    = pst[0]->type;
                 root->table->handler = (void *)pst[0];

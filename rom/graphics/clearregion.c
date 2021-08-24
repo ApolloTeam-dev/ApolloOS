@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function ClearRegion()
-    Lang: english
 */
 #include <aros/debug.h>
 #include "graphics_intern.h"
@@ -16,22 +14,22 @@
     NAME */
 #include <clib/graphics_protos.h>
 
-	AROS_LH1(void, ClearRegion,
+        AROS_LH1(void, ClearRegion,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct Region *, region, A0),
+        AROS_LHA(struct Region *, region, A0),
 
 /*  LOCATION */
-	struct GfxBase *, GfxBase, 88, Graphics)
+        struct GfxBase *, GfxBase, 88, Graphics)
 
 /*  FUNCTION
-	Removes all rectangles in the specified region.
+        Removes all rectangles in the specified region.
 
     INPUTS
-	region - pointer to the region structure
+        region - pointer to the region structure
 
     RESULT
-	None.
+        None.
 
     NOTES
 
@@ -40,14 +38,14 @@
     BUGS
 
     SEE ALSO
-	NewRegion()
+        NewRegion()
 
     INTERNALS
 
     HISTORY
-	27-11-96    digulla automatically created from
-			    graphics_lib.fd and clib/graphics_protos.h
-	15-01-97    mreckt  initial version
+        27-11-96    digulla automatically created from
+                            graphics_lib.fd and clib/graphics_protos.h
+        15-01-97    mreckt  initial version
 
 *****************************************************************************/
 {

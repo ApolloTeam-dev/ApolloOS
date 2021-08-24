@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 */
 
 /*****************************************************************************
@@ -9,10 +8,10 @@
 
 #include <dirent.h>
 
-	void rewinddir(
+        void rewinddir(
 
 /*  SYNOPSIS */
-	DIR *dir)
+        DIR *dir)
 
 /*  FUNCTION
 

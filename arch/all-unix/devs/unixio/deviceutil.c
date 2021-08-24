@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #define DEBUG 0
@@ -35,7 +34,7 @@ static int unixdevice_Open(struct UnixDevice *unixioDev, struct IOStdReq *ioreq,
         ioreq->io_Error                   = 0;
         ioreq->io_Message.mn_Node.ln_Type = NT_REPLYMSG;
 
-        DOPEN(bug("unixio.device: in libopen func. Unit is already open\n"));    
+        DOPEN(bug("unixio.device: in libopen func. Unit is already open\n"));
         return TRUE;
     }
 

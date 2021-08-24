@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <intuition/preferences.h>
@@ -54,11 +53,11 @@
     if (prefbuffer != NULL && size != 0)
     {
         ULONG lock = LockIBase(0);
-	
+        
         CopyMem(&GetPrivIBase(IntuitionBase)->ActivePreferences,
                 prefbuffer,
                 size <= sizeof(struct Preferences) ? size : sizeof(struct Preferences));
-		
+                
         UnlockIBase(lock);
     }
 

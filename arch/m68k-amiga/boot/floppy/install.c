@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2010, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2010, The AROS Development Team. All rights reserved.
 */
 
 #include <errno.h>
@@ -70,7 +69,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    err = read(fd, buff, sizeof(buff)); 
+    err = read(fd, buff, sizeof(buff));
     if (err < 0) {
         perror(image);
         close(fd);

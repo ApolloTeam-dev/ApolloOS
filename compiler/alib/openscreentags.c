@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Open a screen
-    Lang: english
 */
 
 #define AROS_TAGRETURNTYPE  struct Screen *
@@ -19,12 +17,12 @@ extern struct IntuitionBase * IntuitionBase;
 #define NO_INLINE_STDARG /* turn off inline def */
 #include <proto/intuition.h>
 
-	struct Screen * OpenScreenTags (
+        struct Screen * OpenScreenTags (
 
 /*  SYNOPSIS */
-	struct NewScreen *  newScreen,
-	Tag                 tag1,
-	...)
+        struct NewScreen *  newScreen,
+        Tag                 tag1,
+        ...)
 
 /*  FUNCTION
 
@@ -39,13 +37,11 @@ extern struct IntuitionBase * IntuitionBase;
     BUGS
 
     SEE ALSO
-	intuition.library/OpenScreenTagList()
+        intuition.library/OpenScreenTagList()
 
     INTERNALS
 
     HISTORY
-	29-10-95    digulla automatically created from
-			    intuition_lib.fd and clib/intuition_protos.h
 
 *****************************************************************************/
 {

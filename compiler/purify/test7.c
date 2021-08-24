@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <stdio.h>
@@ -9,9 +8,9 @@
 int f (int i)
 {
     if (i <= 1)
-	return 1;
+        return 1;
     else if (i == 2)
-	return 2;
+        return 2;
 
     return f(i-1) + f(i-2);
 }
@@ -22,8 +21,8 @@ int main (int argc, char ** argv)
 
     if (argc == 1)
     {
-	printf ("Usage: %s number\n", argv[0]);
-	return 5;
+        printf ("Usage: %s number\n", argv[0]);
+        return 5;
     }
 
     i = atoi (argv[1]);

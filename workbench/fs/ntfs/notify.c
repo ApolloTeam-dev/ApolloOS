@@ -1,7 +1,7 @@
 /*
  * ntfs.handler - New Technology FileSystem handler
  *
- * Copyright © 2012 The AROS Development Team
+ * Copyright (C) 2012 The AROS Development Team
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the same terms as AROS itself.
@@ -13,6 +13,8 @@
 #include <dos/dos.h>
 #include <dos/notify.h>
 #include <proto/exec.h>
+
+#include <string.h>
 
 #include "ntfs_fs.h"
 #include "ntfs_protos.h"

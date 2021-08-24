@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2019, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2019, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <string.h>
@@ -55,7 +54,7 @@
     AROS_LIBFUNC_INIT
 
     struct Screen *defscreen;
-    STRPTR  	   name;
+    STRPTR         name;
 
     DEBUG_GETDEFAULTPUBSCREEN(dprintf("GetDefaultPubScreen()\n"));
 

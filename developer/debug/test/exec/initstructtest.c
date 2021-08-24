@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2002, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2002, The AROS Development Team. All rights reserved.
 */
 
 #include <proto/exec.h>
@@ -29,11 +28,11 @@ struct init
     S_END   (end);
 } inittable=
 {
-    { { I_CPY	(3,L),      { 1, 2, 3 } } },
-    { { I_REP	(7,B),        4         } },
-    { { I_CPYO	(3,L,O(c)), { 5, 6, 7 } } },
+    { { I_CPY   (3,L),      { 1, 2, 3 } } },
+    { { I_REP   (7,B),        4         } },
+    { { I_CPYO  (3,L,O(c)), { 5, 6, 7 } } },
     { { I_CPYO24(1,W,O(d)), { 8 }       } },
-	I_END	()
+        I_END   ()
 };
 
 #undef O

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 */
 
 
@@ -14,7 +13,7 @@
 #include <aros/debug.h>
 
 
-struct ParallelUnit * findUnit(struct parallelbase * ParallelDevice, 
+struct ParallelUnit * findUnit(struct parallelbase * ParallelDevice,
                              ULONG unitnum)
 {
   struct ParallelUnit * pu;

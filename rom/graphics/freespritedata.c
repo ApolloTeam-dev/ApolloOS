@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function FreeSpriteData()
-    Lang: english
 */
 #include <aros/debug.h>
 #include <graphics/sprite.h>
@@ -24,7 +22,7 @@
         struct GfxBase *, GfxBase, 172, Graphics)
 
 /*  FUNCTION
-	Free sprite data allocated by AllocSpriteData().
+        Free sprite data allocated by AllocSpriteData().
 
     INPUTS
         extsp - The extended sprite structure to be freed.

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function sigaction().
 */
@@ -13,12 +12,12 @@
     NAME */
 #include <signal.h>
 
-	int sigaction (
+        int sigaction (
 
 /*  SYNOPSIS */
-	int signum,
-	const  struct  sigaction  *act,
-	struct sigaction *oldact)
+        int signum,
+        const  struct  sigaction  *act,
+        struct sigaction *oldact)
 
 /*  FUNCTION
 

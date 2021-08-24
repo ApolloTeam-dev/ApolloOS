@@ -1,5 +1,5 @@
 /*
-    Copyright © 2019, The AROS Development Team. All rights reserved.
+    Copyright (C) 2019, The AROS Development Team. All rights reserved.
 */
 
 #include <unistd.h>
@@ -26,7 +26,7 @@ int verbose;
 
 void printBanner(FILE *structfile, char *comment)
 {
-	fprintf(structfile, "%s Copyright (c) 2019, The AROS Dev team.\n%s NB: THIS IS AN AUTO GENERATED FILE!\n\n", comment, comment);
+        fprintf(structfile, "%s Copyright (c) 2019, The AROS Dev team.\n%s NB: THIS IS AN AUTO GENERATED FILE!\n\n", comment, comment);
 }
 
 int

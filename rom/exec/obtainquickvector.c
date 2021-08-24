@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Obtain and install a Quick Interrupt vector
-    Lang: english
 */
 #include "exec_intern.h"
 #include <proto/exec.h>
@@ -12,13 +10,13 @@
 
     NAME */
 
-	AROS_LH1(ULONG, ObtainQuickVector,
+        AROS_LH1(ULONG, ObtainQuickVector,
 
 /*  SYNOPSIS */
-	AROS_LHA(APTR, interruptCode, A0),
+        AROS_LHA(APTR, interruptCode, A0),
 
 /*  LOCATION */
-	struct ExecBase *, SysBase, 131, Exec)
+        struct ExecBase *, SysBase, 131, Exec)
 
 /*  FUNCTION
 

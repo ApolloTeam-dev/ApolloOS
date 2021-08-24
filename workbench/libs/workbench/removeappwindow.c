@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Remove a window from Workbench's list of AppWindows.
-    Lang: English
 */
 
 #include <exec/lists.h>
@@ -63,15 +61,15 @@
 
     if (appWindow == NULL)
     {
-	return FALSE;
+        return FALSE;
     }
     
     LockWorkbench();
 
     while (!IsListEmpty(&appWindow->aw_DropZones))
     {
-	RemoveAppWindowDropZone(appWindow, 
-	      (struct AppWindowDropZone *)GetHead(&appWindow->aw_DropZones));
+        RemoveAppWindowDropZone(appWindow,
+              (struct AppWindowDropZone *)GetHead(&appWindow->aw_DropZones));
     }
 
     Remove((struct Node *)appWindow);

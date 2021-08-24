@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 */
 
 #include "icon_intern.h"
@@ -25,10 +24,10 @@
         struct Library *, IconBase, 33, Icon)
 
 /*  FUNCTION
-	Change a color register for selected icon state.
-	
+        Change a color register for selected icon state.
+        
     INPUTS
-	cr - colorregister to be changed.
+        cr - colorregister to be changed.
 
     RESULT
 

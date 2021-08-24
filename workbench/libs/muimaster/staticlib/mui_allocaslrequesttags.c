@@ -1,8 +1,7 @@
 /*
-    Copyright © 2002, The AROS Development Team. 
+    Copyright (C) 2002, The AROS Development Team.
     All rights reserved.
     
-    $Id$
 */
 
 #define AROS_TAGRETURNTYPE APTR
@@ -16,12 +15,12 @@
 #include <proto/muimaster.h>
 extern struct Library * MUIMasterBase;
 
-	APTR MUI_AllocAslRequestTags (
+        APTR MUI_AllocAslRequestTags (
 
 /*  SYNOPSIS */
-	unsigned long reqType,
-	Tag tag1, 
-	...)
+        unsigned long reqType,
+        Tag tag1,
+        ...)
 
 /*  FUNCTION
 

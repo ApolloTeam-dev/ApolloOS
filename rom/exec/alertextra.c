@@ -31,16 +31,16 @@ static const char illegalstr[] = "\n0x%P ******************************** <illeg
  */
 void FormatAlertExtra(char *buffer, APTR stack, UBYTE type, APTR data, struct ExecBase *SysBase)
 {
-    struct Library *DebugBase = PrivExecBase(SysBase)->DebugBase;
+        struct Library *DebugBase = PrivExecBase(SysBase)->DebugBase;
     char *buf = buffer;
     APTR dissCtx;
 
     switch (type)
     {
     case AT_CPU:
-        buf = Alert_AddString(buf, "\nCPU context:\n");
-        buf = FormatCPUContext(buf, data, SysBase);
-        break;
+                buf = Alert_AddString(buf, "\nCPU context:\n");
+                buf = FormatCPUContext(buf, data, SysBase);
+                break;
 
     case AT_MUNGWALL:
         buf = Alert_AddString(buf, "\nMungwall data:\n");

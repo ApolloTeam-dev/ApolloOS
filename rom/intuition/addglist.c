@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <proto/layers.h>
@@ -66,7 +65,7 @@
 
     struct Gadget *pred;
     struct Gadget *last;
-    UWORD   	   count, count2;
+    UWORD          count, count2;
 
     EXTENDUWORD(position);
     EXTENDWORD(numGad);
@@ -101,7 +100,7 @@
                                    last->GadgetID));
             last->GadgetType &= ~GTYP_REQGADGET;
         }
-	
+        
         pred = (struct Gadget *)&window->FirstGadget;
         requester = NULL;
     }

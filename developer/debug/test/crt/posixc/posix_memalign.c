@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2019, The AROS Development Team. All rights reserved.
 */
 
 #include "test.h"
@@ -12,7 +11,7 @@
 #define BLOCK_MASK ~(BLOCK_SIZE - 1)
 #define BLOCK_COUNT 16
 
-int main() 
+int main()
 {
     void *blocks[BLOCK_COUNT];
     int i;

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -17,7 +16,7 @@
 #include <clib/alib_protos.h>
 
 #include <stdint.h>
-#include <string.h>
+#include <aros/crt_replacement.h>
 
 #include "debug_intern.h"
 
@@ -90,7 +89,7 @@ static void RegisterModule_Hunk(const char *name, BPTR segList, ULONG DebugType,
         ForeachNode(debugInfo, pm) {
             struct segment *seg;
 
-            seg = AllocVec(sizeof(struct segment) + sizeof(module_t) + strlen(pm->m_name), MEMF_PUBLIC|MEMF_CLEAR);
+            seg = AllocVec(sizeof(struct segment) + sizeof(module_t) + Strlen(pm->m_name), MEMF_PUBLIC|MEMF_CLEAR);
 
             if (seg) {
                 unsigned int symbols;
@@ -101,7 +100,7 @@ static void RegisterModule_Hunk(const char *name, BPTR segList, ULONG DebugType,
                 module_t *mod = (module_t *)(&seg[1]);
 
                 DSYMS(bug("[Debug] Adding module @%p: %s\n", pm, pm->m_name));
-                strcpy(mod->m_name, pm->m_name);
+                Strcpy(mod->m_name, pm->m_name);
 
                 seg->s_seg = BNULL;
                 seg->s_mod = mod;
@@ -117,7 +116,7 @@ static void RegisterModule_Hunk(const char *name, BPTR segList, ULONG DebugType,
                 ForeachNode(&pm->m_symbols, sym) {
                     symbols++;
                     if (sym->s_name) {
-                        APTR end = (APTR)sym->s_name + strlen(sym->s_name) + 1 + 1;
+                        APTR end = (APTR)sym->s_name + Strlen(sym->s_name) + 1 + 1;
                         if ((APTR)sym->s_name < str_l)
                             str_l = (APTR)sym->s_name;
                         if (end > str_h)
@@ -264,7 +263,7 @@ static void HandleModuleSegments(module_t *mod, struct MinList * list)
 #if AROS_MODULES_DEBUG
     ForeachNode(list, seg)
     {
-        if (seg->s_name) seggdbhlplen += strlen(seg->s_name) + 5 + 2 + sizeof(APTR) * 2;
+        if (seg->s_name) seggdbhlplen += Strlen(seg->s_name) + 5 + 2 + sizeof(APTR) * 2;
     }
 #endif
 
@@ -287,13 +286,13 @@ static void HandleModuleSegments(module_t *mod, struct MinList * list)
             {
                 mod->m_seggdbhlp = AllocVec(seggdbhlplen, MEMF_PUBLIC | MEMF_CLEAR);
                 __sprintf(mod->m_seggdbhlp, "0x%lx ", seg->s_lowest);
-                last = mod->m_seggdbhlp + strlen(mod->m_seggdbhlp);
+                last = mod->m_seggdbhlp + Strlen(mod->m_seggdbhlp);
             }
             else
             {
                 __sprintf(buffer, "-s %s 0x%lx ", seg->s_name, seg->s_lowest);
-                strcpy(last, buffer);
-                last += strlen(buffer);
+                Strcpy(last, buffer);
+                last += Strlen(buffer);
             }
         }
 #endif
@@ -331,11 +330,11 @@ static void RegisterModule_Hunk(const char *name, BPTR segList, ULONG DebugType,
     int i = 0;
     struct MinList tmplist;
 
-    mod = AllocVec(sizeof(module_t) + strlen(name), MEMF_PUBLIC|MEMF_CLEAR);
+    mod = AllocVec(sizeof(module_t) + Strlen(name), MEMF_PUBLIC|MEMF_CLEAR);
     if (!mod)
         return;
     NEWLIST(&tmplist);
-    strcpy(mod->m_name, name);
+    Strcpy(mod->m_name, name);
     mod->m_seg = segList;
 
     while (segList) {
@@ -367,7 +366,7 @@ static void RegisterModule_Hunk(const char *name, BPTR segList, ULONG DebugType,
 void RegisterModule_ELF(const char *name, BPTR segList, struct elfheader *eh, struct sheader *sections,
         struct Library *DebugBase)
 {
-    module_t *mod = AllocVec(sizeof(module_t) + strlen(name), MEMF_PUBLIC|MEMF_CLEAR);
+    module_t *mod = AllocVec(sizeof(module_t) + Strlen(name), MEMF_PUBLIC|MEMF_CLEAR);
     BOOL segListSkip = (segList == BNULL ? TRUE : FALSE);
 
     D(bug("[Debug] RegisterModule_ELF(%s)\n", name));
@@ -391,7 +390,7 @@ void RegisterModule_ELF(const char *name, BPTR segList, struct elfheader *eh, st
         D(bug("[Debug] %d sections at 0x%p\n", int_shnum, sections));
         shstr = int_shstrndx;
 
-        strcpy(mod->m_name, name);
+        Strcpy(mod->m_name, name);
         mod->m_seg = segList;
         if (sections[shstr].type == SHT_STRTAB)
             mod->m_shstr = getstrtab(&sections[shstr]);
@@ -404,7 +403,7 @@ void RegisterModule_ELF(const char *name, BPTR segList, struct elfheader *eh, st
                 /* If we have string table, copy it */
                 if ((sections[i].type == SHT_STRTAB) && (!mod->m_str)) {
                     /* We are looking for .strtab, not .shstrtab or .stabstr */
-                    if (mod->m_shstr && (strcmp(&mod->m_shstr[sections[i].name], ".strtab") == 0)) {
+                    if (mod->m_shstr && (Strcmp(&mod->m_shstr[sections[i].name], ".strtab") == 0)) {
                         D(bug("[Debug] Symbol name table of length %d in section %d\n", sections[i].size, i));
                         mod->m_str = getstrtab(&sections[i]);
                     }

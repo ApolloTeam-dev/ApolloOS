@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <proto/graphics.h>
@@ -46,8 +45,8 @@
 
     struct GfxBase *GfxBase = GetPrivIBase(IntuitionBase)->GfxBase;
     struct Screen   *screen;
-    ULONG   	     ilock = LockIBase(0);
-    LONG    	     failure = 0;
+    ULONG            ilock = LockIBase(0);
+    LONG             failure = 0;
 
     for (screen = IntuitionBase->FirstScreen; screen; screen = screen->NextScreen)
     {

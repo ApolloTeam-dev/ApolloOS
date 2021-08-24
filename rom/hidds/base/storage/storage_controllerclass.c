@@ -1,6 +1,5 @@
 /*
-    Copyright (C) 2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2018-2020, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -49,7 +48,7 @@ VOID StorageController__Root__Dispose(OOP_Class *cl, OOP_Object *o, OOP_Msg msg)
         Creates a bus driver object and registers it in the controller.
 
     INPUTS
-        obj         - An ATA Controller object to operate on.
+        obj         - A Storage Controller object to operate on.
         busClass - A pointer to OOP class of the bus. In order to create an object
                       of some previously registered public class, use
                       oop.library/OOP_FindClass().
@@ -88,26 +87,29 @@ OOP_Object *StorageController__Hidd_StorageController__AddBus(OOP_Class *cl, OOP
         if (bn)
         {
             D(bug("[Storage:Controller] Hidd_StorageController__AddBus: Bus Node @ 0x%p\n", bn));
-            bus = OOP_NewObject(msg->busClass, NULL, msg->tags);
 
+            bus = OOP_NewObject(msg->busClass, NULL, msg->tags);
             if (!bus)
             {
-                FreePooled( CSD(cl)->cs_MemPool, bn, sizeof(struct BusNode));
                 D(bug("[Storage:Controller] Hidd_StorageController__AddBus: Failed to instantiate Bus\n"));
+
+                FreePooled( CSD(cl)->cs_MemPool, bn, sizeof(struct BusNode));
                 return NULL;
             }
 
-           D(bug("[Storage:Controller] Hidd_StorageController__AddBus: Bus Instance @ 0x%p\n", bus));
+            D(bug("[Storage:Controller] Hidd_StorageController__AddBus: Bus Object @ 0x%p\n", bus));
 
             if (HIDD_StorageController_SetUpBus(o, bus))
             {
-                D(bug("[Storage:Controller] Hidd_StorageController__AddBus: Bus Initialized\n"));
+                D(bug("[Storage:Controller] Hidd_StorageController__AddBus: Bus Initialized\n");)
+
                 /* Add the driver to the end of drivers list */
                 bn->busObject = bus;
                 ObtainSemaphore(&data->scd_BusLock);
                 ADDTAIL(&data->scd_Buses, bn);
                 ReleaseSemaphore(&data->scd_BusLock);
-                
+
+                D(bug("[Storage:Controller] Hidd_StorageController__AddBus: returning 0x%p\n", bus);)
                 return bus;
             }
 
@@ -123,25 +125,25 @@ OOP_Object *StorageController__Hidd_StorageController__AddBus(OOP_Class *cl, OOP
 /*****************************************************************************************
 
     NAME
-	moHidd_StorageController_RemoveBus
+        moHidd_StorageController_RemoveBus
 
     SYNOPSIS
-	void OOP_DoMethod(OOP_Object *obj, struct pHidd_StorageController_RemoveBus *Msg);
+        void OOP_DoMethod(OOP_Object *obj, struct pHidd_StorageController_RemoveBus *Msg);
 
-	void Hidd_StorageController_RemoveBus(OOP_Object *obj, OOP_Object *driver);
+        void Hidd_StorageController_RemoveBus(OOP_Object *obj, OOP_Object *driver);
 
     LOCATION
-	CLID_HW
+        CLID_HW
 
     FUNCTION
-	Unregisters and disposes hardware bus object.
+        Unregisters and disposes hardware bus object.
 
     INPUTS
-	obj    - An ATA Controller object from which the bus should be removed.
-	driver - A pointer to a bus object, returned by Hidd_StorageController_AddBus().
+        obj    - An ATA Controller object from which the bus should be removed.
+        driver - A pointer to a bus object, returned by Hidd_StorageController_AddBus().
 
     RESULT
-	TRUE if removal successful or FALSE upon failure.
+        TRUE if removal successful or FALSE upon failure.
 
     NOTES
 
@@ -150,7 +152,7 @@ OOP_Object *StorageController__Hidd_StorageController__AddBus(OOP_Class *cl, OOP
     BUGS
 
     SEE ALSO
-	moHidd_StorageController_AddBus
+        moHidd_StorageController_AddBus
 
     INTERNALS
 
@@ -169,22 +171,22 @@ BOOL StorageController__Hidd_StorageController__RemoveBus(OOP_Class *cl, OOP_Obj
 /*****************************************************************************************
 
     NAME
-	moHidd_StorageController_EnumBuses
+        moHidd_StorageController_EnumBuses
 
     SYNOPSIS
-	void OOP_DoMethod(OOP_Object *obj, struct pHidd_StorageController_EnumBuses *Msg);
+        void OOP_DoMethod(OOP_Object *obj, struct pHidd_StorageController_EnumBuses *Msg);
 
-	void Hidd_StorageController_EnumBuses(OOP_Object *obj, struct Hook *callback, APTR hookMsg);
+        void Hidd_StorageController_EnumBuses(OOP_Object *obj, struct Hook *callback, APTR hookMsg);
 
     LOCATION
-	CLID_HW
+        CLID_HW
 
     FUNCTION
-	Enumerates all installed driver in the subsystem.
+        Enumerates all installed driver in the subsystem.
 
     INPUTS
-	obj      - A subsystem object to query.
-	callback - A user-supplied hook which will be called for every driver.
+        obj      - A subsystem object to query.
+        callback - A user-supplied hook which will be called for every driver.
         hookMsg  - A user-defined data to be passed to the hook.
 
         The hook will be called with the following parameters:
@@ -199,7 +201,7 @@ BOOL StorageController__Hidd_StorageController__RemoveBus(OOP_Class *cl, OOP_Obj
         or TRUE in order to stop it.
 
     RESULT
-	None.
+        None.
 
     NOTES
 
@@ -239,26 +241,26 @@ void StorageController__Hidd_StorageController__EnumBuses(OOP_Class *cl, OOP_Obj
 /*****************************************************************************************
 
     NAME
-	moHidd_StorageController_SetUpBus
+        moHidd_StorageController_SetUpBus
 
     SYNOPSIS
-	void OOP_DoMethod(OOP_Object *obj, struct pHidd_StorageController_SetUpBus *Msg);
+        void OOP_DoMethod(OOP_Object *obj, struct pHidd_StorageController_SetUpBus *Msg);
 
-	void Hidd_StorageController_SetUpBus(OOP_Object *obj, OOP_Object *busObject);
+        void Hidd_StorageController_SetUpBus(OOP_Object *obj, OOP_Object *busObject);
 
     LOCATION
-	CLID_HW
+        CLID_HW
 
     FUNCTION
-	Performs subsystem-specific setup after driver object creation.
+        Performs subsystem-specific setup after driver object creation.
         This method is intended to be used only by subclasses of CLID_HW.
 
     INPUTS
-	obj          - A subsystem object.
+        obj          - A subsystem object.
         busObject - Device driver object.
 
     RESULT
-	TRUE if setup completed successfully and FALSE in case of error.
+        TRUE if setup completed successfully and FALSE in case of error.
         If this method returns error, the driver object will be disposed
         and moHidd_StorageController_AddBus method will fail.
 
@@ -288,26 +290,26 @@ BOOL StorageController__Hidd_StorageController__SetUpBus(OOP_Class *cl, OOP_Obje
 /*****************************************************************************************
 
     NAME
-	moHidd_StorageController_CleanUpBus
+        moHidd_StorageController_CleanUpBus
 
     SYNOPSIS
-	void OOP_DoMethod(OOP_Object *obj, struct pHidd_StorageController_CleanUpBus *Msg);
+        void OOP_DoMethod(OOP_Object *obj, struct pHidd_StorageController_CleanUpBus *Msg);
 
-	void Hidd_StorageController_CleanUpBus(OOP_Object *obj, OOP_Object *busObject);
+        void Hidd_StorageController_CleanUpBus(OOP_Object *obj, OOP_Object *busObject);
 
     LOCATION
-	CLID_HW
+        CLID_HW
 
     FUNCTION
-	Performs subsystem-specific cleanup before driver object disposal.
+        Performs subsystem-specific cleanup before driver object disposal.
         This method is intended to be used only by subclasses of CLID_HW.
 
     INPUTS
-	obj          - A subsystem object.
+        obj          - A subsystem object.
         busObject - Device driver object.
 
     RESULT
-	None.
+        None.
 
     NOTES
         In base class this method does nothing.

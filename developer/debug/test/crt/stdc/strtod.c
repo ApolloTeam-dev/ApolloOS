@@ -1,12 +1,11 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <stdlib.h>
 #include <stdio.h>
 
-const char * strings [] = 
+const char * strings [] =
 {
     "1e1",
     "1.2e2",

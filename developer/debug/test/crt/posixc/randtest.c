@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <stdio.h>
@@ -25,13 +24,13 @@ int main(void)
  
   printf("---\n");
 
-  srand48(0x1); 
+  srand48(0x1);
   c = 0 ;
   while (c < 20)
   {
-    union { 
-	double d;
-	int i[2];
+    union {
+        double d;
+        int i[2];
     } tmp;
     tmp.d = drand48();
     int a = tmp.i[0];

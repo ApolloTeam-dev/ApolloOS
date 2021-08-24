@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc: Emit one character via raw IO
-    Lang: english
 */
 
 #include "exec_intern.h"
@@ -13,34 +11,34 @@
     NAME */
 #include <proto/exec.h>
 
-	AROS_LH1(void, RawPutChar,
+        AROS_LH1(void, RawPutChar,
 
 /*  SYNOPSIS */
-	AROS_LHA(UBYTE, chr, D0),
+        AROS_LHA(UBYTE, chr, D0),
 
 /*  LOCATION */
-	struct ExecBase *, SysBase, 86, Exec)
+        struct ExecBase *, SysBase, 86, Exec)
 
 /*  FUNCTION
-	Emits a single character into low-level debug output stream
+        Emits a single character into low-level debug output stream
 
     INPUTS
-	chr - The character to emit
+        chr - The character to emit
 
     RESULT
-	None.
+        None.
 
     NOTES
-	This function is for very low level debugging only.
+        This function is for very low level debugging only.
 
-	Zero bytes are ignored by this function.
+        Zero bytes are ignored by this function.
 
     EXAMPLE
 
     BUGS
 
     SEE ALSO
-	RawIOInit(), RawPutChar(), RawMayGetChar()
+        RawIOInit(), RawPutChar(), RawMayGetChar()
 
     INTERNALS
 
@@ -50,7 +48,7 @@
 
     /* Don't write 0 bytes */
     if (KernelBase && chr)
-	KrnPutChar(chr);
+        KrnPutChar(chr);
 
     AROS_LIBFUNC_EXIT
 } /* RawPutChar */

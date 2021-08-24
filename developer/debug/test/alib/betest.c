@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 */
 
 #include <stdio.h>
@@ -24,8 +23,8 @@ int main (int argc, char ** argv)
 
     if (!fh)
     {
-	printf ("Couldn't open file (1)\n");
-	return 10;
+        printf ("Couldn't open file (1)\n");
+        return 10;
     }
 
     WriteByte (fh, 0x11);
@@ -41,8 +40,8 @@ int main (int argc, char ** argv)
 
     if (!fh)
     {
-	printf ("Couldn't open file (2)\n");
-	return 10;
+        printf ("Couldn't open file (2)\n");
+        return 10;
     }
 
     ReadByte (fh, &b);

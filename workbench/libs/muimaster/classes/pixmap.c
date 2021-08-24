@@ -1,7 +1,6 @@
 /*
-    Copyright © 2011, Thore Böckelmann. All rights reserved.
-    Copyright © 2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2011, Thore Böckelmann. All rights reserved.
+    Copyright (C) 2012, The AROS Development Team. All rights reserved.
 */
 
 #include <proto/exec.h>
@@ -16,6 +15,7 @@
 #include <cybergraphx/cybergraphics.h>
 
 #include <strings.h>
+#include <string.h>
 #include <bzlib.h>
 
 #include "pixmap.h"

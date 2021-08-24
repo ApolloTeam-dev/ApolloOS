@@ -1,13 +1,34 @@
-# $Id$
+#
+#   Generate the zlib linklib.
+#
 
 include $(SRCDIR)/config/aros.cfg
+
+#MM- includes-copy : zlib-fetch
+
+ZLIBVERSION=1.2.11
+REPOSITORIES := https://zlib.net
+ARCHBASE     := zlib-$(ZLIBVERSION)
+ARCHSUFFIX := "tar.gz"
+PATCHSPEC := $(ARCHBASE)-aros.diff:$(ARCHBASE):-f,-p1
+ARCHSRCDIR := $(PORTSDIR)/zlib/$(ARCHBASE)
+
+%fetch mmake=zlib-fetch archive=$(ARCHBASE) destination=$(PORTSDIR)/zlib \
+    location=$(PORTSSOURCEDIR) archive_origins=$(REPOSITORIES) suffixes=$(ARCHSUFFIX) \
+    patches_specs=$(PATCHSPEC)
+
+%create_patch mmake=zlib-create-patch \
+    archive=$(ARCHBASE) suffixes=$(ARCHSUFFIX) \
+    destination=$(PORTSDIR)/zlib
+
+#MM- includes-copy : \
+#MM     zlib-fetch \
+#MM     workbench-libs-z-pkgc
 
 #MM workbench-libs-z-includes : \
 #MM     kernel-exec-includes \
 #MM     kernel-dos-includes \
 #MM     includes-copy
-
-#MM workbench-libs-z : workbench-libs-z-pc
 
 FILES := adler32 \
          crc32 \
@@ -28,32 +49,62 @@ FILES := adler32 \
          contrib/infback9/infback9 \
          contrib/infback9/inftree9
 
+ifeq ($(AROS_TARGET_CPU),x86_64)
+TARGET_ISA_CFLAGS +=  -msse2 -msse4.1 -mpclmul
+FILES += x86_aros fill_window_sse crc_folding
+else
+FILES += simd_stub
+endif
 
 LIBZ_CPPFLAGS := -D_XOPEN_SOURCE=600 -DSTDC -DAMIGA -DZ_HAVE_UNISTD_H
+USER_INCLUDES += -I$(ARCHSRCDIR)
 
 USER_CPPFLAGS := $(LIBZ_CPPFLAGS)
 
 %build_module mmake=workbench-libs-z \
   modname=z1 modtype=library \
-  files="$(FILES)" linklibname=z
+  files="$(addprefix $(ARCHSRCDIR)/,$(FILES))" linklibname=z
 
 #MM- linklibs: linklibs-z-static
+#MM linklibs-z-static : zlib-fetch
 
 # N.B: z.static is compiled without the posix wrappers, so that it looks for the default function
 # symbol names (e.g. lseek)
 
-USER_CPPFLAGS := $(LIBZ_CPPFLAGS) -DNO_STRERROR -DNO_POSIX_WRAPPERS
+USER_CPPFLAGS := $(LIBZ_CPPFLAGS) -DNO_STRERROR -DNO_POSIX_WRAPPERS -DNDEBUG
 
-%build_linklib mmake=linklibs-z-static libname=z.static files="$(FILES)"
+%build_linklib mmake=linklibs-z-static libname=z.static \
+    files="$(addprefix $(ARCHSRCDIR)/,$(FILES))" \
+    objdir=$(GENDIR)/$(CURDIR)/static
 
 INCLUDE_FILES := zlib.h zconf.h zutil.h
-%copy_includes
+%copy_includes dir=$(ARCHSRCDIR)
 
 #MM
-workbench-libs-z-pc : $(AROS_LIB)/pkgconfig/zlib.pc
+workbench-libs-z-pkgc : $(AROS_LIB)/pkgconfig/zlib.pc
 
 $(AROS_LIB)/pkgconfig/zlib.pc : $(SRCDIR)/$(CURDIR)/zlib.pc.aros
 	@$(IF) $(TEST) ! -d $(AROS_LIB)/pkgconfig ; then $(MKDIR) $(AROS_LIB)/pkgconfig ; else $(NOP) ; fi
 	$(CP) $^ $@
+
+%build_prog mmake=wokbench-libs-z-example \
+    progname=example \
+    files=$(ARCHSRCDIR)/test/example targetdir=$(AROS_TESTS)/z uselibs="z1"
+
+#MM wokbench-libs-z-example : \
+#MM        workbench-libs-z-linklib
+
+##MM- test-z : wokbench-libs-z-example
+##MM- test-z-quick : wokbench-libs-z-example-quick
+
+%build_prog mmake=wokbench-libs-z-minigzip \
+    progname=minigzip \
+    files=$(ARCHSRCDIR)/test/minigzip targetdir=$(AROS_C) uselibs="z1"
+
+#MM- workbench-c : \
+#MM        wokbench-libs-z-minigzip
+
+#MM wokbench-libs-z-minigzip : \
+#MM        workbench-libs-z-linklib
 
 %common

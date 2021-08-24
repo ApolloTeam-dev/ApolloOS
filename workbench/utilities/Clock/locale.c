@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2016, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2016, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/types.h>
@@ -10,7 +9,7 @@
 #include "strings.h"
 
 #define CATALOG_NAME    "System/Utilities/Clock.catalog"
-#define CATALOG_VERSION 2
+#include "catalogs/catalog_version.h"
 
 /*** Variables **************************************************************/
 struct Catalog *catalog;
@@ -23,8 +22,8 @@ CONST_STRPTR MSG(ULONG id)
     if(LocaleBase != NULL && catalog != NULL)
     {
         return GetCatalogStr(catalog, id, CatCompArray[id].cca_Str);
-    } 
-    else 
+    }
+    else
     {
         return CatCompArray[id].cca_Str;
     }

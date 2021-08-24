@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function NextDisplayInfo()
-    Lang: english
 */
 #include <graphics/displayinfo.h>
 #include <hidd/gfx.h>
@@ -25,7 +23,7 @@
         struct GfxBase *, GfxBase, 122, Graphics)
 
 /*  FUNCTION
-	Go to next entry in the DisplayInfo database.
+        Go to next entry in the DisplayInfo database.
 
     INPUTS
         last_ID - previous displayinfo identifier
@@ -62,24 +60,24 @@
     else {
         /* Find handle and driver of current mode */
         dh = FindDisplayInfo(last_ID);
-	if (dh)
-	    mdd = dh->drv;
+        if (dh)
+            mdd = dh->drv;
     }
 
     while (mdd) {
         /* Take next (or first) mode handle */
         if (dh)
-	    dh++;
-	else
-	    dh = mdd->modes;
+            dh++;
+        else
+            dh = mdd->modes;
 
-	/* If it's not the last handle, return it */
+        /* If it's not the last handle, return it */
         if (dh->id != vHidd_ModeID_Invalid)
             return dh->drv->id | dh->id;
 
-	/* Next driver, first handle */
+        /* Next driver, first handle */
         mdd = mdd->next;
-	dh = NULL;
+        dh = NULL;
     }
 
     return INVALID_ID;

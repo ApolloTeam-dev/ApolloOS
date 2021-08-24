@@ -1,6 +1,5 @@
 /*
-    Copyright © 2015-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2015-2017, The AROS Development Team. All rights reserved.
 */
 
 #define DEBUG 0
@@ -26,12 +25,12 @@
         AROS_LHA(ULONG, flags, D0),
 
 /*  LOCATION */
-	struct TaskResBase *, TaskResBase, 1, Task)
+        struct TaskResBase *, TaskResBase, 1, Task)
 
 /*  FUNCTION
 
     INPUTS
-        flags - 
+        flags -
               LTF_WRITE     Lock The TaskList for writing
                             NB: In general software SHOULDNT
                                 need to use this!

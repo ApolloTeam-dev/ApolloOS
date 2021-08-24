@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include "intuition_intern.h"
@@ -21,7 +20,7 @@
         struct IntuitionBase *, IntuitionBase, 92, Intuition)
 
 /*  FUNCTION
-        Change the status flags for a given public screen. 
+        Change the status flags for a given public screen.
 
     INPUTS
         Scr         - The screen the flags of which to change.

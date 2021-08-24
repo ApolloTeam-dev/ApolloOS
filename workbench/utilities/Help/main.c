@@ -1,6 +1,5 @@
 /*
-    Copyright © 2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2013, The AROS Development Team. All rights reserved.
 */
 
 /******************************************************************************
@@ -29,7 +28,7 @@
 
         NAME    --  the name of the command or application whose help
                     you want to view. The name is case-insensitive.
-	SECTION --  the section where the help document will be searched.
+        SECTION --  the section where the help document will be searched.
                     Currently available are "commands" and "system". If you
                     don't specify the section all available sections will
                     be searched. The section is case-insensitive.

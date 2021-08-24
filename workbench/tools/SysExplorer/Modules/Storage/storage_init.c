@@ -1,6 +1,5 @@
 /*
     Copyright (C) 2018-2019, The AROS Development Team.
-    $Id$
 */
 
 #include <aros/debug.h>
@@ -37,7 +36,7 @@ const struct OOP_ABDescr storage_abd[] =
     {NULL                       , NULL                  }
 };
 
-static int storageenum_init(struct SysexpStorageBase *StorageBase) 
+static int storageenum_init(struct SysexpStorageBase *StorageBase)
 {
     D(bug("[storage.sysexp] %s()\n", __func__));
 

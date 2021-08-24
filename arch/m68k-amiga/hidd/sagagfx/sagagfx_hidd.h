@@ -2,15 +2,12 @@
 #define SAGAGFX_HIDD_H
 
 /*
-    Copyright Â© 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
-    Desc: SAGAGfx Hidd header.
+    Desc: SAGAGfx header.
     Lang: English.
 */
-
-#undef DEBUG
-#define DEBUG 0
 
 #include <exec/interrupts.h>
 #include <exec/semaphores.h>
@@ -37,20 +34,20 @@ struct SAGAGfx_staticdata
     OOP_Object *    sagagfxhidd;
     OOP_Object *    visible;        /* Currently visible bitmap */
     OOP_AttrBase    attrBases[ATTRBASES_NUM];
-    
+
     UBYTE           cursor_clut[16*16];
     UWORD           cursor_pal[4];
     UBYTE           cursor_visible;
-    
+
     WORD            cursorX;
     WORD            cursorY;
-    WORD            hotX;
-    WORD            hotY;
+    UBYTE           hotX;
+    UBYTE           hotY;
     APTR            mempool;
-    
+
     BOOL            useHWSprite;
     UBYTE           boardModel;
-    
+
     UBYTE           (*SAGAGfx_GetPixFmt        ) (UBYTE bpp);
     UBYTE           (*SAGAGfx_GetModeID        ) (UWORD w, UWORD h);
     VOID            (*SAGAGfx_SetColors        ) (ULONG *palette, UWORD startIndex, UWORD count);
@@ -63,8 +60,8 @@ struct SAGAGfx_staticdata
     VOID            (*SAGAGfx_SetSpriteColors  ) (UWORD *colors);
     VOID            (*SAGAGfx_SetSpriteMemory  ) (UBYTE *memory);
     VOID            (*SAGAGfx_SetSpritePosition) (WORD x, WORD y);
-    
-//  struct SignalSemaphore  framebufferlock;
+
+//    struct SignalSemaphore  framebufferlock;
 };
 
 struct SAGAGfxBase

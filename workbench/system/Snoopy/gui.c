@@ -1,6 +1,5 @@
 /*
-    Copyright © 2006-2015, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2006-2015, The AROS Development Team. All rights reserved.
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
@@ -20,7 +19,7 @@
 #include "patches.h"
 #include "locale.h"
 
-#define VERSION "$VER: Snoopy 0.13 (04.05.2015) © 2006-2015 The AROS Dev Team"
+#define VERSION "$VER: Snoopy 0.13 (04.05.2015) \xA9 2006-2015 The AROS Dev Team"
 
 static Object *app, *window, *saveBtn, *openBtn, *useBtn, *undoBtn, *resetBtn, *cancelBtn;
 static Object *failCM, *cliCM, *pathCM, *devCM, *ignoreCM, *breakPointCM, *patternStr;
@@ -269,7 +268,7 @@ void gui_init(void)
                         End),
                     End),
                 End),
-                Child, (IPTR) (RectangleObject, 
+                Child, (IPTR) (RectangleObject,
                     MUIA_Rectangle_HBar, TRUE,
                     MUIA_FixHeight,      2,
                 End),

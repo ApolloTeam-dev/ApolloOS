@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 */
 
 #include "partition_intern.h"
@@ -46,7 +45,7 @@
 
     if (root->table)
     {
-    	struct PTFunctionTable *handler = root->table->handler;
+        struct PTFunctionTable *handler = root->table->handler;
 
         if (handler->writePartitionTable)
             return handler->writePartitionTable(PartitionBase, root);

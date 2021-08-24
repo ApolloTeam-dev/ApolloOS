@@ -1,9 +1,7 @@
 /*
-    Copyright © 2006-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2006-2012, The AROS Development Team. All rights reserved.
 
     Desc: IconX WB script starter
-    Lang: English
 */
 
 /******************************************************************************
@@ -123,7 +121,7 @@ STRPTR AllocateNameFromLock(BPTR lock)
                 else
                 {
                     break;
-                }                
+                }
             }
         }
         else

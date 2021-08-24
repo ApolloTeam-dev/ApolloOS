@@ -1,6 +1,5 @@
 /*
-    Copyright © 2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2003-2021, The AROS Development Team. All rights reserved.
 */
 
 #include <sys/time.h>
@@ -13,7 +12,7 @@
 
 int main()
 {
-    struct timeval  tv_start, 
+    struct timeval  tv_start,
                     tv_end;
     int             count   = 100000000;
     double          elapsed = 0.0;
@@ -27,7 +26,7 @@ int main()
     gettimeofday(&tv_start, NULL);
     
     for(i = 0; i < count; i++)
-    {    
+    {
         memory = AllocPooled(pool, 100);
         if (memory) FreePooled(pool, memory, 100);
     }
@@ -36,16 +35,16 @@ int main()
     
     DeletePool(pool);
     
-    elapsed = ((double)(((tv_end.tv_sec * 1000000) + tv_end.tv_usec) 
-            - ((tv_start.tv_sec * 1000000) + tv_start.tv_usec)))/1000000.;
+    elapsed = ((double)(((tv_end.tv_sec * 1000000) + tv_end.tv_usec)
+            - ((tv_start.tv_sec * 1000000) + tv_start.tv_usec)))/1000000.0;
     
     printf
     (
-        "Elapsed time:           %f seconds\n"
-        "Number of allocations:  %d\n"
-        "Allocations per second: %f\n"
-        "Seconds per allocation: %f\n",
-        elapsed, count, (double) count / elapsed, (double) elapsed / count
+        "Elapsed time:                %f seconds\n"
+        "Number of allocations:       %d\n"
+        "Allocations per second:      %f\n"
+        "Milliseconds per allocation: %f\n",
+        elapsed, count, (double) count / elapsed, (double) elapsed * 1000.0 / count
     );
    
     return 0;

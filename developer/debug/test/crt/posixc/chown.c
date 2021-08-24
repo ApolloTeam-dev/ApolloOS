@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <sys/stat.h>
@@ -35,7 +34,7 @@ int main()
     return OK;
 }
 
-void cleanup() 
+void cleanup()
 {
     remove(testfilename);
 }

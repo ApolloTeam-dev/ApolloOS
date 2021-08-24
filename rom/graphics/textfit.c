@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 
     Desc: Tell how many characters will fit into a box.
-    Lang: english
 */
 #include "graphics_intern.h"
 
@@ -86,13 +84,13 @@
         if (constrainingExtent)
         {
             if (constrainingExtent->te_Extent.MinY > textExtent->te_Extent.MinY
-                || 
+                ||
                 constrainingExtent->te_Extent.MaxY < textExtent->te_Extent.MaxY
                 ||
                 constrainingExtent->te_Height < textExtent->te_Height)
             {
                 ok = FALSE;
-            }    
+            }
         }
 
         if (ok)
@@ -128,7 +126,7 @@
                 textExtent->te_Extent.MinX = newminx;
                 textExtent->te_Extent.MaxX = newmaxx;
 
-                retval++;                
+                retval++;
 
             } /* while(strLen--) */
 

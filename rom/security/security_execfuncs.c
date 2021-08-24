@@ -1,6 +1,5 @@
 /*
-    Copyright © 2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2019, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -60,10 +59,10 @@ static void RemTaskNode(struct SecurityBase *secBase, struct secTaskNode *node)
  *      Replacement for the exec.library AddTask() function
  */
 AROS_LH3(APTR, SecurityAddTask,
-	AROS_LHA(struct Task *,     task,      A1),
-	AROS_LHA(APTR,              initialPC, A2),
-	AROS_LHA(APTR,              finalPC,   A3),
-	struct ExecBase *, SysBase, 47, Exec)
+        AROS_LHA(struct Task *,     task,      A1),
+        AROS_LHA(APTR,              initialPC, A2),
+        AROS_LHA(APTR,              finalPC,   A3),
+        struct ExecBase *, SysBase, 47, Exec)
 {
     AROS_LIBFUNC_INIT
 
@@ -93,9 +92,9 @@ AROS_LH3(APTR, SecurityAddTask,
 }
 
 
-	/*
-	 *		Replacement for the exec.library RemTask() function
-	 */
+        /*
+         *              Replacement for the exec.library RemTask() function
+         */
 AROS_LH1(void, SecurityRemTask,
         AROS_LHA(struct Task *, task, A1),
         struct ExecBase *, SysBase, 48, Exec)

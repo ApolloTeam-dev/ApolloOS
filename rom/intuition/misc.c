@@ -1,7 +1,6 @@
 /*
-    Copyright © 2002-2019, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 2002-2019, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <aros/debug.h>
@@ -256,9 +255,9 @@ Object *MakePointerFromData(struct IntuitionBase *IntuitionBase,
         {POINTERA_BitMap      , (IPTR)source},
         {POINTERA_XOffset     , xOffset      },
         {POINTERA_YOffset     , yOffset      },
-        {SPRITEA_OldDataFormat, TRUE	     },
-        {SPRITEA_Width	      , width	     },
-        {SPRITEA_OutputHeight , height	     },
+        {SPRITEA_OldDataFormat, TRUE         },
+        {SPRITEA_Width        , width        },
+        {SPRITEA_OutputHeight , height       },
         {TAG_DONE                            }
     };
 
@@ -275,8 +274,8 @@ Object *MakePointerFromPrefs(struct IntuitionBase *IntuitionBase, struct Prefere
 void InstallPointer(struct IntuitionBase *IntuitionBase, UWORD which, Object **old, Object *pointer)
 {
     struct msSetPointerShape pmsg;
-    struct IntScreen 	*scr;
-    struct Window   	*win;
+    struct IntScreen    *scr;
+    struct Window       *win;
     struct SharedPointer *oldpointer;
     Object *oldobject;
 
@@ -334,8 +333,8 @@ void SetPointerColors(struct IntuitionBase *IntuitionBase)
     struct IntIntuitionBase *_intuitionBase = GetPrivIBase(IntuitionBase);
     struct GfxBase *GfxBase = _intuitionBase->GfxBase;
     struct Color32 *p;
-    int     	   k;
-    ULONG   	   lock = LockIBase(0);
+    int            k;
+    ULONG          lock = LockIBase(0);
     /* Probably this should apply to Workbench screen and not to currently active one? */
     struct Screen *scr = IntuitionBase->ActiveScreen;
 

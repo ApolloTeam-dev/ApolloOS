@@ -1,6 +1,5 @@
 /*
     Copyright (C) 2013-2019, The AROS Development Team.
-    $Id$
 */
 
 #include <aros/debug.h>
@@ -34,6 +33,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 extern OOP_AttrBase HiddATAUnitAB;
 extern OOP_AttrBase HiddStorageUnitAB;

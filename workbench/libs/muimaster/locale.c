@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/types.h>
@@ -9,7 +9,7 @@
 #include "muimaster_strings.h"
 
 #define CATALOG_NAME     "System/Libs/muimaster.catalog"
-#define CATALOG_VERSION  1
+#include "catalogs/catalog_version.h"
 
 /*** Variables **************************************************************/
 struct Catalog *catalog;
@@ -22,8 +22,8 @@ CONST_STRPTR _(ULONG id)
     if (LocaleBase != NULL && catalog != NULL)
     {
         return GetCatalogStr(catalog, id, CatCompArray[id].cca_Str);
-    } 
-    else 
+    }
+    else
     {
         return CatCompArray[id].cca_Str;
     }
@@ -35,8 +35,8 @@ BOOL Locale_Initialize(VOID)
     if (LocaleBase != NULL)
     {
         catalog = OpenCatalog
-        ( 
-            NULL, CATALOG_NAME, OC_Version, CATALOG_VERSION, TAG_DONE 
+        (
+            NULL, CATALOG_NAME, OC_Version, CATALOG_VERSION, TAG_DONE
         );
     }
     else

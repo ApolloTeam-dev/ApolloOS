@@ -1,4 +1,3 @@
-#   $Id$
 #
 #   Generate liblibinit.a
 #
@@ -11,3 +10,21 @@ include $(SRCDIR)/config/aros.cfg
 
 %build_linklib mmake=linklibs-libinit \
     libname=libinit files="libinit"
+
+# Special kickstart module header
+$(GENDIR)/$(CURDIR)/kickentry.o : $(SRCDIR)/$(CURDIR)/kickentry.c | $(GENDIR)/$(CURDIR)
+	@$(ECHO) "Compiling  $<"
+	@$(TARGET_CC) $(TARGET_SYSROOT) -c $(TARGET_ISA_CFLAGS) $(TARGET_CFLAGS) $(CFLAGS) $< -o $@
+
+#MM
+libinit-kickentry : $(GENDIR)/$(CURDIR)/kickentry.o
+
+# Disk-based module header
+$(GENDIR)/$(CURDIR)/libentry.o : $(SRCDIR)/$(CURDIR)/libentry.c | $(GENDIR)/$(CURDIR)
+	@$(ECHO) "Compiling  $<"
+	@$(TARGET_CC) $(TARGET_SYSROOT) -c $(TARGET_ISA_CFLAGS) $(TARGET_CFLAGS) $(CFLAGS) $< -o $@
+
+#MM
+libinit-libentry : $(GENDIR)/compiler/libinit/libentry.o
+
+#MM- linklibs-startup : libinit-libentry libinit-kickentry

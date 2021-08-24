@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc: Basic helpfuncs for Asl.
-    Lang: english
 */
 
 #include <proto/alib.h>
@@ -36,6 +34,7 @@
 #include "filereqsupport.h"
 #include "filereqhooks.h"
 #include "layout.h"
+#include "catalogs/catalog_version.h"
 
 #define SDEBUG 0
 #define DEBUG 0
@@ -402,7 +401,7 @@ struct LayoutData *AllocCommon
         struct TagItem tags[] =
         {
             {OC_BuiltInLanguage , (IPTR)"english"},
-            {OC_Version         , 2              },
+            {OC_Version         , CATALOG_VERSION},
             {TAG_DONE                            }
         };
 

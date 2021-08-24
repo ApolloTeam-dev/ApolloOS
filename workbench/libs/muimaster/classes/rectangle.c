@@ -1,9 +1,8 @@
-/* 
-    Copyright © 1999, David Le Corfec.
-    Copyright © 2002-2006, The AROS Development Team.
+/*
+    Copyright (C) 2002-2020, The AROS Development Team.
+    Copyright (C) 1999, David Le Corfec.
     All rights reserved.
 
-    $Id$
 */
 
 #include <string.h>
@@ -83,7 +82,7 @@ IPTR Rectangle__OM_NEW(struct IClass *cl, Object *obj, struct opSet *msg)
         }
     }
 
-    D(bug("muimaster.library/rectangle.c: New Rectangle Object at 0x%lx\n",
+    D(bug("muimaster.library/rectangle.c: New Rectangle Object at 0x%p\n",
             obj));
 
     return (IPTR) obj;
@@ -258,7 +257,7 @@ IPTR Rectangle__MUIM_Draw(struct IClass *cl, Object *obj,
         return 0;
 
 
-    D(bug("Draw Rectangle(0x%lx) %ldx%ldx%ldx%ld mw=%ld mh=%ld\n", obj,
+    D(bug("Draw Rectangle(0x%p) %ldx%ldx%ldx%ld mw=%ld mh=%ld\n", obj,
             _left(obj), _top(obj), _right(obj), _bottom(obj), _mwidth(obj),
             _mheight(obj)));
 
@@ -280,7 +279,7 @@ IPTR Rectangle__MUIM_Draw(struct IClass *cl, Object *obj,
         int yt;
 
         /*  D(bug("muimaster.library/rectangle.c: Draw Rectangle Object "
-            "at 0x%lx %ldx%ldx%ldx%ld\n mw=%ld mh=%ld\n",
+            "at 0x%p %ldx%ldx%ldx%ld\n mw=%ld mh=%ld\n",
             obj, _left(obj), _top(obj), _right(obj), _bottom(obj),
             _mwidth(obj), _mheight(obj))); */
 

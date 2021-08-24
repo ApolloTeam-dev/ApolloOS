@@ -1,6 +1,5 @@
 /*
-    Copyright © 2009-2010, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2009-2010, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/types.h>
@@ -10,7 +9,7 @@
 #include "strings.h"
 
 #define CATALOG_NAME     "System/Prefs/Network.catalog"
-#define CATALOG_VERSION  4
+#include "catalogs/catalog_version.h"
 
 static const TEXT DEFYES[] = "Yes", DEFNO[] = "No";
 

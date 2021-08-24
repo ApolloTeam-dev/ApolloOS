@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 
     SAS/C function stcu_d().
 */
@@ -12,25 +11,25 @@
     NAME */
 #include <string.h>
 
-	int stcu_d (
+        int stcu_d (
 
 /*  SYNOPSIS */
-	char 		* out,
-	unsigned	uivalue)
+        char            * out,
+        unsigned        uivalue)
 
 /*  FUNCTION
-	Convert an unsigned integer to a decimal string
+        Convert an unsigned integer to a decimal string
 
     INPUTS
-	out     - Result will be put into this string
-	uivalue - the value to convert
+        out     - Result will be put into this string
+        uivalue - the value to convert
 
     RESULT
-	The number of characters written into the string
+        The number of characters written into the string
 
     NOTES
-	SAS C specific
-	
+        SAS C specific
+        
     EXAMPLE
 
     BUGS

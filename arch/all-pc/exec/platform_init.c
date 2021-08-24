@@ -1,6 +1,5 @@
 /*
-    Copyright © 2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2017, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/config.h>
@@ -356,7 +355,7 @@ struct Task *Exec_X86CreateIdleTask(APTR sysBase)
 #if defined(__AROSEXEC_SMP__)
     struct KernelBase *KernelBase = __kernelBase;
     int cpuNo = KrnGetCPUNumber();
-    IPTR idleNameArg[] = 
+    IPTR idleNameArg[] =
     {
         cpuNo
     };

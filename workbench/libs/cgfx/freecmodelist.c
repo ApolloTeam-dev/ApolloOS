@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 
 #include <cybergraphx/cybergraphics.h>
@@ -17,13 +15,13 @@
     NAME */
 #include <proto/cybergraphics.h>
 
-	AROS_LH1(void, FreeCModeList,
+        AROS_LH1(void, FreeCModeList,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct List *, modeList, A0),
+        AROS_LHA(struct List *, modeList, A0),
 
 /*  LOCATION */
-	struct Library *, CyberGfxBase, 13, Cybergraphics)
+        struct Library *, CyberGfxBase, 13, Cybergraphics)
 
 /*  FUNCTION
         Frees a list of RTG modes returned by AllocCModeListTagList().
@@ -51,8 +49,8 @@
     struct CyberModeNode *node, *safe;
 
     ForeachNodeSafe(modeList, node, safe) {
-	Remove((struct Node *)node);
-	FreeMem(node, sizeof (struct CyberModeNode));
+        Remove((struct Node *)node);
+        FreeMem(node, sizeof (struct CyberModeNode));
     }
 
     FreeMem(modeList, sizeof (struct List));

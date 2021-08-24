@@ -1,26 +1,16 @@
 /*
   Copyright  2004-2013, The AROS Development Team. All rights reserved.
-  $Id$
 */
 
-#include "portable_macros.h"
-#ifdef __AROS__
 #define MUIMASTER_YES_INLINE_STDARG
-#endif
 
-#ifdef __AROS__
 #define DEBUG 0
 #include <aros/debug.h>
-#endif
 
 #include <exec/types.h>
 #include <libraries/mui.h>
 
-#ifdef __AROS__
 #include <zune/customclasses.h>
-#else
-#include <zune_AROS/customclasses.h>
-#endif
 
 #include <proto/utility.h>
 
@@ -41,17 +31,10 @@
 #include <datatypes/pictureclass.h>
 #include <clib/macros.h>
 
-#ifdef __AROS__
 #include <clib/alib_protos.h>
 
 #include <prefs/wanderer.h>
-#else
-#include <prefs_AROS/wanderer.h>
-#endif
 
-#if defined(__AMIGA__) && !defined(__PPC__)
-#define NO_INLINE_STDARG
-#endif
 #ifndef _PROTO_INTUITION_H
 #include <proto/intuition.h>
 #endif
@@ -86,11 +69,7 @@ struct panel_StatusBar_DATA
     IPTR                                iwp_Flags;
     Object                              *iwp_StatusBar_StatusBarObj;
     Object                              *iwp_StatusBar_StatusTextObj;
-#ifdef __AROS__
     struct Hook                         iwp_StatusBar_updateHook;
-#else
-    struct Hook                         *iwp_StatusBar_updateHook;
-#endif
 };
 
 /// From panel_toolbar
@@ -169,7 +148,6 @@ static void FmtSizeToString(UBYTE *buf, ULONG num)
 /*** Hook functions *********************************************************/
 static
 ///panelStatusBar__HookFunc_UpdateStatusFunc()
-#ifdef __AROS__
 AROS_UFH3(
   void, panelStatusBar__HookFunc_UpdateStatusFunc,
   AROS_UFHA(struct Hook *,    hook,   A0),
@@ -177,10 +155,6 @@ AROS_UFH3(
   AROS_UFHA(APTR,             param,  A1)
 )
 {
-#else
-HOOKPROTO(panelStatusBar__HookFunc_UpdateStatusFunc, void, APTR *obj, APTR param)
-{
-#endif
     AROS_USERFUNC_INIT
 
     /* Get data */
@@ -263,9 +237,6 @@ D(bug("[IW.statusbar] %s: '%s' FIB Size = %d bytes\n", __PRETTY_FUNCTION__, icon
 
     AROS_USERFUNC_EXIT
 }
-#ifndef __AROS__
-MakeStaticHook(StatusBar_updateHook, panelStatusBar__HookFunc_UpdateStatusFunc);
-#endif
 
 /*** Main Functions ****************************************************************/
 
@@ -336,11 +307,8 @@ static IPTR panelStatusBar__PrefsSetup(Class *CLASS, Object *self, struct opSet 
             }
             AddTail(panelStatusBarFSNotifyList, &_prefsNotifyHandler->fshn_Node);
         }
-#ifdef __AROS__
         panelStatusBar__PrefsNotificationObject = (Object *)NotifyObject, End;
-#else
-        panelStatusBar__PrefsNotificationObject = MUI_NewObject(MUIC_Notify, TAG_DONE);
-#endif
+
     if (GetVar(extension_PrefsFile, extension_PrefsData, STATUSBAR_PREFSSIZE, GVF_GLOBAL_ONLY) != -1)
     {
             D(bug("[IW.statusbar] %s: Prefs contain '%s'\n", __PRETTY_FUNCTION__, extension_PrefsData));
@@ -414,7 +382,7 @@ static IPTR panelStatusBar__Setup(Class *CLASS, Object *self, struct opSet *mess
             TAG_DONE),
         TAG_DONE);
 
-        /* Got a StatusBarPanel? setup notifies and other values are 
+        /* Got a StatusBarPanel? setup notifies and other values are
          copied to the data of the object */
         if ( panel_StatusBar != NULL )
         {
@@ -437,13 +405,10 @@ static IPTR panelStatusBar__Setup(Class *CLASS, Object *self, struct opSet *mess
 
             if (panelStatusBarPrivate->iwp_StatusBar_StatusBarObj)
             {
-#ifdef __AROS__
                 panelStatusBarPrivate->iwp_StatusBar_updateHook.h_Entry = ( HOOKFUNC )panelStatusBar__HookFunc_UpdateStatusFunc;
-#else
-                panelStatusBarPrivate->iwp_StatusBar_updateHook= &StatusBar_updateHook;
-#endif
-                DoMethod ( 
-                    data->iwd_IconListObj, MUIM_Notify, MUIA_IconList_Changed, MUIV_EveryTime, 
+
+                DoMethod (
+                    data->iwd_IconListObj, MUIM_Notify, MUIA_IconList_Changed, MUIV_EveryTime,
                     (IPTR)self, 3, MUIM_CallHook, &panelStatusBarPrivate->iwp_StatusBar_updateHook, (IPTR)CLASS
                   );
 
@@ -452,7 +417,7 @@ static IPTR panelStatusBar__Setup(Class *CLASS, Object *self, struct opSet *mess
 
                 DoMethod
                   (
-                    panelStatusBar__PrefsNotificationObject, MUIM_Notify, MUIA_ShowMe, MUIV_EveryTime, 
+                    panelStatusBar__PrefsNotificationObject, MUIM_Notify, MUIA_ShowMe, MUIV_EveryTime,
                     (IPTR)data->iwd_BottomPanel.iwp_PanelContainerObj, 3, MUIM_Set, MUIA_ShowMe, MUIV_TriggerValue
                   );
 
@@ -496,7 +461,7 @@ static IPTR panelStatusBar__Cleanup(Class *CLASS, Object *self, Msg msg)
         {
             DoMethod
               (
-                panelStatusBar__PrefsNotificationObject, MUIM_KillNotifyObj, MUIA_ShowMe, 
+                panelStatusBar__PrefsNotificationObject, MUIM_KillNotifyObj, MUIA_ShowMe,
                 (IPTR)data->iwd_BottomPanel.iwp_PanelContainerObj
               );
         }
@@ -547,11 +512,11 @@ static IPTR panelStatusBar__OM_SET(Class *CLASS, Object *self, struct opSet *mes
         if (panelStatusBarPrivate->iwp_Node.ln_Name != (char *)extension_Name)
             return rv;
 
-        while ((tag = NextTagItem((TAGITEM)&tstate)) != NULL)
+        while ((tag = NextTagItem((struct TagItem **)&tstate)) != NULL)
         {
             switch (tag->ti_Tag)
             {
-            /*case MUIA_IconWindowExt_ToolBar_Enabled:   
+            /*case MUIA_IconWindowExt_ToolBar_Enabled:
                 if ((!(data->iwd_Flags & IWDFLAG_ISROOT)) && (data->iwd_BottomPanel.iwp_PanelContainerObj))
                 {
                     // remove statusbar

@@ -1,14 +1,13 @@
 /*
-    Copyright © 2011, The AROS Development Team. All rights reserved
-    $Id$
+    Copyright (C) 2011, The AROS Development Team. All rights reserved
 */
 
 #include LC_LIBDEFS_FILE
 
 AROS_UFH3(void, ehc_enumhook,
-	AROS_UFHA(struct Hook *,    hook,       A0),
-	AROS_UFHA(OOP_Object *,     pcidevice,  A2),
-	AROS_UFHA(APTR,             message,    A1))
+        AROS_UFHA(struct Hook *,    hook,       A0),
+        AROS_UFHA(OOP_Object *,     pcidevice,  A2),
+        AROS_UFHA(APTR,             message,    A1))
 {
     AROS_USERFUNC_INIT
     LIBBASETYPE *ehd = (LIBBASETYPE *) hook->h_Data;

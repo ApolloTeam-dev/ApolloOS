@@ -1,12 +1,13 @@
 /*
-    Copyright © 2012-2015, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2012-2015, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
 
 #include <exec/nodes.h>
 #include <exec/lists.h>
+
+#include <string.h>
 
 #include "exec_intern.h"
 #include "taskstorage.h"

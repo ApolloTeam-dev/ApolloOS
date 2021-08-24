@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2006, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2006, The AROS Development Team. All rights reserved.
 
     Desc: Init of mathieeesingtrans.library
-    Lang: english
 */
 
 #include <aros/symbolsets.h>
@@ -21,7 +19,7 @@ static int Init(LIBBASETYPEPTR LIBBASE)
 {
     MathIeeeSingBasBase = OpenLibrary ("mathieeesingbas.library", 39);
     if (!MathIeeeSingBasBase)
-	return FALSE;
+        return FALSE;
 
     return TRUE;
 }
@@ -30,7 +28,7 @@ static int Init(LIBBASETYPEPTR LIBBASE)
 static int Expunge(LIBBASETYPEPTR LIBBASE)
 {
     if (MathIeeeSingBasBase)
-	CloseLibrary ((struct Library *)MathIeeeSingBasBase);
+        CloseLibrary ((struct Library *)MathIeeeSingBasBase);
     
     return TRUE;
 }

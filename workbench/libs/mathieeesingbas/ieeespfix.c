@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2004, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2004, The AROS Development Team. All rights reserved.
 */
 
 #include "mathieeesingbas_intern.h"
@@ -59,7 +58,7 @@
     {
         SetSR(Zero_Bit, Zero_Bit | Negative_Bit | Overflow_Bit);
         return 0;
-    } 
+    }
     
     Shift = (y & IEEESPExponent_Mask) >> 23;
     Shift -=0x7e;

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2006, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2006, The AROS Development Team. All rights reserved.
 */
 
 #include <proto/exec.h>
@@ -16,11 +15,11 @@
 
 /*  SYNOPSIS */
 
-	AROS_LHA(APTR, data, A0),
+        AROS_LHA(APTR, data, A0),
 
 /*  LOCATION */
 
-	struct Library *, nvBase, 6, Nonvolatile)
+        struct Library *, nvBase, 6, Nonvolatile)
 
 /*  FUNCTION
 

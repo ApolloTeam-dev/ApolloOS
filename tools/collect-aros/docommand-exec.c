@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <unistd.h>
@@ -26,7 +25,7 @@ static void _docommandv(const char *command, char *argv[], int do_path)
     {
         (do_path ? execvp : execv)(command, argv);
 
-	nonfatal(command, strerror(errno));
+        nonfatal(command, strerror(errno));
 
         _exit(EXIT_FAILURE);
     }

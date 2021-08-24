@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <workbench/workbench.h>
@@ -31,7 +30,7 @@ int main(int argc, char **argv)
         struct DiskObject *icon      = GetIconTags
         (
             argv[1],
-            ICONGETA_FailIfUnavailable,        FALSE, 
+            ICONGETA_FailIfUnavailable,        FALSE,
             ICONGETA_IsDefaultIcon,     (IPTR) &isDefault,
             TAG_DONE
         );
@@ -50,7 +49,7 @@ int main(int argc, char **argv)
                 "Tooltypes:     %s\n\n",
                 argv[1], isDefault ? "yes" : "no",
                 typeNames[icon->do_Type], icon->do_Type, icon->do_DefaultTool,
-                (long)icon->do_CurrentX, (unsigned long)icon->do_CurrentX, 
+                (long)icon->do_CurrentX, (unsigned long)icon->do_CurrentX,
                 (long)icon->do_CurrentY, (unsigned long)icon->do_CurrentY,
                 icon->do_DrawerData != NULL ? "yes" : "no",
                 (long)icon->do_StackSize,

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <proto/arossupport.h>
@@ -12,8 +11,8 @@ struct TagItem *LibFindTagItem(Tag tagValue, const struct TagItem *tagList)
 
     while ((tag = LibNextTagItem(&tstate)))
     {
-	if ((ULONG)tag->ti_Tag == (ULONG)tagValue)
-	    return tag;
+        if ((ULONG)tag->ti_Tag == (ULONG)tagValue)
+            return tag;
     }
 
     return NULL;

@@ -1,8 +1,7 @@
 /*
-    Copyright © 2002-2011, The AROS Development Team. 
+    Copyright (C) 2002-2011, The AROS Development Team.
     All rights reserved.
     
-    $Id$
 */
 
 #include <string.h>
@@ -148,7 +147,7 @@ struct MenuHandlerData
 #define ITEXT_EXTRA_TOP    1
 #define ITEXT_EXTRA_BOTTOM 1
 
-static const char subitemindicator[] = "»";
+static const char subitemindicator[] = "\xBB"; // right chevron
 
 
 static void HandleMouseMove(struct MenuHandlerData *mhd);

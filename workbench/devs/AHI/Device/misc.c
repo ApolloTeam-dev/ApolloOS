@@ -143,14 +143,19 @@ SprintfA( char *dst, const char *fmt, IPTR* args )
 }
 
 /******************************************************************************
+** For future reference: AHI#?Semaphore functions are used in functions
+** which get called in supervisor mode. The standard Exec functions raise
+** 0x00000008 - Privilege violation error when being called in supervisor
+** mode, thus the implementation below which is "almost" the same as Exec's
+******************************************************************************/
+
+/******************************************************************************
 ** AHIInitSemaphore ***********************************************************
 ******************************************************************************/
 
 void
 AHIInitSemaphore( struct SignalSemaphore* sigSem )
 {
-  // TODO: Verify license compatibility (Code mostly stolen from AROS).
-
   sigSem->ss_WaitQueue.mlh_Head     = (struct MinNode *)&sigSem->ss_WaitQueue.mlh_Tail;
   sigSem->ss_WaitQueue.mlh_Tail     = NULL;
   sigSem->ss_WaitQueue.mlh_TailPred = (struct MinNode *)&sigSem->ss_WaitQueue.mlh_Head;

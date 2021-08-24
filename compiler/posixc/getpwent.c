@@ -1,6 +1,5 @@
 /*
-    Copyright © 2004-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004-2013, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -12,10 +11,10 @@
 
 #include <pwd.h>
 
-	struct passwd *getpwent(
+        struct passwd *getpwent(
 
 /*  SYNOPSIS */
-	void)
+        void)
 
 /*  FUNCTION
 
@@ -24,7 +23,7 @@
     RESULT
 
     NOTES
-	Not implemented.
+        Not implemented.
 
     EXAMPLE
 

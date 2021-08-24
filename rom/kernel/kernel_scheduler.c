@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2018, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -19,7 +18,7 @@
 #define D(x)
 
 /*
- * Schedule the currently running task away. Put it into the TaskReady list 
+ * Schedule the currently running task away. Put it into the TaskReady list
  * in some smart way. This function is subject of change and it will be probably replaced
  * by some plugin system in the future
  */

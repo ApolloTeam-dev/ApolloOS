@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 */
 
 #include "mathieeedoubbas_intern.h"
@@ -63,7 +62,7 @@
             SetSR(Negative_Bit, Zero_Bit | Negative_Bit | Overflow_Bit);
             Set_Value64C
             (
-                *Qy, 
+                *Qy,
                 one_Hi | IEEEDPSign_Mask_Hi,
                 one_Lo | IEEEDPSign_Mask_Lo
             );
@@ -95,7 +94,7 @@
             double * Dminusone = (double *)&minusone;
             Set_Value64C
             (
-                minusone, 
+                minusone,
                 one_Hi | IEEEDPSign_Mask_Hi,
                 one_Lo | IEEEDPSign_Mask_Lo
             );

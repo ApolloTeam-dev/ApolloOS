@@ -1,9 +1,7 @@
 /*
-    Copyright © 2004-2018, The AROS Development Team. All rights reserved
-    $Id$
+    Copyright (C) 2004-2018, The AROS Development Team. All rights reserved
 
     Desc: Generic PCI-DMA ATA controller driver
-    Lang: English
 */
 
 #include <aros/debug.h>
@@ -48,7 +46,7 @@ static LONG dma_Setup(APTR addr, ULONG len, BOOL read, struct PRDEntry* array)
         len -= tmp;
         flg |= DMA_Continue;
 
-        /* 
+        /*
          * check if we're crossing the magic 64k boundary:
          */
         while (0 < tmp)

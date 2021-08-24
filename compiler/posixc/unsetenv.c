@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function unsetenv().
 */
@@ -12,16 +11,16 @@
     NAME */
 #include <stdlib.h>
 
-	void unsetenv (
+        int unsetenv (
 
 /*  SYNOPSIS */
-	const char *name)
+        const char *name)
 
 /*  FUNCTION
-	 deletes a variable from the environment.
+         deletes a variable from the environment.
 
     INPUTS
-	name  --  Name of the environment variable to delete.
+        name  --  Name of the environment variable to delete.
 
     RESULT
        Returns zero on success, or -1 if the variable was not found.

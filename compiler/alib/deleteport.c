@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: amiga.lib function DeletePort()
-    Lang: english
 */
 #include <proto/exec.h>
 
@@ -13,19 +11,19 @@
 #include <exec/ports.h>
 #include <proto/alib.h>
 
-	void DeletePort (
+        void DeletePort (
 
 /*  SYNOPSIS */
-	struct MsgPort * mp)
+        struct MsgPort * mp)
 
 /*  FUNCTION
-	Free a message port created by CreatePort()
+        Free a message port created by CreatePort()
 
     INPUTS
-	mp - The result of CreatePort()
+        mp - The result of CreatePort()
 
     RESULT
-	None.
+        None.
 
     NOTES
 
@@ -34,7 +32,7 @@
     BUGS
 
     SEE ALSO
-	CreatePort(), exec.library/CreateMsgPort(), exec.library/DeleteMsgPort()
+        CreatePort(), exec.library/CreateMsgPort(), exec.library/DeleteMsgPort()
 
     INTERNALS
 
@@ -43,7 +41,7 @@
 ******************************************************************************/
 {
     if (mp->mp_Node.ln_Name)
-	RemPort (mp);
+        RemPort (mp);
 
     DeleteMsgPort (mp);
 } /* DeletePort */

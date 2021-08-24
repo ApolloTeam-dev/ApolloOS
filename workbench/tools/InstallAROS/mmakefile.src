@@ -1,13 +1,21 @@
-# Copyright © 2009-2020, The AROS Development Team. All rights reserved.
-# $Id$
+# Copyright (C) 2009-2020, The AROS Development Team. All rights reserved.
 
 include $(SRCDIR)/config/aros.cfg
 
-FILES   := ia_main ia_bootloader ia_packages ia_diskio ia_class ia_env ia_locale
+FILES   := \
+        ia_main \
+        ia_bootloader \
+        ia_packages \
+        ia_diskio \
+        ia_class \
+        ia_option \
+        ia_env \
+        ia_locale
+
 EXEDIR  := $(AROS_TOOLS)
 
 #MM- workbench-tools : workbench-tools-installaros
-#MM workbench-tools-installaros : workbench-tools-installaros-catalogs
+#MM workbench-tools-installaros : kernel-hidd-storage-includes workbench-tools-installaros-catalogs
 
 USER_CPPFLAGS := -DARCHBOOTDIR=\"$(AROS_DIR_ARCH)\"
 ifeq ($(strip $(AROS_TARGET_BOOTLOADER)),grub)
@@ -16,7 +24,7 @@ endif
 ifeq ($(strip $(AROS_TARGET_BOOTLOADER)),grub2)
 USER_CPPFLAGS += -DGRUB=2
 endif
-USER_CPPFLAGS += -DDEBUG
+#USER_CPPFLAGS += -DDEBUG=1
 USER_CFLAGS := -w
 
 %build_prog mmake=workbench-tools-installaros \

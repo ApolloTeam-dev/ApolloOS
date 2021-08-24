@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, The AROS Development Team
+ * Copyright (C) 2013-2020, The AROS Development Team
  * All right reserved.
  * Author: Jason S. McMullan <jason.mcmullan@gmail.com>
  *
@@ -10,6 +10,10 @@
 #include <aros/symbolsets.h>
 #include <proto/graphics.h>
 #include <graphics/gfxbase.h>
+
+#include <aros/crt_replacement.h>
+
+#include <defines/exec_LVO.h>
 
 #include LC_LIBDEFS_FILE
 
@@ -23,10 +27,10 @@ AROS_LH1(struct MsgPort *, spFindPort,
         struct ExecBase *, SysBase, 65, Exec)
 {
     AROS_LIBFUNC_INIT
-    if (strcmp(name, SETPATCH_1_NAME) == 0) {
+    if (Strcmp(name, SETPATCH_1_NAME) == 0) {
         bug("SetPatch v1.x detected\n");
     }
-    if (strcmp(name, SETPATCH_2_NAME) == 0) {
+    if (Strcmp(name, SETPATCH_2_NAME) == 0) {
         bug("SetPatch v2.x detected\n");
     }
     return (struct MsgPort *)FindName(&SysBase->PortList,name);
@@ -40,7 +44,7 @@ AROS_LH1(struct SignalSemaphore *, spFindSemaphore,
 {
     AROS_LIBFUNC_INIT
     /* WB 3.x C:SetPatch called, we need to enable AGA. */
-    if (strcmp(name, SETPATCH_3_NAME) == 0) {
+    if (Strcmp(name, SETPATCH_3_NAME) == 0) {
         /* Not nice. Calling OpenLibrary() inside FindSemaphore(). */
         struct GfxBase *GfxBase = (struct GfxBase*)TaggedOpenLibrary(TAGGEDOPEN_GRAPHICS);
         if (GfxBase) {
@@ -92,9 +96,9 @@ int SetPatch_Init(struct SetPatchBase *sp)
 
     /* Patch FindPort and FindSemaphore */
 #if 0
-    sp->sp_OldFindPort = SetFunction(SysBase, -65 * LIB_VECTSIZE, Exec_65_spFindPort);
+    sp->sp_OldFindPort = SetFunction(SysBase, -LVOFindPort * LIB_VECTSIZE, Exec_65_spFindPort);
 #endif
-    sp->sp_OldFindSemaphore = SetFunction(SysBase, -99 * LIB_VECTSIZE, Exec_99_spFindSemaphore);
+    sp->sp_OldFindSemaphore = SetFunction(SysBase, -LVOFindSemaphore * LIB_VECTSIZE, Exec_99_spFindSemaphore);
 
     return 1;
 }

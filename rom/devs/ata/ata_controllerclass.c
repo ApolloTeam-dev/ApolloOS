@@ -1,6 +1,5 @@
 /*
-    Copyright (C) 2013-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2013-2020, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -23,15 +22,15 @@ const char ata_IDEName[] = "IDE Controller";
 OOP_Object *ATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg)
 {
     struct ataBase *ATABase = cl->UserData;
-//	char *ataControllerName = (char *)GetTagData(aHidd_HardwareName, (IPTR)ata_IDEName, msg->attrList);
+//      char *ataControllerName = (char *)GetTagData(aHidd_HardwareName, (IPTR)ata_IDEName, msg->attrList);
 
     OOP_Object *ataController = (OOP_Object *)OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
     if (ataController)
     {
         struct ata_Controller *data = OOP_INST_DATA(cl, ataController);
-//		data->ac_Node.ln_Name = ataControllerName;
+//              data->ac_Node.ln_Name = ataControllerName;
 
-//		D(bug ("[ATA:Controller] Root__New: New '%s' Controller Obj @ 0x%p\n", ataControllerName, ataController);)
+//              D(bug ("[ATA:Controller] Root__New: New '%s' Controller Obj @ 0x%p\n", ataControllerName, ataController);)
 
         /*register the controller in ata.device */
         D(bug ("[ATA:Controller] %s: Controller Entry @ 0x%p\n", __func__, data);)
@@ -86,7 +85,7 @@ void ATA__Root__Get(OOP_Class *cl, OOP_Object *o, struct pRoot_Get *msg)
 
 BOOL ATA__Hidd_StorageController__RemoveBus(OOP_Class *cl, OOP_Object *o, struct pHidd_StorageController_RemoveBus *msg)
 {
-    D(bug ("[ATA:Controller] Hidd_StorageController__RemoveBus(0x%p)\n", msg->busObject);)
+    D(bug ("[ATA:Controller] %s(0x%p)\n", __func__, msg->busObject);)
    /*
      * Currently we don't support unloading ATA bus drivers.
      * This is a very-very big TODO.
@@ -98,8 +97,9 @@ BOOL ATA__Hidd_StorageController__SetUpBus(OOP_Class *cl, OOP_Object *o, struct 
 {
     struct ataBase *ATABase = cl->UserData;
     struct TagItem busTags[2];
+    BOOL        retVal;
 
-    D(bug ("[ATA:Controller] Hidd_StorageController__SetUpBus(0x%p)\n", msg->busObject);)
+    D(bug ("[ATA:Controller] %s(0x%p)\n", __func__, msg->busObject);)
 
     /*
      * Instantiate interfaces. PIO is mandatory, DMA is not.
@@ -111,7 +111,7 @@ BOOL ATA__Hidd_StorageController__SetUpBus(OOP_Class *cl, OOP_Object *o, struct 
     if (!HIDD_ATABus_GetPIOInterface(msg->busObject))
         return FALSE;
 
-    D(bug ("[ATA:Controller] Hidd_StorageController__SetUpBus: PIO Interfaces obtained\n");)
+    D(bug ("[ATA:Controller] %s: PIO Interfaces obtained\n", __func__);)
 
     if (!ATABase->ata_NoDMA)
         HIDD_ATABus_GetDMAInterface(msg->busObject);
@@ -124,11 +124,15 @@ BOOL ATA__Hidd_StorageController__SetUpBus(OOP_Class *cl, OOP_Object *o, struct 
     D(bug ("[ATA:Controller] Hidd_StorageController__SetUpBus: Starting Bus...\n");)
 
     /* Add the bus to the device and start service */
-    return Hidd_ATABus_Start(msg->busObject, ATABase);
+    retVal = Hidd_ATABus_Start(msg->busObject, ATABase);
+
+    D(bug ("[ATA:Controller] %s: Returning %s...\n", __func__, (retVal) ? "TRUE" : "FALSE");)
+
+    return retVal;
 }
 
 void ATA__Hidd_StorageController__CleanUpBus(OOP_Class *cl, OOP_Object *o, struct pHidd_StorageController_CleanUpBus *msg)
 {
-    D(bug ("[ATA:Controller] Hidd_StorageController__CleanUpBus(0x%p)\n", msg->busObject);)
+    D(bug ("[ATA:Controller] %s(0x%p)\n", __func__, msg->busObject);)
     /* By default we have nothing to do here */
 }

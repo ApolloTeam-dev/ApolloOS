@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #ifdef HOST_OS_ios
@@ -25,7 +24,7 @@
 #define stat64 stat
 #else
 
-/* 
+/*
  * Use 32-bit inode_t on Darwin. Otherwise we are expected to use "stat$INODE64"
  * instead of "stat" function which is available only on MacOS 10.6.
  */
@@ -282,7 +281,7 @@ int Host_ProbeGeometry(struct HostDiskBase *hdskBase, char *name, struct DriveGe
     HostLib_Unlock();
     
     return res;
-}    
+}
 
 extern const char Hostdisk_LibName[];
 

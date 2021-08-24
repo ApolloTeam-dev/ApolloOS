@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2005, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2005, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/types.h>
@@ -10,7 +9,7 @@
 #include "strings.h"
 
 #define CATALOG_NAME     "System/System/Wanderer/Tools/DiskInfo.catalog"
-#define CATALOG_VERSION  2
+#include "catalogs/catalog_version.h"
 
 /*** Variables **************************************************************/
 struct Catalog *catalog;
@@ -34,8 +33,8 @@ VOID Locale_Initialize(VOID)
     if (LocaleBase != NULL)
     {
         catalog = OpenCatalog
-        ( 
-            NULL, CATALOG_NAME, OC_Version, CATALOG_VERSION, TAG_DONE 
+        (
+            NULL, CATALOG_NAME, OC_Version, CATALOG_VERSION, TAG_DONE
         );
     } else {
         catalog = NULL;

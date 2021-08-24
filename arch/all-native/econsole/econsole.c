@@ -1,9 +1,7 @@
 /*
-    Copyright  1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright  1995-2020, The AROS Development Team. All rights reserved.
 
     Desc: Emergency console launcher for AROS
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -22,6 +20,8 @@
 #include <proto/graphics.h>
 #include <proto/alib.h>
 #include <proto/expansion.h>
+
+#include <string.h>
 
 #include LC_LIBDEFS_FILE
 

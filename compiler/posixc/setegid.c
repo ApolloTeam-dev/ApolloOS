@@ -1,6 +1,5 @@
 /*
-    Copyright © 2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2017, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function setegid().
 */
@@ -15,24 +14,24 @@
     NAME */
 #include <unistd.h>
 
-	int setegid(
+        int setegid(
 
 /*  SYNOPSIS */
-	gid_t gid)
+        gid_t gid)
 
 /*  FUNCTION
-	Set the effective group id of the calling process to gid.
+        Set the effective group id of the calling process to gid.
 
     INPUTS
-	
+        
     RESULT
-	
+        
     NOTES
 
     EXAMPLE
 
     BUGS
-    	
+        
     SEE ALSO
         
     INTERNALS

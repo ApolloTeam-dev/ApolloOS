@@ -1,6 +1,5 @@
 /*
     Copyright (C) 2017, The AROS Development Team. All rights reserved.
-    $Id$
 */
 
 #define DEBUG 0
@@ -10,6 +9,8 @@
 
 #include <oop/oop.h>
 #include <utility/tagitem.h>
+
+#include <string.h>
 
 #include "acpibutton_intern.h"
 

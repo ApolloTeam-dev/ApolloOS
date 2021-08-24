@@ -1,6 +1,5 @@
 /*
-Copyright © 2002-2011, The AROS Development Team. 
-$Id$
+Copyright (C) 2002-2011, The AROS Development Team.
 */
 
 #define DEBUG 0
@@ -9,20 +8,12 @@ $Id$
 #include <intuition/icclass.h>
 #include <intuition/gadgetclass.h>
 
-#ifdef __AROS__
 #include <aros/debug.h>
 #include <clib/alib_protos.h>
-#else
-#include "../portable_macros.h"
-#define WANDERER_BUILTIN_ICONLISTVIEW 1
-#endif
 
 #include <proto/exec.h>
 #include <proto/utility.h>
 
-#if defined(__AMIGA__) && !defined(__PPC__)
-#define NO_INLINE_STDARG
-#endif
 #include <proto/intuition.h>
 #include <proto/muimaster.h>
 
@@ -32,23 +23,6 @@ $Id$
 #include "iconlist.h"
 #include "iconlistview.h"
 #include "iconlistview_private.h"
-
-#ifndef __AROS__
-
-#ifdef DEBUG
-  #define D(x) if (DEBUG) x
-  #ifdef __amigaos4__
-  #define bug DebugPrintF
-  #else
-  #define bug kprintf
-  #endif
-#else
-  #define  D(...)
-#endif
-
-#define ScrollbuttonObject MUI_MakeObject(MUIO_Button, (IPTR)"scroll"
-
-#endif
 
 extern struct Library *MUIMasterBase;
 
@@ -92,7 +66,7 @@ ULONG IconListview_Layout_Function(struct Hook *hook, Object *obj, struct MUI_La
 
         case MUILM_LAYOUT:
         {
-            /* 
+            /*
             Now place the objects between (0,0,lm->lm_Layout.Width-1,lm->lm_Layout.Height-1)
             */
 
@@ -125,7 +99,7 @@ ULONG IconListview_Layout_Function(struct Hook *hook, Object *obj, struct MUI_La
                 MUI_Layout(data->vert, cont_width, 0, vert_width, cont_height, 0);
                 MUI_Layout(data->horiz, 0, cont_height, cont_width, horiz_height, 0);
                 MUI_Layout(data->button, cont_width, cont_height, vert_width, horiz_height, 0);
-            } 
+            }
             else
             {
                 if (virt_height > lay_height)
@@ -137,7 +111,7 @@ ULONG IconListview_Layout_Function(struct Hook *hook, Object *obj, struct MUI_La
                     cont_width = lay_width - vert_width;
                     cont_height = lay_height;
                     MUI_Layout(data->vert, cont_width, 0, vert_width, cont_height,0);
-                } 
+                }
                 else
                 {
                     if (virt_width > lay_width)
@@ -149,7 +123,7 @@ ULONG IconListview_Layout_Function(struct Hook *hook, Object *obj, struct MUI_La
                         cont_width = lay_width;
                         cont_height = lay_height - horiz_height;
                         MUI_Layout(data->horiz, 0, cont_height, cont_width, horiz_height, 0);
-                    } 
+                    }
                     else
                     {
                         set(data->vert, MUIA_ShowMe, FALSE);
@@ -194,11 +168,11 @@ ULONG IconListview_Function(struct Hook *hook, APTR dummyobj, void **msg)
             SetAttrs(data->iconlist,MUIA_Virtgroup_Left, val, MUIA_NoNotify, TRUE, TAG_DONE);
             break;
         }
-        case 3: 
-            nnset(data->horiz, MUIA_Prop_First, val); 
+        case 3:
+            nnset(data->horiz, MUIA_Prop_First, val);
             break;
-        case 4: 
-            nnset(data->vert, MUIA_Prop_First, val); 
+        case 4:
+            nnset(data->vert, MUIA_Prop_First, val);
             break;
     }
     
@@ -217,13 +191,13 @@ IPTR IconListview__OM_NEW(struct IClass *cl, Object *obj, struct opSet *msg)
     struct Hook *layout_hook = AllocVec(sizeof(struct Hook), MEMF_CLEAR);
     int usewinborder;
 
-    if (!layout_hook) 
+    if (!layout_hook)
         return 0;
     usewinborder = GetTagData(MUIA_IconListview_UseWinBorder, FALSE, msg->ops_AttrList);
 
-    if (!usewinborder) 
+    if (!usewinborder)
         button = ScrollbuttonObject, End;
-    else 
+    else
         button = NULL;
 
     #ifndef __amigaos4__
@@ -358,7 +332,7 @@ IPTR IconListview__MUIM_Show(struct IClass *cl, Object *obj, struct MUIP_Show *m
     get(data->iconlist, MUIA_IconList_Height, &height);
 
     SetAttrs(
-        data->horiz, 
+        data->horiz,
         MUIA_Prop_First, left,
         MUIA_Prop_Entries, width,
         MUIA_Prop_Visible, _mwidth(data->iconlist),
@@ -366,7 +340,7 @@ IPTR IconListview__MUIM_Show(struct IClass *cl, Object *obj, struct MUIP_Show *m
     );
 
     SetAttrs(
-        data->vert,  
+        data->vert,
         MUIA_Prop_First, top,
         MUIA_Prop_Entries, height,
         MUIA_Prop_Visible, _mheight(data->iconlist),
@@ -392,21 +366,12 @@ BOOPSI_DISPATCHER(IPTR,IconListview_Dispatcher, cl, obj, msg)
 }
 BOOPSI_DISPATCHER_END
 
-#ifdef __AROS__
 const struct __MUIBuiltinClass _MUI_IconListview_desc =
 {
-    MUIC_IconListview, 
-    MUIC_Group, 
-    sizeof(struct IconListview_DATA), 
-    (void*)IconListview_Dispatcher 
+    MUIC_IconListview,
+    MUIC_Group,
+    sizeof(struct IconListview_DATA),
+    (void*)IconListview_Dispatcher
 };
-#endif
 #endif /* ZUNE_BUILTIN_ICONLISTVIEW */
 
-#ifndef __AROS__
-struct MUI_CustomClass  *initIconListviewClass(void)
-{
-  return (struct MUI_CustomClass *) MUI_CreateCustomClass(NULL, MUIC_Group, NULL, sizeof(struct IconListview_DATA), ENTRY(IconListview_Dispatcher));
-}
-
-#endif

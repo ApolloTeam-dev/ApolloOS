@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Release all semaphores in the list.
-    Lang: english
 */
 #include "exec_intern.h"
 #include "semaphores.h"
@@ -14,19 +12,19 @@
 
     NAME */
 
-	AROS_LH1(void, ReleaseSemaphoreList,
+        AROS_LH1(void, ReleaseSemaphoreList,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct List *, sigSem, A0),
+        AROS_LHA(struct List *, sigSem, A0),
 
 /*  LOCATION */
-	struct ExecBase *, SysBase, 98, Exec)
+        struct ExecBase *, SysBase, 98, Exec)
 
 /*  FUNCTION
-	This function releases all semaphores in the list at once.
+        This function releases all semaphores in the list at once.
 
     INPUTS
-	sigSem - pointer to list full of semaphores
+        sigSem - pointer to list full of semaphores
 
     RESULT
 
@@ -47,13 +45,13 @@
     struct SignalSemaphore *ss;
 
     /*
-     *	We own all the semaphores, so just go over the list and release
-     *	them one at a time.
+     *  We own all the semaphores, so just go over the list and release
+     *  them one at a time.
      */
 
     ForeachNode(sigSem, ss)
     {
-	ReleaseSemaphore(ss);
+        ReleaseSemaphore(ss);
     }
 
     AROS_LIBFUNC_EXIT

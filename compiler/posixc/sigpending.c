@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function sigpending().
 */
@@ -14,10 +13,10 @@
 
 #include <signal.h>
 
-	int sigpending (
+        int sigpending (
 
 /*  SYNOPSIS */
-	sigset_t *set)
+        sigset_t *set)
 
 /*  FUNCTION
 

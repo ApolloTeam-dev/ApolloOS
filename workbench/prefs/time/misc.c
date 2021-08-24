@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 /*********************************************************************************************/
@@ -21,7 +19,7 @@ struct NewMenu nm[] =
     {NM_ITEM,  (STRPTR)MSG_MEN_PROJECT_QUIT },
     {NM_TITLE, (STRPTR)MSG_MEN_EDIT         },
     {NM_ITEM,  (STRPTR)MSG_MEN_EDIT_RESTORE },
-    {NM_END 	    	    	    	    }
+    {NM_END                                 }
 };
 
 /*********************************************************************************************/
@@ -40,8 +38,8 @@ void InitMenus(void)
             if (actnm->nm_Type == NM_TITLE)
             {
                 actnm->nm_Label = str;
-            } 
-            else 
+            }
+            else
             {
                 actnm->nm_Label = str + 2;
                 if (str[0] != ' ') actnm->nm_CommKey = str;
@@ -49,7 +47,7 @@ void InitMenus(void)
             actnm->nm_UserData = (APTR)(IPTR)id;
             
         } /* if (actnm->nm_Label != NM_BARLABEL) */
-	
+        
     } /* for(actnm = nm; nm->nm_Type != NM_END; nm++) */
 
 }

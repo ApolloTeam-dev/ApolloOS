@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang:
 */
 
 #include <stdarg.h>
@@ -50,7 +48,7 @@ LONG printx(LONG nargs, ...)
 
     baseval = DummyBase->lastval;
 
-    va_start(args, nargs); 
+    va_start(args, nargs);
 
     if (DOSBase) {
         for (i = 0; i < nargs; i++) {

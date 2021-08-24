@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function chdir().
 */
@@ -19,27 +18,27 @@
     NAME */
 #include <unistd.h>
 
-	int chdir(
+        int chdir(
 
 /*  SYNOPSIS */
-	const char *path )
+        const char *path )
 
 /*  FUNCTION
-	Change the current working directory to the one specified by path.
+        Change the current working directory to the one specified by path.
 
     INPUTS
-    	path - Path of the directory to change to.
-	
+        path - Path of the directory to change to.
+        
     RESULT
-	If the current directory was changed successfully, zero is returned.	
-    	Otherwise, -1 is returned and errno set apropriately.
-	
+        If the current directory was changed successfully, zero is returned.
+        Otherwise, -1 is returned and errno set appropriately.
+        
     NOTES
-    	At program exit, the current working directory will be changed back
-	to the one that was current when the program first started. If you
-	do not desire this behaviour, use dos.library/CurrentDir() instead.
+        At program exit, the current working directory will be changed back
+        to the one that was current when the program first started. If you
+        do not desire this behavior, use dos.library/CurrentDir() instead.
         The path given to chdir can be translated so that getcwd gives back
-        a string that is not the same but points to th same directory. For
+        a string that is not the same but points to the same directory. For
         example, assigns are replaced by the path where the assign points to
         and device names (like DH0:) are replaced with the volume name
         (e.g. Workbench:).
@@ -63,26 +62,26 @@
     
     if (path == NULL)
         return -1;
-	    
+            
     newlock = Lock( path, SHARED_LOCK );
 
     if( newlock == BNULL )
     {
         errno = __stdc_ioerr2errno( IoErr() );
-	goto error;
+        goto error;
     }
 
     oldlock = CurrentDir( newlock );
     
     if( PosixCBase->cd_changed )
     {
-    	UnLock( oldlock );
+        UnLock( oldlock );
     }
     else
     {
-    	PosixCBase->cd_changed = TRUE;
-	PosixCBase->cd_lock    = oldlock;
-    }    
+        PosixCBase->cd_changed = TRUE;
+        PosixCBase->cd_lock    = oldlock;
+    }
     
     return 0;
 

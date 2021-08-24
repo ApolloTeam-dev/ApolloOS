@@ -1,6 +1,5 @@
 /*
-    Copyright © 2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2012-2020, The AROS Development Team. All rights reserved.
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
@@ -106,7 +105,7 @@ IPTR Process__OM_NEW(struct IClass *cl, Object *obj, struct opSet *msg)
         }
     }
 
-    D(bug("muimaster.library/process.c: Process Object created at 0x%lx\n",
+    D(bug("muimaster.library/process.c: Process Object created at 0x%p\n",
             obj));
 
     if (data->autolaunch)

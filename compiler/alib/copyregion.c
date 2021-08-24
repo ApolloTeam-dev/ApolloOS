@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc: (AROS only) Graphics function CopyRegion()
-    Lang: english
 */
 
 #include <graphics/regions.h>
@@ -14,19 +12,19 @@
     NAME */
 #include <proto/alib.h>
 
-	struct Region *CopyRegion(
+        struct Region *CopyRegion(
 
 /*  SYNOPSIS */
-	struct Region *region)
+        struct Region *region)
 
 /*  FUNCTION
-    	Make a copy of the given Region.
+        Make a copy of the given Region.
 
     INPUTS
-	region - pointer to a Region structure
+        region - pointer to a Region structure
 
     RESULT
-	the copy of the Region, or NULL if not enough memory.
+        the copy of the Region, or NULL if not enough memory.
 
     NOTES
 
@@ -39,7 +37,6 @@
     INTERNALS
 
     HISTORY
-	13-12-2000  stegerg implemented
 
 *****************************************************************************/
 {
@@ -47,8 +44,8 @@
     
     if (nreg)
     {
-    	if (OrRegionRegion(region, nreg))
-    	    return nreg;
+        if (OrRegionRegion(region, nreg))
+            return nreg;
 
         DisposeRegion(nreg);
     }

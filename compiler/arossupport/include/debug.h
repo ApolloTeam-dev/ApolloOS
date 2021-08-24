@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Debugging macros.
     This include file can be included several times!
@@ -19,7 +18,6 @@
 #   include <exec/alerts.h>
 #endif
 
-#include <string.h>
 
 #ifndef DEBUG
 #   define DEBUG 0
@@ -166,7 +164,7 @@
 
 #define ASSERT(x) do {						\
 	if (!(x)) {						\
-	  DBPRINTF("\x07%s:%ld: assertion failed: %s\n",	\
+	  DBPRINTF("\x07%s:%u: assertion failed: %s\n",	\
 	           THIS_FILE, __LINE__, #x);			\
 	  Alert(AG_BadParm);					\
 	}							\
@@ -174,7 +172,7 @@
 
 #define ASSERT_VALID_PTR(x) do {				\
 	if (((IPTR)(x) < 1024) || !TypeOfMem((APTR)(x))) {	\
-	  DBPRINTF("\x07%s, %ld: bad pointer: %s = $%p\n",	\
+	  DBPRINTF("\x07%s, %u: bad pointer: %s = $%p\n",	\
 	           THIS_FILE, __LINE__, #x, x);			\
 	  Alert(AG_BadParm);					\
 	}							\
@@ -183,7 +181,7 @@
 #define ASSERT_VALID_PTR_OR_NULL(x) do {			\
 	if (((x) != NULL) &&					\
 	    (((IPTR)(x) < 1024) || !TypeOfMem((APTR)(x)))) {	\
-	  DBPRINTF("\x07%s, %ld: bad pointer: %s = $%p\n",	\
+	  DBPRINTF("\x07%s, %u: bad pointer: %s = $%p\n",	\
 	           THIS_FILE, __LINE__, #x, x);			\
 	  Alert(AG_BadParm);					\
 	}							\
@@ -202,7 +200,7 @@
 
 #define KASSERT(x) do {						\
 	if (!(x)) {						\
-	  DBPRINTF("\x07%s:%ld: assertion failed: %s\n",	\
+	  DBPRINTF("\x07%s:%u: assertion failed: %s\n",	\
 	           THIS_FILE, __LINE__, #x);			\
 	  Alert(AG_BadParm);					\
 	}							\
@@ -272,7 +270,7 @@
 	    if(*__p != (fill))				\
 	    {						\
 		struct Task *__t = FindTask(NULL);	\
-		kprintf("\x07" "Broken wall detected at %s:%d at 0x%p, " \
+		kprintf("\x07" "Broken wall detected at %s:%u at 0x%p, " \
 			"Task: 0x%p, Name: %s\n",       \
                         __FUNCTION__, __LINE__,         \
 			__p, __t, __t->tc_Node.ln_Name);\
@@ -359,7 +357,7 @@
     	ULONG *stktop = me->tc_SPLower;					\
     									\
     	if (stktop && (*stktop != 0xE1E1E1E1))				\
-            bug("STACK OVERFLOW in %s, line %d\n", __FILE__, __LINE__);	\
+            bug("STACK OVERFLOW in %s, line %u\n", __FILE__, __LINE__);	\
     }									\
 }
 #else
@@ -389,6 +387,6 @@
 #define aros_print_not_implemented(name) \
     kprintf("The function %s() is not implemented.\n", (name))
 
-#define ALIVE kprintf("%s - %s line %d\n",__FILE__,__FUNCTION__,__LINE__);
+#define ALIVE kprintf("%s - %s line %u\n",__FILE__,__FUNCTION__,__LINE__);
 
 #endif /* AROS_DEBUG_H */

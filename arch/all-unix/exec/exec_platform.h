@@ -1,6 +1,10 @@
 #ifndef __EXEC_PLATFORM_H
 #define __EXEC_PLATFORM_H
 
+#if defined(_WANT_UCONTEXT) && defined(_HAVE_CONFIG_H)
+#include <aros/host-conf.h>
+#endif
+
 #define SCHEDQUANTUM_VALUE      4
 
 #ifdef HOST_OS_android
@@ -15,8 +19,20 @@
  */
 #define _XOPEN_SOURCE
 #endif
-#include <ucontext.h>
 
+#if defined(HAVE_UCONTEXT_H)
+#define _HAVE_UCONTEXT
+#include <ucontext.h>
+#else
+#if defined(HAVE_SYS_UCONTEXT_H)
+#define _HAVE_UCONTEXT
+#include <sys/ucontext.h>
+#endif
+#endif
+#endif
+
+#if defined(_WANT_UCONTEXT) && !defined(_HAVE_UCONTEXT)
+#warning "missing support for ucontext_t on this platform"
 #endif
 
 #ifdef HOST_OS_linux

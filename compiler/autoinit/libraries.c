@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2019, The AROS Development Team. All rights reserved.
 
     Desc: autoinit library - automatic library opening/closing handling
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -36,7 +34,7 @@ int _set_open_libraries_list(const void * const list[], struct ExecBase *SysBase
         
         if (version < 0)
         {
-            version = -(version + 1); 
+            version = -(version + 1);
             do_not_fail = 1;
         }
 
@@ -91,7 +89,7 @@ int _set_open_rellibraries_list(APTR base, const void * const list[], struct Exe
 
         if (version < 0)
         {
-            version = -(version + 1); 
+            version = -(version + 1);
             do_not_fail = 1;
         }
 

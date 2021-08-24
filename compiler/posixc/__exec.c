@@ -1,9 +1,11 @@
 /*
-    Copyright © 2008-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2008-2021, The AROS Development Team. All rights reserved.
 
     Support functions for POSIX exec*() functions.
 */
+
+#include <aros/debug.h>
+
 #include <exec/types.h>
 #include <dos/dos.h>
 #include <proto/dos.h>
@@ -25,9 +27,6 @@
 #include "__upath.h"
 #include "__fdesc.h"
 #include "__vfork.h"
-
-#define DEBUG 0
-#include <aros/debug.h>
 
 static BOOL containswhite(const char *str);
 static char *escape(const char *str);
@@ -627,11 +626,11 @@ void __exec_cleanup_array()
 static BOOL containswhite(const char *str)
 {
     while(*str != '\0')
-    	if(isspace(*str++)) return TRUE;
+        if(isspace(*str++)) return TRUE;
     return FALSE;
 }
 
-/* Escape the string and quote it */ 
+/* Escape the string and quote it */
 static char *escape(const char *str)
 {
     const char *strptr = str;
@@ -651,7 +650,7 @@ static char *escape(const char *str)
     }
     escptr = escaped = (char*) malloc(bufsize);
     if(!escaped)
-    	return NULL;
+        return NULL;
     *escptr++ = '"';
     for(strptr = str; *strptr != '\0'; strptr++)
     {

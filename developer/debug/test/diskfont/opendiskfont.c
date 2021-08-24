@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <diskfont/diskfont.h>
@@ -53,7 +52,7 @@ void action(void)
     font = OpenDiskFont(&ta);
     if (font)
     {
-	CloseFont(font);
+        CloseFont(font);
     }
 }
 

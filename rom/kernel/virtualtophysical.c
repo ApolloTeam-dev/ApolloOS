@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -18,10 +17,10 @@
         AROS_LH1I(void *, KrnVirtualToPhysical,
 
 /*  SYNOPSIS */
-	AROS_LHA(void *, virtual, A0),
+        AROS_LHA(void *, virtual, A0),
 
 /*  LOCATION */
-	struct KernelBase *, KernelBase, 20, Kernel)
+        struct KernelBase *, KernelBase, 20, Kernel)
 
 /*  FUNCTION
 
@@ -41,10 +40,10 @@
 
 ******************************************************************************/
 {
-	AROS_LIBFUNC_INIT
+        AROS_LIBFUNC_INIT
 
-	/* The implementation is entirely architecture-specific */
-	return virtual;
+        /* The implementation is entirely architecture-specific */
+        return virtual;
 
-	AROS_LIBFUNC_EXIT
+        AROS_LIBFUNC_EXIT
 }

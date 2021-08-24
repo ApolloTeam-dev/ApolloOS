@@ -1,6 +1,5 @@
 /*
-    Copyright © 2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2017-2020, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -18,13 +17,13 @@
         AROS_LH1(void, KrnClearCPUMask,
 
 /*  SYNOPSIS */
-	AROS_LHA(void *, mask, A0),
+        AROS_LHA(void *, mask, A0),
 
 /*  LOCATION */
-	struct KernelBase *, KernelBase, 44, Kernel)
+        struct KernelBase *, KernelBase, 44, Kernel)
 
 /*  FUNCTION
-	Clear the affinity mask for (re)use.
+        Clear the affinity mask for (re)use.
 
     INPUTS
 
@@ -37,7 +36,7 @@
     BUGS
 
     SEE ALSO
-	KrnGetCPUNumber(), KrnAllocCPUMask(), KrnGetCPUMask(), KrnCPUInMask()
+        KrnGetCPUNumber(), KrnAllocCPUMask(), KrnGetCPUMask(), KrnCPUInMask()
 
     INTERNALS
 

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc: (AROS only) Graphics function ClearRegionRegion()
-    Lang: english
 */
 
 #include "graphics_intern.h"
@@ -16,40 +14,40 @@
     NAME */
 #include <clib/graphics_protos.h>
 
-	AROS_LH2(BOOL, ClearRegionRegion,
+        AROS_LH2(BOOL, ClearRegionRegion,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct Region *, R1, A0),
-	AROS_LHA(struct Region *, R2, A1),
+        AROS_LHA(struct Region *, R1, A0),
+        AROS_LHA(struct Region *, R2, A1),
 
 /*  LOCATION */
-	struct GfxBase *, GfxBase, 182, Graphics)
+        struct GfxBase *, GfxBase, 182, Graphics)
 
 /*  FUNCTION
-	Clear the given Region region1 from the given Region region2
-	leaving the result in region2.
+        Clear the given Region region1 from the given Region region2
+        leaving the result in region2.
 
     INPUTS
-	region1 - pointer to a Region structure
-	region2 - pointer to a Rectangle structure
+        region1 - pointer to a Region structure
+        region2 - pointer to a Rectangle structure
 
     RESULT
-	FALSE if not enough memory was available, else TRUE
+        FALSE if not enough memory was available, else TRUE
 
     NOTES
-	This function does not exist in AmigaOS.
+        This function does not exist in AmigaOS.
 
     EXAMPLE
 
     BUGS
 
     SEE ALSO
-	ClearRectRegion(), AndRectRegion(), OrRectRegion(), XorRectRegion()
+        ClearRectRegion(), AndRectRegion(), OrRectRegion(), XorRectRegion()
 
     INTERNALS
 
     HISTORY
-	13-12-2000  stegerg implemented
+        13-12-2000  stegerg implemented
 
 *****************************************************************************/
 {
@@ -70,7 +68,7 @@
             _ClearBandBand,
             MinX(R1),
             MinX(R2),
-	    MinY(R1),
+            MinY(R1),
             MinY(R2),
             R1->RegionRectangle,
             R2->RegionRectangle,
@@ -80,7 +78,7 @@
         )
     )
     {
-	ClearRegion(R2);
+        ClearRegion(R2);
 
         *R2 = R3;
 

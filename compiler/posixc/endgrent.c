@@ -1,6 +1,5 @@
 /*
-    Copyright © 2004, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -11,10 +10,10 @@
     NAME */
 #include <grp.h>
 
-	void endgrent(
+        void endgrent(
 
 /*  SYNOPSIS */
-	void)
+        void)
 
 /*  FUNCTION
 
@@ -23,7 +22,7 @@
     RESULT
 
     NOTES
-	Not implemented.
+        Not implemented.
 
     EXAMPLE
 

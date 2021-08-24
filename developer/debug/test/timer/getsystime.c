@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2016, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2016, The AROS Development Team. All rights reserved.
 */
 
 #include <stdio.h>
@@ -43,7 +42,7 @@ int main(int argc, char **argv)
                 GetSysTime(&t2);
 
                 SubTime(&t2, &t1);
-                printf("result %u secs %u micros\n", 
+                printf("result %u secs %u micros\n",
                     (unsigned int)t2.tv_secs,
                     (unsigned int)t2.tv_micro);
                 CloseDevice((struct IORequest *)TimerIO);

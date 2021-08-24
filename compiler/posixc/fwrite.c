@@ -1,17 +1,18 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 
     C99 function fwrite().
 */
 
-#include <errno.h>
+#include <aros/debug.h>
+
 #include <dos/dos.h>
 #include <dos/dosextens.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
-#define DEBUG 0
-#include <aros/debug.h>
+
+#include <errno.h>
+
 #include "__stdio.h"
 #include "__fdesc.h"
 
@@ -20,13 +21,13 @@
     NAME */
 #include <unistd.h>
 
-	size_t fwrite (
+        size_t __posixc_fwrite (
 
 /*  SYNOPSIS */
-	const void * restrict	buf,
-	size_t			size,
-	size_t			nblocks,
-	FILE * restrict		stream)
+        const void * restrict   buf,
+        size_t                  size,
+        size_t                  nblocks,
+        FILE * restrict         stream)
 
 /*  FUNCTION
         Write an amount of bytes to a stream.
@@ -42,7 +43,7 @@
         nblocks. Otherwise examine errno for the reason of the error.
 
     SEE ALSO
-        fopen(), fwrite()
+        __posixc_fopen()
 
 ******************************************************************************/
 {
@@ -62,9 +63,9 @@
     }
 
     if (nblocks > 0 && size > 0)
-	cnt = FWrite (fdesc->fcb->handle, (CONST APTR)buf, size, nblocks);
+        cnt = FWrite (fdesc->fcb->handle, (CONST APTR)buf, size, nblocks);
     else
-	cnt = 0;
+        cnt = 0;
 
     if (cnt == -1)
     {

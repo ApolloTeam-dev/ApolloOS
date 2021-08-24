@@ -1,9 +1,7 @@
 /*
-        Copyright © 1995-2002, The AROS Development Team. All rights reserved.
-    $Id$
+        Copyright (C) 1995-2002, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 #include "rexxsyslib_intern.h"
 
@@ -14,13 +12,13 @@
     NAME */
 #include <clib/rexxsyslib_protos.h>
 
-	AROS_LH1(VOID, DeleteArgstring,
+        AROS_LH1(VOID, DeleteArgstring,
 
 /*  SYNOPSIS */
-	AROS_LHA(UBYTE *, argstring, A0),
+        AROS_LHA(UBYTE *, argstring, A0),
 
 /*  LOCATION */
-	struct RxsLib *, RexxSysBase, 22, RexxSys)
+        struct RxsLib *, RexxSysBase, 22, RexxSys)
 
 /*  FUNCTION
         Deletes a RexxArg structure previously created with CreateArgstring

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Initialize raw IO
-    Lang: english
 */
 
 /*****i***********************************************************************
@@ -11,31 +9,31 @@
     NAME */
 #include <proto/exec.h>
 
-	AROS_LH0(void, RawIOInit,
+        AROS_LH0(void, RawIOInit,
 
 /*  LOCATION */
-	struct ExecBase *, SysBase, 84, Exec)
+        struct ExecBase *, SysBase, 84, Exec)
 
 /*  FUNCTION
-	This is a private function. It initializes raw IO. After you
-	have called this function, you can use RawMayGetChar() and
-	RawPutChar().
+        This is a private function. It initializes raw IO. After you
+        have called this function, you can use RawMayGetChar() and
+        RawPutChar().
 
     INPUTS
-	None.
+        None.
 
     RESULT
-	None.
+        None.
 
     NOTES
-	This function is for very low level debugging only.
+        This function is for very low level debugging only.
 
     EXAMPLE
 
     BUGS
 
     SEE ALSO
-	RawPutChar(), RawMayGetChar()
+        RawPutChar(), RawMayGetChar()
 
     INTERNALS
 

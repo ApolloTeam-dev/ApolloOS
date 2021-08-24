@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2015, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2020, The AROS Development Team. All rights reserved.
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
@@ -404,7 +403,7 @@ STATIC VOID Imageadjust_SetImagespec(Object *obj,
     case '3':
     case '4':
         {
-            struct ExternalListEntry *entry;
+            struct ExternalListEntry *entry = NULL;
             LONG entries = 0;
             int i;
 
@@ -961,90 +960,93 @@ IPTR Imageadjust__OM_GET(struct IClass *cl, Object *obj,
                     break;
             }
 
-            act = pages_per_type[i].pos[act];
-
-            switch (act)
+            if (i < 4)
             {
-            case 0:            /* Pattern */
-                if ((data->imagespec = AllocVec(40, 0)))
-                {
-                    if (data->last_pattern_selected != -1)
-                        snprintf(data->imagespec, 40, "0:%d",
-                            (int)data->last_pattern_selected + 128);
-                    else
-                        strcpy(data->imagespec, "0:128");
-                }
-                break;
+                act = pages_per_type[i].pos[act];
 
-            case 1:
-                if ((data->imagespec = AllocVec(20, 0)))
+                switch (act)
                 {
-                    if (data->last_vector_selected != -1)
-                        snprintf(data->imagespec, 20, "1:%d",
-                            (int)data->last_vector_selected);
-                    else
-                        strcpy(data->imagespec, "0:128");
-                }
-                break;
-
-            case 2:
-                {
-                    struct MUI_PenSpec *penspec = NULL;
-
-                    get(data->color_group, MUIA_Penadjust_Spec, &penspec);
-                    if (penspec)
+                case 0:            /* Pattern */
+                    if ((data->imagespec = AllocVec(40, 0)))
                     {
-                        LONG len;
-                        D(bug("imageadjust: penspec = %s\n", penspec));
-                        len = strlen((STRPTR) penspec) + 3;
-                        if ((data->imagespec = AllocVec(len, 0)))
-                            snprintf(data->imagespec, len, "2:%s",
-                                penspec->buf);
+                        if (data->last_pattern_selected != -1)
+                            snprintf(data->imagespec, 40, "0:%d",
+                                (int)data->last_pattern_selected + 128);
+                        else
+                            strcpy(data->imagespec, "0:128");
                     }
-                }
-                break;
+                    break;
 
-            case 3:            /* External */
-                {
-                    struct ExternalListEntry *entry;
-
-                    DoMethod(data->external_list, MUIM_List_GetEntry,
-                        MUIV_List_GetEntry_Active, (IPTR) & entry);
-                    if (entry != NULL && entry->filename != NULL
-                        && entry->reldir != NULL)
+                case 1:
+                    if ((data->imagespec = AllocVec(20, 0)))
                     {
-                        LONG len;
-                        len =
-                            2 + strlen(entry->reldir) + 1 +
-                            strlen(entry->filename) + 1;
-                        if ((data->imagespec = AllocVec(len, 0)))
+                        if (data->last_vector_selected != -1)
+                            snprintf(data->imagespec, 20, "1:%d",
+                                (int)data->last_vector_selected);
+                        else
+                            strcpy(data->imagespec, "0:128");
+                    }
+                    break;
+
+                case 2:
+                    {
+                        struct MUI_PenSpec *penspec = NULL;
+
+                        get(data->color_group, MUIA_Penadjust_Spec, &penspec);
+                        if (penspec)
                         {
-                            snprintf(data->imagespec, len, "3:%s/%s",
-                                entry->reldir, entry->filename);
-                            D(bug("Imageadjust_OM_GET: imspec=%s\n",
-                                    data->imagespec));
+                            LONG len;
+                            D(bug("imageadjust: penspec = %s\n", penspec));
+                            len = strlen((STRPTR) penspec) + 3;
+                            if ((data->imagespec = AllocVec(len, 0)))
+                                snprintf(data->imagespec, len, "2:%s",
+                                    penspec->buf);
                         }
                     }
-                }
-                break;
+                    break;
 
-            case 4:            /* Bitmap */
-                {
-                    char *str = NULL;
-                    get(data->bitmap_string, MUIA_String_Contents, &str);
-                    if (str)
+                case 3:            /* External */
                     {
-                        LONG len;
-                        len = strlen(str) + 10;
-                        if ((data->imagespec = AllocVec(len, 0)))
-                            snprintf(data->imagespec, len, "5:%s", str);
-                    }
-                }
-                break;
+                        struct ExternalListEntry *entry = NULL;
 
-            case 5:            /* Gradient */
-                data->imagespec = StrDup(data->gradient_imagespec);
-                break;
+                        DoMethod(data->external_list, MUIM_List_GetEntry,
+                            MUIV_List_GetEntry_Active, (IPTR) & entry);
+                        if (entry != NULL && entry->filename != NULL
+                            && entry->reldir != NULL)
+                        {
+                            LONG len;
+                            len =
+                                2 + strlen(entry->reldir) + 1 +
+                                strlen(entry->filename) + 1;
+                            if ((data->imagespec = AllocVec(len, 0)))
+                            {
+                                snprintf(data->imagespec, len, "3:%s/%s",
+                                    entry->reldir, entry->filename);
+                                D(bug("Imageadjust_OM_GET: imspec=%s\n",
+                                        data->imagespec));
+                            }
+                        }
+                    }
+                    break;
+
+                case 4:            /* Bitmap */
+                    {
+                        char *str = NULL;
+                        get(data->bitmap_string, MUIA_String_Contents, &str);
+                        if (str)
+                        {
+                            LONG len;
+                            len = strlen(str) + 10;
+                            if ((data->imagespec = AllocVec(len, 0)))
+                                snprintf(data->imagespec, len, "5:%s", str);
+                        }
+                    }
+                    break;
+
+                case 5:            /* Gradient */
+                    data->imagespec = StrDup(data->gradient_imagespec);
+                    break;
+                }
             }
             if (data->imagespec)
                 *msg->opg_Storage = (IPTR) data->imagespec;
@@ -1103,7 +1105,7 @@ BOOPSI_DISPATCHER(IPTR, Imageadjust_Dispatcher, cl, obj, msg)
         return Imageadjust__MUIM_Imageadjust_ReadExternal(cl, obj,
             (APTR) msg);
 
-    //case MUIM_Imageadjust_ExternalSelected: 
+    //case MUIM_Imageadjust_ExternalSelected:
     //    return Imageadjust__MUIM_Imageadjust_ExternalSelected(cl, obj,
     //        (APTR)msg);
 

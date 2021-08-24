@@ -1,6 +1,5 @@
 /*
-    Copyright © 2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2019, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -21,8 +20,8 @@
 */
 
 AROS_LH1(void *, KrnVirtualToPhysical,
-	AROS_LHA(void *, virtual, A0),
-	struct KernelBase *, KernelBase, 20, Kernel)
+        AROS_LHA(void *, virtual, A0),
+        struct KernelBase *, KernelBase, 20, Kernel)
 {
     AROS_LIBFUNC_INIT
 

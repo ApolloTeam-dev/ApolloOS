@@ -1,6 +1,5 @@
 /*
-    Copyright © 2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2019, The AROS Development Team. All rights reserved.
 */
 
 #define DEBUG 0
@@ -20,14 +19,14 @@
     NAME */
 #include <proto/task.h>
 
-	AROS_LH2(BOOL, RunTaskHooks,
+        AROS_LH2(BOOL, RunTaskHooks,
 
 /*  SYNOPSIS */
-	AROS_LHA(APTR, thDispatcher, A0),
-	AROS_LHA(ULONG, thType, D0),
+        AROS_LHA(APTR, thDispatcher, A0),
+        AROS_LHA(ULONG, thType, D0),
 
 /*  LOCATION */
-	struct TaskResBase *, TaskResBase, 11, Task)
+        struct TaskResBase *, TaskResBase, 11, Task)
 
 /*  FUNCTION
 

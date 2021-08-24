@@ -1,7 +1,7 @@
 /*
  * eth - TUN/TAP network driver for AROS
- * Copyright (c) 2007 Robert Norris. All rights reserved.
- * Copyright (c) 2010-2011 The AROS Development Team. All rights reserved.
+ * Copyright (C) 2007 Robert Norris. All rights reserved.
+ * Copyright (C) 2010-2011 The AROS Development Team. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the same terms as AROS itself.
@@ -11,6 +11,8 @@
 #include <proto/alib.h>
 #include <proto/oop.h>
 
+#include <string.h>
+
 #include "eth.h"
 
 static int GM_UNIQUENAME(init)(LIBBASETYPEPTR LIBBASE)
@@ -19,14 +21,14 @@ static int GM_UNIQUENAME(init)(LIBBASETYPEPTR LIBBASE)
 
     LIBBASE->UnixIOAttrBase = OOP_ObtainAttrBase(IID_Hidd_UnixIO);
     if (!LIBBASE->UnixIOAttrBase)
-	return FALSE;
+        return FALSE;
 
     D(bug("[eth] in init\n"));
 
     LIBBASE->unixio = OOP_NewObjectTags(NULL, CLID_Hidd_UnixIO,
-					aHidd_UnixIO_Opener, MOD_NAME_STRING,
-					aHidd_UnixIO_Architecture, AROS_ARCHITECTURE,
-					TAG_DONE);
+                                        aHidd_UnixIO_Opener, MOD_NAME_STRING,
+                                        aHidd_UnixIO_Architecture, AROS_ARCHITECTURE,
+                                        TAG_DONE);
     if (LIBBASE->unixio == NULL)
     {
         kprintf("[eth] couldn't create unixio object\n");
@@ -48,12 +50,12 @@ static int GM_UNIQUENAME(expunge)(LIBBASETYPEPTR LIBBASE)
     /* We don't need to dispose a unixio object, it's a singletone. */
 
     if (LIBBASE->UnixIOAttrBase)
-	OOP_ReleaseAttrBase(IID_Hidd_UnixIO);
+        OOP_ReleaseAttrBase(IID_Hidd_UnixIO);
 
     return TRUE;
 }
 
-static const ULONG rx_tags[] = { 
+static const ULONG rx_tags[] = {
     S2_CopyToBuff,
     S2_CopyToBuff16
 };
@@ -76,7 +78,7 @@ static int GM_UNIQUENAME(open)(LIBBASETYPEPTR LIBBASE, struct IOSana2Req *req, U
 
     D(bug("[eth] in open\n"));
 
-    D(bug("[eth] unit %ld, flags [0x%08x]%s%s\n", unitnum, flags, 
+    D(bug("[eth] unit %ld, flags [0x%08x]%s%s\n", unitnum, flags,
             flags & SANA2OPF_PROM ? " SANA2OPF_PROM" : "",
             flags & SANA2OPF_MINE ? " SANA2OPF_MINE" : ""));
     
@@ -161,7 +163,7 @@ static int GM_UNIQUENAME(open)(LIBBASETYPEPTR LIBBASE, struct IOSana2Req *req, U
             unit->info.SizeAvailable = unit->info.SizeSupplied = sizeof(struct Sana2DeviceQuery);
             unit->info.DevQueryFormat = 0;
             unit->info.DeviceLevel = 0;
-            unit->info.AddrFieldSize = 48;  
+            unit->info.AddrFieldSize = 48;
             unit->info.MTU = 1500;
             unit->info.BPS = 10000000;
             unit->info.HardwareType = S2WireType_Ethernet;

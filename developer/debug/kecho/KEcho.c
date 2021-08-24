@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2010, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2010, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang:
 */
 
 /******************************************************************************
@@ -70,7 +68,7 @@ AROS_SHA(BOOL,     , NOLINE, /S,   FALSE))
     if (a) while (*a != NULL)
     {
         kprintf("%s", *a);
-	a++;
+        a++;
         if (*a)
             kprintf(" ");
     }

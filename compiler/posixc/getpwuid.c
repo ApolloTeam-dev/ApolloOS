@@ -1,6 +1,5 @@
 /*
-    Copyright © 2004-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004-2017, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -20,15 +19,15 @@
         uid_t uid)
 
 /*  FUNCTION
-	Returns the database entry for the user with specified uid.
+        Returns the database entry for the user with specified uid.
 
     INPUTS
 
     RESULT
 
     NOTES
-	Function is not re-entrant. Results will be overwritten by
-	subsequent calls.
+        Function is not re-entrant. Results will be overwritten by
+        subsequent calls.
 
     EXAMPLE
 

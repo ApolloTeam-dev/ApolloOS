@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <string.h>
@@ -36,7 +35,7 @@
 
     NOTES
         We cannot guarantee that the public screen, the name of which you got
-        by using this function, is available when you call for instance 
+        by using this function, is available when you call for instance
         LockPubScreen(). Therefore you must be prepared to handle failure of
         that kind of functions.
 

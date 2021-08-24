@@ -1,6 +1,5 @@
 /*
     Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
  */
 
 #include <proto/dos.h>
@@ -15,23 +14,23 @@ void cliEcho(ShellState *ss, CONST_STRPTR args)
        that begins with "on" in order to trigger commands echoing on,
        it doesn't really have to be set to just "on". */
     if ((lv = FindVar("echo", LV_VAR)) == NULL)
-	return;
+        return;
 
     switch (lv->lv_Value[0])
     {
     case 'o':
     case 'O':
-	switch (lv->lv_Value[1])
-	{
-	case 'n':
-	case 'N':
-	    break;
-	default:
-	    return;
-	}
-	break;
+        switch (lv->lv_Value[1])
+        {
+        case 'n':
+        case 'N':
+            break;
+        default:
+            return;
+        }
+        break;
     default:
-	return;
+        return;
     }
 
     /* Ok, commands echoing is on. */
@@ -45,8 +44,8 @@ void cliEcho(ShellState *ss, CONST_STRPTR args)
 
     if (args)
     {
-	FPutC(echoOut, ' ');
-	FPuts(echoOut, args);
+        FPutC(echoOut, ' ');
+        FPuts(echoOut, args);
     }
 
     FPutC(echoOut, '\n');

@@ -1,9 +1,7 @@
 /*
-    Copyright © 2011-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2011-2020, The AROS Development Team. All rights reserved.
 
     Desc: High-level scheduler calling code
-    Lang: English
 */
 
 #include <exec/execbase.h>
@@ -11,9 +9,12 @@
 #include <proto/exec.h>
  
 #include <kernel_base.h>
+#include <kernel_debug.h>
 #include <kernel_intr.h>
 #include <kernel_scheduler.h>
 #include <kernel_syscall.h>
+
+#define D(x)
 
 /*
  * Leave the interrupt. This function receives the interrupt register frame
@@ -26,7 +27,7 @@
  * which save and restore CPU context. cpu_Dispatch() is allowed just to
  * jump to the saved context and not return here.
  */
-void core_ExitInterrupt(regs_t *regs) 
+void core_ExitInterrupt(regs_t *regs)
 {
     /* Soft interrupt requested? It's high time to do it */
     if (SysBase->SysFlags & SFF_SoftInt)
@@ -36,18 +37,19 @@ void core_ExitInterrupt(regs_t *regs)
     if (TDNESTCOUNT_GET < 0)
     {
         /*
-         * Do not disturb task if it's not necessary. 
+         * Do not disturb task if it's not necessary.
          * Reschedule only if switch pending flag is set. Exit otherwise.
          */
         if (FLAG_SCHEDSWITCH_ISSET)
         {
-	    /* Run task scheduling sequence */
+            D(bug("[Kernel] %s: Triggering Schedule\n", __func__);)
+            /* Run task scheduling sequence */
             if (core_Schedule())
-	    {
-		cpu_Switch(regs);
-		cpu_Dispatch(regs);
+            {
+                cpu_Switch(regs);
+                cpu_Dispatch(regs);
             }
-	}
+        }
     }
 }
 
@@ -61,7 +63,7 @@ void core_SysCall(int sc, regs_t *regs)
     switch (sc)
     {
     case SC_CAUSE:
-	core_ExitInterrupt(regs);
+        core_ExitInterrupt(regs);
         break;
 
     case SC_SCHEDULE:

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Try to own the blitter for private usage
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -35,9 +33,9 @@
         the blitter right now or if no blits are in the queues (QBlit(),
         QBSBlit()). Otherwise the function will block until the blitter
         can be accessed.
-        It is good practice to start the blitter immediately after calling 
+        It is good practice to start the blitter immediately after calling
         this function and then call DisownBlitter() so other tasks can
-        use the blitter. 
+        use the blitter.
 
     INPUTS
 

@@ -1,7 +1,7 @@
 #ifndef _KERNEL_ARCH_H_
 #define _KERNEL_ARCH_H_
 /*
-    Copyright © 1995-2018, The AROS Development Team. All rights reserved.
+    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Machine-specific definitions for IBM PC hardware
@@ -40,18 +40,15 @@ struct PlatformData
     spinlock_t          kb_BusyIPIHooksLock;
 };
 
-#define PLATFORMF_HAVEMSI       (1 << 1)
+#define PLATFORMB_HAVEHEARTBEAT 0
+#define PLATFORMF_HAVEHEARTBEAT (1 << PLATFORMB_HAVEHEARTBEAT)
+#define PLATFORMB_HAVEMSI       1
+#define PLATFORMF_HAVEMSI       (1 << PLATFORMB_HAVEMSI)
 
 /* Hardware IRQs *********************************************************************************/
 
 /* By default we only know about the xtpic's IRQs */
 #define IRQ_COUNT       I8259A_IRQCOUNT
-
-/*
- *  The first Hardware IRQ starts at 32
- *  (0 - 31 are cpu exceptions, see below..)
- */
-#define HW_IRQ_BASE     X86_CPU_EXCEPT_COUNT
 
 /*
  * We handle all 255 exception vectors. However vectors starting from 0x20

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 
 #include <hidd/gfx.h>
@@ -24,16 +22,16 @@ static LONG PixelHook(struct render_data *data, OOP_Object *bm, OOP_Object *gc,
     NAME */
 #include <proto/cybergraphics.h>
 
-	AROS_LH4(LONG, WriteRGBPixel,
+        AROS_LH4(LONG, WriteRGBPixel,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct RastPort *, rp		, A1),
-	AROS_LHA(UWORD            , x		, D0),
-	AROS_LHA(UWORD            , y		, D1),
-	AROS_LHA(ULONG            , pixel	, D2),
+        AROS_LHA(struct RastPort *, rp          , A1),
+        AROS_LHA(UWORD            , x           , D0),
+        AROS_LHA(UWORD            , y           , D1),
+        AROS_LHA(ULONG            , pixel       , D2),
 
 /*  LOCATION */
-	struct Library *, CyberGfxBase, 19, Cybergraphics)
+        struct Library *, CyberGfxBase, 19, Cybergraphics)
 
 /*  FUNCTION
         Writes a new color value to a pixel in a RastPort.

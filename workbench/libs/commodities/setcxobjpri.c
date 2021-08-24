@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 /*****************************************************************************
@@ -16,12 +14,12 @@
 
 /*  SYNOPSIS */
 
-	AROS_LHA(CxObj *, co,  A0),
-	AROS_LHA(LONG,    pri, D0),
+        AROS_LHA(CxObj *, co,  A0),
+        AROS_LHA(LONG,    pri, D0),
 
 /*  LOCATION */
 
-	struct Library *, CxBase, 13, Commodities)
+        struct Library *, CxBase, 13, Commodities)
 
 /*  FUNCTION
 
@@ -67,7 +65,7 @@
 
     if (co == NULL)
     {
-	return 0;
+        return 0;
     }
 
     oldPri = co->co_Node.ln_Pri;

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 */
 
 #include "coolimages.h"
@@ -50,10 +49,10 @@ static const UBYTE windowimage_pal[] =
 
 const struct CoolImage cool_windowimage =
 {
-	windowimage_data,
-	windowimage_pal,
-	WINDOWIMAGE_WIDTH,
-	WINDOWIMAGE_HEIGHT,
-	WINDOWIMAGE_COLORS
+        windowimage_data,
+        windowimage_pal,
+        WINDOWIMAGE_WIDTH,
+        WINDOWIMAGE_HEIGHT,
+        WINDOWIMAGE_COLORS
 };
 

@@ -1,6 +1,5 @@
 /*
-    Copyright © 2017-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2017-2020, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/libcall.h>
@@ -40,7 +39,7 @@ AROS_LH3(VOID, StartTimerInt,
         if ((ecv & 0xFFFF) == 0)
             ecv = 1;
 
-        /* 
+        /*
          * Set the requested interval, and Choose appropriate flags
          * for the used CIA timer...
          */

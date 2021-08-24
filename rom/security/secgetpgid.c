@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2019, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -14,14 +13,14 @@
 /*****************************************************************************
 
     NAME */
-	AROS_LH1(int, secgetpgid,
+        AROS_LH1(int, secgetpgid,
 
 /*  SYNOPSIS */
-	/* (pid) */
-	AROS_LHA(int, pid, D0),
+        /* (pid) */
+        AROS_LHA(int, pid, D0),
 
 /*  LOCATION */
-	struct SecurityBase *, secBase, 46, Security)
+        struct SecurityBase *, secBase, 46, Security)
 
 /*  FUNCTION
 

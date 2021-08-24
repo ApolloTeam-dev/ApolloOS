@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2019, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -15,14 +14,14 @@
 /*****************************************************************************
 
     NAME */
-	AROS_LH1(BOOL, secUnfreeze,
+        AROS_LH1(BOOL, secUnfreeze,
 
 /*  SYNOPSIS */
-	/* (task) */
-	AROS_LHA(struct Task *, task, A0),
+        /* (task) */
+        AROS_LHA(struct Task *, task, A0),
 
 /*  LOCATION */
-	struct SecurityBase *, secBase, 32, Security)
+        struct SecurityBase *, secBase, 32, Security)
 
 /*  FUNCTION
            Unfreeze a task or process

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2006, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2006, The AROS Development Team. All rights reserved.
 */
 
 #include <dos/dosextens.h>
@@ -21,12 +20,12 @@
 
 /*  SYNOPSIS */
 
-	AROS_LHA(STRPTR, appName,        A0),
-	AROS_LHA(BOOL,   killRequesters, D1),
+        AROS_LHA(STRPTR, appName,        A0),
+        AROS_LHA(BOOL,   killRequesters, D1),
 
 /*  LOCATION */
 
-	struct Library *, nvBase, 10, Nonvolatile)
+        struct Library *, nvBase, 10, Nonvolatile)
 
 /*  FUNCTION
 
@@ -70,18 +69,18 @@
     struct MinList *list;
 
     if(appName == NULL)
-	return NULL;
+        return NULL;
 
     if(strpbrk(appName, ":/") != NULL)
-	return NULL;
+        return NULL;
 
     if(killRequesters)
-	me->pr_WindowPtr = (APTR)-1;
+        me->pr_WindowPtr = (APTR)-1;
 
     list = GetNVDItemList(appName);
 
     if(killRequesters)
-	me->pr_WindowPtr = oldReq;
+        me->pr_WindowPtr = oldReq;
 
     return list;
 

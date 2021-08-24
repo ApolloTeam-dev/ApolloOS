@@ -1,9 +1,7 @@
 /*
     Copyright  1995-2019, The AROS Development Team. All rights reserved.
-    $Id$
 
     Desc: Bitmap class for native Amiga chipset.
-    Lang: English.
     
 */
 
@@ -40,7 +38,7 @@
 
 /****************************************************************************************/
 
-#define AO(x) 	    	  (aoHidd_BitMap_ ## x)
+#define AO(x)             (aoHidd_BitMap_ ## x)
 #define GOT_BM_ATTR(code) GOT_ATTR(code, aoHidd_BitMap, bitmap)
 
 /****************************************************************************************/
@@ -55,7 +53,7 @@ OOP_Object *AmigaVideoBM__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_N
     struct Library *UtilityBase = csd->cs_UtilityBase;
     struct Library *OOPBase = csd->cs_OOPBase;
     IPTR width, height, depth, disp, modeid = 0;
-    BOOL ok = TRUE;      
+    BOOL ok = TRUE;
     struct amigabm_data *data;
     struct BitMap *pbm = NULL;
     struct pRoot_New mymsg = *msg;
@@ -99,8 +97,8 @@ OOP_Object *AmigaVideoBM__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_N
     data->align = csd->aga ? 64 : 16; // AGA 64-bit fetchmode needs 8-byte alignment
 
     /* Get some data about the dimensions of the bitmap */
-    OOP_GetAttr(o, aHidd_BitMap_Width,	&width);
-    OOP_GetAttr(o, aHidd_BitMap_Height,	&height);
+    OOP_GetAttr(o, aHidd_BitMap_Width,  &width);
+    OOP_GetAttr(o, aHidd_BitMap_Height, &height);
     OOP_GetAttr(o, aHidd_BitMap_Depth, &depth);
     OOP_GetAttr(o, aHidd_BitMap_Displayable, &disp);
     OOP_GetAttr(o, aHidd_PlanarBM_BitMap, &pbm);
@@ -194,7 +192,7 @@ VOID AmigaVideoBM__Root__Set(OOP_Class *cl, OOP_Object *o, struct pRoot_Set *msg
     struct Library *UtilityBase = csd->cs_UtilityBase;
     struct amigabm_data *data = OOP_INST_DATA(cl, o);
     struct TagItem  *tag, *tstate;
-    ULONG   	    idx;
+    ULONG           idx;
     LONG newxoffset = data->leftedge;
     LONG newyoffset = data->topedge;
 
@@ -412,12 +410,12 @@ VOID AmigaVideoBM__Hidd_BitMap__PutPixel(OOP_Class *cl, OOP_Object *o,
                                 struct pHidd_BitMap_PutPixel *msg)
 {
     struct amigabm_data    *data;
-    ULONG   	    	    offset;
-    UBYTE   	    	    bit;
+    ULONG                   offset;
+    UBYTE                   bit;
     
     data = OOP_INST_DATA(cl, o);
 
-    offset = msg->x / 8 + msg->y * data->bytesperrow;  
+    offset = msg->x / 8 + msg->y * data->bytesperrow;
     if ((offset & ~3) != data->pixelcacheoffset) {
         CLEARCACHE;
         data->pixelcacheoffset = offset & ~3;
@@ -511,8 +509,8 @@ ULONG AmigaVideoBM__Hidd_BitMap__GetPixel(OOP_Class *cl, OOP_Object *o,
                                 struct pHidd_BitMap_GetPixel *msg)
 {
     struct amigabm_data    *data;
-    ULONG   	    	    offset;
-    UBYTE   	    	    i, c, bit;
+    ULONG                   offset;
+    UBYTE                   i, c, bit;
 
     data = OOP_INST_DATA(cl, o);
     offset = msg->x / 8 + msg->y * data->bytesperrow;
@@ -569,7 +567,7 @@ VOID AmigaVideoBM__Hidd_BitMap__DrawLine(OOP_Class *cl, OOP_Object *o,
         // TODO: blitter pattern support
         OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
         return;
-    }    
+    }
     if (msg->x1 == msg->x2 || msg->y1 == msg->y2) {
         WORD x1 = msg->x1, x2 = msg->x2;
         WORD y1 = msg->y1, y2 = msg->y2;
@@ -639,7 +637,7 @@ VOID AmigaVideoBM__Hidd_BitMap__PutPattern(OOP_Class *cl, OOP_Object *o,
     struct amigabm_data *data = OOP_INST_DATA(cl, o);
 
     CLEARCACHE;
-    D(bug("[AmigaVideo:Bitmap] %s(%dx%d,%dx%d,mask=%x,mod=%d,masksrcx=%d)\n(%x,%dx%d,h=%d,d=%d,lut=%x,inv=%d)(fg=%d,bg=%d,colexp=%d,drmd=%d)\n", 
+    D(bug("[AmigaVideo:Bitmap] %s(%dx%d,%dx%d,mask=%x,mod=%d,masksrcx=%d)\n(%x,%dx%d,h=%d,d=%d,lut=%x,inv=%d)(fg=%d,bg=%d,colexp=%d,drmd=%d)\n",
         __func__,
         msg->x, msg->y, msg->width, msg->height,
         msg->mask, msg->maskmodulo, msg->masksrcx,
@@ -656,11 +654,11 @@ VOID AmigaVideoBM__Hidd_BitMap__PutPattern(OOP_Class *cl, OOP_Object *o,
 VOID AmigaVideoBM__Hidd_BitMap__PutImageLUT(OOP_Class *cl, OOP_Object *o,
                                    struct pHidd_BitMap_PutImageLUT *msg)
 {
-    WORD    	    	    x, y, d;
-    UBYTE   	    	    *pixarray = (UBYTE *)msg->pixels;
-    UBYTE   	    	    **plane;
-    ULONG   	    	    planeoffset;
-    struct amigabm_data   *data;  
+    WORD                    x, y, d;
+    UBYTE                   *pixarray = (UBYTE *)msg->pixels;
+    UBYTE                   **plane;
+    ULONG                   planeoffset;
+    struct amigabm_data   *data;
     
     CMDDEBUGUNIMP(bug("[AmigaVideo:Bitmap] %s()\n", __func__);)
 
@@ -724,12 +722,12 @@ VOID AmigaVideoBM__Hidd_BitMap__PutImageLUT(OOP_Class *cl, OOP_Object *o,
 VOID AmigaVideoBM__Hidd_BitMap__GetImageLUT(OOP_Class *cl, OOP_Object *o,
                                    struct pHidd_BitMap_GetImageLUT *msg)
 {
-    WORD    	    	    x, y, d;
-    UBYTE   	    	    *pixarray = (UBYTE *)msg->pixels;
-    UBYTE   	    	    **plane;
-    ULONG   	    	    planeoffset;
-    struct amigabm_data    *data;  
-    UBYTE   	    	    prefill;
+    WORD                    x, y, d;
+    UBYTE                   *pixarray = (UBYTE *)msg->pixels;
+    UBYTE                   **plane;
+    ULONG                   planeoffset;
+    struct amigabm_data    *data;
+    UBYTE                   prefill;
     
     data = OOP_INST_DATA(cl, o);
 
@@ -809,10 +807,10 @@ VOID AmigaVideoBM__Hidd_BitMap__GetImageLUT(OOP_Class *cl, OOP_Object *o,
 VOID AmigaVideoBM__Hidd_BitMap__PutImage(OOP_Class *cl, OOP_Object *o,
                                 struct pHidd_BitMap_PutImage *msg)
 {
-    WORD    	    	    x, y, d;
-    UBYTE   	    	    *pixarray = (UBYTE *)msg->pixels;
-    UBYTE   	    	    **plane;
-    ULONG   	    	    planeoffset;
+    WORD                    x, y, d;
+    UBYTE                   *pixarray = (UBYTE *)msg->pixels;
+    UBYTE                   **plane;
+    ULONG                   planeoffset;
     struct amigabm_data    *data = OOP_INST_DATA(cl, o);
 
     CLEARCACHE;
@@ -930,7 +928,7 @@ VOID AmigaVideoBM__Hidd_BitMap__PutImage(OOP_Class *cl, OOP_Object *o,
             
             break;
             
-        } /* switch(msg->pixFmt) */    
+        } /* switch(msg->pixFmt) */
         
     } /* for(y = 0; y < msg->height; y++) */
 }

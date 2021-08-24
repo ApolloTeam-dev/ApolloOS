@@ -1,28 +1,20 @@
 /*
   Copyright  2004-2018, The AROS Development Team. All rights reserved.
-  $Id$
 */
 
 #define ZCC_QUIET
 
-#include "portable_macros.h"
-#ifdef __AROS__
 #define DEBUG 0
 #include <aros/debug.h>
 
 #define MUIMASTER_YES_INLINE_STDARG
-#endif
 
 #define IFF_CHUNK_BUFFER_SIZE 1024
 
 #include <exec/types.h>
 #include <libraries/mui.h>
 
-#ifdef __AROS__
 #include <zune/customclasses.h>
-#else
-#include <zune_AROS/customclasses.h>
-#endif
 
 #include <proto/workbench.h>
 
@@ -30,15 +22,11 @@
 
 #include <proto/dos.h>
 
-#ifdef __AROS__
 #include <proto/alib.h>
-#endif
 
 #include <proto/iffparse.h>
 
-#ifdef __AROS__
 #include <proto/aros.h>
-#endif
 
 #include <aros/arosbase.h>
 #include <aros/inquire.h>
@@ -46,10 +34,6 @@
 #include <string.h>
 #include <stdio.h>
 
-
-#if defined(__AMIGA__) && !defined(__PPC__)
-#define NO_INLINE_STDARG
-#endif
 #ifndef _PROTO_INTUITION_H
 #include <proto/intuition.h>
 #endif
@@ -65,29 +49,8 @@
 #include "locale.h"
 #include "version.h"
 
-#ifdef __AROS__
 #include <prefs/prefhdr.h>
 #include <prefs/wanderer.h>
-#else
-#include <prefs_AROS/prefhdr.h>
-#include <prefs_AROS/wanderer.h>
-#endif
-
-
-#ifndef __AROS__
-#define DEBUG 1
-
-#ifdef DEBUG
-  #define D(x) if (DEBUG) x
-  #ifdef __amigaos4__
-  #define bug DebugPrintF
-  #else
-  #define bug kprintf
-  #endif
-#else
-  #define  D(...)
-#endif
-#endif
 
 static CONST_STRPTR     wandererPrefs_PrefsFile = "ENV:SYS/Wanderer/global.prefs";
 static CONST_STRPTR     wandererPrefs_FontsPrefsFile = "ENV:SYS/Font.prefs";
@@ -101,6 +64,7 @@ struct TagItem32 {
 struct WandererPrefs_DATA
 {
     ULONG                       wpd_NavigationMethod;
+    ULONG                       wpd_IconDropMode;
     ULONG                       wpd_ToolbarEnabled;
     ULONG                       wpd_ShowNetwork;
     ULONG                       wpd_ShowUserFiles;
@@ -235,11 +199,7 @@ static
 struct Node *findname(struct List *list, CONST_STRPTR name)
 {
   struct Node *node;
-  #ifdef __AROS__
   ForeachNode(list, node)
-  #else
-  Foreach_Node(list, node);
-  #endif
   {
     if (!Stricmp(node->ln_Name, (STRPTR) name))
     {
@@ -264,7 +224,7 @@ STRPTR ProcessUserScreenTitle(STRPTR screentitle_Template)
 
   if (screentitle_Template == NULL)
   {
-D(bug("[Wanderer:Prefs] ProcessUserScreenTitle(),EXTERN screentitle = NULL\n"));   
+D(bug("[Wanderer:Prefs] ProcessUserScreenTitle(),EXTERN screentitle = NULL\n"));
     return screentitle_Template;
   }
   else
@@ -276,7 +236,7 @@ D(bug("[Wanderer:Prefs] ProcessUserScreenTitle('%s')\n", screentitle_Template));
 
   if (screentitle_TemplateLen > sizeof(temp)-1)
   {
-D(bug("[Wanderer:Prefs] ProcessUserScreenTitle: EXTERN screentitle_TemplateLen = %d\n", screentitle_TemplateLen));   
+D(bug("[Wanderer:Prefs] ProcessUserScreenTitle: EXTERN screentitle_TemplateLen = %d\n", screentitle_TemplateLen));
     return (STRPTR)NULL;
   }
   
@@ -294,12 +254,8 @@ D(bug("[Wanderer:Prefs] ProcessUserScreenTitle: EXTERN screentitle_TemplateLen =
         {
           struct Library *MyLibrary = NULL;
 
-        #ifdef __AROS__
           MyLibrary = (struct Library *)findname(&SysBase->LibList, "workbench.library");
           //workbench.library is just opened, what is the sense of this istruction?
-        #else
-          MyLibrary = WorkbenchBase;
-        #endif
 
           sprintf(infostr, "%ld.%ld",(long int) MyLibrary->lib_Version,(long int) MyLibrary->lib_Revision);
           found = TRUE;
@@ -448,7 +404,7 @@ D(bug("[Wanderer:Prefs] ProcessUserScreenTitle: EXTERN screentitle_TemplateLen =
 
 ///ExpandEnvName()
 /* Expand a passed in env: string to its full location */
-/* Wanderer doesnt free this mem at the moment but should 
+/* Wanderer doesnt free this mem at the moment but should
    incase it is every closed */
 static CONST_STRPTR ExpandEnvName(CONST_STRPTR env_path)
 {
@@ -471,7 +427,7 @@ static CONST_STRPTR ExpandEnvName(CONST_STRPTR env_path)
             strcpy(fullpath, tmp_envbuff);
             AddPart(fullpath, env_path + 4, 1019);
             return fullpath;
-        }     
+        }
     }
 
     //We couldnt expand it so just use as is ..
@@ -587,7 +543,7 @@ IPTR WandererPrefs__OM_SET(Class *CLASS, Object *self, struct opSet *message)
   struct TagItem *tstate = message->ops_AttrList;
   struct TagItem *tag;
   
-  while ((tag = NextTagItem((TAGITEM)&tstate)) != NULL)
+  while ((tag = NextTagItem((struct TagItem **)&tstate)) != NULL)
   {
     switch (tag->ti_Tag)
     {
@@ -610,6 +566,11 @@ IPTR WandererPrefs__OM_SET(Class *CLASS, Object *self, struct opSet *message)
       case MUIA_IconWindow_WindowNavigationMethod:
         data->wpd_NavigationMethod = (LONG)tag->ti_Data;
         break;
+
+      case MUIA_IconWindow_IconDropMode:
+        data->wpd_IconDropMode = (ULONG)tag->ti_Data;
+        break;
+
     }
   }
   
@@ -645,6 +606,10 @@ D(bug("[Wanderer:Prefs] WandererPrefs__GET: MUIA_IconWindowExt_ScreenTitle_Strin
 
     case MUIA_IconWindow_WindowNavigationMethod:
       *store = (IPTR)data->wpd_NavigationMethod;
+      break;
+
+    case MUIA_IconWindow_IconDropMode:
+      *store = (IPTR)data->wpd_IconDropMode;
       break;
 
     default:
@@ -736,11 +701,7 @@ struct WandererPrefs_ViewSettingsNode *WandererPrefs_FindViewSettingsNode(struct
 {
   struct WandererPrefs_ViewSettingsNode *current_Node = NULL;
   
-  #ifdef __AROS__
   ForeachNode(&data->wpd_ViewSettings, current_Node)
-  #else
-  Foreach_Node(&data->wpd_ViewSettings, current_Node);
-  #endif
   {
     if ((strcmp(current_Node->wpbn_Name, node_Name)) == 0) return current_Node;
   }
@@ -772,11 +733,7 @@ D(bug("[Wanderer:Prefs] WandererPrefs_ProccessViewSettingsChunk: Creating new no
 
     _viewSettings_Node->wpbn_Name = AllocVec(strlen(_viewSettings_ViewName) + 1, MEMF_CLEAR|MEMF_PUBLIC);
     strcpy(_viewSettings_Node->wpbn_Name, _viewSettings_ViewName);
-    #ifdef __AROS__
     _viewSettings_Node->wpbn_NotifyObject = (Object *)NotifyObject, End;
-    #else
-    _viewSettings_Node->wpbn_NotifyObject = MUI_NewObject(MUIC_Notify, TAG_DONE);
-    #endif
 
     AddTail(&data->wpd_ViewSettings, &_viewSettings_Node->wpbn_Node);
   }
@@ -860,7 +817,7 @@ D(bug("[Wanderer:Prefs] WandererPrefs__MUIM_WandererPrefs_Reload()\n"));
   if (!(handle = AllocIFF()))
     return FALSE;
 
-  handle->iff_Stream = (IPTR)Open(wandererPrefs_PrefsFile, MODE_OLDFILE); 
+  handle->iff_Stream = (IPTR)Open(wandererPrefs_PrefsFile, MODE_OLDFILE);
 
   if (!handle->iff_Stream)
     return FALSE;
@@ -906,7 +863,7 @@ D(bug("[Wanderer:Prefs] WandererPrefs__MUIM_WandererPrefs_Reload: Context 0x%p\n
 
                   error = ReadChunkBytes
                         (
-                          handle, 
+                          handle,
                           chunk_buffer,
                           this_chunk_size
                         );
@@ -937,13 +894,13 @@ D(bug("[WPEditor] WPEditor__MUIM_PrefsEditor_ImportFH: Process data for wanderer
 D(bug("[Wanderer:Prefs] WandererPrefs__MUIM_WandererPrefs_Reload: Process data for wanderer background chunk '%s'..\n", view_name));
                       WandererPrefs_ProccessViewSettingsChunk(CLASS, self, view_name, chunk_buffer, this_chunk_size);
                     }
-                  }//END if (error == this_chunk_size)  
+                  }//END if (error == this_chunk_size)
                   if ((error = ParseIFF(handle, IFFPARSE_STEP)) == IFFERR_EOC)
                   {
 D(bug("[Wanderer:Prefs] WandererPrefs__MUIM_WandererPrefs_Reload: TAG_DONE) of Data chunk ..\n"));
                   }
                 }//END if ((error = ParseIFF(handle, IFFPARSE_STEP)) == 0)
-              }//END if ((error = ParseIFF(handle, IFFPARSE_STEP)) == IFFERR_EOC)       
+              }//END if ((error = ParseIFF(handle, IFFPARSE_STEP)) == IFFERR_EOC)
             }//END if ((this_chunk_name = AllocVec(strlen(this_header->wpIFFch_ChunkType) +1,MEMF_ANY|MEMF_CLEAR)))
           }//END if ((error=ReadChunkBytes(handle, chunk_buffer, IFF_CHUNK_BUFFER_SIZE)))
         }
@@ -1026,11 +983,7 @@ D(bug("[Wanderer:Prefs] WandererPrefs__MUIM_WandererPrefs_ViewSettings_GetNotify
 
   current_Node->wpbn_Name = AllocVec(strlen(message->Background_Name) + 1, MEMF_CLEAR|MEMF_PUBLIC);
   strcpy(current_Node->wpbn_Name, message->Background_Name);
-    #ifdef __AROS__
-    current_Node->wpbn_NotifyObject = (Object *)NotifyObject, End;
-    #else
-    current_Node->wpbn_NotifyObject = MUI_NewObject(MUIC_Notify, TAG_DONE);
-    #endif
+  current_Node->wpbn_NotifyObject = (Object *)NotifyObject, End;
   AddTail(&data->wpd_ViewSettings, &current_Node->wpbn_Node);
 
 D(bug("[Wanderer:Prefs] WandererPrefs__MUIM_WandererPrefs_ViewSettings_GetNotifyObject: Notify Object @ 0x%p\n", current_Node->wpbn_NotifyObject));

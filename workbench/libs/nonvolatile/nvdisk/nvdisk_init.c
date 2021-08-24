@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2006, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2006, The AROS Development Team. All rights reserved.
 
     Desc: Nonvolatile disk based storage library initialization code.
-    Lang: English
 */
 
 
@@ -77,7 +75,7 @@ static int Init(LIBBASETYPEPTR LIBBASE)
             D(bug("NV location = %s\n", temp));
 
             FreeVec(temp);
-        }    
+        }
         Close(locFile);
     } else {
         /* Volatile mode, if we have no nv_location file */

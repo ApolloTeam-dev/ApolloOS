@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
  
     Change position and size of a window.
 */
@@ -12,11 +11,11 @@
 struct ChangeWindowBoxActionMsg
 {
     struct IntuiActionMsg    msg;
-    struct Window   	    *window;
-    LONG    	    	     left;
-    LONG    	    	     top;
-    LONG    	    	     width;
-    LONG    	    	     height;
+    struct Window           *window;
+    LONG                     left;
+    LONG                     top;
+    LONG                     width;
+    LONG                     height;
 };
 
 static VOID int_changewindowbox(struct ChangeWindowBoxActionMsg *msg,

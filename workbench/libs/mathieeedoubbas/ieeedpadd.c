@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 */
 
 #include "mathieeedoubbas_intern.h"
@@ -67,8 +66,8 @@
     
     if
     (
-           is_neqC(*Qy, 0x0, 0x0) 
-        && is_neqC(*Qy, IEEEDPSign_Mask_Hi, IEEEDPSign_Mask_Lo) 
+           is_neqC(*Qy, 0x0, 0x0)
+        && is_neqC(*Qy, IEEEDPSign_Mask_Hi, IEEEDPSign_Mask_Lo)
     )
     {
         AND64C(Mant1, *Qy, IEEEDPMantisse_Mask_Hi, IEEEDPMantisse_Mask_Lo);
@@ -81,7 +80,7 @@
     
     if
     (
-           is_neqC(*Qz, 0x0, 0x0) 
+           is_neqC(*Qz, 0x0, 0x0)
         && is_neqC(*Qz, IEEEDPSign_Mask_Hi, IEEEDPSign_Mask_Lo)
     )
     {
@@ -176,7 +175,7 @@
         SetSR(Overflow_Bit, Zero_Bit | Overflow_Bit); //do not change Negative_Bit!
         OR64QC
         (
-            Res, 
+            Res,
             (IEEEDPMantisse_Mask_Hi | IEEEDPExponent_Mask_Hi),
             (IEEEDPMantisse_Mask_Lo | IEEEDPExponent_Mask_Lo)
         );

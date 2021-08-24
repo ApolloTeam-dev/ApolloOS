@@ -1,6 +1,5 @@
 /*
-    Copyright © 2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2020, The AROS Development Team. All rights reserved.
 
     Test the utility.library V50 SetMem function
 */
@@ -108,7 +107,7 @@ int main(void)
 {
     TEXT buffer[128];
 
-    printf("AROS utility.library v50 SetMem test\n© The AROS Development Team. All rights reserved.\n");
+    printf("AROS utility.library v50 SetMem test\n\xA9 The AROS Development Team. All rights reserved.\n");
 
     printf("\nPerforming output validtity tests ...\n");
 
@@ -169,7 +168,7 @@ int main(void)
             iter <<= 1;
         }
 
-		FreeMem(perfbuffer, (10 * 1024 * 1024) << 1);
+                FreeMem(perfbuffer, (10 * 1024 * 1024) << 1);
 
         CloseDevice(&timereq);
     }

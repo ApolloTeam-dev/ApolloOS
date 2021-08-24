@@ -1,9 +1,8 @@
-/* 
-    Copyright © 1999, David Le Corfec.
-    Copyright © 2002-2018, The AROS Development Team.
+/*
+    Copyright (C) 2002-2020, The AROS Development Team.
+    Copyright (C) 1999, David Le Corfec.
     All rights reserved.
 
-    $Id$
 */
 
 #include <ctype.h>
@@ -361,12 +360,12 @@ static CONST_STRPTR parse_escape_code(ZTextLine * ztl,
             *t = 0;
             if (HexToIPTR(s, &tmp) != -1)
             {
-                D(bug("listimage = %lx\n", tmp));
+                D(bug("listimage = %p\n", tmp));
                 if (tmp == 0)
                 {
                     /* According to the MUI autodocs, the result of
                      * CreateImage may be NULL, but then \33O[] has to
-                     * simply draw nothing, so it shouldn't be considered 
+                     * simply draw nothing, so it shouldn't be considered
                      * an error.
                      * Without this, AROS crashed, if 00000000 was used.
                      */
@@ -401,7 +400,7 @@ static CONST_STRPTR parse_escape_code(ZTextLine * ztl,
             *t = 0;
             if (HexToIPTR(s, &tmp) != -1)
             {
-                D(bug("image = %lx\n", tmp));
+                D(bug("image = %p\n", tmp));
                 if (tmp == 0)
                 {
                     /* Draw nothing if image pointer is NULL, as MUI 4 does

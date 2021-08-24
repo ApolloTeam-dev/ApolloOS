@@ -1,9 +1,7 @@
 /*
-    Copyright © 2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2020, The AROS Development Team. All rights reserved.
 
     Desc: Varargs version of dos.library/GetSegListInfoTags()
-    Lang: english
 */
 
 #define AROS_TAGRETURNTYPE LONG
@@ -15,12 +13,12 @@
 #define NO_INLINE_STDARG /* turn off inline def */
 #include <proto/dos.h>
 
-	LONG GetSegListInfoTags (
+        LONG GetSegListInfoTags (
 
 /*  SYNOPSIS */
-	BPTR seglist,
-	Tag tag1,
-	...)
+        BPTR seglist,
+        Tag tag1,
+        ...)
 
 /*  FUNCTION
         This is the varargs version of dos.library/GetSegListInfo().

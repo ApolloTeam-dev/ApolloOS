@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <proto/dos.h>
@@ -13,12 +12,12 @@
 
 BPTR lockin = BNULL, lockout = BNULL;
 
-int main() 
+int main()
 {
     char *pathin, *pathout = NULL;
 
     pathin = "SYS:";
-    TEST( (lockin = Lock( pathin, SHARED_LOCK )) != BNULL ); 
+    TEST( (lockin = Lock( pathin, SHARED_LOCK )) != BNULL );
     TEST( chdir( pathin ) == 0 );
     pathout  = getcwd( NULL, 0 );
     TEST( (lockout = Lock( pathin, SHARED_LOCK )) != BNULL );
@@ -28,7 +27,7 @@ int main()
     UnLock( lockout ); lockout = BNULL;
   
     pathin = "SYS:Tools";
-    TEST( (lockin = Lock( pathin, SHARED_LOCK )) != BNULL ); 
+    TEST( (lockin = Lock( pathin, SHARED_LOCK )) != BNULL );
     TEST( chdir( pathin ) == 0 );
     pathout  = getcwd( NULL, 0 );
     TEST( (lockout = Lock( pathin, SHARED_LOCK )) != BNULL );
@@ -40,7 +39,7 @@ int main()
     return OK;
 }
 
-void cleanup() 
+void cleanup()
 {
     if ( lockin != BNULL )
         UnLock( lockin );

@@ -1,6 +1,5 @@
 /*
-    Copyright © 2015-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2015-2017, The AROS Development Team. All rights reserved.
 */
 
 #define DEBUG 0
@@ -27,7 +26,7 @@
         AROS_LHA(ULONG, flags, D0),
 
 /*  LOCATION */
-	struct TaskResBase *, TaskResBase, 2, Task)
+        struct TaskResBase *, TaskResBase, 2, Task)
 
 /*  FUNCTION
         Frees a lock on the task lists given by LockTaskList().

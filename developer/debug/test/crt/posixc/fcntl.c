@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <fcntl.h>
@@ -43,7 +42,7 @@ int main()
 void cleanup()
 {
     if(fd != -1)
-	close(fd);
+        close(fd);
     if(fd2 != -1)
-	close(fd2);
+        close(fd2);
 }

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 */
 
 #define DEBUG 0
@@ -52,7 +51,7 @@ static BOOL InitProcessor(struct SysMonData *smdata)
     
     if (ProcessorBase)
     {
-        struct TagItem tags [] = 
+        struct TagItem tags [] =
         {
             { GCIT_NumberOfProcessors, (IPTR)&processorcount },
             { 0, (IPTR)NULL }
@@ -103,7 +102,7 @@ VOID UpdateProcessorInformation(struct SysMonData * smdata)
         DateStamp(&ds);
         frequency = ((ds.ds_Tick * (i + 1)) % 100) * 10;
 #else
-        struct TagItem tags [] = 
+        struct TagItem tags [] =
         {
             { GCIT_SelectedProcessor, (IPTR)i },
             { GCIT_ProcessorSpeed, (IPTR)&frequency },
@@ -114,7 +113,14 @@ VOID UpdateProcessorInformation(struct SysMonData * smdata)
 
         frequency /= 1000000;
 #endif
-        __sprintf(buffer, "%d MHz", (ULONG)frequency);
+        if (frequency > 1000)
+        {
+            ULONG ghz = frequency / 1000;
+            ULONG mhz = frequency - (ghz * 1000);
+            __sprintf(buffer, "%d.%d GHz", ghz, mhz);
+        }
+        else
+            __sprintf(buffer, "%d MHz", (ULONG)frequency);
         set(smdata->cpufreqvalues[i], MUIA_Text_Contents, (IPTR)buffer);
     }
 }

@@ -1,6 +1,5 @@
 /*
-    Copyright © 2003-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2003-2011, The AROS Development Team. All rights reserved.
 */
 
 // #define DEBUG 1
@@ -14,6 +13,7 @@
 #include <proto/dos.h>
 
 #include <stdlib.h>
+#include <string.h>
 
 #include <aros/debug.h>
 
@@ -452,7 +452,7 @@ STATIC VOID BibPrefs2Gadgets(struct BibEditor_DATA *data)
     SET(data->dock_lst, MUIA_List_Active, 0);
 }
 
-/* 
+/*
  * combine path and file and expand it to an absolute path if necessary
  */
 STATIC CONST_STRPTR AllocExpandPath(CONST_STRPTR path, CONST_STRPTR file)

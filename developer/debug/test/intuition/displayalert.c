@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/alerts.h>
@@ -38,9 +37,9 @@ int main(int argc, char **argv)
     ULONG code;
 
     if ((argc > 1) && (!stricmp(argv[1], "deadend")))
-	code = AT_DeadEnd;
+        code = AT_DeadEnd;
     else
-	code = 0;
+        code = 0;
 
     buffer[0] = 0;
     buf = &buffer[1];

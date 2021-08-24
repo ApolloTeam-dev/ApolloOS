@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 /*****************************************************************************
@@ -17,11 +15,11 @@
 
 /*  SYNOPSIS */
 
-	AROS_LHA(CxObj *, co, A0),
+        AROS_LHA(CxObj *, co, A0),
 
 /*  LOCATION */
 
-	struct Library *, CxBase, 12, Commodities)
+        struct Library *, CxBase, 12, Commodities)
 
 /*  FUNCTION
 
@@ -59,7 +57,7 @@
 
     if (co != NULL)
     {
-	co->co_Error = 0;
+        co->co_Error = 0;
     }
 
     AROS_LIBFUNC_EXIT

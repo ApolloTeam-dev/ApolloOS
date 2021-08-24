@@ -1,6 +1,5 @@
 /*
-    Copyright © 2007-2008, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2007-2008, The AROS Development Team. All rights reserved.
 */
 
 #define DEBUG 1
@@ -49,7 +48,7 @@
 
     INTERNALS
 
-*****************************************************************************/       
+*****************************************************************************/
 {
     AROS_LIBFUNC_INIT
 

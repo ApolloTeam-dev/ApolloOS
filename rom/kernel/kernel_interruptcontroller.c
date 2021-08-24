@@ -1,6 +1,5 @@
 /*
-    Copyright © 2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2017-2020, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -22,7 +21,7 @@
 #include <kernel_objects.h>
 
 /* We use own implementation of bug(), so we don't need aros/debug.h */
-#define D(x) 
+#define D(x)
 
 /*****************************************************************************
 
@@ -94,6 +93,7 @@ BOOL krnInitInterrupt(struct KernelBase *KernelBase, icid_t irq, icid_t icid, ic
     return FALSE;
 }
 
+/* Returns a mapping node for a requested Device Interrupt */
 struct IntrMapping *krnInterruptMapping(struct KernelBase *KernelBase, icid_t irq)
 {
     struct IntrMapping *intrMap;
@@ -108,13 +108,14 @@ struct IntrMapping *krnInterruptMapping(struct KernelBase *KernelBase, icid_t ir
     return NULL;
 }
 
+/* Returns a mapping node for a requested controller Hardware Interrupt */
 struct IntrMapping *krnInterruptMapped(struct KernelBase *KernelBase, icid_t irq)
 {
     struct IntrMapping *intrMap;
 
     ForeachNode(&KernelBase->kb_InterruptMappings, intrMap)
     {
-        if (intrMap->im_IRQ == irq)
+        if (intrMap->im_Int == irq)
         {
             return intrMap;
         }

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 /*****************************************************************************
@@ -17,11 +15,11 @@
 
 /*  SYNOPSIS */
 
-	AROS_LHA(CxMsg *, cxm, A0),
+        AROS_LHA(CxMsg *, cxm, A0),
 
 /*  LOCATION */
 
-	struct Library *, CxBase, 28, Commodities)
+        struct Library *, CxBase, 28, Commodities)
 
 /*  FUNCTION
 
@@ -31,7 +29,7 @@
 
     INPUTS
 
-    cxm  -  the commodity message to delete (must NOT be NULL) 
+    cxm  -  the commodity message to delete (must NOT be NULL)
 
     RESULT
 

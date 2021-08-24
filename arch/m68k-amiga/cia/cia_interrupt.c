@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/libraries.h>
@@ -11,7 +10,7 @@
 #include "cia_intern.h"
 
 AROS_INTH1(Cia_Handler, struct CIABase *, CiaBase)
-{ 
+{
     AROS_INTFUNC_INIT
 
     UBYTE mask;

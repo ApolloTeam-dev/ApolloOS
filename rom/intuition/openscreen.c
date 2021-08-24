@@ -1,7 +1,6 @@
 /*
-    Copyright � 1995-2020, The AROS Development Team. All rights reserved.
-    Copyright � 2001-2013, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2013, The MorphOS Development Team. All Rights Reserved.
 
     Open a new screen.
 */
@@ -46,6 +45,9 @@
 #else
 #include <hidd/gfx.h>
 #endif
+
+#include <string.h>
+
 #include "intuition_intern.h"
 #include "intuition_customize.h"
 #include "intuition_extend.h"
@@ -2449,7 +2451,7 @@ VOID int_openscreen(struct OpenScreenActionMsg *msg,
     }
 
     /* AROS: Allways attempt to activate monitor, current FirstScreen can be using a different one! */
-	ActivateMonitor(screen->IMonitorNode, -1, -1, IntuitionBase);
+        ActivateMonitor(screen->IMonitorNode, -1, -1, IntuitionBase);
 
     /* set the default pub screen */
     if (IBase->IControlPrefs.ic_Flags & ICF_DEFPUBSCREEN)

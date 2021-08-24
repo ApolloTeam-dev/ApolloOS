@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/tasks.h>
@@ -82,9 +81,9 @@ int main(void)
     sss.stk_Lower = AllocMem(STACK_SIZE, MEMF_ANY);
     if (!sss.stk_Lower)
     {
-	print("Failed to allocate new stack!\n");
+        print("Failed to allocate new stack!\n");
 
-	return 1;
+        return 1;
     }
 
     sss.stk_Upper = sss.stk_Lower + STACK_SIZE;

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function SetSoftStyle()
-    Lang: English
 */
 
 #include "graphics_intern.h"
@@ -14,15 +12,15 @@
 #include <graphics/rastport.h>
 #include <proto/graphics.h>
 
-	AROS_LH3(ULONG, SetSoftStyle,
+        AROS_LH3(ULONG, SetSoftStyle,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct RastPort *, rp    , A1),
-	AROS_LHA(ULONG            , style , D0),
-	AROS_LHA(ULONG            , enable, D1),
+        AROS_LHA(struct RastPort *, rp    , A1),
+        AROS_LHA(ULONG            , style , D0),
+        AROS_LHA(ULONG            , enable, D1),
 
 /*  LOCATION */
-	struct GfxBase *, GfxBase, 15, Graphics)
+        struct GfxBase *, GfxBase, 15, Graphics)
 
 /*  FUNCTION
 

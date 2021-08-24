@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 
     Move a window around on the screen.
 */
@@ -12,9 +11,9 @@
 struct MoveWindowActionMsg
 {
     struct IntuiActionMsg    msg;
-    struct Window   	    *window;
-    LONG    	    	     dx;
-    LONG    	    	     dy;
+    struct Window           *window;
+    LONG                     dx;
+    LONG                     dy;
 };
 
 static VOID int_movewindow(struct MoveWindowActionMsg *msg,

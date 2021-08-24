@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc: CachePostDMA() - Do what is necessary for DMA.
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -11,7 +9,11 @@
 #include <exec/execbase.h>
 #include <aros/libcall.h>
 
-extern void AROS_SLIB_ENTRY(CachePostDMA_00,Exec,128)(void);
+#include <defines/exec_LVO.h>
+
+extern void AROS_SLIB_ENTRY(CachePostDMA_00,Exec,LVOCachePostDMA)(void);
+extern void AROS_SLIB_ENTRY(CachePostDMA_30,Exec,LVOCachePostDMA)(void);
+extern void AROS_SLIB_ENTRY(CachePostDMA_40,Exec,LVOCachePostDMA)(void);
 
 #include <proto/exec.h>
 
@@ -30,9 +32,18 @@ AROS_LH3(void, CachePostDMA,
      * Exec syscall table to directly point to the right routine.
      */
     Disable();
-    func = AROS_SLIB_ENTRY(CachePostDMA_00, Exec, 128);
+    if (SysBase->AttnFlags & AFF_68040) {
+        /* 68040 support */
+        func = AROS_SLIB_ENTRY(CachePostDMA_40, Exec, LVOCachePostDMA);
+    } else if (SysBase->AttnFlags & AFF_68030) {
+        /* 68030 support */
+        func = AROS_SLIB_ENTRY(CachePostDMA_30, Exec, LVOCachePostDMA);
+    } else {
+        /* Everybody else (68000, 68010) */
+        func = AROS_SLIB_ENTRY(CachePostDMA_00, Exec, LVOCachePostDMA);
+    }
 
-    SetFunction((struct Library *)SysBase, -LIB_VECTSIZE * 128, func);
+    SetFunction((struct Library *)SysBase, -LVOCachePostDMA * LIB_VECTSIZE, func);
     Enable();
 
     /* Call 'myself', which is now pointing to the correct routine */

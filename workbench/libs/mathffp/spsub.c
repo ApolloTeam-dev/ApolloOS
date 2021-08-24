@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2004, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2004, The AROS Development Team. All rights reserved.
 */
 
 #include "mathffp_intern.h"
@@ -25,7 +24,7 @@
     INPUTS
 
     RESULT
-	FFP number
+        FFP number
 
         Flags:
           zero     : result is zero
@@ -35,7 +34,7 @@
     BUGS
 
     SEE ALSO
-	SPAdd()
+        SPAdd()
 
     INTERNALS
         ALGORITHM:

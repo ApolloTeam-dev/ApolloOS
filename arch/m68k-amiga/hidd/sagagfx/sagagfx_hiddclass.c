@@ -1,16 +1,12 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
-    Desc: SAGAGfx Hidd class.
-    Lang: English.
+    Desc: Gfx Hidd class for SM502.
 */
 
 #define __OOP_NOATTRBASES__
 
-#undef DEBUG
 #define DEBUG 0
-
 #include <aros/debug.h>
 
 #include <aros/asmcall.h>
@@ -314,10 +310,19 @@ BOOL METHOD(SAGAGfx, Hidd_Gfx, SetCursorPos)
         
         if (data->cursor_visible)
         {
-            x += data->hotX;
-            y += data->hotY;
-            
-            data->SAGAGfx_SetSpritePosition(x, y);
+            y <<= 1;
+        }
+
+        x += SAGA_MOUSE_DELTAX;
+        y += SAGA_MOUSE_DELTAY;
+
+        XSD(cl)->cursorX = x;
+        XSD(cl)->cursorY = y;
+
+        if (XSD(cl)->cursor_visible)
+        {
+            WRITE16(SAGA_VIDEO_SPRITEX, x);
+            WRITE16(SAGA_VIDEO_SPRITEY, y);
         }
     }
     return TRUE;
@@ -382,10 +387,42 @@ BOOL METHOD(SAGAGfx, Hidd_Gfx, SetCursorShape)
     
     if (width != 16 || height != 16)
     {
-        for (UWORD i = 0; i < 16 * 16; i++)
+        for (UWORD i=0; i < 16*16; i++)
+            XSD(cl)->cursor_clut[i] = 0;
+    }
+
+    HIDD_BM_GetImageLUT(msg->shape, XSD(cl)->cursor_clut, 16, 0, 0, width, height, NULL);
+
+    bug("Shape:\n");
+    ptr = 0xdff800;
+
+    for (int y = 0; y < 16; y++)
+    {
+        ULONG pix = 0x80008000;
+        ULONG val = 0;
+
+        for (int x = 0; x < 16; x++)
         {
-            data->cursor_clut[i] = 0;
+            bug("%d ", XSD(cl)->cursor_clut[y *16 + x]);
+            switch (XSD(cl)->cursor_clut[y*16 + x])
+            {
+                case 1:
+                    val |= pix & 0xffff;
+                    break;
+                case 2:
+                    val |= pix & 0xffff0000;
+                    break;
+                case 3:
+                    val |= pix;
+                    break;
+                default:
+                    break;
+            }
+            pix >>= 1;
         }
+        WRITE32(ptr, val);
+        ptr += 4;
+        bug("\n");
     }
     
     HIDD_BM_GetImageLUT(msg->shape, data->cursor_clut, 16, 0, 0, width, height, NULL);
@@ -463,14 +500,16 @@ void METHOD(SAGAGfx, Hidd_Gfx, CopyBox)
     struct SAGAGfx_staticdata *data = XSD(cl);
     
     ULONG mode = GC_DRMD(msg->gc);
-    IPTR  src  = 0;
-    IPTR  dst  = 0;
-    
-    
-    if (OOP_OCLASS(msg->src ) != data->bmclass ||
-        OOP_OCLASS(msg->dest) != data->bmclass)
+    IPTR src=0, dst=0;
+
+bug("[SAGA] CopyBox(%p, %p, dx:%d, dy:%d, sx:%d, sy:%d, w:%d, h:%d)\n", msg->src, msg->dest, msg->destX, msg->destY,
+msg->srcX, msg->srcY, msg->width, msg->height);
+
+    if (OOP_OCLASS(msg->src) != XSD(cl)->bmclass ||
+        OOP_OCLASS(msg->dest) != XSD(cl)->bmclass)
     {
-        
+        bug("[SAGA] CopyBox - either source or dest is not SAGA bitmap\n");
+        bug("[SAGA] oclass src: %p, oclass dst: %p, bmclass: %p\n", OOP_OCLASS(msg->src), OOP_OCLASS(msg->dest), XSD(cl)->bmclass);
         OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
     }
     else
@@ -482,12 +521,12 @@ void METHOD(SAGAGfx, Hidd_Gfx, CopyBox)
             bm_dst->bitsperpix <= 8 || 
            (bm_src->bitsperpix != bm_dst->bitsperpix))
         {
-            
+            bug("[SAGA] bpp_src=%d, bpp_dst=%d\n", bm_src->bitsperpix, bm_dst->bitsperpix);
             OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
         }
         else
         {
-            
+            bug("[SAGA] both bitmaps compatible. drmd=%d\n", mode);
             OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
         }
     }

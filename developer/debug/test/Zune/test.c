@@ -1,8 +1,7 @@
 /*
-    Copyright © 2002-2019, The AROS Development Team.
+    Copyright (C) 2002-2019, The AROS Development Team.
     All rights reserved.
 
-    $Id$
 */
 
 #define INTUITION_NO_INLINE_STDARG
@@ -1948,7 +1947,7 @@ int main(void)
                 MUIA_Window_Title, "Second window",
                 WindowContents, VGroup,
                     Child, DropTextObject,
-                        MUIA_Text_Contents, "Drop here", 
+                        MUIA_Text_Contents, "Drop here",
                         MUIA_Dropable, TRUE,
                         End,
                     End,
@@ -3180,7 +3179,7 @@ static Object *CreateBoopsiGroup()
             /* boopsi objects don't know their sizes, so we help keep
              * important values during window resize */
             MUIA_Boopsi_ClassID, "colorwheel.gadget",
-            MUIA_Boopsi_MinWidth , 30, 
+            MUIA_Boopsi_MinWidth , 30,
             MUIA_Boopsi_MinHeight, 30,
             MUIA_Boopsi_Remember , WHEEL_Saturation,
             MUIA_Boopsi_Remember , WHEEL_Hue,

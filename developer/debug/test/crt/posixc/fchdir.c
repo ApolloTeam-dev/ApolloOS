@@ -1,6 +1,5 @@
 /*
-    Copyright © 2008-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2008-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <unistd.h>
@@ -50,7 +49,7 @@ int main()
 void cleanup()
 {
     if(fd != -1)
-	close(fd);
+        close(fd);
     
     DeleteFile("T:__TEST__");
 }

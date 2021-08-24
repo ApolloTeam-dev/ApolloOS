@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Varargs version of graphics.library/AllocSpriteDataA()
-    Lang: english
 */
 #define AROS_TAGRETURNTYPE struct ExtSprite *
 
@@ -17,12 +15,12 @@
 #define NO_INLINE_STDARG /* turn off inline def */
 #include <proto/graphics.h>
 
-	struct ExtSprite * AllocSpriteData (
+        struct ExtSprite * AllocSpriteData (
 
 /*  SYNOPSIS */
-	struct BitMap * bitmap,
-	Tag tag1,
-	...)
+        struct BitMap * bitmap,
+        Tag tag1,
+        ...)
 
 /*  FUNCTION
         This is the varargs version of graphics.library/AllocSpriteDataA().

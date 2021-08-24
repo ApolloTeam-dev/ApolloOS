@@ -1,6 +1,5 @@
 /*
-    Copyright © 2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2020, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -18,14 +17,14 @@
         AROS_LH2(ULONG, KrnModifyIRQA,
 
 /*  SYNOPSIS */
-	AROS_LHA(ULONG, irq, D0),
-	AROS_LHA(struct TagItem *, attribs, A0),
+        AROS_LHA(ULONG, irq, D0),
+        AROS_LHA(struct TagItem *, attribs, A0),
 
 /*  LOCATION */
-	struct KernelBase *, KernelBase, 39, Kernel)
+        struct KernelBase *, KernelBase, 39, Kernel)
 
 /*  FUNCTION
-	Modify an IRQ using the passed in tags.
+        Modify an IRQ using the passed in tags.
 
     INPUTS
 

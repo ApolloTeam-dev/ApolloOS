@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <cybergraphx/cybergraphics.h>
@@ -37,15 +36,15 @@ int main(void)
     
     if (scr)
     {
-    	struct BitMap *bm = scr->RastPort.BitMap;
-	LONG pixfmt;
-	
-	pixfmt = GetCyberMapAttr(bm, CYBRMATTR_PIXFMT);
-	
-	printf("Pixel Format: #%ld (%s)\n",
-	       (long)pixfmt,
-	       ((pixfmt >= 0) && (pixfmt < NUM_PIXFMT)) ? pixfmt_str[pixfmt] : "<unknown>");
-	
+        struct BitMap *bm = scr->RastPort.BitMap;
+        LONG pixfmt;
+        
+        pixfmt = GetCyberMapAttr(bm, CYBRMATTR_PIXFMT);
+        
+        printf("Pixel Format: #%ld (%s)\n",
+               (long)pixfmt,
+               ((pixfmt >= 0) && (pixfmt < NUM_PIXFMT)) ? pixfmt_str[pixfmt] : "<unknown>");
+        
     }
     
     return 0;

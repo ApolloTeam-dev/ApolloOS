@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <exec/types.h>
@@ -39,16 +38,16 @@ static void _om_set(struct ICData *ic, struct TagItem *tags, struct IntuitionBas
 
     while ((tag = NextTagItem(&tstate)))
     {
-	switch(tag->ti_Tag)
-	{
-	case ICA_MAP:
-	    ic->ic_Mapping = (struct TagItem *)tag->ti_Data;
-	    break;
+        switch(tag->ti_Tag)
+        {
+        case ICA_MAP:
+            ic->ic_Mapping = (struct TagItem *)tag->ti_Data;
+            break;
 
-	case ICA_TARGET:
-	    ic->ic_Target = (Object *)tag->ti_Data;
-	    break;
-	}
+        case ICA_TARGET:
+            ic->ic_Target = (Object *)tag->ti_Data;
+            break;
+        }
     }
 }
 
@@ -124,12 +123,12 @@ IPTR ICClass__OM_GET(Class *cl, Object *o, struct opGet *msg)
     switch (msg->opg_AttrID)
     {
     case ICA_MAP:
-	*msg->opg_Storage = (IPTR)ic->ic_Mapping;
-	break;
+        *msg->opg_Storage = (IPTR)ic->ic_Mapping;
+        break;
 
     case ICA_TARGET:
-	*msg->opg_Storage = (IPTR)ic->ic_Target;
-	break;
+        *msg->opg_Storage = (IPTR)ic->ic_Target;
+        break;
     }
 
     return (IPTR)TRUE;

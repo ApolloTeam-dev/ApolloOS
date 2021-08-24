@@ -1,12 +1,12 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     C99 function snprintf().
 */
 
-#define DEBUG 0
 #include <aros/debug.h>
+
+#include "debug.h"
 
 /*****************************************************************************
 
@@ -63,7 +63,7 @@
     int     retval;
     va_list args;
 
-    D(bug("[snprintf] start; str %p('%s'), format: %p('%s')\n",
+    D(bug("[%s] %s: start - str %p('%s'), format: %p('%s')\n", STDCNAME, __func__,
           str, str, format, format
     ));
 
@@ -73,7 +73,7 @@
 
     va_end (args);
 
-    D(bug("[snprintf] end; str %p('%s'), format: %p('%s')\n",
+    D(bug("[%s] %s: end - str %p('%s'), format: %p('%s')\n", STDCNAME, __func__,
           str, str, format, format
     ));
 

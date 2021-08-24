@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2002, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2002, The AROS Development Team. All rights reserved.
 */
 
 #define DEBUG 1
@@ -84,7 +83,7 @@ int main(void)
     icTags[5].ti_Tag=TAG_END;
     icTags[5].ti_Data=0;
 
-	kprintf("here1\n");
+        kprintf("here1\n");
 
     app=ApplicationObject,
         SubWindow, win=WindowObject,

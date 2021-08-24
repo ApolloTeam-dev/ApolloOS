@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <exec/memory.h>
@@ -580,7 +579,7 @@ moreFlags |= (name); else moreFlags &= ~(name)
 
         /* (cyfm 03/03/03 check for nw.Type == PUBLICSCREEN as well, some programs
          *  like TurboPrint GraphicPublisher specify {WA_PubScreen, NULL} and want
-         *  to open on the default public screen that way 
+         *  to open on the default public screen that way
          */
     if (pubScreenNameSet || (nw.Type == PUBLICSCREEN && nw.Screen == NULL))
     {
@@ -686,7 +685,7 @@ moreFlags |= (name); else moreFlags &= ~(name)
     initmsg.wdp_ScreenUserBuffer   = ((struct IntScreen *) nw.Screen)->DecorUserBuffer;
     initmsg.wdp_Screen             = nw.Screen;
 
-    ok = DoMethodA(((struct IntScreen *)(nw.Screen))->WinDecorObj, (Msg)&initmsg);        
+    ok = DoMethodA(((struct IntScreen *)(nw.Screen))->WinDecorObj, (Msg)&initmsg);
 
     if (!ok) {
         D(bug("OpenWindow: WDM_INITWINDOW failed\n"));
@@ -965,7 +964,7 @@ moreFlags |= (name); else moreFlags &= ~(name)
     else
     {
         ((struct IntWindow *)w)->ZipLeftEdge = nw.LeftEdge;
-        ((struct IntWindow *)w)->ZipTopEdge  = nw.TopEdge;        
+        ((struct IntWindow *)w)->ZipTopEdge  = nw.TopEdge;
         ((struct IntWindow *)w)->ZipWidth    = (w->Width == w->MinWidth) ? w->MaxWidth : w->MinWidth;
         ((struct IntWindow *)w)->ZipHeight   = (w->Height == w->MinHeight) ? w->MaxHeight : w->MinHeight;
     }
@@ -1125,7 +1124,7 @@ moreFlags |= (name); else moreFlags &= ~(name)
     msg.wdp_ExtraButtons = ((struct IntWindow *)w)->extrabuttons;
         msg.wdp_Dri             = (struct DrawInfo *)dri;
 
-        DoMethodA(((struct IntScreen *)(nw.Screen))->WinDecorObj, (Msg)&msg);        
+        DoMethodA(((struct IntScreen *)(nw.Screen))->WinDecorObj, (Msg)&msg);
 
         AddGList(w, nw.FirstGadget, -1, -1, NULL);
     }
@@ -1174,7 +1173,7 @@ moreFlags |= (name); else moreFlags &= ~(name)
         shapemsg.wdp_Window = w;
         shapemsg.wdp_UserBuffer      = ((struct IntWindow *)w)->DecorUserBuffer;
 
-        shape = DoMethodA(((struct IntScreen *)(nw.Screen))->WinDecorObj, (Msg)&shapemsg);        
+        shape = DoMethodA(((struct IntScreen *)(nw.Screen))->WinDecorObj, (Msg)&shapemsg);
         ((struct IntWindow *)w)->OutlineShape = shape;
         ChangeWindowShape(w, shape, NULL);
         ((struct IntWindow *)w)->CustomShape = FALSE;

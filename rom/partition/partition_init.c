@@ -1,9 +1,7 @@
 /*
-   Copyright © 2001-2020, The AROS Development Team. All rights reserved.
-   $Id$
+   Copyright (C) 2001-2020, The AROS Development Team. All rights reserved.
 
    Desc: Partition initialization code
-   Lang: English
 */
 
 #include <aros/symbolsets.h>
@@ -34,10 +32,10 @@ static int PartitionCleanup(struct PartitionBase_intern *base)
 {
     /* If there's something in our boot list, we can't quit without losing it */
     if (!IsListEmpty(&base->bootList))
-    	return FALSE;
+        return FALSE;
 
     if (base->pb_DOSBase)
-    	CloseLibrary(base->pb_DOSBase);
+        CloseLibrary(base->pb_DOSBase);
 
     return TRUE;
 }

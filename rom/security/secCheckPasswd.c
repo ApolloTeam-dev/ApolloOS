@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2019, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -11,14 +10,14 @@
 /*****************************************************************************
 
     NAME */
-	AROS_LH1(BOOL, secCheckPasswd,
+        AROS_LH1(BOOL, secCheckPasswd,
 
 /*  SYNOPSIS */
-	/* (taglist) */
-	AROS_LHA(struct TagItem *, taglist, A0),
+        /* (taglist) */
+        AROS_LHA(struct TagItem *, taglist, A0),
 
 /*  LOCATION */
-	struct SecurityBase *, secBase, 17, Security)
+        struct SecurityBase *, secBase, 17, Security)
 
 /*  FUNCTION
 

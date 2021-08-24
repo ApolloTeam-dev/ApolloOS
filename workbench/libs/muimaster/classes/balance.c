@@ -1,6 +1,5 @@
-/* 
-    Copyright © 2002-2013, The AROS Development Team. All rights reserved.
-    $Id$
+/*
+    Copyright (C) 2002-2020, The AROS Development Team. All rights reserved.
 */
 
 #include <string.h>
@@ -62,7 +61,7 @@ IPTR Balance__OM_NEW(struct IClass *cl, Object *obj, struct opSet *msg)
     data->ehn.ehn_Object = obj;
     data->ehn.ehn_Class = cl;
 
-    D(bug("Balance_New(0x%lx)\n", obj));
+    D(bug("Balance_New(0x%p)\n", obj));
 
     return (IPTR) obj;
 }
@@ -338,7 +337,7 @@ static void recalc_weights_neighbours(struct IClass *cl, Object *obj,
         {
             if (!(_flags(sibling) & MADF_SHOWME))
                 continue;
-/*          D(bug("sibling %lx\n", sibling)); */
+/*          D(bug("sibling 0x%p\n", sibling)); */
             if (sibling == obj)
             {
                 while ((sibling = NextObject(&object_state)))
@@ -355,7 +354,7 @@ static void recalc_weights_neighbours(struct IClass *cl, Object *obj,
         if (!(data->obj_before && data->obj_after))
         {
             D(bug
-                ("Balance(%0xlx): missing siblings; before=%lx, after=%lx\n",
+                ("Balance(0x%p): missing siblings; before=0x%p, after=0x%p\n",
                     obj, data->obj_before, data->obj_after));
             return;
         }
@@ -700,7 +699,7 @@ static void handle_move(struct IClass *cl, Object *obj, WORD mouse)
         {
             if ((!(_flags(sibling) & MADF_SHOWME)) && (obj != sibling))
                 continue;
-/*          D(bug("sibling %lx\n", sibling)); */
+/*          D(bug("sibling 0x%p\n", sibling)); */
 
             draw_object_frame(obj, sibling, is_fixed_size(data, sibling));
         }

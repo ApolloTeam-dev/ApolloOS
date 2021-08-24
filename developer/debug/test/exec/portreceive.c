@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <proto/exec.h>
@@ -17,8 +16,8 @@ int main(void)
     port = CreatePort("PORTTEST", 0);
     if (port==NULL)
     {
-	puts("Error creating port");
-	return 20;
+        puts("Error creating port");
+        return 20;
     }
     
     WaitPort(port);

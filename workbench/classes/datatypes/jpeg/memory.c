@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/memory.h>
@@ -19,7 +18,7 @@ void free(void *mem)
 }
 
 char *getenv (const char *name)
-{ 
+{
     /* This function is not thread-safe */
     static TEXT buff[128] = {};
     

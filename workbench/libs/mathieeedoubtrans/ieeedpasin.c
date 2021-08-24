@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2003, The AROS Development Team. All rights reserved.
 */
 /*
  * ====================================================
@@ -36,9 +35,9 @@
         IEEE double precision floating point number
 
         flags:
-	zero	 : result is zero
-	negative : result is negative
-	overflow : argument is out of range
+        zero     : result is zero
+        negative : result is negative
+        overflow : argument is out of range
 
     BUGS
 
@@ -71,7 +70,7 @@
     {    /* |x| >= 1 */
         if(( (ix-0x3ff00000) | Get_Low32of64(x) ) == 0)
         {  /* |x|==1 -> asin(1) = pi/2 */
-            /* 
+            /*
                 if this is a 32bit -compiler we need to define some variables, otherwise
                 these are available as 64bit constants
             */
@@ -98,7 +97,7 @@
         }
         else  /* asin(>1) = NAN  */
         {
-            /* 
+            /*
                 if this is a 32bit -compiler we need to define some variables,
                 otherwise these are available as 64bit constants
             */
@@ -109,7 +108,7 @@
                 Set_Value64C(IEEEDPNAN_64, IEEEDPNAN_Hi, IEEEDPNAN_Lo);
 #           endif
             
-            return IEEEDPNAN_64;	 /* acos(>1)= NAN */
+            return IEEEDPNAN_64;         /* acos(>1)= NAN */
         } /* else */
     } /* if */
     
@@ -149,13 +148,13 @@
 #       endif
         
         if(ix < 0x3fe00000)
-        {	  /* |x| < 0.5 */
+        {         /* |x| < 0.5 */
             if(ix <= 0x3e400000) return x;/* if|x|<2**-27 -> asin(x)=x */
             
             Set_Value64(t, IEEEDPMul(x, x));
             Set_Value64
             (
-                p, 
+                p,
                 IEEEDPMul(t, IEEEDPAdd(pS0_64,
                 IEEEDPMul(t, IEEEDPAdd(pS1_64,
                 IEEEDPMul(t, IEEEDPAdd(pS2_64,
@@ -166,7 +165,7 @@
             
             Set_Value64
             (
-                q, 
+                q,
                 IEEEDPAdd(one_64,
                 IEEEDPMul(t, IEEEDPAdd(qS1_64,
                 IEEEDPMul(t, IEEEDPAdd(qS2_64,
@@ -201,7 +200,7 @@
             /* 1 > |x| >= 0.5 */
             AND64QC
             (
-                x, 
+                x,
                 (IEEEDPMantisse_Mask_Hi | IEEEDPExponent_Mask_Hi),
                 (IEEEDPMantisse_Mask_Lo | IEEEDPExponent_Mask_Lo)
             );
@@ -209,7 +208,7 @@
             Set_Value64(t, IEEEDPMul(w, onehalf_64));
             Set_Value64
             (
-                p, 
+                p,
                 IEEEDPMul(t, IEEEDPAdd(pS0_64,
                 IEEEDPMul(t, IEEEDPAdd(pS1_64,
                 IEEEDPMul(t, IEEEDPAdd(pS2_64,
@@ -234,7 +233,7 @@
                 Set_Value64(w, IEEEDPDiv(p,q));
                 Set_Value64
                 (
-                    t, 
+                    t,
                     IEEEDPSub
                     (
                         pio2_hi_64, IEEEDPSub
@@ -262,7 +261,7 @@
                 Set_Value64(r, IEEEDPDiv(p,q));
                 Set_Value64
                 (
-                    p, 
+                    p,
                     IEEEDPSub
                     (
                         IEEEDPMul(IEEEDPMul(two_64, s), r),

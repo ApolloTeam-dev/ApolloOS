@@ -1,9 +1,7 @@
 /*
-    Copyright © 2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2011-2020, The AROS Development Team. All rights reserved.
 
     Desc: Allocate kernel.resource base.
-    Lang: english
 */
 
 #include <exec/memory.h>
@@ -18,12 +16,12 @@ struct KernelBase *AllocKernelBase(struct ExecBase *SysBase)
     ULONG i = FUNCTIONS_COUNT * LIB_VECTSIZE;
 
     /* Align vector table size */
-    i  = ((i - 1) / sizeof(IPTR) + 1) * sizeof(IPTR);    
+    i  = ((i - 1) / sizeof(IPTR) + 1) * sizeof(IPTR);
 
     /* Allocate the memory */
     mem = AllocMem(i + sizeof(struct KernelBase), MEMF_PUBLIC|MEMF_CLEAR);
     if (!mem)
-    	return NULL;
+        return NULL;
 
     /* Skip past the vector table */
     mem += i;

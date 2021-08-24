@@ -1,6 +1,5 @@
 /*
-    Copyright © 2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2017, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/kernel.h>
@@ -13,9 +12,9 @@
 #define D(x)
 
 AROS_LH2(ULONG, KrnAllocIRQ,
-	AROS_LHA(ULONG, irq_type, D0),
-	AROS_LHA(ULONG, count, D1),
-	struct KernelBase *, KernelBase, 38, Kernel)
+        AROS_LHA(ULONG, irq_type, D0),
+        AROS_LHA(ULONG, count, D1),
+        struct KernelBase *, KernelBase, 38, Kernel)
 {
     AROS_LIBFUNC_INIT
 
@@ -24,9 +23,9 @@ AROS_LH2(ULONG, KrnAllocIRQ,
 
     D(bug("[KRN] KrnAllocIRQ(%08x):\n", irq_type));
 
-    if ((irq_type == IRQTYPE_MSI) && (pdata->kb_PDFlags & PLATFORMF_HAVEMSI))
+    if ((irq_type == IRQTYPE_APIC) && (pdata->kb_PDFlags & PLATFORMF_HAVEMSI))
     {
-        D(bug("[KRN] KrnAllocIRQ: Attempting to allocate MSI Interrupt...\n"));
+        D(bug("[KRN] KrnAllocIRQ: Attempting to allocate APIC Interrupt...\n"));
         irqID = core_APIC_AllocMSI(count);
     }
     return irqID;

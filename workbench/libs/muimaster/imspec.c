@@ -3,7 +3,6 @@
     Copyright  1999, David Le Corfec.
     All rights reserved.
 
-    $Id$
 */
 
 /* This is the implementation of a MUI-like image engine
@@ -367,6 +366,12 @@ static struct MUI_ImageSpec_intern *zune_image_spec_to_structure(IPTR in)
                     &spec->u.penspec));
             break;
 
+        case 'r':              /* a penspec, WookieChat is doing this on MorphOS */
+            spec = get_pen_imspec(s + 1);
+            D(bug("zune_image_spec_to_structure : penspec %lx\n",
+                    &spec->u.penspec));
+            break;
+
         case '3':              /* BOOPSI image class name */
             spec = get_boopsi_imspec(s + 2);
             break;
@@ -399,7 +404,7 @@ static struct MUI_ImageSpec_intern *zune_image_spec_to_structure(IPTR in)
 
         }                       /* switch(*s) */
     }
-    D(bug("zune_image_spec_to_structure : out=0x%lx [%s]\n",
+    D(bug("zune_image_spec_to_structure : out=0x%p [%s]\n",
             spec, zune_imspec_to_string(spec)));
     return spec;
 }
@@ -426,7 +431,7 @@ static void zune_imspec_free(struct MUI_ImageSpec_intern *spec)
 {
     if (!spec)
         return;
-    D(bug("zune_imspec_free(0x%lx) [%s]\n",
+    D(bug("zune_imspec_free(0x%p) [%s]\n",
             spec, zune_imspec_to_string(spec)));
 
     switch (spec->type)
@@ -468,7 +473,7 @@ struct MUI_ImageSpec_intern *zune_imspec_setup(IPTR s,
 
     spec = zune_image_spec_to_structure(s);
 
-    D(bug("zune_imspec_setup(%lx) [%s]\n",
+    D(bug("zune_imspec_setup(0x%p) [%s]\n",
             spec, zune_imspec_to_string(spec)));
     if (!spec)
         return NULL;
@@ -570,7 +575,7 @@ void zune_imspec_cleanup(struct MUI_ImageSpec_intern *spec)
     if (!spec)
         return;
 
-    D(bug("zune_imspec_cleanup(0x%lx) [%s]\n",
+    D(bug("zune_imspec_cleanup(0x%p) [%s]\n",
             spec, zune_imspec_to_string(spec)));
 
     switch (spec->type)
@@ -716,7 +721,7 @@ void zune_imspec_show(struct MUI_ImageSpec_intern *spec, Object *obj)
     if ((!spec) || (!obj))
         return;
 
-    D(bug("zune_imspec_show(0x%lx) [%s]\n", spec,
+    D(bug("zune_imspec_show(0x%p) [%s]\n", spec,
             zune_imspec_to_string(spec)));
 
     /* scaled gradient generation made here */
@@ -742,7 +747,7 @@ void zune_imspec_hide(struct MUI_ImageSpec_intern *spec)
     if (!spec)
         return;
 
-    D(bug("zune_imspec_hide(0x%lx) [%s]\n", spec,
+    D(bug("zune_imspec_hide(0x%p) [%s]\n", spec,
             zune_imspec_to_string(spec)));
 
     switch (spec->type)

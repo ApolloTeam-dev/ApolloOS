@@ -1,6 +1,5 @@
 /*
-    Copyright © 2010-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2010-2013, The AROS Development Team. All rights reserved.
 
     C99 function freopen().
 */
@@ -15,29 +14,29 @@
     NAME */
 #include <stdio.h>
 
-	FILE *freopen (
+        FILE *freopen (
 
 /*  SYNOPSIS */
-	const char * restrict path,
-	const char * restrict mode,
-	FILE       * restrict stream
-	)
+        const char * restrict path,
+        const char * restrict mode,
+        FILE       * restrict stream
+        )
 
 /*  FUNCTION
-	Opens the  file whose name is the string pointed to by path  and
-	associates  the  stream  pointed to by stream with it.
+        Opens the  file whose name is the string pointed to by path  and
+        associates  the  stream  pointed to by stream with it.
 
     INPUTS
-	path   - the file to open, NULL to only change the mode of the stream.
-	mode   - Mode to open file, see fopen for description of the string.
+        path   - the file to open, NULL to only change the mode of the stream.
+        mode   - Mode to open file, see fopen for description of the string.
                  When path is NULL end-of-file and error indicator will be
                  cleared and indication if stream is read and/or write.
                  No change to position in file or no truncation will be
                  performed.
-        stream - the stream to wich the file will be associated.
+        stream - the stream to which the file will be associated.
 
     RESULT
-	NULL on error or stream. When NULL is returned input stream is
+        NULL on error or stream. When NULL is returned input stream is
         not changed.
 
     NOTES
@@ -47,7 +46,7 @@
     BUGS
 
     SEE ALSO
-	 fopen(), fclose()
+         fopen(), fclose()
 
     INTERNALS
 

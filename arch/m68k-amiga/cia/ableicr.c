@@ -1,9 +1,7 @@
 /*
-    Copyright © 2010, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2010, The AROS Development Team. All rights reserved.
 
     Desc: AbleICR() function.
-    Lang: english
 */
 
 #include <exec/libraries.h>
@@ -16,8 +14,8 @@
 #include "cia_intern.h"
 
 AROS_LH1(WORD, AbleICR,
-	 AROS_LHA(WORD, mask, D0),
-	 struct Library *, resource, 3, Cia)
+         AROS_LHA(WORD, mask, D0),
+         struct Library *, resource, 3, Cia)
 {
     AROS_LIBFUNC_INIT
 

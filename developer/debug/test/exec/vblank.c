@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/asmcall.h>
@@ -37,7 +36,7 @@ int main(void)
     
     while (!(CheckSignal(SIGBREAKF_CTRL_C)))
     {
-    	Printf("\rVBlank counter: %lu          ", counter);
+        Printf("\rVBlank counter: %lu          ", counter);
     }
     
     RemIntServer(INTB_VERTB, &vblank_int);

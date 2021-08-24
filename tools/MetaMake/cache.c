@@ -1,5 +1,5 @@
 /* MetaMake - A Make extension
-   Copyright © 1995-2019, The AROS Development Team. All rights reserved.
+   Copyright (C) 1995-2019, The AROS Development Team. All rights reserved.
 
 This file is part of MetaMake.
 
@@ -55,10 +55,10 @@ Boston, MA 02111-1307, USA.  */
 #define debug(v)
 #endif
 
-#define MAJOR		0L
-#define MINOR		9L
-#define REVISION	0L
-#define ID		((MAJOR << 24) | (MINOR << 16) | REVISION)
+#define MAJOR           0L
+#define MINOR           9L
+#define REVISION        0L
+#define ID              ((MAJOR << 24) | (MINOR << 16) | REVISION)
 #define CHECK_ID(id)    (((id) & 0xFFFF0000) == ((ID) & 0xFFFF0000))
 
 struct Cache_priv
@@ -348,11 +348,37 @@ checknewsrc (struct Cache_priv * cache, struct Makefile * makefile, struct List 
     }
 }
 
+int cache_stricmp(const char *a, const char *b) {
+  int ca, cb;
+  do {
+     ca = (unsigned char) *a++;
+     cb = (unsigned char) *b++;
+     ca = tolower(toupper(ca));
+     cb = tolower(toupper(cb));
+   } while (ca == cb && ca != '\0');
+   return ca - cb;
+}
+
+struct DirNode *cache_shufflenode(struct DirNode *subdir, struct DirNode *subdir2)
+{
+    struct DirNode *prevdir;
+loop:
+    if (cache_stricmp(subdir->node.name, subdir2->node.name) > 0)
+    {
+        prevdir = GetPrev(subdir);
+        if (prevdir)
+        {
+            subdir = prevdir;
+            goto loop;
+        }
+    }
+    return subdir;
+}
 
 int
 updatemflist (struct Cache_priv * cache, struct DirNode * node, struct List * regeneratefiles)
 {
-    struct DirNode * subdir;
+    struct DirNode *subdir, *subdir2, *prevdir = NULL;
     struct Makefile * makefile;
     int goup = 0, reread = 0;
     char curdir[1024];
@@ -376,6 +402,33 @@ updatemflist (struct Cache_priv * cache, struct DirNode * node, struct List * re
 
     if (scandirnode(node, cache->project->defaultmakefilename, &cache->project->ignoredirs))
         reread ++;
+
+    ForeachNodeSafe (&node->subdirs, subdir, subdir2)
+    {
+        if (prevdir)
+        {
+            prevdir = cache_shufflenode(prevdir, subdir);
+            if (prevdir != GetPrev(subdir))
+            {
+                Remove(subdir);
+                if (prevdir->node.next)
+                {
+                    subdir->node.next = prevdir->node.next;
+                    subdir->node.prev = &prevdir->node;
+                    prevdir->node.next->prev = &subdir->node;
+                    prevdir->node.next = &subdir->node;
+                }
+                else
+                {
+                    subdir->node.next          = (struct Node *)&node->subdirs.last;
+                    subdir->node.prev          = node->subdirs.prelast;
+                    node->subdirs.prelast->next = &subdir->node;
+                    node->subdirs.prelast              = &subdir->node;
+                }
+            }
+        }
+        prevdir = subdir;
+    }
 
     ForeachNode(&node->subdirs, subdir)
     {
@@ -522,7 +575,7 @@ regeneratemf (struct Cache_priv * cache, struct List * regeneratefiles)
     unlink (tmpname);
 }
 
-void 
+void
 buildtargetlist (struct Cache_priv * cache, struct DirNode * node)
 {
     struct Makefile * makefile;

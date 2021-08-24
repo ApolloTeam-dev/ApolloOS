@@ -1,7 +1,6 @@
 /*
-    Copyright © 2003-2015, The AROS Development Team. All rights reserved.
+    Copyright (C) 2003-2020, The AROS Development Team. All rights reserved.
 
-    $Id$
 */
 #include <stdlib.h>
 #include <stdio.h>
@@ -175,7 +174,7 @@ BOOL zune_penspec_setup(struct MUI_PenSpec_intern *psi,
     if (!psi || !mri)
         return FALSE;
 
-    D(bug("zune_penspec_setup(%lx) type=%ld\n", psi, psi->p_type));
+    D(bug("zune_penspec_setup(0x%p) type=%ld\n", psi, psi->p_type));
     psi->p_mri = mri;
 
     switch (psi->p_type)
@@ -201,7 +200,7 @@ BOOL zune_penspec_setup(struct MUI_PenSpec_intern *psi,
     case PST_RGB:
         set_pen_from_rgb(psi, mri->mri_Colormap,
             psi->p_rgb.red, psi->p_rgb.green, psi->p_rgb.blue);
-        D(bug("zune_penspec_setup(%lx)=%ld RGB(%lx,%lx,%lx)\n", psi,
+        D(bug("zune_penspec_setup(0x%p)=%ld RGB(%lx,%lx,%lx)\n", psi,
                 psi->p_pen, psi->p_rgb.red, psi->p_rgb.green,
                 psi->p_rgb.blue));
         break;
@@ -253,7 +252,7 @@ void zune_penspec_drawdirect(struct MUI_PenSpec_intern *psi,
 
     if (psi->p_type == PST_RGB)
     {
-        D(bug("drawing with %lx, pen=%ld, at %ld, %ld => %ld, %ld\n",
+        D(bug("drawing with 0x%p, pen=%ld, at %ld, %ld => %ld, %ld\n",
                 psi, psi->p_pen, left, top, right, bottom));
     }
     SetAPen(rp, psi->p_pen);

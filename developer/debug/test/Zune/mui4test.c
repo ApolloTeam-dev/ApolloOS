@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 /*
@@ -32,7 +31,7 @@ void init_gui()
         MUIA_Application_Title, "MUI4 Test",
         SubWindow, wnd = WindowObject,
             MUIA_Window_Title, "Floattext Test",
-            MUIA_Window_ID,	MAKE_ID('M','4','T','E'),
+            MUIA_Window_ID,     MAKE_ID('M','4','T','E'),
             WindowContents, VGroup,
                 Child, flttext = FloattextObject,
                     MUIA_Floattext_Text, "Hello",

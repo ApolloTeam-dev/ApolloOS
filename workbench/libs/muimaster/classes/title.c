@@ -1,6 +1,5 @@
 /*
-    Copyright © 2012-2015, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2012-2020, The AROS Development Team. All rights reserved.
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
@@ -202,7 +201,7 @@ IPTR Title__OM_NEW(struct IClass *cl, Object *obj, struct opSet *msg)
     data->ehn.ehn_Object = obj;
     data->ehn.ehn_Class = cl;
 
-    D(bug("muimaster.library/title.c: Title Object created at 0x%lx\n",
+    D(bug("muimaster.library/title.c: Title Object created at 0x%p\n",
             obj));
 
     return (IPTR) obj;

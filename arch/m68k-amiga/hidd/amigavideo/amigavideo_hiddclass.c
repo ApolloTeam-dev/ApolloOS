@@ -1,9 +1,7 @@
 /*
-    Copyright � 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English.
 */
 
 #include <exec/libraries.h>
@@ -22,6 +20,8 @@
 
 #include <hidd/hidd.h>
 #include <aros/symbolsets.h>
+
+#include <string.h>
 
 #include LC_LIBDEFS_FILE
 
@@ -309,7 +309,7 @@ OOP_Object *AmigaVideoCl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_N
         if (csd->aga)
             rdfargs[0] = (IPTR)"AGA";
         else if ((csd->ecs_agnus) || (csd->ecs_denise))
-            rdfargs[0] = (IPTR)"ECS";        
+            rdfargs[0] = (IPTR)"ECS";
         else
             rdfargs[0] = (IPTR)"OCS";
         if (GfxBase->DisplayFlags & NTSC)
@@ -317,7 +317,7 @@ OOP_Object *AmigaVideoCl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_N
         else
             rdfargs[1] = (IPTR)"PAL";
 
-        mytags[2].ti_Data = (IPTR)AllocVec(strlen((char *)rdfargs[0]) + strlen((char *)rdfargs[1]) + 32, MEMF_PUBLIC);
+        mytags[2].ti_Data = (IPTR)AllocVec(strlen((char *)rdfargs[0]) + strlen((char *)rdfargs[1]) + 33, MEMF_PUBLIC);
         RawDoFmt("Amiga %s Chipset %s Display Hardware", (RAWARG)rdfargs, RAWFMTFUNC_STRING, mytags[2].ti_Data);
         D(bug("[AmigaVideo:Hidd] %s: Hardware = '%s'\n", __func__, mytags[2].ti_Data));
     }
@@ -356,7 +356,7 @@ OOP_Object *AmigaVideoCl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_N
             if (h == REZ_Y_MIN || h == (REZ_Y_MIN << 1))
                 modeid |= NTSC_MONITOR_ID;
             else
-                modeid |= PAL_MONITOR_ID;		
+                modeid |= PAL_MONITOR_ID;
 
             for (i = 0; i < SPECIALMODES; i++) {
                 ULONG mid = modeid, pclock, syncstrt, synctot;
@@ -377,7 +377,7 @@ OOP_Object *AmigaVideoCl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_N
                 modetags[cnt] = tagptr;
                 modeids[cnt++] = mid;
 
-                ADDTAG(aHidd_Sync_HMin,	(16 << res));
+                ADDTAG(aHidd_Sync_HMin, (16 << res));
 
                 ADDTAG(aHidd_Sync_HDisp, w);
                 ADDTAG(aHidd_Sync_VDisp, h);
@@ -410,22 +410,22 @@ OOP_Object *AmigaVideoCl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_N
 
     if (csd->aga) {
         pftags_aga[0] = tagptr;
-        ADDTAG(aHidd_PixFmt_RedShift,		 8);
-        ADDTAG(aHidd_PixFmt_GreenShift, 	16);
-        ADDTAG(aHidd_PixFmt_BlueShift,		24);
-        ADDTAG(aHidd_PixFmt_AlphaShift,		 0);
-        ADDTAG(aHidd_PixFmt_RedMask,		0x00FF0000);
-        ADDTAG(aHidd_PixFmt_GreenMask,		0x0000FF00);
-        ADDTAG(aHidd_PixFmt_BlueMask,		0x000000FF);
-        ADDTAG(aHidd_PixFmt_AlphaMask,		0x00000000);
-        ADDTAG(aHidd_PixFmt_CLUTMask,		0x000000FF);
-        ADDTAG(aHidd_PixFmt_CLUTShift,		0);
-        ADDTAG(aHidd_PixFmt_ColorModel,		vHidd_ColorModel_Palette);
-        ADDTAG(aHidd_PixFmt_Depth,		8);
-        ADDTAG(aHidd_PixFmt_BytesPerPixel,	1);
-        ADDTAG(aHidd_PixFmt_BitsPerPixel,	8);
-        ADDTAG(aHidd_PixFmt_StdPixFmt,		vHidd_StdPixFmt_Plane);
-        ADDTAG(aHidd_PixFmt_BitMapType,		vHidd_BitMapType_Planar);
+        ADDTAG(aHidd_PixFmt_RedShift,            8);
+        ADDTAG(aHidd_PixFmt_GreenShift,         16);
+        ADDTAG(aHidd_PixFmt_BlueShift,          24);
+        ADDTAG(aHidd_PixFmt_AlphaShift,          0);
+        ADDTAG(aHidd_PixFmt_RedMask,            0x00FF0000);
+        ADDTAG(aHidd_PixFmt_GreenMask,          0x0000FF00);
+        ADDTAG(aHidd_PixFmt_BlueMask,           0x000000FF);
+        ADDTAG(aHidd_PixFmt_AlphaMask,          0x00000000);
+        ADDTAG(aHidd_PixFmt_CLUTMask,           0x000000FF);
+        ADDTAG(aHidd_PixFmt_CLUTShift,          0);
+        ADDTAG(aHidd_PixFmt_ColorModel,         vHidd_ColorModel_Palette);
+        ADDTAG(aHidd_PixFmt_Depth,              8);
+        ADDTAG(aHidd_PixFmt_BytesPerPixel,      1);
+        ADDTAG(aHidd_PixFmt_BitsPerPixel,       8);
+        ADDTAG(aHidd_PixFmt_StdPixFmt,          vHidd_StdPixFmt_Plane);
+        ADDTAG(aHidd_PixFmt_BitMapType,         vHidd_BitMapType_Planar);
         ADDTAG(TAG_DONE, 0);
         
         pftags_aga[1] = tagptr;
@@ -438,18 +438,18 @@ OOP_Object *AmigaVideoCl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_N
 
         mode_tags_aga = tagptr;
 
-        ADDTAG(aHidd_Sync_VMin,		1);
-        ADDTAG(aHidd_Sync_HMax,		16384);
-        ADDTAG(aHidd_Sync_VMax,		16384);
+        ADDTAG(aHidd_Sync_VMin,         1);
+        ADDTAG(aHidd_Sync_HMax,         16384);
+        ADDTAG(aHidd_Sync_VMax,         16384);
 
         for (j = 0; specialmask_aga[j] != 0xffffffff; j++) {
             if (pftags_aga[j])
-                ADDTAG(aHidd_Gfx_PixFmtTags,	(IPTR)pftags_aga[j]);
+                ADDTAG(aHidd_Gfx_PixFmtTags,    (IPTR)pftags_aga[j]);
             for (i = 0; i < cnt; i++) {
                 ULONG modeid = modeids[i];
                 if ((j == 0 && !(modeid & SPECIAL_MODE_MASK)) || (j > 0 && ((modeid & SPECIAL_MODE_MASK) == specialmask_aga[j]))) {
                     makemodename(modeid, bufptr);
-                    ADDTAG(aHidd_Sync_Description,	(IPTR)bufptr);
+                    ADDTAG(aHidd_Sync_Description,      (IPTR)bufptr);
                     bufptr += strlen(bufptr) + 1;
                     ADDTAG(aHidd_Gfx_SyncTags, (IPTR)modetags[i]);
                 }
@@ -462,22 +462,22 @@ OOP_Object *AmigaVideoCl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_N
     } else {
 
         pftags_ecs_lores = tagptr;
-        ADDTAG(aHidd_PixFmt_RedShift,		20);
-        ADDTAG(aHidd_PixFmt_GreenShift, 	24);
-        ADDTAG(aHidd_PixFmt_BlueShift,		28);
-        ADDTAG(aHidd_PixFmt_AlphaShift,		 0);
-        ADDTAG(aHidd_PixFmt_RedMask,		0x00000F00);
-        ADDTAG(aHidd_PixFmt_GreenMask,		0x000000F0);
-        ADDTAG(aHidd_PixFmt_BlueMask,		0x0000000F);
-        ADDTAG(aHidd_PixFmt_AlphaMask,		0x00000000);
-        ADDTAG(aHidd_PixFmt_CLUTMask,		0x0000001F);
-        ADDTAG(aHidd_PixFmt_CLUTShift,		0);
-        ADDTAG(aHidd_PixFmt_ColorModel,		vHidd_ColorModel_Palette);
-        ADDTAG(aHidd_PixFmt_Depth,		5);
-        ADDTAG(aHidd_PixFmt_BytesPerPixel,	1);
-        ADDTAG(aHidd_PixFmt_BitsPerPixel,	5);
-        ADDTAG(aHidd_PixFmt_StdPixFmt,		vHidd_StdPixFmt_Plane);
-        ADDTAG(aHidd_PixFmt_BitMapType,		vHidd_BitMapType_Planar);
+        ADDTAG(aHidd_PixFmt_RedShift,           20);
+        ADDTAG(aHidd_PixFmt_GreenShift,         24);
+        ADDTAG(aHidd_PixFmt_BlueShift,          28);
+        ADDTAG(aHidd_PixFmt_AlphaShift,          0);
+        ADDTAG(aHidd_PixFmt_RedMask,            0x00000F00);
+        ADDTAG(aHidd_PixFmt_GreenMask,          0x000000F0);
+        ADDTAG(aHidd_PixFmt_BlueMask,           0x0000000F);
+        ADDTAG(aHidd_PixFmt_AlphaMask,          0x00000000);
+        ADDTAG(aHidd_PixFmt_CLUTMask,           0x0000001F);
+        ADDTAG(aHidd_PixFmt_CLUTShift,          0);
+        ADDTAG(aHidd_PixFmt_ColorModel,         vHidd_ColorModel_Palette);
+        ADDTAG(aHidd_PixFmt_Depth,              5);
+        ADDTAG(aHidd_PixFmt_BytesPerPixel,      1);
+        ADDTAG(aHidd_PixFmt_BitsPerPixel,       5);
+        ADDTAG(aHidd_PixFmt_StdPixFmt,          vHidd_StdPixFmt_Plane);
+        ADDTAG(aHidd_PixFmt_BitMapType,         vHidd_BitMapType_Planar);
         ADDTAG(TAG_DONE, 0);
 
         pftags_ecs_hires = tagptr;
@@ -500,48 +500,48 @@ OOP_Object *AmigaVideoCl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_N
 
         mode_tags_ecs = tagptr;
 
-        ADDTAG(aHidd_Sync_VMin,		1);
-        ADDTAG(aHidd_Sync_HMax,		csd->ecs_agnus ? 16384 : 1008);
-        ADDTAG(aHidd_Sync_VMax,		csd->ecs_agnus ? 16384 : 1008);
+        ADDTAG(aHidd_Sync_VMin,         1);
+        ADDTAG(aHidd_Sync_HMax,         csd->ecs_agnus ? 16384 : 1008);
+        ADDTAG(aHidd_Sync_VMax,         csd->ecs_agnus ? 16384 : 1008);
 
-        ADDTAG(aHidd_Gfx_PixFmtTags,	(IPTR)pftags_ecs_lores);
+        ADDTAG(aHidd_Gfx_PixFmtTags,    (IPTR)pftags_ecs_lores);
         for (i = 0; i < cnt; i++) {
                 if ((modeids[i] & SPECIAL_MODE_MASK) || (modeids[i] & SUPER_KEY) != LORES_KEY)
                         continue;
                 makemodename(modeids[i], bufptr);
-                ADDTAG(aHidd_Sync_Description,	(IPTR)bufptr);
+                ADDTAG(aHidd_Sync_Description,  (IPTR)bufptr);
                 bufptr += strlen(bufptr) + 1;
                 ADDTAG(aHidd_Gfx_SyncTags, (IPTR)modetags[i]);
         }
 
-        ADDTAG(aHidd_Gfx_PixFmtTags,	(IPTR)pftags_ecs_hires);
+        ADDTAG(aHidd_Gfx_PixFmtTags,    (IPTR)pftags_ecs_hires);
         for (i = 0; i < cnt; i++) {
                 if ((modeids[i] & SPECIAL_MODE_MASK) || (modeids[i] & SUPER_KEY) != HIRES_KEY)
                         continue;
                 makemodename(modeids[i], bufptr);
-                ADDTAG(aHidd_Sync_Description,	(IPTR)bufptr);
+                ADDTAG(aHidd_Sync_Description,  (IPTR)bufptr);
                 bufptr += strlen(bufptr) + 1;
                 ADDTAG(aHidd_Gfx_SyncTags, (IPTR)modetags[i]);
         }
 
-        ADDTAG(aHidd_Gfx_PixFmtTags,	(IPTR)pftags_ecs_shres);
+        ADDTAG(aHidd_Gfx_PixFmtTags,    (IPTR)pftags_ecs_shres);
         if (csd->ecs_denise) {
                 for (i = 0; i < cnt; i++) {
                         if ((modeids[i] & SPECIAL_MODE_MASK) || (modeids[i] & SUPER_KEY) != SUPER_KEY)
                                 continue;
                         makemodename(modeids[i], bufptr);
-                        ADDTAG(aHidd_Sync_Description,	(IPTR)bufptr);
+                        ADDTAG(aHidd_Sync_Description,  (IPTR)bufptr);
                         bufptr += strlen(bufptr) + 1;
                         ADDTAG(aHidd_Gfx_SyncTags, (IPTR)modetags[i]);
                 }
         }
 
-        ADDTAG(aHidd_Gfx_PixFmtTags,	(IPTR)pftags_ecs_6);
+        ADDTAG(aHidd_Gfx_PixFmtTags,    (IPTR)pftags_ecs_6);
         for (i = 0; i < cnt; i++) {
                 if (!(modeids[i] & SPECIAL_MODE_MASK))
                         continue;
                 makemodename(modeids[i], bufptr);
-                ADDTAG(aHidd_Sync_Description,	(IPTR)bufptr);
+                ADDTAG(aHidd_Sync_Description,  (IPTR)bufptr);
                 bufptr += strlen(bufptr) + 1;
                 ADDTAG(aHidd_Gfx_SyncTags, (IPTR)modetags[i]);
         }
@@ -558,7 +558,7 @@ OOP_Object *AmigaVideoCl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_N
       bug("[AmigaVideo:Hidd] %s: buf @ 0x%p, alloc=%d used=%d\n", __func__, buf, allocsizebuf, bufptr - buf);
      )
 
-    mymsg.mID	= msg->mID;
+    mymsg.mID   = msg->mID;
     mymsg.attrList = mytags;
     msg = &mymsg;
 
@@ -614,7 +614,7 @@ OOP_Object *AmigaVideoCl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_N
         }
         for (i = 0; i < pfcnt; i++) {
             DB2(bug("[AmigaVideo:Hidd] %s: pf %d: %p\n", __func__, i, pixelformats[i]));
-        } 
+        }
 
         ForeachNode(&csd->nativemodelist, node) {
             if (!node->pf) {
@@ -654,7 +654,7 @@ OOP_Object *AmigaVideoCl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_N
                 DB2(bug("[AmigaVideo:Hidd] %s: %08x %dx%dx%d sync = %p pf = %p\n",
                     __func__, node->modeid, node->width, node->height, node->depth, node->sync, node->pf));
             }
-        }   	    
+        }
         HIDD_Gfx_ReleaseModeIDs(o, midp);
         csd->superforward = FALSE;
         DB2(
@@ -689,7 +689,7 @@ VOID AmigaVideoCl__Root__Dispose(OOP_Class *cl, OOP_Object *o, OOP_Msg msg)
 {
     EnterFunc(bug("[AmigaVideo:Hidd] %s(o=%p)\n", __func__, o));
     
-    D(bug("[AmigaVideo:Hidd] %s: calling super\n", __func__));    
+    D(bug("[AmigaVideo:Hidd] %s: calling super\n", __func__));
     OOP_DoSuperMethod(cl, o, msg);
     
     ReturnVoid("[AmigaVideo:Hidd] AGFX::Dispose");
@@ -697,7 +697,7 @@ VOID AmigaVideoCl__Root__Dispose(OOP_Class *cl, OOP_Object *o, OOP_Msg msg)
 
 
 OOP_Object *AmigaVideoCl__Hidd_Gfx__CreateObject(OOP_Class *cl, OOP_Object *o, struct pHidd_Gfx_CreateObject *msg)
-{  
+{
     struct amigagfx_data *data = OOP_INST_DATA(cl, o);
     OOP_Object      *object = NULL;
 
@@ -707,7 +707,7 @@ OOP_Object *AmigaVideoCl__Hidd_Gfx__CreateObject(OOP_Class *cl, OOP_Object *o, s
     {
         struct amigavideo_staticdata *csd = CSD(cl);
         struct Library *UtilityBase = csd->cs_UtilityBase;
-        HIDDT_ModeID		modeid;
+        HIDDT_ModeID            modeid;
         struct pHidd_Gfx_CreateObject   p;
         struct TagItem tags[] =
         {
@@ -818,7 +818,7 @@ VOID AmigaVideoCl__Hidd_Gfx__CopyBox(OOP_Class *cl, OOP_Object *o, struct pHidd_
         ok = blit_copybox(csd, sdata->pbm, ddata->pbm, msg->srcX, msg->srcY, msg->width, msg->height, msg->destX, msg->destY, mode);
     }
     if (!ok)
-        OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);   
+        OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
 }
 
 BOOL AmigaVideoCl__Hidd_Gfx__CopyBoxMasked(OOP_Class *cl, OOP_Object *o, struct pHidd_Gfx_CopyBoxMasked *msg)
@@ -1309,15 +1309,15 @@ int Init_AmigaVideoClass(LIBBASETYPEPTR LIBBASE)
 
     D(bug("[AmigaVideo:Hidd] %s()\n", __func__));
     __IHidd             = OOP_ObtainAttrBase(IID_Hidd);
-    __IHidd_BitMap  	= OOP_ObtainAttrBase(IID_Hidd_BitMap);
-    __IHidd_PlanarBM  	= OOP_ObtainAttrBase(IID_Hidd_PlanarBM);
-    __IHidd_BitMap_AmigaVideo  	= OOP_ObtainAttrBase(IID_Hidd_BitMap_AmigaVideo);
-    __IHidd_GC      	= OOP_ObtainAttrBase(IID_Hidd_GC);
-    __IHidd_Sync    	= OOP_ObtainAttrBase(IID_Hidd_Sync);
-    __IHidd_Gfx     	= OOP_ObtainAttrBase(IID_Hidd_Gfx);
-    __IHidd_Compositor     	= OOP_ObtainAttrBase(IID_Hidd_Compositor);
-    __IHidd_PixFmt		= OOP_ObtainAttrBase(IID_Hidd_PixFmt);
-    __IHidd_ColorMap 	= OOP_ObtainAttrBase(IID_Hidd_ColorMap);
+    __IHidd_BitMap      = OOP_ObtainAttrBase(IID_Hidd_BitMap);
+    __IHidd_PlanarBM    = OOP_ObtainAttrBase(IID_Hidd_PlanarBM);
+    __IHidd_BitMap_AmigaVideo   = OOP_ObtainAttrBase(IID_Hidd_BitMap_AmigaVideo);
+    __IHidd_GC          = OOP_ObtainAttrBase(IID_Hidd_GC);
+    __IHidd_Sync        = OOP_ObtainAttrBase(IID_Hidd_Sync);
+    __IHidd_Gfx         = OOP_ObtainAttrBase(IID_Hidd_Gfx);
+    __IHidd_Compositor          = OOP_ObtainAttrBase(IID_Hidd_Compositor);
+    __IHidd_PixFmt              = OOP_ObtainAttrBase(IID_Hidd_PixFmt);
+    __IHidd_ColorMap    = OOP_ObtainAttrBase(IID_Hidd_ColorMap);
 
     if (!__IHidd || !__IHidd_BitMap || !__IHidd_PlanarBM || !__IHidd_BitMap_AmigaVideo ||
         !__IHidd_GC || !__IHidd_Sync || !__IHidd_Gfx || !__IHidd_PixFmt || !__IHidd_ColorMap)
@@ -1331,7 +1331,7 @@ int Init_AmigaVideoClass(LIBBASETYPEPTR LIBBASE)
         OOP_GetMethodID((STRPTR)IID_Hidd_Compositor, moHidd_Compositor_BitMapStackChanged);
     LIBBASE->csd.mid_BitMapPositionChanged   =
         OOP_GetMethodID((STRPTR)IID_Hidd_Compositor, moHidd_Compositor_BitMapPositionChanged);
-    LIBBASE->csd.mid_BitMapRectChanged       = 
+    LIBBASE->csd.mid_BitMapRectChanged       =
         OOP_GetMethodID((STRPTR)IID_Hidd_Compositor, moHidd_Compositor_BitMapRectChanged);
     LIBBASE->csd.mid_ValidateBitMapPositionChange =
         OOP_GetMethodID((STRPTR)IID_Hidd_Compositor, moHidd_Compositor_ValidateBitMapPositionChange);

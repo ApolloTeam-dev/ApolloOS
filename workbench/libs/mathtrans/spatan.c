@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2003, The AROS Development Team. All rights reserved.
 */
 
 #include "mathtrans_intern.h"
@@ -101,8 +100,8 @@
             res = SPAdd
             (
                 pio2, SPDiv
-                ( 
-                    SPMul(three, fnumcubed), 
+                (
+                    SPMul(three, fnumcubed),
                     SPAdd( res | FFPSign_Mask, one )
                 )
             );

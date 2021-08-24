@@ -1,9 +1,7 @@
 /*
-    Copyright © 2004-2016, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004-2016, The AROS Development Team. All rights reserved.
 
     Desc: File Identifier/starter
-    Lang: English	
 */
 /******************************************************************************
 
@@ -131,7 +129,7 @@ static LONG identify(CONST_STRPTR filename, BOOL verbose)
                 Printf("%s:\t%s/%s\n", filename, gid_str, dth->dth_Name);
             }
             else
-            {   
+            {
                 ULONG gid = AROS_LONG2BE(dth->dth_GroupID),
                       id  = AROS_LONG2BE(dth->dth_ID);
                 

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <stdio.h>
@@ -36,7 +35,7 @@ const char * existing_file = "/usr/bin/gcc";
 const char * non_existing_volume = "/sw243";
 const char * non_existing_directory = "/usr/sdgfer";
 const char * non_existing_file = "/usr/lib/ggg.txt";
-#endif 
+#endif
 
 /* These files need to be prepared in application directory with appriopriate access rights! */
 const char * read_only_file = "read_only_file";
@@ -132,7 +131,7 @@ int test_access(int mode)
         report_progress("F_OK");
     
 
-   /* 
+   /*
      * TEST
      */
 
@@ -148,13 +147,13 @@ int test_access(int mode)
         return -1;
     }
     test_report_success("Accessed existing volume");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
-     */  
+     */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -170,13 +169,13 @@ int test_access(int mode)
         return -1;
     }
     test_report_success("Accessed existing directory");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
-     */  
+     */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -192,13 +191,13 @@ int test_access(int mode)
         return -1;
     }
     test_report_success("Accessed existing file");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
-     */  
+     */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -222,13 +221,13 @@ int test_access(int mode)
         }
     }
     test_report_success("Correct error reported");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
-     */  
+     */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -252,13 +251,13 @@ int test_access(int mode)
         }
     }
     test_report_success("Correct error reported");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
-     */  
+     */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -282,11 +281,11 @@ int test_access(int mode)
         }
     }
     test_report_success("Correct error reported");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
-     */  
+     */
 
     return 0;
 }
@@ -305,7 +304,7 @@ int test_single_file_access_modes()
 
     report_progress("Start test_file_access_modes");
     
-   /* 
+   /*
      * TEST
      */
 
@@ -321,13 +320,13 @@ int test_single_file_access_modes()
         return -1;
     }
     test_report_success("File accessed");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
      */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -343,13 +342,13 @@ int test_single_file_access_modes()
         return -1;
     }
     test_report_success("File accessed");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
      */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -365,13 +364,13 @@ int test_single_file_access_modes()
         return -1;
     }
     test_report_success("File accessed");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
      */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -387,13 +386,13 @@ int test_single_file_access_modes()
         return -1;
     }
     test_report_success("File accessed");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
      */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -417,13 +416,13 @@ int test_single_file_access_modes()
         return -1;
     }
     test_report_success("Correct error reported");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
      */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -447,13 +446,13 @@ int test_single_file_access_modes()
         return -1;
     }
     test_report_success("Correct error reported");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
      */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -469,13 +468,13 @@ int test_single_file_access_modes()
         return -1;
     }
     test_report_success("File accessed");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
      */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -499,13 +498,13 @@ int test_single_file_access_modes()
         return -1;
     }
     test_report_success("Correct error reported");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
      */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -529,14 +528,14 @@ int test_single_file_access_modes()
         return -1;
     }
     test_report_success("Correct error reported");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
      */
 
 
-   /* 
+   /*
      * TEST
      */
 
@@ -552,13 +551,13 @@ int test_single_file_access_modes()
         return -1;
     }
     test_report_success("File accessed");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
      */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -582,13 +581,13 @@ int test_single_file_access_modes()
         return -1;
     }
     test_report_success("Correct error reported");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
      */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -612,9 +611,9 @@ int test_single_file_access_modes()
         return -1;
     }
     test_report_success("Correct error reported");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
      */
 
@@ -630,7 +629,7 @@ int test_combined_file_access_modes()
     report_progress("Start test_combined_file_access_modes");
     
 
-   /* 
+   /*
      * TEST
      */
 
@@ -646,13 +645,13 @@ int test_combined_file_access_modes()
         return -1;
     }
     test_report_success("File accessed");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
      */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -668,13 +667,13 @@ int test_combined_file_access_modes()
         return -1;
     }
     test_report_success("File accessed");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
      */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -690,13 +689,13 @@ int test_combined_file_access_modes()
         return -1;
     }
     test_report_success("File accessed");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
      */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -712,13 +711,13 @@ int test_combined_file_access_modes()
         return -1;
     }
     test_report_success("File accessed");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
      */
 
-   /* 
+   /*
      * TEST
      */
 
@@ -734,9 +733,9 @@ int test_combined_file_access_modes()
         return -1;
     }
     test_report_success("File accessed");
-    test_report_success("SUCCESS");   
+    test_report_success("SUCCESS");
 
-    /* 
+    /*
      * TEST END
      */
 

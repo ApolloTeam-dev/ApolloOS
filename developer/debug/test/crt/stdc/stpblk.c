@@ -1,13 +1,12 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <stdio.h>
 #include <string.h>
 #include "test.h"
 
-int main() 
+int main()
 {
     char *hello = "  Hello";
     char *empty = "       ";
@@ -20,7 +19,7 @@ int main()
     return OK;
 }
 
-void cleanup() 
+void cleanup()
 {
     /* Nothing to clean up */
 }

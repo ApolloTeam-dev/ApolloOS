@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -20,16 +19,16 @@
 /*  SYNOPSIS */
 
 /*  LOCATION */
-	struct KernelBase *, KernelBase, 34, Kernel)
+        struct KernelBase *, KernelBase, 34, Kernel)
 
 /*  FUNCTION
-	Release low-level debug input hardware and hand it back to the operating system
+        Release low-level debug input hardware and hand it back to the operating system
 
     INPUTS
-	None
+        None
 
     RESULT
-	None
+        None
 
     NOTES
 

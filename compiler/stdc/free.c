@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 
     C99 function free().
 */
@@ -16,21 +15,21 @@
     NAME */
 #include <stdlib.h>
 
-	void free (
+        void free (
 
 /*  SYNOPSIS */
-	void * memory)
+        void * memory)
 
 /*  FUNCTION
-	Return memory allocated with malloc() or a similar function to the
-	system.
+        Return memory allocated with malloc() or a similar function to the
+        system.
 
     INPUTS
-	memory - The result of the previous call to malloc(), etc. or
-		NULL.
+        memory - The result of the previous call to malloc(), etc. or
+                NULL.
 
     RESULT
-	None.
+        None.
 
     NOTES
 
@@ -39,7 +38,7 @@
     BUGS
 
     SEE ALSO
-	malloc()
+        malloc()
 
     INTERNALS
 
@@ -49,8 +48,8 @@
     {
         struct StdCIntBase *StdCBase = (struct StdCIntBase *)__aros_getbase_StdCBase();
 
-	unsigned char *mem;
-	size_t         size;
+        unsigned char *mem;
+        size_t         size;
 
         mem = ((UBYTE *)memory) - AROS_ALIGN(sizeof(size_t));
 
@@ -59,7 +58,7 @@
             free(((void **) mem)[-1]);
         else {
             size += AROS_ALIGN(sizeof(size_t));
-	    FreePooled (StdCBase->mempool, mem, size);
+            FreePooled (StdCBase->mempool, mem, size);
         }
     }
 

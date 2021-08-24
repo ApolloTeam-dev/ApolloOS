@@ -1,9 +1,8 @@
 /*
-    Copyright © 1999, David Le Corfec.
-    Copyright © 2002-2017, The AROS Development Team.
+    Copyright (C) 2002-2020, The AROS Development Team.
+    Copyright (C) 1999, David Le Corfec.
     All rights reserved.
 
-    $Id$
 */
 #include <exec/types.h>
 #include <exec/memory.h>
@@ -2412,17 +2411,17 @@ void _zune_window_message(struct IntuiMessage *imsg)
     {
         BOOL refresh=FALSE;
         /* Window is sleeping, so we just ignore (and reply) all messages.
-         * MUI 3.8/AmigaOS3 also receives all messages (IDCMP Flags 
-         * are not modified during sleeping). MUI refreshes the window 
-         * contents, so it seems to handle IDCMP_REFRESHWINDOW messages. 
+         * MUI 3.8/AmigaOS3 also receives all messages (IDCMP Flags
+         * are not modified during sleeping). MUI refreshes the window
+         * contents, so it seems to handle IDCMP_REFRESHWINDOW messages.
          * If any other messages are handled by MUI is unsure/not tested.
          */
-        if (imsg->Class == IDCMP_REFRESHWINDOW) 
+        if (imsg->Class == IDCMP_REFRESHWINDOW)
         {
             refresh=TRUE;
         }
         ReplyMsg((struct Message *)imsg);
-        if (refresh) 
+        if (refresh)
         {
             RefreshWindow(oWin, data);
         }
@@ -3019,7 +3018,7 @@ IPTR Window__OM_NEW(struct IClass *cl, Object *obj, struct opSet *msg)
     }
 
 /*      D(bug("muimaster.library/window.c: Window Object created at " */
-/*          "0x%lx back=%lx\n", */
+/*          "0x%p back=%lx\n", */
 /*          obj,data->wd_Background)); */
 
     return (IPTR) obj;
@@ -3258,7 +3257,7 @@ IPTR Window__OM_SET(struct IClass *cl, Object *obj, struct opSet *msg)
                     data->wd_SleepMinWidth=data->wd_RenderInfo.mri_Window->MaxWidth;
                     /* According to MUI autodocs, sleeping windows can't be resized.
                      * MUI 3.8/AmigaOS also changes min/max values with WindowLimits */
-                    WindowLimits(data->wd_RenderInfo.mri_Window, 
+                    WindowLimits(data->wd_RenderInfo.mri_Window,
                         data->wd_RenderInfo.mri_Window->Width,
                         data->wd_RenderInfo.mri_Window->Height,
                         data->wd_RenderInfo.mri_Window->Width,
@@ -3273,11 +3272,11 @@ IPTR Window__OM_SET(struct IClass *cl, Object *obj, struct opSet *msg)
                 {
                     SetWindowPointerA(data->wd_RenderInfo.mri_Window, NULL);
 
-                    /* Only restore settings, if they have been saved 
+                    /* Only restore settings, if they have been saved
                      * during (MUIA_Window_Sleep, TRUE) call */
                     if (data->wd_SleepMaxHeight > 0)
                     {
-                        WindowLimits(data->wd_RenderInfo.mri_Window, 
+                        WindowLimits(data->wd_RenderInfo.mri_Window,
                             data->wd_SleepMinWidth,
                             data->wd_SleepMinHeight,
                             data->wd_SleepMaxWidth,

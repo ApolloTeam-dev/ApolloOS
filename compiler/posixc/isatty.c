@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 */
 
 #include <proto/dos.h>
@@ -13,11 +12,11 @@
 
 #include <unistd.h>
 
-	int isatty(
+        int isatty(
 
 /*  SYNOPSIS */
-	int fd)
-	
+        int fd)
+        
 /*  FUNCTION
 
     INPUTS

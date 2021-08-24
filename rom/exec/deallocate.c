@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc: Free memory allocated by Allocate().
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -79,7 +77,7 @@
         {
             /* Something is completely wrong. */
             bug("[MM] Memory allocator error\n");
-            bug("[MM] Attempt to free %u bytes at 0x%p from MemHeader 0x%p\n", byteSize, memoryBlock, freeList);
+            bug("[MM] Attempt to free %u bytes at 0x%p from MemHeader 0x%p\n", (int)byteSize, memoryBlock, freeList);
             bug("[MM] Block does not fit into MemHeader (0x%p - 0x%p)\n", freeList->mh_Lower, freeList->mh_Upper);
 
             Alert(AN_BadFreeAddr);

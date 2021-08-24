@@ -1,9 +1,31 @@
-#   $Id$
 
 include $(SRCDIR)/config/aros.cfg
 
+#MM- includes-copy : libpng-fetch
+
+LIBPNGVERSION=1.6.37
+REPOSITORIES = http://prdownloads.sourceforge.net/libpng \
+ https://download.sourceforge.net/libpng
+ARCHBASE     := libpng-$(LIBPNGVERSION)
+ARCHSUFFIX := "tar.gz"
+#PATCHSPEC := $(ARCHBASE)-aros.diff:$(ARCHBASE):-f,-p1
+ARCHSRCDIR := $(PORTSDIR)/libpng/$(ARCHBASE)
+
+%fetch mmake=libpng-fetch archive=$(ARCHBASE) destination=$(PORTSDIR)/libpng \
+    location=$(PORTSSOURCEDIR) archive_origins=$(REPOSITORIES) suffixes=$(ARCHSUFFIX) \
+    patches_specs=$(PATCHSPEC)
+
+%create_patch mmake=libpng-create-patch \
+    archive=$(ARCHBASE) suffixes=$(ARCHSUFFIX) \
+    destination=$(PORTSDIR)/libpng
+
+#MM includes-copy : \
+#MM     libpng-fetch
+
 #MM workbench-libs-png : workbench-libs-z
-#MM- workbench-libs-png-includes : workbench-libs-png-generated
+#MM- workbench-libs-png-includes : \
+#MM     includes-copy \
+#MM     workbench-libs-png-generated
 
 FILES := png pngerror \
 	pngget pngmem pngpread pngread pngrio pngrtran pngrutil \
@@ -11,38 +33,56 @@ FILES := png pngerror \
 
 NOWARN_FLAGS := $(NOWARN_DEPRECATED_DECLARATIONS) $(NOWARN_IMPLICIT_FUNCTION_DECL)
 USER_CFLAGS := $(NOWARN_FLAGS)
+ifeq ($(AROS_TARGET_CPU),x86_64)
+TARGET_ISA_CFLAGS +=  -msse -mfpmath=sse
+USER_CPPFLAGS += -DPNG_INTEL_SSE
+FILES += \
+	intel/intel_init \
+	intel/filter_sse2_intrinsics
+endif
+
+## Add for ARM at a later date ...
+#USER_CPPFLAGS += -DPNG_ARM_NEON
+#FILES += \
+#	arm/arm_init \
+#	arm/filter_neon_intrinsics \
+#	arm/palette_neon_intrinsics
+#AFILES += \
+#	arm/filter_neon
 
 #MM- core-linklibs : linklibs-png
 #MM- linklibs-png : workbench-libs-png-pkgconfig
 
 %build_module mmake=workbench-libs-png \
     modname=png modtype=library \
-    files="$(FILES)" linklibname="png"
+    files="$(addprefix $(ARCHSRCDIR)/,$(FILES))" linklibname="png"
 
 #MM- linklibs: linklibs-png-nostdio
 #MM linklibs-png-nostdio : workbench-libs-png-generated
+#MM workbench-libs-png-generated : libpng-fetch
 
 USER_CPPFLAGS += -DPNG_NO_STDIO -DPNG_NO_WRITE_TIME
 
 %build_linklib mmake=linklibs-png-nostdio libname=png_nostdio \
-	files=$(FILES) objdir=$(OBJDIR)/no_stdio
+	files="$(addprefix $(ARCHSRCDIR)/,$(FILES))" asmfiles="$(addprefix $(ARCHSRCDIR)/,$(AFILES))" objdir=$(OBJDIR)/no_stdio
 
 #MM
 workbench-libs-png-pkgconfig : $(AROS_LIB)/pkgconfig/libpng.pc
 
-$(AROS_LIB)/pkgconfig/libpng.pc : $(SRCDIR)/$(CURDIR)/libpng.pc.in $(SRCDIR)/$(CURDIR)/mmakefile.src
+$(AROS_LIB)/pkgconfig/libpng.pc : $(ARCHSRCDIR)/libpng.pc.in $(SRCDIR)/$(CURDIR)/mmakefile.src
+	@$(ECHO) "Generating /Developer/lib/pkgconfig/libpng.pc ..."
 	%mkdir_q dir=$(AROS_LIB)/pkgconfig
 	@$(SED) -e 's|@exec_prefix@|$${prefix}|' \
 	       -e 's|@includedir@/libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@|$${prefix}/include|' \
 	       -e 's|-lpng@PNGLIB_MAJOR@@PNGLIB_MINOR@|-lpng|' \
-	       -e 's|@libdir@|$(AROS_LIB)|' \
+	       -e 's|@libdir@|$${prefix}/lib|' \
 	       -e 's|@prefix@|/Developer|' \
 	       -e 's|@LIBS@||' \
 	       -e 's|@PNGLIB_VERSION@|1.6.3|' \
 	       -e 's| -I$${includedir}||' \
 	       $< >$@
 
-$(AROS_INCLUDES)/pnglibconf.h : $(SRCDIR)/$(CURDIR)/scripts/pnglibconf.h.prebuilt
+$(AROS_INCLUDES)/pnglibconf.h :  $(ARCHSRCDIR)/scripts/pnglibconf.h.prebuilt
 	$(SED) "s|.*PNG_ERROR_NUMBERS_SUPPORTED.*|#if defined(__AROS__)\\n#define PNG_ERROR_NUMBERS_SUPPORTED\\n#else\\n/*#undef PNG_ERROR_NUMBERS_SUPPORTED*/\\n#endif|g" $< > $@
 
 #MM
@@ -50,6 +90,12 @@ workbench-libs-png-generated : $(AROS_INCLUDES)/pnglibconf.h
 
 #MM includes-copy
 INCLUDE_FILES := png.h pngconf.h
-%copy_includes
+%copy_includes dir=$(ARCHSRCDIR)
+
+%copy_dir_recursive mmake=test-png-pngsuite src=$(ARCHSRCDIR)/contrib/pngsuite dst=$(AROS_TESTS)/Datatypes/png/pngsuite
+
+%copy_dir_recursive mmake=test-png-testpngs src=$(ARCHSRCDIR)/contrib/testpngs dst=$(AROS_TESTS)/Datatypes/png
+
+#MM- test-datatypes : test-png-testpngs test-png-pngsuite
 
 %common

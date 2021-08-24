@@ -1,8 +1,7 @@
 /*
-    Copyright © 2002, The AROS Development Team. 
+    Copyright (C) 2002, The AROS Development Team.
     All rights reserved.
     
-    $Id$
 */
 
 #define AROS_TAGRETURNTYPE BOOL
@@ -16,12 +15,12 @@
 #include <proto/muimaster.h>
 extern struct Library * MUIMasterBase;
 
-	BOOL MUI_AslRequestTags (
+        BOOL MUI_AslRequestTags (
 
 /*  SYNOPSIS */
-	APTR requester,
-	Tag tag1, 
-	...)
+        APTR requester,
+        Tag tag1,
+        ...)
 
 /*  FUNCTION
 

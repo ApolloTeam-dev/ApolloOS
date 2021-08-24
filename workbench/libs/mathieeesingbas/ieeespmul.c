@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2004, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2004, The AROS Development Team. All rights reserved.
 */
 
 #include "mathieeesingbas_intern.h"
@@ -43,7 +42,7 @@
     ULONG Mant1L = y & 0x00000fff;
     ULONG Mant2L = z & 0x00000fff;
     LONG Res;
-    LONG Exponent = ((( y & IEEESPExponent_Mask)) 
+    LONG Exponent = ((( y & IEEESPExponent_Mask))
                   + (( z & IEEESPExponent_Mask)) - 0x3f800000 );
     
     if (0 == y || 0 == z)

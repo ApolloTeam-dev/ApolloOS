@@ -1,6 +1,5 @@
 /*
-  Copyright � 2004-2019, The AROS Development Team. All rights reserved.
-  $Id$
+  Copyright (C) 2004-2020, The AROS Development Team. All rights reserved.
 */
 
 #define DEBUG 0
@@ -8,10 +7,7 @@
 
 #define ZCC_QUIET
 
-#include "portable_macros.h"
-#ifdef __AROS__
 #define MUIMASTER_YES_INLINE_STDARG
-#endif
 
 #define ICONWINDOW_NODETAILVIEWCLASS
 //#define ICONWINDOW_BUFFERLIST
@@ -38,19 +34,11 @@
 #include <datatypes/pictureclass.h>
 #include <clib/macros.h>
 
-#ifdef __AROS__
 #include <aros/debug.h>
 #include <clib/alib_protos.h>
 #include <prefs/wanderer.h>
 #include <zune/customclasses.h>
-#else
-#include <prefs_AROS/wanderer.h>
-#include <zune_AROS/customclasses.h>
-#endif
 
-#if defined(__AMIGA__) && !defined(__PPC__)
-#define NO_INLINE_STDARG
-#endif
 #include <proto/intuition.h>
 #include <proto/muimaster.h>
 
@@ -68,20 +56,6 @@
 
 #include "version.h"
 
-#ifndef __AROS__
-
-#ifdef DEBUG
-  #define D(x) if (DEBUG) x
-  #ifdef __amigaos4__
-  #define bug DebugPrintF
-  #else
-  #define bug kprintf
-  #endif
-#else
-  #define  D(...)
-#endif
-#endif
-
 #if defined(ICONWINDOW_NODETAILVIEWCLASS)
 struct MUI_CustomClass *IconWindowDetailDrawerList_CLASS;
 #endif
@@ -89,11 +63,7 @@ struct MUI_CustomClass *IconWindowDetailDrawerList_CLASS;
 #define WIWVERS       1
 #define WIWREV        0
 
-#ifdef __AROS__
 #define DoSuperNew(cl, obj, ...) DoSuperNewTags(cl, obj, NULL, __VA_ARGS__)
-#else
-#define IconListviewObject NewObject(IconListview_Class->mcc_Class
-#endif
 
 /*** Private Global Data *********************************************************/
 
@@ -280,7 +250,6 @@ STATIC VOID IconWindow_StoreSettings(Object * iconwindow)
 /*** Hook functions *********************************************************/
 
 ///IconWindow__HookFunc_PrefsUpdatedFunc()
-#ifdef __AROS__
 AROS_UFH3(
     void, IconWindow__HookFunc_PrefsUpdatedFunc,
     AROS_UFHA(struct Hook *,    hook,   A0),
@@ -288,10 +257,6 @@ AROS_UFH3(
     AROS_UFHA(APTR,             param,  A1)
 )
 {
-#else
-HOOKPROTO(IconWindow__HookFunc_PrefsUpdatedFunc, void, APTR *obj, APTR param)
-{
-#endif
     AROS_USERFUNC_INIT
   
     /* Get our private data */
@@ -316,13 +281,9 @@ HOOKPROTO(IconWindow__HookFunc_PrefsUpdatedFunc, void, APTR *obj, APTR param)
 
     AROS_USERFUNC_EXIT
 }
-#ifndef __AROS__
-MakeStaticHook(iwd_PrefsUpdated_hook,IconWindow__HookFunc_PrefsUpdatedFunc);
-#endif
 ///
 
 ///IconWindow__HookFunc_ProcessBackgroundFunc()
-#ifdef __AROS__
 AROS_UFH3(
     void, IconWindow__HookFunc_ProcessBackgroundFunc,
     AROS_UFHA(struct Hook *,    hook,   A0),
@@ -330,10 +291,6 @@ AROS_UFH3(
     AROS_UFHA(APTR,             param,  A1)
 )
 {
-#else
-HOOKPROTO(IconWindow__HookFunc_ProcessBackgroundFunc, void, APTR *obj, APTR param)
-{
-#endif
     AROS_USERFUNC_INIT
   
     /* Get our private data */
@@ -363,13 +320,9 @@ HOOKPROTO(IconWindow__HookFunc_ProcessBackgroundFunc, void, APTR *obj, APTR para
 
     AROS_USERFUNC_EXIT
 }
-#ifndef __AROS__
-MakeStaticHook(iwd_ProcessBackground_hook,IconWindow__HookFunc_ProcessBackgroundFunc);
-#endif
 ///
 
 ///IconWindow__HookFunc_WandererBackFillFunc()
-#ifdef __AROS__
 AROS_UFH3(
     void, IconWindow__HookFunc_WandererBackFillFunc,
     AROS_UFHA(struct Hook *,        hook,   A0),
@@ -377,10 +330,6 @@ AROS_UFH3(
     AROS_UFHA(struct BackFillMsg *, BFM,  A1)
 )
 {
-#else
-HOOKPROTO(IconWindow__HookFunc_WandererBackFillFunc, void, struct RastPort *RP, struct BackFillMsg *BFM)
-{
-#endif
     AROS_USERFUNC_INIT
   
     struct IconWindow_BackFillHookData *HookData = NULL;
@@ -429,9 +378,6 @@ D(bug("[Wanderer:IconWindow]: %s()\n", __PRETTY_FUNCTION__));
 
     AROS_USERFUNC_EXIT
 }
-#ifndef __AROS__
-MakeStaticHook(Hook_WandererBackFillFunc,IconWindow__HookFunc_WandererBackFillFunc);
-#endif
 ///
 
 ///OM_NEW()
@@ -505,17 +451,9 @@ D(bug("[Wanderer:IconWindow] %s: Screen @ 0x%p\n", __PRETTY_FUNCTION__, _newIcon
     {
 D(bug("[Wanderer:IconWindow] %s: Allocated WindowBackFillHook @ 0x%p\n", __PRETTY_FUNCTION__, _newIconWin__BackFillHook));
 
-#ifdef __AROS__
-            _newIconWin__BackFillHook->h_Entry = ( HOOKFUNC )IconWindow__HookFunc_WandererBackFillFunc;
-#else
-            _newIconWin__BackFillHook = &Hook_WandererBackFillFunc;
-#endif
+        _newIconWin__BackFillHook->h_Entry = ( HOOKFUNC )IconWindow__HookFunc_WandererBackFillFunc;
 
-//#if defined(__MORPHOS__)
-//        WindowBF_TAG = MUIA_Window_BackFillHook;
-//#else
         WindowBF_TAG = WA_BackFill;
-//#endif
     }
 
     if (isRoot)
@@ -727,7 +665,13 @@ D(bug("]\n"));
     DOPENWINDOW(bug("[Wanderer:IconWindow] %s: Window Co-ords %d,%d [%d x %d]\n", __PRETTY_FUNCTION__, _newIconWin__WindowLeft, _newIconWin__WindowTop, _newIconWin__WindowWidth, _newIconWin__WindowHeight));
     D(bug("[Wanderer:IconWindow] %s: TopPanelContainerObj 0x%p RootViewObj 0x%p\n", __PRETTY_FUNCTION__, _newIconWin__TopPanelContainerObj, _newIconWin__RootViewObj));
 
-    self = (Object *) DoSuperNew(CLASS, self, 
+#if defined(MUIA_Window_ZoomGadget)
+#define WINZOOMTAG        MUIA_Window_ZoomGadget
+#else
+#define WINZOOMTAG        TAG_IGNORE
+#endif
+    
+    self = (Object *) DoSuperNew(CLASS, self,
         MUIA_Window_Screen,                                    _newIconWin__Screen,
         MUIA_Window_Backdrop,                                  isBackdrop ? TRUE : FALSE,
         MUIA_Window_Borderless,                                isBackdrop ? TRUE : FALSE,
@@ -743,9 +687,7 @@ D(bug("]\n"));
         MUIA_Window_CloseGadget,                               (!isBackdrop) ? TRUE : FALSE,
         MUIA_Window_SizeGadget,                                (!isBackdrop) ? TRUE : FALSE,
         MUIA_Window_DepthGadget,                               (!isBackdrop) ? TRUE : FALSE,
-#if defined(MUIA_Window_ZoomGadget)
-        MUIA_Window_ZoomGadget,                                (!isBackdrop) ? TRUE : FALSE,
-#endif
+        WINZOOMTAG,                                             (!isBackdrop) ? TRUE : FALSE,
         MUIA_Window_UseBottomBorderScroller,                   (!isBackdrop) ? TRUE : FALSE,
         MUIA_Window_UseRightBorderScroller,                    (!isBackdrop) ? TRUE : FALSE,
         MUIA_Window_IsSubWindow,                             TRUE,
@@ -810,7 +752,7 @@ D(bug("]\n"));
         data->iwd_Flags                                 |= (isRoot) ? IWDFLAG_ISROOT : 0;
         data->iwd_Flags                                 |= (isBackdrop) ? IWDFLAG_ISBACKDROP : 0;
 
-        data->iwd_ViewSettings_Attrib                   = (data->iwd_Flags & IWDFLAG_ISROOT) 
+        data->iwd_ViewSettings_Attrib                   = (data->iwd_Flags & IWDFLAG_ISROOT)
                                                           ? "Workbench"
                                                           : "Drawer";
 
@@ -818,16 +760,12 @@ D(bug("]\n"));
 
         if (prefs)
         {
-#ifdef __AROS__
             data->iwd_PrefsUpdated_hook.h_Entry = ( HOOKFUNC )IconWindow__HookFunc_PrefsUpdatedFunc;
-#else
-            data->iwd_PrefsUpdated_hook = &iwd_PrefsUpdated_hook;
-#endif
 
             DoMethod
               (
                 prefs, MUIM_Notify, MUIA_WandererPrefs_Processing, FALSE,
-                (IPTR) self, 3, 
+                (IPTR) self, 3,
                 MUIM_CallHook, &data->iwd_PrefsUpdated_hook, (IPTR)CLASS
               );
 
@@ -839,11 +777,7 @@ D(bug("]\n"));
             SET(data->iwd_IconListObj, MUIA_Font, data->iwd_WindowFont);
         }
 
-#ifdef __AROS__
         data->iwd_ProcessBackground_hook.h_Entry = ( HOOKFUNC )IconWindow__HookFunc_ProcessBackgroundFunc;
-#else
-        data->iwd_ProcessBackground_hook = &iwd_ProcessBackground_hook;
-#endif
 
         if ((data->iwd_BackFill_hook = _newIconWin__BackFillHook))
         {
@@ -860,11 +794,11 @@ D(bug("]\n"));
 
         data->iwd_Flags |= IWDFLAG_SETUP;
 
-        /* If double clicked then we call our own private methods, that's 
+        /* If double clicked then we call our own private methods, that's
            easier then using Hooks */
         DoMethod
           (
-            _newIconWin__IconListObj, MUIM_Notify, MUIA_IconList_DoubleClick, TRUE, 
+            _newIconWin__IconListObj, MUIM_Notify, MUIA_IconList_DoubleClick, TRUE,
             (IPTR) self, 1, MUIM_IconWindow_DoubleClicked
           );
 
@@ -939,7 +873,7 @@ IPTR IconWindow__OM_SET(Class *CLASS, Object *self, struct opSet *message)
     IPTR      focusicon = (IPTR) NULL;
     IPTR        rv = TRUE;
 
-    while ((tag = NextTagItem((TAGITEM)&tstate)) != NULL)
+    while ((tag = NextTagItem((struct TagItem **)&tstate)) != NULL)
     {
         switch (tag->ti_Tag)
         {
@@ -1187,7 +1121,7 @@ IPTR IconWindow__MUIM_Window_Setup
         DoMethod
           (
             data->iwd_ViewSettings_PrefsNotificationObject, MUIM_Notify, MUIA_Background, MUIV_EveryTime,
-            (IPTR) self, 3, 
+            (IPTR) self, 3,
             MUIM_CallHook, &data->iwd_ProcessBackground_hook, (IPTR)CLASS
           );
 
@@ -1196,7 +1130,7 @@ IPTR IconWindow__MUIM_Window_Setup
             DoMethod
               (
                 data->iwd_ViewSettings_PrefsNotificationObject, MUIM_Notify, MUIA_IconWindowExt_ImageBackFill_BGRenderMode, MUIV_EveryTime,
-                (IPTR) self, 3, 
+                (IPTR) self, 3,
                 MUIM_CallHook, &data->iwd_ProcessBackground_hook, (IPTR)CLASS
               );
         }
@@ -1204,21 +1138,21 @@ IPTR IconWindow__MUIM_Window_Setup
         DoMethod
           (
             data->iwd_ViewSettings_PrefsNotificationObject, MUIM_Notify, MUIA_IconWindowExt_ImageBackFill_BGTileMode, MUIV_EveryTime,
-            (IPTR) self, 3, 
+            (IPTR) self, 3,
             MUIM_CallHook, &data->iwd_ProcessBackground_hook, (IPTR)CLASS
           );
 
         DoMethod
           (
             data->iwd_ViewSettings_PrefsNotificationObject, MUIM_Notify, MUIA_IconWindowExt_ImageBackFill_BGXOffset, MUIV_EveryTime,
-            (IPTR) self, 3, 
+            (IPTR) self, 3,
             MUIM_CallHook, &data->iwd_ProcessBackground_hook, (IPTR)CLASS
           );
 
         DoMethod
           (
             data->iwd_ViewSettings_PrefsNotificationObject, MUIM_Notify, MUIA_IconWindowExt_ImageBackFill_BGYOffset, MUIV_EveryTime,
-            (IPTR) self, 3, 
+            (IPTR) self, 3,
             MUIM_CallHook, &data->iwd_ProcessBackground_hook, (IPTR)CLASS
           );
 
@@ -1657,7 +1591,7 @@ IPTR IconWindow__MUIM_IconWindow_Snapshot
 
     if (message->snapshotall == TRUE)
     {
-        struct IconList_Entry *icon_entry    = (IPTR)MUIV_IconList_NextIcon_Start;
+        struct IconList_Entry *icon_entry    = (APTR)(IPTR)MUIV_IconList_NextIcon_Start;
         struct IconEntry      *node = NULL;
         struct TagItem            icon_tags[] =
         {
@@ -1752,20 +1686,3 @@ ICONWINDOW_CUSTOMCLASS
 );
 
 ADD2INIT(IconWindow__SetupClass, 0);
-
-#ifndef __AROS__
-int initIconWindowClass(void)
-{
-  IPTR ret1 = IconWindow_Initialize();
-
-  IPTR ret2 = IconWindow__SetupClass();
-
-  IPTR ret3 = ImageBackFill__SetupClass();
-
-  if (ret1 && ret2 && ret3)
-    return TRUE;
-  else
-    return FALSE;
-
-}
-#endif

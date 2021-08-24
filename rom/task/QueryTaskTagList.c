@@ -1,6 +1,5 @@
 /*
-    Copyright © 2015-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2015-2017, The AROS Development Team. All rights reserved.
 */
 
 #define DEBUG 0
@@ -20,14 +19,14 @@
     NAME */
 #include <proto/task.h>
 
-	AROS_LH2(void, QueryTaskTagList,
+        AROS_LH2(void, QueryTaskTagList,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct Task *, task, A0),
-	AROS_LHA(struct TagItem *, tagList, A1),
+        AROS_LHA(struct Task *, task, A0),
+        AROS_LHA(struct TagItem *, tagList, A1),
 
 /*  LOCATION */
-	struct TaskResBase *, TaskResBase, 6, Task)
+        struct TaskResBase *, TaskResBase, 6, Task)
 
 /*  FUNCTION
 

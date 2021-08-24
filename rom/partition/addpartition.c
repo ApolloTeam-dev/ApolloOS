@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
 */
 #include <utility/tagitem.h>
@@ -60,7 +59,7 @@
     struct PTFunctionTable *handler = root->table->handler;
 
         if (handler->addPartition)
-            return handler->addPartition(PartitionBase, root, taglist); 
+            return handler->addPartition(PartitionBase, root, taglist);
     }
     return 0;
     AROS_LIBFUNC_EXIT

@@ -1,6 +1,5 @@
 /*
-    Copyright © 2005-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2005-2011, The AROS Development Team. All rights reserved.
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
@@ -81,5 +80,5 @@ int main(int argc, char **argv)
     }
     cleanup(NULL);
 
-    return RETURN_OK; /* make compiler happy */
+    return RETURN_OK;
 }
