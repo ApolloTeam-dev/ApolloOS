@@ -1,6 +1,5 @@
 /*
-    Copyright © 2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2020, The AROS Development Team. All rights reserved.
 */
 
 #include <proto/exec.h>
@@ -16,7 +15,7 @@ char *generate_banner()
 
     BYTE const CExtra[] = "Licensed under the AROS Public License.\n"
 #if defined(REPOTYPE)
-                         "Version " REPOTYPE "" REPOREVISION
+                         "Version " REPOTYPE " " REPOREVISION
 #if defined(REPOID)
                          " (" REPOID ")"
 #endif

@@ -46,7 +46,6 @@
 #define __DISTRODATE__                  "@aros_dist_date@"
 #define __AMIGADATE__                   "@aros_dist_amigadate@"
 
-
 @PLATFORM_EXECSMP@
 @ENABLE_EXECSMP@
 

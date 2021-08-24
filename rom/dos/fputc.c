@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 #include <exec/memory.h>
 #include <proto/exec.h>
@@ -30,7 +28,7 @@
         struct DosLibrary *, DOSBase, 52, Dos)
 
 /*  FUNCTION
-        Write a character to a file handle. 
+        Write a character to a file handle.
 
         The write is buffered.
 

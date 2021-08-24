@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc: Add a device to the public list of devices.
-    Lang: english
 */
 #include <aros/debug.h>
 #include <exec/execbase.h>
@@ -19,22 +17,22 @@
 
     NAME */
 
-	AROS_LH1(void, AddDevice,
+        AROS_LH1(void, AddDevice,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct Device *, device,A1),
+        AROS_LHA(struct Device *, device,A1),
 
 /*  LOCATION */
-	struct ExecBase *, SysBase, 72, Exec)
+        struct ExecBase *, SysBase, 72, Exec)
 
 /*  FUNCTION
-	Adds a given device to the system's device list after checksumming
-	the device vectors. This function is not for general use but
-	(of course) for building devices that don't use exec's MakeLibrary()
-	mechanism.
+        Adds a given device to the system's device list after checksumming
+        the device vectors. This function is not for general use but
+        (of course) for building devices that don't use exec's MakeLibrary()
+        mechanism.
 
     INPUTS
-	device - Pointer to a ready for use device structure.
+        device - Pointer to a ready for use device structure.
 
     RESULT
 
@@ -45,7 +43,7 @@
     BUGS
 
     SEE ALSO
-	RemDevice(), OpenDevice(), CloseDevice()
+        RemDevice(), OpenDevice(), CloseDevice()
 
     INTERNALS
 

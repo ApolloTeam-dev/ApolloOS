@@ -1,8 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
-    Lang: english
 */
 #include <aros/debug.h>
 
@@ -25,7 +23,7 @@
         struct DosLibrary *, DOSBase, 158, Dos)
 
 /*  FUNCTION
-        This routine writes an unformatted string to the default output.  No 
+        This routine writes an unformatted string to the default output.  No
         newline is appended to the string and any error is returned.  This
         routine is buffered.
 

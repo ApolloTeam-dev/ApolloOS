@@ -1,6 +1,5 @@
 /*
-    Copyright © 2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2019, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -21,7 +20,7 @@ static const char *str_devicename = "scsi.device";
 /*****************************************************************************************
 
     NAME
-        --background--
+        --background_unitclass--
 
     LOCATION
         IID_Hidd_SCSIUnit

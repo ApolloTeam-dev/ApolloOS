@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2016, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2016, The AROS Development Team. All rights reserved.
 
     Desc: DeleteVar() - Deletes a local or environmental variable.
-    Lang: english
 */
 #include "dos_intern.h"
 #include <proto/exec.h>
@@ -67,7 +65,7 @@
   AROS_LIBFUNC_INIT
 
   if(name)
-  {  
+  {
     if((flags & GVF_GLOBAL_ONLY) == 0)
     {
       struct LocalVar *lv = NULL;

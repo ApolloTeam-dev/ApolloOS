@@ -1,9 +1,7 @@
 /*
     Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
 
     Desc: Code to dynamically load ELF executables
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -345,28 +343,14 @@ static int relocate
         sym = &symtab[ELF_R_SYM(rel->info)];
         p = toreloc->addr + rel->offset;
 
-        if (sym->shindex != SHN_XINDEX)
-            shindex = sym->shindex;
-
-        else {
-            if (symtab_shndx == NULL) {
-                D(bug("[ELF Loader] got symbol with shndx 0xfff, but there's no symtab shndx table\n"));
-                SetIoErr(ERROR_BAD_HUNK);
-                return 0;
-            }
-            shindex = ((ULONG *)symtab_shndx->addr)[ELF_R_SYM(rel->info)];
-        }
-
         DB2(bug("[ELF Loader] Processing symbol %s\n", sh[shsymtab->link].addr + sym->name));
 
-        switch (shindex)
+        switch (sym->shindex)
         {
-
             case SHN_COMMON:
                 D(bug("[ELF Loader] COMMON symbol '%s'\n",
                       (STRPTR)sh[shsymtab->link].addr + sym->name));
                       SetIoErr(ERROR_BAD_HUNK);
-
                 return 0;
 
             case SHN_ABS:
@@ -383,6 +367,16 @@ static int relocate
                 /* fall through */
 
             default:
+                if (sym->shindex != SHN_XINDEX)
+                    shindex = sym->shindex;
+                else {
+                    if (symtab_shndx == NULL) {
+                        D(bug("[ELF Loader] got symbol with shndx 0xfff, but there's no symtab shndx table\n"));
+                        SetIoErr(ERROR_BAD_HUNK);
+                        return 0;
+                    }
+                    shindex = ((ULONG *)symtab_shndx->addr)[ELF_R_SYM(rel->info)];
+                }
                 s = (IPTR)sh[shindex].addr + sym->value;
         }
 

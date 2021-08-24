@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Retrieve the full pathname from a lock or a filehandle.
-    Lang: english
 */
 
 #include <proto/exec.h>
@@ -92,7 +90,7 @@ BOOL namefrom_internal(struct DosLibrary *DOSBase, BPTR lock, STRPTR buffer, LON
             else if(!first)
             {
                 if (name > buffer)
-                {                   
+                {
                     *--name = '/';
                 }
                 else
@@ -106,7 +104,7 @@ BOOL namefrom_internal(struct DosLibrary *DOSBase, BPTR lock, STRPTR buffer, LON
                         s2--;
         
                         if (name - (s2 - s1) >= buffer)
-                        { 
+                        {
                             while(s2 > s1)
                         {
                             *--name = *--s2;

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 
     Desc: Implements AROS's generic/amiga-like boot sequence.
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -20,6 +18,8 @@
 #include <libraries/expansionbase.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
+
+#include <string.h>
 
 #include "dos_intern.h"
 #include "../dosboot/bootflags.h"
@@ -139,10 +139,10 @@ void __dos_Boot(struct DosLibrary *DOSBase, ULONG BootFlags, UBYTE Flags)
     }
 
 #if defined(__DISTRONAME__)
-	if (cis == BNULL)
+    if (cis == BNULL)
         cis = Open("CON:////" __DISTRONAME__ " (" __DISTROVERSION__ ", " __DISTRODATE__ ")/AUTO/CLOSE/SMART/BOOT", MODE_OLDFILE);
 #else
-	if (cis == BNULL)
+    if (cis == BNULL)
         cis = Open("CON:////AROS/AUTO/CLOSE/SMART/BOOT", MODE_OLDFILE);
 #endif
 

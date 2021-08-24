@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 #include <aros/debug.h>
@@ -13,6 +11,8 @@
 #include <dos/dosextens.h>
 #include <aros/asmcall.h>
 #include <exec/ports.h>
+
+#include <string.h>
 
 #include "dos_newcliproc.h"
 #include "dos_intern.h"
@@ -327,7 +327,7 @@
         extern void BCPL_RunHandler(void);
         entry = BCPL_RunHandler;
     }
-    else 
+    else
 #endif
     {
         D(bug("[SystemTagList] C 'shell' shell selected\n"));

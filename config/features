@@ -584,7 +584,10 @@ PACKAGE_URL=
 ac_unique_file="../mmakefile"
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+aros_toolchain_cflags_common
 aros_toolchain_sysroot
+aros_nowarnflags_builtin_declaration_mismatch
+aros_warnflags_builtin_declaration_mismatch
 aros_nowarnflags_ignored_optimization_argument
 aros_warnflags_ignored_optimization_argument
 aros_nowarnflags_int_in_bool_context
@@ -740,6 +743,7 @@ aros_cflags_iquote_end
 aros_cflags_iquote
 aros_cflags_isystem_end
 aros_cflags_isystem
+aros_cflags_file_prefix_map
 aros_cflags_visibility_hidden
 aros_cflags_no_merge_all_constants
 aros_cflags_merge_all_constants
@@ -749,6 +753,8 @@ aros_cflags_data_sections
 aros_cflags_function_sections
 aros_cflags_no_asynchronous_unwind_tables
 aros_cflags_asynchronous_unwind_tables
+aros_cflags_no_unwind_tables
+aros_cflags_unwind_tables
 aros_cflags_no_freestanding
 aros_cflags_freestanding
 aros_cflags_no_builtin_unreachable
@@ -766,6 +772,7 @@ aros_cflags_no_builtin_vsnprintf
 aros_cflags_no_builtin_floor
 aros_cflags_no_builtin
 aros_cflags_builtin
+aros_cflags_nodelete_nullpointer_checks
 aros_cflags_no_common
 aros_cflags_common
 aros_cflags_noalignednew
@@ -805,6 +812,8 @@ aros_cxxflags_nopermissive
 aros_cxxflags_permissive
 aros_cflags_noexceptions
 aros_cflags_exceptions
+aros_cflags_no_integrated_as
+aros_targetsection_comment
 ac_ct_CXX
 CXXFLAGS
 CXX
@@ -1656,6 +1665,52 @@ fi
   as_fn_set_status $ac_retval
 
 } # ac_fn_cxx_try_compile
+
+# ac_fn_c_try_link LINENO
+# -----------------------
+# Try to link conftest.$ac_ext, and return whether this succeeded.
+ac_fn_c_try_link ()
+{
+  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+  rm -f conftest.$ac_objext conftest$ac_exeext
+  if { { ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
+$as_echo "$ac_try_echo"; } >&5
+  (eval "$ac_link") 2>conftest.err
+  ac_status=$?
+  if test -s conftest.err; then
+    grep -v '^ *+' conftest.err >conftest.er1
+    cat conftest.er1 >&5
+    mv -f conftest.er1 conftest.err
+  fi
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext && {
+	 test "$cross_compiling" = yes ||
+	 test -x conftest$ac_exeext
+       }; then :
+  ac_retval=0
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_retval=1
+fi
+  # Delete the IPA/IPO (Inter Procedural Analysis/Optimization) information
+  # created by the PGI compiler (conftest_ipa8_conftest.oo), as it would
+  # interfere with the next link command; also delete a directory that is
+  # left behind by Apple's compiler.  We do this before executing the actions.
+  rm -rf conftest.dSYM conftest_ipa8_conftest.oo
+  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
+  as_fn_set_status $ac_retval
+
+} # ac_fn_c_try_link
 cat >config.log <<_ACEOF
 This file contains any messages produced by compilers while
 running configure, to aid debugging if configure makes a mistake.
@@ -2883,23 +2938,30 @@ $as_echo "$aros_targetcfg_dir" >&6; }
 #  -finstrument-functions
 #  -faligned-new
 #  -fcommon
+#  -fno-delete-null-pointer-checks
 
 #  -fno-builtin
 #  -fno-builtin-floor
 #  -fno-builtin-vsnprintf
 
 #  -ffreestanding
+#  -funwind-tables
 #  -fasynchronous-unwind-tables
 #  -ffunction-sections
 #  -fdata-sections
 #  -fmerge-constants
 #  -fmerge-all-constants
 
+#  -ffile-prefix-map
+
 # C++/ObjC++
 #  -fpermissive
 #  -frtti
 
 #  -fvisibility=hidden
+
+# Clang/LLVM
+# -no-integrated-as
 
 # C features first
 ac_ext=c
@@ -3521,6 +3583,32 @@ if test "x-$aros_common" = "x-yes" ; then
     aros_cflags_no_common=-fno-common
 fi
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ${CC} accepts -fno-delete-null-pointer-checks" >&5
+$as_echo_n "checking whether ${CC} accepts -fno-delete-null-pointer-checks... " >&6; }
+CFLAGS=-fno-delete-null-pointer-checks
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  aros_no_delete_null_pointer_checks="yes"
+else
+  aros_no_delete_null_pointer_checks="no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $aros_no_delete_null_pointer_checks" >&5
+$as_echo "$aros_no_delete_null_pointer_checks" >&6; }
+if test "x-$aros_no_delete_null_pointer_checks" = "x-yes" ; then
+    aros_cflags_nodelete_nullpointer_checks=-fno-delete-null-pointer-checks
+fi
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ${CC} accepts -fbuiltin" >&5
 $as_echo_n "checking whether ${CC} accepts -fbuiltin... " >&6; }
 CFLAGS=-fbuiltin
@@ -3913,6 +4001,33 @@ if test "x-$aros_freestanding" = "x-yes" ; then
     aros_cflags_no_freestanding=-fno-freestanding
 fi
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ${CC} accepts -funwind-tables" >&5
+$as_echo_n "checking whether ${CC} accepts -funwind-tables... " >&6; }
+CFLAGS=-funwind-tables
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  aros_unwind_tables="yes"
+else
+  aros_unwind_tables="no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $aros_unwind_tables" >&5
+$as_echo "$aros_unwind_tables" >&6; }
+if test "x-$aros_unwind_tables" = "x-yes" ; then
+    aros_cflags_unwind_tables=-funwind-tables
+    aros_cflags_no_unwind_tables=-fno-unwind-tables
+fi
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ${CC} accepts -fasynchronous-unwind-tables" >&5
 $as_echo_n "checking whether ${CC} accepts -fasynchronous-unwind-tables... " >&6; }
 CFLAGS=-fasynchronous-unwind-tables
@@ -4070,6 +4185,32 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 $as_echo "$aros_visibility_hidden" >&6; }
 if test "x-$aros_visibility_hidden" = "x-yes" ; then
     aros_cflags_visibility_hidden=-fvisibility=hidden
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ${CC} accepts -ffile-prefix-map" >&5
+$as_echo_n "checking whether ${CC} accepts -ffile-prefix-map... " >&6; }
+CFLAGS=-ffile-prefix-map=/a=/b
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  aros_file_prefix_map="yes"
+else
+  aros_file_prefix_map="no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $aros_file_prefix_map" >&5
+$as_echo "$aros_file_prefix_map" >&6; }
+if test "x-$aros_file_prefix_map" = "x-yes" ; then
+    aros_cflags_file_prefix_map=-ffile-prefix-map
 fi
 
 # C++ features
@@ -4395,7 +4536,6 @@ fi
 
 CXXFLAGS="$save_cxxflags"
 
-
 # Check for additional C compiler options..
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -4403,6 +4543,32 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ${CC} accepts -no-integrated-as" >&5
+$as_echo_n "checking whether ${CC} accepts -no-integrated-as... " >&6; }
+CFLAGS=-no-integrated-as
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  aros_no_integrated_as="yes"
+else
+  aros_no_integrated_as="no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $aros_no_integrated_as" >&5
+$as_echo "$aros_no_integrated_as" >&6; }
+if test "x-$aros_no_integrated_as" = "x-yes" ; then
+    aros_cflags_no_integrated_as=-no-integrated-as
+fi
 
 #-----------------------------------------------------------------------------
 #
@@ -4606,6 +4772,7 @@ CFLAGS="$save_cflags"
 #  -Wclass-memaccess
 #  -Wint-in-bool-context
 #  -Wignored-optimization-argument
+#  -Wbuiltin-declaration-mismatch
 
 # C warnings first
 ac_ext=c
@@ -6588,6 +6755,33 @@ if test "x-$aros_ignored_optimization_argument" = "x-yes" ; then
     aros_warnflags_ignored_optimization_argument=-Wignored-optimization-argument
     aros_nowarnflags_ignored_optimization_argument=-Wno-ignored-optimization-argument
 fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ${CC} accepts -Wbuiltin-declaration-mismatch" >&5
+$as_echo_n "checking whether ${CC} accepts -Wbuiltin-declaration-mismatch... " >&6; }
+CFLAGS=-Wbuiltin-declaration-mismatch
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  aros_builtin_declaration_mismatch="yes"
+else
+  aros_builtin_declaration_mismatch="no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $aros_builtin_declaration_mismatch" >&5
+$as_echo "$aros_builtin_declaration_mismatch" >&6; }
+if test "x-$aros_builtin_declaration_mismatch" = "x-yes" ; then
+    aros_warnflags_builtin_declaration_mismatch=-Wbuiltin-declaration-mismatch
+    aros_nowarnflags_builtin_declaration_mismatch=-Wno-builtin-declaration-mismatch
+fi
 CFLAGS="$save_cflags"
 
 # Check the C++ warnings
@@ -6638,6 +6832,24 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 #########################################################
 #
 # Now check what we need to use with the toolchain
+
+COMPILER_VERSION=`${CC} --version 2>/dev/null`
+IS_LLVM_COMPILER=`echo "$COMPILER_VERSION" | grep -i -c -E 'LLVM|clang'`
+if test "$IS_LLVM_COMPILER" -ne "0"; then
+    IS_GNU_COMPILER=0
+fi
+if test "$IS_LLVM_COMPILER" -eq "0"; then
+    IS_GNU_COMPILER=`echo "$COMPILER_VERSION" | grep -i -c -E 'gcc'`
+fi
+if test "$IS_GNU_COMPILER" -ne "0"; then
+    GNU_COMPILER_VERS="`${CC} -dumpversion`"
+    GCC_VERSION_MAJOR=$(echo $GNU_COMPILER_VERS | cut -d'.' -f1)
+    GCC_VERSION_MINOR=$(echo $GNU_COMPILER_VERS | cut -d'.' -f2)
+    GCC_VERSION_PATCH=$(echo $GNU_COMPILER_VERS | cut -d'.' -f3)
+    if test "$GCC_VERSION_MAJOR" -gt "9" ; then
+                aros_toolchain_cflags_common=""
+    fi
+fi
 
 cat >$AROS_DEVELOPER/include/__testsincdir.h <<_ACEOF
 /* Copyright (c) The AROS Dev Team  */
@@ -6691,11 +6903,81 @@ fi
 #    aros_toolchain_isysroot="-isysroot $""(AROS_SDK)"
 #    aros_toolchain_iarchdir="-I $""(AROS_SDK)/$""(AROS_TARGET_CPU)-aros/include"
 #fi
+
+if test "$AROS_TARGET_CPU" = "arm"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if we need to comment out the compilers section attributes" >&5
+$as_echo_n "checking if we need to comment out the compilers section attributes... " >&6; }
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+asm("\t.section\t.aros.startup,\"ax\"\n\t.globl\tstart\n\t.type\tstart,%function\n\t\tldr\tsp, section_ptr\n");
+static void * section_ptr __attribute__((used, section(".aros.startup")));
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+
+            aros_targetsection_needscomment=no
+
+else
+
+            aros_targetsection_needscomment=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $aros_targetsection_needscomment" >&5
+$as_echo "$aros_targetsection_needscomment" >&6; }
+    if test "$aros_targetsection_needscomment" = "yes"; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking which comment style to use" >&5
+$as_echo_n "checking which comment style to use... " >&6; }
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+asm("\t.section\t.aros.startup,\"ax\"\n\t.globl\tstart\n\t.type\tstart,%function\n\t\tldr\tsp, section_ptr\n");
+static void * section_ptr __attribute__((used, section(".aros.startup #")));
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+
+                aros_targetsection_hashcomment=yes
+                aros_targetsection_comment=\"#\"
+
+else
+
+                aros_targetsection_hashcomment=no
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+        if test "$aros_targetsection_hashcomment" = "no"; then
+            aros_targetsection_comment=\"//\"
+        fi
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $aros_targetsection_comment" >&5
+$as_echo "$aros_targetsection_comment" >&6; }
+    fi
+fi
+
 rm -f $AROS_DEVELOPER/include/__testsincdir.h
 
 #
 # export the feature flags...
 #
+
+
+
+
+
+
 
 
 
@@ -6941,7 +7223,10 @@ rm -f $AROS_DEVELOPER/include/__testsincdir.h
 
 
 
+
+
 # Additional toolchain support ...
+
 
 
 ac_config_files="$ac_config_files ${aros_targetcfg_dir}/compiler.cfg:compiler.cfg.in"
