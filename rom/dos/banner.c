@@ -21,23 +21,28 @@ char *generate_banner()
 #endif
                          "\n"
 #endif
-                         "built on " ISODATE ".\n";
+
+#if !defined(__DISTRONAME__)
+                         "built on " __DISTRODATE__ ".\n";
+#else
+			"";
+#endif
 
     char *banner;
 
 #if defined(__DISTRONAME__)
-	IPTR CParams[4];
-	CParams[0] = (IPTR)CDistro;
-	CParams[1] = (IPTR)TaggedOpenLibrary(-2);
+    IPTR CParams[4];
+    CParams[0] = (IPTR)CDistro;
+    CParams[1] = (IPTR)TaggedOpenLibrary(-2);
     CParams[2] = (IPTR)TaggedOpenLibrary(-3);
     CParams[3] = (IPTR)CExtra;
-	banner = AllocVec(strlen((char*)CParams[0]) + strlen((char *)CParams[1]) + strlen((char *)CParams[2]) + strlen((char *)CParams[3]) + 2, MEMF_CLEAR);
+    banner = AllocVec(strlen((char*)CParams[0]) + strlen((char *)CParams[1]) + strlen((char *)CParams[2]) + strlen((char *)CParams[3]) + 2, MEMF_CLEAR);
     RawDoFmt("%s\n%s%s\n%s", (RAWARG)CParams, RAWFMTFUNC_STRING, banner);
 #else
-	IPTR CParams[3];
-	CParams[0] = (IPTR)TaggedOpenLibrary(-2);
-	CParams[1] = (IPTR)TaggedOpenLibrary(-3);
-	CParams[2] = (IPTR)CExtra;
+    IPTR CParams[3];
+    CParams[0] = (IPTR)TaggedOpenLibrary(-2);
+    CParams[1] = (IPTR)TaggedOpenLibrary(-3);
+    CParams[2] = (IPTR)CExtra;
     banner = AllocVec(strlen((char *)CParams[0]) + strlen((char *)CParams[1]) + strlen((char *)CParams[2]) + 2, MEMF_CLEAR);
     RawDoFmt("%s%s\n%s", (RAWARG)CParams, RAWFMTFUNC_STRING, banner);
 #endif
