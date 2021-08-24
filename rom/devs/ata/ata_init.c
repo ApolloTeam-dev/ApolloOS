@@ -1,7 +1,9 @@
 /*
-    Copyright (C) 2004-2020, The AROS Development Team. All rights reserved
+    Copyright © 2004-2020, The AROS Development Team. All rights reserved
+    $Id$
 
     Desc:
+    Lang: English
 */
 
 #include <aros/debug.h>
@@ -44,55 +46,35 @@ BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit)
 {
     struct ExpansionBase *ExpansionBase;
     struct DeviceNode *devnode;
-    TEXT dosdevstem[3] = "HD";
+    TEXT dosdevname[4] = "HD0";
     const ULONG IdDOS = AROS_MAKE_ID('D','O','S','\001');
     const ULONG IdCDVD = AROS_MAKE_ID('C','D','V','D');
 
     ExpansionBase = (struct ExpansionBase *)TaggedOpenLibrary(TAGGEDOPEN_EXPANSION);
     if (ExpansionBase)
     {
-        TEXT dosdevname[4];
-        struct ataBase *ATABase;
-        struct TagItem ATAIDTags[] =
-        {
-            {tHidd_Storage_IDStem,  (IPTR)dosdevstem        },
-            {TAG_DONE,              0                       }
-        };
         IPTR pp[24];
 
+        /* This should be dealt with using some sort of volume manager or such. */
         switch (unit->au_DevType)
         {
             case DG_DIRECT_ACCESS:
                 break;
             case DG_CDROM:
-                dosdevstem[0] = 'C';
+                dosdevname[0] = 'C';
                 break;
             default:
-                D(bug("[ATA>>]:-ata_RegisterVolume called on unknown devicetype\n");)
-                break;
+                D(bug("[ATA>>]:-ata_RegisterVolume called on unknown devicetype\n"));
         }
 
-        ATABase = unit->au_Bus->ab_Base;
-        if ((unit->au_IDNode = HIDD_Storage_AllocateID(ATABase->storageRoot, ATAIDTags)))
-        {
-            D(bug("[ATA>>] %s: unit ID allocated @ 0x%p\n", __func__, unit->au_IDNode);)
-            pp[0]                   = (IPTR)unit->au_IDNode->ln_Name;
-        }
+        if (unit->au_UnitNum < 10)
+            dosdevname[2] += unit->au_UnitNum % 10;
         else
-        {
-            bug("[ATA>>] %s: using legacy device name\n", __func__);
-            dosdevname[0] = dosdevstem[0];
-            dosdevname[1] = dosdevstem[1];
-            dosdevname[2] = '0';
-            if (unit->au_UnitNum < 10)
-                dosdevname[2] += unit->au_UnitNum % 10;
-            else
-                dosdevname[2] = 'A' - 10 + unit->au_UnitNum;
-            pp[0]                   = (IPTR)dosdevname;
-        }
-
-        pp[1]               = (IPTR)MOD_NAME_STRING;
-        pp[2]               = unit->au_UnitNum;
+            dosdevname[2] = 'A' - 10 + unit->au_UnitNum;
+    
+        pp[0] 		    = (IPTR)dosdevname;
+        pp[1]		    = (IPTR)MOD_NAME_STRING;
+        pp[2]		    = unit->au_UnitNum;
         pp[DE_TABLESIZE    + 4] = DE_BOOTBLOCKS;
         pp[DE_SIZEBLOCK    + 4] = 1 << (unit->au_SectorShift - 2);
         pp[DE_NUMHEADS     + 4] = unit->au_Heads;
@@ -114,10 +96,8 @@ BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit)
 
         if (devnode)
         {
-            D(
-                bug("[ATA>>]:-ata_RegisterVolume: '%b', type=0x%08lx with StartCyl=%d, EndCyl=%d .. ",
-                    devnode->dn_Name, pp[DE_DOSTYPE + 4], StartCyl, EndCyl);
-            )
+            D(bug("[ATA>>]:-ata_RegisterVolume: '%b', type=0x%08lx with StartCyl=%d, EndCyl=%d .. ",
+                  devnode->dn_Name, pp[DE_DOSTYPE + 4], StartCyl, EndCyl));
 
             AddBootNode(pp[DE_BOOTPRI + 4], ADNF_STARTPROC, devnode, NULL);
             D(bug("done\n"));
@@ -149,7 +129,6 @@ static CONST_STRPTR const methBaseIDs[] =
 {
     IID_HW,
     IID_Hidd_ATABus,
-    IID_Hidd_Storage,
     IID_Hidd_StorageController,
     NULL
 };
@@ -157,7 +136,7 @@ static CONST_STRPTR const methBaseIDs[] =
 
 static int ATA_init(struct ataBase *ATABase)
 {
-    struct BootLoaderBase       *BootLoaderBase;
+    struct BootLoaderBase	*BootLoaderBase;
 
     D(bug("[ATA--] %s: ata.device Initialization\n", __func__));
 
@@ -171,7 +150,7 @@ static int ATA_init(struct ataBase *ATABase)
     ATABase->ata_Poll    = FALSE;
 
     /*
-     * start initialization:
+     * start initialization: 
      * obtain kernel parameters
      */
     BootLoaderBase = OpenResource("bootloader.resource");
@@ -227,7 +206,7 @@ static int ATA_init(struct ataBase *ATABase)
         return FALSE;
     }
     /*
-     * I've decided to use memory pools again. Alloc everything needed from
+     * I've decided to use memory pools again. Alloc everything needed from 
      * a pool, so that we avoid memory fragmentation.
      */
     ATABase->ata_MemPool = CreatePool(MEMF_CLEAR | MEMF_PUBLIC | MEMF_SEM_PROTECTED , 8192, 4096);

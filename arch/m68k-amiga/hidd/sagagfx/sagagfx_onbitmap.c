@@ -1,7 +1,9 @@
 /*
-    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright � 1995-2020, The AROS Development Team. All rights reserved.
+    $Id$
 
     Desc: Bitmap class for SAGAGfx Hidd.
+    Lang: English.
 */
 
 #define __OOP_NOATTRBASES__

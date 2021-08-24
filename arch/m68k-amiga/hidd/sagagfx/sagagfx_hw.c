@@ -1,7 +1,9 @@
 /*
-    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    $Id$
 
-    Desc: SAGAGfx Hidd class
+    Desc: SAGAGfx Hidd class.
+    Lang: English.
 */
 
 #undef DEBUG

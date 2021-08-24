@@ -1,7 +1,9 @@
 /*
-    Copyright (C) 2009-2013, The AROS Development Team. All rights reserved
+    Copyright © 2009-2013, The AROS Development Team. All rights reserved
+    $Id$
 
     Desc:
+    Lang: English
 */
 
 struct ataBase;

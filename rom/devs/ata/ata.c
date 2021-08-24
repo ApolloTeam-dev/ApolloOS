@@ -1,7 +1,9 @@
 /*
-    Copyright (C) 2004-2020, The AROS Development Team. All rights reserved
+    Copyright © 2004-2019, The AROS Development Team. All rights reserved
+    $Id$
 
     Desc:
+    Lang: English
 */
 
 #include <aros/debug.h>
@@ -670,7 +672,7 @@ static BOOL ValidSMARTCmd(struct IORequest *io)
         case SMARTC_TEST_AVAIL:
         case SMARTC_READ_VALUES:
         case SMARTC_READ_THRESHOLDS:
-                    if (!IOStdReq(io)->io_Data)
+                    if (!IOStdReq(io)->io_Data) 
                     {
                         D(bug("[ATA%02ld] %s: invalid io_Data (%p)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, IOStdReq(io)->io_Data));
                         io->io_Error = IOERR_BADADDRESS;
@@ -1045,7 +1047,7 @@ AROS_LH1(ULONG, GetBlkSize,
     in endless loop and calls proper handling function. The IO is Semaphore-
     protected within a bus.
 */
-void BusTaskCode(struct ataBase *ATABase, struct ata_Bus *bus)
+void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
 {
     ULONG sig;
     int iter;
@@ -1053,10 +1055,7 @@ void BusTaskCode(struct ataBase *ATABase, struct ata_Bus *bus)
     OOP_Object *unitObj;
     struct ata_Unit *unit;
 
-    DINIT(
-        bug("[ATA**] %s: Task started (Bus: %u)\n", __func__, bus->ab_BusNum);
-        bug("[ATA**] %s: Bus MsgPort @ 0x%p\n", __func__, bus->ab_MsgPort);
-    )
+    DINIT(bug("[ATA**] Task started (bus: %u)\n", bus->ab_BusNum));
 
     bus->ab_Timer = ata_OpenTimer(ATABase);
 //    bus->ab_BounceBufferPool = CreatePool(MEMF_CLEAR | MEMF_31BIT, 131072, 65536);
@@ -1072,7 +1071,7 @@ void BusTaskCode(struct ataBase *ATABase, struct ata_Bus *bus)
 
     for (iter = 0; iter < MAX_BUSUNITS; ++iter)
     {
-        DINIT(bug("[ATA**] %s: Device %u type %d\n", __func__, iter, bus->ab_Dev[iter]);)
+        DINIT(bug("[ATA**] Device %u type %d\n", iter, bus->ab_Dev[iter]));
 
         if (bus->ab_Dev[iter] > DEV_UNKNOWN)
         {
@@ -1105,14 +1104,14 @@ void BusTaskCode(struct ataBase *ATABase, struct ata_Bus *bus)
                 else
                 {
                     /* Destroy unit that couldn't be initialised */
-                    OOP_DisposeObject(unitObj);
+                    OOP_DisposeObject((OOP_Object *)unit);
                     bus->ab_Dev[iter] = DEV_NONE;
                 }
             }
         }
     }
 
-    D(bug("[ATA--] %s: Bus %u scan finished\n", __func__, bus->ab_BusNum);)
+    D(bug("[ATA--] Bus %u scan finished\n", bus->ab_BusNum));
     ReleaseSemaphore(&ATABase->DetectionSem);
 
     /* Wait forever and process messages */

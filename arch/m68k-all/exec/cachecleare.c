@@ -11,8 +11,6 @@
 #include <defines/exec_LVO.h>
 
 extern void AROS_SLIB_ENTRY(CacheClearE_00,Exec,LVOCacheClearE)(void);
-extern void AROS_SLIB_ENTRY(CacheClearE_20,Exec,LVOCacheClearE)(void);
-extern void AROS_SLIB_ENTRY(CacheClearE_4060,Exec,LVOCacheClearE)(void);
 
 #include <proto/exec.h>
 
@@ -32,19 +30,9 @@ AROS_LH3(void, CacheClearE,
         return;
 
     Disable();
-    if (SysBase->AttnFlags & AFF_68060) {
-        /* 68060 support */
-        func = AROS_SLIB_ENTRY(CacheClearE_4060, Exec, LVOCacheClearE);
-    } else if (SysBase->AttnFlags & AFF_68040) {
-        /* 68040 support */
-        func = AROS_SLIB_ENTRY(CacheClearE_4060, Exec, LVOCacheClearE);
-    } else if (SysBase->AttnFlags & AFF_68020) {
-        /* 68020 support */
-        func = AROS_SLIB_ENTRY(CacheClearE_20, Exec, LVOCacheClearE);
-    } else {
         /* Everybody else (68000, 68010) */
-        func = AROS_SLIB_ENTRY(CacheClearE_00, Exec, LVOCacheClearE);
-    }
+    func = AROS_SLIB_ENTRY(CacheClearE_00, Exec, LVOCacheClearE);
+
     AROS_UFC3NR(void, func,
         AROS_UFCA(APTR, address, A0),
         AROS_UFCA(ULONG, length, D0),

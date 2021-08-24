@@ -13,7 +13,6 @@
 #include <defines/exec_LVO.h>
 
 extern void AROS_SLIB_ENTRY(CachePreDMA_00,Exec,LVOCachePreDMA)(void);
-extern void AROS_SLIB_ENTRY(CachePreDMA_40,Exec,LVOCachePreDMA)(void);
 
 #include <proto/exec.h>
 
@@ -32,14 +31,7 @@ AROS_LH3(APTR, CachePreDMA,
      * Exec syscall table to directly point to the right routine.
      */
     Disable();
-    if (SysBase->AttnFlags & AFF_68040) {
-        /* 68040 support */
-        func = AROS_SLIB_ENTRY(CachePreDMA_40, Exec, LVOCachePreDMA);
-    } else {
-        /* Everybody else (68000, 68010) */
-        func = AROS_SLIB_ENTRY(CachePreDMA_00, Exec, LVOCachePreDMA);
-    }
-
+    func = AROS_SLIB_ENTRY(CachePreDMA_00, Exec, LVOCachePreDMA);
     SetFunction((struct Library *)SysBase, -LVOCachePreDMA * LIB_VECTSIZE, func);
     Enable();
 

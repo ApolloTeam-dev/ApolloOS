@@ -727,7 +727,7 @@ void exec_boot(ULONG *membanks, ULONG *cpupcr)
         DEBUGPUTS(("'\n"));
     }
 
-        if (wasvalid) {
+    if (wasvalid) {
         /* Save reset proof vectors */
         ColdCapture  = oldSysBase->ColdCapture;
         CoolCapture  = oldSysBase->CoolCapture;

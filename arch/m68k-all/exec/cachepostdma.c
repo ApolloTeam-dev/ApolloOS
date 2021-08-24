@@ -12,8 +12,6 @@
 #include <defines/exec_LVO.h>
 
 extern void AROS_SLIB_ENTRY(CachePostDMA_00,Exec,LVOCachePostDMA)(void);
-extern void AROS_SLIB_ENTRY(CachePostDMA_30,Exec,LVOCachePostDMA)(void);
-extern void AROS_SLIB_ENTRY(CachePostDMA_40,Exec,LVOCachePostDMA)(void);
 
 #include <proto/exec.h>
 
@@ -32,16 +30,7 @@ AROS_LH3(void, CachePostDMA,
      * Exec syscall table to directly point to the right routine.
      */
     Disable();
-    if (SysBase->AttnFlags & AFF_68040) {
-        /* 68040 support */
-        func = AROS_SLIB_ENTRY(CachePostDMA_40, Exec, LVOCachePostDMA);
-    } else if (SysBase->AttnFlags & AFF_68030) {
-        /* 68030 support */
-        func = AROS_SLIB_ENTRY(CachePostDMA_30, Exec, LVOCachePostDMA);
-    } else {
-        /* Everybody else (68000, 68010) */
-        func = AROS_SLIB_ENTRY(CachePostDMA_00, Exec, LVOCachePostDMA);
-    }
+    func = AROS_SLIB_ENTRY(CachePostDMA_00, Exec, LVOCachePostDMA);
 
     SetFunction((struct Library *)SysBase, -LVOCachePostDMA * LIB_VECTSIZE, func);
     Enable();

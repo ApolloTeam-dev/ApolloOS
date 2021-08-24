@@ -11,9 +11,6 @@
 #include <defines/exec_LVO.h>
 
 extern void AROS_SLIB_ENTRY(CacheClearU_00,Exec,LVOCacheClearU)(void);
-extern void AROS_SLIB_ENTRY(CacheClearU_20,Exec,LVOCacheClearU)(void);
-extern void AROS_SLIB_ENTRY(CacheClearU_40,Exec,LVOCacheClearU)(void);
-extern void AROS_SLIB_ENTRY(CacheClearU_60,Exec,LVOCacheClearU)(void);
 
 #include <proto/exec.h>
 
@@ -39,19 +36,9 @@ AROS_LH0(void, CacheClearU,
      */
 
     Disable();
-    if (SysBase->AttnFlags & AFF_68060) {
-        /* 68060 support */
-        func = AROS_SLIB_ENTRY(CacheClearU_60, Exec, LVOCacheClearU);
-    } else if (SysBase->AttnFlags & AFF_68040) {
-        /* 68040 support */
-        func = AROS_SLIB_ENTRY(CacheClearU_40, Exec, LVOCacheClearU);
-    } else if (SysBase->AttnFlags & AFF_68020) {
-        /* 68020 support */
-        func = AROS_SLIB_ENTRY(CacheClearU_20, Exec, LVOCacheClearU);
-    } else {
-        /* Everybody else (68000, 68010) */
-        func = AROS_SLIB_ENTRY(CacheClearU_00, Exec, LVOCacheClearU);
-    }
+    /* Everybody else (68000, 68010) */
+    func = AROS_SLIB_ENTRY(CacheClearU_00, Exec, LVOCacheClearU);
+
     func();
     SetFunction((struct Library *)SysBase, -LVOCacheClearU * LIB_VECTSIZE, func);
     Enable();
