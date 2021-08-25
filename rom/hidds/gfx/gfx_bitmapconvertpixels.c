@@ -164,6 +164,7 @@ static VOID true_to_true(OOP_Class *cl, OOP_Object *o,
     INIT_FMTVARS()
     
     LONG x, y;
+    ULONG srcpix;
     
     
     alpha_diff    = srcfmt->alpha_shift    - dstfmt->alpha_shift;
@@ -192,6 +193,13 @@ bug("destmasks = %p %p %p %p  diffs = %d %d %d %d\n",
     green_diff,
     blue_diff);
 #endif
+
+
+
+#if 0
+
+// ORIGINAL code
+
     for (y = 0; y < msg->height; y ++)
     {
         UBYTE * s = src;
@@ -227,6 +235,198 @@ bug("destmasks = %p %p %p %p  diffs = %d %d %d %d\n",
         dst += msg->dstMod;
     
     } /* for (y) */
+
+#else
+
+// OPTIMIZED code by GVB
+
+//	bug("** ORIGEN:  %d   -->   %d   (%d,%d) (%dx%d) \n", srcfmt->bytes_per_pixel, dstfmt->bytes_per_pixel, x, y, msg->width, msg->height);
+
+
+	switch (dstfmt->bytes_per_pixel)
+	{
+	case 4:
+
+		switch (srcfmt->bytes_per_pixel)
+		{
+		case 4:  // 4 -> 4
+
+			for (y=msg->height; y; y--)
+			{
+				UBYTE * s = src;
+				UBYTE * d = dst;
+				for (x=msg->width; x; x--)
+				{
+					*(ULONG *)d  = (ULONG)*((HIDDT_Pixel *)s);
+					d += 4;
+					s += 4;
+				} /* for (x) */
+				src += msg->srcMod;
+				dst += msg->dstMod;    
+			}
+			break;
+
+		case 3:   // 3 -> 4 
+
+			for (y=msg->height; y ; y--)
+			{
+				UBYTE * s = src;
+				UBYTE * d = dst;
+				for (x=msg->width; x ; x--)
+				{
+					srcpix = (ULONG)*((HIDDT_Pixel *)s);
+					srcpix = srcpix >>8;
+					*(ULONG *)d  = srcpix;
+					d += 4;
+					s += 3;
+				} /* for (x) */
+				src += msg->srcMod;
+				dst += msg->dstMod;
+			}
+			break;
+		}
+		break;
+
+    case 3:
+
+		switch (srcfmt->bytes_per_pixel)
+		{
+		case 4:	// 4 -> 3
+
+			for (y=msg->height; y ; y--)
+			{
+				UBYTE * s = src;
+				UBYTE * d = dst;
+				for (x=msg->width; x ; x--)
+				{
+					s += 1;
+					*(UWORD *)d  = *(UWORD*)s;
+					d += 2;
+					s += 2;
+					*(UBYTE *)d  = *(UBYTE*)s;
+					d += 1;
+					s += 1;
+				} /* for (x) */
+				src += msg->srcMod;
+				dst += msg->dstMod;    
+			}
+			break;
+
+		case 3:   // 3 -> 3
+
+			for (y=msg->height; y ; y--)
+			{
+				UBYTE * s = src;
+				UBYTE * d = dst;
+				for (x=msg->width; x ; x--)
+				{
+					*(UWORD *)d  = *(UWORD*)s;
+					d += 2;
+					s += 2;
+					*(UBYTE *)d  = *(UBYTE*)s;
+					d += 1;
+					s += 1;
+				} /* for (x) */
+				src += msg->srcMod;
+				dst += msg->dstMod;
+			}
+			break;
+
+		case 2:	// 2 -> 3
+
+			for (y=msg->height; y ; y--)
+			{
+				UBYTE * s = src;
+				UBYTE * d = dst;
+				for (x=msg->width; x ; x--)
+				{
+					UWORD data = *(UWORD*)s;
+
+					*(UBYTE *)d = (data & 0xF800) >> 8;
+					d += 1;
+					*(UBYTE *)d = (data & 0x07E0) >> 3;
+					d += 1;
+					*(UBYTE *)d = (data & 0x001F) << 3;
+
+					d += 1;
+					s += 2;
+				} /* for (x) */
+				src += msg->srcMod;
+				dst += msg->dstMod;
+			}
+			break;
+		}
+		break;
+
+	case 2:
+
+		switch (srcfmt->bytes_per_pixel)
+		{
+			case 4:	// 4 -> 2
+
+				for (y=msg->height; y ; y--)
+				{
+					UBYTE * s = src;
+					UBYTE * d = dst;
+					for (x=msg->width; x ; x--)
+					{
+#ifdef NONVAMPIRE
+						ULONG data;
+						ULONG result;
+#else
+						register ULONG data asm ("d0");
+						register ULONG result asm ("d0");
+#endif
+						data = (ULONG)*((HIDDT_Pixel *)s);
+#ifdef NONVAMPIRE
+						result = ((data & 0xF80000)>>8) | ((data & 0xFC00)>>5) | ((data & 0xF8)>>3);
+#else
+						asm ("dc.w 0xFE00,0x0007" : "=r" (result) : "0" (data));
+#endif
+						*(UWORD *)d  = (UWORD)result;
+						s += 4;
+						d += 2;
+					} /* for (x) */
+					src += msg->srcMod;
+					dst += msg->dstMod;    
+				}
+				break;
+
+			case 3:   // 3 -> 2
+
+				for (y=msg->height; y ; y--)
+				{
+					UBYTE * s = src;
+					UBYTE * d = dst;
+					for (x=msg->width; x ; x--)
+					{
+#ifdef NONVAMPIRE
+						ULONG data;
+						ULONG result;
+#else
+						register ULONG data asm ("d0");
+						register ULONG result asm ("d0");
+#endif
+						data = (ULONG)*((HIDDT_Pixel *)s);
+						data = data >>8;
+#ifdef NONVAMPIRE
+						result = ((data & 0xF80000)>>8) | ((data & 0xFC00)>>5) | ((data & 0xF8)>>3);
+#else
+						asm ("dc.w 0xFE00,0x0007" : "=r" (result) : "0" (data));
+#endif
+						*(UWORD *)d  = (UWORD)result;
+						s += 3;
+						d += 2;
+					} /* for (x) */
+					src += msg->srcMod;
+					dst += msg->dstMod;
+				}
+				break;
+		}
+		break;
+	}
+
+#endif
 
     *msg->srcPixels = src;
     *msg->dstBuf    = dst;
@@ -420,6 +620,11 @@ static void native32_to_native(OOP_Class *cl, OOP_Object *o,
     D(bug("SRC: Native32, DST: Native, height=%d, width=%d, bytes per pixel: %d, srcmod: %d, dstmod: %d, depth: %d\n"
     , msg->height, msg->width, dstfmt->bytes_per_pixel, msg->srcMod, msg->dstMod, dstfmt->depth));
 
+
+#if 0
+
+// ORIGINAL code
+
     for ( y = 0; y < msg->height; y ++)
     {
         UBYTE *d = dst;
@@ -484,7 +689,90 @@ static void native32_to_native(OOP_Class *cl, OOP_Object *o,
         dst += msg->dstMod;
 
     }
-    
+
+#else
+
+// OPTIMIZED code by GVB
+
+	switch (dstfmt->bytes_per_pixel)
+	{
+		case 4:
+
+			for ( y = 0; y < msg->height; y ++)
+			{
+				UBYTE *d = dst;
+				UBYTE *s = src;
+				for (x = 0; x < msg->width; x ++)
+				{
+					*(ULONG *)d  = (ULONG)*((HIDDT_Pixel *)s);
+					d += 4;
+					s += sizeof(HIDDT_Pixel);
+				} /* for (x) */
+				src += msg->srcMod;
+				dst += msg->dstMod;
+			}
+			break;
+
+		case 3:
+
+			for ( y = 0; y < msg->height; y ++)
+			{
+				UBYTE *d = dst;
+				UBYTE *s = src;
+				for (x = 0; x < msg->width; x ++)
+				{
+					HIDDT_Pixel dstpix;
+					dstpix = *((HIDDT_Pixel *)s);
+
+					d[0] = (UBYTE)((dstpix >> 16) & 0x000000FF);
+					d[1] = (UBYTE)((dstpix >> 8)  & 0x000000FF);
+					d[2] = (UBYTE)(dstpix  & 0x000000FF);
+
+					d += 3;
+					s += sizeof(HIDDT_Pixel);
+				} /* for (x) */
+				src += msg->srcMod;
+				dst += msg->dstMod;
+			}
+			break;
+
+		case 2:
+
+			for ( y = 0; y < msg->height; y ++)
+			{
+				UBYTE *d = dst;
+				UBYTE *s = src;
+				for (x = 0; x < msg->width; x ++)
+				{
+					*((UWORD *)d) = (UWORD)(*((HIDDT_Pixel *)s));
+					d += 2; s += sizeof(HIDDT_Pixel);
+				} /* for (x) */
+				src += msg->srcMod;
+				dst += msg->dstMod;
+			}
+			break;
+
+		case 1:
+
+			for ( y = 0; y < msg->height; y ++)
+			{
+				UBYTE *d = dst;
+				UBYTE *s = src;
+				for (x = 0; x < msg->width; x ++)
+				{
+					*d  = (UBYTE)*((HIDDT_Pixel *)s);
+					d += 1; s += sizeof(HIDDT_Pixel);
+				} /* for (x) */
+				src += msg->srcMod;
+				dst += msg->dstMod;
+			}
+			break;
+
+	} /* switch() */
+
+
+#endif
+
     *msg->srcPixels = src;
     *msg->dstBuf    = dst;
 }
@@ -497,6 +785,11 @@ static VOID quick_copy(OOP_Class *cl, OOP_Object *o,
         /* Just do a simple memcpy() of the pixels */
     INIT_VARS()
     HIDDT_PixelFormat   *srcfmt = msg->srcPixFmt;
+
+#if 0
+
+// ORIGINAL code
+    
     ULONG               bpl = msg->width * srcfmt->bytes_per_pixel;
     
     /* FIXME: This does not work well for formats with bytes_per_pixel < 1 */
@@ -519,6 +812,71 @@ static VOID quick_copy(OOP_Class *cl, OOP_Object *o,
             dst += msg->dstMod;
         }
     }
+    
+#else
+
+// OPTIMIZED code by GVB
+  
+	ULONG i;
+	ULONG copy_width;
+	ULONG src_modulo, dst_modulo;
+	LONG phase,count;
+	LONG width,height;
+
+
+	copy_width = msg->width * srcfmt->bytes_per_pixel;
+	src_modulo = msg->srcMod - copy_width;
+	dst_modulo = msg->dstMod - copy_width; 
+
+	height =msg->height;
+
+	if ((phase = (IPTR)dst & 7L))
+	{
+		phase = 8 - phase;
+
+		if (phase > copy_width)
+		{
+			phase = copy_width;
+		}
+
+		copy_width -= phase;
+	}
+
+	count=copy_width;
+
+//    bug("[ConvertPixels] quick_copy(): y=%d x=%d phase=%d xcopy=%d %d %d \n", msg->height, msg->width, phase, copy_width, src_modulo, dst_modulo);
+
+    asm volatile(
+    "       bra 7f                       \n"
+    "0:                                  \n"
+    "       move.l %[phase],%[count]     \n"
+    "       bra 2f                       \n"
+    "1:     move.b (%[src])+,(%[dst])+   \n"
+    "2:     dbra   %[count],1b           \n"
+    "                                    \n"
+    "       move.l %[width],%[count]     \n"
+    "       lsr.l  #3,%[count]           \n"
+    "       bra 4f                       \n"
+    "3:     move.l (%[src])+,(%[dst])+   \n"
+    "       move.l (%[src])+,(%[dst])+   \n"
+    "4:     dbra   %[count],3b           \n"
+    "                                    \n"
+    "       move.l %[width],%[count]     \n"
+    "       and.l  #7,%[count]           \n"
+    "       bra 6f                       \n"
+    "5:     move.b (%[src])+,(%[dst])+   \n"
+    "6:     dbra   %[count],5b           \n"
+    "                                    \n"
+    "       adda.l %[srcmodulo],%[src]   \n"
+    "       adda.l %[dstmodulo],%[dst]   \n"
+    "                                    \n"
+    "7:     dbra %[yloop],0b             \n"
+
+    :[count]"+d"(count), [yloop]"+d"(height)
+    :[dst]"a"(dst), [src]"a"(src), [width]"r"(copy_width), [phase]"r"(phase), [srcmodulo]"r"(src_modulo), [dstmodulo]"r"(dst_modulo)
+    :"cc");
+
+#endif
 
     *msg->srcPixels = src;
     *msg->dstBuf    = dst;
