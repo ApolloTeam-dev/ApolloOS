@@ -754,13 +754,14 @@ void exec_boot(ULONG *membanks, ULONG *cpupcr)
      * Chip RAM. It's reserved for the Trap area.
      */
     for (i = 0; membanks[i + 2 + 1]; i += 2);
-//    if (arosbootstrapmode || (attnflags & AFF_68030))
-//        membanks[i + 0] = 0x1000;
-//    else
-//        membanks[i + 0] = 0x400;
-
+#ifdef NONVAMPIRE
+    if (arosbootstrapmode || (attnflags & AFF_68030))
+        membanks[i + 0] = 0x1000;
+    else
+        membanks[i + 0] = 0x400;
+#else
         membanks[i + 0] = 0x2000;
-
+#endif
     membanks[i + 1] -= membanks[i + 0];
  
 #if AROS_SERIAL_DEBUG && (DEBUG > 0)

@@ -21,9 +21,8 @@ ifneq (,$(findstring arm,$(AROS_TARGET_CPU)))
 FILES += arm-exidx-unwind
 endif
 
-# static-cxx-ops cause build failure (ApolloOS)
 CXXFILES := \
-#        static-cxx-ops \
+        static-cxx-ops \
         static-cxx-personality \
         static-cxx-cxa-pure-virtual \
 

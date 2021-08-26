@@ -991,18 +991,21 @@ BOOL MoveRasterWithMinterm (struct RastPort * rp, WORD dx, WORD dy, WORD x1, WOR
                                 }
 
 
-				BltBitMap(srcbm,
-				          Tmp.MinX + corrsrcx + dx,
-				          Tmp.MinY + corrsrcy + dy,
-				          HiddCR->BitMap,
-				          Tmp.MinX + corrdstx,
-				          Tmp.MinY + corrdsty,
-				          Tmp.MaxX - Tmp.MinX + 1,
-				          Tmp.MaxY - Tmp.MinY + 1,
-				          minterm,
-				          0xff,
-				          NULL );
-			    }
+                                BltBitMap
+                                (
+                                    srcbm,
+                                    Tmp.MinX + corrsrcx + dx,
+                                    Tmp.MinY + corrsrcy + dy,
+                                    HiddCR->BitMap,
+                                    Tmp.MinX + corrdstx,
+                                    Tmp.MinY + corrdsty,
+                                    Tmp.MaxX - Tmp.MinX + 1,
+                                    Tmp.MaxY - Tmp.MinY + 1,
+                                    minterm,
+                                    0xff,
+                                    NULL
+                                );
+                            }
 
                             if (!ClearRectRegion(RectRegion, &Tmp))
                             {
@@ -1021,34 +1024,40 @@ BOOL MoveRasterWithMinterm (struct RastPort * rp, WORD dx, WORD dy, WORD x1, WOR
                         }
                     }
 
-		    for (rr = RectRegion->RegionRectangle; rr; rr = rr->Next)
-		    {
-			BltBitMap(srcbm,
-			          MinX(rr) + MinX(RectRegion) + corrsrcx + dx,
-			          MinY(rr) + MinY(RectRegion) + corrsrcy + dy,
-			          rp->BitMap,
-			          MinX(rr) + MinX(RectRegion),
-			          MinY(rr) + MinY(RectRegion),
-			          Width(rr),
-			          Height(rr),
-			          minterm,
-			          0xff,
-                 	  NULL );
-		    }
+                    for (rr = RectRegion->RegionRectangle; rr; rr = rr->Next)
+                    {
+                        BltBitMap
+                        (
+                            srcbm,
+                            MinX(rr) + MinX(RectRegion) + corrsrcx + dx,
+                            MinY(rr) + MinY(RectRegion) + corrsrcy + dy,
+                            rp->BitMap,
+                            MinX(rr) + MinX(RectRegion),
+                            MinY(rr) + MinY(RectRegion),
+                            Width(rr),
+                            Height(rr),
+                            minterm,
+                            0xff,
+                            NULL
+                        );
+                    }
 
                     if (dosrcsrc)
-		    {
-			BltBitMap(srcbm,
-			          Tmp.MinX + corrsrcx + dx,
-                	  Tmp.MinY + corrsrcy + dy,
-	      		      srcbm,
-			          Tmp.MinX + corrsrcx,
-                	  Tmp.MinY + corrsrcy,
-       			      Tmp.MaxX - Tmp.MinX + 1,
-                	  Tmp.MaxY - Tmp.MinY + 1,
-			          minterm,
-         		      0xff,
-                 	  NULL );
+                    {
+                        BltBitMap
+                        (
+                            srcbm,
+                            Tmp.MinX + corrsrcx + dx,
+                            Tmp.MinY + corrsrcy + dy,
+                            srcbm,
+                            Tmp.MinX + corrsrcx,
+                            Tmp.MinY + corrsrcy,
+                            Tmp.MaxX - Tmp.MinX + 1,
+                            Tmp.MaxY - Tmp.MinY + 1,
+                            minterm,
+                            0xff,
+                            NULL
+                        );
 
                     }
 
@@ -1131,22 +1140,25 @@ BOOL MoveRasterWithMinterm (struct RastPort * rp, WORD dx, WORD dy, WORD x1, WOR
                                 dstbm = rp->BitMap;
                             }
 
-                            BltBitMap(srcbm,
-                                      Rect2.MinX + corrsrcx + dx,
-                                      Rect2.MinY + corrsrcy + dy,
-                                      dstbm,
-                                      Rect2.MinX + corrdstx,
-                                      Rect2.MinY + corrdsty,
-                                      Rect2.MaxX - Rect2.MinX + 1,
-                                      Rect2.MaxY - Rect2.MinY + 1,
-                                      minterm,
-                                      0xFF,
-                                      NULL );
-			}
-            	    }
-        	}
-	    }
- 	}
+                            BltBitMap
+                            (
+                                srcbm,
+                                Rect2.MinX + corrsrcx + dx,
+                                Rect2.MinY + corrsrcy + dy,
+                                dstbm,
+                                Rect2.MinX + corrdstx,
+                                Rect2.MinY + corrdsty,
+                                Rect2.MaxX - Rect2.MinX + 1,
+                                Rect2.MaxY - Rect2.MinY + 1,
+                                minterm,
+                                0xFF,
+                                NULL
+                            );
+                        }
+                    }
+                }
+            }
+        }
 #endif
         AROS_END_PROFILING
 

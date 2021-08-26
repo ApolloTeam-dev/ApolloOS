@@ -477,10 +477,12 @@ AROS_LH1(void, ConfigChain,
         if (!configDev)
             break;
 // removed Zorro Z3-card scan, so Vampire V4 doesn't owns it
-//        if (maybeZ3) {
-//            baseAddr = (APTR)EZ3_EXPANSIONBASE;
-//            gotrom = ReadExpansionRom(baseAddr, configDev);
-//        }
+#ifdef NONVAMPIRE
+        if (maybeZ3) {
+            baseAddr = (APTR)EZ3_EXPANSIONBASE;
+            gotrom = ReadExpansionRom(baseAddr, configDev);
+        }
+#endif
         if (!gotrom) {
             baseAddr = (APTR)E_EXPANSIONBASE;
             gotrom = ReadExpansionRom(baseAddr, configDev);

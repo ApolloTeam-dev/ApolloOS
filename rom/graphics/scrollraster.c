@@ -17,13 +17,13 @@
         AROS_LH7(void, ScrollRaster,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct RastPort *, rp, A1),
-	AROS_LHA(WORD             , dx, D0),
-	AROS_LHA(WORD             , dy, D1),
-	AROS_LHA(WORD             , xMin, D2),
-	AROS_LHA(WORD             , yMin, D3),
-	AROS_LHA(WORD             , xMax, D4),
-	AROS_LHA(WORD             , yMax, D5),
+        AROS_LHA(struct RastPort *, rp, A1),
+        AROS_LHA(WORD             , dx, D0),
+        AROS_LHA(WORD             , dy, D1),
+        AROS_LHA(WORD             , xMin, D2),
+        AROS_LHA(WORD             , yMin, D3),
+        AROS_LHA(WORD             , xMax, D4),
+        AROS_LHA(WORD             , yMax, D5),
 
 /*  LOCATION */
         struct GfxBase *, GfxBase, 66, Graphics)

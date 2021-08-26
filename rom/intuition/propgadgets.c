@@ -160,14 +160,9 @@ static void RenderPropLabel(struct RastPort *rp, struct Gadget *gadget, struct B
                         	IDS_NORMAL,
                         	dri);
         	break;
-
         } /* switch (gadget->Flags & GFLG_LABELMASK) */
-
     } /* GadgetText */
-
 }
-
-
 
 VOID HandlePropSelectDown(struct Gadget *gadget, struct Window *w, struct Requester *req,
                           UWORD mouse_x, UWORD mouse_y, struct IntuitionBase *IntuitionBase)
