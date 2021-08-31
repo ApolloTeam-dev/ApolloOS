@@ -7,10 +7,6 @@ CLEAN=0
 GITCLEAN=0
 DL=0
 WORK="apollo-os"
-DISTRONAME="ApolloOS"
-DISTROVERSION="$(cat version)"
-DISTRODATE="$(date +%Y-%m-%d)"
-AMIGADATE="$(date +"%-d.%-m.%Y")"
 
 if [ -e ".git" ]; then
 	BRANCH="$(git branch --show-current)"
@@ -54,22 +50,14 @@ setvars () {
 	TEST_CFLAGS="" #-I${DIR}/${WORK}"
 	PORTS="${DIR}/${WORK}/prt"
 	BIN="${DIR}/${WORK}/bin"
+	source ${SRC}/make_dist_config.sh
+	DISTOPTNAME="--enable-dist-name=${DISTRONAME}"
+	DISTOPTVER="--enable-dist-version=${DISTROVERSION}"
 	CONFOPTS="--target=amiga-m68k --with-optimization=-O${OPT} --with-aros-prefs=classic --with-resolution=${REZ} --with-cpu=${CPU} --with-fpu=${FPU} --disable-mmu --with-portssources=${PORTS}"
 	if [ ${VAMP}  = 0 ]; then CONFOPTS="${CONFOPTS} --with-nonvampire-support";          fi
 	if [ ${DEBUG} = 1 ]; then CONFOPTS="${CONFOPTS} --enable-debug --with-serial-debug"; fi
 	MAKEOPTS="-j${JOBS}"
 	PKGS="git gcc g++ make cmake gawk bison flex bzip2 netpbm autoconf automake libx11-dev libxext-dev libc6-dev liblzo2-dev libxxf86vm-dev libpng-dev libsdl1.2-dev byacc python-mako libxcursor-dev gcc-multilib"
-
-	mkdir -p "${DIR}/${WORK}"
-	VERSION_FILE="${DIR}/${WORK}/dist_config.h"
-
-	printf "#ifndef AROS_DIST_CONFIG_H\n#define AROS_DIST_CONFIG_H\n\n" > "${VERSION_FILE}"
-	# shellcheck disable=SC2129
-	printf "#define __DISTRONAME__\t\t\"%s\"\n" "${DISTRONAME}" >> "${VERSION_FILE}"
-	printf "#define __DISTROVERSION__\t\"%s\"\n" "${DISTROVERSION}" >> "${VERSION_FILE}"
-	printf "#define __DISTRODATE__\t\t\"%s\"\n" "${DISTRODATE}" >> "${VERSION_FILE}"
-	printf "#define __AMIGADATE__\t\t\"%s\"\n" "${AMIGADATE}" >> "${VERSION_FILE}"
-	printf "\n#endif //AROS_DIST_CONFIG_H\n" >> "${VERSION_FILE}"
 
 	export CONFOPTS MAKEOPTS SRC PORTS BIN DIR PKGS
 }
@@ -128,7 +116,7 @@ gitclean  () { cd "${SRC}" || exit; git clean -df; cd "${DIR}" || exit; }
 #pkgcheck  () { if [ $(dpkg-query -W -f '${Binary:Package} ${Status}\n' $PKGS | wc -l) -eq $(echo $PKGS | wc -w) ]; then return 0; else return 1; fi; }
 download  () { cd "${WORK}" || exit; if [ ! -d $SRC ]; then git clone --recursive ${REPO} --branch=${BRANCH} ${SRC}; cd ${DIR}; else git checkout ${REMOTE}/${BRANCH} --recurse-submodules -f; fi }
 # shellcheck disable=SC2086
-configure () { cd "${BIN}" || exit; ${SRC}/configure ${CONFOPTS} ${CONFO}; cd "${DIR}" || exit; }
+configure () { cd "${BIN}" || exit; ${SRC}/configure "${DISTOPTNAME}" "${DISTOPTVER}" ${CONFOPTS} ${CONFO}; cd "${DIR}" || exit; }
 # shellcheck disable=SC2086
 compile () { cd "${BIN}" || exit; update-distro-files; make ${1} ${MAKEOPTS} ${MAKEO}; cd "${DIR}" || exit; }
 

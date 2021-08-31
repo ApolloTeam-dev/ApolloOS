@@ -41,6 +41,12 @@
 #define ENABLE_DBUS                     @ENABLE_DBUS@
 #define ENABLE_X11                      @ENABLE_X11@
 
+#define __DISTRONAME__                  "@aros_dist_name@"
+#define __DISTROVERSION__               "@aros_dist_version@"
+#define __DISTRODATE__                  "@aros_dist_date@"
+#define __AMIGADATE__                   "@aros_dist_amigadate@"
+
+
 @PLATFORM_EXECSMP@
 @ENABLE_EXECSMP@
 
