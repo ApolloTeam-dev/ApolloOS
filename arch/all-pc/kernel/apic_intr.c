@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 */
 
 #include <asm/cpu.h>
@@ -97,7 +96,7 @@ const void *IntrDefaultGates[256] =
 };
 
 /* Set the raw CPU vectors gate in the IDT */
-BOOL core_SetIDTGate(apicidt_t *IGATES, int vect, uintptr_t gate, BOOL enable)
+BOOL core_SetIDTGate(apicidt_t *IGATES, int vect, uintptr_t gate, BOOL enable, BOOL force)
 {
     DIDT(
         APTR gateOld;
@@ -105,15 +104,18 @@ BOOL core_SetIDTGate(apicidt_t *IGATES, int vect, uintptr_t gate, BOOL enable)
         bug("[Kernel] %s: Setting IDTGate #%d IDT @ 0x%p\n", __func__, vect, IGATES);
         bug("[Kernel] %s: gate @ 0x%p\n", __func__, gate);
         bug("[Kernel] %s: enable=%d\n", __func__, enable);
-
-        gateOld = 
+    )
 #if (__WORDSIZE != 64)
-            (APTR)((((IPTR)IGATES[vect].offset_high & 0xFFFF) << 16) | ((IPTR)IGATES[vect].offset_low & 0xFFFF));
+    DIDT(gateOld = (APTR)((((IPTR)IGATES[vect].offset_high & 0xFFFF) << 16) | ((IPTR)IGATES[vect].offset_low & 0xFFFF));)
 #else
-            (APTR)((((IPTR)IGATES[vect].offset_high & 0xFFFFFFFF) << 32) | (((IPTR)IGATES[vect].offset_mid & 0xFFFF) << 16) | ((IPTR)IGATES[vect].offset_low & 0xFFFF));
+    DIDT(gateOld = (APTR)((((IPTR)IGATES[vect].offset_high & 0xFFFFFFFF) << 32) | (((IPTR)IGATES[vect].offset_mid & 0xFFFF) << 16) | ((IPTR)IGATES[vect].offset_low & 0xFFFF));)
 #endif
+    DIDT(
         if (gateOld) bug("[Kernel] %s: existing gate @ 0x%p\n", __func__, gateOld);
     )
+
+    if (IGATES[vect].p && force)
+        IGATES[vect].p = 0;
 
     /* If the gate isn't already enabled, set it */
     if (!IGATES[vect].p)
@@ -150,7 +152,7 @@ BOOL core_SetIRQGate(void *idt, int IRQ, uintptr_t gate)
         bug("[Kernel] %s: gate @ 0x%p\n", __func__, gate);
     )
 
-    return core_SetIDTGate(IGATES, HW_IRQ_BASE + IRQ, gate, TRUE);
+    return core_SetIDTGate(IGATES, HW_IRQ_BASE + IRQ, gate, TRUE, FALSE);
 }
 
 void core_ReloadIDT()
@@ -166,7 +168,7 @@ void core_ReloadIDT()
 
     IDT_sel.size = sizeof(apicidt_t) * 256 - 1;
     IDT_sel.base = (unsigned long)IGATES;
-    DIDT(bug("[Kernel] %s[%d]:    base 0x%p, size %d\n", __func__, cpuNo, IDT_sel.base, IDT_sel.size));
+    DIDT(bug("[Kernel] %s(%u):    base 0x%p, size %d\n", __func__, cpuNo, IDT_sel.base, IDT_sel.size));
 
     asm volatile ("lidt %0"::"m"(IDT_sel));
 }
@@ -182,8 +184,8 @@ void core_SetupIDT(apicid_t _APICID, apicidt_t *IGATES)
     if (IGATES)
     {
         DIDT(
-            bug("[Kernel] %s[%d]: IDT @ 0x%p\n", __func__, _APICID, IGATES);
-            bug("[Kernel] %s[%d]: Setting default gates\n", __func__, _APICID);
+            bug("[Kernel] %s(%u): IDT @ 0x%p\n", __func__, _APICID, IGATES);
+            bug("[Kernel] %s(%u): Setting default gates\n", __func__, _APICID);
         )
 
         // Disable ALL the default gates until something takes ownership
@@ -191,17 +193,17 @@ void core_SetupIDT(apicid_t _APICID, apicidt_t *IGATES)
         {
             off = (uintptr_t)DEF_IRQRETFUNC;
 
-            if (!core_SetIDTGate(IGATES, i, off, FALSE))
+            if (!core_SetIDTGate(IGATES, i, off, FALSE, TRUE))
             {
-                bug("[Kernel] %s[%d]: gate #%d failed\n", __func__, _APICID, i);
+                bug("[Kernel] %s(%u): gate #%d failed\n", __func__, _APICID, i);
             }
         }
 
-        DIDT(bug("[Kernel] %s[%d]: Registering IDT ..\n", __func__, _APICID));
+        DIDT(bug("[Kernel] %s(%u): Registering IDT ..\n", __func__, _APICID));
 
         IDT_sel.size = sizeof(apicidt_t) * 256 - 1;
         IDT_sel.base = (unsigned long)IGATES;
-        DIDT(bug("[Kernel] %s[%d]:    base 0x%p, size %d\n", __func__, _APICID, IDT_sel.base, IDT_sel.size));
+        DIDT(bug("[Kernel] %s(%u):    base 0x%p, size %d\n", __func__, _APICID, IDT_sel.base, IDT_sel.size));
 
         asm volatile ("lidt %0"::"m"(IDT_sel));
     }
@@ -209,27 +211,29 @@ void core_SetupIDT(apicid_t _APICID, apicidt_t *IGATES)
     {
         krnPanic(NULL, "Invalid IDT\n");
     }
-    DIDT(bug("[Kernel] %s[%d]: IDT configured\n", __func__, _APICID));
+    DIDT(bug("[Kernel] %s(%u): IDT configured\n", __func__, _APICID));
 }
 
 /* CPU exceptions are processed here */
 void core_IRQHandle(struct ExceptionContext *regs, unsigned long error_code, unsigned long int_number)
 {
     struct KernelBase *KernelBase = getKernelBase();
-#if 0 
+#if 0
     // This debug works only if Local APIC exists...
     DIRQ(
         IPTR __APICBase = core_APIC_GetBase();
         int cpunum = KrnGetCPUNumber();
 
-        bug("core_IRQHandle(%d), eflags=%08x\n", int_number, regs->rflags);
+        bug("[kernel] %s(%d): eflags=%08x\n", __func__, int_number, regs->rflags);
 
-        bug("IRR.%03x: %08x%08x%08x%08x%08x%08x%08x%08x\n", cpunum,
+        bug("[kernel] %s(%d): IRR.%03x: %08x%08x%08x%08x%08x%08x%08x%08x\n",
+            __func__, int_number, cpunum,
             APIC_REG(__APICBase, APIC_IRR+0x70), APIC_REG(__APICBase, APIC_IRR+0x60),
             APIC_REG(__APICBase, APIC_IRR+0x50), APIC_REG(__APICBase, APIC_IRR+0x40),
             APIC_REG(__APICBase, APIC_IRR+0x30), APIC_REG(__APICBase, APIC_IRR+0x20),
             APIC_REG(__APICBase, APIC_IRR+0x10), APIC_REG(__APICBase, APIC_IRR+0x00));
-        bug("ISR.%03x: %08x%08x%08x%08x%08x%08x%08x%08x\n", cpunum,
+        bug("[kernel] %s(%d): ISR.%03x: %08x%08x%08x%08x%08x%08x%08x%08x\n",
+            __func__, int_number, cpunum,
             APIC_REG(__APICBase, APIC_ISR+0x70), APIC_REG(__APICBase, APIC_ISR + 0x60),
             APIC_REG(__APICBase, APIC_ISR + 0x50), APIC_REG(__APICBase, APIC_ISR + 0x40),
             APIC_REG(__APICBase, APIC_ISR + 0x30), APIC_REG(__APICBase, APIC_ISR + 0x20),
@@ -242,15 +246,17 @@ void core_IRQHandle(struct ExceptionContext *regs, unsigned long error_code, uns
     {
         unsigned long exception_number = GET_EXCEPTION_NUMBER(int_number);
 
-        DTRAP(bug("[Kernel] %s: CPU Exception %08x\n", __func__, int_number);)
-        DTRAP(bug("[Kernel] %s: --> CPU Trap #$%08x\n", __func__, exception_number);)
+        DTRAP(
+            bug("[Kernel] %s(%u): CPU Exception %08x\n", __func__, int_number, int_number);
+            bug("[Kernel] %s(%u): --> CPU Trap #$%08x\n", __func__, int_number, exception_number);
+        )
 
         cpu_Trap(regs, error_code, exception_number);
 
         // NOT a CPU exception, must be APIC or Syscall. If APIC, send EOI
         if (exception_number >= X86_CPU_EXCEPT_COUNT && exception_number != APIC_EXCEPT_SYSCALL)
         {
-            DTRAP(bug("[Kernel] %s: Sending EOI to LAPIC on CPU%03x\n", __func__, KrnGetCPUNumber());)
+            DTRAP(bug("[Kernel] %s(%u): Sending EOI to LAPIC on CPU%03x\n", __func__, int_number, KrnGetCPUNumber());)
             IPTR __APICBase = core_APIC_GetBase();
             APIC_REG(__APICBase, APIC_EOI) = 0;
         }
@@ -259,7 +265,9 @@ void core_IRQHandle(struct ExceptionContext *regs, unsigned long error_code, uns
     {
         UBYTE irq_number = GET_DEVICE_IRQ(int_number);
 
-        DIRQ(bug("[Kernel] %s: Device IRQ #$%02X\n", __func__, irq_number);)
+        DIRQ(
+            bug("[Kernel] %s(%u): Device IRQ #$%02X\n", __func__, int_number, irq_number);
+        )
 
         if (KernelBase)
         {
@@ -291,12 +299,19 @@ void core_IRQHandle(struct ExceptionContext *regs, unsigned long error_code, uns
          */
         if (SysBase != NULL && INTR_FROMUSERMODE)
         {
+
             /* Disable interrupts for a while */
             __asm__ __volatile__("cli; cld;");
 
+            DIRQ(
+                bug("[Kernel] %s(%u): calling ExitInterrupt... (>usermode)(%08x)\n", __func__, int_number, regs->Flags);
+            )
             core_ExitInterrupt(regs);
         }
     }
 
+    DIRQ(
+        bug("[Kernel] %s(%u): calling LeaveInterrupt...(%08x)\n", __func__, int_number, regs->Flags);
+    )
     core_LeaveInterrupt(regs);
 }

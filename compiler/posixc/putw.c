@@ -1,6 +1,5 @@
 /*
-    Copyright © 2004-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004-2013, The AROS Development Team. All rights reserved.
     
     SVID function putw().
 */
@@ -11,11 +10,11 @@
 
 #include <stdio.h>
 
-	int putw(
+        int putw(
 
     SYNOPSIS
-	int word,
-	FILE *stream)
+        int word,
+        FILE *stream)
 
     FUNCTION
 
@@ -32,7 +31,7 @@
     BUGS
 
     SEE ALSO
-        fwrite()
+        __posixc_fwrite()
 
     INTERNALS
 

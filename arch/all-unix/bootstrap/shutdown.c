@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <stdio.h>
@@ -10,7 +9,7 @@
 
 #include "shutdown.h"
 
-#define D(x) 
+#define D(x)
 
 static char **Kernel_ArgV;
 
@@ -23,7 +22,7 @@ void Host_ColdBoot(void)
 {
     D(printf("[Bootstrap] Cold reboot, dir: %s, name: %s\n", bootstrapdir, Kernel_ArgV[0]));
     if (chdir(bootstrapdir)==0)
-    	execvp(Kernel_ArgV[0], Kernel_ArgV);
+        execvp(Kernel_ArgV[0], Kernel_ArgV);
 
     DisplayError("Failed to restart AROS");
 }

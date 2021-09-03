@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2013, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2013, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <exec/types.h>
@@ -62,45 +61,48 @@ void SetDisplayDefaults(struct IntuitionBase * IntuitionBase)
     if (!_intuitionBase->ScreenModePrefs)
         _intuitionBase->ScreenModePrefs = AllocMem(sizeof(struct IScreenModePrefs), MEMF_ANY);
 
-    _intuitionBase->ScreenModePrefs->smp_DisplayID  = INVALID_ID;
-    _intuitionBase->ScreenModePrefs->smp_Control         = 0;
-
-    if ((defmon = OpenMonitor(NULL, INVALID_ID)) != NULL)
+    if (_intuitionBase->ScreenModePrefs)
     {
-        OOP_Object *sync = (OOP_Object *)defmon->ms_Object, *drv = NULL;
+        _intuitionBase->ScreenModePrefs->smp_DisplayID  = INVALID_ID;
+        _intuitionBase->ScreenModePrefs->smp_Control         = 0;
 
-        D(bug("[Intuition] %s: default monitor @ 0x%p\n", __PRETTY_FUNCTION__, defmon));
-
-        if (sync)
+        if ((defmon = OpenMonitor(NULL, INVALID_ID)) != NULL)
         {
-            OOP_AttrBase HiddSyncAttrBase = _intuitionBase->HiddSyncAttrBase;
-            struct Library *OOPBase = _intuitionBase->OOPBase;
+            OOP_Object *sync = (OOP_Object *)defmon->ms_Object, *drv = NULL;
 
-            D(bug("[Intuition] %s: monitor sync obj @ 0x%p\n", __PRETTY_FUNCTION__, sync));
+            D(bug("[Intuition] %s: default monitor @ 0x%p\n", __PRETTY_FUNCTION__, defmon));
 
-            OOP_GetAttr(sync, aHidd_Sync_GfxHidd, (IPTR *)&drv);
-            if (drv)
+            if (sync)
             {
-                OOP_MethodID HiddGfxBase = _intuitionBase->ib_HiddGfxBase;
-                UBYTE depth;
+                OOP_AttrBase HiddSyncAttrBase = _intuitionBase->HiddSyncAttrBase;
+                struct Library *OOPBase = _intuitionBase->OOPBase;
 
-                HIDD_Gfx_NominalDimensions(drv,
-                    &_intuitionBase->ScreenModePrefs->smp_Width,
-                    &_intuitionBase->ScreenModePrefs->smp_Height,
-                    &depth);
-                _intuitionBase->ScreenModePrefs->smp_Depth = depth;
-                done = TRUE;
+                D(bug("[Intuition] %s: monitor sync obj @ 0x%p\n", __PRETTY_FUNCTION__, sync));
+
+                OOP_GetAttr(sync, aHidd_Sync_GfxHidd, (IPTR *)&drv);
+                if (drv)
+                {
+                    OOP_MethodID HiddGfxBase = _intuitionBase->ib_HiddGfxBase;
+                    UBYTE depth;
+
+                    HIDD_Gfx_NominalDimensions(drv,
+                        &_intuitionBase->ScreenModePrefs->smp_Width,
+                        &_intuitionBase->ScreenModePrefs->smp_Height,
+                        &depth);
+                    _intuitionBase->ScreenModePrefs->smp_Depth = depth;
+                    done = TRUE;
+                }
             }
+            CloseMonitor(defmon);
         }
-        CloseMonitor(defmon);
-    }
-    if (!done)
-    {
-        D(bug("[Intuition] %s: using system defaults..\n", __PRETTY_FUNCTION__));
+        if (!done)
+        {
+            D(bug("[Intuition] %s: using system defaults..\n", __PRETTY_FUNCTION__));
 
-        _intuitionBase->ScreenModePrefs->smp_Width          = GfxBase->NormalDisplayColumns;
-        _intuitionBase->ScreenModePrefs->smp_Height         = GfxBase->NormalDisplayRows;
-        _intuitionBase->ScreenModePrefs->smp_Depth          = AROS_NOMINAL_DEPTH;
+            _intuitionBase->ScreenModePrefs->smp_Width          = GfxBase->NormalDisplayColumns;
+            _intuitionBase->ScreenModePrefs->smp_Height         = GfxBase->NormalDisplayRows;
+            _intuitionBase->ScreenModePrefs->smp_Depth          = AROS_NOMINAL_DEPTH;
+        }
     }
 }
 
@@ -117,18 +119,18 @@ void LoadDefaultPreferences(struct IntuitionBase * IntuitionBase)
 
     /* Default IControl prefs are AROS addition. Keep while backporting. */
     _intuitionBase->IControlPrefs.ic_TimeOut  = 50;
-    _intuitionBase->IControlPrefs.ic_MetaDrag = IEQUALIFIER_LCOMMAND;    
+    _intuitionBase->IControlPrefs.ic_MetaDrag = IEQUALIFIER_LCOMMAND;
     _intuitionBase->IControlPrefs.ic_Flags    = ICF_3DMENUS |
                                                                                          ICF_OFFSCREENLAYERS |
                                                              ICF_AVOIDWINBORDERERASE |
-                                                                         ICF_MODEPROMOTE | 
+                                                                         ICF_MODEPROMOTE |
                                                                          ICF_MENUSNAP |
                                                              ICF_STRGAD_FILTER |
                                                              ICF_COERCE_LACE;
     _intuitionBase->IControlPrefs.ic_WBtoFront   = 'N';
     _intuitionBase->IControlPrefs.ic_FrontToBack = 'M';
     _intuitionBase->IControlPrefs.ic_ReqTrue     = 'V';
-    _intuitionBase->IControlPrefs.ic_ReqFalse    = 'B';  
+    _intuitionBase->IControlPrefs.ic_ReqFalse    = 'B';
 
 
     /*
@@ -186,7 +188,7 @@ Object* CreateStdSysImage(WORD which, WORD preferred_height, struct Screen *scr,
             {IA_Width        , 0                         },
             {IA_Height        , preferred_height  },
             {TAG_DONE                                    }
-        };        
+        };
             IPTR width, height;
         
         GetAttr(IA_Width, im, &width);
@@ -548,7 +550,7 @@ BOOL CreateWinSysGadgets(struct Window *w, struct IntuitionBase *IntuitionBase)
                     msg.wdp_TrueColor = (((struct IntScreen *)w->WScreen)->DInfo.dri_Flags & DRIF_DIRECTCOLOR) ? TRUE : FALSE;
                     msg.wdp_Dri = dri;
 
-                    DoMethodA(((struct IntScreen *)(w->WScreen))->WinDecorObj, (Msg)&msg);        
+                    DoMethodA(((struct IntScreen *)(w->WScreen))->WinDecorObj, (Msg)&msg);
 
                     AddGadget(w, (struct Gadget *)SYSGAD(w, i), 0);
                 }
@@ -664,7 +666,7 @@ void CreateScreenBar(struct Screen *scr, struct IntuitionBase *IntuitionBase)
 
 void KillScreenBar(struct Screen *scr, struct IntuitionBase *IntuitionBase)
 {
-    struct IntIntuitionBase *_intuitionBase = GetPrivIBase(IntuitionBase);    
+    struct IntIntuitionBase *_intuitionBase = GetPrivIBase(IntuitionBase);
     struct LayersBase *LayersBase = _intuitionBase->LayersBase;
 
     if (scr->BarLayer)
@@ -989,7 +991,7 @@ void AddResourceToList(APTR resource, UWORD resourcetype, struct IntuitionBase *
         default:
             D(bug("AddResourceToList: Unknown resource type!!!\n"));
             return;
-    }  
+    }
 
     hash = CalcResourceHash(resource);
 
@@ -1008,7 +1010,7 @@ void RemoveResourceFromList(APTR resource, UWORD resourcetype, struct IntuitionB
     ULONG                ilock;
     
     switch(resourcetype)
-    {        
+    {
             case RESOURCE_WINDOW:
             hn = &((struct IntWindow *)resource)->hashnode;
             break;
@@ -1082,7 +1084,7 @@ void FireScreenNotifyMessageCode(IPTR data, ULONG flag, ULONG code, struct Intui
                         | SNOTIFY_LOCKPUBSCREEN     | SNOTIFY_UNLOCKPUBSCREEN
                         | SNOTIFY_SCREENDEPTH       | SNOTIFY_PUBSCREENSTATE    ))
             {
-                /* 
+                /*
                  * If sn->pubname is supplied, only notify for it
                  * (data must be a screen, and it must be public)
                  */
@@ -1115,7 +1117,7 @@ void FireScreenNotifyMessageCode(IPTR data, ULONG flag, ULONG code, struct Intui
                     {
                         msg->snm_Message.mn_Magic = MAGIC_SCREENNOTIFY;
                         msg->snm_Message.mn_Version = SCREENNOTIFY_VERSION;
-                        msg->snm_Object = data;                           
+                        msg->snm_Object = data;
                         msg->snm_Class = flag;
                         msg->snm_Code = code;
                         msg->snm_UserData = sn->userdata;
@@ -1160,7 +1162,7 @@ void FireScreenNotifyMessageCode(IPTR data, ULONG flag, ULONG code, struct Intui
                     CallHook(sn->hook, NULL, (Msg) &msg);
                 }
             }
-        }        
+        }
     }
     ReleaseSemaphore(&_intuitionBase->ScreenNotificationListLock);
 }
@@ -1202,7 +1204,7 @@ AROS_UFH3(BOOL, DefaultWindowShapeFunc,
     msg->NewShape = shape;
     return TRUE;
 
-    AROS_USERFUNC_EXIT 
+    AROS_USERFUNC_EXIT
 }
 
 /**********************************************************************************/

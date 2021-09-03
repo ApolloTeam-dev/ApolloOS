@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2008, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2008, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 #include <aros/asmcall.h>
 #include <aros/debug.h>
@@ -34,14 +32,14 @@ AROS_UFP3(struct Region *, ScaleLayerCallback,
 
     NAME */
 #include <proto/layers.h>
-	AROS_LH2(ULONG, ScaleLayer,
+        AROS_LH2(ULONG, ScaleLayer,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct Layer   *, l         , A0),
-	AROS_LHA(struct TagItem *, taglist   , A1),
+        AROS_LHA(struct Layer   *, l         , A0),
+        AROS_LHA(struct TagItem *, taglist   , A1),
 
 /*  LOCATION */
-	struct LayersBase *, LayersBase, 38, Layers)
+        struct LayersBase *, LayersBase, 38, Layers)
 
 /*  FUNCTION
         Scale the given layer. This function will use the

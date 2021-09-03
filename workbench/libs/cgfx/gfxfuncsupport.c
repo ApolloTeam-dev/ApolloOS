@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -85,7 +84,7 @@ UBYTE GetRectFmtBytesPerPixel(UBYTE rectfmt, struct RastPort *rp,
 
     if (rectfmt == RECTFMT_RAW)
     {
-    	OOP_GetAttr(HIDD_BM_OBJ(rp->BitMap), aHidd_BitMap_PixFmt, (IPTR *)&pf);
+        OOP_GetAttr(HIDD_BM_OBJ(rp->BitMap), aHidd_BitMap_PixFmt, (IPTR *)&pf);
         OOP_GetAttr(pf, aHidd_PixFmt_BytesPerPixel, &oop_result);
         result = oop_result;
     }

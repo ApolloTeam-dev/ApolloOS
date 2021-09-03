@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2016, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2016, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 
 #include <proto/alib.h>
@@ -17,25 +15,25 @@
 /*****************************************************************************
 
     NAME */
-	LONG SetRexxVar(
+        LONG SetRexxVar(
 
 /*  SYNOPSIS */
-	struct RexxMsg *msg,
-	CONST_STRPTR varname,
-	char *value,
+        struct RexxMsg *msg,
+        CONST_STRPTR varname,
+        char *value,
         ULONG length)
 
 /*  FUNCTION
-        Set the value of the named Rexx variable.
+        Set the value of the named REXX variable.
 
     INPUTS
-        msg - A Rexx message generated from a running Rexx script
+        msg - A REXX message generated from a running REXX script
         varname - The name of the variable to set the value
         value - a pointer to the beginning of the value to set
         length - the length of the value argument
 
     RESULT
-        0 when success, otherwise a Rexx error value is returned.
+        0 when success, otherwise a REXX error value is returned.
 
     NOTES
 
@@ -47,7 +45,7 @@
         CheckRexxMsg(), GetRexxVar()
 
     INTERNALS
-        This function creates a Rexx message that is sent to the AREXX
+        This function creates a REXX message that is sent to the AREXX
         port with a RXSETVAR command.
 
 
@@ -63,15 +61,15 @@
     
     if (!IsRexxMsg(msg))
     {
-	retval = ERR10_010;
-	goto cleanup;
+        retval = ERR10_010;
+        goto cleanup;
     }
     
     rexxport = FindPort("REXX");
     if (rexxport==NULL)
     {
-	retval = ERR10_013;
-	goto cleanup;
+        retval = ERR10_013;
+        goto cleanup;
     }
   
     port = CreateMsgPort();
@@ -89,9 +87,9 @@
     msg3 = NULL;
     while (msg3!=msg2)
     {
-	WaitPort(port);
-	msg3 = (struct RexxMsg *)GetMsg(port);
-	if (msg3!=msg2) ReplyMsg((struct Message *)msg3);
+        WaitPort(port);
+        msg3 = (struct RexxMsg *)GetMsg(port);
+        if (msg3!=msg2) ReplyMsg((struct Message *)msg3);
     }
 
     if (msg3->rm_Result1==RC_OK) retval = 0;
@@ -100,9 +98,9 @@
 cleanup:
     if (msg2!=NULL)
     {
-	if (msg2->rm_Args[0]!=0) DeleteArgstring((UBYTE *)msg2->rm_Args[0]);
-	if (msg2->rm_Args[1]!=0) DeleteArgstring((UBYTE *)msg2->rm_Args[1]);
-	DeleteRexxMsg(msg2);
+        if (msg2->rm_Args[0]!=0) DeleteArgstring((UBYTE *)msg2->rm_Args[0]);
+        if (msg2->rm_Args[1]!=0) DeleteArgstring((UBYTE *)msg2->rm_Args[1]);
+        DeleteRexxMsg(msg2);
     }
     if (port!=NULL) DeletePort(port);
     if (RexxSysBase!=NULL) CloseLibrary(RexxSysBase);

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -18,11 +17,11 @@
         AROS_LH2I(int, KrnUnmapGlobal,
 
 /*  SYNOPSIS */
-	AROS_LHA(void *, virtual, A0),
-	AROS_LHA(uint32_t, length, D0),
+        AROS_LHA(void *, virtual, A0),
+        AROS_LHA(uint32_t, length, D0),
 
 /*  LOCATION */
-	struct KernelBase *, KernelBase, 17, Kernel)
+        struct KernelBase *, KernelBase, 17, Kernel)
 
 /*  FUNCTION
 

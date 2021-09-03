@@ -1,9 +1,7 @@
 /*
-    Copyright © 2004, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004, The AROS Development Team. All rights reserved.
 
     Desc: Stub functions for PCI subsystem
-    Lang: English
 */
 
 #ifndef AROS_USE_OOP
@@ -25,7 +23,7 @@
 #include <proto/oop.h>
 
 #undef OOPBase
-#define OOPBase	(OOP_OOPBASE(obj))
+#define OOPBase (OOP_OOPBASE(obj))
 
 /***************************************************************************/
 

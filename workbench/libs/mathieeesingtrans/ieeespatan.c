@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2003, The AROS Development Team. All rights reserved.
 */
 
 #include "mathieeesingtrans_intern.h"
@@ -80,7 +79,7 @@
                 (
                     IEEESPAdd
                     (
-                        IEEESPMul(three, ysquared) | IEEESPSign_Mask, one 
+                        IEEESPMul(three, ysquared) | IEEESPSign_Mask, one
                     ),
                     IEEESPMul(three, ycubed)
                 )
@@ -95,7 +94,7 @@
                 (
                     IEEESPAdd
                     (
-                        IEEESPMul(three, ysquared) | IEEESPSign_Mask, one 
+                        IEEESPMul(three, ysquared) | IEEESPSign_Mask, one
                     ),
                     IEEESPMul(three, ycubed)
                 )

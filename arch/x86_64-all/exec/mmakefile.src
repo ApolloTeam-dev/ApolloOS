@@ -1,16 +1,34 @@
-# $Id$
 
 include $(SRCDIR)/config/aros.cfg
+
+FILES  := \
+        alert_cpu \
+        copymem \
+        newstackswap \
+        preparecontext
+
+AFILES := \
+        execstubs \
+        stackswap \
+        taskexit
 
 USER_AFLAGS   := -I$(GENINCDIR)
 USER_INCLUDES := $(PRIV_EXEC_INCLUDES)
 
+# Allow to add architecture-specific options
+-include $(SRCDIR)/arch/all-$(FAMILY)/exec/make.opts
+-include $(SRCDIR)/arch/all-$(ARCH)/exec/make.opts
+-include $(SRCDIR)/arch/$(CPU)-$(ARCH)/exec/make.opts
+ifneq ($(AROS_TARGET_VARIANT),)
+-include $(SRCDIR)/arch/all-$(ARCH)/$(AROS_TARGET_VARIANT)/exec/make.opts
+-include $(SRCDIR)/arch/$(CPU)-$(ARCH)/$(AROS_TARGET_VARIANT)/exec/make.opts
+endif
+
 %build_archspecific \
   mainmmake=kernel-exec maindir=rom/exec \
-  asmfiles="execstubs stackswap taskexit" \
-  files="copymem newstackswap preparecontext alert_cpu" \
+  asmfiles=$(AFILES) files=$(FILES) \
   arch=x86_64 modname=exec
 
-#MM kernel-exec-x86_64 : includes-asm_h-x86_64 kernel-kernel-includes
+#MM kernel-exec-x86_64 : includes-asm_h kernel-kernel-includes
 
 %common

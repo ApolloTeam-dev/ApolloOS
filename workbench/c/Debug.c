@@ -1,26 +1,24 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc: Debug
-    Lang: English
 */
 
 /*****************************************************************************
 
     NAME
-	Debug
+        Debug
 
     FORMAT
-	Debug
+        Debug
 
     SYNOPSIS
 
     LOCATION
-	C:
+        C:
 
     FUNCTION
-	Activates built-in AROS debugger (SAD)
+        Activates built-in AROS debugger (SAD)
 
     EXAMPLE
 

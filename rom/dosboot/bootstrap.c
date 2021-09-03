@@ -1,15 +1,14 @@
 /*
-    Copyright © 1995-2016, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 
     Desc: Boot AROS
-    Lang: english
 */
+
+#include <aros/debug.h>
 
 #include <string.h>
 #include <stdlib.h>
 
-#include <aros/debug.h>
 #include <exec/alerts.h>
 #include <aros/asmcall.h>
 #include <aros/bootloader.h>
@@ -75,10 +74,10 @@ static BOOL GetBootNodeDeviceUnit(struct BootNode *bn, BPTR *device, IPTR *unit,
     de = BADDR(fssm->fssm_Environ);
     /* Following check from Guru Book */
     if (de == NULL || (de->de_TableSize & 0xffffff00) != 0 || de->de_TableSize < DE_BOOTBLOCKS)
-    	return FALSE;
+        return FALSE;
     *bootblocks = de->de_BootBlocks * de->de_SizeBlock * sizeof(ULONG);
     if (*bootblocks == 0)
-    	return FALSE;
+        return FALSE;
     return TRUE;
 }
 
@@ -88,18 +87,18 @@ static BOOL BootBlockCheckSum(UBYTE *bootblock, ULONG bootblock_size)
     UWORD i;
 
     for (i = 0; i < bootblock_size; i += 4) {
-	ULONG v = AROS_LONG2BE(*(ULONG*)(bootblock + i));
-	if (i == 4) {
-	    crc2 = v;
-	    v = 0;
-	}
-	if (crc + v < crc)
-	    crc++;
-	crc += v;
+        ULONG v = AROS_LONG2BE(*(ULONG*)(bootblock + i));
+        if (i == 4) {
+            crc2 = v;
+            v = 0;
+        }
+        if (crc + v < crc)
+            crc++;
+        crc += v;
     }
     crc ^= 0xffffffff;
-    D(bug("[Strap] bootblock %08x checksum %s (%08x %08x)\n",
-	AROS_LONG2BE(*(ULONG*)bootblock), crc == crc2 ? "ok" : "error", crc, crc2));
+    D(bug("[DOSBoot:bootstrap] %s: bootblock %08x checksum %s (%08x %08x)\n", __func__,
+        AROS_LONG2BE(*(ULONG*)bootblock), crc == crc2 ? "ok" : "error", crc, crc2));
     return crc == crc2;
 }
 
@@ -110,15 +109,15 @@ static BOOL BootBlockCheck(UBYTE *bootblock, ULONG bootblock_size)
     ULONG dostype;
 
     if (!BootBlockCheckSum(bootblock, bootblock_size))
-    	return FALSE;
+        return FALSE;
     if (!(fsr = OpenResource("FileSystem.resource")))
-	return FALSE;
+        return FALSE;
     dostype = AROS_LONG2BE(*(ULONG*)bootblock);
     ForeachNode(&fsr->fsr_FileSysEntries, fse) {
-	if (fse->fse_DosType == dostype)
-	    return TRUE;
+        if (fse->fse_DosType == dostype)
+            return TRUE;
     }
-    D(bug("[Strap] unknown bootblock dostype %08x\n", dostype));
+    D(bug("[DOSBoot:bootstrap] %s: unknown bootblock dostype %08x\n", __func__, dostype));
     return FALSE;
 }
 
@@ -212,21 +211,21 @@ static BOOL dosboot_BootBlock(struct BootNode *bn, struct ExpansionBase *Expansi
    {
        D(bug("calling bootblock loaded code at %p\n", init));
 
-	/*
-	 * This is actually rt_Init calling convention for non-autoinit residents.
-	 * Workbench floppy bootblocks return a pointer to dos.library init routine,
-	 * and it needs SysBase in A6.
-	 * We don't close boot screen and libraries here. We will close them after
-	 * dos.library is successfully initialized, using a second RTF_AFTERDOS ROMTag.
-	 * This is needed because dos.library contains the second part of "bootable"
-	 * test, trying to mount a filesystem and read the volume.
-	 * We hope it won't do any harm for NDOS game disks.
-	 */
+       /*
+        * This is actually rt_Init calling convention for non-autoinit residents.
+        * Workbench floppy bootblocks return a pointer to dos.library init routine,
+        * and it needs SysBase in A6.
+        * We don't close boot screen and libraries here. We will close them after
+        * dos.library is successfully initialized, using a second RTF_AFTERDOS ROMTag.
+        * This is needed because dos.library contains the second part of "bootable"
+        * test, trying to mount a filesystem and read the volume.
+        * We hope it won't do any harm for NDOS game disks.
+       */
        AROS_UFC3NR(void, init,
-       		 AROS_UFCA(APTR, NULL, D0),
-       		 AROS_UFCA(BPTR, BNULL, A0),
-       		 AROS_UFCA(struct ExecBase *, SysBase, A6));
-   }
+                 AROS_UFCA(APTR, NULL, D0),
+                 AROS_UFCA(BPTR, BNULL, A0),
+                 AROS_UFCA(struct ExecBase *, SysBase, A6));
+    }
 
 #ifdef __mc68000
    /* Device *was* BootBlock style, but couldn't boot. */
@@ -280,7 +279,7 @@ LONG dosboot_BootStrap(LIBBASETYPEPTR LIBBASE)
             bn->bn_Node.ln_Pri <= -128 ||
             bn->bn_DeviceNode == NULL)
         {
-            D(bug("%s: Ignoring %p, not a bootable node\n", __func__, bn));
+            D(bug("[DOSBoot:bootstrap] %s: Ignoring %p, not a bootable node\n", __func__, bn));
             ObtainSemaphore(&IntExpBase(ExpansionBase)->BootSemaphore);
             REMOVE(bn);
             ADDTAIL(&ExpansionBase->MountList, bn);
@@ -293,26 +292,27 @@ LONG dosboot_BootStrap(LIBBASETYPEPTR LIBBASE)
          * use it as SYS: if the strap works
          */
 
-        /* First try as a BootBlock.
-         * dosboot_BootBlock returns TRUE if it *was*
-         * a BootBlock device, but couldn't be booted.
-         * Returns FALSE if not a bootblock device,
-         * and doesn't return at all if the bootblock
-         * was successful.
-         */
-        D(bug("%s: Attempting %b as BootBlock\n",__func__, ((struct DeviceNode *)bn->bn_DeviceNode)->dn_Name));
+                    /* First try as a BootBlock.
+                     * dosboot_BootBlock returns TRUE if it *was*
+                     * a BootBlock device, but couldn't be booted.
+                     * Returns FALSE if not a bootblock device,
+                     * and doesn't return at all if the bootblock
+                     * was successful.
+                     */
+                    
+                    D(bug("[DOSBoot:bootstrap] %s: Attempting %b\n",__func__, ((struct DeviceNode *)bn->bn_DeviceNode)->dn_Name));
         if (!dosboot_BootBlock(bn, ExpansionBase)) {
-            /* Then as a BootPoint node */
-            D(bug("%s: Attempting %b as BootPoint\n", __func__, ((struct DeviceNode *)bn->bn_DeviceNode)->dn_Name));
-            dosboot_BootPoint(bn);
+                        /* Then as a BootPoint node */
+                        D(bug("[DOSBoot:bootstrap] %s: Attempting %b as BootPoint\n", __func__, ((struct DeviceNode *)bn->bn_DeviceNode)->dn_Name));
+                        dosboot_BootPoint(bn);
 
-            /* And finally with DOS */
-            D(bug("%s: Attempting %b with DOS\n", __func__, ((struct DeviceNode *)bn->bn_DeviceNode)->dn_Name));
-            dosboot_BootDos();
+                        /* And finally with DOS */
+                        D(bug("[DOSBoot:bootstrap] %s: Attempting %b with DOS\n", __func__, ((struct DeviceNode *)bn->bn_DeviceNode)->dn_Name));
+                        dosboot_BootDos();
         }
 
         /* Didn't work. Next! */
-        D(bug("%s: DeviceNode %b (%d) was not bootable\n", __func__,
+        D(bug("[DOSBoot:bootstrap] %s: DeviceNode %b (%d) was not bootable\n", __func__,
                     ((struct DeviceNode *)bn->bn_DeviceNode)->dn_Name,
                     bn->bn_Node.ln_Pri));
 
@@ -322,7 +322,7 @@ LONG dosboot_BootStrap(LIBBASETYPEPTR LIBBASE)
         ReleaseSemaphore(&IntExpBase(ExpansionBase)->BootSemaphore);
     }
 
-    D(bug("%s: No BootBlock, BootPoint, or BootDos nodes found\n",__func__));
+    D(bug("[DOSBoot:bootstrap] %s: No BootBlock, BootPoint, or BootDos nodes found\n",__func__));
 
     /* At this point we now know that we were unable to
      * strap any bootable devices.

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Initialization of workbench.library.
 */
@@ -8,6 +7,8 @@
 #include <aros/debug.h>
 #include <aros/atomic.h>
 #include <aros/symbolsets.h>
+
+#include <string.h>
 
 #include "workbench_intern.h"
 #include LC_LIBDEFS_FILE
@@ -47,16 +48,16 @@ D(bug("[WBLIB] WBInit: Using %d Bytes for DefaultStackSize\n", WorkbenchBase->wb
 static BOOL openall(LIBBASETYPEPTR LIBBASE)
 {
     if ((UtilityBase = TaggedOpenLibrary(TAGGEDOPEN_UTILITY))) {
-    	if ((DOSBase = TaggedOpenLibrary(TAGGEDOPEN_DOS))) {
-    	    if ((IntuitionBase = TaggedOpenLibrary(TAGGEDOPEN_INTUITION))) {
-    	    	if ((IconBase = TaggedOpenLibrary(TAGGEDOPEN_ICON))) {
-    	    	    return TRUE;
-    	    	}
-    	    	CloseLibrary(IntuitionBase);
-    	    }
-    	    CloseLibrary(DOSBase);
-    	}
-    	CloseLibrary(UtilityBase);
+        if ((DOSBase = TaggedOpenLibrary(TAGGEDOPEN_DOS))) {
+            if ((IntuitionBase = TaggedOpenLibrary(TAGGEDOPEN_INTUITION))) {
+                if ((IconBase = TaggedOpenLibrary(TAGGEDOPEN_ICON))) {
+                    return TRUE;
+                }
+                CloseLibrary(IntuitionBase);
+            }
+            CloseLibrary(DOSBase);
+        }
+        CloseLibrary(UtilityBase);
     }
     return FALSE;
 }
@@ -91,13 +92,13 @@ static int WBOpen(LIBBASETYPEPTR LIBBASE)
             );
         }
     
-        const struct TagItem 	     tags[]=
+        const struct TagItem         tags[]=
         {
             {NP_Entry    , (IPTR)WorkbenchHandler      },
             {NP_Name     , (IPTR)"Workbench Handler"   },
-			{NP_UserData , (IPTR)WorkbenchBase      },
-			{NP_StackSize, 8129 			           },
-            {TAG_DONE    , 0     	    	    	   }
+                        {NP_UserData , (IPTR)WorkbenchBase      },
+                        {NP_StackSize, 8129                                },
+            {TAG_DONE    , 0                               }
         };
         
         /* Start workbench handler -----------------------------------------*/

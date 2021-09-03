@@ -1,6 +1,5 @@
 /*
-    Copyright © 2004-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004-2012, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -11,12 +10,12 @@
 
 #include <unistd.h>
 
-	int fchown(
+        int fchown(
 
 /*  SYNOPSIS */
-	int fd,
-	uid_t owner,
-	gid_t group)
+        int fd,
+        uid_t owner,
+        gid_t group)
 
 /*  FUNCTION
 
@@ -25,7 +24,7 @@
     RESULT
 
     NOTES
-	Not implemented.
+        Not implemented.
 
     EXAMPLE
 

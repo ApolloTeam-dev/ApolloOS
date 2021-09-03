@@ -1,6 +1,5 @@
 /*
-    Copyright © 2011-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2011-2020, The AROS Development Team. All rights reserved.
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
@@ -34,7 +33,7 @@ IPTR SMFloattext__MUIM_DrawBackground(Class *CLASS, Object *self, struct MUIP_Dr
 
 ZUNE_CUSTOMCLASS_1
 (
-    SMFloattext, NULL, MUIC_NFloattext, NULL,   
+    SMFloattext, NULL, MUIC_NFloattext, NULL,
     MUIM_DrawBackground,     struct MUIP_DrawBackground *
 );
 
@@ -72,7 +71,7 @@ static inline Object *makeSMLabel1(char *label)
 Object *ScreenModeAttributes__OM_NEW(Class *CLASS, Object *self, struct opSet *message)
 {
     struct ScreenModeAttributes_DATA *data;
-    Object  * objColGrp, * objVisibleW, * objVisibleH, * objMinimumW, * objMinimumH, 
+    Object  * objColGrp, * objVisibleW, * objVisibleH, * objMinimumW, * objMinimumH,
             * objMaximumW, * objMaximumH, * objMaximumColors, * objFreqH, * objFreqK,
             * objFeaturesGrp, * objFeatures;
 
@@ -197,7 +196,7 @@ err:
 
 IPTR ScreenModeAttributes__OM_SET(Class *CLASS, Object *self, struct opSet *message)
 {
-    struct ScreenModeAttributes_DATA *data = INST_DATA(CLASS, self);    
+    struct ScreenModeAttributes_DATA *data = INST_DATA(CLASS, self);
     struct TagItem *tags;
     struct TagItem *tag;
     IPTR ret;
@@ -267,12 +266,12 @@ IPTR ScreenModeAttributes__OM_SET(Class *CLASS, Object *self, struct opSet *mess
                         set(data->objMaximumH, MUIA_Text_Contents, (IPTR)str_empty);
                         set(data->objMaximumColors, MUIA_Text_Contents, (IPTR)str_empty);
                         DoMethod(data->objColGrp, MUIM_Group_ExitChange);
-                    } 
+                    }
                 }
 
                 if ((pclock != (ULONG)-1) && (GetDisplayInfoData(NULL, (UBYTE *)&mi, sizeof(mi), DTAG_MNTR, tag->ti_Data)))
                 {
-                    IPTR values[1];
+                    IPTR values[2];
 
                     if (DoMethod(data->objColGrp, MUIM_Group_InitChange))
                     {
@@ -307,19 +306,19 @@ IPTR ScreenModeAttributes__OM_SET(Class *CLASS, Object *self, struct opSet *mess
                     int offset = 0;
 
                     if (dflags & DIPF_IS_LACE)
-                        offset += sprintf(&buffer[offset], _(MSG_INTERLACED));
+                        offset += sprintf(&buffer[offset], "%s", _(MSG_INTERLACED));
                     if (dflags & DIPF_IS_ECS)
-                        offset += sprintf(&buffer[offset], _(MSG_WANTS_ECS));
+                        offset += sprintf(&buffer[offset], "%s", _(MSG_WANTS_ECS));
                     if (dflags & DIPF_IS_DUALPF)
-                        offset += sprintf(&buffer[offset], _(MSG_DUALP));
+                        offset += sprintf(&buffer[offset], "%s", _(MSG_DUALP));
                     if (dflags & DIPF_IS_GENLOCK)
-                        offset += sprintf(&buffer[offset], _(MSG_GENLOCK));
+                        offset += sprintf(&buffer[offset], "%s", _(MSG_GENLOCK));
                     if (dflags & DIPF_IS_DRAGGABLE)
-                        offset += sprintf(&buffer[offset], _(MSG_DRAGGABLE));
+                        offset += sprintf(&buffer[offset], "%s", _(MSG_DRAGGABLE));
                     if (dflags & DIPF_IS_PANELLED)
-                        offset += sprintf(&buffer[offset], _(MSG_PANELLED));
+                        offset += sprintf(&buffer[offset], "%s", _(MSG_PANELLED));
                     if (dflags & DIPF_IS_BEAMSYNC)
-                        offset += sprintf(&buffer[offset], _(MSG_BEAM_SYNC));
+                        offset += sprintf(&buffer[offset], "%s", _(MSG_BEAM_SYNC));
 
                     if (offset > 0)
                         featstr = buffer;
@@ -345,7 +344,7 @@ IPTR ScreenModeAttributes__OM_SET(Class *CLASS, Object *self, struct opSet *mess
 
 ZUNE_CUSTOMCLASS_2
 (
-    ScreenModeAttributes, NULL, MUIC_Group, NULL,   
+    ScreenModeAttributes, NULL, MUIC_Group, NULL,
     OM_NEW,     struct opSet *,
     OM_SET,     struct opSet *
 );

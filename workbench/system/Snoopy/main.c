@@ -1,6 +1,5 @@
 /*
-    Copyright © 2006-2015, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2006-2015, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/config.h>
@@ -12,6 +11,8 @@
 #include <proto/arossupport.h>
 #include <proto/exec.h>
 #include <proto/utility.h>
+
+#include <string.h>
 
 #include "main.h"
 #include "gui.h"

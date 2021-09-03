@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -97,6 +95,7 @@ ULONG internal_CliInitAny(struct DosPacket *dp, APTR DOSBase)
             }
             return 0;
         }
+        cli->cli_DefaultStack = -1; /* Mark as new, will reset to default size below */
         me->pr_CLI = MKBADDR(cli);
         me->pr_Flags |= PRF_FREECLI;
         addprocesstoroot(me, DOSBase);
@@ -234,7 +233,8 @@ ULONG internal_CliInitAny(struct DosPacket *dp, APTR DOSBase)
         D(bug("%s: Initializing CLI\n", __func__));
         SetPrompt("%N> ");
         SetCurrentDirName("SYS:");
-        cli->cli_DefaultStack = AROS_STACKSIZE / CLI_DEFAULTSTACK_UNIT;
+        if (cli->cli_DefaultStack < (LONG)(AROS_STACKSIZE / CLI_DEFAULTSTACK_UNIT))
+            cli->cli_DefaultStack = (LONG)(AROS_STACKSIZE / CLI_DEFAULTSTACK_UNIT);
     }
 
     AROS_BSTR_setstrlen(cli->cli_CommandFile, 0);

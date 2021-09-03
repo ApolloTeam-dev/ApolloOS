@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc: Display an alert.
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -109,7 +107,7 @@ void Exec_ExtAlert(ULONG alertNum, APTR location, APTR stack, UBYTE type, APTR d
             }
 
             /* Set location */
-            iet->iet_AlertFlags   |= AF_Location;            
+            iet->iet_AlertFlags   |= AF_Location;
             iet->iet_AlertLocation = location;
             iet->iet_AlertStack    = stack;
 

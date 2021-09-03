@@ -1,12 +1,9 @@
 /*
-    Copyright © 2010-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2010-2020, The AROS Development Team. All rights reserved.
 
     Desc: GetCPUInfo() - Provides information about installed CPUs
-    Lang: english
 */
 
-#define DEBUG 0
 #include <aros/debug.h>
 
 #include <aros/libcall.h>
@@ -41,7 +38,7 @@ AROS_LH1(void, GetCPUInfo,
     first available processor */
     selectedprocessor = (ULONG)GetTagData(GCIT_SelectedProcessor, 0, tagList);
 
-    /* If selectedprocessor not in line with number of processors, report on 
+    /* If selectedprocessor not in line with number of processors, report on
     first available processor */
     if (selectedprocessor >= ProcessorBase->cpucount)
         selectedprocessor = 0;
@@ -73,7 +70,7 @@ AROS_LH1(void, GetCPUInfo,
             *((ULONG *)passedTag->ti_Data) = processor->VectorUnit;
             break;
         case(GCIT_L1CacheSize):
-            *((ULONG *)passedTag->ti_Data) = 
+            *((ULONG *)passedTag->ti_Data) =
                 (processor->L1DataCacheSize + processor->L1InstructionCacheSize);
             break;
         case(GCIT_L1DataCacheSize):
@@ -98,10 +95,10 @@ AROS_LH1(void, GetCPUInfo,
             *((ULONG *)passedTag->ti_Data) = ENDIANNESS_LE;
             break;
         case(GCIT_ProcessorSpeed):
-            *((UQUAD *)passedTag->ti_Data) = GetCurrentProcessorFrequency(processor);
+            *((UQUAD *)passedTag->ti_Data) = GetCurrentProcessorFrequency(ProcessorBase, processor);
             break;
         case(GCIT_ProcessorLoad):
-#if defined(__AROSEXEC_SMP__)            
+#if defined(__AROSEXEC_SMP__)
             *((ULONG *)passedTag->ti_Data) = KrnGetSystemAttr(KATTR_CPULoad + selectedprocessor);
 #else
             *((ULONG *)passedTag->ti_Data) = 0; /* TODO: IMPLEMENT */
@@ -135,22 +132,6 @@ D(bug("[processor.x86] :%s()\n", __func__));
         *((BOOL *)tag->ti_Data) = (BOOL)((info->Features1 & FEATF_SSE) >> FEATB_SSE); break;
     case(GCIT_SupportsSSE2):
         *((BOOL *)tag->ti_Data) = (BOOL)((info->Features1 & FEATF_SSE2) >> FEATB_SSE2); break;
-    case(GCIT_SupportsSSE3):
-        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features2 & FEATF_SSE3) >> FEATB_SSE3); break;
-    case(GCIT_SupportsSSSE3):
-        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features2 & FEATF_SSSE3) >> FEATB_SSSE3); break;
-    case(GCIT_SupportsSSE41):
-        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features2 & FEATF_SSE41) >> FEATB_SSE41); break;
-    case(GCIT_SupportsSSE42):
-        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features2 & FEATF_SSE42) >> FEATB_SSE42); break;
-    case(GCIT_SupportsMMXEXT):
-        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features3 & FEATF_MMXEXT) >> FEATB_MMXEXT); break;
-    case(GCIT_Supports3DNOW):
-        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features3 & FEATF_3DNOW) >> FEATB_3DNOW); break;
-    case(GCIT_Supports3DNOWEXT):
-        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features3 & FEATF_3DNOWEXT) >> FEATB_3DNOWEXT); break;
-    case(GCIT_SupportsSSE4A):
-        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features4 & FEATF_SSE4A) >> FEATB_SSE4A); break;
     case(GCIT_SupportsVME):
         *((BOOL *)tag->ti_Data) = (BOOL)((info->Features1 & FEATF_VME) >> FEATB_VME); break;
     case(GCIT_SupportsPSE):
@@ -170,15 +151,49 @@ D(bug("[processor.x86] :%s()\n", __func__));
     case(GCIT_SupportsACPI):
         if (info->Vendor == VENDOR_INTEL)
             *((BOOL *)tag->ti_Data) = (BOOL)((info->Features1 & FEATF_ACPI) >> FEATB_ACPI);
-        else 
+        else
             *((BOOL *)tag->ti_Data) = FALSE; /* TODO: IMPLEMENT FOR AMD */
         break;
     case(GCIT_SupportsFXSR):
         *((BOOL *)tag->ti_Data) = (BOOL)((info->Features1 & FEATF_FXSR) >> FEATB_FXSR); break;
     case(GCIT_SupportsHTT):
         *((BOOL *)tag->ti_Data) = (BOOL)((info->Features1 & FEATF_HTT) >> FEATB_HTT); break;
+    case(GCIT_SupportsMSR):
+        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features1 & FEATF_MSR) >> FEATB_MSR); break;
     case(GCIT_SupportsCX16):
         *((BOOL *)tag->ti_Data) = (BOOL)((info->Features2 & FEATF_CX16) >> FEATB_CX16); break;
+    case(GCIT_SupportsSSE3):
+        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features2 & FEATF_SSE3) >> FEATB_SSE3); break;
+    case(GCIT_SupportsSSSE3):
+        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features2 & FEATF_SSSE3) >> FEATB_SSSE3); break;
+    case(GCIT_SupportsSSE41):
+        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features2 & FEATF_SSE41) >> FEATB_SSE41); break;
+    case(GCIT_SupportsSSE42):
+        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features2 & FEATF_SSE42) >> FEATB_SSE42); break;
+    case(GCIT_SupportsAES):
+        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features2 & FEATF_AES) >> FEATB_AES); break;
+    case(GCIT_Virtualized):
+        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features2 & FEATF_HYPERV) >> FEATB_HYPERV); break;
+    case(GCIT_SupportsAVX):
+        {
+            if (info->Features2 & FEATF_XSAVE)
+                *((BOOL *)tag->ti_Data) = (BOOL)((info->Features2 & FEATF_AVX) >> FEATB_AVX);
+            else
+                *((BOOL *)tag->ti_Data) = (BOOL)FALSE;
+            break;
+        }
+    case(GCIT_SupportsMMXEXT):
+        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features3 & FEATF_MMXEXT) >> FEATB_MMXEXT); break;
+    case(GCIT_Supports3DNOW):
+        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features3 & FEATF_3DNOW) >> FEATB_3DNOW); break;
+    case(GCIT_Supports3DNOWEXT):
+        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features3 & FEATF_3DNOWEXT) >> FEATB_3DNOWEXT); break;
+    case(GCIT_SupportsNoExecutionBit):
+        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features3 & FEATF_XDNX) >> FEATB_XDNX); break;
+    case(GCIT_Supports64BitMode):
+        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features3 & FEATF_AMD64) >> FEATB_AMD64); break;
+    case(GCIT_SupportsSSE4A):
+        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features4 & FEATF_SSE4A) >> FEATB_SSE4A); break;
     case(GCIT_SupportsVirtualization):
         switch(info->Vendor)
         {
@@ -190,13 +205,8 @@ D(bug("[processor.x86] :%s()\n", __func__));
             *((BOOL *)tag->ti_Data) = FALSE; break;
         };
         break;
-    case(GCIT_SupportsNoExecutionBit):
-        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features3 & FEATF_XDNX) >> FEATB_XDNX); break;
-    case(GCIT_Supports64BitMode):
-        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features3 & FEATF_AMD64) >> FEATB_AMD64); break;
-    case(GCIT_SupportsMSR):
-        *((BOOL *)tag->ti_Data) = (BOOL)((info->Features1 & FEATF_MSR) >> FEATB_MSR); break;
-    default: 
+
+    default:
         *((BOOL *)tag->ti_Data) = FALSE; break;
     }
 }

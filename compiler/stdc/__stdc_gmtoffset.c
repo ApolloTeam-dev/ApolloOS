@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2018, The AROS Development Team. All rights reserved.
 
     Internal arossstdc function to get current GMT offset
 */
@@ -19,7 +18,7 @@
     NAME */
 #include <time.h>
 
-	int __stdc_gmtoffset (
+        int __stdc_gmtoffset (
 
 /*  SYNOPSIS */
         void)

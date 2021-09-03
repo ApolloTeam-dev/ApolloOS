@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 
     Tell the position in a stream.
 */
@@ -16,20 +15,20 @@
     NAME */
 #include <stdio.h>
 
-	long ftell (
+        long __posixc_ftell (
 
 /*  SYNOPSIS */
-	FILE * stream)
+        FILE * stream)
 
 /*  FUNCTION
-	Tell the current position in a stream.
+        Tell the current position in a stream.
 
     INPUTS
-	stream - Obtain position of this stream
+        stream - Obtain position of this stream
 
     RESULT
-	The position on success and -1 on error.
-	If an error occurred, the global variable errno is set.
+        The position on success and -1 on error.
+        If an error occurred, the global variable errno is set.
 
     NOTES
 
@@ -38,7 +37,7 @@
     BUGS
 
     SEE ALSO
-	fopen(), fseek(), fwrite()
+        __posixc_fopen(), __posixc_fseek(), __posixc_fwrite()
 
     INTERNALS
 
@@ -50,8 +49,8 @@
 
     if (!fdesc)
     {
-	errno = EBADF;
-	return 0;
+        errno = EBADF;
+        return 0;
     }
 
     fh = fdesc->fcb->handle;
@@ -60,7 +59,7 @@
     cnt = Seek (fh, 0, OFFSET_CURRENT);
 
     if (cnt == -1)
-	errno = __stdc_ioerr2errno (IoErr ());
+        errno = __stdc_ioerr2errno (IoErr ());
 
     return cnt;
 } /* ftell */

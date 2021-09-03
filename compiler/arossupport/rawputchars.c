@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Formats a message and makes sure the user will see it.
-    Lang: english
 */
 
 #include <aros/config.h>
@@ -14,21 +12,21 @@
     NAME */
 #include <proto/arossupport.h>
 
-	void RawPutChars (
+        void RawPutChars (
 
 /*  SYNOPSIS */
-	const UBYTE * str,
-	int	      len)
+        const UBYTE * str,
+        int           len)
 
 /*  FUNCTION
-	Emits len bytes of fmt via RawPutChar()
+        Emits len bytes of fmt via RawPutChar()
 
     INPUTS
-	str - string to print
-	len - how many bytes of str to print
+        str - string to print
+        len - how many bytes of str to print
 
     RESULT
-	None.
+        None.
 
     NOTES
 
@@ -45,6 +43,6 @@
 ******************************************************************************/
 {
     while (*str && len --)
-	RawPutChar (*str ++);
+        RawPutChar (*str ++);
 } /* RawPutChars */
 

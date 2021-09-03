@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2003, The AROS Development Team. All rights reserved.
 */
 
 /* procedure.c -- Here are all functions related to user-defined procedures */
@@ -119,7 +118,7 @@ return incarnation;
  */
 void free_proclist()
 {
-int i; 
+int i;
 
     for ( i = 0 ; i < numusrprocs ; i++)
     {

@@ -1,11 +1,11 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 #include <dos/dosextens.h>
+
+#include <string.h>
 
 #include "dos_intern.h"
 

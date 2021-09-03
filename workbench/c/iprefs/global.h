@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 #ifndef GLOBAL_H
@@ -173,7 +171,7 @@
 #define GET_WORD(x) x
 #endif
 
-#define IPREFS_SEM_NAME     "« IPrefs »"
+#define IPREFS_SEM_NAME     "\xAB IPrefs \xBB"
 #define DO_LOCALE_PATCHES   0
 
 struct IPrefsSem

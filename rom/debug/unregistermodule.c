@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2016, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2016, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -10,8 +9,6 @@
 #include <aros/libcall.h>
 #include <exec/lists.h>
 #include <proto/exec.h>
-
-#include <string.h>
 
 #include "debug_intern.h"
 

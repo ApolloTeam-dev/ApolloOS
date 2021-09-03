@@ -1,6 +1,5 @@
 /*
-    Copyright © 2006-2015, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2006-2015, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -10,6 +9,8 @@
 #include <proto/intuition.h>
 #include <proto/graphics.h>
 #include <proto/alib.h>
+
+#include <string.h>
 
 #include "main.h"
 #include "patches.h"
@@ -77,7 +78,7 @@ struct Patches
     struct Library *lib;
     LONG lvo;
     BOOL enabled;
-} patches[PATCH_last] = 
+} patches[PATCH_last] =
 {
     // must be in same order as in enum in patches.h
     {NULL, NULL, LIB_Dos,       0, LVO_CreateDir,      FALSE},

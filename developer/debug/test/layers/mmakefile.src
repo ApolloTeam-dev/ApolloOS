@@ -1,8 +1,0 @@
-include $(SRCDIR)/config/aros.cfg
-
-FILES := CRList DamageList clippingtest layerstest sortlayercr
-
-%build_progs mmake=test-layers \
-    files=$(FILES) targetdir=$(AROS_TESTS)/layers
-
-%common

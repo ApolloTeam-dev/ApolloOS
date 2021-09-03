@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2003, The AROS Development Team. All rights reserved.
 */
 
 #include "mathieeedoubtrans_intern.h"
@@ -49,14 +48,14 @@
     Set_Value64(y2, y);
     AND64QC
     (
-        y2, 
+        y2,
         (IEEEDPMantisse_Mask_Hi + IEEEDPExponent_Mask_Hi),
         (IEEEDPMantisse_Mask_Lo + IEEEDPExponent_Mask_Lo)
     );
     
     if ( is_geqC(y2, 0x40320000, 0x0) )
     {
-        /* 
+        /*
             tanh( x > 18 ) =  1
             tanh( x <-18 ) = -1
         */
@@ -93,7 +92,7 @@
         {
             SetSR
             (
-                  Zero_Bit | Negative_Bit, 
+                  Zero_Bit | Negative_Bit,
                   Zero_Bit | Negative_Bit | Overflow_Bit
             );
         }

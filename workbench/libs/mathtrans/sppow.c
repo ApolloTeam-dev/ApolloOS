@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2003, The AROS Development Team. All rights reserved.
 */
 
 #include "mathtrans_intern.h"
@@ -39,7 +38,7 @@
 {
     AROS_LIBFUNC_INIT
     
-    /* 
+    /*
         a     ^ b     = e^(b     * ln a    )
        fnum2 ^ fnum1 = e^(fnum1 * ln fnum2)
     */

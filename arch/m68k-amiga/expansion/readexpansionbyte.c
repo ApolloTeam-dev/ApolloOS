@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 #include "expansion_intern.h"
 
@@ -18,18 +16,18 @@ AROS_LH2(UBYTE, ReadExpansionByte,
 {
     AROS_LIBFUNC_INIT
 
-	UBYTE v;
-	UWORD loffset;
-	volatile UBYTE *p = (UBYTE*)board;
+        UBYTE v;
+        UWORD loffset;
+        volatile UBYTE *p = (UBYTE*)board;
 
-	offset *= 4;
-	if (((ULONG)board) & 0xff000000)
-		loffset = 0x100;
-	else
-		loffset = 0x002;
-	v = (p[offset + loffset] & 0xf0) >> 4;
-	v |= p[offset] & 0xf0;
-	return v;
+        offset *= 4;
+        if (((ULONG)board) & 0xff000000)
+                loffset = 0x100;
+        else
+                loffset = 0x002;
+        v = (p[offset + loffset] & 0xf0) >> 4;
+        v |= p[offset] & 0xf0;
+        return v;
 
     AROS_LIBFUNC_EXIT
 } /* ReadExpansionByte */

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function scandir().
 */
@@ -33,7 +32,7 @@
                    added. If NULL all entries will be added.
         compar   - Function which will be used by qsort() for sorting of the
                    entries. The function alphasort() can be used for sorting
-                   in alphabetical oder. If NULL sorting order isn't specified.
+                   in alphabetical order. If NULL sorting order isn't specified.
 
     RESULT
         Number of entries
@@ -45,7 +44,7 @@
     BUGS
 
     SEE ALSO
-        alphasort()
+        __posixc_alphasort()
 
     INTERNALS
 

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 #include <aros/libcall.h>
 #include <graphics/clip.h>
@@ -19,14 +17,14 @@
 
     NAME */
 
-	AROS_LH2(void, EndUpdate,
+        AROS_LH2(void, EndUpdate,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct Layer *, l    , A0),
-	AROS_LHA(UWORD         , flag , D0),
+        AROS_LHA(struct Layer *, l    , A0),
+        AROS_LHA(UWORD         , flag , D0),
 
 /*  LOCATION */
-	struct LayersBase *, LayersBase, 14, Layers)
+        struct LayersBase *, LayersBase, 14, Layers)
 
 /*  FUNCTION
         After the damaged areas are updated, this routine should be
@@ -35,7 +33,7 @@
     INPUTS
         l    -  pointer to layer
         flag -  TRUE if the update was complete. The damage list is disposed.
-                FALSE it the update was partial. The damage list is kept. 
+                FALSE it the update was partial. The damage list is kept.
 
     RESULT
 
@@ -63,15 +61,15 @@
   if (NULL != l->ClipRect)
   {
     if (IS_SMARTREFRESH(l))
-      _CopyClipRectsToClipRects(l, 
-                                l->ClipRect, 
+      _CopyClipRectsToClipRects(l,
+                                l->ClipRect,
                                 l->cr2,
                                 0,
-				0,
+                                0,
                                 FALSE,
                                 TRUE,
-				FALSE,
-				LayersBase);
+                                FALSE,
+                                LayersBase);
     else
       _FreeClipRectListBM(l,l->ClipRect, LayersBase);
   }

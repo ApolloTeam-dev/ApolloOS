@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 
     Code to parse the command line options and the module config file for
     the genmodule program
@@ -20,7 +19,7 @@
 const static char bannertemplate[] =
     "/*\n"
     "    *** Automatically generated from '%s'. Edits will be lost. ***\n"
-    "    Copyright \xA9 1995-%4u, The AROS Development Team. All rights reserved.\n"
+    "    Copyright (C) 1995-%4u, The AROS Development Team. All rights reserved.\n"
     "*/\n";
 
 char*
@@ -312,6 +311,7 @@ struct config *initconfig(int argc, char **argv)
         funchead = newfunctionhead(cfg->beginiofunc, REGISTERMACRO);
         funchead->type = strdup("void");
         funchead->lvo = 5;
+        funchead->version = -1;
         funcaddarg(funchead, "struct IORequest *ioreq", "A1");
 
         funchead->next = cfg->funclist;
@@ -321,6 +321,7 @@ struct config *initconfig(int argc, char **argv)
         funchead = newfunctionhead(cfg->abortiofunc, REGISTERMACRO);
         funchead->type = strdup("LONG");
         funchead->lvo = 6;
+        funchead->version = -1;
         funcaddarg(funchead, "struct IORequest *ioreq", "A1");
 
         funchead->next = cfg->funclist->next;
@@ -514,7 +515,7 @@ static char *readsections(struct config *cfg, struct classinfo *cl, struct inter
             };
             const unsigned int nums = sizeof(parts)/sizeof(char *);
             unsigned int partnum;
-            int i, atend = 0;
+            unsigned int i;
 
             s = line+2;
             while (isspace(*s)) s++;

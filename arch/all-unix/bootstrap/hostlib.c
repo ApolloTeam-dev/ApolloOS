@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2019, The AROS Development Team. All rights reserved.
 */
 
 #include <dlfcn.h>
@@ -15,7 +14,7 @@
 static inline void GetErrorStr(char **error)
 {
     if (error)
-	*error = (char *)dlerror();
+        *error = (char *)dlerror();
 }
 
 void *Host_HostLib_Open(const char *filename, char **error)

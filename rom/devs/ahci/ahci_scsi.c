@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, The AROS Development Team.  All rights reserved.
+ * Copyright (C) 2012-2020, The AROS Development Team.  All rights reserved.
  * Author: Jason S. McMullan <jason.mcmullan@gmail.com>
  *
  * Licensed under the AROS PUBLIC LICENSE (APL) Version 1.1
@@ -10,6 +10,8 @@
 #include <devices/trackdisk.h>
 #include <scsi/commands.h>
 #include <scsi/values.h>
+
+#include <string.h>
 
 #include "ahci.h"
 #include "ahci_scsi.h"
@@ -184,7 +186,7 @@ static void ahci_ata_sense(struct ata_xfer *xa,
     if (rfis->error & ATA_D2H_ERROR_AMNF)
         sense_data->flags |= SSD_ILI;
     sense_data->add_sense_code = asc;
-    sense_data->add_sense_qual = asq;
+    sense_data->add_sense_code_qual = asq;
 }
 
 static void ahci_io_complete(struct ata_xfer *xa)
@@ -379,7 +381,7 @@ BOOL ahci_scsi_disk_io(struct IORequest *io, struct SCSICmd *scsi)
             rdata->inquiry_data.response_format = 2;
             rdata->inquiry_data.additional_length = 32;
 
-            /* 
+            /*
              * Use the vendor specific area to set the TRIM status
              */
             if (at->at_identify.support_dsm) {

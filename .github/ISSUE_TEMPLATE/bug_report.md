@@ -2,7 +2,7 @@
 name: Bug report
 about: Create a report to help us improve
 title: ''
-labels: bug
+labels: 'bug'
 assignees: ''
 
 ---
@@ -17,7 +17,7 @@ Steps to reproduce the behavior:
 3. Scroll down to '....'
 4. See error
 
-**Expected behavior**
+**Expected behaviour**
 A clear and concise description of what you expected to happen.
 
 **Screenshots**
@@ -41,7 +41,7 @@ If applicable, add screenshots to help explain your problem.
  - other:
 
 **Version**
-Provide the GID ID from AboutAROS (call menu Wanderer>AROS>About)
+Provide the Git ID from AboutAROS (call menu Wanderer>AROS>About)
 
 **Additional context**
 Add any other context about the problem here.

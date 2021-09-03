@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function DoCollision()
-    Lang: english
 */
 #include <graphics/rastport.h>
 #include <graphics/gels.h>
@@ -24,9 +22,9 @@
         struct GfxBase *, GfxBase, 18, Graphics)
 
 /*  FUNCTION
-	Tests each gel in gel list for boundary and gel-to-gel collisions.
-	If a collision happens the collision handling routine is called.
-	The gel list must be sorted by y,x order.
+        Tests each gel in gel list for boundary and gel-to-gel collisions.
+        If a collision happens the collision handling routine is called.
+        The gel list must be sorted by y,x order.
 
     INPUTS
         rp - pointer to RastPort
@@ -92,7 +90,7 @@
             int dy = _CurVSprite->Y - CurVSprite->Y;
             UWORD *  collmask =  CurVSprite->CollMask;
             UWORD * _collmask = _CurVSprite->CollMask;
-            unsigned short  wordsperline; 
+            unsigned short  wordsperline;
             unsigned short _wordsperline;
             int i = 0, _i = 0;
             int offset    , _offset = 0;
@@ -132,13 +130,13 @@
             if (offset < 0)
             {
               _offset = (-offset) >> 4;
-              _scroll = (-offset) & 0xf;              
+              _scroll = (-offset) & 0xf;
               offset = 0;
             }
             else
             {
               /*
-               * _CurVSprite is further to the right than 
+               * _CurVSprite is further to the right than
                * CurVSprite.
                */
               _scroll = -(offset & 0xf);
@@ -171,7 +169,7 @@
                   {
                     collision = TRUE;
                     break;
-                  }  
+                  }
                   _curindex++;
                 }
                 else
@@ -200,7 +198,7 @@
                   {
                     collision = TRUE;
                     break;
-                  }  
+                  }
                   curindex++;
                 }
               }

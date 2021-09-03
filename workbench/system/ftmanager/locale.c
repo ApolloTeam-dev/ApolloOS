@@ -1,6 +1,5 @@
 /*
     Copyright (C) 1995-2016, The AROS Development Team. All rights reserved.
-    $Id$
 */
 
 #include <aros/symbolsets.h>
@@ -11,7 +10,7 @@
 #include "strings.h"
 
 #define CATALOG_NAME     "System/System/FTManager.catalog"
-#define CATALOG_VERSION  1
+#include "catalogs/catalog_version.h"
 
 /*** Variables **************************************************************/
 static struct Catalog *catalog;
@@ -24,8 +23,8 @@ CONST_STRPTR _(ULONG id)
     if (LocaleBase != NULL && catalog != NULL)
     {
         return GetCatalogStr(catalog, id, CatCompArray[id].cca_Str);
-    } 
-    else 
+    }
+    else
     {
         return CatCompArray[id].cca_Str;
     }
@@ -37,8 +36,8 @@ BOOL Locale_Initialize(VOID)
     if (LocaleBase != NULL)
     {
         catalog = OpenCatalog
-        ( 
-            NULL, CATALOG_NAME, OC_Version, CATALOG_VERSION, TAG_DONE 
+        (
+            NULL, CATALOG_NAME, OC_Version, CATALOG_VERSION, TAG_DONE
         );
     }
     else

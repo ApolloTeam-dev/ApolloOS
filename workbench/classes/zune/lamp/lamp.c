@@ -1,6 +1,5 @@
 /*
-    Copyright © 2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2011, The AROS Development Team. All rights reserved.
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
@@ -96,7 +95,7 @@ Object *Lamp__OM_NEW(struct IClass *cl, Object *obj, struct opSet *msg)
             case MUIA_Lamp_Red:
                 data->lmp_Color[0] = tag->ti_Data;
                 data->lmp_ColorType = MUIV_Lamp_ColorType_Color;
-                break; 
+                break;
 
             case MUIA_Lamp_Green:
                 data->lmp_Color[1] = tag->ti_Data;
@@ -160,7 +159,7 @@ IPTR Lamp__OM_SET(struct IClass *cl, Object *obj, struct opSet *msg)
                 data->lmp_ColorType = MUIV_Lamp_ColorType_Color;
                 data->lmp_PenChanged = PCH_NEWPEN;
                 MUI_Redraw(obj, MADF_DRAWUPDATE);
-                break; 
+                break;
 
             case MUIA_Lamp_Green:
                 data->lmp_Color[1] = tag->ti_Data;

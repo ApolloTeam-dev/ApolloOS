@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 */
 
 #include "workbench_intern.h"
@@ -26,12 +25,12 @@
         with the library. When it is done, messages will no longer be sent.
 
     INPUTS
-        msgport - The message port of that was earlier passed in to 
+        msgport - The message port of that was earlier passed in to
                   RegisterWorkbench().
 
     RESULT
         TRUE if the message port was successfully unregistered, FALSE otherwise.
-        The unregistration will fail if the message port isn't the same that 
+        The unregistration will fail if the message port isn't the same that
         was passed in with RegisterWorkbench() earlier or if the passed
         in pointer is NULL.
 

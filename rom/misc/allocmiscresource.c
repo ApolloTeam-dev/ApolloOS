@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: AllocMiscResource() function.
-    Lang: English
 */
 #include "misc_intern.h"
 #include <proto/exec.h>
@@ -13,14 +11,14 @@
 
     NAME */
 
-	AROS_LH2(char *, AllocMiscResource,
+        AROS_LH2(char *, AllocMiscResource,
 
 /*  SYNOPSIS */
-		 AROS_LHA(ULONG,  unitNum, D0),
-		 AROS_LHA(char *, name,    A0),
+                 AROS_LHA(ULONG,  unitNum, D0),
+                 AROS_LHA(char *, name,    A0),
 
 /*  LOCATION */
-		 APTR, MiscBase, 1, Misc)
+                 APTR, MiscBase, 1, Misc)
 
 /*  FUNCTION
 
@@ -49,7 +47,7 @@
     INTERNALS
 
     The misc.resource should probably just redirect commands to a HIDD
-    in the future, to support things like multiple serial ports. 
+    in the future, to support things like multiple serial ports.
 
     HISTORY
 
@@ -61,15 +59,15 @@
     char *retval;
 
     if(unitNum >= MR_MAXUNIT)
-	return errorStr;
+        return errorStr;
 
     ObtainSemaphore(&GPB(MiscBase)->mb_Lock);
 
     retval = GPB(MiscBase)->mb_owners[unitNum];
     
     if(retval == NULL)
-	GPB(MiscBase)->mb_owners[unitNum] = name;
-	
+        GPB(MiscBase)->mb_owners[unitNum] = name;
+        
     ReleaseSemaphore(&GPB(MiscBase)->mb_Lock);
     
     return retval;

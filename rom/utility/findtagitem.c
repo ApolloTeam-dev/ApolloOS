@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 
 #include <exec/types.h>
@@ -16,14 +14,14 @@
     NAME */
 #include <proto/utility.h>
 
-	AROS_LH2I(struct TagItem *, FindTagItem,
+        AROS_LH2I(struct TagItem *, FindTagItem,
 
 /*  SYNOPSIS */
-	AROS_LHA(Tag,                    tagValue, D0),
-	AROS_LHA(const struct TagItem *, tagList,  A0),
+        AROS_LHA(Tag,                    tagValue, D0),
+        AROS_LHA(const struct TagItem *, tagList,  A0),
 
 /*  LOCATION */
-	struct UtilityBase *, UtilityBase, 5, Utility)
+        struct UtilityBase *, UtilityBase, 5, Utility)
 
 /*  FUNCTION
 

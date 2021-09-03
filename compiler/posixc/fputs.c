@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 
     C99 function fputs().
 */
@@ -15,21 +14,21 @@
     NAME */
 #include <stdio.h>
 
-	int fputs (
+        int __posixc_fputs (
 
 /*  SYNOPSIS */
-	const char * str,
-	FILE	   * stream)
+        const char * str,
+        FILE       * stream)
 
 /*  FUNCTION
-	Write a string to the specified stream.
+        Write a string to the specified stream.
 
     INPUTS
-	str - Output this string...
-	fh - ...to this stream
+        str - Output this string...
+        fh - ...to this stream
 
     RESULT
-	> 0 on success and EOF on error.
+        > 0 on success and EOF on error.
 
     NOTES
 
@@ -38,7 +37,7 @@
     BUGS
 
     SEE ALSO
-	puts(), fputc(), putc()
+        __posixc_puts(), __posixc_fputc(), putc()
 
     INTERNALS
 
@@ -48,16 +47,16 @@
 
     if (!fdesc)
     {
-    	errno = EBADF;
-	return EOF;
+        errno = EBADF;
+        return EOF;
     }
 
     if (!str) str = "(null)";
 
     if (FPuts(fdesc->fcb->handle, str) == -1)
     {
-	errno = __stdc_ioerr2errno(IoErr());
-	return EOF;
+        errno = __stdc_ioerr2errno(IoErr());
+        return EOF;
     }
 
     return 0;

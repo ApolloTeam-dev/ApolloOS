@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 
     Desc: Free arguments structure from ReadArgs()
-    Lang: english
 */
 #include <proto/exec.h>
 #include <dos/rdargs.h>
@@ -24,7 +22,7 @@
 
 /*  FUNCTION
         FreeArgs() will clean up after a call to ReadArgs(). If the
-        RDArgs structure was allocated by the system in a call to 
+        RDArgs structure was allocated by the system in a call to
         ReadArgs(), then it will be freed. If however, you allocated
         the RDArgs structure with AllocDosObject(), then you will
         have to free it yourself with FreeDosObject().

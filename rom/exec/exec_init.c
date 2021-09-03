@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc: exec.library resident and initialization.
-    Lang: english
 */
 
 #define DEBUG 0
@@ -236,7 +234,7 @@ AROS_UFH3S(struct ExecBase *, GM_UNIQUENAME(init),
         struct Interrupt *is;
 
         if (i != INTB_SOFTINT)
-        {       
+        {
             struct SoftIntList *sil;
 
             is = AllocMem(sizeof(struct Interrupt) + sizeof(struct SoftIntList), MEMF_CLEAR|MEMF_PUBLIC);

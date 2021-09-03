@@ -1,8 +1,8 @@
 /*
  * fat-handler - FAT12/16/32 filesystem handler
  *
- * Copyright © 2007-2020 The AROS Development Team
- * Copyright © 2006 Marek Szyprowski
+ * Copyright (C) 2007-2020 The AROS Development Team
+ * Copyright (C) 2006 Marek Szyprowski
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the same terms as AROS itself.
@@ -17,6 +17,8 @@
 #include <exec/types.h>
 #include <dos/dos.h>
 #include <dos/notify.h>
+
+#include <string.h>
 
 #include "fat_fs.h"
 #include "fat_protos.h"

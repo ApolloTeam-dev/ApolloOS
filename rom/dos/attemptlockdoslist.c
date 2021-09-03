@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2010, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2010, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 #include <aros/debug.h>
 #include <proto/exec.h>
@@ -91,7 +89,7 @@
     }
 
 /* This came from MorphOS source code, however looks strange.
-   Commented out but left for reference.    
+   Commented out but left for reference.
     if (dl)
         Forbid(); */
     if (!dl) {

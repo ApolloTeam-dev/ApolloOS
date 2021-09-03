@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2003, The AROS Development Team. All rights reserved.
 */
 
 #include "mathtrans_intern.h"
@@ -69,10 +68,10 @@
     tmp |= FFPSign_Mask; /* tmp = -tmp; */
     yabs = SPAdd(yabs, tmp);
     
-    if 
-    ( 
-            (char)yabs > (char)pio2  
-        &&  (yabs & FFPMantisse_Mask) > (pio2 & FFPMantisse_Mask) 
+    if
+    (
+            (char)yabs > (char)pio2
+        &&  (yabs & FFPMantisse_Mask) > (pio2 & FFPMantisse_Mask)
     )
     {
         yabs |= FFPSign_Mask;

@@ -1,4 +1,4 @@
-# Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+# Copyright © 1995-2021, The AROS Development Team. All rights reserved.
 # $Id$
 #
 # Static makefile rule file for AROS.
@@ -117,6 +117,7 @@ AROS_S                        := $(AROSDIR)/$(AROS_DIR_S)
 AROS_STORAGE                  := $(AROSDIR)/$(AROS_DIR_STORAGE)
 AROS_SYSTEM                   := $(AROSDIR)/$(AROS_DIR_SYSTEM)
 AROS_WANDERER                 := $(AROS_SYSTEM)/Wanderer
+AROS_WALLPAPERS               := $(AROS_PREFS)/Presets/Wallpapers
 AROS_THEMES                   := $(AROS_PREFS)/Presets/Themes
 AROS_IMAGES                   := $(AROS_SYSTEM)/Images
 AROS_TOOLS                    := $(AROSDIR)/$(AROS_DIR_TOOLS)
@@ -139,6 +140,9 @@ AROS_INCLUDES                 := $(AROS_DEVELOPER)/$(AROS_DIR_INCLUDE)
 AROS_ARCH_LIB                 = $(AROS_ARCH_SDK)/$(AROS_DIR_LIB)
 AROS_LIB                      := $(AROS_DEVELOPER)/$(AROS_DIR_LIB)
 #AROS_LIB                     := $(AROS_SDK)/$(AROS_DIR_LIB)
+
+#DBGDIR                         := $(AROS_DEBUG)/dbg
+DBGDIR                         := $(AROSDIR)
 
 AROS_CONTRIB_DEVELOPER        := $(AROS_CONTRIB)/$(AROS_DIR_DEVELOPER)
 AROS_CONTRIB_SDK              := $(AROS_SDK)/$(AROS_DIR_CONTRIB)
@@ -174,7 +178,7 @@ INFOINFO                      := $(TOOLDIR)/infoinfo$(HOST_EXE_SUFFIX)
 GENSETS                       := $(TOOLDIR)/gensets$(HOST_EXE_SUFFIX)
 COLLECT-AROS                  := $(TOOLDIR)/collect-aros$(HOST_EXE_SUFFIX)
 GENMODULE                     := $(TOOLDIR)/genmodule$(HOST_EXE_SUFFIX)
-MKKEYMAP                     := $(TOOLDIR)/mkkeymap$(HOST_EXE_SUFFIX)
+MKAMIKEYMAP                   := $(TOOLDIR)/mkamikeymap$(HOST_EXE_SUFFIX)
 SETREV                        := $(TOOLDIR)/setrev$(HOST_EXE_SUFFIX)
 @make_extra_commands@
 RESIDENT_BEGIN                := compiler/libinit/libentry
@@ -244,11 +248,11 @@ else
 endif
 
 # compiler and assembler flags are set depending upon the directory
-CFLAGS                        = $(TARGET_ISA_CFLAGS) $(TARGET_CFLAGS)
-CXXFLAGS                      = $(TARGET_ISA_CXXFLAGS) $(TARGET_CXXFLAGS)
-CPPFLAGS                      = $(TARGET_CPPFLAGS)
-AFLAGS                        = $(TARGET_ISA_AFLAGS) $(USER_AFLAGS) $(CONFIG_AFLAGS)
-LDFLAGS                       = $(USER_LDFLAGS) $(TARGET_LDFLAGS)
+CFLAGS                        = $(strip $(TARGET_ISA_CFLAGS) $(TARGET_CFLAGS))
+CXXFLAGS                      = $(strip $(TARGET_ISA_CXXFLAGS) $(TARGET_CXXFLAGS))
+CPPFLAGS                      = $(strip $(TARGET_CPPFLAGS))
+AFLAGS                        = $(strip $(TARGET_ISA_AFLAGS) $(USER_AFLAGS) $(CONFIG_AFLAGS))
+LDFLAGS                       = $(strip $(USER_LDFLAGS) $(TARGET_LDFLAGS))
 
 # Target arch/CPU-specific options that we can't set in 'configure'
 # (these could be added to CFLAGS instead of using a new variable, except
@@ -276,12 +280,16 @@ LIBDIR                        := $(AROS_LIB)
 OSGENDIR                      := $(GENDIR)/rom
 KOBJSDIR                      := $(GENDIR)/kobjs
 
-# the build system needs to have some tools in the PATH
-
+# 
+# Add necessary directories to the system PATH, so that the build system can
+# find the toolchain and related build tools.
+# NB: wrappers are generally stored under $(TOOLDIR), with native build tools
+# under $(CROSSTOOLSDIR), so make sure they are in the correct order
 ifeq ($(AROS_PATH_SET),)
-    TMP_TOOLDIR               := $(shell echo $(TOOLDIR) | sed 's/^\(.\):\//\/\1\//')
-    TMP_CROSSTOOLSDIR         := $(shell echo $(CROSSTOOLSDIR) | sed 's/^\(.\):\//\/\1\//')
-    PATH                      := $(TMP_CROSSTOOLSDIR):$(TMP_TOOLDIR):$(TMP_TOOLDIR)/$(AROS_TARGET_CPU)-$(AROS_TARGET_ARCH)$(AROS_TARGET_SUFFIX):$(PATH)
+    AROS_BUILD_TOOLDIR        := $(shell echo $(TOOLDIR) | sed 's/^\(.\):\//\/\1\//')
+    AROS_BUILD_CROSSTOOLSDIR  := $(shell echo $(CROSSTOOLSDIR) | sed 's/^\(.\):\//\/\1\//')
+    AROS_BUILD_ARCHTOOLDIR    := $(AROS_BUILD_TOOLDIR)/$(AROS_TARGET_CPU)-$(AROS_TARGET_ARCH)$(AROS_TARGET_SUFFIX)
+    PATH                      := $(AROS_BUILD_TOOLDIR):$(AROS_BUILD_CROSSTOOLSDIR):$(AROS_BUILD_ARCHTOOLDIR):$(PATH)
     AROS_PATH_SET             := yes
     export PATH AROS_PATH_SET
 endif

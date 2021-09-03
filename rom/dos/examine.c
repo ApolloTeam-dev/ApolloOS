@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc: dos.library function Examine().
-    Lang: English
 */
 
 #include <aros/debug.h>
@@ -26,7 +24,7 @@
         struct DosLibrary *, DOSBase, 17, Dos)
 
 /*  FUNCTION
-        Fill in a FileInfoBlock structure concerning a file or directory 
+        Fill in a FileInfoBlock structure concerning a file or directory
         associated with a particular lock.
 
     INPUTS

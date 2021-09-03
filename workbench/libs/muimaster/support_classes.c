@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2020, The AROS Development Team. All rights reserved.
 */
 
 #include <string.h>
@@ -103,7 +102,7 @@ Class *ZUNE_GetExternalClass(ClassID classname,
 
         if ((mcclib = OpenLibrary(s, 0)))
         {
-            D(bug("Calling MCC Query. Librarybase at 0x%lx\n", mcclib));
+            D(bug("Calling MCC Query. Librarybase at 0x%p\n", mcclib));
 
             mcc = MCC_Query(0);
             if (!mcc)

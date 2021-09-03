@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2018, The AROS Development Team. All rights reserved.
     Command line options:
 
     1. PUBSCREEN <name>: the name of the public screen to open the window on
@@ -25,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-const char *version = "$VER: Calculator 1.5 (31.05.2018) © AROS Dev Team";
+const char *version = "$VER: Calculator 1.5 (31.05.2018) \xA9 1995-2018 The AROS Dev Team";
 
 #define ARG_TEMPLATE "PUBSCREEN,TAPE/K"
 enum {ARG_PUBSCREEN,ARG_TAPE,NUM_ARGS};
@@ -54,7 +53,7 @@ enum
     BTYPE_SUB,
     BTYPE_ADD,
     BTYPE_SIGN,
-    BTYPE_EQU    
+    BTYPE_EQU
 };
 
 #define NUM_BUTTONS 20
@@ -503,7 +502,7 @@ IPTR mAddCalcKey(struct IClass *cl, Object *obj, struct MUIMP_CalcKey *msg)
              (data->state == STATE_LEFTVAL || data->state == STATE_RIGHTVAL))
     {
         clear_edit_buffer(data);
-        display_state(data);      
+        display_state(data);
 
     }
     else if (msg->btype == BTYPE_SIGN && data->state != STATE_OP)
@@ -568,13 +567,13 @@ static void dos_error(void)
 
 static char retrieve_decimal_point(void)
 {
-    struct Locale *loc;    
+    struct Locale *loc;
     char result = '.';
 
     if ((loc = OpenLocale(0)))
     {
-    	  result = loc->loc_DecimalPoint[0];
-    	  CloseLocale(loc);
+          result = loc->loc_DecimalPoint[0];
+          CloseLocale(loc);
     }
     return result;
 }

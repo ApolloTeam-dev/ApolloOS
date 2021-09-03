@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2019, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -11,13 +10,13 @@
 /*****************************************************************************
 
     NAME */
-	AROS_LH0(ULONG, secLogout,
+        AROS_LH0(ULONG, secLogout,
 
 /*  SYNOPSIS */
-	/* void */
+        /* void */
 
 /*  LOCATION */
-	struct SecurityBase *, secBase, 5, Security)
+        struct SecurityBase *, secBase, 5, Security)
 
 /*  FUNCTION
 

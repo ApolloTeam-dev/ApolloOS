@@ -1,6 +1,5 @@
 /*
-    Copyright © 2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2017, The AROS Development Team. All rights reserved.
 */
 
 #include <sys/types.h>
@@ -17,13 +16,13 @@
     NAME */
 #include <unistd.h>
 
-	pid_t setsid(
+        pid_t setsid(
 
 /*  SYNOPSIS */
-	void)
+        void)
 
 /*  FUNCTION
-	Returns the process group ID for the new session.
+        Returns the process group ID for the new session.
 
     INPUTS
 

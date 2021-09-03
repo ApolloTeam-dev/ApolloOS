@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 
 #include <aros/libcall.h>
@@ -22,14 +20,14 @@
     NAME */
 #include <proto/layers.h>
 
-	AROS_LH2(LONG, DeleteLayer,
+        AROS_LH2(LONG, DeleteLayer,
 
 /*  SYNOPSIS */
-	AROS_LHA(LONG          , dummy, A0),
-	AROS_LHA(struct Layer *, l    , A1),
+        AROS_LHA(LONG          , dummy, A0),
+        AROS_LHA(struct Layer *, l    , A1),
 
 /*  LOCATION */
-	struct LayersBase *, LayersBase, 15, Layers)
+        struct LayersBase *, LayersBase, 15, Layers)
 
 /*  FUNCTION
         Deletes the layer. Other layers that were hidden (partially)
@@ -43,9 +41,9 @@
 
     RESULT
         TRUE  - layer was successfully deleted
-        FALSE - layer could not be delete (out of memory) 
+        FALSE - layer could not be delete (out of memory)
 
-    NOTES  
+    NOTES
 
     EXAMPLE
 
@@ -56,8 +54,8 @@
     INTERNALS
 
     HISTORY
-	27-11-96    digulla automatically created from
-			    layers_lib.fd and clib/layers_protos.h
+        27-11-96    digulla automatically created from
+                            layers_lib.fd and clib/layers_protos.h
 
 *****************************************************************************/
 {
@@ -77,7 +75,7 @@
   }
     
   if (IS_VISIBLE(l))
-  { 
+  {
     struct Region r;
     InitRegion(&r);
 
@@ -111,7 +109,7 @@
           lparent = lparent->parent;
       }
       /*
-       * The part that this layer is hiding I cannot make 
+       * The part that this layer is hiding I cannot make
        * visible on the layers behind it. Therefore I
        * have to take it out.
        */
@@ -125,7 +123,7 @@
 
     if (!IS_EMPTYREGION(l->shape))
     {
-	D(bug("[Layers] DeleteLayer: lparent: %p, l->parent: %p\n",lparent,l->parent));
+        D(bug("[Layers] DeleteLayer: lparent: %p, l->parent: %p\n",lparent,l->parent));
       if (lparent && IS_ROOTLAYER(lparent))
         _BackFillRegion(lparent, l->shape, FALSE, LayersBase);
     }

@@ -1,8 +1,7 @@
 /*
-    Copyright © 2010, The AROS Development Team. 
+    Copyright (C) 2010, The AROS Development Team.
     All rights reserved.
     
-    $Id$
 */
 
 #include <utility/tagitem.h>
@@ -15,14 +14,14 @@
 #include <proto/popupmenu.h>
 extern struct PopupMenuBase * PopupMenuBase;
 
-	APTR PM_FilterIMsg(
+        APTR PM_FilterIMsg(
 
 /*  SYNOPSIS */
-	struct Window *w,
-	struct PopupMenu *pm,
-	struct IntuiMessage *im,
-	Tag tag1, 
-	...)
+        struct Window *w,
+        struct PopupMenu *pm,
+        struct IntuiMessage *im,
+        Tag tag1,
+        ...)
 
 /*  FUNCTION
 

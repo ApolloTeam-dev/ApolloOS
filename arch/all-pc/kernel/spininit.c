@@ -1,6 +1,5 @@
 /*
-    Copyright © 2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2017, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/types/spinlock_s.h>
@@ -15,8 +14,8 @@
 #define D(x)
 
 AROS_LH1(void, KrnSpinInit,
-	AROS_LHA(spinlock_t *, lock, A0),
-	struct KernelBase *, KernelBase, 49, Kernel)
+        AROS_LHA(spinlock_t *, lock, A0),
+        struct KernelBase *, KernelBase, 49, Kernel)
 {
     AROS_LIBFUNC_INIT
 

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2003, The AROS Development Team. All rights reserved.
 */
 
 /* variables.c -- Here are all functions related to variables */
@@ -257,7 +256,7 @@ int i;
  */
 void free_varlist()
 {
-int i; 
+int i;
 
     for ( i = 0 ; i < numvariables ; i++ )
     {

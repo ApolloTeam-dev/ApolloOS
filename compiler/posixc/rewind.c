@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 
     Change the position in a stream.
 */
@@ -10,16 +9,16 @@
     NAME */
 #include <stdio.h>
 
-	void rewind (
+        void __posixc_rewind (
 
 /*  SYNOPSIS */
-	FILE * stream)
+        FILE * stream)
 
 /*  FUNCTION
-	Change the current position in a stream to the beginning.
+        Change the current position in a stream to the beginning.
 
     INPUTS
-	stream - Modify this stream
+        stream - Modify this stream
 
     RESULT
 
@@ -30,7 +29,7 @@
     BUGS
 
     SEE ALSO
-	fopen(), fwrite(), fseek()
+        __posixc_fopen(), __posixc_fwrite(), __posixc_fseek()
 
     INTERNALS
 

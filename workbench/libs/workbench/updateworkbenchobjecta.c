@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Inform the file manager that an object has changed.
 */
@@ -40,7 +39,7 @@
 
 /*  FUNCTION
         Informs the workbench application that an object has changed, and that
-        it should update it's visual representation. 
+        it should update it's visual representation.
 
     INPUTS
         name - Name of object that has changed.
@@ -83,7 +82,7 @@
             wbhm->wbhm_Data.Update.Type   = type;
             wbcm->wbcm_Data.Relay.Message = wbhm;
             
-            PutMsg(&WorkbenchBase->wb_HandlerPort, (struct Message *) wbcm);            
+            PutMsg(&WorkbenchBase->wb_HandlerPort, (struct Message *) wbcm);
             
             success = TRUE;
         }

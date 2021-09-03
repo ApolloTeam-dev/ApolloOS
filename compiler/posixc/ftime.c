@@ -1,6 +1,5 @@
 /*
-    Copyright © 2004-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004-2013, The AROS Development Team. All rights reserved.
 
     POSIX.1-2001 function ftime().
     Function is deprecated and removed from POSIX.1-2008
@@ -12,10 +11,10 @@
     NAME */
 #include <sys/timeb.h>
 
-	int ftime(
+        int ftime(
 
 /*  SYNOPSIS */
-	struct timeb *tb)
+        struct timeb *tb)
 
 /*  FUNCTION
         Get info on current time and timezone.

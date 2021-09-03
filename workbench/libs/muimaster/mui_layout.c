@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2020, The AROS Development Team. All rights reserved.
 */
 
 #include <intuition/classusr.h>
@@ -74,7 +73,7 @@
     _width(obj) = width;
     _height(obj) = height;
 
-    D(bug("muimaster.library/mui_layout.c: 0x%lx %ldx%ldx%ldx%ld\n",obj,_left(obj),_top(obj),_right(obj),_bottom(obj)));
+    D(bug("muimaster.library/mui_layout.c: 0x%p %ldx%ldx%ldx%ld\n",obj,_left(obj),_top(obj),_right(obj),_bottom(obj)));
 
     DoMethodA(obj, (Msg)&method);
     return TRUE;

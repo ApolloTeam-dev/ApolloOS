@@ -1,9 +1,7 @@
 /*
-    Copyright � 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function SetChipRev()
-    Lang: english
 */
 #include <aros/debug.h>
 #include <graphics/gfxbase.h>
@@ -38,7 +36,7 @@ AROS_LH1(ULONG, SetChipRev,
         Enable();
         if (deniseid1 == deniseid2 && deniseid2 == deniseid3 && deniseid1 == 0xfc)
             chipflags |= GFXF_HR_DENISE;
-   	}
+        }
 
     if (ChipRev != SETCHIPREV_BEST) {
         if (ChipRev == SETCHIPREV_A && chipflags >= SETCHIPREV_A)
@@ -48,7 +46,7 @@ AROS_LH1(ULONG, SetChipRev,
         else if (ChipRev == SETCHIPREV_AA && chipflags >= SETCHIPREV_AA)
             chipflags = SETCHIPREV_AA;
     }
-    GfxBase->ChipRevBits0 = chipflags; //chipflags;
+    GfxBase->ChipRevBits0 = chipflags;
 
     return GfxBase->ChipRevBits0;
 

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc: Read the current vertical position of the beam
-    Lang: english
 */
 #include <aros/debug.h>
 #include "graphics_intern.h"
@@ -21,10 +19,10 @@ AROS_LH0(LONG, VBeamPos,
     UWORD v1, v2;
     
     for (;;) {
-	v1 = custom->vhposr >> 8;
-	v2 = custom->vposr;
-	if (v1 == (custom->vhposr >> 8))
-	    break;
+        v1 = custom->vhposr >> 8;
+        v2 = custom->vposr;
+        if (v1 == (custom->vhposr >> 8))
+            break;
     }
 
     return v1 | ((v2 & 7) << 8);

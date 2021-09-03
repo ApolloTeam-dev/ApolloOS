@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2006, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2006, The AROS Development Team. All rights reserved.
 
     Desc: Return the type of a RexxMsg
-    Lang: English
 */
 
 #include <proto/exec.h>
@@ -24,28 +22,28 @@ LONG rxsupp_typepkt(struct Library *RexxSupportBase, struct RexxMsg *msg, UBYTE 
     
     if ((msg->rm_Action & RXARGMASK) == 1)
     {
-	*argstring = CreateArgstring((UBYTE *)&msg2->rm_Action, sizeof(msg2->rm_Action));
+        *argstring = CreateArgstring((UBYTE *)&msg2->rm_Action, sizeof(msg2->rm_Action));
     }
     else /* 2 Args */
     {
-	char c;
-	
-	switch (toupper(*(char *)ARG2(msg)))
-	{
-	case 'A':
-	    c = '0' + (char)(msg2->rm_Action & RXARGMASK);
-	    break;
-	    
-	case 'C':
-	    c = ((msg2->rm_Action & RXCODEMASK) == RXCOMM) ? '1' : '0';
-	    break;
-	    
-	case 'F':
-	    c = ((msg2->rm_Action & RXCODEMASK) == RXFUNC) ? '1' : '0';
-	    break;
-	}
-	
-	*argstring = CreateArgstring(&c, 1);
+        char c;
+        
+        switch (toupper(*(char *)ARG2(msg)))
+        {
+        case 'A':
+            c = '0' + (char)(msg2->rm_Action & RXARGMASK);
+            break;
+            
+        case 'C':
+            c = ((msg2->rm_Action & RXCODEMASK) == RXCOMM) ? '1' : '0';
+            break;
+            
+        case 'F':
+            c = ((msg2->rm_Action & RXCODEMASK) == RXFUNC) ? '1' : '0';
+            break;
+        }
+        
+        *argstring = CreateArgstring(&c, 1);
     }
     
     return RC_OK;

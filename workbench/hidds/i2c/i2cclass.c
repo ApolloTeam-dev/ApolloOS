@@ -1,6 +1,5 @@
 /*
-    Copyright © 2004-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004-2017, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/types.h>
@@ -23,6 +22,8 @@
 #define DEBUG 0
 #include <aros/debug.h>
 #include <aros/atomic.h>
+
+#include <string.h>
 
 /*
     There are no static AttrBases in this class. Therefore it might be placed

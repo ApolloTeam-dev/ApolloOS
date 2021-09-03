@@ -1,6 +1,5 @@
 /*
-    Copyright © 2015, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2015-2020, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -19,10 +18,10 @@
         AROS_LH1(void, KrnSpinInit,
 
 /*  SYNOPSIS */
-	AROS_LHA(spinlock_t *, lock, A0),
+        AROS_LHA(spinlock_t *, lock, A0),
 
 /*  LOCATION */
-	struct KernelBase *, KernelBase, 49, Kernel)
+        struct KernelBase *, KernelBase, 49, Kernel)
 
 /*  FUNCTION
 

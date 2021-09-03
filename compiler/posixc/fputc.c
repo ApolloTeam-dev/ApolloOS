@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 
     C99 function fputc().
 */
@@ -18,21 +17,21 @@
     NAME */
 #include <stdio.h>
 
-	int fputc (
+        int __posixc_fputc (
 
 /*  SYNOPSIS */
-	int    c,
-	FILE * stream)
+        int    c,
+        FILE * stream)
 
 /*  FUNCTION
-	Write one character to the specified stream.
+        Write one character to the specified stream.
 
     INPUTS
-	c - The character to output
-	stream - The character is written to this stream
+        c - The character to output
+        stream - The character is written to this stream
 
     RESULT
-	The character written or EOF on error.
+        The character written or EOF on error.
 
     NOTES
 
@@ -50,14 +49,14 @@
 
     if (!fdesc)
     {
-    	errno = EBADF;
-	return EOF;
+        errno = EBADF;
+        return EOF;
     }
 
     if (FPutC(fdesc->fcb->handle, c) == EOF)
     {
-	errno = __stdc_ioerr2errno(IoErr());
-	c = EOF;
+        errno = __stdc_ioerr2errno(IoErr());
+        c = EOF;
     }
 
     return c;

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/types.h>
@@ -24,11 +23,11 @@
         struct IconBase *, IconBase, 29, Icon)
 
 /*  FUNCTION
-	Creates an empty DiskObject structure.
+        Creates an empty DiskObject structure.
 
     INPUTS
-	type - WBDISK, WBDRAWER, WBTOOL, WBPROJECT,
-	       WBGARBAGE, WBDEVICE or WBKICK
+        type - WBDISK, WBDRAWER, WBTOOL, WBPROJECT,
+               WBGARBAGE, WBDEVICE or WBKICK
 
     RESULT
 

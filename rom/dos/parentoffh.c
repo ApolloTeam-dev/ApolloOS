@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc: Lock the directory a file is located in
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -41,12 +39,12 @@
     BUGS
 
     SEE ALSO
-        Lock(), UnLock(), ParentDir() 
+        Lock(), UnLock(), ParentDir()
 
     INTERNALS
 
 *****************************************************************************/
-{  
+{
     AROS_LIBFUNC_INIT
 
     struct FileHandle *handle = BADDR(fh);

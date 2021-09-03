@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc: Find a local variable.
-    Lang: English
 */
 
 #include <aros/debug.h>
@@ -98,7 +96,7 @@
         var = (struct LocalVar *)pr->pr_LocalVars.mlh_Head;
         
         ForeachNode(&pr->pr_LocalVars, var)
-        { 
+        {
             LONG res;
             
             if (var->lv_Node.ln_Type == type)

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     ROMTag scanner.
 */
@@ -29,14 +28,14 @@ static LONG findname(struct Resident **list, ULONG len, CONST_STRPTR name)
     
     for (i = 0; i < len; i++)
     {
-    	if (!strcmp(name, list[i]->rt_Name))
-    	    return i;
+        if (!strcmp(name, list[i]->rt_Name))
+            return i;
     }
 
     return -1;
 }
 
-/* 
+/*
  * Allocate memory space for boot-time usage. Returns address and size of the usable area.
  * It's strongly adviced to return enough space to store resident list of sane length.
  */
@@ -122,12 +121,12 @@ static void krnReleaseSysMem(struct MemHeader *mh, APTR addr, IPTR chunkSize, IP
 
 APTR krnRomTagScanner(struct MemHeader *mh, UWORD *ranges[])
 {
-    UWORD	    *end;
-    UWORD	    *ptr;		/* Start looking here */
+    UWORD           *end;
+    UWORD           *ptr;               /* Start looking here */
     struct Resident *res;               /* module found */
-    ULONG	    i;
-    BOOL	    sorted;
-    /* 
+    ULONG           i;
+    BOOL            sorted;
+    /*
      * We don't know resident list size until it's created. Because of this, we use two-step memory allocation
      * for this purpose.
      * First we dequeue some space from the MemHeader, and remember its starting address and size. Then we
@@ -139,78 +138,78 @@ APTR krnRomTagScanner(struct MemHeader *mh, UWORD *ranges[])
     ULONG num = 0;
 
     if (!RomTag)
-    	return NULL;
+        return NULL;
 
     /* Look in whole kickstart for resident modules */
     while (*ranges != (UWORD *)~0)
     {
-	ptr = *ranges++;
-	end = *ranges++;
+        ptr = *ranges++;
+        end = *ranges++;
 
         /* Make sure that addresses are UWORD-aligned. In some circumstances they can be not. */
         ptr = (UWORD *)(((IPTR)ptr + 1) & ~1);
         end = (UWORD *)((IPTR)end & ~1);
 
-	D(bug("RomTagScanner: Start = %p, End = %p\n", ptr, end));
-	do
-	{
-	    res = (struct Resident *)ptr;
+        D(bug("RomTagScanner: Start = %p, End = %p\n", ptr, end));
+        do
+        {
+            res = (struct Resident *)ptr;
 
-	    /* Do we have RTC_MATCHWORD and rt_MatchTag*/
-	    if (res->rt_MatchWord == RTC_MATCHWORD && res->rt_MatchTag == res)
-	    {
-		/* Yes, it is Resident module. Check if there is module with such name already */
-		i = findname(RomTag, num, res->rt_Name);
-		if (i != -1)
-		{
-		    struct Resident *old = RomTag[i];
-		    /*
-			Rules for replacing modules:
-			1. Higher version always wins.
-			2. If the versions are equal, then lower priority
-			    looses.
-		    */
-		    if ((old->rt_Version < res->rt_Version) ||
-			(old->rt_Version == res->rt_Version && old->rt_Pri <= res->rt_Pri))
-		    {
-		    	RomTag[i] = res;
-		    }
-		}
-		else
-		{
-		    /* New module */
-		    RomTag[num++] = res;
-		    /*
-		     * 'limit' holds a length of our MemChunk in pointers.
-		     * Actually it's a number or pointers we can safely store in it (including NULL terminator).
-		     * If it's exceeded, return NULL.
-		     * TODO: If ever needed, this routine can be made smarter. There can be
-		     * the following approaches:
-		     * a) Move the data to a next MemChunk which is bigger than the current one
-		     *    and continue.
-		     * b) In the beginning of this routine, find the largest available MemChunk and use it.
-		     * Note that we exit with destroyed MemChunk here. Anyway, failure here means the system
-		     * is completely unable to boot up.
-		     */
-		    if (num == limit)
-		    	return NULL;
-		}
+            /* Do we have RTC_MATCHWORD and rt_MatchTag*/
+            if (res->rt_MatchWord == RTC_MATCHWORD && res->rt_MatchTag == res)
+            {
+                /* Yes, it is Resident module. Check if there is module with such name already */
+                i = findname(RomTag, num, res->rt_Name);
+                if (i != -1)
+                {
+                    struct Resident *old = RomTag[i];
+                    /*
+                        Rules for replacing modules:
+                        1. Higher version always wins.
+                        2. If the versions are equal, then lower priority
+                            looses.
+                    */
+                    if ((old->rt_Version < res->rt_Version) ||
+                        (old->rt_Version == res->rt_Version && old->rt_Pri <= res->rt_Pri))
+                    {
+                        RomTag[i] = res;
+                    }
+                }
+                else
+                {
+                    /* New module */
+                    RomTag[num++] = res;
+                    /*
+                     * 'limit' holds a length of our MemChunk in pointers.
+                     * Actually it's a number or pointers we can safely store in it (including NULL terminator).
+                     * If it's exceeded, return NULL.
+                     * TODO: If ever needed, this routine can be made smarter. There can be
+                     * the following approaches:
+                     * a) Move the data to a next MemChunk which is bigger than the current one
+                     *    and continue.
+                     * b) In the beginning of this routine, find the largest available MemChunk and use it.
+                     * Note that we exit with destroyed MemChunk here. Anyway, failure here means the system
+                     * is completely unable to boot up.
+                     */
+                    if (num == limit)
+                        return NULL;
+                }
 
-		/* Get address of EndOfResident from RomTag but only when
-		 * it's higher then present one - this avoids strange locks
-		 * when not all modules have Resident structure in .text
-		 * section */
-		ptr = ((IPTR)res->rt_EndSkip > (IPTR)ptr)
-			?   (UWORD *)res->rt_EndSkip - 2
-			:   ptr;
+                /* Get address of EndOfResident from RomTag but only when
+                 * it's higher then present one - this avoids strange locks
+                 * when not all modules have Resident structure in .text
+                 * section */
+                ptr = ((IPTR)res->rt_EndSkip > (IPTR)ptr)
+                        ?   (UWORD *)res->rt_EndSkip - 2
+                        :   ptr;
 
-		if ((IPTR)ptr & 0x01)
-		   ptr = (UWORD *)((IPTR)ptr+1);
-	    }
+                if ((IPTR)ptr & 0x01)
+                   ptr = (UWORD *)((IPTR)ptr+1);
+            }
 
-	    /* Get next address... */
-	    ptr++;
-	} while (ptr < (UWORD*)end);
+            /* Get next address... */
+            ptr++;
+        } while (ptr < (UWORD*)end);
     }
 
     /* Terminate the list */
@@ -225,21 +224,21 @@ APTR krnRomTagScanner(struct MemHeader *mh, UWORD *ranges[])
      */
     do
     {
-    	sorted = TRUE;
+        sorted = TRUE;
 
-    	for (i = 0; i < num - 1; i++)
-    	{
-    	    if (RomTag[i]->rt_Pri < RomTag[i+1]->rt_Pri)
-    	    {
-    	    	struct Resident *tmp;
+        for (i = 0; i < num - 1; i++)
+        {
+            if (RomTag[i]->rt_Pri < RomTag[i+1]->rt_Pri)
+            {
+                struct Resident *tmp;
 
-    	    	tmp = RomTag[i+1];
-    	    	RomTag[i+1] = RomTag[i];
-    	    	RomTag[i] = tmp;
+                tmp = RomTag[i+1];
+                RomTag[i+1] = RomTag[i];
+                RomTag[i] = tmp;
 
-    	    	sorted = FALSE;
-    	    }
-    	}
+                sorted = FALSE;
+            }
+        }
     } while (!sorted);
 
     return RomTag;
@@ -251,8 +250,8 @@ struct Resident *krnFindResident(struct Resident **resList, const char *name)
 
     for (i = 0; resList[i]; i++)
     {
-    	if (!strcmp(resList[i]->rt_Name, name))
-    	    return resList[i];
+        if (!strcmp(resList[i]->rt_Name, name))
+            return resList[i];
     }
     return NULL;
 }

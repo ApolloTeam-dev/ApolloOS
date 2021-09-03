@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 #include <proto/exec.h>
@@ -18,11 +16,11 @@
 
 /*  SYNOPSIS */
 
-	AROS_LHA(ULONG, lockType, D0),
+        AROS_LHA(ULONG, lockType, D0),
 
 /*  LOCATION */
 
-	struct Library *, RealTimeBase, 5, RealTime)
+        struct Library *, RealTimeBase, 5, RealTime)
 
 /*  FUNCTION
 
@@ -60,7 +58,7 @@
     AROS_LIBFUNC_INIT
 
     if(lockType >= RT_MAXLOCK)
-	return NULL;
+        return NULL;
 
     ObtainSemaphore(&GPB(RealTimeBase)->rtb_Locks[lockType]);
 

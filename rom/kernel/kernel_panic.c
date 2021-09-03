@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -31,7 +30,7 @@ void krnPanic(struct KernelBase *KernelBase,const char *fmt, ...)
 
     /* Prepend the header */
     while (*hdr)
-	*ptr++ = *hdr++;
+        *ptr++ = *hdr++;
 
     /* vsprintf() here comes from librom.a */
     va_start(ap, fmt);

@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2019, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -12,17 +11,17 @@
 /*****************************************************************************
 
     NAME */
-	AROS_LH1(void, secFreeExtOwner,
+        AROS_LH1(void, secFreeExtOwner,
 
 /*  SYNOPSIS */
-	/* void */
-	AROS_LHA(struct secExtOwner *, owner, A0),
+        /* void */
+        AROS_LHA(struct secExtOwner *, owner, A0),
 
 /*  LOCATION */
-	struct SecurityBase *, secBase, 22, Security)
+        struct SecurityBase *, secBase, 22, Security)
 
 /*  FUNCTION
-	Free an Extended Owner structure
+        Free an Extended Owner structure
 
     INPUTS
 

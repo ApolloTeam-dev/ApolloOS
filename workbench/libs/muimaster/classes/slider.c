@@ -1,9 +1,8 @@
 /*
-    Copyright © 1999, David Le Corfec.
-    Copyright © 2002-2018, The AROS Development Team.
+    Copyright (C) 1999, David Le Corfec.
+    Copyright (C) 2002-2018, The AROS Development Team.
     All rights reserved.
 
-    $Id$
 */
 
 #include <string.h>
@@ -171,6 +170,17 @@ IPTR Slider__OM_NEW(struct IClass *cl, Object *obj, struct opSet *msg)
     data->ehn.ehn_Class = cl;
 
     return (IPTR) obj;
+}
+
+/**************************************************************************
+ OM_DISPOSE
+**************************************************************************/
+IPTR Slider__OM_DISPOSE(struct IClass *cl, Object *obj, Msg msg)
+{
+    struct MUI_SliderData *data = INST_DATA(cl, obj);
+    if (data->text_buffer) FreeVec((APTR)data->text_buffer);
+
+    return DoSuperMethodA(cl, obj, msg);
 }
 
 /**************************************************************************
@@ -397,8 +407,9 @@ IPTR Slider__MUIM_Draw(struct IClass *cl, Object *obj,
         if (!(data->flags & SLIDER_VALIDSTRING))
         {
             longget(obj, MUIA_Numeric_Value, &val);
-            data->text_buffer = (CONST_STRPTR) DoMethod(obj,
-                MUIM_Numeric_Stringify, val);
+            if (data->text_buffer) FreeVec((APTR)data->text_buffer);
+            data->text_buffer = StrDup((CONST_STRPTR) DoMethod(obj,
+                MUIM_Numeric_Stringify, val));
             data->text_length = strlen(data->text_buffer);
             data->text_width =
                 TextLength(_rp(obj), data->text_buffer, data->text_length);
@@ -463,7 +474,7 @@ IPTR Slider__MUIM_HandleEvent(struct IClass *cl, Object *obj,
                     set(obj, MUIA_Pressed, TRUE);
                     MUI_Redraw(obj, MADF_DRAWUPDATE);
                 }
-                else 
+                else
                 {
                     /* Clicked on background */
                     if (data->flags & SLIDER_HORIZ)
@@ -556,6 +567,8 @@ BOOPSI_DISPATCHER(IPTR, Slider_Dispatcher, cl, obj, msg)
     {
     case OM_NEW:
         return Slider__OM_NEW(cl, obj, (struct opSet *)msg);
+    case OM_DISPOSE:
+        return Slider__OM_DISPOSE(cl, obj, msg);
     case OM_SET:
         return Slider__OM_SET(cl, obj, (struct opSet *)msg);
     case OM_GET:

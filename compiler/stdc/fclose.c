@@ -1,9 +1,10 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 
     C99 function fclose().
 */
+
+#include <aros/debug.h>
 
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -15,29 +16,28 @@
 
 #include "__stdcio_intbase.h"
 
-#define DEBUG 0
-#include <aros/debug.h>
+#include "debug.h"
 
 /*****************************************************************************
 
     NAME */
 #include <stdio.h>
 
-	int fclose (
+        int fclose (
 
 /*  SYNOPSIS */
-	FILE * stream)
+        FILE * stream)
 
 /*  FUNCTION
-	Closes a stream.
+        Closes a stream.
 
     INPUTS
-	stream - Stream to close.
+        stream - Stream to close.
 
     RESULT
-	Upon successful completion 0 is returned. Otherwise, EOF is
-	returned and the global variable errno is set to indicate the
-	error. In either case no further access to the stream is possible.
+        Upon successful completion 0 is returned. Otherwise, EOF is
+        returned and the global variable errno is set to indicate the
+        error. In either case no further access to the stream is possible.
 
     NOTES
 
@@ -46,7 +46,7 @@
     BUGS
 
     SEE ALSO
-	fopen()
+        fopen()
 
     INTERNALS
 
@@ -58,25 +58,38 @@
     int ret = 0;
     char s[L_tmpnam+20] = "";
 
+    D(bug("[%s] %s(0x%p)\n", STDCNAME, __func__, stream));
+
     if (stream->flags & __STDCIO_STDIO_TMP)
     {
         if (!NameFromFH(stream->fh, s, L_tmpnam+20))
         {
             /* Just leave the file in T: */
-            D(bug("[fclose]: Could not get name from fh, IoErr()=%d\n", IoErr()));
+            D(bug("[%s] %s: Could not get name from fh, IoErr()=%d\n", STDCNAME, __func__, IoErr()));
             s[0] = 0;
         }
     }
 
     if (!(stream->flags & __STDCIO_STDIO_DONTCLOSE))
     {
-        if (Close(stream->fh))
+        BOOL closed = Close(stream->fh);
+        if (closed)
+        {
+            D(bug("[%s] %s: closed succesfully\n", STDCNAME, __func__));
             ret = 0;
+        }
         else
         {
+            LONG ioErr = IoErr();
+            D(bug("[%s] %s: Failed to close! (IoErr %x)\n", STDCNAME, __func__, ioErr));
+
             ret = EOF;
-            errno = __stdc_ioerr2errno(IoErr());
+            errno = __stdc_ioerr2errno(ioErr);
         }
+    }
+    else
+    {
+        D(bug("[%s] %s: DONTCLOSE set\n", STDCNAME, __func__));
     }
 
     Remove((struct Node *)stream);
@@ -85,7 +98,7 @@
 
     if (strlen(s) > 0)
     {
-        D(bug("[fclose]: Deleting file '%s'\n", s));
+        D(bug("[%s] %s: Deleting file '%s'\n", STDCNAME, __func__, s));
         DeleteFile(s); /* File will be left there if delete fails */
     }
 

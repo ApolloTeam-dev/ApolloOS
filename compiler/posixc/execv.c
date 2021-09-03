@@ -1,6 +1,5 @@
 /*
-    Copyright © 2008-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2008-2013, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function execv().
 */
@@ -20,23 +19,23 @@
     NAME */
 #include <unistd.h>
 
-	int execv(
+        int execv(
 
 /*  SYNOPSIS */
-	const char *path, 
-	char *const argv[])
+        const char *path,
+        char *const argv[])
         
 /*  FUNCTION
-	Executes a file located in given path with specified arguments.
+        Executes a file located in given path with specified arguments.
 
     INPUTS
-	path - Pathname of the file to execute.
-	argv - Array of arguments given to main() function of the executed
-	file.
+        path - Pathname of the file to execute.
+        argv - Array of arguments given to main() function of the executed
+        file.
 
     RESULT
-	Returns -1 and sets errno appropriately in case of error, otherwise
-	doesn't return.
+        Returns -1 and sets errno appropriately in case of error, otherwise
+        doesn't return.
 
     NOTES
 
@@ -45,8 +44,8 @@
     BUGS
 
     SEE ALSO
-	execve(), execl(), execlp(), execvp()
-	
+        execve(), execl(), execlp(), execvp()
+        
     INTERNALS
 
 ******************************************************************************/

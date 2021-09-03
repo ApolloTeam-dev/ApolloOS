@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 */
 
 #include <libraries/commodities.h>
@@ -82,7 +81,7 @@ extern struct Library *CxBase;
             first = ie;
         
         if(ieChain != NULL)
-            ieChain->ie_NextEvent = ie;            
+            ieChain->ie_NextEvent = ie;
         
         ieChain = ie;
         
@@ -131,7 +130,7 @@ extern struct Library *CxBase;
                 IX ix = {0};
                 LONG err;
                 
-                *str = '\0';            
+                *str = '\0';
                 err = ParseIX(start, &ix);
                 *str++ = '>';
                 

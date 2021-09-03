@@ -1,6 +1,5 @@
 /*
-    Copyright © 2018-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2018-2020, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -11,16 +10,14 @@
 
 extern char *source_Path;
 
-static struct List PACKAGELIST;
-
 #define PACKAGEDIR_BASE "Prefs/Env-Archive/SYS/Packages"
 
-void PACKAGES_InitSupport(void)
+void PACKAGES_InitSupport(struct List *PACKAGELIST)
 {
     D(bug("[InstallAROS] %s()\n", __func__));
 
-    NEWLIST(&PACKAGELIST);
-    // TODO: enumerate available packages .. 
+    NEWLIST(PACKAGELIST);
+    // TODO: enumerate available packages ..
 }
 
 void PACKAGES_AddCoreSkipPaths(struct List *SkipList)
@@ -35,7 +32,7 @@ void PACKAGES_AddCoreSkipPaths(struct List *SkipList)
     AddPart(skipPath, "Prefs/Env-Archive/SYS/Packages/Developer", skipPathLen);
     AddSkipListEntry(SkipList, skipPath);
 #endif
-    // TODO: remove core package dirs .. 
+    // TODO: remove core package dirs ..
 }
 
 void PACKAGES_DoInstall(Class * CLASS, Object * self)

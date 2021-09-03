@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc: ReadBattClock() function.
-    Lang: english
 */
 
 #include <proto/exec.h>
@@ -19,7 +17,7 @@ static inline int bcd_to_dec(int x)
 }
 
 AROS_LH0(ULONG, ReadBattClock,
-	 struct BattClockBase *, BattClockBase, 2, Battclock)
+         struct BattClockBase *, BattClockBase, 2, Battclock)
 {
     AROS_LIBFUNC_INIT
 
@@ -46,13 +44,13 @@ AROS_LH0(ULONG, ReadBattClock,
 
     if ((status_b & 0x04) == 0)
     {
-	date.sec   = bcd_to_dec(date.sec);
-	date.min   = bcd_to_dec(date.min);
-	date.hour  = bcd_to_dec(date.hour);
-	date.mday  = bcd_to_dec(date.mday);
-	date.month = bcd_to_dec(date.month);
-	date.year  = bcd_to_dec(date.year);
-	century    = bcd_to_dec(century);
+        date.sec   = bcd_to_dec(date.sec);
+        date.min   = bcd_to_dec(date.min);
+        date.hour  = bcd_to_dec(date.hour);
+        date.mday  = bcd_to_dec(date.mday);
+        date.month = bcd_to_dec(date.month);
+        date.year  = bcd_to_dec(date.year);
+        century    = bcd_to_dec(century);
     }
 
     date.year = century * 100 + date.year;

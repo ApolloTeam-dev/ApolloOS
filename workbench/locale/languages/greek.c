@@ -1,6 +1,5 @@
 /*
-    Copyright © 2009-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2009-2013, The AROS Development Team. All rights reserved.
 
     Desc: greek.language description file.
     Char: ISO 8859-7
@@ -35,7 +34,7 @@ void *const functable[] =
     /* 0 - 3 */
     &AROS_SLIB_ENTRY(null, language, 0),
     &AROS_SLIB_ENTRY(null, language, 0),
-    &AROS_SLIB_ENTRY(null, language, 0),    
+    &AROS_SLIB_ENTRY(null, language, 0),
     &AROS_SLIB_ENTRY(getlangstring, language, 9),
     (void *)-1
 };

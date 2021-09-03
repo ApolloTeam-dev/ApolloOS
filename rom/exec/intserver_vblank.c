@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 */
 
 #define DEBUG 0
@@ -22,8 +21,8 @@ AROS_INTH3(VBlankServer, struct List *, intList, intMask, custom)
 
     D(bug("[Exec] %s()\n", __func__));
 
-    /* First decrease Elapsed time for current task */
-    if (SysBase->Elapsed && (--SysBase->Elapsed == 0))
+    /* Check if it is time for the running task to be switched away */
+    if (!SCHEDELAPSED_GET || (--SCHEDELAPSED_GET == 0))
     {
         FLAG_SCHEDQUANTUM_SET;
         FLAG_SCHEDSWITCH_SET;

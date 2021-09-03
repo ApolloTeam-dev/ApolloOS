@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2003, The AROS Development Team. All rights reserved.
 */
 /*
  * ====================================================
@@ -36,9 +35,9 @@
      IEEE double precision floating point number
 
       flags:
-	zero	 : result is zero
-	negative : result is negative
-	overflow : argument is out of range
+        zero     : result is zero
+        negative : result is negative
+        overflow : argument is out of range
 
     BUGS
 
@@ -69,9 +68,9 @@
         {  /* |x|==1 */
             if(hx>0)
             {
-                /* 
-                    if this is a 32bit-compiler we need to define some 
-                    variables, otherwise these are available as 64bit 
+                /*
+                    if this is a 32bit-compiler we need to define some
+                    variables, otherwise these are available as 64bit
                     constants
                 */
 #               if defined AROS_64BIT_TYPE || defined __GNUC__
@@ -85,7 +84,7 @@
             else
             {
                 /*
-                    if this is a 32bit-compiler we need to define some 
+                    if this is a 32bit-compiler we need to define some
                     variables, otherwise these are available as 64bit constants
                 */
 #               if defined AROS_64BIT_TYPE || defined __GNUC__
@@ -94,12 +93,12 @@
                     QUAD pi_64 = pi;
 #               endif
                 
-                return pi_64;	  /* acos(-1)= pi */
+                return pi_64;     /* acos(-1)= pi */
             }
         }
         {
-            /* 
-                if this is a 32bit -compiler we need to define some variables, 
+            /*
+                if this is a 32bit -compiler we need to define some variables,
                 otherwise these are available as 64bit constants
             */
 #           if defined AROS_64BIT_TYPE || defined __GNUC__
@@ -114,7 +113,7 @@
     }
     {
         /*
-            if this is a 32bit -compiler we need to define some variables, 
+            if this is a 32bit -compiler we need to define some variables,
             otherwise these are available as 64bit constants
         */
 #       if defined AROS_64BIT_TYPE || defined __GNUC__
@@ -146,13 +145,13 @@
 #       endif
         
         if(ix < 0x3fe00000)
-        {	  /* |x| < 0.5 */
+        {         /* |x| < 0.5 */
             if(ix <= 0x3c600000) return pio2_hi_64;/*if|x|<2**-57*/
     
             Set_Value64(z, IEEEDPMul(x, x));
             Set_Value64
             (
-                p, 
+                p,
                 IEEEDPMul(z, IEEEDPAdd(pS0_64,
                 IEEEDPMul(z, IEEEDPAdd(pS1_64,
                 IEEEDPMul(z, IEEEDPAdd(pS2_64,
@@ -174,7 +173,7 @@
             
             Set_Value64
             (
-                tmp, 
+                tmp,
                 IEEEDPSub(pio2_hi_64,
                 IEEEDPSub(x,
                 IEEEDPSub(pio2_lo_64, IEEEDPMul(x, r))))
@@ -183,7 +182,7 @@
         }
         else
         {
-            /* 
+            /*
                 if this is a 32bit -compiler we need to define some variables,
                 otherwise these are available as 64bit constants
             */
@@ -194,9 +193,9 @@
 #           endif
             
             if (hx < 0)
-            { 	    /* x < -0.5 */
+            {       /* x < -0.5 */
                 /*
-                    if this is a 32bit-compiler we need to define some 
+                    if this is a 32bit-compiler we need to define some
                     variables, otherwise these are available as 64bit constants
                 */
 #               if defined AROS_64BIT_TYPE || defined __GNUC__
@@ -223,7 +222,7 @@
                 return IEEEDPSub(pi_64, IEEEDPMul(two_64, IEEEDPAdd(s,w)));
             }
             else
-            {  /* x > 0.5 */                
+            {  /* x > 0.5 */
                 Set_Value64(z, IEEEDPMul(IEEEDPSub(one_64,x),onehalf_64));
                 Set_Value64(s, IEEEDPSqrt(z));
                 Set_Value64(df,s);

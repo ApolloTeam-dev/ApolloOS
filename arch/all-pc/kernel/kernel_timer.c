@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 */
 
 #include <hardware/pit.h>
@@ -22,12 +21,28 @@ static inline unsigned int usec2tick(unsigned int usec)
     return ret;
 }
 
-void pit_udelay(unsigned int usec)
+void krnClockSourceInit(void)
+{
+    D(bug("[Krn] %s()\n", __func__));
+
+    if (KernelBase->kb_ClockSource)
+    {
+#if (0)
+#endif
+    }
+}
+
+void krnClockSourceUdelay(unsigned int usec)
 {
     unsigned int start = usec2tick(usec);
 
-    D(bug("[PIT] udelay: %d usec = %d ticks\n", usec, start));
+    D(bug("[Krn] %s: %d usec = %d ticks\n", __func__, usec, start));
 
-    pit_start(start);
+    if (KernelBase->kb_ClockSource)
+    {
+        APTR CSBase  = KernelBase->kb_ClockSource;
+    }
+#if (1)
     pit_wait(start);
+#endif
 }

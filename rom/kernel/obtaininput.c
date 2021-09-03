@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -20,16 +19,16 @@
 /*  SYNOPSIS */
 
 /*  LOCATION */
-	struct KernelBase *, KernelBase, 33, Kernel)
+        struct KernelBase *, KernelBase, 33, Kernel)
 
 /*  FUNCTION
-	Take over low-level debug input hardware and initialize the input
+        Take over low-level debug input hardware and initialize the input
 
     INPUTS
-	None
+        None
 
     RESULT
-	Nonzero for success, zero for failure (for example there's no input channel)
+        Nonzero for success, zero for failure (for example there's no input channel)
 
     NOTES
 

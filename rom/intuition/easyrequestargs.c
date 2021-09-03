@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include "intuition_intern.h"
@@ -62,7 +61,7 @@
     AROS_LIBFUNC_INIT
 
     struct Window *req;
-    LONG    	   result;
+    LONG           result;
 
     req = BuildEasyRequestArgs(window, easyStruct,
                                IDCMP_ptr != NULL ? *IDCMP_ptr : 0, argList);

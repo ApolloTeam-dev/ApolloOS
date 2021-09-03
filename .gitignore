@@ -1,4 +1,6 @@
-
+# Build dirs
+apollo-os/
+apollo-v4/
 # /
 /config.log
 /local

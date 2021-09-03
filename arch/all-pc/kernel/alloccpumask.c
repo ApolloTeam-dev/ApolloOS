@@ -1,6 +1,5 @@
 /*
-    Copyright © 2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2017, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -14,7 +13,7 @@
 #include "kernel_intern.h"
 
 AROS_LH0(void *, KrnAllocCPUMask,
-	struct KernelBase *, KernelBase, 42, Kernel)
+        struct KernelBase *, KernelBase, 42, Kernel)
 {
     AROS_LIBFUNC_INIT
 

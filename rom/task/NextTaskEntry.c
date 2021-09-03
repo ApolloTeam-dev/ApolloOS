@@ -1,6 +1,5 @@
 /*
-    Copyright © 2015-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2015-2017, The AROS Development Team. All rights reserved.
 */
 
 #define DEBUG 0
@@ -27,7 +26,7 @@
         AROS_LHA(ULONG           , flags, D0),
 
 /*  LOCATION */
-	struct TaskResBase *, TaskResBase, 3, Task)
+        struct TaskResBase *, TaskResBase, 3, Task)
 
 /*  FUNCTION
         Looks for the next task list entry with the right type. The list
@@ -132,7 +131,7 @@
             }
         }
         retVal = taskList->tlp_Current;
-    }        
+    }
 #endif /* TASKRES_ENABLE */
 
     return retVal;

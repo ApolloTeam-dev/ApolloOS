@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function sigaddset().
 */
@@ -12,11 +11,11 @@
     NAME */
 #include <signal.h>
 
-	int sigaddset (
+        int sigaddset (
 
 /*  SYNOPSIS */
-	sigset_t *set,
-	int signum)
+        sigset_t *set,
+        int signum)
 
 /*  FUNCTION
 
@@ -41,6 +40,6 @@
         set->__val[i] |= (1 << (signum & 0x1f));
         return 0;
     }
-	
+        
     return -1;
 } /* sigaddset */

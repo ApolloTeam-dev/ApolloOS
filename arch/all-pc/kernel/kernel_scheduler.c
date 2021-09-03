@@ -1,6 +1,5 @@
 /*
-    Copyright © 2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2017, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/alerts.h>
@@ -324,7 +323,7 @@ bug("----> such unspinning should not take place!\n");
 
     if (newtask != NULL)
     {
-        BOOL launchtask = FALSE;
+        BOOL launchtask = FALSE, sleeptask = FALSE;
 
         if (newtask->tc_State == TS_READY)
         {
@@ -341,7 +340,10 @@ bug("----> such unspinning should not take place!\n");
             /* Check the stack of the task we are about to launch. */
             if ((newtask->tc_SPReg <= newtask->tc_SPLower) ||
                 (newtask->tc_SPReg > newtask->tc_SPUpper))
+            {
                 newtask->tc_State     = TS_WAIT;
+                sleeptask = TRUE;
+            }
             else
             {
                 newtask->tc_State     = TS_RUN;
@@ -361,14 +363,14 @@ bug("----> such unspinning should not take place!\n");
 #endif
         }
 
-        if (newtask->tc_State == TS_WAIT)
+        if (sleeptask)
         {
-            DSCHED(bug("[Kernel:%03u] Moving '%s' @ 0x%p to wait queue\n", cpuNo, task->tc_Node.ln_Name, task);)
+            DSCHED(bug("[Kernel:%03u] Moving '%s' @ 0x%p to wait queue\n", cpuNo, newtask->tc_Node.ln_Name, newtask);)
 #if defined(__AROSEXEC_SMP__)
             KrnSpinLock(&PrivExecBase(SysBase)->TaskWaitSpinLock, NULL,
                         SPINLOCK_MODE_WRITE);
 #endif
-            Enqueue(&SysBase->TaskWait, &task->tc_Node);
+            Enqueue(&SysBase->TaskWait, &newtask->tc_Node);
 #if defined(__AROSEXEC_SMP__)
             KrnSpinUnLock(&PrivExecBase(SysBase)->TaskWaitSpinLock);
 #endif

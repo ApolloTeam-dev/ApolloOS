@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #define DEBUG 1
@@ -29,8 +28,8 @@
 #define GAYLE_IRQ_1200  0xda9000
 #define GAYLE_INT_1200  0xdaa000
 
-#define GAYLE_IRQ_IDE	0x80
-#define GAYLE_INT_IDE	0x80
+#define GAYLE_IRQ_IDE   0x80
+#define GAYLE_INT_IDE   0x80
 
 struct amiga_driverdata
 {
@@ -351,7 +350,7 @@ AROS_INTH1(IDE_Handler_A1200, struct amiga_driverdata *, ddata)
 
     UBYTE irqmask = *ddata->gayleirqbase;
     if (irqmask & GAYLE_IRQ_IDE) {
-	callbusirq(ddata);
+        callbusirq(ddata);
     }
     return FALSE;
 
@@ -365,7 +364,7 @@ AROS_INTH1(IDE_Handler_A4000, struct amiga_driverdata *, ddata)
     /* A4000 interrupt clears when register is read */
     UWORD irqmask = *((UWORD*)ddata->gayleirqbase);
     if (irqmask & (GAYLE_IRQ_IDE << 8)) {
-	callbusirq(ddata);
+        callbusirq(ddata);
     }
     return FALSE;
 
@@ -373,7 +372,7 @@ AROS_INTH1(IDE_Handler_A4000, struct amiga_driverdata *, ddata)
 }
 
 static AROS_CARDH(IDE_PCMCIA_Handler, void *, data, status)
-{ 
+{
     AROS_CARDFUNC_INIT
 
     struct amiga_pcmcia_driverdata *ddata = data;
@@ -397,14 +396,14 @@ static BOOL ata_CreateInterrupt(struct ata_Bus *bus, UBYTE num)
     ddata->bus[num] = bdata;
 
     if (ddata->ideintdone)
-    	return TRUE;
+        return TRUE;
     ddata->ideintdone = TRUE;
 
     if (ddata->a4000) {
-	irq->is_Code = (APTR)IDE_Handler_A4000;
+        irq->is_Code = (APTR)IDE_Handler_A4000;
     } else {
         gayleintbase = (UBYTE*)GAYLE_INT_1200;
-	irq->is_Code = (APTR)IDE_Handler_A1200;
+        irq->is_Code = (APTR)IDE_Handler_A1200;
     }
 
     irq->is_Node.ln_Pri = 20;
@@ -438,31 +437,31 @@ static BOOL ata_CreateInterrupt_pcmcia(struct ata_Bus *bus)
     return TRUE;
 }
 
-static const struct ata_BusDriver amiga_driver0 = 
+static const struct ata_BusDriver amiga_driver0 =
 {
     ata_out,
     ata_in,
     ata_outl,
     ata_insw,
     ata_outsw,
-    ata_insw,	/* These are intentionally the same as 16-bit routines */
+    ata_insw,   /* These are intentionally the same as 16-bit routines */
     ata_outsw,
     ata_CreateInterrupt0,
     ata_AckInterrupt
 };
-static const struct ata_BusDriver amiga_driver1 = 
+static const struct ata_BusDriver amiga_driver1 =
 {
     ata_out,
     ata_in,
     ata_outl,
     ata_insw,
     ata_outsw,
-    ata_insw,	/* These are intentionally the same as 16-bit routines */
+    ata_insw,   /* These are intentionally the same as 16-bit routines */
     ata_outsw,
     ata_CreateInterrupt1,
     ata_AckInterrupt
 };
-static const struct ata_BusDriver amiga_driver_pcmcia = 
+static const struct ata_BusDriver amiga_driver_pcmcia =
 {
     ata_pcmcia_out,
     ata_pcmcia_in,
@@ -482,24 +481,24 @@ static BOOL ata_amiga_ide_init(struct ataBase *LIBBASE)
 
     ddata = AllocVec(sizeof(struct amiga_driverdata), MEMF_CLEAR | MEMF_PUBLIC);
     if (!ddata)
-    	return FALSE;
+        return FALSE;
     ddata->doubler = 1;
 
     ddata->gaylebase = getport(ddata);
     bdata = AllocVec(sizeof(struct amiga_busdata) * (ddata->doubler == 2 ? 2 : 1), MEMF_CLEAR | MEMF_PUBLIC);
     if (bdata && ddata->gaylebase) {
-	LIBBASE->ata_NoDMA = TRUE;
-	bdata->ddata = ddata;
-	bdata->port = ddata->gaylebase;
-	ata_RegisterBus(0, ddata->doubler ? -1 : 0x1010, 2, 0, ARBF_EarlyInterrupt, &amiga_driver0, bdata, LIBBASE);
-	if (ddata->doubler == 2) {
-	    D(bug("[ATA] Adding secondary bus\n"));
-	    bdata++;
-	    bdata->ddata = ddata;
-	    bdata->port = ddata->gaylebase + 0x1000;
-	    ata_RegisterBus(0, -1, 2, 0, ARBF_EarlyInterrupt, &amiga_driver1, bdata, LIBBASE);
-	}
-	return TRUE;
+        LIBBASE->ata_NoDMA = TRUE;
+        bdata->ddata = ddata;
+        bdata->port = ddata->gaylebase;
+        ata_RegisterBus(0, ddata->doubler ? -1 : 0x1010, 2, 0, ARBF_EarlyInterrupt, &amiga_driver0, bdata, LIBBASE);
+        if (ddata->doubler == 2) {
+            D(bug("[ATA] Adding secondary bus\n"));
+            bdata++;
+            bdata->ddata = ddata;
+            bdata->port = ddata->gaylebase + 0x1000;
+            ata_RegisterBus(0, -1, 2, 0, ARBF_EarlyInterrupt, &amiga_driver1, bdata, LIBBASE);
+        }
+        return TRUE;
     }
     FreeVec(bdata);
     FreeVec(ddata);

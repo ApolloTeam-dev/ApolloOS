@@ -57,59 +57,59 @@ $(TOP)/config.status: $(SRCDIR)/configure
 
 $(TOP)/mmake.config: $(SRCDIR)/mmake.config.in $(TOP)/config.status
 	@+$(ECHO) "Regenerating " $(subst $(TOP)/,,$@); \
-	@$(TOP)/config.status --silent --file=$@:$<
+	$(TOP)/config.status --silent --file=$@:$<
 
 CONFIGUREFILES += $(TOP)/mmake.config
 CONFIGBUILDFILES += $(TOP)/mmake.config
 
 $(TOP)/config/make.cfg: $(SRCDIR)/config/make.cfg.in $(TOP)/config.status
 	@+$(ECHO) "Regenerating " $(subst $(TOP)/,,$@); \
-	@$(TOP)/config.status --silent --file=$@:$<
+	$(TOP)/config.status --silent --file=$@:$<
 
 CONFIGUREFILES += $(TOP)/config/make.cfg
 CONFIGBUILDARCHFILES += $(TOP)/config/make.cfg
 
 $(TOP)/compiler/include/geninc.cfg: $(SRCDIR)/compiler/include/geninc.cfg.in $(TOP)/config.status
 	@+$(ECHO) "Regenerating " $(subst $(TOP)/,,$@); \
-	@$(TOP)/config.status --silent --file=$@:$<
+	$(TOP)/config.status --silent --file=$@:$<
 
 CONFIGUREFILES += $(TOP)/compiler/include/geninc.cfg
 
 $(AROS_INCLUDES)/aros/config.h: $(SRCDIR)/config/config.h.in $(TOP)/config.status
 	@+$(ECHO) "Regenerating " $(subst $(TOP)/,,$@); \
-	@$(TOP)/config.status --silent --file=$@:$<
+	$(TOP)/config.status --silent --file=$@:$<
 
 CONFIGUREFILES += $(AROS_INCLUDES)/aros/config.h
 
 $(GENINCDIR)/aros/config.h: $(SRCDIR)/config/config.h.in $(TOP)/config.status
 	@+$(ECHO) "Regenerating " $(subst $(TOP)/,,$@); \
-	@$(TOP)/config.status --silent --file=$@:$<
+	$(TOP)/config.status --silent --file=$@:$<
 
 CONFIGUREFILES += $(GENINCDIR)/aros/config.h
 
 $(GENDIR)/config/target.cfg: $(SRCDIR)/config/target.cfg.in $(TOP)/config.status
 	@+$(ECHO) "Regenerating " $(subst $(TOP)/,,$@); \
-	@$(TOP)/config.status --silent --file=$@:$<
+	$(TOP)/config.status --silent --file=$@:$<
 
 CONFIGUREFILES += $(GENDIR)/config/target.cfg
 CONFIGBUILDARCHFILES += $(GENDIR)/config/target.cfg
 
 $(GENDIR)/config/build.cfg: $(SRCDIR)/config/build.cfg.in $(TOP)/config.status
 	@+$(ECHO) "Regenerating " $(subst $(TOP)/,,$@); \
-	@$(TOP)/config.status --silent --file=$@:$<
+	$(TOP)/config.status --silent --file=$@:$<
 
 CONFIGUREFILES += $(GENDIR)/config/build.cfg
 CONFIGBUILDARCHFILES += $(GENDIR)/config/build.cfg
 
 $(GENDIR)/config/make.defaults: $(SRCDIR)/config/make.defaults.in $(TOP)/config.status
 	@+$(ECHO) "Regenerating " $(subst $(TOP)/,,$@); \
-	@$(TOP)/config.status --silent --file=$@:$<
+	$(TOP)/config.status --silent --file=$@:$<
 
 CONFIGUREFILES += $(GENDIR)/config/make.defaults
 
 $(HOSTGENDIR)/config/host.cfg: $(SRCDIR)/config/host.cfg.in $(TOP)/config.status
 	@+$(ECHO) "Regenerating " $(subst $(TOP)/,,$@); \
-	@$(TOP)/config.status --silent --file=$@:$<
+	$(TOP)/config.status --silent --file=$@:$<
 
 CONFIGUREFILES += $(HOSTGENDIR)/config/host.cfg
 
@@ -120,6 +120,23 @@ CONFIGUREFILES += $(HOSTGENDIR)/config/host.cfg
 all: $(CONFIGUREFILES) crosstools-toolchain features
 	@+$(CALL) $(MMAKE) $(MMAKE_OPTIONS) AROS.AROS
 
+AROSGDBFILES=
+
+$(AROSDIR)/.gdbinit: $(SRCDIR)/developer/debug/gdb/gdbinit.in
+	@$(ECHO) Copying host .gdbinit for AROS ...
+	@$(SED) "s|\%AROSDBGDIR\%|$(DBGDIR)|g" $< > $@
+
+$(AROSDIR)/.gdb_ignore_errors.py: $(SRCDIR)/developer/debug/gdb/ignore_errors.py
+	@$(ECHO) Copying host gdb support files  for AROS ...
+	@$(CP) $(SRCDIR)/developer/debug/gdb/ignore_errors.py $(AROSDIR)/.gdb_ignore_errors.py ; \
+
+ifeq (@aros_flavour@,emulation)
+AROSGDBFILES += $(AROSDIR)/.gdbinit $(AROSDIR)/.gdb_ignore_errors.py
+endif
+
+gdbinit: $(AROSGDBFILES)
+	@$(NOP)
+
 makedirs:
 	@$(RM) $(TOP)/errors
 	@$(FOR) dir in $(AROSDIR) $(GENDIR) $(TOOLDIR) ; do \
@@ -128,9 +145,6 @@ makedirs:
 		$(MKDIR) "$$dir" ; \
 	    else true ; fi ; \
 	done
-	@$(IF) [ ! -f $(AROSDIR)/.gdbinit ]; then \
-	    $(CP) $(SRCDIR)/_gdbinit $(AROSDIR)/.gdbinit ; \
-	else true ; fi
 
 $(PARSEOFFSETS): $(wildcard $(SRCDIR)/tools/parseoffsets/*.[ch])
 	@$(ECHO) Building parseoffsets...
@@ -145,7 +159,7 @@ parsesdkoffsets : $(PARSEOFFSETS)
     fi ; 
 
 # Create the tools that are used to build AROS.
-tools : makedirs mmake $(GENMFSCRIPT) $(ARCHTOOL) $(ELF2HUNK) \
+tools : makedirs gdbinit mmake $(GENMFSCRIPT) $(ARCHTOOL) $(ELF2HUNK) \
 	$(FLEXCAT) $(CREATEDTDESC) \
 	$(ILBMTOC) $(ILBMTOICON) $(INFOINFO) \
 	$(COLLECT-AROS) $(AFSLIB) $(COPYTOAFS) \
@@ -167,7 +181,7 @@ crosstools : crosstools-toolchain features
 $(TOP)/config/features.status: $(SRCDIR)/config/features $(CROSSTOOLS_BUILDFLAG)
 	@$(IF) ! $(TEST) -f $@ ; then \
 	    $(ECHO) "Querying target compiler features..." ; \
-	    cd $(TOP)/config ; CC="$(TARGET_CC) $(TARGET_SYSROOT)" CFLAGS="$(TARGET_CFLAGS) $(DEBUG_CFLAGS) $(OPTIMIZATION_CFLAGS)" CPP="$(TARGET_CPP) $(TARGET_SYSROOT)" CXX="$(TARGET_CXX) $(TARGET_SYSROOT)" CXXFLAGS=" $(TARGET_CXXFLAGS) $(DEBUG_CFLAGS) $(OPTIMIZATION_CFLAGS)" AROS_DEVELOPER="$(AROS_DEVELOPER)" CONFIG_STATUS="features.status" $(SRCDIR)/config/features  --host=$(AROS_BUILD_HOST) --with-config-dir=$(GENDIR)/config ; \
+	    cd $(TOP)/config ; AROS_TARGET_CPU="$(AROS_TARGET_CPU)" CC="$(TARGET_CC) $(TARGET_SYSROOT)" CFLAGS="$(TARGET_CFLAGS) $(DEBUG_CFLAGS) $(OPTIMIZATION_CFLAGS)" CPP="$(TARGET_CPP) $(TARGET_SYSROOT)" CXX="$(TARGET_CXX) $(TARGET_SYSROOT)" CXXFLAGS=" $(TARGET_CXXFLAGS) $(DEBUG_CFLAGS) $(OPTIMIZATION_CFLAGS)" AROS_DEVELOPER="$(AROS_DEVELOPER)" CONFIG_STATUS="features.status" $(SRCDIR)/config/features  --host=$(AROS_BUILD_HOST) --with-config-dir=$(GENDIR)/config ; \
 	fi
 
 CONFIGBUILDARCHFILES += $(TOP)/config/features.status
@@ -284,7 +298,7 @@ clean:
 		$(TOOLDIR)/$(AROS_TARGET_CPU)-$(AROS_TARGET_ARCH)$(AROS_TARGET_SUFFIX)-aros-gcc \
 		$(TOOLDIR)/$(AROS_TARGET_CPU)-$(AROS_TARGET_ARCH)$(AROS_TARGET_SUFFIX)-aros-ld \
 		$(GENDIR)/scripts/genshared $(TOOLDIR)/genmf.py \
-		tools/adflib/myconf.aros tools/collect-aros/env.h
+		tools/ADFlib/myconf.aros tools/collect-aros/env.h
 
 # Clean the sources and tools
 arch-clean: clean
@@ -305,7 +319,7 @@ $(TOP)/bin/$(AROS_TARGET_ARCH)-$(AROS_TARGET_CPU)$(AROS_TARGET_SUFFIX)/gen/confi
 	@$(NOP)
 
 # targets which do not generate files or for which a file/directory exists
-.PHONY: default all makedirs tools crosstools features docs clean arch-clean dist-clean install \
+.PHONY: default all makedirs gdbinit tools crosstools features docs clean arch-clean dist-clean install \
 	$(TOP)/bin/$(AROS_TARGET_ARCH)-$(AROS_TARGET_CPU)$(AROS_TARGET_SUFFIX)/gen/config/make.opts \
 	test kernel boot workbench compiler contrib ports sdk mmake query
 

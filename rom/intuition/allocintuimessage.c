@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include "intuition_intern.h"
@@ -63,7 +62,7 @@
         msg->ExecMessage.mn_Length       = sizeof(struct ExtIntuiMessage);
         msg->ExecMessage.mn_ReplyPort    = window ? window->WindowPort : GetPrivIBase(IntuitionBase)->IntuiReplyPort;
 
-        msg->IDCMPWindow            	 = window;
+        msg->IDCMPWindow                 = window;
     }
 
     DEBUG_ALLOCINTUIMESSAGE(dprintf("AllocIntuiMessage: Window 0x%lx Port 0x%lx Msg 0x%lx\n",

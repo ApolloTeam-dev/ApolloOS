@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc: Layers Resident and initialization.
-    Lang: english
 */
 
 #include LC_LIBDEFS_FILE
@@ -37,7 +35,7 @@ static int LayersInit(LIBBASETYPEPTR LIBBASE)
     /* Install ourself as graphics.library's layer manager */
     GfxBase->gb_LayersBase = (APTR)LIBBASE;
 
-    return TRUE;    
+    return TRUE;
 }
 
 ADD2INITLIB(LayersInit, 0);

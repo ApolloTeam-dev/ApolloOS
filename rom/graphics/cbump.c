@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function CBump()
-    Lang: english
 */
 #include <exec/types.h>
 #include <graphics/copper.h>
@@ -15,32 +13,32 @@
     NAME */
 #include <proto/graphics.h>
 
-	AROS_LH1(void, CBump,
+        AROS_LH1(void, CBump,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct UCopList *, ucl, A1),
+        AROS_LHA(struct UCopList *, ucl, A1),
 
 /*  LOCATION */
-	struct GfxBase *, GfxBase, 61, Graphics)
+        struct GfxBase *, GfxBase, 61, Graphics)
 
 /*  FUNCTION
-	Increment user copper list pointer. If the current user copper list
-	is full a new one will be created and worked on.
+        Increment user copper list pointer. If the current user copper list
+        is full a new one will be created and worked on.
 
     INPUTS
-	ucl - pointer to a UCopList structure
+        ucl - pointer to a UCopList structure
 
     RESULT
 
     NOTES
-	CWAIT() and CMOVE() automatically call this function!
+        CWAIT() and CMOVE() automatically call this function!
 
     EXAMPLE
 
     BUGS
 
     SEE ALSO
-	CINIT(), CWAIT(), CMOVE(), CEND(), graphics/copper.h
+        CINIT(), CWAIT(), CMOVE(), CEND(), graphics/copper.h
 
     INTERNALS
 

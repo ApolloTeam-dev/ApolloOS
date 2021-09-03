@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2020, The AROS Development Team. All rights reserved.
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
@@ -92,7 +91,7 @@ IPTR Imagedisplay__OM_NEW(struct IClass *cl, Object *obj,
         return 0;
     }
 
-    D(bug("Imagedisplay_New(%lx) spec=%lx\n", obj, data->img));
+    D(bug("Imagedisplay_New(0x%p) spec=0x%p\n", obj, data->img));
     return (IPTR) obj;
 }
 

@@ -1,32 +1,20 @@
 /*
   Copyright  2004-2013, The AROS Development Team. All rights reserved.
-  $Id$
 */
 
-#include "portable_macros.h"
-
-#ifdef __AROS__
 #define MUIMASTER_YES_INLINE_STDARG
-#endif
 
 //#define DEBUG_NETWORKBROWSER
 //#define DEBUG_SHOWUSERFILES
 #define TXTBUFF_LEN 1024
 
-#ifdef __AROS__
 #define DEBUG 0
 #include <aros/debug.h>
-#endif
 
 #include <exec/types.h>
 #include <libraries/mui.h>
 
-#ifdef __AROS__
 #include <zune/customclasses.h>
-#else
-#include <zune_AROS/customclasses.h>
-#endif
-
 
 #include <proto/utility.h>
 
@@ -45,9 +33,6 @@
 #include <datatypes/pictureclass.h>
 #include <clib/macros.h>
 
-#if defined(__AMIGA__) && !defined(__PPC__)
-#define NO_INLINE_STDARG
-#endif
 #ifndef _PROTO_INTUITION_H
 #include <proto/intuition.h>
 #endif
@@ -62,22 +47,6 @@
 #include "iconwindow.h"
 #include "iconwindow_iconlist.h"
 
-
-#ifndef __AROS__
-#define DEBUG 1
-
-#ifdef DEBUG
-  #define D(x) if (DEBUG) x
-  #ifdef __amigaos4__
-  #define bug DebugPrintF
-  #else
-  #define bug kprintf
-  #endif
-#else
-  #define  D(...)
-#endif
-#endif
-
 extern struct IconWindow_BackFill_Descriptor  *iconwindow_BackFill_Active;
 
 #define BG_DRAWFLAG   0xf00dd00f
@@ -89,11 +58,7 @@ struct IconWindowIconList_DATA
     Object                      *iwcd_IconWindow;
     struct RastPort             *iwcd_RastPort;
     struct MUI_EventHandlerNode iwcd_EventHandlerNode;
-#ifdef __AROS__
     struct Hook                 iwcd_ProcessIconListPrefs_hook;
-#else
-    struct Hook                 *iwcd_ProcessIconListPrefs_hook;
-#endif
 
     IPTR                        iwcd_ViewPrefs_ID;
     Object                      *iwcd_ViewPrefs_NotificationObject;
@@ -104,11 +69,7 @@ struct IconWindowIconDrawerList_DATA
     Object                      *iwcd_IconWindow;
     struct RastPort             *iwcd_RastPort;
     struct MUI_EventHandlerNode iwcd_EventHandlerNode;
-#ifdef __AROS__
     struct Hook                 iwcd_ProcessIconListPrefs_hook;
-#else
-    struct Hook                 *iwcd_ProcessIconListPrefs_hook;
-#endif
 
     IPTR                        iwcd_ViewPrefs_ID;
     Object                      *iwcd_ViewPrefs_NotificationObject;
@@ -120,19 +81,11 @@ struct IconWindowIconVolumeList_DATA
     Object                      *iwcd_IconWindow;
     struct RastPort             *iwcd_RastPort;
     struct MUI_EventHandlerNode iwcd_EventHandlerNode;
-#ifdef __AROS__
     struct Hook                 iwcd_ProcessIconListPrefs_hook;
-#else
-    struct Hook                 *iwcd_ProcessIconListPrefs_hook;
-#endif
 
     IPTR                        iwcd_ViewPrefs_ID;
     Object                      *iwcd_ViewPrefs_NotificationObject;
-#ifdef __AROS__
     struct Hook                 iwvcd_UpdateNetworkPrefs_hook;
-#else
-    struct Hook                 *iwvcd_UpdateNetworkPrefs_hook;
-#endif
 
     IPTR                        iwvcd_ShowNetworkBrowser;
     IPTR                        iwvcd_ShowUserFolder;
@@ -143,11 +96,7 @@ struct IconWindowIconNetworkBrowserList_DATA
     Object                      *iwcd_IconWindow;
     struct RastPort             *iwcd_RastPort;
     struct MUI_EventHandlerNode iwcd_EventHandlerNode;
-#ifdef __AROS__
     struct Hook                 iwcd_ProcessIconListPrefs_hook;
-#else
-    struct Hook                 *iwcd_ProcessIconListPrefs_hook;
-#endif
 
     IPTR                        iwcd_ViewPrefs_ID;
     Object                      *iwcd_ViewPrefs_NotificationObject;
@@ -162,7 +111,6 @@ static char __icwc_intern_TxtBuff[TXTBUFF_LEN];
 
 /*** Hook functions *********************************************************/
 ///IconWindowIconList__HookFunc_ProcessIconListPrefsFunc()
-#ifdef __AROS__
 AROS_UFH3(
     void, IconWindowIconList__HookFunc_ProcessIconListPrefsFunc,
     AROS_UFHA(struct Hook *,    hook,   A0),
@@ -170,10 +118,6 @@ AROS_UFH3(
     AROS_UFHA(IPTR *,             param,  A1)
 )
 {
-#else
-HOOKPROTO(IconWindowIconList__HookFunc_ProcessIconListPrefsFunc, void, APTR *obj, IPTR *param)
-{
-#endif
     AROS_USERFUNC_INIT
 
     /* Get our private data */
@@ -449,13 +393,9 @@ HOOKPROTO(IconWindowIconList__HookFunc_ProcessIconListPrefsFunc, void, APTR *obj
     }
     AROS_USERFUNC_EXIT
 }
-#ifndef __AROS__
-MakeStaticHook(Hook_ProcessIconListPrefsFunc,IconWindowIconList__HookFunc_ProcessIconListPrefsFunc);
-#endif
 ///
 
 ///IconWindowIconList__HookFunc_UpdateNetworkPrefsFunc()
-#ifdef __AROS__
 AROS_UFH3(
     void, IconWindowIconList__HookFunc_UpdateNetworkPrefsFunc,
     AROS_UFHA(struct Hook *,    hook,   A0),
@@ -463,10 +403,6 @@ AROS_UFH3(
     AROS_UFHA(APTR,             param,  A1)
 )
 {
-#else
-HOOKPROTO(IconWindowIconList__HookFunc_UpdateNetworkPrefsFunc, void, APTR *obj, APTR param)
-{
-#endif
     AROS_USERFUNC_INIT
 
     /* Get our private data */
@@ -522,9 +458,6 @@ HOOKPROTO(IconWindowIconList__HookFunc_UpdateNetworkPrefsFunc, void, APTR *obj, 
     }
     AROS_USERFUNC_EXIT
 }
-#ifndef __AROS__
-MakeStaticHook(Hook_UpdateNetworkPrefsFunc,IconWindowIconList__HookFunc_UpdateNetworkPrefsFunc);
-#endif
 
 #define BDRPLINELEN_MAX 1024
 BOOL IconWindowIconList__Func_ParseBackdrop(Class *CLASS, Object *self, char *bdrp_dir)
@@ -561,7 +494,7 @@ BOOL IconWindowIconList__Func_ParseBackdrop(Class *CLASS, Object *self, char *bd
                         bdrp_namepart = FilePart(bdrp_fullfile);
                         bdrp_currfile_dob = GetIconTags
                           (
-                            bdrp_fullfile, 
+                            bdrp_fullfile,
                             ICONGETA_FailIfUnavailable, FALSE,
                             ICONGETA_Label,             bdrp_namepart,
                             TAG_DONE
@@ -639,11 +572,7 @@ Object *IconWindowIconList__OM_NEW(Class *CLASS, Object *self, struct opSet *mes
         SETUP_INST_DATA;
         D(bug("[IconWindowIconList] IconWindowIconList__OM_NEW: SELF = 0x%p\n", self));
 
-#ifdef __AROS__
         data->iwcd_ProcessIconListPrefs_hook.h_Entry = ( HOOKFUNC )IconWindowIconList__HookFunc_ProcessIconListPrefsFunc;
-#else
-        data->iwcd_ProcessIconListPrefs_hook = &Hook_ProcessIconListPrefsFunc;
-#endif
 
         if (_newIconList__FSNotifyPort != 0)
         {
@@ -776,84 +705,84 @@ D(bug("[IconWindowIconList] IconWindowIconList__MUIM_Setup: Background Notificat
         DoMethod
           (
             data->iwcd_ViewPrefs_NotificationObject, MUIM_Notify, MUIA_IconList_IconListMode, MUIV_EveryTime,
-            (IPTR) self, 3, 
+            (IPTR) self, 3,
             MUIM_CallHook, &data->iwcd_ProcessIconListPrefs_hook, (IPTR)MUIA_IconList_IconListMode
           );
 
         DoMethod
           (
             data->iwcd_ViewPrefs_NotificationObject, MUIM_Notify, MUIA_IconList_LabelText_Mode, MUIV_EveryTime,
-            (IPTR) self, 3, 
+            (IPTR) self, 3,
             MUIM_CallHook, &data->iwcd_ProcessIconListPrefs_hook, (IPTR)MUIA_IconList_LabelText_Mode
           );
 
         DoMethod
           (
             data->iwcd_ViewPrefs_NotificationObject, MUIM_Notify, MUIA_IconList_LabelText_MaxLineLen, MUIV_EveryTime,
-            (IPTR) self, 3, 
+            (IPTR) self, 3,
             MUIM_CallHook, &data->iwcd_ProcessIconListPrefs_hook, (IPTR)MUIA_IconList_LabelText_MaxLineLen
           );
 
         DoMethod
           (
             data->iwcd_ViewPrefs_NotificationObject, MUIM_Notify, MUIA_IconList_LabelText_MultiLine, MUIV_EveryTime,
-            (IPTR) self, 3, 
+            (IPTR) self, 3,
             MUIM_CallHook, &data->iwcd_ProcessIconListPrefs_hook, (IPTR)MUIA_IconList_LabelText_MultiLine
           );
 
         DoMethod
           (
             data->iwcd_ViewPrefs_NotificationObject, MUIM_Notify, MUIA_IconList_LabelText_MultiLineOnFocus, MUIV_EveryTime,
-            (IPTR) self, 3, 
+            (IPTR) self, 3,
             MUIM_CallHook, &data->iwcd_ProcessIconListPrefs_hook, (IPTR)MUIA_IconList_LabelText_MultiLineOnFocus
           );
 
         DoMethod
           (
             data->iwcd_ViewPrefs_NotificationObject, MUIM_Notify, MUIA_IconList_Icon_HorizontalSpacing, MUIV_EveryTime,
-            (IPTR) self, 3, 
+            (IPTR) self, 3,
             MUIM_CallHook, &data->iwcd_ProcessIconListPrefs_hook, (IPTR)MUIA_IconList_Icon_HorizontalSpacing
           );
 
         DoMethod
           (
             data->iwcd_ViewPrefs_NotificationObject, MUIM_Notify, MUIA_IconList_Icon_VerticalSpacing, MUIV_EveryTime,
-            (IPTR) self, 3, 
+            (IPTR) self, 3,
             MUIM_CallHook, &data->iwcd_ProcessIconListPrefs_hook, (IPTR)MUIA_IconList_Icon_VerticalSpacing
           );
 
         DoMethod
           (
             data->iwcd_ViewPrefs_NotificationObject, MUIM_Notify, MUIA_IconList_Icon_ImageSpacing, MUIV_EveryTime,
-            (IPTR) self, 3, 
+            (IPTR) self, 3,
             MUIM_CallHook, &data->iwcd_ProcessIconListPrefs_hook, (IPTR)MUIA_IconList_Icon_ImageSpacing
           );
 
         DoMethod
           (
             data->iwcd_ViewPrefs_NotificationObject, MUIM_Notify, MUIA_IconList_LabelText_HorizontalPadding, MUIV_EveryTime,
-            (IPTR) self, 3, 
+            (IPTR) self, 3,
             MUIM_CallHook, &data->iwcd_ProcessIconListPrefs_hook, (IPTR)MUIA_IconList_LabelText_HorizontalPadding
           );
 
         DoMethod
           (
             data->iwcd_ViewPrefs_NotificationObject, MUIM_Notify, MUIA_IconList_LabelText_VerticalPadding, MUIV_EveryTime,
-            (IPTR) self, 3, 
+            (IPTR) self, 3,
             MUIM_CallHook, &data->iwcd_ProcessIconListPrefs_hook, (IPTR)MUIA_IconList_LabelText_VerticalPadding
           );
 
         DoMethod
           (
             data->iwcd_ViewPrefs_NotificationObject, MUIM_Notify, MUIA_IconList_LabelText_BorderWidth, MUIV_EveryTime,
-            (IPTR) self, 3, 
+            (IPTR) self, 3,
             MUIM_CallHook, &data->iwcd_ProcessIconListPrefs_hook, (IPTR)MUIA_IconList_LabelText_BorderWidth
           );
 
         DoMethod
           (
             data->iwcd_ViewPrefs_NotificationObject, MUIM_Notify, MUIA_IconList_LabelText_BorderHeight, MUIV_EveryTime,
-            (IPTR) self, 3, 
+            (IPTR) self, 3,
             MUIM_CallHook, &data->iwcd_ProcessIconListPrefs_hook, (IPTR)MUIA_IconList_LabelText_BorderHeight
           );
     }
@@ -862,16 +791,12 @@ D(bug("[IconWindowIconList] IconWindowIconList__MUIM_Setup: Background Notificat
     {
         if (prefs)
         {
-#ifdef __AROS__
             ((struct IconWindowIconVolumeList_DATA *)data)->iwvcd_UpdateNetworkPrefs_hook.h_Entry = ( HOOKFUNC )IconWindowIconList__HookFunc_UpdateNetworkPrefsFunc;
-#else
-            ((struct IconWindowIconVolumeList_DATA *)data)->iwvcd_UpdateNetworkPrefs_hook = &Hook_UpdateNetworkPrefsFunc;
-#endif
 
             DoMethod
               (
                 prefs, MUIM_Notify, MUIA_IconWindowExt_NetworkBrowser_Show, MUIV_EveryTime,
-                (IPTR) self, 3, 
+                (IPTR) self, 3,
                 MUIM_CallHook, &((struct IconWindowIconVolumeList_DATA *)data)->iwvcd_UpdateNetworkPrefs_hook, (IPTR)CLASS
               );
         }
@@ -1043,14 +968,14 @@ IPTR IconWindowIconList__MUIM_HandleEvent
 
     D(bug("[IconWindowIconList] IconWindowIconList__MUIM_HandleEvent()\n"));
 
-    if(imsg->Class == IDCMP_DISKINSERTED) 
+    if(imsg->Class == IDCMP_DISKINSERTED)
     {
         D(bug("[IconWindowIconList] IconWindowIconList__MUIM_HandleEvent: IDCMP_DISKINSERTED\n"));
         DoMethod(self, MUIM_IconList_Update);
     DoMethod(self, MUIM_IconList_Sort);
         return(MUI_EventHandlerRC_Eat);
     }
-    else if (imsg->Class == IDCMP_DISKREMOVED) 
+    else if (imsg->Class == IDCMP_DISKREMOVED)
     {
         D(bug("[IconWindowIconList] IconWindowIconList__MUIM_HandleEvent: IDCMP_DISKREMOVED\n"));
         DoMethod(self, MUIM_IconList_Update);
@@ -1201,7 +1126,7 @@ IPTR IconWindowIconList__MUIM_IconList_Update
                 struct DiskObject    *_nb_dob = NULL;
                 _nb_dob = GetIconTags
                   (
-                    "ENV:SYS/def_NetworkHost", 
+                    "ENV:SYS/def_NetworkHost",
                     ICONGETA_FailIfUnavailable, FALSE,
                     ICONGETA_Label,             (IPTR)"Network Access..",
                     TAG_DONE
@@ -1246,7 +1171,7 @@ IPTR IconWindowIconList__MUIM_IconList_Update
 
                         _nb_dob = GetIconTags
                           (
-                            "ENV:SYS/def_UserHome", 
+                            "ENV:SYS/def_UserHome",
                             ICONGETA_FailIfUnavailable, FALSE,
                             ICONGETA_Label,             (IPTR)"User Files..",
                             TAG_DONE
@@ -1279,7 +1204,6 @@ IPTR IconWindowIconList__MUIM_IconList_Update
 }
 ///
 /*** Setup ******************************************************************/
-#ifdef __AROS__
 ICONWINDOWICONDRAWERLIST_CUSTOMCLASS
 (
     IconWindowIconDrawerList, IconWindowIconList, NULL, MUIC_IconDrawerList, NULL,
@@ -1354,4 +1278,3 @@ ICONWINDOWICONNETWORKBROWSERLIST_CUSTOMCLASS
     MUIM_HandleEvent,              Msg,
     MUIM_IconList_Update,          struct MUIP_IconList_Update *
 );
-#endif

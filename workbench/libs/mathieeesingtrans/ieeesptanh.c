@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2003, The AROS Development Team. All rights reserved.
 */
 
 #include "mathieeesingtrans_intern.h"
@@ -43,7 +42,7 @@
     LONG tmp;
     
     if ( y2 >= 0x41100000 )
-    /* 
+    /*
         tanh( x > 9 ) =  1
         tanh( x <-9 ) = -1
     */
@@ -53,7 +52,7 @@
     Res = IEEESPExp(y2);
     tmp = IEEESPDiv(one, Res);
     Res = IEEESPDiv
-    ( 
+    (
         IEEESPAdd(Res, (tmp | IEEESPSign_Mask) ),
         IEEESPAdd(Res, tmp)
     );

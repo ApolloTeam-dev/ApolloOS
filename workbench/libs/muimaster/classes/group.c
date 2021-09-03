@@ -1,9 +1,8 @@
 /*
-    Copyright © 1999, David Le Corfec.
-    Copyright © 2002-2017, The AROS Development Team.
+    Copyright (C) 2002-2020, The AROS Development Team.
+    Copyright (C) 1999, David Le Corfec.
     All rights reserved.
 
-    $Id$
 */
 
 #include <exec/types.h>
@@ -410,7 +409,7 @@ IPTR Group__OM_NEW(struct IClass *cl, Object *obj, struct opSet *msg)
         return 0;
     }
 
-/*      D(bug("Group_New(0x%lx)\n",obj)); */
+/*      D(bug("Group_New(0x%p)\n",obj)); */
 
     if (data->flags & GROUP_VIRTUAL)
     {
@@ -519,10 +518,10 @@ IPTR Group__OM_SET(struct IClass *cl, Object *obj, struct opSet *msg)
             break;
 
         case MUIA_Group_LayoutHook:
-            /* 
-               [ach] Seems like MUI supports setting this attribute after 
-               initialization, even though the documentation states 
-               otherwise. At least some programs use it... 
+            /*
+               [ach] Seems like MUI supports setting this attribute after
+               initialization, even though the documentation states
+               otherwise. At least some programs use it...
              */
             data->layout_hook = (struct Hook *)tag->ti_Data;
             break;
@@ -1768,7 +1767,7 @@ group_minmax_pagemode(struct IClass *cl, Object *obj,
 
     cstate = (Object *) children->mlh_Head;
 
-    D(bug("minmax_pagemode(%lx)\n", obj, tmp.DefWidth));
+    D(bug("minmax_pagemode(0x%p) defw = %ld\n", obj, tmp.DefWidth));
 
     while ((child = NextObject(&cstate)))
     {
@@ -1779,7 +1778,7 @@ group_minmax_pagemode(struct IClass *cl, Object *obj,
             continue;
 
         tmp.MinHeight = MAX(tmp.MinHeight, _minheight(child));
-        D(bug("minmax_pagemode(%p) minh child = %d tmpmin=%d\n", obj,
+        D(bug("minmax_pagemode(0x%p) minh child = %d tmpmin=%d\n", obj,
                 _minheight(child), tmp.MinHeight));
         tmp.MinWidth = MAX(tmp.MinWidth, _minwidth(child));
         tmp.MaxHeight = MIN(tmp.MaxHeight, w0_maxheight(child));
@@ -1791,7 +1790,7 @@ group_minmax_pagemode(struct IClass *cl, Object *obj,
             MAX(tmp.DefWidth,
             ((w0_defwidth(child) <
                     MUI_MAXMAX) ? w0_defwidth(child) : tmp.DefWidth));
-        D(bug("minmax_pagemode(%lx) defw = %ld\n", obj, tmp.DefWidth));
+        D(bug("minmax_pagemode(0x%p) defw = %ld\n", obj, tmp.DefWidth));
     }
 
     if (data->titlegroup)
@@ -1842,7 +1841,7 @@ IPTR Group__MUIM_AskMinMax(struct IClass *cl, Object *obj,
             continue;
         /*  Ask child  */
         DoMethodA(child, (Msg) & childMsg);
-        /*  D(bug("*** group %lx, child %lx min=%ld,%ld\n", */
+        /*  D(bug("*** group 0x%p, child 0x%p min=%ld,%ld\n", */
         /*      obj, child, childMinMax.MinWidth, childMinMax.MinHeight)); */
         __area_finish_minmax(child, childMsg.MinMaxInfo);
     }
@@ -3306,21 +3305,21 @@ STATIC IPTR Group_Notify(struct IClass *cl, Object *obj,
 #if 1
 /* Notes about Group_Notify() and echo notification problem:
 It was discovered that MUI seems to have some special handling for group class
-which will drop notifications on the children which are found to not 
+which will drop notifications on the children which are found to not
 understand the attribute.
 
-This is done by checking if an OM_GET on the child returns TRUE. 
-There's a little problem here because it is not known how big the storage 
-needed for the attribute in question will be. Almost no class uses anything 
+This is done by checking if an OM_GET on the child returns TRUE.
+There's a little problem here because it is not known how big the storage
+needed for the attribute in question will be. Almost no class uses anything
 bigger than one IPTR. For "big" attributes those return a pointer to the data,
-not the data itself. Unfortuntely there are some exceptions like colorwheel 
-class which does not return a pointer, but the data itself. So it's not 
-enough to use one single IPTR variable (4 Bytes on 32bit machines, 8 bytes 
+not the data itself. Unfortuntely there are some exceptions like colorwheel
+class which does not return a pointer, but the data itself. So it's not
+enough to use one single IPTR variable (4 Bytes on 32bit machines, 8 bytes
 on 64 bit machines) to store the result of the test-OM_Get.
 
-There is no general way to query the size needed so if one wants to change 
-Zune to work like MUI one needs to choose a size which one hopes will be 
-big enough to hold all possible attributes of all classes, old, present 
+There is no general way to query the size needed so if one wants to change
+Zune to work like MUI one needs to choose a size which one hopes will be
+big enough to hold all possible attributes of all classes, old, present
 and future ones.
 */
 STATIC IPTR Group_Notify(struct IClass *cl, Object *obj,
@@ -3463,7 +3462,7 @@ BOOPSI_DISPATCHER(IPTR, Group_Dispatcher, cl, obj, msg)
     }
 
     /* sometimes you want to call a superclass method,
-     * but not dispatching to child. 
+     * but not dispatching to child.
      * But what to do with list methods in a listview ?
      */
     Group_DispatchMsg(cl, obj, (APTR) msg);

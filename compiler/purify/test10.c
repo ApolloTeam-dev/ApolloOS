@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <stdio.h>
@@ -14,7 +13,7 @@ int main (int argc, char ** argv)
 
     len = strlen (argv[0])-2;
     if (len < 0)
-	len = 1;
+        len = 1;
     str = malloc (len + 1); /* MLK */
 
     strncpy (str, argv[0], len);

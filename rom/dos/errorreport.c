@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 #include <dos/dos.h>
@@ -11,6 +9,8 @@
 #include <intuition/intuition.h>
 #include <exec/ports.h>
 #include <aros/debug.h>
+
+#include <string.h>
 
 #define CATCOMP_NUMBERS
 

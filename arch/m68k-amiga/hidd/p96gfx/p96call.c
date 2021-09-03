@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2019, The AROS Development Team. All rights reserved.
 */
 /* This program generates the p96call.h macroset for gcc-4.5.1 m68k-elf
  *
@@ -14,7 +13,7 @@
 
 #include <stdio.h>
 
-#define GENCALL_MAX	(13 + 1)	/* Max number of arguments */
+#define GENCALL_MAX     (13 + 1)        /* Max number of arguments */
 
 static void asm_regs_init(int id, int has_bn, const char *jmp, const char *addr)
 {

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2004, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2004, The AROS Development Team. All rights reserved.
 
     Unset CLI command.
 */
@@ -77,10 +76,10 @@ AROS_SHA(STRPTR, ,NAME, ,NULL))
         /* Delete the local Var from the list.
          */
 
-	 if (!DeleteVar(SHArg(NAME), GVF_LOCAL_ONLY))
-	 {
+         if (!DeleteVar(SHArg(NAME), GVF_LOCAL_ONLY))
+         {
              return RETURN_FAIL;
-	 }
+         }
 
     }
     else

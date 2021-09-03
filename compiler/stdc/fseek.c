@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     C99 function fseek()
 */
@@ -10,38 +9,39 @@
 
 #include "__stdio.h"
 
-#define DEBUG 0
 #include <aros/debug.h>
+
+#include "debug.h"
 
 /*****************************************************************************
 
     NAME */
 #include <stdio.h>
 
-	int fseek (
+        int fseek (
 
 /*  SYNOPSIS */
-	FILE * stream,
-	long   offset,
-	int    whence)
+        FILE * stream,
+        long   offset,
+        int    whence)
 
 /*  FUNCTION
-	Change the current position in a stream.
+        Change the current position in a stream.
 
     INPUTS
-	stream - Modify this stream
-	offset, whence - How to modify the current position. whence
-		can be SEEK_SET, then offset is the absolute position
-		in the file (0 is the first byte), SEEK_CUR then the
-		position will change by offset (ie. -5 means to move
-		5 bytes to the beginning of the file) or SEEK_END.
-		SEEK_END means that the offset is relative to the
-		end of the file (-1 is the last byte and 0 is
-		the EOF).
+        stream - Modify this stream
+        offset, whence - How to modify the current position. whence
+                can be SEEK_SET, then offset is the absolute position
+                in the file (0 is the first byte), SEEK_CUR then the
+                position will change by offset (ie. -5 means to move
+                5 bytes to the beginning of the file) or SEEK_END.
+                SEEK_END means that the offset is relative to the
+                end of the file (-1 is the last byte and 0 is
+                the EOF).
 
     RESULT
-	0 on success and -1 on error. If an error occurred, the global
-	variable errno is set.
+        0 on success and -1 on error. If an error occurred, the global
+        variable errno is set.
 
     NOTES
         The seek is handled by the files system so effects of what happens
@@ -50,11 +50,11 @@
     EXAMPLE
 
     BUGS
-        Not fully compatible with iso fseek, especially in 'ab' and 'a+b'
+        Not fully compatible with ISO fseek, especially in 'ab' and 'a+b'
         modes
 
     SEE ALSO
-	fopen(), fwrite()
+        fopen(), fwrite()
 
     INTERNALS
 
@@ -63,7 +63,7 @@
     LONG mode;
     BPTR fh = stream->fh;
 
-    D(bug("[stdcio/fseek()] Entering stream=0x%x, offset=%d, whence=%d\n",
+    D(bug("[%s] %s: Entering stream = 0x%p, offset = %d, whence = %d\n", STDCNAME, __func__,
           stream, offset, whence
     ));
 
@@ -88,7 +88,7 @@
 
     if (Seek(fh, offset, mode) < 0)
     {
-        D(bug("[stdcio/fseek()] Failed (IoErr()=%d)\n", IoErr()));
+        D(bug("[%s] %s: Failed (IoErr()=%d)\n", STDCNAME, __func__, IoErr()));
         if (IoErr() == ERROR_UNKNOWN)
             errno = EINVAL;
         else
@@ -97,7 +97,7 @@
     }
     else
     {
-        D(bug("[stdcio/fseek()] Done\n"));
+        D(bug("[%s] %s: Done\n", STDCNAME, __func__));
         return 0;
     }
 } /* fseek */

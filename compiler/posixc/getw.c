@@ -1,6 +1,5 @@
 /*
-    Copyright © 2004-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004-2013, The AROS Development Team. All rights reserved.
     
     SVID function getw().
 */
@@ -11,10 +10,10 @@
 
 #include <stdio.h>
 
-	int getw(
+        int getw(
 
     SYNOPSIS
-	FILE *stream)
+        FILE *stream)
 
     FUNCTION
 
@@ -31,7 +30,7 @@
     BUGS
 
     SEE ALSO
-        fread()
+        __posixc_fread()
 
     INTERNALS
 

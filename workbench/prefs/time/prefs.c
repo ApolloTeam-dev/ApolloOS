@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 /*********************************************************************************************/
@@ -35,8 +33,8 @@ BOOL UsePrefs(void)
     secs = Date2Amiga(&clockdata);
     
     TimerIO->tr_node.io_Command = TR_SETSYSTIME;
-    TimerIO->tr_time.tv_secs 	= secs;
-    TimerIO->tr_time.tv_micro 	= 0;
+    TimerIO->tr_time.tv_secs    = secs;
+    TimerIO->tr_time.tv_micro   = 0;
     
     DoIO(&TimerIO->tr_node);
     

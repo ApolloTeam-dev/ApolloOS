@@ -1,6 +1,5 @@
 /*
-    Copyright © 2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2012, The AROS Development Team. All rights reserved.
 
     ASCIITable -- Insert characters to clipboard from GUI.
  */
@@ -73,7 +72,7 @@
 #include "strings.h"
 
 #define CATALOG_NAME     "System/Tools/Commodities.catalog"
-#define CATALOG_VERSION  3
+#include "catalogs/catalog_version.h"
 
 TEXT version[] = "$VER: ASCIITable 1.2 (14.01.2012)";
 
@@ -279,7 +278,7 @@ IPTR ASCIITable__OM_NEW(Class *CLASS, Object *self, struct opSet *message)
     (
         CLASS, self, NULL,
         Child, key_group,
-        Child, (IPTR) (RectangleObject, 
+        Child, (IPTR) (RectangleObject,
             MUIA_Rectangle_HBar, TRUE,
             MUIA_FixHeight,      2,
         End),
@@ -403,8 +402,8 @@ static CONST_STRPTR _(ULONG id)
     if (LocaleBase != NULL && catalog != NULL)
     {
         return GetCatalogStr(catalog, id, CatCompArray[id].cca_Str);
-    } 
-    else 
+    }
+    else
     {
         return CatCompArray[id].cca_Str;
     }
@@ -418,8 +417,8 @@ static int Locale_Initialize(VOID)
     if (LocaleBase != NULL)
     {
         catalog = OpenCatalog
-            ( 
-             NULL, CATALOG_NAME, OC_Version, CATALOG_VERSION, TAG_DONE 
+            (
+             NULL, CATALOG_NAME, OC_Version, CATALOG_VERSION, TAG_DONE
             );
     }
     else
@@ -489,7 +488,7 @@ static struct NewMenu nm[] =
     {NM_TITLE, (STRPTR)MSG_MEN_PROJECT         },
      {NM_ITEM, (STRPTR)MSG_MEN_PROJECT_HIDE    },
      {NM_ITEM, (STRPTR)MSG_MEN_PROJECT_ICONIFY },
-     {NM_ITEM, NM_BARLABEL    	               },
+     {NM_ITEM, NM_BARLABEL                     },
      {NM_ITEM, (STRPTR)MSG_MEN_PROJECT_QUIT    },
     {NM_END                                    }
 };
@@ -525,11 +524,11 @@ static void showSimpleMessage(CONST_STRPTR msgString)
 {
     struct EasyStruct easyStruct;
 
-    easyStruct.es_StructSize	= sizeof(easyStruct);
-    easyStruct.es_Flags		= 0;
-    easyStruct.es_Title		= _(MSG_ASCIITABLE_CXNAME);
-    easyStruct.es_TextFormat	= msgString;
-    easyStruct.es_GadgetFormat	= _(MSG_OK);		
+    easyStruct.es_StructSize    = sizeof(easyStruct);
+    easyStruct.es_Flags         = 0;
+    easyStruct.es_Title         = _(MSG_ASCIITABLE_CXNAME);
+    easyStruct.es_TextFormat    = msgString;
+    easyStruct.es_GadgetFormat  = _(MSG_OK);
 
     if (IntuitionBase != NULL && !Cli() )
     {
@@ -599,7 +598,7 @@ static void MakeGUI(void)
     app = (Object *)ApplicationObject,
         MUIA_Application_Title, __(MSG_ASCIITABLE_CXNAME),
         MUIA_Application_Version, (IPTR)version,
-        MUIA_Application_Copyright, (IPTR)"Copyright  © 2012, The AROS Development TEAM",
+        MUIA_Application_Copyright, (IPTR)"Copyright  \xA9 2012, The AROS Development TEAM",
         MUIA_Application_Author, (IPTR)"The AROS Development Team",
         MUIA_Application_Description, __(MSG_ASCIITABLE_CXDESCR),
         MUIA_Application_BrokerPri, cx_pri,
@@ -700,7 +699,7 @@ int main(int argc, char **argv)
 {
     D(bug("ASCIITable started\n"));
     GetArguments(argc, argv);
-    InitMenus();    
+    InitMenus();
     MakeGUI();
     HandleAll();
     Cleanup(NULL);

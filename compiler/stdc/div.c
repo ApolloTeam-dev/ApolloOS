@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 
     C99 function div().
 */
@@ -10,14 +9,14 @@
     NAME */
 #include <stdlib.h>
 
-	div_t div (
+        div_t div (
 
 /*  SYNOPSIS */
-	int numer,
-	int denom)
+        int numer,
+        int denom)
 
 /*  FUNCTION
- 	Compute quotient en remainder of two int variables
+        Compute quotient en remainder of two int variables
 
     INPUTS
         numer = the numerator
@@ -39,7 +38,7 @@
     BUGS
 
     SEE ALSO
-	ldiv()
+        ldiv()
 
     INTERNALS
 
@@ -51,10 +50,10 @@
     ret.rem  = numer % denom;
 
     /*
-	This comment is from FreeBSD's src/lib/libc/stdlib/div.c, but
-	the code was written before the comment was added (see CVS log).
+        This comment is from FreeBSD's src/lib/libc/stdlib/div.c, but
+        the code was written before the comment was added (see CVS log).
 
-	Thus the code isn't really under the BSD license. The comment is...
+        Thus the code isn't really under the BSD license. The comment is...
      */
 
     /*
@@ -82,8 +81,8 @@
      */
     if (numer >= 0 && ret.rem < 0)
     {
-	ret.quot++;
-	ret.rem -= denom;
+        ret.quot++;
+        ret.rem -= denom;
     }
     return ret;
 }

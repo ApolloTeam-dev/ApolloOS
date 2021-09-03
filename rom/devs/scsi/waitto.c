@@ -1,5 +1,5 @@
 /*
-    Copyright © 2013-2014, The AROS Development Team. All rights reserved
+    Copyright (C) 2013-2014, The AROS Development Team. All rights reserved
     $Id: waitto.c 55802 2019-03-08 21:47:59Z wawa $
 */
 
@@ -40,8 +40,8 @@ ULONG scsi_WaitTO(struct IORequest* tmr, ULONG secs, ULONG micro, ULONG sigs)
     D(bug("[SCSI  ] Signals received: %lx ('%s')\n", sigs, t->ln_Name));
     if (0 == (sigs & sig))
     {
-	if (!CheckIO(tmr))
-	    AbortIO(tmr);
+        if (!CheckIO(tmr))
+            AbortIO(tmr);
     }
     WaitIO(tmr);
 

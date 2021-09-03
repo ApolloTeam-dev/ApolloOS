@@ -1,15 +1,14 @@
 /*
-    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
  */
+
+#include <aros/debug.h>
 
 #include <proto/dos.h>
 
 #include <ctype.h>
 
 #include "Shell.h"
-
-#include <aros/debug.h>
 
 /* environment variables handling (locals and globals) */
 LONG convertVar(ShellState *ss, Buffer *in, Buffer *out, BOOL *quoted)
@@ -24,26 +23,26 @@ LONG convertVar(ShellState *ss, Buffer *in, Buffer *out, BOOL *quoted)
     APTR orig_WindowPtr;
 
     if (bra)
-	++s;
+        ++s;
 
     for (i = 0; i < 256; ++i)
     {
-	if (bra)
+        if (bra)
         {
-	    if (*s == '\0' || *s == '}')
-		break;
+            if (*s == '\0' || *s == '}')
+                break;
         }
         else
         {
             if (!isalnum(*s))
-	        break;
-	}
+                break;
+        }
 
-	varName[i] = *s++;
+        varName[i] = *s++;
     }
 
     if (i >= 256) /* FIXME setup a VAR_MAX constant */
-	return ERROR_LINE_TOO_LONG;
+        return ERROR_LINE_TOO_LONG;
 
     varName[i] = '\0';
 
@@ -57,7 +56,7 @@ LONG convertVar(ShellState *ss, Buffer *in, Buffer *out, BOOL *quoted)
 
     me = (struct Process *)FindTask(NULL);
     
-    /* 
+    /*
         For the rare cases where ENV: is not yet mounted, silence the dos, otherwise it pops up
         with requester asking to insert ENV: in any drive...
     */
@@ -66,13 +65,13 @@ LONG convertVar(ShellState *ss, Buffer *in, Buffer *out, BOOL *quoted)
     
     if ((bra != 1) && (i > 0) && ((len = GetVar(varName, varValue, 256, LV_VAR)) != -1))
     {
-	D(bug("[Shell] found var: %s = %s\n", varName, varValue));
-	bufferAppend(varValue, len, out, SysBase);
+        D(bug("[Shell] found var: %s = %s\n", varName, varValue));
+        bufferAppend(varValue, len, out, ss);
     }
     else
     {
-	D(bug("[Shell] var not found: %s\n", varName));
-	bufferAppend(p, ++i + bra, out, SysBase);
+        D(bug("[Shell] var not found: %s\n", varName));
+        bufferAppend(p, ++i + bra, out, ss);
     }
 
     /* Restore original pr_WindowPtr */

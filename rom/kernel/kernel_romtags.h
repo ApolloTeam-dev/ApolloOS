@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -24,5 +23,5 @@ static inline struct ExecBase *krnInitExecBase(struct Resident *res, struct MemH
     return AROS_UFC3(struct ExecBase *, res->rt_Init,
                      AROS_UFCA(struct MemHeader *, mh, D0),
                      AROS_UFCA(struct TagItem *, bootMsg, A0),
- 	             AROS_UFCA(struct ExecBase *, NULL, A6));
+                     AROS_UFCA(struct ExecBase *, NULL, A6));
 }

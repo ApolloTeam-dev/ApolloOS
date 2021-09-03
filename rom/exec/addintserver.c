@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc: Add interrupt client to chain of interrupt servers
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -30,14 +28,14 @@ static void krnIRQwrapper(void *data1, void *data2)
 
     NAME */
 
-	AROS_LH2(void, AddIntServer,
+        AROS_LH2(void, AddIntServer,
 
 /*  SYNOPSIS */
-	AROS_LHA(ULONG,              intNumber, D0),
-	AROS_LHA(struct Interrupt *, interrupt, A1),
+        AROS_LHA(ULONG,              intNumber, D0),
+        AROS_LHA(struct Interrupt *, interrupt, A1),
 
 /*  LOCATION */
-	struct ExecBase *, SysBase, 28, Exec)
+        struct ExecBase *, SysBase, 28, Exec)
 
 /*  FUNCTION
 
@@ -46,8 +44,8 @@ static void krnIRQwrapper(void *data1, void *data2)
     RESULT
 
     NOTES
-	This function also enables the corresponding chipset interrupt if
-	run on a native Amiga.
+        This function also enables the corresponding chipset interrupt if
+        run on a native Amiga.
 
     EXAMPLE
 

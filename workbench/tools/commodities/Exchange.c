@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2016, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2016, The AROS Development Team. All rights reserved.
 
     Exchange -- controls commodities.
 */
@@ -80,7 +79,7 @@
 #else
 #define CATALOG_NAME     "System/Tools/Exchange.catalog"
 #endif
-#define CATALOG_VERSION  3
+#include "catalogs/catalog_version.h"
 
 TEXT version[] = "$VER: Exchange 1.3 (1.11.2016)";
 
@@ -468,7 +467,7 @@ static void MakeGUI(void)
         MUIA_Application_Title, __(MSG_EXCHANGE_CXNAME),
         MUIA_Application_Version, (IPTR)version,
         MUIA_Application_Copyright,
-            (IPTR)"Copyright  © 1995-2016, The AROS Development Team",
+            (IPTR)"Copyright  \xA9 1995-2016, The AROS Development Team",
         MUIA_Application_Author, (IPTR)"The AROS Development Team",
         MUIA_Application_Description, __(MSG_EXCHANGE_CXDESCR),
         MUIA_Application_BrokerPri, cx_pri,

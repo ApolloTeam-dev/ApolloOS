@@ -1,9 +1,7 @@
 /*
-    Copyright © 2000, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2000, The AROS Development Team. All rights reserved.
 
     Desc: Text.datatype initialization code.
-    Lang: English.
 */
 
 #include <stddef.h>
@@ -38,7 +36,7 @@
 #define DEBUG 0
 #include <aros/debug.h>
 
-#undef	register
+#undef  register
 #define register
 
 #undef __a6

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function dup2().
 */
@@ -49,7 +48,7 @@
             duplicated in
 
     RESULT
-	-1 for error or newfd on success
+        -1 for error or newfd on success
 
     NOTES
         This function must not be used in a shared library or

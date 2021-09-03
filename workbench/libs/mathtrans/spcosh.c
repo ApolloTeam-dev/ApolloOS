@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2003, The AROS Development Team. All rights reserved.
 */
 
 #include "mathtrans_intern.h"
@@ -66,7 +65,7 @@
     /* Res = Res / 2 */
     /* should be ((char)Res) --, but gcc on Linux screws up the result  */
     tmp = Res & 0xFFFFFF00;
-    Res -= sizeof(char); 
+    Res -= sizeof(char);
     Res = tmp | Res;
     
     if (0 == Res || (char)Res < 0 )

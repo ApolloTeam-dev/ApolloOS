@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 */
 
 #include "partition_support.h"
@@ -50,7 +49,7 @@ static const struct PartitionAttribute defaultPartitionTableAttrs[] =
 
     if (table->table)
     {
-    	struct PTFunctionTable *handler = table->table->handler;
+        struct PTFunctionTable *handler = table->table->handler;
 
         return handler->partitionTableAttrs;
     }

@@ -1,9 +1,7 @@
 /*
-    Copyright © 2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2014, The AROS Development Team. All rights reserved.
 
     Desc: PCI XHCI USB host controller
-    Lang: English
 */
 
 #ifdef DEBUG
@@ -82,7 +80,7 @@ static int GM_UNIQUENAME(Open)(LIBBASETYPEPTR LIBBASE, struct IOUsbHWReq *ioreq,
 
             ioreq->iouh_Req.io_Unit                    = (struct Unit *) unit;
             ioreq->iouh_Req.io_Message.mn_Node.ln_Type = NT_REPLYMSG;
-            ioreq->iouh_Req.io_Error				   = 0;
+            ioreq->iouh_Req.io_Error                               = 0;
 
             return TRUE;
         }
@@ -140,7 +138,7 @@ AROS_LH1(void, BeginIO, AROS_LHA(struct IOUsbHWReq *, ioreq, A1), LIBBASETYPEPTR
     WORD ret = RC_OK;
 
     ioreq->iouh_Req.io_Message.mn_Node.ln_Type = NT_MESSAGE;
-    ioreq->iouh_Req.io_Error				   = UHIOERR_NO_ERROR;
+    ioreq->iouh_Req.io_Error                               = UHIOERR_NO_ERROR;
 
     struct PCIXHCIUnit *unit = (struct PCIXHCIUnit *) ioreq->iouh_Req.io_Unit;
 

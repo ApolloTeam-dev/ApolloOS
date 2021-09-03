@@ -1,9 +1,7 @@
 /*
-    Copyright © 2008-2010, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2008-2010, The AROS Development Team. All rights reserved.
 
     Desc: Autodocs for function macros
-    Lang: english
 */
 
 
@@ -20,10 +18,10 @@ macro have the same name but differ in case, e.g. CWait() and CWAIT().
 
 /*****************************************************************************
 
-    NAME 
+    NAME
         AreaCircle(
 
-    SYNOPSIS 
+    SYNOPSIS
         rp,
         cx,
         cy,
@@ -54,10 +52,10 @@ macro have the same name but differ in case, e.g. CWait() and CWAIT().
 
 /*****************************************************************************
 
-    NAME 
+    NAME
         CINIT(
 
-    SYNOPSIS 
+    SYNOPSIS
         c,
         n );
 
@@ -86,10 +84,10 @@ macro have the same name but differ in case, e.g. CWait() and CWAIT().
 
 /*****************************************************************************
 
-    NAME 
+    NAME
         CEND(
 
-    SYNOPSIS 
+    SYNOPSIS
         c );
 
     LOCATION

@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2007, The AROS Development Team. All rights reserved.
 */
 
 #include <proto/graphics.h>
@@ -75,9 +74,9 @@
 #if 0 /* MUI_AddClipRegion frees region itself upon failure */
     if (handle == (APTR)-1)
     {
-    	DisposeRegion(r);
+        DisposeRegion(r);
     }
-#endif    
+#endif
     return handle;
 
     AROS_LIBFUNC_EXIT

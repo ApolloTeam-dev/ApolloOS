@@ -1,4 +1,3 @@
-# $Id$
 #
 
 include $(SRCDIR)/config/aros.cfg
@@ -6,9 +5,11 @@ include $(SRCDIR)/config/aros.cfg
 -include $(SRCDIR)/arch/$(CPU)-all/utility/make.opts
 
 USER_INCLUDES := -I$(SRCDIR)/rom/utility
+ISA_FLAGS += -mavx
 
 FILES := \
-    setmem_sse
+    setmem_sse \
+    setmem_avx \
 
 #MM- kernel-utility-pc : includes
 

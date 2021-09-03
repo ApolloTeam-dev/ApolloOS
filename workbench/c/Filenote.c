@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2011 The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020 The AROS Development Team. All rights reserved.
 
     Desc: Filenote CLI command
-    Lang: english
 */
 
 /*****************************************************************************
@@ -92,11 +90,7 @@
 #include <ctype.h>
 #include <string.h>
 
-#ifdef __AROS__
-#include <aros/rt.h>
-#else
-#define RT_Init()
-#define RT_Exit()
+#ifndef __AROS__
 #define IsDosEntryA(file, flags) 0
 #endif
 
@@ -128,8 +122,6 @@ int main(void)
     IPTR                args[TOTAL_ARGS] = { 0, (IPTR)"", 0, 0};
     int                 Return_Value;
 
-    RT_Init();
-
     Return_Value = RETURN_OK;
 
     apath = AllocVec(sizeof(struct AnchorPath) + MAX_PATH_LEN,
@@ -137,8 +129,9 @@ int main(void)
     if (apath)
     {
         /* Make sure DOS knows the buffer size.
+
          */
-        apath->ap_Flags = APF_DOWILD | APF_FollowHLinks;
+        apath->ap_Flags = (BYTE)((UBYTE)APF_DOWILD | APF_FollowHLinks);
         apath->ap_Strlen = MAX_PATH_LEN;
         apath->ap_BreakBits = 0;
         apath->ap_FoundBreak = 0;
@@ -167,8 +160,6 @@ int main(void)
     }
 
     FreeVec(apath);
-
-    RT_Exit();
 
     return Return_Value;
 

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 */
 
 /* Utility functions for boot taglist relocation */
@@ -35,7 +34,7 @@ void RelocateBootMsg(const struct TagItem *msg)
     /* First count how much memory we will need */
     while ((tag = LibNextTagItem(&tstate)))
     {
-    	num++;
+        num++;
     }
 
     /* Allocate the memory */
@@ -46,9 +45,9 @@ void RelocateBootMsg(const struct TagItem *msg)
     tstate = (struct TagItem *)msg;
     while ((tag = LibNextTagItem(&tstate)))
     {
-    	dest->ti_Tag  = tag->ti_Tag;
-    	dest->ti_Data = tag->ti_Data;
-    	dest++;
+        dest->ti_Tag  = tag->ti_Tag;
+        dest->ti_Data = tag->ti_Data;
+        dest++;
     }
 
     /* Make sure the list is terminated */
@@ -58,10 +57,22 @@ void RelocateBootMsg(const struct TagItem *msg)
 void RelocateTagData(struct TagItem *tag, unsigned long size)
 {
     char *src = (char *)tag->ti_Data;
-    unsigned char *dest = krnAllocBootMem(size);
+    unsigned char *dest;
+    int offset = 0;
+
+    /*
+     * Inject a space at the start of the command line
+     * if necessary, to make parsing switches easier
+     */
+    if ((tag->ti_Data == KRN_CmdLine) && (src[0] != ' '))
+        offset = 1;
+
+    dest = krnAllocBootMem(size + offset);
 
     tag->ti_Data = (IPTR)dest;
-    krnCopyMem(src, dest, size);
+    krnCopyMem(src, (APTR)((IPTR)dest + offset), size);
+    if (offset)
+        dest[0] = ' ';
 }
 
 void RelocateStringData(struct TagItem *tag)
@@ -77,7 +88,7 @@ void RelocateBSSData(struct TagItem *tag)
     unsigned int l = sizeof(struct KernelBSS);
 
     for (bss = (struct KernelBSS *)tag->ti_Data; bss->addr; bss++)
-    	l += sizeof(struct KernelBSS);
+        l += sizeof(struct KernelBSS);
 
     RelocateTagData(tag, l);
 }

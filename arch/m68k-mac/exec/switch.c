@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Native version of Switch().
-    Lang: english
 */
 
 #include <exec/execbase.h>
@@ -26,7 +24,7 @@ AROS_LH0(void, Switch,
          && !(this->tc_Flags & TF_EXCEPT) )
     {
         /*      Its quite possible that they have interrupts Disabled(),
-            we should fix that here, otherwise we can't switch. 
+            we should fix that here, otherwise we can't switch.
 
             We can't call the dispatcher because we need a signal,
             lets just create one.

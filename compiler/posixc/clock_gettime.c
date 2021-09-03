@@ -1,6 +1,5 @@
 /*
-    Copyright © 2008-2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2008-2018, The AROS Development Team. All rights reserved.
     POSIX.1-2001 function clock_gettime().
 */
 
@@ -25,14 +24,14 @@
 
     INPUTS
         clk_id - identifier of the particular clock on which to act
-                CLOCK_REALTIME 
-                System-wide realtime clock. Setting this clock requires appropriate privileges. 
-                CLOCK_MONOTONIC 
-                Clock that cannot be set and represents monotonic time since some unspecified starting point. 
-                CLOCK_PROCESS_CPUTIME_ID 
-                High-resolution per-process timer from the CPU. 
-                CLOCK_THREAD_CPUTIME_ID 
-                Thread-specific CPU-time clock. 
+                CLOCK_REALTIME
+                System-wide real-time clock. Setting this clock requires appropriate privileges.
+                CLOCK_MONOTONIC
+                Clock that cannot be set and represents monotonic time since some unspecified starting point.
+                CLOCK_PROCESS_CPUTIME_ID
+                High-resolution per-process timer from the CPU.
+                CLOCK_THREAD_CPUTIME_ID
+                Thread-specific CPU-time clock.
         tp - structure to hold the retrieved time value
 
     RESULT
@@ -66,7 +65,7 @@
                 struct timeval tv;
                 GetSysTime(&tv);
                 tp->tv_sec  = tv.tv_sec;
-                tp->tv_nsec = tv.tv_usec * 1000; 
+                tp->tv_nsec = tv.tv_usec * 1000;
                 retval = 0;
             }
             else
@@ -83,7 +82,7 @@
                 struct timeval tv;
                 GetUpTime(&tv);
                 tp->tv_sec  = tv.tv_sec;
-                tp->tv_nsec = tv.tv_usec * 1000; 
+                tp->tv_nsec = tv.tv_usec * 1000;
                 retval = 0;
             }
             else

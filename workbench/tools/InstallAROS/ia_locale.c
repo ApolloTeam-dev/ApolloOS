@@ -1,6 +1,5 @@
 /*
-    Copyright © 2018-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2018-2020, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/types.h>
@@ -10,7 +9,7 @@
 #include "strings.h"
 
 #define CATALOG_NAME     "System/Tools/InstallAROS.catalog"
-#define CATALOG_VERSION  2
+#include "catalogs/catalog_version.h"
 
 /*** Variables **************************************************************/
 struct Catalog *catalog;
@@ -22,11 +21,11 @@ CONST_STRPTR _(ULONG id)
 {
     if (LocaleBase != NULL && catalog != NULL)
     {
-	return GetCatalogStr(catalog, id, CatCompArray[id].cca_Str);
+        return GetCatalogStr(catalog, id, CatCompArray[id].cca_Str);
     }
     else
     {
-	return (CONST_STRPTR)CatCompArray[id].cca_Str;
+        return (CONST_STRPTR)CatCompArray[id].cca_Str;
     }
 }
 

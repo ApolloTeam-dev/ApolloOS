@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Varargs version of dos.library/NewLoadSeg()
-    Lang: english
 */
 
 #define AROS_TAGRETURNTYPE BPTR
@@ -16,12 +14,12 @@
 #define NO_INLINE_STDARG /* turn off inline def */
 #include <proto/dos.h>
 
-	BPTR NewLoadSegTags (
+        BPTR NewLoadSegTags (
 
 /*  SYNOPSIS */
-	STRPTR file,
-	Tag tag1,
-	...)
+        STRPTR file,
+        Tag tag1,
+        ...)
 
 /*  FUNCTION
         This is the varargs version of dos.library/NewLoadSeg().

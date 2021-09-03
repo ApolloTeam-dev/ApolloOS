@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2019, The AROS Development Team. All rights reserved.
 
     Desc: The main keyboard class.
-    Lang: English.
 */
 
 /****************************************************************************************/
@@ -38,7 +36,7 @@
 // CIA-A level 2 serial interrupt handler
 
 static AROS_INTH1(keyboard_interrupt, struct kbd_data *, kbddata)
-{ 
+{
     AROS_INTFUNC_INIT
 
     volatile struct CIA *ciaa = (struct CIA*)0xbfe001;
@@ -84,9 +82,9 @@ static AROS_INTH1(keyboard_interrupt, struct kbd_data *, kbddata)
 
     // busy wait until handshake pulse has been long enough
     for (;;) {
-    	ReadEClock(&eclock2);
-    	if ((LONG)(eclock2.ev_lo - eclock1.ev_lo) >= 80)
-    	    break;
+        ReadEClock(&eclock2);
+        if ((LONG)(eclock2.ev_lo - eclock1.ev_lo) >= 80)
+            break;
     }
 
     ciaa->ciacra &= ~CIACRAF_SPMODE; // end handshake
@@ -112,25 +110,25 @@ OOP_Object * AmigaKbd__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New 
     };
     struct TagItem      *tag, *tstate;
     KbdIrqCallBack_t    callback = NULL;
-    APTR    	        callbackdata = NULL;
+    APTR                callbackdata = NULL;
     BOOL                has_kbd_hidd = FALSE;
     struct Library      *UtilityBase = TaggedOpenLibrary(TAGGEDOPEN_UTILITY);
 
     EnterFunc(bug("[kbd:am68k]:New()\n"));
 
     if (!UtilityBase)
-    	ReturnPtr("[kbd:am68k]:New", OOP_Object *, NULL); /* Should have some error code here */
+        ReturnPtr("[kbd:am68k]:New", OOP_Object *, NULL); /* Should have some error code here */
 
     ObtainSemaphoreShared( &XSD(cl)->sema);
 
     if (XSD(cl)->kbdhidd)
-    	has_kbd_hidd = TRUE;
+        has_kbd_hidd = TRUE;
 
     ReleaseSemaphore( &XSD(cl)->sema);
  
     if (has_kbd_hidd) { /* Cannot open twice */
         CloseLibrary(UtilityBase);
-    	ReturnPtr("[kbd:am68k]:New", OOP_Object *, NULL); /* Should have some error code here */
+        ReturnPtr("[kbd:am68k]:New", OOP_Object *, NULL); /* Should have some error code here */
     }
 
     tstate = msg->attrList;
@@ -139,9 +137,9 @@ OOP_Object * AmigaKbd__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New 
     while ((tag = NextTagItem(&tstate)))
     {
         ULONG idx;
-	
+        
         D(bug("[kbd:am68k] Got tag %d, data %x\n", tag->ti_Tag, tag->ti_Data));
-	    
+            
         if (IS_HIDDKBD_ATTR(tag->ti_Tag, idx))
         {
             D(bug("Kbd hidd tag\n"));
@@ -151,19 +149,19 @@ OOP_Object * AmigaKbd__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New 
                     callback = (APTR)tag->ti_Data;
                     D(bug("Got callback %p\n", (APTR)tag->ti_Data));
                     break;
-			
+                        
                 case aoHidd_Kbd_IrqHandlerData:
                     callbackdata = (APTR)tag->ti_Data;
                     D(bug("Got data %p\n", (APTR)tag->ti_Data));
                     break;
             }
         }
-	    
+            
     } /* while (tags to process) */
     CloseLibrary(UtilityBase);
 
     if (NULL == callback)
-    	ReturnPtr("[kbd:am68k]:New", OOP_Object *, NULL); /* Should have some error code here */
+        ReturnPtr("[kbd:am68k]:New", OOP_Object *, NULL); /* Should have some error code here */
 
     o = (OOP_Object *)OOP_DoSuperMethod(cl, o, &new_msg.mID);
 
@@ -173,27 +171,27 @@ OOP_Object * AmigaKbd__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New 
 	struct Library *TimerBase;
 	struct EClockVal eclock1, eclock2;
 
-	struct Interrupt *inter = &XSD(cl)->kbint;
+        struct Interrupt *inter = &XSD(cl)->kbint;
         struct kbd_data *data = OOP_INST_DATA(cl, o);
         
         data->kbd_callback   = callback;
         data->callbackdata   = callbackdata;
-	
-	XSD(cl)->timerio = (struct timerequest*)AllocMem(sizeof(struct timerequest), MEMF_CLEAR | MEMF_PUBLIC);
-	if (OpenDevice("timer.device", UNIT_ECLOCK, (struct IORequest*)XSD(cl)->timerio, 0))
-	    Alert(AT_DeadEnd | AG_OpenDev | AN_Unknown);
-	XSD(cl)->TimerBase = data->TimerBase = (struct Library*)XSD(cl)->timerio->tr_node.io_Device;
-	TimerBase =  data->TimerBase;
+        
+        XSD(cl)->timerio = (struct timerequest*)AllocMem(sizeof(struct timerequest), MEMF_CLEAR | MEMF_PUBLIC);
+        if (OpenDevice("timer.device", UNIT_ECLOCK, (struct IORequest*)XSD(cl)->timerio, 0))
+            Alert(AT_DeadEnd | AG_OpenDev | AN_Unknown);
+        XSD(cl)->TimerBase = data->TimerBase = (struct Library*)XSD(cl)->timerio->tr_node.io_Device;
+        TimerBase =  data->TimerBase;
 
-	if (!(XSD(cl)->ciares = OpenResource("ciaa.resource")))
-	    Alert(AT_DeadEnd | AG_OpenRes | AN_Unknown);
+        if (!(XSD(cl)->ciares = OpenResource("ciaa.resource")))
+            Alert(AT_DeadEnd | AG_OpenRes | AN_Unknown);
 
-	inter = &XSD(cl)->kbint;
-	inter->is_Node.ln_Pri = 0;
-	inter->is_Node.ln_Type = NT_INTERRUPT;
-	inter->is_Node.ln_Name = "kbr";
-	inter->is_Code = (APTR)keyboard_interrupt;
-	inter->is_Data = data;
+        inter = &XSD(cl)->kbint;
+        inter->is_Node.ln_Pri = 0;
+        inter->is_Node.ln_Type = NT_INTERRUPT;
+        inter->is_Node.ln_Name = "kbr";
+        inter->is_Code = (APTR)keyboard_interrupt;
+        inter->is_Data = data;
 
 	/* Send handshake to the Keyboard microcontroller in case it was left in the undefined state. This sets also
 	   the serial port of CIA as input */
@@ -211,9 +209,9 @@ OOP_Object * AmigaKbd__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New 
 
 	/* End handshake and set serial port as input. It will be pulled up */
 	ciaa->ciacra &= ~CIACRAF_SPMODE;
-	
-	if (AddICRVector(XSD(cl)->ciares, 3, inter))
-	    Alert(AT_DeadEnd | AG_NoMemory | AN_Unknown);	
+
+        if (AddICRVector(XSD(cl)->ciares, 3, inter))
+            Alert(AT_DeadEnd | AG_NoMemory | AN_Unknown);
     }
  
     ReturnPtr("[kbd:am68k]:New", OOP_Object *, o);
@@ -223,9 +221,9 @@ VOID AmigaKbd__Root__Dispose(OOP_Class *cl, OOP_Object *o, OOP_Msg msg)
 {
     ObtainSemaphore(&XSD(cl)->sema);
     if (XSD(cl)->ciares)
-    	RemICRVector(XSD(cl)->ciares, 3, &XSD(cl)->kbint);
+        RemICRVector(XSD(cl)->ciares, 3, &XSD(cl)->kbint);
     if (XSD(cl)->TimerBase)
-    	CloseDevice((struct IORequest*)XSD(cl)->timerio);
+        CloseDevice((struct IORequest*)XSD(cl)->timerio);
     ReleaseSemaphore(&XSD(cl)->sema);
     OOP_DoSuperMethod(cl, o, msg);
 }

@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <proto/layers.h>
@@ -12,7 +11,7 @@
 struct ShowWindowActionMsg
 {
     struct IntuiActionMsg    msg;
-    struct Window   	    *window;
+    struct Window           *window;
 };
 
 static VOID int_showwindow(struct ShowWindowActionMsg *msg,
@@ -38,13 +37,13 @@ static VOID int_showwindow(struct ShowWindowActionMsg *msg,
         switches it into visible state.
 
     INPUTS
-	window - The window to affect.
+        window - The window to affect.
 
     RESULT
-	Success indicator. On AROS it's always TRUE.
+        Success indicator. On AROS it's always TRUE.
 
     NOTES
-	This function is soure-compatible with AmigaOS v4.
+        This function is soure-compatible with AmigaOS v4.
         This function is also present in MorphOS v50, however
         considered private.
 
@@ -53,7 +52,7 @@ static VOID int_showwindow(struct ShowWindowActionMsg *msg,
     BUGS
 
     SEE ALSO
-	HideWindow()
+        HideWindow()
 
     INTERNALS
 

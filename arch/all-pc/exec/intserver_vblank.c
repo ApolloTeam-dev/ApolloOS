@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 */
 
 #define DEBUG 0
@@ -33,7 +32,7 @@ AROS_INTH3(VBlankServer, struct List *, intList, intMask, custom)
     D(bug("[Exec:X86] %s()\n", __func__));
 
     /*
-     * If the APIC's dont have their own heartbeat timer, 
+     * If the APIC's dont have their own heartbeat timer,
      * First decrease Elapsed time for current task
      */
     if ((!apicData) || (!(apicData->flags & APF_TIMER)))
@@ -59,7 +58,7 @@ AROS_INTH3(VBlankServer, struct List *, intList, intMask, custom)
             apicTLS = apicData->cores[0].cpu_TLS;
             if ((apicTLS) && ((apicScheduleData = apicTLS->ScheduleData) != NULL))
             {
-                if ((apicScheduleData->Elapsed) && (--apicScheduleData->Elapsed == 0))
+                if (!(apicScheduleData->Elapsed) || (--apicScheduleData->Elapsed == 0))
                 {
                     __AROS_ATOMIC_OR_L(apicScheduleData->ScheduleFlags, TLSSF_Quantum);
                     __AROS_ATOMIC_OR_L(apicScheduleData->ScheduleFlags, TLSSF_Switch);

@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include "intuition_intern.h"
@@ -10,7 +9,7 @@
 struct ZipWindowActionMsg
 {
     struct IntuiActionMsg  msg;
-    struct Window   	  *window;
+    struct Window         *window;
 };
 
 static VOID int_zipwindow(struct ZipWindowActionMsg *msg,
@@ -77,9 +76,9 @@ static VOID int_zipwindow(struct ZipWindowActionMsg *msg,
 static VOID int_zipwindow(struct ZipWindowActionMsg *msg,
                           struct IntuitionBase *IntuitionBase)
 {
-    struct Window   	*window = msg->window;
-    struct IntWindow 	*w = (struct IntWindow *)window;
-    LONG    	    	 NewLeftEdge, NewTopEdge, NewWidth, NewHeight;
+    struct Window       *window = msg->window;
+    struct IntWindow    *w = (struct IntWindow *)window;
+    LONG                 NewLeftEdge, NewTopEdge, NewWidth, NewHeight;
 
     if (!ResourceExisting(window, RESOURCE_WINDOW, IntuitionBase)) return;
     
@@ -109,11 +108,11 @@ static VOID int_zipwindow(struct ZipWindowActionMsg *msg,
     if (w->ZipWidth != ~0)
     {
         NewWidth    = w->ZipWidth;
-	if (window->Flags & WFLG_SIZEGADGET)
-	{
+        if (window->Flags & WFLG_SIZEGADGET)
+        {
             if (NewWidth < (ULONG)window->MinWidth) NewWidth = window->MinWidth;
             if (NewWidth > (ULONG)window->MaxWidth) NewWidth = window->MaxWidth;
-	}
+        }
         w->ZipWidth = w->window.Width;
     }
 
@@ -121,11 +120,11 @@ static VOID int_zipwindow(struct ZipWindowActionMsg *msg,
     if (w->ZipHeight != ~0)
     {
         NewHeight    = w->ZipHeight;
-	if (window->Flags & WFLG_SIZEGADGET)
-	{
+        if (window->Flags & WFLG_SIZEGADGET)
+        {
             if (NewHeight < (ULONG)window->MinHeight) NewHeight = window->MinHeight;
             if (NewHeight > (ULONG)window->MaxHeight) NewHeight = window->MaxHeight;
-	}
+        }
         w->ZipHeight = w->window.Height;
     }
 

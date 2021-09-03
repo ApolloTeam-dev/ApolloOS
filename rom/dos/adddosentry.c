@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 
     Desc: Adds a given dos list entry to the dos list.
-    Lang: English
 */
 
 #include <aros/debug.h>
@@ -119,7 +117,7 @@
     UnLockDosList(LDF_ENTRY|LDF_WRITE);
     UnLockDosList(LDF_ALL | LDF_READ);
 
-    return success;    
+    return success;
 
     AROS_LIBFUNC_EXIT
 } /* AddDosEntry */

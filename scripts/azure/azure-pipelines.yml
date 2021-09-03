@@ -31,15 +31,16 @@ jobs:
 
   steps:
   - script: |
-      if [ "$AROSBUILD_TOOLCHAIN_FAMILY" != ""]; then
-        TARGET_TOOLCHAIN_OPTS="--with-toolchain=$(arosbuild.toolchain.family)"
-        TARGET_TOOLCHAIN="$(arosbuild.toolchain.family)"
+      if [ "$AROSBUILD_TOOLCHAIN_FAMILY" != "" ]; then
+        export TARGETTOOLCHAINOPTS="--with-toolchain=$(arosbuild.toolchain.family)"
+        export TARGETTOOLCHAIN="$(arosbuild.toolchain.family)"
       else
-        TARGET_TOOLCHAIN="gnu"
+        export TARGETTOOLCHAIN="gnu"
       fi
-      echo "Preparing environment for build with $(TARGET_TOOLCHAIN) toolchain"
-      echo "##vso[task.setvariable variable=TOOLCHAIN]$(TARGET_TOOLCHAIN)"
-      echo "##vso[task.setvariable variable=TOOLCHAINOPTS]$(TARGET_TOOLCHAIN_OPTS)"
+      echo "Preparing environment for build with $TARGETTOOLCHAIN toolchain"
+      df -H
+      echo "##vso[task.setvariable variable=TOOLCHAIN;]$TARGETTOOLCHAIN"
+      echo "##vso[task.setvariable variable=TOOLCHAINOPTS;]$TARGETTOOLCHAINOPTS"
     displayName: 'Preparing common environment...'
 
   - script: |
@@ -50,7 +51,7 @@ jobs:
       if [ "$AROSBUILD_VARIANT" != "" ]; then
         CONFIGOPTS="$CONFIGOPTS --enable-target-variant=$(arosbuild.variant)"
       fi
-      CONFIGOPTS="$CONFIGOPTS $(TOOLCHAINOPTS)"
+      CONFIGOPTS="$CONFIGOPTS $TOOLCHAINOPTS"
       if [ "$AROSBUILD_GCC_VERSION" != "" ]; then
         CONFIGOPTS="$CONFIGOPTS --with-gcc-version=$(arosbuild.gcc.version)"
       fi
@@ -68,7 +69,7 @@ jobs:
         CONFIGOPTS="$CONFIGOPTS --with-kernel-toolchain-prefix=i686-w64-mingw32-"
       fi
       CONFIGOPTS="$CONFIGOPTS --enable-ccache --enable-build-type=nightly --with-portssources=$(AROSPORTSSRCSDIR)"
-      echo "##vso[task.setvariable variable=AROSCONFIGOPTIONS]$CONFIGOPTS"
+      echo "##vso[task.setvariable variable=AROSCONFIGOPTIONS;]$CONFIGOPTS"
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: 'Installing AROS build dependencies for Ubuntu'
 
@@ -80,7 +81,7 @@ jobs:
       if [ "$AROSBUILD_VARIANT" != "" ]; then
         CONFIGOPTS="$CONFIGOPTS --enable-target-variant=$(arosbuild.variant)"
       fi
-      CONFIGOPTS="$CONFIGOPTS $(TOOLCHAINOPTS)"
+      CONFIGOPTS="$CONFIGOPTS $TOOLCHAINOPTS"
       if [ "$AROSBUILD_GCC_VERSION" != "" ]; then
         CONFIGOPTS="$CONFIGOPTS --with-gcc-version=$(arosbuild.gcc.version)"
       fi
@@ -95,18 +96,59 @@ jobs:
       brew list netpbm &>/dev/null || brew install netpbm
       brew list md5sha1sum &>/dev/null || brew install md5sha1sum
       brew install caskroom/cask/brew-cask 2> /dev/null
-      brew cask install xquartz
-      sudo easy_install pip3
+      brew install --cask xquartz
+      brew list python@3.9 &>/dev/null || brew install python@3.9
+      if ! command -v pip3; then
+          sudo easy_install pip3
+      fi
       pip3 install Mako
-      brew install https://raw.githubusercontent.com/kadwanev/bigboybrew/master/Library/Formula/sshpass.rb
+      DARWINPYTHONDIR=`brew --prefix python`
+      CONFIGPATH="$DARWINPYTHONDIR/bin:$PATH"
+      brew tap esolitos/ipa
+      brew install sshpass
       ln -s /opt/X11/include/X11 /usr/include/X11
       CONFIGOPTS="$CONFIGOPTS --enable-ccache --enable-build-type=nightly --with-portssources=$(AROSPORTSSRCSDIR)"
-      echo "##vso[task.setvariable variable=AROSCONFIGOPTIONS]$CONFIGOPTS"
+      echo "##vso[task.setvariable variable=AROSBUILDENVPATH;]$CONFIGPATH";
+      echo "##vso[task.setvariable variable=AROSCONFIGOPTIONS;]$CONFIGOPTS"
     condition: eq( variables['Agent.OS'], 'Darwin' )
     displayName: 'Installing AROS build dependencies for MacOS'
 
   - script: |
+      brew list gcc@10 &>/dev/null || brew install gcc@10
+      echo "##vso[task.setvariable variable=CC;]gcc-10"
+      echo "##vso[task.setvariable variable=CXX;]g++-10"
+    condition: and( eq( variables['arosbuild.usegcc'], 'yes' ), and( eq( variables['Agent.OS'], 'Darwin' ), eq( variables['arosbuild.target'], 'darwin-x86_64' )))
+    displayName: 'Install GCC10 toolchain for MacOS'
+
+  - script: |
+      echo "PATH=${PATH}"
+      export ncpu=
+      case '$(Agent.OS)' in
+      'Linux')
+        ncpu=$(nproc)
+        ;;
+      'Darwin')
+        ncpu=$(sysctl -n hw.ncpu)
+        ;;
+      esac
+      [[ -z "$ncpu" || $ncpu -le 0 ]] && ncpu=1
+      echo "Found ${ncpu} cores"
+      echo "##vso[task.setvariable variable=BUILDTHREADS;]$ncpu"
+    displayName: 'Detecting number of build threads'
+
+  - script: |
+      cd ~/
+      MACOSHOMEDIR=`pwd`
       mkdir -p '$(AZBUILDPATH)/host/x86'
+      echo 'Building darwin x86 toolchain'
+      DARWINBUILDXCODEVERS=$(sudo xcode-select --print-path)
+      echo "Initial Darwin XCode version : $DARWINBUILDXCODEVERS"
+      MACOSDEFSDK=$(sudo xcrun --show-sdk-version)
+      echo "Initial MacOS Deployment Target: $MACOSX_DEPLOYMENT_TARGET"
+      echo "MacOS SDK : $SDK (Def: $MACOSDEFSDK)"
+      echo "MacOS 10.5 SDK path: $(xcrun --sdk macosx10.5 --show-sdk-path)"
+      echo "MacOS 10.12 SDK path: $(xcrun --sdk macosx10.12 --show-sdk-path)"
+      echo "MacOS 10.14 SDK path: $(xcrun --sdk macosx10.14 --show-sdk-path)"
       wget https://ftp.gnu.org/gnu/gcc/gcc-8.3.0/gcc-8.3.0.tar.gz -P $(AZBUILDPATH)/host
       wget https://ftp.gnu.org/gnu/gmp/gmp-4.2.4.tar.gz -P $(AZBUILDPATH)/host
       wget https://ftp.gnu.org/gnu/mpc/mpc-1.1.0.tar.gz -P $(AZBUILDPATH)/host
@@ -116,50 +158,74 @@ jobs:
       tar xzf gmp-4.2.4.tar.gz
       tar xzf mpc-1.1.0.tar.gz
       tar xzf mpfr-4.0.1.tar.gz
-      echo 'Building darwin x86 toolchain'
+      echo '** prerequisite gmp'
+      mkdir -p '$MACOSHOMEDIR/opt/gcc/x86'
       mkdir -p '$(AZBUILDPATH)/host/x86/gmp'
       cd $(AZBUILDPATH)/host/x86/gmp
-      $(AZBUILDPATH)/host/gmp-4.2.4/configure --disable-shared --enable-static --prefix=/opt/gcc/x86
-      make -j 2
+      $(AZBUILDPATH)/host/gmp-4.2.4/configure --disable-shared --enable-static --prefix=$MACOSHOMEDIR/opt/gcc/x86
+      make -j $(BUILDTHREADS)
       sudo make install
+      echo '** prerequisite mpfr'
       mkdir -p '$(AZBUILDPATH)/host/x86/mpfr'
       cd $(AZBUILDPATH)/host/x86/mpfr
-      $(AZBUILDPATH)/host/mpfr-4.0.1/configure --disable-shared --enable-static --prefix=/opt/gcc/x86 --with-gmp=/opt/gcc/x86
-      make -j 2
+      $(AZBUILDPATH)/host/mpfr-4.0.1/configure --disable-shared --enable-static --prefix=$MACOSHOMEDIR/opt/gcc/x86 --with-gmp=$MACOSHOMEDIR/opt/gcc/x86
+      make -j $(BUILDTHREADS)
       sudo make install
+      echo '** prerequisite mpc'
       mkdir -p '$(AZBUILDPATH)/host/x86/mpc'
       cd $(AZBUILDPATH)/host/x86/mpc
-      $(AZBUILDPATH)/host/mpc-1.1.0/configure --disable-shared --enable-static --prefix=/opt/gcc/x86 --with-gmp=/opt/gcc/x86 --with-mpfr=/opt/gcc/x86
-      make -j 2
+      $(AZBUILDPATH)/host/mpc-1.1.0/configure --disable-shared --enable-static --prefix=$MACOSHOMEDIR/opt/gcc/x86 --with-gmp=$MACOSHOMEDIR/opt/gcc/x86 --with-mpfr=$MACOSHOMEDIR/opt/gcc/x86
+      make -j $(BUILDTHREADS)
       sudo make install
+      echo '** building gcc'
+      if [ ! -d "/usr/include" ]; then
+        DARWINCONFIGEXTRA="--with-native-system-header-dir=$DARWINBUILDXCODEVERS/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/"
+        DARWINBOOTCFLAGS="-mmacosx-version-min=10.12 -Wa,-mmacos-version-min=10.5 -iframework .../SDKs/MacOSX.sdk/System/Library/Frameworks"
+        DARWINTARGETCFLAGS="-mmacosx-version-min=10.12 -Wa,-mmacos-version-min=10.5 -iframework .../SDKs/MacOSX.sdk/System/Library/Frameworks"
+        DARWINTARGETCXXFLAGS="-mmacosx-version-min=10.12 -Wa,-mmacos-version-min=10.5 -iframework .../SDKs/MacOSX.sdk/System/Library/Frameworks"
+        echo "header config  : $DARWINCONFIGEXTRA"
+      else
+        DARWINCONFIGEXTRA=
+        DARWINBOOTCFLAGS=
+        DARWINTARGETCFLAGS=
+        DARWINTARGETCXXFLAGS=
+      fi
       mkdir -p '$(AZBUILDPATH)/host/x86/gcc'
       cd $(AZBUILDPATH)/host/x86/gcc
-      $(AZBUILDPATH)/host/gcc-8.3.0/configure --prefix=/opt/gcc/x86/8 --disable-nls --enable-languages=c,c++,objc,obj-c++,lto --with-dwarf2 --with-gmp=/opt/gcc/x86 --with-mpfr=/opt/gcc/x8 --with-mpc=/opt/gcc/x86
-      make -j 2
+      BOOT_CFLAGS=$DARWINBOOTCFLAGS  CFLAGS_FOR_TARGET=$DARWINTARGETCFLAGS CXXFLAGS_FOR_TARGET=$DARWINTARGETCXXFLAGS  $(AZBUILDPATH)/host/gcc-8.3.0/configure --prefix=$MACOSHOMEDIR/opt/gcc/x86/8 --disable-nls --enable-languages=c,c++,objc,obj-c++,lto --with-dwarf2 --with-gmp=$MACOSHOMEDIR/opt/gcc/x86 --with-mpfr=/opt/gcc/x8 --with-mpc=$MACOSHOMEDIR/opt/gcc/x86 $DARWINCONFIGEXTRA
+      BOOT_CFLAGS=$DARWINBOOTCFLAGS  CFLAGS_FOR_TARGET=$DARWINTARGETCFLAGS CXXFLAGS_FOR_TARGET=$DARWINTARGETCXXFLAGS make -j $(BUILDTHREADS)
       sudo make install
-      sudo find /opt/gcc/x86/8/lib/gcc -name '*.h' -exec grep -q 'It has been auto-edited by fixincludes from' {} \; -delete
-      echo "##vso[task.setvariable variable=CC]/opt/gcc/x86/8/bin/gcc"
-      echo "##vso[task.setvariable variable=CXX]/opt/gcc/x86/8/bin/g++"
+      sudo find $MACOSHOMEDIR/opt/gcc/x86/8/lib/gcc -name '*.h' -exec grep -q 'It has been auto-edited by fixincludes from' {} \; -delete
+      if [ ! "$AROSBUILD_XCODE" = "" ]; then
+        DARWINBUILDXCODEVERS="/Applications/Xcode_$AROSBUILD_XCODE.app/Contents/Developer"
+        echo "switching XCode to version : $DARWINBUILDXCODEVERS"
+        sudo xcode-select -s $DARWINBUILDXCODEVERS
+      fi
+      echo "##vso[task.setvariable variable=CC;]$MACOSHOMEDIR/opt/gcc/x86/8/bin/gcc"
+      echo "##vso[task.setvariable variable=CXX;]$MACOSHOMEDIR/opt/gcc/x86/8/bin/g++"
+      #echo "##vso[task.setvariable variable=LDFLAGS;]-L$MACOSHOMEDIR/opt/gcc/x86/8/lib/gcc/8"
+      #echo "##vso[task.setvariable variable=LIBRARY_PATH;]$MACOSHOMEDIR/opt/gcc/x86/8/lib/gcc/8:$LIBRARY_PATH"
+      echo "LIBRARY_PATH = '$LIBRARY_PATH'"
       if [ "$AROSBUILD_TARGET" = "darwin-ppc" ]; then
         echo 'Building darwin PPC toolchain'
         mkdir -p '$(AZBUILDPATH)/host/ppc/gcc'
         cd $(AZBUILDPATH)/host/ppc/gcc
         PATH="/dir/containing/dsymutil/from/xcode6:$PATH"
         export MACOSX_PPC_DEPLOYMENT_TARGET=10.4
-        CC=/opt/gcc/x86/8/bin/gcc CXX=/opt/gcc/x86/8/bin/g++ $(AZBUILDPATH)/host/gcc-8.3.0/configure \
-          --prefix=/opt/gcc/ppc/8 --disable-nls --disable-multilib --enable-languages=c,c++,objc,obj-c++,lto --with-dwarf2 \
+        CC=$MACOSHOMEDIR/opt/gcc/x86/8/bin/gcc CXX=$MACOSHOMEDIR/opt/gcc/x86/8/bin/g++ $(AZBUILDPATH)/host/gcc-8.3.0/configure \
+          --prefix=$MACOSHOMEDIR/opt/gcc/ppc/8 --disable-nls --disable-multilib --enable-languages=c,c++,objc,obj-c++,lto --with-dwarf2 \
           --target=powerpc-apple-darwin10.8.0 --with-sysroot=/Developer/SDKs/MacOSX10.4u.sdk \
           CFLAGS_FOR_TARGET="-isysroot /Developer/SDKs/MacOSX10.4u.sdk -mmacosx-version-min=10.4 -g -O2" \
           LDFLAGS_FOR_TARGET="-isysroot /Developer/SDKs/MacOSX10.4u.sdk -mmacosx-version-min=10.4" \
           CXXFLAGS_FOR_TARGET="-isysroot /Developer/SDKs/MacOSX10.4u.sdk -mmacosx-version-min=10.4 -g -O2"
-        make -j 2
+        make -j $(BUILDTHREADS)
         sudo make install
-        sudo find /opt/gcc/ppc/8/lib/gcc -name '*.h' -exec grep -q 'It has been auto-edited by fixincludes from' {} \; -delete
-        echo "##vso[task.setvariable variable=MACOSX_PPC_DEPLOYMENT_TARGET]$MACOSX_PPC_DEPLOYMENT_TARGET"
+        sudo find $MACOSHOMEDIR/opt/gcc/ppc/8/lib/gcc -name '*.h' -exec grep -q 'It has been auto-edited by fixincludes from' {} \; -delete
+        echo "##vso[task.setvariable variable=MACOSX_PPC_DEPLOYMENT_TARGET;]$MACOSX_PPC_DEPLOYMENT_TARGET"
         CONFIGOPTS="$(AROSCONFIGOPTIONS) --with-kernel-toolchain-prefix=powerpc-apple-darwin10.8.0-"
         echo "##vso[task.setvariable variable=AROSCONFIGOPTIONS]$CONFIGOPTS"
       fi
-    condition: eq( variables['Agent.OS'], 'Darwin' )
+    condition: and(eq( variables['Agent.OS'], 'Darwin' ), ne( variables['arosbuild.target'], 'darwin-x86_64' ))
     displayName: 'Build native toolchains for MacOS'
 
   - script: |
@@ -183,9 +249,9 @@ jobs:
       echo '##vso[task.prependpath]$(AROSPORTSSRCSDIR)'
       echo '##vso[task.prependpath]$(AROSLOGSDIR)'
       BUILDDATE=$(date -u +'%Y%m%d')
-      echo "##vso[task.setvariable variable=arosbuilddate]$BUILDDATE"
-      echo "##vso[task.setvariable variable=arosbuildid]AROS-$BUILDDATE"
-      echo "##vso[task.setvariable variable=AROSPACKAGEDIR]$(AROSBUILDSDIR)/AROS-$BUILDDATE-$(arosbuild.name)-$(arosbuild.package)"
+      echo "##vso[task.setvariable variable=arosbuilddate;]$BUILDDATE"
+      echo "##vso[task.setvariable variable=arosbuildid;]AROS-$BUILDDATE"
+      echo "##vso[task.setvariable variable=AROSPACKAGEDIR;]$(AROSBUILDSDIR)/AROS-$BUILDDATE-$(arosbuild.name)-$(arosbuild.package)"
       echo "Common BUILD dir '$(AROSBUILDSDIR)'"
       echo "Common TOOLCHAIN dir '$(AROSBUILDTOOLCHAINDIR)'"
       echo "Common PORTSSOURCES dir '$(AROSPORTSSRCSDIR)'"
@@ -269,27 +335,33 @@ jobs:
           exit 5
         fi
       }
+      if [ "$AROSBUILDENVPATH" != "" ]; then
+          export PATH="$AROSBUILDENVPATH"
+          echo "Using PATH=$AROSBUILDENVPATH"
+      fi
       execute $(AROSSRCDIR)/configure $(AROSCONFIGOPTIONS) --with-aros-toolchain-install=$(AROSBUILDTOOLCHAINDIR)
     workingDirectory: '$(AROSBUILDDIR)'
     displayName: 'Configuring $(arosbuild.name) $(TOOLCHAIN) Toolchain'
 
   - script: |
-      function execute {
-        {
-          echo '>>>' $*
-          $*
-          if [ $? != 0 ]; then
-            touch /tmp/_aros_build_failed
-          fi
-        } 2>&1 | tee -a $(AROSLOGSDIR)/$(arosbuild.package)-$(arosbuild.name).log
-        if [ -f /tmp/_aros_build_failed ]; then
-          exit 5
-        fi
-      }
-      execute make -j 2 crosstools
-      rm -Rf $(AROSBUILDDIR)/*
+      cp config.* $(AROSLOGSDIR)
     workingDirectory: '$(AROSBUILDDIR)'
-    displayName: 'Build $(arosbuild.name) $(TOOLCHAIN) Toolchain'
+    condition: eq( variables['Agent.OS'], 'Darwin' )
+    displayName: 'Gathering MacOS config logs'
+
+  - task: CopyFiles@2
+    condition: and(failed(), eq( variables['Agent.OS'], 'Darwin' ))
+    inputs:
+      SourceFolder: '$(AROSLOGSDIR)'
+      contents: '**'
+      targetFolder: $(Build.ArtifactStagingDirectory)/publish/logs
+
+  - task: PublishBuildArtifacts@1
+    condition: and(failed(), eq( variables['Agent.OS'], 'Darwin' ))
+    displayName: Publish log build artifacts
+    inputs:
+      pathtoPublish: $(Build.ArtifactStagingDirectory)/publish/logs
+      artifactName: $(arosbuild.name) config log
 
   - script: |
       function execute {
@@ -304,6 +376,59 @@ jobs:
           exit 5
         fi
       }
+      execute make -j $(BUILDTHREADS) crosstools
+      cd $(AROSBUILDTOOLCHAINDIR)/../
+      tar cjvf $(AROSBUILDID)-$AGENT_OS-$(TOOLCHAIN)-$(arosbuild.name)-toolchain.tar.bz2 toolchain
+      md5sum $(AROSBUILDID)-$AGENT_OS-$(TOOLCHAIN)-$(arosbuild.name)-toolchain.tar.bz2 >$(AROSBUILDID)-$AGENT_OS-$(TOOLCHAIN)-$(arosbuild.name)-toolchain.tar.bz2.md5
+      mv $(AROSBUILDID)-$AGENT_OS-$(TOOLCHAIN)-$(arosbuild.name)-toolchain.tar.bz2 $(AROSBUILDBINDIR)/
+      mv $(AROSBUILDID)-$AGENT_OS-$(TOOLCHAIN)-$(arosbuild.name)-toolchain.tar.bz2.md5 $(AROSBUILDBINDIR)/
+      rm -Rf $(AROSBUILDDIR)/*
+    workingDirectory: '$(AROSBUILDDIR)'
+    displayName: 'Build $(arosbuild.name) $(TOOLCHAIN) Toolchain'
+
+
+  - task: CopyFiles@2
+    inputs:
+      SourceFolder: '$(AROSBUILDBINDIR)'
+      contents: '**/*'
+      targetFolder: $(Build.ArtifactStagingDirectory)/publish/toolchain
+
+  - task: PublishBuildArtifacts@1
+    displayName: Publish Toolchain Artifacts
+    inputs:
+      pathtoPublish: $(Build.ArtifactStagingDirectory)/publish/toolchain
+      artifactName: $(arosbuild.name) toolchain
+
+  - script: |
+      mkdir -p ~/.ssh
+      mkdir -p '$(Build.BinariesDirectory)/Upload/$(arosbuilddate)/Developer_Tools/'
+      mv $(AROSBUILDBINDIR)/$(AROSBUILDID)*-toolchain* $(Build.BinariesDirectory)/Upload/$(arosbuilddate)/Developer_Tools/
+      ssh-keyscan -t rsa web.sourceforge.net >> ~/.ssh/known_hosts
+      sshpass -p "$MAPPED_PASS" rsync -avz --rsh=ssh $(Build.BinariesDirectory)/Upload/ $MAPPED_USER,aros@web.sourceforge.net:uploads/nightly2/
+      rm -Rf '$(Build.BinariesDirectory)/Upload/$(arosbuilddate)'
+    env:
+      MAPPED_USER: $(SF_RSYNC_USER)
+      MAPPED_PASS: $(SF_RSYNC_PASSWORD)
+    condition: eq( variables['arosbuild.withtoolchain'], 'yes' )
+    displayName: 'Deploying toolchain'
+
+  - script: |
+      function execute {
+        {
+          echo '>>>' $*
+          $*
+          if [ $? != 0 ]; then
+            touch /tmp/_aros_build_failed
+          fi
+        } 2>&1 | tee -a $(AROSLOGSDIR)/$(arosbuild.package)-$(arosbuild.name).log
+        if [ -f /tmp/_aros_build_failed ]; then
+          exit 5
+        fi
+      }
+      if [ "$AROSBUILDENVPATH" != "" ]; then
+          export PATH="$AROSBUILDENVPATH"
+          echo "Using PATH=$AROSBUILDENVPATH"
+      fi
       execute $(AROSSRCDIR)/configure $(AROSCONFIGOPTIONS) --with-aros-toolchain-install=$(AROSBUILDTOOLCHAINDIR) --with-aros-toolchain=yes
     workingDirectory: '$(AROSBUILDDIR)'
     displayName: 'Configuring $(arosbuild.name)'
@@ -333,7 +458,7 @@ jobs:
           exit 5
         fi
       }
-      execute make -j 2
+      execute make -j $(BUILDTHREADS)
     workingDirectory: '$(AROSBUILDDIR)'
     displayName: 'Build $(arosbuild.name) core system'
 
@@ -347,7 +472,7 @@ jobs:
           fi
         } 2>&1 | tee -a $(AROSLOGSDIR)/$(arosbuild.package)-$(arosbuild.name).log
       }
-      execute make -j 2 boot-distfiles
+      execute make -j $(BUILDTHREADS) boot-distfiles
       if [ -f /tmp/_aros_build_failed ]; then
         touch /tmp/_aros_boot_build_failed
         rm /tmp/_aros_build_failed
@@ -371,7 +496,7 @@ jobs:
           fi
         } 2>&1 | tee -a $(AROSLOGSDIR)/$(arosbuild.package)-$(arosbuild.name).log
       }
-      execute make -j 2 distfiles
+      execute make -j $(BUILDTHREADS) distfiles
       if [ -f /tmp/_aros_build_failed ]; then
         touch /tmp/_aros_distfiles_build_failed
         rm /tmp/_aros_build_failed
@@ -393,7 +518,7 @@ jobs:
       }
       cp -r $(AROSBUILDDIR)/bin/$(arosbuild.name)/AROS $(AROSBUILDDIR)/bin/$(arosbuild.name)/AROS.precontrib
       mv $(AROSCONTRIBSRCDIR) $(AROSSRCDIR)/contrib
-      execute make -j 2 contrib
+      execute make -j $(BUILDTHREADS) contrib
       mv $(AROSSRCDIR)/contrib $(AROSCONTRIBSRCDIR)
       if [ -f /tmp/_aros_build_failed ]; then
         touch /tmp/_aros_contrib_build_failed
@@ -484,12 +609,25 @@ jobs:
           rm -Rf '$(AROSBUILDSDIR)/$(AROSBUILDID)-$(arosbuild.name)-contrib'
         fi
       fi
-      cd $(AROSLOGSDIR)
-      bzip2 $(arosbuild.package)-$(arosbuild.name).log
-      md5sum $(arosbuild.package)-$(arosbuild.name).log.bz2 >$(arosbuild.package)-$(arosbuild.name).log.bz2.md5
       rm -Rf $(AROSPACKAGEDIR)
     workingDirectory: '$(AROSBUILDSDIR)'
     displayName: 'Creating $(arosbuild.name) package(s)'
+
+  - script: |
+      cd $(AROSBUILDDIR)
+      for deplog in *.deplog; do
+        if [ -f $deplog ]; then
+          bzip2 $deplog
+          md5sum $deplog.bz2 > $(AROSLOGSDIR)/$deplog.bz2.md5
+          mv $deplog.bz2 $(AROSLOGSDIR)/$deplog.bz2
+        fi
+      done
+      cd $(AROSLOGSDIR)
+      bzip2 $(arosbuild.package)-$(arosbuild.name).log
+      md5sum $(arosbuild.package)-$(arosbuild.name).log.bz2 >$(arosbuild.package)-$(arosbuild.name).log.bz2.md5
+    workingDirectory: '$(AROSBUILDSDIR)'
+    displayName: 'Preparing $(arosbuild.name) Logs(s)'
+    condition: always()
 
   - task: CopyFiles@2
     inputs:
@@ -523,12 +661,14 @@ jobs:
       artifactName: $(arosbuild.name) contrib
 
   - task: CopyFiles@2
+    condition: always()
     inputs:
       SourceFolder: '$(AROSLOGSDIR)'
-      contents: '$(arosbuild.package)-$(arosbuild.name).log.*'
+      contents: '?(*.bz2|*.md5)'
       targetFolder: $(Build.ArtifactStagingDirectory)/publish/logs
 
   - task: PublishBuildArtifacts@1
+    condition: always()
     displayName: Publish log build artifacts
     inputs:
       pathtoPublish: $(Build.ArtifactStagingDirectory)/publish/logs
@@ -547,3 +687,107 @@ jobs:
       MAPPED_USER: $(SF_RSYNC_USER)
       MAPPED_PASS: $(SF_RSYNC_PASSWORD)
     displayName: 'Deploying build'
+
+
+  - script: |
+      brew uninstall --force node
+      brew uninstall --force npm
+      brew install node || sudo chown -R $(whoami) $(brew --prefix)/* && brew link --overwrite node
+      brew unlink md5sha1sum
+      brew list coreutils &>/dev/null || brew install coreutils
+      npm install -g junit-viewer
+      echo "##vso[task.setvariable variable=TIMEOUTCMD;]gtimeout"
+    condition: and( eq( variables['arosbuild.withunittests'], 'yes' ), eq( variables['Agent.OS'], 'Darwin' ))
+    displayName: 'Install Node.js/npm for MacOS'
+
+  - script: |
+      sudo apt-get install -y npm
+      sudo npm install -g junit-viewer
+      echo "##vso[task.setvariable variable=TIMEOUTCMD;]timeout"
+    condition: and( eq( variables['arosbuild.withunittests'], 'yes' ), ne( variables['Agent.OS'], 'Darwin' ))
+    displayName: 'Install npm for Linux'
+
+  - script: |
+      echo "Entered AROS Hosted Cunit Test Phase"
+      for oldfile in $(AROSBUILDBINDIR)/*; do
+          rm -Rf $oldfile
+      done
+      if [ -f "$(Build.BinariesDirectory)/Upload/$(arosbuilddate)/Binaries/$(AROSBUILDID)-$(arosbuild.name)-$(arosbuild.package).$(arosbuild.packagefmt)" ]; then
+        echo "Preparing Host Environment"
+        if [[ "$(arosbuild.packagefmt)" = "zip" ]]
+        then
+          unzip $(Build.BinariesDirectory)/Upload/$(arosbuilddate)/Binaries/$(AROSBUILDID)-$(arosbuild.name)-$(arosbuild.package).$(arosbuild.packagefmt) -d $(AROSBUILDBINDIR)
+        else
+          if [[ "$(arosbuild.packagefmt)" = "tar.bz2" ]]
+          then
+            tar xjf $(Build.BinariesDirectory)/Upload/$(arosbuilddate)/Binaries/$(AROSBUILDID)-$(arosbuild.name)-$(arosbuild.package).$(arosbuild.packagefmt) -C $(AROSBUILDBINDIR)
+          else
+            if [[ "$(arosbuild.packagefmt)" = "lha" ]]
+            then
+              lha -x $(Build.BinariesDirectory)/Upload/$(arosbuilddate)/Binaries/$(AROSBUILDID)-$(arosbuild.name)-$(arosbuild.package).$(arosbuild.packagefmt) $(AROSBUILDBINDIR)
+            fi
+          fi
+        fi
+        cd $(AROSBUILDBINDIR)/$(AROSBUILDID)-$(arosbuild.name)-$(arosbuild.package)/
+        echo "Copying CUnit test scripts, and enabling headless operation"
+        cp $(AROSSRCDIR)/scripts/nightly/autotest/User-Startup.cunit S/User-Startup
+        cp $(AROSSRCDIR)/scripts/nightly/autotest/Try S/
+        cp $(AROSSRCDIR)/scripts/nightly/autotest/Test.cunit S/Test
+        mv Devs/Monitors/X1* Storage/Monitors
+        arosexetarget=$(IFS="-" ; set -- $(arosbuild.name) ; echo $1)
+        arosexehost=${arosexetarget%% *}
+        sed -i.bak "s|Startup = 0|Startup = 1|g" ./Devs/DOSDrivers/DEBUG
+        rm ./Devs/DOSDrivers/DEBUG.bak
+        sed -i.bak "/module Devs\/Drivers\/gfx.hidd/a\\
+      module Storage\/Drivers\/headlessgfx.hidd" "./boot/$arosexehost/AROSBootstrap.conf"
+        rm "./boot/$arosexehost/AROSBootstrap.conf.bak"
+        chmod 744 "./boot/$arosexehost/AROSBootstrap"
+        echo "Launching CUnit tests under AROS $AGENT_OS hosted ..."
+        DISPLAY=:1 $(TIMEOUTCMD) 5m "./boot/$arosexehost/AROSBootstrap"
+        for entry in ./*-Results.xml
+        do
+          if [ -f  "$entry" ]; then
+            sed "/^  <testsuite id=.*/a\\
+          <properties>\n      <property name=\"Build Toolchain\" value=\"$(TOOLCHAIN)\"/>\n      <property name=\"Host OS\" value=\"$(uname -a)\"/>\n    </properties>" "$entry" | iconv -c -t utf8 > "$(AROSLOGSDIR)/$entry"
+          fi
+        done
+        junit-viewer --results=$(AROSLOGSDIR)/ --save=$(AROSBUILDBINDIR)/$(TOOLCHAIN)-$(arosbuild.name)-$(arosbuilddate)-unittests.html
+        if [ -f "$(AROSBUILDBINDIR)/$(TOOLCHAIN)-$(arosbuild.name)-$(arosbuilddate)-unittests.html" ]; then
+          sed -i.bak -e "s|</title>|</title>\n<link href=\"http://www.aros.org/aros.css?v=1.3\" type=\"text/css\" rel=\"stylesheet\">\n<link media=\"print\" href=\"http://www.aros.org/print.css\" type=\"text/css\" rel=\"stylesheet\">|g" -e "s|background-color:#FF1717|background-color:#F03030|g" -e "s|background-color:#E50000|background-color:#E55050|g" -e "s|background-color:#0CAB37|background-color:#46F788|g" -e "s|background-color:#0DBD3D|background-color:#20E070|g" -e "/<h1 class=\"/d" "$(AROSBUILDBINDIR)/$(TOOLCHAIN)-$(arosbuild.name)-$(arosbuilddate)-unittests.html"
+          rm "$(AROSBUILDBINDIR)/$(TOOLCHAIN)-$(arosbuild.name)-$(arosbuilddate)-unittests.html.bak"
+          sshpass -p "$MAPPED_PASS" rsync -avz --rsh=ssh "$(AROSBUILDBINDIR)/$(TOOLCHAIN)-$(arosbuild.name)-$(arosbuilddate)-unittests.html" $MAPPED_USER,aros@web.sourceforge.net:/home/project-web/aros/htdocs/unittests/
+        fi
+      fi
+      echo "AROS Hosted Cunit Test Phase completed"
+    env:
+      MAPPED_USER: $(SF_RSYNC_USER)
+      MAPPED_PASS: $(SF_RSYNC_PASSWORD)
+    continueOnError: true
+    condition: eq( variables['arosbuild.withunittests'], 'yes' )
+    displayName: 'Performing Unit testing with CUnit'
+
+  - task: CopyFiles@2
+    continueOnError: true
+    condition: eq( variables['arosbuild.withunittests'], 'yes' )
+    inputs:
+      SourceFolder: '$(AROSLOGSDIR)'
+      contents: '**/*-Results.xml'
+      targetFolder: $(Build.ArtifactStagingDirectory)/publish/unittests
+
+  - task: PublishBuildArtifacts@1
+    continueOnError: true
+    condition: eq( variables['arosbuild.withunittests'], 'yes' )
+    displayName: Publish unit test build artifacts
+    inputs:
+      pathtoPublish: $(Build.ArtifactStagingDirectory)/publish/unittests
+      artifactName: $(arosbuild.name) unit tests
+
+  - task: PublishTestResults@2
+    continueOnError: true
+    condition: eq( variables['arosbuild.withunittests'], 'yes' )
+    inputs:
+      testRunner: 'JUnit'
+      testResultsFiles: '**/*.xml'
+      testRunTitle: '$(AROSBUILDID)-$(arosbuild.name)'
+      platform: '$(arosbuild.name)'
+      searchFolder: '$(AROSLOGSDIR)'

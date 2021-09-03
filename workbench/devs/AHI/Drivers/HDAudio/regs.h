@@ -7,13 +7,15 @@
 #define HD_VMIN 0x2
 #define HD_VMAJ 0x3
 #define HD_GCTL 0x8
+#define HD_WAKEEN 0xC
 #define HD_STATESTS 0xE
 
 #define HD_INTCTL 0x20 // interrupt control
-  #define HD_INTCTL_GLOBAL 0x80000000
-  #define HD_INTCTL_CIE    0x40000000
+  #define HD_INTCTL_GIE 0x80000000
+  #define HD_INTCTL_CIE 0x40000000
 #define HD_INTSTS 0x24 // interrupt status
-
+  #define HD_INTSTS_GIS 0x80000000
+  #define HD_INTSTS_CIS 0x40000000
 
 // CORB
 #define HD_CORB_LOW 0x40
@@ -72,6 +74,8 @@
     #define AUDIO_WIDGET_CAPS(x) ((x >> 20) & 0xF)
     #define AUDIO_WIDGET_POWER_CONTROL(x) ((x >> 10) & 0x1)
   #define VERB_GET_PARMS_SUPPORTED_PCM_SIZE_RATE 0xA
+    #define PCM_SIZE_RATE_BITSIZE_MASK 0x001F0000
+    #define PCM_SIZE_RATE_RATE_MASK 0x0FFF
   #define VERB_GET_PARMS_PIN_CAPS 0xC
     #define PIN_CAPS_EAPD_CAPABLE (1 << 16)
     #define PIN_CAPS_INPUT_CAPABLE (1 << 5)

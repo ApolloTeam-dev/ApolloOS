@@ -1,9 +1,7 @@
 /*
-    Copyright © 2010, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2010, The AROS Development Team. All rights reserved.
 
     Desc: RemICRVector() function.
-    Lang: english
 */
 
 #include <exec/interrupts.h>
@@ -13,9 +11,9 @@
 #include "cia_intern.h"
 
 AROS_LH2(void, RemICRVector,
-	 AROS_LHA(LONG, iCRBit, D0),
-	 AROS_LHA(struct Interrupt *, interrupt, A1),
-	 struct Library *, resource, 2, Cia)
+         AROS_LHA(LONG, iCRBit, D0),
+         AROS_LHA(struct Interrupt *, interrupt, A1),
+         struct Library *, resource, 2, Cia)
 {
     AROS_LIBFUNC_INIT
 

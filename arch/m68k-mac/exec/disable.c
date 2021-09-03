@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc: Disable() - Stop interrupts from occurring.
-    Lang: english
 */
 
 #include <exec/types.h>
@@ -27,12 +25,12 @@ AROS_LH0(void, Disable,
 
         AROS_LIBFUNC_INIT
 
-	/*
-	 * Disable interrupts by masking all interrupts.
-	 */
-	SetSR(0x700,0x700);
+        /*
+         * Disable interrupts by masking all interrupts.
+         */
+        SetSR(0x700,0x700);
 
-	SysBase->IDNestCnt++;
+        SysBase->IDNestCnt++;
 
-	AROS_LIBFUNC_EXIT
+        AROS_LIBFUNC_EXIT
 } /* Disable() */

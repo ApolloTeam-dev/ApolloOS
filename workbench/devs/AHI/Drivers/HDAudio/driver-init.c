@@ -6,13 +6,18 @@ Software distributed under the License is distributed on an "AS IS" basis, WITHO
 ANY KIND, either express or implied. See the License for the specific language governing rights and
 limitations under the License.
 
-(C) Copyright xxxx-2009 Davy Wentzler.
+(C) Copyright 2010-2021 The AROS Dev Team
 (C) Copyright 2009-2010 Stephen Jones.
+(C) Copyright xxxx-2009 Davy Wentzler.
 
 The Initial Developer of the Original Code is Davy Wentzler.
 
 All Rights Reserved.
 */
+
+#ifdef __AROS__
+#include <aros/debug.h>
+#endif
 
 #include <exec/memory.h>
 
@@ -21,7 +26,6 @@ All Rights Reserved.
 #include <proto/exec.h>
 #include <clib/alib_protos.h>
 #ifdef __AROS__
-#include <aros/debug.h>
 struct DosLibrary* DOSBase;
 struct Library *StdCBase = NULL;
 #endif
@@ -98,19 +102,19 @@ BOOL DriverInit(struct DriverBase* ahisubbase)
     vendor_device_list[0].vendor = 0x8086;
     vendor_device_list[0].device = 0x27D8;
     vendor_device_list_size++;
-    
+
     // Then parse the hdaudio.config file, if available in ENV:
     parse_config_file();
-    
+
     D(bug("[HDAudio] vendor_device_list_size = %ld\n", vendor_device_list_size));
-    
+
     card_base->cards_found = 0;
     dev = NULL;
 
     for (i = 0; i < vendor_device_list_size; i++)
     {
         dev = ahi_pci_find_device(vendor_device_list[i].vendor, vendor_device_list[i].device, dev);
-        
+
         if (dev != NULL)
         {
             D(bug("[HDAudio] Found device with vendor ID = %x, device ID = %x!(i = %d)\n", vendor_device_list[i].vendor, vendor_device_list[i].device, i));
@@ -118,8 +122,8 @@ BOOL DriverInit(struct DriverBase* ahisubbase)
             break; // stop at first found controller
         }
     }
-    
-    
+
+
     FreeVec(vendor_device_list);
 
     // Fail if no hardware (prevents the audio modes from being added to
@@ -177,7 +181,7 @@ VOID DriverCleanup(struct DriverBase* AHIsubBase)
         FreeDriverData(card_base->driverdatas[i], AHIsubBase);
     }
 
-    FreeVec(card_base->driverdatas); 
+    FreeVec(card_base->driverdatas);
 
     ahi_pci_exit();
 
@@ -229,7 +233,7 @@ static void parse_config_file(void)
                 FreeVec(line);
                 break;
             }
-            
+
             if (ret[0] == '0' &&
                 ret[1] == 'x' &&
                 ret[6] == ',' &&
@@ -242,29 +246,29 @@ static void parse_config_file(void)
                 UWORD vendor, device;
                 char *tmp = (char *) AllocVec(16, MEMF_CLEAR);
                 char *tmp2 = (char *) AllocVec(4, MEMF_CLEAR);
-                
+
                 CopyMem(line + 2, tmp, 4);
                 tmp[4] = '\0';
-                
+
                 // convert hex to decimal
-                value = hex_char_to_int(tmp[0]) * 16 * 16 * 16 + hex_char_to_int(tmp[1]) * 16 * 16 + hex_char_to_int(tmp[2]) * 16 + hex_char_to_int(tmp[3]); 
+                value = hex_char_to_int(tmp[0]) * 16 * 16 * 16 + hex_char_to_int(tmp[1]) * 16 * 16 + hex_char_to_int(tmp[2]) * 16 + hex_char_to_int(tmp[3]);
                 vendor = (UWORD) value;
-                
+
                 CopyMem(line + 10, tmp, 4);
                 value = hex_char_to_int(tmp[0]) * 16 * 16 * 16 + hex_char_to_int(tmp[1]) * 16 * 16 + hex_char_to_int(tmp[2]) * 16 + hex_char_to_int(tmp[3]);
                 device = (UWORD) value;
                 //bug("Adding vendor = %x, device = %x to list, size = %ld\n", vendor, device, vendor_device_list_size);
-                
+
                 vendor_device_list[vendor_device_list_size].vendor = vendor;
                 vendor_device_list[vendor_device_list_size].device = device;
                 vendor_device_list_size++;
-                
+
                 if (vendor_device_list_size >= MAX_DEVICE_VENDORS)
                 {
                     bug("Exceeded MAX_DEVICE_VENDORS\n");
                     break;
                 }
-            
+
                 FreeVec(tmp);
                 FreeVec(tmp2);
             }
@@ -272,7 +276,7 @@ static void parse_config_file(void)
             {
                 bug("QUERY found!\n");
                 setForceQuery();
-                
+
                 if (ret[5] == 'D') // debug
                 {
                     setDumpAll();
@@ -282,21 +286,21 @@ static void parse_config_file(void)
             {
                 int speaker = 0;
                 char *tmp = (char *) AllocVec(16, MEMF_CLEAR);
-                
+
                 CopyMem(line + 10, tmp, 2);
                 tmp[2] = '\0';
-                
+
                 // convert hex to decimal
                 speaker = hex_char_to_int(tmp[0]) * 16 + hex_char_to_int(tmp[1]);
-                
+
                 bug("Speaker in config = %x!\n", speaker);
-                
+
                 setForceSpeaker(speaker);
             }
-            
+
             FreeVec(line);
         }
-        
+
         Close(config_file);
     }
     else

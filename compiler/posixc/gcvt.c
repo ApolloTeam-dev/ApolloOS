@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     POSIX.1-2001 function gcvt().
     Function is deprecated and removed from POSIX.1-2008
@@ -13,26 +12,26 @@
     NAME */
 #include <stdlib.h>
 
-	char * gcvt (
+        char * gcvt (
 
 /*  SYNOPSIS */
-	double	  number,
-	int	  ndigit,
-	char	* buf
-	)
+        double    number,
+        int       ndigit,
+        char    * buf
+        )
 
 /*  FUNCTION
-	Converts a number to a minimal length NULL terminated ASCII string.
-	It produces ndigit significant digits in either printf F format or
-	E format.
+        Converts a number to a minimal length NULL terminated ASCII string.
+        It produces ndigit significant digits in either printf F format or
+        E format.
 
     INPUTS
-	number  - The number to convert.
-	ndigits - The number of significan digits that the string has to have.
-	buf     - The buffer that will contain the result string.
+        number  - The number to convert.
+        ndigits - The number of significant digits that the string has to have.
+        buf     - The buffer that will contain the result string.
 
     RESULT
-	The address of the string pointed to by buf.
+        The address of the string pointed to by buf.
 
     NOTES
         This function is deprecated and not present anymore in POSIX.1-2008.
@@ -45,7 +44,7 @@
     BUGS
 
     SEE ALSO
-	stdc.library/sprintf()
+        stdc.library/sprintf()
 
     INTERNALS
 

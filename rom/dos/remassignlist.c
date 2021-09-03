@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc: RemAssignList() - Remove an entry from a multi-dir assign.
-    Lang: English
 */
 
 #include <aros/debug.h>
@@ -83,7 +81,7 @@
             UnLock(dl->dol_Lock);
 
             if (al)
-            {       
+            {
                 dl->dol_misc.dol_assign.dol_List = al->al_Next;
                 dl->dol_Lock = al->al_Lock;
                 FreeVec(al);

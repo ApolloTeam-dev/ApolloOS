@@ -1,30 +1,17 @@
 /*
   Copyright  2004-2013, The AROS Development Team. All rights reserved.
-  $Id$
 */
-
-#include "portable_macros.h"
-
-#ifdef __AROS__
 #define MUIMASTER_YES_INLINE_STDARG
-#endif
 
 #define WANDERER_MODULE_BACKFILL_ENABLED
 
-#ifdef __AROS__
 #define DEBUG 0
 #include <aros/debug.h>
-#endif
 
 #include <exec/types.h>
 #include <libraries/mui.h>
 
-#ifdef __AROS__
 #include <zune/customclasses.h>
-#else
-#include <zune_AROS/customclasses.h>
-#endif
-
 
 #include <proto/utility.h>
 
@@ -43,21 +30,12 @@
 #include <datatypes/pictureclass.h>
 #include <clib/macros.h>
 
-#ifdef __AROS__
 #include <clib/alib_protos.h>
-#endif
 
 #include <graphics/scale.h>
 
-#ifdef __AROS__
 #include <prefs/wanderer.h>
-#else
-#include <prefs_AROS/wanderer.h>
-#endif
 
-#if defined(__AMIGA__) && !defined(__PPC__)
-#define NO_INLINE_STDARG
-#endif
 #ifndef _PROTO_INTUITION_H
 #include <proto/intuition.h>
 #endif
@@ -71,22 +49,6 @@
 #include "Classes/iconlistview.h"
 #include "Classes/iconlist_attributes.h"
 
-
-#ifndef __AROS__
-#define DEBUG 1
-
-#ifdef DEBUG
-  #define D(x) if (DEBUG) x
-  #ifdef __amigaos4__
-  #define bug DebugPrintF
-  #else
-  #define bug kprintf
-  #endif
-#else
-  #define  D(...)
-#endif
-#endif
-
 /*** Global Data **********************************************************/
 
 static struct IconWindow_BackFill_Descriptor   image_backfill_descriptor;
@@ -99,11 +61,8 @@ static struct List                             image_backfill_images;
 static struct BackFillSourceImageRecord *ImageBackFill_FindSourceRecord(char *source_name, IPTR source_mode)
 {
   struct BackFillSourceImageRecord *source_record = NULL;
-  #ifdef __AROS__
+
   ForeachNode(&image_backfill_images, source_record)
-  #else
-  Foreach_Node(&image_backfill_images, source_record);
-  #endif
   {
     if ((strcmp(source_record->bfsir_SourceImage, source_name)==0) && (source_record->bfsir_BackGroundRenderMode == source_mode)) return source_record;
   }
@@ -116,11 +75,7 @@ static struct BackFillSourceImageBuffer *ImageBackFill_FindBufferRecord(struct B
 {
   struct BackFillSourceImageBuffer *buffer_record = NULL;
   
-  #ifdef __AROS__
   ForeachNode(&source_record->bfsir_Buffers, buffer_record)
-  #else
-  Foreach_Node(&source_record->bfsir_Buffers, buffer_record);
-  #endif
   {
     if ((buffer_record->bfsib_BitMapWidth == buffer_width) && (buffer_record->bfsib_BitMapHeight == buffer_height)) return buffer_record;
   }
@@ -194,7 +149,7 @@ static void ImageBackFill_CopyScaledBitMap
 D(bug("[IconWindow.ImageBackFill] ImageBackFill_CopyScaledBitMap()\n"));
 
   Scale_Args.bsa_SrcX = SrcOffsetX;
-  Scale_Args.bsa_SrcY = SrcOffsetY;   
+  Scale_Args.bsa_SrcY = SrcOffsetY;
   Scale_Args.bsa_SrcWidth = SrcSizeX;
   Scale_Args.bsa_SrcHeight = SrcSizeY;
   Scale_Args.bsa_XSrcFactor = SrcSizeX;
@@ -235,7 +190,7 @@ static void ImageBackFill_CopyTiledBitMap
   WORD SrcX, SrcY;        // used as bitmap size in the "exponential" blit
 
   struct BitMap *Src = SrcRast->BitMap;
-  struct BitMap *Dst = DstRast->BitMap; 
+  struct BitMap *Dst = DstRast->BitMap;
 
   #if defined(DEBUG)
   int xcount;
@@ -272,12 +227,12 @@ D(bug("[IconWindow.ImageBackFill] ImageBackFill_CopyTiledBitMap(mode %d)\n", bli
   if (blit_MODE == blit_MODE_Blit)  // blit the first piece of the tile
   {
     D(bug("[IconWindow.ImageBackFill] ImageBackFill_CopyTiledBitMap: 1st Tile Part @ %d,%d [%d x %d]\n", DstFillBounds->MinX, DstFillBounds->MinY, FirstSizeX, FirstSizeY));
-    BltBitMap(Src, 
+    BltBitMap(Src,
         SrcOffsetX, SrcOffsetY,
         Dst,
         DstFillBounds->MinX, DstFillBounds->MinY,
         FirstSizeX, FirstSizeY,
-        0xC0, -1, NULL); 
+        0xC0, -1, NULL);
 
 
     if (SecondSizeX > 0) // if SrcOffset was 0 or the dest rect was too narrow, we won't need a second column
@@ -501,13 +456,13 @@ IPTR ImageBackFill__MUIM_IconWindow_BackFill_ProcessBackground
     D(bug("[IconWindow.ImageBackFill] MUIM_IconWindow_BackFill_ProcessBackground: Creating NEW ImageSource Record\n"));
     if (!(this_BFI->bfi_Source = AllocMem(sizeof(struct BackFillSourceImageRecord), MEMF_CLEAR|MEMF_PUBLIC)))
     {
-      D(bug("[IconWindow.ImageBackFill] MUIM_IconWindow_BackFill_ProcessBackground: Couldnt allocate enough mem for source record!\n"));      
+      D(bug("[IconWindow.ImageBackFill] MUIM_IconWindow_BackFill_ProcessBackground: Couldnt allocate enough mem for source record!\n"));
       return FALSE;
     }
 
     if (!(this_BFI->bfi_Source->bfsir_SourceImage = AllocVec(strlen(this_ImageName) +1, MEMF_CLEAR|MEMF_PUBLIC)))
     {
-      D(bug("[IconWindow.ImageBackFill] MUIM_IconWindow_BackFill_ProcessBackground: Couldnt allocate enough mem for source image name store\n"));     
+      D(bug("[IconWindow.ImageBackFill] MUIM_IconWindow_BackFill_ProcessBackground: Couldnt allocate enough mem for source image name store\n"));
       FreeMem(this_BFI->bfi_Source, sizeof(struct BackFillSourceImageRecord));
       return FALSE;
     }
@@ -680,7 +635,7 @@ check_imagebuffer:
 
             
             ImageBackFill_CopyScaledBitMap(this_BFI->bfi_Source->bfsir_DTRastPort,
-                    0, 0, 
+                    0, 0,
                     this_BFI->bfi_Source->bfsir_DTBitMapHeader->bmh_Width,
                     this_BFI->bfi_Source->bfsir_DTBitMapHeader->bmh_Height,
                     this_Buffer->bfsib_BitMapRastPort,
@@ -787,7 +742,7 @@ check_imagebuffer:
           CopyBounds.MaxY = this_BFI->bfi_CopyHeight - 1;
 
           ImageBackFill_CopyTiledBitMap(this_BFI->bfi_Source->bfsir_DTRastPort,
-                  0, 0, 
+                  0, 0,
                   this_BFI->bfi_Source->bfsir_DTBitMapHeader->bmh_Width,
                   this_BFI->bfi_Source->bfsir_DTBitMapHeader->bmh_Height,
                   this_BFI->bfi_Buffer->bfsib_BitMapRastPort,
@@ -810,7 +765,7 @@ check_imagebuffer:
     }
   }
 
-  D(bug("[IconWindow.ImageBackFill] MUIM_IconWindow_BackFill_ProcessBackground: Failed to create image datatype object\n"));  
+  D(bug("[IconWindow.ImageBackFill] MUIM_IconWindow_BackFill_ProcessBackground: Failed to create image datatype object\n"));
   return FALSE;
   
 pb_cleanup_buffer:
@@ -821,7 +776,7 @@ pb_cleanup_buffer:
   }
 
   if (this_BFI->bfi_Source)
-  { 
+  {
     ImageBackFill_CloseSourceRecord(this_BFI->bfi_Source);
     this_BFI->bfi_Source = NULL;
   }

@@ -1,9 +1,7 @@
 /*
-    Copyright © 2010-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2010-2020, The AROS Development Team. All rights reserved.
 
     Desc: Main kernel.resource initialization.
-    Lang: english
 */
 
 #include <aros/asmcall.h>
@@ -54,7 +52,7 @@ void __clear_bss(const struct KernelBSS *bss)
 {
     while (bss->addr)
     {
-	bzero((void*)bss->addr, bss->len);
+        bzero((void*)bss->addr, bss->len);
         bss++;
     }
 }
@@ -69,7 +67,7 @@ DEFINESET(INITLIB)
  * It can use kernel's own memory allocator (if implemented) for KernelBase creation.
  * This allows not to rely on working exec's memory management before kernel.resource
  * is set up. This can simplify exec.library code on MMU-aware systems.
- * exec.library catches our AddResource() and sets up its pooled memory manager. 
+ * exec.library catches our AddResource() and sets up its pooled memory manager.
  */
 
 AROS_UFH3S(struct KernelBase *, Kernel_Init,
@@ -87,7 +85,7 @@ AROS_UFH3S(struct KernelBase *, Kernel_Init,
 
     KernelBase = AllocKernelBase(SysBase);
     if (!KernelBase)
-    	return NULL;
+        return NULL;
 
     KernelBase->kb_Node.ln_Type = NT_RESOURCE;
     KernelBase->kb_Node.ln_Pri  = RESIDENTPRI;
@@ -98,7 +96,7 @@ AROS_UFH3S(struct KernelBase *, Kernel_Init,
     D(bug("[KRN] KernelBase 0x%p\n", KernelBase));
 
     for (i=0; i < EXCEPTIONS_COUNT; i++)
-	NEWLIST(&KernelBase->kb_Exceptions[i]);
+        NEWLIST(&KernelBase->kb_Exceptions[i]);
 
     for (i=0; i < HW_IRQ_COUNT; i++)
         NEWLIST(&KERNELIRQ_LIST(i));
@@ -113,12 +111,12 @@ AROS_UFH3S(struct KernelBase *, Kernel_Init,
 
     /* Call platform-specific init code */
     if (!set_call_libfuncs(SETNAME(INITLIB), 1, 1, KernelBase))
-    	return NULL;
+        return NULL;
 
     D(bug("[KRN] Kernel_Init() done\n"));
 
     /* Set global KernelBase storage and return */
-    D(bug("[%s] Set global KernelBase\n"));
+    D(bug("[KRN] Set global KernelBase\n"));
     setKernelBase(KernelBase);
 
     return KernelBase;

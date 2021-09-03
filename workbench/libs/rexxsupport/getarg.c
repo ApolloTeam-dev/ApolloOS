@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2002, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2002, The AROS Development Team. All rights reserved.
 
     Desc: Rexx function to wait for a packet on a port
-    Lang: English
 */
 
 #include <proto/exec.h>
@@ -39,11 +37,11 @@ LONG rxsupp_getarg(struct Library *RexxSupportBase, struct RexxMsg *msg, UBYTE *
         int size = strtoul(ARG1(msg), &end, 10);
         if ((*end != 0) || size<0 || size>15)
         {
-	    *argstring = NULL;
-	    return ERR10_018;
-	}
+            *argstring = NULL;
+            return ERR10_018;
+        }
         else
-	    arg = size;
+            arg = size;
     }
   
     *argstring = CreateArgstring(RXARG(msg2, arg), LengthArgstring(RXARG(msg2, arg)));

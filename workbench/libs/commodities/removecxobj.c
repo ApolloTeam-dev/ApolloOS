@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 /*****************************************************************************
@@ -22,11 +20,11 @@ VOID RemoveHandler(struct CommoditiesBase *CxBase);
 
 /*  SYNOPSIS */
 
-	AROS_LHA(CxObj *, co, A0),
+        AROS_LHA(CxObj *, co, A0),
 
 /*  LOCATION */
 
-	struct Library *, CxBase, 17, Commodities)
+        struct Library *, CxBase, 17, Commodities)
 
 /*  FUNCTION
 
@@ -60,12 +58,12 @@ VOID RemoveHandler(struct CommoditiesBase *CxBase);
 
     if (co == NULL)
     {
-	return;
+        return;
     }
 
     if ((co->co_Flags & COF_VALID) == 0)
     {
-	return;
+        return;
     }
 
     ObtainSemaphore(&GPB(CxBase)->cx_SignalSemaphore);
@@ -75,15 +73,15 @@ VOID RemoveHandler(struct CommoditiesBase *CxBase);
     
     if ((CXOBJType(co) == CX_BROKER) || (CXOBJType(co) == CX_ZERO))
     {
-	if (IsListEmpty(&GPB(CxBase)->cx_BrokerList))
-	{
-	    RemoveHandler(GPB(CxBase));
-	}
-	else
-	{
-	    /* Tell Exchange what happened */
-	    BrokerCommand(NULL, CXCMD_LIST_CHG);
-	}
+        if (IsListEmpty(&GPB(CxBase)->cx_BrokerList))
+        {
+            RemoveHandler(GPB(CxBase));
+        }
+        else
+        {
+            /* Tell Exchange what happened */
+            BrokerCommand(NULL, CXCMD_LIST_CHG);
+        }
     }
 
     ReleaseSemaphore(&GPB(CxBase)->cx_SignalSemaphore);
@@ -96,7 +94,7 @@ VOID RemoveHandler(struct CommoditiesBase *CxBase)
 {
     if (CxBase->cx_IORequest.io_Device == NULL)
     {
-	return;
+        return;
     }
     
     CxBase->cx_InputMP.mp_SigTask = FindTask(NULL);

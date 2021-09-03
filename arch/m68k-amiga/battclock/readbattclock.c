@@ -1,8 +1,7 @@
 /*
-    Copyright © 1995-2010, The AROS Development Team. All rights reserved.
+    Copyright (C) 1995-2010, The AROS Development Team. All rights reserved.
 
     Desc: ReadBattClock() function.
-    Lang: english
 */
 #define DEBUG 0
 
@@ -33,9 +32,9 @@ AROS_LH0(ULONG, ReadBattClock,
 
     D(bug("ReadBattClock\n"));
     if (!p)
-    	return 0;
+        return 0;
     
-    /* 
+    /*
        Repeat reading for the second time if the number of seconds read
        at the beginning and at the end of RTC access differs. Do it at most twice
        in order to avoid situatuions where RTC was missing and number of seconds
@@ -64,7 +63,7 @@ AROS_LH0(ULONG, ReadBattClock,
     Enable();
 
     if (cd.year < 1978)
-    	cd.year += 100;
+        cd.year += 100;
     cd.wday = 0;
     t = Date2Amiga(&cd);
     D(bug("%02d:%02d %02d.%02d.%d = %d\n", cd.hour, cd.min, cd.mday, cd.month, cd.year, t));

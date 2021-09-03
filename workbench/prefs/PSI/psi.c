@@ -1,9 +1,8 @@
 /*
-    Copyright © 1995-1997 Stefan Stuntz.
-    Copyright © 2009-2016, The AROS Development Team.
+    Copyright (C) 1995-1997 Stefan Stuntz.
+    Copyright (C) 2009-2016, The AROS Development Team.
     All rights reserved.
 
-    $Id$
 */
 
 #include <proto/exec.h>
@@ -39,7 +38,7 @@ struct Catalog *Catalog;
 /****************************************************************************/
 
 #define CATALOG_NAME     "System/Prefs/PSI.catalog"
-#define CATALOG_VERSION  19
+#include "catalogs/catalog_version.h"
 
 /****************************************************************************************/
 
@@ -422,7 +421,7 @@ int main(int argc, char *argv[])
         app = ApplicationObject,
             MUIA_Application_Title      , "PSI",
             MUIA_Application_Version    , VersionString,
-            MUIA_Application_Copyright  , "©1995-97, Stefan Stuntz",
+            MUIA_Application_Copyright  , "0xA9 1995-97, Stefan Stuntz",
             MUIA_Application_Author     , "Stefan Stuntz",
             MUIA_Application_Description, "Public Screen Inspector",
             MUIA_Application_SingleTask , TRUE,

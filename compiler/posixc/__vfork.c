@@ -1,7 +1,8 @@
 /*
-    Copyright © 2008-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2008-2021, The AROS Development Team. All rights reserved.
 */
+
+#include <aros/debug.h>
 
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -11,6 +12,7 @@
 #include <dos/dos.h>
 #include <libraries/stdc.h>
 #include <aros/cpu.h>
+#include <aros/startup.h>
 
 #include <sys/types.h>
 #include <unistd.h>
@@ -25,20 +27,28 @@
 #include "__vfork.h"
 #include "__exec.h"
 
-#define DEBUG 0
 
-#include <aros/debug.h>
-#include <aros/startup.h>
+#define VFORK_USE_INLINECOPY
+#if defined(VFORK_USE_INLINECOPY)
+#define _VFORK_COPYENV(a,b) \
+({ \
+    int _i; \
+    for (_i = 0; _i < sizeof(jmp_buf); _i++) \
+        *((UBYTE *)((IPTR)(&a) + _i)) = *((UBYTE *)((IPTR)(&b) + _i)); \
+})
+#else
+#define _VFORK_COPYENV(a,b)      *(a) = *(b)
+#endif
 
 /*****************************************************************************
 
     NAME
 #include <unistd.h>
 
-	pid_t vfork(
+        pid_t vfork(
 
     SYNOPSIS
-	void)
+        void)
 
     FUNCTION
         Function to create a subprocess of the current process.
@@ -64,14 +74,14 @@
           memory region so changes to memory in the child are also seen by the
           parent.
 
-        Behaviour for other resources not described in this doc may not be
+        Behavior for other resources not described in this doc may not be
         relied on for future compatibility.
 
     INPUTS
-	-
+        -
 
     RESULT
-	-1: error, no child is started; errno will be set.
+        -1: error, no child is started; errno will be set.
         0: Running in child
         >0: Running in parent, pid of child is return value.
 
@@ -87,7 +97,7 @@
     BUGS
 
     SEE ALSO
-	execl(), execve(), execlp(), execv(), execvp()
+        execl(), execve(), execlp(), execv(), execvp()
 
     INTERNALS
 
@@ -144,7 +154,7 @@ LONG launcher()
         }
     }
     if (!PosixCBase)
-    { 
+    {
         D(bug("launcher:Failed to open libraries!\n"));
         FreeSignal(child_signal);
         udata->child_errno = ENOMEM;
@@ -283,7 +293,7 @@ pid_t __vfork(jmp_buf env)
         vfork_longjmp(env, -1);
     }
     D(bug("__vfork: Parent: allocated udata %p, jmp_buf %p\n", udata, udata->vfork_jmp));
-    *udata->vfork_jmp = *env;
+    _VFORK_COPYENV(udata->vfork_jmp,env);
 
     D(bug("__vfork: Parent: initial jmp_buf %p\n", env));
     D(bug("__vfork: Parent: ip: %p, stack: %p, alt: 0x%p\n", env->retaddr, env->regs[SP], env->regs[ALT]));
@@ -406,7 +416,7 @@ static __attribute__((noinline)) void __vfork_exit_controlled_stack(struct vfork
     __stdc_set_exitjmp(udata->parent_oldexitjmp, dummy);
 
     /* Save some data from udata before udata is being freed */
-    *env = *udata->vfork_jmp;
+    _VFORK_COPYENV(env,udata->vfork_jmp);
 
     D(bug("__vfork: Parent: freeing udata\n"));
     FreeMem(udata, sizeof(struct vfork_data));
@@ -422,7 +432,7 @@ static void parent_createchild(struct vfork_data *udata)
         (struct PosixCIntBase *)__aros_getbase_PosixCBase();
     jmp_buf vfork_jmp;
 
-    *vfork_jmp = *udata->vfork_jmp;
+    _VFORK_COPYENV(vfork_jmp,udata->vfork_jmp);
 
     struct TagItem tags[] =
     {

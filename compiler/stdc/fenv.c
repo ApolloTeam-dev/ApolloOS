@@ -1,11 +1,10 @@
 /*
-    Copyright © 2007-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2007-2013, The AROS Development Team. All rights reserved.
   
     C99 floating-point environment
 */
 
-/* 
+/*
  * The implementation of these functions are architecture-specific, and so are
  * merely stubs here, provided to allow linking to happen correctly.
  */

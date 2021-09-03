@@ -1,6 +1,5 @@
 /*
-    Copyright © 2008-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2008-2013, The AROS Development Team. All rights reserved.
 */
 
 #include "__posixc_intbase.h"
@@ -33,12 +32,12 @@
         
     RESULT
         If the current directory was changed successfully, zero is returned.
-        Otherwise, -1 is returned and errno set apropriately.
+        Otherwise, -1 is returned and errno set appropriately.
         
     NOTES
         At program exit, the current working directory will be changed back
         to the one that was current when the program first started. If you
-        do not desire this behaviour, use dos.library/CurrentDir() instead.
+        do not desire this behavior, use dos.library/CurrentDir() instead.
 
     EXAMPLE
 
@@ -60,7 +59,7 @@
     if (!(fdc->fcb->privflags & _FCB_ISDIR))
     {
         errno = ENOTDIR;
-        goto error; 
+        goto error;
     }
 
     if ( __get_default_file(fd, (long*) &handle) != 0 )
@@ -86,7 +85,7 @@
     {
         PosixCBase->cd_changed = TRUE;
         PosixCBase->cd_lock    = oldlock;
-    }       
+    }
     return 0;
 
 error:

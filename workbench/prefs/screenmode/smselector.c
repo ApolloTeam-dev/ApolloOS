@@ -1,6 +1,5 @@
 /*
-    Copyright © 2003-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2003-2020, The AROS Development Team. All rights reserved.
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
@@ -35,7 +34,7 @@ struct ScreenModeSelector_DATA
 };
 
 #define HOOK(name) \
-struct Hook 
+struct Hook
 
 #define HOOKFUNC(name) IPTR name ## Func(struct Hook *hook, APTR obj, APTR msg)
 
@@ -46,7 +45,7 @@ AROS_UFHA(APTR         , msg , A1))
 {
     AROS_USERFUNC_INIT
 
-    struct ScreenModeSelector_DATA *data = INST_DATA(OCLASS(obj), obj);    
+    struct ScreenModeSelector_DATA *data = INST_DATA(OCLASS(obj), obj);
 
     /* Note: the value used to set MUIA_List_Active may not be an index */
     return set(obj, MUIA_ScreenModeSelector_Active,
@@ -186,7 +185,7 @@ IPTR ScreenModeSelector__OM_DISPOSE(Class *CLASS, Object *self, Msg message)
     struct ScreenModeSelector_DATA *data;
     ULONG cur_mode;
 
-    data = INST_DATA(CLASS, self);    
+    data = INST_DATA(CLASS, self);
 
     if (data->modes_array)
     {
@@ -204,7 +203,7 @@ IPTR ScreenModeSelector__OM_DISPOSE(Class *CLASS, Object *self, Msg message)
 
 IPTR ScreenModeSelector__OM_SET(Class *CLASS, Object *self, struct opSet *message)
 {
-    struct ScreenModeSelector_DATA *data = INST_DATA(CLASS, self);    
+    struct ScreenModeSelector_DATA *data = INST_DATA(CLASS, self);
     struct TagItem *tags;
     struct TagItem *tag;
     struct TagItem noforward_tags[] =
@@ -251,7 +250,7 @@ IPTR ScreenModeSelector__OM_SET(Class *CLASS, Object *self, struct opSet *messag
 
 IPTR ScreenModeSelector__OM_GET(Class *CLASS, Object *self, struct opGet *message)
 {
-    struct ScreenModeSelector_DATA *data = INST_DATA(CLASS, self);    
+    struct ScreenModeSelector_DATA *data = INST_DATA(CLASS, self);
     
     switch (message->opg_AttrID)
     {
@@ -275,7 +274,7 @@ IPTR ScreenModeSelector__OM_GET(Class *CLASS, Object *self, struct opGet *messag
 
 ZUNE_CUSTOMCLASS_4
 (
-    ScreenModeSelector, NULL, MUIC_Listview, NULL,   
+    ScreenModeSelector, NULL, MUIC_Listview, NULL,
     OM_NEW,     struct opSet *,
     OM_DISPOSE, Msg,
     OM_GET,     struct opGet *,

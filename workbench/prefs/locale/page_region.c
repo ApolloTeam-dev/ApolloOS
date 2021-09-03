@@ -1,6 +1,5 @@
 /*
-    Copyright © 2003-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2003-2013, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -17,6 +16,7 @@
 #include <zune/prefseditor.h>
 
 #include <stdio.h>
+#include <string.h>
 
 #include "prefs.h"
 #include "page_region.h"

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 #include <aros/debug.h>
@@ -15,6 +13,7 @@
 #include <resources/filesysres.h>
 
 #include <ctype.h>
+#include <string.h>
 
 #include "dos_intern.h"
 #include "../expansion/expansion_intern.h"
@@ -370,7 +369,7 @@ static BPTR internalBootLock(struct DosLibrary *DOSBase, struct ExpansionBase *E
      * made the desired boot node the first in this list.
      *
      * If this fails to mount, we will fail, which will
-     * cause dos.library to fail to initialize, and 
+     * cause dos.library to fail to initialize, and
      * then dosboot.resource will handle checking the
      * next device in the list.
      */
@@ -474,7 +473,7 @@ static void AddBootAssign(CONST_STRPTR path, CONST_STRPTR assign, APTR DOSBase)
 }
 
 
-/* 
+/*
  * This is what actually gets the Lock() for SYS:,
  * sets up the boot assigns, and starts the
  * startup sequence.
@@ -540,7 +539,7 @@ static LONG internalBootCliHandler(void)
         /* Immediately after ReplyPkt() DOSBase can be freed. */
         internal_ReplyPkt(dp, &bootProc->pr_MsgPort, DOSFALSE, err);
 
-	bootProc->pr_WindowPtr = bootWin;
+        bootProc->pr_WindowPtr = bootWin;
 
         return err;
     }
@@ -574,7 +573,7 @@ static LONG internalBootCliHandler(void)
     }
 
 #if !(mc68000)
-    /* 
+    /*
      * This early assignment prevents Poseidon from asking for ENV:
      * when popup GUI process is initialized and opens muimaster.library.
      * On m68k this harms, Workbench 1.x disks fail to boot correctly with

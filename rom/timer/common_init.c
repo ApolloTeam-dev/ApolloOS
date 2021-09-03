@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc: Timer startup, common part
 */
@@ -26,7 +25,7 @@ static int common_Init(struct TimerBase *LIBBASE)
 
     /* Initialise the lists */
     for (i = 0; i < NUM_LISTS; i++)
-	NEWLIST(&LIBBASE->tb_Lists[i]);
+        NEWLIST(&LIBBASE->tb_Lists[i]);
 
     return TRUE;
 }

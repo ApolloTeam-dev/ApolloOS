@@ -1,7 +1,7 @@
 #ifndef KERNEL_APIC_H
 #define KERNEL_APIC_H
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Generic AROS APIC definitions.
@@ -49,6 +49,8 @@ struct APICData
 {
     IPTR	                lapicBase; 	/* Local APIC base address			        */
     ULONG	                apic_count;	/* Total number of APICs in the system		        */
+    UBYTE	                msibase;	/* starting msi IRQ                                     */
+    UBYTE	                msilast;	/* last allocated msi                                   */
     UWORD	                flags;	        /* See below					        */
     struct CPUData          cores[0];	/* Per-CPU data					        */
 };
@@ -89,12 +91,11 @@ void core_APIC_GetMask(struct APICData *, apicid_t, cpumask_t *);
 BOOL core_APIC_CPUInMask(apicid_t, cpumask_t *);
 
 void core_SetupIDT(apicid_t, apicidt_t *);
-BOOL core_SetIDTGate(apicidt_t *, int, uintptr_t, BOOL);
+BOOL core_SetIDTGate(apicidt_t *, int, uintptr_t, BOOL, BOOL);
 BOOL core_SetIRQGate(void *, int, uintptr_t);
 void core_DefaultIRETQ();
 
 ULONG core_APIC_AllocMSI(ULONG);
-void core_APIC_RegisterMSI(void *);
 
 extern struct IntrController APICInt_IntrController;
 

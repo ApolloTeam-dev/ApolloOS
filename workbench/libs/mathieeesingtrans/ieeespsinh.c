@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2003, The AROS Development Team. All rights reserved.
 */
 
 #include "mathieeesingtrans_intern.h"
@@ -63,7 +62,7 @@
     
     if ( y2 < 0x41100000 )
     {
-        /* 
+        /*
             the following lines is neccessary or otherwise changes in
             the defines/mathieeesing*.h-files would have to be made!
         */

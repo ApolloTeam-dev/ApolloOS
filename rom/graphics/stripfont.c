@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2010, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2010, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function StripFont()
-    Lang: english
 */
 #include <proto/graphics.h>
 #include <proto/exec.h>
@@ -16,19 +14,19 @@
     NAME */
 #include <clib/graphics_protos.h>
 
-	AROS_LH1(void, StripFont,
+        AROS_LH1(void, StripFont,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct TextFont *, font, A0),
+        AROS_LHA(struct TextFont *, font, A0),
 
 /*  LOCATION */
-	struct GfxBase *, GfxBase, 137, Graphics)
+        struct GfxBase *, GfxBase, 137, Graphics)
 
 /*  FUNCTION
-		Removes a TextFontExtension from a font.
+                Removes a TextFontExtension from a font.
 
     INPUTS
-    	font	- font to remove extension from.
+        font    - font to remove extension from.
 
     RESULT
 
@@ -39,13 +37,13 @@
     BUGS
 
     SEE ALSO
-	ExtendFont()
+        ExtendFont()
 
     INTERNALS
 
     HISTORY
-	27-11-96    digulla automatically created from
-			    graphics_lib.fd and clib/graphics_protos.h
+        27-11-96    digulla automatically created from
+                            graphics_lib.fd and clib/graphics_protos.h
 
 *****************************************************************************/
 {
@@ -53,11 +51,11 @@
 
     struct TextFontExtension *tfe;
     struct tfe_hashnode *hn;
-	
+        
     /* Valid parameter ? */
     if (font == NULL)
-	return;
-		
+        return;
+                
     /* Does the font have an extension ? */
 
     ObtainSemaphore(&PrivGBase(GfxBase)->fontsem);
@@ -65,29 +63,29 @@
     hn = tfe_hashlookup(font, GfxBase);
     if (NULL != hn)
     {
-    	tfe = hn->ext;
-	
-	if (hn->chunky_colorfont) FreeVec(hn->chunky_colorfont);
-	
-    	/* Remove the hashitem (tfe_hashdelete() has semaphore protection) */
-	tfe_hashdelete(font, GfxBase);
-	
-	if (NULL != tfe)
-	{
-	    font->tf_Extension = tfe->tfe_OrigReplyPort;
+        tfe = hn->ext;
+        
+        if (hn->chunky_colorfont) FreeVec(hn->chunky_colorfont);
+        
+        /* Remove the hashitem (tfe_hashdelete() has semaphore protection) */
+        tfe_hashdelete(font, GfxBase);
+        
+        if (NULL != tfe)
+        {
+            font->tf_Extension = tfe->tfe_OrigReplyPort;
 
             /* Font is not tagged anymore */
             font->tf_Style &= ~FSF_TAGGED;
-		
-	    FreeTagItems(tfe->tfe_Tags);
-	    FreeMem(tfe, sizeof (struct TextFontExtension_intern));
-	}
-		
+                
+            FreeTagItems(tfe->tfe_Tags);
+            FreeMem(tfe, sizeof (struct TextFontExtension_intern));
+        }
+                
     }
     
     ReleaseSemaphore(&PrivGBase(GfxBase)->fontsem);
 
-    return;	
+    return;
 
     AROS_LIBFUNC_EXIT
 } /* StripFont */

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 #include <proto/exec.h>
 #include "gadtools_intern.h"
@@ -18,10 +16,10 @@
         AROS_LH1(struct IntuiMessage *, GT_GetIMsg,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct MsgPort *, intuiport, A0),
+        AROS_LHA(struct MsgPort *, intuiport, A0),
 
 /*  LOCATION */
-	struct Library *, GadToolsBase, 12, GadTools)
+        struct Library *, GadToolsBase, 12, GadTools)
 
 /*  FUNCTION
         You must use this function instead of exec.library/GetMsg() to get
@@ -56,17 +54,17 @@
 
     while ((imsg = (struct IntuiMessage *)GetMsg(intuiport)))
     {
-    	if ((gtmsg = GT_FilterIMsg(imsg)))
-	{
-	    /* msg is for app */
-	    imsg = gtmsg;
-	    break;
-	}
-	else
-	{
-	    /* msg was for gadtools only */
-	    ReplyMsg(&imsg->ExecMessage);
-	}
+        if ((gtmsg = GT_FilterIMsg(imsg)))
+        {
+            /* msg is for app */
+            imsg = gtmsg;
+            break;
+        }
+        else
+        {
+            /* msg was for gadtools only */
+            ReplyMsg(&imsg->ExecMessage);
+        }
     }
     
     return imsg;

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Varargs version of dos.library/SystemTagList()
-    Lang: english
 */
 
 #define AROS_TAGRETURNTYPE LONG
@@ -15,12 +13,12 @@
 #define NO_INLINE_STDARG /* turn off inline def */
 #include <proto/dos.h>
 
-	LONG SystemTags (
+        LONG SystemTags (
 
 /*  SYNOPSIS */
-	STRPTR command,
-	Tag tag1,
-	...)
+        STRPTR command,
+        Tag tag1,
+        ...)
 
 /*  FUNCTION
         This is the varargs version of dos.library/SystemTagList().

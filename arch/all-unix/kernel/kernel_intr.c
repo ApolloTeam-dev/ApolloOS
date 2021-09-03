@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/atomic.h>
@@ -31,28 +30,28 @@
  * which save and restore CPU context. cpu_Dispatch() is allowed just to
  * jump to the saved context and not return here.
  */
-void core_ExitInterrupt(regs_t *regs) 
+void core_ExitInterrupt(regs_t *regs)
 {
     /* Soft interrupt requested? It's high time to do it */
     if (SysBase->SysFlags & SFF_SoftInt)
         core_Cause(INTB_SOFTINT, 1L << INTB_SOFTINT);
 
     /* If task switching is disabled, do nothing */
-    if (SysBase->TDNestCnt < 0)
+    if (TDNESTCOUNT_GET < 0)
     {
         /*
-         * Do not disturb task if it's not necessary. 
+         * Do not disturb task if it's not necessary.
          * Reschedule only if switch pending flag is set. Exit otherwise.
          */
         if (SysBase->AttnResched & ARF_AttnSwitch)
         {
-	    /* Run task scheduling sequence */
+            /* Run task scheduling sequence */
             if (core_Schedule())
-	    {
-		cpu_Switch(regs);
-		cpu_Dispatch(regs);
+            {
+                cpu_Switch(regs);
+                cpu_Dispatch(regs);
             }
-	}
+        }
     }
 }
 
@@ -72,7 +71,7 @@ void core_ExitInterrupt(regs_t *regs)
 void core_SysCall(int sig, regs_t *regs)
 {
     struct KernelBase *KernelBase = getKernelBase();
-    struct Task *task = SysBase->ThisTask;
+    struct Task *task = GET_THIS_TASK;
 
     D(bug("[KRN] %s()\n", __func__));
 
@@ -84,24 +83,24 @@ void core_SysCall(int sig, regs_t *regs)
     {
     /* A running task needs to be put into TaskReady list first. It's SC_SCHEDULE. */
     case TS_RUN:
-	if (!core_Schedule())
-	    break;
+        if (!core_Schedule())
+            break;
 
     /* If the task is already in some list with appropriate state, it's SC_SWITCH */
     case TS_REMOVED:
     case TS_READY:
     case TS_WAIT:
-	cpu_Switch(regs);
+        cpu_Switch(regs);
 
     /* If the task is removed, it's simply SC_DISPATCH */
     case TS_INVALID:
-	cpu_Dispatch(regs);
-	break;
+        cpu_Dispatch(regs);
+        break;
 
     /* Special state is used for returning from exception */
     case TS_EXCEPT:
-	cpu_DispatchContext(task, regs, KernelBase->kb_PlatformData);
-	break;
+        cpu_DispatchContext(task, regs, KernelBase->kb_PlatformData);
+        break;
     }
 
     SUPERVISOR_LEAVE;

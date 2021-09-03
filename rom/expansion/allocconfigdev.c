@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc: AllocConfigDev() - Create a new ConfigDev in a compatible way.
-    Lang: english
 */
 #include "expansion_intern.h"
 #include <exec/memory.h>
@@ -14,25 +12,25 @@
     NAME */
 #include <proto/expansion.h>
 
-	AROS_LH0(struct ConfigDev *, AllocConfigDev,
+        AROS_LH0(struct ConfigDev *, AllocConfigDev,
 
 /*  SYNOPSIS */
-	/* void */
+        /* void */
 
 /*  LOCATION */
-	struct ExpansionBase *, ExpansionBase, 8, Expansion)
+        struct ExpansionBase *, ExpansionBase, 8, Expansion)
 
 /*  FUNCTION
-	AllocConfigDev() will allocate a new ConfigDev structure for
-	you. You should use this function in order for you to be
-	compatible with future versions of the OS in case this
-	structure changes.
+        AllocConfigDev() will allocate a new ConfigDev structure for
+        you. You should use this function in order for you to be
+        compatible with future versions of the OS in case this
+        structure changes.
 
     INPUTS
-	None.
+        None.
 
     RESULT
-	A newly created ConfigDev structure.
+        A newly created ConfigDev structure.
 
     NOTES
 
@@ -41,13 +39,13 @@
     BUGS
 
     SEE ALSO
-	FreeConfigDev()
+        FreeConfigDev()
 
     INTERNALS
 
     HISTORY
-	27-11-96    digulla automatically created from
-			    expansion_lib.fd and clib/expansion_protos.h
+        27-11-96    digulla automatically created from
+                            expansion_lib.fd and clib/expansion_protos.h
 
 *****************************************************************************/
 {

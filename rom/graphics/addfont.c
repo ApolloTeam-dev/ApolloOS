@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Make a font public available
-    Lang: english
 */
 #include <aros/debug.h>
 #include "graphics_intern.h"
@@ -15,23 +13,23 @@
 #include <graphics/text.h>
 #include <proto/graphics.h>
 
-	AROS_LH1(void, AddFont,
+        AROS_LH1(void, AddFont,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct TextFont *, textFont, A1),
+        AROS_LHA(struct TextFont *, textFont, A1),
 
 /*  LOCATION */
-	struct GfxBase *, GfxBase, 80, Graphics)
+        struct GfxBase *, GfxBase, 80, Graphics)
 
 /*  FUNCTION
-	Add a font to the list of public fonts. After that, you can
-	open the font with OpenFont().
+        Add a font to the list of public fonts. After that, you can
+        open the font with OpenFont().
 
     INPUTS
-	textFont - The font to add.
+        textFont - The font to add.
 
     RESULT
-	None.
+        None.
 
     NOTES
 
@@ -40,7 +38,7 @@
     BUGS
 
     SEE ALSO
-	OpenFont(), RemFont(), CloseFont(), SetFont()
+        OpenFont(), RemFont(), CloseFont(), SetFont()
 
     INTERNALS
 

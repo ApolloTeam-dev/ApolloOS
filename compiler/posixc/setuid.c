@@ -1,6 +1,5 @@
 /*
-    Copyright © 2004-2016, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004-2016, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function setuid().
 */
@@ -21,7 +20,7 @@
         uid_t uid)
 
 /*  FUNCTION
-	Sets the user ID, and effective user ID of the calling process.
+        Sets the user ID, and effective user ID of the calling process.
 
     INPUTS
 

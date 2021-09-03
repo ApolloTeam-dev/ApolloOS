@@ -1,9 +1,8 @@
 /*
-    Copyright © 2004-2015, The AROS Development Team. All rights reserved.
+    Copyright (C) 2004-2015, The AROS Development Team. All rights reserved.
     This file is part of the SystemPrefsWindow class, which is distributed under
     the terms of version 2.1 of the GNU Lesser General Public License.
     
-    $Id$
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
@@ -26,12 +25,14 @@
 #include "systemprefswindow.h"
 #include "systemprefswindow_private.h"
 
-#define CATALOG_VERSION (2)
+#include "catalogs/catalog_version.h"
 #define CATCOMP_ARRAY
 #include "strings.h"
 
 #define DEBUG 1
 #include <aros/debug.h>
+
+#include <string.h>
 
 /*** Macros *****************************************************************/
 #define SETUP_INST_DATA struct SystemPrefsWindow_DATA *data = INST_DATA(CLASS, self)
@@ -42,8 +43,8 @@ CONST_STRPTR MSG(struct Catalog *catalog, ULONG id)
     if (catalog != NULL)
     {
         return GetCatalogStr(catalog, id, CatCompArray[id].cca_Str);
-    } 
-    else 
+    }
+    else
     {
         return CatCompArray[id].cca_Str;
     }
@@ -55,7 +56,7 @@ CONST_STRPTR MSG(struct Catalog *catalog, ULONG id)
 /*** Utility functions ******************************************************/
 Object *MakeMenuitem(CONST_STRPTR text)
 {
-    CONST_STRPTR title    = NULL, 
+    CONST_STRPTR title    = NULL,
                  shortcut = NULL;
     
     if (text != NM_BARLABEL && text[1] == '\0')
@@ -93,11 +94,11 @@ AROS_UFH3(static void, IMsgHook,
 /*** Methods ****************************************************************/
 Object *SystemPrefsWindow__OM_NEW
 (
-    Class *CLASS, Object *self, struct opSet *message 
+    Class *CLASS, Object *self, struct opSet *message
 )
 {
-    struct SystemPrefsWindow_DATA *data = NULL; 
-    struct TagItem *tag        = NULL;    
+    struct SystemPrefsWindow_DATA *data = NULL;
+    struct TagItem *tag        = NULL;
     struct Catalog *catalog    = NULL;
     Object         *editor     = NULL;
     Object         *importMI, *exportMI, *exportIconMI, *defaultsMI,
@@ -138,7 +139,7 @@ Object *SystemPrefsWindow__OM_NEW
                 Child, (IPTR)(useMI    = MakeMenuitem(_(MSG_MENU_PREFS_USE))),
                 Child, (IPTR)(cancelMI = MakeMenuitem(_(MSG_MENU_PREFS_CANCEL))),
             End,
-        End, 
+        End,
         
         TAG_MORE, (IPTR) message->ops_AttrList
     );
@@ -239,7 +240,7 @@ Object *SystemPrefsWindow__OM_NEW
 
 IPTR SystemPrefsWindow__OM_DISPOSE
 (
-    Class *CLASS, Object *self, Msg message 
+    Class *CLASS, Object *self, Msg message
 )
 {
     SETUP_INST_DATA;
@@ -426,7 +427,7 @@ IPTR SystemPrefsWindow__MUIM_PrefsWindow_Import
         );
         if (reqOK)
         {
-            LONG buflen = strlen(data->spwd_FileRequester->rf_Dir) + 
+            LONG buflen = strlen(data->spwd_FileRequester->rf_Dir) +
                 strlen(data->spwd_FileRequester->rf_File) + 5;
             STRPTR prefname = AllocVec(buflen, MEMF_ANY);
             if (prefname)

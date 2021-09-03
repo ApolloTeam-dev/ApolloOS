@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 */
 
 #include "mathieeedoubbas_intern.h"
@@ -19,7 +18,7 @@
         struct MathIeeeDoubBasBase *, MathIeeeDoubBasBase, 14, MathIeeeDoubBas)
 
 /*  FUNCTION
-	Divides two IEEE double precision numbers.
+        Divides two IEEE double precision numbers.
 
     INPUTS
         y - dividend.

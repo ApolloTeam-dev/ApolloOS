@@ -1,8 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc: WriteBattClock()
-    Lang: english
 */
 #include "battclock_intern.h"
 
@@ -25,7 +24,7 @@ AROS_LH1(void, WriteBattClock,
     UBYTE reg;
 
     if (!p)
-    	return;
+        return;
     Amiga2Date(time, &cd);
     stopclock(BattClockBase);
     reg = 0;
@@ -33,9 +32,9 @@ AROS_LH1(void, WriteBattClock,
     putbcd(p, reg + 2, cd.min);
     putbcd(p, reg + 4, cd.hour);
     if (BattClockBase->clocktype == MSM6242B)
-    	reg = 6;
+        reg = 6;
     else
-    	reg = 7;
+        reg = 7;
     putbcd(p, reg, cd.mday);
     putbcd(p, reg + 2, cd.month);
     putbcd(p, reg + 4, cd.year - 1900);

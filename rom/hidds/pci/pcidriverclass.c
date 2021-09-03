@@ -1,9 +1,7 @@
 /*
-    Copyright © 2004-2016, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004-2020, The AROS Development Team. All rights reserved.
 
     Desc: Base PCI driver class
-    Lang: English
 
     I am not sure, whether this piece of code is already aware of endianess.
     Has to be checked soon ;)
@@ -40,7 +38,7 @@ OOP_Object *PCIDrv__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *ms
     This method is not implemented here (aka it should be the abstract class),
     and should be well defined in all PCI drivers.
 */
-ULONG PCIDrv__Hidd_PCIDriver__ReadConfigLong(OOP_Class *cl, OOP_Object *o, 
+ULONG PCIDrv__Hidd_PCIDriver__ReadConfigLong(OOP_Class *cl, OOP_Object *o,
     struct pHidd_PCIDriver_ReadConfigLong *msg)
 {
     /* Wheeeee! Someone has forgotten to reimplement ReadConfigLong! */
@@ -62,20 +60,6 @@ void PCIDrv__Hidd_PCIDriver__WriteConfigLong(OOP_Class *cl, OOP_Object *o,
 }
 
 /*
-    IPTR PCIDriver::HasExtendedConfiguration(bus, dev, sub)
-
-    This does not need to be implemented in the driver; in that case
-    ECAM access method is not used and extended configuration is unavailable.
-*/
-IPTR PCIDrv__Hidd_PCIDriver__HasExtendedConfig(OOP_Class *cl, OOP_Object *o,
-    struct pHidd_PCIDriver_HasExtendedConfig *msg)
-{
-    /* Wheeeee! Someone has forgotten to reimplement HasExtendedConfig! */
-    bug("[PCIDriver] Alert! PCIDriver::HasExtendedConfig() unimplemented!\n");
-    return (IPTR)NULL;
-}
-
-/*
     Please note, that the following methods
 
     UWORD PCIDriver::ReadConfigWord()
@@ -88,11 +72,11 @@ IPTR PCIDrv__Hidd_PCIDriver__HasExtendedConfig(OOP_Class *cl, OOP_Object *o,
     development of PCI drivers and reduce their size.
 */
 
-UBYTE PCIDrv__Hidd_PCIDriver__ReadConfigByte(OOP_Class *cl, OOP_Object *o, 
+UBYTE PCIDrv__Hidd_PCIDriver__ReadConfigByte(OOP_Class *cl, OOP_Object *o,
     struct pHidd_PCIDriver_ReadConfigByte *msg)
 {
     /*
-     * First, read whole ConfigWord from PCI config space, using defined 
+     * First, read whole ConfigWord from PCI config space, using defined
      * method
      */
     ULONG temp = HIDD_PCIDriver_ReadConfigLong(o, msg->device, msg->bus, msg->dev, msg->sub, msg->reg & ~3);
@@ -101,7 +85,7 @@ UBYTE PCIDrv__Hidd_PCIDriver__ReadConfigByte(OOP_Class *cl, OOP_Object *o,
     return (temp >> ((msg->reg & 3) * 8)) & 0xff;
 }
 
-UWORD PCIDrv__Hidd_PCIDriver__ReadConfigWord(OOP_Class *cl, OOP_Object *o, 
+UWORD PCIDrv__Hidd_PCIDriver__ReadConfigWord(OOP_Class *cl, OOP_Object *o,
     struct pHidd_PCIDriver_ReadConfigWord *msg)
 {
     ULONG temp = HIDD_PCIDriver_ReadConfigLong(o, msg->device, msg->bus, msg->dev, msg->sub, msg->reg & ~3);
@@ -173,7 +157,7 @@ APTR PCIDrv__Hidd_PCIDriver__PCItoCPU(OOP_Class *cl, OOP_Object *o,
 }
 
 /*
-    PCIDriver::MapPCI(Address, Length) maps the Length bytes of PCI address 
+    PCIDriver::MapPCI(Address, Length) maps the Length bytes of PCI address
     space at Address to the CPU address space.
 */
 APTR PCIDrv__Hidd_PCIDriver__MapPCI(OOP_Class *cl, OOP_Object *o,
@@ -356,6 +340,12 @@ VOID PCIDrv__Root__Get(OOP_Class *cl, OOP_Object *o,
     {
         switch(idx)
         {
+            case aoHidd_PCIDriver_DeviceClass:
+                /* report the default class if drivers do not provide their own .. */
+                D(bug("[PCI:Driver] %s: Using default device class @ 0x%p\n", __func__, PSD(cl)->pciDeviceClass);)
+                *msg->storage = (IPTR)PSD(cl)->pciDeviceClass;
+                break;
+
             case aoHidd_PCIDriver_DirectBus:
                 *msg->storage = (IPTR)instance->DirectBus;
                 break;

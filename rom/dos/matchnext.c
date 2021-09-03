@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 #include <exec/memory.h>
 #include <exec/types.h>
@@ -93,7 +91,7 @@
             ac->an_String[1] = 0;
             ac->an_Flags = DDF_PatternBit | DDF_AllBit;
             
-            dir_changed = TRUE;     
+            dir_changed = TRUE;
         }
         
         /*
@@ -160,7 +158,7 @@
                 {
                     error = IoErr();
                     goto done;
-                }               
+                }
 
             }
 #else
@@ -265,12 +263,12 @@
                     ** Here we either have found a matching file/directory
                     ** (result) or, if ac->an_Child != NULL we have still to
                     ** continue walking through the AChains until we are in
-                    ** the last one. This all happens further below 
+                    ** the last one. This all happens further below
                     */
                     
                 } /* if (!(lock = Lock(ac->an_String, SHARED_LOCK))) else ... */
                 
-            } /* if (ac->an_Flags & DDF_PatternBit) else ... */ 
+            } /* if (ac->an_Flags & DDF_PatternBit) else ... */
 
         } /* if (!(ac->an_Flags & DDF_ExaminedBit)) */
         else
@@ -310,10 +308,10 @@
                     ** there are no more AChains to follow then we have
                     ** found a matching file/directory (a result)  -->
                     ** break.
-                    */  
+                    */
                                
                     if (!ac->an_Child)
-                    {                   
+                    {
                         break;
                     }
                     else
@@ -322,7 +320,7 @@
                         {
                             /* This is a file, no chance to follow child
                                AChain. Go to top of "for(;;)" loop */
-                            continue;                       
+                            continue;
                         }
                     }
                     
@@ -407,7 +405,7 @@
                 /*
                 ** We have reached the last AChain. And this means that
                 ** we have found a matching file/directory :-)). Go out of
-                ** for(;;) loop --> MakeResult 
+                ** for(;;) loop --> MakeResult
                 */
                 
                 break;

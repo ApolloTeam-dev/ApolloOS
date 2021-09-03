@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2009, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2009, The AROS Development Team. All rights reserved.
 
     Desc: Free a signal.
-    Lang: english
 */
 #include <exec/execbase.h>
 #include <exec/tasks.h>
@@ -16,19 +14,19 @@
 
     NAME */
 
-	AROS_LH1(void, FreeSignal,
+        AROS_LH1(void, FreeSignal,
 
 /*  SYNOPSIS */
-	AROS_LHA(LONG, signalNum, D0),
+        AROS_LHA(LONG, signalNum, D0),
 
 /*  LOCATION */
-	struct ExecBase *, SysBase, 56, Exec)
+        struct ExecBase *, SysBase, 56, Exec)
 
 /*  FUNCTION
-	Free a signal allocated with AllocSignal().
+        Free a signal allocated with AllocSignal().
 
     INPUTS
-	signalNum - Number of the signal to free or -1 to do nothing.
+        signalNum - Number of the signal to free or -1 to do nothing.
 
     RESULT
 
@@ -39,7 +37,7 @@
     BUGS
 
     SEE ALSO
-	AllocSignal(), Signal(), Wait()
+        AllocSignal(), Signal(), Wait()
 
     INTERNALS
 

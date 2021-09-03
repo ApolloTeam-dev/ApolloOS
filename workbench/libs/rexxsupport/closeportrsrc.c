@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2002, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2002, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 #include <proto/exec.h>
 #include <aros/debug.h>
@@ -14,13 +12,13 @@
 
     NAME */
 
-	AROS_LH1(VOID, ClosePortRsrc,
+        AROS_LH1(VOID, ClosePortRsrc,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct RexxRsrc *, rsrc, A0),
+        AROS_LHA(struct RexxRsrc *, rsrc, A0),
 
 /*  LOCATION */
-	struct Library *, RexxSupportBase, 6, RexxSupport)
+        struct Library *, RexxSupportBase, 6, RexxSupport)
 
 /*  FUNCTION
          Deletes a RexxMsg structure

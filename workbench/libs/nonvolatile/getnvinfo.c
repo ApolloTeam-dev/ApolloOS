@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2006, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2006, The AROS Development Team. All rights reserved.
 */
 #include <dos/dosextens.h>
 #include <exec/memory.h>
@@ -18,11 +17,11 @@
 
 /*  SYNOPSIS */
 
-	AROS_LHA(BOOL, killRequesters, D1),
+        AROS_LHA(BOOL, killRequesters, D1),
 
 /*  LOCATION */
 
-	struct Library *, nvBase, 9, Nonvolatile)
+        struct Library *, nvBase, 9, Nonvolatile)
 
 /*  FUNCTION
 
@@ -69,18 +68,18 @@
     /* Try to get the information from the HIDD */
     if(MemInfoNVD(info))
     {
-	/* Round down to nearest 10 bytes */
-	info->nvi_MaxStorage  = (info->nvi_MaxStorage/10)*10;
-	info->nvi_FreeStorage = (info->nvi_FreeStorage/10)*10;
+        /* Round down to nearest 10 bytes */
+        info->nvi_MaxStorage  = (info->nvi_MaxStorage/10)*10;
+        info->nvi_FreeStorage = (info->nvi_FreeStorage/10)*10;
     }
     else
     {
-	FreeVec(info);
-	info = NULL;
+        FreeVec(info);
+        info = NULL;
     }
     
     if(killRequesters)
-	me->pr_WindowPtr = oldReq;
+        me->pr_WindowPtr = oldReq;
 
     return info;
 

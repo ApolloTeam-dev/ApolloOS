@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function CalcIVG()
-    Lang: english
 */
 #include <aros/debug.h>
 #include <graphics/view.h>
@@ -25,7 +23,7 @@
         struct GfxBase *, GfxBase, 138, Graphics)
 
 /*  FUNCTION
-	Calculate the number of blank lines above a ViewPort.
+        Calculate the number of blank lines above a ViewPort.
 
     INPUTS
         View     - pointer to the View

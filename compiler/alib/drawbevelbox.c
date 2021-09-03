@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Draw a bevel box
-    Lang: english
 */
 
 #include "alib_intern.h"
@@ -19,7 +17,7 @@ extern struct Library * GadToolsBase;
 
 #include <utility/tagitem.h>
 
-	void DrawBevelBox (
+        void DrawBevelBox (
 
 /*  SYNOPSIS */
         struct RastPort * rp,
@@ -27,8 +25,8 @@ extern struct Library * GadToolsBase;
         WORD              top,
         WORD              width,
         WORD              height,
-	Tag               tag1,
-	...		)
+        Tag               tag1,
+        ...             )
 
 /*  FUNCTION
         Varargs version of gadtools.library/DrawBevelBoxA().
@@ -44,7 +42,7 @@ extern struct Library * GadToolsBase;
     BUGS
 
     SEE ALSO
-	gadtools.library/DrawBevelBoxA()
+        gadtools.library/DrawBevelBoxA()
 
     INTERNALS
 

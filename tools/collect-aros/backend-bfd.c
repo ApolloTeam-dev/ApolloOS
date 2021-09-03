@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #define PACKAGE
@@ -59,17 +58,17 @@ int check_and_print_undefined_symbols(const char *file)
         if (sym == NULL)
             bfd_fatal(bfd_get_filename (abfd));
 
-	if (bfd_is_und_section (sym->section))
-	{
-	    if (!there_are_undefined_syms)
-	    {
-	        there_are_undefined_syms = 1;
+        if (bfd_is_und_section (sym->section))
+        {
+            if (!there_are_undefined_syms)
+            {
+                there_are_undefined_syms = 1;
 
-		fprintf(stderr, "There are undefined symbols in '%s':\n", bfd_get_filename(abfd));
-	    }
+                fprintf(stderr, "There are undefined symbols in '%s':\n", bfd_get_filename(abfd));
+            }
 
-	    fprintf(stderr, "%s\n", sym->name);
-	}
+            fprintf(stderr, "%s\n", sym->name);
+        }
     }
 
     bfd_close(abfd);

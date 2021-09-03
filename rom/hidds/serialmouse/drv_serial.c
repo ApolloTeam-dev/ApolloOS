@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc: COM mouse driver.
-    Lang: English.
 */
 
 #include <proto/exec.h>
@@ -22,6 +20,7 @@
 
 #include <stdio.h>
 #include <strings.h>
+#include <string.h>
 
 #include "mouse.h"
 

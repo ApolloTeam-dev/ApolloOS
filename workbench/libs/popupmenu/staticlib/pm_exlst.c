@@ -1,8 +1,7 @@
 /*
-    Copyright © 2010, The AROS Development Team. 
+    Copyright (C) 2010-2021, The AROS Development Team.
     All rights reserved.
     
-    $Id$
 */
 
 //#define DEBUG 1
@@ -18,11 +17,11 @@
 #include <proto/popupmenu.h>
 extern struct PopupMenuBase * PopupMenuBase;
 
-	struct PM_IDLst *PM_ExLst(
+        struct PM_IDLst *PM_ExLst(
 
 /*  SYNOPSIS */
-	ULONG id, 
-	...)
+        ULONG id,
+        ...)
 
 /*  FUNCTION
 
@@ -64,9 +63,10 @@ extern struct PopupMenuBase * PopupMenuBase;
     D(bug("[PM_ExLst] size %d\n", size));
 
     values = AllocVec(size * sizeof(ULONG), MEMF_ANY);
-    
     if (values)
     {
+        va_end(ap);
+
         values[0] = id; // initial value
 
         va_start(ap, id);

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 #include <proto/exec.h>
 #include <proto/intuition.h>
@@ -22,10 +20,10 @@
         AROS_LH1(struct Gadget *, CreateContext,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct Gadget **, glistpointer, A0),
+        AROS_LHA(struct Gadget **, glistpointer, A0),
 
 /*  LOCATION */
-	struct Library *, GadToolsBase, 19, GadTools)
+        struct Library *, GadToolsBase, 19, GadTools)
 
 /*  FUNCTION
         Creates a virtual first gadget to which all following gadgets must be
@@ -63,10 +61,10 @@
     rc = (struct GT_ContextGadget *)AllocMem(sizeof(struct GT_ContextGadget), MEMF_PUBLIC | MEMF_CLEAR);
     if (rc)
     {
-        rc->magic 	   = CONTEXT_MAGIC;
-	rc->magic2 	   = CONTEXT_MAGIC2;
-    	rc->gad.Flags 	   = GFLG_GADGHNONE | GFLG_DISABLED;
-	rc->gad.GadgetType = GTYP_GADTOOLS;
+        rc->magic          = CONTEXT_MAGIC;
+        rc->magic2         = CONTEXT_MAGIC2;
+        rc->gad.Flags      = GFLG_GADGHNONE | GFLG_DISABLED;
+        rc->gad.GadgetType = GTYP_GADTOOLS;
     }
     
     *glistpointer = (struct Gadget *)rc;

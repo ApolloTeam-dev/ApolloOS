@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 #include <aros/libcall.h>
 #include <proto/exec.h>
@@ -18,13 +16,13 @@
 #include <proto/layers.h>
 #include "layers_intern.h"
 
-	AROS_LH1(void, UnlockLayer,
+        AROS_LH1(void, UnlockLayer,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct Layer *, layer, A0),
+        AROS_LHA(struct Layer *, layer, A0),
 
 /*  LOCATION */
-	struct LayersBase *, LayersBase, 17, Layers)
+        struct LayersBase *, LayersBase, 17, Layers)
 
 /*  FUNCTION
         Unlocks a layer for access by other tasks. A layer has
@@ -47,8 +45,8 @@
     INTERNALS
 
     HISTORY
-	27-11-96    digulla automatically created from
-			    layers_lib.fd and clib/layers_protos.h
+        27-11-96    digulla automatically created from
+                            layers_lib.fd and clib/layers_protos.h
 
 *****************************************************************************/
 {

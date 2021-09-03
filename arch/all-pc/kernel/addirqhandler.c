@@ -1,6 +1,5 @@
 /*
-    Copyright © 2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2017-2020, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -34,28 +33,28 @@
         struct KernelBase *, KernelBase, 7, Kernel)
 
 /*  FUNCTION
-	Add a raw hardware IRQ handler to the chain of handlers.
+        Add a raw hardware IRQ handler to the chain of handlers.
 
     INPUTS
-	num          - hardware-specific IRQ number
-	handler      - Pointer to a handler function
-	handlerData,
-	handlerData2 - User-defined data which is passed to the
-		       handler.
-	
-	  Handler function uses a C calling convention and must be
-	  declared as follows:
+        num          - hardware-specific IRQ number
+        handler      - Pointer to a handler function
+        handlerData,
+        handlerData2 - User-defined data which is passed to the
+                       handler.
+        
+          Handler function uses a C calling convention and must be
+          declared as follows:
 
-	  void IRQHandler(void *handlerData, void *handlerData2)
+          void IRQHandler(void *handlerData, void *handlerData2)
 
-	  handlerData and handlerData2 will be values passed to the
-	  KrnAddExceptionHandler() function.
+          handlerData and handlerData2 will be values passed to the
+          KrnAddExceptionHandler() function.
 
-	  There is no return code for the IRQ handler.
+          There is no return code for the IRQ handler.
 
     RESULT
-	An opaque handle that can be used for handler removal or NULL in case
-	of failure (like unsupported exception number).
+        An opaque handle that can be used for handler removal or NULL in case
+        of failure (like unsupported exception number).
 
     NOTES
 
@@ -64,7 +63,7 @@
     BUGS
 
     SEE ALSO
-	KrnRemIRQHandler()
+        KrnRemIRQHandler()
 
     INTERNALS
 
@@ -75,15 +74,15 @@
     struct PlatformData *pdata = KernelBase->kb_PlatformData;
     struct IntrNode *handle = NULL;
 
-    D(bug("[KRN] KrnAddIRQHandler(%02x, %012p, %012p, %012p):\n", irq, handler, handlerData, handlerData2));
+    D(bug("[KRN] %s(%02x, %012p, %012p, %012p):\n", __func__, irq, handler, handlerData, handlerData2));
 
-    if ((irq < HW_IRQ_COUNT) || (pdata->kb_PDFlags & PLATFORMF_HAVEMSI))
+    if (irq < HW_IRQ_COUNT)
     {
         /* Go to supervisor mode */
         (void)goSuper();
 
         handle = krnAllocIntrNode();
-        D(bug("[KRN] handle=%012p\n", handle));
+        D(bug("[KRN] %s: handle @ 0x%012p\n", __func__, handle));
 
         if (handle)
         {
@@ -101,15 +100,12 @@
 
                 ictl_enable_irq(irq, KernelBase);
             }
-            else
-            {
-                core_APIC_RegisterMSI(handle);
-            }
             Enable();
         }
 
         goUser();
     }
+    D(else bug("[KRN] %s: Invalid IRQ no #%u.", irq);)
 
     return handle;
 
@@ -123,8 +119,8 @@ void krnRunIRQHandlers(struct KernelBase *KernelBase, uint8_t irq)
 
     ForeachNodeSafe(&KERNELIRQ_LIST(irq), in, in2)
     {
-	irqhandler_t h = in->in_Handler;
+        irqhandler_t h = in->in_Handler;
 
-	h(in->in_HandlerData, in->in_HandlerData2);
+        h(in->in_HandlerData, in->in_HandlerData2);
     }
 }

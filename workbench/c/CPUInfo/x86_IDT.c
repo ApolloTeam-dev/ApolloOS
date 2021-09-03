@@ -1,9 +1,7 @@
 /*
-    Copyright © 2000, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2000, The AROS Development Team. All rights reserved.
 
     Desc: Probe installed IDT CPUs and display relevant information
-    Lang: english
 */
 
 /* BIG TO DO - SEPERATE THE INDIVIDUAL PROCESSOR FAMILY "PROBES" INTO RUNTIME SHARED LIBS OR SIMILAR */
@@ -19,7 +17,7 @@
 #include "../x86.h"
 
 /********************************************
-		 IDT Specific information..
+                 IDT Specific information..
  ********************************************/
 
 void    parse_i386_IDT( int maxi, struct i386_compat_intern * CPUi386 )

@@ -1,19 +1,19 @@
 /*
-    Copyright © 2004-2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004-2020, The AROS Development Team. All rights reserved.
 */
 
-#define DEBUG 1
 #include <aros/debug.h>
-#include <hidd/hidd.h>
-#include <hidd/pci.h>
-#include <oop/oop.h>
-#include <utility/tagitem.h>
-#include <utility/hooks.h>
 
 #include <proto/exec.h>
 #include <proto/utility.h>
 #include <proto/oop.h>
+
+#include <hidd/hidd.h>
+#include <hidd/pci.h>
+#include <hardware/pci.h>
+#include <oop/oop.h>
+#include <utility/tagitem.h>
+#include <utility/hooks.h>
 
 #include "pci.h"
 
@@ -21,7 +21,7 @@ static OOP_Object *FindBridge(OOP_Class *cl, OOP_Object *drv, UBYTE bus);
 static void AssignIRQ(OOP_Class *cl, OOP_Object *drv,
     struct MinList *irq_routing, OOP_Object *pcidev);
 
-/* 
+/*
     Returns 0 for no device, 1 for non-multi device and 2 for
     a multifunction device
 
@@ -33,6 +33,8 @@ static int isPCIDeviceAvailable(OOP_Class *cl, OOP_Object *o, UBYTE bus, UBYTE d
     UWORD Vend;
     UBYTE Type;
 
+    D(bug("[PCI] %s()\n", __func__);)
+    
     Vend = HIDD_PCIDriver_ReadConfigWord(o, NULL, bus, dev, sub, PCICS_VENDOR);
 
     if ((Vend == 0xffff) || (Vend == 0x0000))
@@ -54,13 +56,21 @@ static int isPCIDeviceAvailable(OOP_Class *cl, OOP_Object *o, UBYTE bus, UBYTE d
     return 1;
 }
 
-static OOP_Object *InsertDevice(OOP_Class *cl, ULONG *highBus, struct TagItem *devtags)
+static OOP_Object *InsertDevice(OOP_Class *cl, OOP_Object *driver,
+                                                    ULONG *highBus, struct TagItem *devtags)
 {
     struct pcibase *pciBase = (struct pcibase *)cl->UserData;
+    OOP_Class *deviceClass;
     OOP_Object *pcidev;
     IPTR bridge, secbus;
 
-    pcidev = OOP_NewObject(pciBase->psd.pciDeviceClass, NULL, devtags);
+    D(bug("[PCI] %s()\n", __func__);)
+
+    OOP_GetAttr(driver, aHidd_PCIDriver_DeviceClass, (IPTR *)&deviceClass);
+
+    D(bug("[PCI] %s:Using class @ 0x%p to create device instance\n", __func__, deviceClass);)
+
+    pcidev = OOP_NewObject(deviceClass, NULL, devtags);
     if (pcidev)
     {
         OOP_GetAttr(pcidev, aHidd_PCIDevice_isBridge, &bridge);
@@ -104,15 +114,16 @@ BOOL PCI__HW__SetUpDriver(OOP_Class *cl, OOP_Object *o,
         { aHidd_PCIDevice_Dev           , 0         },
         { aHidd_PCIDevice_Sub           , 0         },
         { aHidd_PCIDevice_Driver        , (IPTR)drv },
-        { aHidd_PCIDevice_ExtendedConfig, 0         },
         { TAG_DONE                      , 0         }
     };
 
+    D(bug("[PCI] %s()\n", __func__);)
+
     OOP_GetAttr(drv, aHidd_PCIDriver_IRQRoutingTable, (IPTR *)&irq_routing);
 
-    D(bug("[PCI] Adding Driver 0x%p class 0x%p\n", drv, OOP_OCLASS(drv)));
+    D(bug("[PCI] %s: Adding Driver Instance @ 0x%p (class @ 0x%p)\n", __func__, drv, OOP_OCLASS(drv)));
 
-    D(bug("[PCI] driver's IRQ routing table at 0x%p\n", irq_routing));
+    D(bug("[PCI] %s: Driver Instance IRQ routing table @ 0x%p\n", __func__, irq_routing));
 
     /*
      * Scan the whole PCI bus looking for devices available
@@ -121,7 +132,7 @@ BOOL PCI__HW__SetUpDriver(OOP_Class *cl, OOP_Object *o,
      */
     for (bus = 0; bus <= highBus; bus++)
     {
-        D(bug("[PCI] Scanning bus %d\n",bus));
+        D(bug("[PCI] %s: Scanning bus %d\n", __func__,bus));
 
         devtags[0].ti_Data = bus;
 
@@ -137,21 +148,18 @@ BOOL PCI__HW__SetUpDriver(OOP_Class *cl, OOP_Object *o,
             {
             /* Regular device */
             case 1:
-                devtags[4].ti_Data = HIDD_PCIDriver_HasExtendedConfig(drv, bus, dev, 0);
-                InsertDevice(cl, &highBus, devtags);
+                InsertDevice(cl, msg->driverObject, &highBus, devtags);
                 break;
 
             /* Cool! Multifunction device, search subfunctions then */
             case 2:
-                devtags[4].ti_Data = HIDD_PCIDriver_HasExtendedConfig(drv, bus, dev, 0);
-                InsertDevice(cl, &highBus, devtags);
+                InsertDevice(cl, msg->driverObject, &highBus, devtags);
                     
                 for (sub=1; sub < 8; sub++)
                 {
                     devtags[2].ti_Data = sub;
                     if (isPCIDeviceAvailable(cl, drv, bus, dev, sub)) {
-                        devtags[4].ti_Data = HIDD_PCIDriver_HasExtendedConfig(drv, bus, dev, sub);
-                        InsertDevice(cl, &highBus, devtags);
+                        InsertDevice(cl, msg->driverObject, &highBus, devtags);
                     }
                 }
                 break;
@@ -164,7 +172,7 @@ BOOL PCI__HW__SetUpDriver(OOP_Class *cl, OOP_Object *o,
         struct pcibase *pciBase = (struct pcibase *)cl->UserData;
         OOP_Object *pcidev;
 
-        D(bug("[PCI] Checking IRQ routing for newly added devices\n"));
+        D(bug("[PCI] %s: Checking IRQ routing for newly added devices\n", __func__));
 
         ForeachNode(&pciBase->psd.devices, pcidev)
         {
@@ -186,6 +194,8 @@ static void AssignIRQ(OOP_Class *cl, OOP_Object *drv,
     IPTR bus, dev;
     struct PCI_IRQRoutingEntry *e;
 
+    D(bug("[PCI] %s()\n", __func__);)
+
     OOP_GetAttr(pcidev, aHidd_PCIDevice_Driver, &d);
     OOP_GetAttr(pcidev, aHidd_PCIDevice_IRQLine, &line);
 
@@ -200,8 +210,8 @@ static void AssignIRQ(OOP_Class *cl, OOP_Object *drv,
             OOP_GetAttr(bridge, aHidd_PCIDevice_Bus, &bus);
             OOP_GetAttr(bridge, aHidd_PCIDevice_Dev, &dev);
 
-            D(bug("[PCI] Looking for routing for device %02x"
-                " and INT%c on bus %d\n", dev, 'A' + line - 1, bus));
+            D(bug("[PCI] %s: Looking for routing for device %02x"
+                " and INT%c on bus %d\n", __func__, dev, 'A' + line - 1, bus));
 
             ForeachNode(irq_routing, e)
             {
@@ -214,8 +224,8 @@ static void AssignIRQ(OOP_Class *cl, OOP_Object *drv,
                         {TAG_DONE, 0UL}
                     };
 
-                    D(bug("[PCI] Got a match. Setting INTLine to %d\n",
-                        e->re_IRQ));
+                    D(bug("[PCI] %s: Got a match. Setting INTLine to %d\n",
+                        __func__, e->re_IRQ));
                     OOP_SetAttrs(pcidev, attr);
                     irq_found = TRUE;
                 }
@@ -223,8 +233,8 @@ static void AssignIRQ(OOP_Class *cl, OOP_Object *drv,
 
             if (!irq_found)
             {
-                D(bug("[PCI] No match on bus %d. Trying parent bridge...\n",
-                    bus));
+                D(bug("[PCI] %s: No match on bus %d. Trying parent bridge...\n",
+                    __func__, bus));
 
                 /* We have to look for a routing entry that matches the
                  * parent bridge instead, so first find the bridge */
@@ -233,8 +243,8 @@ static void AssignIRQ(OOP_Class *cl, OOP_Object *drv,
 
                 /* Swizzle the INT pin as we traverse up to the parent
                  * bridge */
-                D(bug("[PCI] Swizzling the IRQPin from INT%c to INT%c\n",
-                    'A' + line - 1, 'A' + (line - 1 + dev) % 4));
+                D(bug("[PCI] %s:Swizzling the IRQPin from INT%c to INT%c\n",
+                    __func__, 'A' + line - 1, 'A' + (line - 1 + dev) % 4));
                 line = (line - 1 + dev) % 4 + 1;
             }
         }
@@ -247,6 +257,8 @@ static OOP_Object *FindBridge(OOP_Class *cl, OOP_Object *drv, UBYTE bus)
     struct pcibase *pciBase = (struct pcibase *)cl->UserData;
     OOP_Object *bridge = NULL, *pcidev;
     IPTR secbus, d, is_bridge;
+
+    D(bug("[PCI] %s()\n", __func__);)
 
     ForeachNode(&pciBase->psd.devices, pcidev)
     {
@@ -264,8 +276,8 @@ static OOP_Object *FindBridge(OOP_Class *cl, OOP_Object *drv, UBYTE bus)
                     OOP_GetAttr(pcidev, aHidd_PCIDevice_Bus, &bbus);
                     OOP_GetAttr(pcidev, aHidd_PCIDevice_Dev, &dev);
                     OOP_GetAttr(pcidev, aHidd_PCIDevice_Sub, &sub);
-                    bug("[PCI] Found PCI-PCI bridge at %x:%02x.%x (%p)\n",
-                        bbus, dev, sub, pcidev);
+                    bug("[PCI] %s: Found PCI-PCI bridge at %x:%02x.%x (%p)\n",
+                        __func__, bbus, dev, sub, pcidev);
                 )
                 bridge = pcidev;
             }
@@ -291,16 +303,16 @@ static const UBYTE attrTable[] =
 /*****************************************************************************************
 
     NAME
-	moHidd_PCI_EnumDevices
+        moHidd_PCI_EnumDevices
 
     SYNOPSIS
-	void OOP_DoMethod(OOP_Object *obj, struct pHidd_PCI_EnumDrivers *Msg);
+        void OOP_DoMethod(OOP_Object *obj, struct pHidd_PCI_EnumDrivers *Msg);
 
-	void HIDD_PCI_EnumDevices(OOP_Object *obj, struct Hook *callback,
+        void HIDD_PCI_EnumDevices(OOP_Object *obj, struct Hook *callback,
                                   const struct TagItem *requirements);
 
     LOCATION
-	CLID_Hidd_PCI
+        CLID_Hidd_PCI
 
     FUNCTION
         This method calls the callback hook for every PCI device in the system
@@ -309,8 +321,8 @@ static const UBYTE attrTable[] =
         managed by all drivers present in the system.
 
     INPUTS
-	obj          - A PCI subsystem object.
-	callback     - A user-supplied hook which will be called for every device.
+        obj          - A PCI subsystem object.
+        callback     - A user-supplied hook which will be called for every device.
         requirements - A TagList specifying search parameters.
 
         The hook will be called with the following parameters:
@@ -333,7 +345,7 @@ static const UBYTE attrTable[] =
             tHidd_PCI_Driver            - a pointer to bus driver object [V4]
 
     RESULT
-	None.
+        None.
 
     NOTES
 
@@ -356,6 +368,8 @@ void PCI__Hidd_PCI__EnumDevices(OOP_Class *cl, OOP_Object *o, struct pHidd_PCI_E
     ULONG i;
     OOP_Object *dev;
     BOOL ok;
+
+    D(bug("[PCI] %s()\n", __func__);)
 
     for (i = 0; i < sizeof(attrTable); i++)
     {
@@ -407,7 +421,10 @@ BOOL PCI__HW__RemoveDriver(OOP_Class *cl, OOP_Object *o, struct pHW_RemoveDriver
     OOP_Object *dev, *next, *drv;
     IPTR disallow = 0;
 
-    D(bug("[PCI] Removing hardware driver 0x%p\n", msg->driverObject));
+    D(
+        bug("[PCI] %s()\n", __func__);
+        bug("[PCI] %s: Removing hardware driver 0x%p\n", __func__, msg->driverObject);
+    )
 
     /*
      * Get exclusive lock on devices list.
@@ -451,7 +468,7 @@ BOOL PCI__HW__RemoveDriver(OOP_Class *cl, OOP_Object *o, struct pHW_RemoveDriver
     if (disallow)
     {
         ReleaseSemaphore(&pciBase->psd.dev_lock);
-        D(bug("[PCI] PCI::RemoveDriver() failed, driver in use\n"));
+        D(bug("[PCI] %s: failed, driver in use\n", __func__));
         return FALSE;
     }
 
@@ -462,7 +479,7 @@ BOOL PCI__HW__RemoveDriver(OOP_Class *cl, OOP_Object *o, struct pHW_RemoveDriver
     }
 
     ReleaseSemaphore(&pciBase->psd.dev_lock);
-    D(bug("[PCI] PCI::RemHardwareDriver() succeeded\n"));
+    D(bug("[PCI] %s: succeeded\n", __func__));
     return OOP_DoSuperMethod(cl, o, &msg->mID);
 }
 
@@ -490,6 +507,7 @@ BOOL PCI__HW__RemoveDriver(OOP_Class *cl, OOP_Object *o, struct pHW_RemoveDriver
         driverClass - A pointer to OOP class of the driver. In order to create an object
                       of some previously registered public class, use
                       oop.library/OOP_FindClass().
+        instanceTags - Tags used during driver instance creation.
 
     RESULT
         None.
@@ -510,7 +528,7 @@ BOOL PCI__HW__RemoveDriver(OOP_Class *cl, OOP_Object *o, struct pHW_RemoveDriver
 void PCI__Hidd_PCI__AddHardwareDriver(OOP_Class *cl, OOP_Object *o,
                                       struct pHidd_PCI_AddHardwareDriver *msg)
 {
-    HW_AddDriver(o, msg->driverClass, NULL);
+    HW_AddDriver(o, msg->driverClass, msg->instanceTags);
 }
 
 AROS_UFH3(static BOOL, searchFunc,
@@ -519,6 +537,8 @@ AROS_UFH3(static BOOL, searchFunc,
     AROS_UFHA(OOP_Class *, driverClass, A1))
 {
     AROS_USERFUNC_INIT
+
+    D(bug("[PCI] %s()\n", __func__);)
 
     if (OOP_OCLASS(driverObject) == driverClass)
     {
@@ -579,6 +599,8 @@ BOOL PCI__Hidd_PCI__RemHardwareDriver(OOP_Class *cl, OOP_Object *o,
         .h_Entry = (HOOKFUNC)searchFunc
     };
 
+    D(bug("[PCI] %s()\n", __func__);)
+
     /*
      * A very stupid and slow algorithm.
      * Find a driver using Enum method, remember it, then remove.
@@ -609,7 +631,9 @@ OOP_Object *PCI__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg)
 {
     struct pcibase *pciBase = (struct pcibase *)cl->UserData;
     struct pci_staticdata *psd = &pciBase->psd;
-    
+
+    D(bug("[PCI] %s()\n", __func__);)
+
     if (!psd->pciObject)
     {
         struct TagItem new_tags[] =

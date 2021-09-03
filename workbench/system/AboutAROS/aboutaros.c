@@ -1,9 +1,8 @@
 /*
-    Copyright © 2003-2020, The AROS Development Team. All rights reserved.
+    Copyright (C) 2003-2020, The AROS Development Team. All rights reserved.
     This file is part of the About program, which is distributed under
     the terms of version 2 of the GNU General Public License.
     
-    $Id$
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
@@ -117,11 +116,11 @@ BOOL NamesToList
                 
                 if (sectionName != NULL)
                 {
-                    sectionFirst 
+                    sectionFirst
                         ? sectionFirst = FALSE
                         : DoMethod
                           (
-                              list, MUIM_List_InsertSingle, (IPTR) "", 
+                              list, MUIM_List_InsertSingle, (IPTR) "",
                               MUIV_List_Insert_Bottom
                           );
 

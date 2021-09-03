@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2019, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -12,14 +11,14 @@
 /*****************************************************************************
 
     NAME */
-	AROS_LH1(ULONG, secGetTaskOwner,
+        AROS_LH1(ULONG, secGetTaskOwner,
 
 /*  SYNOPSIS */
-	/* (task) */
-	AROS_LHA(struct Task *, task, D0),
+        /* (task) */
+        AROS_LHA(struct Task *, task, D0),
 
 /*  LOCATION */
-	struct SecurityBase *, secBase, 7, Security)
+        struct SecurityBase *, secBase, 7, Security)
 
 /*  FUNCTION
 

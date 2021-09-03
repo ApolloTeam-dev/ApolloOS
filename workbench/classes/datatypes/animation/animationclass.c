@@ -38,6 +38,7 @@
 #include "animationclass.h"
 
 #include <stdio.h>
+#include <string.h>
 
 extern AROS_UFP3(ULONG, playerHookFunc,
     AROS_UFPA(struct Hook *, hook, A0),
@@ -452,20 +453,20 @@ IPTR DT_MapPens(struct IClass *cl, struct Gadget *g, struct privMapFramePens *ms
                         }
                         else
                         {
-                            bug("[animation.datatype] %s: ERROR: out of pen storage\n");
+                            bug("[animation.datatype] %s: ERROR: out of pen storage\n", __func__);
                         }
                     }
                 }
                 else
                 {
-                    bug("[animation.datatype] %s: ERROR: no colormap to remap against\n");
+                    bug("[animation.datatype] %s: ERROR: no colormap to remap against\n", __func__);
                 }
             }
             else
             {
                 if (animd->ad_ColorData.acd_NumAlloc >= needcolors)
                 {
-                    bug("[animation.datatype] %s: ERROR: out of pen storage\n");
+                    bug("[animation.datatype] %s: ERROR: out of pen storage\n", __func__);
                 }
                 else
                 {

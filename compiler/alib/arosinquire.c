@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Retrieve information about the OS
-    Lang: english
 */
 #define AROS_TAGRETURNTYPE  ULONG
 #include <aros/arosbase.h>
@@ -18,11 +16,11 @@ extern struct Library * ArosBase;
 #define NO_INLINE_STDARG /* turn off inline def */
 #include <proto/aros.h>
 
-	ULONG ArosInquire(
+        ULONG ArosInquire(
 
 /*  SYNOPSIS */
-	ULONG tag1,
-	...)
+        ULONG tag1,
+        ...)
 
 /*  FUNCTION
 
@@ -37,7 +35,7 @@ extern struct Library * ArosBase;
     BUGS
 
     SEE ALSO
-	aros.library/ArosInquireA()
+        aros.library/ArosInquireA()
 
     INTERNALS
 

@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <exec/memory.h>
@@ -68,7 +67,7 @@
     AROS_LIBFUNC_INIT
 
     struct opSet ops;
-    IPTR    	 result;
+    IPTR         result;
 
     DEBUG_SETGADGETATTRS(dprintf("SetGadgetAttrs[%x]: Gadget 0x%lx Window 0x%lx Requester 0x%lx Tags 0x%lx\n",
                                  &ops, gadget, window, requester, tagList));

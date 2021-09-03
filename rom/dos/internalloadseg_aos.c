@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -178,7 +176,7 @@ BPTR InternalLoadSeg_AOS(BPTR fh,
 
     lcount = AROS_BE2LONG(lcount);
     tmp = lcount & (HUNKF_FAST | HUNKF_CHIP);
-    lcount &= 0x3FFFFFFF;
+    lcount &= 0x3FFFFFFF; // Was 0xFFFFFF -- removed limit of 64Mb (by HUNK-Size) in Amiga executable files -- commit fdd8e7a
     D(bug("\tHunk %d size: 0x%06lx bytes in ", i, lcount*4));
     req = MEMF_CLEAR | MEMF_PUBLIC;
     if (tmp == (HUNKF_FAST | HUNKF_CHIP)) {

@@ -1,8 +1,7 @@
 /*
-    Copyright © 2002-2008, The AROS Development Team. 
+    Copyright (C) 2002-2008, The AROS Development Team.
     All rights reserved.
     
-    $Id$
 */
 
 #include <exec/types.h>
@@ -127,7 +126,7 @@ D(bug("[MiamiPanel] initMiamiPanelBase(%x)\n", LIBBASE));
     {
 D(bug("[MiamiPanel] initMiamiPanelBase: mem pool allocated @ %x\n", LIBBASE->mpb_pool));
         NEWLIST(&LIBBASE->mpb_msgList);
-		Locale_Initialize(LIBBASE);
+                Locale_Initialize(LIBBASE);
 
         if (MUIPC_App_ClassInit(LIBBASE)
             && MUIPC_MGroup_ClassInit(LIBBASE)
@@ -137,7 +136,7 @@ D(bug("[MiamiPanel] initMiamiPanelBase: mem pool allocated @ %x\n", LIBBASE->mpb
             && MUIPC_Traffic_ClassInit(LIBBASE)
             && MUIPC_Rate_ClassInit(LIBBASE)
             && MUIPC_TimeText_ClassInit(LIBBASE)
-			)
+                        )
         {
 D(bug("[MiamiPanel] initMiamiPanelBase: Classes Initialised ..\n"));
             LIBBASE->mpb_flags |= BASEFLG_Init;
@@ -147,7 +146,7 @@ D(bug("[MiamiPanel] initMiamiPanelBase: Classes Initialised ..\n"));
     }
 
 D(bug("[MiamiPanel] initMiamiPanelBase: Initialisation Failed!\n"));
-	
+        
     freeMiamiPanelBase(LIBBASE);
 
     return FALSE;
@@ -166,7 +165,7 @@ D(bug("[MiamiPanel] Open(%x)\n", LIBBASE));
     }
 
     ReleaseSemaphore(&LIBBASE->mpb_libSem);
-	
+        
     return TRUE;
 }
 
@@ -181,7 +180,7 @@ D(bug("[MiamiPanel] Expunge(%x)\n", LIBBASE));
     freeMiamiPanelBase(LIBBASE);
 
     ReleaseSemaphore(&LIBBASE->mpb_libSem);
-	
+        
     return TRUE;
 }
 

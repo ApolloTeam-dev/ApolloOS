@@ -1,9 +1,7 @@
 /*
-    Copyright © 2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2014, The AROS Development Team. All rights reserved.
 
     Desc: PCI XHCI USB host controller
-    Lang: English
 */
 
 #ifdef DEBUG
@@ -406,7 +404,7 @@ BOOL PCIXHCI_HCHalt(struct PCIXHCIUnit *unit) {
     /*
         The xHC shall halt within 16 ms. after software clears the Run/Stop bit if certain conditions have been met.
         The HCHalted (HCH) bit in the USBSTS register indicates when the xHC has finished its
-        pending pipelined transactions and has entered the stopped state. 
+        pending pipelined transactions and has entered the stopped state.
     */
     timeout = 250;  //FIXME: arbitrary value of 2500ms
     do {

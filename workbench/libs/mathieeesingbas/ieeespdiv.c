@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include "mathieeesingbas_intern.h"
@@ -43,7 +42,7 @@
     AROS_LIBFUNC_INIT
     
     LONG Res = 0;
-    LONG Exponent = (y & IEEESPExponent_Mask) 
+    LONG Exponent = (y & IEEESPExponent_Mask)
                   - (z & IEEESPExponent_Mask) + 0x3f800000;
     
     LONG Mant2 = ((y & IEEESPMantisse_Mask) | 0x00800000) << 8;

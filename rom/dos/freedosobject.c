@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 #include <exec/memory.h>
 #include <proto/exec.h>
@@ -97,7 +95,7 @@
             break;
 
         /*
-            FreeArgs() will not free a RDArgs without a RDA_DAList, 
+            FreeArgs() will not free a RDArgs without a RDA_DAList,
             see that function for more information as to why...
         */
         case DOS_RDARGS:

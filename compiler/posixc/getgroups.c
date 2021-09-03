@@ -1,6 +1,5 @@
 /*
-    Copyright © 2004-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004-2013, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function getgroups().
 */
@@ -14,11 +13,11 @@
 
 #include <unistd.h>
 
-	int getgroups(
+        int getgroups(
 
 /*  SYNOPSIS */
-	int gidsetlen,
-	gid_t *gidset)
+        int gidsetlen,
+        gid_t *gidset)
 
 /*  FUNCTION
 
@@ -27,7 +26,7 @@
     RESULT
 
     NOTES
-	Not implemented.
+        Not implemented.
 
     EXAMPLE
 

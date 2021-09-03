@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 */
 
 #define DEBUG 0
@@ -20,7 +19,7 @@ struct Library *ACPICABase = NULL;
 static int BattClock_Init(struct BattClockBase *BattClockBase)
 {
     InitSemaphore(&BattClockBase->sem);
-    BattClockBase->century = CENTURY;	/* Default offset */
+    BattClockBase->century = CENTURY;   /* Default offset */
 
     if ((ACPICABase = OpenLibrary("acpica.library",0)))
     {

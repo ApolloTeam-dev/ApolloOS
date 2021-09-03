@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 */
 
 #include "mathieeedoubbas_intern.h"
@@ -29,10 +28,10 @@
              0: y = 0.0
             -1: y < 0.0
 
-	Flags:
-	  zero	   : result is zero
-	  negative : result is negative
-	  overflow : 0
+        Flags:
+          zero     : result is zero
+          negative : result is negative
+          overflow : 0
 
     NOTES
 
@@ -45,9 +44,9 @@
 
     INTERNALS
         Algorithm:
-	Sign is negative: return -1
-	y == 0		: return 0
-	Otherwise	: return 1
+        Sign is negative: return -1
+        y == 0          : return 0
+        Otherwise       : return 1
 
 *****************************************************************************/
 {

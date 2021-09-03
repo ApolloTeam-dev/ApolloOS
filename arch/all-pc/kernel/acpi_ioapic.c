@@ -1,6 +1,5 @@
 /*
-    Copyright � 1995-2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
     
     http://download.intel.com/design/chipsets/datashts/29056601.pdf
 */
@@ -13,6 +12,8 @@
 
 #define __KERNEL_NOLIBBASE__
 #include <proto/kernel.h>
+
+#include <asm/io.h>
 
 #include <inttypes.h>
 #include <string.h>
@@ -38,9 +39,6 @@
  ************************************************************************************************/
 
 const char *ACPI_TABLE_MADT_STR __attribute__((weak)) = "APIC";
-
-#define IOREGSEL        0
-#define IOREGWIN        0x10
 
 /* descriptor for an ioapic routing table entry */
 struct acpi_ioapic_route
@@ -80,6 +78,15 @@ void ioapic_ParseTableEntry(UQUAD *tblData)
     }
     else
     {
+        bug(" DM:%02x", tblEntry->dm);
+        if (tblEntry->ds)
+        {
+            bug(" DS");
+        }
+        if (tblEntry->rirr)
+        {
+            bug(" IRR");
+        }
         if (tblEntry->pol)
         {
             bug(" Active LOW,");
@@ -146,6 +153,41 @@ icid_t IOAPICInt_Register(struct KernelBase *KernelBase)
     return (icid_t)IOAPICInt_IntrController.ic_Node.ln_Type;
 }
 
+/*
+ *
+ */
+void IOAPIC_IntDeliveryOptions(UBYTE pin, UBYTE pol, UBYTE trig, UBYTE *rtPol, UBYTE *rtTrig)
+{
+    if (pol == 0)
+    {
+        if (pin < I8259A_IRQCOUNT)
+            *rtPol = 0;
+        else
+            *rtPol = 1; // low
+    }
+    else
+    {
+        if (pol == 1)
+            *rtPol = 0;
+        else
+            *rtPol = 1; // low
+    }
+    if (trig == 0)
+    {
+        if (pin < I8259A_IRQCOUNT)
+            *rtTrig = 0;
+        else
+            *rtTrig = 1; // level
+    }
+    else
+    {
+        if (trig == 1)
+            *rtTrig = 1; // level
+        else
+            *rtTrig = 0;
+    }
+}
+
 BOOL IOAPICInt_Init(struct KernelBase *KernelBase, icid_t instanceCount)
 {
     struct PlatformData *kernPlatD = (struct PlatformData *)KernelBase->kb_PlatformData;
@@ -173,19 +215,27 @@ BOOL IOAPICInt_Init(struct KernelBase *KernelBase, icid_t instanceCount)
             bug("[Kernel:IOAPIC] %s: Init IOAPIC #%u [ID=%03u] @ 0x%p\n", __func__, instance + 1, ioapicData->ioapic_ID, ioapicData->ioapic_Base);
         )
 
-	/*
+        /*
          * Skip controllers that report bogus version information
          */
         ioapicval = acpi_IOAPIC_ReadReg(
                         ioapicData->ioapic_Base,
                         IOAPICREG_VER);
-	if (ioapicval == 0xFFFFFFFF)
-		continue;
+        if (ioapicval == 0xFFFFFFFF)
+                continue;
 
         DINT(
             bug("[Kernel:IOAPIC] %s: IOAPIC Version appears to be valid...\n", __func__);
         )
-	/*
+        if (ioapicData->ioapic_Ver >= 0x20)
+        {
+            ioapicData->ioapic_Flags |= IOAPICF_EOI;
+            DINT(
+                bug("[Kernel:IOAPIC] %s: EOI present\n", __func__);
+            )
+        }
+
+        /*
          * Make sure we are using the correct LocalID
          */
         ioapicval = acpi_IOAPIC_ReadReg(
@@ -216,11 +266,21 @@ BOOL IOAPICInt_Init(struct KernelBase *KernelBase, icid_t instanceCount)
             DINT(bug("[Kernel:IOAPIC] %s: Routing Data @ 0x%p\n", __func__, ioapicData->ioapic_RouteTable));
             for (irq = ioapic_irqbase; irq < (ioapic_irqbase + ioapicData->ioapic_IRQCount); irq++)
             {
-                UBYTE ioapic_pin = irq - ioapic_irqbase;
-                struct acpi_ioapic_route *irqRoute = (struct acpi_ioapic_route *)&ioapicData->ioapic_RouteTable[ioapic_pin];
-                struct IntrMapping *intrMap = krnInterruptMapped(KernelBase, irq);
+                struct IntrMapping *intrMap = krnInterruptMapping(KernelBase, irq);
+                struct acpi_ioapic_route *irqRoute;
+                UBYTE ioapic_pin;
+                UBYTE rtPol, rtTrig;
                 BOOL enabled = FALSE;
                 APTR ssp = NULL;
+
+                if (intrMap)
+                {
+                    ioapic_pin = intrMap->im_Int - ioapic_irqbase;
+                }
+                else
+                    ioapic_pin = irq - ioapic_irqbase;
+
+                irqRoute = (struct acpi_ioapic_route *)&ioapicData->ioapic_RouteTable[ioapic_pin];
 
                 DINT(bug("[Kernel:IOAPIC] %s: Route Entry %u @ 0x%p\n", __func__, ioapic_pin, irqRoute));
 
@@ -236,20 +296,23 @@ BOOL IOAPICInt_Init(struct KernelBase *KernelBase, icid_t instanceCount)
 
                 irqRoute->ds = 0;
                 irqRoute->rirr = 0;
-                if (ioapic_pin < I8259A_IRQCOUNT)
+                if (intrMap)
                 {
-                    /* mark the ISA interrupts as active high, edge triggered... */
-                    irqRoute->pol = 0;
-                    irqRoute->trig = 0;
+                    IOAPIC_IntDeliveryOptions(ioapic_pin, intrMap->im_Polarity, intrMap->im_Trig, &rtPol, &rtTrig);
                 }
                 else
                 {
-                    /* ...and PCI interrupts as active low, level triggered */
-                    irqRoute->pol = 1;
-                    irqRoute->trig = 1;
+                    IOAPIC_IntDeliveryOptions(ioapic_pin, 0, 0, &rtPol, &rtTrig);
                 }
-
-                /* setup delivery to the boot processor */
+                if (rtPol)
+                    irqRoute->pol = 1;
+                else
+                    irqRoute->pol = 0;
+                if (rtTrig)
+                    irqRoute->trig = 1;
+                else
+                    irqRoute->trig = 0;
+                
                 if (intrMap)
                 {
                     irqRoute->vect = (UBYTE)intrMap->im_Node.ln_Pri + HW_IRQ_BASE;
@@ -257,7 +320,10 @@ BOOL IOAPICInt_Init(struct KernelBase *KernelBase, icid_t instanceCount)
                         enabled = TRUE;
                 }
                 else
+                {
                     irqRoute->vect = irq + HW_IRQ_BASE;
+                }
+                /* setup delivery to the boot processor */
                 D(bug("[Kernel:IOAPIC] %s: Routing HW IRQ to Vector #$%02X\n", __func__, irqRoute->vect);)
                 irqRoute->dm = 0; // fixed
                 irqRoute->dstm = 0; // physical
@@ -279,7 +345,7 @@ BOOL IOAPICInt_Init(struct KernelBase *KernelBase, icid_t instanceCount)
                         {
                             bug("[Kernel:IOAPIC] %s: failed to set IRQ %d's gate\n", __func__, irq);
                         }
-                        if ((!krnInterruptMapping(KernelBase, irq)) && (ictl_is_irq_enabled(irq, KernelBase)))
+                        if ((!intrMap) && (ictl_is_irq_enabled(irq, KernelBase)))
                             enabled = TRUE;
                     }
                     if (ssp)
@@ -304,6 +370,7 @@ BOOL IOAPICInt_Init(struct KernelBase *KernelBase, icid_t instanceCount)
                     bug("\n");
                 );
             }
+            ioapicData->ioapic_Flags |= IOAPICF_ENABLED;
         }
         ioapic_irqbase += ioapicData->ioapic_IRQCount;
     }
@@ -323,7 +390,7 @@ BOOL IOAPICInt_DisableIRQ(APTR icPrivate, icid_t icInstance, icid_t intNum)
 
     if (intrMap)
     {
-        ioapic_pin = (intrMap->im_IRQ - ioapicData->ioapic_GSI);
+        ioapic_pin = (intrMap->im_Int - ioapicData->ioapic_GSI);
     }
     else
         ioapic_pin = intNum - ioapicData->ioapic_GSI;
@@ -353,16 +420,20 @@ BOOL IOAPICInt_EnableIRQ(APTR icPrivate, icid_t icInstance, icid_t intNum)
     struct acpi_ioapic_route *irqRoute;
     UBYTE ioapic_pin;
 
-    DINT(bug("[Kernel:IOAPIC] %s(%02X)\n", __func__, intNum));
+    DINT(
+        bug("[Kernel:IOAPIC] %s(%02X)\n", __func__, intNum);
+    )
 
     if (intrMap)
     {
-        ioapic_pin = (intrMap->im_IRQ - ioapicData->ioapic_GSI);
+        ioapic_pin = (intrMap->im_Int - ioapicData->ioapic_GSI);
     }
     else
          ioapic_pin = intNum - ioapicData->ioapic_GSI;
 
-    DINT(bug("[Kernel:IOAPIC] %s: IOAPIC Pin %02X\n", __func__, ioapic_pin));
+    DINT(
+        bug("[Kernel:IOAPIC] %s: IOAPIC Pin %02X\n", __func__, ioapic_pin);
+    )
     irqRoute = (struct acpi_ioapic_route *)&ioapicData->ioapic_RouteTable[ioapic_pin];
 
     /*
@@ -376,6 +447,25 @@ BOOL IOAPICInt_EnableIRQ(APTR icPrivate, icid_t icInstance, icid_t intNum)
 
     irqRoute->vect = intNum + HW_IRQ_BASE;
     irqRoute->mask = 0; // enable!!
+    if (intrMap)
+    {
+        UBYTE rtPol, rtTrig;
+        IOAPIC_IntDeliveryOptions(ioapic_pin, intrMap->im_Polarity, intrMap->im_Trig, &rtPol, &rtTrig);
+        if (rtPol)
+            irqRoute->pol = 1; // low
+        else
+            irqRoute->pol = 0;
+        if (rtTrig)
+            irqRoute->trig = 1; // lvl
+        else
+            irqRoute->trig = 0;
+    }
+
+    DINT(
+        bug("[Kernel:IOAPIC] %s: ", __func__);
+        ioapic_ParseTableEntry(&ioapicData->ioapic_RouteTable[ioapic_pin]);
+        bug("\n");
+    )
 
     acpi_IOAPIC_WriteReg(ioapicData->ioapic_Base,
         IOAPICREG_REDTBLBASE + (ioapic_pin << 1 ) + 1,
@@ -389,15 +479,70 @@ BOOL IOAPICInt_EnableIRQ(APTR icPrivate, icid_t icInstance, icid_t intNum)
 
 BOOL IOAPICInt_AckIntr(APTR icPrivate, icid_t icInstance, icid_t intNum)
 {
+    struct PlatformData *kernPlatD = (struct PlatformData *)KernelBase->kb_PlatformData;
+    struct IOAPICData *ioapicPrivate = (struct IOAPICData *)icPrivate;
+    struct IOAPICCfgData *ioapicData = &ioapicPrivate->ioapics[icInstance];
+    struct IntrMapping *intrMap = krnInterruptMapping(KernelBase, intNum);
+    struct acpi_ioapic_route *irqRoute;
     IPTR apic_base;
+    UBYTE ioapic_pin;
 
-    DINT(bug("[Kernel:IOAPIC] %s()\n", __func__));
+    DINT(bug("[Kernel:IOAPIC] %s(%u)\n", __func__, intNum);)
 
     /* Write zero to EOI of APIC */
     apic_base = core_APIC_GetBase();
-
+    DINT(bug("[Kernel:IOAPIC] %s: apicBase = %p\n", __func__, apic_base));
     APIC_REG(apic_base, APIC_EOI) = 0;
 
+    /* write IOAPIC EIO if necessary .. */
+    if (intrMap)
+    {
+        ioapic_pin = (intrMap->im_Int - ioapicData->ioapic_GSI);
+    }
+    else
+         ioapic_pin = intNum - ioapicData->ioapic_GSI;
+
+    DINT(
+        bug("[Kernel:IOAPIC] %s: IOAPIC Pin %02X\n", __func__, ioapic_pin);
+    )
+    irqRoute = (struct acpi_ioapic_route *)&ioapicData->ioapic_RouteTable[ioapic_pin];
+
+    if (irqRoute->trig == 1)
+    {
+        if (ioapicData->ioapic_Flags & IOAPICF_EOI)
+        {
+            volatile ULONG *ioapic_eoi = (volatile ULONG *)((IPTR)ioapicData->ioapic_Base + IOREGEOI);
+            DINT(
+                bug("[Kernel:IOAPIC] %s: Writting IOAPIC EOI REG (@ 0x%p, %u)\n", __func__, ioapic_eoi, irqRoute->vect);
+            )
+            *ioapic_eoi = irqRoute->vect;
+        }
+        else
+        {
+            int rttrig = irqRoute->trig, rtmask = irqRoute->mask;
+
+            DINT(
+                bug("[Kernel:IOAPIC] %s: Toggling trig/mask\n", __func__);
+            )
+            /*
+             * If the IO-APIC is too old, Replicate the linux kernel behaviour
+             * of setting the pin to edge trigger and back - masking the pin while changing
+             */
+            rttrig = irqRoute->trig;
+            rtmask = irqRoute->mask;
+
+            irqRoute->trig = 0;
+            irqRoute->mask = 1;
+            acpi_IOAPIC_WriteReg(ioapicData->ioapic_Base,
+                IOAPICREG_REDTBLBASE + (ioapic_pin << 1),
+                (ioapicData->ioapic_RouteTable[ioapic_pin] & 0xFFFFFFFF));
+            irqRoute->trig = rttrig;
+            irqRoute->mask = rtmask;
+            acpi_IOAPIC_WriteReg(ioapicData->ioapic_Base,
+                IOAPICREG_REDTBLBASE + (ioapic_pin << 1),
+                (ioapicData->ioapic_RouteTable[ioapic_pin] & 0xFFFFFFFF));
+        }
+    }
     return TRUE;
 }
 
@@ -428,18 +573,43 @@ struct IntrController IOAPICInt_IntrController =
         D(bug("[Kernel:ACPI-IOAPIC] IO-APIC Private @ 0x%p, for %u IOAPIC's\n", pdata->kb_IOAPIC, pdata->kb_ACPI->acpi_ioapicCnt));
     }
 }
- 
+
+static UBYTE ACPI_PolFromInti(UWORD inti)
+{
+    switch (inti & ACPI_MADT_POLARITY_MASK) {
+    default:
+    case ACPI_MADT_POLARITY_CONFORMS:
+    case ACPI_MADT_POLARITY_ACTIVE_HIGH:
+            return 1;
+    case ACPI_MADT_POLARITY_ACTIVE_LOW:
+            return 2;
+    }
+}
+
+static UBYTE ACPI_TrigFromInti(UWORD inti)
+{
+    switch (inti & ACPI_MADT_TRIGGER_MASK) {
+    default:
+    case ACPI_MADT_TRIGGER_CONFORMS:
+    case ACPI_MADT_TRIGGER_EDGE:
+            return 2;
+    case ACPI_MADT_TRIGGER_LEVEL:
+            return 1;
+    }
+}
+
 /* Process the 'Interrupt Source' MADT Table */
 AROS_UFH2(IPTR, ACPI_hook_Table_Int_Src_Parse,
-	  AROS_UFHA(struct Hook *, table_hook, A0),
-	  AROS_UFHA(ACPI_MADT_INTERRUPT_SOURCE *, intsrc, A2))
+          AROS_UFHA(struct Hook *, table_hook, A0),
+          AROS_UFHA(ACPI_MADT_INTERRUPT_SOURCE *, intsrc, A2))
 {
     AROS_USERFUNC_INIT
 
-    DPARSE(bug("[Kernel:ACPI-IOAPIC] ## %s()\n", __func__));
-    DPARSE(bug("[Kernel:ACPI-IOAPIC]    %s: %u:%u, GSI %u, Flags 0x%x\n", __func__, intsrc->Id, intsrc->Eid,
-                intsrc->GlobalIrq, intsrc->IntiFlags));
     DPARSE(
+        bug("[Kernel:ACPI-IOAPIC] ## %s()\n", __func__);
+        bug("[Kernel:ACPI-IOAPIC]    %s: %u:%u, GSI %u\n", __func__, intsrc->Id, intsrc->Eid,
+                intsrc->GlobalIrq);
+        bug("[Kernel:ACPI-IOAPIC]    %s: Flags 0x%x\n", __func__,intsrc->IntiFlags);
         if (intsrc->Type == 1)
         {
             bug("[Kernel:ACPI-IOAPIC]    %s: PMI, vector %d\n", __func__, intsrc->IoSapicVector);
@@ -453,6 +623,33 @@ AROS_UFH2(IPTR, ACPI_hook_Table_Int_Src_Parse,
             bug("[Kernel:ACPI-IOAPIC]    %s: Corrected\n", __func__);
         }
     )
+#if (0)
+    if ((intrMap = krnInterruptMapped(KernelBase, intsrc->GlobalIrq)) == NULL)
+    {
+        intrMap = AllocMem(sizeof(struct IntrMapping), MEMF_CLEAR);
+
+        bug("[Kernel:ACPI-IOAPIC]    %s: new mapping node @ 0x%p\n", __func__, intrMap);
+
+        intrMap->im_Node.ln_Pri = intsrc->SourceIrq;
+        //intrMap->im_Node.ln_Type = IOAPICInt_IntrController->;
+        intrMap->im_Int = intsrc->GlobalIrq;
+
+        intrMap->im_Polarity = ACPI_PolFromInti(intsrc->IntiFlags);
+        intrMap->im_Trig = ACPI_TrigFromInti(intsrc->IntiFlags);
+
+        Enqueue(&KernelBase->kb_InterruptMappings, &intrMap->im_Node);
+    }
+    else
+    {
+        bug("[Kernel:ACPI-IOAPIC]    %s: updating mapping node @ 0x%p\n", __func__, intrMap);
+        intrMap->im_Int = intsrc->GlobalIrq;
+        intrMap->im_Polarity = (intsrc->IntiFlags & 1) ? 1 : 0;
+        intrMap->im_Trig = ((intsrc->IntiFlags >> 2) & 1) ? 0 : 1;
+    }
+#else
+    bug("[Kernel:ACPI-IOAPIC]    %s: AROS LACKS SUPPORT FOR ACPI_MADT_INTERRUPT_SOURCE\n", __func__);
+    bug("[Kernel:ACPI-IOAPIC]    %s: Speak to a developer about adding this functionality!\n", __func__);
+#endif
     return TRUE;
 
     AROS_USERFUNC_EXIT
@@ -460,40 +657,116 @@ AROS_UFH2(IPTR, ACPI_hook_Table_Int_Src_Parse,
 
 /* Process the 'Interrupt Source Overide' MADT Table */
 AROS_UFH2(IPTR, ACPI_hook_Table_Int_Src_Ovr_Parse,
-	  AROS_UFHA(struct Hook *, table_hook, A0),
-	  AROS_UFHA(ACPI_MADT_INTERRUPT_OVERRIDE *, intsrc, A2))
+          AROS_UFHA(struct Hook *, table_hook, A0),
+          AROS_UFHA(ACPI_MADT_INTERRUPT_OVERRIDE *, intsrc, A2))
 {
     AROS_USERFUNC_INIT
 
     struct IntrMapping *intrMap;
+    BOOL newRt = FALSE;
 
-    DPARSE(bug("[Kernel:ACPI-IOAPIC] ## %s()\n", __func__));
-    DPARSE(bug("[Kernel:ACPI-IOAPIC]    %s: Bus %u, Source IRQ %u, GSI %u, Flags 0x%x\n", __func__, intsrc->Bus, intsrc->SourceIrq,
-                intsrc->GlobalIrq, intsrc->IntiFlags));
+    DPARSE(
+        bug("[Kernel:ACPI-IOAPIC] ## %s()\n", __func__);
+    )
 
-    intrMap = AllocMem(sizeof(struct IntrMapping), MEMF_CLEAR);
-    intrMap->im_Node.ln_Pri = intsrc->SourceIrq;
-    //intrMap->im_Node.ln_Type = IOAPICInt_IntrController->;
-    intrMap->im_IRQ = intsrc->GlobalIrq;
-    Enqueue(&KernelBase->kb_InterruptMappings, &intrMap->im_Node);
+    if ((intrMap = krnInterruptMapping(KernelBase, intsrc->SourceIrq)) == NULL)
+    {
+        intrMap = AllocMem(sizeof(struct IntrMapping), MEMF_CLEAR);
+        newRt = TRUE;
+        DPARSE(bug("[Kernel:ACPI-IOAPIC]    %s: new mapping node @ 0x%p\n", __func__, intrMap);)
 
+        intrMap->im_Node.ln_Pri = intsrc->SourceIrq;
+    }
+    else
+    {
+        DPARSE(bug("[Kernel:ACPI-IOAPIC]    %s: updating mapping node @ 0x%p\n", __func__, intrMap);)
+    }
+
+    intrMap->im_Int = intsrc->GlobalIrq;
+    intrMap->im_Polarity = ACPI_PolFromInti(intsrc->IntiFlags);
+    intrMap->im_Trig = ACPI_TrigFromInti(intsrc->IntiFlags);
+
+    if (newRt)
+    {
+        Enqueue(&KernelBase->kb_InterruptMappings, &intrMap->im_Node);
+    }
+
+    DPARSE(
+        bug("[Kernel:ACPI-IOAPIC]    %s: Bus %u, Source IRQ %u, GSI %u\n", __func__, intsrc->Bus, intsrc->SourceIrq, intsrc->GlobalIrq);
+        bug("[Kernel:ACPI-IOAPIC]    %s: Flags 0x%x\n", __func__,intsrc->IntiFlags);
+    )
+
+    if (intsrc->SourceIrq != intsrc->GlobalIrq)
+    {
+        newRt = FALSE;
+        if ((intrMap = krnInterruptMapping(KernelBase, intsrc->GlobalIrq)) == NULL)
+        {
+            intrMap = AllocMem(sizeof(struct IntrMapping), MEMF_CLEAR);
+            newRt = TRUE;
+            DPARSE(bug("[Kernel:ACPI-IOAPIC]    %s: new mapping node @ 0x%p\n", __func__, intrMap);)
+
+            intrMap->im_Node.ln_Pri = intsrc->GlobalIrq;
+        }
+        else
+        {
+            DPARSE(bug("[Kernel:ACPI-IOAPIC]    %s: updating mapping node @ 0x%p\n", __func__, intrMap);)
+        }
+
+        intrMap->im_Int = intsrc->SourceIrq;
+
+        intrMap->im_Polarity = ACPI_PolFromInti(intsrc->IntiFlags);
+        intrMap->im_Trig = ACPI_TrigFromInti(intsrc->IntiFlags);
+
+        if (newRt)
+        {
+            Enqueue(&KernelBase->kb_InterruptMappings, &intrMap->im_Node);
+        }
+    }
     return TRUE;
 
     AROS_USERFUNC_EXIT
 }
 
+
+
 /* Process the 'Non-Maskable Interrupt Source' MADT Table */
 AROS_UFH2(IPTR, ACPI_hook_Table_NMI_Src_Parse,
-	  AROS_UFHA(struct Hook *, table_hook, A0),
-	  AROS_UFHA(ACPI_MADT_NMI_SOURCE *, nmi_src, A2))
+          AROS_UFHA(struct Hook *, table_hook, A0),
+          AROS_UFHA(ACPI_MADT_NMI_SOURCE *, nmi_src, A2))
 {
     AROS_USERFUNC_INIT
 
-    DPARSE(bug("[Kernel:ACPI-IOAPIC] ## %s()\n", __func__));
-    DPARSE(bug("[Kernel:ACPI-IOAPIC]    %s: GSI %u, Flags 0x%x\n", __func__, nmi_src->GlobalIrq, nmi_src->IntiFlags));
+    struct IntrMapping *intrMap;
+    BOOL newRt = FALSE;
 
-    /* FIXME: Uh... shouldn't we do something with this? */
+    DPARSE(
+        bug("[Kernel:ACPI-IOAPIC] ## %s()\n", __func__);
+        bug("[Kernel:ACPI-IOAPIC]    %s: GSI %u\n", __func__, nmi_src->GlobalIrq);
+        bug("[Kernel:ACPI-IOAPIC]    %s: Flags 0x%x\n", __func__,nmi_src->IntiFlags);
+    )
 
+    if ((intrMap = krnInterruptMapped(KernelBase, nmi_src->GlobalIrq)) == NULL)
+    {
+        intrMap = AllocMem(sizeof(struct IntrMapping), MEMF_CLEAR);
+        newRt = TRUE;
+
+        DPARSE(bug("[Kernel:ACPI-IOAPIC]    %s: new mapping node @ 0x%p\n", __func__, intrMap);)
+    }
+    else
+    {
+        DPARSE(bug("[Kernel:ACPI-IOAPIC]    %s: updating mapping node @ 0x%p\n", __func__, intrMap);)
+    }
+
+    intrMap->im_Node.ln_Pri = nmi_src->GlobalIrq;
+    intrMap->im_Int = nmi_src->GlobalIrq;
+
+    intrMap->im_Polarity = ACPI_PolFromInti(nmi_src->IntiFlags);
+    intrMap->im_Trig = ACPI_TrigFromInti(nmi_src->IntiFlags);
+
+    if (newRt)
+    {
+        Enqueue(&KernelBase->kb_InterruptMappings, &intrMap->im_Node);
+    }
     return TRUE;
 
     AROS_USERFUNC_EXIT
@@ -501,9 +774,9 @@ AROS_UFH2(IPTR, ACPI_hook_Table_NMI_Src_Parse,
 
 /* Process the 'IO-APIC' MADT Table */
 AROS_UFH3(IPTR, ACPI_hook_Table_IOAPIC_Parse,
-	  AROS_UFHA(struct Hook *, table_hook, A0),
-	  AROS_UFHA(ACPI_MADT_IO_APIC *, ioapic, A2),
-	  AROS_UFHA(struct ACPI_TABLESCAN_DATA *, tsdata, A1))
+          AROS_UFHA(struct Hook *, table_hook, A0),
+          AROS_UFHA(ACPI_MADT_IO_APIC *, ioapic, A2),
+          AROS_UFHA(struct ACPI_TABLESCAN_DATA *, tsdata, A1))
 {
     AROS_USERFUNC_INIT
 
@@ -545,8 +818,8 @@ AROS_UFH3(IPTR, ACPI_hook_Table_IOAPIC_Parse,
             ioapicval = acpi_IOAPIC_ReadReg(
                 ioapicData->ioapic_Base,
                 IOAPICREG_VER);
-            ioapicData->ioapic_IRQCount = ((ioapicval >> 16) & 0xFF) + 1;
-            ioapicData->ioapic_Ver = (ioapicval & 0xFF);
+            ioapicData->ioapic_IRQCount = ((ioapicval & IOAPICVER_MASKCNT) >> IOAPICVER_CNTSHIFT) + 1;
+            ioapicData->ioapic_Ver = (ioapicval & IOAPICVER_MASKVER);
             DPARSE(bug(" ver %u, max irqs = %u,",
                 ioapicData->ioapic_Ver, ioapicData->ioapic_IRQCount));
             ioapicval = acpi_IOAPIC_ReadReg(
@@ -561,12 +834,12 @@ AROS_UFH3(IPTR, ACPI_hook_Table_IOAPIC_Parse,
                 ioapicval = acpi_IOAPIC_ReadReg(
                     ioapicData->ioapic_Base,
                     IOAPICREG_REDTBLBASE + i);
-                tblraw = ((UQUAD)ioapicval << 32);
-               
+                tblraw = (UQUAD)ioapicval;
+
                 ioapicval = acpi_IOAPIC_ReadReg(
                     ioapicData->ioapic_Base,
                     IOAPICREG_REDTBLBASE + i + 1);
-                tblraw |= (UQUAD)ioapicval;
+                tblraw |= ((UQUAD)ioapicval << 32);
 
                 DPARSE(
                     bug("[Kernel:ACPI-IOAPIC]    %s:       ", __func__);
@@ -578,6 +851,9 @@ AROS_UFH3(IPTR, ACPI_hook_Table_IOAPIC_Parse,
             pdata->kb_IOAPIC->ioapic_count++;
         }
     }
+
+    DPARSE(bug("[Kernel:ACPI-IOAPIC] %s: ioapics configuration done\n", __func__);)
+
     return TRUE;
 
     AROS_USERFUNC_EXIT
@@ -588,9 +864,9 @@ AROS_UFH3(IPTR, ACPI_hook_Table_IOAPIC_Parse,
  * This function counts the available IO-APICs.
  */
 AROS_UFH3(static IPTR, ACPI_hook_Table_IOAPIC_Count,
-	  AROS_UFHA(struct Hook *, table_hook, A0),
-	  AROS_UFHA(ACPI_MADT_IO_APIC *, ioapic, A2),
-	  AROS_UFHA(struct ACPI_TABLESCAN_DATA *, tsdata, A1))
+          AROS_UFHA(struct Hook *, table_hook, A0),
+          AROS_UFHA(ACPI_MADT_IO_APIC *, ioapic, A2),
+          AROS_UFHA(struct ACPI_TABLESCAN_DATA *, tsdata, A1))
 {
     AROS_USERFUNC_INIT
 

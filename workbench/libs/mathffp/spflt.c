@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2004, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2004, The AROS Development Team. All rights reserved.
 */
 
 #include "mathffp_intern.h"
@@ -22,7 +21,7 @@
     INPUTS
 
     RESULT
-	FFP number
+        FFP number
 
         Flags:
           zero     : result is zero
@@ -76,9 +75,9 @@
     /* Exponent = number of highest set bit + 1 */
     
     if (Exponent > 0) /* > 32 bit LONG shift = undefined */
-	inum <<= (32 - Exponent);
+        inum <<= (32 - Exponent);
     else
-    	inum = 0;
+        inum = 0;
     if ((char) inum < 0) inum +=0x100;
     inum &= FFPMantisse_Mask;
     

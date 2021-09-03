@@ -1,10 +1,8 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc: exec.library's internal service task. Performs memory management according
           to task scheduler's requests.
-    Lang: english
 */
 
 #include <exec/execbase.h>
@@ -46,8 +44,8 @@ void ServiceTask(struct ExecBase *SysBase)
              * So, currently we ignore this.
              */
 
-	    switch (task->tc_State)
-	    {
+            switch (task->tc_State)
+            {
 #if defined(__AROSEXEC_SMP__)
             case TS_TOMBSTONED:
                 if (!(PrivExecBase(SysBase)->IntFlags & EXECF_CPUAffinity) || (GetIntETask(serviceTask)->iet_CpuNumber== (IPTR)task->tc_UserData))

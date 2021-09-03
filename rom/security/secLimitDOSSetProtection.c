@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2019, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -11,14 +10,14 @@
 /*****************************************************************************
 
     NAME */
-	AROS_LH1(BOOL, secLimitDOSSetProtection,
+        AROS_LH1(BOOL, secLimitDOSSetProtection,
 
 /*  SYNOPSIS */
-	/* (flag) */
-	AROS_LHA(BOOL, flag, D0),
+        /* (flag) */
+        AROS_LHA(BOOL, flag, D0),
 
 /*  LOCATION */
-	struct SecurityBase *, secBase, 16, Security)
+        struct SecurityBase *, secBase, 16, Security)
 
 /*  FUNCTION
 

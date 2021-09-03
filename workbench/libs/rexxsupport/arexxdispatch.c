@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2006, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2006, The AROS Development Team. All rights reserved.
 
     Desc: The query function called by rexxmast to find the library functions
-    Lang: English
 */
 
 #include <rexx/rexxcall.h>
@@ -59,7 +57,7 @@ int comparefunc(const void *name, const void *func)
 }
 
 AROS_AREXXLIBQUERYFUNC(ArexxDispatch, msg,
-		       struct Library *, RexxSupportBase, 5, RexxSupport)
+                       struct Library *, RexxSupportBase, 5, RexxSupport)
 {
     struct arexxfunc *func;
     UBYTE *argstring = NULL;
@@ -75,7 +73,7 @@ AROS_AREXXLIBQUERYFUNC(ArexxDispatch, msg,
     {
         ReturnRexxQuery(ERR10_018, NULL);
     }
-    else 
+    else
     {
         rc = func->f(RexxSupportBase, msg, &argstring);
         ReturnRexxQuery(rc, argstring);

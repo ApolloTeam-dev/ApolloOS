@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc: Remove a memory handler.
-    Lang: english
 */
 #include <exec/execbase.h>
 #include <aros/libcall.h>
@@ -15,19 +13,19 @@
 
     NAME */
 
-	AROS_LH1(void, RemMemHandler,
+        AROS_LH1(void, RemMemHandler,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct Interrupt *, memHandler, A1),
+        AROS_LHA(struct Interrupt *, memHandler, A1),
 
 /*  LOCATION */
-	struct ExecBase *, SysBase, 130, Exec)
+        struct ExecBase *, SysBase, 130, Exec)
 
 /*  FUNCTION
-	Remove some function added with AddMemHandler again.
+        Remove some function added with AddMemHandler again.
 
     INPUTS
-	memHandler - The same Interrupt structure you gave to AddMemHandler().
+        memHandler - The same Interrupt structure you gave to AddMemHandler().
 
     RESULT
 

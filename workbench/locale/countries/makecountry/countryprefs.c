@@ -1,9 +1,7 @@
 /*
-    Copyright © 2008-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2008-2019, The AROS Development Team. All rights reserved.
 
     Desc: makecountry code that needs access to AROS structures and types
-    Lang: english
 */
 
 #include <exec/types.h>
@@ -13,9 +11,9 @@
 #define EC(x)\
 {\
     (x) =   (((x) & 0xFF000000) >> 24)\
-	  | (((x) & 0x00FF0000) >> 8)\
-	  | (((x) & 0x0000FF00) << 8)\
-	  | (((x) & 0x000000FF) << 24);\
+          | (((x) & 0x00FF0000) >> 8)\
+          | (((x) & 0x0000FF00) << 8)\
+          | (((x) & 0x000000FF) << 24);\
 }
 
 unsigned long getCountryPrefsSize()

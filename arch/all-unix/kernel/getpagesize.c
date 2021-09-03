@@ -1,9 +1,7 @@
 /*
-    Copyright © 2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2011, The AROS Development Team. All rights reserved.
 
     Desc: Query UNIX host OS for memory page size
-    Lang: english
 */
 
 #include "hostinterface.h"
@@ -22,9 +20,9 @@ unsigned int krnGetPageSize(void *hostlib)
     
     if (!getpagesize)
     {
-    	krnPanic(NULL, "Failed to obtain memory page size\n"
-    		       "%s", errstr);
-    	return 0;
+        krnPanic(NULL, "Failed to obtain memory page size\n"
+                       "%s", errstr);
+        return 0;
     }
 
     ret = getpagesize();

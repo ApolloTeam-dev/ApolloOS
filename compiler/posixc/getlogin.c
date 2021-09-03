@@ -1,6 +1,5 @@
 /*
-    Copyright © 2008-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2008-2013, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function getlogin().
 */
@@ -14,10 +13,10 @@
     NAME */
 #include <unistd.h>
 
-	char * getlogin(
+        char * getlogin(
 
 /*  SYNOPSIS */
-	)
+        )
         
 /*  FUNCTION
 
@@ -33,7 +32,7 @@
     BUGS
 
     SEE ALSO
-	
+        
     INTERNALS
 
 ******************************************************************************/

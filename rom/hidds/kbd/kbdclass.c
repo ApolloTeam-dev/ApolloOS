@@ -1,6 +1,5 @@
 /*
     Copyright (C) 2004-2019, The AROS Development Team. All rights reserved.
-    $Id$
 */
 
 #define __OOP_NOATTRBASES__
@@ -50,7 +49,7 @@
 
     FUNCTION
         Specifies a keyboard event handler. The handler will be called every time a
-        keyboard event occurs.  Handlers should be declared using 'C' calling conventions, 
+        keyboard event occurs.  Handlers should be declared using 'C' calling conventions,
         e.g.:
 
         void KeyboardIRQ(APTR data, KbdIrqData_t keyData)

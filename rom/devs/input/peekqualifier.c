@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 
     Desc: Input device function PeekQualifier()
-    Lang: english
 */
 
 #include "input_intern.h"
@@ -13,13 +11,13 @@
     NAME */
 #include <clib/input_protos.h>
 
-	AROS_LH0(UWORD, PeekQualifier,
+        AROS_LH0(UWORD, PeekQualifier,
 
 /*  SYNOPSIS */
-	/* void */
+        /* void */
 
 /*  LOCATION */
-	struct Device *, InputBase, 7, Input)
+        struct Device *, InputBase, 7, Input)
 
 /*  FUNCTION
 

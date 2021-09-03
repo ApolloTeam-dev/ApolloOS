@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <proto/graphics.h>
@@ -49,9 +48,9 @@
 
     if (window)
     {
-        ULONG 	lock;
+        ULONG   lock;
         Object *pointer = (Object *)GetTagData(WA_Pointer, 0, taglist);
-        BOOL	busy = (GetTagData(WA_BusyPointer, FALSE, taglist) != 0) ? TRUE : FALSE;
+        BOOL    busy = (GetTagData(WA_BusyPointer, FALSE, taglist) != 0) ? TRUE : FALSE;
 
         DEBUG_SETPOINTER(dprintf("SetWindowPointer: %spointer 0x%p\n",
                                 (busy) ? "busy" : "",

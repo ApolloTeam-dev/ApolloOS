@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 
     Desc: Display an alert in user mode.
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -14,8 +12,11 @@
 #include <proto/intuition.h>
 
 #include "etask.h"
+#define DEBUG_NOPRIVATEINLINE
+#include "debug_intern.h"
 #include "exec_intern.h"
 #include "exec_util.h"
+#include "exec_locks.h"
 
 static LONG SafeEasyRequest(struct EasyStruct *es, BOOL full, struct IntuitionBase *IntuitionBase)
 {
@@ -58,8 +59,19 @@ static const char full_recoverable_buttons[] = "Log|Continue";
 LONG Alert_AskSuspend(struct Task *task, ULONG alertNum, char * buffer, struct ExecBase *SysBase)
 {
     LONG choice = -1;
-    struct IntuitionBase *IntuitionBase = (struct IntuitionBase *)TaggedOpenLibrary(TAGGEDOPEN_INTUITION);
+    struct IntuitionBase *IntuitionBase;
 
+    /* Arbitrate for the library list */
+    EXEC_LOCK_LIST_READ_AND_FORBID(&SysBase->LibList);
+    
+    /* Look for the library in our list */
+    IntuitionBase = (struct IntuitionBase *) FindName (&SysBase->LibList, "intuition.library");
+
+    EXEC_UNLOCK_LIST(&SysBase->LibList);
+    if (!IntuitionBase)
+         return choice;
+
+    IntuitionBase = (struct IntuitionBase *)TaggedOpenLibrary(TAGGEDOPEN_INTUITION);
     if (IntuitionBase)
     {
         if (buffer)
@@ -107,11 +119,16 @@ LONG Alert_AskSuspend(struct Task *task, ULONG alertNum, char * buffer, struct E
 
 static LONG AskSuspend(struct Task *task, ULONG alertNum, struct ExecBase *SysBase)
 {
-    char * buffer = AllocMem(ALERT_BUFFER_SIZE, MEMF_ANY);
+    int allocsize = ALERT_BUFFER_SIZE;
+    char *buffer;
+    LONG choice;
 
-    LONG choice = Alert_AskSuspend(task, alertNum, buffer, SysBase);
+    if ((PrivExecBase(SysBase)->DebugBase) && (((struct DebugBase *)(PrivExecBase(SysBase)->DebugBase))->db_Flags & DBFF_DISASSEMBLE))
+        allocsize <<= 1;
 
-    FreeMem(buffer, ALERT_BUFFER_SIZE);
+    buffer = AllocMem(allocsize, MEMF_ANY);
+    choice = Alert_AskSuspend(task, alertNum, buffer, SysBase);
+    FreeMem(buffer, allocsize);
 
     return choice;
 }

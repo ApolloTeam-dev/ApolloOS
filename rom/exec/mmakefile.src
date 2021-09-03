@@ -1,4 +1,3 @@
-# $Id$
 
 include $(SRCDIR)/config/aros.cfg
 
@@ -45,11 +44,20 @@ FILES	   := alertextra alert_cpu systemalert initkicktags intservers intserver_v
 	      exec_debug exec_util exec_locks supervisoralert
 
 # platform.h can be overriden in arch-specific directory
-USER_INCLUDES += $(PRIV_EXEC_INCLUDES)
+USER_INCLUDES += $(PRIV_EXEC_INCLUDES) -I$(SRCDIR)/rom/debug
 USER_CPPFLAGS := -DAROS_ARCH_$(ARCH)
 ifeq ($(AROS_TARGET_CPU),m68k)
 # Make sure we optimize this code for size on m68k..
 OPTIMIZATION_CFLAGS := -Os
+endif
+
+# Allow to add architecture-specific options
+-include $(SRCDIR)/arch/all-$(FAMILY)/exec/make.opts
+-include $(SRCDIR)/arch/all-$(ARCH)/exec/make.opts
+-include $(SRCDIR)/arch/$(CPU)-$(ARCH)/exec/make.opts
+ifneq ($(AROS_TARGET_VARIANT),)
+-include $(SRCDIR)/arch/all-$(ARCH)/$(AROS_TARGET_VARIANT)/exec/make.opts
+-include $(SRCDIR)/arch/$(CPU)-$(ARCH)/$(AROS_TARGET_VARIANT)/exec/make.opts
 endif
 
 # Use customized entry code which declares SysBase suitable

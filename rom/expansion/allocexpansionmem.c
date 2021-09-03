@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 #include "expansion_intern.h"
 
@@ -12,14 +10,14 @@
     NAME */
 #include <clib/expansion_protos.h>
 
-	AROS_LH2(APTR, AllocExpansionMem,
+        AROS_LH2(APTR, AllocExpansionMem,
 
 /*  SYNOPSIS */
-	AROS_LHA(ULONG, numSlots, D0),
-	AROS_LHA(ULONG, slotAlign, D1),
+        AROS_LHA(ULONG, numSlots, D0),
+        AROS_LHA(ULONG, slotAlign, D1),
 
 /*  LOCATION */
-	struct ExpansionBase *, ExpansionBase, 9, Expansion)
+        struct ExpansionBase *, ExpansionBase, 9, Expansion)
 
 /*  FUNCTION
 

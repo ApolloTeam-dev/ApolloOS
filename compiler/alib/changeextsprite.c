@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Varargs version of graphics.library/ChangeExtSpriteA()
-    Lang: english
 */
 #define AROS_TAGRETURNTYPE LONG
 #include <graphics/view.h>
@@ -16,14 +14,14 @@
 #define NO_INLINE_STDARG /* turn off inline def */
 #include <proto/graphics.h>
 
-	LONG ChangeExtSprite (
+        LONG ChangeExtSprite (
 
 /*  SYNOPSIS */
-	struct ViewPort * vp,
-	struct ExtSprite * oldsprite,
-	struct ExtSprite * newsprite,
-	Tag tag1,
-	...)
+        struct ViewPort * vp,
+        struct ExtSprite * oldsprite,
+        struct ExtSprite * newsprite,
+        Tag tag1,
+        ...)
 
 /*  FUNCTION
         This is the varargs version of graphics.library/ChangeExtSpriteA().

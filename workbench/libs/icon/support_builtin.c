@@ -1,6 +1,5 @@
 /*
-    Copyright © 2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2003, The AROS Development Team. All rights reserved.
     
     Builtin icon images to fall back upon if on-disk icons cannot be opened.
     Icons contributed by Martin "Mason" Merz.
@@ -237,9 +236,9 @@ struct DiskObject *__GetBuiltinIcon_WB(LONG type, struct IconBase *IconBase)
     temp.do_DefaultTool          = (type == WBDISK) ? "SYS:System/DiskCopy" : "";
    
     dobj = DupDiskObject(&temp,
-    	    ICONDUPA_DuplicateImages, TRUE,
-    	    ICONDUPA_DuplicateImageData, TRUE,
-    	    TAG_END);
+            ICONDUPA_DuplicateImages, TRUE,
+            ICONDUPA_DuplicateImageData, TRUE,
+            TAG_END);
 
     return dobj;
 }

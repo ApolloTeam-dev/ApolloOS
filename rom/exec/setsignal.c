@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc: Examine and/or modify the signals of a task.
-    Lang: english
 */
 
 #define DEBUG 0
@@ -21,24 +19,24 @@
 
     NAME */
 
-	AROS_LH2(ULONG, SetSignal,
+        AROS_LH2(ULONG, SetSignal,
 
 /*  SYNOPSIS */
-	AROS_LHA(ULONG, newSignals, D0),
-	AROS_LHA(ULONG, signalSet,  D1),
+        AROS_LHA(ULONG, newSignals, D0),
+        AROS_LHA(ULONG, signalSet,  D1),
 
 /*  LOCATION */
-	struct ExecBase *, SysBase, 51, Exec)
+        struct ExecBase *, SysBase, 51, Exec)
 
 /*  FUNCTION
-	Change or read the set of signals sent to the current task.
+        Change or read the set of signals sent to the current task.
 
     INPUTS
-	newSignals - New values for the signals.
-	signalSet  - Mask of signals affected by 'newSignals'.
+        newSignals - New values for the signals.
+        signalSet  - Mask of signals affected by 'newSignals'.
 
     RESULT
-	Old signal set.
+        Old signal set.
 
     NOTES
 
@@ -47,7 +45,7 @@
     BUGS
 
     SEE ALSO
-	AllocSignal(), FreeSignal(), Wait(), Signal(), SetExcept()
+        AllocSignal(), FreeSignal(), Wait(), Signal(), SetExcept()
 
     INTERNALS
 

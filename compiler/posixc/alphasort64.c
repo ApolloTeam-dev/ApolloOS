@@ -1,6 +1,5 @@
 /*
-    Copyright © 2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2020, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function alphasort64().
 */
@@ -33,7 +32,7 @@
     BUGS
 
     SEE ALSO
-        scandir()
+        __posixc_scandir()
 
     INTERNALS
 

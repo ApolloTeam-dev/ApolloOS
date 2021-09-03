@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function CoerceMode()
-    Lang: english
 */
 #include <aros/debug.h>
 #include <graphics/view.h>
@@ -26,7 +24,7 @@
         struct GfxBase *, GfxBase, 156, Graphics)
 
 /*  FUNCTION
-	Determine the best mode in the MonitorID to coerce RealViewPort to.
+        Determine the best mode in the MonitorID to coerce RealViewPort to.
 
     INPUTS
         RealViewPort - ViewPort to coerce

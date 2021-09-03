@@ -1,9 +1,7 @@
 /*
-    Copyright © 2009-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2009-2011, The AROS Development Team. All rights reserved.
 
     Desc: WriteBattClock()
-    Lang: English
 */
 
 #include <proto/exec.h>
@@ -19,8 +17,8 @@ static inline UBYTE MakeBCDByte(UBYTE n)
 }
 
 AROS_LH1(void, WriteBattClock,
-	 AROS_LHA(ULONG, time, D0),
-	 struct BattClockBase *, BattClockBase, 3, Battclock)
+         AROS_LHA(ULONG, time, D0),
+         struct BattClockBase *, BattClockBase, 3, Battclock)
 {
     AROS_LIBFUNC_INIT
 

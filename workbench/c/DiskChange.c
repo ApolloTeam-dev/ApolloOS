@@ -1,9 +1,7 @@
 /*
-    Copyright © 2007-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2007-2014, The AROS Development Team. All rights reserved.
 
     Desc: DiskChange CLI command
-    Lang: English
 */
 /******************************************************************************
 
@@ -25,9 +23,9 @@
 
     FUNCTION
 
-          Diskchange is intended only for removable media. For example if 
-      you have a internal floppy disk dive set to noclick AROS  will not 
-      perform disk presence check. So you have to manually update any 
+          Diskchange is intended only for removable media. For example if
+      you have a internal floppy disk dive set to noclick AROS  will not
+      perform disk presence check. So you have to manually update any
       disk change made.
 
     INPUTS
@@ -69,10 +67,10 @@ int main(void)
 
     ra = ReadArgs("DEVICE/A", (IPTR *)&dev, NULL);
     if (ra) {
-	if (Inhibit(dev, DOSTRUE) && Inhibit(dev, DOSFALSE))
-	    rc = RETURN_OK;
-	error = IoErr();
-	FreeArgs(ra);
+        if (Inhibit(dev, DOSTRUE) && Inhibit(dev, DOSFALSE))
+            rc = RETURN_OK;
+        error = IoErr();
+        FreeArgs(ra);
     }
     PrintFault(error, "DiskChange");
     return rc;

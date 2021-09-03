@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2019, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2019, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <hidd/gfx.h>
@@ -30,9 +29,9 @@
 /* Empty sprite */
 const UWORD posctldata[] =
 {
-    0x0000,0x0000, /* posctl		     */
+    0x0000,0x0000, /* posctl                 */
     0x0000,0x0000, /* Empty pixels, one line */
-    0x0000,0x0000  /* Reserved		     */
+    0x0000,0x0000  /* Reserved               */
 };
 
 /***********************************************************************************/
@@ -54,7 +53,7 @@ IPTR PointerClass__OM_NEW(Class *cl, Object *o, struct opSet *msg)
             {SPRITEA_Width        , 0   },
             {SPRITEA_OutputHeight , 0   },
             {SPRITEA_OldDataFormat, TRUE},
-            {TAG_DONE        	    }
+            {TAG_DONE               }
         };
         struct ExtSprite *sprite;
         struct TagItem *tags = msg->ops_AttrList;
@@ -97,7 +96,7 @@ IPTR PointerClass__OM_NEW(Class *cl, Object *o, struct opSet *msg)
             D(kprintf("[Pointer] %s: called without bitmap, using dummy sprite !\n", __func__));
 
             spritetags[0].ti_Data = 16;
-            spritetags[1].ti_Data = 1; 
+            spritetags[1].ti_Data = 1;
             bitmap = (struct BitMap *)posctldata;
         }
 
@@ -157,7 +156,7 @@ IPTR PointerClass__OM_NEW(Class *cl, Object *o, struct opSet *msg)
                     //data->yRes = yResolution;
                     D(kprintf("[Pointer] %s: set extSprite 0x%lx and XOffset %ld YOffset %ld\n",
                                                                              __func__,
-                                                                             shared->sprite, 
+                                                                             shared->sprite,
                                                                              shared->xoffset,
                                                                              shared->yoffset));
                 }

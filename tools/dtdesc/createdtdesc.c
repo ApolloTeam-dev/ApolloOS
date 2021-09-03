@@ -1,9 +1,7 @@
 /*
-    Copyright © 2000-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2000-2020, The AROS Development Team. All rights reserved.
 
     Desc: DataTypesDescriptorCreator
-    Lang: English.
 */
 
 #include "createdtdesc.h"
@@ -175,7 +173,7 @@ int HandleMask(struct DTDesc *TheDTDesc)
      if (DataPtr != NewDataPtr)
      {
       DataPtr = NewDataPtr;
-      TheDTDesc->Mask[TheDTDesc->DTH.dth_MaskLen++] = i;      
+      TheDTDesc->Mask[TheDTDesc->DTH.dth_MaskLen++] = i;
      }
      else
      {
@@ -628,7 +626,7 @@ int WriteOutDTD(struct DTDesc *TheDTDesc)
    free(DTCDdata);
    EndChunk(IH);
   }
- }     
+ }
  CloseIFF(IH);
 
  return(TRUE);

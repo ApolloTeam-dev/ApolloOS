@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc: Change the priority of a task.
-    Lang: english
 */
 
 #define DEBUG 0
@@ -86,7 +84,7 @@
 #endif
     Disable();
 #if defined(__AROSEXEC_SMP__)
-    if (task->tc_State == TS_READY) 
+    if (task->tc_State == TS_READY)
         EXEC_LOCK_WRITE(task_listlock);
     else
         EXEC_LOCK_READ(task_listlock);

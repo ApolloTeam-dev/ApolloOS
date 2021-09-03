@@ -1,6 +1,5 @@
 /*
-    Copyright (C) 2013-2020, The AROS Development Team.
-    $Id$
+    Copyright (C) 2013-2021, The AROS Development Team.
 */
 
 #include <aros/debug.h>
@@ -33,19 +32,22 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "locale.h"
 #include "classes.h"
 
 #include "enums.h"
 
+#include "sysexp_libdefs.h"
+
 #define APPNAME "SysExplorer"
-#define VERSION "SysExplorer 0.6"
-#define SysexpModuleDir	"PROGDIR:SysExpModules"
+#define VERSION "SysExplorer " MOD_VERS_STRING
+#define SysexpModuleDir "PROGDIR:SysExpModules"
 
 int __nocommandline = 1;
 
-const char version[] = "$VER: " VERSION " (" ADATE ")\n";
+const char version[] = "$VER: " VERSION " (" MOD_DATE_STRING ")\n";
 
 extern void sysexp_initlib(struct SysexpBase **SysexpBasePtr);
 
@@ -105,34 +107,43 @@ AROS_UFH3S(BOOL, enumFunc,
 
     if (objValid)
     {
-        int objnum;
-
-        /* This is either HW or HIDD subclass */
-        OOP_GetAttr(obj, aHW_ClassName, (IPTR *)&name);
-        if (!name)
-            OOP_GetAttr(obj, aHidd_HardwareName, (IPTR *)&name);
-
-        D(bug("[SysExplorer] %s: name = '%s'\n", __func__, name));
-
-        objnum = ++SysexpBase->GlobalCount;
-#if (1)
-        tn = (APTR)DoMethod(SysexpBase->sesb_Tree, MUIM_NListtree_Insert, name, &msg,
-                            parent, MUIV_NListtree_Insert_PrevNode_Sorted, flags);
-        D(bug("[SysExplorer] %s: Inserted TreeNode 0x%p <%s> UserData 0x%p\n", __func__, tn, tn->tn_Name, tn->tn_User));
-
-        /* If we have enumerator for this class, call it now */
-        if (clHandlers && clHandlers->enumFunc && (flags & TNF_LIST))
-            clHandlers->enumFunc(obj, tn);
-
-        if (objnum == SysexpBase->GlobalCount)
+        if (!SkipClass(OOP_OCLASS(obj)->ClassNode.ln_Name))
         {
-            tn->tn_Flags &= ~flags;
-        }
+            int objnum;
+
+            /* This is either HW or HIDD subclass */
+            OOP_GetAttr(obj, aHW_ClassName, (IPTR *)&name);
+            if (!name)
+                OOP_GetAttr(obj, aHidd_HardwareName, (IPTR *)&name);
+
+            D(bug("[SysExplorer] %s: name = '%s'\n", __func__, name));
+
+            objnum = ++SysexpBase->GlobalCount;
+#if (1)
+            tn = (APTR)DoMethod(SysexpBase->sesb_Tree, MUIM_NListtree_Insert, name, &msg,
+                                parent, MUIV_NListtree_Insert_PrevNode_Sorted, flags);
+            D(bug("[SysExplorer] %s: Inserted TreeNode 0x%p <%s> UserData 0x%p\n", __func__, tn, tn->tn_Name, tn->tn_User));
+
+            /* If we have enumerator for this class, call it now */
+            if (clHandlers && clHandlers->enumFunc && (flags & TNF_LIST))
+                clHandlers->enumFunc(obj, tn);
+
+            if (objnum == SysexpBase->GlobalCount)
+            {
+                tn->tn_Flags &= ~flags;
+            }
 #else
-        DoMethod(_app(SysexpBase->sesb_Tree), MUIM_Application_PushMethod,
-                SysexpBase->sesb_Tree, 6, MUIM_NListtree_Insert, name, &msg,
-                        parent, MUIV_NListtree_Insert_PrevNode_Sorted, flags);
+            DoMethod(_app(SysexpBase->sesb_Tree), MUIM_Application_PushMethod,
+                    SysexpBase->sesb_Tree, 6, MUIM_NListtree_Insert, name, &msg,
+                            parent, MUIV_NListtree_Insert_PrevNode_Sorted, flags);
 #endif
+        }
+        else
+        {
+            /* If we have enumerator for this class, call it now */
+            if (clHandlers && clHandlers->enumFunc)
+                clHandlers->enumFunc(obj, parent);
+        }
     }
     return FALSE; /* Continue enumeration */
 
@@ -274,8 +285,14 @@ AROS_UFH3S(void, propertyFunc,
 
         if (data->win)
         {
+            Object *rootGrp = NULL;
             DoMethod(app, OM_ADDMEMBER, data->win);
-            DoMethod(data->win, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, 
+            GET(data->win, MUIA_Window_RootObject, &rootGrp);
+            if (DoMethod(rootGrp, MUIM_Group_InitChange))
+            {
+                DoMethod(rootGrp, MUIM_Group_ExitChange);
+            }
+            DoMethod(data->win, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
                      data->win, 3,
                      MUIM_CallHook, &close_hook, data);
             SET(data->win, MUIA_Window_Open, TRUE);
@@ -298,7 +315,7 @@ static BOOL GUIinit(struct SysexpBase *SysexpBase)
     app = ApplicationObject,
         MUIA_Application_Title,         (IPTR)APPNAME,
         MUIA_Application_Version,       (IPTR)VERSION,
-        MUIA_Application_Copyright,     (IPTR)"(C) 2013, The AROS Development Team",
+        MUIA_Application_Copyright,     (IPTR)"(C) 2013-2021, The AROS Development Team",
         MUIA_Application_Author,        (IPTR)"Pavel Fedin",
         MUIA_Application_Base,          (IPTR)APPNAME,
         MUIA_Application_Description,   __(MSG_DESCRIPTION),
@@ -322,7 +339,7 @@ static BOOL GUIinit(struct SysexpBase *SysexpBase)
         End),
 
         SubWindow, (IPTR)(main_window = WindowObject,
-            MUIA_Window_Title,	__(MSG_WINTITLE),
+            MUIA_Window_Title,  __(MSG_WINTITLE),
             MUIA_Window_ID, MAKE_ID('S', 'Y', 'E', 'X'),
             WindowContents, (IPTR)(HGroup,
                 Child, (IPTR)(NListviewObject,
@@ -343,8 +360,8 @@ static BOOL GUIinit(struct SysexpBase *SysexpBase)
     if (app)
     {
         /* Quit application if the main window's closegadget or the esc key is pressed. */
-        DoMethod(main_window, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, 
-                 app, 2, 
+        DoMethod(main_window, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
+                 app, 2,
                  MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 
         DoMethod(property_menu, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
@@ -386,7 +403,7 @@ AROS_UFH3(void, SysExplorer__Proc_EnumerateHardware,
         D(bug("[SysExplorer] %s: Enumerating Devices..\n", __func__));
 
         /* Kick the recursive enumeration into action */
-        CALLHOOKPKT((struct Hook *)&enum_hook, hwRoot, MUIV_NListtree_Insert_ListNode_Root);
+        CALLHOOKPKT((struct Hook *)&enum_hook, hwRoot, (APTR)MUIV_NListtree_Insert_ListNode_Root);
     }
     D(bug("[SysExplorer] %s: Finished..\n", __func__));
 

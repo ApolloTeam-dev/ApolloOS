@@ -1,10 +1,11 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
 #include <proto/console.h>
+
+#include <string.h>
 
 #include "console_gcc.h"
 

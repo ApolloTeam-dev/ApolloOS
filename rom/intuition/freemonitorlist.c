@@ -1,6 +1,5 @@
 /*
-    Copyright © 2010-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2010-2013, The AROS Development Team. All rights reserved.
  
     Free a copy of monitors list
 */
@@ -24,24 +23,24 @@
         struct IntuitionBase *, IntuitionBase, 162, Intuition)
 
 /*  FUNCTION
-	Frees an array of monitor class objects obtained using
-	GetMonitorList().
+        Frees an array of monitor class objects obtained using
+        GetMonitorList().
 
     INPUTS
-	list - a pointer to the list to free.
+        list - a pointer to the list to free.
 
     RESULT
-	None.
+        None.
 
     NOTES
-	This function is compatible with MorphOS v2.
+        This function is compatible with MorphOS v2.
 
     EXAMPLE
 
     BUGS
 
     SEE ALSO
-	GetMonitorList()
+        GetMonitorList()
 
     INTERNALS
 

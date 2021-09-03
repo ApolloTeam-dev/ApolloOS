@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/memory.h>
@@ -23,7 +22,7 @@
         struct Library *, PartitionBase, 10, Partition)
 
 /*  FUNCTION
-        Create a new partition table. 
+        Create a new partition table.
 
     INPUTS
         root - partition to create table in

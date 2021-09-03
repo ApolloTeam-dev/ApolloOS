@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 /*****************************************************************************
@@ -20,11 +18,11 @@
 
 /*  SYNOPSIS */
 
-	AROS_LHA(struct List *, CopyofList, A0),
+        AROS_LHA(struct List *, CopyofList, A0),
 
 /*  LOCATION */
 
-	struct Library *, CxBase, 31, Commodities)
+        struct Library *, CxBase, 31, Commodities)
 
 /*  FUNCTION
 
@@ -68,24 +66,24 @@
 
     ForeachNode(&GPB(CxBase)->cx_BrokerList, broker)
     {
-	if (CxObjType(broker) == CX_ZERO)
-	{
-	    break;
-	}
+        if (CxObjType(broker) == CX_ZERO)
+        {
+            break;
+        }
 
-	brokerCopy = AllocVec(sizeof(struct BrokerCopy), MEMF_PUBLIC | MEMF_CLEAR);
+        brokerCopy = AllocVec(sizeof(struct BrokerCopy), MEMF_PUBLIC | MEMF_CLEAR);
 
-	if (brokerCopy == NULL)
-	{
-	    break;
-	}
+        if (brokerCopy == NULL)
+        {
+            break;
+        }
 
-	/* Copy the broker name */
-	CopyMem(broker->co_Ext.co_BExt, brokerCopy->bc_Name, sizeof(*broker->co_Ext.co_BExt));
-	brokerCopy->bc_Flags = broker->co_Flags;
-	/* Point the node name to the broker name */
-	brokerCopy->bc_Node.ln_Name = brokerCopy->bc_Name;
-	
+        /* Copy the broker name */
+        CopyMem(broker->co_Ext.co_BExt, brokerCopy->bc_Name, sizeof(*broker->co_Ext.co_BExt));
+        brokerCopy->bc_Flags = broker->co_Flags;
+        /* Point the node name to the broker name */
+        brokerCopy->bc_Node.ln_Name = brokerCopy->bc_Name;
+        
 
         AddTail(CopyofList, &brokerCopy->bc_Node);
         count++;

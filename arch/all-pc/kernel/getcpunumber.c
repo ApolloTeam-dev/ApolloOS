@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/kernel.h>
@@ -11,7 +10,7 @@
 #include "apic.h"
 
 AROS_LH0(unsigned int, KrnGetCPUNumber,
-	 struct KernelBase *, KernelBase, 41, Kernel)
+         struct KernelBase *, KernelBase, 41, Kernel)
 {
     AROS_LIBFUNC_INIT
 

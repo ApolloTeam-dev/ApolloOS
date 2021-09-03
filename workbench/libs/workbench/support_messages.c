@@ -1,6 +1,5 @@
 /*
-    Copyright © 2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2003, The AROS Development Team. All rights reserved.
 */
 
 #include "support_messages.h"
@@ -67,7 +66,7 @@ VOID __DestroyWBS_WB
 /*== WBHandlerMessage ======================================================*/
 struct IntWBHandlerMessage *__CreateIWBHM_WB
 (
-    enum WBHM_Type type, struct MsgPort *replyport, 
+    enum WBHM_Type type, struct MsgPort *replyport,
     struct WorkbenchBase *WorkbenchBase
 )
 {
@@ -92,7 +91,7 @@ VOID __DestroyIWBHM_WB
         switch (message->iwbhm_wbhm.wbhm_Type)
         {
             case WBHM_TYPE_OPEN:
-                if (message->iwbhm_wbhm.wbhm_Data.Open.Name != NULL) 
+                if (message->iwbhm_wbhm.wbhm_Data.Open.Name != NULL)
                 {
                     FreeVec((APTR) message->iwbhm_wbhm.wbhm_Data.Open.Name);
                 }
