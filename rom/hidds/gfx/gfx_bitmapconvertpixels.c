@@ -196,7 +196,7 @@ bug("destmasks = %p %p %p %p  diffs = %d %d %d %d\n",
 
 
 
-#if 0
+#ifdef NONVAMPIRE
 
 // ORIGINAL code
 
@@ -621,7 +621,7 @@ static void native32_to_native(OOP_Class *cl, OOP_Object *o,
     , msg->height, msg->width, dstfmt->bytes_per_pixel, msg->srcMod, msg->dstMod, dstfmt->depth));
 
 
-#if 0
+#ifdef NONVAMPIRE
 
 // ORIGINAL code
 
@@ -786,7 +786,7 @@ static VOID quick_copy(OOP_Class *cl, OOP_Object *o,
     INIT_VARS()
     HIDDT_PixelFormat   *srcfmt = msg->srcPixFmt;
 
-#if 0
+#ifdef NONVAMPIRE
 
 // ORIGINAL code
     
