@@ -1731,17 +1731,10 @@ static const char THIS_FILE[] = __FILE__;
         */
         UpdateScreenBitMap(&screen->Screen, IntuitionBase);
 
-#ifdef __MORPHOS__
         screen->Screen.WBorTop    = 2;
         screen->Screen.WBorLeft   = 4;
         screen->Screen.WBorRight  = 4;
         screen->Screen.WBorBottom = 2;
-#else
-        screen->Screen.WBorTop    = 6;  /* Amiga default is 2 */
-        screen->Screen.WBorLeft   = 4;
-        screen->Screen.WBorRight  = 4;
-        screen->Screen.WBorBottom = 4;  /* Amiga default is 2 */
-#endif
 
         screen->Screen.Title = ns.DefaultTitle;
 
