@@ -2873,7 +2873,7 @@ VOID GFXHIDD__Hidd_Gfx__CopyBox(OOP_Class *cl, OOP_Object *obj, struct pHidd_Gfx
 {
     struct Library *OOPBase = CSD(cl)->cs_OOPBase;
     WORD                            x, y;
-    WORD                            srcX = msg->srcX, destX = msg->destX;
+    WORD                            srcXw, srcX = msg->srcX, destX = msg->destX;
     WORD                            srcY = msg->srcY, destY = msg->destY;
     WORD                            startX, endX, deltaX, startY, endY, deltaY;
     ULONG                           memFG;
