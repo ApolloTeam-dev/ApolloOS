@@ -3182,8 +3182,8 @@ VOID GFXHIDD__Hidd_Gfx__CopyBox(OOP_Class *cl, OOP_Object *obj, struct pHidd_Gfx
 			}
 		}
 #endif
-
-	} /* if (IS_TRUECOLOR(srcpf)) else ... */
+             
+        } /* if (IS_TRUECOLOR(srcpf)) else ... */
 
     } /* if (HIDD_PF_COLMODEL(srcpf) == HIDD_PF_COLMODEL(dstpf)) */
     else
@@ -3232,7 +3232,7 @@ VOID GFXHIDD__Hidd_Gfx__CopyBox(OOP_Class *cl, OOP_Object *obj, struct pHidd_Gfx
                      * so if the address of the entry in the colormap is passed, the colormap
                      * itself will be modified, if we pass "&ctab[pix]" to HIDD_BM_MapColor() !!!!
                      */
-	
+        
                     GC_FG(gc) = HIDD_BM_MapColor(msg->dest, &col);
                     HIDD_BM_DrawPixel(msg->dest, gc, destX + x, destY + y);
                     
@@ -3335,8 +3335,8 @@ VOID GFXHIDD__Hidd_Gfx__CopyBox(OOP_Class *cl, OOP_Object *obj, struct pHidd_Gfx
 		}
 
 #endif
-	}
-	
+        }
+        
     } /* if (HIDD_PF_COLMODEL(srcpf) == HIDD_PF_COLMODEL(dstpf)) else ... */
     
     GC_FG(gc) = memFG;
