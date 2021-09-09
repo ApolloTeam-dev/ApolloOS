@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -14,7 +13,7 @@
 #include <proto/exec.h>
 #include <proto/kernel.h>
 
-#include <inttypes.h>
+//#include <inttypes.h>
 
 #include "debug_intern.h"
 

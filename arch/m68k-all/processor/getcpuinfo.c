@@ -1,9 +1,7 @@
 /*
-    Copyright © 2011-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2011-2019, The AROS Development Team. All rights reserved.
 
     Desc: GetCPUInfo() - Provides information about installed CPUs
-    Lang: english
 */
 
 #define DEBUG 0
@@ -54,11 +52,11 @@ AROS_LH1(void, GetCPUInfo,
                 break;
             case(GCIT_SupportsFPU):
                 *((BOOL *)passedTag->ti_Data) = (BOOL)(
-                    (processor->FPUModel == FPUMODEL_68881) || 
+                    (processor->FPUModel == FPUMODEL_68881) ||
                     (processor->FPUModel == FPUMODEL_68882) ||
-                    (processor->FPUModel == FPUMODEL_INTERNAL)); 
+                    (processor->FPUModel == FPUMODEL_INTERNAL));
                 break;
-            default: 
+            default:
                 *((BOOL *)passedTag->ti_Data) = FALSE; break;
             }
         }
@@ -82,7 +80,7 @@ AROS_LH1(void, GetCPUInfo,
                     *((ULONG *)passedTag->ti_Data) = VECTORTYPE_NONE;
                 break;
             case(GCIT_L1CacheSize):
-                *((ULONG *)passedTag->ti_Data) = 
+                *((ULONG *)passedTag->ti_Data) =
                     (processor->L1DataCacheSize + processor->L1InstructionCacheSize);
                 break;
             case(GCIT_L1DataCacheSize):

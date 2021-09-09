@@ -1,6 +1,5 @@
 /*
-    Copyright © 2015, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2015, The AROS Development Team. All rights reserved.
 
     The code for creating a thunk file for the functions present in the module
 */
@@ -67,7 +66,7 @@ static void writethunkfunc(FILE *out, struct config *cfg, struct functionhead *f
     );
     fprintf(out, "    ");
     fprintf(out, "THUNK_CALL%d(%s, %s, %s",
-            funclist->argcount, 
+            funclist->argcount,
             is_void ? "" : "return ",
             funclist->internalname,
             cfg->libbase);
@@ -117,7 +116,7 @@ void writethunk(struct config *cfg)
         if (argmask & (1ULL << i)) {
             int j;
 
-            fprintf(out, 
+            fprintf(out,
                     "#define THUNK_PROTO%d(type, name, arg_base", i);
             for (j = 0; j < i; j++) {
                 fprintf(out, ", arg_%d", j);
@@ -128,7 +127,7 @@ void writethunk(struct config *cfg)
             }
             fprintf(out, "arg_base)\n");
 
-            fprintf(out, 
+            fprintf(out,
                     "#define THUNK_CALL%d(retcode, name, arg_base", i);
             for (j = 0; j < i; j++) {
                 fprintf(out, ", arg_%d", j);

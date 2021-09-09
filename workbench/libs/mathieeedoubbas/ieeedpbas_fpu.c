@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/libcall.h>
@@ -14,7 +13,7 @@
 
 /*
   Problem (ONLY on Linux/M68K with binary compatibility turned on):
-   In order to get binary compatibility with the original Amiga OS 
+   In order to get binary compatibility with the original Amiga OS
    we have to return the value in D0/D1. This is NOT automatically
    done by the compiler. The result would be returned in one of the
    FPU registers instead. So we're using the trick with the QUADs.

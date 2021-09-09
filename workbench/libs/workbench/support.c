@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Miscellanous support functions.
 */
@@ -88,7 +87,7 @@ STRPTR __AllocateNameFromLock(BPTR lock, struct WorkbenchBase *WorkbenchBase)
                 else
                 {
                     break;
-                }                
+                }
             }
         }
         else
@@ -133,7 +132,7 @@ BPTR __DuplicateSearchPath(BPTR list, struct WorkbenchBase *WorkbenchBase)
         paths != NULL;
         paths = (BPTR *) BADDR(paths[0]) /* next path */
     )
-    { 
+    {
         if ((current = (BPTR *) AllocVec(2 * sizeof(BPTR), MEMF_ANY)) != NULL)
         {
             current[0] = BNULL;

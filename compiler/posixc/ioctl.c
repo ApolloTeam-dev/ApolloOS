@@ -1,6 +1,5 @@
 /*
-    Copyright © 2004-2016, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004-2016, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -104,31 +103,31 @@ static int fill_consize(APTR fd, struct winsize *ws)
 
 #include <sys/ioctl.h>
 
-	int ioctl(
+        int ioctl(
 
 /*  SYNOPSIS */
-	int fd,
-	int request,
-	...)
+        int fd,
+        int request,
+        ...)
 
 /*  FUNCTION
-        Control device. Function to manipulate and fetch special device 
+        Control device. Function to manipulate and fetch special device
         parameters.
 
     INPUTS
         fd      - file descriptor
-        request - ioctl request id, containing request type, input or output 
-                  type and argument size in bytes. Use macros and defines 
+        request - ioctl request id, containing request type, input or output
+                  type and argument size in bytes. Use macros and defines
                   from <sys/ioctl.h>:
 
-                  TIOCGWINSZ - fill in rows, columns, width and height of 
+                  TIOCGWINSZ - fill in rows, columns, width and height of
                                console window
 
         ...     - Other arguments for the specified request
 
     RESULT
-        EBADF   - fd is not valid 
-        EFAULT  - no valid argument 
+        EBADF   - fd is not valid
+        EFAULT  - no valid argument
         ENOTTY  - fd is not of required type
 
     NOTES
@@ -157,7 +156,7 @@ static int fill_consize(APTR fd, struct winsize *ws)
         }
 
     BUGS
-        Only the requests listed above are implented.
+        Only the requests listed above are implemented.
 
     SEE ALSO
 

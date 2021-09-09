@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
-    Desc: Simply call the exec function 
-    Lang: english
+    Desc: Simply call the exec function
 */
 #define AROS_TAGRETURNTYPE APTR
 
@@ -15,11 +13,11 @@
 #define NO_INLINE_STDARG /* turn off inline def */
 #include <proto/exec.h>
 
-	AROS_UFH2(void, AsmDeletePool,
+        AROS_UFH2(void, AsmDeletePool,
 
 /*  SYNOPSIS */
-	AROS_UFHA(APTR, poolHeader, A0),
-	AROS_UFHA(struct ExecBase *, SysBase, A6)) 
+        AROS_UFHA(APTR, poolHeader, A0),
+        AROS_UFHA(struct ExecBase *, SysBase, A6))
 
 /*  FUNCTION
 

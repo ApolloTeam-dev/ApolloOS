@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 /****************************************************************************/
@@ -49,18 +48,18 @@ IPTR ITextIClass__IM_DRAW(Class *cl, struct Image *im, struct impDraw *msg)
     struct IntuitionBase *IntuitionBase = (struct IntuitionBase *)cl->cl_UserData;
     struct GfxBase *GfxBase = GetPrivIBase(IntuitionBase)->GfxBase;
     struct RastPort *rp = msg->imp_RPort;
-    IPTR    	     retval = (IPTR)0;
+    IPTR             retval = (IPTR)0;
 
     if (rp)
     {
         struct IntuiText    *iText = (struct IntuiText *)im->ImageData;
-        int 	    	     leftOffset = msg->imp_Offset.X + im->LeftEdge;
-        int 	    	     topOffset = msg->imp_Offset.Y + im->TopEdge;
+        int                  leftOffset = msg->imp_Offset.X + im->LeftEdge;
+        int                  topOffset = msg->imp_Offset.Y + im->TopEdge;
  
         SetABPenDrMd(rp, im->PlanePick, 0 ,JAM1);
 
-    	int_PrintIText(rp, iText, leftOffset, topOffset, TRUE, IntuitionBase);
-	
+        int_PrintIText(rp, iText, leftOffset, topOffset, TRUE, IntuitionBase);
+        
         retval = (IPTR)1;
     }
 

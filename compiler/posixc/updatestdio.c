@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002, The AROS Development Team. All rights reserved.
 
     C function to update stdfiles when changed by dos functions.
 */
@@ -10,10 +9,10 @@
 /*****************************************************************************
 
     NAME */
-	void updatestdio (
+        void updatestdio (
 
 /*  SYNOPSIS */
-	void)
+        void)
 
 /*  FUNCTION
         Update stdin, stdout, stderr to reflect changes done by calling

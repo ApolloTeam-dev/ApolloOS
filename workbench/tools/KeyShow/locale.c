@@ -1,6 +1,5 @@
 /*
-    Copyright © 2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2012, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/types.h>
@@ -10,7 +9,7 @@
 #include "strings.h"
 
 #define CATALOG_NAME     "System/Tools/KeyShow.catalog"
-#define CATALOG_VERSION  1
+#include "catalogs/catalog_version.h"
 
 /*** Variables **************************************************************/
 struct Catalog *catalog;

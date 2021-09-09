@@ -1,9 +1,7 @@
 /*
-    Copyright © 2018-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2018-2019, The AROS Development Team. All rights reserved.
 
     Desc: GetUpTime() - Get time since machine was powered on.
-    Lang: english
 */
 #include <proto/exec.h>
 
@@ -34,8 +32,8 @@ AROS_LH1(void, GetUpTime,
 
     // can only overflow once, e-clock interrupts happen more than once a second
     if (dest->tv_micro >= 1000000) {
-    	dest->tv_micro -= 1000000;
-    	dest->tv_secs++;
+        dest->tv_micro -= 1000000;
+        dest->tv_secs++;
     }
     D(bug("uptime=%d/%d\n", dest->tv_secs, dest->tv_micro));
 

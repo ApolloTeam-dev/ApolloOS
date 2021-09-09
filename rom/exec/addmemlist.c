@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 
     Desc: Add memory to the public list of memory.
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -22,29 +20,29 @@
         AROS_LH5(void, AddMemList,
 
 /*  SYNOPSIS */
-	AROS_LHA(IPTR,   size,       D0),
-	AROS_LHA(ULONG,  attributes, D1),
-	AROS_LHA(LONG,   pri,        D2),
-	AROS_LHA(APTR,   base,       A0),
-	AROS_LHA(STRPTR, name,       A1),
+        AROS_LHA(IPTR,   size,       D0),
+        AROS_LHA(ULONG,  attributes, D1),
+        AROS_LHA(LONG,   pri,        D2),
+        AROS_LHA(APTR,   base,       A0),
+        AROS_LHA(STRPTR, name,       A1),
 
 /*  LOCATION */
-	struct ExecBase *, SysBase, 103, Exec)
+        struct ExecBase *, SysBase, 103, Exec)
 
 /*  FUNCTION
-	Add a new block of memory to the system memory lists.
+        Add a new block of memory to the system memory lists.
 
     INPUTS
-	size	   - Size of the block
-	attributes - The attributes the memory will have
-	pri	   - Priority in the list of MemHeaders
-	base	   - Base address
-	name	   - A name associated with the memory
+        size       - Size of the block
+        attributes - The attributes the memory will have
+        pri        - Priority in the list of MemHeaders
+        base       - Base address
+        name       - A name associated with the memory
 
     RESULT
 
     NOTES
-	No argument checking done.
+        No argument checking done.
 
     EXAMPLE
 

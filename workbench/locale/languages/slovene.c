@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2015, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2015, The AROS Development Team. All rights reserved.
 
     Desc: slovene.language description file.
 */
@@ -51,8 +50,8 @@ const STRPTR ___strings[] =
     "",
 
     /*  The days of the week. Starts with the first day of the week.
-	In English this would be Sunday, this depends upon the settings
-	of Locale->CalendarType.
+        In English this would be Sunday, this depends upon the settings
+        of Locale->CalendarType.
     */
     "Nedelja", "Ponedeljek", "Torek", "Sreda", "Èetrtek",
     "Petek",   "Sobota",

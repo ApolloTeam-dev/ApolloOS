@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 
     C99 function setbuf().
 */
@@ -10,11 +9,11 @@
     NAME */
 #include <stdio.h>
 
-	void setbuf (
+        void __posixc_setbuf (
 
 /*  SYNOPSIS */
-	FILE *stream,
-	char *buf)
+        FILE *stream,
+        char *buf)
 
 /*  FUNCTION
 
@@ -23,7 +22,7 @@
     RESULT
 
     NOTES
-	This is a simpler alias for setvbuf() according to manpage.
+        This is a simpler alias for setvbuf() according to manpage.
 
     EXAMPLE
 

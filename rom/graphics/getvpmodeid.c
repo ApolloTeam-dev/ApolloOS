@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function GetVPModeID()
-    Lang: english
 */
 #include <aros/debug.h>
 #include <graphics/view.h>
@@ -63,7 +61,7 @@
         /* If we have a colormap, get ModeID from it */
         modeid = vp->ColorMap->VPModeID;
     else if (IS_HIDD_BM(vp->RasInfo->BitMap))
-	modeid = GET_BM_MODEID(vp->RasInfo->BitMap);
+        modeid = GET_BM_MODEID(vp->RasInfo->BitMap);
     else
         modeid = INVALID_ID;
 

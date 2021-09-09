@@ -26,38 +26,46 @@ CONST struct Preferences IntuitionDefaultPreferences =
     }
     ,   // timeval DoubleClick
 
+
+    /* Intuition Pointer data */
     {
-        0,12,
-        0xff00, 0xfff0,
-        0xfe00, 0xffe0,
-        0xfc00, 0xffc0,
-        0xf800, 0xff80,
-        0xf000, 0xff00,
-        0xe000, 0xfe00,
-        0xc000, 0xfc00,
-        0x8000, 0xf800,
-        0x0000, 0xf000,
-        0x0000, 0xe000,
-        0x0000, 0xc000,
-        0x0000, 0x8000,
+        0x0000, 0x0000, /* USHORT PointerMatrix[POINTERSIZE];  */
+
+        0xC000, 0x4000,
+        0x7000, 0xB000,
+        0x3C00, 0x4C00,
+        0x3F00, 0x4300,
+
+        0x1FC0, 0x20C0,
+        0x1FC0, 0x2000,
+        0x0F00, 0x1100,
+        0x0D80, 0x1280,
+
+        0x04C0, 0x0940,
+        0x0460, 0x08A0,
+        0x0020, 0x0040,
+        0x0000, 0x0000,
+
         0x0000, 0x0000,
         0x0000, 0x0000,
         0x0000, 0x0000,
         0x0000, 0x0000,
-        0,0
-    }
-    ,   // PointerMatrix (36 entries)
+
+        0x0000, 0x0000
+    },
+
+    // PointerMatrix (36 entries)
     0,      // XOffset
     0,      // YOffset
-    0x0b00, // color17
-    0x0d00, // color18
-    0x0f00, // color19
+    0x0E44, // color17 RED
+    0x0000, // color18 BLACK
+    0x0EEA, // color19 IVORY
     1,      // PointerTicks
 
-    0x0999, // color0-4
+    0x0AAA, // color0-4
     0x0000,
-    0x0eee,
-    0x068b,
+    0x0FFF,
+    0x068B,
 
     0,      // ViewXOffset
     0,      // ViewYOffset

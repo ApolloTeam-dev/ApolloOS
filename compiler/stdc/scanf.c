@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     C99 function scanf().
 */
@@ -12,18 +11,18 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-	int scanf (
+        int scanf (
 
 /*  SYNOPSIS */
-	const char * restrict format,
-	...)
+        const char * restrict format,
+        ...)
 
 /*  FUNCTION
 
     INPUTS
 
     RESULT
-	The number of converted parameters
+        The number of converted parameters
 
     NOTES
 
@@ -32,7 +31,7 @@
     BUGS
 
     SEE ALSO
-	fscanf(), vscanf(), vfscanf(), sscanf(), vsscanf()
+        fscanf(), vscanf(), vfscanf(), sscanf(), vsscanf()
 
     INTERNALS
 

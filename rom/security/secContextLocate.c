@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2019, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -12,17 +11,17 @@
 /*****************************************************************************
 
     NAME */
-	AROS_LH4(APTR, secContextLocate,
+        AROS_LH4(APTR, secContextLocate,
 
 /*  SYNOPSIS */
-	/* (module, id, caller, size) */
-	AROS_LHA(secPluginModule *, module, A0),
-	AROS_LHA(ULONG, id, D0),
-	AROS_LHA(struct Task *, caller, A1),
-	AROS_LHA(ULONG, size, D1),
+        /* (module, id, caller, size) */
+        AROS_LHA(secPluginModule *, module, A0),
+        AROS_LHA(ULONG, id, D0),
+        AROS_LHA(struct Task *, caller, A1),
+        AROS_LHA(ULONG, size, D1),
 
 /*  LOCATION */
-	struct SecurityBase *, secBase, 52, Security)
+        struct SecurityBase *, secBase, 52, Security)
 
 /*  FUNCTION
 

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function AskSoftStyle()
-    Lang: English
 */
 
 /*****************************************************************************
@@ -12,13 +10,13 @@
 #include <graphics/rastport.h>
 #include <proto/graphics.h>
 
-	AROS_LH1I(ULONG, AskSoftStyle,
+        AROS_LH1I(ULONG, AskSoftStyle,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct RastPort *, rp, A1),
+        AROS_LHA(struct RastPort *, rp, A1),
 
 /*  LOCATION */
-	struct GfxBase *, GfxBase, 14, Graphics)
+        struct GfxBase *, GfxBase, 14, Graphics)
 
 /*  FUNCTION
 
@@ -56,7 +54,7 @@
     AROS_LIBFUNC_INIT
       
     if(rp->Font == NULL)
-	return 0;
+        return 0;
     
     return ~rp->Font->tf_Style;
     

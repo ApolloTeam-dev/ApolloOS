@@ -1,6 +1,5 @@
 /*
     Copyright  2002-2012, The AROS Development Team. All rights reserved.
-    $Id$
 */
 
 #include <exec/memory.h>
@@ -1057,7 +1056,7 @@ IPTR Prop__MUIM_Draw(struct IClass *cl, Object *obj,
         //if (p)
         //    DoMethod(p, MUIM_DrawParentBackground, _left(obj), _top(obj),
         //    _width(obj), _height(obj), _left(obj), _top(obj), 0);
-        //else 
+        //else
         DoMethod(obj, MUIM_DrawParentBackground, _left(obj), _top(obj),
             _width(obj), _height(obj), _left(obj), _top(obj), 0);
 

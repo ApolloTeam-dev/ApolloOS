@@ -1,6 +1,5 @@
 /*
-    Copyright © 2003-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2003-2011, The AROS Development Team. All rights reserved.
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
@@ -20,12 +19,13 @@
 #include <proto/workbench.h>
 
 #include <stdio.h>
+#include <string.h>
 
 #include "executecommand.h"
 #include "locale.h"
 #include "support.h"
 
-#define VERSION "$VER: Execute 0.2 (13.01.2006) ©AROS Dev Team"
+#define VERSION "$VER: Execute 0.2 (13.01.2006) \xA9 2006 The AROS Dev Team"
 
 /*** Private methods ********************************************************/
 #define MUIM_ExecuteCommand_ExecuteCommand  (TAG_USER | 0x20000000)
@@ -45,7 +45,7 @@ struct ExecuteCommand_DATA
 /*** Methods ****************************************************************/
 Object *ExecuteCommand__OM_NEW
 (
-    Class *CLASS, Object *self, struct opSet *message 
+    Class *CLASS, Object *self, struct opSet *message
 )
 {
     struct ExecuteCommand_DATA *data           = NULL;
@@ -107,7 +107,7 @@ Object *ExecuteCommand__OM_NEW
         
         MUIA_Application_Title, __(MSG_TITLE),
         MUIA_Application_Version, (IPTR) VERSION,
-        MUIA_Application_Copyright, (IPTR)"© 2006, The AROS Development Team",
+        MUIA_Application_Copyright, (IPTR)"\xA9 2006, The AROS Dev Team",
         MUIA_Application_Description, __(MSG_DESCRIPTION),
         SubWindow, (IPTR) (window = (Object *)WindowObject,
             MUIA_Window_Title,       __(MSG_DESCRIPTION),
@@ -147,7 +147,7 @@ Object *ExecuteCommand__OM_NEW
     );
     
     /* Not needed anymore */
-    if (freeInitial) FreeVec((APTR) initial); 
+    if (freeInitial) FreeVec((APTR) initial);
     
     /* Check if object creation succeeded */
     if (self == NULL)
@@ -168,20 +168,20 @@ Object *ExecuteCommand__OM_NEW
     
     /* Setup notifications -------------------------------------------------*/
     DoMethod
-    ( 
-        window, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, 
+    (
+        window, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
         (IPTR) self, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit
     );
     
     DoMethod
     (
-        cancelButton, MUIM_Notify, MUIA_Pressed, FALSE, 
+        cancelButton, MUIM_Notify, MUIA_Pressed, FALSE,
         (IPTR) self, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit
     );
     
     DoMethod
     (
-        commandString, MUIM_Notify, MUIA_String_Acknowledge, MUIV_EveryTime, 
+        commandString, MUIM_Notify, MUIA_String_Acknowledge, MUIV_EveryTime,
         (IPTR) self, 2, MUIM_ExecuteCommand_ExecuteCommand, TRUE
     );
     
@@ -214,7 +214,7 @@ IPTR ExecuteCommand__OM_DISPOSE(Class *CLASS, Object *self, Msg message)
 
 IPTR ExecuteCommand__MUIM_Application_Execute
 (
-    Class *CLASS, Object *self, Msg message 
+    Class *CLASS, Object *self, Msg message
 )
 {
     struct ExecuteCommand_DATA *data = INST_DATA(CLASS, self);
@@ -231,7 +231,7 @@ IPTR ExecuteCommand__MUIM_Application_Execute
 
 IPTR ExecuteCommand__MUIM_ExecuteCommand_ExecuteCommand
 (
-    Class *CLASS, Object *self, 
+    Class *CLASS, Object *self,
     struct MUIP_ExecuteCommand_ExecuteCommand *message
 )
 {
@@ -268,7 +268,7 @@ IPTR ExecuteCommand__MUIM_ExecuteCommand_ExecuteCommand
             (
                 sizeof(buffer) > snprintf
                 (
-                    buffer, sizeof(buffer), 
+                    buffer, sizeof(buffer),
                     "CON:////%s/CLOSE/AUTO/WAIT", _(MSG_CONSOLE_TITLE)
                 )
             )
@@ -288,7 +288,7 @@ IPTR ExecuteCommand__MUIM_ExecuteCommand_ExecuteCommand
                 
                 WorkbenchControl
                 (
-                    NULL, 
+                    NULL,
                     WBCTRLA_DuplicateSearchPath, (IPTR) &searchPath,
                     TAG_DONE
                 );
@@ -319,7 +319,7 @@ IPTR ExecuteCommand__MUIM_ExecuteCommand_ExecuteCommand
                     
                     ShowError
                     (
-                        self, data->ecd_Window, 
+                        self, data->ecd_Window,
                         _(MSG_ERROR_EXECUTE), TRUE
                     );
                     
@@ -339,10 +339,10 @@ IPTR ExecuteCommand__MUIM_ExecuteCommand_ExecuteCommand
             {
                 ShowError
                 (
-                    self, data->ecd_Window, 
+                    self, data->ecd_Window,
                     _(MSG_ERROR_OPEN_CONSOLE), TRUE
                 );
-            }            
+            }
         }
     
         DoMethod(self, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
@@ -375,7 +375,7 @@ BOOL ExecuteCommand_Initialize()
 {
     ExecuteCommand_CLASS = MUI_CreateCustomClass
     (
-        NULL, MUIC_Application, NULL, 
+        NULL, MUIC_Application, NULL,
         sizeof(struct ExecuteCommand_DATA), ExecuteCommand_Dispatcher
     );
 

@@ -1,34 +1,34 @@
 /*
-    Copyright © 2004, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004-2021, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function dirname().
 */
 
-#include "__upath.h"
-
-#define DEBUG 0
 #include <aros/debug.h>
+
+#include <string.h>
+
+#include "__upath.h"
 
 /*****************************************************************************
 
     NAME */
 #include <libgen.h>
 
-	char *dirname(
+        char *dirname(
 
 /*  SYNOPSIS */
-	char *filename)
+        char *filename)
 
 /*  FUNCTION
-	Returns the string up to the latest '/'.
-	
+        Returns the string up to the latest '/'.
+        
     INPUTS
-	filename - Path which should be split
+        filename - Path which should be split
 
     RESULT
-	Directory part of the path.
-	
+        Directory part of the path.
+        
     NOTES
 
     EXAMPLE
@@ -36,7 +36,7 @@
     BUGS
 
     SEE ALSO
-	basename()
+        basename()
 
     INTERNALS
 
@@ -47,7 +47,7 @@
 
     if (!filename || *filename == '\0')
     {
-	D(bug("dirname()=.\n")); 
+        D(bug("dirname()=.\n"));
         return ".";
     }
 
@@ -57,7 +57,7 @@
 
     if (pos[0] == '/' && pos[1] == '\0')
     {
-	D(bug("dirname(/)=/\n"));
+        D(bug("dirname(/)=/\n"));
         return uname;
     }
 
@@ -67,7 +67,7 @@
     while (pos[-1] == '/')
     {
         --pos;
-	pos[0] = '\0';
+        pos[0] = '\0';
     }
     while (--pos > uname)
     {
@@ -79,7 +79,7 @@
     }
 
     if (pos == uname)
-	uname = ".";
+        uname = ".";
 
     D(bug("%s\n", uname));
     return uname;

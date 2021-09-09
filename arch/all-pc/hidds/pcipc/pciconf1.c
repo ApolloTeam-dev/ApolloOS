@@ -1,15 +1,13 @@
 /*
-    Copyright © 2004-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004-2020, The AROS Development Team. All rights reserved.
 
     Desc: PCI configuration mechanism 1 access functions
-    Lang: English
 */
 
 #include <asm/io.h>
 #include <proto/exec.h>
 
-#include "pci.h"
+#include "pcipc.h"
 
 #define CFGADD(bus,dev,func,reg)    \
     ( 0x80000000 | ((bus)<<16) |    \

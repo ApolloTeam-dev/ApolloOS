@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <proto/layers.h>
@@ -109,7 +108,7 @@
     /* We don't want the inputhandler to redraw the knob with values
      * partially changed, so use some protection.
      */
-    pi->Flags 	    = flags;
+    pi->Flags       = flags;
     pi->HorizPot    = horizPot;
     pi->VertPot     = vertPot;
     pi->HorizBody   = horizBody;
@@ -124,7 +123,7 @@
     else
     {
 
-    	// Permit(); stegerg: CHECKME, commented out!
+        // Permit(); stegerg: CHECKME, commented out!
 #endif
         knobok2 = CalcKnobSize (gadget, &new);
 

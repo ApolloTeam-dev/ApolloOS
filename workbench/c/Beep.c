@@ -1,26 +1,24 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc: Beep
-    Lang: English
 */
 
 /*****************************************************************************
 
     NAME
-	Beep
+        Beep
 
     FORMAT
-	Beep
+        Beep
 
     SYNOPSIS
 
     LOCATION
-	C:
+        C:
 
     FUNCTION
-	BEEP produces a beep via Intuition DisplayBeep(NULL).
+        BEEP produces a beep via Intuition DisplayBeep(NULL).
 
     EXAMPLE
 
@@ -45,7 +43,7 @@ __startup AROS_PROCH(Start, argstr, argsize, SysBase)
 
     IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 0);
     if (!IntuitionBase)
-    	return RETURN_FAIL;
+        return RETURN_FAIL;
 
     DisplayBeep( NULL );
     

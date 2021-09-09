@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc: Main class for HIDD.
-    Lang: english
 */
 
 #include <exec/types.h>
@@ -54,8 +52,6 @@
 *****************************************************************************************/
 
 static const char unknown[]  = "--unknown device--";
-
-#define IS_HIDD_ATTR(attr, idx) ((idx = attr - HiddAttrBase) < num_Hidd_Attrs)
 
 /*****************************************************************************************
 
@@ -430,7 +426,7 @@ VOID HIDDCl__Root__Get(OOP_Class *cl, OOP_Object *o, struct pRoot_Get *msg)
 
 #if 0
 /***********************************
-**  Unimplemented methods 
+**  Unimplemented methods
 */
 
 
@@ -453,7 +449,7 @@ VOID HIDDCl__Root__Get(OOP_Class *cl, OOP_Object *o, struct pRoot_Get *msg)
             hd->hd_Producer = GetTagData(aHidd_Producer, 0, list);
             hd->hd_Name = (STRPTR)GetTagData(aHidd_Name, (IPTR)unknown, list);
             hd->hd_HWName = (STRPTR)GetTagData(aHidd_HardwareName, (IPTR)unknown, list);
-            hd->hd_Active = TRUE; 
+            hd->hd_Active = TRUE;
             hd->hd_Status = GetTagData(aHidd_Status, HIDDV_StatusUnknown, list);
             hd->hd_ErrorCode = GetTagData(aHidd_ErrorCode, 0, list);
             hd->hd_Locking = GetTagData(aHidd_Locking, HIDDV_LockShared, list);

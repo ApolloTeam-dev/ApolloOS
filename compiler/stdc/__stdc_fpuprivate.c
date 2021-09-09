@@ -1,8 +1,7 @@
 /*
-    Copyright © 2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2018, The AROS Development Team. All rights reserved.
 
-    Platforms that use softfloat support should implement these 
+    Platforms that use softfloat support should implement these
     functions to correctly share interpretations between the softfloat implementation
     and fenv.
 */

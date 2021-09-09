@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function GetExtSpriteA()
-    Lang: english
 */
 #include <aros/debug.h>
 #include <graphics/sprite.h>
@@ -43,10 +41,10 @@
     SEE ALSO
 
     INTERNALS
-    	AROS does not have complete sprite system, instead it has a (hacky)
-	minimal implementation enough to drive mouse pointer as a single
-	sprite #0. This assumes that this sprite is always allocated by the OS
-	itself and can't be used by user applications. So we just return error.
+        AROS does not have complete sprite system, instead it has a (hacky)
+        minimal implementation enough to drive mouse pointer as a single
+        sprite #0. This assumes that this sprite is always allocated by the OS
+        itself and can't be used by user applications. So we just return error.
 
     HISTORY
 

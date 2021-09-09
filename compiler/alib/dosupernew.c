@@ -1,6 +1,5 @@
 /*
-    Copyright © 2003-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2003-2011, The AROS Development Team. All rights reserved.
 */
 
 #define ALIB_NO_INLINE_STDARG
@@ -17,7 +16,7 @@
 #include <intuition/classusr.h>
 #include <proto/alib.h>
 
-	IPTR DoSuperNewTagList
+        IPTR DoSuperNewTagList
         (
 /*  SYNOPSIS */
             Class             *CLASS,
@@ -39,8 +38,8 @@
     BUGS
 
     SEE ALSO
-	intuition.library/NewObjectA(), intuition.library/SetAttrsA(), intuition.library/GetAttr(),
-	intuition.library/DisposeObject(), DoMethodA(),
+        intuition.library/NewObjectA(), intuition.library/SetAttrsA(), intuition.library/GetAttr(),
+        intuition.library/DisposeObject(), DoMethodA(),
         CoerceMethodA(), <intuition/classes.h>
 
 ******************************************************************************/

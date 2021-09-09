@@ -1,6 +1,5 @@
 /*
-   Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-   $Id$
+   Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 */
 
 /*********************************************************************************************/
@@ -102,7 +101,7 @@ char *GetAROSRegionAttribs(struct AnchorPath *ap, char **regionNamePtr)
                     {
                         if ((error = ParseIFF(iff, parse_mode)) == 0)
                         {
-                            parse_mode = IFFPARSE_STEP; 
+                            parse_mode = IFFPARSE_STEP;
 
                             cn = CurrentChunk(iff);
                             D(bug("[LocalePrefs] GetAROSRegionAttribs: Chunk ID %08x. %d bytes\n", cn->cn_ID, cn->cn_Size));
@@ -118,7 +117,7 @@ char *GetAROSRegionAttribs(struct AnchorPath *ap, char **regionNamePtr)
                             if (cn->cn_ID == MAKE_ID('F','L','A','G'))
                             {
                                 lockFlag = AllocVecPooled(mempool, cn->cn_Size + 18 + 1);
-                                sprintf(lockFlag, flagpathstr);
+                                sprintf(lockFlag, "%s", flagpathstr);
                                 ReadChunkBytes(iff, lockFlag + 18, cn->cn_Size);
                                 lockFlag[cn->cn_Size + 17] = ']';
                                 D(bug("[LocalePrefs] GetAROSRegionAttribs: Flag '%s'\n", lockFlag));
@@ -346,7 +345,7 @@ BOOL Prefs_LoadRegion(STRPTR name, struct CountryPrefs *region)
                     {
                         if ((error = ParseIFF(iff, parse_mode)) == 0)
                         {
-                            parse_mode = IFFPARSE_STEP; 
+                            parse_mode = IFFPARSE_STEP;
                             
                             D(bug("[LocalePrefs] LoadRegion: ParseIFF okay.\n"));
 

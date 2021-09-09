@@ -1,8 +1,7 @@
 /*
-    Copyright © 2010, The AROS Development Team. 
+    Copyright (C) 2010, The AROS Development Team.
     All rights reserved.
     
-    $Id$
 */
 
 #include <utility/tagitem.h>
@@ -15,11 +14,11 @@
 #include <proto/popupmenu.h>
 extern struct PopupMenuBase * PopupMenuBase;
 
-	struct PopupMenu *PM_MakeItem(
+        struct PopupMenu *PM_MakeItem(
 
 /*  SYNOPSIS */
-	Tag tag1, 
-	...)
+        Tag tag1,
+        ...)
 
 /*  FUNCTION
 

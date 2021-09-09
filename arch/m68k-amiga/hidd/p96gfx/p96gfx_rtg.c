@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2019, The AROS Development Team. All rights reserved.
     
     Desc: p96 RTG support code.
 */
@@ -23,7 +22,7 @@ const UBYTE modetable[16] =
 
 static AROS_UFH1(ULONG, RTGCall_Default,
     AROS_UFHA(APTR, boardinfo, A0))
-{ 
+{
     AROS_USERFUNC_INIT
 
     pw (boardinfo + PSSO_BoardInfo_AROSFlag, 0);
@@ -134,5 +133,5 @@ struct ModeInfo *P96GFXRTG__GetModeInfo(struct p96gfx_staticdata *csd, struct p9
     modeinfo->Width = width;
     modeinfo->Height = height;
     modeinfo->Depth = depth;
-    return modeinfo;    
+    return modeinfo;
 }

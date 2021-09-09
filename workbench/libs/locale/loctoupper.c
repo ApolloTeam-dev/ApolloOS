@@ -1,12 +1,10 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc: LocToUpper - locale.library's private replacement
           of utility.library/ToUper function. IPrefs will install
           the patch.
 
-    Lang: english
 */
 
 #include <exec/types.h>
@@ -41,7 +39,7 @@
     NOTES
             This function is not called by apps directly. Instead dos.library/DosGet-
         LocalizedString is patched to use this function. This means, that the
-        LocaleBase parameter above actually points to UtilityBase, so we make use of 
+        LocaleBase parameter above actually points to UtilityBase, so we make use of
         the global LocaleBase variable. This function is marked as private,
         thus the headers generator won't mind the different basename in the header.
         

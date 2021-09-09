@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 /*****************************************************************************
@@ -19,12 +17,12 @@
 
 /*  SYNOPSIS */
 
-	AROS_LHA(CxObj *            , translator, A0),
-	AROS_LHA(struct InputEvent *, events    , A1),
+        AROS_LHA(CxObj *            , translator, A0),
+        AROS_LHA(struct InputEvent *, events    , A1),
 
 /*  LOCATION */
 
-	struct Library *, CxBase, 19, Commodities)
+        struct Library *, CxBase, 19, Commodities)
 
 /*  FUNCTION
 
@@ -66,18 +64,18 @@
 
     if (translator == NULL)
     {
-	return;
+        return;
     }
 
     ObtainSemaphore(&GPB(CxBase)->cx_SignalSemaphore);
     
     if (CXOBJType(translator) != CX_TRANSLATE)
     {
-	translator->co_Error |= COERR_BADTYPE;
+        translator->co_Error |= COERR_BADTYPE;
     }
     else
     {
-	translator->co_Ext.co_IE = events;
+        translator->co_Ext.co_IE = events;
     }
 
     ReleaseSemaphore(&GPB(CxBase)->cx_SignalSemaphore);

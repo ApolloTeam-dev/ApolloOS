@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc: VESA Gfx Hidd for standalone i386 AROS
-    Lang: english
 */
 
 #define __OOP_NOATTRBASES__
@@ -38,8 +36,8 @@ static void FreeAttrBases(const STRPTR *iftable, OOP_AttrBase *bases, ULONG num)
     
     for (i = 0; i < num; i++)
     {
-	if (bases[i])
-	    OOP_ReleaseAttrBase(iftable[i]);
+        if (bases[i])
+            OOP_ReleaseAttrBase(iftable[i]);
     }
 }
 
@@ -49,12 +47,12 @@ static BOOL GetAttrBases(const STRPTR *iftable, OOP_AttrBase *bases, ULONG num)
 
     for (i = 0; i < num; i++)
     {
-	bases[i] = OOP_ObtainAttrBase(iftable[i]);
-	if (!bases[i])
-	{
-	    FreeAttrBases(iftable, bases, i);
-	    return FALSE;
-	}
+        bases[i] = OOP_ObtainAttrBase(iftable[i]);
+        if (!bases[i])
+        {
+            FreeAttrBases(iftable, bases, i);
+            return FALSE;
+        }
     }
 
     return TRUE;
@@ -98,7 +96,7 @@ static int VESAGfx_Init(LIBBASETYPEPTR LIBBASE)
 
                 D(bug("[VESAGfx] Init: Everything OK, installing driver\n"));
                 
-                /* 
+                /*
                  * It is unknown (and no way to know) what hardware part this driver uses.
                  * In order to avoid conflicts with disk-based native-mode hardware
                  * drivers it needs to be removed from the system when some other driver
@@ -120,7 +118,7 @@ static int VESAGfx_Init(LIBBASETYPEPTR LIBBASE)
     }
     else
     {
-	D(bug("[VESAGfx] Failed to open graphics.library!\n"));
+        D(bug("[VESAGfx] Failed to open graphics.library!\n"));
     }
     return res;
 }

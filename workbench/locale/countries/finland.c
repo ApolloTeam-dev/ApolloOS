@@ -1,9 +1,8 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc: Country data for Suomi (Finland)
-          based on the Amiga Developer CD 2.1 file -: 
+          based on the Amiga Developer CD 2.1 file -:
           NDK/NDK_3.5/Examples/Locale/Countries/make_country_files.c
 */
 

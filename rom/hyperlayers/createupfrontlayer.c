@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 #include <exec/types.h>
 #include <aros/libcall.h>
@@ -22,20 +20,20 @@
 
     NAME */
 
-	AROS_LH8(struct Layer *, CreateUpfrontLayer,
+        AROS_LH8(struct Layer *, CreateUpfrontLayer,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct Layer_Info *, li, A0),
-	AROS_LHA(struct BitMap     *, bm, A1),
-	AROS_LHA(LONG               , x0, D0),
-	AROS_LHA(LONG               , y0, D1),
-	AROS_LHA(LONG               , x1, D2),
-	AROS_LHA(LONG               , y1, D3),
-	AROS_LHA(LONG               , flags, D4),
-	AROS_LHA(struct BitMap     *, bm2, A2),
+        AROS_LHA(struct Layer_Info *, li, A0),
+        AROS_LHA(struct BitMap     *, bm, A1),
+        AROS_LHA(LONG               , x0, D0),
+        AROS_LHA(LONG               , y0, D1),
+        AROS_LHA(LONG               , x1, D2),
+        AROS_LHA(LONG               , y1, D3),
+        AROS_LHA(LONG               , flags, D4),
+        AROS_LHA(struct BitMap     *, bm2, A2),
 
 /*  LOCATION */
-	struct LayersBase *, LayersBase, 6, Layers)
+        struct LayersBase *, LayersBase, 6, Layers)
 
 /*  FUNCTION
 
@@ -54,8 +52,8 @@
     INTERNALS
 
     HISTORY
-	27-11-96    digulla automatically created from
-			    layers_lib.fd and clib/layers_protos.h
+        27-11-96    digulla automatically created from
+                            layers_lib.fd and clib/layers_protos.h
 
 *****************************************************************************/
 {

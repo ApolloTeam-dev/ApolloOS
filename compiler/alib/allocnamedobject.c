@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Allocate a NamedObject with varargs.
-    Lang: english
 */
 #define AROS_TAGRETURNTYPE  struct NamedObject *
 
@@ -16,26 +14,26 @@
     NAME */
 #include <utility/tagitem.h>
 #include <utility/name.h>
-	#include <proto/utility.h>
+        #include <proto/utility.h>
 
-	struct NamedObject * AllocNamedObject (
+        struct NamedObject * AllocNamedObject (
 
 /*  SYNOPSIS */
-	STRPTR             name,
-	Tag                tag1,
-	...                )
+        STRPTR             name,
+        Tag                tag1,
+        ...                )
 
 /*  FUNCTION
-	Allocate a NamedObject. This is the varargs version of the function.
-	For more information see AllocNamedObjectA() in utility.library.
+        Allocate a NamedObject. This is the varargs version of the function.
+        For more information see AllocNamedObjectA() in utility.library.
 
     INPUTS
-	name        -   The name of the object to allocate.
-	tag1        -   The first Tag of the arguments. End the list with
-			TAG_DONE.
+        name        -   The name of the object to allocate.
+        tag1        -   The first Tag of the arguments. End the list with
+                        TAG_DONE.
 
     RESULT
-	The address of a NamedObject, or NULL if the allocation failed.
+        The address of a NamedObject, or NULL if the allocation failed.
 
     NOTES
 
@@ -44,12 +42,11 @@
     BUGS
 
     SEE ALSO
-	utility.library/AllocNamedObjectA()
+        utility.library/AllocNamedObjectA()
 
     INTERNALS
 
     HISTORY
-	09-02-1997  iaint       Adapted from another function.
 
 *****************************************************************************/
 {

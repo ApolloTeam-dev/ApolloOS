@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <proto/layers.h>
@@ -11,8 +10,8 @@
 struct ShowTitleActionMsg
 {
     struct IntuiActionMsg    msg;
-    struct Screen   	    *screen;
-    BOOL    	    	     showit;
+    struct Screen           *screen;
+    BOOL                     showit;
 };
 
 static VOID int_showtitle(struct ShowTitleActionMsg *msg,

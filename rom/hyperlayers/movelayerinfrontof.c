@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 
 #include <aros/libcall.h>
@@ -20,14 +18,14 @@
     NAME */
 #include <proto/layers.h>
 
-	AROS_LH2(LONG, MoveLayerInFrontOf,
+        AROS_LH2(LONG, MoveLayerInFrontOf,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct Layer *, layer_to_move, A0),
-	AROS_LHA(struct Layer *, other_layer, A1),
+        AROS_LHA(struct Layer *, layer_to_move, A0),
+        AROS_LHA(struct Layer *, other_layer, A1),
 
 /*  LOCATION */
-	struct LayersBase *, LayersBase, 28, Layers)
+        struct LayersBase *, LayersBase, 28, Layers)
 
 /*  FUNCTION
         Moves layer directly in front of another layer. Other layers
@@ -60,8 +58,8 @@
     INTERNALS
 
     HISTORY
-	27-11-96    digulla automatically created from
-			    layers_lib.fd and clib/layers_protos.h
+        27-11-96    digulla automatically created from
+                            layers_lib.fd and clib/layers_protos.h
 
 *****************************************************************************/
 {
@@ -83,7 +81,7 @@
     /*
      * If I run into the other layer before I find l
      * then I know I have to move it to the back.
-     */ 
+     */
     if (_l == other_layer)
       break;
       

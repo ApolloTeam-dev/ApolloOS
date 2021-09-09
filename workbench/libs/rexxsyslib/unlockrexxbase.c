@@ -1,9 +1,7 @@
 /*
-        Copyright © 1995-2002, The AROS Development Team. All rights reserved.
-    $Id$
+        Copyright (C) 1995-2002, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 #include "rexxsyslib_intern.h"
 
@@ -12,13 +10,13 @@
     NAME */
 #include <clib/rexxsyslib_protos.h>
 
-	AROS_LH1(VOID, UnlockRexxBase,
+        AROS_LH1(VOID, UnlockRexxBase,
 
 /*  SYNOPSIS */
-	AROS_LHA(ULONG, resource, D0),
+        AROS_LHA(ULONG, resource, D0),
 
 /*  LOCATION */
-	struct RxsLib *, RexxSysBase, 76, RexxSys)
+        struct RxsLib *, RexxSysBase, 76, RexxSys)
 
 /*  FUNCTION
 

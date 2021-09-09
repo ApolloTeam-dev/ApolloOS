@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 
 #include <hidd/gfx.h>
@@ -16,19 +14,19 @@
     NAME */
 #include <proto/cybergraphics.h>
 
-	AROS_LH7(ULONG, MovePixelArray,
+        AROS_LH7(ULONG, MovePixelArray,
 
 /*  SYNOPSIS */
-	AROS_LHA(UWORD            , SrcX, D0),
-	AROS_LHA(UWORD            , SrcY, D1),
-	AROS_LHA(struct RastPort *, RastPort, A1),
-	AROS_LHA(UWORD            , DstX, D2),
-	AROS_LHA(UWORD            , DstY, D3),
-	AROS_LHA(UWORD            , SizeX, D4),
-	AROS_LHA(UWORD            , SizeY, D5),
+        AROS_LHA(UWORD            , SrcX, D0),
+        AROS_LHA(UWORD            , SrcY, D1),
+        AROS_LHA(struct RastPort *, RastPort, A1),
+        AROS_LHA(UWORD            , DstX, D2),
+        AROS_LHA(UWORD            , DstY, D3),
+        AROS_LHA(UWORD            , SizeX, D4),
+        AROS_LHA(UWORD            , SizeY, D5),
 
 /*  LOCATION */
-	struct Library *, CyberGfxBase, 22, Cybergraphics)
+        struct Library *, CyberGfxBase, 22, Cybergraphics)
 
 /*  FUNCTION
         Copies the pixels in a rectangular portion of a RastPort to another

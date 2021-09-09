@@ -1,13 +1,12 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 */
 
 #include <libraries/locale.h>
 #include "locale_intern.h"
 
 /*
-** Dispose the catalog's strings but not the Catalog structure 
+** Dispose the catalog's strings but not the Catalog structure
 ** itself.
 */
 void dispose_catalog(struct IntCatalog * cat,

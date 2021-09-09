@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 
     C99 function getchar().
 */
@@ -21,19 +20,19 @@
     NAME */
 #include <stdio.h>
 
-	int getchar (void)
+        int __posixc_getchar (void)
 
 /*  SYNOPSIS */
 
 /*  FUNCTION
-	Read one character from the standard input stream. If there
+        Read one character from the standard input stream. If there
         is no character available or an error occurred, the function
         returns EOF.
 
     INPUTS
 
     RESULT
-	The character read or EOF on end of file or error.
+        The character read or EOF on end of file or error.
 
     NOTES
 
@@ -42,13 +41,13 @@
     BUGS
 
     SEE ALSO
-	fgetc(), getc(), fputc(), putc()
+        fgetc(), getc(), __posixc_fputc(), putc()
 
     INTERNALS
 
 ******************************************************************************/
 {
-    struct PosixCBase *PosixCBase = 
+    struct PosixCBase *PosixCBase =
         (struct PosixCBase *)__aros_getbase_PosixCBase();
 
     return fgetc(PosixCBase->_stdin);

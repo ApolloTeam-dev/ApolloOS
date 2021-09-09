@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2009, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2009, The AROS Development Team. All rights reserved.
 
     Desc: Free a trap.
-    Lang: english
 */
 #include "exec_intern.h"
 #include <proto/exec.h>
@@ -12,13 +10,13 @@
 
     NAME */
 
-	AROS_LH1(void, FreeTrap,
+        AROS_LH1(void, FreeTrap,
 
 /*  SYNOPSIS */
-	AROS_LHA(long, trapNum, D0),
+        AROS_LHA(long, trapNum, D0),
 
 /*  LOCATION */
-	struct ExecBase *, SysBase, 58, Exec)
+        struct ExecBase *, SysBase, 58, Exec)
 
 /*  FUNCTION
 

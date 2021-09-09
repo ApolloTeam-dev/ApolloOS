@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <stdlib.h>
@@ -30,7 +29,7 @@ struct Dataspace_Node
 
 struct MUI_DataspaceData
 {
-    /* We store this as a linear list, but it has O(n) when looking 
+    /* We store this as a linear list, but it has O(n) when looking
      ** for an entry, which is bad because this is the most frequently used
      ** operation.
      */

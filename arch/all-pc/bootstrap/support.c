@@ -1,9 +1,7 @@
 /*
     Copyright (C) 2006-2011 The AROS Development Team. All rights reserved.
-    $Id$
     
     Desc: Miscellaneous support functions.
-    Lang: English
 */
 
 #include <bootconsole.h>
@@ -85,7 +83,7 @@ void *__bs_malloc(unsigned long size)
      * end of our working memory.
      */
     if (end > workspace + sizeof(workspace))
-    	return 0;
+        return 0;
 
     MemPtr = end;
 

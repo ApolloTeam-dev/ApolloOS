@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc: Hardware text mode (IBM-compatible) screen console.
 */
@@ -42,7 +41,7 @@ void txt_Putc(char chr)
 
     /* Ignore null bytes, they are output by formatting routines as terminators */
     if (chr == 0)
-    	return;
+        return;
 
     /* Reached end of line ? New line if so. */
     if ((chr == '\n') || (scr_XPos >= scr_Width))
@@ -62,7 +61,7 @@ void txt_Putc(char chr)
     }
 
     if (chr == '\n')
-    	return;
+        return;
 
     i = 80 * scr_YPos + scr_XPos;
     view[i].sign = chr;

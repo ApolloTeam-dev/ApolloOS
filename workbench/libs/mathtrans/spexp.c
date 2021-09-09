@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2003, The AROS Development Team. All rights reserved.
 */
 
 #include "mathtrans_intern.h"
@@ -40,7 +39,7 @@
     AROS_LIBFUNC_INIT
     
     const LONG ExpTable[] =
-    { 
+    {
         0x8fa1fe6f,  /* e^32  */
         0x87975e58,  /* e^16  */
         0xba4f534c,  /* e^8   */

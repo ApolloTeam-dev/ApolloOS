@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 
     Desc: Varargs version of workbench.library/AddAppWindowA()
-    Lang: english
 */
 #define AROS_TAGRETURNTYPE struct AppWindow *
 #include <utility/tagitem.h>
@@ -14,15 +12,15 @@
 #define NO_INLINE_STDARG /* turn off inline def */
 #include <proto/workbench.h>
 
-	struct AppWindow * AddAppWindow (
+        struct AppWindow * AddAppWindow (
 
 /*  SYNOPSIS */
-	IPTR id,
-	IPTR  userdata,
-	struct Window * window,
-	struct MsgPort * msgport,
-	Tag tag1,
-	...)
+        IPTR id,
+        IPTR  userdata,
+        struct Window * window,
+        struct MsgPort * msgport,
+        Tag tag1,
+        ...)
 
 /*  FUNCTION
         This is the varargs version of workbench.library/AddAppWindowA().

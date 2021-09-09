@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include "intuition_intern.h"
@@ -46,7 +45,7 @@
 {
     AROS_LIBFUNC_INIT
 
-    int     	     i;
+    int              i;
     struct Menu     *thismenu;
     struct MenuItem *thisitem;
 
@@ -72,12 +71,12 @@
             else
             {
                 thisitem = thismenu->FirstItem;
-		
+                
                 for (i = 0; i < ITEMNUM(menunumber) && thisitem; i++)
                 {
                     thisitem = thisitem->NextItem;
                 }
-		
+                
                 if (thisitem)
                 {
                     if (SUBNUM(menunumber) != NOSUB && thisitem->SubItem)
@@ -89,15 +88,15 @@
                         }
                     }
                 }
-		
+                
                 if (thisitem)
                 {
                     thisitem->Flags &= ~ITEMENABLED;
                 }
             }
-	    
+            
         } /* if (thismenu) */
-	
+        
     } /* if (MENUNUM(menunumber) != NOMENU) */
 
     AROS_LIBFUNC_EXIT

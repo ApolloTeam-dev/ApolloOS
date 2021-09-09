@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2004, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2004, The AROS Development Team. All rights reserved.
 */
 
 #include "mathffp_intern.h"
@@ -165,7 +164,7 @@
         {
             Mant1 += Mant1;  /* one bit to the left. */
             Exponent--;
-        }    
+        }
     } /* else */
     
     if ((char) Exponent < 0)

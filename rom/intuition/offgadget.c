@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include "intuition_intern.h"
@@ -62,7 +61,7 @@
     {
         struct TagItem set_tags[] =
         {
-            {GA_Disabled, TRUE	},
+            {GA_Disabled, TRUE  },
             {TAG_END            }
         };
 

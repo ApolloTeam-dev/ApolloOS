@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2019, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2019, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <dos/dos.h>
@@ -222,7 +221,7 @@ IPTR WinDecorClass__OM_GET(Class *cl, Object *obj, struct opGet *msg)
         return DoSuperMethodA(cl, obj, (Msg)msg);
     }
 
-    return 1;    
+    return 1;
 }
     
 
@@ -336,7 +335,7 @@ IPTR WinDecorClass__WDM_GETDEFSIZE_SYSIMAGE(Class *cl, Object *obj, struct wdpGe
             def_low_width  =
                 def_med_width  =
                 def_high_width = (refwidth + 1) * 2; // reffont->tf_XSize * 3 - 1;
-            def_low_height = 
+            def_low_height =
                 def_med_height =
                 def_high_height = refheight + 1;
             break;
@@ -366,7 +365,7 @@ IPTR WinDecorClass__WDM_GETDEFSIZE_SYSIMAGE(Class *cl, Object *obj, struct wdpGe
         default:
         *msg->wdp_Width = def_high_width;
         *msg->wdp_Height = def_high_height;
-        break;            
+        break;
     }
 
     return TRUE;
@@ -400,13 +399,13 @@ IPTR WinDecorClass__WDM_DRAW_SYSIMAGE(Class *cl, Object *obj, struct wdpDrawSysI
     {
         renderimageframe(rp, CLOSEIMAGE, state, pens, left, top, width, height, IntuitionBase);
         /* no code yet */
-        break;      
+        break;
     }
     case POPUPIMAGE:
     {
         renderimageframe(rp, CLOSEIMAGE, state, pens, left, top, width, height, IntuitionBase);
         /* code should be added later */
-        break;      
+        break;
     }
     case ICONIFYIMAGE:
     {
@@ -494,7 +493,7 @@ IPTR WinDecorClass__WDM_DRAW_SYSIMAGE(Class *cl, Object *obj, struct wdpDrawSysI
         SetAPen(rp, pens[(state == IDS_NORMAL) ? SHINEPEN : BACKGROUNDPEN]);
         RectFill(rp, left, top, right, bottom);
 
-        break;        
+        break;
     }
 
     case ZOOMIMAGE:
@@ -1239,7 +1238,7 @@ IPTR WinDecorClass__WDM_DRAW_BORDERPROPBACK(Class *cl, Object *obj, struct wdpDr
 
         SetAfPt(rp, pattern, 1);
         SetAPen(rp, pens[SHADOWPEN]);
-        SetBPen(rp, pens[(window->Flags & WFLG_WINDOWACTIVE) ? FILLPEN : BACKGROUNDPEN]);    
+        SetBPen(rp, pens[(window->Flags & WFLG_WINDOWACTIVE) ? FILLPEN : BACKGROUNDPEN]);
         RectFill(rp, r->MinX, r->MinY, r->MaxX, r->MaxY);
         SetAfPt(rp, NULL, 0);
     }

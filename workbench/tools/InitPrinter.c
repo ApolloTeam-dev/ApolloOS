@@ -1,6 +1,5 @@
 /*
-    Copyright © 2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2012, The AROS Development Team. All rights reserved.
 */
 
 #include <devices/printer.h>
@@ -12,7 +11,7 @@
 //#define DEBUG 1
 #include <aros/debug.h>
 
-const char version[] = "$VER: InitPrinter 1.0 (03.03.2012) © AROS Dev Team";
+const char version[] = "$VER: InitPrinter 1.0 (03.03.2012) \xA9 2012 The AROS Dev Team";
 
 char __stdiowin[]="CON:/30/400/100/InitPrinter/AUTO/CLOSE/WAIT";
 

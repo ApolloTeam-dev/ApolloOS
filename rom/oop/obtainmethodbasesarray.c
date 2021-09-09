@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc: Obtain array of method ID bases
-    Lang: english
 */
 
 /*****************************************************************************
@@ -13,14 +11,14 @@
 #include <proto/oop.h>
 #include <oop/oop.h>
 
-	AROS_LH2(ULONG, OOP_ObtainMethodBasesArray,
+        AROS_LH2(ULONG, OOP_ObtainMethodBasesArray,
 
 /*  SYNOPSIS */
-	AROS_LHA(OOP_MethodID *, bases, A0),
+        AROS_LHA(OOP_MethodID *, bases, A0),
         AROS_LHA(CONST_STRPTR const *, ids, A1),
 
 /*  LOCATION */
-	struct Library *, OOPBase, 25, OOP)
+        struct Library *, OOPBase, 25, OOP)
 
 /*  FUNCTION
         Obtain several method ID bases, storing them in linear array.
@@ -58,7 +56,7 @@
     {
         *bases = OOP_GetMethodID(*ids, 0);
 
-	if (*bases == -1)
+        if (*bases == -1)
             failed++;
 
         bases++;

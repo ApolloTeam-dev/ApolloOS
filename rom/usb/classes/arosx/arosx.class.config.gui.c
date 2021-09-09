@@ -1,9 +1,7 @@
 /*
-    Copyright © 2018-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2018-2019, The AROS Development Team. All rights reserved.
 
     Desc: Gamepad (XInput) USB class driver
-    Lang: English
 */
 
 #include "debug.h"
@@ -290,7 +288,7 @@ AROS_UFH0(void, nGUITask)
                     End),
                 End;
 
-                if(gui->App) 
+                if(gui->App)
                 {
                     DoMethod(gui->MainWindow, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
                              gui->App, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);

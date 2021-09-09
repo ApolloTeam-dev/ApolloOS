@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Create a gadtools menu
-    Lang: english
 */
 
 #define AROS_TAGRETURNTYPE struct Menu *
@@ -21,12 +19,12 @@ extern struct Library * GadToolsBase;
 #define NO_INLINE_STDARG /* turn off inline def */
 #include <proto/gadtools.h>
 
-	struct Menu * CreateMenus (
+        struct Menu * CreateMenus (
 
 /*  SYNOPSIS */
-	struct NewMenu * newmenu,
-	Tag		 tag1,
-	...		)
+        struct NewMenu * newmenu,
+        Tag              tag1,
+        ...             )
 
 /*  FUNCTION
         Varargs version of gadtools.library/CreateMenusA().
@@ -42,7 +40,7 @@ extern struct Library * GadToolsBase;
     BUGS
 
     SEE ALSO
-	gadtools.library/CreateMenusA()
+        gadtools.library/CreateMenusA()
 
     INTERNALS
 

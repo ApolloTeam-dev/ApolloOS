@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2018, The AROS Development Team. All rights reserved.
 
     Desc: Enable() - Allow interrupts to occur after Disable().
-    Lang: english
 */
 
 #define DEBUG 0
@@ -62,7 +60,7 @@
 
         (*) On EXECSMP builds, Enable() only applies to the processor
             it is called from. Data which needs to be protected from
-            parallel access will also require a spinlock.            
+            parallel access will also require a spinlock.
 
     EXAMPLE
         In most userspace code, you will not want to use this function.

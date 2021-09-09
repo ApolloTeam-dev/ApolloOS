@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2006, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2006, The AROS Development Team. All rights reserved.
 
     Desc: Convert BCPL address to C pointer
-    Lang: English
 */
 
 #include <proto/exec.h>
@@ -26,7 +24,7 @@ LONG rxsupp_baddr(struct Library *RexxSupportBase, struct RexxMsg *msg, UBYTE **
     *argstring = NULL;
     
     if (LengthArgstring(ARG1(msg)) != sizeof(void *))
-	return ERR10_018;
+        return ERR10_018;
     
     ptr = BADDR(*(BPTR *)ARG1(msg));
     

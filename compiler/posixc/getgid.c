@@ -1,6 +1,5 @@
 /*
-    Copyright © 2003-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2003-2013, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function getgid().
 */
@@ -12,26 +11,26 @@
     NAME */
 #include <unistd.h>
 
-	gid_t getgid(
+        gid_t getgid(
 
 /*  SYNOPSIS */
-	void)
+        void)
 
 /*  FUNCTION
-	Returns the real group ID of the calling process
+        Returns the real group ID of the calling process
 
     INPUTS
-	
+        
     RESULT
-	
+        
     NOTES
 
     EXAMPLE
 
     BUGS
-    	
+        
     SEE ALSO
-    	setgid()
+        setgid()
         
     INTERNALS
 

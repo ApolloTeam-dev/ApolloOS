@@ -1,6 +1,5 @@
 /*
-    Copyright © 2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2011, The AROS Development Team. All rights reserved.
 */
 
 #include "exec_intern.h"
@@ -18,10 +17,10 @@
         struct ExecBase *, SysBase, 181, Exec)
 
 /*  FUNCTION
-        This function will free a slot in taskstorage 
+        This function will free a slot in taskstorage
 
     INPUTS
-	slot - The slot to free.
+        slot - The slot to free.
 
     RESULT
         None.
@@ -36,7 +35,7 @@
     BUGS
 
     SEE ALSO
-	AllocTaskStorageSlot()
+        AllocTaskStorageSlot()
 
     INTERNALS
 

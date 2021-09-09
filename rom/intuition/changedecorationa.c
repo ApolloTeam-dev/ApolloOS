@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <proto/utility.h>
@@ -10,6 +9,8 @@
 #include <intuition/screens.h>
 
 #include <proto/dos.h>
+
+#include <string.h>
 
 #include "intuition_intern.h"
 #include "intuition_customize.h"
@@ -51,7 +52,7 @@
     BUGS
 
     SEE ALSO
-	intuition/screens.h
+        intuition/screens.h
 
     INTERNALS
 
@@ -83,8 +84,8 @@
                 if (nd->nd_IntPattern)
                 {
                     struct DosLibrary *DOSBase = GetPrivIBase(IntuitionBase)->DOSBase;
-		    if (!DOSBase)
-                    	GetPrivIBase(IntuitionBase)->DOSBase = DOSBase = (struct DosLibrary *)TaggedOpenLibrary(TAGGEDOPEN_DOS);
+                    if (!DOSBase)
+                        GetPrivIBase(IntuitionBase)->DOSBase = DOSBase = (struct DosLibrary *)TaggedOpenLibrary(TAGGEDOPEN_DOS);
 
                     if (DOSBase)
                     {

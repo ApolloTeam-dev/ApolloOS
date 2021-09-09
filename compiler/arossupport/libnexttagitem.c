@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <proto/arossupport.h>
@@ -8,7 +7,7 @@
 struct TagItem *LibNextTagItem(struct TagItem **tagListPtr)
 {
     if (!(*tagListPtr))
-	return NULL;
+        return NULL;
 
     while(1)
     {

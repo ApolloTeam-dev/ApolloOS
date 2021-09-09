@@ -13,12 +13,12 @@
     NAME */
 #include <proto/alib.h>
 
-	APTR LibAllocAligned (
+        APTR LibAllocAligned (
 
 /*  SYNOPSIS */
-	IPTR memSize,
-	ULONG requirements,
-	IPTR  alignBytes)
+        IPTR memSize,
+        ULONG requirements,
+        IPTR  alignBytes)
 
 /*  FUNCTION
         Allocate a memory block with a start address and size that are
@@ -45,7 +45,7 @@
     BUGS
 
     SEE ALSO
-        exec.library/AllocMem, exec.library/FreeMem().
+        exec.library/AllocMem(), exec.library/FreeMem().
 
     INTERNALS
 

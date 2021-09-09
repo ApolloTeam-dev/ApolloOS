@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc: GetSysTime() - Find out what time it is.
-    Lang: english
 */
 #include <proto/exec.h>
 
@@ -32,17 +30,17 @@ AROS_LH1(void, GetSysTime,
     dest->tv_secs = timerBase->tb_CurrentTime.tv_secs;
     dest->tv_micro = (ULONG)(((long long)tb_eclock_to_usec * timerBase->tb_eclock_micro_mult) >> 16);
     if (dest->tv_micro > timerBase->tb_lastsystime.tv_secs + timerBase->lastsystimetweak) {
-    	timerBase->lastsystimetweak = 0;
+        timerBase->lastsystimetweak = 0;
     } else {
-    	timerBase->lastsystimetweak++;
+        timerBase->lastsystimetweak++;
     }
     timerBase->tb_lastsystime.tv_secs = dest->tv_secs;
     timerBase->tb_lastsystime.tv_micro = dest->tv_micro;
     dest->tv_micro += timerBase->lastsystimetweak;
     // can only overflow once, e-clock interrupts happen more than once a second
     if (dest->tv_micro >= 1000000) {
-    	dest->tv_micro -= 1000000;
-    	dest->tv_secs++;
+        dest->tv_micro -= 1000000;
+        dest->tv_secs++;
     }
     D(bug("systime=%d/%d\n", dest->tv_secs, dest->tv_micro));
 

@@ -58,23 +58,30 @@ AC_MSG_RESULT($aros_targetcfg_dir)
 #  -finstrument-functions
 #  -faligned-new
 #  -fcommon
+#  -fno-delete-null-pointer-checks
 
 #  -fno-builtin
 #  -fno-builtin-floor
 #  -fno-builtin-vsnprintf
 
 #  -ffreestanding
+#  -funwind-tables
 #  -fasynchronous-unwind-tables
 #  -ffunction-sections
 #  -fdata-sections
 #  -fmerge-constants
 #  -fmerge-all-constants
 
+#  -ffile-prefix-map
+
 # C++/ObjC++
 #  -fpermissive
 #  -frtti
 
 #  -fvisibility=hidden
+
+# Clang/LLVM
+# -no-integrated-as
 
 # C features first 
 AC_LANG_PUSH(C)
@@ -276,6 +283,14 @@ if test "x-$aros_common" = "x-yes" ; then
     aros_cflags_no_common=-fno-common
 fi
 
+AC_MSG_CHECKING([whether ${CC} accepts -fno-delete-null-pointer-checks])
+CFLAGS=-fno-delete-null-pointer-checks
+AC_TRY_COMPILE(,, aros_no_delete_null_pointer_checks="yes", aros_no_delete_null_pointer_checks="no")
+AC_MSG_RESULT($aros_no_delete_null_pointer_checks)
+if test "x-$aros_no_delete_null_pointer_checks" = "x-yes" ; then
+    aros_cflags_nodelete_nullpointer_checks=-fno-delete-null-pointer-checks
+fi
+
 AC_MSG_CHECKING([whether ${CC} accepts -fbuiltin])
 CFLAGS=-fbuiltin
 AC_TRY_COMPILE(,, aros_builtin="yes", aros_builtin="no")
@@ -398,6 +413,15 @@ if test "x-$aros_freestanding" = "x-yes" ; then
     aros_cflags_no_freestanding=-fno-freestanding
 fi
 
+AC_MSG_CHECKING([whether ${CC} accepts -funwind-tables])
+CFLAGS=-funwind-tables
+AC_TRY_COMPILE(,, aros_unwind_tables="yes", aros_unwind_tables="no")
+AC_MSG_RESULT($aros_unwind_tables)
+if test "x-$aros_unwind_tables" = "x-yes" ; then
+    aros_cflags_unwind_tables=-funwind-tables
+    aros_cflags_no_unwind_tables=-fno-unwind-tables
+fi
+
 AC_MSG_CHECKING([whether ${CC} accepts -fasynchronous-unwind-tables])
 CFLAGS=-fasynchronous-unwind-tables
 AC_TRY_COMPILE(,, aros_asynchronous_unwind_tables="yes", aros_asynchronous_unwind_tables="no")
@@ -449,6 +473,14 @@ if test "x-$aros_visibility_hidden" = "x-yes" ; then
     aros_cflags_visibility_hidden=-fvisibility=hidden
 fi
 
+AC_MSG_CHECKING([whether ${CC} accepts -ffile-prefix-map])
+CFLAGS=-ffile-prefix-map=/a=/b
+AC_TRY_COMPILE(,, aros_file_prefix_map="yes", aros_file_prefix_map="no")
+AC_MSG_RESULT($aros_file_prefix_map)
+if test "x-$aros_file_prefix_map" = "x-yes" ; then
+    aros_cflags_file_prefix_map=-ffile-prefix-map
+fi
+
 # C++ features
 AC_LANG_PUSH(C++)
 save_cxxflags="$CXXFLAGS"
@@ -473,9 +505,16 @@ fi
 
 CXXFLAGS="$save_cxxflags"
 
-
 # Check for additional C compiler options..
 AC_LANG_PUSH(C)
+
+AC_MSG_CHECKING([whether ${CC} accepts -no-integrated-as])
+CFLAGS=-no-integrated-as
+AC_TRY_COMPILE(,, aros_no_integrated_as="yes", aros_no_integrated_as="no")
+AC_MSG_RESULT($aros_no_integrated_as)
+if test "x-$aros_no_integrated_as" = "x-yes" ; then
+    aros_cflags_no_integrated_as=-no-integrated-as
+fi
 
 #-----------------------------------------------------------------------------
 #
@@ -607,6 +646,7 @@ CFLAGS="$save_cflags"
 #  -Wclass-memaccess
 #  -Wint-in-bool-context
 #  -Wignored-optimization-argument
+#  -Wbuiltin-declaration-mismatch
 
 # C warnings first
 AC_LANG_PUSH(C)
@@ -1270,6 +1310,15 @@ if test "x-$aros_ignored_optimization_argument" = "x-yes" ; then
     aros_warnflags_ignored_optimization_argument=-Wignored-optimization-argument
     aros_nowarnflags_ignored_optimization_argument=-Wno-ignored-optimization-argument
 fi
+
+AC_MSG_CHECKING([whether ${CC} accepts -Wbuiltin-declaration-mismatch])
+CFLAGS=-Wbuiltin-declaration-mismatch
+AC_TRY_COMPILE(,, aros_builtin_declaration_mismatch="yes", aros_builtin_declaration_mismatch="no")
+AC_MSG_RESULT($aros_builtin_declaration_mismatch)
+if test "x-$aros_builtin_declaration_mismatch" = "x-yes" ; then
+    aros_warnflags_builtin_declaration_mismatch=-Wbuiltin-declaration-mismatch
+    aros_nowarnflags_builtin_declaration_mismatch=-Wno-builtin-declaration-mismatch
+fi
 CFLAGS="$save_cflags"
 
 # Check the C++ warnings
@@ -1292,6 +1341,25 @@ AC_LANG_PUSH(C)
 #########################################################
 #
 # Now check what we need to use with the toolchain
+
+COMPILER_VERSION=`${CC} --version 2>/dev/null`
+IS_LLVM_COMPILER=`echo "$COMPILER_VERSION" | grep -i -c -E 'LLVM|clang'`
+if test "$IS_LLVM_COMPILER" -ne "0"; then
+    IS_GNU_COMPILER=0
+fi
+if test "$IS_LLVM_COMPILER" -eq "0"; then
+    IS_GNU_COMPILER=`echo "$COMPILER_VERSION" | grep -i -c -E 'gcc'`
+fi
+if test "$IS_GNU_COMPILER" -ne "0"; then
+    GNU_COMPILER_VERS="`${CC} -dumpversion`"
+    GCC_VERSION_MAJOR=$(echo $GNU_COMPILER_VERS | cut -d'.' -f1)
+    GCC_VERSION_MINOR=$(echo $GNU_COMPILER_VERS | cut -d'.' -f2)
+    GCC_VERSION_PATCH=$(echo $GNU_COMPILER_VERS | cut -d'.' -f3)
+    if test "$GCC_VERSION_MAJOR" -gt "9" ; then
+        dnl $""(CFLAGS_COMMON)
+        aros_toolchain_cflags_common=""
+    fi
+fi
 
 cat >$AROS_DEVELOPER/include/__testsincdir.h <<_ACEOF
 /* Copyright (c) The AROS Dev Team  */
@@ -1330,11 +1398,41 @@ fi
 #    aros_toolchain_isysroot="-isysroot $""(AROS_SDK)"
 #    aros_toolchain_iarchdir="-I $""(AROS_SDK)/$""(AROS_TARGET_CPU)-aros/include"
 #fi
+
+if test "$AROS_TARGET_CPU" = "arm"; then
+    AC_MSG_CHECKING([if we need to comment out the compilers section attributes])
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[asm("\t.section\t.aros.startup,\"ax\"\n\t.globl\tstart\n\t.type\tstart,%function\n\t\tldr\tsp, section_ptr\n");
+static void * section_ptr __attribute__((used, section(".aros.startup")));]],[[]])],
+        [
+            aros_targetsection_needscomment=no
+        ],[
+            aros_targetsection_needscomment=yes
+        ])
+    AC_MSG_RESULT($aros_targetsection_needscomment)
+    if test "$aros_targetsection_needscomment" = "yes"; then
+        AC_MSG_CHECKING([which comment style to use])
+        AC_LINK_IFELSE([AC_LANG_PROGRAM([[asm("\t.section\t.aros.startup,\"ax\"\n\t.globl\tstart\n\t.type\tstart,%function\n\t\tldr\tsp, section_ptr\n");
+static void * section_ptr __attribute__((used, section(".aros.startup #")));]],[[]])],
+            [
+                aros_targetsection_hashcomment=yes
+                aros_targetsection_comment=\"#\"
+            ],[
+                aros_targetsection_hashcomment=no
+            ])
+        if test "$aros_targetsection_hashcomment" = "no"; then
+            aros_targetsection_comment=\"//\"
+        fi
+        AC_MSG_RESULT($aros_targetsection_comment)
+    fi
+fi
+
 rm -f $AROS_DEVELOPER/include/__testsincdir.h
 
 #
 # export the feature flags...
 #
+AC_SUBST(aros_targetsection_comment)
+AC_SUBST(aros_cflags_no_integrated_as)
 AC_SUBST(aros_cflags_exceptions)
 AC_SUBST(aros_cflags_noexceptions)
 AC_SUBST(aros_cxxflags_permissive)
@@ -1383,6 +1481,7 @@ AC_SUBST(aros_cflags_noalignednew)
 
 AC_SUBST(aros_cflags_common)
 AC_SUBST(aros_cflags_no_common)
+AC_SUBST(aros_cflags_nodelete_nullpointer_checks)
 
 AC_SUBST(aros_cflags_builtin)
 AC_SUBST(aros_cflags_no_builtin)
@@ -1403,6 +1502,8 @@ AC_SUBST(aros_cflags_no_builtin_unreachable)
 AC_SUBST(aros_cflags_freestanding)
 AC_SUBST(aros_cflags_no_freestanding)
 
+AC_SUBST(aros_cflags_unwind_tables)
+AC_SUBST(aros_cflags_no_unwind_tables)
 AC_SUBST(aros_cflags_asynchronous_unwind_tables)
 AC_SUBST(aros_cflags_no_asynchronous_unwind_tables)
 
@@ -1414,6 +1515,7 @@ AC_SUBST(aros_cflags_merge_all_constants)
 AC_SUBST(aros_cflags_no_merge_all_constants)
 
 AC_SUBST(aros_cflags_visibility_hidden)
+AC_SUBST(aros_cflags_file_prefix_map)
 
 #
 AC_SUBST(aros_cflags_isystem)
@@ -1579,9 +1681,12 @@ AC_SUBST(aros_warnflags_int_in_bool_context)
 AC_SUBST(aros_nowarnflags_int_in_bool_context)
 AC_SUBST(aros_warnflags_ignored_optimization_argument)
 AC_SUBST(aros_nowarnflags_ignored_optimization_argument)
-
+AC_SUBST(aros_warnflags_builtin_declaration_mismatch)
+AC_SUBST(aros_nowarnflags_builtin_declaration_mismatch)
+    
 # Additional toolchain support ...
 AC_SUBST(aros_toolchain_sysroot)
+AC_SUBST(aros_toolchain_cflags_common)
 
 AC_CONFIG_FILES(
     ${aros_targetcfg_dir}/compiler.cfg:compiler.cfg.in

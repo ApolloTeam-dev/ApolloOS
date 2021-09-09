@@ -1,12 +1,10 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc: LocToLower - locale.library's private replacement
           of utility.library/ToLower function. IPrefs will install
           the patch.
 
-    Lang: english
 */
 
 #include <exec/types.h>
@@ -41,7 +39,7 @@
     NOTES
             This function is not called by apps directly. Instead dos.library/DosGet-
         LocalizedString is patched to use this function. This means, that the
-        LocaleBase parameter above actually points to UtilityBase, so we make use of 
+        LocaleBase parameter above actually points to UtilityBase, so we make use of
         the global LocaleBase variable. This function is marked as private,
         thus the headers generator won't mind the different basename in the header.
         
@@ -60,7 +58,7 @@
 
     ULONG retval;
     
-    REPLACEMENT_LOCK;    
+    REPLACEMENT_LOCK;
 
     DEBUG_CONVTOLOWER(dprintf("locToLower: char 0x%lx\n", character));
 
@@ -68,7 +66,7 @@
         (struct Locale *)IntLB(LocaleBase)->lb_CurrentLocale));
 
     retval = ConvToLower((struct Locale *)IntLB(LocaleBase)->lb_CurrentLocale,
-        character);   
+        character);
 
     DEBUG_CONVTOLOWER(dprintf("locToLower: retval 0x%lx\n", retval));
 

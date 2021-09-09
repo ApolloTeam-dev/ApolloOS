@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function sigemptyset().
 */
@@ -12,10 +11,10 @@
     NAME */
 #include <signal.h>
 
-	int sigemptyset (
+        int sigemptyset (
 
 /*  SYNOPSIS */
-	sigset_t *set)
+        sigset_t *set)
 
 /*  FUNCTION
 

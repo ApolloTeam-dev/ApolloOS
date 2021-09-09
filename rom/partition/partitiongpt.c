@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
     
     Desc: GPT partition table handler
 */
@@ -28,6 +27,8 @@
 #include <proto/exec.h>
 #include <proto/partition.h>
 #include <proto/utility.h>
+
+#include <string.h>
 
 #include "partition_support.h"
 #include "partition_types.h"

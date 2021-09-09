@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -29,24 +28,24 @@ static int Platform_Init(struct ExecBase *SysBase)
     HostLibBase = OpenResource("hostlib.resource");
     D(bug("[exec] HostLibBase %p\n", HostLibBase));
     if (!HostLibBase)
-	return FALSE;
+        return FALSE;
 
     /* We use local variable for the handle because we never expunge
        so we will never close it */
     LibCHandle = HostLib_Open(LIBC_NAME, NULL);
     D(bug("[exec] libc handle 0x%p\n", LibCHandle));
     if (!LibCHandle)
-	return FALSE;
+        return FALSE;
 
     PD(SysBase).SysIFace = (struct LibCInterface *)HostLib_GetInterface(LibCHandle, libc_symbols, &r);
     if (PD(SysBase).SysIFace)
     {
-	D(bug("[exec] Got libc interface, %u unresolved symbols\n", r));
-	if (!r)
-	    return TRUE;
+        D(bug("[exec] Got libc interface, %u unresolved symbols\n", r));
+        if (!r)
+            return TRUE;
 
-	HostLib_DropInterface((APTR *)PD(SysBase).SysIFace);
-	HostLib_Close(LibCHandle, NULL);
+        HostLib_DropInterface((APTR *)PD(SysBase).SysIFace);
+        HostLib_Close(LibCHandle, NULL);
     }
 
     return FALSE;

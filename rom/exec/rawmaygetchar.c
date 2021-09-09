@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc: Check if there is a character on the raw console
-    Lang: english
 */
 
 #include "exec_intern.h"
@@ -13,29 +11,29 @@
     NAME */
 #include <proto/exec.h>
 
-	AROS_LH0(LONG, RawMayGetChar,
+        AROS_LH0(LONG, RawMayGetChar,
 
 /*  LOCATION */
-	struct ExecBase *, SysBase, 85, Exec)
+        struct ExecBase *, SysBase, 85, Exec)
 
 /*  FUNCTION
-	Check if there is a character on the raw console.
+        Check if there is a character on the raw console.
 
     INPUTS
-	None.
+        None.
 
     RESULT
-	The character or -1 if there was none.
+        The character or -1 if there was none.
 
     NOTES
-	This function is for very low level debugging only.
+        This function is for very low level debugging only.
 
     EXAMPLE
 
     BUGS
 
     SEE ALSO
-	RawIOInit(), RawPutChar()
+        RawIOInit(), RawPutChar()
 
     INTERNALS
 

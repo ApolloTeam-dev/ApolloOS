@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: UserState() - Return to normal mode after changing things.
-    Lang: english
 */
 
 /*****************************************************************************
@@ -11,22 +9,22 @@
     NAME */
 #include <proto/exec.h>
 
-	AROS_LH1(void, UserState,
+        AROS_LH1(void, UserState,
 
 /*  SYNOPSIS */
-	AROS_LHA(APTR, sysStack, D0),
+        AROS_LHA(APTR, sysStack, D0),
 
 /*  LOCATION */
-	struct ExecBase *, SysBase, 26, Exec)
+        struct ExecBase *, SysBase, 26, Exec)
 
 /*  FUNCTION
-	Return to user mode after a call to SuperState().
+        Return to user mode after a call to SuperState().
 
     INPUTS
-	sysStack    -   The return value from SuperState()
+        sysStack    -   The return value from SuperState()
 
     RESULT
-	The system will be back to normal.
+        The system will be back to normal.
 
     NOTES
 
@@ -35,10 +33,10 @@
     BUGS
 
     SEE ALSO
-	SuperState(), Supervisor()
+        SuperState(), Supervisor()
 
     INTERNALS
-	Undo SuperState()
+        Undo SuperState()
 
 ******************************************************************************/
 {

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 
     Desc: BindDrivers CLI command
-    Lang: English
 */
 
 /******************************************************************************
@@ -64,6 +62,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <string.h>
 
 #include <exec/resident.h>
 

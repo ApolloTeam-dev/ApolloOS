@@ -1,6 +1,5 @@
 /*
-    Copyright © 2013-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2013-2019, The AROS Development Team. All rights reserved.
 */
 
 #include <dos/rdargs.h>
@@ -85,7 +84,7 @@ VOID FreeArguments(VOID)
 IPTR GetArgument(enum Argument id)
 {
     if ((id >= 0) && (id < COUNT))
-	return args[id];
+        return args[id];
 
     return 0;
 }

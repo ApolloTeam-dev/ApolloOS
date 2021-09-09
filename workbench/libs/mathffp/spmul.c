@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2004, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2004, The AROS Development Team. All rights reserved.
 */
 
 #include "mathffp_intern.h"
@@ -25,7 +24,7 @@
     INPUTS
 
     RESULT
-	FFP number
+        FFP number
 
         Flags:
           zero     : result is zero
@@ -40,7 +39,7 @@
 {
     AROS_LIBFUNC_INIT
     
-    char Exponent = ((char) fnum1 & FFPExponent_Mask) 
+    char Exponent = ((char) fnum1 & FFPExponent_Mask)
                   + ((char) fnum2 & FFPExponent_Mask) - 0x41;
     ULONG Mant1H = ( (ULONG) (fnum1 & FFPMantisse_Mask)) >> 20;
     ULONG Mant2H = ( (ULONG) (fnum2 & FFPMantisse_Mask)) >> 20;

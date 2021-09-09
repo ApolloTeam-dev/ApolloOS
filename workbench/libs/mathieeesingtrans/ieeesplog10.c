@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2008, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2008, The AROS Development Team. All rights reserved.
 */
 
 #include "mathieeesingtrans_intern.h"
@@ -107,7 +106,7 @@
     
     ld_M = intern_IEEESPLd((y & IEEESPMantisse_Mask) | 0x3f000000);
     
-    /*               
+    /*
                       ld M + E
         log(fnum1) =  --------
                        ld 10

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 
 #include <aros/config.h>
@@ -232,13 +230,13 @@ IPTR kickbase(void);
                 data = KrnGetSystemAttr(KATTR_Architecture);
             }
 #else
-	    /*
-	     * This is a legacy hack for old PPC-native kernel.resource implementations.
-	     * Please do not support this. aros.library is a part of base kickstart, and
-	     * it is platform-independent. Consequently, it should not include any hardcoded
-	     * references to platform name. Platform name is specified by kernel.resource.
-	     * See boot/modular_kickstart.txt for more info.
-	     */
+            /*
+             * This is a legacy hack for old PPC-native kernel.resource implementations.
+             * Please do not support this. aros.library is a part of base kickstart, and
+             * it is platform-independent. Consequently, it should not include any hardcoded
+             * references to platform name. Platform name is specified by kernel.resource.
+             * See boot/modular_kickstart.txt for more info.
+             */
             data = (IPTR)AROS_ARCHITECTURE;
 #endif
             SetData(tag, IPTR, data);

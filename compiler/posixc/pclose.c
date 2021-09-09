@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function pclose().
 */
@@ -16,10 +15,10 @@
     NAME */
 #include <stdio.h>
 
-	int pclose(
+        int pclose(
 
 /*  SYNOPSIS */
-	FILE * stream)
+        FILE * stream)
 
 /*  FUNCTION
 
@@ -35,7 +34,7 @@
     BUGS
 
     SEE ALSO
-	popen()
+        popen()
 
     INTERNALS
 

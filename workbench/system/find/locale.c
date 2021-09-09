@@ -1,6 +1,5 @@
 /*
-    Copyright © 2016, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2016, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/types.h>
@@ -12,7 +11,7 @@
 #include "strings.h"
 
 #define CATALOG_NAME     "System/System/Find.catalog"
-#define CATALOG_VERSION  1
+#include "catalogs/catalog_version.h"
 
 /*** Variables **************************************************************/
 struct Catalog *catalog;

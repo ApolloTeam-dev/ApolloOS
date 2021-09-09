@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <aros/debug.h>
@@ -109,11 +108,11 @@ static inline ULONG beepcolor(ULONG x)
 
 #else /* USE_NEWDISPLAYBEEP */
 
-    struct MsgPort  	*TimerMsgPort;
+    struct MsgPort      *TimerMsgPort;
     struct timerequest  *BeepTimerIO;
-    BOOL    	    	 VisualBeep = TRUE;
-    BOOL    	    	 AllScreens = FALSE;
-    LONG    	    	 NumBeeped = 0;
+    BOOL                 VisualBeep = TRUE;
+    BOOL                 AllScreens = FALSE;
+    LONG                 NumBeeped = 0;
 
     TimerMsgPort = CreateMsgPort();
     if (!TimerMsgPort)
@@ -189,14 +188,14 @@ static inline ULONG beepcolor(ULONG x)
                     // struct Window *BeepWindow;
                     struct TagItem window_tags[] =
                     {
-                        {WA_Left    	, 0 	    	    	    	    	},
-                        {WA_Top     	, 0 	    	    	    	    	},
-                        {WA_Width   	, -1	    	    	    	    	},
-                        {WA_Height  	, -1	    	    	    	    	},
-                        {WA_Flags   	, WFLG_SIMPLE_REFRESH | WFLG_BORDERLESS },
-                        {WA_CustomScreen, (IPTR) screen     	    	    	},
-                      //{WA_Priority	, 50	    	    	    	    	},  // Place in front of all other windows!
-                        {TAG_DONE   	    	    	    	    	    	}
+                        {WA_Left        , 0                                     },
+                        {WA_Top         , 0                                     },
+                        {WA_Width       , -1                                    },
+                        {WA_Height      , -1                                    },
+                        {WA_Flags       , WFLG_SIMPLE_REFRESH | WFLG_BORDERLESS },
+                        {WA_CustomScreen, (IPTR) screen                         },
+                      //{WA_Priority    , 50                                    },  // Place in front of all other windows!
+                        {TAG_DONE                                               }
                     };
 
                     GetPrivScreen(screen)->DisplayBeepWindow = (struct Window *) OpenWindowTagList (NULL, window_tags);

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc:
 */
@@ -32,14 +31,14 @@
         struct KernelBase *, KernelBase, 15, Kernel)
 
 /*  FUNCTION
-	Remove previously installed CPU exception handler
+        Remove previously installed CPU exception handler
 
     INPUTS
-	handle - an opaque handler returned by KrnAddExceptionHandler()
-	         function
+        handle - an opaque handler returned by KrnAddExceptionHandler()
+                 function
 
     RESULT
-	None
+        None
 
     NOTES
 

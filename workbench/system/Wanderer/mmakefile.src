@@ -1,5 +1,4 @@
-# Copyright © 2004-2013, The AROS Development Team. All rights reserved.
-# $Id$
+# Copyright (C) 2004-2020, The AROS Development Team. All rights reserved.
 
 include $(SRCDIR)/config/aros.cfg
 
@@ -9,6 +8,7 @@ FILES := main \
     locale \
     support \
     filesystems \
+    filesystems_utilities \
     wanderer \
     wandererprefs \
     iconwindow \

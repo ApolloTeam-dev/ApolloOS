@@ -1,9 +1,7 @@
 /*
-    Copyright � 2013-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2013-2020, The AROS Development Team. All rights reserved.
 
-    Desc: 
-    Lang: english
+    Desc:
 */
 
 #include <aros/debug.h>
@@ -115,7 +113,7 @@ ULONG llPortOpen(struct LowLevelBase *LowLevelBase, int port, UWORD *bits)
     if (type == 0 || type == JP_TYPE_GAMECTLR || type == JP_TYPE_JOYSTK) {
         if (port == 0)
             potbits = POTGO_GAMEPAD_PORT0;
-        else 
+        else
             potbits = POTGO_GAMEPAD_PORT1;
         potres = AllocPotBits(potbits);
     } else {

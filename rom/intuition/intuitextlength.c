@@ -1,10 +1,11 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <proto/graphics.h>
+
+#include <string.h>
 
 #include "intuition_intern.h"
 
@@ -52,7 +53,7 @@
     struct GfxBase *GfxBase = GetPrivIBase(IntuitionBase)->GfxBase;
     struct RastPort  rp;
     struct TextFont *newfont = NULL;
-    LONG    	     width;
+    LONG             width;
 
     DEBUG_INTUITEXTLENGTH(dprintf("IntuiTextLength(itext 0x%lx)\n",iText));
 

@@ -1,6 +1,5 @@
 /*
-    Copyright © 2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2017, The AROS Development Team. All rights reserved.
 */
 
 #include <asm/cpu.h>
@@ -25,10 +24,10 @@
 int Kernel_13_KrnIsSuper();
 
 AROS_LH3(spinlock_t *, KrnSpinLock,
-	AROS_LHA(spinlock_t *, lock, A1),
-	AROS_LHA(struct Hook *, failhook, A0),
-	AROS_LHA(ULONG, mode, D0),
-	struct KernelBase *, KernelBase, 52, Kernel)
+        AROS_LHA(spinlock_t *, lock, A1),
+        AROS_LHA(struct Hook *, failhook, A0),
+        AROS_LHA(ULONG, mode, D0),
+        struct KernelBase *, KernelBase, 52, Kernel)
 {
     AROS_LIBFUNC_INIT
 
@@ -46,7 +45,7 @@ AROS_LH3(spinlock_t *, KrnSpinLock,
         Check if lock->lock equals to SPINLOCK_UNLOCKED. If yes, it will be atomicaly replaced by SPINLOCKF_WRITE and function
         returns 1. Otherwise it copies value of lock->lock into tmp and returns 0.
         */
-        while (!compare_and_exchange_long((ULONG*)&lock->lock, SPINLOCK_UNLOCKED, SPINLOCKF_WRITE, &tmp)) 
+        while (!compare_and_exchange_long((ULONG*)&lock->lock, SPINLOCK_UNLOCKED, SPINLOCKF_WRITE, &tmp))
         {
             struct Task *t = lock->s_Owner;
             // Tell CPU we are spinning
@@ -60,7 +59,7 @@ AROS_LH3(spinlock_t *, KrnSpinLock,
             }
             D(bug("[Kernel] %s: my name is %s\n", __func__, Kernel_13_KrnIsSuper() ? "--supervisor code--" : me->tc_Node.ln_Name));
             D(bug("[Kernel] %s: spinning on held lock (val=%08x, s_Owner=%p)...\n", __func__, tmp, t));
-            if (me && t && (me->tc_Node.ln_Pri > t->tc_Node.ln_Pri)) 
+            if (me && t && (me->tc_Node.ln_Pri > t->tc_Node.ln_Pri))
             {
                 D(bug("[Kernel] %s: spinlock owner (%s) has pri %d, lowering ours...\n", __func__, t ? (t->tc_Node.ln_Name) : "--supervisor--", t ? t->tc_Node.ln_Pri : 999));
                 // If lock is spinning and the owner of lock has lower priority than ours, we need to reduce

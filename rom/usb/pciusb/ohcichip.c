@@ -1,6 +1,5 @@
 /*
-    Copyright © 2010-2013, The AROS Development Team. All rights reserved
-    $Id$
+    Copyright (C) 2010-2013, The AROS Development Team. All rights reserved
 */
 
 /* Enable debug level 1000, keeps an eye on TD DoneQueue consistency */
@@ -1622,7 +1621,7 @@ BOOL ohciInit(struct PCIController *hc, struct PCIUnit *hu) {
         SYNC;
 
         // make sure the ports are on with chipset quirk workaround
-        hubdesca = READREG32_LE(hc->hc_RegBase, OHCI_HUBDESCA);        
+        hubdesca = READREG32_LE(hc->hc_RegBase, OHCI_HUBDESCA);
         if (hd->hd_Flags & HDF_FORCEPOWER)
             hubdesca |= OHAF_NOPOWERSWITCH;     /* Required for some IntelMacs */
         else

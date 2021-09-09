@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function ClearScreen()
-    Lang: English
 */
 #include <aros/debug.h>
 #include <graphics/rastport.h>
@@ -15,13 +13,13 @@
     NAME */
 #include <proto/graphics.h>
 
-	AROS_LH1(void, ClearScreen,
+        AROS_LH1(void, ClearScreen,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct RastPort *, rp, A1),
+        AROS_LHA(struct RastPort *, rp, A1),
 
 /*  LOCATION */
-	struct GfxBase *, GfxBase, 8, Graphics)
+        struct GfxBase *, GfxBase, 8, Graphics)
 
 /*  FUNCTION
 
@@ -63,12 +61,12 @@
 
     if(height >= ymin)
     {
-	ULONG      oldDrMd = GetDrMd(rp);
+        ULONG      oldDrMd = GetDrMd(rp);
 
-	SetDrMd(rp, oldDrMd ^ INVERSVID);
-	RectFill(rp, 0, ymin, width - 1, height - 1);	
-	SetDrMd(rp, oldDrMd);
+        SetDrMd(rp, oldDrMd ^ INVERSVID);
+        RectFill(rp, 0, ymin, width - 1, height - 1);
+        SetDrMd(rp, oldDrMd);
     }
-	
+        
     AROS_LIBFUNC_EXIT
 } /* ClearScreen */

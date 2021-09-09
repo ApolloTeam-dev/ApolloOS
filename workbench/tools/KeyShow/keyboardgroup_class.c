@@ -1,6 +1,5 @@
 /*
-    Copyright © 2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2012, The AROS Development Team. All rights reserved.
 */
 
 #include <proto/muimaster.h>
@@ -17,6 +16,7 @@
 #include <zune/customclasses.h>
 
 #include <stdio.h>
+#include <string.h>
 
 #include "keyboardgroup_class.h"
 #include "locale.h"

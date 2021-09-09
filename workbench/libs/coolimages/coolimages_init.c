@@ -1,8 +1,7 @@
 /*
-    Copyright © 2002-2006, The AROS Development Team. 
+    Copyright (C) 2002-2006, The AROS Development Team.
     All rights reserved.
     
-    $Id$
 */
 
 #include <exec/types.h>
@@ -26,18 +25,18 @@ static int Init(LIBBASETYPEPTR LIBBASE)
 
     if (!cool_buttonclass)
     {
-    	if (!InitCoolButtonClass(CyberGfxBase)) return FALSE;
-    	
-	cool_buttonclass->cl_ID = COOLBUTTONGCLASS;
-	AddClass(cool_buttonclass);
+        if (!InitCoolButtonClass(CyberGfxBase)) return FALSE;
+        
+        cool_buttonclass->cl_ID = COOLBUTTONGCLASS;
+        AddClass(cool_buttonclass);
     }
     
     if (!cool_imageclass)
     {
-    	if (!InitCoolImageClass(CyberGfxBase)) return FALSE;
-	
-	cool_imageclass->cl_ID = COOLIMAGECLASS;
-	AddClass(cool_imageclass);
+        if (!InitCoolImageClass(CyberGfxBase)) return FALSE;
+        
+        cool_imageclass->cl_ID = COOLIMAGECLASS;
+        AddClass(cool_imageclass);
     }
     
     return TRUE;

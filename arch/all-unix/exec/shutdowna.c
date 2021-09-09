@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc: ShutdownA() - Shut down the operating system.
-    Lang: english
 */
 
 /* Prevent 'timeval redefinition' error */
@@ -28,15 +26,15 @@ AROS_LH1(ULONG, ShutdownA,
     switch(action)
     {
     case SD_ACTION_POWEROFF:
-    	exitcode = 0;
-	break;
+        exitcode = 0;
+        break;
 
     case SD_ACTION_COLDREBOOT:
-    	exitcode = 0x81; /* Magic value for our bootstrap */
-    	break;
+        exitcode = 0x81; /* Magic value for our bootstrap */
+        break;
 
     default:
-    	return 0; /* Unknown action code */
+        return 0; /* Unknown action code */
     }
 
     Exec_DoResetCallbacks((struct IntExecBase *)SysBase, action);

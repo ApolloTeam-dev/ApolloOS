@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Free memory allocated with AllocEntry().
-    Lang: english
 */
 #include <aros/libcall.h>
 #include <exec/memory.h>
@@ -25,20 +23,20 @@
 
     NAME */
 
-	AROS_LH1(void, FreeEntry,
+        AROS_LH1(void, FreeEntry,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct MemList *, entry,A0),
+        AROS_LHA(struct MemList *, entry,A0),
 
 /*  LOCATION */
-	struct ExecBase *, SysBase, 38, Exec)
+        struct ExecBase *, SysBase, 38, Exec)
 
 
 /*  FUNCTION
-	Free some memory allocated with AllocEntry().
+        Free some memory allocated with AllocEntry().
 
     INPUTS
-	entry - The MemList you got from AllocEntry().
+        entry - The MemList you got from AllocEntry().
 
     RESULT
 
@@ -49,7 +47,7 @@
     BUGS
 
     SEE ALSO
-	AllocEntry()
+        AllocEntry()
 
     INTERNALS
 
@@ -62,12 +60,12 @@
     for(i=0;i<entry->ml_NumEntries;i++)
     {
         D(bug("[FreeEntry] Freeing size %d at 0x%p\n", entry->ml_ME[i].me_Length,entry->ml_ME[i].me_Addr));
-	FreeMem(entry->ml_ME[i].me_Addr,entry->ml_ME[i].me_Length);
+        FreeMem(entry->ml_ME[i].me_Addr,entry->ml_ME[i].me_Length);
     }
 
     /* Then free the MemList itself */
     FreeMem(entry,sizeof(struct MemList)-sizeof(struct MemEntry)+
-		  sizeof(struct MemEntry)*entry->ml_NumEntries);
+                  sizeof(struct MemEntry)*entry->ml_NumEntries);
     AROS_LIBFUNC_EXIT
 } /* FreeEntry */
 

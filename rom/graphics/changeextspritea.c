@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2010, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2010, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function ChangeExtSpriteA()
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -57,7 +55,7 @@
         This is a minimal implementation which supports only single sprite #0
         for mouse pointer.
 
-	With vp set to NULL the function always fails at the moment.
+        With vp set to NULL the function always fails at the moment.
 
     HISTORY
 
@@ -87,11 +85,11 @@
     if (vp) {
         /* Pick up display driver from ViewPort's bitmap */
         mdd = GET_BM_DRIVERDATA(vp->RasInfo->BitMap);
-	res = HIDD_Gfx_SetCursorShape(mdd->gfxhidd, bitmap, 0, 0);
-	if (res)
-	    HIDD_Gfx_SetCursorVisible(mdd->gfxhidd, TRUE);
+        res = HIDD_Gfx_SetCursorShape(mdd->gfxhidd, bitmap, 0, 0);
+        if (res)
+            HIDD_Gfx_SetCursorVisible(mdd->gfxhidd, TRUE);
     } else
-	/* TODO: NULL ViewPort means Amiga(tm) chipset display */
+        /* TODO: NULL ViewPort means Amiga(tm) chipset display */
         res = FALSE;
 
     RELEASE_HIDD_BM(bitmap, newsprite->es_BitMap);

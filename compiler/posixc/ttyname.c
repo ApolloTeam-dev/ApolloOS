@@ -1,6 +1,5 @@
 /*
-    Copyright © 2008-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2008-2013, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function ttyname().
 */
@@ -14,10 +13,10 @@
     NAME */
 #include <unistd.h>
 
-	char * ttyname(
+        char * ttyname(
 
 /*  SYNOPSIS */
-	int fd)
+        int fd)
         
 /*  FUNCTION
 
@@ -33,7 +32,7 @@
     BUGS
 
     SEE ALSO
-	
+        
     INTERNALS
 
 ******************************************************************************/

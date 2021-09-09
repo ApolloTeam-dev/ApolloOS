@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 /*
@@ -46,13 +45,13 @@ static int Timer_Init(struct KernelBase *KernelBase)
      * 60Hz PAL  11823
      */
     if (todcnt > 14188 + (14318 - 14188) / 2)
-    	SysBase->PowerSupplyFrequency = 50;
+        SysBase->PowerSupplyFrequency = 50;
     else if (todcnt <= 11823 + (11932 - 11823) / 2)
-    	SysBase->PowerSupplyFrequency = 60;
+        SysBase->PowerSupplyFrequency = 60;
     else if (todcnt > 14188 - (14188 - 11932) / 2)
-    	SysBase->PowerSupplyFrequency = 50;
+        SysBase->PowerSupplyFrequency = 50;
     else
-    	SysBase->PowerSupplyFrequency = 60;
+        SysBase->PowerSupplyFrequency = 60;
 
     return TRUE;
 }

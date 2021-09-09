@@ -1,9 +1,7 @@
 /*
-    Copyright © 2010-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2010-2020, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 /*********************************************************************************************/
@@ -50,7 +48,7 @@ STATIC struct ColorSpec defaultcolor[MAXPENS * 4] =
     {5, 0x5555, 0xDDDD, 0x5555  },
     {6, 0x0000, 0x4444, 0xDDDD  },
     {7, 0xEEEE, 0x9999, 0x0000  },
-    {65535                      }
+    {(WORD)65535                      }
 };
 
 /*********************************************************************************************/

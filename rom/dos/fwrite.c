@@ -1,8 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
-    Lang: english
 */
 #include "dos_intern.h"
 
@@ -27,7 +25,7 @@
         struct DosLibrary *, DOSBase, 55, Dos)
 
 /*  FUNCTION
-        Buffered write of a number of blocks to a stream. 
+        Buffered write of a number of blocks to a stream.
         May write fewer blocks than requested.
 
     INPUTS

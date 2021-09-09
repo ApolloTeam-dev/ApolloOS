@@ -6,7 +6,7 @@ Software distributed under the License is distributed on an "AS IS" basis, WITHO
 ANY KIND, either express or implied. See the License for the specific language governing rights and
 limitations under the License.
 
-(C) Copyright 2010-2020 The AROS Developer Team
+(C) Copyright 2010-2021 The AROS Dev Team
 (C) Copyright 2009-2010 Stephen Jones.
 (C) Copyright xxxx-2009 Davy Wentzler.
 
@@ -14,6 +14,10 @@ The Initial Developer of the Original Code is Davy Wentzler.
 
 All Rights Reserved.
 */
+
+#ifdef __AROS__
+#include <aros/debug.h>
+#endif
 
 #include <config.h>
 
@@ -26,9 +30,6 @@ All Rights Reserved.
 #include "interrupt.h"
 #include "misc.h"
 #include "pci_wrapper.h"
-#ifdef __AROS__
-#include <aros/debug.h>
-#endif
 
 #define min(a,b) ((a)<(b)?(a):(b))
 
@@ -52,13 +53,16 @@ CardInterrupt( struct HDAudioChip* card )
 {
     ULONG intreq;
     LONG  handled = 0;
+    D(UWORD statests;)
     UBYTE rirb_status;
     int i;
 
     intreq = pci_inl(HD_INTSTS, card);
 
-    if (intreq & HD_INTCTL_GLOBAL)
-    {       
+    D(bug("[HDAudio] %s(%08x)\n", __func__, intreq);)
+    if (intreq & HD_INTSTS_GIS)
+    {
+        D(bug("[HDAudio] %s: Global Interrupt\n", __func__);)
         if (intreq & 0x3fffffff) // stream interrupt
         {
 //            ULONG position;
@@ -154,16 +158,14 @@ CardInterrupt( struct HDAudioChip* card )
             }
         }
 
-        if (intreq & HD_INTCTL_CIE)
+        if (intreq & HD_INTSTS_CIS)
         {
-            //D(bug("[HDAudio] CIE\n"));
+            D(bug("[HDAudio] %s: Controller Interrupt\n", __func__);)
             pci_outb(0x4, HD_INTSTS + 3, card); // only byte access allowed
-           
-  //          if (card->is_playing)
-    //            D(bug("[HDAudio] CIE irq! rirb is %x, STATESTS = %x\n", pci_inb(HD_RIRBSTS, card), pci_inw(HD_STATESTS, card)));
-        
+
             // check for RIRB status
             rirb_status = pci_inb(HD_RIRBSTS, card);
+            D(bug("[HDAudio] %s: RIRB = %02x\n", __func__, rirb_status);)
             if (rirb_status & 0x5)
             {
                 if (rirb_status & 0x4) // RIRBOIS
@@ -182,8 +184,12 @@ CardInterrupt( struct HDAudioChip* card )
                     //D(bug("[HDAudio] RIRB IRQ!\n"));
                 }
 
-                pci_outb(0x5, HD_RIRBSTS, card);
+                pci_outb(rirb_status, HD_RIRBSTS, card);
             }
+            D(
+              statests = pci_inw(HD_STATESTS, card);
+              bug("[HDAudio] %s: STATESTS = %04x\n", __func__, statests);
+            )
         }
         
         handled = 1;
@@ -219,7 +225,7 @@ PlaybackInterrupt( struct HDAudioChip* card )
         skip_mix = CallHookPkt(AudioCtrl->ahiac_PreTimerFunc, (Object*) AudioCtrl, 0);
         CallHookPkt(AudioCtrl->ahiac_PlayerFunc, (Object*) AudioCtrl, NULL);
 
-        if (! skip_mix)
+        if (!skip_mix)
         {
 #if defined(__AROS__) && (__WORDSIZE==64)
             CallHookPkt(AudioCtrl->ahiac_MixerFunc, (Object*) AudioCtrl, (APTR)(((IPTR)card->upper_mix_buffer << 32) | card->lower_mix_buffer));
@@ -241,24 +247,34 @@ PlaybackInterrupt( struct HDAudioChip* card )
 
         if (AudioCtrl->ahiac_Flags & AHIACF_HIFI)
         {
-            while(i > 0)
+            if (card->bitsizes[card->selected_bitsize_index] == 24)
             {
-                *dstlong++ = *srclong++;
-                *dstlong++ = *srclong++;
+                /* 32-bit mixing buffer, 24-bit hardware format, stereo => frame size of 8 bytes */
+                while(i > 0)
+                {
+                    *dstlong++ = *srclong++;
+                    *dstlong++ = *srclong++;
 
-                --i;
+                    --i;
+                }
             }
         }
-        else
+
+        if (!(AudioCtrl->ahiac_Flags & AHIACF_HIFI))
         {
-            while(i > 0)
+            if (card->bitsizes[card->selected_bitsize_index] == 16)
             {
-                *dstlong++ = (*srclong & 0xFF00) >> 16; srclong++; // tbd
-                *dstlong++ = (*srclong & 0xFF000000) >> 16; srclong++;
+                /* 16-bit mixing buffer, 16-bit hardware format, stereo => frame size of 4 bytes */
+                while(i > 0)
+                {
+                    *dstlong++ = *srclong++;
 
-                --i;
+                    --i;
+                }
             }
         }
+
+        /* Note: other combinations of mixing buffer and hardware format are not supported at this moment */
 
         CallHookPkt(AudioCtrl->ahiac_PostTimerFunc, (Object*) AudioCtrl, 0);
     }
@@ -301,7 +317,7 @@ RecordInterrupt( struct HDAudioChip* card )
      while( i < frames )
      {
        *dst = ( ( *src & 0x00FF ) << 8 ) | ( ( *src & 0xFF00 ) >> 8 );
-   
+
        ++i;
        ++src;
        ++dst;
@@ -310,7 +326,7 @@ RecordInterrupt( struct HDAudioChip* card )
      /*while( i < frames )
      {
        *dst = (*src);
-   
+
        ++i;
        ++src;
        ++dst;

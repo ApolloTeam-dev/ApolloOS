@@ -1,6 +1,5 @@
 /*
-    Copyright © 2003-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2003-2013, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function kill().
 */
@@ -13,10 +12,10 @@
     NAME */
 #include <signal.h>
 
-	int kill (
+        int kill (
 
 /*  SYNOPSIS */
-	pid_t pid,
+        pid_t pid,
         int   sig)
 
 /*  FUNCTION
@@ -26,7 +25,7 @@
     RESULT
 
     NOTES
-	Not implemented.
+        Not implemented.
 
     EXAMPLE
 

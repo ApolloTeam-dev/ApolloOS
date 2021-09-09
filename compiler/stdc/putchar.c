@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     C99 function putchar()
 */
@@ -12,10 +11,10 @@
 
 #include <stdio.h>
 
-	int putchar(
+        int putchar(
 
 /*  SYNOPSIS */
-	int c)
+        int c)
 
 /*  FUNCTION
         Equivalent to fputc(stdout)

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Get attributes of a gadtools gadget
-    Lang: english
 */
 
 #include <exec/types.h>
@@ -22,14 +20,14 @@ extern struct Library * GadToolsBase;
 #define NO_INLINE_STDARG /* turn off inline def */
 #include <proto/gadtools.h>
 
-	LONG GT_GetGadgetAttrs (
+        LONG GT_GetGadgetAttrs (
 
 /*  SYNOPSIS */
-	struct Gadget    * gad,
-	struct Window    * win,
-	struct Requester * req,
-	Tag		   tag1,
-	...		   )
+        struct Gadget    * gad,
+        struct Window    * win,
+        struct Requester * req,
+        Tag                tag1,
+        ...                )
 
 /*  FUNCTION
         Varargs version of gadtools.library/GT_GetGadgetAttrsA().
@@ -45,7 +43,7 @@ extern struct Library * GadToolsBase;
     BUGS
 
     SEE ALSO
-	gadtools.library/GT_GetGadgetAttrsA()
+        gadtools.library/GT_GetGadgetAttrsA()
 
     INTERNALS
 

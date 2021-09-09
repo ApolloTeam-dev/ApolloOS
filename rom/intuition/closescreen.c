@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2013, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2013, The MorphOS Development Team. All Rights Reserved.
 
     Close a screen.
 */
@@ -404,12 +403,12 @@ static VOID int_closescreen(struct CloseScreenActionMsg *msg,
                 DeactivateWindow(NULL,msg->msg.task,IntuitionBase);
             }
 #endif
-	    /* If there is active screen, activate its monitor now */
-	    if (IntuitionBase->ActiveScreen)
-	    {
-		ActivateMonitor(((struct IntScreen *)(IntuitionBase->ActiveScreen))->IMonitorNode, -1, -1, IntuitionBase);
-	    }
-	    
+            /* If there is active screen, activate its monitor now */
+            if (IntuitionBase->ActiveScreen)
+            {
+                ActivateMonitor(((struct IntScreen *)(IntuitionBase->ActiveScreen))->IMonitorNode, -1, -1, IntuitionBase);
+            }
+            
             return;
         }
         parent = parent->NextScreen;

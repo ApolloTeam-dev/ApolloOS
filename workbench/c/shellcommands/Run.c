@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 /******************************************************************************
@@ -27,7 +25,7 @@
 
     INPUTS
 
-        QUIET    --  avoids printing of the background CLI's number 
+        QUIET    --  avoids printing of the background CLI's number
 
         COMMAND  --  the program to run together with its arguments
 
@@ -66,6 +64,8 @@
 #include <aros/debug.h>
 
 #include <aros/shcommands.h>
+
+#include <string.h>
 
 AROS_SH2H(Run, 41.3,                  "Start a program as a background process\n",
 AROS_SHAH(BOOL  , ,QUIET  ,/S,FALSE,"\tDon't print the background CLI's number"),
@@ -144,25 +144,25 @@ AROS_SHAH(STRPTR, ,COMMAND,/F,NULL ,  "The program (resp. script) to run (argume
     {
         struct TagItem tags[] =
         {
-	    { SYS_ScriptInput, (IPTR)cis     },
-	    { SYS_Input,       (IPTR)cis     },
-	    { SYS_Output,      (IPTR)cos     },
-	    { SYS_Error,       (IPTR)ces     },
-	    { SYS_CliType,     (IPTR)CLI_RUN },
-	    { TAG_DONE,        0             }
+            { SYS_ScriptInput, (IPTR)cis     },
+            { SYS_Input,       (IPTR)cis     },
+            { SYS_Output,      (IPTR)cos     },
+            { SYS_Error,       (IPTR)ces     },
+            { SYS_CliType,     (IPTR)CLI_RUN },
+            { TAG_DONE,        0             }
         };
 
         if ( SystemTagList((CONST_STRPTR)command,
                            tags                                ) == -1 )
         {
-	    PrintFault(IoErr(), "Run");
-	    Close(cis);
-	    Close(cos);
-	    Close(ces);
-	    if (cmdsize > 0)
-	        FreeMem(command, cmdsize);
+            PrintFault(IoErr(), "Run");
+            Close(cis);
+            Close(cos);
+            Close(ces);
+            if (cmdsize > 0)
+                FreeMem(command, cmdsize);
 
-	    return RETURN_FAIL;
+            return RETURN_FAIL;
         }
     }
 

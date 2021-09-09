@@ -1,9 +1,7 @@
 /*
-    Copyright © 2009-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2009-2012, The AROS Development Team. All rights reserved.
 
     Desc: Copy memory.
-    Lang: english
 */
 
 #define DEBUG 0
@@ -179,7 +177,7 @@ D(bug("[Exec] CopyMem: Copy remaining %ld bytes.\n", size));
         __small_memcpy(src, dst, size);
     }
 
-    /* 
+    /*
         FENCE Memory to re-order again since movntq is weakly-ordered ?
     */
     MEMFENCE;

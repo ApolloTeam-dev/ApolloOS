@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 /*****************************************************************************
@@ -21,11 +19,11 @@ VOID RecRem(CxObj *, struct Library *CxBase);
 
 /*  SYNOPSIS */
 
-	AROS_LHA(CxObj *, co, A0),
+        AROS_LHA(CxObj *, co, A0),
 
 /*  LOCATION */
 
-	struct Library *, CxBase, 9, Commodities)
+        struct Library *, CxBase, 9, Commodities)
 
 /*  FUNCTION
 
@@ -62,7 +60,7 @@ VOID RecRem(CxObj *, struct Library *CxBase);
 
     if (co == NULL)
     {
-	return;
+        return;
     }
 
     RemoveCxObj(co);
@@ -79,10 +77,10 @@ VOID RecRem(CxObj *obj, struct Library *CxBase)
     
     while (obj != NULL)
     {
-        RecRem((CxObj *)GetHead(&obj->co_ObjList), CxBase);        
+        RecRem((CxObj *)GetHead(&obj->co_ObjList), CxBase);
 
-        next = (CxObj *)GetSucc(obj);        
-	FreeCxStructure(obj, CX_OBJECT, CxBase);
+        next = (CxObj *)GetSucc(obj);
+        FreeCxStructure(obj, CX_OBJECT, CxBase);
         obj = next;
         
     }

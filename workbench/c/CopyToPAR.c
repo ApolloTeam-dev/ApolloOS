@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc: Copy file to parallel.device
-    Lang: English
 */
 /*****************************************************************************
 
@@ -74,7 +72,7 @@ STRPTR           devicename = "parallel.device";
 
 static void cleanup(char *msg)
 {
-    if (msg && !args[ARG_QUIET]) 
+    if (msg && !args[ARG_QUIET])
     {
         Printf("CopyToPAR: %s\n", msg);
     }
@@ -207,6 +205,6 @@ int main(void)
     if (rc)
         return rc;
 
-    cleanup(NULL);    
+    cleanup(NULL);
     return 0;
 }

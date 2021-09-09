@@ -1,9 +1,9 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 */
 
-#include <string.h>
+#include <aros/debug.h>
+
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <dos/dos.h>
@@ -11,35 +11,34 @@
 #include <exec/types.h>
 #include <assert.h>
 
-#define DEBUG 0
-#include <aros/debug.h>
+#include <string.h>
 
 /*****************************************************************************
 
     NAME */
 #include <stdlib.h>
 
-	char *mktemp (
+        char *mktemp (
 
 /*  SYNOPSIS */
-	char *template)
+        char *template)
 
 /*  FUNCTION
-	Make a unique temporary file name.
+        Make a unique temporary file name.
 
     INPUTS
-	template - template to change into unique filename
+        template - template to change into unique filename
 
     RESULT
-	Returns template.
+        Returns template.
 
     NOTES
-    	Template must end in "XXXXXX" (i.e at least 6 X's).
-    	
+        Template must end in "XXXXXX" (i.e at least 6 X's).
+        
         Prior to this paragraph being created, mktemp() sometimes produced filenames
         with '/' in them. AROS doesn't like that at all. Fortunately, the bug in this
         function which produced it has been fixed. -- blippy
-		
+                
         For clarity, define the HEAD of the template to be the part before the tail,
         and the TAIL to be the succession of X's. So in, T:temp.XXXXXX , the head is
         T:temp. and the tail is XXXXXX .
@@ -47,17 +46,17 @@
     EXAMPLE
 
     BUGS
-    	Cannot create more than 26 filenames for the same process id. This is because
-    	the "bumping" is only done to the first tail character - it should be
-    	generalised to bump more characters if necessary.
+        Cannot create more than 26 filenames for the same process id. This is because
+        the "bumping" is only done to the first tail character - it should be
+        generalized to bump more characters if necessary.
 
     SEE ALSO
 
     INTERNALS
-    	Based on libnix mktemp
+        Based on libnix mktemp
 
 ******************************************************************************/
-{ 
+{
     IPTR pid = (IPTR)FindTask(0L);
     char *c = template + strlen(template);
     BPTR  lock;
@@ -66,14 +65,14 @@
     while (*--c == 'X')
     {
         remainder = pid % 10;
-        assert(remainder>=0 && remainder<10); 
+        assert(remainder>=0 && remainder<10);
         *c = remainder + '0';
         pid /= 10L;
     }
     
     c++; /* ... c now points to the 1st char of the template tail */
 
-    /* If template errornously does not end in X c will point to '\0';
+    /* If template erroneously does not end in X c will point to '\0';
        exit gracefully
     */
     if (*c)
@@ -94,5 +93,5 @@
     }
     
     D(bug("26 tries exhausted; Returning '%s'\n", template));
-    return template; 
+    return template;
 } /* mktemp */

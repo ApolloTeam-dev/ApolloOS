@@ -1,6 +1,5 @@
 /*
-    Copyright © 2005-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2005-2021, The AROS Development Team. All rights reserved.
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
@@ -24,6 +23,7 @@
 #include <proto/workbench.h>
 
 #include <stdio.h>
+#include <string.h>
 
 #include <zune/iconimage.h>
 #include "diskinfo.h"
@@ -42,7 +42,7 @@
 #define ID_NTFS_DISK       (0x4E544653L)
 #endif
 
-static LONG dt[] = 
+static LONG dt[] =
 {
     ID_NO_DISK_PRESENT, ID_UNREADABLE_DISK,
     ID_DOS_DISK, ID_FFS_DISK, ID_INTER_DOS_DISK, ID_INTER_FFS_DISK,
@@ -72,13 +72,12 @@ struct DiskInfo_DATA
     LONG                        dki_Aspect;
     struct MUI_InputHandlerNode dki_NotifyIHN;
     struct NotifyRequest        dki_FSNotifyRequest;
-    STRPTR                      dki_WindowTitle;
 };
 
 /*** Methods ****************************************************************/
 Object *DiskInfo__OM_NEW
 (
-    Class *CLASS, Object *self, struct opSet *message 
+    Class *CLASS, Object *self, struct opSet *message
 )
 {
     struct DosList             *dl;
@@ -108,8 +107,8 @@ Object *DiskInfo__OM_NEW
 
     static struct InfoData id;
 
-    static STRPTR disktypelist[] = 
-    { 
+    static STRPTR disktypelist[] =
+    {
     "No Disk",
     "Unreadable",
     "OFS",
@@ -169,6 +168,7 @@ Object *DiskInfo__OM_NEW
         SetIoErr(ERROR_DEVICE_NOT_MOUNTED);
         return NULL;
     }
+
     int volname_len = strlen(volname);
     if ((volicon = AllocVec(volname_len + 5, MEMF_CLEAR)) == NULL)
     {
@@ -206,10 +206,10 @@ Object *DiskInfo__OM_NEW
             CopyMem(_(MSG_UNKNOWN), filesystem, strlen(_(MSG_UNKNOWN)));
         }
 
-        FormatSize(size, id.id_NumBlocks, id.id_NumBlocks, id.id_BytesPerBlock, FALSE);
-        percent = FormatSize(used, id.id_NumBlocksUsed, id.id_NumBlocks, id.id_BytesPerBlock, TRUE);
-        FormatSize(free, id.id_NumBlocks - id.id_NumBlocksUsed, id.id_NumBlocks, id.id_BytesPerBlock, TRUE);
-        sprintf(blocksize, "%d %s", (int)id.id_BytesPerBlock, _(MSG_BYTES));
+        FormatSize(size, sizeof size, id.id_NumBlocks, id.id_NumBlocks, id.id_BytesPerBlock, FALSE);
+        percent = FormatSize(used, sizeof used, id.id_NumBlocksUsed, id.id_NumBlocks, id.id_BytesPerBlock, TRUE);
+        FormatSize(free, sizeof free, id.id_NumBlocks - id.id_NumBlocksUsed, id.id_NumBlocks, id.id_BytesPerBlock, TRUE);
+        snprintf(blocksize, sizeof blocksize, "%d %s", (int)id.id_BytesPerBlock, _(MSG_BYTES));
 
         switch (id.id_DiskState)
         {
@@ -259,7 +259,7 @@ Object *DiskInfo__OM_NEW
             }
         }
     }
-    else        
+    else
     {
         filesystem = AllocVec(strlen(_(MSG_UNKNOWN)) + 1, MEMF_ANY);
         CopyMem(_(MSG_UNKNOWN), filesystem, strlen(_(MSG_UNKNOWN)));
@@ -271,12 +271,13 @@ Object *DiskInfo__OM_NEW
         CLASS, self, NULL,
 
         MUIA_Application_Title, __(MSG_TITLE),
-        MUIA_Application_Version, (IPTR) "$VER: DiskInfo 0.5 ("ADATE") ©2006-2009 AROS Dev Team",
+        MUIA_Application_Version, (IPTR) "$VER: DiskInfo 0.6 ("ADATE") \xA9 2006-2021 The AROS Dev Team",
         MUIA_Application_Copyright, __(MSG_COPYRIGHT),
         MUIA_Application_Author, __(MSG_AUTHOR),
         MUIA_Application_Description, __(MSG_DESCRIPTION),
         MUIA_Application_Base, (IPTR) "DISKINFO",
         SubWindow, (IPTR) (window = (Object *)WindowObject,
+            MUIA_Window_Title,       __(MSG_TITLE),
             MUIA_Window_Activate,    TRUE,
             MUIA_Window_NoMenus,     TRUE,
             MUIA_Window_CloseGadget, TRUE,
@@ -299,32 +300,32 @@ Object *DiskInfo__OM_NEW
                             Child, (IPTR) HVSpace,
                                 Child, (IPTR) ColGroup(2),
                                     /* TODO: Build this list only when data is realy available, and localise */
-                                    (dosdevname) ? Child : TAG_IGNORE, (IPTR) TextObject, 
+                                    (dosdevname) ? Child : TAG_IGNORE, (IPTR) TextObject,
                                         MUIA_Text_PreParse, (IPTR) "\33r",
                                         MUIA_Text_Contents, __(MSG_DOSDEVICE),
                                     End,
-                                    (dosdevname) ? Child : TAG_IGNORE, (IPTR) TextObject, 
+                                    (dosdevname) ? Child : TAG_IGNORE, (IPTR) TextObject,
                                         MUIA_Text_PreParse, (IPTR) "\33l",
                                         MUIA_Text_Contents, (IPTR) dosdevname,
                                     End,
-                                    (deviceinfo) ? Child : TAG_IGNORE, (IPTR) TextObject, 
+                                    (deviceinfo) ? Child : TAG_IGNORE, (IPTR) TextObject,
                                         MUIA_Text_PreParse, (IPTR) "\33r",
                                         MUIA_Text_Contents, __(MSG_DEVICEINFO),
                                     End,
-                                    (deviceinfo) ? Child : TAG_IGNORE, (IPTR) TextObject, 
+                                    (deviceinfo) ? Child : TAG_IGNORE, (IPTR) TextObject,
                                         MUIA_Text_PreParse, (IPTR) "\33l",
                                         MUIA_Text_Contents, (IPTR) deviceinfo,
                                     End,
-                            Child, (IPTR) TextObject, 
+                            Child, (IPTR) TextObject,
                                 MUIA_Text_PreParse, (IPTR) "\33r",
                                 MUIA_Text_Contents, __(MSG_FILESYSTEM),
                             End,
-                            Child, (IPTR) TextObject, 
+                            Child, (IPTR) TextObject,
                                 MUIA_Text_PreParse, (IPTR) "\33I[6:24] \33l",
                                 MUIA_Text_Contents, (IPTR) filesystem,
                             End,
                             Child, (IPTR) HVSpace,
-                            Child, (IPTR) TextObject, 
+                            Child, (IPTR) TextObject,
                                 MUIA_Text_PreParse, (IPTR) "\33l",
                                 MUIA_Text_Contents, (IPTR) handlertype,
                             End,
@@ -339,7 +340,7 @@ Object *DiskInfo__OM_NEW
                         GroupFrame,
                         Child, (IPTR) HVSpace,
                         Child, (IPTR) ColGroup(2),
-                            Child, (IPTR) TextObject, 
+                            Child, (IPTR) TextObject,
                                 MUIA_Text_PreParse, (IPTR) "\33r",
                                 MUIA_Text_Contents, __(MSG_NAME),
                             End,
@@ -456,13 +457,6 @@ Object *DiskInfo__OM_NEW
     data->dki_FileSys = filesystem;
     data->dki_Aspect        = aspect;
 
-    /*
-        the window class doesn't copy the title so we must
-        create a copy by ourselves to avoid corrupt window title
-    */
-    data->dki_WindowTitle = StrDup(volname);
-    SET(data->dki_Window, MUIA_Window_Title, data->dki_WindowTitle);
-
     /* Setup notifications -------------------------------------------------*/
     DoMethod( window, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
         (IPTR) self, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
@@ -512,7 +506,6 @@ IPTR DiskInfo__OM_DISPOSE(Class *CLASS, Object *self, Msg message)
     FreeVec(data->dki_DOSDev);
     FreeVec(data->dki_DOSDevInfo);
     FreeVec(data->dki_FileSys);
-    FreeVec(data->dki_WindowTitle);
 
     return DoSuperMethodA(CLASS, self, message);
 }
@@ -565,8 +558,8 @@ IPTR DiskInfo__MUIM_DiskInfo_HandleNotify
                         D(bug("[DiskInfo] %s: Updating Window from DOS Device '%s'\n", __PRETTY_FUNCTION__, (STRPTR)XGET(data->dki_VolumeName, MUIA_Text_Contents)));
 
                         //FormatSize(size, id.id_NumBlocks, id.id_NumBlocks, id.id_BytesPerBlock, FALSE);
-                        percent = FormatSize(used, id.id_NumBlocksUsed, id.id_NumBlocks, id.id_BytesPerBlock, TRUE);
-                        FormatSize(free, id.id_NumBlocks - id.id_NumBlocksUsed, id.id_NumBlocks, id.id_BytesPerBlock, TRUE);
+                        percent = FormatSize(used, sizeof used, id.id_NumBlocksUsed, id.id_NumBlocks, id.id_BytesPerBlock, TRUE);
+                        FormatSize(free, sizeof free, id.id_NumBlocks - id.id_NumBlocksUsed, id.id_NumBlocks, id.id_BytesPerBlock, TRUE);
                         //sprintf(blocksize, "%d %s", id.id_BytesPerBlock, _(MSG_BYTES));
 
                         //data->dki_VolumeName    = volnameobj;
@@ -673,7 +666,7 @@ BOOL DiskInfo_Initialize()
     D(bug("[DiskInfo] %s()\n", __PRETTY_FUNCTION__));
 
     DiskInfo_CLASS = MUI_CreateCustomClass(
-        NULL, MUIC_Application, NULL, 
+        NULL, MUIC_Application, NULL,
         sizeof(struct DiskInfo_DATA), DiskInfo_Dispatcher);
 
     return DiskInfo_CLASS ? TRUE : FALSE;

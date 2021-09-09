@@ -1,6 +1,5 @@
 /*
-    Copyright © 2012-2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2012-2021, The AROS Development Team. All rights reserved.
 
     Initialisation code for stdcio.library
 */
@@ -8,6 +7,8 @@
 
 #include <proto/stdcio.h>
 
+#if (0)
 /* Set StdCBase offset */
 const ULONG __aros_rellib_base_StdCBase = 0;
 SETRELLIBOFFSET(StdCBase, struct StdCIOBase, StdCBase)
+#endif

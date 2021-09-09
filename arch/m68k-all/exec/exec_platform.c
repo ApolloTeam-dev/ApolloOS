@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017, The AROS Development Team.  All rights reserved.
+ * Copyright (C) 2011-2020, The AROS Development Team.  All rights reserved.
  * Author: Jason S. McMullan <jason.mcmullan@gmail.com>
  *
  * Licensed under the AROS PUBLIC LICENSE (APL) Version 1.1
@@ -9,7 +9,9 @@
 #include <aros/libcall.h>
 #include <aros/symbolsets.h>
 #include <exec/execbase.h>
-    
+
+#include <defines/exec_LVO.h>
+
 extern VOID AROS_SLIB_ENTRY(ExitIntr, Exec, 6)(VOID);
 extern VOID AROS_SLIB_ENTRY(Schedule, Exec, 7)(VOID);
 extern VOID AROS_SLIB_ENTRY(Switch, Exec, 9)(VOID);

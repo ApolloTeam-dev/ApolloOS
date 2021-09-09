@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2011, The AROS Development Team. All rights reserved.
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
@@ -173,7 +172,7 @@ Object *INTERNAL_ImageButton(CONST_STRPTR label, CONST_STRPTR imagePath,
                 MUIA_Weight,                0,
             End,
             Child, (IPTR)HVSpace,
-        End;    
+        End;
 
     }
     else
@@ -372,9 +371,9 @@ Object *INTERNAL_ImageButton(CONST_STRPTR label, CONST_STRPTR imagePath,
                 MUIA_CycleChain,    1,
                 TAG_DONE);
         }
-    case MUIO_ImageButton: 
+    case MUIO_ImageButton:
         return INTERNAL_ImageButton
-        ( 
+        (
             (CONST_STRPTR) params[0],
             (CONST_STRPTR) params[1],
             ((struct MUIMasterBase_intern *)MUIMasterBase)->topaz8font

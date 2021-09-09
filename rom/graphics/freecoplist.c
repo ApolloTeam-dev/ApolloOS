@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Graphics function FreeCopList()
-    Lang: english
 */
 #include <exec/types.h>
 #include <graphics/copper.h>
@@ -15,19 +13,19 @@
     NAME */
 #include <proto/graphics.h>
 
-	AROS_LH1(void, FreeCopList,
+        AROS_LH1(void, FreeCopList,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct CopList *, coplist, A0),
+        AROS_LHA(struct CopList *, coplist, A0),
 
 /*  LOCATION */
-	struct GfxBase *, GfxBase, 91, Graphics)
+        struct GfxBase *, GfxBase, 91, Graphics)
 
 /*  FUNCTION
-	Deallocate all memory associated with this copper list.
+        Deallocate all memory associated with this copper list.
 
     INPUTS
-	coplist - pointer to a CopList structure
+        coplist - pointer to a CopList structure
 
     RESULT
 
@@ -38,7 +36,7 @@
     BUGS
 
     SEE ALSO
-	graphics/copper.h
+        graphics/copper.h
 
     INTERNALS
 

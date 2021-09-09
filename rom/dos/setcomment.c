@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2008, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2008, The AROS Development Team. All rights reserved.
 
     Desc: Set a filecomment.
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -11,6 +9,9 @@
 #include <dos/dosextens.h>
 #include <dos/dos.h>
 #include <proto/dos.h>
+
+#include <string.h>
+
 #include "dos_intern.h"
 
 /*****************************************************************************

@@ -1,6 +1,5 @@
 /*
-    Copyright © 2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2018, The AROS Development Team. All rights reserved.
 
     Prelude for common code block to format a string like printf().
 */
@@ -58,7 +57,7 @@ static size_t format_long(char *buffer, char type, int base, unsigned long v)
             base = 8;
         break;
 
-    default:	/* 'd' and 'u' */
+    default:    /* 'd' and 'u' */
         /* Use slow divide operations for decimal numbers */
         do
         {

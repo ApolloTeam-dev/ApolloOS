@@ -1,9 +1,7 @@
 /*
-    Copyright © 2011-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2011-2017, The AROS Development Team. All rights reserved.
 
     Desc: Common trap handling routines for x86 CPU
-    Lang: English
 */
 
 #include <exec/execbase.h>
@@ -69,18 +67,18 @@ void cpu_Trap(struct ExceptionContext *regs, unsigned long error_code, unsigned 
     D(bug("[Kernel] Trap exception %u\n", irq_number));
 
     if (krnRunExceptionHandlers(KernelBase, irq_number, regs))
-	return;
+        return;
 
     if ((irq_number < AMIGATRAP_COUNT) && (AmigaTraps[irq_number] != -1))
     {
         D(bug("[Kernel] Passing on to exec, Amiga trap %d\n", AmigaTraps[irq_number]));
 
-	if (core_Trap(AmigaTraps[irq_number], regs))
-	{
-	    /* If the trap handler returned, we can continue */
-	    D(bug("[Kernel] Trap handler returned\n"));
-	    return;
-	}
+        if (core_Trap(AmigaTraps[irq_number], regs))
+        {
+            /* If the trap handler returned, we can continue */
+            D(bug("[Kernel] Trap handler returned\n"));
+            return;
+        }
     }
 
     bug("[Kernel] UNHANDLED EXCEPTION %lu\n", irq_number);

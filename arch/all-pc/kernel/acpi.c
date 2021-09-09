@@ -1,6 +1,5 @@
 /*
-    Copyright © 2017-2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2017-2020, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/asmcall.h>
@@ -10,6 +9,8 @@
 #include <proto/kernel.h>
 
 #include <aros/symbolsets.h>
+
+#include <resources/kernel.h>
 
 #include <inttypes.h>
 #include <string.h>
@@ -41,6 +42,8 @@ int acpi_ScanTableEntries(CONST ACPI_TABLE_HEADER *table, ULONG thl, UINT8 type,
     UINT8 *table_entry = (UINT8 *)table + thl;
     int count;
 
+    D(bug("[Kernel:ACPI] %s(0x%p)\n", __func__, table));
+
     for (count = 0; table_entry < table_end; table_entry += ((ACPI_SUBTABLE_HEADER *)table_entry)->Length) {
         ACPI_SUBTABLE_HEADER *sh = (ACPI_SUBTABLE_HEADER *)table_entry;
         if (sh->Type == (UINT8)type) {
@@ -55,6 +58,95 @@ int acpi_ScanTableEntries(CONST ACPI_TABLE_HEADER *table, ULONG thl, UINT8 type,
     }
 
     return count;
+}
+
+ACPI_STATUS acpiAttachDevResource(ACPI_RESOURCE *resource, void *Context)
+{
+    struct TagItem irqAttribs[] =
+    {
+        { KERNELTAG_IRQ_POLARITY,       0       },
+        { KERNELTAG_IRQ_TRIGGERLEVEL,   0       },
+        { TAG_DONE,                     0       }
+    };
+    D(
+        bug("[Kernel:ACPI] %s(0x%p)\n", __func__, resource);
+        bug("[Kernel:ACPI] %s: Res Type #%u\n", __func__, resource->Type);
+    )
+    switch (resource->Type) {
+        case ACPI_RESOURCE_TYPE_IRQ:
+            {
+                struct acpi_resource_irq *irq  = &resource->Data.Irq;
+                D(
+                    bug("[Kernel:ACPI] %s: - ACPI_RESOURCE_TYPE_IRQ\n", __func__);
+                    bug("[Kernel:ACPI] %s:       IRQ #%u, Pol = %u, TrigLvl = %u\n", __func__, irq->Interrupts[0], irq->Polarity, irq->Triggering);
+                )
+                if (irq->Triggering == ACPI_LEVEL_SENSITIVE)
+                    irqAttribs[1].ti_Data = 1;
+                else
+                    irqAttribs[1].ti_Data = 2;
+
+                if (irq->Polarity != ACPI_ACTIVE_HIGH)
+                    irqAttribs[0].ti_Data = 2;
+                else
+                    irqAttribs[0].ti_Data = 1;
+
+                /* Update delivery information */
+                KrnModifyIRQA(irq->Interrupts[0], irqAttribs);
+            }
+            break;
+        case ACPI_RESOURCE_TYPE_EXTENDED_IRQ:
+            {
+                struct acpi_resource_extended_irq *eirq = &resource->Data.ExtendedIrq;
+                D(
+                    bug("[Kernel:ACPI] %s: - ACPI_RESOURCE_TYPE_EXTENDED_IRQ\n", __func__);
+                    bug("[Kernel:ACPI] %s:       IRQ #%u, Pol = %u, TrigLvl = %u\n", __func__, eirq->Interrupts[0], eirq->Polarity, eirq->Triggering);
+                )
+                if (eirq->Triggering == ACPI_LEVEL_SENSITIVE)
+                    irqAttribs[1].ti_Data = 1;
+                else
+                    irqAttribs[1].ti_Data = 2;
+
+                if (eirq->Polarity != ACPI_ACTIVE_HIGH)
+                    irqAttribs[0].ti_Data = 2;
+                else
+                    irqAttribs[0].ti_Data = 1;
+
+                /* Update delivery information */
+                KrnModifyIRQA(eirq->Interrupts[0], irqAttribs);
+            }
+            break;
+    }
+    return AE_OK;
+}
+
+static ACPI_STATUS acpiInitDevice(ACPI_HANDLE handle, ULONG level, void *context, void **return_value)
+{
+    ACPI_DEVICE_INFO *devInfo = NULL;
+    ACPI_STATUS             Status;
+
+    D(bug("[Kernel:ACPI] %s(0x%p)\n", __func__, handle);)
+ 
+    /* retrieve extra information about the device */
+    Status = AcpiGetObjectInfo(handle, &devInfo);
+    if (ACPI_SUCCESS(Status))
+    {
+#if (0)
+        char devPath[80];
+        ACPI_BUFFER nameBuffer = { .Length = 80, devPath };
+        Status = AcpiGetName(handle, ACPI_FULL_PATHNAME, &nameBuffer);
+        if (Status != AE_BUFFER_OVERFLOW)
+        {
+          bug("[Kernel:ACPI] %s: device '%s'\n", __func__, devPath);
+        }
+#endif
+        Status = AcpiWalkResources(handle, "_CRS", acpiAttachDevResource, NULL);
+        if (ACPI_FAILURE(Status))
+        {
+            D(bug("[Kernel:ACPI] %s: failed to enumerate ACPI Device Resources\n", __func__));
+        }
+    }
+    FreeVec(devInfo);
+    return AE_OK;
 }
 
 /* Initialize ACPI */
@@ -152,6 +244,13 @@ void acpi_Init(struct PlatformData *pdata)
                 D(xtpicICInstID =) krnAddInterruptController(KernelBase, &i8259a_IntrController);
                 D(bug("[Kernel:ACPI] %s: Registered i8259A IC ID #%d:%d\n", __func__, ICINTR_ICID(xtpicICInstID), ICINTR_INST(xtpicICInstID)));
             }
+            D(bug("[Kernel:ACPI] %s: Scanning ACPI Device tree..\n", __func__));
+            Status = AcpiGetDevices(NULL, acpiInitDevice, pdata->kb_ACPI, NULL);
+            if (ACPI_FAILURE(Status))
+            {
+                D(bug("[Kernel:ACPI] %s: failed to enumerate ACPI Devices\n", __func__));
+            }
         }
     }
+    D(bug("[Kernel:ACPI] %s: finished\n", __func__));
 }

@@ -1,6 +1,5 @@
 /*
-    Copyright © 2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2013, The AROS Development Team. All rights reserved.
 */
 
 #include <intuition/diattr.h>
@@ -91,7 +90,7 @@
  */
 
 {
-    AROS_LIBFUNC_INIT 
+    AROS_LIBFUNC_INIT
 
     struct GfxBase *GfxBase = GetPrivIBase(IntuitionBase)->GfxBase;
     ULONG pen;

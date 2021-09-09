@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 
     C99 function scanf().
 */
@@ -14,18 +13,18 @@
     NAME */
 #include <stdio.h>
 
-	int scanf (
+        int __posixc_scanf (
 
 /*  SYNOPSIS */
-	const char * format,
-	...)
+        const char * format,
+        ...)
 
 /*  FUNCTION
 
     INPUTS
 
     RESULT
-	The number of converted parameters
+        The number of converted parameters
 
     NOTES
 
@@ -34,8 +33,8 @@
     BUGS
 
     SEE ALSO
-	fscanf(), vscanf(), vfscanf(), stdc.library/sscanf(),
-        stdc.library/vsscanf()
+        __posixc_fscanf(), __posixc_vscanf(), __posixc_vfscanf(),
+        stdc.library/sscanf(), stdc.library/vsscanf()
 
     INTERNALS
 

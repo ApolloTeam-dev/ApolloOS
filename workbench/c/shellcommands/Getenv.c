@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Getenv CLI command
-    Lang: English
 */
 
 /*****************************************************************************
@@ -84,7 +82,7 @@ AROS_SHA(STRPTR, ,NAME,/A,NULL))
     {
         Printf("%s\n", Var_Value);
 
-	return RETURN_OK;
+        return RETURN_OK;
     }
 
     SetIoErr(ERROR_OBJECT_NOT_FOUND);

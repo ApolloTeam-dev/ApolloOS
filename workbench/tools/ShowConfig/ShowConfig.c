@@ -5,7 +5,7 @@
 #include <resources/processor.h>
 
 #include <proto/aros.h>
-#include <proto/hpet.h>
+#include <proto/clocksource.h>
 #include <proto/kernel.h>
 #include <proto/exec.h>
 #include <proto/utility.h>
@@ -14,6 +14,11 @@
 #include <stdio.h>
 
 #include "cpuspecific.h"
+
+#define APPNAME "ShowConfig"
+#define VERSION "ShowConfig 0.3"
+
+const char version[] = "$VER: " VERSION " (" ADATE ")\n";
 
 APTR ProcessorBase = NULL;
 char execextra[100];
@@ -173,7 +178,7 @@ int main()
 {
     struct MemHeader *mh;
     APTR KernelBase;
-    APTR HPETBase;
+    APTR CSBase;
     int offset = 0;
 
 #if (__WORDSIZE==64)
@@ -201,18 +206,30 @@ int main()
     if (ProcessorBase)
         PrintProcessorInformation();
 
-    HPETBase = OpenResource("hpet.resource");
-    if (HPETBase)
+    KernelBase = OpenResource("kernel.resource");
+    if (KernelBase)
     {
-    	const char *owner;
+        CSBase = (APTR)KrnGetSystemAttr(KATTR_ClockSource);
+        if (CSBase != (APTR)-1)
+                printf("Kernel Clock Source:\t%s\n", ((struct Node *)CSBase)->ln_Name);
+    }
+
+    CSBase = OpenResource("hpet.resource");
+    if (CSBase)
+    {
+    	const struct Node *owner;
+        struct Node unusedtsunit =
+        {
+            .ln_Name = "Available for use"
+        };
     	ULONG i = 0;
 
-	while (GetUnitAttrs(i, HPET_UNIT_OWNER, &owner, TAG_DONE))
+	while (GetCSUnitAttrs(i, CLOCKSOURCE_UNIT_OWNER, &owner, TAG_DONE))
 	{
 	    if (!owner)
-	    	owner = "Available for use";
+	    	owner = &unusedtsunit;
 
-	    printf("HPET %u:\t\t%s\n", (unsigned)(++i), owner);
+	    printf("HPET %02u:\t\t%s\n", (unsigned)(++i), owner->ln_Name);
 	}
     }
 
@@ -229,7 +246,7 @@ int main()
         printf(")\n");
     }
 
-    KernelBase = OpenResource("kernel.resource");
+
     if (KernelBase)
     {
 	struct TagItem *bootinfo = KrnGetBootInfo();

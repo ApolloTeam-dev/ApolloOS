@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2008, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2008, The AROS Development Team. All rights reserved.
 
     Desc: Format a string and emit it.
-    Lang: english
 */
 #include <exec/execbase.h>
 #include <stdarg.h>
@@ -14,13 +12,13 @@
 
     NAME */
 
-	STRPTR NewRawDoFmt(
+        STRPTR NewRawDoFmt(
 
 /*  SYNOPSIS */
-	CONST_STRPTR FormatString,
-	VOID_FUNC PutChProc,
-	APTR PutChData,
-	... )
+        CONST_STRPTR FormatString,
+        VOID_FUNC PutChProc,
+        APTR PutChData,
+        ... )
 
 /*  FUNCTION
         This is the varargs version of exec.library/VNewRawDoFmt().

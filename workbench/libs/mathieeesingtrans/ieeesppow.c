@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2003, The AROS Development Team. All rights reserved.
 */
 
 #include "mathieeesingtrans_intern.h"
@@ -39,7 +38,7 @@
 {
     AROS_LIBFUNC_INIT
     
-    /* 
+    /*
         a ^ b  = e^(b * ln a )
         y ^ x  = e^(x * ln y )
     */
@@ -52,7 +51,7 @@
     Res = IEEESPMul(Res, x);
     Res = IEEESPExp(Res);
     
-    /* 
+    /*
         if y < 0 and x was and even integer, the result is positive, otherwise
         it is negative.
     */

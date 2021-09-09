@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc: Create a new BitMap
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -387,7 +385,7 @@ static HIDDT_StdPixFmt const cyber2hidd_pixfmt[] =
                 {
                     OOP_Object *pf;
 
-                    /* 
+                    /*
                      * It is possible that the HIDD had to allocate a larger depth than that supplied, so
                      * we should get back the correct depth.
                      * This is because layers.library might want to allocate offscreen bitmaps to
@@ -448,7 +446,7 @@ static HIDDT_StdPixFmt const cyber2hidd_pixfmt[] =
                         if (oldcolmap)
                             OOP_DisposeObject(oldcolmap);
 
-                        HIDD_BM_COLMAP(nbm)     = HIDD_BM_COLMAP(friend_bitmap);                            
+                        HIDD_BM_COLMAP(nbm)     = HIDD_BM_COLMAP(friend_bitmap);
                         HIDD_BM_PIXTAB(nbm)     = HIDD_BM_PIXTAB(friend_bitmap);
                         HIDD_BM_COLMOD(nbm)     = HIDD_BM_COLMOD(friend_bitmap);
                         HIDD_BM_REALDEPTH(nbm)  = HIDD_BM_REALDEPTH(friend_bitmap);

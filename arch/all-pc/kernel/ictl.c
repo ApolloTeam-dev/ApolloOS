@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2018, The AROS Development Team. All rights reserved.
 */
 
 #include <proto/arossupport.h>
@@ -94,8 +93,8 @@ void ictl_Initialize(struct KernelBase *KernelBase)
 #if (__WORDSIZE==64)
     if (!pdata->kb_APIC)
     {
-    	/* We are x86-64, so we should always have APIC. */
-    	krnPanic(KernelBase, "Failed to allocate APIC descriptor.");
+        /* We are x86-64, so we should always have APIC. */
+        krnPanic(KernelBase, "Failed to allocate APIC descriptor.");
     }
 #endif
 

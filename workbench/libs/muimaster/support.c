@@ -1,8 +1,7 @@
 /*
-    Copyright © 2002, The AROS Development Team. 
+    Copyright (C) 2002, The AROS Development Team.
     All rights reserved.
     
-    $Id$
 */
 
 #include <string.h>
@@ -55,7 +54,7 @@ ULONG ConvertKey(struct IntuiMessage * imsg)
 /**************************************************************************
  Convenient way to get an attribute of an object easily. If the object
  doesn't support the attribute this call returns an undefined value. So use
- this call only if the attribute is known to be known by the object. 
+ this call only if the attribute is known to be known by the object.
  Implemented as a macro when compiling with GCC.
 **************************************************************************/
 #ifndef __GNUC__

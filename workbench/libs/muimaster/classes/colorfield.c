@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2015, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2020, The AROS Development Team. All rights reserved.
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
@@ -31,9 +30,9 @@
 
 extern struct Library *MUIMasterBase;
 
-#define FLAG_FIXED_PEN 	    1
+#define FLAG_FIXED_PEN      1
 #define FLAG_PEN_ALLOCATED  2
-#define FLAG_NO_PEN 	    4
+#define FLAG_NO_PEN         4
 
 
 /****** Colorfield.mui/MUIA_Colorfield_Pen ***********************************
@@ -154,7 +153,7 @@ IPTR Colorfield__OM_NEW(struct IClass *cl, Object *obj, struct opSet *msg)
             break;
 
         case MUIA_Colorfield_Pen:
-            if ((data->pen = (UBYTE) tag->ti_Data) != -1)
+            if ((data->pen = (UBYTE) tag->ti_Data) != (UBYTE)-1)
                 data->flags |= FLAG_FIXED_PEN;
             break;
 
@@ -222,7 +221,7 @@ IPTR Colorfield__OM_SET(struct IClass *cl, Object *obj,
                 data->cm = NULL;
                 ReleasePen(cm, disposepen);
             }
-            if ((data->pen = (UBYTE) tag->ti_Data) != -1)
+            if ((data->pen = (UBYTE) tag->ti_Data) != (UBYTE)-1)
                 data->flags |= FLAG_FIXED_PEN;
             newcol = TRUE;
             break;
@@ -320,7 +319,7 @@ void Colorfield_SetupPen(Object *obj, struct Colorfield_DATA *data)
         {
             data->pen = (UBYTE) pen;
             data->flags |= FLAG_PEN_ALLOCATED;
-        }    
+        }
     }
 }
 

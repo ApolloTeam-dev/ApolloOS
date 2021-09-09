@@ -1,6 +1,5 @@
 /*
-    Copyright © 2009, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2009, The AROS Development Team. All rights reserved.
 */
 
 #include <libraries/muiscreen.h>
@@ -19,10 +18,10 @@
         AROS_LH1(void, MUIS_AddInfoClient,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct MUIS_InfoClient *, sic,  A0),
+        AROS_LHA(struct MUIS_InfoClient *, sic,  A0),
 
 /*  LOCATION */
-	struct MUIScreenBase_intern *, MUIScreenBase, 13, MUIScreen)
+        struct MUIScreenBase_intern *, MUIScreenBase, 13, MUIScreen)
 
 /*  FUNCTION
 

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 #include "icon_intern.h"
 
@@ -12,20 +10,20 @@
     NAME */
 #include <proto/icon.h>
 
-	AROS_LH1(void, FreeFreeList,
+        AROS_LH1(void, FreeFreeList,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct FreeList *, freelist, A0),
+        AROS_LHA(struct FreeList *, freelist, A0),
 
 /*  LOCATION */
-	struct IconBase *, IconBase, 9, Icon)
+        struct IconBase *, IconBase, 9, Icon)
 
 /*  FUNCTION
-	Frees all memory chunks in the freelist (previously inserted into
-	it via AddFreeList()).
+        Frees all memory chunks in the freelist (previously inserted into
+        it via AddFreeList()).
 
     INPUTS
-	freelist  - pointer to FreeList struct. It is safe to use NULL.
+        freelist  - pointer to FreeList struct. It is safe to use NULL.
 
     RESULT
 
@@ -36,7 +34,7 @@
     BUGS
 
     SEE ALSO
-	AddFreeList()
+        AddFreeList()
 
     INTERNALS
 

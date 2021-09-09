@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 */
 
 #include "__dirdesc.h"
@@ -11,10 +10,10 @@
 
 #include <dirent.h>
 
-	long telldir(
+        long telldir(
 
 /*  SYNOPSIS */
-	DIR *dir)
+        DIR *dir)
 
 /*  FUNCTION
 

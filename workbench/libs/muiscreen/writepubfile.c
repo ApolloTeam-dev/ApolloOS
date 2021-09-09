@@ -1,6 +1,5 @@
 /*
-    Copyright © 2009, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2009, The AROS Development Team. All rights reserved.
 */
 
 #include <libraries/muiscreen.h>
@@ -21,11 +20,11 @@
         AROS_LH2(BOOL, MUIS_WritePubFile,
 
 /*  SYNOPSIS */
-	AROS_LHA(APTR, pf,  A0),
-	AROS_LHA(struct MUI_PubScreenDesc *, desc,  A1),
+        AROS_LHA(APTR, pf,  A0),
+        AROS_LHA(struct MUI_PubScreenDesc *, desc,  A1),
 
 /*  LOCATION */
-	struct Library *, MUIScreenBase, 12, MUIScreen)
+        struct Library *, MUIScreenBase, 12, MUIScreen)
 
 /*  FUNCTION
 
@@ -50,7 +49,7 @@
 
     D(bug("MUIS_WritePubFile(%p, %p)\n", pf, desc));
 
-    struct IFFHandle *iff = (struct IFFHandle *) pf; 
+    struct IFFHandle *iff = (struct IFFHandle *) pf;
     BOOL retval = FALSE;
     struct MUI_PubScreenDescArray desc_tmp;
 
@@ -82,11 +81,11 @@
 
     if (!PushChunk(iff, ID_PREF, ID_MPUB, sizeof(struct MUI_PubScreenDescArray)))
     {
-	if (WriteChunkBytes(iff, &desc_tmp, sizeof(struct MUI_PubScreenDescArray)) == sizeof(struct MUI_PubScreenDescArray))
-	{
-	    retval = TRUE;
-	}
-	PopChunk(iff);
+        if (WriteChunkBytes(iff, &desc_tmp, sizeof(struct MUI_PubScreenDescArray)) == sizeof(struct MUI_PubScreenDescArray))
+        {
+            retval = TRUE;
+        }
+        PopChunk(iff);
     }
 
     return retval;

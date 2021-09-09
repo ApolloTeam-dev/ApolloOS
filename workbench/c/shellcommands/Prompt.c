@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Prompt CLI command
-    Lang: English
 */
 
 /*****************************************************************************
@@ -27,13 +25,13 @@
     INPUTS
 
         PROMPT  --  The prompt to set as a string. The following commands
-	            may be used in a printf kind of style.
+                    may be used in a printf kind of style.
 
-		    N  --  cli number
-		    S  --  name of the current directory
-		    R  --  return code of the last operation
+                    N  --  cli number
+                    S  --  name of the current directory
+                    R  --  return code of the last operation
 
-		    If no prompt is specified "%N.%S> " is used as default.
+                    If no prompt is specified "%N.%S> " is used as default.
 
     RESULT
 
@@ -45,7 +43,7 @@
 
         Prompt "Oepir Risti.%N> " gives:
 
-	Oepir Risti.10>      (if the CLI number was 10)
+        Oepir Risti.10>      (if the CLI number was 10)
 
     BUGS
 
@@ -75,9 +73,9 @@ AROS_SHA(STRPTR, ,PROMPT, , "%N.%S> "))
 
     if (SetPrompt(SHArg(PROMPT)) == DOSFALSE)
     {
-	PrintFault(IoErr(), "Prompt");
+        PrintFault(IoErr(), "Prompt");
 
-	return RETURN_ERROR;
+        return RETURN_ERROR;
     }
 
     return RETURN_OK;

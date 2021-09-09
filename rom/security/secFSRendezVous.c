@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2019, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -13,15 +12,15 @@
 /*****************************************************************************
 
     NAME */
-	AROS_LH0(BOOL, secFSRendezVous,
+        AROS_LH0(BOOL, secFSRendezVous,
 
 /*  SYNOPSIS */
 
 /*  LOCATION */
-	struct SecurityBase *, secBase, 18, Security)
+        struct SecurityBase *, secBase, 18, Security)
 
 /*  FUNCTION
-	Freeze a task or process
+        Freeze a task or process
 
     INPUTS
 
@@ -30,7 +29,7 @@
 
 
     NOTES
-	This function may be called by root only!
+        This function may be called by root only!
 
     EXAMPLE
 

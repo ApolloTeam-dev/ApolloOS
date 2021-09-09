@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Why CLI command
-    Lang: English
 */
 
 /******************************************************************************
@@ -22,9 +20,9 @@
     FUNCTION
 
         Print additional information why an operation failed. Ordinarily
-	when a command fails a brief message is printed that typically
-	includes the name of the command that failed but provides few
-	details. Why fills in details related to the failed operation.
+        when a command fails a brief message is printed that typically
+        includes the name of the command that failed but provides few
+        details. Why fills in details related to the failed operation.
 
     INPUTS
 
@@ -67,9 +65,9 @@ AROS_SH0(Why, 41.3)
         lasterror = cli->cli_Result2;
 
         if (cli->cli_ReturnCode == 0 || lasterror == 0)
-	{
+        {
             VPrintf("The last command did not set a return-value\n", NULL);
-	}
+        }
         else
         {
             PrintFault(lasterror, "The last command failed, reason");

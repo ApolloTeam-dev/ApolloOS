@@ -1,6 +1,5 @@
 /*
     Copyright (C) 2003-2018, The AROS Development Team.
-    $Id$
 */
 
 #include <exec/types.h>
@@ -23,6 +22,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
 #include "locale.h"
 #include "support.h"
 #include "saveinfo.h"
@@ -295,7 +296,7 @@ AROS_UFH3(void, select_function,
             pciids_GetDeviceName(vendor, val, buf, MAX_STRING_LENGTH));
         product = val;
         strcpy(SaveDeviceInfo.Product_name,
-            pciids_GetDeviceName(vendor, val, buf, MAX_STRING_LENGTH)); 
+            pciids_GetDeviceName(vendor, val, buf, MAX_STRING_LENGTH));
 
         OOP_GetAttr(obj, aHidd_PCIDevice_SubsystemVendorID, (APTR)&val);
         subvendor = val;
@@ -612,7 +613,7 @@ BOOL GUIinit()
                                         MUIA_Background, MUII_TextBack,
                                         MUIA_Text_SetMax, FALSE,
                                         MUIA_Text_Contents, "",
-                                    End,                                    
+                                    End,
                                 End,
                                 Child, ColGroup(6),
                                     Child, Label(_(MSG_VENDORID)),
@@ -716,8 +717,8 @@ BOOL GUIinit()
     if (app)
     {
         /* Quit application if the windowclosegadget or the esc key is pressed. */
-        DoMethod(MainWindow, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, 
-                 (IPTR)app, 2, 
+        DoMethod(MainWindow, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
+                 (IPTR)app, 2,
                  MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 
         DoMethod(DriverList, MUIM_Notify, MUIA_List_Active, MUIV_EveryTime,

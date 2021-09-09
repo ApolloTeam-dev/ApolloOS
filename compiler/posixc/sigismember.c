@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function sigismember().
 */
@@ -12,11 +11,11 @@
     NAME */
 #include <signal.h>
 
-	int sigismember (
+        int sigismember (
 
 /*  SYNOPSIS */
-	const sigset_t *set,
-	int signum)
+        const sigset_t *set,
+        int signum)
 
 /*  FUNCTION
 

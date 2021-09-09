@@ -1,13 +1,11 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 */
-
-#include <signal.h>
 
 #include "kernel_base.h"
 #include "kernel_intern.h"
 
+#include <signal.h>
 
 struct SignalTranslation const sigs[] = {
     {SIGILL   ,  4,  7},

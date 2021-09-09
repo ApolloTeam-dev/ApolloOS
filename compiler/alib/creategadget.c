@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Create a gadtools gadget
-    Lang: english
 */
 
 #define AROS_TAGRETURNTYPE struct Gadget *
@@ -21,14 +19,14 @@ extern struct Library * GadToolsBase;
 #define NO_INLINE_STDARG /* turn off inline def */
 #include <proto/gadtools.h>
 
-	struct Gadget * CreateGadget (
+        struct Gadget * CreateGadget (
 
 /*  SYNOPSIS */
-	ULONG kind,
-	struct Gadget * previous,
-	struct NewGadget * ng,
-	Tag		tag1,
-	...		)
+        ULONG kind,
+        struct Gadget * previous,
+        struct NewGadget * ng,
+        Tag             tag1,
+        ...             )
 
 /*  FUNCTION
         Varargs version of gadtools.library/CreateGadgetA().
@@ -44,7 +42,7 @@ extern struct Library * GadToolsBase;
     BUGS
 
     SEE ALSO
-	gadtools.library/CreateGadgetA()
+        gadtools.library/CreateGadgetA()
 
     INTERNALS
 

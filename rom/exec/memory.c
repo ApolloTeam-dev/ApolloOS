@@ -1,11 +1,12 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
 #include <exec/rawfmt.h>
 #include <exec/memheaderext.h>
+
+#include <string.h>
 
 #include "exec_intern.h"
 #include "exec_util.h"
@@ -758,7 +759,7 @@ void stdDealloc(struct MemHeader *freeList, struct MemHeaderAllocatorCtx *mhac, 
     }
 }
 
-/* 
+/*
  * TODO:
  * During transition period four routines below use nommu allocator.
  * When transition is complete they should use them only if MMU

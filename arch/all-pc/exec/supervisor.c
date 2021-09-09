@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 
     Desc: Supervisor() - Execute some code in a privileged environment.
-    Lang: english
 */
 
 #include <aros/libcall.h>
@@ -12,8 +10,8 @@
 #include "kernel_syscall.h"
 
 AROS_LH1I(IPTR, Supervisor,
-	 AROS_LHA(void *, userFunction, A5),
-	 struct ExecBase *, SysBase, 5, Exec)
+         AROS_LHA(void *, userFunction, A5),
+         struct ExecBase *, SysBase, 5, Exec)
 {
     AROS_LIBFUNC_INIT
 

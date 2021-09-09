@@ -1,14 +1,12 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
  
     Desc: Dir CLI command
-    Lang: English
 */
 
-#define MAX_PATH_LEN			512
+#define MAX_PATH_LEN                    512
 
-#define USE_SOFTLINKCHECK		0
+#define USE_SOFTLINKCHECK               0
 
 #include <exec/devices.h>
 #include <exec/io.h>
@@ -53,7 +51,7 @@
  
     FUNCTION
  
-    DIR displays the file or directory contained in the current or 
+    DIR displays the file or directory contained in the current or
     specified directory. Directories get listed first, then in alphabetical
     order, the files are listed in two columns. Pressing CTRL-C aborts the
     directory listing.
@@ -67,18 +65,18 @@
     INTER  --  Enter interactive mode.
  
                Interactive listing mode stops after each name to display
-	       a question mark at which you can enter commands. These
-	       commands are:
+               a question mark at which you can enter commands. These
+               commands are:
  
-	       Return      --  Goto the next file or directory.
-	       E/ENTER     --  Enters a directory.
-	       B/BACK      --  Go back one directory level.
-	       DEL/DELETE  --  Delete a file or an empty directory.
+               Return      --  Goto the next file or directory.
+               E/ENTER     --  Enters a directory.
+               B/BACK      --  Go back one directory level.
+               DEL/DELETE  --  Delete a file or an empty directory.
                T/TYPE      --  Display content of a file.
                C/COM       --  Let the file or directory be the input of
-	                       a DOS command (which specified after the C or
-			       COM or specified separately later).
-	       Q/QUIT      --  Quit interactive mode.
+                               a DOS command (which specified after the C or
+                               COM or specified separately later).
+               Q/QUIT      --  Quit interactive mode.
  
     RESULT
  
@@ -472,9 +470,9 @@ static
 LONG doPatternDir(CONST_STRPTR dirPat, BOOL all, BOOL doDirs, BOOL doFiles, BOOL inter)
 {
     struct table files;
-    struct AnchorPath *ap;	/* Matching structure */
+    struct AnchorPath *ap;      /* Matching structure */
 
-    LONG  match;		/* Loop variable */
+    LONG  match;                /* Loop variable */
     LONG  error = RETURN_FAIL;
 
     LONG  ioerr = 0;

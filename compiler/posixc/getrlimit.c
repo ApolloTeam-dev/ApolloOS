@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function getrlimit().
 */
@@ -14,21 +13,21 @@
 
     NAME */
 
-	int getrlimit (
+        int getrlimit (
 
 /*  SYNOPSIS */
-	int resource,
-	struct rlimit *rlp)
+        int resource,
+        struct rlimit *rlp)
 
 /*  FUNCTION
-	Get the limits of certain system resources
+        Get the limits of certain system resources
 
     INPUTS
-	resource - the resource type to get
-	rlp      - returned resource information
+        resource - the resource type to get
+        rlp      - returned resource information
 
     RESULT
-	On success, returns 0. -1 and errno on error.
+        On success, returns 0. -1 and errno on error.
 
     NOTES
 
@@ -37,7 +36,7 @@
     BUGS
 
     SEE ALSO
-	setrlimit()
+        setrlimit()
 
     INTERNALS
 
@@ -47,7 +46,7 @@
 
     switch (resource) {
     case RLIMIT_NOFILE: /* needed for getdtablesize() */
-        rlp->rlim_cur = rlp->rlim_max = __getfdslots(); 
+        rlp->rlim_cur = rlp->rlim_max = __getfdslots();
         break;
     default:
         retval = -1;

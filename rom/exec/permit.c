@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc: Permit() - Allow tasks switches to occur.
-    Lang: english
 */
 
 #define DEBUG 0
@@ -50,7 +48,7 @@
 
         (*) On EXECSMP builds, Forbid() only aplies to the processor
             it is called from. Data which needs to be protected from
-            parallel access will also require a spinlock.  
+            parallel access will also require a spinlock.
 
     EXAMPLE
         On uniprocessor builds of AROS, it is generally not necessary/

@@ -1,9 +1,8 @@
 /*
-    Copyright © 1999, David Le Corfec.
-    Copyright © 2002-2015, The AROS Development Team.
+    Copyright (C) 2002-2020, The AROS Development Team.
+    Copyright (C) 1999, David Le Corfec.
     All rights reserved.
 
-    $Id$
 */
 
 #include <exec/types.h>
@@ -425,7 +424,7 @@ static IPTR Application__OM_NEW(struct IClass *cl, Object *obj,
     get(data->app_GlobalInfo.mgi_Configdata, MUIA_Configdata_ZunePrefs,
         &data->app_GlobalInfo.mgi_Prefs);
 
-//    D(bug("muimaster.library/application.c: Message Port created at 0x%lx\n",
+//    D(bug("muimaster.library/application.c: Message Port created at 0x%p\n",
 //    data->app_GlobalInfo.mgi_WindowPort));
 
     /* Setup timer stuff */
@@ -1347,7 +1346,7 @@ static IPTR Application__OM_ADDMEMBER(struct IClass *cl, Object *obj,
 {
     struct MUI_ApplicationData *data = INST_DATA(cl, obj);
 
-    D(bug("Application_AddMember: Adding 0x%lx to window member list\n",
+    D(bug("Application_AddMember: Adding 0x%p to window member list\n",
             msg->opam_Object));
 
     DoMethodA(data->app_WindowFamily, (Msg) msg);
@@ -1365,7 +1364,7 @@ static IPTR Application__OM_REMMEMBER(struct IClass *cl, Object *obj,
 {
     struct MUI_ApplicationData *data = INST_DATA(cl, obj);
 
-    D(bug("Application_RemMember: Removing 0x%lx from window member list\n",
+    D(bug("Application_RemMember: Removing 0x%p from window member list\n",
             msg->opam_Object));
 
     DoMethod(msg->opam_Object, MUIM_DisconnectParent);
@@ -2206,8 +2205,8 @@ static IPTR Application__MUIM_Save(struct IClass *cl, Object *obj,
 *
 *   FUNCTION
 *       Redraw any damaged portions within all of the application's windows.
-*       This method is normally only used in hooks that handle Intuition 
-*       messages received while modal requesters are open (e.g. ASL file 
+*       This method is normally only used in hooks that handle Intuition
+*       messages received while modal requesters are open (e.g. ASL file
 *       requesters). If such a hook is not used, a modal requester may damage
 *       the contents of your application windows when the requester is moved.
 *

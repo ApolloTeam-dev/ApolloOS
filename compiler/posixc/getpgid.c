@@ -1,6 +1,5 @@
 /*
-    Copyright © 2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2017, The AROS Development Team. All rights reserved.
 */
 
 #include <sys/types.h>
@@ -18,13 +17,13 @@
     NAME */
 #include <unistd.h>
 
-	pid_t getpgid(
+        pid_t getpgid(
 
 /*  SYNOPSIS */
-	pid_t pid)
+        pid_t pid)
 
 /*  FUNCTION
-	Returns the process group ID for the specified process with ID 'pid'.
+        Returns the process group ID for the specified process with ID 'pid'.
 
     INPUTS
 

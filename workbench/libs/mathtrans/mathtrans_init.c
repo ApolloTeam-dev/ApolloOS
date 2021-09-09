@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2006, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2006, The AROS Development Team. All rights reserved.
 
     Desc: Init of mathtrans.library
-    Lang: english
 */
 
 #include <aros/symbolsets.h>
@@ -21,7 +19,7 @@ static int Init(LIBBASETYPEPTR LIBBASE)
 {
     MathBase = OpenLibrary ("mathffp.library", 0);
     if (!MathBase)
-	return FALSE;
+        return FALSE;
 
     return TRUE;
 }
@@ -29,7 +27,7 @@ static int Init(LIBBASETYPEPTR LIBBASE)
 static int Expunge(LIBBASETYPEPTR LIBBASE)
 {
     if (MathBase)
-	CloseLibrary ((struct Library *)MathBase);
+        CloseLibrary ((struct Library *)MathBase);
 
     return TRUE;
 }

@@ -1,12 +1,10 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 
     Desc: Locale_RawDoFmt - locale.library's private replacement
           of exec.library/RawDoFmt function. IPrefs will install
           the patch.
 
-    Lang: english
 */
 
 #include <exec/rawfmt.h>
@@ -17,8 +15,6 @@
 #include <aros/asmcall.h>
 #include <stdarg.h>
 #include <alloca.h>
-
-#include <clib/alib_protos.h>
 
 AROS_UFH3(VOID, LocRawDoFmtFormatStringFunc,
     AROS_UFHA(struct Hook *, hook, A0),
@@ -211,19 +207,14 @@ AROS_UFH3(VOID, LocRawDoFmtFormatStringFunc_SysV,
     ULONG *iStream;
     APTR dStream;
     ULONG iSize = 0, dSize = 0;
-#if defined(__arm__) || defined(__x86_64__) || defined(__powerpc__)
-    va_list nullarg = {};
-#else
-    va_list nullarg = 0;
-#endif
 
     /* Scan to determine the location of the positional arguments */
-    GetDataStreamFromFormat(FormatString, nullarg, NULL, NULL,
+    localeDataStreamFromFormat(FormatString, NULL, NULL,
                             NULL, &iSize);
     iStream = alloca(iSize);
 
     /* Scan to determine the size of the repacked datastream */
-    GetDataStreamFromFormat(FormatString, nullarg, NULL, &dSize,
+    localeDataStreamFromFormat(FormatString, NULL, &dSize,
                             iStream, &iSize);
     dStream = alloca(dSize);
 

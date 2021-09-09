@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
  
     Tell Workbench task that it shall open/close its windows.
 */
@@ -21,7 +20,7 @@ ULONG TellWBTaskToOpenWindows(struct IntuitionBase *IntuitionBase)
                             FindTask(NULL)->tc_Node.ln_Name));
     if
     (
-           GetPrivIBase(IntuitionBase)->WorkBenchMP != NULL 
+           GetPrivIBase(IntuitionBase)->WorkBenchMP != NULL
         && GetPrivIBase(IntuitionBase)->WorkBenchMP->mp_SigTask != FindTask(NULL)
     )
     {
@@ -127,8 +126,8 @@ ULONG TellWBTaskToCloseWindows(struct IntuitionBase *IntuitionBase)
         {
             /* Setup our message */
             imsg->ExecMessage.mn_ReplyPort = GetPrivIBase(IntuitionBase)->IntuiReplyPort;
-            imsg->Class     	    	   = IDCMP_WBENCHMESSAGE;
-            imsg->Code      	    	   = WBENCHCLOSE;
+            imsg->Class                    = IDCMP_WBENCHMESSAGE;
+            imsg->Code                     = WBENCHCLOSE;
 
             DEBUG_WORKBENCH(dprintf("TellWBTaskToCloseWindows: Send Msg\n"));
             /* Sends it to the handler asynchron */

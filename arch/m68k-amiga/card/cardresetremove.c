@@ -1,17 +1,15 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 
     Desc: CardResetRemove() function.
-    Lang: english
 */
 
 #include "card_intern.h"
 
 AROS_LH2(ULONG, CardResetRemove,
-	AROS_LHA(struct CardHandle*, handle, A1),
-	AROS_LHA(ULONG, flag, D0),
-	struct CardResource*, CardResource, 7, Card)
+        AROS_LHA(struct CardHandle*, handle, A1),
+        AROS_LHA(ULONG, flag, D0),
+        struct CardResource*, CardResource, 7, Card)
 {
     AROS_LIBFUNC_INIT
 
@@ -20,7 +18,7 @@ AROS_LH2(ULONG, CardResetRemove,
     CARDDEBUG(bug("CardResetRemove(%p,%08x)\n", handle, flag));
 
     if (!ISMINE)
-    	return 0;
+        return 0;
 
     CardResource->resetberr = flag ? GAYLE_IRQ_RESET : 0;
     gio->intreq = (0xff & ~(GAYLE_IRQ_RESET | GAYLE_IRQ_BERR)) | CardResource->resetberr;

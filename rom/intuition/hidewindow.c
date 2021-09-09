@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <proto/layers.h>
@@ -12,7 +11,7 @@
 struct HideWindowActionMsg
 {
     struct IntuiActionMsg  msg;
-    struct Window   	  *window;
+    struct Window         *window;
 };
 
 static VOID int_hidewindow(struct HideWindowActionMsg *msg,
@@ -35,13 +34,13 @@ static VOID int_hidewindow(struct HideWindowActionMsg *msg,
         Make a window invisible.
 
     INPUTS
-	window - The window to affect.
+        window - The window to affect.
 
     RESULT
-	Success indicator. On AROS this is always TRUE.
+        Success indicator. On AROS this is always TRUE.
 
     NOTES
-	This function is source-compatible with AmigaOS v4.
+        This function is source-compatible with AmigaOS v4.
         This function is also present in MorphOS v50, however
         considered private.
 
@@ -50,7 +49,7 @@ static VOID int_hidewindow(struct HideWindowActionMsg *msg,
     BUGS
 
     SEE ALSO
-	ShowWindow()
+        ShowWindow()
 
     INTERNALS
 

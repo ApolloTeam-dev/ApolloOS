@@ -1,0 +1,46 @@
+Assign EXISTS "DEBUG:" >NIL:
+If NOT WARN
+    Echo "## Unit Test Output is redirected to DEBUG:" >DEBUG:
+
+    ; Perform basic "Exec" type unit tests...
+    Execute S/Test cunit/exec/cunit-exec-types
+
+    ; Peform basic 'C' type unit tests..
+    Execute S/Test cunit/crt/stdc/cunit-crt-types
+
+    ; Peform basic 'genmodule' unit tests..
+    If EXISTS "SYS:Developer/Debug/Tests/Library/Libs"
+        Assign "LIBS:" "SYS:Developer/Debug/Tests/Library/Libs" ADD
+        Execute S/Test cunit/genmodule/library/cunit-genmodule-autoopen
+        Execute S/Test cunit/genmodule/library/cunit-genmodule-library
+        Execute S/Test cunit/genmodule/library/cunit-genmodule-relbase
+    EndIf
+
+    ; Perform basic "exec.library" unit tests...
+
+    ; Perform basic "utility.library" unit tests...
+
+    ; Perform basic "dos.library" unit tests...
+    Execute S/Test cunit/dos/cunit-dos-fileseek
+    Execute S/Test cunit/dos/cunit-dos-readargs
+
+    ; Perform basic "locale.library" unit tests...
+    Execute S/Test cunit/locale/cunit-locale-formatstring
+
+    ; Perform basic "gfx.hidd" unit tests...
+    Execute S/Test cunit/hidds/gfx/cunit-convertpixels
+
+    ; Perform basic "stdc.library" unit tests...
+
+    ; Perform basic "stdc.library" math unit tests...
+    Execute S/Test cunit/crt/stdc/math/cunit-crt-math
+
+    ; Perform basic "stdcio.library" unit tests...
+    Execute S/Test cunit/crt/stdc/cunit-crt-fileseek
+
+    ; Perform basic "posixc.library" unit tests...
+
+Endif
+
+; All done!
+Shutdown

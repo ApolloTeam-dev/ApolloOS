@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2002, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2002, The AROS Development Team. All rights reserved.
 */
 
 #include <stdlib.h>
@@ -10,11 +9,11 @@
 
     NAME */
 
-	int on_exit(
+        int on_exit(
 
 /*  SYNOPSIS */
-	void (*func)(int, void *),
-	void *arg)
+        void (*func)(int, void *),
+        void *arg)
 
 /*  FUNCTION
 

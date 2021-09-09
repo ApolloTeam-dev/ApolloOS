@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 
     Desc: SetDate CLI command
-    Lang: English
 */
 
 /*************************************************************************
@@ -159,10 +157,10 @@ int main(void)
 
             //VPrintf("%s\n", (IPTR *)&aPath->ap_Info.fib_FileName);
             if (  ((&aPath->ap_Info)->fib_DirEntryType >= 0)
-               && !(aPath->ap_Flags & APF_DIDDIR) 
+               && !(aPath->ap_Flags & APF_DIDDIR)
                && ((BOOL)args[ARG_ALL]))
             {
-            	aPath->ap_Flags |= APF_DODIR;
+                aPath->ap_Flags |= APF_DODIR;
             }
             SetFileDate(aPath->ap_Info.fib_FileName, &dt.dat_Stamp);
 
@@ -197,4 +195,4 @@ int main(void)
     }
     
     return retval;
-}    
+}

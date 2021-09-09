@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc: DosGetString() - Support for localized strings.
-    Lang: english
 */
 
 #include "dos_intern.h"
@@ -23,7 +21,7 @@
 
 /*  FUNCTION
         Internal DOS function, will return the string corresponding to
-        the number stringNum. 
+        the number stringNum.
 
     INPUTS
         stringNum - The number of the string you want.

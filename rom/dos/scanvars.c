@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 #include <aros/debug.h>
@@ -83,7 +81,7 @@
                 var = (struct LocalVar *)pr->pr_LocalVars.mlh_Head;
                 
                 ForeachNode(&pr->pr_LocalVars, var)
-                {       
+                {
                         if (var->lv_Node.ln_Type == LV_VAR)
                         {
                                 msg.sv_Name = var->lv_Node.ln_Name;
@@ -91,7 +89,7 @@
                                 msg.sv_VarLen = var->lv_Len;
                                 msg.sv_GDir = "";
                                 res = CallHookPkt(hook, userdata, &msg);
-                                if(res != 0) 
+                                if(res != 0)
                                         return(res);
                         }
                 }

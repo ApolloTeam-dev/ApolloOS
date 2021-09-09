@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function sigfillset().
 */
@@ -13,16 +12,16 @@
     NAME */
 #include <signal.h>
 
-	int sigfillset (
+        int sigfillset (
 
 /*  SYNOPSIS */
-	sigset_t *set)
+        sigset_t *set)
 
 /*  FUNCTION
         Initialise the signal set
 
     INPUTS
-        Set to initialise
+        Set to initialize
 
     RESULT
         "0" for success, "-1" for failure (errno contains error)
@@ -36,7 +35,7 @@
     SEE ALSO
 
     INTERNALS
-        POSIX.1-2001. 
+        POSIX.1-2001.
 
 ******************************************************************************/
 {

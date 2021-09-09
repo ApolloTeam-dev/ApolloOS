@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Set attributes of a gadtools gadget
-    Lang: english
 */
 
 #include "alib_intern.h"
@@ -19,14 +17,14 @@ extern struct Library * GadToolsBase;
 #define NO_INLINE_STDARG /* turn off inline def */
 #include <proto/gadtools.h>
 
-	void GT_SetGadgetAttrs (
+        void GT_SetGadgetAttrs (
 
 /*  SYNOPSIS */
-	struct Gadget    * gad,
+        struct Gadget    * gad,
         struct Window    * win,
         struct Requester * req,
-	Tag		   tag1,
-	...		   )
+        Tag                tag1,
+        ...                )
 
 /*  FUNCTION
         Varargs version of gadtools.library/GT_SetGadgetAttrsA().

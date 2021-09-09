@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2019, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -14,14 +13,14 @@
 /*****************************************************************************
 
     NAME */
-	AROS_LH1(struct secExtOwner *, secUserInfo2ExtOwner,
+        AROS_LH1(struct secExtOwner *, secUserInfo2ExtOwner,
 
 /*  SYNOPSIS */
-	/* (info) */
-	AROS_LHA(struct secUserInfo *, info, A0),
+        /* (info) */
+        AROS_LHA(struct secUserInfo *, info, A0),
 
 /*  LOCATION */
-	struct SecurityBase *, secBase, 24, Security)
+        struct SecurityBase *, secBase, 24, Security)
 
 /*  FUNCTION
 

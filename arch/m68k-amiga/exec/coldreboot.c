@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc: ColdReboot() - Reboot the computer.
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -16,14 +14,14 @@ extern void Exec_MagicResetCode(void);
      * at the ROM exception vector
      */
 asm (
-	"	.text\n"
-	"	.align 4\n"
-	"	.globl Exec_MagicResetCode\n"
-	"Exec_MagicResetCode:\n"
-	"	nop\n"
-        "	move.l #2,%a0\n"
-        "	reset\n"
-        "	jmp    (%a0)\n"
+        "       .text\n"
+        "       .align 4\n"
+        "       .globl Exec_MagicResetCode\n"
+        "Exec_MagicResetCode:\n"
+        "       nop\n"
+        "       move.l #2,%a0\n"
+        "       reset\n"
+        "       jmp    (%a0)\n"
      );
 
 

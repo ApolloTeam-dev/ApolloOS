@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2019, The AROS Development Team. All rights reserved.
 */
 
 #include <aros/debug.h>
@@ -11,15 +10,15 @@
 /*****************************************************************************
 
     NAME */
-	AROS_LH2(struct secPrivGroupInfo *, secPasswd,
+        AROS_LH2(struct secPrivGroupInfo *, secPasswd,
 
 /*  SYNOPSIS */
-	/* (oldpwd, newpwd) */
-	AROS_LHA(STRPTR, oldpwd, A0),
-	AROS_LHA(STRPTR, newpwd, A1),
+        /* (oldpwd, newpwd) */
+        AROS_LHA(STRPTR, oldpwd, A0),
+        AROS_LHA(STRPTR, newpwd, A1),
 
 /*  LOCATION */
-	struct SecurityBase *, secBase, 8, Security)
+        struct SecurityBase *, secBase, 8, Security)
 
 /*  FUNCTION
 

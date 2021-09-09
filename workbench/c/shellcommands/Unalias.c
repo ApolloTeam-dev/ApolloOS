@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2004, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2004, The AROS Development Team. All rights reserved.
 
     Unalias CLI command.
 */
@@ -90,7 +89,7 @@ AROS_SHA(STRPTR, ,NAME, ,NULL))
         {
             PrintFault(IoErr(), "Unalias");
 
-	    return RETURN_WARN;
+            return RETURN_WARN;
         }
     }
     else
@@ -121,7 +120,7 @@ AROS_SHA(STRPTR, ,NAME, ,NULL))
                                      VarLength);
 
                         Buffer2[VarLength] = 0;
-			
+                        
                         Printf("%-20s\t%-20s\n", UnaliasNode->lv_Node.ln_Name, Buffer2);
                     }
                 }

@@ -1,6 +1,6 @@
 #ifdef __SSE__
 /*
-    Copyright ï¿½ 2020, The AROS Development Team. All rights reserved.
+    Copyright © 2020, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -9,16 +9,7 @@
 
 #include <emmintrin.h>
 
-static VOID __smallsetmem(APTR destination, UBYTE c, ULONG length)
-{
-    int i;
-
-    register char *p = (char *) destination;
-
-    for (i = 0; i < length; i++) {
-        p[i] = c;
-    }
-}
+#include "setmem_pc.h"
 
 /****i************************************************************************
 
@@ -62,7 +53,7 @@ static VOID __smallsetmem(APTR destination, UBYTE c, ULONG length)
     ULONG postsize;
     char val;
 
-    D(bug("[utility:pc] %s(0x%p, %02x, %d)\n", __func__, destination, c, length));
+    D(bug("[utility:pc] %s(0x%p, %02x, %d)\n", __func__, destination, c, length);)
 
     p = (char *) destination;
     val = (char) c;
@@ -73,23 +64,48 @@ static VOID __smallsetmem(APTR destination, UBYTE c, ULONG length)
 
         presize = (((IPTR) destination + 15 ) & ~15) - (IPTR)destination;
         ssefillcount = (length - presize) / 16;
-        postsize = length - ssefillcount * 16 - presize;
+        postsize = length - (ssefillcount * 16) - presize;
 
         /* setup sse value .. */
-        __m128i c16 = _mm_set_epi8(val, val, val, val, val, val, val, val, val, val, val, val, val, val, val, val);
+        __m128i c16 = _mm_set1_epi8(val);
 
-        D(bug("[utility:pc] %s: 0x%p, %d\n", __func__, p, presize));
+        D(bug("[utility:pc] %s: 0x%p, %d\n", __func__, p, presize);)
 
         /* fill inital bytes ... */
         __smallsetmem(p, val, presize);
         p += presize;
 
-        D(bug("[utility:pc] %s: 0x%p, %d x 16\n", __func__, p, ssefillcount));
+        D(bug("[utility:pc] %s: 0x%p, %d x 16\n", __func__, p, ssefillcount);)
 
         /* sse fill 16bytes at a time ... */
         for (i = 0; i < ssefillcount; ++i) {
-            _mm_store_si128((__m128i*)p, c16);
-            p += 16;
+            D(bug("[utility:pc] %s: fill ", __func__);)
+
+            if ((ssefillcount - i) > 3)
+            {
+                D(bug("x4");)
+                _mm_store_si128((__m128i*)p, c16);
+                _mm_store_si128((__m128i*)((IPTR)p + 16), c16);
+                _mm_store_si128((__m128i*)((IPTR)p + 32), c16);
+                _mm_store_si128((__m128i*)((IPTR)p + 48), c16);
+                p += (16 << 2);
+                i += 3;
+            }
+            else if ((ssefillcount - i) > 1)
+            {
+                D(bug("x2");)
+                _mm_store_si128((__m128i*)p, c16);
+                _mm_store_si128((__m128i*)((IPTR)p + 16), c16);
+                p += (16 << 1);
+                i += 1;
+            }
+            else
+            {
+                D(bug("x1");)
+                _mm_store_si128((__m128i*)p, c16);
+                p += 16;
+            }
+            D(bug("\n");)
         }
     }
     else
@@ -97,7 +113,7 @@ static VOID __smallsetmem(APTR destination, UBYTE c, ULONG length)
         postsize = length;
     }
 
-    D(bug("[utility:pc] %s: 0x%p, %d\n", __func__, p, postsize));
+    D(bug("[utility:pc] %s: 0x%p, %d\n", __func__, p, postsize);)
 
     /* file remainder ... */
     __smallsetmem(p, val, postsize);

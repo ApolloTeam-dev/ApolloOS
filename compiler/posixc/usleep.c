@@ -1,6 +1,5 @@
 /*
-    Copyright © 2008, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2008, The AROS Development Team. All rights reserved.
 
     POSIX.1-2001 function usleep()
     Function is removed from POSIX.1-2008
@@ -15,10 +14,10 @@
     NAME */
 #include <unistd.h>
 
-	int usleep (
+        int usleep (
 
 /*  SYNOPSIS */
-	useconds_t usec) 
+        useconds_t usec)
         
 /*  FUNCTION
         Suspends program execution for a given number of microseconds.

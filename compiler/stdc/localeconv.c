@@ -1,6 +1,5 @@
 /*
-    Copyright © 2006-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2006-2013, The AROS Development Team. All rights reserved.
 
     C99 function localeconv().
 */
@@ -41,7 +40,7 @@ static const struct lconv _lconv =
     NAME */
 #include <string.h>
 
-	struct lconv *localeconv (
+        struct lconv *localeconv (
 
 /*  SYNOPSIS */
         void)

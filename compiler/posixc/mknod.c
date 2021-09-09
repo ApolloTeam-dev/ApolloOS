@@ -1,6 +1,5 @@
 /*
-    Copyright © 2004-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2004-2013, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function mknod().
 */
@@ -16,12 +15,12 @@
     NAME */
 #include <sys/stat.h>
 
-	int mknod(
+        int mknod(
 
 /*  SYNOPSIS */
-	const char *pathname,
-	mode_t mode,
-	dev_t dev)
+        const char *pathname,
+        mode_t mode,
+        dev_t dev)
 
 /*  FUNCTION
 

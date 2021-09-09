@@ -1,6 +1,5 @@
 /*
-    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
  */
 
 #include <aros/debug.h>
@@ -8,41 +7,43 @@
 #include <proto/dos.h>
 #include <proto/exec.h>
 
-#include "buffer.h"
+#include <string.h>
+
+#include "Shell.h"
 
 #define BUF_SIZE 512
 
-static BOOL bufferExpand(Buffer *out, LONG size, APTR SysBase)
+static BOOL bufferExpand(Buffer *out, LONG size, ShellState *ss)
 {
     ULONG newLength = out->len + size;
 
     if (newLength > out->mem)
     {
-	ULONG newSize = BUF_SIZE;
-	STRPTR tmp;
+        ULONG newSize = BUF_SIZE;
+        STRPTR tmp;
 
-	while (newSize < newLength)
-	    newSize += BUF_SIZE;
+        while (newSize < newLength)
+            newSize += BUF_SIZE;
 
-	if ((tmp = AllocMem(newSize + 1, MEMF_ANY)) == NULL)
-	    return FALSE;
+        if ((tmp = AllocMem(newSize + 1, MEMF_ANY)) == NULL)
+            return FALSE;
 
-	if (out->len > 0)
-	    CopyMem(out->buf, tmp, out->len);
+        if (out->len > 0)
+            CopyMem(out->buf, tmp, out->len);
 
-	if (out->mem > 0)
-	    FreeMem(out->buf, out->mem);
+        if (out->mem > 0)
+            FreeMem(out->buf, out->mem);
 
-	out->buf = tmp;
-	out->mem = newSize;
+        out->buf = tmp;
+        out->mem = newSize;
     }
     return TRUE;
 }
 
-LONG bufferInsert(STRPTR str, ULONG size, Buffer *out, APTR SysBase)
+LONG bufferInsert(STRPTR str, ULONG size, Buffer *out, ShellState *ss)
 {
     ULONG newLength;
-    if (!bufferExpand(out, size, SysBase))
+    if (!bufferExpand(out, size, ss))
         return ERROR_NO_FREE_STORE;
 
     memmove(out->buf + size, out->buf, out->len);
@@ -54,10 +55,10 @@ LONG bufferInsert(STRPTR str, ULONG size, Buffer *out, APTR SysBase)
     return 0;
 }
 
-LONG bufferAppend(STRPTR str, ULONG size, Buffer *out, APTR SysBase)
+LONG bufferAppend(STRPTR str, ULONG size, Buffer *out, ShellState *ss)
 {
     ULONG newLength;
-    if (!bufferExpand(out, size, SysBase))
+    if (!bufferExpand(out, size, ss))
         return ERROR_NO_FREE_STORE;
 
     CopyMem(str, out->buf + out->len, size);
@@ -68,18 +69,18 @@ LONG bufferAppend(STRPTR str, ULONG size, Buffer *out, APTR SysBase)
     return 0;
 }
 
-LONG bufferCopy(Buffer *in, Buffer *out, ULONG size, APTR SysBase)
+LONG bufferCopy(Buffer *in, Buffer *out, ULONG size, ShellState *ss)
 {
     STRPTR s = in->buf + in->cur;
-    LONG ret = bufferAppend(s, size, out, SysBase);
+    LONG ret = bufferAppend(s, size, out, ss);
     in->cur += size;
     return ret;
 }
 
-void bufferFree(Buffer *b, APTR SysBase)
+void bufferFree(Buffer *b, ShellState *ss)
 {
     if (b->mem <= 0)
-	return;
+        return;
 
     FreeMem(b->buf, b->mem + 1);
 
@@ -89,7 +90,7 @@ void bufferFree(Buffer *b, APTR SysBase)
     b->mem = 0;
 }
 
-LONG bufferReadItem(STRPTR buf, ULONG size, Buffer *in, APTR DOSBase)
+LONG bufferReadItem(STRPTR buf, ULONG size, Buffer *in, ShellState *ss)
 {
     struct CSource tin = { in->buf, in->len, in->cur };
     LONG ret = ReadItem(buf, size, &tin);
@@ -104,8 +105,8 @@ LONG bufferReadItem(STRPTR buf, ULONG size, Buffer *in, APTR DOSBase)
      */
     if (in->cur == in->len - 1)
     {
-    	D(bug("[bufferReadItem] Getting last character\n"));
-    	in->cur++;
+        D(bug("[bufferReadItem] Getting last character\n"));
+        in->cur++;
     }
 
     return ret;
@@ -114,7 +115,7 @@ LONG bufferReadItem(STRPTR buf, ULONG size, Buffer *in, APTR DOSBase)
 void bufferReset(Buffer *b)
 {
     if (b->mem > 0)
-	b->buf[0] = '\0';
+        b->buf[0] = '\0';
 
     b->len = 0;
     b->cur = 0;

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Varargs version of datatypes.library/GetDTAttrsA()
-    Lang: english
 */
 
 #define AROS_TAGRETURNTYPE ULONG
@@ -18,12 +16,12 @@ extern struct Library *DataTypesBase;
 #define NO_INLINE_STDARG /* turn off inline def */
 #include <proto/datatypes.h>
 
-	ULONG GetDTAttrs (
+        ULONG GetDTAttrs (
 
 /*  SYNOPSIS */
-	Object * o,
-	Tag tag1,
-	...)
+        Object * o,
+        Tag tag1,
+        ...)
 
 /*  FUNCTION
         This is the varargs version of datatypes.library/GetDTAttrsA().

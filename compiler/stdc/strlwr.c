@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     C function strlwr().
 */
@@ -10,10 +9,10 @@
     NAME */
 #include <string.h>
 
-	char * strlwr (
+        char * strlwr (
 
 /*  SYNOPSIS */
-	char * str)
+        char * str)
 
 /*  FUNCTION
         
@@ -21,7 +20,7 @@
         the given string.
 
     INPUTS
-	str - The string to convert.
+        str - The string to convert.
 
     RESULT
         The same string buffer is passed back with all characters converted.
@@ -38,12 +37,12 @@
 
 ******************************************************************************/
 {
-	unsigned int i = 0;
-	while (str[i]) {
-		if (str[i] >= 'A' && str[i] <= 'Z')
-			str[i] -= ('A'-'a');
-		i++;
-	}
+        unsigned int i = 0;
+        while (str[i]) {
+                if (str[i] >= 'A' && str[i] <= 'Z')
+                        str[i] -= ('A'-'a');
+                i++;
+        }
 
-	return str;
+        return str;
 } /* strlwr */

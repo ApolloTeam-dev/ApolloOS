@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Implementation of MoveLayer()
-    Lang: english
 */
 #include <aros/libcall.h>
 #include <proto/layers.h>
@@ -18,16 +16,16 @@
 
     NAME */
 
-	AROS_LH4(LONG, MoveLayer,
+        AROS_LH4(LONG, MoveLayer,
 
 /*  SYNOPSIS */
-	AROS_LHA(LONG          , dummy, A0),
-	AROS_LHA(struct Layer *, l    , A1),
-	AROS_LHA(LONG          , dx   , D0),
-	AROS_LHA(LONG          , dy   , D1),
+        AROS_LHA(LONG          , dummy, A0),
+        AROS_LHA(struct Layer *, l    , A1),
+        AROS_LHA(LONG          , dx   , D0),
+        AROS_LHA(LONG          , dy   , D1),
 
 /*  LOCATION */
-	struct LayersBase *, LayersBase, 10, Layers)
+        struct LayersBase *, LayersBase, 10, Layers)
 
 /*  FUNCTION
         Move the layer to a specified position in the bitmap.
@@ -55,8 +53,8 @@
     INTERNALS
 
     HISTORY
-	27-11-96    digulla automatically created from
-			    layers_lib.fd and clib/layers_protos.h
+        27-11-96    digulla automatically created from
+                            layers_lib.fd and clib/layers_protos.h
 
 *****************************************************************************/
 {

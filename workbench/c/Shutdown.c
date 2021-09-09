@@ -1,6 +1,5 @@
 /*
-    Copyright © 2008-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2008-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/tasks.h>
@@ -10,13 +9,13 @@
 /**************************************************************************
 
     NAME
-	Shutdown
+        Shutdown
 
     SYNOPSIS
-	(N/A)
+        (N/A)
 
     LOCATION
-	C:
+        C:
 
     FUNCTION
            Shut down AROS and power off the machine.

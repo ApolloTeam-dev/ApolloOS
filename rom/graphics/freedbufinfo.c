@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 #include "graphics_intern.h"
@@ -19,11 +17,11 @@
 
 /*  SYNOPSIS */
 
-	AROS_LHA(struct DBufInfo *, db, A1),
+        AROS_LHA(struct DBufInfo *, db, A1),
 
 /*  LOCATION */
 
-	struct GfxBase *, GfxBase, 162, Graphics)
+        struct GfxBase *, GfxBase, 162, Graphics)
 
 /*  FUNCTION
 

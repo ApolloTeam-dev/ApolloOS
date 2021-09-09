@@ -1,4 +1,3 @@
-# $Id$
 
 include $(SRCDIR)/config/aros.cfg
 
@@ -9,7 +8,11 @@ EXEDIR      := $(AROS_DEBUG)/Hardware
 # Build ACPITool only for PC
 #MM- workbench-pc-$(CPU) : debug-tools-acpitool
 
-#MM debug-tools-acpitool : debug-tools-acpitool-icon debug-tools-acpitool-catalogs
+#MM debug-tools-acpitool : \
+#MM                                      kernel-acpica-sharedlib-includes \
+#MM                                      kernel-acpica-sharedlib-linklib \
+#MM                                      debug-tools-acpitool-icon \
+#MM                                      debug-tools-acpitool-catalogs
 
 %build_prog mmake=debug-tools-acpitool \
     progname=ACPITool targetdir=$(EXEDIR) \

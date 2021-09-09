@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc: Internal debugger.
-    Lang: english
 */
 
 #include <aros/debug.h>
@@ -179,13 +177,13 @@ static char *NextWord(char *s)
 
             if (!Exec_CheckTask(t, SysBase))
             {
-                kprintf("Task 0x%P not found\n", t);
+                kprintf("Task 0x%p not found\n", t);
                 continue;
             }
 
             kprintf("Task status (%p = '%s'):\n"
                             "tc_Node.ln_Pri = %d\n"
-                            "tc_Flags       = %p\n"
+                            "tc_Flags       = %02x\n"
                             "tc_SigAlloc    = %04.4lx\n"
                             "tc_SigWait     = %04.4lx\n"
                             "tc_SPLower     = %p\n"
@@ -405,7 +403,7 @@ static char *NextWord(char *s)
             ULONG cnt = GetL(NextWord(data));
             ULONG t;
 
-            kprintf("Array from 0x%p (size=0x%08lX):\n", ptr, cnt);
+            kprintf("Array from 0x%p (size=0x%08X):\n", ptr, cnt);
 
             for(t = 1; t <= cnt; t++)
             {
@@ -448,8 +446,8 @@ static char *NextWord(char *s)
                 DecodeLocationA(ptr, tags);
             }
 
-            kprintf("%p %s %s+0x%x\n", sym_l, sym_h, modname, symname, (APTR)ptr - (APTR)sym_l);
-        } 
+            kprintf("%p:%p %s %s+0x%p\n", sym_l, sym_h, modname, symname, (APTR)ptr - (APTR)sym_l);
+        }
         else if (strcmp(comm, "QT") == 0 && strcmp(data, "00000000") == 0)
         {
             kprintf("Quitting SAD...\n");

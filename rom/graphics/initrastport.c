@@ -1,9 +1,8 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$	$Log
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
+    $Id$        $Log
 
     Desc: Graphics function InitRastPort()
-    Lang: english
 */
 
 #include <graphics/rastport.h>
@@ -19,26 +18,26 @@
     NAME */
 #include <proto/graphics.h>
 
-	AROS_LH1(void, InitRastPort,
+        AROS_LH1(void, InitRastPort,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct RastPort *, rp, A1),
+        AROS_LHA(struct RastPort *, rp, A1),
 
 /*  LOCATION */
-	struct GfxBase *, GfxBase, 33, Graphics)
+        struct GfxBase *, GfxBase, 33, Graphics)
 
 /*  FUNCTION
-	Initializes a RastPort structure.
+        Initializes a RastPort structure.
 
     INPUTS
-	rp - The RastPort to initialize.
+        rp - The RastPort to initialize.
 
     RESULT
-	all entries in RastPort get zeroed out, with the following exceptions:
+        all entries in RastPort get zeroed out, with the following exceptions:
 
-	    Mask, FgPen, AOLPen, and LinePtrn are set to -1.
-	    The DrawMode is set to JAM2
-	    The font is set to the standard system font
+            Mask, FgPen, AOLPen, and LinePtrn are set to -1.
+            The DrawMode is set to JAM2
+            The font is set to the standard system font
 
     NOTES
 
@@ -51,8 +50,8 @@
     INTERNALS
 
     HISTORY
-	29-10-95    digulla automatically created from
-			    graphics_lib.fd and clib/graphics_protos.h
+        29-10-95    digulla automatically created from
+                            graphics_lib.fd and clib/graphics_protos.h
 
 *****************************************************************************/
 {

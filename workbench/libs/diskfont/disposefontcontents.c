@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 #include "diskfont_intern.h"
 #include <proto/exec.h>
@@ -13,13 +11,13 @@
     NAME */
 #include <proto/diskfont.h>
 
-	AROS_LH1(VOID, DisposeFontContents,
+        AROS_LH1(VOID, DisposeFontContents,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct FontContentsHeader *, fontContentsHeader, A1),
+        AROS_LHA(struct FontContentsHeader *, fontContentsHeader, A1),
 
 /*  LOCATION */
-	struct Library *, DiskfontBase, 8, Diskfont)
+        struct Library *, DiskfontBase, 8, Diskfont)
 
 /*  FUNCTION
 

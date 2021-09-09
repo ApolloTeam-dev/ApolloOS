@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2018, The AROS Development Team. All rights reserved.
 */
 
 #include <time.h>
@@ -45,9 +44,9 @@ static const unsigned char *strings[]=
 };
 #define ABDAY_1     7
 #define ABMON_1     26
-#define AM_STR	    41
-#define DAY_1	    0
-#define MON_1	    14
+#define AM_STR      41
+#define DAY_1       0
+#define MON_1       14
 
 static size_t strfnumb(char *s, size_t maxsize, signed int places, size_t value)
 {
@@ -63,7 +62,7 @@ static size_t strfnumb(char *s, size_t maxsize, signed int places, size_t value)
     }
     else
     {
-        while ((places++ < -1) && (++size <= maxsize)) 
+        while ((places++ < -1) && (++size <= maxsize))
         {
             s[size - 1] = ' ';
         }
@@ -78,13 +77,13 @@ static size_t strfnumb(char *s, size_t maxsize, signed int places, size_t value)
 
     NAME */
 
-	size_t strftime(
+        size_t strftime(
 
 /*  SYNOPSIS */
-	char *s,
-	size_t maxsize,
-	const char *format,
-	const struct tm *timeptr)
+        char *s,
+        size_t maxsize,
+        const char *format,
+        const struct tm *timeptr)
 
 /*  FUNCTION
 
@@ -202,7 +201,7 @@ static size_t strfnumb(char *s, size_t maxsize, signed int places, size_t value)
     STOR('\0');
 
     if (size > maxsize)
-    { 
+    {
         s -= size;
 
         if (maxsize) /* Don't know if this is necessary, therefore it's here ;-) */

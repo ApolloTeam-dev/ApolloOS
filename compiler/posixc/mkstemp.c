@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function mkstemp().
 */
@@ -16,10 +15,10 @@
     NAME */
 #include <stdlib.h>
 
-	int mkstemp(
+        int mkstemp(
 
 /*  SYNOPSIS */
-	char *template)
+        char *template)
 
 /*  FUNCTION
 
@@ -54,7 +53,7 @@
 
     if (ctr < 6) {
         errno = EINVAL;
-        return -1;      
+        return -1;
     }
     
     c++;
@@ -71,7 +70,7 @@
             return -1;
         if (!(lock = Lock(atemplate, ACCESS_READ))) {
             int fd = open(template, O_WRITE|O_CREAT|O_EXCL);
-            if (fd > 0) 
+            if (fd > 0)
                 return fd;
         }
         UnLock(lock);
@@ -84,6 +83,6 @@
     }
     
     errno = EEXIST;
-    return -1; 
+    return -1;
  
 } /* mkstemp() */

@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2003, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2003, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <intuition/intuition.h>
@@ -30,7 +29,7 @@ VOID DoGMLayout(struct Gadget *glist, struct Window *win, struct Requester *req,
                                   GFLG_RELWIDTH | GFLG_RELHEIGHT))))
         {
             struct gpLayout lmsg;
-	    
+            
             lmsg.MethodID    = GM_LAYOUT;
             lmsg.gpl_GInfo   = NULL;
             lmsg.gpl_Initial = initial;

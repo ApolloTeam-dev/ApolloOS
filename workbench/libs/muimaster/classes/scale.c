@@ -1,6 +1,5 @@
 /*
-    Copyright © 2002-2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2002-2020, The AROS Development Team. All rights reserved.
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
@@ -56,7 +55,7 @@ IPTR Scale__OM_NEW(struct IClass *cl, Object *obj, struct opSet *msg)
         }
     }
 
-    D(bug("muimaster.library/scale.c: Scale Object created at 0x%lx\n",
+    D(bug("muimaster.library/scale.c: Scale Object created at 0x%p\n",
             obj));
 
     return (IPTR) obj;
@@ -155,7 +154,7 @@ IPTR Scale__MUIM_Draw(struct IClass *cl, Object *obj,
 
     DoSuperMethodA(cl, obj, (Msg) msg);
     D(bug("muimaster.library/scale.c: Draw Scale Object "
-        "at 0x%lx %ldx%ldx%ldx%ld\n",
+        "at 0x%p %ldx%ldx%ldx%ld\n",
         obj, _left(obj), _top(obj), _right(obj), _bottom(obj)));
 
     if (data->horiz)

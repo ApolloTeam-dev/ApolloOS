@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
 */
 
 #define CATCOMP_ARRAY
@@ -42,7 +41,7 @@ STRPTR MSG(ULONG id)
     {
         retval = (STRPTR)GetCatalogStr(catalog, id, CatCompArray[id].cca_Str);
     }
-    else 
+    else
     {
         retval = CatCompArray[id].cca_Str;
     }

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Generate UUIDs
-    Lang: English
 */
 
 /******************************************************************************
@@ -22,8 +20,8 @@
 
     FUNCTION
 
-        Generates one or more universally unique identifiers. They may be either 
-        time-based or random. Please note that the quality of random generated 
+        Generates one or more universally unique identifiers. They may be either
+        time-based or random. Please note that the quality of random generated
         uuid's may be poor, due to the lack of high-quality noise generators on AROS.
 
     INPUTS

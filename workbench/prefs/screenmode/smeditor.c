@@ -1,6 +1,5 @@
 /*
-    Copyright © 2003-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2003-2020, The AROS Development Team. All rights reserved.
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
@@ -25,6 +24,7 @@
 #include <prefs/prefhdr.h>
 
 #include <stdio.h>
+#include <string.h>
 
 #include "locale.h"
 
@@ -215,7 +215,7 @@ static Object *SMEditor__OM_NEW(Class *CLASS, Object *self, struct opSet *messag
 
 static IPTR SMEditor__MUIM_PrefsEditor_ImportFH
 (
-    Class *CLASS, Object *self, 
+    Class *CLASS, Object *self,
     struct MUIP_PrefsEditor_ImportFH *message
 )
 {
@@ -289,9 +289,9 @@ static IPTR SMEditor__MUIM_PrefsEditor_Test
     testPort = CreateMsgPort();
     if (testPort)
     {
-        struct timerequest *timer; 
+        struct timerequest *timer;
         D(bug("[smeditor] testPort @ 0x%p\n", testPort);)
-        timer = (struct timerequest *)CreateIORequest(testPort, sizeof(struct timerequest)); 
+        timer = (struct timerequest *)CreateIORequest(testPort, sizeof(struct timerequest));
         if (timer)
         {
             D(bug("[smeditor] timer @ 0x%p\n", timer);)
@@ -535,7 +535,7 @@ static IPTR SMEditor__MUIM_PrefsEditor_Test
             }
             DeleteIORequest((struct IORequest *)timer);
         }
-        DeleteMsgPort(testPort); 
+        DeleteMsgPort(testPort);
     }
 
     return TRUE;

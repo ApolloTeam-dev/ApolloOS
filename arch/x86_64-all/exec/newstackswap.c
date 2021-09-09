@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 
     Desc: NewStackSwap() - Call a function with swapped stack, x86-64 version
-    Lang: english
 */
 
 #include <aros/config.h>
@@ -14,10 +12,10 @@
 #define _PUSH(sp, val) *--sp = (IPTR)val
 
 AROS_LH3(IPTR, NewStackSwap,
-	AROS_LHA(struct StackSwapStruct *,  sss, A0),
-	AROS_LHA(LONG_FUNC, entry, A1),
-	AROS_LHA(struct StackSwapArgs *, args, A2),
-	struct ExecBase *, SysBase, 134, Exec)
+        AROS_LHA(struct StackSwapStruct *,  sss, A0),
+        AROS_LHA(LONG_FUNC, entry, A1),
+        AROS_LHA(struct StackSwapArgs *, args, A2),
+        struct ExecBase *, SysBase, 134, Exec)
 {
     AROS_LIBFUNC_INIT
 
@@ -42,10 +40,10 @@ AROS_LH3(IPTR, NewStackSwap,
 
     if (t->tc_Flags & TF_STACKCHK)
     {
-    	UBYTE* startfill = sss->stk_Lower;
+        UBYTE* startfill = sss->stk_Lower;
 
-    	while (startfill < (UBYTE *)sp)
-	    *startfill++ = 0xE1;
+        while (startfill < (UBYTE *)sp)
+            *startfill++ = 0xE1;
     }
 
     /*

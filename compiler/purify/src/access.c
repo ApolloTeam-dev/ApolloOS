@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include <stdio.h>
@@ -15,7 +14,7 @@ void Purify_CheckRead (char * addr, long size)
 #endif
 
     if (!Purify_CheckMemoryAccess (addr, size, PURIFY_MemAccess_Read))
-	Purify_PrintAccessError ("Read", addr, size);
+        Purify_PrintAccessError ("Read", addr, size);
 }
 
 void Purify_CheckWrite (char * addr, long size)
@@ -25,7 +24,7 @@ void Purify_CheckWrite (char * addr, long size)
 #endif
 
     if (!Purify_CheckMemoryAccess (addr, size, PURIFY_MemAccess_Write))
-	Purify_PrintAccessError ("Write", addr, size);
+        Purify_PrintAccessError ("Write", addr, size);
 
 #if DEBUG
     Purify_PrintMemory ();

@@ -2,7 +2,7 @@
 #define GRAPHICS_GFXBASE_H
 
 /*
-    Copyright ï¿½ 1995-2010, The AROS Development Team. All rights reserved.
+    Copyright © 1995-2010, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: graphics.library

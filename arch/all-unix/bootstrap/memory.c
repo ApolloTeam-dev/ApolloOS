@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2015, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2015, The AROS Development Team. All rights reserved.
 */
 
 #include <stdlib.h>
@@ -44,7 +43,7 @@ static size_t RAM_len  = 0;
     void *ret = mmap(NULL, len, prot, flags, -1, 0);
 
     if (ret == MAP_FAILED)
-    	ret = NULL;
+        ret = NULL;
     else
     {
         if (addr_store)
@@ -109,7 +108,7 @@ void Host_FreeMem(void)
 #endif
     munmap(RAM32, RAM32_len);
 
-    free(SystemVersion);    
+    free(SystemVersion);
     if (KernelArgs)
-    	free(KernelArgs);
+        free(KernelArgs);
 }

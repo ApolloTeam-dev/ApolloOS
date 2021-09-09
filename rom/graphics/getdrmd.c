@@ -1,9 +1,8 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
     $Id$    $Log
 
     Desc: Graphics function GetDrMd()
-    Lang: english
 */
 #include "graphics_intern.h"
 
@@ -13,19 +12,19 @@
 #include <graphics/rastport.h>
 #include <proto/graphics.h>
 
-	AROS_LH1(ULONG, GetDrMd,
+        AROS_LH1(ULONG, GetDrMd,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct RastPort *, rp, A0),
+        AROS_LHA(struct RastPort *, rp, A0),
 
 /*  LOCATION */
-	struct GfxBase *, GfxBase, 145, Graphics)
+        struct GfxBase *, GfxBase, 145, Graphics)
 
 /*  FUNCTION
-	Get drawmode value of RastPort.
+        Get drawmode value of RastPort.
 
     INPUTS
-	rp - RastPort
+        rp - RastPort
 
     RESULT
 
@@ -40,8 +39,8 @@
     INTERNALS
 
     HISTORY
-	29-10-95    digulla automatically created from
-			    graphics_lib.fd and clib/graphics_protos.h
+        29-10-95    digulla automatically created from
+                            graphics_lib.fd and clib/graphics_protos.h
 
 *****************************************************************************/
 {

@@ -1,15 +1,11 @@
 /*
-    Copyright © 1995-2019, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2021, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/alerts.h>
 #include <exec/execbase.h>
 #include <hardware/intbits.h>
 #include <proto/exec.h>
-
-#include <unistd.h>
-#include <time.h>
 
 #include "hostinterface.h"
 #include "kernel_base.h"
@@ -18,6 +14,9 @@
 #include "kernel_intern.h"
 #include "kernel_intr.h"
 #include "kernel_scheduler.h"
+
+#include <unistd.h>
+#include <time.h>
 
 #define D(x)
 #define BILLION 1000000000L
@@ -46,7 +45,7 @@ static void cpu_Exception(void)
 {
     struct KernelBase *KernelBase = getKernelBase();
     /* Save return context and IDNestCnt on stack */
-    struct Task *task = SysBase->ThisTask;
+    struct Task *task = GET_THIS_TASK;
     char nestCnt = task->tc_IDNestCnt;
     char save[KernelBase->kb_ContextSize];
     APTR savesp;
@@ -60,14 +59,14 @@ static void cpu_Exception(void)
     /* Restore saved task state and resume it. Note that interrupts are
        disabled again here */
     task->tc_IDNestCnt = nestCnt;
-    SysBase->IDNestCnt = nestCnt;
+    IDNESTCOUNT_SET(nestCnt);
 
     /* Restore saved context */
     CopyMem(save, task->tc_UnionETask.tc_ETask->et_RegFrame, KernelBase->kb_ContextSize);
     task->tc_SPReg = savesp;
 
     /* This tells task switcher that we are returning from the exception */
-    SysBase->ThisTask->tc_State = TS_EXCEPT;
+    GET_THIS_TASK->tc_State = TS_EXCEPT;
 
     /* System call */
     KernelBase->kb_PlatformData->iface->raise(SIGUSR1);
@@ -77,7 +76,7 @@ static void cpu_Exception(void)
 void cpu_Switch(regs_t *regs)
 {
     struct KernelBase *KernelBase = getKernelBase();
-    struct Task *task = SysBase->ThisTask;
+    struct Task *task = GET_THIS_TASK;
     struct AROSCPUContext *ctx = task->tc_UnionETask.tc_ETask->et_RegFrame;
     struct timespec timeSpec;
     u_int64_t diff;
@@ -141,7 +140,7 @@ void cpu_DispatchContext(struct Task *task, regs_t *regs, struct PlatformData *p
     if (task->tc_Flags & TF_EXCEPT)
     {
         /* Disable interrupts, otherwise we may lose saved context */
-        SysBase->IDNestCnt = 0;
+        IDNESTCOUNT_SET(0);
 
         /* Manipulate the current cpu context so Exec_Exception gets
            excecuted after we leave the kernel resp. the signal handler. */
@@ -152,7 +151,7 @@ void cpu_DispatchContext(struct Task *task, regs_t *regs, struct PlatformData *p
      * Adjust user mode interrupts state.
      * Brackets MUST present, these are complex macros.
      */
-    if (SysBase->IDNestCnt < 0)
+    if (IDNESTCOUNT_GET < 0)
     {
         SC_ENABLE(regs);
     }

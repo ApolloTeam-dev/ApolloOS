@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 */
 
 #include "requesters.h"
@@ -27,15 +26,15 @@
         struct IntuitionBase *, IntuitionBase, 60, Intuition)
 
 /*  FUNCTION
-	Build and display a system requester.
+        Build and display a system requester.
 
     INPUTS
-	window - The window in which the requester will appear
-	bodytext - The Text to be shown in the body of the requester
-	postext - The Text to be shown in the positive choice gadget
-	negtext - The Text to be shown in the negative choice gadget
-	IDCMPFlags - The IDCMP Flags for this requester
-	width, height - The dimensions of the requester
+        window - The window in which the requester will appear
+        bodytext - The Text to be shown in the body of the requester
+        postext - The Text to be shown in the positive choice gadget
+        negtext - The Text to be shown in the negative choice gadget
+        IDCMPFlags - The IDCMP Flags for this requester
+        width, height - The dimensions of the requester
 
     RESULT
 
@@ -46,8 +45,8 @@
     BUGS
 
     SEE ALSO
-	FreeSysRequest(), DisplayAlert(), ModifyIDCMP(), exec.library/Wait(),
-	Request(), AutoRequest(), EasyRequestArgs(), BuildEasyRequestArgs()
+        FreeSysRequest(), DisplayAlert(), ModifyIDCMP(), exec.library/Wait(),
+        Request(), AutoRequest(), EasyRequestArgs(), BuildEasyRequestArgs()
 
     INTERNALS
 

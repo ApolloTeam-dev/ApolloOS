@@ -1,9 +1,7 @@
 /*
  Copyright (C) 2006-2020 The AROS Development Team. All rights reserved.
- $Id$
  
  Desc: ELF loader extracted from our internal_load_seg_elf in dos.library.
- Lang: English
  */
 
 #include <inttypes.h>
@@ -73,18 +71,18 @@ static char *check_header(struct elfheader *eh)
  * Get the memory for chunk and load it
  */
 static void *load_hunk(void *file, struct sheader *sh, void *addr, struct KernelBSS_t **bss_tracker)
-{ 
+{
     uintptr_t align;
 
     /* empty chunk? Who cares :) */
     if (!sh->size)
         return addr;
 
-    D(kprintf("[ELF Loader] Chunk (%ld bytes, align=%ld (%p) @ ", sh->size, sh->addralign, (void *)(uintptr_t)sh->addralign));
+    D(kprintf("[ELF Loader] Chunk (%ld bytes, align=%ld (%p) @ ", sh->size, sh->addralign, (void *)(uintptr_t)sh->addralign);)
     align = sh->addralign - 1;
     addr = (char *)(((uintptr_t)addr + align) & ~align);
 
-    D(kprintf("%p\n", addr));
+    D(kprintf("%p\n", addr);)
     sh->addr = (elf_ptr_t)(uintptr_t)addr;
 
     /* copy block of memory from ELF file if it exists */
@@ -102,13 +100,13 @@ static void *load_hunk(void *file, struct sheader *sh, void *addr, struct Kernel
         (*bss_tracker)++;
     }
 
-    return addr + sh->size;
+    return (void *)((uintptr_t)addr + sh->size);
 }
 
 static void *copy_data(void *src, void *addr, uintptr_t len)
 {
     memcpy(addr, src, len);
-    return addr + len;
+    return (void *)((uintptr_t)addr + len);
 }
 
 /* Perform relocations of given section */
@@ -133,12 +131,12 @@ static int relocate(struct elfheader *eh, struct sheader *sh, long shrel_idx, el
     if (!(toreloc->flags & SHF_ALLOC))
         return 1;
 
-    DREL(kprintf("[ELF Loader] performing %d relocations\n", numrel));
+    DREL(kprintf("[ELF Loader] performing %d relocations\n", numrel);)
   
     for (i=0; i<numrel; i++, rel++)
     {
         struct symbol *sym = &symtab[ELF_R_SYM(rel->info)];
-        uintptr_t *p = (void *)(uintptr_t)toreloc->addr + rel->offset;
+        uintptr_t *p = (void *)((uintptr_t)toreloc->addr + rel->offset);
         const char *name = (const char *)(uintptr_t)sh[shsymtab->link].addr + sym->name;
         elf_uintptr_t s;
 
@@ -159,7 +157,7 @@ static int relocate(struct elfheader *eh, struct sheader *sh, long shrel_idx, el
                 if (!SysBase_ptr)
                 {
                     SysBase_ptr = DefSysBase;
-                    D(kprintf("[ELF Loader] SysBase symbol set to default %p\n", (void *)(uintptr_t)SysBase_ptr));
+                    D(kprintf("[ELF Loader] SysBase symbol set to default %p\n", (void *)(uintptr_t)SysBase_ptr);)
                 }
 
                 s = SysBase_ptr;
@@ -178,7 +176,7 @@ static int relocate(struct elfheader *eh, struct sheader *sh, long shrel_idx, el
             {
                 if (Strcmp(name, "SysBase") == 0)
                 {
-                    DREL(kprintf("[ELF Loader] got SysBase\n"));
+                    DREL(kprintf("[ELF Loader] got SysBase\n");)
                     SysBase_sym = sym;
                 }
             }
@@ -188,7 +186,7 @@ static int relocate(struct elfheader *eh, struct sheader *sh, long shrel_idx, el
                 if (!SysBase_ptr)
                 {
                     SysBase_ptr = DefSysBase;
-                    D(kprintf("[ELF Loader] SysBase symbol set to default %p\n", (void *)(uintptr_t)SysBase_ptr));
+                    D(kprintf("[ELF Loader] SysBase symbol set to default %p\n", (void *)(uintptr_t)SysBase_ptr);)
                 }
 
                 s = SysBase_ptr;
@@ -212,13 +210,13 @@ static int relocate(struct elfheader *eh, struct sheader *sh, long shrel_idx, el
                     if (Strcmp(name, "SysBase") == 0)
                     {
                         SysBase_ptr = s;
-                        D(kprintf("[ELF Loader] SysBase symbol set to %p\n", (void *)(uintptr_t)SysBase_ptr));
+                        D(kprintf("[ELF Loader] SysBase symbol set to %p\n", (void *)(uintptr_t)SysBase_ptr);)
                     }
                 }
             }
         }
 
-        DREL(kprintf("[ELF Loader] Relocating symbol %s, type ", sym->name ? name : "<unknown>"));
+        DREL(kprintf("[ELF Loader] Relocating symbol %s, type ", sym->name ? name : "<unknown>");)
         switch (ELF_R_TYPE(rel->info))
         {
 #ifdef ELF_64BIT
@@ -248,17 +246,17 @@ static int relocate(struct elfheader *eh, struct sheader *sh, long shrel_idx, el
 #else
 #ifdef __i386__
         case R_386_32: /* 32bit absolute */
-            DREL(kprintf("R_386_32"));
+            DREL(kprintf("R_386_32");)
             *p += s;
             break;
 
         case R_386_PC32: /* 32bit PC relative */
-            DREL(kprintf("R_386_PC32"));
+            DREL(kprintf("R_386_PC32");)
             *p += (s - (uintptr_t)p);
             break;
 
         case R_386_NONE:
-            DREL(kprintf("R_386_NONE"));
+            DREL(kprintf("R_386_NONE");)
             break;
 #endif
 #endif
@@ -373,7 +371,7 @@ static int relocate(struct elfheader *eh, struct sheader *sh, long shrel_idx, el
             kprintf("[ELF Loader] Unknown relocation #%d type %ld\n", i, (long)ELF_R_TYPE(rel->info));
             return 0;
         }
-        DREL(kprintf(" -> %p\n", *p));
+        DREL(kprintf(" -> %p\n", *p);)
     }
     return 1;
 }
@@ -386,7 +384,7 @@ int GetKernelSize(struct ELFNode *FirstELF, unsigned long *ro_size, unsigned lon
     unsigned long bsize = sizeof(struct KernelBSS_t);
     unsigned short i;
 
-    kprintf("[ELF Loader] Calculating kickstart size...\n");
+    D(kprintf("[ELF Loader] Calculating kickstart size...\n");)
 
     for (n = FirstELF; n; n = n->Next)
     {
@@ -394,7 +392,7 @@ int GetKernelSize(struct ELFNode *FirstELF, unsigned long *ro_size, unsigned lon
         char *errstr = NULL;
         unsigned int err;
 
-        D(kprintf("[ELF Loader] Checking file %s\n", n->Name));
+        D(kprintf("[ELF Loader] Checking file %s\n", n->Name);)
         
         file = open_file(n, &err);
         if (err)
@@ -475,7 +473,7 @@ int GetKernelSize(struct ELFNode *FirstELF, unsigned long *ro_size, unsigned lon
     if (bss_size)
         *bss_size = bsize;
 
-    kprintf("[ELF Loader] Code %lu bytes, data %lu bytes, BSS array %lu bytes\n", ksize, rwsize, bsize);
+    D(kprintf("[ELF Loader] Code %lu bytes, data %lu bytes, BSS array %lu bytes\n", ksize, rwsize, bsize);)
 
     return 1;
 }
@@ -497,14 +495,14 @@ int LoadKernel(struct ELFNode *FirstELF, void *ptr_ro, void *ptr_rw, char *track
     struct ELF_ModuleInfo_t *prev_mod = NULL;
     struct KernelBSS_t *tracker = (struct KernelBSS_t *)tracker_p;
 
-    kprintf("[ELF Loader] Loading kickstart...\n");
+    D(kprintf("[ELF Loader] Loading kickstart...\n");)
 
     for (n = FirstELF; n; n = n->Next)
     {
         void *file;
         unsigned int err;
 
-        kprintf("[ELF Loader] Code %p, Data %p, Module %s...\n", ptr_ro, ptr_rw, n->Name);
+        D(kprintf("[ELF Loader] Code %p, Data %p, Module %s...\n", ptr_ro, ptr_rw, n->Name);)
 
         file = open_file(n, &err);
         if (err)
@@ -518,12 +516,12 @@ int LoadKernel(struct ELFNode *FirstELF, void *ptr_ro, void *ptr_rw, char *track
         {
             struct sheader *sh = n->sh;
 
-            D(kprintf("[ELF Loader] Section %u... ", i));
+            D(kprintf("[ELF Loader] Section %u... ", i);)
 
             if ((sh[i].flags & SHF_ALLOC) || (sh[i].type == SHT_STRTAB) || (sh[i].type == SHT_SYMTAB))
             {
                 /* Does the section require memory allcation? */
-                D(kprintf("Allocated section\n"));
+                D(kprintf("Allocated section\n");)
 
                 if (sh[i].flags & SHF_WRITE)
                 {
@@ -551,13 +549,13 @@ int LoadKernel(struct ELFNode *FirstELF, void *ptr_ro, void *ptr_rw, char *track
                     need_entry = 0;
                 }
             }
-                D(else kprintf("Ignored\n");)
+            D(else kprintf("Ignored\n");)
 
-            D(kprintf("[ELF Loader] Section address: %p, size: %lu\n", sh[i].addr, sh[i].size));
+            D(kprintf("[ELF Loader] Section address: %p, size: %lu\n", sh[i].addr, sh[i].size);)
         }
 
         /* For every loaded section perform relocations */
-        D(kprintf("[ELF Loader] Relocating...\n"));
+        D(kprintf("[ELF Loader] Relocating...\n");)
         for (i=0; i < n->eh->shnum; i++)
         {
             struct sheader *sh = n->sh;
@@ -584,7 +582,7 @@ int LoadKernel(struct ELFNode *FirstELF, void *ptr_ro, void *ptr_rw, char *track
 
         close_file(file);
 
-        D(kprintf("[ELF Loader] Adding module debug information...\n"));
+        D(kprintf("[ELF Loader] Adding module debug information...\n");)
 
         /* Align our pointer */
         ptr_ro = (void *)(((uintptr_t)ptr_ro + sizeof(void *)) & ~(sizeof(void *) - 1));

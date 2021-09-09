@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2006, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2006, The AROS Development Team. All rights reserved.
 
     Desc: Rexx stub for Delay system function
-    Lang: English
 */
 
 #include <proto/alib.h>
@@ -29,17 +27,17 @@ LONG rxsupp_delay(struct Library *RexxSupportBase, struct RexxMsg *msg, UBYTE **
     len = strlen(arg);
     if (len == 0)
     {
-	*argstring = NULL;
-	return ERR10_018;
+        *argstring = NULL;
+        return ERR10_018;
     }
 
     for (pos = 0; pos < len; pos++)
     {
-	if (!isdigit(arg[pos]))
-	{
-	    *argstring = NULL;
-	    return ERR10_018;
-	}
+        if (!isdigit(arg[pos]))
+        {
+            *argstring = NULL;
+            return ERR10_018;
+        }
     }
     
     Delay(atoi(arg));

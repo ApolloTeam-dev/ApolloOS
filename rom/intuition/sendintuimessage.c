@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <proto/timer.h>
@@ -86,7 +85,7 @@
     if (window->UserPort)
     {
         struct Task *apptask = window->UserPort->mp_SigTask;
-	
+        
         if (apptask && (!apptask->tc_SigWait) && (apptask->tc_State == TS_WAIT))
         {
             //task is DEAD!
@@ -94,7 +93,7 @@
             imsg->Code = 0;
             imsg->Qualifier = 0;
             ReplyMsg(&imsg->ExecMessage);
-	    
+            
             if (IW(window)->messagecache)
             {
                 IW(window)->messagecache->IDCMPWindow = 0;
@@ -112,8 +111,8 @@
 
             return;
         }
-	else
-	{
+        else
+        {
             IW(window)->specialflags &= ~SPFLAG_IAMDEAD;
         }
     }

@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc: Miscellaneous functions for dealing with DOS rootnode.
-    Lang:
 */
 
 #include <aros/debug.h>
@@ -79,7 +77,7 @@ void addprocesstoroot(struct Process *process, struct DosLibrary *DOSBase)
     }
     
     /*
-    ** it seems like a new taskarray is needed 
+    ** it seems like a new taskarray is needed
     */
     newtaskarray = AllocMem(sizeof(IPTR) + (size + 1)*sizeof(APTR), MEMF_ANY);
     

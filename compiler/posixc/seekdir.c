@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 */
 
 #include <dos/dos.h>
@@ -14,11 +13,11 @@
 
 #include <dirent.h>
 
-	void seekdir(
+        void seekdir(
 
 /*  SYNOPSIS */
-	DIR *dir,
-	off_t offset)
+        DIR *dir,
+        off_t offset)
 
 /*  FUNCTION
 
@@ -47,12 +46,12 @@
         return;
 
     if (offset > 1)
-       	for
-	(
-	    pos = 2;
-	    (pos <= offset) && ExNext(desc->fcb->handle, dir->priv);
-	    pos++
-	);
+        for
+        (
+            pos = 2;
+            (pos <= offset) && ExNext(desc->fcb->handle, dir->priv);
+            pos++
+        );
     dir->pos = pos;
 }
 

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function fstat().
 */
@@ -16,25 +15,25 @@
 
 #include <sys/stat.h>
 
-	int __posixc_fstat(
+        int __posixc_fstat(
 
 /*  SYNOPSIS */
-	int fd,
-	struct stat *sb)
+        int fd,
+        struct stat *sb)
 
 /*  FUNCTION
-	Returns information about a file specified by an open file descriptor.
-	Information is stored in stat structure. Consult stat() documentation
-	for detailed description of that structure.
+        Returns information about a file specified by an open file descriptor.
+        Information is stored in stat structure. Consult stat() documentation
+        for detailed description of that structure.
 
     INPUTS
-	filedes - File descriptor of the file
-	sb - Pointer to stat structure that will be filled by the fstat()
-	call.
+        filedes - File descriptor of the file
+        sb - Pointer to stat structure that will be filled by the fstat()
+        call.
 
     RESULT
-	0 on success and -1 on error. If an error occurred, the global
-	variable errno is set.
+        0 on success and -1 on error. If an error occurred, the global
+        variable errno is set.
 
     NOTES
 
@@ -43,10 +42,10 @@
     BUGS
 
     SEE ALSO
-	stat()
+        __posixc_stat()
 
     INTERNALS
-	Consult stat() documentation for details.
+        Consult stat() documentation for details.
 
 ******************************************************************************/
 {
@@ -56,7 +55,7 @@
     {
         errno = EBADF;
 
-	return -1;
+        return -1;
     }
 
     return __stat(desc->fcb->handle, sb, (desc->fcb->privflags & _FCB_ISDIR) ? FALSE : TRUE);

@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 
     Free a BOOPSI Class.
 */
@@ -100,7 +99,7 @@
     {
         AROS_ATOMIC_DEC(iclass->cl_Super->cl_SubclassCount);
         
-        DeletePool(iclass->cl_MemoryPool); 
+        DeletePool(iclass->cl_MemoryPool);
         FreeMem(iclass, sizeof(Class));
         
         rv = TRUE;

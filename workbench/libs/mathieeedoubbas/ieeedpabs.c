@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 */
 
 #include "mathieeedoubbas_intern.h"
@@ -27,10 +26,10 @@
     RESULT
         x - absolute value of y.
 
-	Flags:
-	  zero	   : result is zero
-	  negative : 0
-	  overflow : 0
+        Flags:
+          zero     : result is zero
+          negative : 0
+          overflow : 0
 
     NOTES
 
@@ -63,7 +62,7 @@
         /* (*Qy) &= (IEEEDPMantisse_Mask | IEEEDPExponent_Mask) */
         AND64QC
         (
-            (*Qy), 
+            (*Qy),
             (IEEEDPMantisse_Mask_Hi | IEEEDPExponent_Mask_Hi),
             (IEEEDPMantisse_Mask_Lo | IEEEDPExponent_Mask_Lo)
         );

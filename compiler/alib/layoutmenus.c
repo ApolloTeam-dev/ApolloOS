@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Layout a gadtools menu
-    Lang: english
 */
 
 #define AROS_TAGRETURNTYPE BOOL
@@ -20,13 +18,13 @@ extern struct Library * GadToolsBase;
 #define NO_INLINE_STDARG /* turn off inline def */
 #include <proto/gadtools.h>
 
-	BOOL LayoutMenus (
+        BOOL LayoutMenus (
 
 /*  SYNOPSIS */
-	struct Menu * menu,
-	APTR          vi,
-	Tag	      tag1,
-	...	      )
+        struct Menu * menu,
+        APTR          vi,
+        Tag           tag1,
+        ...           )
 
 /*  FUNCTION
         Varargs version of gadtools.library/LayoutMenusA().
@@ -42,7 +40,7 @@ extern struct Library * GadToolsBase;
     BUGS
 
     SEE ALSO
-	gadtools.library/LayoutMenusA()
+        gadtools.library/LayoutMenusA()
 
     INTERNALS
 

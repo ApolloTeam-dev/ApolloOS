@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2007, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 #include <aros/libcall.h>
 #include <proto/exec.h>
@@ -19,38 +17,38 @@
 #include <proto/layers.h>
 #include "layers_intern.h"
 
-	AROS_LH1(void, InitLayers,
+        AROS_LH1(void, InitLayers,
 
 /*  SYNOPSIS */
-	AROS_LHA(struct Layer_Info *, li, A0),
+        AROS_LHA(struct Layer_Info *, li, A0),
 
 /*  LOCATION */
-	struct LayersBase *, LayersBase, 5, Layers)
+        struct LayersBase *, LayersBase, 5, Layers)
 
 /*  FUNCTION
-	Initializes the supplied Layer_Info, so it's ready for use.
-	Leaves the Layer_Info in an unlocked state.
+        Initializes the supplied Layer_Info, so it's ready for use.
+        Leaves the Layer_Info in an unlocked state.
 
     INPUTS
-	li -- pointer to Layer_Info structure
+        li -- pointer to Layer_Info structure
 
     RESULT
 
     NOTES
-	This function is obsolete. Use NewLayerInfo() instead.
+        This function is obsolete. Use NewLayerInfo() instead.
 
     EXAMPLE
 
     BUGS
 
     SEE ALSO
-	NewLayerInfo()
+        NewLayerInfo()
 
     INTERNALS
 
     HISTORY
-	27-11-96    digulla automatically created from
-			    layers_lib.fd and clib/layers_protos.h
+        27-11-96    digulla automatically created from
+                            layers_lib.fd and clib/layers_protos.h
 
 *****************************************************************************/
 {
@@ -62,7 +60,7 @@
 
     /* init LayerInfo structure with all zeros */
     for(i = 0; i < sizeof(struct Layer_Info); i++)
-	((UBYTE *)li)[i] = 0;
+        ((UBYTE *)li)[i] = 0;
 
     NewList((struct List *)&li->gs_Head);
 

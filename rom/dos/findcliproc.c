@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
 
     Desc: Find a CLI process by number
-    Lang: English
 */
 
 #include <exec/lists.h>
@@ -27,7 +25,7 @@
 
 /*  FUNCTION
         Find a CLI process by its task number. The number must be greater
-        than 0. 
+        than 0.
 
     INPUTS
         num - The task number of the CLI to find.

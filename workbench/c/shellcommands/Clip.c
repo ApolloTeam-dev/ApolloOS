@@ -1,9 +1,7 @@
 /*
-    Copyright © 2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2011, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 /******************************************************************************
@@ -47,6 +45,8 @@
 
 #define SH_GLOBAL_SYSBASE       1
 #include <aros/shcommands.h>
+
+#include <string.h>
 
 /*
  * otigreat: Without having used the original Clip, it's not clear if

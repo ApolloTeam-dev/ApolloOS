@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2001, The AROS Development Team. All rights reserved.
 
     Desc: Varargs version of dos.library/CreateNewProc()
-    Lang: english
 */
 
 #define AROS_TAGRETURNTYPE struct Process *
@@ -16,11 +14,11 @@
 #define NO_INLINE_STDARG /* turn off inline def */
 #include <proto/dos.h>
 
-	struct Process * CreateNewProcTags (
+        struct Process * CreateNewProcTags (
 
 /*  SYNOPSIS */
-	Tag tag1,
-	...)
+        Tag tag1,
+        ...)
 
 /*  FUNCTION
         This is the varargs version of dos.library/CreateNewProc().

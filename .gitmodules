@@ -97,9 +97,6 @@
 [submodule "workbench/prefs/palette/catalogs"]
 	path = workbench/prefs/palette/catalogs
 	url = https://github.com/aros-translation-team/palette-prefs.git
-[submodule "developer/debug/test/crt/posixc/posix.1"]
-	path = developer/debug/test/crt/posixc/posix.1
-	url = https://github.com/agordon/posix-libc-examples.git
 [submodule "workbench/prefs/appearance/catalogs"]
 	path = workbench/prefs/appearance/catalogs
 	url = https://github.com/aros-translation-team/appearance-prefs.git
@@ -199,6 +196,6 @@
 [submodule "workbench/tools/WiMP/catalogs"]
 	path = workbench/tools/WiMP/catalogs
 	url = https://github.com/aros-translation-team/wimp.git
-[submodule "developer/debug/test/datatypes"]
-	path = developer/debug/test/datatypes
-	url = https://github.com/aros-development-team/datatype-test-binaries.git
+[submodule "workbench/system/Wanderer/Tools/Info/catalogs"]
+	path = workbench/system/Wanderer/Tools/Info/catalogs
+	url = https://github.com/aros-translation-team/info.git

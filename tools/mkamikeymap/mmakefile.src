@@ -1,0 +1,15 @@
+include $(SRCDIR)/config/aros.cfg
+
+## Host build
+
+#MM- tools-mkkeymap: includes
+
+USER_INCLUDES := -I$(GENINCDIR)
+EXEDIR := $(dir $(MKAMIKEYMAP))
+FILES := mkamikeymap config parsedescriptor writekeymap
+
+%build_prog mmake=tools-mkkeymap \
+    progname="$(notdir $(MKAMIKEYMAP))" targetdir=$(EXEDIR) \
+    files="$(FILES)" compiler=host
+
+%common

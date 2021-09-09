@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2014, The AROS Development Team. All rights reserved.
 */
 
 #include "sysmon_intern.h"
@@ -52,13 +51,13 @@ static VOID DeInitTimer(struct SysMonData *smdata)
 {
     if (timermsg != NULL)
     {
-	    AbortIO((struct IORequest *)timermsg);
-	    WaitIO((struct IORequest *)timermsg);
-	    CloseDevice((struct IORequest *)timermsg);
-	    DeleteExtIO((struct IORequest *)timermsg);
+            AbortIO((struct IORequest *)timermsg);
+            WaitIO((struct IORequest *)timermsg);
+            CloseDevice((struct IORequest *)timermsg);
+            DeleteExtIO((struct IORequest *)timermsg);
     }
 
-	if(timerport != NULL) DeletePort(timerport);
+        if(timerport != NULL) DeletePort(timerport);
 }
 
 ULONG GetSIG_TIMER()

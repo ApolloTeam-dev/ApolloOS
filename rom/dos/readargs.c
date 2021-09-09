@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2017, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: english
 */
 
 #define DEBUG 0
@@ -620,7 +618,7 @@ static inline LONG is_question(BYTE * buff, LONG buffsize)
                 cs->CS_CurChr--;
             s2 = &cs->CS_Buffer[cs->CS_CurChr];
            
-            while (cs->CS_CurChr < cs->CS_Length && 
+            while (cs->CS_CurChr < cs->CS_Length &&
                    strbuflen > 1 &&
                    *s2 &&
                    *s2 != '\n')

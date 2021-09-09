@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2003, The AROS Development Team. All rights reserved.
 */
 
 /* gui_zune.c -- here are all functions for the ZUNE gui */
@@ -1110,7 +1109,7 @@ int i, max = 0;
         max = GetPL(pl, _CHOICES).intval;
 
         if ( max > 32 )
-        { 
+        {
             error = SCRIPTERROR;
             traperr("More than 32 choices given!\n", NULL);
         }
@@ -1294,7 +1293,7 @@ BOOL j;
         max = GetPL(pl, _CHOICES).intval;
 
         if ( max > 32 )
-        { 
+        {
             error = SCRIPTERROR;
             traperr("More than 32 choices given!\n", NULL);
         }

@@ -1,6 +1,5 @@
 /*
-    Copyright © 2003, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2003, The AROS Development Team. All rights reserved.
 */
 
 #include <exec/types.h>
@@ -25,7 +24,7 @@ BOOL MakeDir( CONST_STRPTR path )
 
 BOOL MakeDirs( STRPTR path )
 {
-    STRPTR position; 
+    STRPTR position;
     BOOL   success = FALSE;
     BPTR   lock    = BNULL;
     

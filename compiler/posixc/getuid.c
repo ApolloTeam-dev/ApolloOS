@@ -1,6 +1,5 @@
 /*
-    Copyright © 2003-2016, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2003-2016, The AROS Development Team. All rights reserved.
 
     POSIX.1-2008 function getuid().
 */
@@ -18,7 +17,7 @@
         void)
 
 /*  FUNCTION
-	Returns the real user ID of the calling process.
+        Returns the real user ID of the calling process.
 
     INPUTS
 

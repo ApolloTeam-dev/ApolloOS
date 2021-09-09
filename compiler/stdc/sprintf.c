@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2012, The AROS Development Team. All rights reserved.
 
     C99 function sprintf().
 */
@@ -12,36 +11,36 @@
     NAME */
 #include <stdio.h>
 
-	int sprintf (
+        int sprintf (
 
 /*  SYNOPSIS */
-	char	   * str,
-	const char * format,
-	...)
+        char       * str,
+        const char * format,
+        ...)
 
 /*  FUNCTION
-	Formats a list of arguments and writes them into the string str.
+        Formats a list of arguments and writes them into the string str.
 
     INPUTS
-	str - The formatted string is written into this variable. You
-		must make sure that it is large enough to contain the
-		result.
-	format - Format string as described above
-	... - Arguments for the format string
+        str - The formatted string is written into this variable. You
+                must make sure that it is large enough to contain the
+                result.
+        format - Format string as described above
+        ... - Arguments for the format string
 
     RESULT
-	The number of characters written into the string.
+        The number of characters written into the string.
 
     NOTES
-	No checks are made that str is large enough for the result.
+        No checks are made that str is large enough for the result.
 
     EXAMPLE
 
     BUGS
 
     SEE ALSO
-	fprintf(), vprintf(), vfprintf(), snprintf(), vsprintf(),
-	vsnprintf()
+        fprintf(), vprintf(), vfprintf(), snprintf(), vsprintf(),
+        vsnprintf()
 
     INTERNALS
 

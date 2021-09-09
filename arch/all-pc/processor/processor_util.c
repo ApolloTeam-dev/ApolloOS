@@ -1,14 +1,16 @@
 /*
-    Copyright © 2010-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2010-2020, The AROS Development Team. All rights reserved.
 */
 
-#define DEBUG 0
 #include <aros/debug.h>
 
+#include <proto/utility.h>
+
 #include <resources/processor.h>
+
 #include <string.h>
 
+#include "processor_intern.h"
 #include "processor_arch_intern.h"
 
 static const char *vendors[] =
@@ -26,17 +28,24 @@ static const char *vendors[] =
     NULL
 };
 
-static void ReadVendorID(struct X86ProcessorInformation * info)
+static void ReadVendorID(struct ProcessorBase *ProcessorBase, struct X86ProcessorInformation * info)
 {
+    struct UtilityBase *UtilityBase;
+    APTR *procPriv = ProcessorBase->Private1;
     ULONG eax, ebx, ecx, edx;
     ULONG * ulongptr = NULL;
     ULONG index = 0;
+
     info->Vendor = VENDOR_UNKNOWN;
     info->CPUIDHighestStandardFunction = 0x0;
     info->CPUIDHighestExtendedFunction = 0x0;
     
-D(bug("[processor.x86] :%s()\n", __func__));
-    
+    D(bug("[processor.x86] :%s()\n", __func__));
+
+    /* UtilityBase is embeded in the last slot .. */
+    UtilityBase = procPriv[ProcessorBase->cpucount];
+    D(bug("[processor.x86] %s: UtilityBase @ 0x%p\n", __func__, UtilityBase);)
+
     /* Reading CPU Vendor ID */
     ulongptr = (ULONG *)info->VendorID;
     index = 0;
@@ -48,7 +57,7 @@ D(bug("[processor.x86] :%s()\n", __func__));
     /* Select manufacturer based on Vendor ID */
     for (index = 0; vendors[index]; index++)
     {
-        if (strcmp(info->VendorID, vendors[index]) == 0)
+        if (Stricmp(info->VendorID, vendors[index]) == 0)
         {
             info->Vendor = index + VENDOR_AMD;
             break;
@@ -68,7 +77,7 @@ static void ReadBrandString(struct X86ProcessorInformation * info)
     ULONG * ulongptr = NULL;
     ULONG index = 0;
 
-D(bug("[processor.x86] :%s()\n", __func__));
+    D(bug("[processor.x86] :%s()\n", __func__));
     
     /* Reading CPU Brand String */
     ulongptr = (ULONG *)info->BrandStringBuffer;
@@ -95,9 +104,9 @@ static ULONG AMDDeriveFamily(UBYTE basefamily, UBYTE extendedfamily)
     ULONG family = 0;
     ULONG ret;
 
-D(bug("[processor.x86] :%s()\n", __func__));
+    D(bug("[processor.x86] :%s()\n", __func__));
 
-    if (basefamily == 0x0f) 
+    if (basefamily == 0x0f)
         family = basefamily + extendedfamily;
     else
         family = basefamily;
@@ -121,7 +130,7 @@ static ULONG IntelDeriveFamily(UBYTE basefamily, UBYTE extendedfamily)
     ULONG family = extendedfamily + basefamily;
     ULONG ret;
 
-D(bug("[processor.x86] :%s()\n", __func__));
+    D(bug("[processor.x86] :%s()\n", __func__));
 
     switch(family)
     {
@@ -140,7 +149,7 @@ static void ReadFamilyModelStepping(struct X86ProcessorInformation * info)
     ULONG eax, ebx, ecx, edx;
     UBYTE stepping, basefamily, extendedfamily, basemodel, extendedmodel;
 
-D(bug("[processor.x86] :%s()\n", __func__));
+    D(bug("[processor.x86] :%s()\n", __func__));
 
     /* Reading Family/Model/Stepping */
     cpuid(0x00000001);
@@ -155,12 +164,12 @@ D(bug("[processor.x86] :%s()\n", __func__));
     info->Family = CPUFAMILY_UNKNOWN;
     switch(info->Vendor)
     {
-    case(VENDOR_AMD): 
-        info->Family = AMDDeriveFamily(basefamily, extendedfamily); 
+    case(VENDOR_AMD):
+        info->Family = AMDDeriveFamily(basefamily, extendedfamily);
         info->Model = basemodel | (basefamily < 0x0f ? 0 : (extendedmodel << 4));
         (void)stepping; /* FIXME: Why is this unused? */
         break;
-    case(VENDOR_INTEL): 
+    case(VENDOR_INTEL):
         info->Family = IntelDeriveFamily(basefamily, extendedfamily);
         info->Model = basemodel | (extendedmodel << 4);
         (void)stepping; /* FIXME: Why is this unused? */
@@ -172,7 +181,7 @@ static void ReadFeaturesFlags(struct X86ProcessorInformation * info)
 {
     ULONG eax, ebx, ecx, edx;
 
-D(bug("[processor.x86] :%s()\n", __func__));
+    D(bug("[processor.x86] :%s()\n", __func__));
 
     /* Reading standard feature flags */
     cpuid(0x00000001);
@@ -200,7 +209,9 @@ D(bug("[processor.x86] :%s()\n", __func__));
     info->Features4 = ecx;
     
     /* Calculate the vector unit */
-    if (info->Features2 & FEATF_SSE42)
+    if (info->Features2 & FEATF_AVX)
+        info->VectorUnit = VECTORTYPE_AVX;
+    else if (info->Features2 & FEATF_SSE42)
         info->VectorUnit = VECTORTYPE_SSE42;
     else if (info->Features2 & FEATF_SSE41)
         info->VectorUnit = VECTORTYPE_SSE41;
@@ -224,6 +235,27 @@ D(bug("[processor.x86] :%s()\n", __func__));
         info->VectorUnit = VECTORTYPE_MMX;
     else
         info->VectorUnit = VECTORTYPE_NONE;
+
+    if (info->Features2 & FEATF_HYPERV) {
+
+        /* Read The Hypervisor ID ..*/
+        cpuid(0x40000000);
+        info->HyperVID[0] = ebx & 0xFF;
+        info->HyperVID[1] = (ebx & 0xFF00) >> 8;
+        info->HyperVID[2] = (ebx & 0xFF0000) >> 16;
+        info->HyperVID[3] = (ebx & 0xFF000000) >> 24;
+
+        info->HyperVID[4] = ecx & 0xFF;
+        info->HyperVID[5] = (ecx & 0xFF00) >> 8;
+        info->HyperVID[6] = (ecx & 0xFF0000) >> 16;
+        info->HyperVID[7] = (ecx & 0xFF000000) >> 24;
+
+        info->HyperVID[8] = edx & 0xFF;
+        info->HyperVID[9] = (edx & 0xFF00) >> 8;
+        info->HyperVID[10] = (edx & 0xFF0000) >> 16;
+        info->HyperVID[11] = (edx & 0xFF000000) >> 24;
+        D(bug("[processor.x86] :%s: Hypervisor ID = '%s'\n", __func__, info->HyperVID);)
+    }
 }
 
 static void AMDDeriveCacheInformation(struct X86ProcessorInformation * info)
@@ -231,7 +263,7 @@ static void AMDDeriveCacheInformation(struct X86ProcessorInformation * info)
     ULONG eax, ebx, ecx, edx;
     info->CacheLineSize = 0xff;
 
-D(bug("[processor.x86] :%s()\n", __func__));
+    D(bug("[processor.x86] :%s()\n", __func__));
 
     /* Reading L1 information */
     cpuid(0x80000005);
@@ -255,7 +287,7 @@ D(bug("[processor.x86] :%s()\n", __func__));
 static void IntelDecodeCacheKeyValue(struct X86ProcessorInformation * info, UBYTE key)
 {
 
-D(bug("[processor.x86] :%s()\n", __func__));
+    D(bug("[processor.x86] :%s()\n", __func__));
 
     switch(key)
     {
@@ -331,7 +363,7 @@ static void IntelDeriveCacheInformation(struct X86ProcessorInformation * info)
     ULONG eax, ebx, ecx, edx;
     info->CacheLineSize = 0xff;
 
-D(bug("[processor.x86] :%s()\n", __func__));
+    D(bug("[processor.x86] :%s()\n", __func__));
 
     /* Reading Cache Information */
     cpuid(0x00000002);
@@ -395,7 +427,7 @@ D(bug("[processor.x86] :%s()\n", __func__));
 static void ReadCacheInformation(struct X86ProcessorInformation * info)
 {
 
-D(bug("[processor.x86] :%s()\n", __func__));
+    D(bug("[processor.x86] :%s()\n", __func__));
 
     info->L1DataCacheSize = 0;
     info->L1InstructionCacheSize = 0;
@@ -414,7 +446,7 @@ static void ReadMSRSupportInformation(struct X86ProcessorInformation * info)
 {
     ULONG eax, ebx, ecx, edx;
 
-D(bug("[processor.x86] :%s()\n", __func__));
+    D(bug("[processor.x86] :%s()\n", __func__));
 
     info->APERFMPERF = FALSE;
 
@@ -423,7 +455,7 @@ D(bug("[processor.x86] :%s()\n", __func__));
         return;
 
     if (info->CPUIDHighestStandardFunction > 0x00000005)
-    {   
+    {
         /* Reading Power Management Information */
         cpuid(0x00000006);
         if (ecx & 0x01)
@@ -431,11 +463,11 @@ D(bug("[processor.x86] :%s()\n", __func__));
     }
 }
 
-VOID ReadProcessorInformation(struct X86ProcessorInformation * info)
+VOID ReadProcessorInformation(struct ProcessorBase *ProcessorBase, struct X86ProcessorInformation * info)
 {
-D(bug("[processor.x86] :%s()\n", __func__));
+    D(bug("[processor.x86] :%s()\n", __func__));
 
-    ReadVendorID(info);
+    ReadVendorID(ProcessorBase, info);
     ReadBrandString(info);
     ReadFamilyModelStepping(info);
     ReadFeaturesFlags(info);

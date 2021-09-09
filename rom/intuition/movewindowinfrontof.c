@@ -1,7 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
-    $Id$
+    Copyright (C) 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright (C) 2001-2003, The MorphOS Development Team. All Rights Reserved.
 */
 
 #include <proto/layers.h>
@@ -11,8 +10,8 @@
 struct MoveWindowInFrontOfActionMsg
 {
     struct IntuiActionMsg    msg;
-    struct Window   	    *window;
-    struct Window   	    *behindwindow;
+    struct Window           *window;
+    struct Window           *behindwindow;
 };
 
 static VOID int_movewindowinfrontof(struct MoveWindowInFrontOfActionMsg *msg,
@@ -77,11 +76,11 @@ static VOID int_movewindowinfrontof(struct MoveWindowInFrontOfActionMsg *msg,
                                     struct IntuitionBase *IntuitionBase)
 {
     struct LayersBase *LayersBase = GetPrivIBase(IntuitionBase)->LayersBase;
-    struct Window   	*window = msg->window;
-    struct Window   	*behindwindow = msg->behindwindow;
-    struct Screen   	*screen = window->WScreen;
-    struct Requester 	*req;
-    struct Layer    	*layer = WLAYER(window);
+    struct Window       *window = msg->window;
+    struct Window       *behindwindow = msg->behindwindow;
+    struct Screen       *screen = window->WScreen;
+    struct Requester    *req;
+    struct Layer        *layer = WLAYER(window);
     
     if (!ResourceExisting(window, RESOURCE_WINDOW, IntuitionBase)) return;
     if (!ResourceExisting(behindwindow, RESOURCE_WINDOW, IntuitionBase)) return;

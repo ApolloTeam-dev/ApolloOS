@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
 
     Desc: Timer startup and device commands, reference code
     
@@ -11,6 +10,9 @@
 */
 
 /****************************************************************************************/
+
+
+#include <aros/debug.h>
 
 #include <exec/types.h>
 #include <exec/io.h>
@@ -26,7 +28,6 @@
 #include <proto/timer.h>
 
 #include <aros/symbolsets.h>
-#include <aros/debug.h>
 
 #include LC_LIBDEFS_FILE
 
@@ -36,6 +37,8 @@
 static AROS_INTH1(VBlankInt, struct TimerBase *, TimerBase)
 {
     AROS_INTFUNC_INIT
+
+    D(bug("%s()\n", __func__);)
 
     /*
      * First increment the current time. No need to Disable() here as
@@ -64,6 +67,8 @@ static int GM_UNIQUENAME(Init)(LIBBASETYPEPTR LIBBASE)
 {
     struct Interrupt *is;
 
+    D(bug("%s()\n", __func__);)
+
 #if defined(__AROSEXEC_SMP__)
     struct ExecLockBase *ExecLockBase;
     if ((ExecLockBase = OpenResource("execlock.resource")) != NULL)
@@ -90,22 +95,22 @@ static int GM_UNIQUENAME(Init)(LIBBASETYPEPTR LIBBASE)
     LIBBASE->tb_Platform.tb_VBlankTime.tv_micro = 1000000 / LIBBASE->tb_eclock_rate;
 
     D(bug("Timer period: %ld secs, %ld micros\n",
-	LIBBASE->tb_Platform.tb_VBlankTime.tv_secs, LIBBASE->tb_Platform.tb_VBlankTime.tv_micro));
+        LIBBASE->tb_Platform.tb_VBlankTime.tv_secs, LIBBASE->tb_Platform.tb_VBlankTime.tv_micro));
 
     /* Start up the interrupt server */
     is = AllocMem(sizeof(struct Interrupt), MEMF_PUBLIC);
     if (is)
     {
-	is->is_Node.ln_Pri = 0;
-	is->is_Node.ln_Type = NT_INTERRUPT;
-	is->is_Node.ln_Name = (STRPTR)MOD_NAME_STRING;
-	is->is_Code = (VOID_FUNC)VBlankInt;
-	is->is_Data = LIBBASE;
+        is->is_Node.ln_Pri = 0;
+        is->is_Node.ln_Type = NT_INTERRUPT;
+        is->is_Node.ln_Name = (STRPTR)MOD_NAME_STRING;
+        is->is_Code = (VOID_FUNC)VBlankInt;
+        is->is_Data = LIBBASE;
 
-	AddIntServer(INTB_VERTB, is);
-	LIBBASE->tb_TimerIRQHandle = is;
-	
-	return TRUE;
+        AddIntServer(INTB_VERTB, is);
+        LIBBASE->tb_TimerIRQHandle = is;
+        
+        return TRUE;
     }
 
     return FALSE;
