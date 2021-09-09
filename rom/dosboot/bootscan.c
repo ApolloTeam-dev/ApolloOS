@@ -64,12 +64,13 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
     UBYTE name[32];
     ULONG i, blockspercyl;
     const struct PartitionAttribute *attrs;
-    IPTR tags[7];
+    IPTR tags[9];
     IPTR pp[4 + DE_BOOTBLOCKS + 1] = { };
     struct DeviceNode *devnode;
     LONG ppos;
     TEXT *devname;
     LONG bootable;
+    LONG automount;
     ULONG pttype = PHPTT_UNKNOWN;
     BOOL appended, changed;
     struct Node *fsnode;
@@ -92,10 +93,18 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
         tags[3] = (IPTR)&pp[4];
         tags[4] = PT_BOOTABLE;
         tags[5] = (IPTR)&bootable;
-        tags[6] = TAG_DONE;
+        tags[6] = PT_AUTOMOUNT;
+        tags[7] = (IPTR)&automount;
+        tags[8] = TAG_DONE;
         GetPartitionAttrs(pn, (struct TagItem *)tags);
 
-        D(bug("[Boot] Partition name: %s bootable: %d\n", name, bootable));
+        D(bug("[Boot] Partition name: %s bootable: %d automount: %d\n", name, bootable, automount));
+
+        if (automount == FALSE)
+        {
+        	D(bug("[Boot] Skipping %s so NOMOUNT is SET\n", name));
+        	return;
+        }
     }
     else
     {

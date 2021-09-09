@@ -440,8 +440,11 @@ VOID CBM__Hidd_BitMap__PutAlphaImage(OOP_Class *cl, OOP_Object *o,
     UBYTE src_red, src_green, src_blue, src_alpha;
     UBYTE dst_red, dst_green, dst_blue;
 
+    D(bug("[CBM] PutAlphaImage %d %d F=%d\n", msg->height,  msg->width, pixFmt));
+
     switch(pixFmt)
     {
+#ifdef NONVAMPIRE
         case vHidd_StdPixFmt_BGR032:
 
             p = msg->pixels;
@@ -534,6 +537,174 @@ VOID CBM__Hidd_BitMap__PutAlphaImage(OOP_Class *cl, OOP_Object *o,
 
                         *q++ = (dst_green << 3) & 0xe0 | dst_blue >> 3;
                         *q++ = dst_red & 0xf8 | dst_green >> 5;
+                    }
+                }
+                p += src_step;
+                q += dst_step;
+            }
+            break;
+#endif
+    	
+    	// VAMPIRE modes used by SAGA
+    	
+        case vHidd_StdPixFmt_ARGB32:
+
+            p = msg->pixels;
+            q = data->buffer + msg->y * data->bytesperrow
+                + msg->x * data->bytesperpixel;
+            src_step = msg->modulo - msg->width * 4;
+            dst_step = data->bytesperrow - data->bytesperpixel * msg->width;
+
+            for(y=msg->height; y; y--)
+            {
+                for(x=msg->width; x; x--)
+                {
+                    src_alpha = *p++;
+                    src_red   = *p++;
+                    src_green = *p++;
+                    src_blue  = *p++;
+
+                    switch(src_alpha)
+                    {
+                    case 0:
+                        q += 4;
+                        break;
+
+                    case 0xff:
+                        *q++ = 0;
+                        *q++ = src_red;
+                        *q++ = src_green;
+                        *q++ = src_blue;
+                        break;
+
+                    default:
+                        *q++ = 0;
+                        dst_red = *q;
+                        dst_red += do_alpha(src_alpha, src_red - dst_red);
+                        *q++ = dst_red;
+                        dst_green = *q;
+                        dst_green += do_alpha(src_alpha, src_green - dst_green);
+                        *q++ = dst_green;
+                        dst_blue = *q;
+                        dst_blue += do_alpha(src_alpha, src_blue - dst_blue);
+                        *q++ = dst_blue;
+                        break;
+                    }
+                }
+                p += src_step;
+                q += dst_step;
+            }
+            break;
+
+
+        case vHidd_StdPixFmt_RGB24:
+
+            p = msg->pixels;
+            q = data->buffer + msg->y * data->bytesperrow
+                + msg->x * data->bytesperpixel;
+            src_step = msg->modulo - msg->width * 4;
+            dst_step = data->bytesperrow - data->bytesperpixel * msg->width;
+
+            for(y=msg->height; y; y--)
+            {
+                for(x=msg->width; x; x--)
+                {
+                    src_alpha = *p++;
+                    src_red   = *p++;
+                    src_green = *p++;
+                    src_blue  = *p++;
+
+                    switch(src_alpha)
+                    {
+                    case 0:
+                        q += 3;
+                        break;
+
+                    case 0xff:
+                        *q++ = src_red;
+                        *q++ = src_green;
+                        *q++ = src_blue;
+                        break;
+
+                    default:
+                        dst_red = *q;
+                        dst_red += do_alpha(src_alpha, src_red - dst_red);
+                        *q++ = dst_red;
+                        dst_green = *q;
+                        dst_green += do_alpha(src_alpha, src_green - dst_green);
+                        *q++ = dst_green;
+                        dst_blue = *q;
+                        dst_blue += do_alpha(src_alpha, src_blue - dst_blue);
+                        *q++ = dst_blue;
+                        break;
+                    }
+                }
+                p += src_step;
+                q += dst_step;
+            }
+            break;
+
+        case vHidd_StdPixFmt_RGB16:
+
+            p = msg->pixels;
+            q = data->buffer + msg->y * data->bytesperrow
+                + msg->x * data->bytesperpixel;
+            src_step = msg->modulo - msg->width * 4;
+            dst_step = data->bytesperrow - data->bytesperpixel * msg->width;
+
+            for(y= msg->height; y; y--)
+            {
+                for(x=msg->width; x; x--)
+                {
+#ifdef NONVAMPIRE
+                    ULONG data;
+                    ULONG result;
+#else
+                    register ULONG data asm ("d0");
+                    register ULONG result asm ("d0");
+#endif
+                    data = (ULONG)*((HIDDT_Pixel *)p);
+                    src_alpha = *p++;
+                    src_red   = *p++;
+                    src_green = *p++;
+                    src_blue  = *p++;
+
+                    switch(src_alpha)
+                    {
+                    case 0:
+                        q += 2;
+                        break;
+
+                    case 0xff:
+#ifdef NONVAMPIRE
+						result = ((data & 0xF80000)>>8) | ((data & 0xFC00)>>5) | ((data & 0xF8)>>3);
+#else
+                        asm ("dc.w 0xFE00,0x0007" : "=r" (result) : "0" (data));
+#endif
+                        *(UWORD *)q  = (UWORD)result;
+                        q += 2;
+                        break;
+
+                    default:
+                        dst_red = *q;
+                        dst_blue = *(q + 1);
+                        dst_green = (dst_red << 5) | ((dst_blue & 0xE0) >> 3);
+                        dst_red  &= 0xf8;
+                        dst_blue <<= 3;
+                        dst_red += do_alpha(src_alpha, src_red - dst_red);
+                        data = dst_red<<16;
+                        dst_green += do_alpha(src_alpha, src_green - dst_green);
+                        data |= dst_green<<8;
+                        dst_blue += do_alpha(src_alpha, src_blue - dst_blue);
+                        data |= dst_blue;
+#ifdef NONVAMPIRE
+						result = ((data & 0xF80000)>>8) | ((data & 0xFC00)>>5) | ((data & 0xF8)>>3);
+#else
+                        asm ("dc.w 0xFE00,0x0007" : "=r" (result) : "0" (data));
+#endif
+                        *(UWORD *)q  = (UWORD)result;
+                        q += 2;
+                        break;
                     }
                 }
                 p += src_step;

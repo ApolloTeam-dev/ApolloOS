@@ -1316,6 +1316,7 @@ static struct Gadget *Process_RawMouse(struct InputEvent *ie, struct IIHData *ii
         struct Screen *scr;
         UWORD DWidth, DHeight;
         struct Rectangle DBounds;
+        BOOL skipAutoscroll = FALSE;
 
         if (ie->ie_Qualifier & IEQUALIFIER_RELATIVEMOUSE) {
             //ULONG Thresh;
@@ -1476,11 +1477,12 @@ static struct Gadget *Process_RawMouse(struct InputEvent *ie, struct IIHData *ii
                     DEBUG_DRAG(bug("[Inputhandler] Title Restricted Y delta will be %d\n", dy);)
                 }
                 ScreenPosition(scr, SPOS_RELATIVE, dx, dy, 0, 0);
+                skipAutoscroll = TRUE;
             }
 
             /* Autoscroll the active screen */
             scr = IntuitionBase->ActiveScreen;
-            if (scr && (scr->Flags & AUTOSCROLL) &&
+            if (!skipAutoscroll && scr && (scr->Flags & AUTOSCROLL) &&
                (GetPrivScreen(scr)->IMonitorNode == GetPrivIBase(IntuitionBase)->ActiveMonitor))
             {
                 UWORD DSWidth, DSHeight;

@@ -2886,6 +2886,10 @@ VOID GFXHIDD__Hidd_Gfx__CopyBox(OOP_Class *cl, OOP_Object *obj, struct pHidd_Gfx
     dest = msg->dest;
     src  = msg->src;
 
+#ifdef NONVAMPIRE
+
+// ORIGINAL code
+
     /* If source/dest overlap, direction of operation is important */
     
     if (srcX < destX)
@@ -2906,8 +2910,6 @@ VOID GFXHIDD__Hidd_Gfx__CopyBox(OOP_Class *cl, OOP_Object *obj, struct pHidd_Gfx
         startY = 0; endY = msg->height; deltaY = 1;
     }
     
-    /* Get the source pixel format */
-    srcpf = (HIDDT_PixelFormat *)HBM(src)->prot.pixfmt;
 
     DCOPYBOX(bug("COPYBOX: obj=0x%p (%s), src=0x%p at (%d, %d), dst=0x%p at (%d, %d), size=%dx%d\n", obj, OOP_OCLASS(obj)->ClassNode.ln_Name,
                  msg->src, srcX, srcY, msg->dest, destX, destY, msg->width, msg->height));
@@ -2926,6 +2928,31 @@ VOID GFXHIDD__Hidd_Gfx__CopyBox(OOP_Class *cl, OOP_Object *obj, struct pHidd_Gfx
     }
 #endif
 
+#else
+
+// OPTIMIZED code by GVB
+
+	startX = 0; endX = msg->width;  deltaX = 1;
+	startY = 0; endY = msg->height; deltaY = 1;
+	
+	/* If same format and source/dest overlap, direction of operation is important */
+	if( srcpf == dstpf )
+	{
+		if (srcX < destX)
+		{
+			startX = msg->width - 1;  endX = -1; deltaX = -1;
+		}
+		if (srcY < destY)
+		{
+			startY = msg->height - 1; endY = -1; deltaY = -1;
+		}
+	}
+
+#endif
+
+
+    /* Get the source pixel format */
+    srcpf = (HIDDT_PixelFormat *)HBM(src)->prot.pixfmt;
     dstpf = (HIDDT_PixelFormat *)HBM(dest)->prot.pixfmt;
 
     OOP_GetAttr(msg->src,  aHidd_ChunkyBM_Buffer, (APTR)&srcPixels);
@@ -3078,6 +3105,10 @@ VOID GFXHIDD__Hidd_Gfx__CopyBox(OOP_Class *cl, OOP_Object *obj, struct pHidd_Gfx
              */
             DCOPYBOX(bug("COPY FROM PALETTE TO PALETTE\n"));
 
+#ifdef NONVAMPIRE
+
+// ORIGINAL code
+
             /* FIXME: This might not work very well with two StaticPalette bitmaps */
 
             for(y = startY; y != endY; y += deltaY)
@@ -3090,8 +3121,69 @@ VOID GFXHIDD__Hidd_Gfx__CopyBox(OOP_Class *cl, OOP_Object *obj, struct pHidd_Gfx
                     
                 }
             }
-             
-        } /* if (IS_TRUECOLOR(srcpf)) else ... */
+	     
+#else
+
+// OPTIMIZED code by GVB
+
+		if (destPixels!=0)	// Chunky!!
+		{
+		    HIDDT_DrawMode                  mode;
+
+			IPTR dest_bytesperline;
+			OOP_GetAttr(msg->dest, aHidd_BitMap_BytesPerRow, &dest_bytesperline);
+
+			UBYTE *dest;
+			dest = destPixels + (msg->destX) + (msg->destY) * dest_bytesperline;
+			ULONG destmodulo= dest_bytesperline- msg->width;
+
+    		mode  = GC_DRMD(gc);		// Drawmode?
+
+			if (vHidd_GC_DrawMode_Copy == mode)
+			{
+				for(y=msg->height; y; y--)
+				{
+					srcXw=srcX;     		
+					for(x=msg->width; x; x--)
+					{
+						register HIDDT_Pixel pix;
+						pix = HIDD_BM_GetPixel(src, srcXw, srcY);
+						*dest = (UBYTE)pix;
+						dest += 1;
+						srcXw++;
+					}
+					dest += destmodulo; 
+					srcY++; 
+				}
+			}
+			else	 // CLR?
+			{
+				for(y=msg->height; y; y--)
+				{
+					for(x=msg->width; x; x--)
+					{
+						*dest = 0x00;
+						dest += 1;
+					}
+					dest += destmodulo; 
+				}
+			}
+		}
+		else	// dst PLANAR?
+		{
+			for(y = startY; y != endY; y += deltaY)
+			{
+				for(x = startX; x != endX; x += deltaX)
+				{
+					GC_FG(gc) = HIDD_BM_GetPixel(src, srcX + x, srcY + y);
+
+					HIDD_BM_DrawPixel(msg->dest, gc, destX + x, destY + y);
+				}
+			}
+		}
+#endif
+
+	} /* if (IS_TRUECOLOR(srcpf)) else ... */
 
     } /* if (HIDD_PF_COLMODEL(srcpf) == HIDD_PF_COLMODEL(dstpf)) */
     else
@@ -3116,6 +3208,10 @@ VOID GFXHIDD__Hidd_Gfx__CopyBox(OOP_Class *cl, OOP_Object *obj, struct pHidd_Gfx
         }
         else if (IS_TRUECOLOR(dstpf))
         {
+#ifdef NONVAMPIRE
+
+// ORIGINAL code
+
             /* Get the colortab */
             HIDDT_Color *ctab = ((HIDDT_ColorLUT *)HBM(src)->colmap)->colors;
 
@@ -3136,14 +3232,111 @@ VOID GFXHIDD__Hidd_Gfx__CopyBox(OOP_Class *cl, OOP_Object *obj, struct pHidd_Gfx
                      * so if the address of the entry in the colormap is passed, the colormap
                      * itself will be modified, if we pass "&ctab[pix]" to HIDD_BM_MapColor() !!!!
                      */
-        
+	
                     GC_FG(gc) = HIDD_BM_MapColor(msg->dest, &col);
                     HIDD_BM_DrawPixel(msg->dest, gc, destX + x, destY + y);
                     
                 }
             }
-        }
-        
+
+#else
+
+// OPTIMIZED code by GVB
+
+		if( dstpf->bytes_per_pixel==4 )	// 32bit
+		{
+			ULONG *ctab = (ULONG *)((HIDDT_ColorLUT *)HBM(src)->colmap)->colors;
+			IPTR dest_bytesperline;
+			OOP_GetAttr(msg->dest, aHidd_BitMap_BytesPerRow, &dest_bytesperline);
+
+			UBYTE *dest;
+			dest = destPixels + (msg->destX) * 4 + (msg->destY) * dest_bytesperline;
+			ULONG destmodulo= dest_bytesperline- (msg->width*4);
+
+			for(y=msg->height; y; y--)
+			{		
+				srcXw=srcX;     		
+				for(x=msg->width; x; x--)
+				{
+					register HIDDT_Pixel pix;
+					ULONG col;
+
+					pix = HIDD_BM_GetPixel(src, srcXw, srcY);
+					col = ctab[pix*3+2];
+
+					*(ULONG*)dest = col;
+					dest += 4;
+					srcXw++;
+				}
+				dest += destmodulo; 
+				srcY++; 
+			}
+		}
+		else if( dstpf->bytes_per_pixel==3 )	// 24bit
+		{
+			ULONG *ctab = (ULONG *)((HIDDT_ColorLUT *)HBM(src)->colmap)->colors;
+			IPTR dest_bytesperline;
+			OOP_GetAttr(msg->dest, aHidd_BitMap_BytesPerRow, &dest_bytesperline);
+
+			UBYTE *dest;
+			dest = destPixels + (msg->destX) * 3 + (msg->destY) * dest_bytesperline;
+			ULONG destmodulo= dest_bytesperline- (msg->width*3);
+
+			for(y=msg->height; y; y--)
+			{		
+				srcXw=srcX;     		
+				for(x=msg->width; x; x--)
+				{
+					register HIDDT_Pixel pix;
+					ULONG col;
+
+					pix = HIDD_BM_GetPixel(src, srcXw, srcY );
+					col = ctab[pix*3+2];
+
+					*(UWORD*)dest = (UWORD)(col>>8);
+					dest += 2;
+					*(UBYTE*)dest = (UBYTE)col;
+					dest += 1;
+					srcXw++;
+				}
+				dest += destmodulo;
+				srcY++; 
+			}
+		}
+		else if( dstpf->bytes_per_pixel==2 )	// 16bit
+		{
+			ULONG *ctab = (ULONG *)((HIDDT_ColorLUT *)HBM(src)->colmap)->colors;
+			IPTR dest_bytesperline;
+			OOP_GetAttr(msg->dest, aHidd_BitMap_BytesPerRow, &dest_bytesperline);
+
+
+			UBYTE *dest;
+			dest = destPixels + (msg->destX) * 2 + (msg->destY) * dest_bytesperline;
+			ULONG destmodulo= dest_bytesperline- (msg->width*2);
+
+			for(y=msg->height; y; y--)
+			{
+				srcXw=srcX;     		
+				for(x=msg->width; x; x--)
+				{
+					register HIDDT_Pixel pix;
+					register ULONG data asm ("d0");
+					register ULONG result asm ("d0");
+
+					pix = HIDD_BM_GetPixel(src, srcXw, srcY);
+					data = ctab[pix*3+2];
+					*(UWORD *)dest =(UWORD)data;
+					dest += 2;
+					srcXw++;
+				}
+				dest += destmodulo; 
+				srcY++; 
+			}
+		}
+
+#endif
+	}
+	
     } /* if (HIDD_PF_COLMODEL(srcpf) == HIDD_PF_COLMODEL(dstpf)) else ... */
     
     GC_FG(gc) = memFG;

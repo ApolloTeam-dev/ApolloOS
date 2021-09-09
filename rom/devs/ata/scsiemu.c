@@ -37,12 +37,16 @@ static ULONG rl(UBYTE *p)
 {
     return (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | (p[3]);
 }
+static ULONG rw(UBYTE *p)
+{
+    return (p[0] << 8) | (p[1]);
+}
 
 static UBYTE scsi_read32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG len, ULONG *outlen)
 {
+     UBYTE io_Error = 0;
      if (unit->au_SectorShift == 9) /* use cache with 512 Byte sectors only */
      {
-         UBYTE io_Error = 0;
          struct ata_Bus *bus = unit->au_Bus;
          struct ataBase *base = bus->ab_Base;
          ULONG unitNum = unit->au_UnitNum;
@@ -62,12 +66,13 @@ static UBYTE scsi_read32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG l
                  if (start != i)
                  {
                      /* Call the Unit's access funtion */
-                     io_Error = unit->au_Read32(unit, offset + start, i - start,
-                         data + start*512, outlen);
-
+                     io_Error = unit->au_Read32(unit, offset + start, i - start, data + start*512, outlen);
                      if (io_Error)
                      {
-                         return io_Error;
+                        io_Error = unit->au_Read32(unit, offset + start, i - start, data + start*512, outlen);
+                        if (io_Error) {
+                          return io_Error;
+                        }
                      }
 
                      blockAdr = (offset + start) & CACHE_MASK;
@@ -85,12 +90,12 @@ static UBYTE scsi_read32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG l
          if (start != i)
          {
              /* Call the Unit's access funtion */
-             io_Error = unit->au_Read32(unit, offset + start, i - start,
-                 data + start*512, outlen);
-
-             if (io_Error)
-             {
-                 return io_Error;
+             io_Error = unit->au_Read32(unit, offset + start, i - start, data + start*512, outlen);
+             if (io_Error) {
+                 io_Error = unit->au_Read32(unit, offset + start, i - start, data + start*512, outlen);
+                 if (io_Error) {
+                   return io_Error;
+                 }
              }
 
              ULONG blockAdr = (offset + start) & CACHE_MASK;
@@ -108,7 +113,12 @@ static UBYTE scsi_read32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG l
      else
      {
          /* Call the Unit's access funtion */
-         return unit->au_Read32(unit, offset, len, data, outlen);
+        // return unit->au_Read32(unit, offset, len, data, outlen);
+         io_Error = unit->au_Read32(unit, offset, len, data, outlen);
+         if (io_Error) /* on error try again */
+           return unit->au_Read32(unit, offset, len, data, outlen);
+         return io_Error;
+
      }
 }
 
@@ -116,12 +126,16 @@ static UBYTE scsi_write32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG 
 {
      struct ata_Bus *bus = unit->au_Bus;
      struct ataBase *base = bus->ab_Base;
+     UBYTE err;
      for (int i = 0; i < len; i++)
      {
          ULONG blockAdr = (offset + i) & CACHE_MASK;
          base->ata_CacheTags[blockAdr] = 0xfffffffffffffffful;
      }
-     return unit->au_Write32(unit, offset, len, data, outlen);
+     err = unit->au_Write32(unit, offset, len, data, outlen);
+     if (err) /* on error try again */
+          return unit->au_Write32(unit, offset, len, data, outlen);
+     return err;
 }
 
 static UBYTE scsi_inquiry(struct ata_Unit *unit, struct SCSICmd *cmd, ULONG *outlen)
@@ -261,7 +275,7 @@ BYTE SCSIEmu(struct ata_Unit *unit, struct SCSICmd *cmd)
 	break;
 	case 0x28: /* READ (10) */
 	offset = rl(cmdbuf + 2);
-	len = rl(cmdbuf + 7 - 2) & 0xffff;
+	len = rw(cmdbuf + 7);
 	err = scsi_read32(unit, cmd->scsi_Data, offset, len, &scsi_len);
 	break;	
 	case 0xa8: /* READ (12) */
@@ -278,7 +292,7 @@ BYTE SCSIEmu(struct ata_Unit *unit, struct SCSICmd *cmd)
 	break;
 	case 0x2a: /* WRITE (10) */
 	offset = rl(cmdbuf + 2);
-	len = rl(cmdbuf + 7 - 2) & 0xffff;
+	len = rw(cmdbuf + 7);
 	err = scsi_write32(unit, cmd->scsi_Data, offset, len, &scsi_len);
 	break;
 	case 0xaa: /* WRITE (12) */
