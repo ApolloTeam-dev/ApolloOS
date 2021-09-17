@@ -369,7 +369,12 @@
          * allow the user to describe the physical placement of several displays
          * in his environment, and explicitly set the preferred display.
          */
-        if (!IS_CLASS(gfxclass, "hidd.gfx.amigavideo"))
+
+// Next 'IF' skips PAL/NTSC to be added as a monitor
+// BUT we want to incluse it for compatibility with old software
+// so, this 'IF' is commeted now
+
+//      if (!IS_CLASS(gfxclass, "hidd.gfx.amigavideo"))
         {
             /*
              * graphics.library uses struct MonitorSpec pointers for historical reasons,

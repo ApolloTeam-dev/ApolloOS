@@ -13,7 +13,8 @@ char *generate_banner()
 	BYTE const CDistro[] = "" __DISTRONAME__ " (" __DISTROVERSION__ ", " __DISTRODATE__ ")";
 #endif
 
-    BYTE const CExtra[] = "Licensed under the AROS Public License.\n"
+    BYTE const CExtra[] = "Licensed under the AROS Public License.\n";
+/*
 #if defined(REPOTYPE)
                          "Version " REPOTYPE " " REPOREVISION
 #if defined(REPOID)
@@ -27,6 +28,7 @@ char *generate_banner()
 #else
 			"";
 #endif
+*/
 
     char *banner;
 
