@@ -129,6 +129,9 @@ KLIBS   := exec aros dos utility oop expansion partition debug
 KDEVS   := timer input keyboard console gameport audio
 KHNDLRS := con afs ram
 KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse 
+ifeq ($(AROS_NON_VAMPIRE),yes)
+KHIDDS += p96gfx
+endif
 KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem misc shell card bootloader vampire
 KHOOKS  := diag romboot
 
@@ -318,7 +321,10 @@ KLIBS   := aros utility dos oop mathffp mathieeesingbas partition \
            keymap graphics layers intuition gadtools workbench setpatch
 KDEVS   := timer input keyboard console trackdisk gameport audio ata cd
 KHNDLRS := cdrom con afs ram
-KHIDDS  := amigakbd amigamouse amigavideo ata_gayle bus gfx hiddclass keyboard mouse storage system
+KHIDDS  := amigakbd amigamouse amigavideo ata_gayle bus gfx hiddclass keyboard mouse storage system 
+ifeq ($(AROS_NON_VAMPIRE),yes)
+KHIDDS += p96gfx
+endif
 KRSRCS  := battclock processor task lddemon dosboot cia potgo disk \
            misc shell shellcommands workbook wbtag card FileSystem vampire
 KHOOKS  := alert romboot
