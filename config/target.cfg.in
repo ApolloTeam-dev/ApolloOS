@@ -19,6 +19,7 @@ USE_MMU                       := @aros_enable_mmu@
 # This is a prerequisite for ObjectiveC and C++ support,
 # since they depend on the AROS C Library
 AROS_TARGET_TOOLCHAIN         := @aros_target_toolchain@
+AROS_NON_VAMPIRE              := @aros_nonvampire_support@
 
 # The toolchain family to build
 AROS_TOOLCHAIN                := @aros_toolchain@
