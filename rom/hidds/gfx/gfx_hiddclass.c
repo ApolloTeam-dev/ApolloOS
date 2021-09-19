@@ -2886,6 +2886,10 @@ VOID GFXHIDD__Hidd_Gfx__CopyBox(OOP_Class *cl, OOP_Object *obj, struct pHidd_Gfx
     dest = msg->dest;
     src  = msg->src;
 
+    /* Get the source pixel format */
+    srcpf = (HIDDT_PixelFormat *)HBM(src)->prot.pixfmt;
+    dstpf = (HIDDT_PixelFormat *)HBM(dest)->prot.pixfmt;
+
 #ifdef NONVAMPIRE
 
 // ORIGINAL code
@@ -2950,10 +2954,6 @@ VOID GFXHIDD__Hidd_Gfx__CopyBox(OOP_Class *cl, OOP_Object *obj, struct pHidd_Gfx
 
 #endif
 
-
-    /* Get the source pixel format */
-    srcpf = (HIDDT_PixelFormat *)HBM(src)->prot.pixfmt;
-    dstpf = (HIDDT_PixelFormat *)HBM(dest)->prot.pixfmt;
 
     OOP_GetAttr(msg->src,  aHidd_ChunkyBM_Buffer, (APTR)&srcPixels);
     OOP_GetAttr(msg->dest, aHidd_ChunkyBM_Buffer, (APTR)&destPixels);
