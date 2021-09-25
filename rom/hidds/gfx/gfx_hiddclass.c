@@ -2888,7 +2888,7 @@ VOID GFXHIDD__Hidd_Gfx__CopyBox(OOP_Class *cl, OOP_Object *obj, struct pHidd_Gfx
     dest = msg->dest;
     src  = msg->src;
 
-#if 0
+#ifdef NONVAMPIRE
 
 // ORIGINAL code
 
@@ -3107,7 +3107,7 @@ VOID GFXHIDD__Hidd_Gfx__CopyBox(OOP_Class *cl, OOP_Object *obj, struct pHidd_Gfx
 	     */
     	    DCOPYBOX(bug("COPY FROM PALETTE TO PALETTE\n"));
 
-#if 0
+#ifdef NONVAMPIRE
 
 // ORIGINAL code
 
@@ -3211,7 +3211,7 @@ VOID GFXHIDD__Hidd_Gfx__CopyBox(OOP_Class *cl, OOP_Object *obj, struct pHidd_Gfx
 	}
 	else if (IS_TRUECOLOR(dstpf))
 	{
-#if 0
+#ifdef NONVAMPIRE
 
 // ORIGINAL code
 
