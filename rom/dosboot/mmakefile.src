@@ -1,16 +1,19 @@
-# $Id$
 
 include $(SRCDIR)/config/aros.cfg
 
 NOMEDIA_IMAGE := nomedia
 
 FILES := dosboot_init bootstrap bootscan \
-         menu gadgets bootscreen bootanim cleanup
+         menu bootscreen bootanim cleanup
 
 #MM- kernel-dosboot-includes : kernel-bootloader-includes
 #MM- kernel-dosboot : includes linklibs kernel-bootloader-includes
 USER_CPPFLAGS := \
-               -DUSE_EXEC_DEBUG
+               -DUSE_EXEC_DEBUG \
+               -D__GADTOOLS_NOLIBBASE__ \
+               -D__OOP_NOLIBBASE__ \
+               -D__OOP_NOATTRBASES__ \
+               -D__OOP_NOMETHODBASES__
 USER_INCLUDES := -I$(SRCDIR)/rom/devs -I$(GENDIR)/$(CURDIR)/dosboot
 USER_LDFLAGS := -static
 
