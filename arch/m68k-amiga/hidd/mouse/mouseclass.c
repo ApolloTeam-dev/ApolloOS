@@ -50,6 +50,8 @@ static AROS_INTH1(mouse_vblank, struct mouse_data *, mousedata)
     UWORD buttons = 0;
     BYTE x, y;
 
+    custom->potgo = 0xFF00;		// From Gunnar von Boehn - Mouse 2nd and 3rd buttons FIX
+
     y = (BYTE)(joydat >> 8);
     y -= (BYTE)(mousedata->joydat >> 8);
     x = (BYTE)(joydat & 0xff);
