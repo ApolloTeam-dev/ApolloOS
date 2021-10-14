@@ -144,6 +144,9 @@ void _CallLayerHook(struct Hook * h,
   
   if (h != LAYERS_NOBACKFILL)
   {
+
+    offsetX = R->MinX + L->Scroll_X - ((struct Window*)L->Window)->LeftEdge + ((struct Window*)L->Window)->BorderLeft;
+    offsetY = R->MinY + L->Scroll_Y - ((struct Window*)L->Window)->TopEdge + ((struct Window*)L->Window)->BorderTop;
     struct layerhookmsg msg;
     msg.l    = L;
     msg.MinX = R->MinX;
