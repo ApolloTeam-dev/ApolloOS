@@ -283,7 +283,7 @@ void internal_ChildFree(APTR tid, struct DosLibrary * DOSBase);
         }
 
 
-        if (defaults[22].ti_Data != TAGDATA_NOT_SPECIFIED)
+	if ( ( defaults[22].ti_Data != TAGDATA_NOT_SPECIFIED ) && ( defaults[22].ti_Data != 0 ) )
         {
             cli->cli_CommandDir = (BPTR) defaults[22].ti_Data;
         }
