@@ -24,8 +24,8 @@
 #define VREG_BOARD_Unknown      0x00      // Unknown
 #define VREG_BOARD_V600         0x01      // V600
 #define VREG_BOARD_V500         0x02      // V500
-#define VREG_BOARD_V4           0x03      // V4
-#define VREG_BOARD_V666         0x04      // V666
+#define VREG_BOARD_V4           0x03      // V4-500
+#define VREG_BOARD_ICEDRAKE     0x04      // V4-Icedrake
 #define VREG_BOARD_V4SA         0x05      // V4SA
 #define VREG_BOARD_V1200        0x06      // V1200
 #define VREG_BOARD_V4000        0x07      // V4000
