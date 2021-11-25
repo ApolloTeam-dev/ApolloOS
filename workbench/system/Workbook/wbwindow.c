@@ -156,8 +156,8 @@ static BOOL wbMenuEnable(Class *cl, Object *obj, int id, BOOL onoff)
 
 AROS_UFH3(ULONG, wbFilterIcons_Hook,
     AROS_UFHA(struct Hook*, hook, A0),
-    AROS_UFHA(struct ExAllData*, ead, A1),
-    AROS_UFHA(LONG *, type, A2))
+    AROS_UFHA(LONG *, type, A2),
+    AROS_UFHA(struct ExAllData*, ead, A1))
 {
     AROS_USERFUNC_INIT
     int i;
@@ -183,8 +183,8 @@ AROS_UFH3(ULONG, wbFilterIcons_Hook,
 
 AROS_UFH3(ULONG, wbFilterAll_Hook,
     AROS_UFHA(struct Hook*, hook, A0),
-    AROS_UFHA(struct ExAllData*, ead, A1),
-    AROS_UFHA(LONG *, type, A2))
+    AROS_UFHA(LONG *, type, A2),
+    AROS_UFHA(struct ExAllData*, ead, A1))
 {
     AROS_USERFUNC_INIT
 
