@@ -2150,7 +2150,7 @@ _DEBUG(("examine ED_TYPE, o->bits=%x, o->objectnode=%d\n", o->bits, BE2L(o->be_o
                     if(keepentry!=DOSFALSE && eac->eac_MatchFunc!=0) {
                       
 #ifdef __AROS__
-                      keepentry=CALLHOOKPKT(eac->eac_MatchFunc, ead, (APTR)globals->packet->dp_Arg4);
+                      keepentry=CALLHOOKPKT(eac->eac_MatchFunc, (APTR)globals->packet->dp_Arg4, ead);
 #else
                       LONG __asm(*hookfunc)(register __a0 struct Hook *,register __a1 struct ExAllData *,register __a2 ULONG)=(LONG __asm(*)(register __a0 struct Hook *,register __a1 struct ExAllData *,register __a2 ULONG))eac->eac_MatchFunc->h_Entry;
                       keepentry=hookfunc(eac->eac_MatchFunc,ead,packet->dp_Arg4);

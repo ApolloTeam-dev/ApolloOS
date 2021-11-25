@@ -1214,7 +1214,7 @@ LONG DoExamineAll(struct emulbase *emulbase, struct filehandle *fh, struct ExAll
 	if(error)
 	    break;
 
-	if ((eac->eac_MatchFunc) && !CALLHOOKPKT(eac->eac_MatchFunc, ead, &type))
+	if ((eac->eac_MatchFunc) && !CALLHOOKPKT(eac->eac_MatchFunc, &type, ead))
 	  continue;
 
 	eac->eac_Entries++;
