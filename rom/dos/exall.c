@@ -24,7 +24,7 @@
         AROS_LHA(BPTR,                  lock,    D1),
         AROS_LHA(struct ExAllData *,    buffer,  D2),
         AROS_LHA(LONG,                  size,    D3),
-        AROS_LHA(LONG,                  data,    D4),
+        AROS_LHA(LONG,                  type,    D4),
         AROS_LHA(struct ExAllControl *, control, D5),
 
 /*  LOCATION */
@@ -39,7 +39,7 @@
                   which is filled with (partial) ExAllData structures
                   (see NOTES)
         size    - size of 'buffer' in bytes
-        data    - type of the data to be returned
+        type    - type of the data to be returned
         control - a control structure allocated by AllocDosObject()
 
     RESULT
@@ -92,7 +92,8 @@
                        matching function will be called. The hook is called as
                        follows:
 
-                            BOOL = MatchFunc(hook, data, typeptr)
+                            BOOL = MatchFunc(hook, typeptr, ead)
+                                              A0     A2     A1
 
     EXAMPLE
 
@@ -122,7 +123,7 @@
     }
     else
     {
-        status = dopacket5(DOSBase, &err, fl->fl_Task, ACTION_EXAMINE_ALL, (SIPTR)lock, (IPTR)buffer, (IPTR)size, (IPTR)data, (IPTR)control);
+        status = dopacket5(DOSBase, &err, fl->fl_Task, ACTION_EXAMINE_ALL, (SIPTR)lock, (IPTR)buffer, (IPTR)size, (IPTR)type, (IPTR)control);
         if (status != DOSFALSE)
             err = RETURN_OK;
     }
@@ -219,7 +220,7 @@
             } while (0)
 
             
-        if (data > ED_OWNER)
+        if (type > ED_OWNER)
             /* We don't have that many fields to fill in... */
             err = ERROR_BAD_NUMBER;
         else
@@ -238,14 +239,14 @@
                                         icontrol->fib->fib_FileName))
                     continue;
 
-                next = (STRPTR)curr + sizes[data];
+                next = (STRPTR)curr + sizes[type];
 
                 /* Oops, the buffer is full.  */
                 if (next > end)
                     ReturnOverflow();
 
                 /* Switch over the requested fields and fill them as appropriate.  */
-                switch(data)
+                switch(type)
                 {
                     case ED_OWNER:
                         curr->ed_OwnerUID = icontrol->fib->fib_OwnerUID;
@@ -285,7 +286,7 @@
                 }
                     
                 /* Do some more matching... */
-                if (control->eac_MatchFunc && !CALLHOOKPKT(control->eac_MatchFunc, curr, &data))
+                if (control->eac_MatchFunc && !CALLHOOKPKT(control->eac_MatchFunc, &type, curr))
                     continue;
                     
                 /* Finally go to the next entry in the buffer.  */
