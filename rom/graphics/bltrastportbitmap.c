@@ -14,7 +14,7 @@
 
 void BltRastPortBitMap(struct RastPort *srcRastPort, WORD xSrc, WORD ySrc, 
 		       struct BitMap *destBitMap, WORD xDest, WORD yDest,
-		       WORD xSize, WORD ySize, ULONG minterm,
+		       WORD xSize, WORD ySize, UBYTE minterm,
 		       struct GfxBase *GfxBase)
 {
 	struct Layer * srcLayer;

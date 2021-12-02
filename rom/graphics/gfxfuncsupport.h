@@ -184,7 +184,7 @@ LONG fillrect_pendrmd(struct RastPort *tp, WORD x1, WORD y1, WORD x2, WORD y2,
 
 BOOL int_bltbitmap(struct BitMap *srcBitMap, OOP_Object *srcbm_obj, WORD xSrc, WORD ySrc,
 	    	   struct BitMap *dstBitMap, OOP_Object *dstbm_obj, WORD xDest, WORD yDest,
-		   WORD xSize, WORD ySize, ULONG minterm, OOP_Object *gfxhidd, OOP_Object *gc,
+		   WORD xSize, WORD ySize, UBYTE minterm, OOP_Object *gfxhidd, OOP_Object *gc,
 		   struct GfxBase *GfxBase);
 
 
@@ -214,9 +214,9 @@ BOOL GetRPClipRectangleForBitMap(struct RastPort *rp, struct BitMap *bm,
 
 void update_bitmap(struct BitMap *bitmap, OOP_Object *bm, UWORD x, UWORD y, UWORD width, UWORD height, struct GfxBase *GfxBase);
 
-void BltRastPortBitMap(struct RastPort *srcRastPort, WORD xSrc, WORD ySrc, 
+void BltRastPortBitMap(struct RastPort *srcRastPort, WORD xSrc, WORD ySrc,
 		       struct BitMap *destBitMap, WORD xDest, WORD yDest,
-		       WORD xSize, WORD ySize, ULONG minterm,
+		       WORD xSize, WORD ySize, UBYTE minterm,
 		       struct GfxBase *GfxBase);
 
 /****************************************************************************************/

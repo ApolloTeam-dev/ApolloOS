@@ -17,7 +17,7 @@
 struct bitmap_render_data
 {
     struct render_special_info rsi;
-    ULONG   	    	       minterm;
+    UBYTE   	    	       minterm;
     struct BitMap   	      *srcbm;
     OOP_Object      	      *srcbm_obj;
 };
@@ -62,7 +62,7 @@ static ULONG bitmap_render(APTR bitmap_rd, WORD srcx, WORD srcy,
 	AROS_LHA(WORD             , yDest, D3),
 	AROS_LHA(WORD             , xSize, D4),
 	AROS_LHA(WORD             , ySize, D5),
-	AROS_LHA(ULONG            , minterm, D6),
+	AROS_LHA(UBYTE            , minterm, D6),
 
 /*  LOCATION */
 	struct GfxBase *, GfxBase, 101, Graphics)

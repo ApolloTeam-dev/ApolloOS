@@ -51,8 +51,8 @@ static void copyonepixel (PLANEPTR src, ULONG xsrc, PLANEPTR dest,
 	destBitMap - Copy to this bitmap. May be the same as srcBitMap.
 	xDest, yDest - Upper left corner where to place the copy
 	xSize, ySize - The size of the area to copy
-	minterm - How to copy. Most useful values are 0x00C0 for a vanilla
-		copy, 0x0030 to invert the source and then copy or 0x0050
+	minterm - How to copy. Most useful values are 0xC0 for a vanilla
+		copy, 0x30 to invert the source and then copy or 0x50
 		to ignore the source and just invert the destination. If
 		you want to calculate other values, then you must know that
 		channel A is set, if you are inside the rectangle, channel
@@ -69,11 +69,11 @@ static void copyonepixel (PLANEPTR src, ULONG xsrc, PLANEPTR dest,
 		 6	110
 		 7	111
 
-		So 0x00C0 means: D is set if one is inside the rectangle
+		So 0xC0 means: D is set if one is inside the rectangle
 		(A is set) and B (the source) is set and cleared otherwise.
 
 		To fill the rectangle, you would want to set D when A is
-		set, so the value is 0x00F0.
+		set, so the value is 0xF0.
 
 	mask - Which planes should be copied. Typically, you should set
 		this to ~0L.
