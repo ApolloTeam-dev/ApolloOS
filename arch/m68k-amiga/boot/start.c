@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: m68k-amiga bootstrap to exec.
@@ -351,7 +351,7 @@ static struct MemHeader *addmemoryregion(ULONG startaddr, ULONG size, struct Boo
         krnCreateMemHeader("chip memory", -10,
             (APTR)startaddr, size,
             MEMF_CHIP | MEMF_KICK | MEMF_PUBLIC | MEMF_LOCAL | MEMF_24BITDMA);
-    } else if (startaddr = 0x01000000) {
+    } else if (startaddr == 0x01000000) {
         krnCreateMemHeader("fast memory", 50,
             (APTR)startaddr, size,
             MEMF_FAST | MEMF_KICK | MEMF_PUBLIC | MEMF_LOCAL );
