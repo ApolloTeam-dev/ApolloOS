@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2007, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Set one color register for this Viewport
@@ -66,9 +66,14 @@
     if (!vp)
         return;
 
-    SetRGB32(vp, n, r * 0x11111111,
-    	    	    g * 0x11111111,
-		    b * 0x11111111);
+    r = (( r & 0xF) << 4) | (r & 0xFF );
+    r = r | (r << 8) | ( r << 16 ) | (r << 24 );
+    g = (( g & 0xF) << 4) | (g & 0xFF );
+    g = g | (g << 8) | ( g << 16 ) | (g << 24 );
+    b = (( b & 0xF) << 4) | (b & 0xFF );
+    b = b | (b << 8) | ( b << 16 ) | (b << 24 );
+
+    SetRGB32( vp, n, r, g, b );
 
     /************************************************************
     / This is the code that works correctly on the real thing
