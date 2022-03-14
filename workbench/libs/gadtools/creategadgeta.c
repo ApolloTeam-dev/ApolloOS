@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2007, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: gadtools.library function CreateGadgetA()
@@ -159,6 +159,8 @@
         stdgadtags[TAG_LabelPlace].ti_Data = GV_LabelPlace_Above;
     else if ((ng->ng_Flags & PLACETEXT_BELOW))
         stdgadtags[TAG_LabelPlace].ti_Data = GV_LabelPlace_Below;
+    else if ((ng->ng_Flags & PLACETEXT_IN ))
+    	stdgadtags[TAG_LabelPlace].ti_Data = GV_LabelPlace_In;
 
     switch(kind)
     {
