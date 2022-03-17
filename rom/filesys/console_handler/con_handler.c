@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -76,6 +76,7 @@ static const struct NewWindow default_nw =
     0,              /* BlockPen */
     0,              /* IDCMP */
     WFLG_DEPTHGADGET   |
+	WFLG_CLOSEGADGET   |
     WFLG_SIZEGADGET    |
     WFLG_DRAGBAR       |
     WFLG_SIZEBRIGHT    |
