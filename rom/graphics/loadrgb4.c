@@ -66,9 +66,9 @@
 
     for (t = 0; t < count; t ++ )
     {
-    	UWORD r = (colors[t] & 0xF00) >> 8;
-    	UWORD g = (colors[t] & 0x0F0) >> 4;
-    	UWORD b = (colors[t] & 0x00F);
+    	ULONG r = (colors[t] & 0xF00) >> 8;
+    	ULONG g = (colors[t] & 0x0F0) >> 4;
+    	ULONG b = (colors[t] & 0x00F);
 
         r = (( r & 0xF) << 4) | (r & 0xFF );
         r = r | (r << 8) | ( r << 16 ) | (r << 24 );
