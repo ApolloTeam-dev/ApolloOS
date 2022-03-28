@@ -4,8 +4,9 @@
 /local
 /mmake.cache
 /mmake.config
-/bin
 /Makefile
+/bin/amiga-m68k
+/bin/linux-x86_64
 /distfiles
 /config.status
 /contrib
