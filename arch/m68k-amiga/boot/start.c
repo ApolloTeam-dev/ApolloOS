@@ -870,13 +870,14 @@ void exec_boot(ULONG *membanks, ULONG *cpupcr)
     SysBase->AttnFlags = attnflags;
 
     /* Inject code for GetCC, depending on CPU model */
-    if (SysBase->AttnFlags & AFF_68010) {
+    /* This doesn't seem to work, remove these lines for now as we coded it inside the function */
+    //if (SysBase->AttnFlags & AFF_68010) {
         /* move.w %ccr,%d0; rts; nop */
-        FAKE_IT(SysBase, Exec, GetCC, 88, 0x42c0, 0x4e75, 0x4e71);
-    } else {
+    //    FAKE_IT(SysBase, Exec, GetCC, 88, 0x42c0, 0x4e75, 0x4e71);
+    //} else {
         /* move.w %sr,%d0; rts; nop */
-        FAKE_IT(SysBase, Exec, GetCC, 88, 0x40c0, 0x4e75, 0x4e71);
-    }
+    //    FAKE_IT(SysBase, Exec, GetCC, 88, 0x40c0, 0x4e75, 0x4e71);
+    //}
 
 #ifdef THESE_ARE_KNOWN_SAFE_ASM_ROUTINES
     PRESERVE_ALL(SysBase, Exec, Disable, 20);
