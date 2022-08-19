@@ -2,7 +2,7 @@
 #define _ATA_H
 
 /*
-    Copyright © 2004-2019, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2004-2019, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: ata.device main private include file
@@ -38,7 +38,12 @@
 #define STACK_SIZE              16384
 #define TASK_PRI                10
 #define TIMEOUT                 30
-#define CACHE_SIZE_BITS         17      /* 2^11 * 512 byte blocks (min 9)*/
+#if VAMPIRECARD_SERIES=v2
+#error TESTING
+#define CACHE_SIZE_BITS         14      /* 2^14 * 512 byte blocks */
+#else
+#define CACHE_SIZE_BITS         17      /* 2^17 * 512 byte blocks (min 9)*/
+#endif
 #define CACHE_SIZE              (1<<CACHE_SIZE_BITS)
 #define CACHE_MASK              (CACHE_SIZE-1)
 
