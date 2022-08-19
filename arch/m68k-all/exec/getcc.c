@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2013, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: GetCC() - Read the CPU condition codes in an easy way.
@@ -18,8 +18,8 @@ AROS_LH0(UWORD, GetCC,
     AROS_LIBFUNC_INIT
 
     /* Overridden on the RegCall ABI's startup routine */
-    aros_print_not_implemented("GetCC");
-    return ~0;
+    /* Anyways, do it here, too */
+    asm volatile(" dc.w 0x42C0\n");
 
     AROS_LIBFUNC_EXIT
 } /* GetCC() */
