@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2001, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: GetCC() - Read the CPU condition codes in an easy way.
@@ -51,9 +51,8 @@
 	you own registers and assemble them into the form of the MC680x0
 	condition codes.
     */
-    /* TODO: Write exec/GetCC() */
-    aros_print_not_implemented("GetCC");
-    return ~0;
+    /* Do move.l ccr,d0 */
+    asm volatile(" dc.w 0x42C0\n");
 
     AROS_LIBFUNC_EXIT
 } /* GetCC() */
