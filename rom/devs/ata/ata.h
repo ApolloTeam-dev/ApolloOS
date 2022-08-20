@@ -38,11 +38,10 @@
 #define STACK_SIZE              16384
 #define TASK_PRI                10
 #define TIMEOUT                 30
-#if VAMPIRECARD_SERIES=v2
-#error TESTING
+#if VAMPIRECARDSERIES==2
 #define CACHE_SIZE_BITS         14      /* 2^14 * 512 byte blocks */
 #else
-#define CACHE_SIZE_BITS         17      /* 2^17 * 512 byte blocks (min 9)*/
+#define CACHE_SIZE_BITS         14      //Maybe we increase this one day for V4 cards?
 #endif
 #define CACHE_SIZE              (1<<CACHE_SIZE_BITS)
 #define CACHE_MASK              (CACHE_SIZE-1)

@@ -3014,20 +3014,20 @@ else
 fi
 
 dnl check to see if we are enabling support for the V2
-AC_MSG_CHECKING([Vampire card series (v2 or v2)] )
-AC_ARG_WITH(vampirecard-series,AC_HELP_STRING([--vampirecard-series],[Set for which series of vampire card the rom is to be built (default=v4)]),vampirecard_series=$withval,vampirecard_Series=v4)
-if test "$vampirecard_Series" = "v2"; then
-	AC_MSG_RESULT(Vampire Card Series v2)
-	aros_config_cppflags="$aros_config_cppflags -DVAMPIRECARD_SERIES=v2"
-	aros_config_cflags="$aros_config_cflags -DVAMPIRECARD_SERIES=v2"
-	aros_kernel_cppflags="$aros_kernel_cppflags -DVAMPIRECARD_SERIES=v2"
-	aros_kernel_cflags="$aros_kernel_cflags -DVAMPIRECARD_SERIES=v2"
+AC_MSG_CHECKING([Vampire card series: v2 or v4 ] )
+AC_ARG_WITH(vampirecard-series,AC_HELP_STRING([--with-vampirecard-series=VERSION],[Set for which series of vampire card the rom is to be built (default=v4)]),vampirecard_series="$withval",vampirecard_Series="v4")
+if test "$vampirecard_series" = "v2" ; then
+	AC_MSG_RESULT(Vampire Card Series v2 )
+	aros_config_cppflags="$aros_config_cppflags -DVAMPIRECARDSERIES=2"
+	aros_config_cflags="$aros_config_cflags -DVAMPIRECARDSERIES=2"
+	aros_kernel_cppflags="$aros_kernel_cppflags -DVAMPIRECARDSERIES=2"
+	aros_kernel_cflags="$aros_kernel_cflags -DVAMPIRECARDSERIES=2"
 else
-	AC_MSG_RESULT(Vampire Card Series v4)
-	aros_config_cppflags="$aros_config_cppflags -DVAMPIRECARD_SERIES=v4"
-	aros_config_cflags="$aros_config_cflags -DVAMPIRECARD_SERIES=v4"
-	aros_kernel_cppflags="$aros_kernel_cppflags -DVAMPIRECARD_SERIES=v4"
-	aros_kernel_cflags="$aros_kernel_cflags -DVAMPIRECARD_SERIES=v4"
+	AC_MSG_RESULT(Vampire Card Series v4 )
+	aros_config_cppflags="$aros_config_cppflags -DVAMPIRECARDSERIES=4"
+	aros_config_cflags="$aros_config_cflags -DVAMPIRECARDSERIES=4"
+	aros_kernel_cppflags="$aros_kernel_cppflags -DVAMPIRECARDSERIES=4"
+	aros_kernel_cflags="$aros_kernel_cflags -DVAMPIRECARDSERIES=4"
 fi
 
 dnl See if the user wants the serial debug output for native flavour
