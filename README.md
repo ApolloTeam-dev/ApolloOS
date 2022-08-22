@@ -1,11 +1,10 @@
-# AROS (ApolloOS Flavour) Git Repository
+# ApolloOS Git Repository
 
-This is the main repository for the ApolloOS flavoured version of AROS.
-
+This is the main repository for ApolloOS
 
 ## Contributing
 
-Please see the [CONTRIBUTING.md](CONTRIBUTING.md) file for details on joining the GitHub organization, and guidelines on contributing to the AROS project.
+Please contact @WillemDrijver on Apollo Discord if you would like to contribute to ApolloOS development
 
 ## License
 

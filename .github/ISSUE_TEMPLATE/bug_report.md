@@ -23,25 +23,11 @@ A clear and concise description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
-**Architecture**
- - Amiga (including UAE, Vampire cards)
- - pc (native)
- - linux (hosted)
- - Raspberry Pi
- - mingw
- - darwin
- - other:
+**Configuration**
+Amiga Computer:
+(A500, A1000, A1200, etc.)
+Apollo Device
+(V2, V4 Stand Alone, V4 IceDrake, etc.)
  
-**CPU**
- - i386
- - x86_64
- - m68k
- - arm
- - ppc
- - other:
-
-**Version**
-Provide the GID ID from AboutAROS (call menu Wanderer>AROS>About)
-
 **Additional context**
 Add any other context about the problem here.
