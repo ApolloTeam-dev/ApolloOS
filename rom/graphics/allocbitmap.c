@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Create a new BitMap
@@ -541,26 +541,55 @@ static HIDDT_StdPixFmt const cyber2hidd_pixfmt[] =
             {
                 ULONG plane;
 
-                for (plane=0; plane<depth; plane++)
+                /* Interleaved Bitmap? */
+                if(flags & BMF_INTERLEAVED)
                 {
-                    nbm->Planes[plane] = AllocRaster (sizex, sizey);
-
-                    if (!nbm->Planes[plane])
-                        break;
-
-                    if (clear)
-                        SetMem (nbm->Planes[plane], 0, RASSIZE(sizex,sizey));
+                    // Set all PlanePtr to NULL
+                    for(plane = 0; plane<=7; plane++)
+                    {
+                        nbm->Planes[plane] = NULL;                   
+                    }
+                    nbm->Planes[0] = AllocRaster(sizex*depth, sizey);
+                    if(nbm->Planes[0])
+                    {
+                      if (clear)
+                          SetMem (nbm->Planes[0], 0, RASSIZE(sizex*depth,sizey));
+ 
+                      for(plane = 1; plane<depth; plane++)
+                      {
+                          nbm->Planes[plane] = (void *)((ULONG)(nbm->Planes[plane-1]) + RASSIZE(sizex,sizey));           
+                      }
+                    }
                 }
-
-                if (plane != depth)
-                {
+                else
+                { 
+                    // Set all PlanePtr to NULL
+                    for(plane = 0; plane<=7; plane++)
+                    {
+                        nbm->Planes[plane] = NULL;                   
+                    } 
+                
                     for (plane=0; plane<depth; plane++)
-                        if (nbm->Planes[plane])
-                            FreeRaster (nbm->Planes[plane], sizex, sizey);
+                    {
+                        nbm->Planes[plane] = AllocRaster (sizex, sizey);
 
-                    FreeMem (nbm, sizeof (struct BitMap));
+                        if (!nbm->Planes[plane])
+                            break;
 
-                    nbm = NULL;
+                        if (clear)
+                            SetMem (nbm->Planes[plane], 0, RASSIZE(sizex,sizey));
+                    }
+
+                    if (plane != depth)
+                    {
+                        for (plane=0; plane<depth; plane++)
+                            if (nbm->Planes[plane])
+                                FreeRaster (nbm->Planes[plane], sizex, sizey);
+
+                        FreeMem (nbm, sizeof (struct BitMap));
+
+                        nbm = NULL;
+                    }
                 }
             }
         }

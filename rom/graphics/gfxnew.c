@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2010, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2010, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -18,6 +18,12 @@
 #include "graphics_intern.h"
 
 static LONG dummy_init(void);
+
+static int gfx_init(struct ExtendedNode *node)
+{
+   if(!node) return TRUE;
+   return FALSE;
+}
 
 /*****************************************************************************
 
@@ -97,9 +103,25 @@ static LONG dummy_init(void);
              FindName((struct List *)(&(GfxBase -> MonitorList)), DEFAULT_MONITOR_NAME);*/
           break;
         case VIEWPORT_EXTRA_TYPE:
+          if(Result = (struct ExtendedNode *)AllocMem(sizeof(struct ViewPortExtra), MEMF_PUBLIC|MEMF_CLEAR))
+          {
+              Result->xln_Type = NT_GRAPHICS;
+              Result->xln_Subtype = VIEWPORT_EXTRA_TYPE;
+              Result->xln_Subsystem = SS_GRAPHICS;
+              Result->xln_Library = (LONG) GfxBase;
+              Result->xln_Init = gfx_init;
+          }
           break;
         case SPECIAL_MONITOR_TYPE:
-          /* ((struct SpecialMonitor *)Result).do_monitor = */
+          if(Result = (struct ExtendedNode *)AllocMem(sizeof(struct ViewPortExtra), MEMF_PUBLIC|MEMF_CLEAR))
+          {
+              Result->xln_Type = NT_GRAPHICS;
+              Result->xln_Subsystem = SS_GRAPHICS;
+              Result->xln_Subtype = SPECIAL_MONITOR_TYPE;
+              Result->xln_Library = (LONG) GfxBase;
+              Result->xln_Init = gfx_init;
+              ((struct SpecialMonitor *)Result)->do_monitor = (void *)GfxBase->default_monitor; //<-- is this correct?
+          }  
         break;
         case MONITOR_SPEC_TYPE:
           /* ((struct MonitorSpec *)Result)->ms_transform = */
