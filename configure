@@ -977,6 +977,7 @@ with_theme
 enable_includes
 with_resolution
 with_nonvampire_support
+with_vampirecard_series
 with_serial_debug
 enable_palm_debug_hack
 enable_usb30_code
@@ -1749,6 +1750,9 @@ Optional Packages:
                           Default resolution of the initial WorkbenchScreen
   --with-nonvampire-support
                           Enable support for non-vampires (default=no)
+  --with-vampirecard-series=VERSION
+                          Set for which series of vampire card the rom is to
+                          be built (default=v4)
   --with-serial-debug     Enable serial debug output in native (default=no)
   --with-x                use the X Window System
   --with-sdl-prefix=PFX   Prefix where SDL is installed (optional)
@@ -6416,7 +6420,7 @@ if ${am_cv_pathless_PYTHON+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-	for am_cv_pathless_PYTHON in python python2 python3 python3.3 python3.2 python3.1 python3.0 python2.7  python2.6 python2.5 python2.4 python2.3 python2.2 python2.1 python2.0 none; do
+	for am_cv_pathless_PYTHON in python python2 python3  python3.9 python3.8 python3.7 python3.6 python3.5 python3.4 python3.3  python3.2 python3.1 python3.0  python2.7 python2.6 python2.5 python2.4 python2.3 python2.2 python2.1  python2.0 none; do
 	  test "$am_cv_pathless_PYTHON" = none && break
 	  prog="import sys
 # split strings by '.' and convert to numeric.  Append some zeros
@@ -15308,6 +15312,32 @@ $as_echo "Enabling nonvampire support" >&6; }
 else
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking Vampire card series: v2 or v4  " >&5
+$as_echo_n "checking Vampire card series: v2 or v4  ... " >&6; }
+
+# Check whether --with-vampirecard-series was given.
+if test "${with_vampirecard_series+set}" = set; then :
+  withval=$with_vampirecard_series; vampirecard_series="$withval"
+else
+  vampirecard_Series="v4"
+fi
+
+if test "$vampirecard_series" = "v2" ; then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Vampire Card Series v2 " >&5
+$as_echo "Vampire Card Series v2 " >&6; }
+	aros_config_cppflags="$aros_config_cppflags -DVAMPIRECARDSERIES=2"
+	aros_config_cflags="$aros_config_cflags -DVAMPIRECARDSERIES=2"
+	aros_kernel_cppflags="$aros_kernel_cppflags -DVAMPIRECARDSERIES=2"
+	aros_kernel_cflags="$aros_kernel_cflags -DVAMPIRECARDSERIES=2"
+else
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Vampire Card Series v4 " >&5
+$as_echo "Vampire Card Series v4 " >&6; }
+	aros_config_cppflags="$aros_config_cppflags -DVAMPIRECARDSERIES=4"
+	aros_config_cflags="$aros_config_cflags -DVAMPIRECARDSERIES=4"
+	aros_kernel_cppflags="$aros_kernel_cppflags -DVAMPIRECARDSERIES=4"
+	aros_kernel_cflags="$aros_kernel_cflags -DVAMPIRECARDSERIES=4"
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether serial debug is enabled" >&5
