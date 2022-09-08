@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2013, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -109,7 +109,7 @@ static STRPTR ids[] = {
 	{ BIDTAG_NominalWidth  , 800	},
 	{ BIDTAG_NominalHeight , 600	},
 	{ BIDTAG_Depth         , 8	},
-	{ CYBRBIDTG_BoardName  , 0	},
+	{ CYBRBIDTG_BoardName  , NULL	},
 	{ TAG_DONE             , 0	}
     };
       
