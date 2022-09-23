@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2007, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Graphics function InitView()
@@ -15,8 +15,8 @@ static const struct View defaultView =
   NULL, /* ViewPort */
   NULL, /* LOFCprList */
   NULL, /* SHFCprList */
-  0,    /* DyOffset */
-  0,    /* DxOffset */
+  0x2C,    /* DyOffset */
+  0x81,    /* DxOffset */
   0     /* Modes */
 };
 
