@@ -91,12 +91,10 @@ static int SAGAGfx_Init(LIBBASETYPEPTR LIBBASE)
         case VREG_BOARD_V500:
         case VREG_BOARD_V600:
         case VREG_BOARD_V1200:
-        case VREG_BOARD_V4000:
-        case VREG_BOARD_VCD32:
             // SAGA V2 METHODS
             xsd->SAGAGfx_GetPixFmt         = SAGAHW_V2_GetPixFmt;
             xsd->SAGAGfx_GetModeID         = SAGAHW_V4_GetModeID;
-            xsd->SAGAGfx_SetColors         = SAGAHW_V2_SetColors;
+            xsd->SAGAGfx_SetColors         = SAGAHW_V4_SetColors;
             xsd->SAGAGfx_SetModulo         = SAGAHW_V2_SetModulo;
             xsd->SAGAGfx_SetMemory         = SAGAHW_V2_SetMemory;
             xsd->SAGAGfx_SetMode           = SAGAHW_V2_SetMode;
@@ -107,7 +105,8 @@ static int SAGAGfx_Init(LIBBASETYPEPTR LIBBASE)
             xsd->SAGAGfx_SetSpriteMemory   = SAGAHW_V2_SetSpriteMemory;
             xsd->SAGAGfx_SetSpritePosition = SAGAHW_V2_SetSpritePosition;
             break;
-            
+        case VREG_BOARD_V4000:
+        case VREG_BOARD_VCD32:            
         case VREG_BOARD_V4:
         case VREG_BOARD_ICEDRAKE:
         case VREG_BOARD_V4SA:

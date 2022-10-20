@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Graphics function BestModeIDA()
@@ -45,6 +45,7 @@ struct MatchData
     UWORD  found_depth;
     UWORD  found_width;
     UWORD  found_height;
+    BOOL   usecgx;
 };
 
 static void BestModeIDForMonitor(struct monitor_driverdata *mdd, struct MatchData *args, ULONG modemask, struct GfxBase *GfxBase)
@@ -250,7 +251,8 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
         0, 0,             /* Desired size */
         INVALID_ID,       /* Found ID     */
         -1,               /* Found depth  */
-        -1, -1            /* Found size   */
+        -1, -1,           /* Found size   */
+	FALSE             /* Use CGX */
     };
 
     D(bug("[Gfx] %s()\n", __PRETTY_FUNCTION__));
@@ -296,6 +298,11 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
 	/* Offer some help to cybergraphics.library */
 	case CYBRBIDTG_BoardName:
 	    args.boardname = (STRPTR)tag->ti_Data;
+	    // We need to remark, we are using CGX to prevent PAL/NTSC in the first look
+	    args.usecgx = TRUE;
+	    args.dipf_mustnothave |= (PAL_MONITOR_ID|NTSC_MONITOR_ID);
+	    // We might not use the preferred monitor, so get rid of it
+	    monitor = NULL; 
 	    break;
 	}
     }
@@ -357,8 +364,11 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
     /* OK, now we try to search for a mode that has the supplied charateristics. */
     ObtainSemaphoreShared(&CDD(GfxBase)->displaydb_sem);
 
-    /* First try to find exact match */
-    FindBestModeIDForMonitor(monitor, &args, ~0, GfxBase);
+    /* First try to find exact match. If we use CGX, skip PAL/NTSC for now */
+    if(args.usecgx)
+        FindBestModeIDForMonitor(monitor, &args, ~(PAL_MONITOR_ID|NTSC_MONITOR_ID), GfxBase);
+    else 
+	FindBestModeIDForMonitor(monitor, &args, ~0, GfxBase);
 #ifdef __mc68000
     /* Handle situation where program only asks for specific monitor
      * (for example only PAL_MONITOR_ID or NTSC_MONITOR_ID bits set)
@@ -376,6 +386,14 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
      */
     if (args.found_id == INVALID_ID && args.monitorid != INVALID_ID) {
         FindBestModeIDForMonitor(monitor, &args, AROS_MONITOR_ID_MASK, GfxBase);
+    }
+		
+    // If CGX didn't find any mode, look again in all possibilities. Just to be sure
+    if(args.usecgx)
+    {
+      if (args.found_id == INVALID_ID && args.monitorid != INVALID_ID) {
+          FindBestModeIDForMonitor(monitor, &args, ~0, GfxBase);
+      }
     }
 
     ReleaseSemaphore(&CDD(GfxBase)->displaydb_sem);
