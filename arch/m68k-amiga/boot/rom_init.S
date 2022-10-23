@@ -97,9 +97,9 @@ arosbootstrap_init:
 	/* set AttnFlags AFB_ADDR32 */
 	or.w	#0x2000,%a4@(2)
 	
-	#if 1
+	#if VAMPIRECARDSERIES==4
 	//V4 version
-	move.l	#0x01000000,%a0
+	move.l	#0x01200000,%a0		//Reserve 2MB for VFloppy
 	move.l	#0x20000000,%a1
 	move.l	#0x00100000,%d0
 	jsr	__MemoryTest
