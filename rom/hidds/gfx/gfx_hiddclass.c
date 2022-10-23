@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Gfx Hidd driver class implementation.
@@ -2714,6 +2714,12 @@ BOOL GFXHIDD__Hidd_Gfx__SetCursorShape(OOP_Class *cl, OOP_Object *o,
     return TRUE;
 }
 
+BOOL GFXHIDD__Hidd_Gfx__SetSpriteShape(OOP_Class *cl, OOP_Object *o,
+    	    	    	    	   struct pHidd_Gfx_SetCursorShape *msg, int spritenum)
+{
+    return TRUE;
+}
+
 /*****************************************************************************************
 
     NAME
@@ -2755,6 +2761,11 @@ BOOL GFXHIDD__Hidd_Gfx__SetCursorShape(OOP_Class *cl, OOP_Object *o,
 *****************************************************************************************/
 
 VOID GFXHIDD__Hidd_Gfx__SetCursorVisible(OOP_Class *cl, OOP_Object *o, struct pHidd_Gfx_SetCursorVisible *msg)
+{
+
+}
+
+VOID GFXHIDD__Hidd_Gfx__SetSpriteVisible(OOP_Class *cl, OOP_Object *o, struct pHidd_Gfx_SetSpriteVisible *msg, int spritenum)
 {
 
 }
@@ -2807,6 +2818,11 @@ VOID GFXHIDD__Hidd_Gfx__SetCursorVisible(OOP_Class *cl, OOP_Object *o, struct pH
 *****************************************************************************************/
 
 BOOL GFXHIDD__Hidd_Gfx__SetCursorPos(OOP_Class *cl, OOP_Object *o, struct pHidd_Gfx_SetCursorPos *msg)
+{
+    return TRUE;
+}
+
+BOOL GFXHIDD__Hidd_Gfx__SetSpritePos(OOP_Class *cl, OOP_Object *o, struct pHidd_Gfx_SetSpritePos *msg, int spritenum)
 {
     return TRUE;
 }
