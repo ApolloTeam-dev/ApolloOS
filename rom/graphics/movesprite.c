@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2010, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2010, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Graphics function MoveSprite()
@@ -83,9 +83,8 @@
     }
 
     if (sprite->num) /* We have only sprite #0 for the mouse cursor */
-        return;
-
-    HIDD_Gfx_SetCursorPos(mdd->gfxhidd, sprite->x, sprite->y);
+        HIDD_Gfx_SetSpritePos(mdd->gfxhidd, sprite->x, sprite->y, sprite->num);
+    else HIDD_Gfx_SetCursorPos(mdd->gfxhidd, sprite->x, sprite->y);
 
     AROS_LIBFUNC_EXIT
 } /* MoveSprite */
