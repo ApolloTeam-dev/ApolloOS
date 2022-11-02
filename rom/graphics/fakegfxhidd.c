@@ -1555,9 +1555,6 @@ static OOP_Class *init_fakegfxhiddclass (struct GfxBase *GfxBase)
 	{(IPTR (*)())gfx_fwd		   , moHidd_Gfx_CleanViewPort	        },
 	{(IPTR (*)())gfx_fwd		   , moHidd_Gfx_PrepareViewPorts        },
 	{(IPTR (*)())gfx_copyboxmasked 	   , moHidd_Gfx_CopyBoxMasked	        },
-	{(IPTR (*)())gfx_setspriteshape    , moHidd_Gfx_SetSpriteShape	        },
-	{(IPTR (*)())gfx_setspritepos	   , moHidd_Gfx_SetSpritePos	        },
-	{(IPTR (*)())gfx_setspritevisible  , moHidd_Gfx_SetSpriteVisible        },
         {NULL	    	    	    	   , 0UL   	    	    	        }
     };
 
