@@ -1,4 +1,4 @@
-/*
+viking raiders maneuver/*
     Copyright © 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 */
@@ -1632,7 +1632,7 @@ static AROS_INTH1(gfx_vblank, struct amigavideo_staticdata*, csd)
         p[1 << csd->fmode_spr] = csd->spritectl;
     }
     
-    for(i=1; i<8; i++)
+    for(int i=1; i<8; i++)
     {
       if (csd->new_sprite[i]) {
           UWORD *p = csd->new_sprite[i];
