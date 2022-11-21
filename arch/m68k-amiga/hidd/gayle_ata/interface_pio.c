@@ -1,5 +1,5 @@
 /*
-    Copyright © 2013, The AROS Development Team. All rights reserved.
+    Copyright Â© 2013, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: A600/A1200/A4000 ATA HIDD PIO interface functions
@@ -36,8 +36,8 @@ static void ata_outsl(struct pio_data *data, APTR address, ULONG count)
 
 
     asm volatile(
-"1:     move.l (%[address])+,(0xDA2000)  \n"
-"       move.l (%[address])+,(0xDA2000)  \n"
+"1:     move.l (%[address])+,(0xDD2000)  \n"
+"       move.l (%[address])+,(0xDD2000)  \n"
 "       subq.l #1,%[count]              \n"
 "       bnes 1b                         \n"
         ::[count]"d"(count >> 3),[address]"a"(address),[port]"a"(addr));

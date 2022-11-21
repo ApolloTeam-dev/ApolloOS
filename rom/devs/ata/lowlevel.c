@@ -1,5 +1,5 @@
 /*
-    Copyright © 2004-2018, The AROS Development Team. All rights reserved.
+    Copyright Â© 2004-2018, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -177,7 +177,7 @@ static void ata_IRQSetHandler(struct ata_Unit *unit,
 
 static void ata_IRQNoData(struct ata_Unit *unit, UBYTE status)
 {
-    volatile UBYTE *port=0xDA201C;
+    volatile UBYTE *port=0xDD201C;
     status = *port;
 
     if (status & ATAF_BUSY)
@@ -200,7 +200,7 @@ static void ata_IRQPIORead(struct ata_Unit *unit, UBYTE status)
 {
     ULONG count;
     APTR address;
-    volatile UBYTE *port=0xDA201C;
+    volatile UBYTE *port=0xDD201C;
     long retrycount; 
 
 AGAIN:
@@ -225,8 +225,8 @@ WAITBUSY:
    
           asm volatile(
       "       bra 2f                           \n"
-      "1:     move16 (0xDA6000),(%[address])+  \n"
-      "       move16 (0xDA6000),(%[address])+  \n"
+      "1:     move16 (0xDD6000),(%[address])+  \n"
+      "       move16 (0xDD6000),(%[address])+  \n"
       "2:     dbra   %[count],1b               \n"
               :[count]"+d"(count),[address]"+a"(address)::"cc");
    
@@ -274,7 +274,7 @@ static void ata_PIOWriteBlk(struct ata_Unit *unit)
 static void ata_IRQPIOWrite(struct ata_Unit *unit, UBYTE status)
 {
 
-    volatile UBYTE *port=0xDA201C;
+    volatile UBYTE *port=0xDD201C;
     ULONG count;
     APTR address;
     long retrycount; 
@@ -304,8 +304,8 @@ WAITBUSYW:
 
           asm volatile(
       "       bra 2f                           \n"
-      "1:     move.l (%[address])+,(0xDA2000)  \n"
-      "       move.l (%[address])+,(0xDA2000)  \n"
+      "1:     move.l (%[address])+,(0xDD2000)  \n"
+      "       move.l (%[address])+,(0xDD2000)  \n"
       "2:     dbra   %[count],1b               \n"
               :[count]"+d"(count),[address]"+a"(address)::"cc");
 
