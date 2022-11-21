@@ -554,8 +554,8 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
     BYTE err = 0;
     APTR mem = block->buffer;
     UBYTE status;
-    volatile WORD *irqreg=0xDA9000;
-    volatile WORD *irqen=0xDAA000;
+    volatile WORD *irqreg=0xDD9000;
+    volatile WORD *irqen=0xDDA000;
 
     /*
      * Use a short timeout for Identify commands. This is because some bad
