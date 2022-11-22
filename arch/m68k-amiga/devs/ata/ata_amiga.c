@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2014, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -22,12 +22,12 @@
 #include "ata.h"
 #include "timer.h"
 
-#define GAYLE_BASE_4000 0xdd2022 /* 0xdd2020.W, 0xdd2026.B, 0xdd202a.B ... (argh!) */
+#define GAYLE_BASE_4000 0xdd2022 /* 0xdd2020.W, 0xdd2026.B, 0xdd202a.B ... */
 #define GAYLE_IRQ_4000  0xdd3020
 
-#define GAYLE_BASE_1200 0xda0000 /* 0xda0000.W, 0xda0004.B, 0xda0008.B ... */
-#define GAYLE_IRQ_1200  0xda9000
-#define GAYLE_INT_1200  0xdaa000
+#define GAYLE_BASE_1200 0xdd0000 /* 0xdd0000.W, 0xdd0004.B, 0xdd0008.B ... */
+#define GAYLE_IRQ_1200  0xdd9000
+#define GAYLE_INT_1200  0xdda000
 
 #define GAYLE_IRQ_IDE	0x80
 #define GAYLE_INT_IDE	0x80

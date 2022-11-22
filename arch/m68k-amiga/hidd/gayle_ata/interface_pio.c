@@ -36,8 +36,8 @@ static void ata_outsl(struct pio_data *data, APTR address, ULONG count)
 
 
     asm volatile(
-"1:     move.l (%[address])+,(0xDD2000)  \n"
-"       move.l (%[address])+,(0xDD2000)  \n"
+"1:     move.l (%[address])+,(0xdd2000)  \n"
+"       move.l (%[address])+,(0xdd2000)  \n"
 "       subq.l #1,%[count]              \n"
 "       bnes 1b                         \n"
         ::[count]"d"(count >> 3),[address]"a"(address),[port]"a"(addr));
@@ -52,8 +52,8 @@ static void ata_insl(struct pio_data *data, APTR address, ULONG count)
     asm volatile(
 "       bra 2f                          \n"
 "1:                                     \n"
-"       move16 0x00da6000,(%[address])+ \n"
-"       move16 0x00da6000,(%[address])+ \n"
+"       move16 0x00dd6000,(%[address])+ \n"
+"       move16 0x00dd6000,(%[address])+ \n"
 "2:     dbra   %[count],1b              \n"
         ::[count]"d"(count >> 5),[address]"a"(address));
 }
