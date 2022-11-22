@@ -2,7 +2,7 @@
 #define AROS_M68K_CPU_H
 
 /*
-    Copyright © 1995-2016, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2016, The AROS Development Team. All rights reserved.
     $Id$
 
     NOTE: This file must compile *without* any other header !
@@ -116,7 +116,7 @@ extern void aros_not_implemented ();
     Not so much, I think (schulz) ;-))
 */
 
-#define AROS_STACKSIZE  0x4000
+#define AROS_STACKSIZE  0xA000
 
 //#define AROS_NEEDS___MAIN
 
