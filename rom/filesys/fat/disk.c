@@ -1,8 +1,8 @@
 /*
  * fat-handler - FAT12/16/32 filesystem handler
  *
- * Copyright © 2006 Marek Szyprowski
- * Copyright © 2007-2015 The AROS Development Team
+ * Copyright ï¿½ 2006 Marek Szyprowski
+ * Copyright ï¿½ 2007-2015 The AROS Development Team
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the same terms as AROS itself.
@@ -14,6 +14,8 @@
 
 #include <exec/types.h>
 #include <exec/errors.h>
+
+#include <dos/filehandler.h>
 
 #include <devices/newstyle.h>
 #include <devices/trackdisk.h>
@@ -37,11 +39,18 @@
 
 void ProcessDiskChange(struct Globals *glob)
 {
-    D(bug("\nGot disk change request\n"));
+    D(bug("----------------------------------------------------------------\n"));
+    D(bug("[%s] Start\n",__FUNCTION__ ));
+
+    struct DriveGeometry geometry;
+    struct FileSysStartupMsg *fssm = glob->fssm;
+    struct DosEnvec *de = BADDR(fssm->fssm_Environ);
+
+    D(bug("[%s] Got disk change request\n",__FUNCTION__ ));
 
     if (glob->disk_inhibited != 0)
     {
-        D(bug("Disk is inhibited, ignoring disk change\n"));
+        D(bug("[%s] Disk is inhibited, ignoring disk change\n",__FUNCTION__ ));
         return;
     }
 
@@ -55,23 +64,53 @@ void ProcessDiskChange(struct Globals *glob)
         && glob->diskioreq->iotd_Req.io_Actual == 0)
     {
         /* Disk has been inserted. */
-        D(bug("\tDisk has been inserted\n"));
+        D(bug("[%s] Disk has been inserted\n",__FUNCTION__ ));
         glob->disk_inserted = TRUE;
+
+        glob->diskioreq->iotd_Req.io_Data = &geometry;
+        glob->diskioreq->iotd_Req.io_Command = TD_GETGEOMETRY;
+        glob->diskioreq->iotd_Req.io_Length = sizeof(struct DriveGeometry);
+        DoIO((struct IORequest *)glob->diskioreq);
+
+        D(bug("[%s] Disk geometry retrieved in DriveGeometry structure\n",__FUNCTION__ ));
+        D(bug("[%s] dg_SectorSize    : %d\n",__FUNCTION__ , geometry.dg_SectorSize));
+        D(bug("[%s] dg_TotalSectors  : %d\n",__FUNCTION__ , geometry.dg_TotalSectors));
+        D(bug("[%s] dg_Cylinders     : %d\n",__FUNCTION__ , geometry.dg_Cylinders));
+        D(bug("[%s] dg_CylSectors    : %d\n",__FUNCTION__ , geometry.dg_CylSectors));
+        D(bug("[%s] dg_Heads         : %d\n",__FUNCTION__ , geometry.dg_Heads));
+        D(bug("[%s] dg_TrackSectors  : %d\n",__FUNCTION__ , geometry.dg_TrackSectors));
+
+        D(bug("[%s] Drive Geometry structure transfer to glob->fssm->fssm_Environ\n",__FUNCTION__ ));
+
+        de->de_SizeBlock        = geometry.dg_SectorSize >> 2; // Sizeblock = LONG p/Block = Shift 2
+        de->de_Surfaces         = geometry.dg_Heads;           // Surfaces = Heads
+        de->de_BlocksPerTrack   = geometry.dg_TrackSectors;    // Block p/Track = #Sectors
+        de->de_LowCyl           = 2;                           // HOW TO DETERMINE???
+        de->de_HighCyl          = geometry.dg_Cylinders - 1;   // Assume 1 partition ???
+
+        D(bug("[%s] de_SizeBlock      : %d\n",__FUNCTION__ , de->de_SizeBlock));
+        D(bug("[%s] de_Surfaces       : %d\n",__FUNCTION__ , de->de_Surfaces));
+        D(bug("[%s] de_BlocksPerTrack : %d\n",__FUNCTION__ , de->de_BlocksPerTrack));
+        D(bug("[%s] dg_LowCyl         : %d\n",__FUNCTION__ , de->de_LowCyl));
+        D(bug("[%s] dg_HighCyl        : %d\n",__FUNCTION__ , de->de_HighCyl));
+
         DoDiskInsert(glob);
     }
     else
     {
         /* Disk has been removed. */
-        D(bug("\tDisk has been removed\n"));
+        D(bug("[%s] Disk has been removed\n",__FUNCTION__ ));
         glob->disk_inserted = FALSE;
         DoDiskRemove(glob);
     }
 
-    D(bug("Done\n"));
+    D(bug("[%s] Done process disk change request\n",__FUNCTION__ ));
 }
 
 void UpdateDisk(struct Globals *glob)
 {
+    D(bug("----------------------------------------------------------------\n"));
+    D(bug("[%s] Start \n",__FUNCTION__ ));
     if (glob->sb)
         Cache_Flush(glob->sb->cache);
 
@@ -82,7 +121,7 @@ void UpdateDisk(struct Globals *glob)
      * last timer period */
     if (!glob->restart_timer)
     {
-        D(bug("Stopping drive motor\n"));
+        D(bug("[%s] Stopping drive motor\n",__FUNCTION__ ));
         glob->diskioreq->iotd_Req.io_Command = TD_MOTOR;
         glob->diskioreq->iotd_Req.io_Length = 0;
         DoIO((struct IORequest *)glob->diskioreq);
@@ -92,6 +131,8 @@ void UpdateDisk(struct Globals *glob)
 /* Probe the device to determine 64-bit support */
 void Probe64BitSupport(struct Globals *glob)
 {
+    D(bug("----------------------------------------------------------------\n"));
+    D(bug("[%s] Start\n",__FUNCTION__ ));
     struct NSDeviceQueryResult nsd_query;
     UWORD *nsd_cmd;
 
@@ -107,8 +148,7 @@ void Probe64BitSupport(struct Globals *glob)
 
     if (DoIO((struct IORequest *)glob->diskioreq) != IOERR_NOCMD)
     {
-        D(bug("Probe_64bit_support:"
-            " device supports 64-bit trackdisk extensions\n"));
+        D(bug("[%s] Device supports 64-bit trackdisk extensions\n",__FUNCTION__ ));
         glob->readcmd = TD_READ64;
         glob->writecmd = TD_WRITE64;
     }
@@ -125,8 +165,7 @@ void Probe64BitSupport(struct Globals *glob)
         {
             if (*nsd_cmd == NSCMD_TD_READ64)
             {
-                D(bug("Probe_64bit_support:"
-                    " device supports NSD 64-bit trackdisk extensions\n"));
+                D(bug("[%s] Device supports NSD 64-bit trackdisk extensions\n",__FUNCTION__ ));
                 glob->readcmd = NSCMD_TD_READ64;
                 glob->writecmd = NSCMD_TD_WRITE64;
                 break;
@@ -138,6 +177,8 @@ void Probe64BitSupport(struct Globals *glob)
 LONG AccessDisk(BOOL do_write, ULONG num, ULONG nblocks, ULONG block_size,
     UBYTE *data, APTR priv)
 {
+    D(bug("----------------------------------------------------------------\n"));
+    D(bug("[%s] Start \n",__FUNCTION__ ));
     struct Globals *glob = priv;
     UQUAD off;
     ULONG err;

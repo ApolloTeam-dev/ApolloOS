@@ -1,8 +1,8 @@
 /*
  * fat-handler - FAT12/16/32 filesystem handler
  *
- * Copyright © 2007-2020 The AROS Development Team
- * Copyright © 2006 Marek Szyprowski
+ * Copyright ï¿½ 2007-2020 The AROS Development Team
+ * Copyright ï¿½ 2006 Marek Szyprowski
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the same terms as AROS itself.
@@ -239,8 +239,8 @@ LONG GetDirEntryByCluster(struct DirHandle *dh, ULONG cluster,
     /* Loop through the entries until we find a match */
     while ((err = GetNextDirEntry(dh, de, glob)) == 0)
     {
-        if (de->e.entry.first_cluster_hi == (cluster >> 16)
-            && de->e.entry.first_cluster_lo == (cluster & 0xffff))
+        if (AROS_LE2WORD(de->e.entry.first_cluster_hi) == (cluster >> 16)
+            && AROS_LE2WORD(de->e.entry.first_cluster_lo) == (cluster & 0xffff))
         {
             D(bug("[fat] matched starting cluster at entry %ld, returning\n",
                 dh->cur_index));
@@ -578,8 +578,8 @@ void FillDirEntry(struct DirEntry *de, UBYTE attr, ULONG cluster,
     de->e.entry.create_time_tenth = ds.ds_Tick % (TICKS_PER_SECOND * 2)
         / (TICKS_PER_SECOND / 10);
 
-    de->e.entry.first_cluster_lo = cluster & 0xffff;
-    de->e.entry.first_cluster_hi = cluster >> 16;
+    de->e.entry.first_cluster_lo = AROS_LE2WORD(cluster & 0xffff);
+    de->e.entry.first_cluster_hi = AROS_LE2WORD (cluster >> 16);
 
     de->e.entry.file_size = 0;
 }
