@@ -1,8 +1,8 @@
 /*
  * fat-handler - FAT12/16/32 filesystem handler
  *
- * Copyright � 2007-2020 The AROS Development Team
- * Copyright � 2006 Marek Szyprowski
+ * Copyright ? 2007-2020 The AROS Development Team
+ * Copyright ? 2006 Marek Szyprowski
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the same terms as AROS itself.
@@ -585,11 +585,12 @@ LONG OpRenameFile(struct ExtFileLock *sdirlock, UBYTE *sname,
     /* Make a new entry in the target dir */
     if ((err = CreateDirEntry(&ddh, dname, dnamelen,
         sde.e.entry.attr | ATTR_ARCHIVE,
-        (sde.e.entry.first_cluster_hi << 16) | sde.e.entry.first_cluster_lo,
+        AROS_LE2WORD(sde.e.entry.first_cluster_hi << 16) | AROS_LE2WORD(sde.e.entry.first_cluster_lo),
         &dde, glob)) != 0)
     {
         ReleaseDirHandle(&ddh, glob);
         ReleaseDirHandle(&sdh, glob);
+        return err;
     }
 
     /* Copy in the leftover attributes */
