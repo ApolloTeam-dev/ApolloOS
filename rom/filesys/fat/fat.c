@@ -23,7 +23,10 @@
 static APTR GetFatEntryPtr(struct FSSuper *sb, ULONG offset, APTR *rb,
     UWORD fat_no)
 {
-    D(struct Globals *glob = sb->glob);
+    D(bug("----------------------------------------------------------------\n"));
+    D(bug("[%s] Start\n",__FUNCTION__ ));
+
+    struct Globals *glob = sb->glob;
     ULONG entry_cache_block = offset >> sb->fat_cachesize_bits;
     ULONG entry_cache_offset = offset & (sb->fat_cachesize - 1);
     ULONG num;
@@ -34,7 +37,7 @@ static APTR GetFatEntryPtr(struct FSSuper *sb, ULONG offset, APTR *rb,
     if (sb->fat_cache_block != entry_cache_block
         || sb->fat_cache_no != fat_no)
     {
-        D(bug("[fat] loading %ld FAT sectors starting at sector %ld\n",
+        D(bug("[%s] loading %ld FAT sectors starting at sector %ld\n",__FUNCTION__ ,
             sb->fat_blocks_count,
             entry_cache_block << (sb->fat_cachesize_bits -
             sb->sectorsize_bits)));
@@ -98,14 +101,17 @@ static APTR GetFatEntryPtr(struct FSSuper *sb, ULONG offset, APTR *rb,
  */
 ULONG GetFat12Entry(struct FSSuper *sb, ULONG n)
 {
-    D(struct Globals *glob = sb->glob);
+    D(bug("----------------------------------------------------------------\n"));
+    D(bug("[%s] Start\n",__FUNCTION__ ));
+
+    struct Globals *glob = sb->glob;
     ULONG offset = n + n / 2;
     UBYTE *p1;
     UWORD val = 0, *p2;
 
     if ((offset & (sb->sectorsize - 1)) == sb->sectorsize - 1)
     {
-        D(bug("[fat] fat12 cluster pair on block boundary, compensating\n"));
+        D(bug("[%s] FAT12 cluster pair on block boundary, compensating\n",__FUNCTION__ ));
 
         p1 = GetFatEntryPtr(sb, offset + 1, NULL, 0);
         if (p1 != NULL)
@@ -140,6 +146,9 @@ ULONG GetFat12Entry(struct FSSuper *sb, ULONG n)
  */
 ULONG GetFat16Entry(struct FSSuper *sb, ULONG n)
 {
+    D(bug("----------------------------------------------------------------\n"));
+    D(bug("[%s] Start \n",__FUNCTION__ ));
+
     UWORD val = 0, *p;
 
     p = GetFatEntryPtr(sb, n << 1, NULL, 0);
@@ -151,6 +160,9 @@ ULONG GetFat16Entry(struct FSSuper *sb, ULONG n)
 
 ULONG GetFat32Entry(struct FSSuper *sb, ULONG n)
 {
+    D(bug("----------------------------------------------------------------\n"));
+    D(bug("[%s] Start\n",__FUNCTION__ ));
+
     ULONG val = 0, *p;
 
     p = GetFatEntryPtr(sb, n << 2, NULL, 0);
@@ -162,7 +174,10 @@ ULONG GetFat32Entry(struct FSSuper *sb, ULONG n)
 
 BOOL SetFat12Entry(struct FSSuper *sb, ULONG n, ULONG val)
 {
-    D(struct Globals *glob = sb->glob);
+    D(bug("----------------------------------------------------------------\n"));
+    D(bug("[%s] Start\n",__FUNCTION__ ));
+
+    struct Globals *glob = sb->glob;
     APTR b;
     ULONG offset = n + n / 2;
     BOOL success = TRUE, boundary = FALSE;
@@ -175,8 +190,7 @@ BOOL SetFat12Entry(struct FSSuper *sb, ULONG n, ULONG val)
         {
             boundary = TRUE;
 
-            D(bug(
-                "[fat] fat12 cluster pair on block boundary, compensating\n"));
+            D(bug("[%s] FAT12 cluster pair on block boundary, compensating\n",__FUNCTION__ ));
 
             p1 = GetFatEntryPtr(sb, offset + 1, NULL, i);
             if (p1 != NULL)
@@ -244,6 +258,9 @@ BOOL SetFat12Entry(struct FSSuper *sb, ULONG n, ULONG val)
 
 BOOL SetFat16Entry(struct FSSuper *sb, ULONG n, ULONG val)
 {
+    D(bug("----------------------------------------------------------------\n"));
+    D(bug("[%s] Start\n",__FUNCTION__ ));
+
     BOOL success = TRUE;
     APTR b;
     UWORD i, *p;
@@ -265,6 +282,9 @@ BOOL SetFat16Entry(struct FSSuper *sb, ULONG n, ULONG val)
 
 BOOL SetFat32Entry(struct FSSuper *sb, ULONG n, ULONG val)
 {
+    D(bug("----------------------------------------------------------------\n"));
+    D(bug("[%s] Start\n",__FUNCTION__ ));
+
     BOOL success = TRUE;
     APTR b;
     ULONG *p;
@@ -287,7 +307,10 @@ BOOL SetFat32Entry(struct FSSuper *sb, ULONG n, ULONG val)
 
 LONG FindFreeCluster(struct FSSuper *sb, ULONG *rcluster)
 {
-    D(struct Globals *glob = sb->glob);
+    D(bug("----------------------------------------------------------------\n"));
+    D(bug("[%s] Start\n",__FUNCTION__ ));
+
+    struct Globals *glob = sb->glob;
     ULONG cluster = 0;
     BOOL found = FALSE;
 
@@ -315,13 +338,13 @@ LONG FindFreeCluster(struct FSSuper *sb, ULONG *rcluster)
 
     if (!found)
     {
-        D(bug("[fat] no more free clusters, we're out of space\n"));
+        D(bug("[%s] No more free clusters, we're out of space\n",__FUNCTION__ ));
         return ERROR_DISK_FULL;
     }
 
     sb->next_cluster = *rcluster;
 
-    D(bug("[fat] found free cluster %ld\n", *rcluster));
+    D(bug("[%s] Found free cluster %ld\n", __FUNCTION__, *rcluster));
 
     return 0;
 }
@@ -329,7 +352,10 @@ LONG FindFreeCluster(struct FSSuper *sb, ULONG *rcluster)
 /* See how many unused clusters are available */
 void CountFreeClusters(struct FSSuper *sb)
 {
-    D(struct Globals *glob = sb->glob);
+    D(bug("----------------------------------------------------------------\n"));
+    D(bug("[%s] Start\n",__FUNCTION__ ));
+
+    struct Globals *glob = sb->glob;
     ULONG cluster = 0;
     ULONG free = 0;
 
@@ -344,11 +370,14 @@ void CountFreeClusters(struct FSSuper *sb)
     /* Put the value away for later */
     sb->free_clusters = free;
 
-    D(bug("\tfree clusters: %ld\n", free));
+    D(bug("[%s] Free clusters: %ld\n", __FUNCTION__ , free));
 }
 
 void AllocCluster(struct FSSuper *sb, ULONG cluster)
 {
+    D(bug("----------------------------------------------------------------\n"));
+    D(bug("[%s] Start\n",__FUNCTION__ ));
+
     SET_NEXT_CLUSTER(sb, cluster, sb->eoc_mark);
     sb->free_clusters--;
     if (sb->fsinfo_buffer != NULL)
@@ -361,6 +390,9 @@ void AllocCluster(struct FSSuper *sb, ULONG cluster)
 
 void FreeCluster(struct FSSuper *sb, ULONG cluster)
 {
+    D(bug("----------------------------------------------------------------\n"));
+    D(bug("[%s] Start\n",__FUNCTION__ ));
+
     SET_NEXT_CLUSTER(sb, cluster, 0);
     sb->free_clusters++;
     if (sb->fsinfo_buffer != NULL)

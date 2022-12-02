@@ -1,8 +1,8 @@
 /*
  * fat-handler - FAT12/16/32 filesystem handler
  *
- * Copyright © 2007-2020 The AROS Development Team
- * Copyright © 2006 Marek Szyprowski
+ * Copyright ï¿½ 2007-2020 The AROS Development Team
+ * Copyright ï¿½ 2006 Marek Szyprowski
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the same terms as AROS itself.
@@ -737,8 +737,8 @@ LONG OpCreateDir(struct ExtFileLock *dirlock, UBYTE *name, ULONG namelen,
     cluster = dh.ioh.first_cluster;
     if (cluster == dh.ioh.sb->rootdir_cluster)
         cluster = 0;
-    sde.e.entry.first_cluster_lo = cluster & 0xffff;
-    sde.e.entry.first_cluster_hi = cluster >> 16;
+    sde.e.entry.first_cluster_lo = AROS_LE2WORD(cluster & 0xffff);
+    sde.e.entry.first_cluster_hi = AROS_LE2WORD(cluster >> 16);
     UpdateDirEntry(&sde, glob);
 
     /* Clear all remaining entries (the first of which marks the end of the
@@ -874,9 +874,9 @@ LONG OpWrite(struct ExtFileLock *lock, UBYTE *data, ULONG want,
                 glob);
             GetDirEntry(&dh, lock->gl->dir_entry, &de, glob);
 
-            de.e.entry.file_size = lock->gl->size;
-            de.e.entry.first_cluster_lo = lock->gl->first_cluster & 0xffff;
-            de.e.entry.first_cluster_hi = lock->gl->first_cluster >> 16;
+            de.e.entry.file_size = AROS_LE2LONG(lock->gl->size);
+            de.e.entry.first_cluster_lo = AROS_LE2WORD(lock->gl->first_cluster & 0xffff);
+            de.e.entry.first_cluster_hi = AROS_LE2WORD(lock->gl->first_cluster >> 16);
 
             de.e.entry.attr |= ATTR_ARCHIVE;
             UpdateDirEntry(&de, glob);
@@ -1048,8 +1048,8 @@ LONG OpSetFileSize(struct ExtFileLock *lock, LONG offset, LONG whence,
     }
 
     /* Clusters are fixed, now update the directory entry */
-    de.e.entry.first_cluster_lo = first & 0xffff;
-    de.e.entry.first_cluster_hi = first >> 16;
+    de.e.entry.first_cluster_lo = AROS_LE2WORD( first & 0xffff );
+    de.e.entry.first_cluster_hi = AROS_LE2WORD( first >> 16);
     de.e.entry.file_size = size;
     de.e.entry.attr |= ATTR_ARCHIVE;
     UpdateDirEntry(&de, glob);
