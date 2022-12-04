@@ -94,6 +94,9 @@ LONG ReadFATSuper(struct FSSuper *sb)
     if (!boot)
         return ERROR_NO_FREE_STORE;
 
+tryagain:    
+    invalid = FALSE;
+        
     D(bug("[%s] Blockspertrack %ld\n",__FUNCTION__ , de->de_BlocksPerTrack));
     D(bug("[%s] Surfaces %ld\n", __FUNCTION__ , de->de_Surfaces));
     D(bug("[%s] Lowcyl %ld\n", __FUNCTION__ , de->de_LowCyl));
@@ -239,8 +242,15 @@ LONG ReadFATSuper(struct FSSuper *sb)
         D(bug("[%s] Invalid FAT Signature (boot->bpb_signature\n", __FUNCTION__ ));
     }
 
-    if (invalid)
+    if (invalid == TRUE)
     {
+        if (de->de_LowCyl < 256)        //ugly hack for special SDcards, we should read the MBR and calculate the offset
+        {   
+            de->de_LowCyl+=1;
+            D(bug("[%s] FAT32 =%c %c %c %c \n", __FUNCTION__, boot->bpb_signature[82], boot->bpb_signature[83], boot->bpb_signature[84], boot->bpb_signature[85]));
+            D(bug("[%s] Invalid FAT Boot Sector, try again with offset %ld\n",__FUNCTION__ , de->de_LowCyl));
+            goto tryagain;
+        }
         D(bug("[%s] Invalid FAT Boot Sector\n",__FUNCTION__ ));
         FreeMem(boot, bsize);
         return ERROR_NOT_A_DOS_DISK;
