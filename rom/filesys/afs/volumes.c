@@ -131,7 +131,7 @@ UBYTE dosflags;
 	{
 		blockbuffer->flags |= BCF_USED;	// won't be cleared until volume is ejected
 		volume->usedblockscount=countUsedBlocks(afsbase, volume);
-		volume->state = diskWritable(afsbase, &volume->ioh) ?
+		volume->state = volume->state != ID_VALIDATING || diskWritable(afsbase, &volume->ioh) ?
 			ID_VALIDATED : ID_WRITE_PROTECTED;
 	}
 	error = osMediumInit(afsbase, volume, blockbuffer);
