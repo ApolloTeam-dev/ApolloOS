@@ -1,11 +1,9 @@
 #include <aros/kernel.h>
 #include <exec/execbase.h>
 #include <exec/memory.h>
-#include <resources/hpet.h>
 #include <resources/processor.h>
 
 #include <proto/aros.h>
-#include <proto/hpet.h>
 #include <proto/kernel.h>
 #include <proto/exec.h>
 #include <proto/utility.h>
@@ -173,7 +171,6 @@ int main()
 {
     struct MemHeader *mh;
     APTR KernelBase;
-    APTR HPETBase;
     int offset = 0;
 
 #if (__WORDSIZE==64)
@@ -200,21 +197,6 @@ int main()
     ProcessorBase = OpenResource(PROCESSORNAME);
     if (ProcessorBase)
         PrintProcessorInformation();
-
-    HPETBase = OpenResource("hpet.resource");
-    if (HPETBase)
-    {
-    	const char *owner;
-    	ULONG i = 0;
-
-	while (GetUnitAttrs(i, HPET_UNIT_OWNER, &owner, TAG_DONE))
-	{
-	    if (!owner)
-	    	owner = "Available for use";
-
-	    printf("HPET %u:\t\t%s\n", (unsigned)(++i), owner);
-	}
-    }
 
     printf("RAM:\n");
     for (mh = (struct MemHeader *)SysBase->MemList.lh_Head; mh->mh_Node.ln_Succ; mh = (struct MemHeader *)mh->mh_Node.ln_Succ) {

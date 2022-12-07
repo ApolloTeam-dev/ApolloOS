@@ -7,7 +7,6 @@
 
 #include <exec/memory.h>
 #include <hidd/hidd.h>
-#include <resources/hpet.h>
 #include <libraries/mui.h>
 #include <mui/NFloattext_mcc.h>
 #include <resources/processor.h>
@@ -18,7 +17,6 @@
 #include <proto/aros.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
-#include <proto/hpet.h>
 #include <proto/kernel.h>
 #include <proto/muimaster.h>
 #include <proto/utility.h>

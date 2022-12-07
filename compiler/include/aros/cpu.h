@@ -32,7 +32,7 @@
 #if defined __i386__
 #   include <aros/i386/cpu.h>
 #elif defined __x86_64__
-#   include <aros/x86_64/cpu.h>
+#   include <aros/cpu_x86_64.h>
 #elif defined __mc68000__
 #   include <aros/m68k/cpu.h>
 #elif defined __MORPHOS__

@@ -9,7 +9,6 @@
 
 #include <exec/memory.h>
 #include <hidd/hidd.h>
-#include <resources/hpet.h>
 #include <libraries/mui.h>
 #include <mui/NFloattext_mcc.h>
 #include <resources/processor.h>
@@ -20,7 +19,6 @@
 #include <proto/aros.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
-#include <proto/hpet.h>
 #include <proto/kernel.h>
 #include <proto/muimaster.h>
 #include <proto/utility.h>
@@ -299,14 +297,12 @@ char *SplitBootArgs(struct TagItem *bootinfo, char *buffer, LONG bufsize)
 static Object *ComputerWindow__OM_NEW(Class *cl, Object *self, struct opSet *msg)
 {
     Object *GrpProcessors;
-    Object *hpet_flt;
     Object *ram_flt;
     char aros_ver[12], exec_ver[12];
     char buffer[2000];
     IPTR bootldr = 0;
     IPTR args = 0;
     APTR KernelBase;
-    APTR HPETBase;
 
     STRPTR pagetitles[5];
     int pagecnt = 0;
@@ -333,10 +329,7 @@ static Object *ComputerWindow__OM_NEW(Class *cl, Object *self, struct opSet *msg
         pagetitles[pagecnt++] = (STRPTR)_(MSG_PROCESSORS);
     }
     pagetitles[pagecnt++] = (STRPTR)_(MSG_RAM);
-    if ((HPETBase = OpenResource("hpet.resource")) != NULL)
-    {
-        pagetitles[pagecnt++] = (STRPTR)_(MSG_HPET);
-    }
+
     pagetitles[pagecnt] = NULL;
 
     D(bug("[SysExplorer] %s: %d pages\n", __func__, pagecnt));
@@ -410,16 +403,6 @@ static Object *ComputerWindow__OM_NEW(Class *cl, Object *self, struct opSet *msg
                     End),
                 End),
             End),
-            HPETBase ? Child : TAG_IGNORE, (IPTR)(VGroup,
-                Child, (IPTR)(NListviewObject,
-                    TextFrame,
-                    MUIA_Background, MUII_TextBack,
-                    MUIA_NListview_NList, (IPTR)(hpet_flt = NFloattextObject,
-                        NoFrame,
-                        MUIA_Background, MUII_TextBack,
-                    End),
-                End),
-            End),
         End),
         TAG_DONE
     );
@@ -445,25 +428,6 @@ static Object *ComputerWindow__OM_NEW(Class *cl, Object *self, struct opSet *msg
         bufptr = buffer;
         bufsize = sizeof(buffer);
 
-        if (HPETBase)
-        {
-            const char *owner;
-            ULONG i = 0;
-
-            while (bufsize > 5 && GetUnitAttrs(i, HPET_UNIT_OWNER, &owner, TAG_DONE))
-            {
-                if (!owner)
-                    owner = _(MSG_AVAILABLE);
-
-                snprintf(bufptr, bufsize, "HPET %u:\t\t%s\n", (unsigned)(++i), owner);
-
-                slen = strlen(bufptr);
-                bufptr += slen;
-                bufsize -= slen;
-            }
-        }
-        // we intentionally use MUIA_Floattext_Text because it copies the text
-        SET(hpet_flt, MUIA_Floattext_Text, buffer);
 
         // RAM
         *buffer = '\0';
