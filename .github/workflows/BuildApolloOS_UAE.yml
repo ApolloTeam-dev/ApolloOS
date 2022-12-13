@@ -34,7 +34,7 @@ jobs:
       
       # Install pre-reuisites
       - name: Install Prerequisites
-        run: sudo apt-get install git-core gcc g++ make cmake gawk bison flex bzip2 netpbm autoconf automake libx11-dev libxext-dev libc6-dev liblzo2-dev libxxf86vm-dev libpng-dev libsdl1.2-dev byacc python-mako libxcursor-dev gcc-multilib zip genisoimage
+        run: sudo apt-get install git-core gcc g++ make cmake gawk bison flex bzip2 netpbm autoconf automake libx11-dev libxext-dev libc6-dev liblzo2-dev libxxf86vm-dev libpng-dev libsdl1.2-dev byacc libxcursor-dev gcc-multilib zip genisoimage
 
       # Runs a single command using the runners shell
       - name: configure
