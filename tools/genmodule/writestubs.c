@@ -163,7 +163,6 @@ static void writeheader(struct config *cfg, int is_rel, FILE *out)
         out,
         "#include <stddef.h>\n"
         "\n"
-        "#include <aros/cpu.h>\n"
         "#include <aros/genmodule.h>\n"
         "#include <aros/libcall.h>\n"
         "#include <aros/symbolsets.h>\n"
