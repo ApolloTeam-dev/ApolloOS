@@ -88,7 +88,11 @@ static int SAGAGfx_Init(LIBBASETYPEPTR LIBBASE)
     
 	switch (xsd->boardModel)
     {
-        case VREG_BOARD_V2_V500:
+    	case VREG_BOARD_Unknown:
+	    return(FALSE);	
+ 	    break;		
+			
+	case VREG_BOARD_V2_V500:
         case VREG_BOARD_V2_V600:
         case VREG_BOARD_V2_V1200:
             // SAGA V2 METHODS
