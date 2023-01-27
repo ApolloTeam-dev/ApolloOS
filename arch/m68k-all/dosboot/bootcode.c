@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2014, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -31,6 +31,8 @@ VOID_FUNC CallBootBlockCode(APTR bootcode, struct IOStdReq *io, struct Expansion
     /* Lovely. Double return values. What func. */
     asm volatile (
                  "move.l %2,%%a1\n"
+                 "suba.l %%a1,%%a1\n"
+                 "dc.w 0x4e7b,0x9002\n" // movec %%a1,%%cacr\n"
                  "move.l %4,%%a0\n"
                  "move.l %%a6,%%sp@-\n"
                  "move.l %3,%%a6\n"
