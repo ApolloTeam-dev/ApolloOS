@@ -126,7 +126,7 @@ AFILES=rom_entry rom_init cpu_detect superstack_swap
 KLIBS   := exec aros dos utility oop expansion partition debug
 KDEVS   := timer input keyboard console gameport audio
 KHNDLRS := con afs ram
-KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse
+KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse p96gfx
 KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem misc shell card bootloader vampire
 KHOOKS  := diag romboot
 
