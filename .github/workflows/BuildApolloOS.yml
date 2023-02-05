@@ -44,15 +44,15 @@ jobs:
 
       # build the compilers
       - name: Compiler Build
-        run: make compiler
+        run: make -j4 compiler
 
       # Runs a set of commands using the runners shell
       - name: make
-        run: make 
+        run: make -j4
         
       # make dist files
       - name: distfiles
-        run: make distfiles
+        run: make -j4 distfiles
         
       # Make the rom
       - name: aros.rom
