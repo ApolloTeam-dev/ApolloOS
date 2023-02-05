@@ -5,7 +5,7 @@ THREADS=${CPU_COUNT}
 #Some how, running more than 8 tasks doesn't succeed every time
 if [ ${THREADS} -gt  8 ]
 then
-	THREADS=8
+	THREADS=1
 fi
 
 args=("$@")
@@ -35,10 +35,10 @@ DISTOPTVER="--enable-dist-version=${DISTROVERSION}"
 
 source ./make_dist_config.sh
 
-./configure "${DISTOPTNAME}" "${DISTOPTVER}" --target=amiga-m68k --with-optimization="-Os" --enable-ccache --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68020 --with-serial-debug --enable-debug=all $@
+./configure "${DISTOPTNAME}" "${DISTOPTVER}" --target=amiga-m68k --with-optimization="-Os" --enable-ccache --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68040 --with-serial-debug --enable-debug=all $@
 
 make -j${THREADS}
-make -j${THREADS} kernel-amiga-m68k
+make -j${THREADS} kernel
 cat bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin > aros.rom
 ls -lah aros.rom
 
