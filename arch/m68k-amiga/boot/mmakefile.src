@@ -74,7 +74,6 @@ include $(SRCDIR)/config/aros.cfg
 #MM     kernel-workbook-kobj \
 #MM     kernel-workbench-devs-amiga-m68k \
 #MM     kernel-vampire-amiga-m68k \
-#MM     hidd-m68k-sagagfx \
 #MM     workbench-libs-gadtools-kobj \
 #MM     workbench-libs-icon-kobj \
 #MM     workbench-libs-lowlevel-kobj \
@@ -86,8 +85,7 @@ include $(SRCDIR)/config/aros.cfg
 #MM     linklibs-loadseg \
 #MM     compiler-stdc \
 #MM     compiler-stdcio \
-#MM     kernel-sagasd-device-kobj \
-#MM     sagasd-device \
+#MM     hidd-m68k-sagagfx \
 #MM     compiler-posixc
 
 #MM- kernel-workbench-devs-amiga-m68k : workbench-devs-amiga-m68k
@@ -126,7 +124,7 @@ FILES=start early debug mmu
 AFILES=rom_entry rom_init cpu_detect superstack_swap
 
 KLIBS   := exec aros dos utility oop expansion partition debug
-KDEVS   := timer input keyboard console gameport audio
+KDEVS   := timer input keyboard console trackdisk gameport audio
 KHNDLRS := con afs ram
 KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse p96gfx
 KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem misc shell card bootloader vampire
@@ -152,8 +150,8 @@ AFILES  := ext_entry
 KLIBS   :=  keymap graphics layers intuition gadtools workbench \
             mathffp mathieeesingbas freeanim lowlevel \
             setpatch
-KDEVS   := cd ata trackdisk
-KHNDLRS :=  cdrom
+KDEVS   := cd ata
+KHNDLRS := cdrom
 KHIDDS  := bus storage system
 KRSRCS  := shellcommands wbtag
 KHOOKS  := alert
@@ -316,7 +314,7 @@ KLIBS   := aros utility dos oop mathffp mathieeesingbas partition \
            keymap graphics layers intuition gadtools workbench setpatch
 KDEVS   := timer input keyboard console trackdisk gameport audio ata cd
 KHNDLRS := cdrom con afs ram
-KHIDDS  := amigakbd amigamouse amigavideo ata_gayle bus gfx hiddclass keyboard mouse storage system
+KHIDDS  := amigakbd amigamouse amigavideo ata_gayle bus gfx hiddclass keyboard mouse storage system p96gfx
 KRSRCS  := battclock processor task lddemon dosboot cia potgo disk \
            misc shell shellcommands workbook wbtag card FileSystem vampire
 KHOOKS  := alert romboot
