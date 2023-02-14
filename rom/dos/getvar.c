@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2010, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2010, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: GetVar - Return the value of a local or global variable.
@@ -101,6 +101,16 @@ static LONG getvar_from(const char *name, const char *volume, STRPTR buffer, LON
         SetIoErr(ERROR_BAD_NUMBER);
 
         return 0;
+    }
+
+    //For programs that supply both GVF_GLOBAL_ONLY and GVF_LOCAL_ONLY
+    //we shall disambiguate to remove both.  This should be closer to AOS behaviour.
+    if( (flags & GVF_GLOBAL_ONLY) && (flags & GVF_LOCAL_ONLY) )
+    {
+    	//The behaviour on AOS3.9 is that only the GLOBAL case is carried out.
+    	//So removing the local flag will produce the same behaviour
+        D( bug("GetVar: GVF_GLOBAL_ONLY and GVF_LOCAL_ONLY specified.  Resorting to GVF_GLOBAL_ONLY\n" ));
+    	flags &= ~( GVF_LOCAL_ONLY );
     }
 
     if (name && buffer)

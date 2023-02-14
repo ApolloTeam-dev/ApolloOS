@@ -3,9 +3,9 @@ CPU_COUNT=$(grep processor /proc/cpuinfo | wc -l)
 THREADS=${CPU_COUNT}
 
 #Some how, running more than 8 tasks doesn't succeed every time
-if [ ${THREADS} -gt  8 ]
+if [ ${THREADS} -gt  4 ]
 then
-	THREADS=8
+	THREADS=4
 fi
 
 args=("$@")
@@ -34,7 +34,7 @@ source ./make_dist_config.sh
 DISTOPTNAME="--enable-dist-name=${DISTRONAME}"
 DISTOPTVER="--enable-dist-version=${DISTROVERSION}"
 
-./configure "${DISTOPTNAME}" "${DISTOPTVER}" --target=amiga-m68k --with-optimization="-O2" --enable-ccache --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68040 --disable-mmu $@
+./configure "${DISTOPTNAME}" "${DISTOPTVER}" --target=amiga-m68k --with-optimization="-Os" --enable-ccache --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68040 --disable-mmu $@
 
 make -j${THREADS}
 make -j${THREADS} kernel-amiga-m68k
