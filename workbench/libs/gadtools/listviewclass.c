@@ -255,7 +255,7 @@ STATIC VOID RenderEntries(Class *cl, struct Gadget *g, struct gpRender *msg,
     	drawmsg.lvdm_State = statetab[state];
     	    
     	drawmsg.lvdm_Bounds.MinY = top;
-    	drawmsg.lvdm_Bounds.MaxY = top + data->ld_ItemHeight - 1;
+    	drawmsg.lvdm_Bounds.MaxY = top + data->ld_ItemHeight - 1;      
     	    
     	CallHookPkt( data->ld_CallBack, node, &drawmsg);
     	
@@ -281,8 +281,9 @@ STATIC WORD NumItemsFit(struct Gadget *g, struct LVData *data)
     
     EnterFunc(bug("NumItemsFit(g=%p, data=%p)\n",g, data));
     D(bug("NumItemsFit: total spacing: %d\n", TotalItemHeight(data) ));
-   
-    numfit = (g->Height - 2 * LV_BORDER_Y) / 
+    
+    /* fix number of items that fit (added: +2) */
+    numfit = (g->Height+2 - 2 * LV_BORDER_Y) / 
     			TotalItemHeight(data);
     	
     ReturnInt ("NumItemsFit", UWORD, numfit);
@@ -1055,7 +1056,7 @@ IPTR GTListView__GM_RENDER(Class *cl, struct Gadget *g, struct gpRender *msg)
 	    
 	    /* center image position, we assume image top and left is 0 */
 	    itags[0].ti_Data = g->Width;
-	    itags[1].ti_Data = g->Height;
+	    itags[1].ti_Data = g->Height; 
 	
 	    SetAttrsA((Object *)data->ld_Frame, itags);
 	

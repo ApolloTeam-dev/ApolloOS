@@ -65,6 +65,8 @@
 {
     AROS_LIBFUNC_INIT
 
+    int LV_HeightCorrection = 0;            
+    
     struct Gadget 	*gad = NULL;
     struct TagItem 	stdgadtags[] =
     {
@@ -119,7 +121,7 @@
     /* Set the default label place according to the gadget type. */
 
     if (kind == LISTVIEW_KIND)
-	stdgadtags[TAG_LabelPlace].ti_Data = GV_LabelPlace_Above;
+	    stdgadtags[TAG_LabelPlace].ti_Data = GV_LabelPlace_Above;    
     else if (kind != BUTTON_KIND)
 	stdgadtags[TAG_LabelPlace].ti_Data = GV_LabelPlace_Left;
     
@@ -127,7 +129,7 @@
     stdgadtags[TAG_Top].ti_Data = ng->ng_TopEdge;
     stdgadtags[TAG_Width].ti_Data = ng->ng_Width;
     stdgadtags[TAG_Height].ti_Data = ng->ng_Height;
-
+        
     if (ng->ng_GadgetText)
     {
         ULONG old_ng_flags = ng->ng_Flags;
@@ -202,7 +204,7 @@
             break;
 
 	case TEXT_KIND:
-            gad = maketext(GTB(GadToolsBase),
+	        gad = maketext(GTB(GadToolsBase),
                 	   stdgadtags,
                 	   VI(ng->ng_VisualInfo),
                 	   ng->ng_TextAttr,
@@ -210,7 +212,7 @@
             break;
 
 	case NUMBER_KIND:
-            gad = makenumber(GTB(GadToolsBase),
+	        gad = makenumber(GTB(GadToolsBase),
                              stdgadtags,
                              VI(ng->ng_VisualInfo),
                              ng->ng_TextAttr,
@@ -242,7 +244,7 @@
 	    break;
 
 	case INTEGER_KIND:
-            gad = makeinteger(GTB(GadToolsBase),
+	        gad = makeinteger(GTB(GadToolsBase),
                               stdgadtags,
                               VI(ng->ng_VisualInfo),
                               ng->ng_TextAttr,
@@ -250,7 +252,12 @@
 	    break;
 
 	case LISTVIEW_KIND:
-            gad = makelistview(GTB(GadToolsBase),
+	        
+	        /* correction values are based on a visual comparison between AmigaOS and ApolloOS */
+	        LV_HeightCorrection = (ng->ng_TextAttr) ? ((ng->ng_TextAttr)->ta_YSize)-4 : 7;
+	        stdgadtags[TAG_Height].ti_Data = stdgadtags[TAG_Height].ti_Data - LV_HeightCorrection; 
+	        
+	        gad = makelistview(GTB(GadToolsBase),
                                stdgadtags,
                                VI(ng->ng_VisualInfo),
                                ng->ng_TextAttr,
