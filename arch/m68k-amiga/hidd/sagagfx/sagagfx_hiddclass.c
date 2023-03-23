@@ -89,8 +89,8 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
     MAKE_SYNC(1024x768, 28375*2,1024,1100,1150,1216,  768, 770, 774, 780, 1, "SAGA1024x768");
     MAKE_SYNC(720x576, 28375, 720, 753, 817, 908,  576, 582, 586, 626, 1, "SAGA:720x576");
     MAKE_SYNC(848x480, 28375*2, 848, 936, 984, 1516,  480, 490, 492, 626, 1, "SAGA:848x480");
-
-
+    MAKE_SYNC(640x200, 28375, 640, 753, 817, 908,  400/2, 490/2, 492/2, 524/2, 1, "SAGA:640x200");
+    MAKE_SYNC(1920x1080, 28375*2, 1920, 2085, 2145, 2274, 1080, 1088, 1095, 1125, 1, "SAGA:1920x1080");
     
     const struct TagItem syncs[] =
 	{
@@ -108,7 +108,9 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_800x600         },
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_1024x768        },
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_720x576         },
-		{ aHidd_Gfx_SyncTags,         (IPTR)sync_848x480       },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_848x480         },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_640x200         },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_1920x1080       },
 		{ TAG_DONE,                   0UL                        }
 	};
 
