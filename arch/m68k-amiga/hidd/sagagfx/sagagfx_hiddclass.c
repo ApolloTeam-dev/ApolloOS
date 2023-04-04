@@ -114,7 +114,8 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_640x200         },
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_1920x1080       },
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_1280x1024       },
-		{ TAG_DONE,                   0UL                        }
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_1280x800        },
+	    	{ TAG_DONE,                   0UL                        }
 	};
 
     
