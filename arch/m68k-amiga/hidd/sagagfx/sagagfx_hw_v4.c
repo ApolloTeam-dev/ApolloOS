@@ -50,12 +50,14 @@ UBYTE SAGAHW_V4_GetModeID(UWORD w, UWORD h)
     else if (w == 960 && h == 540) return(SAGA_V4_VIDEO_MODEID_960x540);
     else if (w == 800 && h == 600) return(SAGA_V4_VIDEO_MODEID_800x600);
     else if (w == 1280 && h == 720) return(SAGA_V4_VIDEO_MODEID_1280x720);
+    else if (w == 1280 && h == 800) return(SAGA_V4_VIDEO_MODEID_1280x800);
     else if (w == 1280 && h == 1024) return(SAGA_V4_VIDEO_MODEID_1280x1024);
     else if (w == 1920 && h == 1080) return(SAGA_V4_VIDEO_MODEID_1920x1080);
     else if (w == 848 && h == 480) return(SAGA_V4_VIDEO_MODEID_848x480);
     else if (w == 1024 && h == 768) return(SAGA_V4_VIDEO_MODEID_1024x768);
     else if (w == 720 && h == 576) return(SAGA_V4_VIDEO_MODEID_720x576);
     else if (w == 848 && h == 480) return(SAGA_V4_VIDEO_MODEID_848x480);
+    
 
     return(0);
 }
