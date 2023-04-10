@@ -57,7 +57,7 @@ UBYTE SAGAHW_V4_GetModeID(UWORD w, UWORD h)
     else if (w == 1024 && h == 768) return(SAGA_V4_VIDEO_MODEID_1024x768);
     else if (w == 720 && h == 576) return(SAGA_V4_VIDEO_MODEID_720x576);
     else if (w == 848 && h == 480) return(SAGA_V4_VIDEO_MODEID_848x480);
-    
+    else if (w == 1440 && h == 900) return(SAGA_V4_VIDEO_MODEID_1440x900);
 
     return(0);
 }
