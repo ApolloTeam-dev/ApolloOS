@@ -89,9 +89,12 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
     MAKE_SYNC(1024x768, 28375*2,1024,1100,1150,1216,  768, 770, 774, 780, 1, "SAGA1024x768");
     MAKE_SYNC(720x576, 28375, 720, 753, 817, 908,  576, 582, 586, 626, 1, "SAGA:720x576");
     MAKE_SYNC(848x480, 28375*2, 848, 936, 984, 1516,  480, 490, 492, 626, 1, "SAGA:848x480");
-
-
-    
+    MAKE_SYNC(640x200, 28375, 640, 753, 817, 908,  400/2, 490/2, 492/2, 524/2, 1, "SAGA:640x200");
+    MAKE_SYNC(1920x1080, 28375*3, 1920, 2085, 2145, 2274, 1080, 1088, 1095, 1125, 1, "SAGA:1920x1080");
+    MAKE_SYNC(1280x1024, 28375*3, 1280, 1390, 1430, 1516, 1024, 1088, 1108, 1184, 1, "SAGA:1280x1024");
+    MAKE_SYNC(1280x800, 28375*3, 1280, 1390, 1430, 1516, 800, 824, 848, 872, 1, "SAGA:1280x800");
+    MAKE_SYNC(1440x900, 28375*3, 1440, 1560, 1620, 1700, 900, 930, 960, 1000, 1, "SAGA:1440x900");
+	
     const struct TagItem syncs[] =
 	{
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_320x200         },
@@ -108,8 +111,13 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_800x600         },
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_1024x768        },
 		{ aHidd_Gfx_SyncTags,         (IPTR)sync_720x576         },
-		{ aHidd_Gfx_SyncTags,         (IPTR)sync_848x480       },
-		{ TAG_DONE,                   0UL                        }
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_848x480         },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_640x200         },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_1920x1080       },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_1280x800        },
+	    	{ aHidd_Gfx_SyncTags,         (IPTR)sync_1280x1024       },
+		{ aHidd_Gfx_SyncTags,         (IPTR)sync_1440x900        },
+	    	{ TAG_DONE,                   0UL                        }
 	};
 
     
@@ -117,7 +125,7 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
     {
         { aHidd_PixFmt_RedShift,      8                          }, /* 0 */
         { aHidd_PixFmt_GreenShift,    16                         }, /* 1 */
-        { aHidd_PixFmt_BlueShift,  	  24                         }, /* 2 */
+        { aHidd_PixFmt_BlueShift,     24                         }, /* 2 */
         { aHidd_PixFmt_AlphaShift,    0                          }, /* 3 */
         { aHidd_PixFmt_RedMask,       0x00ff0000                 }, /* 4 */
         { aHidd_PixFmt_GreenMask,     0x0000ff00                 }, /* 5 */
