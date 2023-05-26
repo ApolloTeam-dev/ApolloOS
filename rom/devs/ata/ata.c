@@ -1,5 +1,5 @@
 /*
-    Copyright © 2004-2019, The AROS Development Team. All rights reserved
+    Copyright Â© 2004-2019, The AROS Development Team. All rights reserved
     $Id$
 
     Desc:
@@ -99,29 +99,10 @@ static void cmd_Read32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
                 {
                     CopyMem(base->ata_CacheData + blockAdr*512, IOStdReq(io)->io_Data + i*512, 512);
 
-                    if (start != i)
-                    {
-                        /* Call the Unit's access funtion */
-                        io->io_Error = unit->au_Read32(unit, block + start, i - start,
-                            IOStdReq(io)->io_Data + start*512, &cnt);
-
-                        if (io->io_Error)
-                        {
-                            IOStdReq(io)->io_Actual = 0;
-                            return;
-                        }
-
-                        blockAdr = (block + start) & CACHE_MASK;
-                        CopyMem(IOStdReq(io)->io_Data + start*512, base->ata_CacheData + blockAdr*512, (i - start)*512);
-                        for (ULONG j = start; j < i; j++)
-                        {
-                            blockAdr = (block + j) & CACHE_MASK;
-                            blockTag = (block + j) & ~CACHE_MASK;
-                            base->ata_CacheTags[blockAdr] = blockTag | unitNum;
-                        }
-                    }
                     start = i + 1;
-                }
+                }else{
+                    i= count;
+                } 
             }
             if (start != i)
             {
@@ -135,10 +116,10 @@ static void cmd_Read32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
                     return;
                 }
 
-                ULONG blockAdr = (block + start) & CACHE_MASK;
-                CopyMem(IOStdReq(io)->io_Data + start*512, base->ata_CacheData + blockAdr*512, (i - start)*512);
                 for (ULONG j = start; j < i; j++)
                 {
+                    ULONG blockAdr = (block + j) & CACHE_MASK;
+                    CopyMem(IOStdReq(io)->io_Data + j*512, base->ata_CacheData + blockAdr*512, 512);
                     blockAdr = (block + j) & CACHE_MASK;
                     ULONG blockTag = (block + j) & ~CACHE_MASK;
                     base->ata_CacheTags[blockAdr] = blockTag | unitNum;
@@ -215,29 +196,9 @@ static void cmd_Read64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
                         (base->ata_CacheTags[blockAdr] == (blockTag | unitNum))) /* cache hit */
                     {
                         CopyMem(base->ata_CacheData + blockAdr*512, IOStdReq(io)->io_Data + i*512, 512);
-
-                        if (start != i)
-                        {
-                            /* Call the Unit's access funtion */
-                            io->io_Error = unit->au_Read32(unit, (ULONG)(block & 0x0fffffff) + start, i - start,
-                                IOStdReq(io)->io_Data + start*512, &cnt);
-        
-                            if (io->io_Error)
-                            {
-                                IOStdReq(io)->io_Actual = 0;
-                                return;
-                            }
-        
-                            blockAdr = (block + start) & CACHE_MASK;
-                            CopyMem(IOStdReq(io)->io_Data + start*512, base->ata_CacheData + blockAdr*512, (i - start)*512);
-                            for (ULONG j = start; j < i; j++)
-                            {
-                                blockAdr = (block + j) & CACHE_MASK;
-                                blockTag = (block + j) & ~CACHE_MASK;
-                                base->ata_CacheTags[blockAdr] = blockTag | unitNum;
-                            }
-                        }
                         start = i + 1;
+                    }else{
+                        i= count;
                     }
                 }
                 if (start != i)
@@ -252,10 +213,10 @@ static void cmd_Read64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
                         return;
                     }
     
-                    ULONG blockAdr = (block + start) & CACHE_MASK;
-                    CopyMem(IOStdReq(io)->io_Data + start*512, base->ata_CacheData + blockAdr*512, (i - start)*512);
                     for (ULONG j = start; j < i; j++)
                     {
+                        ULONG blockAdr = (block + j) & CACHE_MASK;
+                        CopyMem(IOStdReq(io)->io_Data + j*512, base->ata_CacheData + blockAdr*512, 512);
                         blockAdr = (block + j) & CACHE_MASK;
                         ULONG blockTag = (block + j) & ~CACHE_MASK;
                         base->ata_CacheTags[blockAdr] = blockTag | unitNum;
@@ -295,28 +256,9 @@ static void cmd_Read64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
                     {
                         CopyMem(base->ata_CacheData + blockAdr*512, IOStdReq(io)->io_Data + i*512, 512);
 
-                        if (start != i)
-                        {
-                            /* Call the Unit's access funtion */
-                            io->io_Error = unit->au_Read64(unit, block + start, i - start,
-                                IOStdReq(io)->io_Data + start*512, &cnt);
-    
-                            if (io->io_Error)
-                            {
-                                IOStdReq(io)->io_Actual = 0;
-                                return;
-                            }
-    
-                            blockAdr = (block + start) & CACHE_MASK;
-                            CopyMem(IOStdReq(io)->io_Data + start*512, base->ata_CacheData + blockAdr*512, (i - start)*512);
-                            for (ULONG j = start; j < i; j++)
-                            {
-                                blockAdr = (block + j) & CACHE_MASK;
-                                blockTag = (block + j) & ~CACHE_MASK;
-                                base->ata_CacheTags[blockAdr] = blockTag | unitNum;
-                            }
-                        }
                         start = i + 1;
+                    }else{
+                        i =count;
                     }
                 }
                 if (start != i)
@@ -331,10 +273,10 @@ static void cmd_Read64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
                         return;
                     }
     
-                    ULONG blockAdr = (block + start) & CACHE_MASK;
-                    CopyMem(IOStdReq(io)->io_Data + start*512, base->ata_CacheData + blockAdr*512, (i - start)*512);
                     for (ULONG j = start; j < i; j++)
                     {
+                        ULONG blockAdr = (block + j) & CACHE_MASK;
+                        CopyMem(IOStdReq(io)->io_Data + j*512, base->ata_CacheData + blockAdr*512, 512);
                         blockAdr = (block + j) & CACHE_MASK;
                         ULONG blockTag = (block + j) & ~CACHE_MASK;
                         base->ata_CacheTags[blockAdr] = blockTag | unitNum;

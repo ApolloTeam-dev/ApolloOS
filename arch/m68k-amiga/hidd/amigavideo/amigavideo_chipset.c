@@ -1772,7 +1772,7 @@ VOID initcustom(struct amigavideo_staticdata *csd)
 //    COPPEROUT(c, 0x0094, 0)					// Push (DDFSTOP) Display bitplane data fetch stop
     COPPEROUT(c, 0x0104, csd->bplcon2)                          // Push the screens bplcon2
 
-    /* initialize SPRxPOS */
+/* initialize SPRxPOS /
     COPPEROUT(c, 0x0140, 0)
     COPPEROUT(c, 0x0148, 0)
     COPPEROUT(c, 0x0150, 0)
@@ -1781,14 +1781,15 @@ VOID initcustom(struct amigavideo_staticdata *csd)
     COPPEROUT(c, 0x0168, 0)
     COPPEROUT(c, 0x0170, 0)
     COPPEROUT(c, 0x0178, 0)
-    
-    /* set the initial sprite to a blank cursor */
+
+    / set the initial sprite to a blank cursor */
     for (i = 0; i < 8; i++) {
         COPPEROUT(c, 0x0120 + (i << 2), (UWORD)(((ULONG)csd->sprite_null) >> 16))
         if (i == 0)
             csd->copper1_spritept = &c[-1];
         COPPEROUT(c, 0x0122 + (i << 2), (UWORD)(((ULONG)csd->sprite_null) >> 0))
     }
+
     COPPEROUT(c, 0x0C01, 0xfffe)        // Wait for VPOS = 0c, HPOS = 2
     COPPEROUT(c, 0x0C01, 0xfffe)        // Wait for VPOS = 0c, HPOS = 2
     COPPEROUT(c, 0x008a, 0x0000)        // COPJMP2
