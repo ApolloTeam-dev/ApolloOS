@@ -1,5 +1,5 @@
 /*
-    Copyright © 2011-2020, The AROS Development Team. All rights reserved
+    Copyright ï¿½ 2011-2020, The AROS Development Team. All rights reserved
     $Id$
 
     Desc: Simple HD_SCSICMD emulator.
@@ -62,30 +62,13 @@ static UBYTE scsi_read32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG l
                  (base->ata_CacheTags[blockAdr] == (blockTag | unitNum))) /* cache hit */
              {
                  CopyMem(base->ata_CacheData + blockAdr*512, data + i*512, 512);
-
-                 if (start != i)
-                 {
-                     /* Call the Unit's access funtion */
-                     io_Error = unit->au_Read32(unit, offset + start, i - start, data + start*512, outlen);
-                     if (io_Error)
-                     {
-                        io_Error = unit->au_Read32(unit, offset + start, i - start, data + start*512, outlen);
-                        if (io_Error) {
-                          return io_Error;
-                        }
-                     }
-
-                     blockAdr = (offset + start) & CACHE_MASK;
-                     CopyMem(data + start*512, base->ata_CacheData + blockAdr*512, (i - start)*512);
-                     for (ULONG j = start; j < i; j++)
-                     {
-                         blockAdr = (offset + j) & CACHE_MASK;
-                         blockTag = (offset + j) & ~CACHE_MASK;
-                         base->ata_CacheTags[blockAdr] = blockTag | unitNum;
-                     }
-                 }
                  start = i + 1;
              }
+             else
+             {
+                 i = len;
+                 break;
+             }    
          }
          if (start != i)
          {
@@ -98,10 +81,10 @@ static UBYTE scsi_read32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG l
                  }
              }
 
-             ULONG blockAdr = (offset + start) & CACHE_MASK;
-             CopyMem(data + start*512, base->ata_CacheData + blockAdr*512, (i - start)*512);
              for (ULONG j = start; j < i; j++)
              {
+                 ULONG blockAdr = (offset + j) & CACHE_MASK;
+                 CopyMem(data + j*512, base->ata_CacheData + blockAdr*512, 512);
                  blockAdr = (offset + j) & CACHE_MASK;
                  ULONG blockTag = (offset + j) & ~CACHE_MASK;
                  base->ata_CacheTags[blockAdr] = blockTag | unitNum;
