@@ -34,11 +34,14 @@
 static const UWORD widthtable[] = {
     REZ_X_MIN,
     (REZ_X_MIN << 1),
+    // (REZ_X_MIN << 2), /* uncomment this to have SuperHires modes */
     0
 };
 static const UWORD heighttable[] = {
     REZ_Y_MIN,
+    ((REZ_Y_MIN) << 1),
     (REZ_Y_MIN + REZ_PAL_LINES),
+    ((REZ_Y_MIN + REZ_PAL_LINES) << 1),
     0
 };
 static const ULONG specialmask_aga[] = {
@@ -351,7 +354,7 @@ OOP_Object *AmigaVideoCl__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_N
                 res = 0;
                 d = csd->aga ? 8 : 5;
             }
-            if (h >= (REZ_Y_MIN << 1))
+            if ((h == (REZ_Y_MIN << 1)) || (h == ((REZ_Y_MIN + REZ_PAL_LINES) << 1)))
                 modeid |= LORESLACE_KEY;
             if (h == REZ_Y_MIN || h == (REZ_Y_MIN << 1))
                 modeid |= NTSC_MONITOR_ID;
