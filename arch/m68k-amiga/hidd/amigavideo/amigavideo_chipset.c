@@ -284,7 +284,7 @@ static VOID setcopperscroll2(struct amigavideo_staticdata *csd, struct amigabm_d
     // Modulo (even)
     copptr[19] = modulo;
 
-    copptr[20] = (ystart+4 << 8) | 0x01;
+    copptr[20] = (ystart+2 << 8) | 0x01;
     copptr[21] = 0xFFFE;
 
     // DIWHIGH
