@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2011, The AROS Development Team. All rights reserved.
     $Id$	$Log
 
     Desc: Graphics function SetABPenDrMd()
@@ -66,6 +66,8 @@
     rp->DrawMode  = drawMode;
     rp->linpatcnt = 15;
     rp->Flags    &= ~RPF_NO_PENS;
+
+    GenMinterms(rp);
 
     AROS_LIBFUNC_EXIT
 } /* SetABPenDrMd */
