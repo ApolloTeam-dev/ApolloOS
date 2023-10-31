@@ -1,6 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
+    Copyright Â© 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright Â© 2001-2003, The MorphOS Development Team. All Rights Reserved.
     $Id$
 */
 
@@ -94,6 +94,7 @@
 	D(bug("[ScreenPosition] Scroll result: (%d, %d)\n",screen->ViewPort.DxOffset, screen->ViewPort.DyOffset));
 	screen->LeftEdge = screen->ViewPort.DxOffset;
 	screen->TopEdge = screen->ViewPort.DyOffset;
+	RethinkDisplay();
     }
 
     AROS_LIBFUNC_EXIT
