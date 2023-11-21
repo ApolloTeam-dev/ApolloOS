@@ -1,6 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
+    Copyright Â© 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright Â© 2001-2003, The MorphOS Development Team. All Rights Reserved.
     $Id$
 */
 
@@ -121,10 +121,11 @@ void int_refreshglist(struct Gadget *gadgets, struct Window *window,
                       struct IntuitionBase *IntuitionBase)
 {
 #ifdef GADTOOLSCOMPATIBLE
-
     struct Gadget *gadtoolsgadget = 0;
-    LONG           num = numGad;
 #endif
+    LONG           num = numGad;
+    struct Gadget *firstgad;
+    firstgad = gadgets;
 
     DEBUG_INTREFRESHGLIST(dprintf("IntRefreshGList: Gadgets 0x%lx Window 0x%lx Req 0x%lx Num %ld Must 0x%lx MustNot 0x%lx\n",
                                   gadgets, window, requester, numGad, mustbe, mustnotbe));
@@ -138,31 +139,67 @@ void int_refreshglist(struct Gadget *gadgets, struct Window *window,
 
     for ( ; gadgets && numGad; gadgets=gadgets->NextGadget, numGad --)
     {
-        #ifdef GADTOOLSCOMPATIBLE
-        if (gadgets->GadgetType & 0x100)
+	if (gadgets->GadgetType == 0)
         {
-            gadtoolsgadget = gadgets;
-            continue;
-        }
-        #endif
+            #ifdef GADTOOLSCOMPATIBLE
+            if (gadgets->GadgetType & 0x100)
+            {
+                gadtoolsgadget = gadgets;
+                continue;
+            }
+            #endif
 
-        if (!(qualifygadget(gadgets,mustbe,mustnotbe,IntuitionBase))) continue;
-        //DEBUG_REFRESHGLIST(dprintf("IntRefreshGList: Gadget %p Type 0x%04lx\n",
-        //          gadgets, gadgets->GadgetType));
+            if (!(qualifygadget(gadgets,mustbe,mustnotbe,IntuitionBase))) continue;
+            //DEBUG_REFRESHGLIST(dprintf("IntRefreshGList: Gadget %p Type 0x%04lx\n",
+            //          gadgets, gadgets->GadgetType));
 
-        D(bug("RefreshGList: gadget=%p type 0x%x [%d %d %d %d]\n",
-              gadgets,gadgets->GadgetType,
-              gadgets->LeftEdge,gadgets->TopEdge,
-              gadgets->Width,gadgets->Height));
+            D(bug("RefreshGList: gadget=%p type 0x%x [%d %d %d %d]\n",
+                  gadgets,gadgets->GadgetType,
+                  gadgets->LeftEdge,gadgets->TopEdge,
+                  gadgets->Width,gadgets->Height));
 
-        /*SetAPen(window->RPort, 4);
-        Move(window->RPort, gadgets->LeftEdge-1, gadgets->TopEdge-1);
-        Draw(window->RPort, gadgets->LeftEdge+gadgets->Width, gadgets->TopEdge-1);
-        Draw(window->RPort, gadgets->LeftEdge+gadgets->Width, gadgets->TopEdge+gadgets->Height);
-        Draw(window->RPort, gadgets->LeftEdge-1, gadgets->TopEdge+gadgets->Height);
-        Draw(window->RPort, gadgets->LeftEdge-1, gadgets->TopEdge-1);*/
+            /*SetAPen(window->RPort, 4);
+            Move(window->RPort, gadgets->LeftEdge-1, gadgets->TopEdge-1);
+            Draw(window->RPort, gadgets->LeftEdge+gadgets->Width, gadgets->TopEdge-1);
+            Draw(window->RPort, gadgets->LeftEdge+gadgets->Width, gadgets->TopEdge+gadgets->Height);
+            Draw(window->RPort, gadgets->LeftEdge-1, gadgets->TopEdge+gadgets->Height);
+            Draw(window->RPort, gadgets->LeftEdge-1, gadgets->TopEdge-1);*/
 
-        rendergadget(gadgets,window,requester,IntuitionBase);
+            rendergadget(gadgets,window,requester,IntuitionBase);
+	}
+    } /* for ( ; gadgets && numGad; gadgets=gadgets->NextGadget, numGad --) */
+    numGad = num;
+    gadgets = firstgad;
+    for ( ; gadgets && numGad; gadgets=gadgets->NextGadget, numGad --)
+    {
+	if (gadgets->GadgetType > 0)
+        {
+            #ifdef GADTOOLSCOMPATIBLE
+            if (gadgets->GadgetType & 0x100)
+            {
+                gadtoolsgadget = gadgets;
+                continue;
+            }
+            #endif
+
+            if (!(qualifygadget(gadgets,mustbe,mustnotbe,IntuitionBase))) continue;
+            //DEBUG_REFRESHGLIST(dprintf("IntRefreshGList: Gadget %p Type 0x%04lx\n",
+            //          gadgets, gadgets->GadgetType));
+
+            D(bug("RefreshGList: gadget=%p type 0x%x [%d %d %d %d]\n",
+                  gadgets,gadgets->GadgetType,
+                  gadgets->LeftEdge,gadgets->TopEdge,
+                  gadgets->Width,gadgets->Height));
+
+            /*SetAPen(window->RPort, 4);
+            Move(window->RPort, gadgets->LeftEdge-1, gadgets->TopEdge-1);
+            Draw(window->RPort, gadgets->LeftEdge+gadgets->Width, gadgets->TopEdge-1);
+            Draw(window->RPort, gadgets->LeftEdge+gadgets->Width, gadgets->TopEdge+gadgets->Height);
+            Draw(window->RPort, gadgets->LeftEdge-1, gadgets->TopEdge+gadgets->Height);
+            Draw(window->RPort, gadgets->LeftEdge-1, gadgets->TopEdge-1);*/
+
+            rendergadget(gadgets,window,requester,IntuitionBase);
+	}
     } /* for ( ; gadgets && numGad; gadgets=gadgets->NextGadget, numGad --) */
 
 #ifdef GADTOOLSCOMPATIBLE
