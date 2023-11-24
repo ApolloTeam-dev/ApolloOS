@@ -56,7 +56,8 @@
     rp->linpatcnt = 15;
     rp->Flags    &= ~RPF_NO_PENS;
 
-    GenMinterms(rp);
+    // Temporarily disabled due to endless loop in SysInfo
+    // GenMinterms(rp);
 
     AROS_LIBFUNC_EXIT
 } /* SetAPen */
