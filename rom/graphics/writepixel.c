@@ -97,6 +97,8 @@ static LONG pix_write(APTR pr_data, OOP_Object *bm, OOP_Object *gc,
 	    struct ClipRect *clipRect;
 	    struct BitMap *superBitMap;
 	    ULONG offset;
+
+	    GenMinterms(rp); // Temp fix for SysInfo, usually this belongs to SetAPen
 	    
 	    layer = rp->Layer;
 	    
