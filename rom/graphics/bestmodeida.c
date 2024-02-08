@@ -1,4 +1,4 @@
-/*
+ /*
     Copyright © 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
 
@@ -257,7 +257,8 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
         INVALID_ID,       /* Found ID     */
         -1,               /* Found depth  */
         -1, -1,           /* Found size   */
-	FALSE             /* Use CGX */
+       	FALSE,             /* Use CGX */
+        INVALID_ID
     };
 
     D(bug("[Gfx] %s()\n", __PRETTY_FUNCTION__));
@@ -419,6 +420,9 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
     ReleaseSemaphore(&CDD(GfxBase)->displaydb_sem);
 
     D(bug("[Gfx] %s: Returning mode ID 0x%08lX\n", __PRETTY_FUNCTION__, args.found_id));
+
+    if(args.matching_id != INVALID_ID)
+        args.found_id = args.matching_id;
     return args.found_id;
 
     AROS_LIBFUNC_EXIT
