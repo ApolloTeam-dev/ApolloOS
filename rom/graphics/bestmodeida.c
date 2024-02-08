@@ -1,4 +1,4 @@
- /*
+4 /*
     Copyright © 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
 
@@ -414,7 +414,7 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
     //{
       if (args.found_id == INVALID_ID && args.monitorid != INVALID_ID) {
           FindBestModeIDForMonitor(monitor, &args, ~0, GfxBase);
-    //  }
+      }
     //}
 
     ReleaseSemaphore(&CDD(GfxBase)->displaydb_sem);
