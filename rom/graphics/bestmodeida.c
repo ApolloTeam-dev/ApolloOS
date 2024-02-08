@@ -1,4 +1,4 @@
-4 /*
+/*
     Copyright © 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
 
