@@ -1,6 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
+    Copyright Â© 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright Â© 2001-2003, The MorphOS Development Team. All Rights Reserved.
     $Id$
 
     Change order of screens.
@@ -367,6 +367,8 @@ static VOID int_screendepth(struct ScreenDepthActionMsg *msg,
         } /* if SDEPTH_TO_BACK */
     } /* if (current) */
 
+    IntuitionBase->ActiveScreen = IntuitionBase->FirstScreen;
+    ActivateMonitor(GetPrivScreen(IntuitionBase->ActiveScreen)->IMonitorNode, -1, -1, IntuitionBase); 
     RethinkDisplay();
 
 #if 0 /* FIXME: backport, disabled */
