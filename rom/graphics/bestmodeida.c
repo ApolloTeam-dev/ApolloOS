@@ -46,6 +46,7 @@ struct MatchData
     UWORD  found_width;
     UWORD  found_height;
     BOOL   usecgx;
+    ULONG  matching_id;
 };
 
 static void BestModeIDForMonitor(struct monitor_driverdata *mdd, struct MatchData *args, ULONG modemask, struct GfxBase *GfxBase)
@@ -137,6 +138,10 @@ static void BestModeIDForMonitor(struct monitor_driverdata *mdd, struct MatchDat
 		    args->found_width  = gm_width;
 		    args->found_height = gm_height;
 
+		    if(gm_width == args->desired_width && gm_height == args->desired_height)
+		    {
+		        args->matching_id = modeid;
+		    }
 		    D(bug(" Match!\n"));
 		}
 	    }
@@ -369,6 +374,8 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
         FindBestModeIDForMonitor(monitor, &args, ~(PAL_MONITOR_ID|NTSC_MONITOR_ID), GfxBase);
     else 
 	FindBestModeIDForMonitor(monitor, &args, ~0, GfxBase);
+	if(args.matching_id != INVALID_ID)
+            args.found_id = args.matching_id;
 #ifdef __mc68000
     /* Handle situation where program only asks for specific monitor
      * (for example only PAL_MONITOR_ID or NTSC_MONITOR_ID bits set)
@@ -379,6 +386,8 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
     if (args.found_id == INVALID_ID && args.monitorid != INVALID_ID) {
         FindBestModeIDForMonitor(monitor, &args, MONITOR_ID_MASK, GfxBase);
     }
+    if(args.matching_id != INVALID_ID)
+        args.found_id = args.matching_id;
 #endif
     /* Still not found, AROS_MONITOR_ID_MASK.
      * Mask out bit 12 in monitorid because the user may (and will) pass in IDs defined in include/graphics/modeid.h
@@ -387,14 +396,15 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
     if (args.found_id == INVALID_ID && args.monitorid != INVALID_ID) {
         FindBestModeIDForMonitor(monitor, &args, AROS_MONITOR_ID_MASK, GfxBase);
     }
-		
+    if(args.matching_id != INVALID_ID)
+        args.found_id = args.matching_id;	
     // If CGX didn't find any mode, look again in all possibilities. Just to be sure
-    if(args.usecgx)
-    {
+    //if(args.usecgx)
+    //{
       if (args.found_id == INVALID_ID && args.monitorid != INVALID_ID) {
           FindBestModeIDForMonitor(monitor, &args, ~0, GfxBase);
-      }
-    }
+    //  }
+    //}
 
     ReleaseSemaphore(&CDD(GfxBase)->displaydb_sem);
 
