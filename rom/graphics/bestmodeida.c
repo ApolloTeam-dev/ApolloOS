@@ -301,6 +301,16 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
 	    break;
 
 	/* Offer some help to cybergraphics.library */
+	case CYBRBIDTG_NominalWidth:
+	    args.usecgx = TRUE;
+	    args.dipf_mustnothave |= (PAL_MONITOR_ID|NTSC_MONITOR_ID);
+	    monitor = NULL; 
+	    break;
+	case CYBRBIDTG_NominalHeight:
+	    args.usecgx = TRUE;
+	    args.dipf_mustnothave |= (PAL_MONITOR_ID|NTSC_MONITOR_ID);
+	    monitor = NULL; 
+	    break;	    
 	case CYBRBIDTG_BoardName:
 	    args.boardname = (STRPTR)tag->ti_Data;
 	    // We need to remark, we are using CGX to prevent PAL/NTSC in the first look
