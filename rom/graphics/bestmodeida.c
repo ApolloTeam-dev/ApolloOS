@@ -383,46 +383,27 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
     /* First try to find exact match. If we use CGX, skip PAL/NTSC for now */
     if(args.usecgx)
         FindBestModeIDForMonitor(monitor, &args, ~(PAL_MONITOR_ID|NTSC_MONITOR_ID), GfxBase);
-    else 
-	FindBestModeIDForMonitor(monitor, &args, ~0, GfxBase);
+    else
+    {
+	FindBestModeIDForMonitor(monitor, &args, MONITOR_ID_MASK, GfxBase);
+        if(args.matching_id != INVALID_ID)
+            args.found_id = args.matching_id;
+	    
+        if (args.found_id == INVALID_ID && args.monitorid != INVALID_ID)
+	    FindBestModeIDForMonitor(monitor, &args, AROS_MONITOR_ID_MASK, GfxBase);	
 	if(args.matching_id != INVALID_ID)
             args.found_id = args.matching_id;
-#ifdef __mc68000
-    /* Handle situation where program only asks for specific monitor
-     * (for example only PAL_MONITOR_ID or NTSC_MONITOR_ID bits set)
-     * but it also requests hires or larger resolution.
-     * We must always return chipset mode if PAL or NTSC bits are set.
-     * Mask out screen mode bits (MONITOR_ID_MASK)
-     */
-    if (args.found_id == INVALID_ID && args.monitorid != INVALID_ID) {
-        FindBestModeIDForMonitor(monitor, &args, MONITOR_ID_MASK, GfxBase);
+	    
+	if (args.found_id == INVALID_ID && args.monitorid != INVALID_ID)
+	    FindBestModeIDForMonitor(monitor, &args, ~0, GfxBase);
     }
     if(args.matching_id != INVALID_ID)
         args.found_id = args.matching_id;
-#endif
-    /* Still not found, AROS_MONITOR_ID_MASK.
-     * Mask out bit 12 in monitorid because the user may (and will) pass in IDs defined in include/graphics/modeid.h
-     * (like PAL_MONITOR_ID, VGA_MONITOR_ID, etc) which have bit 12 set)
-     */
-    if (args.found_id == INVALID_ID && args.monitorid != INVALID_ID) {
-        FindBestModeIDForMonitor(monitor, &args, AROS_MONITOR_ID_MASK, GfxBase);
-    }
-    if(args.matching_id != INVALID_ID)
-        args.found_id = args.matching_id;	
-    // If CGX didn't find any mode, look again in all possibilities. Just to be sure
-    //if(args.usecgx)
-    //{
-      if (args.found_id == INVALID_ID && args.monitorid != INVALID_ID) {
-          FindBestModeIDForMonitor(monitor, &args, ~0, GfxBase);
-      }
-    //}
-
+	
     ReleaseSemaphore(&CDD(GfxBase)->displaydb_sem);
 
     D(bug("[Gfx] %s: Returning mode ID 0x%08lX\n", __PRETTY_FUNCTION__, args.found_id));
 
-    if(args.matching_id != INVALID_ID)
-        args.found_id = args.matching_id;
     return args.found_id;
 
     AROS_LIBFUNC_EXIT
