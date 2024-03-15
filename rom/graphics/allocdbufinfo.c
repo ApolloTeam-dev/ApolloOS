@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2007, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -58,8 +58,8 @@
 {
     AROS_LIBFUNC_INIT
 
-    return (struct DBufInfo *)AllocMem(MEMF_ANY | MEMF_CLEAR,
-				       sizeof(struct DBufInfo));
+    return (struct DBufInfo *)AllocMem(sizeof(struct DBufInfo),
+				       MEMF_ANY | MEMF_CLEAR);
     
     AROS_LIBFUNC_EXIT
 } /* AllocDBufInfo */

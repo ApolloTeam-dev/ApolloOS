@@ -219,6 +219,8 @@ void BltRastPortBitMap(struct RastPort *srcRastPort, WORD xSrc, WORD ySrc,
 		       WORD xSize, WORD ySize, ULONG minterm,
 		       struct GfxBase *GfxBase);
 
+void GenMinterms(struct RastPort *rp);
+
 /****************************************************************************************/
 
 static inline BOOL GetRPClipRectangleForLayer(struct RastPort *rp, struct Layer *lay, struct Rectangle *r, struct GfxBase *GfxBase)

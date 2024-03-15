@@ -110,6 +110,8 @@ static STRPTR ids[] = {
 	{ BIDTAG_NominalHeight , 600	},
 	{ BIDTAG_Depth         , 8	},
 	{ CYBRBIDTG_BoardName  , NULL	},
+	{ CYBRBIDTG_NominalWidth  , 800	},
+	{ CYBRBIDTG_NominalHeight , 600	},
 	{ TAG_DONE             , 0	}
     };
       
@@ -121,10 +123,12 @@ static STRPTR ids[] = {
 	
 	    case CYBRBIDTG_NominalWidth:
 	        modetags[0].ti_Data = tag->ti_Data;
+		modetags[4].ti_Data = tag->ti_Data;
 	    	break;
 
 	    case CYBRBIDTG_NominalHeight:
 	        modetags[1].ti_Data = tag->ti_Data;
+		modetags[5].ti_Data = tag->ti_Data;
 	    	break;
 
 	    case CYBRBIDTG_MonitorID:

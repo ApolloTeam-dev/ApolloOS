@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2020, The AROS Development Team. All rights reserved.
     $Id$	$Log
 
     Desc: Graphics function InitRastPort()
@@ -66,6 +66,8 @@
     rp->AOlPen   = -1;
     rp->DrawMode = JAM2;
     rp->LinePtrn = 0xFFFF;
+
+    GenMinterms(rp);
 
     SetFont (rp, GfxBase->DefaultFont);
 
