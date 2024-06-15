@@ -1,6 +1,6 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
+    Copyright Â© 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright Â© 2001-2003, The MorphOS Development Team. All Rights Reserved.
     $Id$
 */
 
@@ -96,6 +96,23 @@ void int_RethinkDisplay(struct RethinkDisplayActionMsg *msg,struct IntuitionBase
                 screen->ViewPort.Modes |= VP_HIDE;
         }
 	*/
+	/* Thore: It is needed, but the correct way of examination which screen is really hidden */
+	UWORD topmost = screen->TopEdge + screen->Height;
+	for (screen = IntuitionBase->FirstScreen; screen; screen = screen->NextScreen)
+        {
+            viewport = &screen->ViewPort;
+            if(!(screen->Flags & 0x2000)) // SCREENHIDDEN
+            {
+                if((screen->TopEdge < topmost) && (topmost > 0))
+                {
+                    viewport->Modes &= ~VP_HIDE;
+                }
+                else viewport->Modes |= VP_HIDE;
+            }
+            else viewport->Modes |= VP_HIDE;
+            topmost = screen->TopEdge;
+        }
+	    
         /* Build the list of viewports in the view */
 	DEBUG_RETHINKDISPLAY(dprintf("RethinkDisplay: Building viewports list\n"));
         viewportptr = &IntuitionBase->ViewLord.ViewPort;
@@ -120,8 +137,9 @@ void int_RethinkDisplay(struct RethinkDisplayActionMsg *msg,struct IntuitionBase
 	}
 
         /* Reinitialize the view */
-        IntuitionBase->ViewLord.DxOffset = 0; /***/
-        IntuitionBase->ViewLord.DyOffset = 0; /***/
+        /* Thore: Following lines make no sense for dragged screens... */
+	//IntuitionBase->ViewLord.DxOffset = 0; /***/
+        //IntuitionBase->ViewLord.DyOffset = 0; /***/
         IntuitionBase->ViewLord.Modes = modes;
         screen = IntuitionBase->FirstScreen;
 #ifdef __MORPHOS__
@@ -195,13 +213,14 @@ void int_RethinkDisplay(struct RethinkDisplayActionMsg *msg,struct IntuitionBase
     if (!failure)
     {
         /* validate screen positions, scrolling limits are not necessarily same anymore. */
-        for (screen = IntuitionBase->FirstScreen; screen; screen = screen->NextScreen)
+        /* Thore: We do not set ScreenPosition because ScreenPosition will call RethinkDisplay */
+	/*for (screen = IntuitionBase->FirstScreen; screen; screen = screen->NextScreen)
         {
             if ((screen->ViewPort.Modes & VP_HIDE) == 0)
             {
                 ScreenPosition( screen, SPOS_RELATIVE, 0,0,0,0  );
             }
-        }
+        }*/
         /* Ensure that empty displays get normal pointer */
         ResetPointer(IntuitionBase);
     }

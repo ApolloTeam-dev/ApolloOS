@@ -46,6 +46,7 @@ struct MatchData
     UWORD  found_width;
     UWORD  found_height;
     BOOL   usecgx;
+    ULONG  matching_id;
 };
 
 static void BestModeIDForMonitor(struct monitor_driverdata *mdd, struct MatchData *args, ULONG modemask, struct GfxBase *GfxBase)
@@ -137,6 +138,10 @@ static void BestModeIDForMonitor(struct monitor_driverdata *mdd, struct MatchDat
 		    args->found_width  = gm_width;
 		    args->found_height = gm_height;
 
+		    if(gm_width == args->desired_width && gm_height == args->desired_height)
+		    {
+		        args->matching_id = modeid;
+		    }
 		    D(bug(" Match!\n"));
 		}
 	    }
@@ -252,7 +257,8 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
         INVALID_ID,       /* Found ID     */
         -1,               /* Found depth  */
         -1, -1,           /* Found size   */
-	FALSE             /* Use CGX */
+       	FALSE,             /* Use CGX */
+        INVALID_ID
     };
 
     D(bug("[Gfx] %s()\n", __PRETTY_FUNCTION__));
@@ -296,6 +302,16 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
 	    break;
 
 	/* Offer some help to cybergraphics.library */
+	case CYBRBIDTG_NominalWidth:
+	    args.usecgx = TRUE;
+	    args.dipf_mustnothave |= (PAL_MONITOR_ID|NTSC_MONITOR_ID);
+	    monitor = NULL; 
+	    break;
+	case CYBRBIDTG_NominalHeight:
+	    args.usecgx = TRUE;
+	    args.dipf_mustnothave |= (PAL_MONITOR_ID|NTSC_MONITOR_ID);
+	    monitor = NULL; 
+	    break;	    
 	case CYBRBIDTG_BoardName:
 	    args.boardname = (STRPTR)tag->ti_Data;
 	    // We need to remark, we are using CGX to prevent PAL/NTSC in the first look
@@ -367,38 +383,27 @@ static BOOL FindBestModeIDForMonitor(struct monitor_driverdata *monitor, struct 
     /* First try to find exact match. If we use CGX, skip PAL/NTSC for now */
     if(args.usecgx)
         FindBestModeIDForMonitor(monitor, &args, ~(PAL_MONITOR_ID|NTSC_MONITOR_ID), GfxBase);
-    else 
-	FindBestModeIDForMonitor(monitor, &args, ~0, GfxBase);
-#ifdef __mc68000
-    /* Handle situation where program only asks for specific monitor
-     * (for example only PAL_MONITOR_ID or NTSC_MONITOR_ID bits set)
-     * but it also requests hires or larger resolution.
-     * We must always return chipset mode if PAL or NTSC bits are set.
-     * Mask out screen mode bits (MONITOR_ID_MASK)
-     */
-    if (args.found_id == INVALID_ID && args.monitorid != INVALID_ID) {
-        FindBestModeIDForMonitor(monitor, &args, MONITOR_ID_MASK, GfxBase);
-    }
-#endif
-    /* Still not found, AROS_MONITOR_ID_MASK.
-     * Mask out bit 12 in monitorid because the user may (and will) pass in IDs defined in include/graphics/modeid.h
-     * (like PAL_MONITOR_ID, VGA_MONITOR_ID, etc) which have bit 12 set)
-     */
-    if (args.found_id == INVALID_ID && args.monitorid != INVALID_ID) {
-        FindBestModeIDForMonitor(monitor, &args, AROS_MONITOR_ID_MASK, GfxBase);
-    }
-		
-    // If CGX didn't find any mode, look again in all possibilities. Just to be sure
-    if(args.usecgx)
+    else
     {
-      if (args.found_id == INVALID_ID && args.monitorid != INVALID_ID) {
-          FindBestModeIDForMonitor(monitor, &args, ~0, GfxBase);
-      }
+	FindBestModeIDForMonitor(monitor, &args, MONITOR_ID_MASK, GfxBase);
+        if(args.matching_id != INVALID_ID)
+            args.found_id = args.matching_id;
+	    
+        if (args.found_id == INVALID_ID && args.monitorid != INVALID_ID)
+	    FindBestModeIDForMonitor(monitor, &args, AROS_MONITOR_ID_MASK, GfxBase);	
+	if(args.matching_id != INVALID_ID)
+            args.found_id = args.matching_id;
+	    
+	if (args.found_id == INVALID_ID && args.monitorid != INVALID_ID)
+	    FindBestModeIDForMonitor(monitor, &args, ~0, GfxBase);
     }
-
+    if(args.matching_id != INVALID_ID)
+        args.found_id = args.matching_id;
+	
     ReleaseSemaphore(&CDD(GfxBase)->displaydb_sem);
 
     D(bug("[Gfx] %s: Returning mode ID 0x%08lX\n", __PRETTY_FUNCTION__, args.found_id));
+
     return args.found_id;
 
     AROS_LIBFUNC_EXIT

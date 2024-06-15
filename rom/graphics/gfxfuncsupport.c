@@ -1213,3 +1213,32 @@ BOOL GetRPClipRectangleForBitMap(struct RastPort *rp, struct BitMap *bm,
 
     return res;
 }
+
+/****************************************************************************************/
+
+void GenMinterms(struct RastPort *rp)
+{
+    int i;
+    UBYTE minA=0, minB=0;
+	
+    // COMPLEMENT
+    if(rp->DrawMode & COMPLEMENT)
+    {
+        minA = (rp->DrawMode & INVERSVID) ? 0x6a : 0x9a;
+        for(i=0;i<8;i++)
+            rp->minterms[i] = minA;
+    }
+    else
+    {
+        for(i=0 ; i<8 ; i++)
+        {
+            minA = ((rp->FgPen >> i) & 1) * 3;
+            minB = (rp->DrawMode & JAM2) ? ((rp->BgPen >> i) & 1) * 3 : 2;
+            if(rp->DrawMode & INVERSVID)
+                minA = (minB << 2) | minA;
+            else minA = (minA << 2) | minB;
+		
+            rp->minterms[i] = (minA << 4) | 0x0a;
+        }
+    }
+}

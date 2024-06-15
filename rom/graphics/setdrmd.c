@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2011, The AROS Development Team. All rights reserved.
     $Id$    $Log
 
     Desc: Graphics function SetDrMd()
@@ -53,6 +53,8 @@
 
     rp->DrawMode  = drawMode;
     rp->linpatcnt = 15;
+
+    GenMinterms(rp);
 
     AROS_LIBFUNC_EXIT
 } /* SetDrMd */
