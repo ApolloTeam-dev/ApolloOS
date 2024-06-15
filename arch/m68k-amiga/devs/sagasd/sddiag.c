@@ -24,6 +24,7 @@
  */
 
 #include <aros/debug.h>
+#undef DEBUG
 
 #include <exec/memory.h>
 #include <proto/exec.h>
@@ -35,7 +36,7 @@
 #include "sdcmd.h"
 #include "common.h"
 
-#include "sd.h"
+#include <sd.h>
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x)   (sizeof(x)/sizeof((x)[0]))
@@ -89,7 +90,7 @@ AROS_SHAH(ULONG *  ,D= ,DEBUG,/N, 0, "Debug level\n")
 
     setBases(SysBase, DOSBase);
 
-    //DebugLevel = SHArg(DEBUG) ? *SHArg(DEBUG) : 0;
+    DebugLevel = SHArg(DEBUG) ? *SHArg(DEBUG) : 0;
     Printf("DebugLevel: %ld\n", DebugLevel);
 
     sd.iobase = iobase;

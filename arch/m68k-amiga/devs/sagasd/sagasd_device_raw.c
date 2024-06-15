@@ -61,7 +61,7 @@
 #define SAGASD_RETRY    5      /* By default, retry up to N times */
 
 #define VERSION 2
-#define REVISION 1
+#define REVISION 2
 #define LIBNAME "sagasd.device"
 #define VSTRING "sagasd.device v#VERSION##.#REVISION" 
 
