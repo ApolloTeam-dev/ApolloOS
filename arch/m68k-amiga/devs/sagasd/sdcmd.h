@@ -29,10 +29,10 @@
 
 #include <exec/types.h>
 
-#define SDSIZ_BLOCK        512  /* Block size in bytes */
+#define SDSIZ_BLOCK        512          /* Block size in bytes */
 
 #define SDCMD_TIMEOUT      51200       /* Times to read for new status */
-#define SDCMD_IDLE_RETRY   10000
+#define SDCMD_IDLE_RETRY   5000
 
 #define SDERRF_TIMEOUT  (1 << 7)
 #define SDERRF_PARAM    (1 << 6)

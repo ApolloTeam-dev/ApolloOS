@@ -60,20 +60,17 @@
 
 #define SAGASD_RETRY    300      /* By default, retry up to N times */
 
-#if DEBUG
+#if 0
 #define bug(x,args...)   kprintf(x ,##args)
 #define debug(x,args...) bug("%s:%ld " x "\n", __func__, (unsigned long)__LINE__ ,##args)
 #else
-#define bug(x,args...)   do { } while (0)
-#define debug(x,args...) do { } while (0)
+#define bug(x,args...)   asm("nop\r\n")
+#define debug(x,args...) asm("nop\r\n")
 #endif
 
 static VOID SAGASD_log(struct sdcmd *sd, int level, const char *format, ...)
 {
     va_list args;
-
-    if (level > DEBUG)
-        return;
 
     va_start(args, format);
     vkprintf(format, args);
@@ -135,9 +132,8 @@ static LONG SAGASD_ReadWrite(struct IORequest *io, UQUAD off64, BOOL is_write)
         sderr = sdcmd_read_blocks(&sdu->sdu_SDCmd, block, data, len);
     }
 
-    debug("sderr=$%02x", sderr);
-
     if (sderr) {
+        debug("sderr=$%02x", sderr);
         iostd->io_Actual = 0;
 
         /* Decode sderr into IORequest io_Errors */
@@ -524,14 +520,17 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
 
     switch (io->io_Command) {
     case CMD_CLEAR:     /* Invalidate read buffer */
+    	bug( "%s CMD_CLEAR\n", __FUNCTION__ );
         iostd->io_Actual = 0;
         err = 0;
         break;
     case CMD_UPDATE:    /* Flush write buffer */
+    	bug( "%s CMD_UPDATE\n", __FUNCTION__ );
         iostd->io_Actual = 0;
         err = 0;
         break;
     case NSCMD_DEVICEQUERY:
+    	bug( "%s NSCMD_DEVICEQUERY\n", __FUNCTION__ );
         if (len < sizeof(*nsqr)) {
             err = IOERR_BADLENGTH;
             break;
@@ -547,14 +546,17 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         err = 0;
         break;
     case TD_PROTSTATUS:
+    	bug( "%s TD_PROTSTATUS\n", __FUNCTION__ );
         iostd->io_Actual = sdu->sdu_ReadOnly ? 1 : 0;
         err = 0;
         break;
     case TD_CHANGENUM:
+    	bug( "%s TD_CHANGENUM\n", __FUNCTION__ );
         iostd->io_Actual = sdu->sdu_ChangeNum;
         err = 0;
         break;
     case TD_CHANGESTATE:
+    	bug( "%s TD_CHANGESTATE\n", __FUNCTION__ );
         Forbid();
         iostd->io_Actual = sdu->sdu_Present ? 0 : 1;
         Permit();
@@ -563,16 +565,19 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
     case TD_EJECT:
         // Eject removable media
         // We mark is as invalid, then wait for Present to toggle.
+    	bug( "%s TD_EJECT\n", __FUNCTION__ );
         Forbid();
         sdu->sdu_Valid = FALSE;
         Permit();
         err = 0;
         break;
     case TD_GETDRIVETYPE:
+    	bug( "%s TD_GETDRIVETYPE\n", __FUNCTION__ );
         iostd->io_Actual = DRIVE_NEWSTYLE;
         err = 0;
         break;
     case TD_GETGEOMETRY:
+    	bug( "%s TD_GETGEOMETRY\n", __FUNCTION__ );
         if (len < sizeof(*geom)) {
             err = IOERR_BADLENGTH;
             break;
@@ -593,11 +598,13 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         err = 0;
         break;
     case TD_FORMAT:
+    	bug( "%s TD_FORMAT\n", __FUNCTION__ );
         off64  = iotd->iotd_Req.io_Offset;
         err = SAGASD_ReadWrite(io, off64, TRUE);
         break;
     case TD_MOTOR:
         // FIXME: Tie in with power management
+    	//bug( "%s TD_MOTOR\n", __FUNCTION__ );
         iostd->io_Actual = sdu->sdu_Motor;
         sdu->sdu_Motor = iostd->io_Length ? 1 : 0;
         err = 0;
@@ -641,6 +648,7 @@ static void SAGASD_Detect(struct Library *SysBase, struct SAGASDUnit *sdu)
     BOOL present;
 
     /* Update sdu_Present, regardless */
+    asm ( "tst.b 0xbfe001\r\n" );
     present = sdcmd_present(&sdu->sdu_SDCmd);
     if (present != sdu->sdu_Present) {
         if (present) {
@@ -803,7 +811,7 @@ AROS_LH1(void, BeginIO,
         /* Commands that don't require any IO */
 	switch(io->io_Command)
 	{
-            case NSCMD_DEVICEQUERY:
+        case NSCMD_DEVICEQUERY:
 	    case TD_GETNUMTRACKS:
 	    case TD_GETDRIVETYPE:
 	    case TD_GETGEOMETRY:
@@ -902,7 +910,7 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
     struct Library *SysBase = SAGASDBase->sd_ExecBase;
     struct SAGASDUnit *sdu = &SAGASDBase->sd_Unit[id];
 
-    debug("");
+    debug("Initialising sagasd2nd unit: %i", id);
 
     switch (id) {
     case 0:
@@ -967,7 +975,13 @@ static int GM_UNIQUENAME(init)(struct SAGASDBase * SAGASDBase)
     struct Library *ExpansionBase;
     ULONG i;
 
-    debug("");
+    debug("Initialising sagasd2nd");
+
+    //Temporary hack:  Remove this if you find it
+    //Hard coding the first device for now
+    debug("Hard setting chipselect 0 for now.....");
+    volatile unsigned char *chipselectRegister =  (unsigned char*)(SAGA_SD_BASE + SAGA_SD_CTL);
+    *chipselectRegister = SAGA_CS_DRIVE0;
 
     ExpansionBase = TaggedOpenLibrary(TAGGEDOPEN_EXPANSION);
     if (!ExpansionBase)
@@ -993,7 +1007,7 @@ static int GM_UNIQUENAME(expunge)(struct SAGASDBase * SAGASDBase)
     struct IORequest io = {};
     int i;
 
-    debug("");
+    debug("Expunging sagasd2nd");
 
     for (i = 0; i < SAGASD_UNITS; i++) {
         io.io_Device = &SAGASDBase->sd_Device;
@@ -1012,6 +1026,8 @@ static int GM_UNIQUENAME(open)(struct SAGASDBase * SAGASDBase,
                                struct IOExtTD *iotd, ULONG unitnum,
                                ULONG flags)
 {
+	debug("Opening sagasd2nd");
+
     iotd->iotd_Req.io_Error = IOERR_OPENFAIL;
 
     /* Is the requested unitNumber valid? */
@@ -1038,6 +1054,7 @@ static int GM_UNIQUENAME(open)(struct SAGASDBase * SAGASDBase,
 static int GM_UNIQUENAME(close)(struct SAGASDBase *SAGASDBase,
                                 struct IOExtTD *iotd)
 {
+	debug("Closing sagasd2nd");
     iotd->iotd_Req.io_Unit->unit_OpenCnt --;
 
     return TRUE;

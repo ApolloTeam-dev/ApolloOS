@@ -34,13 +34,11 @@
 
 #include "common.h"
 
-#include "aros/debug.h"
-
-#define sdcmd_log(sd,level,fmt,args...) \
-    do { \
-        if (sd->func.log) \
-            sd->func.log(sd, level, "%s:%ld " fmt, __func__, (ULONG)__LINE__ ,##args); \
-    } while (0)
+#define sdcmd_log(sd,level,fmt,args...) asm ("nop\r\n")
+//    do { \
+//        if (sd->func.log) \
+//            sd->func.log(sd, level, "%s:%ld " fmt, __func__, (ULONG)__LINE__ ,##args); \
+//    } while (0)
 
 #define diag(fmt,args...)       sdcmd_log(sd, SDLOG_DIAG, fmt ,##args)
 #define debug(fmt,args...)      sdcmd_log(sd, SDLOG_DEBUG, fmt ,##args)
@@ -48,7 +46,7 @@
 #define warn(fmt,args...)       sdcmd_log(sd, SDLOG_WARN, fmt ,##args)
 #define error(fmt,args...)      sdcmd_log(sd, SDLOG_ERROR, fmt ,##args)
 
-#define SDCMD_CLKDIV_SLOW       0xff
+#define SDCMD_CLKDIV_SLOW       0xFF
 #define SDCMD_CLKDIV_FAST       0x01
 #define SDCMD_CLKDIV_FASTER     0x00
 
@@ -124,7 +122,7 @@ static UWORD crc16(UWORD crc, UBYTE byte)
 
 static VOID sdcmd_out(struct sdcmd *sd, UBYTE data)
 {
-    diag("SD_DATA <= $%02lx", data);
+    //diag("SD_DATA <= $%02lx", data);
 
     Write8(sd->iobase + SAGA_SD_DATA, data);
 
@@ -138,16 +136,14 @@ static UBYTE sdcmd_in(struct sdcmd *sd)
     Write8(sd->iobase + SAGA_SD_DATA, 0xff);
     val = Read8(sd->iobase + SAGA_SD_DATA);
 
-    diag("SD_DATA => $%02lx", val);
+    //diag("SD_DATA => $%02lx", val);
 
     return val;
 }
 
+
 static void sdcmd_ins(struct sdcmd *sd, UBYTE *buff, size_t len)
 {
-    UBYTE val;
-    ULONG dataio = sd->iobase + SAGA_SD_DATA;
-
     if (len == 0)
         return;
 
@@ -155,32 +151,21 @@ static void sdcmd_ins(struct sdcmd *sd, UBYTE *buff, size_t len)
      * filled by the SPI, we amortize that cost by computing
      * the CRC16 while waiting for the next fill.
      */
-    Write8(dataio, 0xff);
-    for (len--; len > 0; len--, buff++) {
-        val = *((UBYTE*)0xde0002);
-      //  Write8(dataio + SAGA_SD_DATA, 0xff);
-        *buff = val;
-    }
-    val = Read8(dataio + SAGA_SD_DATA);
-    *buff = val;
+	asm volatile(
+			"       move.b #0xff,(0xDE0000)        \n"
+			"       subq.l #1,%[count]              \n"
+			"       bra 2f                         \n"
+			"1:     move.b (0xDE0002),(%[buff])+   \n"
+			"2:     dbra   %[count],1b             \n"
+			"       move.b (0xDE0000),(%[buff])+   \n"
+				:[count]"+d"(len),[buff]"+a"(buff)::"cc");
 
     return;
 }
             
 BOOL sdcmd_present(struct sdcmd *sd)
 {
-#if 0
-    UWORD val;
-    
-    val = Read16(sd->iobase + SAGA_SD_STAT);
-
-    diag("SD_STAT => $%04lx", val);
-
-    return (val & SAGA_SD_STAT_NCD) ? FALSE : TRUE;
-#else
-    bug("sdcmd_present: Das ding ist eingesteckt.");
     return TRUE;
-#endif
 }
 
 VOID sdcmd_select(struct sdcmd *sd, BOOL cs)
@@ -189,7 +174,7 @@ VOID sdcmd_select(struct sdcmd *sd, BOOL cs)
 
     val = cs ? 0 : SAGA_SD_CTL_NCS;
 
-    diag("SD_CTL  => $%04lx", val);
+    //diag("SD_CTL  => $%04lx", val);
 
     Write16(sd->iobase + SAGA_SD_CTL, val);
     sdcmd_out(sd, 0xff);
@@ -291,7 +276,7 @@ UBYTE sdcmd_r3(struct sdcmd *sd, ULONG *ocr)
 
     sdcmd_select(sd, FALSE);
 
-    debug("r3=0x%08lx", r3);
+    //debug("r3=0x%08lx", r3);
     *ocr = r3;
 
     return r1;
@@ -313,7 +298,7 @@ UBYTE sdcmd_r7(struct sdcmd *sd, ULONG *ifcond)
 
     sdcmd_select(sd, FALSE);
 
-    debug("r7=0x%08lx", r7);
+    //debug("r7=0x%08lx", r7);
     *ifcond = r7;
 
     return r1;
@@ -341,7 +326,7 @@ UBYTE sdcmd_read_packet(struct sdcmd *sd, UBYTE *buff, int len)
 {
     UBYTE token = 0xfe;
     UBYTE byte;
-    UWORD tmp;
+    UWORD crc, tmp;
     int i;
 
     /* Wait for the Data Token */
@@ -362,9 +347,6 @@ UBYTE sdcmd_read_packet(struct sdcmd *sd, UBYTE *buff, int len)
     tmp = (UWORD)sdcmd_in(sd) << 8;
     tmp |= sdcmd_in(sd);
 
-//    if (tmp != crc)
-//        return SDERRF_CRC;
-
     return 0;
 }
 
@@ -383,7 +365,7 @@ UBYTE sdcmd_stop_transmission(struct sdcmd *sd)
 
         /* Read response */
         r1 = sdcmd_r1a(sd);
-        debug("r1=$%02lx", r1);
+        //debug("r1=$%02lx", r1);
     } while ((r1 & SDERRF_CRC) && (crc_retry-- > 0));
 
     /* If it's a CRC error, after our retires, just die. */
@@ -400,7 +382,7 @@ UBYTE sdcmd_stop_transmission(struct sdcmd *sd)
     /* Wait until not busy */
     for (i = 0; i < SDCMD_TIMEOUT; i++) {
         tmp = sdcmd_in(sd);
-        debug("tmp=$%02lx", tmp);
+        //debug("tmp=$%02lx", tmp);
         if (tmp == 0xff)
            break;
     }
@@ -444,13 +426,13 @@ UBYTE sdcmd_write_packet(struct sdcmd *sd, UBYTE token, CONST UBYTE *buff, int l
     }
 
     r1 = ((byte & SDDRS_CODE_MASK) == SDDRS_CODE_ACCEPTED) ? 0 : SDERRF_CRC;
-    debug("byte=$%02lx, r1=$%02lx", byte, r1);
+    //debug("byte=$%02lx, r1=$%02lx", byte, r1);
 
     /* Wait for the idle pattern */
     /* Wait until not busy */
     for (i = 0; i < SDCMD_TIMEOUT; i++) {
         UBYTE tmp = sdcmd_in(sd);
-        debug("ptmp = $%02lx", tmp);
+        //debug("ptmp = $%02lx", tmp);
         if (tmp == 0xff)
             break;
     }
@@ -500,8 +482,9 @@ UBYTE sdcmd_detect(struct sdcmd *sd)
 
     /* Emit at least 74 clocks of idle */
     sdcmd_select(sd, TRUE);
-    for (i = 0; i < 10; i++)
+    for (i = 0; i < 16; i++) {
         sdcmd_out(sd, 0xff);
+    }
     sdcmd_select(sd, FALSE);
 
     /* Stuff two idle bytes while deasserted */
@@ -548,7 +531,7 @@ UBYTE sdcmd_detect(struct sdcmd *sd)
             break;
     }
 
-    debug("r1=0x%lx", r1);
+    //debug("r1=0x%lx", r1);
     if (r1)
         return r1;
 
@@ -557,18 +540,18 @@ UBYTE sdcmd_detect(struct sdcmd *sd)
     r1 = sdcmd_r1(sd);
     if (r1) {
         /* Non-fatal if this failed */
-        debug("r1=0x%lx", r1);
+        //debug("r1=0x%lx", r1);
     }
 
     /* Check for voltage levels */
     sdcmd_send(sd, SDCMD_READ_OCR, 0);
     r1 = sdcmd_r3(sd, &info->ocr);
-    debug("r1=0x%lx", r1);
+    //debug("r1=0x%lx", r1);
     if (r1)
         return r1;
 
     /* Not in our voltage range */
-    info("ocr=0x%08lx (vs 0x%08lx)", info->ocr, SDOCRF_MAX_3_3V | SDOCRF_MAX_3_4V);
+    //info("ocr=0x%08lx (vs 0x%08lx)", info->ocr, SDOCRF_MAX_3_3V | SDOCRF_MAX_3_4V);
     if (!(info->ocr & (SDOCRF_MAX_3_3V | SDOCRF_MAX_3_4V)))
         return SDERRF_IDLE;
 
@@ -580,39 +563,39 @@ UBYTE sdcmd_detect(struct sdcmd *sd)
         /* Get the CSD data */
         sdcmd_send(sd, SDCMD_SEND_CSD, 0);
         r1 = sdcmd_r1a(sd);
-        debug("r1=0x%lx", r1);
+        //debug("r1=0x%lx", r1);
         if (r1)
             goto exit;
 
         r1 = sdcmd_read_packet(sd, csd, 16);
-        debug("r1=0x%lx", r1);
+        //debug("r1=0x%lx", r1);
         if (r1)
             goto exit;
 
-        info("csd=%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx",
-                csd[0], csd[1], csd[2], csd[3],
-                csd[4], csd[5], csd[6], csd[7],
-                csd[8], csd[9], csd[10], csd[11],
-                csd[12], csd[13], csd[14], csd[15]);
+        //info("csd=%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx",
+        //        csd[0], csd[1], csd[2], csd[3],
+        //        csd[4], csd[5], csd[6], csd[7],
+        //        csd[8], csd[9], csd[10], csd[11],
+        //        csd[12], csd[13], csd[14], csd[15]);
 
         /* Get the CID data */
         sdcmd_send(sd, SDCMD_SEND_CID, 0);
         r1 = sdcmd_r1a(sd);
-        debug("r1=%d", r1);
+        //debug("r1=%d", r1);
         if (r1)
             goto exit;
 
         r1 = sdcmd_read_packet(sd, cid, 16);
         sdcmd_select(sd, FALSE);
 
-        debug("r1=0x%lx", r1);
+        //debug("r1=0x%lx", r1);
         if (r1)
             return r1;
-        info("cid=%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx",
-                cid[0], cid[1], cid[2], cid[3],
-                cid[4], cid[5], cid[6], cid[7],
-                cid[8], cid[9], cid[10], cid[11],
-                cid[12], cid[13], cid[14], cid[15]);
+        //info("cid=%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx",
+        //        cid[0], cid[1], cid[2], cid[3],
+        //        cid[4], cid[5], cid[6], cid[7],
+        //        cid[8], cid[9], cid[10], cid[11],
+        //        cid[12], cid[13], cid[14], cid[15]);
 
         info->block_size = SDSIZ_BLOCK;
 
@@ -648,7 +631,7 @@ UBYTE sdcmd_detect(struct sdcmd *sd)
 
             info->addr_shift = 9;
         }
-        info("blocks=%ld", info->blocks);
+        //info("blocks=%ld", info->blocks);
     }
 
     /* Default speed mode */
@@ -662,7 +645,7 @@ UBYTE sdcmd_detect(struct sdcmd *sd)
      */
     sdcmd_send(sd, SDCMD_SWITCH_FUNCTION, 0x80fffff1);
     r1 = sdcmd_r1a(sd);
-    debug("r1=0x%lx", r1);
+    //debug("r1=0x%lx", r1);
     if (!r1) {
         UBYTE cmd6[512/8];
         ULONG f1_sel;
@@ -694,7 +677,7 @@ UBYTE sdcmd_read_block(struct sdcmd *sd, ULONG addr, UBYTE *buff)
     LONG crc_retry = sd->retry.read;
 
     do {
-        info("read block=%ld", addr);
+        //info("read block=%ld", addr);
 
         /* Send the read block command */
         sdcmd_send(sd, SDCMD_READ_SINGLE_BLOCK, addr << sd->info.addr_shift);
@@ -719,13 +702,13 @@ UBYTE sdcmd_read_blocks(struct sdcmd *sd, ULONG addr, UBYTE *buff, int blocks)
         return sdcmd_read_block(sd, addr, buff);
 
     do {
-        info("read block=%ld, blocks=%ld", addr, blocks);
+        //info("read block=%ld, blocks=%ld", addr, blocks);
 
         /* Send the read block command */
         sdcmd_send(sd, SDCMD_READ_MULTIPLE_BLOCK, addr << sd->info.addr_shift);
         r1 = sdcmd_r1a(sd);
         if (r1) {
-            debug("r1=$%02lx", r1);
+            //debug("r1=$%02lx", r1);
             sdcmd_select(sd, FALSE);
             continue;
         }
@@ -733,7 +716,7 @@ UBYTE sdcmd_read_blocks(struct sdcmd *sd, ULONG addr, UBYTE *buff, int blocks)
         for (; blocks > 0; addr++, blocks--, buff += SDSIZ_BLOCK) {
             r1 = sdcmd_read_packet(sd, buff, SDSIZ_BLOCK);
             if (r1) {
-                debug("r1=$%02lx", r1);
+                //debug("r1=$%02lx", r1);
                 /* Terminate the read early */
                 sdcmd_stop_transmission(sd);
                 break;
@@ -760,7 +743,7 @@ UBYTE sdcmd_write_block(struct sdcmd *sd, ULONG addr, CONST UBYTE *buff)
     UBYTE r1;
 
     do {
-        info("write block=%ld", addr);
+        //info("write block=%ld", addr);
 
         /* Send write block command */
         sdcmd_send(sd, SDCMD_WRITE_SINGLE_BLOCK, addr << sd->info.addr_shift);
@@ -786,7 +769,7 @@ UBYTE sdcmd_write_blocks(struct sdcmd *sd, ULONG addr, CONST UBYTE *buff, int bl
         return sdcmd_write_block(sd, addr, buff);
 
     do {
-        info("block=%ld, blocks=%ld", addr, blocks);
+        //info("block=%ld, blocks=%ld", addr, blocks);
 
         /* Send write blocks command */
         sdcmd_send(sd, SDCMD_WRITE_MULTIPLE_BLOCK, addr << sd->info.addr_shift);
@@ -798,7 +781,7 @@ UBYTE sdcmd_write_blocks(struct sdcmd *sd, ULONG addr, CONST UBYTE *buff, int bl
 
         for (; blocks; addr++, blocks--, buff += SDSIZ_BLOCK) {
             r1 = sdcmd_write_packet(sd, token, buff, SDSIZ_BLOCK);
-            debug("pr1=$%02lx", r1);
+            //debug("pr1=$%02lx", r1);
             if (r1)
                 break;
 
@@ -817,14 +800,14 @@ UBYTE sdcmd_write_blocks(struct sdcmd *sd, ULONG addr, CONST UBYTE *buff, int bl
         /* Wait until not busy */
         for (i = 0; i < SDCMD_TIMEOUT; i++) {
             tmp = sdcmd_in(sd);
-            debug("tmp=$%02lx", tmp);
+            //debug("tmp=$%02lx", tmp);
             if (tmp == 0xff)
                 break;
         }
 
         sdcmd_select(sd, FALSE);
 
-        debug("i=%ld, r1=$%02lx", i, r1);
+        //debug("i=%ld, r1=$%02lx", i, r1);
         if (i == SDCMD_TIMEOUT)
             r1 = SDERRF_TIMEOUT;
 
@@ -832,5 +815,4 @@ UBYTE sdcmd_write_blocks(struct sdcmd *sd, ULONG addr, CONST UBYTE *buff, int bl
 
     return r1;
 }
-
 /* vim: set shiftwidth=4 expandtab:  */

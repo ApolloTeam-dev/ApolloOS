@@ -90,7 +90,7 @@ AROS_SHAH(ULONG *  ,D= ,DEBUG,/N, 0, "Debug level\n")
 
     setBases(SysBase, DOSBase);
 
-    DebugLevel = SHArg(DEBUG) ? *SHArg(DEBUG) : 0;
+    //DebugLevel = SHArg(DEBUG) ? *SHArg(DEBUG) : 0;
     Printf("DebugLevel: %ld\n", DebugLevel);
 
     sd.iobase = iobase;

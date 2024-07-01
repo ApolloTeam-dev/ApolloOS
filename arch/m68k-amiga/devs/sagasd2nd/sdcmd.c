@@ -36,11 +36,15 @@
 
 #include "aros/debug.h"
 
+#if 0
 #define sdcmd_log(sd,level,fmt,args...) \
     do { \
         if (sd->func.log) \
             sd->func.log(sd, level, "%s:%ld " fmt, __func__, (ULONG)__LINE__ ,##args); \
     } while (0)
+#else
+#define sdcmd_log(sd,level,fmt,args...) asm ("nop\r\n")
+#endif
 
 #define diag(fmt,args...)       sdcmd_log(sd, SDLOG_DIAG, fmt ,##args)
 #define debug(fmt,args...)      sdcmd_log(sd, SDLOG_DEBUG, fmt ,##args)
@@ -124,7 +128,7 @@ static UWORD crc16(UWORD crc, UBYTE byte)
 
 static VOID sdcmd_out(struct sdcmd *sd, UBYTE data)
 {
-    diag("SD_DATA <= $%02lx", data);
+    //diag("SD_DATA <= $%02lx", data);
 
     Write8(sd->iobase + SAGA_SD_DATA, data);
 
@@ -138,11 +142,32 @@ static UBYTE sdcmd_in(struct sdcmd *sd)
     Write8(sd->iobase + SAGA_SD_DATA, 0xff);
     val = Read8(sd->iobase + SAGA_SD_DATA);
 
-    diag("SD_DATA => $%02lx", val);
+    //diag("SD_DATA => $%02lx", val);
 
     return val;
 }
+#if 1
+static void sdcmd_ins(struct sdcmd *sd, UBYTE *buff, size_t len)
+{
+    if (len == 0)
+        return;
 
+    /* Since the read of the SAGA_SD_DATA will stall until
+     * filled by the SPI, we amortize that cost by computing
+     * the CRC16 while waiting for the next fill.
+     */
+        asm volatile(
+                        "       move.b #0xff,(0xDE0010)        \n"
+                        "       subq.l #1,%[count]              \n"
+                        "       bra 2f                         \n"
+                        "1:     move.b (0xDE0012),(%[buff])+   \n"
+                        "2:     dbra   %[count],1b             \n"
+                        "       move.b (0xDE0010),(%[buff])+   \n"
+                                :[count]"+d"(len),[buff]"+a"(buff)::"cc");
+
+    return;
+}
+#else
 static void sdcmd_ins(struct sdcmd *sd, UBYTE *buff, size_t len)
 {
     UBYTE val;
@@ -157,7 +182,7 @@ static void sdcmd_ins(struct sdcmd *sd, UBYTE *buff, size_t len)
      */
     Write8(dataio, 0xff);
     for (len--; len > 0; len--, buff++) {
-        val = *((UBYTE*)0xde0002);
+        val = *((UBYTE*)0xde0012);
       //  Write8(dataio + SAGA_SD_DATA, 0xff);
         *buff = val;
     }
@@ -166,28 +191,19 @@ static void sdcmd_ins(struct sdcmd *sd, UBYTE *buff, size_t len)
 
     return;
 }
+#endif
             
 BOOL sdcmd_present(struct sdcmd *sd)
 {
-#if 0
-    UWORD val;
-    
-    val = Read16(sd->iobase + SAGA_SD_STAT);
-
-    diag("SD_STAT => $%04lx", val);
-
-    return (val & SAGA_SD_STAT_NCD) ? FALSE : TRUE;
-#else
-    bug("sdcmd_present: Das ding ist eingesteckt.");
     return TRUE;
-#endif
 }
 
 VOID sdcmd_select(struct sdcmd *sd, BOOL cs)
 {
     UWORD val;
 
-    val = cs ? 0 : SAGA_SD_CTL_NCS;
+    //val = cs ? 0 : SAGA_SD_CTL_NCS;
+    val = cs ? 0 : SAGA_CS_DRIVE0;
 
     diag("SD_CTL  => $%04lx", val);
 
