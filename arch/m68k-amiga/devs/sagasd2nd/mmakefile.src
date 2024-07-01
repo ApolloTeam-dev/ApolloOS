@@ -36,16 +36,16 @@ DEVICE_FILES := sagasd_device sdcmd
 
 SDDIAG_FILES := sddiag sdcmd
 
-#MM- kernel-sagasd-device: sagasd-c kernel-sagasd-device
-#MM- kernel-sagasd-device-kobj: kernel-sagasd-device
-#MM- kernel-sagasd-device-quick: sagasd-c-quick kernel-sagasd-device-quick
+#MM- kernel-sagasd2nd-device: sagasd2nd-c kernel-sagasd2nd-device
+#MM- kernel-sagasd2nd-device-kobj: kernel-sagasd2nd-device
+#MM- kernel-sagasd2nd-device-quick: sagasd2nd-c-quick kernel-sagasd2nd-device-quick
 
-%build_prog mmake=sagasd-c progname=SDDiag \
+%build_prog mmake=sagasd2nd-c progname=SDDiag \
       files="$(SDDIAG_FILES)" targetdir="$(AROS_C)" \
       usestartup=no
 
-%build_module mmake=kernel-sagasd-device \
-       modname=sagasd modtype=device \
+%build_module mmake=kernel-sagasd2nd-device \
+       modname=sagasd2nd modtype=device \
        files="$(DEVICE_FILES)" uselibs="romhack"
 
 %common
