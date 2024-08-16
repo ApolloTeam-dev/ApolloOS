@@ -25,14 +25,18 @@
 
 #ifndef SAGA_SD_H
 #define SAGA_SD_H
-#define SAGA_SD_BASE            0xde0000        /* Base address */
-#define SAGA_SD_DATA            0x0000          /* Read as UBYTE/Write as UBYTE */
-#define SAGA_SD_CTL             0x0004          /* UWORD, Write only */
-#define   SAGA_SD_CTL_NCS       (1 << 0)        /* nChipSelect */
-#define SAGA_SD_STAT            0x0006          /* UWORD, Read only */
-#define   SAGA_SD_STAT_NCD      (1 << 0)        /* nCardDetect */
-#define SAGA_SD_CLK             0x000c
-#define   SAGA_SD_CLK_DIV(x)    ((x) & 0xff)
+#define SAGA_SD_BASE			0xde0010        /* Base address */
+#define SAGA_SD_DATA			0x0000          /* Read as UBYTE/Write as UBYTE */
+#define SAGA_SD_CTL				0x0004          /* UWORD, Write only */
+#define SAGA_SD_CTL_NCS			(1 << 0)        /* nChipSelect */
+#define SAGA_SD_STAT			0x0006          /* UWORD, Read only */
+#define SAGA_SD_STAT_NCD		(1 << 0)        /* nCardDetect */
+#define SAGA_SD_CLK				0x000c
+#define SAGA_SD_CLK_DIV(x)		((x) & 0xff)
+
+#define SAGA_CS_DRIVE0			0xFE
+#define SAGA_CS_DRIVE1			0xFD
+#define SAGA_CS_NODRIVE			0xFF
 
 #endif /* SAGA_SD_H */
 /* vim: set shiftwidth=4 expandtab:  */

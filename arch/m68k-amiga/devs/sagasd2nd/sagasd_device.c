@@ -45,39 +45,32 @@
 
 #include <dos/filehandler.h>
 
-//#include <proto/exec.h>
+#include <proto/exec.h>
 #include <proto/disk.h>
 #include <proto/expansion.h>
-//#include <aros/debug.h>
 
 #include "common.h"
 
-#include "sd.h"
+#include <sd.h>
 
 #include LC_LIBDEFS_FILE
 
 #define SAGASD_HEADS    16
 #define SAGASD_SECTORS  64
-#define SAGASD_RETRY    5      /* By default, retry up to N times */
 
-#define VERSION 2
-#define REVISION 2
-#define LIBNAME "sagasd.device"
-#define VSTRING "sagasd.device v#VERSION##.#REVISION" 
+#define SAGASD_RETRY    300      /* By default, retry up to N times */
 
-#if DEBUG
+#if 0
+#define bug(x,args...)   kprintf(x ,##args)
 #define debug(x,args...) bug("%s:%ld " x "\n", __func__, (unsigned long)__LINE__ ,##args)
 #else
-#define bug(x,args...)   asm ("nop\r\n");
-#define debug(x,args...) asm ("nop\r\n");
+#define bug(x,args...)   asm("nop\r\n")
+#define debug(x,args...) asm("nop\r\n")
 #endif
 
 static VOID SAGASD_log(struct sdcmd *sd, int level, const char *format, ...)
 {
     va_list args;
-
-    if (level > DEBUG)
-        return;
 
     va_start(args, format);
     vkprintf(format, args);
@@ -139,9 +132,8 @@ static LONG SAGASD_ReadWrite(struct IORequest *io, UQUAD off64, BOOL is_write)
         sderr = sdcmd_read_blocks(&sdu->sdu_SDCmd, block, data, len);
     }
 
-    debug("sderr=$%02x", sderr);
-
     if (sderr) {
+        debug("sderr=$%02x", sderr);
         iostd->io_Actual = 0;
 
         /* Decode sderr into IORequest io_Errors */
@@ -168,7 +160,7 @@ static LONG SAGASD_ReadWrite(struct IORequest *io, UQUAD off64, BOOL is_write)
 static LONG SAGASD_PerformSCSI(struct IORequest *io)
 {
     struct SAGASDBase *sd = (struct SAGASDBase *)io->io_Device;
-    struct Library *SysBase = sd->sd_ExecBase;
+    //struct Library *SysBase = sd->sd_ExecBase;
     struct SAGASDUnit *sdu = (struct SAGASDUnit *)io->io_Unit;
     struct IOStdReq *iostd = (struct IOStdReq *)io;
     struct SCSICmd *scsi = iostd->io_Data;
@@ -519,23 +511,26 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
     struct NSDeviceQueryResult *nsqr;
     LONG err = IOERR_NOCMD;
 
-    //debug("");
+    debug("");
 
     if (io->io_Error == IOERR_ABORTED)
         return io->io_Error;
 
-    //debug("IO %p Start, io_Flags = %d, io_Command = %d (%s)", io, io->io_Flags, io->io_Command, cmd_name(io->io_Command));
+    debug("IO %p Start, io_Flags = %d, io_Command = %d (%s)", io, io->io_Flags, io->io_Command, cmd_name(io->io_Command));
 
     switch (io->io_Command) {
     case CMD_CLEAR:     /* Invalidate read buffer */
+    	bug( "%s CMD_CLEAR\n", __FUNCTION__ );
         iostd->io_Actual = 0;
         err = 0;
         break;
     case CMD_UPDATE:    /* Flush write buffer */
+    	bug( "%s CMD_UPDATE\n", __FUNCTION__ );
         iostd->io_Actual = 0;
         err = 0;
         break;
     case NSCMD_DEVICEQUERY:
+    	bug( "%s NSCMD_DEVICEQUERY\n", __FUNCTION__ );
         if (len < sizeof(*nsqr)) {
             err = IOERR_BADLENGTH;
             break;
@@ -551,14 +546,17 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         err = 0;
         break;
     case TD_PROTSTATUS:
+    	bug( "%s TD_PROTSTATUS\n", __FUNCTION__ );
         iostd->io_Actual = sdu->sdu_ReadOnly ? 1 : 0;
         err = 0;
         break;
     case TD_CHANGENUM:
+    	bug( "%s TD_CHANGENUM\n", __FUNCTION__ );
         iostd->io_Actual = sdu->sdu_ChangeNum;
         err = 0;
         break;
     case TD_CHANGESTATE:
+    	bug( "%s TD_CHANGESTATE\n", __FUNCTION__ );
         Forbid();
         iostd->io_Actual = sdu->sdu_Present ? 0 : 1;
         Permit();
@@ -567,16 +565,19 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
     case TD_EJECT:
         // Eject removable media
         // We mark is as invalid, then wait for Present to toggle.
+    	bug( "%s TD_EJECT\n", __FUNCTION__ );
         Forbid();
         sdu->sdu_Valid = FALSE;
         Permit();
         err = 0;
         break;
     case TD_GETDRIVETYPE:
+    	bug( "%s TD_GETDRIVETYPE\n", __FUNCTION__ );
         iostd->io_Actual = DRIVE_NEWSTYLE;
         err = 0;
         break;
     case TD_GETGEOMETRY:
+    	bug( "%s TD_GETGEOMETRY\n", __FUNCTION__ );
         if (len < sizeof(*geom)) {
             err = IOERR_BADLENGTH;
             break;
@@ -597,11 +598,13 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         err = 0;
         break;
     case TD_FORMAT:
+    	bug( "%s TD_FORMAT\n", __FUNCTION__ );
         off64  = iotd->iotd_Req.io_Offset;
         err = SAGASD_ReadWrite(io, off64, TRUE);
         break;
     case TD_MOTOR:
         // FIXME: Tie in with power management
+    	//bug( "%s TD_MOTOR\n", __FUNCTION__ );
         iostd->io_Actual = sdu->sdu_Motor;
         sdu->sdu_Motor = iostd->io_Length ? 1 : 0;
         err = 0;
@@ -635,8 +638,8 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         break;
     }
 
-    //debug("io_Actual = %d", iostd->io_Actual);
-    //debug("io_Error = %d", err);
+    debug("io_Actual = %d", iostd->io_Actual);
+    debug("io_Error = %d", err);
     return err;
 }
 
@@ -645,7 +648,6 @@ static void SAGASD_Detect(struct Library *SysBase, struct SAGASDUnit *sdu)
     BOOL present;
 
     /* Update sdu_Present, regardless */
-
     asm ( "tst.b 0xbfe001\r\n" );
     present = sdcmd_present(&sdu->sdu_SDCmd);
     if (present != sdu->sdu_Present) {
@@ -746,7 +748,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
              */
             treq->tr_node.io_Command = TR_ADDREQUEST;
             treq->tr_time.tv_secs = 0;
-            treq->tr_time.tv_micro = 100000;
+            treq->tr_time.tv_micro = 100 * 1000;
             SendIO((struct IORequest *)treq);
 
             /* Wait on either the MsgPort, or the timer */
@@ -809,7 +811,7 @@ AROS_LH1(void, BeginIO,
         /* Commands that don't require any IO */
 	switch(io->io_Command)
 	{
-            case NSCMD_DEVICEQUERY:
+        case NSCMD_DEVICEQUERY:
 	    case TD_GETNUMTRACKS:
 	    case TD_GETDRIVETYPE:
 	    case TD_GETGEOMETRY:
@@ -859,10 +861,12 @@ static void SAGASD_BootNode(
         ULONG unit)
 {
     struct SAGASDUnit *sdu = &SAGASDBase->sd_Unit[unit];
-    struct Library *SysBase = SAGASDBase->sd_ExecBase;
     TEXT dosdevname[4] = "SD0";
     IPTR pp[4 + DE_BOOTBLOCKS + 1] = {};
     struct DeviceNode *devnode;
+
+    if (1)
+        return;
 
     debug("");
 
@@ -906,7 +910,8 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
     struct Library *SysBase = SAGASDBase->sd_ExecBase;
     struct SAGASDUnit *sdu = &SAGASDBase->sd_Unit[id];
 
-    debug("");
+    debug("Initialising sagasd2nd unit: %i", id);
+
     switch (id) {
     case 0:
         sdu->sdu_SDCmd.iobase  = SAGA_SD_BASE;
@@ -935,7 +940,7 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
 
             /* Initialize the task */
             memset(utask, 0, sizeof(*utask));
-            utask->tc_Node.ln_Pri = 1;
+            utask->tc_Node.ln_Pri = -21;
             utask->tc_Node.ln_Name = &sdu->sdu_Name[0];
             utask->tc_SPReg = utask->tc_SPUpper = &sdu->sdu_Stack[SDU_STACK_SIZE];
             utask->tc_SPLower = &sdu->sdu_Stack[0];
@@ -964,68 +969,64 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
     debug("unit=%d enabled=%d", id, SAGASDBase->sd_Unit[id].sdu_Enabled ? 1 : 0);
 }
 
-// Alynna:  The entire IO structure has been reworked to be 
-//			binary compatible with AmigaOS and AROS.
-
-static AROS_UFH3(struct SAGASDBase *, SAGASD_Init,
-	AROS_UFHA(struct SAGASDBase *, SAGASDBase, D0),
-	AROS_UFHA(BPTR, seglist, A0),
-	AROS_UFHA(struct Library *, exec_base, A6)
-)
+static int GM_UNIQUENAME(init)(struct SAGASDBase * SAGASDBase)
 {
-	AROS_USERFUNC_INIT
-	debug("Init has officially started, SAGASDBase: %08x",SAGASDBase);
     struct Library *SysBase = SAGASDBase->sd_ExecBase;
     struct Library *ExpansionBase;
     ULONG i;
 
-	// Device lib setup
-	SAGASDBase->sd_Device.dd_Library.lib_Node.ln_Type 	= NT_DEVICE;
-	SAGASDBase->sd_Device.dd_Library.lib_Node.ln_Pri  	= 1;
-	SAGASDBase->sd_Device.dd_Library.lib_Node.ln_Name 	= LIBNAME;
-	SAGASDBase->sd_Device.dd_Library.lib_Flags        	= LIBF_SUMUSED|LIBF_CHANGED;
-	SAGASDBase->sd_Device.dd_Library.lib_Version      	= VERSION;
-	SAGASDBase->sd_Device.dd_Library.lib_Revision     	= REVISION;
-	SAGASDBase->sd_Device.dd_Library.lib_IdString     	= VSTRING;
-	SAGASDBase->sd_ExecBase 		           			= exec_base;
-	SAGASDBase->sd_SegList 							  	= seglist;
-	debug("Library set up, Device is: %08x",SAGASDBase->sd_Device);
+    debug("Initialising sagasd2nd");
 
-	/* Save pointer to our loaded code (the SegList) */
-    asm ( "tst.b 0xbfe001\r\n" );    // Wait a moment, then...
+    //Temporary hack:  Remove this if you find it
+    //Hard coding the first device for now
+    debug("Hard setting chipselect 0 for now.....");
+    volatile unsigned char *chipselectRegister =  (unsigned char*)(SAGA_SD_BASE + SAGA_SD_CTL);
+    *chipselectRegister = SAGA_CS_DRIVE0;
 
     ExpansionBase = TaggedOpenLibrary(TAGGEDOPEN_EXPANSION);
     if (!ExpansionBase)
-		Alert(AT_DeadEnd | AO_TrackDiskDev | AG_OpenLib);
+  	Alert(AT_DeadEnd | AO_TrackDiskDev | AG_OpenLib);
 
     for (i = 0; i < SAGASD_UNITS; i++)
-		SAGASD_InitUnit(SAGASDBase, i);
+	SAGASD_InitUnit(SAGASDBase, i);
 
     /* Only add bootnode if recalibration succeeded */
     for (i = 0; i < SAGASD_UNITS; i++) {
-	if (SAGASDBase->sd_Unit[i].sdu_Valid) {
-			SAGASD_BootNode(SAGASDBase, ExpansionBase, i);
-			debug("ACTIVE %s unit %d as %08x",VSTRING,i,SAGASDBase->sd_Unit[i]);
-		}
+	if (SAGASDBase->sd_Unit[i].sdu_Valid)
+	    SAGASD_BootNode(SAGASDBase, ExpansionBase, i);
     }
 
-	debug("Init finished with SAGASDBase as %08x",SAGASDBase);
     CloseLibrary((struct Library *)ExpansionBase);
-	
-    return SAGASDBase;
 
-	AROS_USERFUNC_EXIT
+    return TRUE;
 }
 
-static AROS_LH3(LONG, SAGASD_Open,
-	AROS_LHA(struct IOExtTD *, iotd, A1),
-	AROS_LHA(ULONG, unitnum, D0),
-	AROS_LHA(ULONG, flags, D1),
-	struct SAGASDBase *, SAGASDBase, 1, SAGASD
-)
+static int GM_UNIQUENAME(expunge)(struct SAGASDBase * SAGASDBase)
 {
-	AROS_LIBFUNC_INIT
     struct Library *SysBase = SAGASDBase->sd_ExecBase;
+    struct IORequest io = {};
+    int i;
+
+    debug("Expunging sagasd2nd");
+
+    for (i = 0; i < SAGASD_UNITS; i++) {
+        io.io_Device = &SAGASDBase->sd_Device;
+        io.io_Unit = &SAGASDBase->sd_Unit[i].sdu_Unit;
+        io.io_Flags = 0;
+        io.io_Command = ~0;
+
+        /* Signal the unit task to die */
+        DoIO(&io);
+    }
+
+    return TRUE;
+}
+
+static int GM_UNIQUENAME(open)(struct SAGASDBase * SAGASDBase,
+                               struct IOExtTD *iotd, ULONG unitnum,
+                               ULONG flags)
+{
+	debug("Opening sagasd2nd");
 
     iotd->iotd_Req.io_Error = IOERR_OPENFAIL;
 
@@ -1048,96 +1049,19 @@ static AROS_LH3(LONG, SAGASD_Open,
   
     return iotd->iotd_Req.io_Error == 0;
 
-	AROS_LIBFUNC_EXIT
 }
 
-static AROS_LH1(BPTR, SAGASD_Close,
-	AROS_LHA(struct IOExtTD *, iotd, A1),
-	struct SAGASDBase *, SAGASDBase, 2, SAGASD
-)
+static int GM_UNIQUENAME(close)(struct SAGASDBase *SAGASDBase,
+                                struct IOExtTD *iotd)
 {
-	AROS_LIBFUNC_INIT
-    struct Library *SysBase = SAGASDBase->sd_ExecBase;
+	debug("Closing sagasd2nd");
     iotd->iotd_Req.io_Unit->unit_OpenCnt --;
 
     return TRUE;
-	AROS_LIBFUNC_EXIT
 }
 
-
-static AROS_LH0(BPTR, SAGASD_Expunge,
-	struct SAGASDBase *, SAGASDBase, 3, SAGASD
-)
-{
-	AROS_LIBFUNC_INIT
-		
-    struct Library *SysBase = SAGASDBase->sd_ExecBase;
-    struct IORequest io = {};
-    int i;
-
-    debug("");
-
-    for (i = 0; i < SAGASD_UNITS; i++) {
-        io.io_Device = &SAGASDBase->sd_Device;
-        io.io_Unit = &SAGASDBase->sd_Unit[i].sdu_Unit;
-        io.io_Flags = 0;
-        io.io_Command = ~0;
-
-        /* Signal the unit task to die */
-        DoIO(&io);
-    }
-
-	BPTR result = 0;
-
-	/* see if anyone has us open */
-	if (SAGASDBase->sd_Device.dd_Library.lib_OpenCnt > 0) {
-		/* it is still open.  set the delayed expunge flag */
-		SAGASDBase->sd_Device.dd_Library.lib_Flags |= LIBF_DELEXP;
-	} else {
-		/* go ahead and get rid of us. */
-		result = SAGASDBase->sd_SegList;
-
-		/* unlink from device list */
-		Remove((struct Node *)SAGASDBase); /* Remove first (before FreeMem) */
-	}
-
-	return result;
-	AROS_LIBFUNC_EXIT
-}
-
-static AROS_LH0(APTR, SAGASD_Null,
-	struct SAGASD *, libBase, 4, SAGASD
-)
-{
-	AROS_LIBFUNC_INIT
-	return NULL;
-	AROS_LIBFUNC_EXIT
-}
-
-const CONST_APTR SAGASD_Vec[] = {
-	(APTR)AROS_SLIB_ENTRY(SAGASD_Open, SAGASD, 1),
-	(APTR)AROS_SLIB_ENTRY(SAGASD_Close, SAGASD, 2),
-	(APTR)AROS_SLIB_ENTRY(SAGASD_Expunge, SAGASD, 3),
-	(APTR)AROS_SLIB_ENTRY(SAGASD_Null, SAGASD, 4),
-	(APTR)-1
-};
-
-const IPTR SAGASD_Tab[] = {
-	sizeof(struct SAGASDBase),
-	(IPTR)SAGASD_Vec,
-	(IPTR)NULL,
-	(IPTR)SAGASD_Init
-};
-
-const struct Resident ROMTag = {
-    RTC_MATCHWORD,
-    (struct Resident *)&ROMTag,
-    (APTR)(&terminator + 1),
-    RTF_COLDSTART & RTF_AUTOINIT, /* Add RTF_COLDSTART if you want to be resident */
-    VERSION,
-    NT_DEVICE, /* Make this NT_DEVICE if needed */
-    1, /* PRI, usually not needed unless you're resident */
-    (STRPTR)LIBNAME,
-    (STRPTR)VSTRING,
-    (APTR)SAGASD_Tab
-};
+ADD2INITLIB(GM_UNIQUENAME(init), 0)
+ADD2EXPUNGELIB(GM_UNIQUENAME(expunge), 0)
+ADD2OPENDEV(GM_UNIQUENAME(open), 0)
+ADD2CLOSEDEV(GM_UNIQUENAME(close), 0)
+/* vim: set shiftwidth=4 expandtab:  */
