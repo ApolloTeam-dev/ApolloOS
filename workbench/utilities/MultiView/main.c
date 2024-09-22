@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -730,12 +730,17 @@ static void OpenDTO(void)
                             }
 
                             filename = GetFileName(MSG_ASL_OPEN_TITLE);
-                            if (filename) continue;
+                            if (filename)
+			    {
+			        ReleaseDataType(dtn);
+			        UnLock(lock);
+			        continue;
+			    }
                         }
                         ReleaseDataType(dtn);
                     }
                     UnLock(lock);
-                }
+                }	    
             }
 
             if (errnum >= DTERROR_UNKNOWN_DATATYPE)
