@@ -239,6 +239,13 @@ static void LoadFont(void)
     D(bug("[MultiView] %s()\n", __func__));
 
     font = OpenDiskFont(&textattr);
+
+    if (!font)
+    {
+        InitDefaultFont();
+        font = OpenDiskFont(&textattr);
+    }
+
     if (!font)
     {
         textattr.ta_Name  = "topaz.font";
@@ -261,7 +268,7 @@ static void KillFont(void)
 
 /*********************************************************************************************/
 
-static void InitDefaults(void)
+static void InitDefaultFont(void)
 {
     struct TextFont *defaultfont = GfxBase->DefaultFont;
 
@@ -1710,7 +1717,6 @@ void InitWin(void)
 {
     D(bug("[MultiView] %s()\n", __func__));
 
-    InitDefaults();
     LoadFont();
     MakeICObjects();
     OpenDTO();
@@ -1755,6 +1761,7 @@ int main(int argc, char **argv)
     tdt_text_wordwrap = TRUE;
     separate_screen   = FALSE;
 
+    InitDefaultFont(); /* May be overridden in GetArguments() if user specifies a font */
     InitLocale("System/Utilities/MultiView.catalog", 2);
     InitMenus(nm);
     InitMenus(nmpict);
