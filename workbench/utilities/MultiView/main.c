@@ -740,7 +740,7 @@ static void OpenDTO(void)
                         ReleaseDataType(dtn);
                     }
                     UnLock(lock);
-                }	    
+		}
             }
 
             if (errnum >= DTERROR_UNKNOWN_DATATYPE)
