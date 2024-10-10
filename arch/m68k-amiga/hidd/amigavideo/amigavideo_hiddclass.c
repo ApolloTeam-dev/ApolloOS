@@ -34,7 +34,7 @@
 static const UWORD widthtable[] = {
     REZ_X_MIN,
     (REZ_X_MIN << 1),
-    // (REZ_X_MIN << 2), /* uncomment this to have SuperHires modes */
+    (REZ_X_MIN << 2),
     0
 };
 static const UWORD heighttable[] = {

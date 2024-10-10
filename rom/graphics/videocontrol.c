@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2010, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2010, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Graphics function VideoControl()
@@ -12,6 +12,8 @@
 #include <proto/utility.h>
 
 #include "graphics_intern.h"
+
+#define	MIN(a,b)	((a)<(b)?(a):(b))
 
 /*****************************************************************************
 
@@ -165,19 +167,36 @@
 
 /* TODO: Implement these */
 	case VTAG_PF1_TO_SPRITEPRI_SET:
+	    if(cm->cm_vp)
+	    {
+		cm->cm_vp->SpritePriorities = ((cm->cm_vp->SpritePriorities & 0x38) | MIN(tag->ti_Data, 7));
+		// needs immediate bplcon2
+	    }
 	    break;
 
 	case VTAG_PF1_TO_SPRITEPRI_GET:
 	    tag->ti_Tag = VTAG_PF1_TO_SPRITEPRI_SET;
-	    tag->ti_Data = 0;
+	    tag->ti_Data = 4;
+	    if(cm->cm_vp)
+	    {
+		tag->ti_Data = (cm->cm_vp->SpritePriorities & 0x7);
+	    }
 	    break;
 
 	case VTAG_PF2_TO_SPRITEPRI_SET:
+	    if(cm->cm_vp)
+	    {
+		cm->cm_vp->SpritePriorities = ((cm->cm_vp->SpritePriorities & 0x7) | (MIN(tag->ti_Data, 7) << 3));
+	    }
 	    break;
 
 	case VTAG_PF2_TO_SPRITEPRI_GET:
 	    tag->ti_Tag = VTAG_PF2_TO_SPRITEPRI_SET;
-	    tag->ti_Data = 0;
+	    tag->ti_Data = 4;
+	    if(cm->cm_vp)
+	    {
+		tag->ti_Data = ((cm->cm_vp->SpritePriorities & 0x38) >> 3);
+	    }
 	    break;
 
 	case VTAG_BORDERBLANK_SET:
@@ -218,9 +237,11 @@
 
 /* TODO: implement these */
 	case VTAG_CHROMAKEY_SET:
+	    cm->Flags |= COLORMAP_TRANSPARENCY;
 	    break;
 
 	case VTAG_CHROMAKEY_CLR:
+	    cm->Flags &= ~COLORMAP_TRANSPARENCY;
 	    break;
 
 	case VTAG_CHROMAKEY_GET:
@@ -229,9 +250,11 @@
 	    break;
 	
 	case VTAG_BITPLANEKEY_SET:
+	    cm->Flags |= COLORPLANE_TRANSPARENCY;
 	    break;
 
 	case VTAG_BITPLANEKEY_CLR:
+	    cm->Flags &= ~COLORPLANE_TRANSPARENCY;
 	    break;
 
 	case VTAG_BITPLANEKEY_GET:
@@ -240,9 +263,14 @@
 	    break;
 
 	case VTAG_CHROMA_PEN_SET:
+	    if(tag->ti_Data < cm->Count) ((UWORD *)(cm->ColorTable))[tag->ti_Data] |= 0x8000;
 	    break;
 
 	case VTAG_CHROMA_PEN_CLR:
+	    if(tag->ti_Data < cm->Count)
+	    {
+	      ((UWORD *)(cm->ColorTable))[tag->ti_Data] &= 0x7fff;
+	    }
 	    break;
 
 	case VTAG_CHROMA_PEN_GET:
@@ -359,6 +387,22 @@
 
 /* TODO: implement this */
 	case VTAG_BATCH_ITEMS_ADD:
+	    Forbid();
+	    struct TagItem *bi = cm->cm_batch_items;
+	    struct TagItem *ti = (struct TagItem *)tag->ti_Data;
+	    while(ti && ti->ti_Tag != VTAG_END_CM)
+	    {
+	       if(ti->ti_Tag == VTAG_NEXTBUF_CM) ti = (struct TagItem *)ti->ti_Data;
+	       else ti++;
+	       if(ti != (struct TagItem *)ti->ti_Data)
+	       {
+  		   ti->ti_Tag = VTAG_NEXTBUF_CM;
+	           ti->ti_Data = (ULONG)bi;
+	           ti = (struct TagItem *)tag->ti_Data;
+	       }else ti = bi;
+	       cm->cm_batch_items = ti;
+	    }
+	    Permit();
 	    break;
 
 	case VTAG_BATCH_ITEMS_GET:
@@ -379,6 +423,17 @@
 	    tag->ti_Data = cm->VPModeID;
 	    break;
 
+	/*  add missing ones */
+
+        case VTAG_DEFSPRITERESN_SET:
+            cm->SpriteResDefault = tag->ti_Data;
+            break;          
+
+        case VTAG_DEFSPRITERESN_GET:
+            tag->ti_Tag = VTAG_DEFSPRITERESN_SET;
+            tag->ti_Data = cm->SpriteResDefault;
+            break;
+
 	default:
 	    res = 1;
 	}
@@ -387,6 +442,8 @@
     if (immediate) {
     
 	/* TODO: update SpriteBase in the graphics driver here */
+
+	/* Also missing immediates for bplcon<x> and color */
 
         *immediate = 0;
     }
