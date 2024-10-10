@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -239,6 +239,13 @@ static void LoadFont(void)
     D(bug("[MultiView] %s()\n", __func__));
 
     font = OpenDiskFont(&textattr);
+
+    if (!font)
+    {
+        InitDefaultFont();
+        font = OpenDiskFont(&textattr);
+    }
+
     if (!font)
     {
         textattr.ta_Name  = "topaz.font";
@@ -261,7 +268,7 @@ static void KillFont(void)
 
 /*********************************************************************************************/
 
-static void InitDefaults(void)
+static void InitDefaultFont(void)
 {
     struct TextFont *defaultfont = GfxBase->DefaultFont;
 
@@ -730,12 +737,17 @@ static void OpenDTO(void)
                             }
 
                             filename = GetFileName(MSG_ASL_OPEN_TITLE);
-                            if (filename) continue;
+                            if (filename)
+			    {
+			        ReleaseDataType(dtn);
+			        UnLock(lock);
+			        continue;
+			    }
                         }
                         ReleaseDataType(dtn);
                     }
                     UnLock(lock);
-                }
+		}
             }
 
             if (errnum >= DTERROR_UNKNOWN_DATATYPE)
@@ -1705,7 +1717,6 @@ void InitWin(void)
 {
     D(bug("[MultiView] %s()\n", __func__));
 
-    InitDefaults();
     LoadFont();
     MakeICObjects();
     OpenDTO();
@@ -1750,6 +1761,7 @@ int main(int argc, char **argv)
     tdt_text_wordwrap = TRUE;
     separate_screen   = FALSE;
 
+    InitDefaultFont(); /* May be overridden in GetArguments() if user specifies a font */
     InitLocale("System/Utilities/MultiView.catalog", 2);
     InitMenus(nm);
     InitMenus(nmpict);
