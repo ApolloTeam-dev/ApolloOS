@@ -23,16 +23,46 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef SAGA_SD_H
-#define SAGA_SD_H
-#define SAGA_SD_BASE            0xde0000        /* Base address */
-#define SAGA_SD_DATA            0x0000          /* Read as UBYTE/Write as UBYTE */
-#define SAGA_SD_CTL             0x0004          /* UWORD, Write only */
-#define   SAGA_SD_CTL_NCS       (1 << 0)        /* nChipSelect */
-#define SAGA_SD_STAT            0x0006          /* UWORD, Read only */
-#define   SAGA_SD_STAT_NCD      (1 << 0)        /* nCardDetect */
-#define SAGA_SD_CLK             0x000c
-#define   SAGA_SD_CLK_DIV(x)    ((x) & 0xff)
+#ifndef COMMON_H
+#define COMMON_H
 
-#endif /* SAGA_SD_H */
+#include <proto/arossupport.h>
+
+static inline UBYTE Read8(IPTR addr)
+{
+    return *(volatile UBYTE *)addr;
+}
+
+static inline VOID Write8(IPTR addr, UBYTE value)
+{
+    if (!SIMULATE) {
+        *(volatile UBYTE *)addr = value;
+    }
+}
+
+static inline UWORD Read16(IPTR addr)
+{
+    return *(volatile UWORD *)addr;
+}
+
+static inline VOID Write16(IPTR addr, UWORD value)
+{
+    if (!SIMULATE) {
+        *(volatile UWORD *)addr = value;
+    }
+}
+
+static inline ULONG Read32(IPTR addr)
+{
+    return *(volatile ULONG *)addr;
+}
+
+static inline VOID Write32(IPTR addr, ULONG value)
+{
+    if (!SIMULATE) {
+        *(volatile ULONG *)addr = value;
+    }
+}
+
+#endif /* COMMON_H */
 /* vim: set shiftwidth=4 expandtab:  */

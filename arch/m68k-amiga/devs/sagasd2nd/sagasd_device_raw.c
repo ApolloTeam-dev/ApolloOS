@@ -62,8 +62,8 @@
 
 #define VERSION 2
 #define REVISION 2
-#define LIBNAME "sagasd.device"
-#define VSTRING "sagasd.device v#VERSION##.#REVISION" 
+#define LIBNAME "sagasd2nd.device"
+#define VSTRING "sagasd2nd.device v#VERSION##.#REVISION"
 
 #if DEBUG
 #define debug(x,args...) bug("%s:%ld " x "\n", __func__, (unsigned long)__LINE__ ,##args)
