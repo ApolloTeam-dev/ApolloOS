@@ -59,8 +59,8 @@ jobs:
         run: cat bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin > aros.rom
       
       # Make the rom
-      - name: AROS.HUNK Image
-        run: zip -9r aros.hunk.zip bin/amiga-m68k/AROS.HUNK
+      # - name: AROS.HUNK Image
+      #  run: zip -9r aros.hunk.zip bin/amiga-m68k/AROS.HUNK
       
       #Upload the ROM
       - name: Upload ROM
@@ -77,8 +77,8 @@ jobs:
           path: distfiles/aros-amiga-m68k.iso
           
       #Upload the Installation as a ZIP File
-      - name: AROS.HUNK image
-        uses: actions/upload-artifact@v4
-        with:
-          name: AROS.HUNK image
-          path: aros.hunk.zip
+      #- name: AROS.HUNK image
+      #  uses: actions/upload-artifact@v4
+      #  with:
+      #    name: AROS.HUNK image
+      #    path: aros.hunk.zip
