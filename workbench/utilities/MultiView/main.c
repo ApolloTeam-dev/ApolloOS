@@ -95,11 +95,19 @@ static jmp_buf 		exit_buf;
 
 /*********************************************************************************************/
 
+static void OpenLibs(void);
 static void CloseLibs(void);
+static void LoadFont(void);
+static void InitDefaultFont(void);
 static void KillFont(void);
+static void GetArguments(void);
 static void FreeArguments(void);
+static void GetOptions(struct WBStartup *startup);
+static struct DiskObject *LoadProgIcon(struct WBStartup *startup, BPTR *icondir, STRPTR iconname);
 static void KillICObjects(void);
+static void GetVisual(void);
 static void FreeVisual(void);
+static void MakeGadgets(void);
 static void KillGadgets(void);
 static void CloseDTO(void);
 static void KillWindow(void);
@@ -173,7 +181,7 @@ void WinCleanup(void)
     KillFont();
 }
 
-/*********************************************************************************************/
+/***************static void LoadFont(void)******************************************************************************/
 
 void Cleanup(CONST_STRPTR msg)
 {
@@ -208,7 +216,6 @@ void Cleanup(CONST_STRPTR msg)
     longjmp(exit_buf, 0);
 }
 
-
 /*********************************************************************************************/
 
 static void OpenLibs(void)
@@ -242,7 +249,7 @@ static void CloseLibs(void)
     }
 }
 
-/*********************************************************************************************/
+/****************static void LoadFont(void)*****************************************************************************/
 
 static void LoadFont(void)
 {
@@ -250,7 +257,7 @@ static void LoadFont(void)
 
     font = OpenDiskFont(&textattr);
 
-    if (!font)
+    if (!font) 
     {
         InitDefaultFont();
         font = OpenDiskFont(&textattr);
@@ -340,7 +347,7 @@ static void GetArguments(void)
         wincoords.MinX = *(LONG *)args[ARG_WINDOWLEFT];
     }
 
-    if (args[ARG_WINDOWTOP)
+    if (args[ARG_WINDOWTOP])
     {
         wincoords.MinY = *(LONG *)args[ARG_WINDOWTOP];
     }
@@ -350,7 +357,7 @@ static void GetArguments(void)
         wincoords.MaxX = *(LONG *)args[ARG_WINDOWWIDTH];
     }
 
-    if (args[ARG_WINDOWHEIGHT)
+    if (args[ARG_WINDOWHEIGHT])
     {
         wincoords.MaxY = *(LONG *)args[ARG_WINDOWHEIGHT];
     }
@@ -995,7 +1002,7 @@ static void MakeWindow(void)
 
     win = OpenWindowTags(0, WA_PubScreen        , (IPTR)scr             ,
                             WA_Title            , (IPTR)objnamebuffer   ,
-                            WA_BackDrop         , win_backdrop          ,
+//                          WA_BackDrop         , win_backdrop          ,
                             WA_CloseGadget      , TRUE                  ,
                             WA_DepthGadget      , TRUE                  ,
                             WA_DragBar          , TRUE                  ,
