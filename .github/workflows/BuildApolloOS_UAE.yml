@@ -62,21 +62,21 @@ jobs:
       
       #Upload the ROM
       - name: Upload ROM
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: AROS ROM
           path: aros.rom
         
       #Upload the ISO
       - name: Upload ISO
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ISO Image
           path: distfiles/aros-amiga-m68k.iso
           
       #Upload the Installation as a ZIP File
       - name: AROS.HUNK image
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: AROS.HUNK image
           path: aros.hunk.zip
