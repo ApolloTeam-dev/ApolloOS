@@ -22,8 +22,6 @@ extern struct NewMenu nm[];
 extern struct NewMenu nmpict[];
 extern struct NewMenu nmtext[];
 
-IPTR win_backdrop = FALSE;
-
 /*********************************************************************************************/
 
 /* Many datatype classes seem to rely on OM_NOTIFY calls coming back to the datatype object
@@ -335,11 +333,6 @@ static void GetArguments(void)
     if (args[ARG_FONTSIZE])
     {
         textattr.ta_YSize = *(LONG *)args[ARG_FONTSIZE];
-    }
-
-    if (args[ARG_BACKDROP])
-    {
-        win_backdrop = TRUE;
     }
 
     if (args[ARG_WINDOWLEFT])
@@ -1002,7 +995,6 @@ static void MakeWindow(void)
 
     win = OpenWindowTags(0, WA_PubScreen        , (IPTR)scr             ,
                             WA_Title            , (IPTR)objnamebuffer   ,
-//                          WA_BackDrop         , win_backdrop          ,
                             WA_CloseGadget      , TRUE                  ,
                             WA_DepthGadget      , TRUE                  ,
                             WA_DragBar          , TRUE                  ,
