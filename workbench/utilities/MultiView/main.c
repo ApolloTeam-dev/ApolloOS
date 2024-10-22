@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -32,26 +32,34 @@ extern struct NewMenu nmtext[];
 /*********************************************************************************************/
 
 #define ARG_TEMPLATE    "FILE,CLIPBOARD/S,CLIPUNIT/K/N,SCREEN/S,PUBSCREEN/K,REQUESTER/S," \
-                        "BOOKMARK/S,FONTNAME/K,FONTSIZE/K/N,BACKDROP/S,WINDOW/S," \
-                        "PORTNAME/K,IMMEDIATE/S,REPEAT/S,PRTUNIT/K/N"
+                        "BOOKMARK/S,FONTNAME/K,FONTSIZE/K/N,CHARSET/K,BACKDROP/S,WINDOW/S," \
+                        "PORTNAME/K,IMMEDIATE/S,REPEAT/S,PRTUNIT/K/N," \
+                        "WINDOWLEFT/K/N,WINDOWTOP/K/N,WINDOWWIDTH/K/N,WINDOWHEIGHT/K/N," \
+                        "AUTORESIZE/S"
 
-#define ARG_FILE        0
-#define ARG_CLIPBOARD   1
-#define ARG_CLIPUNIT    2
-#define ARG_SCREEN      3
-#define ARG_PUBSCREEN   4
-#define ARG_REQUESTER   5
-#define ARG_BOOKMARK    6
-#define ARG_FONTNAME    7
-#define ARG_FONTSIZE    8
-#define ARG_BACKDROP    9
-#define ARG_WINDOW      10
-#define ARG_PORTNAME    11
-#define ARG_IMMEDIATE   12
-#define ARG_REPEAT      13
-#define ARG_PRTUNIT     14
+#define ARG_FILE         0
+#define ARG_CLIPBOARD    1
+#define ARG_CLIPUNIT     2
+#define ARG_SCREEN       3
+#define ARG_PUBSCREEN    4
+#define ARG_REQUESTER    5
+#define ARG_BOOKMARK     6
+#define ARG_FONTNAME     7
+#define ARG_FONTSIZE     8
+#define ARG_CHARSET      9
+#define ARG_BACKDROP     10
+#define ARG_WINDOW       11
+#define ARG_PORTNAME     12
+#define ARG_IMMEDIATE    13
+#define ARG_REPEAT       14
+#define ARG_PRTUNIT      15
+#define ARG_WINDOWLEFT   16
+#define ARG_WINDOWTOP    17
+#define ARG_WINDOWWIDTH  18
+#define ARG_WINDOWHEIGHT 19
+#define ARG_AUTORESIZE   20
 
-#define NUM_ARGS        15
+#define NUM_ARGS        21
 
 /*********************************************************************************************/
 
@@ -85,11 +93,19 @@ static jmp_buf 		exit_buf;
 
 /*********************************************************************************************/
 
+static void OpenLibs(void);
 static void CloseLibs(void);
+static void LoadFont(void);
+static void InitDefaultFont(void);
 static void KillFont(void);
+static void GetArguments(void);
 static void FreeArguments(void);
+static void GetOptions(struct WBStartup *startup);
+static struct DiskObject *LoadProgIcon(struct WBStartup *startup, BPTR *icondir, STRPTR iconname);
 static void KillICObjects(void);
+static void GetVisual(void);
 static void FreeVisual(void);
+static void MakeGadgets(void);
 static void KillGadgets(void);
 static void CloseDTO(void);
 static void KillWindow(void);
@@ -198,7 +214,6 @@ void Cleanup(CONST_STRPTR msg)
     longjmp(exit_buf, 0);
 }
 
-
 /*********************************************************************************************/
 
 static void OpenLibs(void)
@@ -239,6 +254,13 @@ static void LoadFont(void)
     D(bug("[MultiView] %s()\n", __func__));
 
     font = OpenDiskFont(&textattr);
+
+    if (!font) 
+    {
+        InitDefaultFont();
+        font = OpenDiskFont(&textattr);
+    }
+
     if (!font)
     {
         textattr.ta_Name  = "topaz.font";
@@ -261,7 +283,7 @@ static void KillFont(void)
 
 /*********************************************************************************************/
 
-static void InitDefaults(void)
+static void InitDefaultFont(void)
 {
     struct TextFont *defaultfont = GfxBase->DefaultFont;
 
@@ -312,6 +334,26 @@ static void GetArguments(void)
     {
         textattr.ta_YSize = *(LONG *)args[ARG_FONTSIZE];
     }
+
+    if (args[ARG_WINDOWLEFT])
+    {
+        wincoords.MinX = *(LONG *)args[ARG_WINDOWLEFT];
+    }
+
+    if (args[ARG_WINDOWTOP])
+    {
+        wincoords.MinY = *(LONG *)args[ARG_WINDOWTOP];
+    }
+    
+    if (args[ARG_WINDOWWIDTH])
+    {
+        wincoords.MaxX = *(LONG *)args[ARG_WINDOWWIDTH];
+    }
+
+    if (args[ARG_WINDOWHEIGHT])
+    {
+        wincoords.MaxY = *(LONG *)args[ARG_WINDOWHEIGHT];
+    }
 }
 
 static struct DiskObject *LoadProgIcon(struct WBStartup *startup, BPTR *icondir, STRPTR iconname)
@@ -322,28 +364,28 @@ static struct DiskObject *LoadProgIcon(struct WBStartup *startup, BPTR *icondir,
 
     if (startup)
     {
-    	BPTR olddir;
+        BPTR olddir;
 	
-	*icondir = startup->sm_ArgList[0].wa_Lock;
+        *icondir = startup->sm_ArgList[0].wa_Lock;
 	
-	olddir = CurrentDir(*icondir);	
-    	progicon = GetDiskObject(startup->sm_ArgList[0].wa_Name);		
-	CurrentDir(olddir);
+        olddir = CurrentDir(*icondir);	
+        progicon = GetDiskObject(startup->sm_ArgList[0].wa_Name);		
+        CurrentDir(olddir);
 
-	strncpy(iconname, startup->sm_ArgList[0].wa_Name, 255);
+        strncpy(iconname, startup->sm_ArgList[0].wa_Name, 255);
     }
     else
     {	
-	if (GetProgramName(iconname, 255))
-	{
-    	    BPTR olddir;
-	    
-	    *icondir = GetProgramDir();
-	    
-	    olddir = CurrentDir(*icondir);
-    	    progicon = GetDiskObject(iconname);	    
-	    CurrentDir(olddir);
-	}	    
+        if (GetProgramName(iconname, 255))
+        {
+            BPTR olddir;
+            
+	        *icondir = GetProgramDir();
+
+            olddir = CurrentDir(*icondir);
+            progicon = GetDiskObject(iconname);	    
+	        CurrentDir(olddir);
+        }	    
     }
     
     return progicon;
@@ -730,12 +772,17 @@ static void OpenDTO(void)
                             }
 
                             filename = GetFileName(MSG_ASL_OPEN_TITLE);
-                            if (filename) continue;
+                            if (filename)
+                            {
+                                ReleaseDataType(dtn);
+                                UnLock(lock);
+                                continue;
+                            }
                         }
                         ReleaseDataType(dtn);
                     }
                     UnLock(lock);
-                }
+		}
             }
 
             if (errnum >= DTERROR_UNKNOWN_DATATYPE)
@@ -1705,7 +1752,6 @@ void InitWin(void)
 {
     D(bug("[MultiView] %s()\n", __func__));
 
-    InitDefaults();
     LoadFont();
     MakeICObjects();
     OpenDTO();
@@ -1750,6 +1796,7 @@ int main(int argc, char **argv)
     tdt_text_wordwrap = TRUE;
     separate_screen   = FALSE;
 
+    InitDefaultFont(); /* May be overridden in GetArguments() if user specifies a font */
     InitLocale("System/Utilities/MultiView.catalog", 2);
     InitMenus(nm);
     InitMenus(nmpict);
@@ -1786,5 +1833,3 @@ int main(int argc, char **argv)
     
     return 0;
 }
-
-/*********************************************************************************************/
