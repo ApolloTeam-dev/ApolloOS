@@ -9,7 +9,6 @@
 #include <exec/rawfmt.h>
 
 #include "global.h"
-
 #include "compilerspecific.h"
 #include "debug.h"
 #include "arossupport.h"
@@ -17,6 +16,7 @@
 #include <setjmp.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 extern struct NewMenu nm[];
 extern struct NewMenu nmpict[];
@@ -89,7 +89,13 @@ static UBYTE            fontname[256];
 static WORD             winwidth, winheight;
 static WORD             sizeimagewidth, sizeimageheight;
 static BOOL             model_has_members;
-static jmp_buf 		exit_buf;
+static BOOL             FromWB;
+static BOOL             bClipBoard = FALSE;
+static BOOL             bRequester = TRUE;
+static BOOL             bWindow = FALSE;
+static APTR             clipunit = 0;
+static STRPTR           pubScreen;
+static jmp_buf exit_buf;
 
 /*********************************************************************************************/
 
@@ -100,8 +106,7 @@ static void InitDefaultFont(void);
 static void KillFont(void);
 static void GetArguments(void);
 static void FreeArguments(void);
-static void GetOptions(struct WBStartup *startup);
-static struct DiskObject *LoadProgIcon(struct WBStartup *startup, BPTR *icondir, STRPTR iconname);
+static void GetFileToolTypes(STRPTR fname);
 static void KillICObjects(void);
 static void GetVisual(void);
 static void FreeVisual(void);
@@ -316,11 +321,26 @@ static void GetArguments(void)
     }
 
     filename = (STRPTR)args[ARG_FILE];
-    if (!filename && !args[ARG_CLIPBOARD])
+    
+    if (args[ARG_REQUESTER]) /* Open file requester if using file and have no filename supplied */
+        bRequester = TRUE;
+        
+    if (args[ARG_CLIPBOARD]) /* Start with Clipboard data as input, as opposed to file */
     {
-        filename = GetFileName(MSG_ASL_OPEN_TITLE);
-        if (!filename) Cleanup(NULL);
+        bClipBoard = TRUE;
+        bRequester = FALSE; /* Mutually Exclusive options */
+        bWindow    = FALSE; /* Mutually Exclusive options */
     }
+
+    if (args[ARG_WINDOW]) /* Start with empty Window with no input */
+    {
+        bWindow    = TRUE;
+        bRequester = FALSE; /* Mutually Exclusive options */
+        bClipBoard = FALSE; /* Mutually Exclusive options */
+    }
+
+    if (args[ARG_CLIPUNIT]) 
+        clipunit = *(APTR *)args[ARG_CLIPUNIT];
 
     if (args[ARG_FONTNAME])
     {
@@ -331,84 +351,82 @@ static void GetArguments(void)
     }
 
     if (args[ARG_FONTSIZE])
-    {
         textattr.ta_YSize = *(LONG *)args[ARG_FONTSIZE];
-    }
 
     if (args[ARG_WINDOWLEFT])
-    {
         wincoords.MinX = *(LONG *)args[ARG_WINDOWLEFT];
-    }
 
     if (args[ARG_WINDOWTOP])
-    {
         wincoords.MinY = *(LONG *)args[ARG_WINDOWTOP];
-    }
     
     if (args[ARG_WINDOWWIDTH])
-    {
         wincoords.MaxX = *(LONG *)args[ARG_WINDOWWIDTH];
-    }
 
     if (args[ARG_WINDOWHEIGHT])
-    {
         wincoords.MaxY = *(LONG *)args[ARG_WINDOWHEIGHT];
-    }
+
+    if (args[ARG_PUBSCREEN])
+        pubScreen = (STRPTR)args[ARG_PUBSCREEN];
 }
 
-static struct DiskObject *LoadProgIcon(struct WBStartup *startup, BPTR *icondir, STRPTR iconname)
+static void GetFileToolTypes(STRPTR fname)
 {
-    struct DiskObject *progicon = NULL;
+    struct DiskObject *dobj;
+    char **toolarray;
+    char *s;
 
     D(bug("[MultiView] %s()\n", __func__));
 
-    if (startup)
+    if ((fname) && (dobj=GetDiskObject(fname)))
     {
-        BPTR olddir;
-	
-        *icondir = startup->sm_ArgList[0].wa_Lock;
-	
-        olddir = CurrentDir(*icondir);	
-        progicon = GetDiskObject(startup->sm_ArgList[0].wa_Name);		
-        CurrentDir(olddir);
+        /* We have read the DiskObject (icon) for this arg */
+        toolarray = (char **)dobj->do_ToolTypes; 
 
-        strncpy(iconname, startup->sm_ArgList[0].wa_Name, 255);
-    }
-    else
-    {	
-        if (GetProgramName(iconname, 255))
+        if (s = (char *)FindToolType(toolarray,"REQUESTER"))
+            bRequester = TRUE;  
+
+        if (s = (char *)FindToolType(toolarray,"CLIPBOARD"))
         {
-            BPTR olddir;
-            
-	        *icondir = GetProgramDir();
-
-            olddir = CurrentDir(*icondir);
-            progicon = GetDiskObject(iconname);	    
-	        CurrentDir(olddir);
-        }	    
-    }
-    
-    return progicon;
-}
-
-static void GetOptions(struct WBStartup *startup)
-{
-    struct DiskObject *mvIcon;
-    char mvIconName[256];
-    BPTR mvDirLock;
-
-    D(bug("[MultiView] %s()\n", __func__));
-
-    mvIcon = LoadProgIcon(startup, &mvDirLock, mvIconName);
-    if (mvIcon)
-    {
-        const STRPTR *toolarray = (const STRPTR *)mvIcon->do_ToolTypes;
-        char *s;
-        if (s = (char *)FindToolType(toolarray,"EXPORT"))
-        {
-            cmdexport = StrDup(s);
-            D(bug("[MultiView] EXPORT = '%s'\n", cmdexport);)
+            bClipBoard = TRUE;
+            bRequester = FALSE; /* Mutually Exclusive options */
+            bWindow    = FALSE; /* Mutually Exclusive options */
         }
+
+        if (s = (char *)FindToolType(toolarray,"WINDOW"))
+        {
+            bWindow    = TRUE;
+            bRequester = FALSE; /* Mutually Exclusive options */
+            bClipBoard = FALSE; /* Mutually Exclusive options */
+        }
+        
+        if (s = (char *)FindToolType(toolarray,"CLIPUNIT"))
+            clipunit = (APTR)atoi(s);
+        
+        if (s = (char *)FindToolType(toolarray,"PUBSCREEN"))
+            pubScreen = (STRPTR)strdup(s);
+
+        if (s = (char *)FindToolType(toolarray,"FONTNAME"))
+        {
+            strncpy(fontname, s, 255 - 5);
+            if (!strstr(fontname, ".font")) strcat(fontname, ".font");
+            textattr.ta_Name = fontname;
+        }
+        if (s = (char *)FindToolType(toolarray,"FONTSIZE"))
+            textattr.ta_YSize = (LONG)atoi(s);
+
+        if (s = (char *)FindToolType(toolarray,"WINDOWLEFT"))
+            wincoords.MinX = (LONG)atoi(s);
+
+        if (s = (char *)FindToolType(toolarray,"WINDOWTOP"))
+            wincoords.MinY = (LONG)atoi(s);
+
+        if (s = (char *)FindToolType(toolarray,"WINDOWWIDTH"))
+            wincoords.MaxX = (LONG)atoi(s);
+
+        if (s = (char *)FindToolType(toolarray,"WINDOWHEIGHT"))
+            wincoords.MaxY = (LONG)atoi(s);
+
+        FreeDiskObject(dobj);
     }
 }
 
@@ -514,7 +532,8 @@ static void GetVisual(void)
 {
     D(bug("[MultiView] %s()\n", __func__));
 
-    scr = LockPubScreen((CONST_STRPTR)args[ARG_PUBSCREEN]);
+    //scr = LockPubScreen((CONST_STRPTR)args[ARG_PUBSCREEN]);
+    scr = LockPubScreen((CONST_STRPTR)pubScreen);
     if (!scr) Cleanup(MSG(MSG_CANT_LOCK_SCR));
 
     dri = GetScreenDrawInfo(scr);
@@ -724,12 +743,8 @@ static void OpenDTO(void)
     {
         D(bug("[MultiView] calling NewDTObject\n"));
 
-        if (!old_dto && args[ARG_CLIPBOARD])
+        if (!old_dto && bClipBoard)
         {
-            APTR clipunit = 0;
-
-            if (args[ARG_CLIPUNIT]) clipunit = *(APTR *)args[ARG_CLIPUNIT];
-
             dto = NewDTObject(clipunit, ICA_TARGET    , (IPTR)model_obj,
                                     GA_ID         , 1000           ,
                                     DTA_SourceType, DTST_CLIPBOARD ,
@@ -1774,10 +1789,14 @@ void InitWin(void)
 
 int main(int argc, char **argv)
 {
-    struct WBStartup *startup = NULL;
+    struct WBStartup *WBenchMsg;
+    struct WBArg *wbarg;
     int rc;
 
     D(bug("[MultiView] %s()\n", __func__));
+
+    BOOL FromWb = (argc == 0 ) ? TRUE : FALSE;
+    filename = NULL;
 
     /* This is for when Cleanup() is called */
     rc = setjmp(exit_buf);
@@ -1802,28 +1821,58 @@ int main(int argc, char **argv)
     InitMenus(nmpict);
     InitMenus(nmtext);
     OpenLibs();
-    
-    if (argc == 0)
-    {
-        startup = (struct WBStartup *) argv;
-        
-        if (startup->sm_NumArgs >= 2)
-        {
-            /* FIXME: all arguments but the first are ignored */
-            cd       = CurrentDir(startup->sm_ArgList[1].wa_Lock);
-            filename = startup->sm_ArgList[1].wa_Name;
-        }
-        else
-        {
-            filename = GetFileName(MSG_ASL_OPEN_TITLE);
-            if (!filename) Cleanup(NULL);
-        }
-    }
-    else
+
+    if (!FromWb)
     {
         GetArguments();
     }
-    GetOptions(startup);
+    else
+    {
+        WBenchMsg = (struct WBStartup *) argv;
+        wbarg = WBenchMsg->sm_ArgList;
+
+        /* Note wbarg++ at end of FOR statement steps through wbargs.
+         * First arg is our executable (tool).  Any additional args
+         * are projects/icons passed to us via either extend select
+         * or default tool method.
+         * In our case, we only care about 2nd arg which is the filename
+         */
+
+        if ( WBenchMsg->sm_NumArgs > 0)
+        {
+            /* Pass 1 gets any Tooltypes from MultiView Icon
+               Pass 2 gets any Tooltypes from file icon, overlaying MultiView Icon Tooltypes
+               */
+            for (int i = 0; i < 2 && i < WBenchMsg->sm_NumArgs; i++)
+            {
+                if ( *wbarg->wa_Name )
+                {
+                    /* if there's a directory lock for this wbarg, CD there */
+                    cd = -1;
+                    if (wbarg->wa_Lock)
+                        cd = CurrentDir(wbarg->wa_Lock);
+
+                    if (i > 0 )
+                        filename = wbarg->wa_Name;
+
+                    GetFileToolTypes(wbarg->wa_Name);
+
+                    if (cd != -1)
+                        CurrentDir(cd); /* CD back where we were */
+                }
+                wbarg++;
+            }
+        }
+    }
+
+    if (!filename && bRequester && !bWindow && !bClipBoard)
+        filename = GetFileName(MSG_ASL_OPEN_TITLE);
+
+    if (filename) 
+        GetFileToolTypes(filename);
+    else
+        if (!bWindow && !bClipBoard)
+            Cleanup(NULL);
 
     InitIScreenNotify();
     InitWin();
