@@ -314,13 +314,8 @@ static void GetArguments(void)
 {
     D(bug("[MultiView] %s()\n", __func__));
 
-    if (!(myargs = ReadArgs(ARG_TEMPLATE, args, NULL)))
-    {
-        Fault(IoErr(), 0, s, 256);
-        Cleanup(s);
-    }
-
-    filename = (STRPTR)args[ARG_FILE];
+    if (!filename)
+        filename = (STRPTR)args[ARG_FILE];
     
     if (args[ARG_REQUESTER]) /* Open file requester if using file and have no filename supplied */
         bRequester = TRUE;
@@ -1822,11 +1817,7 @@ int main(int argc, char **argv)
     InitMenus(nmtext);
     OpenLibs();
 
-    if (!FromWb)
-    {
-        GetArguments();
-    }
-    else
+    if (FromWb)
     {
         WBenchMsg = (struct WBStartup *) argv;
         wbarg = WBenchMsg->sm_ArgList;
@@ -1864,15 +1855,28 @@ int main(int argc, char **argv)
             }
         }
     }
+    else /* from CLI */
+    {
+        if (!(myargs = ReadArgs(ARG_TEMPLATE, args, NULL)))
+        {
+            Fault(IoErr(), 0, s, 256);
+            Cleanup(s);
+        }
+        GetArguments();
+    }
 
     if (!filename && bRequester && !bWindow && !bClipBoard)
         filename = GetFileName(MSG_ASL_OPEN_TITLE);
 
     if (filename) 
         GetFileToolTypes(filename);
-    else
-        if (!bWindow && !bClipBoard)
-            Cleanup(NULL);
+
+    /* ensure CLI parms beat icon parms */
+    if (!FromWb)
+        GetArguments();
+
+    if (!filename &&!bWindow && !bClipBoard)
+        Cleanup(NULL);
 
     InitIScreenNotify();
     InitWin();
