@@ -361,7 +361,7 @@
 							CBUMP(&cl);
 							CMOVE(ci, custom->color[++t],CurVSprite->SprColors[1]);
 							CBUMP(&cl);
-				    			MOVE(ci, custom->color[++t],CurVSprite->SprColors[2]);
+				    			CMOVE(ci, custom->color[++t],CurVSprite->SprColors[2]);
 							CBUMP(&cl);
 						}
 					}
