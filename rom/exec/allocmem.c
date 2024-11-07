@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2015, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2015, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Allocate some memory
@@ -10,7 +10,6 @@
 #include <exec/execbase.h>
 #include <aros/libcall.h>
 #include <aros/asmcall.h>
-#include <aros/rt.h>
 #include <aros/macros.h>
 #include <aros/arossupportbase.h>
 #include <exec/memory.h>
@@ -117,10 +116,6 @@
     {
         res = nommu_AllocMem(byteSize, requirements, &loc, SysBase);
     } while (res == NULL && checkMemHandlers(&cmhs, SysBase) == MEM_TRY_AGAIN);
-
-#if ENABLE_RT
-    RT_Add (RTT_MEMORY, res, origSize);
-#endif  
 
     res = MungWall_Build(res, NULL, origSize, requirements, &loc, SysBase);
 
