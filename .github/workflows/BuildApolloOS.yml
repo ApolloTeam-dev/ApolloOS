@@ -20,13 +20,13 @@ jobs:
   # This workflow contains a single job called "build"
   build:
     # The type of runner that the job will run on
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     #runs-on: [self-hosted, linux, X64]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with: 
             submodules: recursive
 
@@ -59,26 +59,26 @@ jobs:
         run: cat bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin > aros.rom
       
       # Make the rom
-      - name: AROS.HUNK Image
-        run: zip -9r aros.hunk.zip bin/amiga-m68k/AROS.HUNK
+      # - name: AROS.HUNK Image
+      #  run: zip -9r aros.hunk.zip bin/amiga-m68k/AROS.HUNK
       
       #Upload the ROM
       - name: Upload ROM
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: AROS ROM
           path: aros.rom
         
       #Upload the ISO
       - name: Upload ISO
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ISO Image
           path: distfiles/aros-amiga-m68k.iso
           
       #Upload the Installation as a ZIP File
-      - name: AROS.HUNK image
-        uses: actions/upload-artifact@v2
-        with:
-          name: AROS.HUNK image
-          path: aros.hunk.zip
+      #- name: AROS.HUNK image
+      #  uses: actions/upload-artifact@v4
+      #  with:
+      #    name: AROS.HUNK image
+      #    path: aros.hunk.zip
