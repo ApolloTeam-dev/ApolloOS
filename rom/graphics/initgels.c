@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2007, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Graphics function InitGels()
@@ -80,6 +80,10 @@
 
 	head -> IntVSprite = NULL;
 	tail -> IntVSprite = NULL;
+	head -> PrevVSprite = NULL;
+	tail -> NextVSprite = NULL;
+
+	if(GInfo->collHandler) GInfo->collHandler->collPtrs[0] = 0;
 
 	AROS_LIBFUNC_EXIT
 } /* InitGels */
