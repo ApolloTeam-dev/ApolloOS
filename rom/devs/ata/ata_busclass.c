@@ -941,6 +941,7 @@ void ATABus__Hidd_ATABus__Shutdown(OOP_Class *cl, OOP_Object *o, OOP_Msg *msg)
 BOOL Hidd_ATABus_Start(OOP_Object *o, struct ataBase *ATABase)
 {
     struct ata_Bus *ab = OOP_INST_DATA(ATABase->busClass, o);
+    STRPTR TaskName = "ATA[PI] Subsystem";
 
     D(bug("[ATA:Bus] %s()\n", __func__));
 
