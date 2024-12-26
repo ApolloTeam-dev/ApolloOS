@@ -188,6 +188,8 @@ struct ata_Bus
 
    APTR                    	ab_BounceBufferPool;
 
+   BOOL use_da;
+
    /** functions go here **/
    void                   	(*ab_HandleIRQ)(struct ata_Unit* unit, UBYTE status);
 };
