@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2019, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2019, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -948,7 +948,22 @@ BOOL Hidd_ATABus_Start(OOP_Object *o, struct ataBase *ATABase)
     OOP_SetAttrsTags(o, aHidd_Bus_IRQHandler, Hidd_ATABus_HandleIRQ,
                         aHidd_Bus_IRQData   , ab,
                         TAG_DONE);
-    
+
+    // is this check correct? Please find more accurate way if possible
+    if(ATABase->ata__buscount == 0)
+    {
+    	if((d & 0xFF) != 0xFF)
+    		ab->use_da = FALSE;
+    	else ab->use_da = TRUE;
+    }
+    else
+    {
+    	if((a & 0xFF) != 0xFF)
+    		ab->use_da = TRUE;
+    	else ab->use_da = FALSE;
+    	TaskName = "ATA[PI] Subsystem 2";
+    }
+	
     /* scan bus - try to locate all devices (disables irq) */    
     ata_InitBus(ab);
 
@@ -995,14 +1010,26 @@ BOOL Hidd_ATABus_Start(OOP_Object *o, struct ataBase *ATABase)
      * then, if successful, insert units. This allows to keep things parallel.
      */
     D(bug("[ATA>>] Start: Bus %u: Unit 0 - %d, Unit 1 - %d\n", ab->ab_BusNum, ab->ab_Dev[0], ab->ab_Dev[1]));
-    return NewCreateTask(TASKTAG_PC         , BusTaskCode,
-                         TASKTAG_NAME       , "ATA[PI] Subsystem",
+    if(ATABase->ata__buscount == 0)
+    {
+   	 return NewCreateTask(TASKTAG_PC    , BusTaskCode,
+                         TASKTAG_NAME       , TaskName,
                          TASKTAG_STACKSIZE  , STACK_SIZE,
                          TASKTAG_PRI        , TASK_PRI,
                          TASKTAG_TASKMSGPORT, &ab->ab_MsgPort,
                          TASKTAG_ARG1       , ab,
                          TASKTAG_ARG2       , ATABase,
                          TAG_DONE) ? TRUE : FALSE;
+     }else{
+   	 return NewCreateTask(TASKTAG_PC    , BusTaskCode2,
+                         TASKTAG_NAME       , TaskName,
+                         TASKTAG_STACKSIZE  , STACK_SIZE,
+                         TASKTAG_PRI        , TASK_PRI,
+                         TASKTAG_TASKMSGPORT, &ab->ab_MsgPort,
+                         TASKTAG_ARG1       , ab,
+                         TASKTAG_ARG2       , ATABase,
+                         TAG_DONE) ? TRUE : FALSE;     
+     }
 }
 
 AROS_UFH3(BOOL, Hidd_ATABus_Open,
