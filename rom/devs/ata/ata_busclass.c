@@ -948,6 +948,11 @@ BOOL Hidd_ATABus_Start(OOP_Object *o, struct ataBase *ATABase)
     OOP_SetAttrsTags(o, aHidd_Bus_IRQHandler, Hidd_ATABus_HandleIRQ,
                         aHidd_Bus_IRQData   , ab,
                         TAG_DONE);
+    unsigned short *pd = (unsigned char *)0xdd0018;
+    unsigned short *pa = (unsigned char *)0xda0018;  
+    unsigned short d, a;
+    d = *pd;
+    a = *pa;
 
     // is this check correct? Please find more accurate way if possible
     if(ATABase->ata__buscount == 0)
