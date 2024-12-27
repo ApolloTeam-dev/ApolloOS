@@ -5,7 +5,7 @@ THREADS=${CPU_COUNT}
 #Some how, running more than 8 tasks doesn't succeed every time
 if [ ${THREADS} -gt  8 ]
 then
-	THREADS=1
+	THREADS=8
 fi
 
 args=("$@")

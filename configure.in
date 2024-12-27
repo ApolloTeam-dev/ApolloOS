@@ -762,6 +762,8 @@ dnl The target configuration section is responsible for setting up all
 dnl the paths for includes, and tools required to build AROS to some
 dnl particular target.
 
+apollorom_target=
+
 test_kernel_cc=no
 
 aros_nowarn_flags="NOWARN_UNUSED_COMMAND_LINE_ARGUMENT NOWARN_UNKNOWN_WARNING_OPTION NOWARN_POINTER_SIGN NOWARN_PARENTHESES"
@@ -3009,8 +3011,10 @@ if test "$nonvampire_support" = "yes"; then
 	aros_config_cflags="$aros_config_cflags -DNONVAMPIRE"
 	aros_kernel_cppflags="$aros_kernel_cppflags -DNONVAMPIRE"
 	aros_kernel_cflags="$aros_kernel_cflags -DNONVAMPIRE"
+    apollorom_target="UAE"
 else
 	AC_MSG_RESULT(no)
+    apollorom_target="V4"
 fi
 
 dnl check to see if we are enabling support for the V2
@@ -3351,6 +3355,8 @@ SORT=m4_normalize($SORT)
 TOUCH=m4_normalize($TOUCH)
 UNIQ=m4_normalize($UNIQ)
 
+apollorom_target=m4_normalize($apollorom_target)
+
 aros_config_cflags=m4_normalize($aros_config_cflags)
 aros_config_cppflags=m4_normalize($aros_config_cppflags)
 aros_config_cxxflags=m4_normalize($aros_config_cxxflags)
@@ -3479,6 +3485,8 @@ AC_SUBST(aros_cxx_libs)
 AC_SUBST(aros_shared_cflags)
 AC_SUBST(aros_shared_aflags)
 AC_SUBST(aros_shared_ldflags)
+
+AC_SUBST(apollorom_target)
 
 AC_SUBST(aros_warn_flags)
 AC_SUBST(aros_nowarn_flags)
@@ -3790,4 +3798,3 @@ if test -n "$aros_shared_cflags" ; then
     echo "SHARED_CFLAGS := $aros_shared_cflags" >> ${aros_hostcfg_dir}/host.cfg
     echo "SHARED_AR := $aros_shared_ar" >> ${aros_hostcfg_dir}/host.cfg
 fi
-

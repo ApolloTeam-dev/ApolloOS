@@ -19,6 +19,9 @@
 /autom4te.cache
 /.vscode
 
+# Apollo
+/ApolloROM.*
+
 # /boot/
 /boot/mmakefile
 

@@ -125,12 +125,25 @@ ROMLOC_rom := 0x0f80000
 FILES=start early debug mmu
 AFILES=rom_entry rom_init cpu_detect superstack_swap
 
-KLIBS   := exec aros dos utility oop expansion partition debug
-KDEVS   := timer input keyboard console gameport audio
-KHNDLRS := con afs ram
-KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse 
-KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem misc shell card bootloader vampire
-KHOOKS  := diag romboot
+# APOLLOROM = V4 -> Native V4
+ifeq ($(APOLLOROM),V4)
+	KLIBS   := exec aros dos utility oop expansion partition debug
+	KDEVS   := timer input keyboard console gameport audio
+	KHNDLRS := con afs ram
+	KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse 
+	KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem misc shell card bootloader vampire
+	KHOOKS  := diag romboot
+endif
+
+# APOLLOROM = UAE -> UAE with P96
+ifeq ($(APOLLOROM),UAE)
+	KLIBS   := exec aros dos utility oop expansion partition
+	KDEVS   := timer input keyboard console gameport audio
+	KHNDLRS := con afs ram
+	KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse p96gfx
+	KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem 
+	KHOOKS  := 
+endif
 
 KOBJS_rom := $(addprefix $(KOBJSDIR)/,$(addsuffix _library.ko ,$(KLIBS))) \
 	$(addprefix $(KOBJSDIR)/,$(addsuffix _device.ko  ,$(KDEVS))) \
@@ -149,14 +162,25 @@ $(GENDIR)/boot/aros-amiga-m68k-rom.elf: $(KOBJS_rom) $(OBJS_rom)
 FILES   := 
 AFILES  := ext_entry
 
-KLIBS   :=  keymap graphics layers intuition gadtools workbench \
-            mathffp mathieeesingbas freeanim lowlevel \
-            setpatch
-KDEVS   := cd ata trackdisk
-KHNDLRS :=  cdrom
-KHIDDS  := bus storage system
-KRSRCS  := shellcommands wbtag
-KHOOKS  := alert
+# APOLLOROM = V4 -> Native V4
+ifeq ($(APOLLOROM),V4)
+	KLIBS   := keymap graphics layers intuition gadtools workbench mathffp mathieeesingbas freeanim lowlevel setpatch
+	KDEVS   := cd ata trackdisk
+	KHNDLRS := cdrom
+	KHIDDS  := bus storage system
+	KRSRCS  := shellcommands wbtag
+	KHOOKS  := alert
+endif
+
+# APOLLOROM = UAE -> UAE with P96
+ifeq ($(APOLLOROM),UAE)
+	KLIBS   := keymap graphics layers intuition gadtools workbench mathffp mathieeesingbas freeanim lowlevel setpatch
+	KDEVS   := cd ata trackdisk
+	KHNDLRS := cdrom
+	KHIDDS  := bus storage system
+	KRSRCS  := shellcommands wbtag misc shell card bootloader
+	KHOOKS  := alert diag romboot
+endif
 
 ROMLOC_ext := 0xe00000
 KOBJS_ext := \

@@ -726,6 +726,7 @@ aros_config_cflags
 aros_config_cppflags
 aros_nowarn_flags
 aros_warn_flags
+apollorom_target
 aros_shared_ldflags
 aros_shared_aflags
 aros_shared_cflags
@@ -8904,6 +8905,8 @@ fi
 printf "%s\n" "$as_me: Performing target configuration..." >&6;}
 
 
+apollorom_target=
+
 test_kernel_cc=no
 
 aros_nowarn_flags="NOWARN_UNUSED_COMMAND_LINE_ARGUMENT NOWARN_UNKNOWN_WARNING_OPTION NOWARN_POINTER_SIGN NOWARN_PARENTHESES"
@@ -16623,9 +16626,11 @@ printf "%s\n" "Enabling nonvampire support" >&6; }
 	aros_config_cflags="$aros_config_cflags -DNONVAMPIRE"
 	aros_kernel_cppflags="$aros_kernel_cppflags -DNONVAMPIRE"
 	aros_kernel_cflags="$aros_kernel_cflags -DNONVAMPIRE"
+    apollorom_target="UAE"
 else
 	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
+    apollorom_target="V4"
 fi
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking Vampire card series: v2 or v4  " >&5
@@ -17634,6 +17639,8 @@ SORT=$SORT
 TOUCH=$TOUCH
 UNIQ=$UNIQ
 
+apollorom_target=$apollorom_target
+
 aros_config_cflags=$aros_config_cflags
 aros_config_cppflags=$aros_config_cppflags
 aros_config_cxxflags=$aros_config_cxxflags
@@ -17708,6 +17715,8 @@ aros_kernel_ranlib=$aros_kernel_ranlib
 
 
 # Target Related #########################
+
+
 
 
 
@@ -19363,5 +19372,4 @@ if test -n "$aros_shared_cflags" ; then
     echo "SHARED_CFLAGS := $aros_shared_cflags" >> ${aros_hostcfg_dir}/host.cfg
     echo "SHARED_AR := $aros_shared_ar" >> ${aros_hostcfg_dir}/host.cfg
 fi
-
 
