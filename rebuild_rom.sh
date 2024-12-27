@@ -3,10 +3,10 @@ CPU_COUNT=$(grep processor /proc/cpuinfo | wc -l)
 THREADS=${CPU_COUNT}
 
 #Some how, running more than 8 tasks doesn't succeed every time
-if [ ${THREADS} -gt  8 ]
-then
-	THREADS=8
-fi
+#if [ ${THREADS} -gt  8 ]
+#then
+#	THREADS=8
+#fi
 
 args=("$@")
 if [ "${args[ 0 ]}" == "-h" ]
