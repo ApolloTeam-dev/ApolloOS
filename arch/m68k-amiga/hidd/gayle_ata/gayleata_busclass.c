@@ -1,5 +1,5 @@
 /*
-    Copyright © 2013-2020, The AROS Development Team. All rights reserved.
+    Copyright Â© 2013-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: A600/A1200/A4000 ATA HIDD
@@ -57,12 +57,21 @@ static BOOL ata_CreateGayleInterrupt(struct ATA_BusData *bus, UBYTE num)
 {
     struct Interrupt *irq = &bus->ideint;
 
-        bus->gayleintbase = (UBYTE*)GAYLE_INT_1200;
-        irq->is_Code = (APTR)IDE_Handler_A1200;
-
+    if(bus->a500)
+    {
+        bus->gayleintbase = (UBYTE*)GAYLE_INT_500;
+    }
+    else
+    {
+        bus->gayleintbase = (UBYTE*)GAYLE_INT_1200;   
+    }
+    irq->is_Code = (APTR)IDE_Handler_A1200;
+    
     irq->is_Node.ln_Pri = 20;
     irq->is_Node.ln_Type = NT_INTERRUPT;
-    irq->is_Node.ln_Name = "AT-IDE";
+    if(bus->a500)
+        irq->is_Node.ln_Name = "AT-IDE2";
+    else irq->is_Node.ln_Name = "AT-IDE";
     irq->is_Data = bus;
     AddIntServer(INTB_PORTS, irq);
     
@@ -112,6 +121,7 @@ OOP_Object *GAYLEATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *
         data->bus->atapb_Node.ln_Succ = (struct Node *)-1;
         data->gaylebase = data->bus->port;
         data->gayleirqbase = data->bus->gayleirqbase;
+        data->a500 = data->bus->a500;
         //ata_CreateGayleInterrupt(data, 0);
 
         //mDispose = msg->mID - moRoot_New + moRoot_Dispose;
@@ -201,6 +211,7 @@ APTR GAYLEATA__Hidd_ATABus__GetPIOInterface(OOP_Class *cl, OOP_Object *o, OOP_Ms
         pio->port = data->bus->port;
         pio->altport  = data->bus->altport;
         pio->dataport = (UBYTE*)(((ULONG)pio->port) & ~3);
+        pio->a500 = data->bus->a500;
         /* 
          * (A600/A1200) Data port is in a shadow bank of gayle (offset of 0x2000).
          * This shadow bank is for 16/32-bit data transfers, while the
