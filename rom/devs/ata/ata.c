@@ -1093,3 +1093,97 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
         }
     }
 }
+void BusTaskCode2(struct ata_Bus *bus, struct ataBase *ATABase)
+{
+    ULONG sig;
+    int iter;
+    struct IORequest *msg;
+    OOP_Object *unitObj;
+    struct ata_Unit *unit;
+
+    DINIT(bug("[ATA**] Task started (bus: %u)\n", bus->ab_BusNum));
+
+    bus->ab_Timer = ata_OpenTimer(ATABase);
+//    bus->ab_BounceBufferPool = CreatePool(MEMF_CLEAR | MEMF_31BIT, 131072, 65536);
+
+    /* Get the signal used for sleeping */
+    bus->ab_Task = FindTask(0);
+    bus->ab_SleepySignal = AllocSignal(-1);
+    /* Failed to get it? Use SIGBREAKB_CTRL_E instead */
+    if (bus->ab_SleepySignal < 0)
+        bus->ab_SleepySignal = SIGBREAKB_CTRL_E;
+
+    sig = 1L << bus->ab_MsgPort->mp_SigBit;
+
+    for (iter = 0; iter < MAX_BUSUNITS; ++iter)
+    {
+        DINIT(bug("[ATA**] Device %u type %d\n", iter, bus->ab_Dev[iter]));
+
+        if (bus->ab_Dev[iter] > DEV_UNKNOWN)
+        {
+            unitObj = OOP_NewObject(ATABase->unitClass, NULL, NULL);
+            if (unitObj)
+            {
+                unit = OOP_INST_DATA(ATABase->unitClass, unitObj);
+                ata_init_unit(bus, unit, iter);
+                if (ata_setup_unit(bus, unit))
+                {
+                    /*
+                     * Add unit to the bus.
+                     * At this point it becomes visible to OpenDevice().
+                     */
+                    bus->ab_Units[iter] = unitObj;
+
+                    if (unit->au_XferModes & AF_XFER_PACKET)
+                    {
+                        struct ata_Controller *ataNode = NULL;
+
+                        ata_RegisterVolume(0, 0, unit);
+
+                        OOP_GetAttr(bus->ab_Object, aHidd_ATABus_Controller, (IPTR *)&ataNode);
+                    }
+                    else
+                    {
+                        ata_RegisterVolume(0, unit->au_Cylinders - 1, unit);
+                    }
+                }
+                else
+                {
+                    /* Destroy unit that couldn't be initialised */
+                    OOP_DisposeObject((OOP_Object *)unit);
+                    bus->ab_Dev[iter] = DEV_NONE;
+                }
+            }
+        }
+    }
+
+    D(bug("[ATA--] Bus %u scan finished\n", bus->ab_BusNum));
+    ReleaseSemaphore(&ATABase->DetectionSem);
+    
+    /* Wait forever and process messages */
+    for (;;)
+    {
+        Wait(sig);
+        
+        /* Even if you get new signal, do not process it until Unit is not active */
+        if (!(bus->ab_Flags & UNITF_ACTIVE))
+        {
+            bus->ab_Flags |= UNITF_ACTIVE;
+            
+            /* Empty the request queue */
+            while ((msg = (struct IORequest *)GetMsg(bus->ab_MsgPort)))
+            {
+                /* And do IO's */
+                HandleIO(msg, ATABase);
+
+                /* TD_ADDCHANGEINT doesn't require reply */
+                if (msg->io_Command != TD_ADDCHANGEINT)
+                {
+                    ReplyMsg((struct Message *)msg);
+                }
+            }
+            
+            bus->ab_Flags &= ~(UNITF_INTASK | UNITF_ACTIVE);
+        }
+    }
+}

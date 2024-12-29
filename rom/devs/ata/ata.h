@@ -188,6 +188,8 @@ struct ata_Bus
 
    APTR                    	ab_BounceBufferPool;
 
+   BOOL use_da;
+
    /** functions go here **/
    void                   	(*ab_HandleIRQ)(struct ata_Unit* unit, UBYTE status);
 };
@@ -407,6 +409,7 @@ void ata_init_unit(struct ata_Bus *bus, struct ata_Unit *unit, UBYTE u);
 
 BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit);
 void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase);
+void BusTaskCode2(struct ata_Bus *bus, struct ataBase *ATABase);
 void DaemonCode(struct ataBase *LIBBASE, struct ata_Controller *ataNode);
 
 BYTE SCSIEmu(struct ata_Unit*, struct SCSICmd*);

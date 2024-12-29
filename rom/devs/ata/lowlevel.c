@@ -177,7 +177,10 @@ static void ata_IRQSetHandler(struct ata_Unit *unit,
 
 static void ata_IRQNoData(struct ata_Unit *unit, UBYTE status)
 {
-    volatile UBYTE *port=0xDD201C;
+    volatile UBYTE *port;
+    if(unit->au_Bus->use_da)
+	port = 0xDA201C;
+    else port = 0xDD201C;
     status = *port;
 
     if (status & ATAF_BUSY)
@@ -200,8 +203,11 @@ static void ata_IRQPIORead(struct ata_Unit *unit, UBYTE status)
 {
     ULONG count;
     APTR address;
-    volatile UBYTE *port=0xDD201C;
-    long retrycount; 
+    volatile UBYTE *port;
+    long retrycount;
+    if(unit->au_Bus->use_da)
+	port = 0xDA201C;
+    else port = 0xDD201C;
 
 AGAIN:
     retrycount=100000000;
@@ -222,13 +228,25 @@ WAITBUSY:
 
            count = (unit->au_cmd_length>>5);
            address = unit->au_cmd_data;
-   
+
+    if (unit->au_Bus->use_da)
+    {
+          asm volatile(
+      "       bra 2f                           \n"
+      "1:     move16 (0xDA6000),(%[address])+  \n"
+      "       move16 (0xDA6000),(%[address])+  \n"
+      "2:     dbra   %[count],1b               \n"
+              :[count]"+d"(count),[address]"+a"(address)::"cc");
+    }
+    else
+    {
           asm volatile(
       "       bra 2f                           \n"
       "1:     move16 (0xDD6000),(%[address])+  \n"
       "       move16 (0xDD6000),(%[address])+  \n"
       "2:     dbra   %[count],1b               \n"
               :[count]"+d"(count),[address]"+a"(address)::"cc");
+    }
    
 //   
 	/*
@@ -274,10 +292,13 @@ static void ata_PIOWriteBlk(struct ata_Unit *unit)
 static void ata_IRQPIOWrite(struct ata_Unit *unit, UBYTE status)
 {
 
-    volatile UBYTE *port=0xDD201C;
+    volatile UBYTE *port;
     ULONG count;
     APTR address;
-    long retrycount; 
+    long retrycount;
+    if(unit->au_Bus->use_da)
+        port = 0xDA201C;
+    else port = 0xDD201C;
     /*
      * If there's more data left for this transfer, write it, keep same
      * handler and wait for next interrupt
@@ -302,13 +323,24 @@ WAITBUSYW:
            count = unit->au_cmd_length>>3;
            address = unit->au_cmd_data;
 
+    if(unit->au_Bus->use_da)
+    {
+          asm volatile(
+      "       bra 2f                           \n"
+      "1:     move.l (%[address])+,(0xDA2000)  \n"
+      "       move.l (%[address])+,(0xDA2000)  \n"
+      "2:     dbra   %[count],1b               \n"
+              :[count]"+d"(count),[address]"+a"(address)::"cc");
+    }
+    else
+    {
           asm volatile(
       "       bra 2f                           \n"
       "1:     move.l (%[address])+,(0xDD2000)  \n"
       "       move.l (%[address])+,(0xDD2000)  \n"
       "2:     dbra   %[count],1b               \n"
               :[count]"+d"(count),[address]"+a"(address)::"cc");
-
+    }
 
       unit->au_cmd_data += unit->au_cmd_length;
       unit->au_cmd_total -= unit->au_cmd_length;
@@ -554,8 +586,19 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
     BYTE err = 0;
     APTR mem = block->buffer;
     UBYTE status;
-    volatile WORD *irqreg=0xDD9000;
-    volatile WORD *irqen=0xDDA000;
+    volatile WORD *irqreg;
+    volatile WORD *irqen;
+
+    if(unit->au_Bus->use_da)
+    {
+        irqreg = 0xDA9000;
+	irqen = 0xDAA000;
+    }
+    else
+    {
+        irqreg = 0xDD9000;
+	irqen = 0xDDA000;
+    }
 
     /*
      * Use a short timeout for Identify commands. This is because some bad
