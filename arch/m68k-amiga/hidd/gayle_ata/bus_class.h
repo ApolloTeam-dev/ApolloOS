@@ -9,6 +9,7 @@ struct ata_ProbedBus
     UBYTE *altport;
     UBYTE *gayleirqbase;
     BOOL a4000;
+    BOOL a500;
     UBYTE doubler;
 };
 
@@ -22,6 +23,7 @@ struct ATA_BusData
     UBYTE *gayleirqbase;
     UBYTE *gayleintbase;
     BOOL ideintadded;
+    BOOL a500;
 };
 
 struct ataBase
