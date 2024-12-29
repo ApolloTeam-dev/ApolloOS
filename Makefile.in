@@ -1,4 +1,4 @@
-# Copyright © 2000-2020, The AROS Development Team. All rights reserved.
+# Copyright ï¿½ 2000-2020, The AROS Development Team. All rights reserved.
 # $Id$
 #
 # Main makefile for AROS
@@ -284,7 +284,8 @@ clean:
 		$(TOOLDIR)/$(AROS_TARGET_CPU)-$(AROS_TARGET_ARCH)$(AROS_TARGET_SUFFIX)-aros-gcc \
 		$(TOOLDIR)/$(AROS_TARGET_CPU)-$(AROS_TARGET_ARCH)$(AROS_TARGET_SUFFIX)-aros-ld \
 		$(GENDIR)/scripts/genshared $(TOOLDIR)/genmf.py \
-		tools/adflib/myconf.aros tools/collect-aros/env.h
+		tools/adflib/myconf.aros tools/collect-aros/env.h \
+		config/features.status
 
 # Clean the sources and tools
 arch-clean: clean

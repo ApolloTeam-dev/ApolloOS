@@ -3,10 +3,10 @@ CPU_COUNT=$(grep processor /proc/cpuinfo | wc -l)
 THREADS=${CPU_COUNT}
 
 #Some how, running more than 8 tasks doesn't succeed every time
-if [ ${THREADS} -gt  8 ]
-then
-	THREADS=8
-fi
+#if [ ${THREADS} -gt  8 ]
+#then
+#	THREADS=8
+#fi
 
 args=("$@")
 if [ "${args[ 0 ]}" == "-h" ]
@@ -28,6 +28,7 @@ sleep 3
 make clean
 git clean -df
 rm -rf bin/amiga-m68k
+rm -rf config/features.status
 
 source ./make_dist_config.sh
 DISTOPTNAME="--enable-dist-name=${DISTRONAME}"
@@ -38,6 +39,12 @@ DISTOPTVER="--enable-dist-version=${DISTROVERSION}"
 
 make -j${THREADS}
 make -j${THREADS} distfiles
-cat bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin > aros.rom
-ls -lah aros.rom
 
+if [ "${args[ 0 ]}" == "--with-nonvampire-support" ]
+then
+	cat bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin > ApolloROM.UAE
+	ls -lah ApolloROM.UAE
+else
+	cat bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin > ApolloROM.V4
+	ls -lah ApolloROM.V4
+fi

@@ -28,10 +28,10 @@ static const char * const libnames[] =
 static const char * const copyrights[] =
 {
     "AROS Research Operating System (AROS)",
-    "Copyright © 1995-2024, ",
-    "The AROS Development Team.",
-    "Other parts © by respective owners.",
-    "ALPHA ",
+    "ApolloOS created by Apollo Development Team   ",
+    "Parts based on AROS Research Operating System (AROS)   ",
+    "https://apollo-computer.com   Copyright 1995-2025",
+    "APOLLO",
     MOD_NAME_STRING,
     "exec " MOD_VERS_STRING " (" MOD_DATE_STRING ")\r\n"
 };
