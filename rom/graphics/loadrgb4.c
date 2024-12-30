@@ -29,6 +29,7 @@ static void pokeCL(UWORD *ci, UWORD target, UWORD table)
 static struct CopIns *pokeCI(struct CopIns *ci, UWORD *field1, short field2)
 {
     struct CopIns *c;
+    UWORD op=COPPER_MOVE;
     c = ci;
     if(c)
     {
