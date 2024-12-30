@@ -91,11 +91,12 @@ struct Gadget *findprevgadget(struct Gadget *gadget,struct Window *window,struct
         gadgets = requester->ReqGadget;
     }
 
-#ifdef USEGADGETLOCK
+// Lock both in any way. If not correct, revert, but it seems fine
+//#ifdef USEGADGETLOCK
     LOCKGADGET(IntuitionBase)
-#else
+//#else
     LOCKWINDOWLAYERS(window);
-#endif
+//#endif
  
     int_refreshglist(gadgets,
                      window,
@@ -105,11 +106,11 @@ struct Gadget *findprevgadget(struct Gadget *gadget,struct Window *window,struct
                      0,
                      IntuitionBase);
 
-#ifdef USEGADGETLOCK
+//#ifdef USEGADGETLOCK
     UNLOCKGADGET(IntuitionBase)
-#else
+//#else
     UNLOCKWINDOWLAYERS(window);
-#endif
+//#endif
 
     ReturnVoid("RefreshGList");
 
@@ -120,6 +121,10 @@ void int_refreshglist(struct Gadget *gadgets, struct Window *window,
                       struct Requester *requester, LONG numGad, LONG mustbe, LONG mustnotbe,
                       struct IntuitionBase *IntuitionBase)
 {
+
+// Might help to undef this
+#undef GADTOOLSCOMPATIBLE
+	
 #ifdef GADTOOLSCOMPATIBLE
     struct Gadget *gadtoolsgadget = 0;
 #endif
@@ -131,15 +136,15 @@ void int_refreshglist(struct Gadget *gadgets, struct Window *window,
                                   gadgets, window, requester, numGad, mustbe, mustnotbe));
 
     // in case we're not called from RefreshGList...
-#ifdef USEGADGETLOCK
+//#ifdef USEGADGETLOCK
     LOCKGADGET(IntuitionBase)
-#else
+//#else
     LOCKWINDOWLAYERS(window);
-#endif
+//#endif
 
     for ( ; gadgets && numGad; gadgets=gadgets->NextGadget, numGad --)
     {
-	if (gadgets->GadgetType == 0)
+	if ((gadgets->GadgetType == 0) || (gadgets->GadgetType == 0x100) || (gadgets->GadgetType == 0x105) || (gadgets->Flags == 0x8007)) 
         {
             #ifdef GADTOOLSCOMPATIBLE
             if (gadgets->GadgetType & 0x100)
@@ -172,7 +177,7 @@ void int_refreshglist(struct Gadget *gadgets, struct Window *window,
     gadgets = firstgad;
     for ( ; gadgets && numGad; gadgets=gadgets->NextGadget, numGad --)
     {
-	if (gadgets->GadgetType > 0)
+	if ((gadgets->GadgetType > 0) && (gadgets->GadgetType != 0x100) && (gadgets->GadgetType != 0x105) && (gadgets->Flags != 0x8007))
         {
             #ifdef GADTOOLSCOMPATIBLE
             if (gadgets->GadgetType & 0x100)
@@ -213,11 +218,11 @@ void int_refreshglist(struct Gadget *gadgets, struct Window *window,
     }
 #endif
 
-#ifdef USEGADGETLOCK
+//#ifdef USEGADGETLOCK
     UNLOCKGADGET(IntuitionBase)
-#else
+//#else
     UNLOCKWINDOWLAYERS(window);
-#endif
+//#endif
 }
 
 BOOL qualifygadget(struct Gadget *gadgets,LONG mustbe, LONG mustnotbe,struct IntuitionBase *IntuitionBase)
@@ -264,6 +269,14 @@ BOOL qualifygadget(struct Gadget *gadgets,LONG mustbe, LONG mustnotbe,struct Int
         }
 
         if ((gadgets->GadgetType & GTYP_GTYPEMASK) == GTYP_CUSTOMGADGET)
+        {
+            if (mustnotbe & REFRESHGAD_BOOPSI) return FALSE; /* don't refresh if boopsi gadget */
+        }
+        else
+        {
+            if (mustbe & REFRESHGAD_BOOPSI) return FALSE; /* don't refresh if not boopsi gadget */
+        }
+	if (gadgets->Flags & (GFLG_GADGIMAGE|GFLG_GADGHNONE) == GFLG_GADGIMAGE|GFLG_GADGHNONE)
         {
             if (mustnotbe & REFRESHGAD_BOOPSI) return FALSE; /* don't refresh if boopsi gadget */
         }
