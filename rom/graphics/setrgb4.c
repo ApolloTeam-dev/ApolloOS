@@ -63,8 +63,32 @@
 {
     AROS_LIBFUNC_INIT
 
+    UWORD col;
+    volatile struct Custom *custom = (struct Custom *)0xdff000;
+
+    col = ((r & 0xF) << 8) | ((g & 0xF) << 4) | (b & 0xF);
+	
     if (!vp)
+    {
+        custom->color[n] = col;
         return;
+    }
+
+    if(vp->ColorMap)
+        SetRGB4CM(vp->ColorMap, n, r, g, b);
+
+    if(vp->ColorMap == NULL)
+    {
+        if(vp->DspIns)
+        {    
+            ObtainSemaphore(GfxBase->ActiViewCprSemaphore);
+            pokeCL(vp->DspIns->CopLStart, &custom->color[n], col);
+            pokeCL(vp->DspIns->CopSStart, &custom->color[n], col);
+	    
+            pokeCI(vp->DspIns->CopIns,&custom->color[n],col);
+            ReleaseSemaphore(GfxBase->ActiViewCprSemaphore);
+        }
+    }
 
     r = (( r & 0xF) << 4) | (r & 0xFF );
     r = r | (r << 8) | ( r << 16 ) | (r << 24 );
@@ -74,6 +98,8 @@
     b = b | (b << 8) | ( b << 16 ) | (b << 24 );
 
     SetRGB32( vp, n, r, g, b );
+
+    MrcCop(GfxBase->ActiView);
 
     /************************************************************
     / This is the code that works correctly on the real thing
