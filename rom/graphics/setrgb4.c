@@ -12,6 +12,7 @@
     NAME */
 #include <graphics/view.h>
 #include <proto/graphics.h>
+#include "gfxfuncsupport.h"
 
 	AROS_LH5(void, SetRGB4,
 
