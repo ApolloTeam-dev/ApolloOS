@@ -100,7 +100,7 @@
 
     SetRGB32( vp, n, r, g, b );
 
-    MrcCop(GfxBase->ActiView);
+    MrgCop(GfxBase->ActiView);
 
     /************************************************************
     / This is the code that works correctly on the real thing
