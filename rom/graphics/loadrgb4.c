@@ -204,6 +204,7 @@ static struct CopIns *pokeCI(struct CopIns *ci, UWORD *field1, short field2)
 
     // To make it visible immediately we need to update the view. To simplify it, we call MrgCop
     MrgCop(GfxBase->ActiView);
+    GfxBase->LOFlist = GfxBase->ActiView->LOFCprList->start;
 
     AROS_LIBFUNC_EXIT
     
