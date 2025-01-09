@@ -78,17 +78,14 @@
     if(vp->ColorMap)
         SetRGB4CM(vp->ColorMap, n, r, g, b);
 
-    if(vp->ColorMap == NULL)
-    {
-        if(vp->DspIns)
-        {    
-            ObtainSemaphore(GfxBase->ActiViewCprSemaphore);
-            pokeCL(vp->DspIns->CopLStart, &custom->color[n], col);
-            pokeCL(vp->DspIns->CopSStart, &custom->color[n], col);
+    if(vp->DspIns)
+    {    
+        ObtainSemaphore(GfxBase->ActiViewCprSemaphore);
+        pokeCL(vp->DspIns->CopLStart, &custom->color[n], col);
+        pokeCL(vp->DspIns->CopSStart, &custom->color[n], col);
 	    
-            pokeCI(vp->DspIns->CopIns,&custom->color[n],col);
-            ReleaseSemaphore(GfxBase->ActiViewCprSemaphore);
-        }
+        pokeCI(vp->DspIns->CopIns,&custom->color[n],col);
+        ReleaseSemaphore(GfxBase->ActiViewCprSemaphore);
     }
 
     r = (( r & 0xF) << 4) | (r & 0xFF );
