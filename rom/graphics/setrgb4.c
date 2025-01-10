@@ -98,7 +98,8 @@
     SetRGB32( vp, n, r, g, b );
 
     MrgCop(GfxBase->ActiView);
-    GfxBase->LOFlist = GfxBase->ActiView->LOFCprList->start;
+    if(TypeOfMem(GfxBase->ActiView->LOFCprList->start) == MEMF_CHIP)
+        GfxBase->LOFlist = GfxBase->ActiView->LOFCprList->start;
 
     /************************************************************
     / This is the code that works correctly on the real thing
