@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2007, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Graphics function ChangeSprite()
@@ -50,8 +50,13 @@
 {
     AROS_LIBFUNC_INIT
 
-    /* TODO: Write graphics/ChangeSprite() */
-    aros_print_not_implemented ("ChangeSprite");
+    WORD x,y;
+
+    s->posctldata = newdata;
+    x = s->x;
+    y = s->y;
+
+    MoveSprite(vp, s, x, y);
 
     AROS_LIBFUNC_EXIT
 } /* ChangeSprite */
