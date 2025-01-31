@@ -33,7 +33,7 @@ static void ata_outsw(struct pio_data *data, APTR address, ULONG count)
 {
     volatile UWORD *addr = (UWORD*)data->dataport;
 
-    DDATA(bug("WOUT %p %p %d\n", addr, address, count));
+    bug("WOUT %p %p %d\n", addr, address, count);
 
     asm volatile(
 "1:     move.w (%[address])+,(%[port])  \n"
@@ -72,7 +72,7 @@ static void ata_insw(struct pio_data *data, APTR address, ULONG count)
 {
     volatile UWORD *addr = (UWORD*)data->dataport;
 
-    DDATA(bug("WIN %p %p %d\n", addr, address, count));
+    bug("WIN %p %p %d\n", addr, address, count);
 
     asm volatile(
 "1:     move.w (%[port]),(%[address])+  \n"

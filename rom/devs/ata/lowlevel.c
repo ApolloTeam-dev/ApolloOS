@@ -232,6 +232,28 @@ WAITBUSY:
     {
         Unit_InS(unit, unit->au_cmd_data, unit->au_cmd_length);
 
+        /*count = (unit->au_cmd_length>>5);
+        address = unit->au_cmd_data;
+
+        if (unit->au_Bus->use_da)
+        {
+            asm volatile(
+        "       bra 2f                           \n"
+        "1:     move16 (0xDA6000),(%[address])+  \n"
+        "       move16 (0xDA6000),(%[address])+  \n"
+        "2:     dbra   %[count],1b               \n"
+                :[count]"+d"(count),[address]"+a"(address)::"cc");
+        }
+        else
+        {
+            asm volatile(
+        "       bra 2f                           \n"
+        "1:     move16 (0xDD6000),(%[address])+  \n"
+        "       move16 (0xDD6000),(%[address])+  \n"
+        "2:     dbra   %[count],1b               \n"
+                :[count]"+d"(count),[address]"+a"(address)::"cc");
+        }*/
+
         unit->au_cmd_data += unit->au_cmd_length;
         unit->au_cmd_total -= unit->au_cmd_length;
         if (unit->au_cmd_total != 0)
@@ -284,7 +306,31 @@ WAITBUSYW:
     if (status & ATAF_DATAREQ) {
         DIRQ(bug("[ATA%02ld] IRQ: PIOWriteData - DRQ.\n", unit->au_UnitNum));
 
-        ata_PIOWriteBlk(unit);
+        //ata_PIOWriteBlk(unit);
+
+        Unit_OutS(unit, unit->au_cmd_data, unit->au_cmd_length);
+
+        /*count = unit->au_cmd_length>>3;
+        address = unit->au_cmd_data;
+
+        if(unit->au_Bus->use_da)
+        {
+            asm volatile(
+        "       bra 2f                           \n"
+        "1:     move.l (%[address])+,(0xDA2000)  \n"
+        "       move.l (%[address])+,(0xDA2000)  \n"
+        "2:     dbra   %[count],1b               \n"
+                :[count]"+d"(count),[address]"+a"(address)::"cc");
+        }
+        else
+        {
+            asm volatile(
+        "       bra 2f                           \n"
+        "1:     move.l (%[address])+,(0xDD2000)  \n"
+        "       move.l (%[address])+,(0xDD2000)  \n"
+        "2:     dbra   %[count],1b               \n"
+                :[count]"+d"(count),[address]"+a"(address)::"cc");
+        }*/
 
         unit->au_cmd_data += unit->au_cmd_length;
         unit->au_cmd_total -= unit->au_cmd_length;
