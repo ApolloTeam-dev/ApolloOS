@@ -23,81 +23,6 @@
 #include "bus_class.h"
 #include "interface_pio.h"
 
-AROS_INTH1(IDE_Handler_A1200, struct ATA_BusData *, bus)
-{
-    AROS_INTFUNC_INIT
-
-    volatile UBYTE *irqbase = bus->gayleirqbase;
-    UBYTE irqmask = *irqbase;
-    if (irqmask & GAYLE_IRQ_IDE) {
-        volatile UBYTE *port;
-        UBYTE status;
-
-        port = bus->gaylebase;
-        status = port[ata_Status * 4];
-        /* Clear A600/A1200 IDE interrupt. (Stupid Gayle hardware)
-         * Technically this should be done while interrupts are
-         * disabled
-         */
-        *irqbase = 0x7c | (*irqbase & 3);
-        if (status & ATAF_BUSY) {
-            bug("[ATA:Gayle] ATA interrupt but BUSY flag set!?\n");
-            return FALSE;
-        }
-        bus->ata_HandleIRQ(status, bus->irqData);
-        return TRUE;
-    }
-    return FALSE;
-
-    AROS_INTFUNC_EXIT
-}
-
-
-static BOOL ata_CreateGayleInterrupt(struct ATA_BusData *bus, UBYTE num)
-{
-    struct Interrupt *irq = &bus->ideint;
-
-    if(bus->a500)
-    {
-        bus->gayleintbase = (UBYTE*)GAYLE_INT_500;
-    }
-    else
-    {
-        bus->gayleintbase = (UBYTE*)GAYLE_INT_1200;   
-    }
-    irq->is_Code = (APTR)IDE_Handler_A1200;
-    
-    irq->is_Node.ln_Pri = 20;
-    irq->is_Node.ln_Type = NT_INTERRUPT;
-    if(bus->a500)
-        irq->is_Node.ln_Name = "AT-IDE2";
-    else irq->is_Node.ln_Name = "AT-IDE";
-    irq->is_Data = bus;
-    AddIntServer(INTB_PORTS, irq);
-    
-    if (bus->gayleintbase) {
-        volatile UBYTE *gayleintbase = bus->gayleintbase;
-        *gayleintbase |= GAYLE_INT_IDE;
-    }
-    bus->ideintadded = TRUE;
-
-    return TRUE;
-}
-
-static void ata_RemoveGayleInterrupt(struct ATA_BusData *bus)
-{
-    struct Interrupt *irq = &bus->ideint;
-
-    if (!bus->ideintadded)
-        return;
-    bus->ideintadded = FALSE;
-    if (bus->gayleintbase) {
-        volatile UBYTE *gayleintbase = bus->gayleintbase;
-        *gayleintbase &= ~GAYLE_INT_IDE;
-    }
-    RemIntServer(INTB_PORTS, irq);
-}
-
 /* Class Methods */
 
 OOP_Object *GAYLEATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg)
@@ -105,7 +30,7 @@ OOP_Object *GAYLEATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *
     struct ataBase *base = cl->UserData;
     struct ata_ProbedBus *bus = (struct ata_ProbedBus *)GetTagData(aHidd_DriverData, 0, msg->attrList);
 
-    D(bug("[ATA:Gayle] %s()\n", __func__);)
+    bug("[ATA:Gayle] %s()\n", __func__);
 
     if (!bus)
         return NULL;
@@ -114,31 +39,23 @@ OOP_Object *GAYLEATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *
     if (o)
     {
         struct ATA_BusData *data = OOP_INST_DATA(cl, o);
-        //OOP_MethodID mDispose;
 
         data->bus = bus;
-        /* Signal structure ownership */
         data->bus->atapb_Node.ln_Succ = (struct Node *)-1;
         data->gaylebase = data->bus->port;
         data->gayleirqbase = data->bus->gayleirqbase;
         data->a500 = data->bus->a500;
-        //ata_CreateGayleInterrupt(data, 0);
-
-        //mDispose = msg->mID - moRoot_New + moRoot_Dispose;
-        //OOP_DoSuperMethod(cl, o, &mDispose);
     }
-    D(bug("[ATA:Gayle] %s: Instance @ %p\n", __func__, o);)
+    bug("[ATA:Gayle] %s: Instance @ %p\n", __func__, o);
     return o;
 }
 
 void GAYLEATA__Root__Dispose(OOP_Class *cl, OOP_Object *o, OOP_Msg msg)
 {
-    //struct ataBase *base = cl->UserData;
     struct ATA_BusData *data = OOP_INST_DATA(cl, o);
 
-    D(bug("[ATA:Gayle] %s()\n", __func__);)
+    bug("[ATA:Gayle] %s()\n", __func__);
 
-    ata_RemoveGayleInterrupt(data);
     FreeVec(data->bus);
 
     OOP_DoSuperMethod(cl, o, msg);
@@ -147,10 +64,9 @@ void GAYLEATA__Root__Dispose(OOP_Class *cl, OOP_Object *o, OOP_Msg msg)
 void GAYLEATA__Root__Get(OOP_Class *cl, OOP_Object *o, struct pRoot_Get *msg)
 {
     struct ataBase *base = cl->UserData;
-    //struct ATA_BusData *data = OOP_INST_DATA(cl, o);
     ULONG idx;
 
-    D(bug("[ATA:Gayle] %s()\n", __func__);)
+    bug("[ATA:Gayle] %s()\n", __func__);
 
     Hidd_ATABus_Switch(msg->attrID, idx)
     {
@@ -177,7 +93,7 @@ void GAYLEATA__Root__Set(OOP_Class *cl, OOP_Object *o, struct pRoot_Set *msg)
     struct TagItem *tstate = msg->attrList;
     struct TagItem *tag;
 
-    D(bug("[ATA:Gayle] %s()\n", __func__);)
+    bug("[ATA:Gayle] %s()\n", __func__);
 
     while ((tag = NextTagItem(&tstate)))
     {
@@ -203,21 +119,15 @@ APTR GAYLEATA__Hidd_ATABus__GetPIOInterface(OOP_Class *cl, OOP_Object *o, OOP_Ms
     struct ATA_BusData *data = OOP_INST_DATA(cl, o);
     struct pio_data *pio;
 
-    D(bug("[ATA:Gayle] %s()\n", __func__);)
+    bug("[ATA:Gayle] %s()\n", __func__);
 
     pio = (struct pio_data *)OOP_DoSuperMethod(cl, o, msg);
     if (pio)
     {
         pio->port = data->bus->port;
         pio->altport  = data->bus->altport;
-        pio->dataport = (UBYTE*)(((ULONG)pio->port) & ~3);
         pio->a500 = data->bus->a500;
-        /* 
-         * (A600/A1200) Data port is in a shadow bank of gayle (offset of 0x2000).
-         * This shadow bank is for 16/32-bit data transfers, while the
-         * other one is much slower due to 8-bit transfers, only.
-         */
-         pio->dataport = (UBYTE*)(((ULONG)pio->port) + 0x2000);
+        pio->dataport = (UBYTE*)(((ULONG)pio->port) + 0x2000);
     }
 
     return pio;
@@ -225,7 +135,5 @@ APTR GAYLEATA__Hidd_ATABus__GetPIOInterface(OOP_Class *cl, OOP_Object *o, OOP_Ms
 
 void GAYLEATA__Hidd_ATABus__Shutdown(OOP_Class *cl, OOP_Object *o, OOP_Msg msg)
 {
-    //struct ATA_BusData *data = OOP_INST_DATA(cl, o);
-
     OOP_DoSuperMethod(cl, o, msg);
 }

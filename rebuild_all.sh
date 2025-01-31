@@ -8,6 +8,11 @@ THREADS=${CPU_COUNT}
 #	THREADS=8
 #fi
 
+export DISTRONAME="$(cat distname)"
+export DISTROVERSION="$(cat version)"
+export DISTRODATE="$(date +%Y-%m-%d)"
+export AMIGADATE="$(date +"%-d.%-m.%Y")"
+
 args=("$@")
 if [ "${args[ 0 ]}" == "-h" ]
 then
@@ -35,7 +40,6 @@ DISTOPTNAME="--enable-dist-name=${DISTRONAME}"
 DISTOPTVER="--enable-dist-version=${DISTROVERSION}"
 
 ./configure "${DISTOPTNAME}" "${DISTOPTVER}" --target=amiga-m68k --with-optimization="-O2" --enable-ccache --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68040 --disable-mmu $@
-
 
 make -j${THREADS}
 make -j${THREADS} distfiles

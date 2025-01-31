@@ -140,7 +140,7 @@ void __dos_Boot(struct DosLibrary *DOSBase, ULONG BootFlags, UBYTE Flags)
 
 #if defined(__DISTRONAME__)
 	if (cis == BNULL)
-        cis = Open("CON:////ApolloDOS/AUTO/CLOSE/SMART/BOOT", MODE_OLDFILE);
+        cis = Open("CON:////ApolloOS/AUTO/CLOSE/SMART/BOOT", MODE_OLDFILE);
 #else
 	if (cis == BNULL)
         cis = Open("CON:////AROS/AUTO/CLOSE/SMART/BOOT", MODE_OLDFILE);

@@ -36,7 +36,7 @@ DISTOPTVER="--enable-dist-version=${DISTROVERSION}"
 
 source ./make_dist_config.sh
 
-./configure "${DISTOPTNAME}" "${DISTOPTVER}" --target=amiga-m68k --with-optimization="-Os" --enable-ccache --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68040 --with-serial-debug --enable-debug=all $@
+./configure "${DISTOPTNAME}" "${DISTOPTVER}" --target=amiga-m68k --with-optimization="-O2" --enable-ccache --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68040 --with-serial-debug $@
 
 make -j${THREADS}
 make -j${THREADS} kernel

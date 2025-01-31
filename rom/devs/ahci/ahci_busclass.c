@@ -1,5 +1,5 @@
 /*
-    Copyright © 2018, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2018, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -244,25 +244,7 @@ AROS_UFH3(BOOL, Hidd_AHCIBus_Open,
     AROS_USERFUNC_INIT
 
     D(bug ("[AHCI:Bus] Hidd_AHCIBus_Open(%p)\n", obj);)
-#if (0)
-    struct IORequest *req = h->h_Data;
-    struct AHCIBase *AHCIBase = (struct AHCIBase *)req->io_Device;
-    struct ahci_Bus *b = (struct ahci_Bus *)OOP_INST_DATA(AHCIBase->busClass, obj);
-    ULONG bus = reqUnit >> 1;
-    UBYTE dev = reqUnit & 1;
 
-    D(bug("[ATA%02ld] Checking bus %u dev %u\n", reqUnit, bus, dev));
-    
-    if ((b->ab_BusNum == bus) && b->ab_Units[dev])
-    {
-        /* Got the unit */
-        req->io_Unit  = &b->ab_Units[dev]->au_Unit;
-        req->io_Error = 0;
-
-        b->ab_Units[dev]->au_Unit.unit_OpenCnt++;
-        return TRUE;
-    }
-#endif
     return FALSE;
 
     AROS_USERFUNC_EXIT

@@ -131,7 +131,7 @@ ifeq ($(APOLLOROM),V4)
 	KDEVS   := timer input keyboard console gameport audio
 	KHNDLRS := con afs ram
 	KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse 
-	KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem misc shell card bootloader vampire
+	KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem vampire
 	KHOOKS  := diag romboot
 endif
 
@@ -168,7 +168,7 @@ ifeq ($(APOLLOROM),V4)
 	KDEVS   := cd ata trackdisk
 	KHNDLRS := cdrom
 	KHIDDS  := bus storage system
-	KRSRCS  := shellcommands wbtag
+	KRSRCS  := shellcommands wbtag misc shell card bootloader
 	KHOOKS  := alert
 endif
 

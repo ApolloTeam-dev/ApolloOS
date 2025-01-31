@@ -721,7 +721,7 @@ static void initPage(LIBBASETYPEPTR DOSBootBase, WORD page)
     if (page == PAGE_MAIN && (GfxBase->DisplayFlags & (NTSC | PAL))) {
             ULONG modeid = GetVPModeID(&DOSBootBase->bm_Screen->ViewPort);
             if (modeid != INVALID_ID && (((modeid & MONITOR_ID_MASK) == NTSC_MONITOR_ID) || ((modeid & MONITOR_ID_MASK) == PAL_MONITOR_ID))) {
-            centertext(DOSBootBase, 1, 30, "(" __DISTROVERSION__ ", " __DISTRODATE__ ")");
+            centertext(DOSBootBase, 1, 30, "" __DISTROVERSION__ " (" __DISTRODATE__ ")");
         }
     }
 

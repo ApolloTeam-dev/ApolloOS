@@ -26,7 +26,6 @@ ATA_DEVICEFILES := \
     ata_trim \
     ata_smart \
     timer \
-    waitnano \
     waitto \
     scsiemu \
     bootwait

@@ -99,7 +99,7 @@ BOOL ATA__Hidd_StorageController__SetUpBus(OOP_Class *cl, OOP_Object *o, struct 
     struct ataBase *ATABase = cl->UserData;
     struct TagItem busTags[2];
 
-    D(bug ("[ATA:Controller] Hidd_StorageController__SetUpBus(0x%p)\n", msg->busObject);)
+    bug ("[ATA:Controller] Hidd_StorageController__SetUpBus(0x%p)\n", msg->busObject);
 
     /*
      * Instantiate interfaces. PIO is mandatory, DMA is not.
@@ -108,20 +108,18 @@ BOOL ATA__Hidd_StorageController__SetUpBus(OOP_Class *cl, OOP_Object *o, struct 
      * We do this in SetUpBus because the object must be fully
      * created in order for this stuff to work.
      */
-    if (!HIDD_ATABus_GetPIOInterface(msg->busObject))
-        return FALSE;
+    if (!HIDD_ATABus_GetPIOInterface(msg->busObject)) return FALSE;
 
-    D(bug ("[ATA:Controller] Hidd_StorageController__SetUpBus: PIO Interfaces obtained\n");)
+    bug ("[ATA:Controller] Hidd_StorageController__SetUpBus: PIO Interfaces obtained\n");
 
-    if (!ATABase->ata_NoDMA)
-        HIDD_ATABus_GetDMAInterface(msg->busObject);
+    if (!ATABase->ata_NoDMA) HIDD_ATABus_GetDMAInterface(msg->busObject);
 
     busTags[0].ti_Tag = aHidd_ATABus_Controller;
     busTags[0].ti_Data = (IPTR)OOP_INST_DATA(cl, o);
     busTags[1].ti_Tag = TAG_DONE;
     OOP_SetAttrs(msg->busObject, busTags);
 
-    D(bug ("[ATA:Controller] Hidd_StorageController__SetUpBus: Starting Bus...\n");)
+    bug ("[ATA:Controller] Hidd_StorageController__SetUpBus: Starting Bus...\n");
 
     /* Add the bus to the device and start service */
     return Hidd_ATABus_Start(msg->busObject, ATABase);

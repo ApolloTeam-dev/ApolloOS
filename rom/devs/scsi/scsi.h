@@ -2,7 +2,7 @@
 #define _SCSI_H
 
 /*
-    Copyright © 2019, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2019, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: scsi.device main private include file

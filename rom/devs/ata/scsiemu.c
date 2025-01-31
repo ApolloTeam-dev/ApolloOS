@@ -110,11 +110,13 @@ static UBYTE scsi_write32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG 
      struct ata_Bus *bus = unit->au_Bus;
      struct ataBase *base = bus->ab_Base;
      UBYTE err;
+     
      for (int i = 0; i < len; i++)
      {
          ULONG blockAdr = (offset + i) & CACHE_MASK;
          base->ata_CacheTags[blockAdr] = 0xfffffffffffffffful;
      }
+    
      err = unit->au_Write32(unit, offset, len, data, outlen);
      if (err) /* on error try again */
           return unit->au_Write32(unit, offset, len, data, outlen);

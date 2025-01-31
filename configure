@@ -3524,7 +3524,7 @@ printf "%s\n" "$msg_result" >&6; }
 
 aros_dist_name=AROS
 aros_dist_version=ABIv1
-aros_dist_date=$(date +%Y-%m-%d)
+aros_dist_date=$(date +%d-%m-%Y)
 aros_dist_amigadate=$(date +"%-d.%-m.%Y")
 
 aros_nominal_width=800

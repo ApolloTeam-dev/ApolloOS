@@ -1,5 +1,5 @@
 /*
-    Copyright © 2019, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2019, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -63,6 +63,8 @@ static int AMiGAROMSupport_Init(struct KernelBase *KernelBase)
     UBYTE id;
 
     D(bug("[Kernel:Am68k] %s: platformdata @ 0x%p\n", __func__, pd);)
+
+    bug("ApolloOS Serial Debug Enabled\n");
 
     id = (UBYTE)ReadGayle();
     if ((id > 0) &&

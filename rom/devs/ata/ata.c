@@ -346,14 +346,14 @@ static void cmd_Write32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
         io->io_Error = unit->au_Write32(unit, block, count,
             IOStdReq(io)->io_Data, &cnt);
 
-        struct ata_Bus *bus = unit->au_Bus;
+                struct ata_Bus *bus = unit->au_Bus;
         struct ataBase *base = bus->ab_Base;
         for (int i = 0; i < count; i++)
         {
             ULONG blockAdr = (block + i) & CACHE_MASK;
             base->ata_CacheTags[blockAdr] = 0xfffffffffffffffful;
         }
-
+        
         IOStdReq(io)->io_Actual = cnt;
     }
 }
@@ -428,7 +428,7 @@ static void cmd_Write64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
             ULONG blockAdr = (block + i) & CACHE_MASK;
             base->ata_CacheTags[blockAdr] = 0xfffffffffffffffful;
         }
-
+        
         IOStdReq(io)->io_Actual = cnt;
     }
 }
@@ -660,7 +660,7 @@ static void cmd_SMART(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
     struct ata_Bus *bus = unit->au_Bus;
     UBYTE u;
 #endif
-    D(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+    bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__);
 
     if (unit->au_Flags & AF_DiscPresent)
     {
@@ -987,15 +987,6 @@ AROS_LH1(ULONG, GetBlkSize,
 }
 
 /*
- * The daemon of ata.device first opens all ATAPI devices and then enters
- * endless loop. Every 2 seconds it tells ATAPI units to check the media
- * presence. In case of any state change they will rise user-specified
- * functions.
- * The check is done by sending HD_SCSICMD+1 command (internal testchanged
- * command). ATAPI units should already handle the command further.
- */
-
-/*
     Bus task body. It doesn't really do much. It receives simply all IORequests
     in endless loop and calls proper handling function. The IO is Semaphore-
     protected within a bus.
@@ -1008,7 +999,7 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
     OOP_Object *unitObj;
     struct ata_Unit *unit;
 
-    DINIT(bug("[ATA**] Task started (bus: %u)\n", bus->ab_BusNum));
+    bug("[ATA:BusTask] TaskCode started (bus: %u)\n", bus->ab_BusNum);
 
     bus->ab_Timer = ata_OpenTimer(ATABase);
 //    bus->ab_BounceBufferPool = CreatePool(MEMF_CLEAR | MEMF_31BIT, 131072, 65536);
@@ -1024,10 +1015,9 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
 
     for (iter = 0; iter < MAX_BUSUNITS; ++iter)
     {
-        DINIT(bug("[ATA**] Device %u type %d\n", iter, bus->ab_Dev[iter]));
-
         if (bus->ab_Dev[iter] > DEV_UNKNOWN)
         {
+            bug("[ATA:BusTask] Device %u type %d\n", iter, bus->ab_Dev[iter]);
             unitObj = OOP_NewObject(ATABase->unitClass, NULL, NULL);
             if (unitObj)
             {
@@ -1064,7 +1054,7 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
         }
     }
 
-    D(bug("[ATA--] Bus %u scan finished\n", bus->ab_BusNum));
+    bug("[ATA:BusTask] TaskCode Bus %u scan finished\n", bus->ab_BusNum);
     ReleaseSemaphore(&ATABase->DetectionSem);
 
     /* Wait forever and process messages */
@@ -1093,6 +1083,7 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
         }
     }
 }
+
 void BusTaskCode2(struct ata_Bus *bus, struct ataBase *ATABase)
 {
     ULONG sig;
@@ -1101,7 +1092,7 @@ void BusTaskCode2(struct ata_Bus *bus, struct ataBase *ATABase)
     OOP_Object *unitObj;
     struct ata_Unit *unit;
 
-    DINIT(bug("[ATA**] Task started (bus: %u)\n", bus->ab_BusNum));
+    bug("[ATA:BusTask2] TaskCode started (bus: %u)\n", bus->ab_BusNum);
 
     bus->ab_Timer = ata_OpenTimer(ATABase);
 //    bus->ab_BounceBufferPool = CreatePool(MEMF_CLEAR | MEMF_31BIT, 131072, 65536);
@@ -1117,7 +1108,7 @@ void BusTaskCode2(struct ata_Bus *bus, struct ataBase *ATABase)
 
     for (iter = 0; iter < MAX_BUSUNITS; ++iter)
     {
-        DINIT(bug("[ATA**] Device %u type %d\n", iter, bus->ab_Dev[iter]));
+        bug("[ATA:BusTask2] Device %u type %d\n", iter, bus->ab_Dev[iter]);
 
         if (bus->ab_Dev[iter] > DEV_UNKNOWN)
         {
@@ -1157,32 +1148,31 @@ void BusTaskCode2(struct ata_Bus *bus, struct ataBase *ATABase)
         }
     }
 
-    D(bug("[ATA--] Bus %u scan finished\n", bus->ab_BusNum));
+    bug("[ATA:BusTask2] TaskCode Bus %u scan finished\n", bus->ab_BusNum);
     ReleaseSemaphore(&ATABase->DetectionSem);
-    
+
     /* Wait forever and process messages */
     for (;;)
     {
         Wait(sig);
-        
+
         /* Even if you get new signal, do not process it until Unit is not active */
         if (!(bus->ab_Flags & UNITF_ACTIVE))
         {
             bus->ab_Flags |= UNITF_ACTIVE;
-            
+
             /* Empty the request queue */
             while ((msg = (struct IORequest *)GetMsg(bus->ab_MsgPort)))
             {
                 /* And do IO's */
                 HandleIO(msg, ATABase);
-
                 /* TD_ADDCHANGEINT doesn't require reply */
                 if (msg->io_Command != TD_ADDCHANGEINT)
                 {
                     ReplyMsg((struct Message *)msg);
                 }
             }
-            
+
             bus->ab_Flags &= ~(UNITF_INTASK | UNITF_ACTIVE);
         }
     }
