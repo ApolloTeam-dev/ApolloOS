@@ -1929,6 +1929,8 @@ static void ata_ResetBus(struct ata_Bus *bus)
         while ( 1 )
         {
             if ((ata_ReadStatus(bus) & ATAF_BUSY) == 0)
+            {
+                bus->ab_Dev[1] = DEV_UNKNOWN;
                 break;
             ata_WaitTO(bus->ab_Timer, 0, 1000, 0);
             if (!(--TimeOut)) {
