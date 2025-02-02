@@ -1,5 +1,5 @@
 /*
-    Copyright © 2004-2013, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2004-2013, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: private inline stubs for calling DMA and PIO vectors

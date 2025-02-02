@@ -965,8 +965,7 @@ BOOL Hidd_ATABus_Start(OOP_Object *o, struct ataBase *ATABase)
     
     if(ab->ab_BusNum == 0)
     {
-   	    ab->use_da = TRUE;
-        bug("[ATA:Bus] Start BusTask: %01d | Use-DA: %01d | Unit 0: %01d | Unit 1: %01d\n", ab->ab_BusNum, ab->use_da, ab->ab_Dev[0], ab->ab_Dev[1]);
+        bug("[ATA:Bus] Start BusTask: %01d | Unit 0: %01d | Unit 1: %01d\n", ab->ab_BusNum, ab->ab_Dev[0], ab->ab_Dev[1]);
         return NewCreateTask(TASKTAG_PC    , BusTaskCode,
                          TASKTAG_NAME       , "ATA[PI] Bus #0",
                          TASKTAG_STACKSIZE  , STACK_SIZE,
@@ -978,8 +977,7 @@ BOOL Hidd_ATABus_Start(OOP_Object *o, struct ataBase *ATABase)
     } else {
         if(ab->ab_BusNum == 1)
    	    {
-            ab->use_da = FALSE;
-            bug("[ATA:Bus] Start BusTask: %01d | Use-DA: %01d | Unit 0: %01d | Unit 1: %01d\n", ab->ab_BusNum, ab->use_da, ab->ab_Dev[0], ab->ab_Dev[1]);
+            bug("[ATA:Bus] Start BusTask: %01d | Unit 0: %01d | Unit 1: %01d\n", ab->ab_BusNum, ab->ab_Dev[0], ab->ab_Dev[1]);
             return NewCreateTask(TASKTAG_PC    , BusTaskCode2,
                             TASKTAG_NAME       , "ATA[PI] Bus #1",
                             TASKTAG_STACKSIZE  , STACK_SIZE,

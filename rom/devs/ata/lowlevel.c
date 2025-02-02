@@ -186,10 +186,7 @@ static void ata_IRQSetHandler(struct ata_Unit *unit,
 
 static void ata_IRQNoData(struct ata_Unit *unit, UBYTE status)
 {
-    volatile UBYTE *port;
-    if(unit->au_Bus->use_da) port = 0xDA201C;
-    else port = 0xDD201C;
-    status = *port;
+    status = PIO_In(unit->au_Bus, ata_Status);
 
     if (status & ATAF_BUSY) return;
 
@@ -207,53 +204,25 @@ static void ata_NULL(struct ata_Unit *unit, UBYTE status)
 
 static void ata_IRQPIORead(struct ata_Unit *unit, UBYTE status)
 {
-    /*
-    ULONG count;
-    APTR address;
-    volatile UBYTE *port;
-    long retrycount; 
-
-    if(unit->au_Bus->use_da) port = 0xDA201C;
-    else port = 0xDD201C;
+    ULONG   count;
+    APTR    address;
+    ULONG   retrycount; 
 
 AGAIN:
     retrycount=100000000;
-    if (status & ATAF_BUSY){
-WAITBUSY:      
-        status = *port;
-        retrycount--;
-        if (retrycount=0){
-           unit->au_cmd_error = HFERR_BadStatus;
-           return;
-        }
-        if (status & ATAF_BUSY) goto WAITBUSY;
-    }  
+WAITBUSY: 
+    status = PIO_In(unit->au_Bus, ata_Status);
+
+    if (retrycount-- == 0)
+    {
+        unit->au_cmd_error = HFERR_BadStatus;
+        return;
+    }
+    if (status & ATAF_BUSY) goto WAITBUSY;
   
     if (status & ATAF_DATAREQ)
     {
         Unit_InS(unit, unit->au_cmd_data, unit->au_cmd_length);
-
-        /*count = (unit->au_cmd_length>>5);
-        address = unit->au_cmd_data;
-
-        if (unit->au_Bus->use_da)
-        {
-            asm volatile(
-        "       bra 2f                           \n"
-        "1:     move16 (0xDA6000),(%[address])+  \n"
-        "       move16 (0xDA6000),(%[address])+  \n"
-        "2:     dbra   %[count],1b               \n"
-                :[count]"+d"(count),[address]"+a"(address)::"cc");
-        }
-        else
-        {
-            asm volatile(
-        "       bra 2f                           \n"
-        "1:     move16 (0xDD6000),(%[address])+  \n"
-        "       move16 (0xDD6000),(%[address])+  \n"
-        "2:     dbra   %[count],1b               \n"
-                :[count]"+d"(count),[address]"+a"(address)::"cc");
-        }*/
 
         unit->au_cmd_data += unit->au_cmd_length;
         unit->au_cmd_total -= unit->au_cmd_length;
@@ -261,9 +230,7 @@ WAITBUSY:
         {
             if (unit->au_cmd_length > unit->au_cmd_total)
             unit->au_cmd_length = unit->au_cmd_total;
-
-                status = *port;
-                goto AGAIN;
+            goto AGAIN;
         }
     } else {
         unit->au_cmd_error = HFERR_BadStatus;
@@ -271,67 +238,29 @@ WAITBUSY:
     ata_IRQNoData(unit, status);
 }
 
-static void ata_PIOWriteBlk(struct ata_Unit *unit)
-{
-    Unit_OutS(unit, unit->au_cmd_data, unit->au_cmd_length);
-
-    unit->au_cmd_data += unit->au_cmd_length;
-    unit->au_cmd_total -= unit->au_cmd_length;
-    if (unit->au_cmd_length > unit->au_cmd_total)
-        unit->au_cmd_length = unit->au_cmd_total;
-}
 
 static void ata_IRQPIOWrite(struct ata_Unit *unit, UBYTE status)
 {
-
-    volatile UBYTE *port;
-    ULONG count;
-    APTR address;
-    long retrycount;
-    if(unit->au_Bus->use_da) port = 0xDA201C;
-    else port = 0xDD201C;
+    ULONG   count;
+    APTR    address;
+    ULONG   retrycount;
 
 AGAINW:
     retrycount=100000000;
-    if (status & ATAF_BUSY){
 WAITBUSYW:
-        status = *port;
-        retrycount--;
-        if (retrycount=0){
-           unit->au_cmd_error = HFERR_BadStatus;
-           return;
-        }
-        if (status & ATAF_BUSY) goto WAITBUSYW;
+    status = PIO_In(unit->au_Bus, ata_Status);
+
+    retrycount--;
+    if (retrycount-- == 0)
+    {
+        unit->au_cmd_error = HFERR_BadStatus;
+        return;
     }
+    if (status & ATAF_BUSY) goto WAITBUSYW;
 
-    if (status & ATAF_DATAREQ) {
-        DIRQ(bug("[ATA%02ld] IRQ: PIOWriteData - DRQ.\n", unit->au_UnitNum));
-
-        //ata_PIOWriteBlk(unit);
-
+    if (status & ATAF_DATAREQ)
+    {
         Unit_OutS(unit, unit->au_cmd_data, unit->au_cmd_length);
-
-        /*count = unit->au_cmd_length>>3;
-        address = unit->au_cmd_data;
-
-        if(unit->au_Bus->use_da)
-        {
-            asm volatile(
-        "       bra 2f                           \n"
-        "1:     move.l (%[address])+,(0xDA2000)  \n"
-        "       move.l (%[address])+,(0xDA2000)  \n"
-        "2:     dbra   %[count],1b               \n"
-                :[count]"+d"(count),[address]"+a"(address)::"cc");
-        }
-        else
-        {
-            asm volatile(
-        "       bra 2f                           \n"
-        "1:     move.l (%[address])+,(0xDD2000)  \n"
-        "       move.l (%[address])+,(0xDD2000)  \n"
-        "2:     dbra   %[count],1b               \n"
-                :[count]"+d"(count),[address]"+a"(address)::"cc");
-        }*/
 
         unit->au_cmd_data += unit->au_cmd_length;
         unit->au_cmd_total -= unit->au_cmd_length;
@@ -343,24 +272,17 @@ WAITBUSYW:
 
         if (unit->au_cmd_total != 0)
         {
-            status = *port;
             goto AGAINW;
         }
-
     } else {
         if (unit->au_cmd_total != 0)
         {
             unit->au_cmd_error = HFERR_BadStatus;
         }
     }
-
-    DIRQ(bug("[ATA%02ld] IRQ: PIOWriteData - done.\n", unit->au_UnitNum));
     ata_IRQNoData(unit, status);
 }
 
-	static void ata_IRQDMAReadWrite(struct ata_Unit *unit, UBYTE status)
-{
-}
 
 static void ata_IRQPIOReadAtapi(struct ata_Unit *unit, UBYTE status)
 {
@@ -563,48 +485,18 @@ static BOOL ata_WaitBusyTO(struct ata_Unit *unit, UWORD tout, BOOL irq,
     return res;
 }
 
-/*
- * Procedure for sending ATA command blocks
- * it appears LARGE but there's a lot of COMMENTS here :)
- * handles *all* ata commands (no data, pio and dma)
- * naturally could be split at some point in the future
- * depends if anyone believes that the change for 50 lines
- * would make slow ATA transfers any faster
- */
+
 static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
 {
     struct ata_Bus *bus = unit->au_Bus;
     BYTE err = 0;
     APTR mem = block->buffer;
     UBYTE status;
-    volatile WORD *irqreg;
-    volatile WORD *irqen;
 
-    if(unit->au_Bus->use_da)
-    {
-        irqreg = 0xDA9000;
-	    irqen = 0xDAA000;
-    }
-    else
-    {
-        irqreg = 0xDD9000;
-	    irqen = 0xDDA000;
-    }
-
-    /*
-     * Use a short timeout for Identify commands. This is because some bad
-     * drives make us think that there are two devices on the bus when there
-     * is really only one, so when we send an Identify command to the phantom
-     * drive, we can't rely on getting an IRQ. Additionally, some real drives
-     * don't produce an IRQ when the Identify command is complete, so we call
-     * the interrupt handler "manually" if we time out while waiting for it.
-     */
-    BOOL fake_irq = block->command == ATA_IDENTIFY_DEVICE
-        || block->command == ATA_IDENTIFY_ATAPI;
+    BOOL fake_irq = block->command == ATA_IDENTIFY_DEVICE || block->command == ATA_IDENTIFY_ATAPI;
     UWORD timeout = fake_irq? 1 : TIMEOUT;
 
-    if (FALSE == ata_SelectUnit(unit))
-        return IOERR_UNITBUSY;
+    if (FALSE == ata_SelectUnit(unit)) return IOERR_UNITBUSY;
 
     switch (block->type)
     {
@@ -615,12 +507,6 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
                 DERROR(bug("[ATA%02ld] ata_exec_cmd: ERROR: Transfer length (%ld) exceeds 256 sectors. Aborting.\n", unit->au_UnitNum, block->sectors));
                 return IOERR_BADLENGTH;
             }
-
-            /* note:
-             * we want the above to fall in here!
-             * we really do (checking for secmul)
-             */
-
         case CT_LBA48:
             if (block->sectors > 65536)
             {
@@ -645,14 +531,11 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
     block->actual = 0;
     D(bug("[ATA%02ld] ata_exec_cmd: Executing command %02lx\n", unit->au_UnitNum, block->command));
 
-    if (block->feature != 0)
-        PIO_Out(bus, block->feature, ata_Feature);
+    if (block->feature != 0) PIO_Out(bus, block->feature, ata_Feature);
 
-            ULONG piolen = block->length;
-            ULONG blklen = block->secmul << unit->au_SectorShift;
-    /*
-     * - set LBA and sector count
-     */
+    ULONG piolen = block->length;
+    ULONG blklen = block->secmul << unit->au_SectorShift;
+
     switch (block->type)
     {
         case CT_CHS:
@@ -705,40 +588,21 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
     switch (block->method)
     {
         case CM_PIOWrite:
-//            ata_IRQSetHandler(unit, &ata_IRQPIOWrite, mem, block->secmul << unit->au_SectorShift, block->length);
-            break;
-
-        case CM_PIORead:
-            //ata_IRQSetHandler(unit, &ata_IRQPIORead, mem, block->secmul << unit->au_SectorShift, block->length);
-            break;
-
-        case CM_DMARead:
-            break;
-
-        case CM_DMAWrite:
-            break;
-
-        case CM_NoData:
-            ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
-            break;
-
-        default:
-            return IOERR_NOCMD;
-            break;
-    };
-
-    /*
-     * send command now
-     * let drive propagate its signals
-     */
-    DATA(bug("[ATA%02ld] ata_exec_cmd: Sending command\n", unit->au_UnitNum));
-
-    if (block->method == CM_PIORead) {
-            *irqen=0x0000;
             PIO_OutAlt(bus, ATACTLF_INT_DISABLE, ata_AltControl);
             PIO_Out(bus, block->command, ata_Command);
 
-            //ata_WaitNano(400, bus->ab_Base);
+            unit->au_cmd_error = 0;
+            unit->au_cmd_data = mem;
+            piolen = block->length;
+            blklen = block->secmul << unit->au_SectorShift;
+            unit->au_cmd_length = (piolen < blklen) ? piolen : blklen;
+            unit->au_cmd_total = piolen;
+            ata_IRQPIOWrite(unit, ATAF_BUSY);
+            break;
+
+        case CM_PIORead:
+            PIO_OutAlt(bus, ATACTLF_INT_DISABLE, ata_AltControl);
+            PIO_Out(bus, block->command, ata_Command);
 
             unit->au_cmd_error = 0;
             unit->au_cmd_data = mem;
@@ -747,67 +611,26 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
             unit->au_cmd_length = (piolen < blklen) ? piolen : blklen;
             unit->au_cmd_total = piolen;
             ata_IRQPIORead(unit, ATAF_BUSY);
-            *irqreg=0x0000;
+            break;
+    
+        case CM_NoData:
+            ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
+            break;
 
-    }else if (block->method == CM_PIOWrite) {
-            *irqen=0x0000;
-            PIO_OutAlt(bus, ATACTLF_INT_DISABLE, ata_AltControl);
+        default:
             PIO_Out(bus, block->command, ata_Command);
-
-            //ata_WaitNano(400, bus->ab_Base);
-
-            unit->au_cmd_error = 0;
-            unit->au_cmd_data = mem;
-             piolen = block->length;
-             blklen = block->secmul << unit->au_SectorShift;
-            unit->au_cmd_length = (piolen < blklen) ? piolen : blklen;
-            unit->au_cmd_total = piolen;
-            ata_IRQPIOWrite(unit, ATAF_BUSY);
-
-    }else{
-         //   *irqen=0x8000;
-         //   PIO_OutAlt(bus, 0x0, ata_AltControl);
-            PIO_Out(bus, block->command, ata_Command);
-
+            break;
     };
 
-    /*
-     * In case of PIO write the drive won't issue an IRQ before first
-     * data transfer, so we should poll the status and send the first
-     * block upon request.
-     */
-//       if (block->method == CM_PIOWrite)
-//       {
-//   	if (FALSE == ata_WaitBusyTO(unit, TIMEOUT, FALSE, FALSE, &status)) {
-//   	    DERROR(bug("[ATA%02ld] ata_exec_cmd: PIOWrite - no response from device. Status %02X\n", unit->au_UnitNum, status));
-//   	    return IOERR_UNITBUSY;
-//   	}
-//   	if (status & ATAF_DATAREQ) {
-//   	    DATA(bug("[ATA%02ld] ata_exec_cmd: PIOWrite - DRQ.\n", unit->au_UnitNum));
-//   	    ata_PIOWriteBlk(unit);
-//   	}
-//   	else
-//   	{
-//   	    DERROR(bug("[ATA%02ld] ata_exec_cmd: PIOWrite - bad status: %02X\n", status));
-//   	    return HFERR_BadStatus;
-//   	}
-//       }
-
-    /*
-     * wait for drive to complete what it has to do
-     */
-    if (FALSE == ata_WaitBusyTO(unit, timeout, TRUE, fake_irq, &status))
+     if (FALSE == ata_WaitBusyTO(unit, timeout, TRUE, fake_irq, &status))
     {
         DERROR(bug("[ATA%02ld] ata_exec_cmd: Device is late - no response\n", unit->au_UnitNum));
         err = IOERR_UNITBUSY;
-    }
-    else
+    } else {
         err = unit->au_cmd_error;
+    }
 
-    DATA(bug("[ATA%02ld] ata_exec_cmd: Command done\n", unit->au_UnitNum));
-
-
-    D(bug("[ATA%02ld] ata_exec_cmd: return code %ld\n", unit->au_UnitNum, err));
+    D(bug("[ATA%02ld] ata_exec_cmd: Command done -> return code %ld\n", unit->au_UnitNum, err));
     return err;
 }
 
@@ -983,7 +806,6 @@ static BYTE ata_exec_blk(struct ata_Unit *unit, ata_CommandBlock *blk)
         count -= part;
     }
 
-
     return err;
 }
 
@@ -1002,9 +824,6 @@ void ata_init_unit(struct ata_Bus *bus, struct ata_Unit *unit, UBYTE u)
     unit->pioInterface  = bus->pioInterface;
     unit->au_UnitNum    = bus->ab_BusNum << 1 | u;      // b << 8 | u
     unit->au_DevMask    = 0xa0 | (u << 4);
-    unit->au_ins        = bus->pioVectors->ata_ins;
-    unit->au_outs       = bus->pioVectors->ata_outs;
-    unit->au_UseModes   |= AF_XFER_PIO32;
 
     bug("[ATA:%02u] ata_init_unit: bus %u unit %d\n", unit->au_UnitNum, bus->ab_BusNum, u);
 

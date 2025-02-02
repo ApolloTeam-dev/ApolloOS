@@ -44,7 +44,8 @@ OOP_Object *GAYLEATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *
         data->bus->atapb_Node.ln_Succ = (struct Node *)-1;
         data->gaylebase = data->bus->port;
         data->gayleirqbase = data->bus->gayleirqbase;
-        data->a500 = data->bus->a500;
+        data->da = data->bus->da;
+        data->v4 = data->bus->v4;
     }
     bug("[ATA:Gayle] %s: Instance @ %p\n", __func__, o);
     return o;
@@ -126,7 +127,8 @@ APTR GAYLEATA__Hidd_ATABus__GetPIOInterface(OOP_Class *cl, OOP_Object *o, OOP_Ms
     {
         pio->port = data->bus->port;
         pio->altport  = data->bus->altport;
-        pio->a500 = data->bus->a500;
+        pio->da = data->bus->da;
+        pio->v4 = data->bus->v4;
         pio->dataport = (UBYTE*)(((ULONG)pio->port) + 0x2000);
     }
 

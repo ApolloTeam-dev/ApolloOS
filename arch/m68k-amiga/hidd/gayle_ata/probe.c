@@ -66,21 +66,33 @@ static UBYTE *getport(struct ata_ProbedBus *ddata, int buscounter)
     if(buscounter == 0)
     {
         // V4-ID and V4-MC have mainboard native IDE on $DA, V2-500, V2-600, V2-1200, V4-FB and V4-SA have Fast-IDE Gayle on $DA
-        //if((ApolloBoardID == VREG_BOARD_V500)||(ApolloBoardID == VREG_BOARD_V600)||(ApolloBoardID == VREG_BOARD_V1200)||(ApolloBoardID == VREG_BOARD_V4FB)||(ApolloBoardID == VREG_BOARD_V4SA))
         {
-            bug("[ATA:Gayle] Port = GAYLE_BASE_DA\n");
             port = (UBYTE*)GAYLE_BASE_DA;
             ddata->gayleirqbase = (UBYTE*)GAYLE_IRQ_DA;
-            ddata->a500 = TRUE;
+            ddata->da = TRUE;
+            if((ApolloBoardID == VREG_BOARD_V500)
+             ||(ApolloBoardID == VREG_BOARD_V600)
+             ||(ApolloBoardID == VREG_BOARD_V1200)
+             ||(ApolloBoardID == VREG_BOARD_V4FB)
+             ||(ApolloBoardID == VREG_BOARD_V4SA))
+            {
+                ddata->v4 = TRUE;
+                bug("[ATA:Gayle] Port = GAYLE_BASE_DA (V4 Fast-IDE)\n");
+            } else {
+                ddata->v4 = FALSE;
+                bug("[ATA:Gayle] Port = GAYLE_BASE_DA (Native IDE)\n");
+            }
         } 
     } else {
         // V4-ID and V4-MC have Fast-IDE Gayle on $DD
-        if((ApolloBoardID == VREG_BOARD_V4ID)||(ApolloBoardID == VREG_BOARD_V4MC))
+        if((ApolloBoardID == VREG_BOARD_V4ID)
+         ||(ApolloBoardID == VREG_BOARD_V4MC))
         {
-            bug("[ATA:Gayle] Port = GAYLE_BASE_DD\n");
             port = (UBYTE*)GAYLE_BASE_DD;
             ddata->gayleirqbase = (UBYTE*)GAYLE_IRQ_DD;
-            ddata->a500 = FALSE;
+            ddata->da = FALSE;
+            ddata->v4 = TRUE;
+            bug("[ATA:Gayle] Port = GAYLE_BASE_DD (V4 Fast-IDE)\n");
         }
     }
     Enable();
@@ -90,9 +102,7 @@ static UBYTE *getport(struct ata_ProbedBus *ddata, int buscounter)
     {
         bug("[ATA:Gayle] No Gayle IDE port @ %08x\n", (ULONG)port & ~3);
         return NULL;
-    } else {
-        bug("[ATA:Gayle] Possible Gayle IDE port @ %08x\n", (ULONG)port & ~3);
-    }    
+    } 
 
     ddata->port = (UBYTE*)port;
     altport = port + 0x1010;

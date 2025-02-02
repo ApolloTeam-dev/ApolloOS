@@ -19,10 +19,11 @@
 
 struct pio_data
 {
-    UBYTE *dataport;
-    UBYTE *port;
-    UBYTE *altport;
-    BOOL a500;
+    UBYTE   *dataport;
+    UBYTE   *port;
+    UBYTE   *altport;
+    BOOL    da;
+    BOOL    v4;
 };
 
 extern const APTR bus_FuncTable[];

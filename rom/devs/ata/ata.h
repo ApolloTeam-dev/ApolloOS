@@ -192,8 +192,6 @@ struct ata_Bus
 
    /** functions go here **/
    void                   	(*ab_HandleIRQ)(struct ata_Unit* unit, UBYTE status);
-
-   int                       use_da;
 };
 
 /* Device types */

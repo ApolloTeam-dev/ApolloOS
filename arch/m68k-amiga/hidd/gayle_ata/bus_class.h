@@ -8,7 +8,8 @@ struct ata_ProbedBus
     UBYTE   *port;
     UBYTE   *altport;
     UBYTE   *gayleirqbase;
-    BOOL    a500;
+    BOOL    da;
+    BOOL    v4;
 };
 
 struct ATA_BusData
@@ -21,7 +22,8 @@ struct ATA_BusData
     UBYTE   *gayleirqbase;
     UBYTE   *gayleintbase;
     BOOL    ideintadded;
-    BOOL    a500;
+    BOOL    da;
+    BOOL    v4;
 };
 
 struct ataBase
