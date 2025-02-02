@@ -71,15 +71,13 @@ static void ata_outsl(struct pio_data *data, APTR address, ULONG count)
 static void ata_insw(struct pio_data *data, APTR address, ULONG count)
 {
     volatile UWORD *addr = (UWORD*)data->dataport;
-
-    bug("WIN %p %p %d\n", addr, address, count);
-
     asm volatile(
 "1:     move.w (%[port]),(%[address])+  \n"
 "       move.w (%[port]),(%[address])+  \n"
 "       subq.l #1,%[count]              \n"
 "       bnes 1b                         \n"
         ::[count]"d"(count >> 2),[address]"a"(address),[port]"a"(addr));
+}
 }
 
 static void ata_insl(struct pio_data *data, APTR address, ULONG count)

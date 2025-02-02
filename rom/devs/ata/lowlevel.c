@@ -207,6 +207,7 @@ static void ata_NULL(struct ata_Unit *unit, UBYTE status)
 
 static void ata_IRQPIORead(struct ata_Unit *unit, UBYTE status)
 {
+    /*
     ULONG count;
     APTR address;
     volatile UBYTE *port;
@@ -997,10 +998,13 @@ void ata_init_unit(struct ata_Bus *bus, struct ata_Unit *unit, UBYTE u)
     UWORD ApolloBoardID     = *(volatile UWORD *)0xdff3fc;  
     ApolloBoardID = ApolloBoardID >> 8; 
 
-    unit->au_Bus       = bus;
-    unit->pioInterface = bus->pioInterface;
-    unit->au_UnitNum   = bus->ab_BusNum << 1 | u;      // b << 8 | u
-    unit->au_DevMask   = 0xa0 | (u << 4);
+    unit->au_Bus        = bus;
+    unit->pioInterface  = bus->pioInterface;
+    unit->au_UnitNum    = bus->ab_BusNum << 1 | u;      // b << 8 | u
+    unit->au_DevMask    = 0xa0 | (u << 4);
+    unit->au_ins        = bus->pioVectors->ata_ins;
+    unit->au_outs       = bus->pioVectors->ata_outs;
+    unit->au_UseModes   |= AF_XFER_PIO32;
 
     bug("[ATA:%02u] ata_init_unit: bus %u unit %d\n", unit->au_UnitNum, bus->ab_BusNum, u);
 
