@@ -31,45 +31,77 @@ static UBYTE ata_in(struct pio_data *data, UWORD offset)
 
 static void ata_outsw(struct pio_data *data, APTR address, ULONG count)
 {
-    volatile UWORD *addr = (UWORD*)data->dataport;
-
-    bug("WOUT %p %p %d\n", addr, address, count);
-
-    asm volatile(
-"1:     move.w (%[address])+,(%[port])  \n"
-"       move.w (%[address])+,(%[port])  \n"
-"       subq.l #1,%[count]              \n"
-"       bnes 1b                         \n"
-        ::[count]"d"(count >> 2),[address]"a"(address),[port]"a"(addr));
+    // Redundant
 }
 
 static void ata_outsl(struct pio_data *data, APTR address, ULONG count)
     {
         volatile ULONG *addr = (ULONG*)data->dataport;
 
-    if(data->da)
+    if(data->v4)
     {
+        if(data->da)
+        {
+            asm volatile(
+    "1:     move.l (%[address])+,(0xda2000)  \n"
+    "       move.l (%[address])+,(0xda2000)  \n"
+        "       subq.l #1,%[count]              \n"
+        "       bnes 1b                         \n"
+                ::[count]"d"(count >> 3),[address]"a"(address),[port]"a"(addr));
+        }
+        else
+        {
         asm volatile(
-"1:     move.l (%[address])+,(0xda2000)  \n"
-"       move.l (%[address])+,(0xda2000)  \n"
+    "1:     move.l (%[address])+,(0xdd2000)  \n"
+    "       move.l (%[address])+,(0xdd2000)  \n"
     "       subq.l #1,%[count]              \n"
     "       bnes 1b                         \n"
             ::[count]"d"(count >> 3),[address]"a"(address),[port]"a"(addr));
+        }
+    } else {
+        volatile UWORD *addr = (UWORD*)data->dataport;
+
+        asm volatile(
+    "1:     move.w (%[address])+,(%[port])  \n"
+    "       move.w (%[address])+,(%[port])  \n"
+    "       subq.l #1,%[count]              \n"
+    "       bnes 1b                         \n"
+            ::[count]"d"(count >> 2),[address]"a"(address),[port]"a"(addr));
     }
-    else
-    {
-    asm volatile(
-"1:     move.l (%[address])+,(0xdd2000)  \n"
-"       move.l (%[address])+,(0xdd2000)  \n"
-"       subq.l #1,%[count]              \n"
-"       bnes 1b                         \n"
-        ::[count]"d"(count >> 3),[address]"a"(address),[port]"a"(addr));
-    }
-    
 }
 
 static void ata_insw(struct pio_data *data, APTR address, ULONG count)
 {
+    // Redundant
+}
+
+static void ata_insl(struct pio_data *data, APTR address, ULONG count)
+{
+    volatile ULONG *addr = (ULONG*)data->dataport;
+
+    if(data->v4)
+    {
+        if(data->da)
+            {
+                asm volatile(
+            "       bra 2f                          \n"
+            "1:                                     \n"
+            "       move16 0x00da6000,(%[address])+ \n"
+            "       move16 0x00da6000,(%[address])+ \n"
+            "2:     dbra   %[count],1b              \n"
+                    ::[count]"d"(count >> 5),[address]"a"(address));
+        }
+        else
+        {
+                asm volatile(
+            "       bra 2f                          \n"
+            "1:                                     \n"
+            "       move16 0x00dd6000,(%[address])+ \n"
+            "       move16 0x00dd6000,(%[address])+ \n"
+            "2:     dbra   %[count],1b              \n"
+                    ::[count]"d"(count >> 5),[address]"a"(address));
+        }
+    } else {
         volatile UWORD *addr = (UWORD*)data->dataport;
         asm volatile(
 "1:     move.w (%[port]),(%[address])+  \n"
@@ -77,32 +109,7 @@ static void ata_insw(struct pio_data *data, APTR address, ULONG count)
     "       subq.l #1,%[count]              \n"
     "       bnes 1b                         \n"
         ::[count]"d"(count >> 2),[address]"a"(address),[port]"a"(addr));
-}
-
-static void ata_insl(struct pio_data *data, APTR address, ULONG count)
-{
-    volatile ULONG *addr = (ULONG*)data->dataport;
-
-    if(data->da)
-        {
-            asm volatile(
-        "       bra 2f                          \n"
-        "1:                                     \n"
-        "       move16 0x00da6000,(%[address])+ \n"
-        "       move16 0x00da6000,(%[address])+ \n"
-        "2:     dbra   %[count],1b              \n"
-                ::[count]"d"(count >> 5),[address]"a"(address));
     }
-    else
-    {
-            asm volatile(
-        "       bra 2f                          \n"
-        "1:                                     \n"
-        "       move16 0x00dd6000,(%[address])+ \n"
-        "       move16 0x00dd6000,(%[address])+ \n"
-        "2:     dbra   %[count],1b              \n"
-                ::[count]"d"(count >> 5),[address]"a"(address));
-        }
 }
 
 const APTR bus_FuncTable[] =

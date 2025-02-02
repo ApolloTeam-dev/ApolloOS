@@ -825,17 +825,11 @@ void ata_init_unit(struct ata_Bus *bus, struct ata_Unit *unit, UBYTE u)
     unit->au_UnitNum    = bus->ab_BusNum << 1 | u;      // b << 8 | u
     unit->au_DevMask    = 0xa0 | (u << 4);
 
-    bug("[ATA:%02u] ata_init_unit: bus %u unit %d\n", unit->au_UnitNum, bus->ab_BusNum, u);
+    unit->au_UseModes |= AF_XFER_PIO32;
+    unit->au_ins       = bus->pioVectors->ata_insl;
+    unit->au_outs      = bus->pioVectors->ata_outsl;
 
-    // Set PIO transfer to 32-bit for $DA (only V4-IDE if not ICE/MC) and for $DD (always V4 IDE)
-    if ( ( (bus->ab_BusNum) == 0) && !( (ApolloBoardID == VREG_BOARD_V4ID) || (ApolloBoardID == VREG_BOARD_V4MC) ) || ((bus->ab_BusNum) == 1) )  
-    {    
-        Unit_Enable32Bit(unit);
-        bug("[ATA:%02u] ata_init_unit: 32-Bit ENABLED\n", unit->au_UnitNum);
-    } else {
-        Unit_Disable32Bit(unit);
-        bug("[ATA:%02u] ata_init_unit: 32-Bit DISABLED\n", unit->au_UnitNum);
-    }
+    bug("[ATA:%02u] ata_init_unit: bus %u unit %d\n", unit->au_UnitNum, bus->ab_BusNum, u);
 }
 
 BOOL ata_setup_unit(struct ata_Bus *bus, struct ata_Unit *unit)
