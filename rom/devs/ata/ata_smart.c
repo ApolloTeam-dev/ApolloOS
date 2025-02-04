@@ -1,5 +1,5 @@
 /*
-    Copyright © 2019, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2019, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -17,6 +17,8 @@
 #include <devices/ata.h>
 
 #include "ata.h"
+
+#define DD(x) x
 
 /* perform the S.M.A.R.T operation specified in io_Reserved1 */
 void ata_SMARTCmd(struct IOStdReq *io)
@@ -37,7 +39,7 @@ void ata_SMARTCmd(struct IOStdReq *io)
         CT_NoBlock
     };
 #endif
-    D(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+    DD(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
 #if (0)
 	if (IOStdReq(io)->io_Reserved1 == SMARTC_READ_VALUES || IOStdReq(io)->io_Reserved1 == SMARTC_READ_THRESHOLDS) {
 		acb.buffer = IOStdReq(io)->io_Data;

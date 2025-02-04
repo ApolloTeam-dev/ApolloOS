@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2013, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -19,6 +19,8 @@
 #include <proto/execlock.h>
 #include <resources/execlock.h>
 #endif
+
+#define DD(x) x
 
 extern const char ata_LibName[];
 extern const char ata_LibID[];
@@ -90,7 +92,7 @@ AROS_UFH3(static APTR, ata_Wait,
 
     if (ATABase)
     {
-        D(bug("[ATA  ] Waiting for device detection to complete...\n"));
+        DD(bug("[ATA  ] Waiting for device detection to complete...\n"));
         ObtainSemaphore(&ATABase->DetectionSem);
         ReleaseSemaphore(&ATABase->DetectionSem);
     }

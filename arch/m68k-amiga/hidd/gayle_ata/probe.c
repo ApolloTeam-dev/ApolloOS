@@ -29,6 +29,8 @@
 #include "bus_class.h"
 #include "interface_pio.h"
 
+#define DD(x) x
+
 #define VREG_BOARD_Unknown  0x00 /* Unknown                         */
 #define VREG_BOARD_V600     0x01 /* Vampire V2 V600(+),   for A600  */
 #define VREG_BOARD_V500     0x02 /* Vampire V2 V500(+),   for A500  */

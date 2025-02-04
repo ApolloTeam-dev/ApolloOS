@@ -27,15 +27,15 @@
 #include "ata_bus.h"
 #include "timer.h"
 
-// use #define xxx(a) D(a) to enable particular sections.
+// use #define xxx(a) DD(a) to enable particular sections.
 #if DEBUG
-#define DIRQ(a) D(a)
+#define DIRQ(a) DD(a)
 #define DIRQ_MORE(a)
-#define DUMP(a) D(a)
+#define DUMP(a) DD(a)
 #define DUMP_MORE(a)
-#define DATA(a) D(a)
-#define DATAPI(a) D(a)
-#define DINIT(a) D(a)
+#define DATA(a) DD(a)
+#define DATAPI(a) DD(a)
+#define DINIT(a) DD(a)
 #else
 #define DIRQ(a)      do { } while (0)
 #define DIRQ_MORE(a) do { } while (0)
@@ -47,6 +47,8 @@
 #endif
 /* Errors that shouldn't happen */
 #define DERROR(a) a
+
+#define DD(x)
 
 #define VREG_BOARD_Unknown  0x00 /* Unknown                         */
 #define VREG_BOARD_V600     0x01 /* Vampire V2 V600(+),   for A600  */
@@ -529,7 +531,7 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
     }
 
     block->actual = 0;
-    D(bug("[ATA%02ld] ata_exec_cmd: Executing command %02lx\n", unit->au_UnitNum, block->command));
+    DD(bug("[ATA%02ld] ata_exec_cmd: Executing command %02lx\n", unit->au_UnitNum, block->command));
 
     if (block->feature != 0) PIO_Out(bus, block->feature, ata_Feature);
 
@@ -630,7 +632,7 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
         err = unit->au_cmd_error;
     }
 
-    D(bug("[ATA%02ld] ata_exec_cmd: Command done -> return code %ld\n", unit->au_UnitNum, err));
+    DD(bug("[ATA%02ld] ata_exec_cmd: Command done -> return code %ld\n", unit->au_UnitNum, err));
     return err;
 }
 
@@ -1109,14 +1111,13 @@ static BYTE ata_Identify(struct ata_Unit *unit)
 
     DUMP(dump(unit->au_Drive, sizeof(struct DriveIdent)));
 
-        unit->au_SectorShift    = 9;
-        unit->au_DevType        = DG_DIRECT_ACCESS;
-        unit->au_Read32         = ata_ReadSector32;
-        unit->au_Write32        = ata_WriteSector32;
-        unit->au_Eject          = ata_Eject;
-        unit->au_XferModes      = 0;
-        unit->au_Flags         |= AF_DiscPresent | AF_DiscChanged;
-    
+    unit->au_SectorShift    = 9;
+    unit->au_DevType        = DG_DIRECT_ACCESS;
+    unit->au_Read32         = ata_ReadSector32;
+    unit->au_Write32        = ata_WriteSector32;
+    unit->au_Eject          = ata_Eject;
+    unit->au_XferModes      = 0;
+    unit->au_Flags         |= AF_DiscPresent | AF_DiscChanged;
 
     ata_strcpy(unit->au_Drive->id_Model, unit->au_Model, 40);
     ata_strcpy(unit->au_Drive->id_SerialNumber, unit->au_SerialNumber, 20);
@@ -1228,7 +1229,7 @@ static BYTE ata_ReadSector32(struct ata_Unit *unit, ULONG block,
     };
     BYTE err;
 
-    D(bug("[ATA%02ld] ata_ReadSector32()\n", unit->au_UnitNum));
+    DD(bug("[ATA%02ld] ata_ReadSector32()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb)))
@@ -1257,7 +1258,7 @@ static BYTE ata_ReadMultiple32(struct ata_Unit *unit, ULONG block,
     };
     BYTE err;
 
-    D(bug("[ATA%02ld] ata_ReadMultiple32()\n", unit->au_UnitNum));
+    DD(bug("[ATA%02ld] ata_ReadMultiple32()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb)))
@@ -1290,7 +1291,7 @@ static BYTE ata_ReadSector64(struct ata_Unit *unit, UQUAD block,
     };
     BYTE err = 0;
 
-    D(bug("[ATA%02ld] ata_ReadSector64()\n", unit->au_UnitNum));
+    DD(bug("[ATA%02ld] ata_ReadSector64()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb)))
@@ -1319,7 +1320,7 @@ static BYTE ata_ReadMultiple64(struct ata_Unit *unit, UQUAD block,
     };
     BYTE err;
 
-    D(bug("[ATA%02ld] ata_ReadMultiple64()\n", unit->au_UnitNum));
+    DD(bug("[ATA%02ld] ata_ReadMultiple64()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb)))
@@ -1352,7 +1353,7 @@ static BYTE ata_WriteSector32(struct ata_Unit *unit, ULONG block,
     };
     BYTE err;
 
-    D(bug("[ATA%02ld] ata_WriteSector32()\n", unit->au_UnitNum));
+    DD(bug("[ATA%02ld] ata_WriteSector32()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb)))
@@ -1381,7 +1382,7 @@ static BYTE ata_WriteMultiple32(struct ata_Unit *unit, ULONG block,
     };
     BYTE err;
 
-    D(bug("[ATA%02ld] ata_WriteMultiple32()\n", unit->au_UnitNum));
+    DD(bug("[ATA%02ld] ata_WriteMultiple32()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb)))
@@ -1414,7 +1415,7 @@ static BYTE ata_WriteSector64(struct ata_Unit *unit, UQUAD block,
     };
     BYTE err;
 
-    D(bug("[ATA%02ld] ata_WriteSector64()\n", unit->au_UnitNum));
+    DD(bug("[ATA%02ld] ata_WriteSector64()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb)))
@@ -1443,7 +1444,7 @@ static BYTE ata_WriteMultiple64(struct ata_Unit *unit, UQUAD block,
     };
     BYTE err;
 
-    D(bug("[ATA%02ld] ata_WriteMultiple64()\n", unit->au_UnitNum));
+    DD(bug("[ATA%02ld] ata_WriteMultiple64()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb)))
@@ -1474,7 +1475,7 @@ static BYTE ata_Eject(struct ata_Unit *unit)
         CT_NoBlock
     };
 
-    D(bug("[ATA%02ld] ata_Eject()\n", unit->au_UnitNum));
+    DD(bug("[ATA%02ld] ata_Eject()\n", unit->au_UnitNum));
 
     return ata_exec_cmd(unit, &acb);
 }
@@ -1495,7 +1496,7 @@ int atapi_TestUnitOK(struct ata_Unit *unit)
     };
     UWORD i;
 
-    D(bug("[ATA%02ld] atapi_TestUnitOK()\n", unit->au_UnitNum));
+    DD(bug("[ATA%02ld] atapi_TestUnitOK()\n", unit->au_UnitNum));
 
     sc.scsi_Command = (void*) &cmd;
     sc.scsi_CmdLength = sizeof(cmd);
@@ -1562,7 +1563,7 @@ static ULONG ata_ReadSignature(struct ata_Bus *bus, int unit,
 {
     UBYTE tmp1, tmp2;
 
-    D(bug("[ATA  ] ata_ReadSignature(%02ld)\n", unit));
+    DD(bug("[ATA  ] ata_ReadSignature(%02ld)\n", unit));
 
     PIO_Out(bus, DEVHEAD_VAL | (unit << 4), ata_DevHead);
     //ata_WaitNano(400, bus->ab_Base);

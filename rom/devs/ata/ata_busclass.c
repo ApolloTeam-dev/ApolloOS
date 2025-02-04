@@ -22,8 +22,10 @@
 #include "ata.h"
 #include "ata_bus.h"
 
-#define DIRQ(x)
-#define DATTR(x)
+#define DIRQ(x) x
+#define DATTR(x) x
+
+#define DD(x) x
 
 static void Hidd_ATABus_HandleIRQ(UBYTE status, struct ata_Bus *bus)
 {
@@ -66,7 +68,7 @@ static AROS_INTH1(ataBus_Reset, struct ata_Bus *, bus)
     struct ataBase *ATABase = bus->ab_Base;
     OOP_Object *obj = (void *)bus - ATABase->busClass->InstOffset;
 
-    D(bug("[ATA:Bus] %s()\n", __func__));
+    DD(bug("[ATA:Bus] %s()\n", __func__));
 
     HIDD_ATABus_Shutdown(obj);
 
@@ -512,7 +514,7 @@ static AROS_INTH1(ataBus_Reset, struct ata_Bus *, bus)
 OOP_Object *ATABus__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg)
 {
     struct ataBase *ATABase = cl->UserData;
-    D(bug("[ATA:Bus] %s()\n", __func__));
+    DD(bug("[ATA:Bus] %s()\n", __func__));
 
     o = (OOP_Object *)OOP_DoSuperMethod(cl, o, &msg->mID);
     if (o)
@@ -521,7 +523,7 @@ OOP_Object *ATABus__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *ms
         struct TagItem *tstate = msg->attrList;
         struct TagItem *tag;
 
-        D(
+        DD(
           bug("[ATA:Bus] %s: instance @ 0x%p\n", __func__, o);
           bug("[ATA:Bus] %s: ata_Bus @ 0x%p\n", __func__, data);
          )
@@ -537,7 +539,7 @@ OOP_Object *ATABus__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *ms
             {
             case aoHidd_ATABus_PIODataSize:
                 data->pioDataSize = tag->ti_Data;
-                D(bug("[ATA:Bus] %s: PIODataSize = %d\n", __func__, data->pioDataSize);)
+                DD(bug("[ATA:Bus] %s: PIODataSize = %d\n", __func__, data->pioDataSize);)
                 break;
 
             case aoHidd_ATABus_DMADataSize:
@@ -657,7 +659,7 @@ void ATABus__Hidd_StorageBus__EnumUnits(OOP_Class *cl, OOP_Object *o, struct pHi
     struct ata_Bus *data = OOP_INST_DATA(cl, o);
     BOOL stop = FALSE;
 
-    D(bug ("[ATA:Bus] Hidd_StorageBus__EnumUnits()\n");)
+    DD(bug ("[ATA:Bus] Hidd_StorageBus__EnumUnits()\n");)
 
     if (data->ab_Units[0])
 	stop = CALLHOOKPKT(msg->callback, data->ab_Units[0], msg->hookMsg);
@@ -739,7 +741,7 @@ APTR ATABus__Hidd_ATABus__GetPIOInterface(OOP_Class *cl, OOP_Object *o, OOP_Msg 
     struct ata_Bus *data = OOP_INST_DATA(cl, o);
     struct ATA_BusInterface *vec;
 
-    D(
+    DD(
       bug("[ATA:Bus] %s()\n", __func__);
       bug("[ATA:Bus] %s: ata_Bus @ 0x%p\n", __func__, data);
      )
@@ -748,7 +750,7 @@ APTR ATABus__Hidd_ATABus__GetPIOInterface(OOP_Class *cl, OOP_Object *o, OOP_Msg 
                    MEMF_PUBLIC|MEMF_CLEAR);
     if (vec)
     {
-        D(bug("[ATA:Bus] %s: ATA_BusInterface @ 0x%p (%d bytes + %d)\n", __func__, vec, sizeof(struct ATA_BusInterface), data->pioDataSize);)
+        DD(bug("[ATA:Bus] %s: ATA_BusInterface @ 0x%p (%d bytes + %d)\n", __func__, vec, sizeof(struct ATA_BusInterface), data->pioDataSize);)
 
         /* Some default vectors for simplicity */
         vec->ata_out_alt = default_out_alt;
@@ -812,7 +814,7 @@ APTR ATABus__Hidd_ATABus__GetDMAInterface(OOP_Class *cl, OOP_Object *o, OOP_Msg 
     struct ata_Bus *data = OOP_INST_DATA(cl, o);
     struct ATA_DMAInterface *vec;
 
-    D(bug("[ATA:Bus] %s()\n", __func__));
+    DD(bug("[ATA:Bus] %s()\n", __func__));
 
     if (!data->dmaVectors)
         return NULL;
@@ -875,7 +877,7 @@ APTR ATABus__Hidd_ATABus__GetDMAInterface(OOP_Class *cl, OOP_Object *o, OOP_Msg 
 
 BOOL ATABus__Hidd_ATABus__SetXferMode(OOP_Class *cl, OOP_Object *o, struct pHidd_ATABus_SetXferMode *msg)
 {
-    D(bug("[ATA:Bus] %s()\n", __func__));
+    DD(bug("[ATA:Bus] %s()\n", __func__));
 
     if ((msg->mode >= AB_XFER_MDMA0) && (msg->mode <= AB_XFER_UDMA6))
     {
@@ -926,7 +928,7 @@ void ATABus__Hidd_ATABus__Shutdown(OOP_Class *cl, OOP_Object *o, OOP_Msg *msg)
 {
     struct ata_Bus *data = OOP_INST_DATA(cl, o);
 
-    D(bug("[ATA:Bus] %s()\n", __func__));
+    DD(bug("[ATA:Bus] %s()\n", __func__));
 
     if (data->pioInterface)
     {
@@ -1003,8 +1005,8 @@ AROS_UFH3(BOOL, Hidd_ATABus_Open,
     ULONG bus = reqUnit >> 1;
     UBYTE dev = reqUnit & 1;
 
-    D(bug("[ATA:Bus] %s()\n", __func__));
-    D(bug("[ATA%02ld] Checking bus %u dev %u\n", reqUnit, bus, dev));
+    DD(bug("[ATA:Bus] %s()\n", __func__));
+    DD(bug("[ATA%02ld] Checking bus %u dev %u\n", reqUnit, bus, dev));
     
     if ((b->ab_BusNum == bus) && b->ab_Units[dev])
     {
