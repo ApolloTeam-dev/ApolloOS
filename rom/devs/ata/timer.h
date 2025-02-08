@@ -53,5 +53,5 @@ BOOL ata_Calibrate(struct IORequest* tmr, struct ataBase *base);
  * note
  *   rounds up ns to nearest multiple of 100
  */
-//void ata_WaitNano(ULONG ns, struct ataBase *base);
+void ata_WaitNano(ULONG ns, struct ataBase *base);
 

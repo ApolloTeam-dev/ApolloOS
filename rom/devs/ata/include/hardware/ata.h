@@ -2,7 +2,7 @@
 #define _HARDWARE_ATA_H
 
 /*
-    Copyright © 2004-2019, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2004-2019, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: ATA hardware register definitions
@@ -42,14 +42,16 @@
 #define ATAB_ERROR                              0
 #define ATAB_BUSY                               7
 
+#define ATAF_BUSY                               0x80
+#define ATAF_ATAPI                              0x80
+#define ATAF_DRDY                               0x40
+#define ATAF_LBA                                0x40
 #define ATAF_DF                                 0x20
 #define ATAF_SLAVE                              0x10
-#define ATAF_LBA                                0x40
-#define ATAF_ATAPI                              0x80
 #define ATAF_DATAREQ                            0x08
+#define ATAF_CORR                               0x04
+#define ATAF_IDX                                0x02
 #define ATAF_ERROR                              0x01
-#define ATAF_BUSY                               0x80
-#define ATAF_DRDY                               0x40
 
 #define ATAPIF_CHECK                            0x01
 

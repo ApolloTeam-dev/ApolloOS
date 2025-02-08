@@ -64,6 +64,8 @@ AROS_UFH3(static APTR, ata_Wait,
 {
     AROS_USERFUNC_INIT
 
+    return NULL;
+
     struct ataBase *ATABase;
 #if defined(__AROSPLATFORM_SMP__)
     void *ExecLockBase = OpenResource("execlock.resource");

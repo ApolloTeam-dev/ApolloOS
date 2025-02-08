@@ -48,7 +48,7 @@
 /* Errors that shouldn't happen */
 #define DERROR(a) a
 
-#define DD(x)
+#define DD(x) x
 
 #define VREG_BOARD_Unknown  0x00 /* Unknown                         */
 #define VREG_BOARD_V600     0x01 /* Vampire V2 V600(+),   for A600  */
@@ -71,8 +71,7 @@ static BYTE ata_WriteMultiple32(struct ata_Unit *, ULONG, ULONG, APTR, ULONG *);
 static BYTE ata_WriteMultiple64(struct ata_Unit *, UQUAD, ULONG, APTR, ULONG *);
 static void ata_ResetBus(struct ata_Bus *bus);
 static BYTE ata_Eject(struct ata_Unit *);
-static BOOL ata_WaitBusyTO(struct ata_Unit *unit, UWORD tout, BOOL irq,
-    BOOL fake_irq, UBYTE *stout);
+static BOOL ata_WaitBusyTO(struct ata_Unit *unit, UWORD tout, BOOL irq, BOOL fake_irq, UBYTE *stout);
 
 static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data,
     LONG datalen, BOOL *dma, BOOL write);
@@ -154,7 +153,7 @@ static inline BOOL ata_SelectUnit(struct ata_Unit* unit)
 
     do
     {
-        //ata_WaitNano(400, bus->ab_Base);
+        ata_WaitNano(400, bus->ab_Base);
         //ata_WaitTO(unit->au_Bus->ab_Timer, 0, 1, 0);
     }
     while (0 != (ATAF_BUSY & ata_ReadStatus(bus)));
@@ -164,26 +163,20 @@ static inline BOOL ata_SelectUnit(struct ata_Unit* unit)
     return TRUE;
 }
 
-/*
- * handle IRQ; still fast and efficient, supposed to verify if this irq is for us and take adequate steps
- * part of code moved here from ata.c to reduce containment
- */
 static void ata_IRQSignalTask(struct ata_Bus *bus)
 {
     bus->ab_IntCnt++;
     Signal(bus->ab_Task, 1UL << bus->ab_SleepySignal);
 }
 
-static void ata_IRQSetHandler(struct ata_Unit *unit,
-    void (*handler)(struct ata_Unit*, UBYTE), APTR piomem, ULONG blklen,
-    ULONG piolen)
+static void ata_IRQSetHandler(struct ata_Unit *unit, void (*handler)(struct ata_Unit*, UBYTE), APTR piomem, ULONG blklen, ULONG piolen)
 {
     if (NULL != handler) unit->au_cmd_error = 0;
 
     unit->au_cmd_data = piomem;
     unit->au_cmd_length = (piolen < blklen) ? piolen : blklen;
     unit->au_cmd_total = piolen;
-    unit->au_Bus->ab_HandleIRQ = handler;
+    //unit->au_Bus->ab_HandleIRQ = handler;
 }
 
 static void ata_IRQNoData(struct ata_Unit *unit, UBYTE status)
@@ -194,14 +187,9 @@ static void ata_IRQNoData(struct ata_Unit *unit, UBYTE status)
 
     if ((unit->au_cmd_error == 0) && (status & ATAF_ERROR)) unit->au_cmd_error = HFERR_BadStatus;
 
-    DIRQ(bug("[ATA%02ld] IRQ: NoData - done; status %02lx.\n", unit->au_UnitNum, status));
+    DIRQ(bug("[ATA:%02ld] IRQ: NoData - done; status %02lx.\n", unit->au_UnitNum, status));
     ata_IRQSetHandler(unit, NULL, NULL, 0, 0);
     ata_IRQSignalTask(unit->au_Bus);
-}
-
-static void ata_NULL(struct ata_Unit *unit, UBYTE status)
-{
-	return;
 }
 
 static void ata_IRQPIORead(struct ata_Unit *unit, UBYTE status)
@@ -210,18 +198,23 @@ static void ata_IRQPIORead(struct ata_Unit *unit, UBYTE status)
     APTR    address;
     ULONG   retrycount; 
 
-AGAIN:
-    retrycount=100000000;
-WAITBUSY: 
-    status = PIO_In(unit->au_Bus, ata_Status);
+    BOOL atapi = 0; //unit->au_Bus->ab_Dev[unit->au_UnitNum & 1] & 0x80;
 
-    if (retrycount-- == 0)
+    if (!atapi)
     {
-        unit->au_cmd_error = HFERR_BadStatus;
-        return;
+    AGAIN:
+        retrycount=100000000;
+    WAITBUSY: 
+        status = PIO_In(unit->au_Bus, ata_Status);
+
+        if (retrycount-- == 0)
+        {
+            unit->au_cmd_error = HFERR_BadStatus;
+            return;
+        }
+        if (status & ATAF_BUSY) goto WAITBUSY;
     }
-    if (status & ATAF_BUSY) goto WAITBUSY;
-  
+
     if (status & ATAF_DATAREQ)
     {
         Unit_InS(unit, unit->au_cmd_data, unit->au_cmd_length);
@@ -232,7 +225,12 @@ WAITBUSY:
         {
             if (unit->au_cmd_length > unit->au_cmd_total)
             unit->au_cmd_length = unit->au_cmd_total;
-            goto AGAIN;
+            if (!atapi)
+            {
+                goto AGAIN;
+            } else {
+                return;
+            }
         }
     } else {
         unit->au_cmd_error = HFERR_BadStatus;
@@ -246,19 +244,23 @@ static void ata_IRQPIOWrite(struct ata_Unit *unit, UBYTE status)
     ULONG   count;
     APTR    address;
     ULONG   retrycount;
+    BOOL atapi = 0; //unit->au_Bus->ab_Dev[unit->au_UnitNum & 1] & 0x80;
 
-AGAINW:
-    retrycount=100000000;
-WAITBUSYW:
-    status = PIO_In(unit->au_Bus, ata_Status);
-
-    retrycount--;
-    if (retrycount-- == 0)
+    if (!atapi)
     {
-        unit->au_cmd_error = HFERR_BadStatus;
-        return;
+    AGAINW:
+        retrycount=100000000;
+    WAITBUSYW:
+        status = PIO_In(unit->au_Bus, ata_Status);
+
+        retrycount--;
+        if (retrycount-- == 0)
+        {
+            unit->au_cmd_error = HFERR_BadStatus;
+            return;
+        }
+        if (status & ATAF_BUSY) goto WAITBUSYW;
     }
-    if (status & ATAF_BUSY) goto WAITBUSYW;
 
     if (status & ATAF_DATAREQ)
     {
@@ -274,7 +276,12 @@ WAITBUSYW:
 
         if (unit->au_cmd_total != 0)
         {
-            goto AGAINW;
+            if (!atapi)
+            {
+                goto AGAINW;
+            } else {
+                return;
+            }
         }
     } else {
         if (unit->au_cmd_total != 0)
@@ -292,46 +299,46 @@ static void ata_IRQPIOReadAtapi(struct ata_Unit *unit, UBYTE status)
     ULONG size = 0;
     LONG remainder = 0;
     UBYTE reason = PIO_In(bus, atapi_Reason);
-    DIRQ(bug("[ATAPI] Current status: %ld during READ\n", reason));
+    DD(bug("[ATAPI] ata_IRQPIOReadAtapi - Sector Count: %ld\n", reason));
+    
+    //if (0 == (status & (ATAF_BUSY | ATAF_DATAREQ))) ata_IRQNoData(unit, status);
 
-    /* have we failed yet? */
-    if (0 == (status & (ATAF_BUSY | ATAF_DATAREQ)))
-        ata_IRQNoData(unit, status);
-    if (status & ATAF_ERROR)
+    /*if (status & ATAF_ERROR)
     {
+        DD(bug("[ATAPI] ata_IRQPIOReadAtapi: ATAF_ERROR\n"));
         ata_IRQNoData(unit, status);
         return;
-    }
+    }*/
 
-    /* anything for us please? */
-    if (ATAPIF_READ != (reason & ATAPIF_MASK))
+    /*if (ATAPIF_READ != (reason & ATAPIF_MASK))
+    {
+        DD(bug("[ATAPI] ata_IRQPIOReadAtapi: Sector Count (%ld) != 2\n", reason));
         return;
+    }*/
 
     size = PIO_In(bus, atapi_ByteCntH) << 8 | PIO_In(bus, atapi_ByteCntL);
-    DIRQ(bug("[ATAPI] IRQ: data available for read (%ld bytes, max: %ld bytes)\n", size, unit->au_cmd_total));
+    DD(bug("[ATAPI] ata_IRQPIOReadAtapi: data available for read (%ld bytes, max: %ld bytes)\n", size, unit->au_cmd_total));
 
     if (size > unit->au_cmd_total)
     {
-        DERROR(bug("[ATAPI] IRQ: CRITICAL! MORE DATA OFFERED THAN STORAGE CAN TAKE: %ld bytes vs %ld bytes left!\n", size, unit->au_cmd_total));
+        DD(bug("[ATAPI] ata_IRQPIOReadAtapi: CRITICAL! MORE DATA OFFERED THAN STORAGE CAN TAKE: %ld bytes vs %ld bytes left!\n", size, unit->au_cmd_total));
         remainder = size - unit->au_cmd_total;
         size = unit->au_cmd_total;
     }
 
-    Unit_InS(unit, unit->au_cmd_data, size);
+    if (size > 0) Unit_InS(unit, unit->au_cmd_data, size);
 
     unit->au_cmd_data = &((UBYTE*)unit->au_cmd_data)[size];
     unit->au_cmd_total -= size;
 
-    DIRQ(bug("[ATAPI] IRQ: %lu bytes read.\n", size));
+    DD(bug("[ATAPI] ata_IRQPIOReadAtapi: %lu bytes read, %lu bytes remaining.\n", size, remainder));
 
     /*
      * Soak up excess bytes.
      */
-    for (; remainder > 0; remainder -= 2)
-        Unit_InS(unit, &size, 2);
+    for (; remainder > 0; remainder -= 2) Unit_InS(unit, &size, 2);
 
-    if (unit->au_cmd_total == 0)
-        ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
+    if (unit->au_cmd_total == 0) ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
 }
 
 static void ata_IRQPIOWriteAtapi(struct ata_Unit *unit, UBYTE status)
@@ -340,31 +347,26 @@ static void ata_IRQPIOWriteAtapi(struct ata_Unit *unit, UBYTE status)
     ULONG size = 0;
     UBYTE reason = PIO_In(bus, atapi_Reason);
 
-    DIRQ(bug("[ATAPI] IRQ: Current status: %ld during WRITE\n", reason));
+    DD(bug("[ATAPI] ata_IRQPIOWriteAtapi: Current status: %ld during WRITE\n", reason));
 
-    /*
-     * have we failed yet?
-     * CHECKME: This sequence actually can trigger ata_IRQNoData() twice.
-     * Is this correct ?
-     */
-    if (0 == (status & (ATAF_BUSY | ATAF_DATAREQ)))
-        ata_IRQNoData(unit, status);
-    if (status & ATAF_ERROR)
+    //if (0 == (status & (ATAF_BUSY | ATAF_DATAREQ))) ata_IRQNoData(unit, status);
+
+    /*if (status & ATAF_ERROR)
     {
         ata_IRQNoData(unit, status);
         return;
-    }
+    }*/
 
-    /* anything for us please? */
-    if (ATAPIF_WRITE != (reason & ATAPIF_MASK))
-        return;
+    /* anything for us please?
+    if (ATAPIF_WRITE != (reason & ATAPIF_MASK)) return;
+    */
 
     size = PIO_In(bus, atapi_ByteCntH) << 8 | PIO_In(bus, atapi_ByteCntL);
-    DIRQ(bug("[ATAPI] IRQ: data requested for write (%ld bytes, max: %ld bytes)\n", size, unit->au_cmd_total));
+    DIRQ(bug("[ATAPI] ata_IRQPIOWriteAtapi: data requested for write (%ld bytes, max: %ld bytes)\n", size, unit->au_cmd_total));
 
     if (size > unit->au_cmd_total)
     {
-        DERROR(bug("[ATAPI] IRQ: CRITICAL! MORE DATA REQUESTED THAN STORAGE CAN GIVE: %ld bytes vs %ld bytes left!\n", size, unit->au_cmd_total));
+        DERROR(bug("[ATAPI] ata_IRQPIOWriteAtapi: CRITICAL! MORE DATA REQUESTED THAN STORAGE CAN GIVE: %ld bytes vs %ld bytes left!\n", size, unit->au_cmd_total));
         size = unit->au_cmd_total;
     }
 
@@ -372,118 +374,91 @@ static void ata_IRQPIOWriteAtapi(struct ata_Unit *unit, UBYTE status)
     unit->au_cmd_data = &((UBYTE*)unit->au_cmd_data)[size];
     unit->au_cmd_total -= size;
 
-    DIRQ(bug("[ATAPI] IRQ: %lu bytes written.\n", size));
+    DIRQ(bug("[ATAPI] ata_IRQPIOWriteAtapi: %lu bytes written.\n", size));
 
-    if (unit->au_cmd_total == 0)
-        ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
+    if (unit->au_cmd_total == 0) ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
 }
 
 /*
  * wait for timeout or drive ready
  */
-static BOOL ata_WaitBusyTO(struct ata_Unit *unit, UWORD tout, BOOL irq,
-    BOOL fake_irq, UBYTE *stout)
+static BOOL ata_WaitBusyTO(struct ata_Unit *unit, UWORD tout, BOOL irq, BOOL fake_irq, UBYTE *stout)
 {
     struct ata_Bus *bus = unit->au_Bus;
     UBYTE status = 0xff;
     ULONG step = 0;
     BOOL res = TRUE;
 
-    if (bus->ab_Base->ata_Poll)
-        irq = FALSE;
+    BOOL atapi = unit->au_Bus->ab_Dev[unit->au_UnitNum & 1] & 0x80;
 
-//       if (irq)
-//       {
-//           /* Do not read ata_Status in irq mode. It can cause random lost interrupts. */
-//           if (bus->haveAltIO)
-//               status = PIO_InAlt(bus, ata_AltStatus);
-//           /*
-//            * wait for either IRQ or timeout
-//            */
-//           DIRQ(bug("[ATA%02ld] Waiting (Current status: %02lx)...\n",
-//               unit->au_UnitNum, status));
-//           step = ata_WaitTO(unit->au_Bus->ab_Timer, tout, 0,
-//               1 << bus->ab_SleepySignal);
-//   
-//           if (step == 0)
-//           {
-//               DERROR(bug("[ATA%02ld] Timeout while waiting for device to complete"
-//                   " operation\n", unit->au_UnitNum));
-//   
-//               Disable();
-//               if (fake_irq)
-//               {
-//                   /* fake the interrupt we expected */
-//                   status = PIO_In(bus, ata_Status);
-//                   while (unit->au_Bus->ab_HandleIRQ != NULL)
-//                       unit->au_Bus->ab_HandleIRQ(unit, status);
-//               }
-//               else
-//               {
-//                   /* do nothing if the interrupt eventually arrives */
-//                   ata_IRQSetHandler(unit, NULL, NULL, 0, 0);
-//                   res = FALSE;
-//               }
-//               Enable();
-//           }
-//       }
-//       else
-//       {
+    //if (bus->ab_Base->ata_Poll) irq = FALSE;
+
+    /*if (0) //(irq) && (atapi))
+    {
+        // Do not read ata_Status in irq mode. It can cause random lost interrupts.
+        if (bus->haveAltIO) status = PIO_InAlt(bus, ata_AltStatus);
+        
+        // wait for either IRQ or timeout
+        DD(bug("[ATA:%02ld] Waiting (Current status: %02lx)...\n", unit->au_UnitNum, status));
+        step = ata_WaitTO(unit->au_Bus->ab_Timer, tout, 0, 1 << bus->ab_SleepySignal);
+
+        if (step == 0)
+        {
+            DD(bug("[ATA:%02ld] Timeout while waiting for device to complete operation\n", unit->au_UnitNum));
+
+            Disable();
+            if (fake_irq)
+            {
+                status = PIO_In(bus, ata_Status);
+                while (unit->au_Bus->ab_HandleIRQ != NULL) unit->au_Bus->ab_HandleIRQ(unit, status);
+            }
+            else
+            {
+                ata_IRQSetHandler(unit, NULL, NULL, 0, 0);
+                res = FALSE;
+            }
+            Enable();
+        }
+    } else { */
+
+    if (atapi)
+    {
         status = PIO_InAlt(bus, ata_AltStatus);
         while (status & ATAF_BUSY)
         {
             ++step;
 
             /*
-             * every 16n rounds do some extra stuff
-             */
+            * every 16n rounds do some extra stuff
+            */
             if ((step & 15) == 0)
-          //  if (1 == 0)
             {
                 /*
-                 * huhm. so it's been 16n rounds already. any timeout yet?
-                 */
+                * huhm. so it's been 16n rounds already. any timeout yet?
+                */
                 if (step >> 4 > tout * 1000)
                 {
-                    DERROR(bug("[ATA%02ld] Device still busy after timeout."
-                        " Aborting\n", unit->au_UnitNum));
+                    DD(bug("[ATA:%02ld] Device still busy after timeout. Aborting\n", unit->au_UnitNum));
                     res = FALSE;
                     break;
                 }
-
                 /*
-                 * no timeout just yet, but it's not a good idea to keep
-                 * spinning like that. let's give the system some time.
-                 */
+                * no timeout just yet, but it's not a good idea to keep
+                * spinning like that. let's give the system some time.
+                */
                 ata_WaitTO(unit->au_Bus->ab_Timer, 0, 1000, 0);
             }
-
             status = PIO_InAlt(bus, ata_AltStatus);
         }
-//    }
+    }
 
-    /*
-     * get final status and clear any interrupt (may be neccessary if we
-     * were polling, for example)
-     */
     status = PIO_In(bus, ata_Status);
 
-    /*
-     * be nice to frustrated developer
-     */
-    DIRQ(bug("[ATA%02ld] WaitBusy status: %lx / %ld\n", unit->au_UnitNum,
-        status, res));
+    DD(bug("[ATA:%02ld] WaitBusy status: %lx / %ld\n", unit->au_UnitNum, status, res));
 
-    /*
-     * release old junk
-     */
     SetSignal(0, 1 << bus->ab_SleepySignal);
 
-    /*
-     * and say it went fine (i mean it)
-     */
-    if (stout)
-	*stout = status;
+    if (stout) *stout = status;
     return res;
 }
 
@@ -498,6 +473,8 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
     BOOL fake_irq = block->command == ATA_IDENTIFY_DEVICE || block->command == ATA_IDENTIFY_ATAPI;
     UWORD timeout = fake_irq? 1 : TIMEOUT;
 
+    BOOL atapi = 0; //unit->au_Bus->ab_Dev[unit->au_UnitNum & 1] & 0x80; 
+
     if (FALSE == ata_SelectUnit(unit)) return IOERR_UNITBUSY;
 
     switch (block->type)
@@ -506,18 +483,18 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
         case CT_LBA28:
             if (block->sectors > 256)
             {
-                DERROR(bug("[ATA%02ld] ata_exec_cmd: ERROR: Transfer length (%ld) exceeds 256 sectors. Aborting.\n", unit->au_UnitNum, block->sectors));
+                DERROR(bug("[ATA:%02ld] ata_exec_cmd: ERROR: Transfer length (%ld) exceeds 256 sectors. Aborting.\n", unit->au_UnitNum, block->sectors));
                 return IOERR_BADLENGTH;
             }
         case CT_LBA48:
             if (block->sectors > 65536)
             {
-                DERROR(bug("[ATA%02ld] ata_exec_cmd: ERROR: Transfer length (%ld) exceeds 65536 sectors. Aborting.\n", unit->au_UnitNum, block->sectors));
+                DERROR(bug("[ATA:%02ld] ata_exec_cmd: ERROR: Transfer length (%ld) exceeds 65536 sectors. Aborting.\n", unit->au_UnitNum, block->sectors));
                 return IOERR_BADLENGTH;
             }
             if (block->secmul == 0)
             {
-                DERROR(bug("[ATA%02ld] ata_exec_cmd: ERROR: Invalid transfer multiplier. Should be at least set to 1 (correcting)\n", unit->au_UnitNum));
+                DERROR(bug("[ATA:%02ld] ata_exec_cmd: ERROR: Invalid transfer multiplier. Should be at least set to 1 (correcting)\n", unit->au_UnitNum));
                 block->secmul = 1;
             }
            break;
@@ -526,12 +503,12 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
             break;
 
         default:
-            DERROR(bug("[ATA%02ld] ata_exec_cmd: ERROR: Invalid command type %lx. Aborting.\n", unit->au_UnitNum, block->type));
+            DERROR(bug("[ATA:%02ld] ata_exec_cmd: ERROR: Invalid command type %lx. Aborting.\n", unit->au_UnitNum, block->type));
             return IOERR_NOCMD;
     }
 
     block->actual = 0;
-    DD(bug("[ATA%02ld] ata_exec_cmd: Executing command %02lx\n", unit->au_UnitNum, block->command));
+    //DD(bug("[ATA:%02ld] ata_exec_cmd: Executing command %02lx\n", unit->au_UnitNum, block->command));
 
     if (block->feature != 0) PIO_Out(bus, block->feature, ata_Feature);
 
@@ -541,7 +518,7 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
     switch (block->type)
     {
         case CT_CHS:
-            DATA(bug("[ATA%02ld] ata_exec_cmd: Command uses CHS addressing (OLD)\n", unit->au_UnitNum));
+            DATA(bug("[ATA:%02ld] ata_exec_cmd: Command uses CHS addressing (OLD)\n", unit->au_UnitNum));
             {
                 ULONG cyl, head, sector;
                 ULONG tmp = unit->au_Heads * unit->au_Sectors;
@@ -557,7 +534,7 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
             }
             break;
         case CT_LBA28:
-            DATA(bug("[ATA%02ld] ata_exec_cmd: Command uses 28bit LBA addressing (OLD)\n", unit->au_UnitNum));
+            DATA(bug("[ATA:%02ld] ata_exec_cmd: Command uses 28bit LBA addressing (OLD)\n", unit->au_UnitNum));
 
             PIO_Out(bus, ((block->blk >> 24) & 0x0f) | DEVHEAD_VAL | unit->au_DevMask, ata_DevHead);
             PIO_Out(bus, block->blk >> 16, ata_LBAHigh);
@@ -567,7 +544,7 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
             break;
 
         case CT_LBA48:
-            DATA(bug("[ATA%02ld] ata_exec_cmd: Command uses 48bit LBA addressing (NEW)\n", unit->au_UnitNum));
+            DATA(bug("[ATA:%02ld] ata_exec_cmd: Command uses 48bit LBA addressing (NEW)\n", unit->au_UnitNum));
 
             PIO_Out(bus, DEVHEAD_VAL | unit->au_DevMask, ata_DevHead);
             PIO_Out(bus, block->blk >> 40, ata_LBAHigh);
@@ -583,36 +560,52 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
             break;
 
         case CT_NoBlock:
-            DATA(bug("[ATA%02ld] ata_exec_cmd: Command does not address any block\n", unit->au_UnitNum));
+            DATA(bug("[ATA:%02ld] ata_exec_cmd: Command does not address any block\n", unit->au_UnitNum));
             break;
     }
 
     switch (block->method)
     {
         case CM_PIOWrite:
-            PIO_OutAlt(bus, ATACTLF_INT_DISABLE, ata_AltControl);
-            PIO_Out(bus, block->command, ata_Command);
+            if (atapi)
+            {
+                ata_IRQSetHandler(unit, &ata_IRQPIOWrite, mem, block->secmul << unit->au_SectorShift, block->length);
+                DD(bug("[ATA:%02ld] ata_exec_cmd: Sending command\n", unit->au_UnitNum));
+                PIO_Out(bus, block->command, ata_Command);
+                ata_WaitNano(400, bus->ab_Base);
+            } else {
+                PIO_OutAlt(bus, ATACTLF_INT_DISABLE, ata_AltControl);
+                PIO_Out(bus, block->command, ata_Command);
 
-            unit->au_cmd_error = 0;
-            unit->au_cmd_data = mem;
-            piolen = block->length;
-            blklen = block->secmul << unit->au_SectorShift;
-            unit->au_cmd_length = (piolen < blklen) ? piolen : blklen;
-            unit->au_cmd_total = piolen;
-            ata_IRQPIOWrite(unit, ATAF_BUSY);
+                unit->au_cmd_error = 0;
+                unit->au_cmd_data = mem;
+                piolen = block->length;
+                blklen = block->secmul << unit->au_SectorShift;
+                unit->au_cmd_length = (piolen < blklen) ? piolen : blklen;
+                unit->au_cmd_total = piolen;
+                ata_IRQPIOWrite(unit, ATAF_BUSY);
+            }
             break;
 
         case CM_PIORead:
-            PIO_OutAlt(bus, ATACTLF_INT_DISABLE, ata_AltControl);
-            PIO_Out(bus, block->command, ata_Command);
+            if (atapi)
+            {
+                ata_IRQSetHandler(unit, &ata_IRQPIORead, mem, block->secmul << unit->au_SectorShift, block->length);
+                DD(bug("[ATA:%02ld] ata_exec_cmd: Sending command\n", unit->au_UnitNum));
+                PIO_Out(bus, block->command, ata_Command);
+                ata_WaitNano(400, bus->ab_Base);
+            } else {
+                PIO_OutAlt(bus, ATACTLF_INT_DISABLE, ata_AltControl);
+                PIO_Out(bus, block->command, ata_Command);
 
-            unit->au_cmd_error = 0;
-            unit->au_cmd_data = mem;
-            piolen = block->length;
-            blklen = block->secmul << unit->au_SectorShift;
-            unit->au_cmd_length = (piolen < blklen) ? piolen : blklen;
-            unit->au_cmd_total = piolen;
-            ata_IRQPIORead(unit, ATAF_BUSY);
+                unit->au_cmd_error = 0;
+                unit->au_cmd_data = mem;
+                piolen = block->length;
+                blklen = block->secmul << unit->au_SectorShift;
+                unit->au_cmd_length = (piolen < blklen) ? piolen : blklen;
+                unit->au_cmd_total = piolen;
+                ata_IRQPIORead(unit, ATAF_BUSY);
+            }
             break;
     
         case CM_NoData:
@@ -620,43 +613,41 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
             break;
 
         default:
-            PIO_Out(bus, block->command, ata_Command);
+            return IOERR_NOCMD;
             break;
     };
 
-     if (FALSE == ata_WaitBusyTO(unit, timeout, TRUE, fake_irq, &status))
+    /*if (atapi)
     {
-        DERROR(bug("[ATA%02ld] ata_exec_cmd: Device is late - no response\n", unit->au_UnitNum));
-        err = IOERR_UNITBUSY;
-    } else {
-        err = unit->au_cmd_error;
-    }
+        if (ata_WaitBusyTO(unit, timeout, TRUE, fake_irq, &status) == FALSE)
+        {
+            DERROR(bug("[ATA:%02ld] ata_exec_cmd: Device is late - no response\n", unit->au_UnitNum));
+            err = IOERR_UNITBUSY;
+        } else {
+            err = unit->au_cmd_error;
+        }
+    }*/
 
-    DD(bug("[ATA%02ld] ata_exec_cmd: Command done -> return code %ld\n", unit->au_UnitNum, err));
+    //DD(bug("[ATA:%02ld] ata_exec_cmd: Command done -> return code %ld\n", unit->au_UnitNum, err));
     return err;
 }
 
 /*
  * atapi packet iface
  */
-static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data,
-    LONG datalen, BOOL *dma, BOOL write)
+static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG datalen, BOOL *dma, BOOL write)
 {
     struct ata_Bus *bus = unit->au_Bus;
-    *dma = *dma && (unit->au_Flags & AF_DMA) ? TRUE : FALSE;
+    *dma = FALSE; //*dma && (unit->au_Flags & AF_DMA) ? TRUE : FALSE;
     LONG err = 0;
 
-    UBYTE cmd[12] = {
-        0
-    };
+    UBYTE cmd[12] = {0};
     register int t=5,l=0;
 
-    if (((UBYTE*)packet)[0] > 0x1f)
-        t+= 4;
-    if (((UBYTE*)packet)[0] > 0x5f)
-        t+= 2;
+    if (((UBYTE*)packet)[0] > 0x1f) t+= 4;
+    if (((UBYTE*)packet)[0] > 0x5f) t+= 2;
 
-    switch (((UBYTE*)packet)[0])
+    /*switch (((UBYTE*)packet)[0])
     {
         case 0x28:  // read10
         case 0xa8:  // read12
@@ -672,7 +663,7 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data,
             break;
         default:
             *dma = FALSE;
-    }
+    }*/
 
     while (l<=t)
     {
@@ -680,8 +671,8 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data,
         ++l;
     }
 
-    DATAPI({
-        bug("[ATA%02lx] Sending %s ATA packet: ", unit->au_UnitNum, (*dma) ? "DMA" : "PIO");
+    DD({
+        bug("[ATA:%02lx] atapi_SendPacket - Sending %s ATA packet: ", unit->au_UnitNum, (*dma) ? "DMA" : "PIO");
         l=0;
         while (l<=t)
         {
@@ -691,23 +682,20 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data,
         bug("\n");
 
         if (datalen & 1)
-            bug("[ATAPI] ERROR: DATA LENGTH NOT EVEN! Rounding Up! (%ld bytes requested)\n", datalen);
+            bug("[ATAPI] atapi_SendPacket - ERROR: DATA LENGTH NOT EVEN! Rounding Up! (%ld bytes requested)\n", datalen);
     });
 
     datalen = (datalen+1)&~1;
 
     if (FALSE == ata_SelectUnit(unit))
     {
-        DATAPI(bug("[ATAPI] WaitBusy failed at first check\n"));
+        DD(bug("[ATAPI] atapi_SendPacket - WaitBusy failed at first check\n"));
         return IOERR_UNITBUSY;
     }
 
-    /*
-     * tell device whether we want to read or write and if we want a dma transfer
-     */
-    PIO_Out(bus,
-            ((*dma) ? 1 : 0) | (((unit->au_Drive->id_DMADir & 0x8000) && !write) ? 4 : 0),
-            atapi_Features);
+    //PIO_Out(bus, ((*dma) ? 1 : 0) | (((unit->au_Drive->id_DMADir & 0x8000) && !write) ? 4 : 0),atapi_Features);
+    
+    // Set Data Lenght
     PIO_Out(bus, (datalen & 0xff), atapi_ByteCntL);
     PIO_Out(bus, (datalen >> 8) & 0xff, atapi_ByteCntH);
 
@@ -715,63 +703,102 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data,
      * once we're done with that, we can go ahead and inform device that we're about to send atapi packet
      * after command is dispatched, we are obliged to give 400ns for the unit to parse command and set status
      */
-    DATAPI(bug("[ATAPI] Issuing ATA_PACKET command.\n"));
+    DD(bug("[ATAPI] atapi_SendPacket - Issuing ATA_PACKET command.\n"));
     ata_IRQSetHandler(unit, &ata_IRQNoData, 0, 0, 0);
+
+    PIO_OutAlt(bus, ATACTLF_INT_DISABLE, ata_AltControl);
     PIO_Out(bus, ATA_PACKET, atapi_Command);
-    //ata_WaitNano(400, bus->ab_Base);
-    //ata_WaitTO(unit->au_Bus->ab_Timer, 0, 1, 0);
+    
+    ata_WaitNano(400, bus->ab_Base);
 
-    ata_WaitBusyTO(unit, TIMEOUT, (unit->au_Drive->id_General & 0x60) == 0x20,
-        FALSE, NULL);
+    ata_WaitBusyTO(unit, TIMEOUT, (unit->au_Drive->id_General & 0x60) == 0x20, FALSE, NULL);
+
     if (0 == (ata_ReadStatus(bus) & ATAF_DATAREQ))
-        return HFERR_BadStatus;
-
-    /*
-     * setup appropriate hooks
-     */
-    if (datalen == 0)
-        ata_IRQSetHandler(unit, &ata_IRQNoData, 0, 0, 0);
-    else if (write)
-        ata_IRQSetHandler(unit, &ata_IRQPIOWriteAtapi, data, 0, datalen);
-    else
-        ata_IRQSetHandler(unit, &ata_IRQPIOReadAtapi, data, 0, datalen);
-
-    if (*dma)
     {
-        DATAPI(bug("[ATAPI] Starting DMA\n"));
-        DMA_Start(bus);
-    }
+        DD(bug("[ATAPI] atapi_SendPacket - HFERR_BadStatus.\n"));
+        return HFERR_BadStatus;
+    } 
 
-    DATAPI(bug("[ATAPI] Sending packet\n"));
+    if (datalen == 0) ata_IRQSetHandler(unit, &ata_IRQNoData, 0, 0, 0);
+    else if (write)   ata_IRQSetHandler(unit, &ata_IRQPIOWriteAtapi, data, 0, datalen);
+    else              ata_IRQSetHandler(unit, &ata_IRQPIOReadAtapi, data, 0, datalen);
+
+    DD(bug("[ATAPI] atapi_SendPacket - Sending packet\n"));
     Unit_OutS(unit, cmd, 12);
-    //ata_WaitNano(400, bus->ab_Base);
+    ata_WaitNano(400, bus->ab_Base);
 
-    DATAPI(bug("[ATAPI] Status after packet: %lx\n", ata_ReadAltStatus(bus)));
+    DD(bug("[ATAPI] atapi_SendPacket - Status after packet: %lx\n", ata_ReadAltStatus(bus)));
+
+    if (datalen > 0)
+    {
+        if (write)
+        {
+            DD(bug("[ATAPI] atapi_SendPacket - Start ata_IRQPIOWriteAtapi\n"));
+            ata_IRQPIOWriteAtapi(unit, ATAF_BUSY);
+        } else {
+            DD(bug("[ATAPI] atapi_SendPacket - Start ata_IRQPIOReadAtapi\n"));           
+            ata_IRQPIOReadAtapi(unit, ATAF_BUSY);
+        }
+    }
 
     /*
      * Wait for command to complete. Note that two interrupts will occur
      * before we wake up if this is a PIO data transfer
-     */
-    if (ata_WaitTO(unit->au_Bus->ab_Timer, TIMEOUT, 0,
-        1 << unit->au_Bus->ab_SleepySignal) == 0)
+     
+    if (ata_WaitTO(unit->au_Bus->ab_Timer, TIMEOUT, 0, 1 << unit->au_Bus->ab_SleepySignal) == 0)
     {
-        DATAPI(bug("[DSCSI] Command timed out.\n"));
+        DD(bug("[DSCSI] Command timed out.\n"));
         err = IOERR_UNITBUSY;
     }
     else
-        err = atapi_EndCmd(unit);
+    */
+    err = atapi_EndCmd(unit);
 
-    if (*dma)
+    /*if (*dma)
     {
         DMA_End(bus, data, datalen, !write);
-    }
+    }*/
 
-    DATAPI(bug("[ATAPI] IO error code %ld\n", err));
+    //DD(bug("[ATAPI] IO error code %ld\n", err));
     return err;
 }
 
 static BYTE atapi_DirectSCSI(struct ata_Unit *unit, struct SCSICmd *cmd)
 {
+    APTR buffer = cmd->scsi_Data;
+    ULONG length = cmd->scsi_Length;
+    BYTE err = 0;
+    BOOL dma = FALSE;
+
+    cmd->scsi_Actual = 0;
+
+    DD(bug("[DSCSI] Sending packet!\n"));
+
+    /*
+     * setup DMA & push command
+     * it does not really mean we will use dma here btw
+     
+    if ((unit->au_Flags & AF_DMA) && (length !=0) && (buffer != 0))
+    {
+        dma = DMA_Setup(unit->au_Bus, buffer, length, cmd->scsi_Flags & SCSIF_READ);
+    }*/
+
+    err = atapi_SendPacket(unit, cmd->scsi_Command, cmd->scsi_Data, cmd->scsi_Length, &dma, (cmd->scsi_Flags & SCSIF_READ) == 0);
+
+    DUMP({ if (cmd->scsi_Data != 0) dump(cmd->scsi_Data, cmd->scsi_Length); });
+
+    /*
+     * on check condition - grab sense data
+     */
+    DD(bug("[ATA:%02lx] atapi_DirectSCSI: SCSI Flags: %02lx / Error: %ld\n", unit->au_UnitNum, cmd->scsi_Flags, err));
+    if ((err != 0) && (cmd->scsi_Flags & SCSIF_AUTOSENSE))
+    {
+        DD(bug("[DSCSI] atapi_DirectSCSI: Packet Failed. Calling atapi_RequestSense\n"));
+        atapi_RequestSense(unit, cmd->scsi_SenseData, cmd->scsi_SenseLength);
+        DUMP(dump(cmd->scsi_SenseData, cmd->scsi_SenseLength));
+    }
+
+    return err;
 }
 
 /*
@@ -791,17 +818,17 @@ static BYTE ata_exec_blk(struct ata_Unit *unit, ata_CommandBlock *blk)
         max <<= 8;
 
 
-    DATA(bug("[ATA%02ld] ata_exec_blk: Accessing %ld sectors starting from %x%08x\n", unit->au_UnitNum, count, (ULONG)(blk->blk >> 32), (ULONG)blk->blk));
+    DATA(bug("[ATA:%02ld] ata_exec_blk: Accessing %ld sectors starting from %x%08x\n", unit->au_UnitNum, count, (ULONG)(blk->blk >> 32), (ULONG)blk->blk));
     while ((count > 0) && (err == 0))
     {
         part = (count > max) ? max : count;
         blk->sectors = part;
         blk->length  = part << unit->au_SectorShift;
 
-        DATA(bug("[ATA%02ld] Transfer of %ld sectors from %x%08x\n", unit->au_UnitNum, part, (ULONG)(blk->blk >> 32), (ULONG)blk->blk));
+        DATA(bug("[ATA:%02ld] Transfer of %ld sectors from %x%08x\n", unit->au_UnitNum, part, (ULONG)(blk->blk >> 32), (ULONG)blk->blk));
         // If bounce buffer is active, 
         err = ata_exec_cmd(unit, blk);
-        DATA(bug("[ATA%02ld] ata_exec_blk: ata_exec_cmd returned %lx\n", unit->au_UnitNum, err));
+        DATA(bug("[ATA:%02ld] ata_exec_blk: ata_exec_cmd returned %lx\n", unit->au_UnitNum, err));
         blk->buffer  = (APTR)((IPTR)blk->buffer + (part << unit->au_SectorShift));
         
         blk->blk    += part;
@@ -827,9 +854,9 @@ void ata_init_unit(struct ata_Bus *bus, struct ata_Unit *unit, UBYTE u)
     unit->au_UnitNum    = bus->ab_BusNum << 1 | u;      // b << 8 | u
     unit->au_DevMask    = 0xa0 | (u << 4);
 
-    unit->au_UseModes |= AF_XFER_PIO32;
-    unit->au_ins       = bus->pioVectors->ata_insl;
-    unit->au_outs      = bus->pioVectors->ata_outsl;
+    unit->au_UseModes &= ~AF_XFER_PIO32;
+    unit->au_ins       = bus->pioVectors->ata_insw;
+    unit->au_outs      = bus->pioVectors->ata_outsw;
 
     bug("[ATA:%02u] ata_init_unit: bus %u unit %d\n", unit->au_UnitNum, bus->ab_BusNum, u);
 }
@@ -843,7 +870,7 @@ BOOL ata_setup_unit(struct ata_Bus *bus, struct ata_Unit *unit)
 
     if (FALSE == ata_WaitBusyTO(unit, 1, FALSE, FALSE, NULL))
     {
-        bug("[ATA%02ld] ata_setup_unit: ERROR: Drive not ready for use. Keeping functions stubbed\n", unit->au_UnitNum);
+        bug("[ATA:%02ld] ata_setup_unit: ERROR: Drive not ready for use. Keeping functions stubbed\n", unit->au_UnitNum);
         return FALSE;
     }
 
@@ -906,12 +933,12 @@ static void common_SetXferMode(struct ata_Unit* unit, ata_XferMode mode)
         CT_LBA28
     };
 #endif
-    DINIT(bug("[ATA%02ld] common_SetXferMode: Trying to set mode %d\n", unit->au_UnitNum, mode));
+    DINIT(bug("[ATA:%02ld] common_SetXferMode: Trying to set mode %d\n", unit->au_UnitNum, mode));
 
     /* CHECKME: This condition should be not needed. */
     if ((!bus->dmaVectors) && (mode >= AB_XFER_MDMA0))
     {
-        DINIT(bug("[ATA%02ld] common_SetXferMode: This controller does not own DMA port! Will set best PIO\n", unit->au_UnitNum));
+        DINIT(bug("[ATA:%02ld] common_SetXferMode: This controller does not own DMA port! Will set best PIO\n", unit->au_UnitNum));
         common_SetBestXferMode(unit);
         return;
     }
@@ -976,7 +1003,7 @@ static void common_SetXferMode(struct ata_Unit* unit, ata_XferMode mode)
     acb.sectors = type;
     if (0 != ata_exec_cmd(unit, &acb))
     {
-        DINIT(bug("[ATA%02ld] common_SetXferMode: ERROR: Failed to apply new xfer mode.\n", unit->au_UnitNum));
+        DINIT(bug("[ATA:%02ld] common_SetXferMode: ERROR: Failed to apply new xfer mode.\n", unit->au_UnitNum));
     }
 
     if (!HIDD_ATABus_SetXferMode(obj, mode))
@@ -1005,10 +1032,139 @@ static void common_SetXferMode(struct ata_Unit* unit, ata_XferMode mode)
 
 static void common_SetBestXferMode(struct ata_Unit* unit)
 {
+    struct ata_Bus *bus = unit->au_Bus;
+    struct ataBase *ATABase = bus->ab_Base;
+    OOP_Object *obj = OOP_OBJECT(ATABase->busClass, bus);
+    int iter;
+    int max = AB_XFER_UDMA6;
+
+    if ((!bus->dmaInterface)
+        || (   !(unit->au_Drive->id_MWDMASupport & 0x0700)
+            && !(unit->au_Drive->id_UDMASupport  & 0x7f00)))
+    {
+        /*
+         * make sure you reduce scan search to pio here!
+         * otherwise this and above function will fall into infinite loop
+         */
+        DINIT(bug("[ATA:%02ld] common_SetBestXferMode: DMA is disabled for"
+            " this drive.\n", unit->au_UnitNum));
+        max = AB_XFER_PIO4;
+    }
+    else if (!OOP_GET(obj, aHidd_ATABus_Use80Wire))
+    {
+        DINIT(bug("[ATA:%02ld] common_SetBestXferMode: "
+            "An 80-wire cable has not been detected for this drive. "
+            "Disabling modes above UDMA2.\n", unit->au_UnitNum));
+        max = AB_XFER_UDMA2;
+    }
+
+    for (iter=max; iter>=AB_XFER_PIO0; --iter)
+    {
+        if (unit->au_XferModes & (1<<iter))
+        {
+            common_SetXferMode(unit, iter);
+            return;
+        }
+    }
+    bug("[ATA:%02ld] common_SetBestXferMode: ERROR: device never reported any valid xfer modes. will continue at default\n", unit->au_UnitNum);
+    common_SetXferMode(unit, AB_XFER_PIO0);
 }
 
 static void common_DetectXferModes(struct ata_Unit* unit)
 {
+    int iter;
+
+    DINIT(bug("[ATA:%02ld] common_DetectXferModes: Supports\n", unit->au_UnitNum));
+
+    if (unit->au_Drive->id_Commands4 & (1 << 4))
+    {
+        DINIT(bug("[ATA:%02ld] common_DetectXferModes: - Packet interface\n", unit->au_UnitNum));
+        unit->au_XferModes     |= AF_XFER_PACKET;
+        unit->au_DirectSCSI     = atapi_DirectSCSI;
+    }
+    else if (unit->au_Drive->id_Commands5 & (1 << 10))
+    {
+        /* ATAPI devices do not use this bit. */
+        DINIT(bug("[ATA:%02ld] common_DetectXferModes: - 48bit I/O\n", unit->au_UnitNum));
+        unit->au_XferModes     |= AF_XFER_48BIT;
+    }
+
+    if ((unit->au_XferModes & AF_XFER_PACKET) || (unit->au_Drive->id_Capabilities & (1<< 9)))
+    {
+        DINIT(bug("[ATA:%02ld] common_DetectXferModes: - LBA Addressing\n", unit->au_UnitNum));
+        unit->au_XferModes     |= AF_XFER_LBA;
+        unit->au_UseModes      |= AF_XFER_LBA;
+    }
+    else
+    {
+        DINIT(bug("[ATA:%02ld] common_DetectXferModes: - DEVICE DOES NOT SUPPORT LBA ADDRESSING >> THIS IS A POTENTIAL PROBLEM <<\n", unit->au_UnitNum));
+        unit->au_Flags |= AF_CHSOnly;
+    }
+
+    if (unit->au_Drive->id_RWMultipleSize & 0xff)
+    {
+        DINIT(bug("[ATA:%02ld] common_DetectXferModes: - R/W Multiple (%ld sectors per xfer)\n", unit->au_UnitNum, unit->au_Drive->id_RWMultipleSize & 0xff));
+        unit->au_XferModes     |= AF_XFER_RWMULTI;
+    }
+
+    DINIT(bug("[ATA:%02ld] common_DetectXferModes: - PIO0 PIO1 PIO2 ",
+        unit->au_UnitNum));
+    unit->au_XferModes |= AF_XFER_PIO(0) | AF_XFER_PIO(1) | AF_XFER_PIO(2);
+    if (unit->au_Drive->id_ConfigAvailable & (1 << 1))
+    {
+        for (iter = 0; iter < 2; iter++)
+        {
+            if (unit->au_Drive->id_PIOSupport & (1 << iter))
+            {
+                DINIT(bug("PIO%ld ", 3 + iter));
+                unit->au_XferModes |= AF_XFER_PIO(3 + iter);
+            }
+        }
+        DINIT(bug("\n"));
+    }
+
+    if ((unit->au_Drive->id_ConfigAvailable & (1 << 1)) &&
+        (unit->au_Drive->id_Capabilities & (1<<8)))
+    {
+        DINIT(bug("[ATA:%02ld] common_DetectXferModes: DMA:\n", unit->au_UnitNum));
+        if (unit->au_Drive->id_MWDMASupport & 0xff)
+        {
+            DINIT(bug("[ATA:%02ld] common_DetectXferModes: - ", unit->au_UnitNum));
+            for (iter = 0; iter < 3; iter++)
+            {
+                if (unit->au_Drive->id_MWDMASupport & (1 << iter))
+                {
+                    unit->au_XferModes |= AF_XFER_MDMA(iter);
+                    if (unit->au_Drive->id_MWDMASupport & (256 << iter))
+                    {
+                        unit->au_UseModes |= AF_XFER_MDMA(iter);
+                        DINIT(bug("[MDMA%ld] ", iter));
+                    }
+                        DINIT(else bug("MDMA%ld ", iter);)
+                }
+            }
+            DINIT(bug("\n"));
+        }
+
+        if (unit->au_Drive->id_UDMASupport & 0xff)
+        {
+            DINIT(bug("[ATA:%02ld] common_DetectXferModes: - ", unit->au_UnitNum));
+            for (iter = 0; iter < 7; iter++)
+            {
+                if (unit->au_Drive->id_UDMASupport & (1 << iter))
+                {
+                    unit->au_XferModes |= AF_XFER_UDMA(iter);
+                    if (unit->au_Drive->id_UDMASupport & (256 << iter))
+                    {
+                        unit->au_UseModes |= AF_XFER_UDMA(iter);
+                        DINIT(bug("[UDMA%ld] ", iter));
+                    }
+                        DINIT(else bug("UDMA%ld ", iter);)
+                }
+            }
+            DINIT(bug("\n"));
+        }
+    }
 }
 
 #define SWAP_LE_WORD(x) (x) = AROS_LE2WORD((x))
@@ -1036,26 +1192,20 @@ static BYTE ata_Identify(struct ata_Unit *unit)
     UWORD n = 0, *p, *limit;
 
     /* If the right command fails, try the wrong one. If both fail, abort */
-    bug("[ATA:%02ld] ata_Identify: Executing ATA_IDENTIFY_%s command\n",
-        unit->au_UnitNum, atapi ? "ATAPI" : "DEVICE");
+    bug("[ATA:%02ld] ata_Identify: Executing ATA_IDENTIFY_%s command\n", unit->au_UnitNum, atapi ? "ATAPI" : "DEVICE");
     if (ata_exec_cmd(unit, &acb))
     {
         acb.command = atapi ? ATA_IDENTIFY_DEVICE : ATA_IDENTIFY_ATAPI;
-        bug("[ATA:%02ld] ata_Identify: Executing ATA_IDENTIFY_%s command"
-            " instead\n", unit->au_UnitNum, atapi ? "DEVICE" : "ATAPI");
+        bug("[ATA:%02ld] ata_Identify: Executing ATA_IDENTIFY_%s command instead\n", unit->au_UnitNum, atapi ? "DEVICE" : "ATAPI");
         if (ata_exec_cmd(unit, &acb))
         {
-            bug("[ATA:%02ld] ata_Identify: Both command variants failed."
-                " Discarding drive.\n",
+            bug("[ATA:%02ld] ata_Identify: Both command variants failed. Discarding drive.\n",
                 unit->au_UnitNum);
             return IOERR_OPENFAIL;
         }
         unit->au_Bus->ab_Dev[unit->au_UnitNum & 1] ^= 0x82;
         atapi = unit->au_Bus->ab_Dev[unit->au_UnitNum & 1] & 0x80;
-        bug("[ATA:%02ld] ata_Identify:"
-            " Incorrect device signature detected."
-            " Switching device type to %lx.\n", unit->au_UnitNum,
-            unit->au_Bus->ab_Dev[unit->au_UnitNum & 1]);
+        bug("[ATA:%02ld] ata_Identify: Incorrect device signature detected. Switching device type to %lx.\n", unit->au_UnitNum, unit->au_Bus->ab_Dev[unit->au_UnitNum & 1]);
     }
 
 #if (AROS_BIG_ENDIAN != 0)
@@ -1111,6 +1261,18 @@ static BYTE ata_Identify(struct ata_Unit *unit)
 
     DUMP(dump(unit->au_Drive, sizeof(struct DriveIdent)));
 
+    if (atapi)
+    {
+        unit->au_SectorShift    = 11;
+        unit->au_Read32         = atapi_Read;
+        unit->au_Write32        = atapi_Write;
+        unit->au_DirectSCSI     = atapi_DirectSCSI;
+        unit->au_Eject          = atapi_Eject;
+        unit->au_Flags         |= AF_DiscChanged;
+        unit->au_DevType        = (unit->au_Drive->id_General >>8) & 0x1f;
+        unit->au_XferModes      = AF_XFER_PACKET;
+        unit->au_UseModes      |= AF_XFER_PACKET; /* OR because this field may already contain AF_XFER_PIO32 */
+    } else {
     unit->au_SectorShift    = 9;
     unit->au_DevType        = DG_DIRECT_ACCESS;
     unit->au_Read32         = ata_ReadSector32;
@@ -1118,28 +1280,62 @@ static BYTE ata_Identify(struct ata_Unit *unit)
     unit->au_Eject          = ata_Eject;
     unit->au_XferModes      = 0;
     unit->au_Flags         |= AF_DiscPresent | AF_DiscChanged;
+    }
 
     ata_strcpy(unit->au_Drive->id_Model, unit->au_Model, 40);
     ata_strcpy(unit->au_Drive->id_SerialNumber, unit->au_SerialNumber, 20);
     ata_strcpy(unit->au_Drive->id_FirmwareRev, unit->au_FirmwareRev, 8);
 
     bug("[ATA:%02ld] ata_Identify: Unit info: %s / %s / %s\n", unit->au_UnitNum, unit->au_Model, unit->au_SerialNumber, unit->au_FirmwareRev);
-    //common_DetectXferModes(unit);
-    //common_SetBestXferMode(unit);
+
+    if (atapi) //unit->au_Drive->id_General & 0x80)
+    {
+        DD(bug("[ATA:%02ld] ata_Identify: Device is removable.\n", unit->au_UnitNum));
+        unit->au_Flags |= AF_Removable;
+        common_DetectXferModes(unit);
+        common_SetBestXferMode(unit);
+    }
 
     supportLBA = (unit->au_Drive->id_Capabilities & (1 << 9)) != 0;
     supportLBA48 = supportLBA && (unit->au_Drive->id_Commands5 & (1 << 10)) != 0;
 
     unit->au_Capacity = unit->au_Drive->id_LBASectors;
-    if (supportLBA48)
-        unit->au_Capacity48 = unit->au_Drive->id_LBA48Sectors;
-    else
-        unit->au_Capacity48 = unit->au_Capacity;
+    if (supportLBA48) unit->au_Capacity48 = unit->au_Drive->id_LBA48Sectors;
+    else unit->au_Capacity48 = unit->au_Capacity;
 
-    bug("[ATA:%02ld] ata_Identify: Unit LBA%d: %07lx 28bit / %04lx:%08lx 48bit addressable blocks\n",
-        unit->au_UnitNum, supportLBA48 ? 48 : (supportLBA ? 28 : 0),
-        unit->au_Capacity, (ULONG)(unit->au_Capacity48 >> 32), (ULONG)(unit->au_Capacity48 & 0xfffffffful));
+    bug("[ATA:%02ld] ata_Identify: Unit LBA%d: %07lx 28bit / %04lx:%08lx 48bit addressable blocks\n", unit->au_UnitNum, supportLBA48 ? 48 : (supportLBA ? 28 : 0), unit->au_Capacity, (ULONG)(unit->au_Capacity48 >> 32), (ULONG)(unit->au_Capacity48 & 0xfffffffful));
 
+    if (atapi)
+    {
+        switch (unit->au_DevType)
+        {
+            case DG_CDROM:
+            case DG_WORM:
+            case DG_OPTICAL_DISK:
+                unit->au_SectorShift    = 11;
+                unit->au_Heads          = 1;
+                unit->au_Sectors        = 75;
+                unit->au_Cylinders      = 4440;
+                break;
+
+            case DG_DIRECT_ACCESS:
+                unit->au_SectorShift = 9;
+                if (!strcmp("LS-120", &unit->au_Model[0]))
+                {
+                    unit->au_Heads      = 2;
+                    unit->au_Sectors    = 18;
+                    unit->au_Cylinders  = 6848;
+                }
+                else if (!strcmp("ZIP 100 ", &unit->au_Model[8]))
+                {
+                    unit->au_Heads      = 1;
+                    unit->au_Sectors    = 64;
+                    unit->au_Cylinders  = 3072;
+                }
+                break;
+        }
+        atapi_TestUnitOK(unit);
+    } else {
         /*
            For drive capacities > 8.3GB assume maximal possible layout.
            It really doesn't matter here, as BIOS will not handle them in
@@ -1147,8 +1343,7 @@ static BYTE ata_Identify(struct ata_Unit *unit)
            i guess this just solves that weirdo div-by-zero crash, if nothing
            else...
            */
-        if (supportLBA && ((unit->au_Drive->id_LBA48Sectors > (63 * 255 * 1024)) ||
-            (unit->au_Drive->id_LBASectors > (63 * 255 * 1024))))
+        if (supportLBA && ((unit->au_Drive->id_LBA48Sectors > (63 * 255 * 1024)) || (unit->au_Drive->id_LBASectors > (63 * 255 * 1024))))
         {
             ULONG div = 1;
             /*
@@ -1200,7 +1395,7 @@ static BYTE ata_Identify(struct ata_Unit *unit)
                 unit->au_Capacity48 = unit->au_Capacity;
             }
         }
-    
+    }
 
     bug("[ATA:%02ld] ata_Identify: Unit CHS: %d/%d/%d\n", unit->au_UnitNum, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors);
 
@@ -1210,8 +1405,7 @@ static BYTE ata_Identify(struct ata_Unit *unit)
 /*
  * ata read32 commands
  */
-static BYTE ata_ReadSector32(struct ata_Unit *unit, ULONG block,
-    ULONG count, APTR buffer, ULONG *act)
+static BYTE ata_ReadSector32(struct ata_Unit *unit, ULONG block, ULONG count, APTR buffer, ULONG *act)
 {
     ata_CommandBlock acb =
     {
@@ -1229,7 +1423,7 @@ static BYTE ata_ReadSector32(struct ata_Unit *unit, ULONG block,
     };
     BYTE err;
 
-    DD(bug("[ATA%02ld] ata_ReadSector32()\n", unit->au_UnitNum));
+    //DD(bug("[ATA:%02ld] ata_ReadSector32()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb)))
@@ -1239,8 +1433,7 @@ static BYTE ata_ReadSector32(struct ata_Unit *unit, ULONG block,
     return 0;
 }
 
-static BYTE ata_ReadMultiple32(struct ata_Unit *unit, ULONG block,
-    ULONG count, APTR buffer, ULONG *act)
+static BYTE ata_ReadMultiple32(struct ata_Unit *unit, ULONG block, ULONG count, APTR buffer, ULONG *act)
 {
     ata_CommandBlock acb =
     {
@@ -1258,7 +1451,7 @@ static BYTE ata_ReadMultiple32(struct ata_Unit *unit, ULONG block,
     };
     BYTE err;
 
-    DD(bug("[ATA%02ld] ata_ReadMultiple32()\n", unit->au_UnitNum));
+    //DD(bug("[ATA:%02ld] ata_ReadMultiple32()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb)))
@@ -1291,7 +1484,7 @@ static BYTE ata_ReadSector64(struct ata_Unit *unit, UQUAD block,
     };
     BYTE err = 0;
 
-    DD(bug("[ATA%02ld] ata_ReadSector64()\n", unit->au_UnitNum));
+    DD(bug("[ATA:%02ld] ata_ReadSector64()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb)))
@@ -1320,7 +1513,7 @@ static BYTE ata_ReadMultiple64(struct ata_Unit *unit, UQUAD block,
     };
     BYTE err;
 
-    DD(bug("[ATA%02ld] ata_ReadMultiple64()\n", unit->au_UnitNum));
+    DD(bug("[ATA:%02ld] ata_ReadMultiple64()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb)))
@@ -1353,7 +1546,7 @@ static BYTE ata_WriteSector32(struct ata_Unit *unit, ULONG block,
     };
     BYTE err;
 
-    DD(bug("[ATA%02ld] ata_WriteSector32()\n", unit->au_UnitNum));
+    //DD(bug("[ATA:%02ld] ata_WriteSector32()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb)))
@@ -1382,7 +1575,7 @@ static BYTE ata_WriteMultiple32(struct ata_Unit *unit, ULONG block,
     };
     BYTE err;
 
-    DD(bug("[ATA%02ld] ata_WriteMultiple32()\n", unit->au_UnitNum));
+    //DD(bug("[ATA:%02ld] ata_WriteMultiple32()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb)))
@@ -1415,7 +1608,7 @@ static BYTE ata_WriteSector64(struct ata_Unit *unit, UQUAD block,
     };
     BYTE err;
 
-    DD(bug("[ATA%02ld] ata_WriteSector64()\n", unit->au_UnitNum));
+    DD(bug("[ATA:%02ld] ata_WriteSector64()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb)))
@@ -1444,7 +1637,7 @@ static BYTE ata_WriteMultiple64(struct ata_Unit *unit, UQUAD block,
     };
     BYTE err;
 
-    DD(bug("[ATA%02ld] ata_WriteMultiple64()\n", unit->au_UnitNum));
+    DD(bug("[ATA:%02ld] ata_WriteMultiple64()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb)))
@@ -1475,7 +1668,7 @@ static BYTE ata_Eject(struct ata_Unit *unit)
         CT_NoBlock
     };
 
-    DD(bug("[ATA%02ld] ata_Eject()\n", unit->au_UnitNum));
+    DD(bug("[ATA:%02ld] ata_Eject()\n", unit->au_UnitNum));
 
     return ata_exec_cmd(unit, &acb);
 }
@@ -1485,18 +1678,10 @@ static BYTE ata_Eject(struct ata_Unit *unit)
  */
 int atapi_TestUnitOK(struct ata_Unit *unit)
 {
-    UBYTE cmd[6] = {
-        0
-    };
-    UBYTE sense[16] = {
-        0
-    };
-    struct SCSICmd sc = {
-       0
-    };
+    UBYTE cmd[6] = {0};
+    UBYTE sense[16] = {0};
+    struct SCSICmd sc = {0};
     UWORD i;
-
-    DD(bug("[ATA%02ld] atapi_TestUnitOK()\n", unit->au_UnitNum));
 
     sc.scsi_Command = (void*) &cmd;
     sc.scsi_CmdLength = sizeof(cmd);
@@ -1504,12 +1689,11 @@ int atapi_TestUnitOK(struct ata_Unit *unit)
     sc.scsi_SenseLength = sizeof(sense);
     sc.scsi_Flags = SCSIF_AUTOSENSE;
 
-    DATAPI(bug("[ATA%02ld] atapi_TestUnitOK: Testing Unit Ready sense...\n", unit->au_UnitNum));
+    DD(bug("[ATA:%02ld] atapi_TestUnitOK: Testing Unit Ready sense...\n", unit->au_UnitNum));
 
     /* Send command twice, and take the second result, as some drives give
      * invalid (or at least not so useful) sense data straight after reset */
-    for (i = 0; i < 2; i++)
-        unit->au_DirectSCSI(unit, &sc);
+    for (i = 0; i < 2; i++) unit->au_DirectSCSI(unit, &sc);
     unit->au_SenseKey = sense[2];
 
     /*
@@ -1535,104 +1719,171 @@ int atapi_TestUnitOK(struct ata_Unit *unit)
         unit->au_Flags |= AF_DiscChanged;
     }
 
-    DATAPI(bug("[ATA%02ld] atapi_TestUnitOK: Test Unit Ready sense: %02lx, Media %s\n", unit->au_UnitNum, sense[2], unit->au_Flags & AF_DiscPresent ? "PRESENT" : "ABSENT"));
+    DD(bug("[ATA:%02ld] atapi_TestUnitOK: Test Unit Ready sense: %02lx, Media %s\n", unit->au_UnitNum, sense[2], unit->au_Flags & AF_DiscPresent ? "PRESENT" : "ABSENT"));
     return sense[2];
 }
 
 static BYTE atapi_Read(struct ata_Unit *unit, ULONG block, ULONG count,
     APTR buffer, ULONG *act)
 {
+    UBYTE cmd[] = {
+       SCSI_READ10, 0, block>>24, block>>16, block>>8, block, 0, count>>8, count, 0
+    };
+    struct SCSICmd sc = {
+       0
+    };
+
+    D(bug("[ATA:%02ld] atapi_Read()\n", unit->au_UnitNum));
+
+    sc.scsi_Command = (void*) &cmd;
+    sc.scsi_CmdLength = sizeof(cmd);
+    sc.scsi_Data = buffer;
+    sc.scsi_Length = count << unit->au_SectorShift;
+    sc.scsi_Flags = SCSIF_READ;
+
+    return unit->au_DirectSCSI(unit, &sc);
 }
 
 static BYTE atapi_Write(struct ata_Unit *unit, ULONG block, ULONG count,
     APTR buffer, ULONG *act)
 {
+    UBYTE cmd[] = {
+       SCSI_WRITE10, 0, block>>24, block>>16, block>>8, block, 0, count>>8, count, 0
+    };
+    struct SCSICmd sc = {
+       0
+    };
+
+    D(bug("[ATA:%02ld] atapi_Write()\n", unit->au_UnitNum));
+
+    sc.scsi_Command = (void*) &cmd;
+    sc.scsi_CmdLength = sizeof(cmd);
+    sc.scsi_Data = buffer;
+    sc.scsi_Length = count << unit->au_SectorShift;
+    sc.scsi_Flags = SCSIF_WRITE;
+
+    return unit->au_DirectSCSI(unit, &sc);
 }
 
 static BYTE atapi_Eject(struct ata_Unit *unit)
 {
+    struct atapi_StartStop cmd = {
+        command: SCSI_STARTSTOP,
+        immediate: 1,
+        flags: ATAPI_SS_EJECT,
+    };
+
+    struct SCSICmd sc = {
+       0
+    };
+
+    D(bug("[ATA:%02ld] atapi_Eject()\n", unit->au_UnitNum));
+
+    sc.scsi_Command = (void*) &cmd;
+    sc.scsi_CmdLength = sizeof(cmd);
+    sc.scsi_Flags = SCSIF_READ;
+
+    return unit->au_DirectSCSI(unit, &sc);
 }
 
-static ULONG atapi_RequestSense(struct ata_Unit* unit, UBYTE* sense,
-    ULONG senselen)
+static ULONG atapi_RequestSense(struct ata_Unit* unit, UBYTE* sense, ULONG senselen)
 {
+    UBYTE cmd[] = {3, 0, 0, 0, senselen & 0xfe, 0};
+    struct SCSICmd sc = {0};
+
+    DD(bug("[ATA:%02ld] atapi_RequestSense()\n", unit->au_UnitNum));
+
+    if ((senselen == 0) || (sense == 0)) return 0;
+    
+    sc.scsi_Data = (void*)sense;
+    sc.scsi_Length = senselen & 0xfe;
+    sc.scsi_Command = (void*)&cmd;
+    sc.scsi_CmdLength = 6;
+    sc.scsi_Flags = SCSIF_READ;
+
+    unit->au_DirectSCSI(unit, &sc);
+
+    DATAPI(dump(sense, senselen));
+    DD(bug("[SENSE] atapi_RequestSense: sensed data: %lx %lx %lx\n", sense[2]&0xf, sense[12], sense[13]));
+    return ((sense[2]&0xf)<<16) | (sense[12]<<8) | (sense[13]);
 }
 
-static ULONG ata_ReadSignature(struct ata_Bus *bus, int unit,
-    BOOL *DiagExecuted)
+static ULONG ata_ReadSignature(struct ata_Bus *bus, int unit, BOOL *DiagExecuted)
 {
     UBYTE tmp1, tmp2;
 
     DD(bug("[ATA  ] ata_ReadSignature(%02ld)\n", unit));
 
     PIO_Out(bus, DEVHEAD_VAL | (unit << 4), ata_DevHead);
-    //ata_WaitNano(400, bus->ab_Base);
+    ata_WaitNano(400, bus->ab_Base);
     //ata_WaitTO(bus->ab_Timer, 0, 1, 0);
 
-    DINIT(bug("[ATA  ] ata_ReadSignature: Status %02lx Device %02lx\n",
-          ata_ReadStatus(bus), PIO_In(bus, ata_DevHead)));
-
-    /* Ok, ATA/ATAPI device. Get detailed signature */
-    DINIT(bug("[ATA  ] ata_ReadSignature: ATA[PI] device present. Attempting to detect specific subtype\n"));
+    DD(bug("[ATA  ] ata_ReadSignature: Status %02lx Device %02lx\n", ata_ReadStatus(bus), PIO_In(bus, ata_DevHead)));
 
     tmp1 = PIO_In(bus, ata_LBAMid);
     tmp2 = PIO_In(bus, ata_LBAHigh);
 
-    DINIT(bug("[ATA  ] ata_ReadSignature: Subtype check returned %02lx:%02lx (%04lx)\n", tmp1, tmp2, (tmp1 << 8) | tmp2));
+    UBYTE status;
+
+    status = PIO_In(bus, atapi_Status);
+    DD(bug("[ATA  ] ata_ReadSignature: Subtype check returned %02lx:%02lx (%04lx) | STATUS = %02x\n", tmp1, tmp2, (tmp1 << 8) | tmp2, status));
+
+    status = PIO_InAlt(bus, ata_AltStatus);
+    DD(bug("[ATA  ] ata_ReadSignature: ata_AltStatus: = %02x\n", status));
+
 
     switch ((tmp1 << 8) | tmp2)
     {
         case 0x14eb:
-            DINIT(bug("[ATA  ] ata_ReadSignature: Found signature for ATAPI device\n"));
+            DD(bug("[ATA  ] ata_ReadSignature: Found signature for ATAPI device\n"));
             return DEV_ATAPI;
 
         case 0x3cc3:
-            DINIT(bug("[ATA  ] ata_ReadSignature: Found signature for SATA device\n"));
+            DD(bug("[ATA  ] ata_ReadSignature: Found signature for SATA device\n"));
             return DEV_SATA;
 
         case 0x6996:
-            DINIT(bug("[ATA  ] ata_ReadSignature: Found signature for SATAPI device\n"));
+            DD(bug("[ATA  ] ata_ReadSignature: Found signature for SATAPI device\n"));
             return DEV_SATAPI;
 
         default:
             if (0 == (ata_ReadStatus(bus) & 0xfe)) {
-                DINIT(bug("[ATA  ] ata_ReadSignature: Found NONE\n"));
+                DD(bug("[ATA  ] ata_ReadSignature: Found NONE\n"));
                 return DEV_NONE;
             }
 
             /* ATA_EXECUTE_DIAG is executed by both devices, do it only once */
             if (!*DiagExecuted)
             {
-                DINIT(bug("[ATA  ] ata_ReadSignature: ATA_EXECUTE_DIAG\n"));
+                DD(bug("[ATA  ] ata_ReadSignature: ATA_EXECUTE_DIAG\n"));
                 PIO_Out(bus, ATA_EXECUTE_DIAG, ata_Command);
                 *DiagExecuted = TRUE;
             }
 
             ata_WaitTO(bus->ab_Timer, 0, 2000, 0);
             while (ata_ReadStatus(bus) & ATAF_BUSY)
-                //ata_WaitNano(400, bus->ab_Base);
+                ata_WaitNano(400, bus->ab_Base);
                 //ata_WaitTO(bus->ab_Timer, 0, 1, 0);
 
-            DINIT(bug("[ATA  ] ata_ReadSignature: ATAF_BUSY wait finished\n"));
+            DD(bug("[ATA  ] ata_ReadSignature: ATAF_BUSY wait finished\n"));
 
             PIO_Out(bus, DEVHEAD_VAL | (unit << 4), ata_DevHead);
             do
             {
-                //ata_WaitNano(400, bus->ab_Base);
+                ata_WaitNano(400, bus->ab_Base);
                 //ata_WaitTO(unit->au_Bus->ab_Timer, 0, 1, 0);
             }
             while (0 != (ATAF_BUSY & ata_ReadStatus(bus)));
-            DINIT(bug("[ATA  ] ata_ReadSignature: Further validating ATA signature: %lx & 0x7f = 1, %lx & 0x10 = unit\n",
-                      PIO_In(bus, ata_Error), PIO_In(bus, ata_DevHead)));
+            DD(bug("[ATA  ] ata_ReadSignature: Further validating ATA signature: %lx & 0x7f = 1, %lx & 0x10 = unit\n",
+            PIO_In(bus, ata_Error), PIO_In(bus, ata_DevHead)));
 
             if ((PIO_In(bus, ata_Error) & 0x7f) == 1)
             {
-                DINIT(bug("[ATA  ] ata_ReadSignature: Found *valid* signature for ATA device\n"));
+                DD(bug("[ATA  ] ata_ReadSignature: Found *valid* signature for ATA device\n"));
                 /* this might still be an (S)ATAPI device, but we correct that in ata_Identify */
                 return DEV_ATA;
             }
-            DERROR(bug("[ATA  ] ata_ReadSignature: Found signature for ATA "
-                "device, but further validation failed\n"));
+            DD(bug("[ATA  ] ata_ReadSignature: Found signature for ATA device, but further validation failed\n"));
             return DEV_NONE;
     }
 }
@@ -1662,7 +1913,7 @@ static void ata_ResetBus(struct ata_Bus *bus)
         
         bug("[ATA:ResetBus] Wait for Master to clear BSY\n", bus->ab_BusNum);
         bus->ab_Dev[0] = DEV_NONE;
-        for(Counter=1000000; Counter ; Counter--)
+        for(Counter=20000000; Counter ; Counter--)
         {
             if ((ata_ReadStatus(bus) & ATAF_BUSY) == 0)
             {
@@ -1673,7 +1924,7 @@ static void ata_ResetBus(struct ata_Bus *bus)
                 *color0=0x0000;
             }
         }
-        if (Counter==0) bug("[ATA:ResetBus] ata_ResetBus: ERROR: Master did NOT clear BSY\n", bus->ab_BusNum);
+        if (Counter==0) bug("[ATA:ResetBus] ERROR: Master did NOT clear BSY\n", bus->ab_BusNum);
     }
 
     if (DEV_NONE != bus->ab_Dev[1])
@@ -1681,9 +1932,9 @@ static void ata_ResetBus(struct ata_Bus *bus)
         PIO_Out(bus, DEVHEAD_VAL | (1 << 4), ata_DevHead);
         ata_WaitTO(bus->ab_Timer, 0, 20000, 0);
         
-        bug("[ATA:ResetBus] ata_ResetBus: Wait for Slave to clear BSY\n", bus->ab_BusNum);
+        bug("[ATA:ResetBus] Wait for Slave to clear BSY\n", bus->ab_BusNum);
         bus->ab_Dev[1] = DEV_NONE;
-        for(Counter=1000000; Counter ; Counter--)
+        for(Counter=20000000; Counter ; Counter--)
         {
             if ((ata_ReadStatus(bus) & ATAF_BUSY) == 0)
             {
@@ -1694,7 +1945,7 @@ static void ata_ResetBus(struct ata_Bus *bus)
                 *color0=0x0000;
             }
         }
-        if (Counter==0) bug("[ATA:ResetBus] ata_ResetBus: ERROR: Slave did NOT clear BSY\n", bus->ab_BusNum);
+        if (Counter==0) bug("[ATA:ResetBus] ERROR: Slave did NOT clear BSY\n", bus->ab_BusNum);
     }
 
     if (DEV_NONE != bus->ab_Dev[0]) bus->ab_Dev[0] = ata_ReadSignature(bus, 0, &DiagExecuted);
@@ -1788,20 +2039,16 @@ static const ULONG ErrorMap[] = {
 static BYTE atapi_EndCmd(struct ata_Unit *unit)
 {
     struct ata_Bus *bus = unit->au_Bus;
-    UBYTE status;
+    UBYTE status, error;
 
-    DATAPI(bug("[ATA%02ld] atapi_EndCmd()\n", unit->au_UnitNum));
+    DD(bug("[ATA:%02ld] atapi_EndCmd()\n", unit->au_UnitNum));
 
-    /*
-     * read alternate status register (per specs)
-     */
     status = PIO_InAlt(bus, ata_AltStatus);
-    DATAPI(bug("[ATA%02ld] atapi_EndCmd: Alternate status: %lx\n", unit->au_UnitNum, status));
+    DD(bug("[ATA:%02ld] atapi_EndCmd: Alternate status: %lx\n", unit->au_UnitNum, status));
 
     status = PIO_In(bus, atapi_Status);
 
-    DATAPI(bug("[ATA%02ld] atapi_EndCmd: Command complete. Status: %lx\n",
-        unit->au_UnitNum, status));
+    DD(bug("[ATA:%02ld] atapi_EndCmd: Command complete. Status: %lx\n", unit->au_UnitNum, status));
 
     if (!(status & ATAPIF_CHECK))
     {
@@ -1809,8 +2056,8 @@ static BYTE atapi_EndCmd(struct ata_Unit *unit)
     }
     else
     {
-       status = PIO_In(bus, atapi_Error);
-       DATAPI(bug("[ATA%02ld] atapi_EndCmd: Error code 0x%lx\n", unit->au_UnitNum, status >> 4));
-       return ErrorMap[status >> 4];
+       error = PIO_In(bus, atapi_Error);
+       DD(bug("[ATA:%02ld] atapi_EndCmd: Error code 0x%lx\n", unit->au_UnitNum, error >> 4));
+       return ErrorMap[error >> 4];
     }
 }

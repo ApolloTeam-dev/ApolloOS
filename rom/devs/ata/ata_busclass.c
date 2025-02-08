@@ -746,8 +746,7 @@ APTR ATABus__Hidd_ATABus__GetPIOInterface(OOP_Class *cl, OOP_Object *o, OOP_Msg 
       bug("[ATA:Bus] %s: ata_Bus @ 0x%p\n", __func__, data);
      )
 
-    vec = AllocMem(sizeof(struct ATA_BusInterface) + data->pioDataSize,
-                   MEMF_PUBLIC|MEMF_CLEAR);
+    vec = AllocMem(sizeof(struct ATA_BusInterface) + data->pioDataSize, MEMF_PUBLIC|MEMF_CLEAR);
     if (vec)
     {
         DD(bug("[ATA:Bus] %s: ATA_BusInterface @ 0x%p (%d bytes + %d)\n", __func__, vec, sizeof(struct ATA_BusInterface), data->pioDataSize);)
@@ -756,8 +755,7 @@ APTR ATABus__Hidd_ATABus__GetPIOInterface(OOP_Class *cl, OOP_Object *o, OOP_Msg 
         vec->ata_out_alt = default_out_alt;
         vec->ata_in_alt  = default_in_alt;
 
-        CopyVectors((APTR *)vec, (APTR *)data->busVectors,
-                    sizeof(struct ATA_BusInterface) / sizeof(APTR));
+        CopyVectors((APTR *)vec, (APTR *)data->busVectors, sizeof(struct ATA_BusInterface) / sizeof(APTR));
 
         data->pioInterface = &vec[1];
         return data->pioInterface;
