@@ -223,14 +223,8 @@ static void ata_IRQPIORead(struct ata_Unit *unit, UBYTE status)
         unit->au_cmd_total -= unit->au_cmd_length;
         if (unit->au_cmd_total != 0)
         {
-            if (unit->au_cmd_length > unit->au_cmd_total)
-            unit->au_cmd_length = unit->au_cmd_total;
-            if (!atapi)
-            {
-                goto AGAIN;
-            } else {
-                return;
-            }
+            if (unit->au_cmd_length > unit->au_cmd_total) unit->au_cmd_length = unit->au_cmd_total;
+            goto AGAIN;
         }
     } else {
         unit->au_cmd_error = HFERR_BadStatus;
@@ -268,26 +262,11 @@ static void ata_IRQPIOWrite(struct ata_Unit *unit, UBYTE status)
 
         unit->au_cmd_data += unit->au_cmd_length;
         unit->au_cmd_total -= unit->au_cmd_length;
+        if (unit->au_cmd_length > unit->au_cmd_total) unit->au_cmd_length = unit->au_cmd_total;
+        if (unit->au_cmd_total != 0) goto AGAINW;
 
-        if (unit->au_cmd_length > unit->au_cmd_total)
-        {
-            unit->au_cmd_length = unit->au_cmd_total;
-        }
-
-        if (unit->au_cmd_total != 0)
-        {
-            if (!atapi)
-            {
-                goto AGAINW;
-            } else {
-                return;
-            }
-        }
     } else {
-        if (unit->au_cmd_total != 0)
-        {
-            unit->au_cmd_error = HFERR_BadStatus;
-        }
+        if (unit->au_cmd_total != 0) unit->au_cmd_error = HFERR_BadStatus;
     }
     ata_IRQNoData(unit, status);
 }
@@ -298,8 +277,21 @@ static void ata_IRQPIOReadAtapi(struct ata_Unit *unit, UBYTE status)
     struct ata_Bus *bus = unit->au_Bus;
     ULONG size = 0;
     LONG remainder = 0;
-    UBYTE reason = PIO_In(bus, atapi_Reason);
-    DD(bug("[ATAPI] ata_IRQPIOReadAtapi - Sector Count: %ld\n", reason));
+    ULONG retrycount; 
+    //UBYTE reason;
+    //DD(bug("[ATAPI] ata_IRQPIOReadAtapi - Reason Bits: %ld\n", reason & ATAPIF_MASK));
+    
+AGAIN:
+    retrycount=100000000;
+WAITBUSY: 
+    status = PIO_In(unit->au_Bus, ata_Status);
+
+    if (retrycount-- == 0)
+    {
+        unit->au_cmd_error = HFERR_BadStatus;
+        return;
+    }
+    if (status & ATAF_BUSY) goto WAITBUSY;
     
     //if (0 == (status & (ATAF_BUSY | ATAF_DATAREQ))) ata_IRQNoData(unit, status);
 
@@ -316,28 +308,31 @@ static void ata_IRQPIOReadAtapi(struct ata_Unit *unit, UBYTE status)
         return;
     }*/
 
-    size = PIO_In(bus, atapi_ByteCntH) << 8 | PIO_In(bus, atapi_ByteCntL);
-    DD(bug("[ATAPI] ata_IRQPIOReadAtapi: data available for read (%ld bytes, max: %ld bytes)\n", size, unit->au_cmd_total));
+   // reason = PIO_In(bus, atapi_Reason);
 
-    if (size > unit->au_cmd_total)
+    if (status & ATAF_DATAREQ)
     {
-        DD(bug("[ATAPI] ata_IRQPIOReadAtapi: CRITICAL! MORE DATA OFFERED THAN STORAGE CAN TAKE: %ld bytes vs %ld bytes left!\n", size, unit->au_cmd_total));
-        remainder = size - unit->au_cmd_total;
-        size = unit->au_cmd_total;
-    }
+        size = PIO_In(bus, atapi_ByteCntH) << 8 | PIO_In(bus, atapi_ByteCntL);
+        DD(bug("[ATAPI] ata_IRQPIOReadAtapi: data available for read (%ld bytes, max: %ld bytes)\n", size, unit->au_cmd_total));
 
-    if (size > 0) Unit_InS(unit, unit->au_cmd_data, size);
+        if (size > unit->au_cmd_total)
+        {
+            DD(bug("[ATAPI] ata_IRQPIOReadAtapi: CRITICAL! MORE DATA OFFERED THAN STORAGE CAN TAKE: %ld bytes vs %ld bytes left!\n", size, unit->au_cmd_total));
+            remainder = size - unit->au_cmd_total;
+            size = unit->au_cmd_total;
+        }
 
-    unit->au_cmd_data = &((UBYTE*)unit->au_cmd_data)[size];
-    unit->au_cmd_total -= size;
+        if (size > 0) Unit_InS(unit, unit->au_cmd_data, size);
 
-    DD(bug("[ATAPI] ata_IRQPIOReadAtapi: %lu bytes read, %lu bytes remaining.\n", size, remainder));
+        unit->au_cmd_data = &((UBYTE*)unit->au_cmd_data)[size];
+        unit->au_cmd_total -= size;
 
-    /*
-     * Soak up excess bytes.
-     */
-    for (; remainder > 0; remainder -= 2) Unit_InS(unit, &size, 2);
+        DD(bug("[ATAPI] ata_IRQPIOReadAtapi: %lu bytes read, %lu bytes remaining.\n", size, unit->au_cmd_total));
 
+        for (; remainder > 0; remainder -= 2) Unit_InS(unit, &size, 2);
+    } else {
+        unit->au_cmd_error = HFERR_BadStatus;
+    }    
     if (unit->au_cmd_total == 0) ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
 }
 
@@ -346,8 +341,21 @@ static void ata_IRQPIOWriteAtapi(struct ata_Unit *unit, UBYTE status)
     struct ata_Bus *bus = unit->au_Bus;
     ULONG size = 0;
     UBYTE reason = PIO_In(bus, atapi_Reason);
-
+    ULONG retrycount; 
+    
     DD(bug("[ATAPI] ata_IRQPIOWriteAtapi: Current status: %ld during WRITE\n", reason));
+
+AGAINW:
+    retrycount=100000000;
+WAITBUSYW: 
+    status = PIO_In(unit->au_Bus, ata_Status);
+
+    if (retrycount-- == 0)
+    {
+        unit->au_cmd_error = HFERR_BadStatus;
+        return;
+    }
+    if (status & ATAF_BUSY) goto WAITBUSYW;
 
     //if (0 == (status & (ATAF_BUSY | ATAF_DATAREQ))) ata_IRQNoData(unit, status);
 
@@ -361,21 +369,25 @@ static void ata_IRQPIOWriteAtapi(struct ata_Unit *unit, UBYTE status)
     if (ATAPIF_WRITE != (reason & ATAPIF_MASK)) return;
     */
 
-    size = PIO_In(bus, atapi_ByteCntH) << 8 | PIO_In(bus, atapi_ByteCntL);
-    DIRQ(bug("[ATAPI] ata_IRQPIOWriteAtapi: data requested for write (%ld bytes, max: %ld bytes)\n", size, unit->au_cmd_total));
-
-    if (size > unit->au_cmd_total)
+    if (status & ATAF_DATAREQ)
     {
-        DERROR(bug("[ATAPI] ata_IRQPIOWriteAtapi: CRITICAL! MORE DATA REQUESTED THAN STORAGE CAN GIVE: %ld bytes vs %ld bytes left!\n", size, unit->au_cmd_total));
-        size = unit->au_cmd_total;
-    }
+        size = PIO_In(bus, atapi_ByteCntH) << 8 | PIO_In(bus, atapi_ByteCntL);
+        DD(bug("[ATAPI] ata_IRQPIOWriteAtapi: data requested for write (%ld bytes, max: %ld bytes)\n", size, unit->au_cmd_total));
 
-    Unit_OutS(unit, unit->au_cmd_data, size);
-    unit->au_cmd_data = &((UBYTE*)unit->au_cmd_data)[size];
-    unit->au_cmd_total -= size;
+        if (size > unit->au_cmd_total)
+        {
+            DERROR(bug("[ATAPI] ata_IRQPIOWriteAtapi: CRITICAL! MORE DATA REQUESTED THAN STORAGE CAN GIVE: %ld bytes vs %ld bytes left!\n", size, unit->au_cmd_total));
+            size = unit->au_cmd_total;
+        }
 
-    DIRQ(bug("[ATAPI] ata_IRQPIOWriteAtapi: %lu bytes written.\n", size));
+        Unit_OutS(unit, unit->au_cmd_data, size);
+        unit->au_cmd_data = &((UBYTE*)unit->au_cmd_data)[size];
+        unit->au_cmd_total -= size;
 
+        DD(bug("[ATAPI] ata_IRQPIOWriteAtapi: %lu bytes written, %lu bytes remaining..\n", size,  unit->au_cmd_total));
+    } else {
+        unit->au_cmd_error = HFERR_BadStatus;
+    } 
     if (unit->au_cmd_total == 0) ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
 }
 
