@@ -176,7 +176,7 @@ static void ata_IRQSetHandler(struct ata_Unit *unit, void (*handler)(struct ata_
     unit->au_cmd_data = piomem;
     unit->au_cmd_length = (piolen < blklen) ? piolen : blklen;
     unit->au_cmd_total = piolen;
-    //unit->au_Bus->ab_HandleIRQ = handler;
+    unit->au_Bus->ab_HandleIRQ = handler;
 }
 
 static void ata_IRQNoData(struct ata_Unit *unit, UBYTE status)
