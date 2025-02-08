@@ -176,7 +176,7 @@ static void ata_IRQSetHandler(struct ata_Unit *unit, void (*handler)(struct ata_
     unit->au_cmd_data = piomem;
     unit->au_cmd_length = (piolen < blklen) ? piolen : blklen;
     unit->au_cmd_total = piolen;
-    unit->au_Bus->ab_HandleIRQ = handler;
+    //unit->au_Bus->ab_HandleIRQ = handler;
 }
 
 static void ata_IRQNoData(struct ata_Unit *unit, UBYTE status)
@@ -433,7 +433,7 @@ static BOOL ata_WaitBusyTO(struct ata_Unit *unit, UWORD tout, BOOL irq, BOOL fak
         }
     } else { */
 
-    if (atapi)
+    if (1)
     {
         status = PIO_InAlt(bus, ata_AltStatus);
         while (status & ATAF_BUSY)
@@ -466,7 +466,7 @@ static BOOL ata_WaitBusyTO(struct ata_Unit *unit, UWORD tout, BOOL irq, BOOL fak
 
     status = PIO_In(bus, ata_Status);
 
-    DD(bug("[ATA:%02ld] WaitBusy status: %lx / %ld\n", unit->au_UnitNum, status, res));
+    //DD(bug("[ATA:%02ld] WaitBusy status: %lx / %ld\n", unit->au_UnitNum, status, res));
 
     SetSignal(0, 1 << bus->ab_SleepySignal);
 
@@ -628,6 +628,14 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
             return IOERR_NOCMD;
             break;
     };
+
+    if (FALSE == ata_WaitBusyTO(unit, timeout, TRUE, fake_irq, &status))
+    {
+        DERROR(bug("[ATA%02ld] ata_exec_cmd: Device is late - no response\n", unit->au_UnitNum));
+        err = IOERR_UNITBUSY;
+    } else {
+        err = unit->au_cmd_error;
+    }
 
     /*if (atapi)
     {
@@ -855,6 +863,8 @@ static BYTE ata_exec_blk(struct ata_Unit *unit, ata_CommandBlock *blk)
  */
 void ata_init_unit(struct ata_Bus *bus, struct ata_Unit *unit, UBYTE u)
 {
+    BOOL atapi = unit->au_Bus->ab_Dev[unit->au_UnitNum & 1] & 0x80;
+    
     struct ataBase *ATABase = bus->ab_Base;
     OOP_Object *obj = OOP_OBJECT(ATABase->busClass, bus);
 
@@ -866,9 +876,16 @@ void ata_init_unit(struct ata_Bus *bus, struct ata_Unit *unit, UBYTE u)
     unit->au_UnitNum    = bus->ab_BusNum << 1 | u;      // b << 8 | u
     unit->au_DevMask    = 0xa0 | (u << 4);
 
-    unit->au_UseModes &= ~AF_XFER_PIO32;
-    unit->au_ins       = bus->pioVectors->ata_insw;
-    unit->au_outs      = bus->pioVectors->ata_outsw;
+    if (1)
+    {
+        unit->au_UseModes &= ~AF_XFER_PIO32;
+        unit->au_ins       = bus->pioVectors->ata_insw;
+        unit->au_outs      = bus->pioVectors->ata_outsw;
+    } else {
+        unit->au_UseModes |= AF_XFER_PIO32;
+        unit->au_ins       = bus->pioVectors->ata_insl;
+        unit->au_outs      = bus->pioVectors->ata_outsl;
+    }
 
     bug("[ATA:%02u] ata_init_unit: bus %u unit %d\n", unit->au_UnitNum, bus->ab_BusNum, u);
 }
