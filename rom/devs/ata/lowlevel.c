@@ -333,7 +333,12 @@ WAITBUSY:
     } else {
         unit->au_cmd_error = HFERR_BadStatus;
     }    
-    if (unit->au_cmd_total == 0) ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
+    if (unit->au_cmd_total > 0)
+    {
+        goto AGAIN;
+    } else {
+        ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
+    }
 }
 
 static void ata_IRQPIOWriteAtapi(struct ata_Unit *unit, UBYTE status)
@@ -466,7 +471,7 @@ static BOOL ata_WaitBusyTO(struct ata_Unit *unit, UWORD tout, BOOL irq, BOOL fak
 
     status = PIO_In(bus, ata_Status);
 
-    //DD(bug("[ATA:%02ld] WaitBusy status: %lx / %ld\n", unit->au_UnitNum, status, res));
+    DD(bug("[ATA:%02ld] WaitBusy status: %lx / %ld\n", unit->au_UnitNum, status, res));
 
     SetSignal(0, 1 << bus->ab_SleepySignal);
 
