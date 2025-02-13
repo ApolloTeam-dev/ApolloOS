@@ -344,10 +344,9 @@ static void cmd_Write32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
         }
 
         /* Call the Unit's access funtion */
-        io->io_Error = unit->au_Write32(unit, block, count,
-            IOStdReq(io)->io_Data, &cnt);
+        io->io_Error = unit->au_Write32(unit, block, count, IOStdReq(io)->io_Data, &cnt);
 
-                struct ata_Bus *bus = unit->au_Bus;
+        struct ata_Bus *bus = unit->au_Bus;
         struct ataBase *base = bus->ab_Base;
         for (int i = 0; i < count; i++)
         {
