@@ -1811,14 +1811,25 @@ static ULONG atapi_RequestSense(struct ata_Unit* unit, UBYTE* sense, ULONG sense
 static ULONG ata_ReadSignature(struct ata_Bus *bus, int unit, BOOL *DiagExecuted)
 {
     UBYTE tmp1, tmp2;
+    ULONG retrycount = 1000;
 
     DD(bug("[ATA  ] ata_ReadSignature(%02ld)\n", unit));
 
     PIO_Out(bus, DEVHEAD_VAL | (unit << 4), ata_DevHead);
-    ata_WaitNano(400, bus->ab_Base);
-    //ata_WaitTO(bus->ab_Timer, 0, 1, 0);
 
-    DD(bug("[ATA  ] ata_ReadSignature: Status %02lx Device %02lx\n", ata_ReadStatus(bus), PIO_In(bus, ata_DevHead)));
+    do
+    {
+        retrycount--;
+        ata_WaitNano(400, bus->ab_Base);
+        //DD(bug("[ATA  ] ata_ReadSignature: Status %02lx Device %02lx\n", ata_ReadStatus(bus), PIO_In(bus, ata_DevHead)));
+    }
+    while ((retrycount > 0) && (ATAF_DRDY & ata_ReadStatus(bus)) == FALSE);
+    
+    if (retrycount == 0) 
+    {
+        DD(bug("[ATA  ] ata_ReadSignature: Found signature for ATA device, but STATUS == 00 (ATA Master/Slave conflict)\n"));
+        return DEV_NONE;      
+    }
 
     tmp1 = PIO_In(bus, ata_LBAMid);
     tmp2 = PIO_In(bus, ata_LBAHigh);
@@ -1827,10 +1838,6 @@ static ULONG ata_ReadSignature(struct ata_Bus *bus, int unit, BOOL *DiagExecuted
 
     status = PIO_In(bus, atapi_Status);
     DD(bug("[ATA  ] ata_ReadSignature: Subtype check returned %02lx:%02lx (%04lx) | STATUS = %02x\n", tmp1, tmp2, (tmp1 << 8) | tmp2, status));
-
-    status = PIO_InAlt(bus, ata_AltStatus);
-    DD(bug("[ATA  ] ata_ReadSignature: ata_AltStatus: = %02x\n", status));
-
 
     switch ((tmp1 << 8) | tmp2)
     {
@@ -1847,7 +1854,8 @@ static ULONG ata_ReadSignature(struct ata_Bus *bus, int unit, BOOL *DiagExecuted
             return DEV_SATAPI;
 
         default:
-            if (0 == (ata_ReadStatus(bus) & 0xfe)) {
+            if (0 == (ata_ReadStatus(bus) & 0xfe))
+            {
                 DD(bug("[ATA  ] ata_ReadSignature: Found NONE\n"));
                 return DEV_NONE;
             }
@@ -1863,7 +1871,7 @@ static ULONG ata_ReadSignature(struct ata_Bus *bus, int unit, BOOL *DiagExecuted
             ata_WaitTO(bus->ab_Timer, 0, 2000, 0);
             while (ata_ReadStatus(bus) & ATAF_BUSY)
                 ata_WaitNano(400, bus->ab_Base);
-                //ata_WaitTO(bus->ab_Timer, 0, 1, 0);
+                ata_WaitTO(bus->ab_Timer, 0, 1, 0);
 
             DD(bug("[ATA  ] ata_ReadSignature: ATAF_BUSY wait finished\n"));
 
@@ -1871,7 +1879,7 @@ static ULONG ata_ReadSignature(struct ata_Bus *bus, int unit, BOOL *DiagExecuted
             do
             {
                 ata_WaitNano(400, bus->ab_Base);
-                //ata_WaitTO(unit->au_Bus->ab_Timer, 0, 1, 0);
+                ata_WaitTO(bus->ab_Timer, 0, 1, 0);
             }
             while (0 != (ATAF_BUSY & ata_ReadStatus(bus)));
             DD(bug("[ATA  ] ata_ReadSignature: Further validating ATA signature: %lx & 0x7f = 1, %lx & 0x10 = unit\n",
