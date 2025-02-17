@@ -942,7 +942,7 @@ BOOL Hidd_ATABus_Start(OOP_Object *o, struct ataBase *ATABase)
 {
     struct ata_Bus *ab = OOP_INST_DATA(ATABase->busClass, o);
 
-    bug("[ATA:Bus] %s()\n", __func__);
+    DD(bug("[ATA:Bus] %s()\n", __func__);)
 
     OOP_SetAttrsTags(o, aHidd_Bus_IRQHandler, Hidd_ATABus_HandleIRQ,
                         aHidd_Bus_IRQData   , ab,
@@ -953,11 +953,11 @@ BOOL Hidd_ATABus_Start(OOP_Object *o, struct ataBase *ATABase)
     Forbid();
     ab->ab_BusNum = ATABase->ata__buscount++;
     Permit();
-    bug("[ATA:Bus] ATABase->ata__buscount = %01d\n", ATABase->ata__buscount);
+    DD(bug("[ATA:Bus] ATABase->ata__buscount = %01d\n", ATABase->ata__buscount);)
 
     if ((ab->ab_Dev[0] < DEV_ATA) && (ab->ab_Dev[1] < DEV_ATA))
     {
-        bug("[ATA:Bus] No ATA Drives found on Bus %01d\n", ab->ab_BusNum);
+        DD(bug("[ATA:Bus] No ATA Drives found on Bus %01d\n", ab->ab_BusNum);)
         return FALSE;    
     }
 
@@ -965,7 +965,7 @@ BOOL Hidd_ATABus_Start(OOP_Object *o, struct ataBase *ATABase)
     
     if(ab->ab_BusNum == 0)
     {
-        bug("[ATA:Bus] Start BusTask: %01d | Unit 0: %01d | Unit 1: %01d\n", ab->ab_BusNum, ab->ab_Dev[0], ab->ab_Dev[1]);
+        DD(bug("[ATA:Bus] Start BusTask: %01d | Unit 0: %01d | Unit 1: %01d\n", ab->ab_BusNum, ab->ab_Dev[0], ab->ab_Dev[1]);)
         return NewCreateTask(TASKTAG_PC    , BusTaskCode,
                          TASKTAG_NAME       , "ATA[PI] Bus #0",
                          TASKTAG_STACKSIZE  , STACK_SIZE,
@@ -977,7 +977,7 @@ BOOL Hidd_ATABus_Start(OOP_Object *o, struct ataBase *ATABase)
     } else {
         if(ab->ab_BusNum == 1)
    	    {
-            bug("[ATA:Bus] Start BusTask: %01d | Unit 0: %01d | Unit 1: %01d\n", ab->ab_BusNum, ab->ab_Dev[0], ab->ab_Dev[1]);
+            DD(bug("[ATA:Bus] Start BusTask: %01d | Unit 0: %01d | Unit 1: %01d\n", ab->ab_BusNum, ab->ab_Dev[0], ab->ab_Dev[1]);)
             return NewCreateTask(TASKTAG_PC    , BusTaskCode2,
                             TASKTAG_NAME       , "ATA[PI] Bus #1",
                             TASKTAG_STACKSIZE  , STACK_SIZE,
