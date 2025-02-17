@@ -15,15 +15,17 @@
 #include "timer.h"
 
 // use #define xxx(a) DD(a) to enable particular sections.
-#if DEBUG
+//#if DEBUG
 #define DIRQ(a) DD(a)
 #define DIRQ_MORE(a)
-#define DUMP(a) DD(a)
-#define DUMP_MORE(a)
+
+//#define DUMP(a) do { } while (0)
+//#define DUMP_MORE(a) do { } while (0)
+
 #define DATA(a) DD(a)
 #define DATAPI(a) DD(a)
 #define DINIT(a) DD(a)
-#else
+/*#else
 #define DIRQ(a)      do { } while (0)
 #define DIRQ_MORE(a) do { } while (0)
 #define DUMP(a)      do { } while (0)
@@ -31,7 +33,7 @@
 #define DATA(a)      do { } while (0)
 #define DATAPI(a)    do { } while (0)
 #define DINIT(a)
-#endif
+#endif*/
 /* Errors that shouldn't happen */
 #define DERROR(a) a
 
@@ -728,7 +730,7 @@ void ata_init_unit(struct ata_Bus *bus, struct ata_Unit *unit, UBYTE u)
 
     BOOL atapi = unit->au_Bus->ab_Dev[unit->au_UnitNum & 1] & 0x80;
 
-    if (atapi)
+    if (TRUE) //CHANGEMEBACK
     {
         unit->au_UseModes &= ~AF_XFER_PIO32;
         unit->au_ins       = bus->pioVectors->ata_insw;
@@ -1064,7 +1066,7 @@ static BYTE ata_Identify(struct ata_Unit *unit)
     SWAP_LE_QUAD(unit->au_Drive->id_LBA48Sectors);
 #endif
 
-    DUMP(dump(unit->au_Drive, sizeof(struct DriveIdent)));
+    //DUMP(dump(unit->au_Drive, sizeof(struct DriveIdent)));
 
     if (atapi)
     {
@@ -1608,7 +1610,7 @@ static ULONG atapi_RequestSense(struct ata_Unit* unit, UBYTE* sense, ULONG sense
 
     unit->au_DirectSCSI(unit, &sc);
 
-    DATAPI(dump(sense, senselen));
+    //DATAPI(dump(sense, senselen));
     DD(bug("[SENSE] atapi_RequestSense: sensed data: %lx %lx %lx\n", sense[2]&0xf, sense[12], sense[13]));
     return ((sense[2]&0xf)<<16) | (sense[12]<<8) | (sense[13]);
 }
