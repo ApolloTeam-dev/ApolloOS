@@ -16,15 +16,15 @@
 
 // use #define xxx(a) DD(a) to enable particular sections.
 //#if DEBUG
-#define DIRQ(a) DD(a)
+#define DIRQ(a) 
 #define DIRQ_MORE(a)
 
 //#define DUMP(a) do { } while (0)
 //#define DUMP_MORE(a) do { } while (0)
 
-#define DATA(a) DD(a)
-#define DATAPI(a) DD(a)
-#define DINIT(a) DD(a)
+#define DATA(a) 
+#define DATAPI(a)
+#define DINIT(a) 
 /*#else
 #define DIRQ(a)      do { } while (0)
 #define DIRQ_MORE(a) do { } while (0)
@@ -730,7 +730,7 @@ void ata_init_unit(struct ata_Bus *bus, struct ata_Unit *unit, UBYTE u)
 
     BOOL atapi = unit->au_Bus->ab_Dev[unit->au_UnitNum & 1] & 0x80;
 
-    if (TRUE) //CHANGEMEBACK
+    if (atapi)
     {
         unit->au_UseModes &= ~AF_XFER_PIO32;
         unit->au_ins       = bus->pioVectors->ata_insw;
@@ -1741,7 +1741,7 @@ static void ata_ResetBus(struct ata_Bus *bus)
                 *color0=0x0000;
             }
         }
-        if (Counter==0) DD(bug("[ATA:ResetBus] ERROR: Master did NOT clear BSY\n", bus->ab_BusNum);)
+        if (Counter==0) bug("[ATA:ResetBus] ERROR: Master did NOT clear BSY\n", bus->ab_BusNum);
     }
 
     if (DEV_NONE != bus->ab_Dev[1])
@@ -1763,7 +1763,7 @@ static void ata_ResetBus(struct ata_Bus *bus)
                 *color0=0x0000;
             }
         }
-        if (Counter==0) DD(bug("[ATA:ResetBus] ERROR: Slave did NOT clear BSY\n", bus->ab_BusNum);)
+        if (Counter==0) bug("[ATA:ResetBus] ERROR: Slave did NOT clear BSY\n", bus->ab_BusNum);
     }
 
     if (DEV_NONE != bus->ab_Dev[0]) bus->ab_Dev[0] = ata_ReadSignature(bus, 0, &DiagExecuted);
