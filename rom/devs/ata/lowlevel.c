@@ -145,7 +145,7 @@ static inline BOOL ata_SelectUnit(struct ata_Unit* unit)
     do
     {
         ata_WaitNano(400, bus->ab_Base);
-        //ata_WaitTO(unit->au_Bus->ab_Timer, 0, 1, 0);
+        ata_WaitTO(unit->au_Bus->ab_Timer, 0, 1, 0);
     }
     while (0 != (ATAF_BUSY & ata_ReadStatus(bus)));
 
@@ -399,7 +399,7 @@ static BOOL ata_WaitBusyTO(struct ata_Unit *unit, UWORD tout, BOOL irq, BOOL fak
 static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
 {
     struct ata_Bus *bus = unit->au_Bus;
-    //BYTE err = 0;
+    BYTE err = 0;
     APTR mem = block->buffer;
     UBYTE status;
 
@@ -530,16 +530,27 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
             break;
     };
 
-    /*if (FALSE == ata_WaitBusyTO(unit, timeout, TRUE, fake_irq, &status))
+    if (FALSE == ata_WaitBusyTO(unit, timeout, TRUE, fake_irq, &status))
     {
         DERROR(bug("[ATA%02ld] ata_exec_cmd: Device is late - no response\n", unit->au_UnitNum));
         err = IOERR_UNITBUSY;
-    } else {*/
-     //   err = ;
-    //}
+    } else {
+        err = unit->au_cmd_error;
+    }
+
+    /*if (atapi)
+    {
+        if (ata_WaitBusyTO(unit, timeout, TRUE, fake_irq, &status) == FALSE)
+        {
+            DERROR(bug("[ATA:%02ld] ata_exec_cmd: Device is late - no response\n", unit->au_UnitNum));
+            err = IOERR_UNITBUSY;
+        } else {
+            err = unit->au_cmd_error;
+        }
+    }*/
 
     //DD(bug("[ATA:%02ld] ata_exec_cmd: Command done -> return code %ld\n", unit->au_UnitNum, err));
-    return unit->au_cmd_error;
+    return err;
 }
 
 
@@ -617,7 +628,7 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
     PIO_Out(bus, ATA_PACKET, atapi_Command);
     
     ata_WaitNano(400, bus->ab_Base);
-    //ata_WaitBusyTO(unit, TIMEOUT, (unit->au_Drive->id_General & 0x60) == 0x20, FALSE, NULL);
+    ata_WaitBusyTO(unit, TIMEOUT, (unit->au_Drive->id_General & 0x60) == 0x20, FALSE, NULL);
 
     if (0 == (ata_ReadStatus(bus) & ATAF_DATAREQ))
     {
@@ -751,11 +762,11 @@ BOOL ata_setup_unit(struct ata_Bus *bus, struct ata_Unit *unit)
     DD(bug("[ATA:%02ld] ata_setup_unit\n", unit->au_UnitNum);)
     ata_SelectUnit(unit);
 
-    /*if (FALSE == ata_WaitBusyTO(unit, 1, FALSE, FALSE, NULL))
+    if (FALSE == ata_WaitBusyTO(unit, 1, FALSE, FALSE, NULL))
     {
-        DD(bug("[ATA:%02ld] ata_setup_unit: ERROR: Drive not ready for use. Keeping functions stubbed\n", unit->au_UnitNum);)
+        bug("[ATA:%02ld] ata_setup_unit: ERROR: Drive not ready for use. Keeping functions stubbed\n", unit->au_UnitNum);
         return FALSE;
-    }*/
+    }
 
     u = unit->au_UnitNum & 1;
     switch (bus->ab_Dev[u])
@@ -809,7 +820,7 @@ static void common_SetXferMode(struct ata_Unit* unit, ata_XferMode mode)
             ata_IRQSetHandler(unit, ata_IRQNoData, NULL, 0, 0);
             PIO_Out(bus, unit->au_Drive->id_RWMultipleSize & 0xFF, ata_Count);
             PIO_Out(bus, ATA_SET_MULTIPLE, ata_Command);
-            //ata_WaitBusyTO(unit, -1, TRUE, FALSE, NULL);
+            ata_WaitBusyTO(unit, -1, TRUE, FALSE, NULL);
 
             unit->au_UseModes |= AF_XFER_RWMULTI;
             unit->au_Read32    = ata_ReadMultiple32;
@@ -834,8 +845,55 @@ static void common_SetXferMode(struct ata_Unit* unit, ata_XferMode mode)
             }
         }
     }
+
+#if 0 // We can't set drive modes unless we also set the controller's timing registers
+    if ((mode >= AB_XFER_PIO0) && (mode <= AB_XFER_PIO4))
+    {
+        type = 8 + (mode - AB_XFER_PIO0);
+    }
+    else if ((mode >= AB_XFER_MDMA0) && (mode <= AB_XFER_MDMA2))
+    {
+        type = 32 + (mode - AB_XFER_MDMA0);
+        dma=TRUE;
+    }
+    else if ((mode >= AB_XFER_UDMA0) && (mode <= AB_XFER_UDMA6))
+    {
+        type = 64 + (mode - AB_XFER_UDMA0);
+        dma=TRUE;
+    }
+    else
+    {
+        type = 0;
+    }
+
+    acb.sectors = type;
+    if (0 != ata_exec_cmd(unit, &acb))
+    {
+        DINIT(bug("[ATA:%02ld] common_SetXferMode: ERROR: Failed to apply new xfer mode.\n", unit->au_UnitNum));
+    }
+
+    if (!HIDD_ATABus_SetXferMode(obj, mode))
+    {
+        /*
+         * DMA mode setup failed.
+         * FIXME: Should completely revert back to PIO protocol, or try lower mode.
+         */
+        dma = FALSE;
+    }
+#else
+    if (mode >= AB_XFER_MDMA0)
+        dma = TRUE;
+#endif
+
+    if (dma)
+    {
+        unit->au_Flags |= AF_DMA; /* This flag is used by ATAPI protocol */
+    }
+    else
+    {
     unit->au_UseModes &= ~AF_XFER_DMA_MASK;
     unit->au_Flags    &= ~AF_DMA;
+    }
 }
 
 static void common_SetBestXferMode(struct ata_Unit* unit)
@@ -1676,10 +1734,10 @@ static ULONG ata_ReadSignature(struct ata_Bus *bus, int unit, BOOL *DiagExecuted
                 *DiagExecuted = TRUE;
             }
 
-            //ata_WaitTO(bus->ab_Timer, 0, 2000, 0);
+            ata_WaitTO(bus->ab_Timer, 0, 2000, 0);
             while (ata_ReadStatus(bus) & ATAF_BUSY)
                 ata_WaitNano(400, bus->ab_Base);
-                //ata_WaitTO(bus->ab_Timer, 0, 1, 0);
+                ata_WaitTO(bus->ab_Timer, 0, 1, 0);
 
             DD(bug("[ATA  ] ata_ReadSignature: ATAF_BUSY wait finished\n"));
 
@@ -1687,7 +1745,7 @@ static ULONG ata_ReadSignature(struct ata_Bus *bus, int unit, BOOL *DiagExecuted
             do
             {
                 ata_WaitNano(400, bus->ab_Base);
-                //ata_WaitTO(bus->ab_Timer, 0, 1, 0);
+                ata_WaitTO(bus->ab_Timer, 0, 1, 0);
             }
             while (0 != (ATAF_BUSY & ata_ReadStatus(bus)));
             DD(bug("[ATA  ] ata_ReadSignature: Further validating ATA signature: %lx & 0x7f = 1, %lx & 0x10 = unit\n",
@@ -1720,13 +1778,12 @@ static void ata_ResetBus(struct ata_Bus *bus)
         *color0=0x0000;
     }
     PIO_OutAlt(bus, ATACTLF_INT_DISABLE, ata_AltControl);
-    //ata_WaitTO(bus->ab_Timer, 0, 20000, 0);
+    ata_WaitTO(bus->ab_Timer, 0, 20000, 0);
     
     if (DEV_NONE != bus->ab_Dev[0])
     {
         PIO_Out(bus, DEVHEAD_VAL, ata_DevHead);
-        ata_WaitNano(400, bus->ab_Base);
-        //ata_WaitTO(bus->ab_Timer, 0, 20000, 0);
+        ata_WaitTO(bus->ab_Timer, 0, 20000, 0);
         
         DD(bug("[ATA:ResetBus] Wait for Master to clear BSY\n", bus->ab_BusNum);)
         bus->ab_Dev[0] = DEV_NONE;
@@ -1747,8 +1804,7 @@ static void ata_ResetBus(struct ata_Bus *bus)
     if (DEV_NONE != bus->ab_Dev[1])
     {
         PIO_Out(bus, DEVHEAD_VAL | (1 << 4), ata_DevHead);
-        ata_WaitNano(400, bus->ab_Base);
-        //ata_WaitTO(bus->ab_Timer, 0, 20000, 0);
+        ata_WaitTO(bus->ab_Timer, 0, 20000, 0);
         
         DD(bug("[ATA:ResetBus] Wait for Slave to clear BSY\n", bus->ab_BusNum);)
         bus->ab_Dev[1] = DEV_NONE;
@@ -1800,8 +1856,7 @@ void ata_InitBus(struct ata_Bus *bus)
     {
         /* Select device and disable IRQs */
         PIO_Out(bus, DEVHEAD_VAL | (i << 4), ata_DevHead);
-        ata_WaitNano(400, bus->ab_Base);
-        //ata_WaitTO(bus->ab_Timer, 0, 400, 0);
+        ata_WaitTO(bus->ab_Timer, 0, 400, 0);
         PIO_OutAlt(bus, ATACTLF_INT_DISABLE, ata_AltControl);
 
         /* Write some pattern to registers. This is a variant of a more
