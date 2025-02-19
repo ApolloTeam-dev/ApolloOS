@@ -271,6 +271,9 @@ WAITBUSY:
         unit->au_cmd_error = HFERR_BadStatus;
         return;
     }
+
+    ata_WaitTO(bus->ab_Timer, 0, 2000, 0);
+    
     DATAPI(bug("R"));
     if (status & ATAF_BUSY) goto WAITBUSY;
 
@@ -572,7 +575,7 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
         ++l;
     }
 
-    DD({
+    DATAPI({
         bug("[ATA:%02lx] atapi_SendPacket - Sending %s ATA packet: ", unit->au_UnitNum, (*dma) ? "DMA" : "PIO");
         l=0;
         while (l<=t)
@@ -1917,7 +1920,7 @@ static BYTE atapi_EndCmd(struct ata_Unit *unit)
 
     status = PIO_In(bus, atapi_Status);
 
-    DD(bug("[ATA:%02ld] atapi_EndCmd: Command complete. Status: %lx\n", unit->au_UnitNum, status));
+    DATAPI(bug("[ATA:%02ld] atapi_EndCmd: Command complete. Status: %lx\n", unit->au_UnitNum, status));
 
     if (!(status & ATAPIF_CHECK))
     {
