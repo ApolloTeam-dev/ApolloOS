@@ -1,5 +1,5 @@
 /*
-    Copyright © 2013-2014, The AROS Development Team. All rights reserved
+    Copyright ï¿½ 2013-2014, The AROS Development Team. All rights reserved
     $Id$
 */
 
@@ -25,8 +25,7 @@ ULONG ata_WaitTO(struct IORequest* tmr, ULONG secs, ULONG micro, ULONG sigs)
     ULONG sig = 1 << tmr->io_Message.mn_ReplyPort->mp_SigBit;
 
     D(struct Node *t = (struct Node *)FindTask(NULL));
-    D(bug("[ATA  ] Timed wait %lds %ldu (task='%s')\n", secs, micro,
-        t->ln_Name));
+    D(bug("[ATA  ] Timed wait %lds %ldu (task='%s')\n", secs, micro, t->ln_Name));
 
     tmr->io_Command = TR_ADDREQUEST;
     ((struct timerequest*)tmr)->tr_time.tv_secs = secs;

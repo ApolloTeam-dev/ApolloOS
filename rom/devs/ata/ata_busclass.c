@@ -22,10 +22,10 @@
 #include "ata.h"
 #include "ata_bus.h"
 
-#define DIRQ(x) x
-#define DATTR(x) x
+#define DIRQ(x) 
+#define DATTR(x) 
 
-#define DD(x) x
+#define DD(x) 
 
 static void Hidd_ATABus_HandleIRQ(UBYTE status, struct ata_Bus *bus)
 {

@@ -102,7 +102,7 @@ static UBYTE *getport(struct ata_ProbedBus *ddata, int buscounter)
 
     if(port == NULL)
     {
-        DD(bug("[ATA:Probe] No Gayle IDE port @ %08x\n", (ULONG)port & ~3);)
+        //DD(bug("[ATA:Probe] No Gayle IDE port @ %08x\n", (ULONG)port & ~3);)
         return NULL;
     } 
 
@@ -118,7 +118,7 @@ static UBYTE *getport(struct ata_ProbedBus *ddata, int buscounter)
     port[ata_DevHead * 4] = 0;
     Enable();
 
-    DD(bug("[ATA:Probe] Status=%02x,%02x\n", status1, status2);)
+    //DD(bug("[ATA:Probe] Status=%02x,%02x\n", status1, status2);)
 
 RETRY:
 
@@ -192,7 +192,7 @@ static int gayle_bus_Scan(struct ataBase *base)
                     DD(bug("[ATA:Probe] Added: %s\n", attrs[1].ti_Data);)
                     return TRUE;
                 }
-                DD(bug("[ATA:Gayle] Failed to create object for device IO: %x:%x IRQ: %x\n", probedbus->port, probedbus->altport, probedbus->gayleirqbase);)
+                //DD(bug("[ATA:Gayle] Failed to create object for device IO: %x:%x IRQ: %x\n", probedbus->port, probedbus->altport, probedbus->gayleirqbase);)
                 if (!probedbus->atapb_Node.ln_Succ) FreeVec(probedbus);
                 return TRUE;
             }

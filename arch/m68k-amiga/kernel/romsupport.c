@@ -64,27 +64,27 @@ static int AMiGAROMSupport_Init(struct KernelBase *KernelBase)
 
     D(bug("[Kernel:Am68k] %s: platformdata @ 0x%p\n", __func__, pd);)
 
-    bug("ApolloOS Serial Debug Enabled\n");
+    D(bug("ApolloOS Serial Debug Enabled\n");)
 
     id = (UBYTE)ReadGayle();
     if ((id > 0) &&
         AMiGAROM_IsValid((APTR)0xA80000) &&
         !AMiGAROM_MatchWords((APTR)0xA80000, (APTR)0xF80000))
     {
-        bug("ROMInfo: 2MiB ROM detected\n");
+        D(bug("ROMInfo: 2MiB ROM detected\n");)
         romsize = ROMSIZE2MB;
         imgcnt = 4;
     }
     else if (AMiGAROM_IsValid((APTR)0xE00000) &&
         !AMiGAROM_MatchWords((APTR)0xE00000, (APTR)0xF80000))
     {
-        bug("ROMInfo: 1MiB ROM detected\n");
+        D(bug("ROMInfo: 1MiB ROM detected\n");)
         romsize = ROMSIZE1MB;
         imgcnt = 2;
     }
     else
     {
-        bug("ROMInfo: 512KiB ROM detected\n");
+        D(bug("ROMInfo: 512KiB ROM detected\n");)
         romsize = ROMSIZE512;
         imgcnt = 2;
     }
@@ -156,37 +156,33 @@ static int AMiGAROMSupport_Init(struct KernelBase *KernelBase)
     }
 
     APTR physaddr;
-    bug("ROMInfo: ROM region(s)..\n");
+    D(bug("ROMInfo: ROM region(s)..\n");)
     switch (romsize)
     {
         case ROMSIZE2MB:
             {
                 physaddr = KrnVirtualToPhysical((APTR)0xA80000);
-                bug("ROMInfo:     0x%08x - 0x%08x", 0xA80000, 0xA80000 + (romsize / imgcnt) - 1);
-                if (physaddr != (APTR)0xA80000)
-                    bug("@  0x%08x - 0x%08x", physaddr, (IPTR)physaddr + (romsize / imgcnt) - 1);
-                bug("\n");
+                //D(bug("ROMInfo:     0x%08x - 0x%08x", 0xA80000, 0xA80000 + (romsize / imgcnt) - 1);)
+                //if (physaddr != (APTR)0xA80000) D(bug("@  0x%08x - 0x%08x", physaddr, (IPTR)physaddr + (romsize / imgcnt) - 1);)
+                //D(bug("\n");)
                 physaddr = KrnVirtualToPhysical((APTR)0xB00000);
-                bug("ROMInfo:     0x%08x - 0x%08x", 0xB00000, 0xB00000 + (romsize / imgcnt) - 1);
-                if (physaddr != (APTR)0xB00000)
-                    bug("@  0x%08x - 0x%08x", physaddr, (IPTR)physaddr + (romsize / imgcnt) - 1);
-                bug("\n");
+                //D(bug("ROMInfo:     0x%08x - 0x%08x", 0xB00000, 0xB00000 + (romsize / imgcnt) - 1);)
+                //if (physaddr != (APTR)0xB00000) D(bug("@  0x%08x - 0x%08x", physaddr, (IPTR)physaddr + (romsize / imgcnt) - 1);)
+                //D(bug("\n");)
             }
         case ROMSIZE1MB:
             {
                 physaddr = KrnVirtualToPhysical((APTR)0xE00000);
-                bug("ROMInfo:     0x%08x - 0x%08x", 0xE00000, 0xE00000 + (romsize / imgcnt) - 1);
-                if (physaddr != (APTR)0xE00000)
-                    bug("@  0x%08x - 0x%08x", physaddr, (IPTR)physaddr + (romsize / imgcnt) - 1);
-                bug("\n");
+                //D(bug("ROMInfo:     0x%08x - 0x%08x", 0xE00000, 0xE00000 + (romsize / imgcnt) - 1);)
+                //if (physaddr != (APTR)0xE00000) D(bug("@  0x%08x - 0x%08x", physaddr, (IPTR)physaddr + (romsize / imgcnt) - 1);)
+                //D(bug("\n");)
             }
         case ROMSIZE512:
             {
                 physaddr = KrnVirtualToPhysical((APTR)0xF80000);
-                bug("ROMInfo:     0x%08x - 0x%08x", 0xF80000, 0xF80000 + (romsize / imgcnt) - 1);
-                if (physaddr != (APTR)0xF80000)
-                    bug("@  0x%08x - 0x%08x", physaddr, (IPTR)physaddr + (romsize / imgcnt) - 1);
-                bug("\n");
+                //D(bug("ROMInfo:     0x%08x - 0x%08x", 0xF80000, 0xF80000 + (romsize / imgcnt) - 1);)
+                //if (physaddr != (APTR)0xF80000) D(bug("@  0x%08x - 0x%08x", physaddr, (IPTR)physaddr + (romsize / imgcnt) - 1);)
+                //D(bug("\n");)
             }
     }
     return TRUE;

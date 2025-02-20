@@ -30,7 +30,7 @@
 #include LC_LIBDEFS_FILE
 
 #define DINIT(x)
-#define DD(x) 
+#define DD(x) x
 
 //---------------------------IO Commands---------------------------------------
 
@@ -52,11 +52,17 @@ static void cmd_Read32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
     struct ata_Unit *unit = (struct ata_Unit *)IOStdReq(io)->io_Unit;
 
+    if (AF_Removable == (unit->au_Flags & (AF_Removable | AF_DiscPresent)))
+    {
+        DD(bug("[ATA%02ld] %s: USUALLY YOU'D WANT TO CHECK IF DISC IS PRESENT FIRST\n", unit->au_UnitNum, __func__));
+        io->io_Error = TDERR_DiskChanged;
+        return;
+    }
 
     ULONG block = IOStdReq(io)->io_Offset;
     ULONG count = IOStdReq(io)->io_Length;
 
-    DD(bug("[ATA%02ld] %s(%08x, %08x)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, block, count));
+    //DD(bug("[ATA%02ld] %s(%08x, %08x)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, block, count));
 
     ULONG mask = (1 << unit->au_SectorShift) - 1;
 
@@ -151,11 +157,17 @@ static void cmd_Read64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
     struct ata_Unit *unit = (struct ata_Unit *)IOStdReq(io)->io_Unit;
 
+    if (AF_Removable == (unit->au_Flags & (AF_Removable | AF_DiscPresent)))
+    {
+        D(bug("[ATA%02ld] %s: USUALLY YOU'D WANT TO CHECK IF DISC IS PRESENT FIRST\n", unit->au_UnitNum, __func__));
+        io->io_Error = TDERR_DiskChanged;
+        return;
+    }
 
     UQUAD block = IOStdReq(io)->io_Offset | (UQUAD)(IOStdReq(io)->io_Actual) << 32;
     ULONG count = IOStdReq(io)->io_Length;
 
-    DD(bug("[ATA%02ld] %s(%08x-%08x, %08x)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, IOStdReq(io)->io_Actual, IOStdReq(io)->io_Offset, count));
+    //DD(bug("[ATA%02ld] %s(%08x-%08x, %08x)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, IOStdReq(io)->io_Actual, IOStdReq(io)->io_Offset, count));
 
     ULONG mask = (1 << unit->au_SectorShift) - 1;
 
@@ -311,10 +323,17 @@ static void cmd_Write32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
     struct ata_Unit *unit = (struct ata_Unit *)IOStdReq(io)->io_Unit;
 
+    if (AF_Removable == (unit->au_Flags & (AF_Removable | AF_DiscPresent)))
+    {
+        D(bug("[ATA%02ld] %s: USUALLY YOU'D WANT TO CHECK IF DISC IS PRESENT FIRST\n", unit->au_UnitNum, __func__));
+        io->io_Error = TDERR_DiskChanged;
+        return;
+    }
+
     ULONG block = IOStdReq(io)->io_Offset;
     ULONG count = IOStdReq(io)->io_Length;
 
-    DD(bug("[ATA%02ld] %s(%08x, %08x)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, block, count));
+    //DD(bug("[ATA%02ld] %s(%08x, %08x)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, block, count));
 
     ULONG mask = (1 << unit->au_SectorShift) - 1;
 
@@ -366,10 +385,17 @@ static void cmd_Write64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
     struct ata_Unit *unit = (struct ata_Unit *)IOStdReq(io)->io_Unit;
 
+    if (AF_Removable == (unit->au_Flags & (AF_Removable | AF_DiscPresent)))
+    {
+        D(bug("[ATA%02ld] %s: USUALLY YOU'D WANT TO CHECK IF DISC IS PRESENT FIRST\n", unit->au_UnitNum, __func__));
+        io->io_Error = TDERR_DiskChanged;
+        return;
+    }
+
     UQUAD block = IOStdReq(io)->io_Offset | (UQUAD)(IOStdReq(io)->io_Actual) << 32;
     ULONG count = IOStdReq(io)->io_Length;
 
-    DD(bug("[ATA%02ld] %s(%08x-%08x, %08x)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, IOStdReq(io)->io_Actual, IOStdReq(io)->io_Offset, count));
+    //DD(bug("[ATA%02ld] %s(%08x-%08x, %08x)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, IOStdReq(io)->io_Actual, IOStdReq(io)->io_Offset, count));
 
     ULONG mask = (1 << unit->au_SectorShift) - 1;
 
@@ -459,6 +485,36 @@ static void cmd_Flush(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 */
 static void cmd_TestChanged(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
+    struct ata_Unit *unit = (struct ata_Unit *)io->io_Unit;
+    struct IORequest *msg;
+
+    DD(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+
+    if ((unit->au_XferModes & AF_XFER_PACKET) && (unit->au_Flags & AF_Removable))
+    {
+        atapi_TestUnitOK(unit);
+        if (unit->au_Flags & AF_DiscChanged)
+        {
+            unit->au_ChangeNum++;
+
+            DD(bug("\n[ATA%02ld] cmd_TestChanged: Disk Change Detected | unit->au_ChangeNum = %d\n", unit->au_UnitNum, unit->au_ChangeNum);)
+
+            Forbid();
+
+            /* old-fashioned RemoveInt call first */
+            if (unit->au_RemoveInt) Cause(unit->au_RemoveInt);
+
+            /* And now the whole list of possible calls */
+            ForeachNode(&unit->au_SoftList, msg)
+            {
+                Cause((struct Interrupt *)IOStdReq(msg)->io_Data);
+            }
+
+            unit->au_Flags &= ~AF_DiscChanged;
+
+            Permit();
+        }
+    }
 }
 
 static void cmd_Update(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
@@ -912,7 +968,7 @@ AROS_LH1(void, BeginIO,
     /* Disable interrupts for a while to modify message flags */
     Disable();
 
-    DD(bug("[ATA%02ld] %s: Executing IO Command %lx\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, io->io_Command));
+    //DD(bug("[ATA%02ld] %s: Executing IO Command %lx\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, io->io_Command));
 
     /*
         If the command is not-immediate, or presence of disc is still unknown,
@@ -948,7 +1004,7 @@ AROS_LH1(void, BeginIO,
         }
     }
 
-    DD(bug("[ATA%02ld] %s: Done\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+    //DD(bug("[ATA%02ld] %s: Done\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
     AROS_LIBFUNC_EXIT
 }
 
@@ -986,6 +1042,105 @@ AROS_LH1(ULONG, GetBlkSize,
     AROS_LIBFUNC_EXIT
 }
 
+void DaemonCode(struct ataBase *ATABase, struct ata_Controller *ataNode)
+{
+    struct IORequest *timer;	// timer
+    UBYTE b = 0;
+    ULONG sigs;
+
+    DD(bug("[ATA**] ATA DAEMON woke for controller @ 0x%p\n", ataNode));
+
+    /*
+     * Prepare message ports and timer.device's request
+     */
+    timer  = ata_OpenTimer(ATABase);
+    if (!timer)
+    {
+        DD(bug("[ATA++] Failed to open timer!\n"));
+
+        Forbid();
+        Signal(ataNode->ac_daemonParent, SIGF_SINGLE);
+        return;
+    }
+
+    /* Calibrate 400ns delay */
+    if (!ata_Calibrate(timer, ATABase))
+    {
+        ata_CloseTimer(timer);
+        Forbid();
+        Signal(ataNode->ac_daemonParent, SIGF_SINGLE);
+        return;
+    }
+
+    /* This also signals that we have initialized successfully */
+    ataNode->ac_Daemon = FindTask(NULL);
+    Signal(ataNode->ac_daemonParent, SIGF_SINGLE);
+
+
+
+
+    DD(bug("[ATA++] Starting sweep medium presence detection\n"));
+
+    /*
+     * Endless loop
+     */
+    do
+    {
+        /*
+         * call separate IORequest for every ATAPI device
+         * we're calling HD_SCSICMD+1 command here -- anything like test unit ready?
+         * FIXME: This is not a very nice approach in terms of performance.
+         * This inserts own command into command queue every 2 seconds, so
+         * this would give periodic performance drops under high loads.
+         * It would be much better if unit tasks ping their devices by themselves,
+         * when idle. This would also save us from lots of headaches with dealing
+         * with list of these requests. Additionally i start disliking all these
+         * semaphores.
+         */
+        
+        
+        if (0 == (b & 1))
+        {
+            struct IOStdReq *ios;
+
+            DD(bug("[ATA++] Detecting media presence\n"));
+            ObtainSemaphore(&ataNode->DaemonSem);
+
+            ForeachNode(&ataNode->Daemon_ios, ios)
+            {
+                // Using the request will clobber its Node. Save links. 
+                struct Node *s = ios->io_Message.mn_Node.ln_Succ;
+                struct Node *p = ios->io_Message.mn_Node.ln_Pred;
+
+                DoIO((struct IORequest *)ios);
+
+                ios->io_Message.mn_Node.ln_Succ = s;
+                ios->io_Message.mn_Node.ln_Pred = p;
+            }
+
+            ReleaseSemaphore(&ataNode->DaemonSem);
+        }
+
+        /*
+         * And then hide and wait for 1 second
+         */
+        //DD(bug("[ATA++] 1 second delay, timer 0x%p...\n", timer));
+        sigs = ata_WaitTO(timer, 1, 0, SIGBREAKF_CTRL_C);
+
+        //DD(bug("[ATA++] Delay completed\n"));
+        b++;
+    } while (!sigs);
+
+    ataNode->ac_Daemon = NULL;
+    DD(bug("[ATA++] Daemon quits\n"));
+
+    ata_CloseTimer(timer);
+
+    Forbid();
+    Signal(ataNode->ac_daemonParent, SIGF_SINGLE);
+}
+
+
 /*
     Bus task body. It doesn't really do much. It receives simply all IORequests
     in endless loop and calls proper handling function. The IO is Semaphore-
@@ -1002,7 +1157,7 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
     bug("[ATA:BusTask] TaskCode started (bus: %u)\n", bus->ab_BusNum);
 
     bus->ab_Timer = ata_OpenTimer(ATABase);
-//    bus->ab_BounceBufferPool = CreatePool(MEMF_CLEAR | MEMF_31BIT, 131072, 65536);
+    bus->ab_BounceBufferPool = CreatePool(MEMF_CLEAR | MEMF_31BIT, 131072, 65536);
 
     /* Get the signal used for sleeping */
     bus->ab_Task = FindTask(0);
@@ -1033,11 +1188,47 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
 
                     if (unit->au_XferModes & AF_XFER_PACKET)
                     {
+                        DD(bug("[ATA:BusTask] AF_XFER_PACKET\n"));
+                        
                         struct ata_Controller *ataNode = NULL;
 
                         ata_RegisterVolume(0, 0, unit);
 
-                        OOP_GetAttr(bus->ab_Object, aHidd_ATABus_Controller, (IPTR *)&ataNode);
+                        //OOP_GetAttr(bus->ab_Object, aHidd_ATABus_Controller, (IPTR *)ataNode);
+                        
+                        ataNode = (void *)(((struct List *)(&ATABase->ata_Controllers))->lh_Head);
+                        
+                        //for ( ataNode = (void *)(((struct List *)(&ATABase->ata_Controllers))->lh_Head); ((struct Node *)(ataNode))->ln_Succ; ataNode = (void *)(((struct Node *)(ataNode))->ln_Succ) )
+
+                        if (ataNode)
+                        {
+                            DD(bug("[ATA:BusTask] ataNode = TRUE\n"));
+                            
+                            /* For ATAPI device we also submit media presence detection request */
+                            unit->DaemonReq = (struct IOStdReq *)CreateIORequest(ataNode->DaemonPort, sizeof(struct IOStdReq));
+                            if (unit->DaemonReq)
+                            {
+                                DD(bug("[ATA:BusTask] unit->DaemonReq = TRUE\n"));
+                                /*
+                                 * We don't want to keep stalled open count of 1, so we
+                                 * don't call OpenDevice() here. Instead we fill in the needed
+                                 * fields manually.
+                                 */
+                                unit->DaemonReq->io_Device = &ATABase->ata_Device;
+                                unit->DaemonReq->io_Unit   = &unit->au_Unit;
+                                unit->DaemonReq->io_Command = HD_SCSICMD+1;
+
+                                ObtainSemaphore(&ataNode->DaemonSem);
+                                AddTail((struct List *)&ataNode->Daemon_ios, &unit->DaemonReq->io_Message.mn_Node);
+                                ReleaseSemaphore(&ataNode->DaemonSem);
+
+                                DD(bug("[ATA:BusTask] Deamon Request for Media Detection Inserted\n"));
+                            } else {
+                                DD(bug("[ATA:BusTask] unit->DaemonReq = FALSE\n"));
+                            }
+                        } else {
+                            DD(bug("[ATA:BusTask] ataNode = FALSE\n"));
+                        }
                     }
                     else
                     {
@@ -1095,7 +1286,6 @@ void BusTaskCode2(struct ata_Bus *bus, struct ataBase *ATABase)
     bug("[ATA:BusTask2] TaskCode started (bus: %u)\n", bus->ab_BusNum);
 
     bus->ab_Timer = ata_OpenTimer(ATABase);
-//    bus->ab_BounceBufferPool = CreatePool(MEMF_CLEAR | MEMF_31BIT, 131072, 65536);
 
     /* Get the signal used for sleeping */
     bus->ab_Task = FindTask(0);
@@ -1132,6 +1322,26 @@ void BusTaskCode2(struct ata_Bus *bus, struct ataBase *ATABase)
                         ata_RegisterVolume(0, 0, unit);
 
                         OOP_GetAttr(bus->ab_Object, aHidd_ATABus_Controller, (IPTR *)&ataNode);
+                        if (ataNode)
+                        {
+                            /* For ATAPI device we also submit media presence detection request */
+                            unit->DaemonReq = (struct IOStdReq *)CreateIORequest(ataNode->DaemonPort, sizeof(struct IOStdReq));
+                            if (unit->DaemonReq)
+                            {
+                                /*
+                                 * We don't want to keep stalled open count of 1, so we
+                                 * don't call OpenDevice() here. Instead we fill in the needed
+                                 * fields manually.
+                                 */
+                                unit->DaemonReq->io_Device = &ATABase->ata_Device;
+                                unit->DaemonReq->io_Unit   = &unit->au_Unit;
+                                unit->DaemonReq->io_Command = HD_SCSICMD+1;
+
+                                ObtainSemaphore(&ataNode->DaemonSem);
+                                AddTail((struct List *)&ataNode->Daemon_ios, &unit->DaemonReq->io_Message.mn_Node);
+                                ReleaseSemaphore(&ataNode->DaemonSem);
+                            }
+                        }
                     }
                     else
                     {
