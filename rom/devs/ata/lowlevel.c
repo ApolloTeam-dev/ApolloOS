@@ -273,7 +273,7 @@ WAITBUSY:
 
     ata_WaitTO(bus->ab_Timer, 0, 2000, 0);
     
-    DATAPI(bug("R"));
+    bug("R");
     if (status & ATAF_BUSY) goto WAITBUSY;
 
     DATAPI(bug("[ATAPI] ata_IRQPIOReadAtapi - Status: %lx\n", status));
@@ -329,7 +329,7 @@ WAITBUSYW:
         unit->au_cmd_error = HFERR_BadStatus;
         return;
     }
-    DATAPI(bug("W"));
+    bug("W");
     if (status & ATAF_BUSY) goto WAITBUSYW;
 
     if (status & ATAF_DATAREQ)
@@ -1545,6 +1545,8 @@ static BYTE ata_Eject(struct ata_Unit *unit)
 /*
  * atapi commands
  */
+
+/* ORIGINAL AROS
 int atapi_TestUnitOK(struct ata_Unit *unit)
 {
     UBYTE cmd[6] = {0};
@@ -1560,8 +1562,7 @@ int atapi_TestUnitOK(struct ata_Unit *unit)
 
     DD(bug("[ATA:%02ld] atapi_TestUnitOK: Testing Unit Ready sense...\n", unit->au_UnitNum));
 
-    /* Send command twice, and take the second result, as some drives give
-     * invalid (or at least not so useful) sense data straight after reset */
+    // Send command twice, and take the second result, as some drives give invalid (or at least not so useful) sense data straight after reset
     for (i = 0; i < 2; i++) unit->au_DirectSCSI(unit, &sc);
 
     unit->au_SenseKey = sense[2];
@@ -1581,6 +1582,46 @@ int atapi_TestUnitOK(struct ata_Unit *unit)
 
     DD(bug("[ATA:%02ld] atapi_TestUnitOK: SenseCode = %02lx | Media = %s | Change = %s\n\n", unit->au_UnitNum, sense[2], unit->au_Flags & AF_DiscPresent ? "YES" : "NO", unit->au_Flags & AF_DiscChanged ? "YES" : "NO"));
     return sense[2];
+}*/
+
+int atapi_TestUnitOK(struct ata_Unit *unit)
+{
+    UBYTE cmd[12]       = {0x25,0,0,0,0,0,0,0,0,0,0,0};
+    UBYTE capacity[8]   = {0};
+    BYTE result;
+    ULONG blockaddress  = 0;
+    ULONG blocklenght   = 0;
+
+    struct SCSICmd sc   = {0};
+
+    sc.scsi_Command     = (void*) &cmd;
+    sc.scsi_CmdLength   = sizeof(cmd);
+    sc.scsi_Data        = (void*) &capacity;
+    sc.scsi_Length      = sizeof(capacity);
+    sc.scsi_Flags       = SCSIF_READ;
+
+    result = unit->au_DirectSCSI(unit, &sc);
+
+    if( result > 0 ) 
+    {
+        if ( (unit->au_Flags & AF_DiscPresent) != 0) 
+        {
+            unit->au_Flags &= ~AF_DiscPresent;
+            unit->au_Flags |= AF_DiscChanged;
+        }
+    } else {
+        if ( (unit->au_Flags & AF_DiscPresent) == 0 )
+        {
+            unit->au_Flags |= AF_DiscPresent;
+            unit->au_Flags |= AF_DiscChanged;            
+        }
+    };
+
+    DD(bug("[ATA:%02ld] atapi_TestUnitOK: | Result = %d | Media = %s | Change = %s\n\n", unit->au_UnitNum, result, unit->au_Flags & AF_DiscPresent ? "YES" : "NO", unit->au_Flags & AF_DiscChanged ? "YES" : "NO"));
+    
+    //blockaddress    = (ULONG)capacity[0];
+    //blocklenght     = (ULONG)capacity[4];
+    //bug("[ATA:%02ld] atapi_TestUnitOK: blockaddress = %u | blocklenght = %u\n", blockaddress, blocklenght);
 }
 
 static BYTE atapi_Read(struct ata_Unit *unit, ULONG block, ULONG count, APTR buffer, ULONG *act)
@@ -1912,14 +1953,12 @@ static BYTE atapi_EndCmd(struct ata_Unit *unit)
 
     DD(bug("[ATA:%02ld] atapi_EndCmd: Command complete. Status: %lx\n", unit->au_UnitNum, status));
 
-    /*if (!(status & ATAPIF_CHECK))
+    if (!(status & ATAPIF_CHECK))
     {
         return 0;
+    } else {
+        error = PIO_In(bus, atapi_Error);
+        DD(bug("[ATA:%02ld] atapi_EndCmd: ERROR code 0x%lx\n", unit->au_UnitNum, error >> 4));
+        return ErrorMap[error >> 4];
     }
-    else
-    {*/
-       error = PIO_In(bus, atapi_Error);
-       DD(bug("[ATA:%02ld] atapi_EndCmd: ERROR code 0x%lx\n", unit->au_UnitNum, error >> 4));
-       return ErrorMap[error >> 4];
-    //}
 }

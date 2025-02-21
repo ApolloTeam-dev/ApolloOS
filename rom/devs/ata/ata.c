@@ -497,17 +497,22 @@ static void cmd_TestChanged(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
         {
             unit->au_ChangeNum++;
 
-            DD(bug("\n[ATA%02ld] cmd_TestChanged: Disk Change Detected | unit->au_ChangeNum = %d\n", unit->au_UnitNum, unit->au_ChangeNum);)
+            DD(bug("#############################################\n[ATA%02ld] cmd_TestChanged: Disk Change Detected | unit->au_ChangeNum = %d\n#############################################\n\n", unit->au_UnitNum, unit->au_ChangeNum);)
 
             Forbid();
 
             /* old-fashioned RemoveInt call first */
-            if (unit->au_RemoveInt) Cause(unit->au_RemoveInt);
+            if (unit->au_RemoveInt)
+            {
+                Cause(unit->au_RemoveInt);
+                bug("[ATA%02ld] Calling unit->au_RemoveInt\n");
+            }
 
             /* And now the whole list of possible calls */
             ForeachNode(&unit->au_SoftList, msg)
             {
                 Cause((struct Interrupt *)IOStdReq(msg)->io_Data);
+                bug("[ATA%02ld] Calling unit->au_SoftList\n");
             }
 
             unit->au_Flags &= ~AF_DiscChanged;
@@ -938,13 +943,8 @@ static BOOL isSlow(struct IORequest *io)
     /* For commands with numbers <= 31 check the mask */
     if (io->io_Command <= 31)
     {
-        if (IMMEDIATE_COMMANDS & (1 << io->io_Command))
-            slow = FALSE;
+        if (IMMEDIATE_COMMANDS & (1 << io->io_Command)) slow = FALSE;
     }
-#if(0)
-    else if ((io->io_Command >= HD_SMARTCMD && io->io_Command <= HD_TRIMCMD) &&
-                (IOStdReq(io)->io_Reserved1 == ATAFEATURE_TEST_AVAIL)) slow = FALSE;
-#endif
     else if (io->io_Command == NSCMD_TD_SEEK64 || io->io_Command == NSCMD_DEVICEQUERY) slow = FALSE;
 
     return slow;
@@ -1076,9 +1076,6 @@ void DaemonCode(struct ataBase *ATABase, struct ata_Controller *ataNode)
     ataNode->ac_Daemon = FindTask(NULL);
     Signal(ataNode->ac_daemonParent, SIGF_SINGLE);
 
-
-
-
     DD(bug("[ATA++] Starting sweep medium presence detection\n"));
 
     /*
@@ -1196,10 +1193,8 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
 
                         //OOP_GetAttr(bus->ab_Object, aHidd_ATABus_Controller, (IPTR *)ataNode);
                         
-                        ataNode = (void *)(((struct List *)(&ATABase->ata_Controllers))->lh_Head);
+                        ataNode = (void *)(((struct List *)(&ATABase->ata_Controllers))->lh_Head);      // First Controller on $DA
                         
-                        //for ( ataNode = (void *)(((struct List *)(&ATABase->ata_Controllers))->lh_Head); ((struct Node *)(ataNode))->ln_Succ; ataNode = (void *)(((struct Node *)(ataNode))->ln_Succ) )
-
                         if (ataNode)
                         {
                             DD(bug("[ATA:BusTask] ataNode = TRUE\n"));
@@ -1261,6 +1256,8 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
             /* Empty the request queue */
             while ((msg = (struct IORequest *)GetMsg(bus->ab_MsgPort)))
             {
+                //bug("[ATA:BusTask] Received Message | Command = %u \n", msg->io_Command);
+                
                 /* And do IO's */
                 HandleIO(msg, ATABase);
                 /* TD_ADDCHANGEINT doesn't require reply */
@@ -1321,7 +1318,10 @@ void BusTaskCode2(struct ata_Bus *bus, struct ataBase *ATABase)
 
                         ata_RegisterVolume(0, 0, unit);
 
-                        OOP_GetAttr(bus->ab_Object, aHidd_ATABus_Controller, (IPTR *)&ataNode);
+                        //OOP_GetAttr(bus->ab_Object, aHidd_ATABus_Controller, (IPTR *)&ataNode);
+
+                        ataNode = (void *)(((struct List *)(&ATABase->ata_Controllers))->lh_Head->ln_Succ);      // Second Controller on $DD
+
                         if (ataNode)
                         {
                             /* For ATAPI device we also submit media presence detection request */
