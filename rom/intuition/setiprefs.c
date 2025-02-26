@@ -1,6 +1,6 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2001-2003, The MorphOS Development Team. All Rights Reserved.
     $Id$
 */
 
@@ -71,6 +71,11 @@
 
         case IPREFS_TYPE_SCREENMODE_V37:
         {
+            struct IScreenModePrefs *smp;
+            smp = data;
+            bug("[SetiPrefs] ModeID: 0x%08lX, Size: %dx%d, Depth: %d, Control: 0x%08lX\n",
+                smp->smp_DisplayID, smp->smp_Width, smp->smp_Height, smp->smp_Depth, smp->smp_Control);
+                
             BOOL reopen = FALSE, closed = (GetPrivIBase(IntuitionBase)->WorkBench) ? FALSE : TRUE;
 
             DEBUG_SETIPREFS(bug("[Intuition] %s: IP_SCREENMODE_V37\n", __func__));
@@ -80,20 +85,25 @@
             if (!GetPrivIBase(IntuitionBase)->ScreenModePrefs)
                 GetPrivIBase(IntuitionBase)->ScreenModePrefs = AllocMem(sizeof(struct IScreenModePrefs), MEMF_ANY);
 
-            if (memcmp(GetPrivIBase(IntuitionBase)->ScreenModePrefs, data,
-                       sizeof(struct IScreenModePrefs)) == 0)
+            if (memcmp(GetPrivIBase(IntuitionBase)->ScreenModePrefs, data, sizeof(struct IScreenModePrefs)) == 0)
+            {
+                DEBUG_SETIPREFS(bug("[Intuition] %s: Copy Prefs Failed!\n", __func__));
                 break;
+            }
 
             if (!closed)
             {
+                DEBUG_SETIPREFS(bug("[Intuition] %s: WB Not Closed . . .\n", __func__));
+                
                 BOOL try = TRUE;
-
                 reopen = TRUE;
 
                 UnlockIBase(lock);
 
                 while (try && !(closed = CloseWorkBench()))
                 {
+                    DEBUG_SETIPREFS(bug("[Intuition] %s: Trying to Close WB\n", __func__));
+                    
                     struct EasyStruct es =
                     {
                         sizeof(struct EasyStruct),
@@ -109,8 +119,11 @@
             }
 
             if (closed)
+            {
+                DEBUG_SETIPREFS(bug("[Intuition] %s: WB is Closed !\n", __func__));
                 CopyMem(data, GetPrivIBase(IntuitionBase)->ScreenModePrefs, sizeof(struct IScreenModePrefs));
-
+            }
+                
             if (reopen)
             {
                 if (closed)

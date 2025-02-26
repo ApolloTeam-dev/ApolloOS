@@ -2,8 +2,8 @@
 #define INTUITION_INTERN_H
 
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2013, The MorphOS Development Team. All Rights Reserved.
+    Copyright ï¿½ 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2001-2013, The MorphOS Development Team. All Rights Reserved.
     $Id$
 */
 
@@ -1184,7 +1184,7 @@ AROS_UFPA(APTR  , args      , A1));
 #define DEBUG_CHANGEWINDOWBOX(x)    	;
 #define DEBUG_CLOSESCREEN(x)        	;
 #define DEBUG_CLOSEWINDOW(x)        	;
-#define DEBUG_CLOSEWORKBENCH(x)     	;
+#define DEBUG_CLOSEWORKBENCH(x) x     	;
 #define DEBUG_DISPOSEOBJECT(x)      	;
 #define DEBUG_DOGADGETMETHOD(x)     	;
 #define DEBUG_DRAWBORDER(x)         	;
@@ -1258,7 +1258,7 @@ AROS_UFPA(APTR  , args      , A1));
 #else
 
 #define DEBUG_INIT(x)               	if (SysBase->ex_DebugFlags & EXECDEBUGF_INIT) x;
-#define DEBUG_SETIPREFS(x)          	if (SysBase->ex_DebugFlags & EXECDEBUGF_INIT) x;
+#define DEBUG_SETIPREFS(x)  x        	//if (SysBase->ex_DebugFlags & EXECDEBUGF_INIT) x;
 #define DEBUG_SETPREFS(x)           	if (SysBase->ex_DebugFlags & EXECDEBUGF_INIT) x;
 
 #endif
