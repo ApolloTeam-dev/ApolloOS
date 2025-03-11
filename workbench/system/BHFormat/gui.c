@@ -212,7 +212,7 @@ void ComputeCapacity(struct DosList *pdlVolume, struct InfoData *pInfoData)
            possible disk size is 2^64 bytes = 16 exabytes. */
 	const char * pchUnitSymbol = _(MSG_UNITS);
 
-	D(Printf("Calculating capacity info...\n"));
+	DD(bug("Calculating capacity info...\n"));
 	cUnits = ibyEnd - ibyStart;
 	while( (cUnits >>= 10) > 9999 )
 	    ++pchUnitSymbol;
@@ -226,7 +226,7 @@ void ComputeCapacity(struct DosList *pdlVolume, struct InfoData *pInfoData)
 	else
 	    RawDoFmtSz( szCapacityInfo, _(MSG_CAPACITY),
 			(ULONG)cUnits, (ULONG)*pchUnitSymbol );
-	D(Printf("Done: %s\n", szCapacityInfo));
+	DD(bug("Done: %s\n", szCapacityInfo));
 }
 
 void VolumesToList(Object* listObject)
@@ -337,42 +337,36 @@ struct SFormatEntry* SelectDevice(void)
 	
     VolumesToList(list);
 
-    DoMethod(list, MUIM_Notify, MUIA_List_Active, MUIV_EveryTime,
-        ok , 3, MUIM_Set, MUIA_Disabled, FALSE);
-    DoMethod(ok, MUIM_Notify, MUIA_Pressed, FALSE,
-	app, 2, MUIM_Application_ReturnID, (IPTR)ok);
-    DoMethod(cancel, MUIM_Notify, MUIA_Pressed, FALSE,
-	app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
+    DoMethod(list, MUIM_Notify, MUIA_List_Active, MUIV_EveryTime, ok , 3, MUIM_Set, MUIA_Disabled, FALSE);
+    DoMethod(ok, MUIM_Notify, MUIA_Pressed, FALSE, app, 2, MUIM_Application_ReturnID, (IPTR)ok);
+    DoMethod(cancel, MUIM_Notify, MUIA_Pressed, FALSE, app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
     
     set(ok, MUIA_Disabled, TRUE);
     set(wnd, MUIA_Window_Open, TRUE);
 	
     ULONG sigs = 0;
  
-    // Main loop
+    DD(bug("[SelectDevice] Mainloop\n"));
     struct SFormatEntry* selectedEntry = NULL;
     IPTR returnId;
-    while((returnId = (IPTR)DoMethod(app, MUIM_Application_NewInput, (IPTR)&sigs))
-	!= MUIV_Application_ReturnID_Quit)
+    while((returnId = (IPTR)DoMethod(app, MUIM_Application_NewInput, (IPTR)&sigs)) != MUIV_Application_ReturnID_Quit)
     {
-	if (sigs)
+		if (sigs)
         {
-       	    if ((Object*) returnId == ok)
+			DD(bug("[SelectDevice] Checking Buttons\n"));
+			if ((Object*) returnId == ok)
             {
-	        IPTR active = XGET(list, MUIA_List_Active);
-		struct SFormatEntry *entry;
-		DoMethod(list, MUIM_List_GetEntry, active, &entry);
-		selectedEntry = AllocMem(sizeof(struct SFormatEntry), 0L);
-		if (selectedEntry)
-		    memcpy(selectedEntry, entry, sizeof(struct SFormatEntry));
-           	break;
-	    }
-                	
+	        	DD(bug("[SelectDevice] Button = OK\n"));
+				IPTR active = XGET(list, MUIA_List_Active);
+				struct SFormatEntry *entry;
+				DoMethod(list, MUIM_List_GetEntry, active, &entry);
+				selectedEntry = AllocMem(sizeof(struct SFormatEntry), 0L);
+				if (selectedEntry) memcpy(selectedEntry, entry, sizeof(struct SFormatEntry));
+           		break;
+	    	}
             sigs = Wait(sigs | SIGBREAKF_CTRL_C);
-            
-            if (sigs & SIGBREAKF_CTRL_C)
-                break;
-	}
+            if (sigs & SIGBREAKF_CTRL_C) break;
+		}
     }	
 
     MUI_DisposeObject(app);
@@ -392,7 +386,7 @@ AROS_UFH3S(void, btn_format_function,
     BOOL bDirCache = FALSE;
     LONG rc = FALSE;
 
-    D(Printf("Full format? %d\n", bDoFormat));
+    DD(bug("Full format? %d\n", bDoFormat));
     
     if(!bSetSzDosDeviceFromSz(szDosDevice))
         goto cleanup;
@@ -442,7 +436,7 @@ AROS_UFH3S(void, btn_format_function,
 	ULONG icyl, sigs;
 	if(!bGetExecDevice(TRUE))
 	    goto cleanup;
-	D(PutStr("GetExecDevice done\n"));
+	DD(PutStr("GetExecDevice done\n"));
 	set(gauge, MUIA_Gauge_Max, HighCyl-LowCyl);
 	for( icyl = LowCyl; icyl <= HighCyl; ++icyl )
 	{
@@ -461,7 +455,7 @@ AROS_UFH3S(void, btn_format_function,
 	    set(gauge, MUIA_Gauge_Current, icyl-LowCyl);    
 	}
 	FreeExecDevice();
-	D(PutStr("FreeExecDevice done\n"));
+	DD(PutStr("FreeExecDevice done\n"));
     }
 
     if(formatOk)
@@ -504,10 +498,10 @@ int rcGuiMain(void)
 
 	if( _WBenchMsg->sm_ArgList[1].wa_Lock == 0 )
 	{
-	    D(Printf("Object specified by name: %s\n", _WBenchMsg->sm_ArgList[1].wa_Name);)
+	    DD(bug("Object specified by name: %s\n", _WBenchMsg->sm_ArgList[1].wa_Name);)
 	    /* it's a device */
 	    if( !bSetSzDosDeviceFromSz(_WBenchMsg->sm_ArgList[1].wa_Name) ) {
-		D(Printf("Bad device name wrom Workbench: %s\n", _WBenchMsg->sm_ArgList[1].wa_Name));
+		DD(bug("Bad device name wrom Workbench: %s\n", _WBenchMsg->sm_ArgList[1].wa_Name));
 		/* Workbench is playing silly buggers */
 		goto cleanup;
 	    }
@@ -516,7 +510,7 @@ int rcGuiMain(void)
 	{
 	    /* it's a volume */
 
-	    D(Printf("Object specified by lock\n"));
+	    DD(bug("Object specified by lock\n"));
 	    /* make sure it's mounted before looking for its device */
 	    if( !Info( _WBenchMsg->sm_ArgList[1].wa_Lock, &dinf ) )
 	    {
@@ -566,10 +560,10 @@ int rcGuiMain(void)
 	strcpy(szCapacityInfo, entry->capacityInfo);
 	FreeMem(entry, sizeof(struct SFormatEntry));
 
-        D(Printf("Object name selected via SelectDevice: %s\n", szDosDevice));
+        DD(bug("Object name selected via SelectDevice: %s\n", szDosDevice));
         /* it's a device */
         if( !bSetSzDosDeviceFromSz(szDosDevice) ) {
-            D(Printf("Bad device name from SelectDevice: %s\n", szDosDevice));
+            DD(bug("Bad device name from SelectDevice: %s\n", szDosDevice));
             goto cleanup;
         }
     }
@@ -578,7 +572,7 @@ int rcGuiMain(void)
 	goto cleanup;
 	    
     RawDoFmtSz( szTitle, _(MSG_WINDOW_TITLE), szDosDevice );
-    D(Printf("Setting window title to '%s'\n", szTitle));
+    DD(bug("Setting window title to '%s'\n", szTitle));
 
     {
 	Object *btn_format, *btn_qformat, *btn_cancel, *btn_stop;
@@ -588,7 +582,7 @@ int rcGuiMain(void)
 	RawDoFmtSz( szDeviceInfo, _(MSG_DEVICE), szDosDevice );
 	RawDoFmtSz( szVolumeInfo, _(MSG_VOLUME), szVolumeName );
 
-	D(Printf("Creating GUI...\n"));
+	DD(bug("Creating GUI...\n"));
 	
 	app = (Object *)ApplicationObject,
 	    MUIA_Application_Title, __(MSG_APPLICATION_TITLE),
@@ -638,9 +632,9 @@ int rcGuiMain(void)
 			MUIA_FixHeight,      2,
 		    End),
 		    Child, (IPTR)(HGroup,
-			Child, (IPTR)(btn_format  = ImageButton( _(MSG_BTN_FORMAT) , "THEME:Images/Gadgets/OK")),
-			Child, (IPTR)(btn_qformat = ImageButton( _(MSG_BTN_QFORMAT), "THEME:Images/Gadgets/OK")),
-			Child, (IPTR)(btn_cancel  = ImageButton( _(MSG_BTN_CANCEL) , "THEME:Images/Gadgets/Cancel")),
+			Child, (IPTR)(btn_format  = SimpleButton( _(MSG_BTN_FORMAT) )),
+			Child, (IPTR)(btn_qformat = SimpleButton( _(MSG_BTN_QFORMAT))),
+			Child, (IPTR)(btn_cancel  = SimpleButton( _(MSG_BTN_CANCEL) )),
 		    End), /* HGroup */
 		End), /* VGroup */
 	    End), /* Window */
@@ -726,7 +720,7 @@ static void message(CONST_STRPTR s)
 {
     if (s)
     {
-	D(Printf(s));
+	DD(bug(s));
 	MUI_Request(app, NULL, 0, _(MSG_REQ_ERROR_TITLE), _(MSG_OK), s);
     }
 }

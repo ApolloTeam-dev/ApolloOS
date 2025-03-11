@@ -29,7 +29,7 @@ static UBYTE ata_in(struct pio_data *data, UWORD offset)
     return v;
 }
 
-static void ata_outsw(struct pio_data *data, APTR address, ULONG count)
+static void ata_outsw(struct pio_data *data, APTR address, ULONG count)         // Write 16-Bit Mode (TODO: Split in $DA/$DD)
 {
         volatile UWORD *addr = (UWORD*)data->dataport;
 
@@ -41,7 +41,7 @@ static void ata_outsw(struct pio_data *data, APTR address, ULONG count)
             ::[count]"d"(count >> 2),[address]"a"(address),[port]"a"(addr));
 }
 
-static void ata_outsl(struct pio_data *data, APTR address, ULONG count)
+static void ata_outsl(struct pio_data *data, APTR address, ULONG count)         // Write 32-Bit Mode (Examine if Move16 maybe also can be used? - see Read 32-Bit)
     {
         volatile ULONG *addr = (ULONG*)data->dataport;
 

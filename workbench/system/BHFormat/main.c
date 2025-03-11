@@ -289,10 +289,10 @@ BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
     if (!pdlDevice) {
 	flags = LDF_DEVICES|LDF_READ;
 	pdlList = LockDosList(flags);
-	D(Printf( "LockDosList( LDF_DEVICES | LDF_READ ) = 0x%08lx\n", (ULONG)pdlList ));
+	DD(bug( "LockDosList( LDF_DEVICES | LDF_READ ) = 0x%08lx\n", (ULONG)pdlList ));
 	*pchDosDeviceColon = 0;
 	pdlDevice = FindDosEntry( pdlList, szDosDevice, LDF_DEVICES );
-	D(Printf("FindDosEntry( 0x%08lx, \"%s\", LDF_DEVICES ) = 0x%08lx\n",
+	DD(bug("FindDosEntry( 0x%08lx, \"%s\", LDF_DEVICES ) = 0x%08lx\n",
 		 (ULONG)pdlList, (ULONG)szDosDevice, (ULONG)pdlDevice ));
 	if( pdlDevice == 0 )
 	{
@@ -364,7 +364,7 @@ BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
 	       || prt->rt_MatchTag != prt )
 	    prt = (struct Resident *)((UWORD *)prt + 1);
 	verFS = prt->rt_Version;
-	D(Printf( "found RomTag at 0x%08lx; rt_Version = %lu\n",
+	DD(bug( "found RomTag at 0x%08lx; rt_Version = %lu\n",
 		  (ULONG)prt, (ULONG)verFS ));
 	    
 	/* check that the fs can handle this device correctly */
@@ -429,7 +429,7 @@ void FreeDosDevice(void)
     if(bInhibited)
     {
 	*pchDosDeviceColon = ':';
-	D(Printf( "Inhibit( \"%s\", DOSFALSE );\n", (ULONG)szDosDevice ));
+	DD(bug( "Inhibit( \"%s\", DOSFALSE );\n", (ULONG)szDosDevice ));
 	(void) Inhibit( szDosDevice, DOSFALSE );
 	bInhibited = FALSE;
     }
@@ -439,7 +439,7 @@ void FreeDosDevice(void)
 BOOL bGetExecDevice( BOOL bWillVerify )
 {
     *pchDosDeviceColon = ':';
-    D(Printf( "Inhibit( \"%s\", DOSTRUE );\n", (ULONG)szDosDevice ));
+    DD(bug( "Inhibit( \"%s\", DOSTRUE );\n", (ULONG)szDosDevice ));
     if(!Inhibit( szDosDevice, DOSTRUE ))
     {
 	/* This is a bit stupid, but compatible with v40 Format */
@@ -452,7 +452,7 @@ BOOL bGetExecDevice( BOOL bWillVerify )
 	|| (piosDisk = (struct IOStdReq *)
 	    CreateIORequest( pmpDiskIO, sizeof(struct IOStdReq) )) == 0 )
     {
-	D(Printf("pmpDiskIO = 0x%08lX, piosDisk = 0x%08lX\n", pmpDiskIO, piosDisk));
+	DD(bug("pmpDiskIO = 0x%08lX, piosDisk = 0x%08lX\n", pmpDiskIO, piosDisk));
 	ReportErrSz( ertFailure, ERROR_NO_FREE_STORE, 0 );
 	return FALSE;
     }
@@ -560,7 +560,7 @@ BOOL bGetExecDevice( BOOL bWillVerify )
 
     /* We need two buffers - one for writing and one for reading back to
        verify the write */
-    D(Printf("Allocating buffers, size %lu bytes\n", cbyCylinder));
+    DD(bug("Allocating buffers, size %lu bytes\n", cbyCylinder));
     if( (paulWriteBuffer = AllocMem( cbyCylinder,
 				     BufMemType )) == 0
 	|| (bWillVerify
@@ -723,7 +723,7 @@ static BOOL bTransferCylinder(
 	piosDisk->io_Length      = cbyLength;
 	piosDisk->io_Data        = pBuffer;
 
-	D(Printf( "DoIO() Cmd=%2lu Act=0x%08lx Len=0x%08lx "
+	DD(bug( "DoIO() Cmd=%2lu Act=0x%08lx Len=0x%08lx "
 		  "Data=0x%08lx Off=0x%08lx\n",
 		  piosDisk->io_Command,
 		  piosDisk->io_Actual,
@@ -792,7 +792,7 @@ BOOL bMakeFileSys( BOOL bFFS, BOOL bOFS, BOOL bIntl, BOOL bNoIntl,
     if(!bInhibited)
     {
 	*pchDosDeviceColon = ':';
-	D(Printf( "Inhibit( \"%s\", DOSTRUE );\n", (ULONG)szDosDevice ));
+	DD(bug( "Inhibit( \"%s\", DOSTRUE );\n", (ULONG)szDosDevice ));
 	if(!Inhibit( szDosDevice, DOSTRUE ))
 	{
 	    /* This is a bit stupid, but compatible with v40 Format */
@@ -802,7 +802,7 @@ BOOL bMakeFileSys( BOOL bFFS, BOOL bOFS, BOOL bIntl, BOOL bNoIntl,
 	bInhibited = TRUE;
     }
 
-    D(Printf( "Format( \"%s\", \"%s\", 0x%08lx );\n",
+    DD(bug( "Format( \"%s\", \"%s\", 0x%08lx );\n",
 	      (ULONG)szDosDevice, (ULONG)(szVolume + 1), fstCurrent ));
     if( !Format( szDosDevice,
 		 (DOSBase->dl_lib.lib_Version == 36) ?
@@ -918,8 +918,7 @@ static const UWORD AddChSz[] = {0x16C0, 0x4E75}; /* move.l d0,(a3)+ : rts */
 
 void RawDoFmtSz( char * pszBuffer, const char * pszFormat, ... )
 {
-    RawDoFmt( (char *)pszFormat, (APTR)(&pszFormat+1),
-	      (void (*)())AddChSz, pszBuffer );
+    RawDoFmt( (char *)pszFormat, (APTR)(&pszFormat+1), (void (*)())AddChSz, pszBuffer );
 }
 
 void RawDoVFmtSz( char * pszBuffer, const char * pszFormat, APTR pData )

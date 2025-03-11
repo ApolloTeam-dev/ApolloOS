@@ -98,12 +98,12 @@ preftable[] =
     {"locale"	    , localeprefsname	 , LocalePrefs_Handler     },       // ApolloOS IPrefs + Prefs/Locale (REWRITE!) 
     {"font" 	    , fontprefsname      , FontPrefs_Handler       },       // ApolloOS IPrefs + AmiNet Prefs/Font (Triton) 
     {"palette"	    , paletteprefsname   , PalettePrefs_Handler    },       // ApolloOS IPrefs + Prefs/Palette (REWRITE!)
-    {"icontrol"     , icontrolprefsname  , IControlPrefs_Handler   },       //
-    {"screenmode"   , screenmodeprefsname, ScreenModePrefs_Handler },       //
+    //{"icontrol"     , icontrolprefsname  , IControlPrefs_Handler   },     // Redundant
+    {"screenmode"   , screenmodeprefsname, ScreenModePrefs_Handler },       // ApolloOS IPrefs + Prefs/ScreenMode (REWRITE!)
     //{"wbpattern"    , patternprefsname   , WBPatternPrefs_Handler  },     // AOS39 IPrefs + Prefs/WBPattern
-    {"serial"	    , serialprefsname	 , SerialPrefs_Handler     }, 
-    {"printer"	    , printerprefsname	 , PrinterPrefs_Handler    },
-    {"pointer"	    , pointerprefsname   , PointerPrefs_Handler    },       //
+    {"serial"	    , serialprefsname	 , SerialPrefs_Handler     },       // ApolloOS IPrefs + Prefs/Serial (REWRITE!)
+    {"printer"	    , printerprefsname	 , PrinterPrefs_Handler    },       // ApolloOS IPrefs + Prefs/Printer (REWRITE!)
+    //{"pointer"	    , pointerprefsname   , PointerPrefs_Handler    },   //
     //{"overscan"     , overscanprefsname  , NULL                    },     // Redundant
     {NULL   	    	    	    	      	    	    	   }
 

@@ -62,7 +62,7 @@ static void cmd_Read32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
     ULONG block = IOStdReq(io)->io_Offset;
     ULONG count = IOStdReq(io)->io_Length;
 
-    //DD(bug("[ATA%02ld] %s(%08x, %08x)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, block, count));
+    DD(bug("[ATA%02ld] %s(%08x, %08x)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, block, count));
 
     ULONG mask = (1 << unit->au_SectorShift) - 1;
 
@@ -141,8 +141,7 @@ static void cmd_Read32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
         else
         {
             /* Call the Unit's access funtion */
-            io->io_Error = unit->au_Read32(unit, block, count,
-                IOStdReq(io)->io_Data, &cnt);
+            io->io_Error = unit->au_Read32(unit, block, count, IOStdReq(io)->io_Data, &cnt);
         }
 
         IOStdReq(io)->io_Actual = cnt;
@@ -647,6 +646,9 @@ static void cmd_GetGeometry(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
         else
             dg->dg_Flags                = 0;
         dg->dg_Reserved                 = 0;
+
+        DD(bug("[ATA%02ld] %s(): LBA:%u | LBA48:%llu | CYL:%u | HDS:%u | SEC:%u | TYPE:%u\n",
+            ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, unit->au_Capacity, unit->au_Capacity48, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors, unit->au_DevType));
 
         IOStdReq(io)->io_Actual = sizeof(struct DriveGeometry);
     }
@@ -1185,25 +1187,30 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
 
                     if (unit->au_XferModes & AF_XFER_PACKET)
                     {
-                        DD(bug("[ATA:BusTask] AF_XFER_PACKET\n"));
+                        DD(bug("[ATA:BusTask] Device %u | AF_XFER_PACKET (ATAPI DEVICE)\n", iter));
                         
                         struct ata_Controller *ataNode = NULL;
 
-                        ata_RegisterVolume(0, 0, unit);
+                        if (unit->au_DevType == DG_DIRECT_ACCESS)
+                        {
+                            ata_RegisterVolume(0, unit->au_Cylinders - 1, unit);
+                        } else {
+                            ata_RegisterVolume(0, 0, unit);
+                        }
 
-                        //OOP_GetAttr(bus->ab_Object, aHidd_ATABus_Controller, (IPTR *)ataNode);
+                        //OOP_GetAttr(bus->ab_Object, aHidd_ATABus_Controller, (IPTR *)ataNode);        // [WD]: This does not work, replaced buy code below
                         
                         ataNode = (void *)(((struct List *)(&ATABase->ata_Controllers))->lh_Head);      // First Controller on $DA
                         
                         if (ataNode)
                         {
-                            DD(bug("[ATA:BusTask] ataNode = TRUE\n"));
+                            DD(bug("[ATA:BusTask] Device %u | ataNode = TRUE\n", iter));
                             
-                            /* For ATAPI device we also submit media presence detection request */
+                            // For ATAPI device we submit media presence detection request 
                             unit->DaemonReq = (struct IOStdReq *)CreateIORequest(ataNode->DaemonPort, sizeof(struct IOStdReq));
                             if (unit->DaemonReq)
                             {
-                                DD(bug("[ATA:BusTask] unit->DaemonReq = TRUE\n"));
+                                DD(bug("[ATA:BusTask] Device %u | unit->DaemonReq = TRUE\n", iter));
                                 /*
                                  * We don't want to keep stalled open count of 1, so we
                                  * don't call OpenDevice() here. Instead we fill in the needed
@@ -1217,12 +1224,12 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
                                 AddTail((struct List *)&ataNode->Daemon_ios, &unit->DaemonReq->io_Message.mn_Node);
                                 ReleaseSemaphore(&ataNode->DaemonSem);
 
-                                DD(bug("[ATA:BusTask] Deamon Request for Media Detection Inserted\n"));
+                                DD(bug("[ATA:BusTask] Device %u | Deamon Request for Media Detection Inserted\n", iter));
                             } else {
-                                DD(bug("[ATA:BusTask] unit->DaemonReq = FALSE\n"));
+                                DD(bug("[ATA:BusTask] Device %u | unit->DaemonReq = FALSE\n", iter));
                             }
                         } else {
-                            DD(bug("[ATA:BusTask] ataNode = FALSE\n"));
+                            DD(bug("[ATA:BusTask] Device %u | ataNode = FALSE\n", iter));
                         }
                     }
                     else

@@ -87,7 +87,7 @@ BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit)
         pp[DE_HIGHCYL      + 4] = EndCyl;
         pp[DE_NUMBUFFERS   + 4] = 10;
         pp[DE_BUFMEMTYPE   + 4] = MEMF_PUBLIC | MEMF_31BIT;
-        pp[DE_MAXTRANSFER  + 4] = 0x00200000;
+        pp[DE_MAXTRANSFER  + 4] = 0x1FE00;
         pp[DE_MASK         + 4] = 0x7FFFFFFE;
         pp[DE_BOOTPRI      + 4] = ((unit->au_DevType == DG_DIRECT_ACCESS) ? 0 : 10);
         pp[DE_DOSTYPE      + 4] = ((unit->au_DevType == DG_DIRECT_ACCESS) ? IdDOS : IdCDVD);
@@ -98,16 +98,16 @@ BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit)
 
         if (devnode)
         {
-            DD(bug("[ATA>>]:-ata_RegisterVolume: '%b', type=0x%08lx with StartCyl=%d, EndCyl=%d .. ", devnode->dn_Name, pp[DE_DOSTYPE + 4], StartCyl, EndCyl));
+            DD(bug("[ATA>>]:-ata_RegisterVolume=%b, type=0x%08lx | StartCyl=%d | EndCyl=%d .. ", devnode->dn_Name, pp[DE_DOSTYPE + 4], StartCyl, EndCyl));
 
             if (unit->au_DevType == DG_DIRECT_ACCESS)
             {
                 AddBootNode(pp[DE_BOOTPRI + 4], ADNF_STARTPROC, devnode, NULL);
-                DD(bug("BootNode\n"));
-
+                DD(bug("BootNode (Direct Access Medium)\n"));
             } else {
-                DD(bug("DosNode\n"));
+                DD(bug("DosNode (CD/DVD or other Non-Direct Access Medium)\n"));
             }
+
             return TRUE;
         }
         CloseLibrary((struct Library *)ExpansionBase);

@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2014, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -117,11 +117,11 @@ static AROS_UFH3 (APTR, Init,
    AROS_USERFUNC_INIT
 
    struct ExpansionBase *eb = (struct ExpansionBase*)TaggedOpenLibrary(TAGGEDOPEN_EXPANSION);
-   APTR res;
+   /*APTR res;
 
    res = OpenResource("uae.resource");
    if (res)
-	uaegfxhack(res, "uaelib_demux");
+	uaegfxhack(res, "uaelib_demux");*/
 
    romtaginit(eb);
 

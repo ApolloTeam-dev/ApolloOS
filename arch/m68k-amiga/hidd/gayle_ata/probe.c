@@ -189,7 +189,7 @@ static int gayle_bus_Scan(struct ataBase *base)
 
                 if (bus)
                 {
-                    DD(bug("[ATA:Probe] Added: %s\n", attrs[1].ti_Data);)
+                    //DD(bug("[ATA:Probe] Added: %s\n", attrs[1].ti_Data);)
                     return TRUE;
                 }
                 //DD(bug("[ATA:Gayle] Failed to create object for device IO: %x:%x IRQ: %x\n", probedbus->port, probedbus->altport, probedbus->gayleirqbase);)

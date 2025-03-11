@@ -41,14 +41,8 @@
 #ifdef __AROS__
 #include <aros/debug.h>
 #define _WBenchMsg WBenchMsg
-#else
-#include <clib/debug_protos.h>
+#define DD(x) x
 #define bug kprintf
-#ifdef DEBUG
-#define D(x) (x)
-#else
-#define D(x)
-#endif
 #endif
 
 

@@ -41,7 +41,7 @@ OOP_Object *ATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg)
         data->ac_Class = cl;
         data->ac_Object = ataController;
 
-        /* Try to setup daemon task looking for diskchanges */
+        /* Try to setup daemon task looking for diskchanges 
         NEWLIST(&data->Daemon_ios);
         InitSemaphore(&data->DaemonSem);
         data->ac_daemonParent = FindTask(NULL);
@@ -51,7 +51,7 @@ OOP_Object *ATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg)
                            TASKTAG_NAME       , "ATA.daemon",
                            TASKTAG_STACKSIZE  , STACK_SIZE,
                            TASKTAG_TASKMSGPORT, &data->DaemonPort,
-                           TASKTAG_PRI        , TASK_PRI - 1,	/* The daemon should have a little bit lower Pri than handler tasks */
+                           TASKTAG_PRI        , TASK_PRI - 1,	// The daemon should have a little bit lower Pri than handler tasks 
                            TASKTAG_ARG1       , ATABase,
                            TASKTAG_ARG2       , data,
                            TAG_DONE))
@@ -60,9 +60,9 @@ OOP_Object *ATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg)
             return FALSE;
         }
 
-        /* Wait for handshake */
         Wait(SIGF_SINGLE);
         DD(bug("[ATA:Controller] %s: Daemon task set to 0x%p\n", __func__, data->ac_Daemon));
+        */
 
         AddTail(&ATABase->ata_Controllers, &data->ac_Node);
     }

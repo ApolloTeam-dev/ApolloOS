@@ -32,6 +32,8 @@ int main(int argc, char **argv)
 {
     Object *application,  *window;
 
+    bug("[INPUT] Start\n");
+
     Locale_Initialize();
 
     if (ReadArguments(argc, argv))
@@ -65,11 +67,11 @@ int main(int argc, char **argv)
                     MUIA_Application_SingleTask, TRUE,
                     MUIA_Application_Base, (IPTR) "INPUTPREF",
                     SubWindow, (IPTR) (window = SystemPrefsWindowObject,
-                        MUIA_Window_Screen, (IPTR)pScreen,
-                        MUIA_Window_ID, MAKE_ID('I','W','I','N'),
+                            MUIA_Window_Screen, (IPTR)pScreen,
+                            MUIA_Window_ID, MAKE_ID('I','W','I','N'),
                         WindowContents, (IPTR) IPEditorObject,
                         TAG_DONE),
-                    End),
+                        End),
                 End;
 
                 if (application != NULL)
@@ -79,6 +81,8 @@ int main(int argc, char **argv)
                     SET(window, MUIA_Window_Open, FALSE);
 
                     MUI_DisposeObject(application);
+                } else {
+                    bug("[INPUT] Failed to open MUI application\n");
                 }
 
                 if (pScreen)
