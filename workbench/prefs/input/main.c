@@ -56,8 +56,10 @@ int main(int argc, char **argv)
 
                 Prefs_ScanDirectory("DEVS:Keymaps/" EXCLUDEPATTERN, &keymap_list, sizeof(struct KeymapEntry));
 
-                application = ApplicationObject,
-                    MUIA_Application_Title,  __(MSG_NAME),
+                application = (Object *)ApplicationObject,
+                    MUIA_Application_Author, (IPTR)"Jason McMullan <jason.mcmullan@gmail.com>",
+                    MUIA_Application_Copyright, (IPTR)"2012, AROS Team",
+                    MUIA_Application_Title, __(MSG_NAME),
                     MUIA_Application_Version, (IPTR) VERSION,
                     MUIA_Application_Description,  __(MSG_NAME),
                     MUIA_Application_SingleTask, TRUE,
