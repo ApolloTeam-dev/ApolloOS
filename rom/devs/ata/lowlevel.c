@@ -144,7 +144,6 @@ static inline BOOL ata_SelectUnit(struct ata_Unit* unit)
     do
     {
         ata_WaitNano(400, bus->ab_Base);
-        //ata_WaitTO(unit->au_Bus->ab_Timer, 0, 1, 0);
     }
     while (0 != (ATAF_BUSY & ata_ReadStatus(bus)));
 
@@ -271,11 +270,11 @@ WAITBUSY:
     {
         ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
         unit->au_cmd_error = HFERR_BadStatus;
-        DD(bug("[ATAPI] ata_IRQPIOReadAtapi: ERROR = RetryCount reached ZERO on WAITBUSY\n"));
+        DD(bug("\n[ATAPI] ata_IRQPIOReadAtapi: ERROR = RetryCount reached ZERO on WAITBUSY\n"));
         return;
     }
     
-    DD(bug("r"));
+    bug("r");
     if ((status & ATAF_BUSY) != 0) // Wait for BSY to CLEAR
     {
         goto WAITBUSY;
@@ -292,11 +291,11 @@ WAITDATAREQ:
     {
         ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
         unit->au_cmd_error = HFERR_BadStatus;
-        DD(bug("[ATAPI] ata_IRQPIOReadAtapi: ERROR = RetryCount reached ZERO on DATAREQ SET\n"));
+        DD(bug("\n[ATAPI] ata_IRQPIOReadAtapi: ERROR = RetryCount reached ZERO on DATAREQ SET\n"));
         return;
     }
 
-    DD(bug("R"));
+    bug("R");
     if ((status & ATAF_DATAREQ) != ATAF_DATAREQ) // Wait for DRQ to SET
     {
         goto WAITDATAREQ;
@@ -346,11 +345,11 @@ WAITBUSYW:
     {
         ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
         unit->au_cmd_error = HFERR_BadStatus;
-        bug("[ATAPI] ata_IRQPIOWriteAtapi: ERROR = RetryCount reached ZERO on BUSY & DATAREQ CLEAR\n");
+        bug("\n[ATAPI] *** ERROR: ata_IRQPIOWriteAtapi: ERROR = RetryCount reached ZERO on BUSY & DATAREQ CLEAR\n");
         return;
     }
 
-    DD(bug("w"));
+    bug("w");
     if ((status & ATAF_BUSY) != 0) // Wait for BSY to CLEAR
     {
         goto WAITBUSYW;
@@ -367,11 +366,11 @@ WAITDATAREQW:
     {
         ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
         unit->au_cmd_error = HFERR_BadStatus;
-        bug("[ATAPI] ata_IRQPIOWriteAtapi: ERROR = RetryCount reached ZERO on DATAREQ SET\n");
+        bug("\n[ATAPI] *** ERROR: ata_IRQPIOWriteAtapi: ERROR = RetryCount reached ZERO on DATAREQ SET\n");
         return;
     }
 
-    DD(bug("W"));
+    bug("W");
     if ((status & ATAF_DATAREQ) != ATAF_DATAREQ) // Wait for DRQ to SET
     {
         goto WAITDATAREQW;
@@ -604,6 +603,9 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
     LONG err = 0;
     UBYTE status;
 
+    ULONG retry_busy = 5000;
+    ULONG retry_datareq = 500;
+
     UBYTE cmd[12] = {0};
     register int t=5,l=0;
 
@@ -638,25 +640,42 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
         return IOERR_UNITBUSY;
     }
 
-    while ((status & (ATAF_BUSY | ATAF_DATAREQ)) != 0) // Wait for BSY and DRQ to CLEAR
+    do
     {
+        status = PIO_In(unit->au_Bus, ata_Status);
         ata_WaitNano(400, bus->ab_Base);
-    }
+        bug("B");
 
-    DD(bug("[ATAPI] atapi_SendPacket - Data Lenght = %u\n", datalen));
+        retry_busy--;
+        if (retry_busy == 0)
+        {
+            bug("\n[ATAPI] *** ERROR: ATAF_BUSY | ATAF_DATAREQ not cleared!");
+            break;
+        }
+    } while ((status & (ATAF_BUSY | ATAF_DATAREQ)) != 0);  // Wait for BSY and DRQ to CLEAR
+
+    DD(bug("\n[ATAPI] atapi_SendPacket - Data Lenght = %u\n", datalen));
     PIO_Out(bus, (datalen & 0xff), atapi_ByteCntL);
     PIO_Out(bus, (datalen >> 8) & 0xff, atapi_ByteCntH);
-
-    //while ((status & ATAF_DATAREQ) != ATAF_DATAREQ) // Wait for DRQ to SET
-    //{
-    //    ata_WaitNano(400, bus->ab_Base);
-    //}
-
+    
     DD(status = PIO_In(bus, ata_Status));
     DD(bug("[ATAPI] atapi_SendPacket - Status after atapi_ByteCntL/H: %lx\n", status)); 
 
     PIO_OutAlt(bus, ATACTLF_INT_DISABLE, ata_AltControl);
     PIO_Out(bus, ATA_PACKET, atapi_Command);
+
+    do
+    {
+        status = PIO_In(unit->au_Bus, ata_Status);
+        ata_WaitNano(400, bus->ab_Base);
+        bug("D");
+        retry_datareq--;
+        if (retry_datareq == 0)
+        {
+            bug("\n[ATAPI] *** ERROR: ATAF_DATAREQ not set!");
+            break;
+        }         
+    } while ((status & ATAF_DATAREQ) != ATAF_DATAREQ);  // Wait for DRQ to SET
 
     if (datalen == 0) ata_IRQSetHandler(unit, &ata_IRQNoData, 0, 0, 0);
     else if (write)   ata_IRQSetHandler(unit, &ata_IRQPIOWriteAtapi, data, 0, datalen);
@@ -666,7 +685,7 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
     ata_WaitNano(400, bus->ab_Base);
 
     status = PIO_In(bus, ata_Status);
-    DD(bug("[ATAPI] atapi_SendPacket - Status after atapi_Command: %lx\n", status));  
+    DD(bug("\n[ATAPI] atapi_SendPacket - Status after atapi_Command: %lx\n", status));  
 
     if (status & ATAF_ERROR) // Check for BUS Error
     {
@@ -788,8 +807,7 @@ static BYTE ata_exec_blk(struct ata_Unit *unit, ata_CommandBlock *blk)
     if (blk->type == CT_LBA48)
         max <<= 8;
 
-
-    DD(bug("[ATA:%02ld] ata_exec_blk: Accessing %ld sectors starting from %x%08x\n", unit->au_UnitNum, count, (ULONG)(blk->blk >> 32), (ULONG)blk->blk));
+    //DD(bug("[ATA:%02ld] ata_exec_blk: Accessing %ld sectors starting from %x%08x\n", unit->au_UnitNum, count, (ULONG)(blk->blk >> 32), (ULONG)blk->blk));
     while ((count > 0) && (err == 0))
     {
         part = (count > max) ? max : count;
@@ -1376,7 +1394,7 @@ static BYTE ata_ReadSector32(struct ata_Unit *unit, ULONG block, ULONG count, AP
     };
     BYTE err;
 
-    DD(bug("\n[ATA:%02ld] ata_ReadSector32()\n", unit->au_UnitNum));
+    //DD(bug("\n[ATA:%02ld] ata_ReadSector32()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb)))
@@ -1499,7 +1517,7 @@ static BYTE ata_WriteSector32(struct ata_Unit *unit, ULONG block,
     };
     BYTE err;
 
-    DD(bug("\n[ATA:%02ld] ata_WriteSector32()\n", unit->au_UnitNum));
+    //DD(bug("\n[ATA:%02ld] ata_WriteSector32()\n", unit->au_UnitNum));
 
     *act = 0;
     if (0 != (err = ata_exec_blk(unit, &acb))) return err;
@@ -1717,8 +1735,8 @@ int atapi_TestUnitOK(struct ata_Unit *unit)
     unit->au_Heads      = (UBYTE)HEADS_PER_CYLINDER;
     unit->au_Sectors    = (UBYTE)SECTORS_PER_TRACK;
 
-    bug("[ATA:%02ld] atapi_TestUnitOK: LBA = %u | Block = %u | Cylinders = %u | Heads = %u | Sectors = %u\n",
-        unit->au_UnitNum, capacity.logicalsectors, capacity.blocksize, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors);
+    DD(bug("[ATA:%02ld] atapi_TestUnitOK: LBA = %u | Block = %u | Cylinders = %u | Heads = %u | Sectors = %u\n",
+        unit->au_UnitNum, capacity.logicalsectors, capacity.blocksize, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors));
 }
 
 static BYTE atapi_Read(struct ata_Unit *unit, ULONG block, ULONG count, APTR buffer, ULONG *act)
@@ -2046,14 +2064,22 @@ static BYTE atapi_EndCmd(struct ata_Unit *unit)
 {
     struct ata_Bus *bus = unit->au_Bus;
     UBYTE status, error;
+    ULONG retry_busy = 5000;
 
-    status = PIO_In(bus, atapi_Status);    
-    while ((status & ATAF_BUSY) != 0) // Wait for BSY to CLEAR
+    do
     {
+        status = PIO_In(bus, atapi_Status);
         ata_WaitNano(400, bus->ab_Base);
-    }
+        bug("E");
+        retry_busy--;
+        if (retry_busy == 0)
+        {
+            bug("\n[ATAPI] *** ERROR: ATAF_BUSY | ATAF_DATAREQ not cleared!");
+            break;
+        }
+    } while ((status & ATAF_BUSY) != 0); // Wait for BSY to CLEAR
     
-    DD(bug("[ATA:%02ld] atapi_EndCmd: Command complete. Status: %lx\n", unit->au_UnitNum, status));
+    DD(bug("\n[ATA:%02ld] atapi_EndCmd: Command complete. Status: %lx\n", unit->au_UnitNum, status));
 
     if (!(status & ATAPIF_CHECK))
     {
