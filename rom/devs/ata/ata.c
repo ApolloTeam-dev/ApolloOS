@@ -1247,7 +1247,7 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
         }
     }
 
-    bug("[ATA:BusTask] TaskCode Bus %u scan finished\n", bus->ab_BusNum);
+    bug("[ATA:BusTask] TaskCode Bus %u scan finished **************************************************************\n\n", bus->ab_BusNum);
     ReleaseSemaphore(&ATABase->DetectionSem);
 
     /* Wait forever and process messages */
@@ -1365,7 +1365,8 @@ void BusTaskCode2(struct ata_Bus *bus, struct ataBase *ATABase)
         }
     }
 
-    bug("[ATA:BusTask2] TaskCode Bus %u scan finished\n", bus->ab_BusNum);
+    bug("[ATA:BusTask2] TaskCode Bus %u scan finished **************************************************************\n\n", bus->ab_BusNum);
+
     ReleaseSemaphore(&ATABase->DetectionSem);
 
     /* Wait forever and process messages */

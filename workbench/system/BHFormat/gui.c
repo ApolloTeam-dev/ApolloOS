@@ -337,9 +337,10 @@ struct SFormatEntry* SelectDevice(void)
 	
     VolumesToList(list);
 
-    DoMethod(list, MUIM_Notify, MUIA_List_Active, MUIV_EveryTime, ok , 3, MUIM_Set, MUIA_Disabled, FALSE);
-    DoMethod(ok, MUIM_Notify, MUIA_Pressed, FALSE, app, 2, MUIM_Application_ReturnID, (IPTR)ok);
-    DoMethod(cancel, MUIM_Notify, MUIA_Pressed, FALSE, app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
+    DoMethod(list,   MUIM_Notify, MUIA_List_Active, MUIV_EveryTime, ok , 3, MUIM_Set,                  MUIA_Disabled, FALSE);
+
+    DoMethod(ok,     MUIM_Notify, MUIA_Pressed,     FALSE,          app, 2, MUIM_Application_ReturnID, (IPTR)ok);
+    DoMethod(cancel, MUIM_Notify, MUIA_Pressed,     FALSE,          app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
     
     set(ok, MUIA_Disabled, TRUE);
     set(wnd, MUIA_Window_Open, TRUE);
@@ -354,7 +355,7 @@ struct SFormatEntry* SelectDevice(void)
 		if (sigs)
         {
 			DD(bug("[SelectDevice] Checking Buttons\n"));
-			if ((Object*) returnId == ok)
+			if ((Object*) returnId == (IPTR)ok)
             {
 	        	DD(bug("[SelectDevice] Button = OK\n"));
 				IPTR active = XGET(list, MUIA_List_Active);
@@ -436,7 +437,7 @@ AROS_UFH3S(void, btn_format_function,
 	ULONG icyl, sigs;
 	if(!bGetExecDevice(TRUE))
 	    goto cleanup;
-	DD(PutStr("GetExecDevice done\n"));
+	DD(bug("GetExecDevice done\n"));
 	set(gauge, MUIA_Gauge_Max, HighCyl-LowCyl);
 	for( icyl = LowCyl; icyl <= HighCyl; ++icyl )
 	{
@@ -455,7 +456,7 @@ AROS_UFH3S(void, btn_format_function,
 	    set(gauge, MUIA_Gauge_Current, icyl-LowCyl);    
 	}
 	FreeExecDevice();
-	DD(PutStr("FreeExecDevice done\n"));
+	DD(bug("FreeExecDevice done\n"));
     }
 
     if(formatOk)
