@@ -1730,7 +1730,7 @@ static ULONG ata_ReadSignature(struct ata_Bus *bus, int unit, BOOL *DiagExecuted
     UBYTE status;
 
     status = PIO_In(bus, atapi_Status);
-    DINIT(bug("[ATA  ] ata_ReadSignature: Subtype check returned %02lx:%02lx (%04lx) | STATUS = %02x\n", tmp1, tmp2, (tmp1 << 8) | tmp2, status));
+    DINIT(bug("[ATA  ] ata_ReadSignature: LBAMid=%02lx | LBAHigh=%02lx | LBA=%04lx | Status=%02x\n", tmp1, tmp2, (tmp1 << 8) | tmp2, status));
 
     switch ((tmp1 << 8) | tmp2)
     {
@@ -1749,7 +1749,7 @@ static ULONG ata_ReadSignature(struct ata_Bus *bus, int unit, BOOL *DiagExecuted
         default:
             if (0 == (ata_ReadStatus(bus) & 0xfe))
             {
-                DINIT(bug("[ATA  ] ata_ReadSignature: Found NONE\n"));
+                DINIT(bug("[ATA  ] ata_ReadSignature: ERROR = NO Signature Found\n"));
                 return DEV_NONE;
             }
 
@@ -1774,8 +1774,10 @@ static ULONG ata_ReadSignature(struct ata_Bus *bus, int unit, BOOL *DiagExecuted
                 ata_WaitNano(400, bus->ab_Base);
                 ata_WaitTO(bus->ab_Timer, 0, 1, 0);
             }
+
             while (0 != (ATAF_BUSY & ata_ReadStatus(bus)));
             DINIT(bug("[ATA  ] ata_ReadSignature: Further validating ATA signature: %lx & 0x7f = 1, %lx & 0x10 = unit\n",
+            
             PIO_In(bus, ata_Error), PIO_In(bus, ata_DevHead)));
 
             if ((PIO_In(bus, ata_Error) & 0x7f) == 1)
