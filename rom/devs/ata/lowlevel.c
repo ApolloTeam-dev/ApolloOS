@@ -688,6 +688,7 @@ static BYTE atapi_DirectSCSI(struct ata_Unit *unit, struct SCSICmd *cmd)
     BOOL dma = FALSE;
     
     cmd->scsi_Actual = 0;
+    unit->au_cmd_error = 0;
 
     DD(bug("[ATA:%02lx] atapi_DirectSCSI: Sending ATAPI packet\n", unit->au_UnitNum));
 
@@ -1579,29 +1580,35 @@ int atapi_TestUnitOK(struct ata_Unit *unit)
 
     DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: | Result = %d | Media = %s | Change = %s\n", unit->au_UnitNum, result, unit->au_Flags & AF_DiscPresent ? "YES" : "NO", unit->au_Flags & AF_DiscChanged ? "YES" : "NO"));
    
-    unit->au_Capacity   = capacity.logicalsectors;
+    if ( (unit->au_cmd_error) == HFERR_BadStatus )
+    {
+        unit->au_Capacity = 0;
+        unit->au_Capacity48 = 0;
+        unit->au_Heads = 0;
+        unit->au_Cylinders = 0;
+        unit->au_Sectors = 0;
+        capacity.blocksize = 0;
+    } else {
+        unit->au_Capacity   = capacity.logicalsectors;
 
-    #define HEADS_PER_CYLINDER  16
-    #define SECTORS_PER_TRACK   63
-
-    ULONG translated_cylinders  = capacity.logicalsectors / (HEADS_PER_CYLINDER * SECTORS_PER_TRACK);
-
-    unit->au_Cylinders  = (ULONG)translated_cylinders;
-    unit->au_Heads      = (UBYTE)HEADS_PER_CYLINDER;
-    unit->au_Sectors    = (UBYTE)SECTORS_PER_TRACK;
+        #define HEADS_PER_CYLINDER  16
+        #define SECTORS_PER_TRACK   63
+    
+        ULONG translated_cylinders  = capacity.logicalsectors / (HEADS_PER_CYLINDER * SECTORS_PER_TRACK);
+    
+        unit->au_Cylinders  = (ULONG)translated_cylinders;
+        unit->au_Heads      = (UBYTE)HEADS_PER_CYLINDER;
+        unit->au_Sectors    = (UBYTE)SECTORS_PER_TRACK;
+    }
 
     DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: LBA = %u | Block = %u | Cylinders = %u | Heads = %u | Sectors = %u\n",
-        unit->au_UnitNum, capacity.logicalsectors, capacity.blocksize, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors));
+        unit->au_UnitNum, unit->au_Capacity, capacity.blocksize, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors));
 }
 
 static BYTE atapi_Read(struct ata_Unit *unit, ULONG block, ULONG count, APTR buffer, ULONG *act)
 {
-    UBYTE cmd[] = {
-       SCSI_READ10, 0, block>>24, block>>16, block>>8, block, 0, count>>8, count, 0
-    };
-    struct SCSICmd sc = {
-       0
-    };
+    UBYTE cmd[] = {SCSI_READ10, 0, block>>24, block>>16, block>>8, block, 0, count>>8, count, 0};
+    struct SCSICmd sc = {0};
 
     DD(bug("\n[ATA:%02ld] atapi_Read()\n", unit->au_UnitNum));
 
@@ -1617,12 +1624,8 @@ static BYTE atapi_Read(struct ata_Unit *unit, ULONG block, ULONG count, APTR buf
 static BYTE atapi_Write(struct ata_Unit *unit, ULONG block, ULONG count,
     APTR buffer, ULONG *act)
 {
-    UBYTE cmd[] = {
-       SCSI_WRITE10, 0, block>>24, block>>16, block>>8, block, 0, count>>8, count, 0
-    };
-    struct SCSICmd sc = {
-       0
-    };
+    UBYTE cmd[] = {SCSI_WRITE10, 0, block>>24, block>>16, block>>8, block, 0, count>>8, count, 0};
+    struct SCSICmd sc = {0};
 
     DD(bug("\n[ATA:%02ld] atapi_Write()\n", unit->au_UnitNum));
 

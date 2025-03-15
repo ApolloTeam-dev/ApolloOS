@@ -342,7 +342,7 @@ struct SFormatEntry* SelectDevice(void)
     DoMethod(ok,     MUIM_Notify, MUIA_Pressed,     FALSE,          app, 2, MUIM_Application_ReturnID, (IPTR)ok);
     DoMethod(cancel, MUIM_Notify, MUIA_Pressed,     FALSE,          app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
     
-    set(ok, MUIA_Disabled, TRUE);
+    //set(ok, MUIA_Disabled, TRUE);
     set(wnd, MUIA_Window_Open, TRUE);
 	
     ULONG sigs = 0;
@@ -354,8 +354,8 @@ struct SFormatEntry* SelectDevice(void)
     {
 		if (sigs)
         {
-			DD(bug("[SelectDevice] Checking Buttons\n"));
-			if ((Object*) returnId == (IPTR)ok)
+			DD(bug("[SelectDevice] Checking Buttons | ReturnID = %u\n", (ULONG)returnId));
+			if ((Object*)returnId == (IPTR)ok)
             {
 	        	DD(bug("[SelectDevice] Button = OK\n"));
 				IPTR active = XGET(list, MUIA_List_Active);

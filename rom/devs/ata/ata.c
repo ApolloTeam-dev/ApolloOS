@@ -31,6 +31,7 @@
 
 #define DINIT(x)
 #define DD(x) x
+#define DDD(x)
 
 //---------------------------IO Commands---------------------------------------
 
@@ -1255,19 +1256,19 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
     {
         Wait(sig);
 
-        /* Even if you get new signal, do not process it until Unit is not active */
+        // Even if you get new signal, do not process it until Unit is not active 
         if (!(bus->ab_Flags & UNITF_ACTIVE))
         {
             bus->ab_Flags |= UNITF_ACTIVE;
 
-            /* Empty the request queue */
+            // Empty the request queue 
             while ((msg = (struct IORequest *)GetMsg(bus->ab_MsgPort)))
             {
-                //bug("[ATA:BusTask] Received Message | Command = %u \n", msg->io_Command);
+                DDD(bug("[ATA:BusTask] Received Message | Command = %u \n", msg->io_Command));
                 
-                /* And do IO's */
+                // And do IO's 
                 HandleIO(msg, ATABase);
-                /* TD_ADDCHANGEINT doesn't require reply */
+                // TD_ADDCHANGEINT doesn't require reply
                 if (msg->io_Command != TD_ADDCHANGEINT)
                 {
                     ReplyMsg((struct Message *)msg);
