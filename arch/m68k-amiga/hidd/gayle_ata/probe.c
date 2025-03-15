@@ -29,7 +29,17 @@
 #include "bus_class.h"
 #include "interface_pio.h"
 
-#define DD(x) x
+// use #define DERROR(x) x for error output
+#define DERROR(x) x
+
+// add #define DINIT(x) x for output on Initialization routines
+#define DINIT(x) x
+
+// add #define DD(x) x for regular level debug output
+#define DD(x) 
+
+// add #define DDD(x) x for output on low level routines
+#define DDD(x)
 
 #define VREG_BOARD_Unknown  0x00 /* Unknown                         */
 #define VREG_BOARD_V600     0x01 /* Vampire V2 V600(+),   for A600  */
@@ -60,7 +70,7 @@ static UBYTE *getport(struct ata_ProbedBus *ddata, int buscounter)
     UWORD ApolloBoardID     = *(volatile UWORD *)0xdff3fc;  
     ApolloBoardID = ApolloBoardID >> 8;  
 
-    DD(bug("\n[ATA:Probe] BusNumber = %01d | ApolloBoardID = %d\n", buscounter, ApolloBoardID);)
+    DINIT(bug("[ATA:Probe] BusNumber = %01d | ApolloBoardID = %d\n", buscounter, ApolloBoardID);)
 
     port = NULL;
     gfx = (struct GfxBase*)TaggedOpenLibrary(TAGGEDOPEN_GRAPHICS);
@@ -79,10 +89,10 @@ static UBYTE *getport(struct ata_ProbedBus *ddata, int buscounter)
              ||(ApolloBoardID == VREG_BOARD_V4SA))
             {
                 ddata->v4 = TRUE;
-                DD(bug("[ATA:Probe] Port = GAYLE_BASE_DA (V4 Fast-IDE)\n");)
+                DINIT(bug("[ATA:Probe] Port = GAYLE_BASE_DA (V4 Fast-IDE)\n");)
             } else {
                 ddata->v4 = FALSE;
-                DD(bug("[ATA:Probe] Port = GAYLE_BASE_DA (Native IDE)\n");)
+                DINIT(bug("[ATA:Probe] Port = GAYLE_BASE_DA (Native IDE)\n");)
             }
         } 
     } else {
@@ -94,7 +104,7 @@ static UBYTE *getport(struct ata_ProbedBus *ddata, int buscounter)
             ddata->gayleirqbase = (UBYTE*)GAYLE_IRQ_DD;
             ddata->da = FALSE;
             ddata->v4 = TRUE;
-            DD(bug("[ATA:Probe] Port = GAYLE_BASE_DD (V4 Fast-IDE)\n");)
+            DINIT(bug("[ATA:Probe] Port = GAYLE_BASE_DD (V4 Fast-IDE)\n");)
         }
     }
     Enable();
@@ -102,7 +112,7 @@ static UBYTE *getport(struct ata_ProbedBus *ddata, int buscounter)
 
     if(port == NULL)
     {
-        //DD(bug("[ATA:Probe] No Gayle IDE port @ %08x\n", (ULONG)port & ~3);)
+        DERROR(bug("[ATA:Probe] No Gayle IDE port @ %08x\n", (ULONG)port & ~3);)
         return NULL;
     } 
 
@@ -118,7 +128,7 @@ static UBYTE *getport(struct ata_ProbedBus *ddata, int buscounter)
     port[ata_DevHead * 4] = 0;
     Enable();
 
-    //DD(bug("[ATA:Probe] Status=%02x,%02x\n", status1, status2);)
+    DINIT(bug("[ATA:Probe] Status=%02x,%02x\n", status1, status2);)
 
 RETRY:
 
@@ -126,7 +136,7 @@ RETRY:
     {
         if(retrynum++ < 10) goto RETRY;
         
-        DD(bug("[ATA:Probe] No Devices detected\n");)
+        DERROR(bug("[ATA:Probe] No Devices detected\n");)
         return NULL;
     }
 
@@ -138,7 +148,7 @@ static int gayle_bus_Scan(struct ataBase *base)
     struct ata_ProbedBus *probedbus;
     OOP_Class *busClass = base->GayleBusClass;
 
-    DD(bug("[ATA:Probe] Starting Gayle Bus Scan\n");)
+    DINIT(bug("[ATA:Probe] Starting Gayle Bus Scan\n");)
 
     for(int buscounter=0; buscounter<2; buscounter++)
     {
@@ -160,7 +170,7 @@ static int gayle_bus_Scan(struct ataBase *base)
             }
         
             ata = HW_AddDriver(base->storageRoot, base->ataClass, ata_tags);
-            DD(bug("[ATA:Probe] Added: %s\n", ata_tags[1].ti_Data);)
+            DINIT(bug("[ATA:Probe] Added: %s\n", ata_tags[1].ti_Data);)
 
             if (ata) {
                 struct TagItem attrs[] =
@@ -189,10 +199,10 @@ static int gayle_bus_Scan(struct ataBase *base)
 
                 if (bus)
                 {
-                    //DD(bug("[ATA:Probe] Added: %s\n", attrs[1].ti_Data);)
+                    DINIT(bug("[ATA:Probe] Added: %s\n", attrs[1].ti_Data);)
                     return TRUE;
                 }
-                //DD(bug("[ATA:Gayle] Failed to create object for device IO: %x:%x IRQ: %x\n", probedbus->port, probedbus->altport, probedbus->gayleirqbase);)
+                DERROR(bug("[ATA:Gayle] Failed to create object for device IO: %x:%x IRQ: %x\n", probedbus->port, probedbus->altport, probedbus->gayleirqbase);)
                 if (!probedbus->atapb_Node.ln_Succ) FreeVec(probedbus);
                 return TRUE;
             }
