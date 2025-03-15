@@ -123,7 +123,7 @@ AROS_UFH3S(IPTR, consfunc,
     AROS_USERFUNC_INIT
     
     int size = sizeof(struct SFormatEntry);
-    
+
     struct SFormatEntry *new = AllocPooled(pool, size);
     
     if (new) memcpy(new, entry, size);
@@ -299,39 +299,46 @@ struct SFormatEntry* SelectDevice(void)
     list_desfunc_hook.h_Entry = (HOOKFUNC)desfunc;
     list_dispfunc_hook.h_Entry = (HOOKFUNC)dispfunc;
 
-    app = (Object *)ApplicationObject,
-           MUIA_Application_Title, __(MSG_APPLICATION_TITLE),
-           MUIA_Application_Version, (IPTR)szVersion,
-           MUIA_Application_Description, __(MSG_DESCRIPTION),
-           MUIA_Application_Copyright, __(MSG_COPYRIGHT),
-           MUIA_Application_Author, __(MSG_AUTHOR),
-           MUIA_Application_Base, (IPTR)"FORMAT",
-        SubWindow, (IPTR)(wnd = (Object *)WindowObject,
-            MUIA_Window_ID, MAKE_ID('F','R','M','D'),
-            MUIA_Window_CloseGadget, (IPTR)FALSE,
-            MUIA_Window_Title, (IPTR)_(MSG_APPLICATION_TITLE),
-            WindowContents, (IPTR)(VGroup,
-		Child, (IPTR)(TextObject,
-		    MUIA_Text_Contents, (IPTR)_(MSG_SELECTDEVICE),
-		End),
-		Child, (IPTR)(list = (Object *)ListviewObject,
-		    MUIA_Listview_List, (IPTR)ListObject,
-			InputListFrame,
-			MUIA_List_ConstructHook, (IPTR)&list_consfunc_hook,
-			MUIA_List_DestructHook, (IPTR)&list_desfunc_hook,
-			MUIA_List_DisplayHook, (IPTR)&list_dispfunc_hook,
-			MUIA_List_Format, (IPTR)",",
-			MUIA_List_AdjustWidth, (IPTR)TRUE,
-		    End,
-            	End),
-                Child, (IPTR)(HGroup,
-		    Child, (IPTR)(ok = SimpleButton(_(MSG_OK))),
-		    Child, (IPTR)RectangleObject, End,
-                    Child, (IPTR)(cancel = SimpleButton(_(MSG_CANCEL))),
-               	End),
-            End),
-        End),
-    End;
+    app =	(Object *)ApplicationObject,
+				MUIA_Application_Title, __(MSG_APPLICATION_TITLE),
+				MUIA_Application_Version, (IPTR)szVersion,
+				MUIA_Application_Description, __(MSG_DESCRIPTION),
+				MUIA_Application_Copyright, __(MSG_COPYRIGHT),
+				MUIA_Application_Author, __(MSG_AUTHOR),
+				MUIA_Application_Base, (IPTR)"FORMAT",
+        		SubWindow, (IPTR)(wnd = (Object *)WindowObject,
+					MUIA_Window_ID, MAKE_ID('F','R','M','D'),
+					MUIA_Window_CloseGadget, (IPTR)FALSE,
+					MUIA_Window_Title, (IPTR)_(MSG_APPLICATION_TITLE),
+            		WindowContents, (IPTR)(VGroup,
+						Child, (IPTR)(TextObject,
+							MUIA_Text_Contents,
+							(IPTR)_(MSG_SELECTDEVICE),
+						End),
+						Child, (IPTR)(list = (Object *)ListviewObject,
+							MUIA_Listview_List,
+							(IPTR)ListObject,
+							InputListFrame,
+							MUIA_List_ConstructHook,
+							(IPTR)&list_consfunc_hook,
+							MUIA_List_DestructHook,
+							(IPTR)&list_desfunc_hook,
+							MUIA_List_DisplayHook,
+							(IPTR)&list_dispfunc_hook,
+							MUIA_List_Format,
+							(IPTR)",",
+							MUIA_List_AdjustWidth,
+							(IPTR)TRUE,
+							End,
+						End),
+						Child, (IPTR)(HGroup,
+							Child, (IPTR)(ok = SimpleButton(_(MSG_OK))),
+							Child, (IPTR)RectangleObject, End,
+							Child, (IPTR)(cancel = SimpleButton(_(MSG_CANCEL))),
+						End),
+            		End),
+        		End),
+    		End;
 
     if(app == NULL) return NULL;
 	
@@ -339,36 +346,55 @@ struct SFormatEntry* SelectDevice(void)
 
     DoMethod(list,   MUIM_Notify, MUIA_List_Active, MUIV_EveryTime, ok , 3, MUIM_Set,                  MUIA_Disabled, FALSE);
 
-    DoMethod(ok,     MUIM_Notify, MUIA_Pressed,     FALSE,          app, 2, MUIM_Application_ReturnID, (IPTR)ok);
+    DoMethod(ok,     MUIM_Notify, MUIA_Pressed,     FALSE,          app, 2, MUIM_Application_ReturnID, 5);
     DoMethod(cancel, MUIM_Notify, MUIA_Pressed,     FALSE,          app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
     
-    //set(ok, MUIA_Disabled, TRUE);
+    set(ok, MUIA_Disabled, TRUE);
     set(wnd, MUIA_Window_Open, TRUE);
 	
-    ULONG sigs = 0;
- 
     DD(bug("[SelectDevice] Mainloop\n"));
     struct SFormatEntry* selectedEntry = NULL;
-    IPTR returnId;
-    while((returnId = (IPTR)DoMethod(app, MUIM_Application_NewInput, (IPTR)&sigs)) != MUIV_Application_ReturnID_Quit)
+
+    ULONG sigs = 0;
+	ULONG returnId;
+	BOOL running = TRUE;
+
+    do
     {
-		if (sigs)
-        {
-			DD(bug("[SelectDevice] Checking Buttons | ReturnID = %u\n", (ULONG)returnId));
-			if ((Object*)returnId == (IPTR)ok)
-            {
-	        	DD(bug("[SelectDevice] Button = OK\n"));
+		returnId = DoMethod(app, MUIM_Application_NewInput, &sigs);
+
+		DD(bug("[SelectDevice] Checking Buttons | ReturnID = %u\n", returnId));
+		
+		switch(returnId)
+		{
+			case 5:
+			{
+				DD(bug("[SelectDevice] Button = OK\n"));
 				IPTR active = XGET(list, MUIA_List_Active);
 				struct SFormatEntry *entry;
 				DoMethod(list, MUIM_List_GetEntry, active, &entry);
 				selectedEntry = AllocMem(sizeof(struct SFormatEntry), 0L);
 				if (selectedEntry) memcpy(selectedEntry, entry, sizeof(struct SFormatEntry));
-           		break;
-	    	}
-            sigs = Wait(sigs | SIGBREAKF_CTRL_C);
-            if (sigs & SIGBREAKF_CTRL_C) break;
+				sigs = 0;
+				running = FALSE;
+				break;
+			}
+
+			case MUIV_Application_ReturnID_Quit:
+				sigs = 0;
+				running = FALSE;
+				break;				
 		}
-    }	
+
+		if (sigs)
+		{
+			sigs = Wait(sigs | SIGBREAKF_CTRL_C);
+			if (sigs & SIGBREAKF_CTRL_C)
+			{
+				running = FALSE;
+			}
+		}
+    } while(running);
 
     MUI_DisposeObject(app);
     
