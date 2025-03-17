@@ -47,7 +47,7 @@
 #include "support.h"
 #include "gui.h"
 
-
+#define D(x) x
 
 #if defined( __morphos__ ) || defined( __MORPHOS__ )
 
@@ -709,8 +709,8 @@ BOOL BuildGUI(char *screenname)
   MUIApp = ApplicationObject,
     MUIA_Application_Title, (IPTR) msgTextProgramName,
     MUIA_Application_Version, Version,
-    MUIA_Application_Copyright, (IPTR) "©1996-2005 Martin Blom",
-    MUIA_Application_Author, (IPTR) "Stéphane Barbaray/Martin Blom",
+    MUIA_Application_Copyright, (IPTR) "ï¿½1996-2005 Martin Blom",
+    MUIA_Application_Author, (IPTR) "Stï¿½phane Barbaray/Martin Blom",
     MUIA_Application_Description, (IPTR) msgTextProgramName,
     MUIA_Application_Base, (IPTR) "AHI",
     MUIA_Application_HelpFile, HELPFILE,
@@ -727,9 +727,9 @@ BOOL BuildGUI(char *screenname)
          Child, page2,
        End,
        Child, HGroup,
-          Child, MUISave = ImageButton(msgButtonSave, "THEME:Images/Gadgets/Save"),
-          Child, MUIUse =  ImageButton(msgButtonUse,"THEME:Images/Gadgets/Use"),
-          Child, MUICancel =  ImageButton(msgButtonCancel,"THEME:Images/Gadgets/Cancel"),
+          Child, MUISave = SimpleButton(msgButtonSave),
+          Child, MUIUse =  SimpleButton(msgButtonUse),
+          Child, MUICancel =  SimpleButton(msgButtonCancel),
         End,
       End,
     End,
@@ -914,7 +914,7 @@ void EventLoop(void)
       {
         char* args[] = { "\033c",
                          (char*)msgTextProgramName,
-                         "1996-2005 Stéphane Barbaray/Martin Blom"
+                         "1996-2005 Stï¿½phane Barbaray/Martin Blom"
                        };
 
         MUI_RequestA(MUIApp, MUIWindow, 0, (char *) msgTextProgramName,
