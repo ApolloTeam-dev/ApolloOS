@@ -124,7 +124,7 @@ AROS_UFH3S(IPTR, consfunc,
     
     int size = sizeof(struct SFormatEntry);
 
-    struct SFormatEntry *new = AllocPooled(pool, size);
+    struct SFormatEntry *new = AllocVec(size, MEMF_ANY | MEMF_PUBLIC);
     
     if (new) memcpy(new, entry, size);
     
@@ -140,7 +140,7 @@ AROS_UFH3S(void, desfunc,
 {
     AROS_USERFUNC_INIT
     
-    FreePooled(pool, entry, sizeof(struct SFormatEntry));
+    FreeVec(entry);
     
     AROS_USERFUNC_EXIT
 }
@@ -262,10 +262,12 @@ void VolumesToList(Object* listObject)
 		{
 			struct SFormatEntry entry;
 			strcpy(entry.deviceName, AROS_BSTR_ADDR(device->dol_Name));
-						
+
+			ComputeCapacity(device, pInfoData);
+			strcpy(entry.capacityInfo, szCapacityInfo);
+
 			volume = adl;            
-		
-			do
+					do
 			{
 				volume = NextDosEntry(volume, LDF_VOLUMES);
 				if (volume) DD(bug("Device = %s | Volume = %s\n", AROS_BSTR_ADDR(device->dol_Name), AROS_BSTR_ADDR(volume->dol_Name)));
@@ -273,14 +275,14 @@ void VolumesToList(Object* listObject)
 				
 			} while (volume->dol_Task != device->dol_Task);
 		
-			if (volume) strcpy(entry.volumeName, AROS_BSTR_ADDR(volume->dol_Name));
-			else strcpy(entry.volumeName, "_____");
+			if (volume)
+			{
+				strcpy(entry.volumeName, AROS_BSTR_ADDR(volume->dol_Name));
+			} else {
+				strcpy(entry.volumeName, "______");
+			}
 		
-			ComputeCapacity(volume, pInfoData);
-			strcpy(entry.capacityInfo, szCapacityInfo);
-		
-			DoMethod(listObject, MUIM_List_InsertSingle, &entry,
-			MUIV_List_Insert_Top);				
+			DoMethod(listObject, MUIM_List_InsertSingle, &entry, MUIV_List_Insert_Top);				
 		}
     }
 		
@@ -320,7 +322,7 @@ struct SFormatEntry* SelectDevice(void)
 							MUIA_Group_HorizSpacing, 4,
 							MUIA_Group_VertSpacing,  4,
 	
-							Child, Label("\33c\33b ApolloFormat \33n\n Select Device to Format "),
+							Child, Label("\33c\33b ApolloFormat \33n\n\n    Select Device to Format    "),
 						End,
 
 						Child, HGroup,
@@ -334,10 +336,10 @@ struct SFormatEntry* SelectDevice(void)
 									InputListFrame,
 									MUIA_List_ConstructHook,	&list_consfunc_hook,
 									MUIA_List_DestructHook,		&list_desfunc_hook,
-									MUIA_List_DisplayHook,		&list_dispfunc_hook,
-		
+									//MUIA_List_DisplayHook,		&list_dispfunc_hook,
+									MUIA_List_Format,			",,",
 									MUIA_List_AdjustHeight,		TRUE,
-									MUIA_List_AdjustWidth,		TRUE,
+									MUIA_List_AdjustWidth,		FALSE,
 									End,
 							End),
 						End,
@@ -443,8 +445,8 @@ AROS_UFH3S(void, btn_format_function,
 
     bMakeTrashcan = XGET(chk_trash, MUIA_Selected);
     bFFS = XGET(chk_ffs, MUIA_Selected);
-    bIntl = XGET(chk_intl, MUIA_Selected);
-    bDirCache = XGET(chk_cache, MUIA_Selected);
+    bIntl = TRUE;		// XGET(chk_intl, MUIA_Selected);
+    bDirCache = FALSE;	//XGET(chk_cache, MUIA_Selected);
 #ifdef __AROS__
     bDirCache = FALSE;
 #endif
@@ -583,7 +585,7 @@ int rcGuiMain(void)
 			}
 		}
 
-		ComputeCapacity(pdlVolume, &dinf );
+		ComputeCapacity(pdlDevice, &dinf );
 		
 		if (pdlVolume) strcpy(szVolumeName, AROS_BSTR_ADDR(pdlVolume->dol_Name));
 
@@ -636,27 +638,32 @@ int rcGuiMain(void)
 			MUIA_Window_Title, (IPTR)szTitle,
 				WindowContents, (IPTR)(VGroup,
 
+				Child, HGroup,
+					MUIA_Background,         MUII_SHINE,
+					MUIA_Frame,              MUIV_Frame_Group,
+					MUIA_Group_HorizSpacing, 4,
+					MUIA_Group_VertSpacing,  4,
+
+					Child, Label("\33c\33b ApolloFormat \33n\n\n    Enter Format Parameters    "),
+				End,
+
 		    		Child, (IPTR)(ColGroup(2),
-						Child, (IPTR)Label2("Device:"),
-							Child, (IPTR)(TextObject, (IPTR)TextFrame, MUIA_Text_Contents, (IPTR)szDosDevice, End),
-						Child, (IPTR)Label2("Volume:"),
-							Child, (IPTR)(TextObject, TextFrame, MUIA_Text_Contents, (IPTR)szVolumeName, End),
-						Child, (IPTR)Label2("Capacity:"),
+						MUIA_Group_HorizSpacing, 4,
+						MUIA_Group_VertSpacing,  4,
+						Child, (IPTR)LLabel2("Device:"),
+							Child, (IPTR)(TextObject, TextFrame, MUIA_FixWidth, 128, MUIA_Text_Contents,  (IPTR)szDosDevice, End),
+						Child, (IPTR)LLabel2("Capacity:"),
 							Child, (IPTR)(TextObject, TextFrame, MUIA_Text_Contents, (IPTR)szCapacityInfo, End),
-						Child, (IPTR)Label2("New Volume Name:"),
-							Child, (IPTR)(str_volume = (Object *)StringObject, StringFrame, MUIA_String_Contents, __(MSG_DEFAULT_VOLUME_NAME), MUIA_String_MaxLen, MAX_FS_NAME_LEN, End),
-						Child, (IPTR)Label2("Put Trashcan Icon:"),
+						Child, (IPTR)LLabel2("Volume:"),
+							Child, (IPTR)(str_volume = (Object *)StringObject, StringFrame, MUIA_String_Contents, (IPTR)szVolumeName, MUIA_String_MaxLen, MAX_FS_NAME_LEN, End),
+						Child, (IPTR)LLabel2("Trashcan:"),
 							Child, (IPTR)(chk_trash = MUI_MakeObject(MUIO_Checkmark, NULL)),
-						Child, (IPTR)Label2("Fast File System:"),
-							Child, (IPTR)(chk_ffs = MUI_MakeObject(MUIO_Checkmark, NULL)),
-						Child, (IPTR)Label2("International Mode"),
-							Child, (IPTR)(chk_intl = MUI_MakeObject(MUIO_Checkmark, NULL)),
-						Child, (IPTR)Label2("Directory Cache:"),
-							Child, (IPTR)(chk_cache = MUI_MakeObject(MUIO_Checkmark, NULL)),
 					End), /* ColGroup */
 		    
 					Child, (IPTR)(RectangleObject, MUIA_Rectangle_HBar, TRUE, MUIA_FixHeight, 2, End),
 		    		Child, (IPTR)(HGroup,
+						MUIA_Group_HorizSpacing, 4,
+						MUIA_Group_VertSpacing,  4,
 						Child, (IPTR)(btn_format  = SimpleButton( _(MSG_BTN_FORMAT) )),
 						Child, (IPTR)(btn_qformat = SimpleButton( _(MSG_BTN_QFORMAT))),
 						Child, (IPTR)(btn_cancel  = SimpleButton( _(MSG_BTN_CANCEL) )),
@@ -678,7 +685,6 @@ int rcGuiMain(void)
 		    		Child, (IPTR)(btn_stop = SimpleButton( _(MSG_BTN_STOP) )),
 		    		Child, (IPTR)RectangleObject, End,
 		    	End), /* HGroup */
-
 			End), /* VGroup */
 	    End), /* Window */
 	End; /* Application */
@@ -689,16 +695,11 @@ int rcGuiMain(void)
 	    goto cleanup;
 	}
 	
-	DoMethod(mainwin, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
-	    app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
-	DoMethod(btn_cancel, MUIM_Notify, MUIA_Pressed, FALSE,
-	    app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
-	DoMethod(btn_format, MUIM_Notify, MUIA_Pressed, FALSE,
-	    app, 3, MUIM_CallHook, (IPTR)&btn_format_hook, TRUE);
-	DoMethod(btn_qformat, MUIM_Notify, MUIA_Pressed, FALSE,
-	    app, 3, MUIM_CallHook, (IPTR)&btn_format_hook, FALSE);
-	DoMethod(btn_stop, MUIM_Notify, MUIA_Pressed, FALSE,
-	    formatwin, 3, MUIM_Set, MUIA_UserData, 1);
+	DoMethod(mainwin, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
+	DoMethod(btn_cancel, MUIM_Notify, MUIA_Pressed, FALSE, app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
+	DoMethod(btn_format, MUIM_Notify, MUIA_Pressed, FALSE, app, 3, MUIM_CallHook, (IPTR)&btn_format_hook, TRUE);
+	DoMethod(btn_qformat, MUIM_Notify, MUIA_Pressed, FALSE, app, 3, MUIM_CallHook, (IPTR)&btn_format_hook, FALSE);
+	DoMethod(btn_stop, MUIM_Notify, MUIA_Pressed, FALSE, formatwin, 3, MUIM_Set, MUIA_UserData, 1);
 	    
 	set(chk_trash, MUIA_Selected, TRUE);
 	if( DosType >= 0x444F5300 && DosType <= 0x444F5305 )
