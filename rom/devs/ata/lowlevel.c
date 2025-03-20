@@ -208,7 +208,7 @@ static void ata_IRQPIOReadAtapi(struct ata_Unit *unit, UBYTE status)
     ULONG retry_busy, retry_datareq;
 
 AGAIN:
-    retry_busy = 200000;
+    retry_busy = 1000000;
     retry_datareq = 500;
 
 WAITBUSY: 
@@ -220,7 +220,7 @@ WAITBUSY:
     {
         ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
         unit->au_cmd_error = HFERR_BadStatus;
-        DERROR(bug("[ATAPI] ata_IRQPIOReadAtapi: ERROR = RetryCount (200000) reached ZERO on ATAF_BUSY clear\n"));
+        DERROR(bug("[ATAPI] ata_IRQPIOReadAtapi: ERROR = RetryCount (1000000) reached ZERO on ATAF_BUSY clear\n"));
         return;
     }
     
@@ -300,7 +300,7 @@ static void ata_IRQPIOWriteAtapi(struct ata_Unit *unit, UBYTE status)
     ULONG retry_busy, retry_datareq; 
     
 AGAINW:
-    retry_busy = 200000;
+    retry_busy = 1000000;
     retry_datareq = 500;
 
 WAITBUSYW: 
@@ -312,7 +312,7 @@ WAITBUSYW:
     {
         ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
         unit->au_cmd_error = HFERR_BadStatus;
-        DERROR(bug("[ATAPI] ata_IRQPIOWriteAtapi: ERROR = RetryCount (200000) reached ZERO on ATAF_BUSY clear\n"));
+        DERROR(bug("[ATAPI] ata_IRQPIOWriteAtapi: ERROR = RetryCount (1000000) reached ZERO on ATAF_BUSY clear\n"));
         return;
     }
 
