@@ -76,7 +76,7 @@
 */
 
 #define MUIMASTER_YES_INLINE_STDARG
-
+#include "gui.h"
 
 static char szCapacityInfo[5+1+8+2+2+2+4+1];
 static Object *app, *mainwin, *formatwin, *chk_trash, *chk_intl, *chk_ffs, *chk_cache;
