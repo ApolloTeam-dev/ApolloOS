@@ -1,0 +1,201 @@
+## version $VER: FTManager.catalog 1.0 (02.02.2020)
+## language polski
+## codeset 5
+;
+;
+;
+MSG_APP_NAME
+FTManager
+;
+MSG_APP_TITLE
+Menedżer czcionek FreeType
+;
+MSG_WINDOW_TITLE
+Menedżer czcionek FreeType
+; 
+MSG_LABEL_SOURCE
+Źródło
+;
+MSG_ASL_FONTS_TRUETYPE
+Czcionki:TrueType
+;
+MSG_LABEL_DESTINATION
+Cel
+;
+MSG_ASL_FONTS
+Czcionki:
+;
+MSG_LABEL_CODEPAGE
+Strona kodowa
+;
+MSG_QUIT
+Porzuć
+;
+MSG_BUTTON_INSTALL
+_Instaluj
+;
+MSG_BUTTON_CLOSE
+Zamknij
+;
+MSG_WEIGHT_ULTRATHIN
+Ultra fine
+;
+MSG_WEIGHT_EXTRATHIN
+Extra fine
+;
+MSG_WEIGHT_THIN
+Fine
+;
+MSG_WEIGHT_EXTRALIGHT
+Extra lekka
+;
+MSG_WEIGHT_LIGHT
+Lekka
+;
+MSG_WEIGHT_DEMILIGHT
+Demi lekka
+;
+MSG_WEIGHT_SEMILIGHT
+Semi lekka
+;
+MSG_WEIGHT_BOOK
+Normalna
+;
+MSG_WEIGHT_MEDIUM
+Średnia
+;
+MSG_WEIGHT_SEMIBOLD
+Semi pogrubiona
+;
+MSG_WEIGHT_DEMIBOLD
+Demi pogrubiona
+;
+MSG_WEIGHT_BOLD
+Pogrubiona
+;
+MSG_WEIGHT_EXTRABOLD
+Extra pogrubiona
+;
+MSG_WEIGHT_BLACK
+Czarna
+;
+MSG_WEIGHT_EXTRABLACK
+Extra czarna
+;
+MSG_WEIGHT_ULTRABLACK
+Ultra czarna
+;
+MSG_WEIGHT_CUSTOM
+Dostosowana
+;
+MSG_STYLE_UPRIGHT
+Prosta
+;
+MSG_STYLE_ITALIC
+Kursywa
+;
+MSG_STYLE_LEFTITALIC
+Lewa kursywa
+;
+MSG_HSTYLE_ULTRACOMPRESSED
+Ultra skomprymowana
+;
+MSG_HSTYLE_EXTRACOMPRESSED
+Extra skomprymowana
+;
+MSG_HSTYLE_COMPRESSED
+Skomprymowana
+;
+MSG_HSTYLE_CONDENSED
+Skondensowana
+;
+MSG_HSTYLE_NORMAL
+Regularna
+;
+MSG_HSTYLE_SEMIEXPANDED
+Semi rozszerzona
+;
+MSG_HSTYLE_EXPANDED
+Rozszerzona
+;
+MSG_HSTYLE_EXTRAEXPANDED
+extra rozszerzona
+;
+MSG_HSTYLE_CUSTOM
+Dostosowana
+;
+MSG_METRIC_GLOBALBOUNDINGBOX
+Obwód globalny
+;
+MSG_METRIC_RAWFONTMETRIC
+Dane surowej czcionki
+;
+MSG_METRIC_ASCENDER
+Ascender
+;
+MSG_METRIC_TYPOASCENDER
+Typo ascender
+;
+MSG_METRIC_USWINASCENDER
+USWin ascender
+;
+MSG_METRIC_CUSTOMBOUNDINGBOX
+Obwód dostosowany
+;
+MSG_LABEL_EXTRAFILE
+Plik dodatkowy
+;
+MSG_LABEL_FACENUM
+Krój
+;
+MSG_LABEL_NAME
+Nazwa
+;
+MSG_LABEL_FAMILY
+Rodzina
+;
+MSG_LABEL_METRIC
+Metryczny
+;
+MSG_LABEL_BOUNDINGBOX
+Obwód
+;
+MSG_LABEL_YMIN
+yMin
+;
+MSG_LABEL_YMAX
+yMax
+;
+MSG_LABEL_SIZEFACTOR
+Wielkość
+;
+MSG_LABEL_SPACEWIDTH
+Szerokość pauzy
+;
+MSG_LABEL_FIXEDWIDTH
+Stała szerokość
+;
+MSG_LABEL_SERIF
+Szeryfowa
+;
+MSG_LABEL_STEMWEIGHT
+Waga
+;
+MSG_LABEL_SLANTSTYLE
+Skośny styl
+;
+MSG_LABEL_HORIZSTYLE
+Poziomy styl
+;
+MSG_FRAME_PREVIEW
+Podgląd
+;
+MSG_PREVIEW_STRING
+Mężny bądź, chroń pułk twój i sześć flag.
+;
+MSG_LABEL_SIZE
+Rozmiar
+;
+MSG_LABEL_ANTIALIASING
+Wygładzanie krawędzi
+;

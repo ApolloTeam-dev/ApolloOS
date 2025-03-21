@@ -1,0 +1,117 @@
+## version $VER: Find.catalog 1.0 (29.09.2016)
+## language czech
+## codeset 5
+;
+MSG_APP_TITLE
+Find
+; Find
+;
+MSG_APP_DESCRIPTION
+Wyszukiwarka
+; File search tool
+;
+MSG_APP_COPYRIGHT
+Copyright \xa9 2016 The AROS Development Team
+; Copyright \xa9 2016 The AROS Development Team
+;
+MSG_WI_TITLE
+Find
+; Find
+;
+MSG_OK
+Ok
+; OK
+;
+MSG_LST_FULLPATH
+Pełna ścieżka
+; Full Path
+;
+MSG_LST_SIZE
+Wielkość
+; Size
+;
+MSG_LST_ATTRIBUTES
+Atrybuty
+; Attributes
+;
+MSG_LST_DATE
+Data
+; Date
+;
+MSG_LST_TIME
+Czas
+; Time
+;
+MSG_LST_COMMENT
+Komentarz
+; Comment
+;
+MSG_LBL_PATH
+Ścieżka
+; Path
+;
+MSG_LBL_PATTERN
+Wzór
+; Pattern
+;
+MSG_LBL_CONTENTS
+Zawartość
+; Contents
+;
+MSG_BTN_START
+Start
+; Start
+;
+MSG_BTN_STOP
+Stop
+; Stop
+;
+MSG_BTN_OPEN
+Otwórz
+; Open
+;
+MSG_BTN_VIEW
+Pokaż
+; View
+;
+MSG_BTN_DRAWER
+Szuflada
+; Drawer
+;
+; Error messages
+;
+MSG_ERR
+Błąd
+; Error
+;
+MSG_ERR_NO_APPLICATION
+Nie można utworzyć aplikacji.
+; Can't create application.
+;
+MSG_ERR_READARGS
+Nie można odczytać argumentów wiersza poleceń.
+; Can't read commandline arguments.
+;
+MSG_ERR_NO_MEM
+Chyba:\nNie można zalokowac pamięci.
+; Error:\nCan't allocate memory.
+;
+MSG_ERR_NO_WINDOW
+Chyba:\nNie można otworzyć okna.
+; Error:\nCan't open window.
+;
+MSG_ERR_DOS
+Chyba DOS:\n%s
+; DOS Error:\n%s
+;
+MSG_ERR_NO_FILE
+Chyba:\nNie można otworzyć pliku\n\"%s\".
+; Error:\nCan't open file\n\"%s\".
+;
+MSG_ERR_NO_DIR
+Chyba:\nNie można otworzyć szuflady\n\"%s\".
+; Error:\nCan't open directory\n\"%s\".
+;
+MSG_ERR_PATTERN
+Chyba:\nNie można przeanalizować wzoru.
+; Error:\nCan't parse pattern.

@@ -1,0 +1,53 @@
+## version $VER: executestartup.catalog 1.0 (02.02.2020)
+## language polski
+## codeset 5
+;
+;
+MSG_ERROR
+Błąd
+; Error
+;
+MSG_WARNING
+Ostrzeżenie
+; Warning
+;
+MSG_OK
+Ok
+; OK
+;
+MSG_ERROR_GETDISKOBJECT
+ExecuteStartup\nGetDiskObject zawiódł dla:\n%s
+; ExecuteStartup\nGetDiskObject failed for:\n%s
+;
+MSG_ERROR_INFONODE
+ExecuteStartup\nNiedostatek pamięci dla InfoNode
+; ExecuteStartup\nOut of memory for InfoNode
+;
+MSG_ERROR_LNNAME
+ExecuteStartup\nNiedostatek pamięci dla ln_Name
+; ExecuteStartup\nOut of memory for ln_Name
+;
+MSG_ERROR_SCANNING
+ExecuteStartup\nBłąd %ld wystąpił podczas skanowania katalogu
+; ExecuteStartup\nError %ld occured while scanning directory
+;
+MSG_ERROR_ANCHORPATH
+ExecuteStartup\nNiedostatek pamięci dla pro AnchorPath
+; ExecuteStartup\nOut of memory for AnchorPath
+;
+MSG_ERROR_FILEINFOBLOCK
+ExecuteStartup\nNiedostatek pamięci dla FileInfoBlock
+; ExecuteStartup\nOut of memory for FileInfoBlock
+;
+MSG_ERROR_MEMORYPOOL
+ExecuteStartup\nNie można utworzyć bloku pamięci
+; ExecuteStartup\nCouldn't create pool memory
+;
+MSG_ERROR_EXAMINE
+ExecuteStartup\nNie można zbadać
+; ExecuteStartup\nCouldn't examine 
+;Note final space!
+MSG_WARNING_OPENWBOBJECT
+ExecuteStartup\nOpenWorkbenchObject zawiódł dla:\n%s
+; ExecuteStartup\nOpenWorkbenchObject failed for:\n%s
+;

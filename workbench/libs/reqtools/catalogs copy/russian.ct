@@ -1,0 +1,202 @@
+;******************
+;
+;   ReqTools V38
+;
+;   Russian
+;
+;******************
+; Done by Oleg Sergeev (26.1.97)
+; Done in cp1251 by Sergey Mineychev aka Keen
+;
+## version $VER: reqtools.catalog 39.0 (14.12.2020)
+## codeset 2104
+## language russian
+;
+; *** General ***
+;
+; Note: there are two spaces around the Ok string to make it 4 chars wide.
+MSG_OK
+ _Ok
+;
+MSG_CANCEL
+Отмена
+;
+; *** EZRequester ***
+;
+MSG_OK_BAR_CANCEL
+ _Ok |Отмена
+;
+MSG_LAST_BAR_CANCEL
+Последний|Отмена
+;
+MSG_REQUEST
+Запрос
+;Begдran, Anhеllan, Efterfrеgan
+;
+MSG_INFORMATION
+Информация
+;
+; *** GetLong Requester ***
+;
+; Note: there are two spaces around the next three strings!
+MSG_MIN_FMT
+ Мин.: %ld \
+;
+MSG_MAX_FMT
+ Макс.: %ld \
+;
+MSG_MIN_MAX_FMT
+ Мин. %ld, Макс.: %ld \
+;
+MSG_TOO_SMALL
+Мало!
+;
+MSG_TOO_BIG
+Много!
+;
+; *** Palette Requester ***
+;
+MSG_PALETTE_COLORS
+Цвета палитры:
+;
+MSG_RED
+Красный:
+;
+MSG_GREEN
+Зелёный:
+;
+MSG_BLUE
+Синий:
+;
+MSG_COPY
+Копировать
+;
+MSG_SWAP
+Обменять
+;
+MSG_SPREAD
+Распространить
+;
+MSG_UNDO
+Отменить
+;
+; ** 2.5 **
+;
+MSG_COPY_TITLE
+Скопировать в...
+; Copy to
+;
+MSG_SWAP_TITLE
+Обменять с...
+; Swap with
+;
+MSG_SPREAD_TITLE
+Распространить на...
+; Spread to
+;
+; *** File Requester ***
+;
+MSG_CREATE_DRAWER
+Директория "%s" не существует.\nСоздать её?
+;
+MSG_DIR_ERROR
+Ошибка директории!
+;
+MSG_MATCH_WINTITLE
+Совпадение...
+;
+MSG_DRAWER
+Директория
+;
+MSG_ASSIGN
+Присвоение
+;
+MSG_ALL
+Всё
+;
+MSG_MATCH
+Совпадение...
+;
+MSG_CLEAR
+Очистка
+;
+MSG_VOLUMES
+Тома
+;
+MSG_PARENT
+Назад
+;
+MSG_PATTERN
+Шаблон:
+;
+MSG_GET
+Считать
+;
+MSG_DOT_INFO
+Иконки
+;
+MSG_SELECTED
+Выбрано:
+;
+MSG_FULL
+Занято %ld%%
+;
+; *** Font Requester ***
+;
+MSG_COULDNT_OPEN_FONT
+не открыется шрифт!
+;
+MSG_BOLD
+Жирный
+;
+MSG_ITALIC
+Наклонный
+;
+MSG_UNDERLINE
+Подчёркнутый
+;
+; *** ScreenMode Requester ***
+;
+MSG_DASH_INTERLACED
+-Чересстрочный
+;
+MSG_DASH_HAM
+-HAM
+;
+MSG_DASH_EHB
+-EHB
+;
+MSG_REGULAR_SIZE
+Обычный размер
+;
+MSG_TEXT_SIZE
+Текстовый размер
+;
+MSG_GFX_SIZE
+Графический размер
+;
+MSG_MAX_SIZE
+Максимальный размер
+;
+MSG_OVERSCAN
+Габариты:
+;
+MSG_WIDTH
+Ширина:
+;
+MSG_HEIGHT
+Высота:
+;
+;
+MSG_DEFAULT
+По умолчанию
+;
+MSG_COLORS
+Цвета:
+;
+MSG_MAX
+Макс.:
+;
+MSG_AUTOSCROLL
+Автопрокрутка:
+;
