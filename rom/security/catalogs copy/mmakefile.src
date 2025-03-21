@@ -1,0 +1,11 @@
+# Copyright © 2018, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+# croatian portuguese
+CATALOGS:= italian russian spanish
+
+%build_catalogs mmake=kernel-security-catalogs \
+    catalogs=$(CATALOGS) description=$(SRCDIR)/$(CURDIR)/security \
+    name=Security subdir=System
