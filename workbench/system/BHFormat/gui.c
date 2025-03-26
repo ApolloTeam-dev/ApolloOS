@@ -314,7 +314,7 @@ struct SFormatEntry* SelectDevice(void)
 								MUIA_Listview_List, ListObject,
 									InputListFrame,
 									MUIA_List_ConstructHook,	&list_consfunc_hook,
-									MUIA_List_DestructHook,	&list_desfunc_hook,
+									MUIA_List_DestructHook,		&list_desfunc_hook,
 									MUIA_List_DisplayHook,		&list_dispfunc_hook,
 									MUIA_List_Format, 			",",
 									MUIA_List_AdjustHeight,		TRUE,
@@ -411,89 +411,81 @@ AROS_UFH3S(void, btn_format_function,
 	BOOL bDirCache = FALSE;
 	LONG rc = FALSE;
 
-	DD(bug("Full format? %d\n", bDoFormat));
+	DD(bug("Select Format: %s\n", bDoFormat ? "Full" : "Quick" ));
 	
-	if(!bSetSzDosDeviceFromSz(szDosDevice))
-		goto cleanup;
-	
-	/* TODO: set volume name same as old one if name is null string */
-	if( !bSetSzVolumeFromSz( (char *)XGET(str_volume, MUIA_String_Contents) ) )
-	{
-	goto cleanup;
-	}
+	if( !bSetSzDosDeviceFromSz(szDosDevice) ) goto cleanup;
+	if( !bSetSzVolumeFromSz( (char *)XGET(str_volume, MUIA_String_Contents) ) )	goto cleanup;
 
 	bMakeTrashcan = XGET(chk_trash, MUIA_Selected);
-	bFFS = XGET(chk_ffs, MUIA_Selected);
-	bIntl = XGET(chk_intl, MUIA_Selected);
-	bDirCache = XGET(chk_cache, MUIA_Selected);
-#ifdef __AROS__
-	bDirCache = FALSE;
-#endif
+	bFFS = FALSE; 		//XGET(chk_ffs, MUIA_Selected);
+	bIntl = FALSE; 		//XGET(chk_intl, MUIA_Selected);
+	bDirCache = FALSE; 	//XGET(chk_cache, MUIA_Selected);
 
-	if(bDoFormat)
-	{
-	set(txt_action, MUIA_Text_Contents, _(MSG_GUI_FORMATTING) );
-	}
-	else
-	{
-	set(txt_action, MUIA_Text_Contents, _(MSG_GUI_INITIALIZING) );
-	}
+	if (bDoFormat) set(txt_action, MUIA_Text_Contents, "\33cFull Format");
+	else set(txt_action, MUIA_Text_Contents, "\33cQuick Format");
 	
-	set(mainwin, MUIA_Window_Open, FALSE);
 	set(formatwin, MUIA_Window_Open, TRUE);
-	
-	{
+	set(mainwin, MUIA_Window_Open, FALSE);
+
 	char szVolumeId[11 + MAX_FS_NAME_LEN];
-	if(pdlVolume)
-		RawDoFmtSz( szVolumeId, "%b", pdlVolume->dol_Name );
-	else
-		RawDoFmtSz( szVolumeId, _(MSG_IN_DEVICE), szDosDevice );
-	if( MUI_Request ( app, formatwin, 0,
-				_(MSG_FORMAT_REQUEST_TITLE), _(MSG_FORMAT_REQUEST_GADGETS),
-				_(MSG_FORMAT_REQUEST_TEXT),
-				szVolumeId, szCapacityInfo) != 1)
-		goto cleanup;
+	if(pdlVolume) RawDoFmtSz( szVolumeId, "%b", pdlVolume->dol_Name );
+	else RawDoFmtSz( szVolumeId, _(MSG_IN_DEVICE), szDosDevice );
+
+	if( ((ibyEnd - ibyStart) > (1024 * 1024 * 1024)) && bDoFormat )
+	{
+		switch (MUI_Request( app, formatwin, 0, "Format Request Confirmation", "_Quick Format|_Full Format|_Cancel", "WARNING !!!\n\n%s: is a large drive (>1Gb)\n\nQuick Format is strongly advised\n\nALL data will be lost on %s:\n\nPlease Confirm your Choice . . .", szDosDevice, szDosDevice ))
+		{
+			case 1: 
+				bDoFormat = FALSE;
+				set(txt_action, MUIA_Text_Contents, "Quick Format");
+				break;
+			case 0:
+				goto cleanup;
+			default:
+				break;
+		}
+	} else {
+		if (MUI_Request( app, formatwin, 0, "Format Request Confirmation", "_Confirm|_Cancel", "WARNING !!!\n\nALL data will be lost on %s:\n\nPlease Confirm your Choice . . .", szDosDevice) == 0) goto cleanup;
 	}
 
 	BOOL formatOk = TRUE;
+
 	if(bDoFormat)
 	{
-	ULONG icyl, sigs;
-	if(!bGetExecDevice(TRUE))
-		goto cleanup;
-	DD(bug("GetExecDevice done\n"));
-	set(gauge, MUIA_Gauge_Max, HighCyl-LowCyl);
-	for( icyl = LowCyl; icyl <= HighCyl; ++icyl )
-	{
-		DoMethod(app, MUIM_Application_Input, (IPTR)&sigs);
-		/* interrupted by user? */
-		if(XGET(formatwin, MUIA_UserData) == 1)
+		ULONG icyl, sigs;
+		if(!bGetExecDevice(TRUE)) goto cleanup;
+		DD(bug("GetExecDevice done\n"));
+		
+		set(gauge, MUIA_Gauge_Max, 100);
+
+		for( icyl = LowCyl; icyl <= HighCyl; ++icyl )
 		{
-		formatOk = FALSE;
-		break;
+			DoMethod(app, MUIM_Application_Input, (IPTR)&sigs);
+
+			if(XGET(formatwin, MUIA_UserData) == 1)
+			{
+				formatOk = FALSE;
+				break;
+			}
+			if(!bFormatCylinder(icyl) || !bVerifyCylinder(icyl))
+			{
+				formatOk = FALSE;
+				break;
+			}
+			set(gauge, MUIA_Gauge_Current, (((icyl-LowCyl)*100) / ((HighCyl-LowCyl))) );   
+			DD(bug("MUIA_Gauge_Current = %u\n", (((icyl-LowCyl)*100) / ((HighCyl-LowCyl))) ));
 		}
-		if(!bFormatCylinder(icyl) || !bVerifyCylinder(icyl))
-		{
-		formatOk = FALSE;
-		break;
-		}
-		set(gauge, MUIA_Gauge_Current, icyl-LowCyl);    
-	}
-	FreeExecDevice();
-	DD(bug("FreeExecDevice done\n"));
+		FreeExecDevice();
+		DD(bug("FreeExecDevice done\n"));
 	}
 
 	if(formatOk)
-	if( bMakeFileSys( bFFS, !bFFS, bIntl, !bIntl, bDirCache, !bDirCache )
-			&& (!bMakeTrashcan || bMakeFiles(FALSE)) )
-			rc = RETURN_OK;
-	
+	{
+		if( bMakeFileSys( bFFS, !bFFS, bIntl, !bIntl, bDirCache, !bDirCache ) && (!bMakeTrashcan || bMakeFiles(FALSE)) ) rc = RETURN_OK;
+	}
+
 cleanup:
 	DoMethod(app, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
-
-	if (rc != RETURN_OK) {
-		/* Shouldn't we do something if rc != RETURN_OK? */
-	}
 
 	AROS_USERFUNC_EXIT
 }
@@ -532,7 +524,6 @@ int rcGuiMain(void)
 		} else {
 			if( _WBenchMsg->sm_ArgList[1].wa_Name[0] == 0 )
 			{
-				DD(bug("Object specified by lock\n"));
 				if( !Info( _WBenchMsg->sm_ArgList[1].wa_Lock, &dinf ) )
 				{
 					ReportErrSz( ertFailure, 0, 0 );
@@ -542,6 +533,7 @@ int rcGuiMain(void)
 				pdlVolume = (struct DosList *)BADDR(pflVolume->fl_Volume);
 				pdlList = LockDosList( LDF_DEVICES | LDF_READ );
 				pdlDevice = pdlList;
+				
 				do
 				{
 					if ((pdlDevice = NextDosEntry(pdlDevice, LDF_DEVICES)) == 0)
@@ -564,9 +556,12 @@ int rcGuiMain(void)
 			}
 		}
 
-	ComputeCapacity(pdlDevice, &dinf );
+		ObjectTypeOk(pdlDevice);
+		ComputeCapacity(pdlVolume, &dinf );
 		
 		if (pdlVolume) strcpy(szVolumeName, AROS_BSTR_ADDR(pdlVolume->dol_Name));
+
+		DD(bug("Device specified by lock: Device = %s | Volume = %s | Capacity = %s\n", szDosDevice, szVolumeName, szCapacityInfo));
 
 	} else {
 		if ( _WBenchMsg->sm_NumArgs == 1 )
@@ -579,7 +574,7 @@ int rcGuiMain(void)
 			strcpy(szCapacityInfo, entry->capacityInfo);
 			FreeMem(entry, sizeof(struct SFormatEntry));
 
-			DD(bug("Object name selected via SelectDevice: %s\n", szDosDevice));
+			DD(bug("Device selected via SelectDevice: Device = %s | Volume = %s | Capacity = %s\n", szDosDevice, szVolumeName, szCapacityInfo));
 
 			if( !bSetSzDosDeviceFromSz(szDosDevice) )
 			{
@@ -598,8 +593,8 @@ int rcGuiMain(void)
 
 	btn_format_hook.h_Entry = (HOOKFUNC)btn_format_function;
 
-	RawDoFmtSz( szDeviceInfo, _(MSG_DEVICE), szDosDevice );
-	RawDoFmtSz( szVolumeInfo, _(MSG_VOLUME), szVolumeName );
+	//RawDoFmtSz( szDeviceInfo, _(MSG_DEVICE), szDosDevice );
+	//RawDoFmtSz( szVolumeInfo, _(MSG_VOLUME), szVolumeName );
 
 	DD(bug("Creating GUI...\n"));
 	
@@ -622,7 +617,6 @@ int rcGuiMain(void)
 				MUIA_Frame,              MUIV_Frame_Group,
 				MUIA_Group_HorizSpacing, 4,
 				MUIA_Group_VertSpacing,  4,
-
 				Child, Label("\33c\33b ApolloFormat \33n\n\n    Enter Format Parameters    "),
 			End,
 
@@ -630,7 +624,7 @@ int rcGuiMain(void)
 					MUIA_Group_HorizSpacing, 4,
 					MUIA_Group_VertSpacing,  4,
 					Child, (IPTR)LLabel2("Device:"),
-						Child, (IPTR)(TextObject, TextFrame, MUIA_FixWidth, 128, MUIA_Text_Contents,  (IPTR)szDosDevice, End),
+						Child, (IPTR)(TextObject, TextFrame, MUIA_FixWidth, 128, MUIA_Text_Contents, (IPTR)szDosDevice, End),
 					Child, (IPTR)LLabel2("Capacity:"),
 							Child, (IPTR)(TextObject, TextFrame, MUIA_Text_Contents, (IPTR)szCapacityInfo, End),
 					Child, (IPTR)LLabel2("Volume:"),
@@ -651,14 +645,26 @@ int rcGuiMain(void)
 			End), /* Window */
 
 		SubWindow, (IPTR)(formatwin = (Object *)WindowObject,
-		MUIA_Window_ID, MAKE_ID('F','R','M','2'),
+		//MUIA_Window_ID, MAKE_ID('F','R','M','2'),
 		MUIA_Window_Title, (IPTR)szTitle,
 		MUIA_Window_CloseGadget, (IPTR)FALSE,
+		MUIA_Window_RefWindow, mainwin,
+		MUIA_Window_TopEdge, MUIV_Window_TopEdge_Centered, 
 			WindowContents, (IPTR)(VGroup,
-				
+
+				Child, HGroup,
+				MUIA_Background,         MUII_SHINE,
+				MUIA_Frame,              MUIV_Frame_Group,
+				MUIA_Group_HorizSpacing, 4,
+				MUIA_Group_VertSpacing,  4,
+				Child, Label("\33c\33b ApolloFormat \33n\n\n    Formatting Drive . . .     "),
+				End,
+
 				Child, (IPTR)(txt_action = (Object *)TextObject, TextFrame, End),
-				Child, (IPTR)(gauge = (Object *)GaugeObject, GaugeFrame, MUIA_Gauge_Horiz, (IPTR)TRUE, MUIA_FixHeightTxt, (IPTR)"|", End),
+				Child, (IPTR)(gauge = (Object *)GaugeObject, GaugeFrame, MUIA_Gauge_Horiz, (IPTR)TRUE, MUIA_FixHeight, 20, MUIA_Gauge_InfoText, "%ld%%", End),
 				
+				Child, (IPTR)(RectangleObject, MUIA_Rectangle_HBar, TRUE, MUIA_FixHeight, 2, End),
+
 				Child, (IPTR)(HGroup,
 					Child, (IPTR)RectangleObject, End,
 					Child, (IPTR)(btn_stop = SimpleButton( _(MSG_BTN_STOP) )),

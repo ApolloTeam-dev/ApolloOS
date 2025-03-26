@@ -471,35 +471,25 @@ BOOL bGetExecDevice( BOOL bWillVerify )
 	bExecDevOpen = TRUE;
     }
 
-#ifdef __mc68000
-    {
 	/* This is an attempt to spot a scsi.device that is really an
 	   IDE driver. If we have a card slot (A600/A1200) or AGA
 	   (A1200/A4000/A4000T/CD32/clones) then it probably is.  If
 	   the version number is lower than 40 then it does not limit
 	   transfers to 128 blocks as required for correct operation
 	   of some drives. */
-	struct GfxBase * GfxBase = (struct GfxBase *)
-	    OpenLibrary( "graphics.library", 39 );
-	if( !strcmp( pszExecDevice, "scsi.device" )
-	    && piosDisk->io_Device->dd_Library.lib_Version < 40
-	    && (OpenResource("card.resource")
-		|| (GfxBase && (GfxBase->ChipRevBits0 & GFXF_AA_ALICE)) ))
+	
+	   struct GfxBase * GfxBase = (struct GfxBase *) OpenLibrary( "graphics.library", 39 );
+
+	if( !strcmp( pszExecDevice, "scsi.device" ) && piosDisk->io_Device->dd_Library.lib_Version < 40 && (OpenResource("card.resource") || (GfxBase && (GfxBase->ChipRevBits0 & GFXF_AA_ALICE)) ))
 	{
 	    bSuspectIDE = TRUE;
 	    if( MaxTransfer > 0x10000 )
 	    {
-		MaxTransfer = 0x10000;
-		ReportErrSz(
-		    ertWarning,
-		    -1,
-		    _(MSG_ERROR_IDE) );
+			MaxTransfer = 0x10000;
+			ReportErrSz(ertWarning, -1, _(MSG_ERROR_IDE) );
 	    }
 	}
-	if(GfxBase)
-	    CloseLibrary((struct Library *)GfxBase);
-    }
-#endif
+	if(GfxBase) CloseLibrary((struct Library *)GfxBase);
 
     if( ibyEnd > 0x100000000ULL )
     {
@@ -658,11 +648,9 @@ BOOL bFormatCylinder( ULONG icyl )
 
     /* put a "BAD\0" marker at the beginning in case format is aborted */
     /* put normal "DOS\0" marker at the beginning of other cylinders */
-    paulWriteBuffer[0] =
-	(icyl == LowCyl) ? 0x42414400 : 0x444F5300;
+    paulWriteBuffer[0] = (icyl == LowCyl) ? 0x42414400 : 0x444F5300;
 
-    if( !bTransferCylinder( paulWriteBuffer, icyl,
-			    NSCMD_TD_FORMAT64, TD_FORMAT ) )
+    if( !bTransferCylinder( paulWriteBuffer, icyl, NSCMD_TD_FORMAT64, TD_FORMAT ) )
 	return FALSE;
 
     /* Write out and invalidate the track buffer */
@@ -670,17 +658,12 @@ BOOL bFormatCylinder( ULONG icyl )
     derr = DoIO((struct IORequest *)piosDisk);
     if( derr == 0 )
     {
-	piosDisk->io_Command = CMD_CLEAR;
-	derr = DoIO((struct IORequest *)piosDisk);
-	if( derr == 0 )
-	    return TRUE;
+		piosDisk->io_Command = CMD_CLEAR;
+		derr = DoIO((struct IORequest *)piosDisk);
+		if( derr == 0 ) return TRUE;
     }
 
-    ReportErrSz( ertFailure, -1,
-		 _(MSG_ERROR_DEVICE_RETURN),
-		 (piosDisk->io_Command == CMD_UPDATE) ?
-		 _(MSG_ERROR_FLUSH) : _(MSG_ERROR_INVALIDATE),
-		 (ULONG)derr );
+    ReportErrSz( ertFailure, -1, _(MSG_ERROR_DEVICE_RETURN), (piosDisk->io_Command == CMD_UPDATE) ? _(MSG_ERROR_FLUSH) : _(MSG_ERROR_INVALIDATE), (ULONG)derr );
     return FALSE;
 }
 

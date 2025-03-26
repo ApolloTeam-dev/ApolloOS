@@ -325,8 +325,7 @@ static int ata_expunge(struct ataBase *ATABase)
     return TRUE;
 }
 
-static int open(struct ataBase *ATABase, struct IORequest *iorq,
-                ULONG unitnum, ULONG flags)
+static int open(struct ataBase *ATABase, struct IORequest *iorq, ULONG unitnum, ULONG flags)
 {
     struct ata_Controller *ataNode;
     struct Hook searchHook =

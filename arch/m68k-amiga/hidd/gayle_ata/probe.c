@@ -176,7 +176,7 @@ static int gayle_bus_Scan(struct ataBase *base)
                 struct TagItem attrs[] =
                 {
                     {aHidd_Name                     , (IPTR)"ata_gayle.hidd"        },
-                    {aHidd_HardwareName             , (IPTR)"Gayle IDE Channel $DA" },
+                    {aHidd_HardwareName             , (IPTR)"Gayle IDE Bus $DA" },
                     {aHidd_DriverData               , (IPTR)probedbus               },
                     {aHidd_ATABus_PIODataSize       , sizeof(struct pio_data)       },
                     {aHidd_ATABus_BusVectors        , (IPTR)bus_FuncTable           },
@@ -188,7 +188,7 @@ static int gayle_bus_Scan(struct ataBase *base)
                 if(buscounter == 1)
                 {
                     attrs[0].ti_Data = (IPTR)"ata_gayle2.hidd";
-                    attrs[1].ti_Data = (IPTR)"Gayle IDE Channel $DD";
+                    attrs[1].ti_Data = (IPTR)"Gayle IDE Bus $DD";
                 }
 
                 OOP_Object *bus;
@@ -202,7 +202,7 @@ static int gayle_bus_Scan(struct ataBase *base)
                     DINIT(bug("[ATA:Probe] Added: %s\n", attrs[1].ti_Data);)
                     return TRUE;
                 }
-                DERROR(bug("[ATA:Gayle] Failed to create object for device IO: %x:%x IRQ: %x\n", probedbus->port, probedbus->altport, probedbus->gayleirqbase);)
+                DERROR(bug("[ATA:Probe] Failed to create object for device IO: %x:%x IRQ: %x\n", probedbus->port, probedbus->altport, probedbus->gayleirqbase);)
                 if (!probedbus->atapb_Node.ln_Succ) FreeVec(probedbus);
                 return TRUE;
             }

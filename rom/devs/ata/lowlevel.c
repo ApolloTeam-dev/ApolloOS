@@ -21,13 +21,13 @@
 #define DINIT(x) x
 
 // add #define DD(x) x for regular level debug output
-#define DD(x) 
+#define DD(x) x
 
 // add #define DDD(x) x for output on low level routines
 #define DDD(x)
 
 // add #define DATAPI(x) x for output on Atapi routines
-#define DATAPI(x) 
+#define DATAPI(x)
 
 #define VREG_BOARD_Unknown  0x00 /* Unknown                         */
 #define VREG_BOARD_V600     0x01 /* Vampire V2 V600(+),   for A600  */
@@ -224,7 +224,7 @@ WAITBUSY:
         return;
     }
     
-    DATAPI(bug("r"));
+    DDD(bug("r"));
 
     if ((status & ATAF_BUSY) != 0) // Wait for BSY to CLEAR
     {
@@ -246,7 +246,7 @@ WAITDATAREQ:
         return;
     }
 
-    DATAPI(bug("R"));
+    DDD(bug("R"));
     if ((status & ATAF_DATAREQ) != ATAF_DATAREQ) // Wait for DRQ to SET
     {
         goto WAITDATAREQ;
@@ -316,7 +316,7 @@ WAITBUSYW:
         return;
     }
 
-    DATAPI(bug("w"));
+    DDD(bug("w"));
     if ((status & ATAF_BUSY) != 0) // Wait for BSY to CLEAR
     {
         goto WAITBUSYW;
@@ -337,7 +337,7 @@ WAITDATAREQW:
         return;
     }
 
-    DATAPI(bug("W"));
+    DDD(bug("W"));
     if ((status & ATAF_DATAREQ) != ATAF_DATAREQ) // Wait for DRQ to SET
     {
         goto WAITDATAREQW;
@@ -412,7 +412,7 @@ static BOOL ata_WaitBusyTO(struct ata_Unit *unit, UWORD tout, BOOL irq, BOOL fak
 
     status = PIO_In(bus, ata_Status);
 
-    DATAPI(bug("[ATA:%02ld] WaitBusy status: %lx / %ld\n", unit->au_UnitNum, status, res));
+    DDD(bug("[ATA:%02ld] WaitBusy status: %lx / %ld\n", unit->au_UnitNum, status, res));
 
     SetSignal(0, 1 << bus->ab_SleepySignal);
 
@@ -604,7 +604,7 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
         DERROR(if (datalen & 1) bug("[ATAPI] atapi_SendPacket - ERROR: DATA LENGTH NOT EVEN! Rounding Up! (%ld bytes requested)\n", datalen));
     });
 
-    //datalen = (datalen+1)&~1;
+    datalen = (datalen+1)&~1;
 
     if (FALSE == ata_SelectUnit(unit))
     {
@@ -616,12 +616,12 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
     {
         status = PIO_In(unit->au_Bus, ata_Status);
         ata_WaitNano(400, bus->ab_Base);
-        DD(bug("B"));
+        DDD(bug("B"));
 
         retry_busy--;
         if (retry_busy == 0)
         {
-            DERROR(bug("\n[ATAPI] *** ERROR: ATAF_BUSY | ATAF_DATAREQ not cleared!"));
+            DERROR(bug("\n[ATAPI] *** ERROR: ATAF_BUSY | ATAF_DATAREQ not cleared, status = %u\n", status));
             break;
         }
     } while ((status & (ATAF_BUSY | ATAF_DATAREQ)) != 0);  // Wait for BSY and DRQ to CLEAR
@@ -640,7 +640,7 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
     {
         status = PIO_In(unit->au_Bus, ata_Status);
         ata_WaitNano(400, bus->ab_Base);
-        DD(bug("D"));
+        DDD(bug("D"));
         retry_datareq--;
         if (retry_datareq == 0)
         {
@@ -1196,8 +1196,15 @@ static BYTE ata_Identify(struct ata_Unit *unit)
                 break;
         }
 
-        atapi_TestUnitOK(unit);
-        atapi_TestUnitOK(unit);
+        ULONG retry_test = 10;
+        while(!(atapi_TestUnitOK(unit)))
+        {
+            if ((retry_test--) == 0)
+            {
+                DERROR(bug("[ATA:%02ld] ata_Identify: ERROR = atapi_TestUnitOK FAILED\n", unit->au_UnitNum);)
+                return IOERR_UNITBUSY;
+            }
+        }
         
     } else {
         /*
@@ -1541,7 +1548,7 @@ static BYTE ata_Eject(struct ata_Unit *unit)
  */
 
 
-int atapi_TestUnitOK(struct ata_Unit *unit)
+BOOL atapi_TestUnitOK(struct ata_Unit *unit)
 {
     struct SCSICmd sc   = {0}; 
     
@@ -1588,6 +1595,7 @@ int atapi_TestUnitOK(struct ata_Unit *unit)
         unit->au_Cylinders = 0;
         unit->au_Sectors = 0;
         capacity.blocksize = 0;
+        return(FALSE);
     } else {
         unit->au_Capacity   = capacity.logicalsectors;
 
@@ -1603,6 +1611,8 @@ int atapi_TestUnitOK(struct ata_Unit *unit)
 
     DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: LBA = %u | Block = %u | Cylinders = %u | Heads = %u | Sectors = %u\n",
         unit->au_UnitNum, unit->au_Capacity, capacity.blocksize, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors));
+    
+    return(TRUE);
 }
 
 static BYTE atapi_Read(struct ata_Unit *unit, ULONG block, ULONG count, APTR buffer, ULONG *act)
@@ -1758,7 +1768,7 @@ static void ata_ResetBus(struct ata_Bus *bus)
     PIO_OutAlt(bus, ATACTLF_INT_DISABLE, ata_AltControl);
     ata_WaitTO(bus->ab_Timer, 0, 20000, 0);
     
-    /*if ( bus->ab_Dev[0] != DEV_NONE )
+    if ( bus->ab_Dev[0] != DEV_NONE )
     {
         PIO_Out(bus, DEVHEAD_VAL, ata_DevHead);
         ata_WaitTO(bus->ab_Timer, 0, 20000, 0);
@@ -1798,7 +1808,7 @@ static void ata_ResetBus(struct ata_Bus *bus)
             }
         }
         if (Counter==0) DERROR(bug("[ATA:ResetBus] ERROR: Slave did NOT clear BSY\n", bus->ab_BusNum));
-    }*/
+    }
 
     if ( bus->ab_Dev[0] != DEV_NONE ) bus->ab_Dev[0] = ata_ReadSignature(bus, 0, &DiagExecuted);
     if ( bus->ab_Dev[1] != DEV_NONE ) bus->ab_Dev[1] = ata_ReadSignature(bus, 1, &DiagExecuted);
@@ -1893,7 +1903,7 @@ static BYTE atapi_EndCmd(struct ata_Unit *unit)
     struct ata_Bus *bus = unit->au_Bus;
     UBYTE status, error;
     
-    DD(bug("[ATA:%02ld] atapi_EndCmd: Command complete. Status: %lx | RETRY = %u\n\n", unit->au_UnitNum, status, retry_busy));
+    DD(bug("[ATA:%02ld] atapi_EndCmd: Command complete. Status: %lx\n", unit->au_UnitNum, status));
 
     if (!(status & ATAPIF_CHECK))
     {

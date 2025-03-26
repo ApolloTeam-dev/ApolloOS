@@ -403,7 +403,7 @@ AROS_UFP3(BOOL, Hidd_ATABus_Open,
           AROS_UFPA(IPTR, reqUnit, A1));
 
 void ata_InitBus(struct ata_Bus *);
-int atapi_TestUnitOK(struct ata_Unit *);
+BOOL atapi_TestUnitOK(struct ata_Unit *);
 BOOL ata_setup_unit(struct ata_Bus *bus, struct ata_Unit *unit);
 void ata_init_unit(struct ata_Bus *bus, struct ata_Unit *unit, UBYTE u);
 
