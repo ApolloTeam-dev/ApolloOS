@@ -18,7 +18,7 @@
 
 #include "ata.h"
 
-#define DD(x) x
+#define DD(x) 
 
 /* perform the S.M.A.R.T operation specified in io_Reserved1 */
 void ata_SMARTCmd(struct IOStdReq *io)

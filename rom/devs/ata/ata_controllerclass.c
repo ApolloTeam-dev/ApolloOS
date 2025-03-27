@@ -18,7 +18,7 @@
 
 #include "ata.h"
 
-#define DD(x) x
+#define DD(x)
 
 const char ata_IDEName[] = "IDE Controller";
 

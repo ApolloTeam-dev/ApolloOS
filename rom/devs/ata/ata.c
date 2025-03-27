@@ -30,7 +30,7 @@
 #include LC_LIBDEFS_FILE
 
 #define DINIT(x)
-#define DD(x) x
+#define DD(x) 
 #define DDD(x)
 
 //---------------------------IO Commands---------------------------------------
@@ -89,7 +89,7 @@ static void cmd_Read32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
             return;
         }
 
-        if (unit->au_SectorShift == 9) /* use cache with 512 Byte sectors only */
+        if ((unit->au_SectorShift == 9) && ((unit->au_XferModes & AF_XFER_PACKET)==0)) /* use cache with 512 Byte sectors only */
         {
             struct ata_Bus *bus = unit->au_Bus;
             struct ataBase *base = bus->ab_Base;
@@ -196,7 +196,7 @@ static void cmd_Read64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
                 return;
             }
 
-            if (unit->au_SectorShift == 9) /* use cache with 512 Byte sectors only */
+            if ((unit->au_SectorShift == 9) && ((unit->au_XferModes & AF_XFER_PACKET)==0)) /* use cache with 512 Byte sectors only */
             {
                 struct ata_Bus *bus = unit->au_Bus;
                 struct ataBase *base = bus->ab_Base;
@@ -259,7 +259,7 @@ static void cmd_Read64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
                 return;
             }
 
-            if (unit->au_SectorShift == 9) /* use cache with 512 Byte sectors only */
+            if ((unit->au_SectorShift == 9) && ((unit->au_XferModes & AF_XFER_PACKET)==0))  /* use cache with 512 Byte sectors only */
             {
                 struct ata_Bus *bus = unit->au_Bus;
                 struct ataBase *base = bus->ab_Base;
@@ -365,12 +365,15 @@ static void cmd_Write32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
         /* Call the Unit's access funtion */
         io->io_Error = unit->au_Write32(unit, block, count, IOStdReq(io)->io_Data, &cnt);
 
-        struct ata_Bus *bus = unit->au_Bus;
-        struct ataBase *base = bus->ab_Base;
-        for (int i = 0; i < count; i++)
+        if ((unit->au_SectorShift == 9) && ((unit->au_XferModes & AF_XFER_PACKET)==0)) 
         {
-            ULONG blockAdr = (block + i) & CACHE_MASK;
-            base->ata_CacheTags[blockAdr] = 0xfffffffffffffffful;
+            struct ata_Bus *bus = unit->au_Bus;
+            struct ataBase *base = bus->ab_Base;
+            for (int i = 0; i < count; i++)
+            {
+                ULONG blockAdr = (block + i) & CACHE_MASK;
+                base->ata_CacheTags[blockAdr] = 0xfffffffffffffffful;
+            }
         }
         
         IOStdReq(io)->io_Actual = cnt;
@@ -447,14 +450,17 @@ static void cmd_Write64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
                 IOStdReq(io)->io_Data, &cnt);
         }
 
-        struct ata_Bus *bus = unit->au_Bus;
-        struct ataBase *base = bus->ab_Base;
-        for (int i = 0; i < count; i++)
+        if ((unit->au_SectorShift == 9) && ((unit->au_XferModes & AF_XFER_PACKET)==0)) 
         {
-            ULONG blockAdr = (block + i) & CACHE_MASK;
-            base->ata_CacheTags[blockAdr] = 0xfffffffffffffffful;
+            struct ata_Bus *bus = unit->au_Bus;
+            struct ataBase *base = bus->ab_Base;
+            for (int i = 0; i < count; i++)
+            {
+                ULONG blockAdr = (block + i) & CACHE_MASK;
+                base->ata_CacheTags[blockAdr] = 0xfffffffffffffffful;
+            }
         }
-        
+
         IOStdReq(io)->io_Actual = cnt;
     }
 }

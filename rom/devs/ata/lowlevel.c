@@ -18,10 +18,10 @@
 #define DERROR(x) x
 
 // add #define DINIT(x) x for output on Initialization routines
-#define DINIT(x) x
+#define DINIT(x) 
 
 // add #define DD(x) x for regular level debug output
-#define DD(x) x
+#define DD(x) 
 
 // add #define DDD(x) x for output on low level routines
 #define DDD(x)
@@ -285,7 +285,7 @@ WAITDATAREQ:
         status = PIO_In(bus, atapi_Status);
         ata_WaitNano(400, bus->ab_Base);
         retry_busy++;
-        if (retry_busy == 1000000)
+        if (retry_busy == 5000000)
         {
             DERROR(bug("[ATAPI] *** ERROR: ata_IRQPIOReadAtapi - ATAF_BUSY not cleared!\n"));
             break;
@@ -376,7 +376,7 @@ WAITDATAREQW:
         status = PIO_In(bus, atapi_Status);
         ata_WaitNano(400, bus->ab_Base);
         retry_busy++;
-        if (retry_busy == 1000000)
+        if (retry_busy == 5000000)
         {
             DERROR(bug("[ATAPI] *** ERROR: ata_IRQPIOWriteAtapi - ATAF_BUSY not cleared!\n"));
             break;
@@ -696,7 +696,7 @@ static BYTE atapi_DirectSCSI(struct ata_Unit *unit, struct SCSICmd *cmd)
 
     DD(bug("[ATA:%02lx] atapi_DirectSCSI: SCSI Flags: %02lx / Error: %ld\n", unit->au_UnitNum, cmd->scsi_Flags, err));
 
-     if ((err != 0) && (cmd->scsi_Flags & SCSIF_AUTOSENSE))
+    if ((err != 0) && (cmd->scsi_Flags & SCSIF_AUTOSENSE))
     {
         DERROR(bug("[DSCSI] atapi_DirectSCSI: Calling atapi_RequestSense\n"));
         atapi_RequestSense(unit, cmd->scsi_SenseData, cmd->scsi_SenseLength);
@@ -1197,7 +1197,7 @@ static BYTE ata_Identify(struct ata_Unit *unit)
         }
 
         ULONG retry_test = 10;
-        while(!(atapi_TestUnitOK(unit)))
+        while(!(atapi_TestUnitOK(unit)) || (retry_test > 5))
         {
             if ((retry_test--) == 0)
             {
@@ -1574,29 +1574,29 @@ BOOL atapi_TestUnitOK(struct ata_Unit *unit)
         
     result = unit->au_DirectSCSI(unit, &sc);
 
-    if( result == 0 )                                       // Check for Error
-    {
-        if ( (unit->au_Flags & AF_DiscPresent) == 0 )       // TRUE -> Check if AF_DiscPresent is Cleared 
-        {
-            unit->au_Flags |= AF_DiscPresent;                   // TRUE -> Set AF_DiscPresent
-            unit->au_Flags |= AF_DiscChanged;                   // TRUE -> Set AF_DiscChanged
-        }
-    } else {
-        unit->au_Flags &= ~AF_DiscPresent;                  // FALSE -> clear AF_DiscPresent
-    }
-
-    DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: | Result = %d | Media = %s | Change = %s\n", unit->au_UnitNum, result, unit->au_Flags & AF_DiscPresent ? "YES" : "NO", unit->au_Flags & AF_DiscChanged ? "YES" : "NO"));
-   
     if ( (unit->au_cmd_error) == HFERR_BadStatus )
     {
+        DINIT(bug("[ATA:%02ld] unit->au_cmd_error) == HFERR_BadStatus\n", unit->au_UnitNum));
+        unit->au_Flags &= ~AF_DiscPresent;                  // FALSE -> clear AF_DiscPresent
         unit->au_Capacity = 0;
         unit->au_Capacity48 = 0;
         unit->au_Heads = 0;
         unit->au_Cylinders = 0;
         unit->au_Sectors = 0;
         capacity.blocksize = 0;
-        return(FALSE);
+        if (result == 0)
+        {   
+            return(TRUE);                                   // No Media but valid Device
+        } else {
+            return(FALSE);                                  // Error on Device
+        }
     } else {
+        if ( (unit->au_Flags & AF_DiscPresent) == 0 )       // TRUE -> Check if AF_DiscPresent is Cleared 
+        {
+            unit->au_Flags |= AF_DiscPresent;                   // TRUE -> Set AF_DiscPresent
+            unit->au_Flags |= AF_DiscChanged;                   // TRUE -> Set AF_DiscChanged
+        }      
+        
         unit->au_Capacity   = capacity.logicalsectors;
 
         #define HEADS_PER_CYLINDER  16
@@ -1609,8 +1609,10 @@ BOOL atapi_TestUnitOK(struct ata_Unit *unit)
         unit->au_Sectors    = (UBYTE)SECTORS_PER_TRACK;
     }
 
+    DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: | Result = %d | Media = %s | Change = %s\n",
+         unit->au_UnitNum, result, unit->au_Flags & AF_DiscPresent ? "YES" : "NO", unit->au_Flags & AF_DiscChanged ? "YES" : "NO"));
     DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: LBA = %u | Block = %u | Cylinders = %u | Heads = %u | Sectors = %u\n",
-        unit->au_UnitNum, unit->au_Capacity, capacity.blocksize, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors));
+         unit->au_UnitNum, unit->au_Capacity, capacity.blocksize, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors));
     
     return(TRUE);
 }
@@ -1620,13 +1622,13 @@ static BYTE atapi_Read(struct ata_Unit *unit, ULONG block, ULONG count, APTR buf
     UBYTE cmd[] = {SCSI_READ10, 0, block>>24, block>>16, block>>8, block, 0, count>>8, count, 0};
     struct SCSICmd sc = {0};
 
-    DD(bug("\n[ATA:%02ld] atapi_Read()\n", unit->au_UnitNum));
-
     sc.scsi_Command = (void*) &cmd;
     sc.scsi_CmdLength = sizeof(cmd);
     sc.scsi_Data = buffer;
     sc.scsi_Length = count << unit->au_SectorShift;
     sc.scsi_Flags = SCSIF_READ;
+
+    DD(bug("\n[ATA:%02ld] atapi_Read() | Block=%u | Sectors=%u | Bytes=%u\n", unit->au_UnitNum, block, count, sc.scsi_Length));
 
     return unit->au_DirectSCSI(unit, &sc);
 }
@@ -1637,13 +1639,13 @@ static BYTE atapi_Write(struct ata_Unit *unit, ULONG block, ULONG count,
     UBYTE cmd[] = {SCSI_WRITE10, 0, block>>24, block>>16, block>>8, block, 0, count>>8, count, 0};
     struct SCSICmd sc = {0};
 
-    DD(bug("\n[ATA:%02ld] atapi_Write()\n", unit->au_UnitNum));
-
     sc.scsi_Command = (void*) &cmd;
     sc.scsi_CmdLength = sizeof(cmd);
     sc.scsi_Data = buffer;
     sc.scsi_Length = count << unit->au_SectorShift;
     sc.scsi_Flags = SCSIF_WRITE;
+
+    DD(bug("\n[ATA:%02ld] atapi_Write() | Block=%u | Sectors=%u | Bytes=%u\n", unit->au_UnitNum, block, count, sc.scsi_Length));
 
     return unit->au_DirectSCSI(unit, &sc);
 }

@@ -49,7 +49,7 @@ static UBYTE scsi_read32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG l
     bug("[SCSI] scsi_read32\n");
     
      UBYTE io_Error = 0;
-     if (unit->au_SectorShift == 9) /* use cache with 512 Byte sectors only */
+     if ((unit->au_SectorShift == 9) && ((unit->au_XferModes & AF_XFER_PACKET)==0))  /* use cache with 512 Byte sectors only */
      {
          struct ata_Bus *bus = unit->au_Bus;
          struct ataBase *base = bus->ab_Base;
@@ -112,16 +112,20 @@ static UBYTE scsi_read32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG l
 static UBYTE scsi_write32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG len, ULONG *outlen)
 {
     bug("[SCSI] scsi_write32\n");
-    
-     struct ata_Bus *bus = unit->au_Bus;
-     struct ataBase *base = bus->ab_Base;
-     UBYTE err;
-     
-     for (int i = 0; i < len; i++)
-     {
-         ULONG blockAdr = (offset + i) & CACHE_MASK;
-         base->ata_CacheTags[blockAdr] = 0xfffffffffffffffful;
-     }
+
+    UBYTE err;
+
+    if ((unit->au_SectorShift == 9) && ((unit->au_XferModes & AF_XFER_PACKET)==0)) 
+    {
+        struct ata_Bus *bus = unit->au_Bus;
+        struct ataBase *base = bus->ab_Base;
+        
+        for (int i = 0; i < len; i++)
+        {
+            ULONG blockAdr = (offset + i) & CACHE_MASK;
+            base->ata_CacheTags[blockAdr] = 0xfffffffffffffffful;
+        }
+    }
     
      err = unit->au_Write32(unit, offset, len, data, outlen);
      if (err) /* on error try again */
