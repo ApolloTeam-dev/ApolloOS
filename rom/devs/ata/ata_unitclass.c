@@ -16,7 +16,7 @@
 
 #include "ata.h"
 
-#define DD(x) 
+#define DD(x) x
 
 static const char *str_devicename = "ata.device";
 

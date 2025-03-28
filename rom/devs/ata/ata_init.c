@@ -41,7 +41,7 @@
 
 #include LC_LIBDEFS_FILE
 
-#define DD(x) 
+#define DD(x) x
 
 /* Add a bootnode using expansion.library */
 BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit)

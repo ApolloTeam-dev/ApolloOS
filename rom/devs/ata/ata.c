@@ -29,10 +29,9 @@
 #include "ata.h"
 #include LC_LIBDEFS_FILE
 
-#define DINIT(x)
-#define DD(x) 
-#define DDD(x)
-
+#define DINIT(x) x
+#define DD(x) x
+#define DDD(x) 
 //---------------------------IO Commands---------------------------------------
 
 /* Invalid comand does nothing, complains only. */
@@ -63,7 +62,7 @@ static void cmd_Read32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
     ULONG block = IOStdReq(io)->io_Offset;
     ULONG count = IOStdReq(io)->io_Length;
 
-    //DD(bug("[ATA%02ld] %s(%08x, %08x)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, block, count));
+    DDD(bug("[ATA%02ld] %s(%08x, %08x)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, block, count));
 
     ULONG mask = (1 << unit->au_SectorShift) - 1;
 
@@ -503,18 +502,19 @@ static void cmd_TestChanged(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
         {
             unit->au_ChangeNum++;
 
-            DD(bug("#############################################\n[ATA%02ld] cmd_TestChanged: Disk Change Detected | unit->au_ChangeNum = %d\n#############################################\n\n", unit->au_UnitNum, unit->au_ChangeNum);)
+            DD(bug("#############################################\n[ATA%02ld] cmd_TestChanged: Disk %s Detected | unit->au_ChangeNum = %d\n#############################################\n",
+                unit->au_UnitNum, (unit->au_Flags & AF_DiscPresent)? "INSERT" : "REMOVE", unit->au_ChangeNum);)
 
             Forbid();
 
-            /* old-fashioned RemoveInt call first */
+            // old-fashioned RemoveInt call first 
             if (unit->au_RemoveInt)
             {
                 Cause(unit->au_RemoveInt);
-                bug("[ATA%02ld] Calling unit->au_RemoveInt\n");
+                bug("[ATA%02ld] Calling unit->au_RemoveInt\n, unit->au_UnitNum");
             }
 
-            /* And now the whole list of possible calls */
+            // And now the whole list of possible calls 
             ForeachNode(&unit->au_SoftList, msg)
             {
                 Cause((struct Interrupt *)IOStdReq(msg)->io_Data);
@@ -634,13 +634,10 @@ static void cmd_GetGeometry(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 
         if (unit->au_Capacity48 != 0)
         {
-            if ((unit->au_Capacity48 >> 32) != 0)
-                dg->dg_TotalSectors     = 0xffffffff;
-            else
-                dg->dg_TotalSectors     = unit->au_Capacity48;
+            if ((unit->au_Capacity48 >> 32) != 0) dg->dg_TotalSectors = 0xffffffff;
+            else dg->dg_TotalSectors     = unit->au_Capacity48;
         }
-        else
-            dg->dg_TotalSectors         = unit->au_Capacity;
+        else dg->dg_TotalSectors         = unit->au_Capacity;
 
         dg->dg_Cylinders                = unit->au_Cylinders;
         dg->dg_CylSectors               = unit->au_Sectors * unit->au_Heads;
@@ -648,14 +645,13 @@ static void cmd_GetGeometry(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
         dg->dg_TrackSectors             = unit->au_Sectors;
         dg->dg_BufMemType               = MEMF_PUBLIC;
         dg->dg_DeviceType               = unit->au_DevType;
-        if (dg->dg_DeviceType != DG_DIRECT_ACCESS)
-            dg->dg_Flags                    = (unit->au_Flags & AF_Removable) ? DGF_REMOVABLE : 0;
-        else
-            dg->dg_Flags                = 0;
+        //if (dg->dg_DeviceType != DG_DIRECT_ACCESS) 
+        dg->dg_Flags                    = (unit->au_Flags & AF_Removable) ? DGF_REMOVABLE : 0;
+        //else dg->dg_Flags                = 0;
         dg->dg_Reserved                 = 0;
 
-        DD(bug("[ATA%02ld] %s(): LBA:%u | LBA48:%llu | CYL:%u | HDS:%u | SEC:%u | TYPE:%u\n",
-            ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, unit->au_Capacity, unit->au_Capacity48, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors, unit->au_DevType));
+        DD(bug("[ATA%02ld] %s(): LBA:%u | LBA48:%llu | CYL:%u | HDS:%u | SEC:%u | BLOCK:%u | TYPE:%u | REMOVABLE:%s\n",
+            ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, unit->au_Capacity, unit->au_Capacity48, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors, dg->dg_SectorSize, unit->au_DevType, (unit->au_Flags & AF_Removable) ? "YES" : "NO" ));
 
         IOStdReq(io)->io_Actual = sizeof(struct DriveGeometry);
     }
@@ -977,7 +973,7 @@ AROS_LH1(void, BeginIO,
     /* Disable interrupts for a while to modify message flags */
     Disable();
 
-    //DD(bug("[ATA%02ld] %s: Executing IO Command %lx\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, io->io_Command));
+    DD(bug("[ATA%02ld] %s: Executing IO Command %lx\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, io->io_Command));
 
     /*
         If the command is not-immediate, or presence of disc is still unknown,
@@ -985,6 +981,8 @@ AROS_LH1(void, BeginIO,
     */
     if (isSlow(io))
     {
+        DD(bug("[ATA%02ld] %s: ->Slow command\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+        
         unit->au_Unit.unit_flags |= UNITF_ACTIVE | UNITF_INTASK;
         io->io_Flags &= ~IOF_QUICK;
         Enable();
@@ -1013,7 +1011,6 @@ AROS_LH1(void, BeginIO,
         }
     }
 
-    //DD(bug("[ATA%02ld] %s: Done\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
     AROS_LIBFUNC_EXIT
 }
 
@@ -1198,12 +1195,7 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
                         
                         struct ata_Controller *ataNode = NULL;
 
-                        if (unit->au_DevType == DG_DIRECT_ACCESS)
-                        {
-                            ata_RegisterVolume(0, unit->au_Cylinders - 1, unit);
-                        } else {
-                            ata_RegisterVolume(0, 0, unit);
-                        }
+                        ata_RegisterVolume(0, 0, unit);
 
                         //OOP_GetAttr(bus->ab_Object, aHidd_ATABus_Controller, (IPTR *)ataNode);        // [WD]: This does not work, replaced buy code below
                         

@@ -18,16 +18,16 @@
 #define DERROR(x) x
 
 // add #define DINIT(x) x for output on Initialization routines
-#define DINIT(x) 
+#define DINIT(x) x
 
 // add #define DD(x) x for regular level debug output
-#define DD(x) 
+#define DD(x) x
 
 // add #define DDD(x) x for output on low level routines
 #define DDD(x)
 
 // add #define DATAPI(x) x for output on Atapi routines
-#define DATAPI(x)
+#define DATAPI(x) x
 
 #define VREG_BOARD_Unknown  0x00 /* Unknown                         */
 #define VREG_BOARD_V600     0x01 /* Vampire V2 V600(+),   for A600  */
@@ -96,7 +96,7 @@ static inline BOOL ata_SelectUnit(struct ata_Unit* unit)
 
     if (unit == bus->ab_SelectedUnit) return TRUE;
 
-    DD(bug("ata_SelectUnit: CHANGE SELECTUNIT = %01d\n", unit->au_UnitNum);)
+    DD(bug("[ATA%02ld] ata_SelectUnit: CHANGE SELECTUNIT\n", unit->au_UnitNum);)
 
     PIO_Out(bus, unit->au_DevMask, ata_DevHead);
 
@@ -230,8 +230,8 @@ WAITBUSY:
     {
         goto WAITBUSY;
     }
-
-    DATAPI(bug("\n[ATAPI] ata_IRQPIOReadAtapi - Status: %lx\n", status));
+    DDD(bug("\n"));
+    DATAPI(bug("[ATAPI] ata_IRQPIOReadAtapi - Status: %lx\n", status));
 
 WAITDATAREQ:
     status = PIO_In(unit->au_Bus, ata_Status);
@@ -251,10 +251,10 @@ WAITDATAREQ:
     {
         goto WAITDATAREQ;
     }
-
+    DDD(bug("\n"));
     size = PIO_In(bus, atapi_ByteCntH) << 8 | PIO_In(bus, atapi_ByteCntL);
     
-    DATAPI(bug("\n[ATAPI] ata_IRQPIOReadAtapi: data available for read (%ld bytes, max: %ld bytes)\n", size, unit->au_cmd_total));
+    DATAPI(bug("[ATAPI] ata_IRQPIOReadAtapi: data available for read (%ld bytes, max: %ld bytes)\n", size, unit->au_cmd_total));
 
     if (size > unit->au_cmd_total)
     {
@@ -321,8 +321,8 @@ WAITBUSYW:
     {
         goto WAITBUSYW;
     }
-
-    DATAPI(bug("\n[ATAPI] ata_IRQPIOWriteAtapi - Status: %lx\n", status));
+    DDD(bug("\n"));
+    DATAPI(bug("[ATAPI] ata_IRQPIOWriteAtapi - Status: %lx\n", status));
 
 WAITDATAREQW:
     status = PIO_In(unit->au_Bus, ata_Status);
@@ -342,10 +342,10 @@ WAITDATAREQW:
     {
         goto WAITDATAREQW;
     }
-
+    DDD(bug("\n"));
     size = PIO_In(bus, atapi_ByteCntH) << 8 | PIO_In(bus, atapi_ByteCntL);
 
-    DATAPI(bug("\n[ATAPI] ata_IRQPIOWriteAtapi: data requested for write (%ld bytes, max: %ld bytes)\n", size, unit->au_cmd_total));
+    DATAPI(bug("[ATAPI] ata_IRQPIOWriteAtapi: data requested for write (%ld bytes, max: %ld bytes)\n", size, unit->au_cmd_total));
 
     if (size > unit->au_cmd_total)
     {
@@ -625,8 +625,9 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
             break;
         }
     } while ((status & (ATAF_BUSY | ATAF_DATAREQ)) != 0);  // Wait for BSY and DRQ to CLEAR
+    DDD(bug("\n"));
 
-    DD(bug("\n[ATAPI] atapi_SendPacket - Data Lenght = %u\n", datalen));
+    DD(bug("[ATAPI] atapi_SendPacket - Data Lenght = %u\n", datalen));
     PIO_Out(bus, (datalen & 0xff), atapi_ByteCntL);
     PIO_Out(bus, (datalen >> 8) & 0xff, atapi_ByteCntH);
     
@@ -648,6 +649,7 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
             break;
         }         
     } while ((status & ATAF_DATAREQ) != ATAF_DATAREQ);  // Wait for DRQ to SET
+    DDD(bug("\n"));
 
     if (datalen == 0) ata_IRQSetHandler(unit, &ata_IRQNoData, 0, 0, 0);
     else if (write)   ata_IRQSetHandler(unit, &ata_IRQPIOWriteAtapi, data, 0, datalen);
@@ -657,7 +659,7 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
     ata_WaitNano(400, bus->ab_Base);
 
     status = PIO_In(bus, ata_Status);
-    DD(bug("\n[ATAPI] atapi_SendPacket - Status after atapi_Command: %lx\n", status));  
+    DD(bug("[ATAPI] atapi_SendPacket - Status after atapi_Command: %lx\n", status));  
 
     if (status & ATAF_ERROR) // Check for BUS Error
     {
@@ -1181,7 +1183,7 @@ static BYTE ata_Identify(struct ata_Unit *unit)
 
             case DG_DIRECT_ACCESS:
                 unit->au_SectorShift = 9;
-                if (!strcmp("LS-120", &unit->au_Model[0]))                  // CHANGE: HARDCODED SUCKS
+                /*if (!strcmp("LS-120", &unit->au_Model[0]))                  // CHANGE: HARDCODED SUCKS
                 {
                     unit->au_Heads      = 2;
                     unit->au_Sectors    = 18;
@@ -1192,7 +1194,7 @@ static BYTE ata_Identify(struct ata_Unit *unit)
                     unit->au_Heads      = 1;
                     unit->au_Sectors    = 64;
                     unit->au_Cylinders  = 3072;
-                }
+                }*/
                 break;
         }
 
@@ -1570,49 +1572,70 @@ BOOL atapi_TestUnitOK(struct ata_Unit *unit)
     sc.scsi_Length      = sizeof(capacity);
     sc.scsi_SenseData   = 0;
 
-    DINIT(bug("\n[ATA:%02ld] atapi_TestUnitOK - Sending Read Capacity ATAPI Command\n", unit->au_UnitNum));
+    DINIT(bug("[ATA:%02ld] atapi_TestUnitOK - Sending Read Capacity ATAPI Command\n", unit->au_UnitNum));
         
     result = unit->au_DirectSCSI(unit, &sc);
 
     if ( (unit->au_cmd_error) == HFERR_BadStatus )
     {
         DINIT(bug("[ATA:%02ld] unit->au_cmd_error) == HFERR_BadStatus\n", unit->au_UnitNum));
-        unit->au_Flags &= ~AF_DiscPresent;                  // FALSE -> clear AF_DiscPresent
-        unit->au_Capacity = 0;
+
+        if ( (unit->au_Flags & AF_DiscPresent) == AF_DiscPresent )      // Media Absent -> Check if AF_DiscPresent is Set 
+        {
+            unit->au_Flags &= ~AF_DiscPresent;                          // Clear AF_DiscPresent
+            unit->au_Flags |= AF_DiscChanged;                           // Set AF_DiscChanged
+        }    
+
+        /*unit->au_Capacity = 196575;
         unit->au_Capacity48 = 0;
-        unit->au_Heads = 0;
-        unit->au_Cylinders = 0;
-        unit->au_Sectors = 0;
-        capacity.blocksize = 0;
+        unit->au_Heads = 16;
+        unit->au_Cylinders = 195;
+        unit->au_Sectors = 63;
+        capacity.blocksize = 512;*/
+
+        DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: | Result = %d | Media = %s | Change = %s\n",
+            unit->au_UnitNum, result, unit->au_Flags & AF_DiscPresent ? "YES" : "NO", unit->au_Flags & AF_DiscChanged ? "YES" : "NO"));
+
+        DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: LBA = %u | Block = %u | Cylinders = %u | Heads = %u | Sectors = %u\n",
+            unit->au_UnitNum, unit->au_Capacity, 1<<unit->au_SectorShift , unit->au_Cylinders, unit->au_Heads, unit->au_Sectors));
+  
+
         if (result == 0)
         {   
-            return(TRUE);                                   // No Media but valid Device
+            return(TRUE);                                               // No Media but valid Device
         } else {
-            return(FALSE);                                  // Error on Device
+            return(FALSE);                                              // Error on Device
         }
     } else {
-        if ( (unit->au_Flags & AF_DiscPresent) == 0 )       // TRUE -> Check if AF_DiscPresent is Cleared 
+        if ( (unit->au_Flags & AF_DiscPresent) == 0 )                   // Media Present -> Check if AF_DiscPresent is Cleared 
         {
-            unit->au_Flags |= AF_DiscPresent;                   // TRUE -> Set AF_DiscPresent
-            unit->au_Flags |= AF_DiscChanged;                   // TRUE -> Set AF_DiscChanged
+            unit->au_Flags |= AF_DiscPresent;                           // Set AF_DiscPresent
+            unit->au_Flags |= AF_DiscChanged;                           // Set AF_DiscChanged
         }      
         
-        unit->au_Capacity   = capacity.logicalsectors;
+        if ((unit->au_DevType) == DG_DIRECT_ACCESS)
+        {
+            unit->au_Capacity   = capacity.logicalsectors;
 
-        #define HEADS_PER_CYLINDER  16
-        #define SECTORS_PER_TRACK   63
+            #define HEADS_PER_CYLINDER  16
+            #define SECTORS_PER_TRACK   63
+        
+            ULONG translated_cylinders  = capacity.logicalsectors / (HEADS_PER_CYLINDER * SECTORS_PER_TRACK);
+        
+            unit->au_Cylinders  = (ULONG)translated_cylinders;
+            unit->au_Heads      = (UBYTE)HEADS_PER_CYLINDER;
+            unit->au_Sectors    = (UBYTE)SECTORS_PER_TRACK;
+        }
     
-        ULONG translated_cylinders  = capacity.logicalsectors / (HEADS_PER_CYLINDER * SECTORS_PER_TRACK);
-    
-        unit->au_Cylinders  = (ULONG)translated_cylinders;
-        unit->au_Heads      = (UBYTE)HEADS_PER_CYLINDER;
-        unit->au_Sectors    = (UBYTE)SECTORS_PER_TRACK;
+        DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: | Result = %d | Media = %s | Change = %s\n",
+            unit->au_UnitNum, result, unit->au_Flags & AF_DiscPresent ? "YES" : "NO", unit->au_Flags & AF_DiscChanged ? "YES" : "NO"));
+
+        DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: LBA = %u | Block = %u | Cylinders = %u | Heads = %u | Sectors = %u\n",
+            unit->au_UnitNum, unit->au_Capacity, capacity.blocksize, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors));
+
     }
 
-    DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: | Result = %d | Media = %s | Change = %s\n",
-         unit->au_UnitNum, result, unit->au_Flags & AF_DiscPresent ? "YES" : "NO", unit->au_Flags & AF_DiscChanged ? "YES" : "NO"));
-    DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: LBA = %u | Block = %u | Cylinders = %u | Heads = %u | Sectors = %u\n",
-         unit->au_UnitNum, unit->au_Capacity, capacity.blocksize, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors));
+
     
     return(TRUE);
 }

@@ -18,22 +18,18 @@
 
 #include "ata.h"
 
-#define DD(x)
+#define DD(x) x
 
 const char ata_IDEName[] = "IDE Controller";
 
 OOP_Object *ATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg)
 {
     struct ataBase *ATABase = cl->UserData;
-//	char *ataControllerName = (char *)GetTagData(aHidd_HardwareName, (IPTR)ata_IDEName, msg->attrList);
 
     OOP_Object *ataController = (OOP_Object *)OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
     if (ataController)
     {
         struct ata_Controller *data = OOP_INST_DATA(cl, ataController);
-//		data->ac_Node.ln_Name = ataControllerName;
-
-//		DD(bug ("[ATA:Controller] Root__New: New '%s' Controller Obj @ 0x%p\n", ataControllerName, ataController);)
 
         /*register the controller in ata.device */
         DD(bug ("[ATA:Controller] %s: Controller Entry @ 0x%p\n", __func__, data);)
@@ -41,7 +37,7 @@ OOP_Object *ATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg)
         data->ac_Class = cl;
         data->ac_Object = ataController;
 
-        /* Try to setup daemon task looking for diskchanges 
+        // Try to setup daemon task looking for diskchanges 
         NEWLIST(&data->Daemon_ios);
         InitSemaphore(&data->DaemonSem);
         data->ac_daemonParent = FindTask(NULL);
@@ -62,7 +58,6 @@ OOP_Object *ATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg)
 
         Wait(SIGF_SINGLE);
         DD(bug("[ATA:Controller] %s: Daemon task set to 0x%p\n", __func__, data->ac_Daemon));
-        */
 
         AddTail(&ATABase->ata_Controllers, &data->ac_Node);
     }

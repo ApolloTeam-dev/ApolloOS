@@ -20,7 +20,7 @@
 #include <resources/execlock.h>
 #endif
 
-#define DD(x) 
+#define DD(x) x
 
 extern const char ata_LibName[];
 extern const char ata_LibID[];
