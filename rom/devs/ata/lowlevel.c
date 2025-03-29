@@ -27,7 +27,7 @@
 #define DDD(x)
 
 // add #define DATAPI(x) x for output on Atapi routines
-#define DATAPI(x) x
+#define DATAPI(x)
 
 #define VREG_BOARD_Unknown  0x00 /* Unknown                         */
 #define VREG_BOARD_V600     0x01 /* Vampire V2 V600(+),   for A600  */
@@ -137,12 +137,13 @@ static void ata_IRQPIORead(struct ata_Unit *unit, UBYTE status)
     ULONG   retrycount; 
 
 AGAIN:
-    retrycount=100000000;
+    retrycount=5000000;
 WAITBUSY: 
     status = PIO_In(unit->au_Bus, ata_Status);
 
     if (retrycount-- == 0)
     {
+        DERROR(bug("[ATA%02ld] ata_IRQPIORead: ERROR = ATAF_BUSY is NOT Cleared\n", unit->au_UnitNum));
         unit->au_cmd_error = HFERR_BadStatus;
         return;
     }
@@ -173,13 +174,14 @@ static void ata_IRQPIOWrite(struct ata_Unit *unit, UBYTE status)
     ULONG   retrycount;
 
 AGAINW:
-    retrycount=100000000;
+    retrycount=5000000;
 WAITBUSYW:
     status = PIO_In(unit->au_Bus, ata_Status);
 
     retrycount--;
     if (retrycount-- == 0)
     {
+        DERROR(bug("[ATA%02ld] ata_IRQPIORead: ERROR = ATAF_BUSY is NOT Cleared\n", unit->au_UnitNum));
         unit->au_cmd_error = HFERR_BadStatus;
         return;
     }
@@ -208,7 +210,7 @@ static void ata_IRQPIOReadAtapi(struct ata_Unit *unit, UBYTE status)
     ULONG retry_busy, retry_datareq;
 
 AGAIN:
-    retry_busy = 1000000;
+    retry_busy = 5000000;
     retry_datareq = 500;
 
 WAITBUSY: 
@@ -220,7 +222,7 @@ WAITBUSY:
     {
         ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
         unit->au_cmd_error = HFERR_BadStatus;
-        DERROR(bug("[ATAPI] ata_IRQPIOReadAtapi: ERROR = RetryCount (1000000) reached ZERO on ATAF_BUSY clear\n"));
+        DERROR(bug("[ATAPI] ata_IRQPIOReadAtapi: ERROR = RetryCount (5000000) reached ZERO on ATAF_BUSY clear\n"));
         return;
     }
     
@@ -300,7 +302,7 @@ static void ata_IRQPIOWriteAtapi(struct ata_Unit *unit, UBYTE status)
     ULONG retry_busy, retry_datareq; 
     
 AGAINW:
-    retry_busy = 1000000;
+    retry_busy = 5000000;
     retry_datareq = 500;
 
 WAITBUSYW: 
@@ -312,7 +314,7 @@ WAITBUSYW:
     {
         ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
         unit->au_cmd_error = HFERR_BadStatus;
-        DERROR(bug("[ATAPI] ata_IRQPIOWriteAtapi: ERROR = RetryCount (1000000) reached ZERO on ATAF_BUSY clear\n"));
+        DERROR(bug("[ATAPI] ata_IRQPIOWriteAtapi: ERROR = RetryCount (5000000) reached ZERO on ATAF_BUSY clear\n"));
         return;
     }
 
@@ -621,18 +623,19 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
         retry_busy--;
         if (retry_busy == 0)
         {
-            DERROR(bug("\n[ATAPI] *** ERROR: ATAF_BUSY | ATAF_DATAREQ not cleared, status = %u\n", status));
+            DDD(bug("\n"));
+            DERROR(bug("[ATAPI] atapi_SendPacket - ERROR: ATAF_BUSY | ATAF_DATAREQ not cleared, status = %u\n", status));
             break;
         }
     } while ((status & (ATAF_BUSY | ATAF_DATAREQ)) != 0);  // Wait for BSY and DRQ to CLEAR
     DDD(bug("\n"));
 
-    DD(bug("[ATAPI] atapi_SendPacket - Data Lenght = %u\n", datalen));
+    DDD(bug("[ATAPI] atapi_SendPacket - Data Lenght = %u\n", datalen));
     PIO_Out(bus, (datalen & 0xff), atapi_ByteCntL);
     PIO_Out(bus, (datalen >> 8) & 0xff, atapi_ByteCntH);
     
-    DD(status = PIO_In(bus, ata_Status));
-    DD(bug("[ATAPI] atapi_SendPacket - Status after atapi_ByteCntL/H: %lx\n", status)); 
+    DDD(status = PIO_In(bus, ata_Status));
+    DDD(bug("[ATAPI] atapi_SendPacket - Status after atapi_ByteCntL/H: %lx\n", status)); 
 
     PIO_OutAlt(bus, ATACTLF_INT_DISABLE, ata_AltControl);
     PIO_Out(bus, ATA_PACKET, atapi_Command);
@@ -645,7 +648,8 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
         retry_datareq--;
         if (retry_datareq == 0)
         {
-            DERROR(bug("\n[ATAPI] *** ERROR: ATAF_DATAREQ not set!"));
+            DDD(bug("\n"));
+            DERROR(bug("[ATAPI] atapi_SendPacket - ERROR: ATAF_DATAREQ not set!"));
             break;
         }         
     } while ((status & ATAF_DATAREQ) != ATAF_DATAREQ);  // Wait for DRQ to SET
@@ -659,7 +663,7 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
     ata_WaitNano(400, bus->ab_Base);
 
     status = PIO_In(bus, ata_Status);
-    DD(bug("[ATAPI] atapi_SendPacket - Status after atapi_Command: %lx\n", status));  
+    DDD(bug("[ATAPI] atapi_SendPacket - Status after atapi_Command: %lx\n", status));  
 
     if (status & ATAF_ERROR) // Check for BUS Error
     {
@@ -671,10 +675,10 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
     {
         if (write)
         {
-            DD(bug("[ATAPI] atapi_SendPacket - Start ata_IRQPIOWriteAtapi\n"));
+            DDD(bug("[ATAPI] atapi_SendPacket - Start ata_IRQPIOWriteAtapi\n"));
             ata_IRQPIOWriteAtapi(unit, ATAF_BUSY);
         } else {
-            DD(bug("[ATAPI] atapi_SendPacket - Start ata_IRQPIOReadAtapi\n"));           
+            DDD(bug("[ATAPI] atapi_SendPacket - Start ata_IRQPIOReadAtapi\n"));           
             ata_IRQPIOReadAtapi(unit, ATAF_BUSY);
         }
     }
@@ -692,11 +696,11 @@ static BYTE atapi_DirectSCSI(struct ata_Unit *unit, struct SCSICmd *cmd)
     cmd->scsi_Actual = 0;
     unit->au_cmd_error = 0;
 
-    DD(bug("[ATA:%02lx] atapi_DirectSCSI: Sending ATAPI packet\n", unit->au_UnitNum));
+    DDD(bug("[ATA:%02lx] atapi_DirectSCSI: Sending ATAPI packet\n", unit->au_UnitNum));
 
     err = atapi_SendPacket(unit, cmd->scsi_Command, cmd->scsi_Data, cmd->scsi_Length, &dma, (cmd->scsi_Flags & SCSIF_READ) == 0);
 
-    DD(bug("[ATA:%02lx] atapi_DirectSCSI: SCSI Flags: %02lx / Error: %ld\n", unit->au_UnitNum, cmd->scsi_Flags, err));
+    DDD(bug("[ATA:%02lx] atapi_DirectSCSI: SCSI Flags: %02lx / Error: %ld\n", unit->au_UnitNum, cmd->scsi_Flags, err));
 
     if ((err != 0) && (cmd->scsi_Flags & SCSIF_AUTOSENSE))
     {
@@ -1572,13 +1576,13 @@ BOOL atapi_TestUnitOK(struct ata_Unit *unit)
     sc.scsi_Length      = sizeof(capacity);
     sc.scsi_SenseData   = 0;
 
-    DINIT(bug("[ATA:%02ld] atapi_TestUnitOK - Sending Read Capacity ATAPI Command\n", unit->au_UnitNum));
+    //DINIT(bug("[ATA:%02ld] atapi_TestUnitOK - Sending Read Capacity ATAPI Command\n", unit->au_UnitNum));
         
     result = unit->au_DirectSCSI(unit, &sc);
 
     if ( (unit->au_cmd_error) == HFERR_BadStatus )
     {
-        DINIT(bug("[ATA:%02ld] unit->au_cmd_error) == HFERR_BadStatus\n", unit->au_UnitNum));
+        DINIT(bug("[ATA:%02ld] unit->au_cmd_error == HFERR_BadStatus\n", unit->au_UnitNum));
 
         if ( (unit->au_Flags & AF_DiscPresent) == AF_DiscPresent )      // Media Absent -> Check if AF_DiscPresent is Set 
         {
@@ -1593,12 +1597,11 @@ BOOL atapi_TestUnitOK(struct ata_Unit *unit)
         unit->au_Sectors = 63;
         capacity.blocksize = 512;*/
 
-        DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: | Result = %d | Media = %s | Change = %s\n",
-            unit->au_UnitNum, result, unit->au_Flags & AF_DiscPresent ? "YES" : "NO", unit->au_Flags & AF_DiscChanged ? "YES" : "NO"));
-
-        DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: LBA = %u | Block = %u | Cylinders = %u | Heads = %u | Sectors = %u\n",
+        DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: LBA = %u | Block = %u | Cylinders = %u | Heads = %u | Sectors = %u |",
             unit->au_UnitNum, unit->au_Capacity, 1<<unit->au_SectorShift , unit->au_Cylinders, unit->au_Heads, unit->au_Sectors));
-  
+
+        DINIT(bug("Result = %d | Media = %s | Change = %s\n",
+            result, unit->au_Flags & AF_DiscPresent ? "YES" : "NO", unit->au_Flags & AF_DiscChanged ? "YES" : "NO"));
 
         if (result == 0)
         {   
@@ -1627,11 +1630,11 @@ BOOL atapi_TestUnitOK(struct ata_Unit *unit)
             unit->au_Sectors    = (UBYTE)SECTORS_PER_TRACK;
         }
     
-        DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: | Result = %d | Media = %s | Change = %s\n",
-            unit->au_UnitNum, result, unit->au_Flags & AF_DiscPresent ? "YES" : "NO", unit->au_Flags & AF_DiscChanged ? "YES" : "NO"));
-
-        DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: LBA = %u | Block = %u | Cylinders = %u | Heads = %u | Sectors = %u\n",
+        DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: LBA = %u | Block = %u | Cylinders = %u | Heads = %u | Sectors = %u | ",
             unit->au_UnitNum, unit->au_Capacity, capacity.blocksize, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors));
+
+        DINIT(bug("Result = %d | Media = %s | Change = %s\n",
+            result, unit->au_Flags & AF_DiscPresent ? "YES" : "NO", unit->au_Flags & AF_DiscChanged ? "YES" : "NO"));
 
     }
 
@@ -1651,7 +1654,7 @@ static BYTE atapi_Read(struct ata_Unit *unit, ULONG block, ULONG count, APTR buf
     sc.scsi_Length = count << unit->au_SectorShift;
     sc.scsi_Flags = SCSIF_READ;
 
-    DD(bug("\n[ATA:%02ld] atapi_Read() | Block=%u | Sectors=%u | Bytes=%u\n", unit->au_UnitNum, block, count, sc.scsi_Length));
+    DD(bug("[ATA:%02ld] atapi_Read() | Block=%u | Sectors=%u | Bytes=%u\n", unit->au_UnitNum, block, count, sc.scsi_Length));
 
     return unit->au_DirectSCSI(unit, &sc);
 }
@@ -1668,7 +1671,7 @@ static BYTE atapi_Write(struct ata_Unit *unit, ULONG block, ULONG count,
     sc.scsi_Length = count << unit->au_SectorShift;
     sc.scsi_Flags = SCSIF_WRITE;
 
-    DD(bug("\n[ATA:%02ld] atapi_Write() | Block=%u | Sectors=%u | Bytes=%u\n", unit->au_UnitNum, block, count, sc.scsi_Length));
+    DD(bug("[ATA:%02ld] atapi_Write() | Block=%u | Sectors=%u | Bytes=%u\n", unit->au_UnitNum, block, count, sc.scsi_Length));
 
     return unit->au_DirectSCSI(unit, &sc);
 }
@@ -1720,7 +1723,7 @@ static ULONG ata_ReadSignature(struct ata_Bus *bus, int unit, BOOL *DiagExecuted
 {
     UBYTE status;
     UBYTE tmp1, tmp2;
-    ULONG retrycount = 10000000;
+    ULONG retrycount = 5000000;
 
     DINIT(bug("[ATA  ] ata_ReadSignature(%02ld)\n", unit));
 
@@ -1742,7 +1745,7 @@ static ULONG ata_ReadSignature(struct ata_Bus *bus, int unit, BOOL *DiagExecuted
     }
     while ((retrycount > 0) && (status & ATAF_BUSY));
     
-    DINIT( if (retrycount == 0) bug("[ATA  ] ata_ReadSignature: ERROR = ATAF_BUSY failed to clear within 10000000 tries\n") );
+    DINIT( if (retrycount == 0) bug("[ATA  ] ata_ReadSignature: ERROR = ATAF_BUSY failed to clear within 5000000 tries\n") );
     
     tmp1 = PIO_In(bus, ata_LBAMid);
     tmp2 = PIO_In(bus, ata_LBAHigh);
@@ -1928,7 +1931,7 @@ static BYTE atapi_EndCmd(struct ata_Unit *unit)
     struct ata_Bus *bus = unit->au_Bus;
     UBYTE status, error;
     
-    DD(bug("[ATA:%02ld] atapi_EndCmd: Command complete. Status: %lx\n", unit->au_UnitNum, status));
+    status = ata_ReadStatus(bus);
 
     if (!(status & ATAPIF_CHECK))
     {
@@ -1937,7 +1940,7 @@ static BYTE atapi_EndCmd(struct ata_Unit *unit)
         error = PIO_In(bus, atapi_Error);
         DERROR(bug("[ATA:%02ld] atapi_EndCmd: ERROR code 0x%lx\n", unit->au_UnitNum, error));
         
-        if (error != 0x60)
+        /*if (error != 0x60)
         {
             ULONG   sense_lenght = 18;
             UBYTE*  sense_data = AllocMem(sense_lenght, MEMF_ANY|MEMF_PUBLIC);
@@ -1945,7 +1948,7 @@ static BYTE atapi_EndCmd(struct ata_Unit *unit)
             atapi_RequestSense(unit, sense_data, sense_lenght);
 
             FreeMem(sense_data,sense_lenght);
-        }
+        }*/
         
         return ErrorMap[error >> 4];
     }
