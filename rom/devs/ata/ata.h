@@ -331,6 +331,8 @@ struct ata_Unit
    ULONG               au_Capacity;    /* Highest sector accessible through LBA28 */
    UQUAD               au_Capacity48;  /* Highest sector accessible through LBA48 */
    ULONG               au_Cylinders;
+   ULONG               au_StartCyl;    // Start Cylinder for Partition on ATAPI Devices
+   ULONG               au_EndCyl;      // End Cylinder for Partition on ATAPI Devices
    UBYTE               au_Heads;
    UBYTE               au_Sectors;
    UBYTE               au_Model[41];

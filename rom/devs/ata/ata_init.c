@@ -69,16 +69,15 @@ BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit)
                 DD(bug("[ATA>>]:-ata_RegisterVolume called on unknown devicetype\n"));
         }
 
-        if (unit->au_UnitNum < 10)
-            dosdevname[2] += unit->au_UnitNum % 10;
-        else
-            dosdevname[2] = 'A' - 10 + unit->au_UnitNum;
+        if (unit->au_UnitNum < 10) dosdevname[2] += unit->au_UnitNum % 10;
+        else dosdevname[2] = 'A' - 10 + unit->au_UnitNum;
     
-        pp[0] 		    = (IPTR)dosdevname;
-        pp[1]		    = (IPTR)MOD_NAME_STRING;
-        pp[2]		    = unit->au_UnitNum;
+        pp[0] 		            = (IPTR)dosdevname;
+        pp[1]		            = (IPTR)MOD_NAME_STRING;
+        pp[2]		            = unit->au_UnitNum;
         pp[DE_TABLESIZE    + 4] = DE_BOOTBLOCKS;
-        pp[DE_SIZEBLOCK    + 4] = 1 << (unit->au_SectorShift - 2);
+
+        pp[DE_SIZEBLOCK    + 4] = 1 << (unit->au_SectorShift - 2);          // LONG (32-bit) per Sector = (#Bytes/Sector)/4 = SectorSift-2 
         pp[DE_NUMHEADS     + 4] = unit->au_Heads;
         pp[DE_SECSPERBLOCK + 4] = 1;
         pp[DE_BLKSPERTRACK + 4] = unit->au_Sectors;
@@ -98,9 +97,10 @@ BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit)
 
         if (devnode)
         {
-            DD(bug("[ATA>>]:-ata_RegisterVolume=%b, type=0x%08lx | StartCyl=%d | EndCyl=%d .. ", devnode->dn_Name, pp[DE_DOSTYPE + 4], StartCyl, EndCyl));
+            DD(bug("[ATA>>]:-ata_RegisterVolume=%b, DosType=0x%08lx | LowCyl=%d | HighCyl=%d | Heads=%d | Blocksize=%d | BlockPerTrack=%d .. ",
+                devnode->dn_Name, pp[DE_DOSTYPE + 4], StartCyl, EndCyl, unit->au_Heads, 1 << unit->au_SectorShift, unit->au_Sectors));
 
-            if (unit->au_DevType == DG_DIRECT_ACCESS)
+            if (unit->au_DevType == DG_DIRECT_ACCESS) // && ((unit->au_Flags & AF_Removable) == 0))
             {
                 AddBootNode(pp[DE_BOOTPRI + 4], ADNF_STARTPROC, devnode, NULL);
                 DD(bug("BootNode (Direct Access Medium)\n"));

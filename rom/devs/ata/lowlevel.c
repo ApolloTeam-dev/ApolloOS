@@ -211,7 +211,7 @@ static void ata_IRQPIOReadAtapi(struct ata_Unit *unit, UBYTE status)
 
 AGAIN:
     retry_busy = 5000000;
-    retry_datareq = 500;
+    retry_datareq = 5000;
 
 WAITBUSY: 
     status = PIO_In(unit->au_Bus, ata_Status);
@@ -244,7 +244,7 @@ WAITDATAREQ:
     {
         ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
         unit->au_cmd_error = HFERR_BadStatus;
-        DERROR(bug("[ATAPI] ata_IRQPIOReadAtapi: ERROR = RetryCount (500) reached ZERO on ATAF_DATAREQ SET\n"));
+        DERROR(bug("[ATAPI] ata_IRQPIOReadAtapi: ERROR = RetryCount (5000) reached ZERO on ATAF_DATAREQ SET\n"));
         return;
     }
 
@@ -281,13 +281,13 @@ WAITDATAREQ:
     DERROR(status = PIO_In(unit->au_Bus, ata_Status));
     DERROR(if (status & ATAF_ERROR) bug("\n[ATAPI] *** ERROR: ata_IRQPIOReadAtapi - ATAF_ERROR"));
 
-    retry_busy = 0;
+    retry_busy = 5000000;
     do
     {
         status = PIO_In(bus, atapi_Status);
         ata_WaitNano(400, bus->ab_Base);
-        retry_busy++;
-        if (retry_busy == 5000000)
+        retry_busy--;
+        if (retry_busy == 0)
         {
             DERROR(bug("[ATAPI] *** ERROR: ata_IRQPIOReadAtapi - ATAF_BUSY not cleared!\n"));
             break;
@@ -303,7 +303,7 @@ static void ata_IRQPIOWriteAtapi(struct ata_Unit *unit, UBYTE status)
     
 AGAINW:
     retry_busy = 5000000;
-    retry_datareq = 500;
+    retry_datareq = 5000;
 
 WAITBUSYW: 
     status = PIO_In(unit->au_Bus, ata_Status);
@@ -335,7 +335,7 @@ WAITDATAREQW:
     {
         ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
         unit->au_cmd_error = HFERR_BadStatus;
-        DERROR(bug("\n[ATAPI] *** ERROR: ata_IRQPIOWriteAtapi: ERROR = RetryCount (500) reached ZERO on ATAF_DATAREQ SET\n"));
+        DERROR(bug("\n[ATAPI] *** ERROR: ata_IRQPIOWriteAtapi: ERROR = RetryCount (5000) reached ZERO on ATAF_DATAREQ SET\n"));
         return;
     }
 
@@ -372,13 +372,13 @@ WAITDATAREQW:
     DERROR(status = PIO_In(unit->au_Bus, ata_Status));
     DERROR(if (status & ATAF_ERROR) bug("\n[ATAPI] *** ERROR: ata_IRQPIOWriteAtapi - ATAF_ERROR"));
 
-    retry_busy = 0;
+    retry_busy = 5000000;
     do
     {
         status = PIO_In(bus, atapi_Status);
         ata_WaitNano(400, bus->ab_Base);
-        retry_busy++;
-        if (retry_busy == 5000000)
+        retry_busy--;
+        if (retry_busy == 0)
         {
             DERROR(bug("[ATAPI] *** ERROR: ata_IRQPIOWriteAtapi - ATAF_BUSY not cleared!\n"));
             break;
@@ -579,7 +579,7 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
     UBYTE status;
 
     ULONG retry_busy = 200000;
-    ULONG retry_datareq = 500;
+    ULONG retry_datareq = 5000;
 
     UBYTE cmd[12] = {0};
     register int t=5,l=0;
@@ -625,7 +625,7 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
         {
             DDD(bug("\n"));
             DERROR(bug("[ATAPI] atapi_SendPacket - ERROR: ATAF_BUSY | ATAF_DATAREQ not cleared, status = %u\n", status));
-            break;
+            return HFERR_BadStatus;
         }
     } while ((status & (ATAF_BUSY | ATAF_DATAREQ)) != 0);  // Wait for BSY and DRQ to CLEAR
     DDD(bug("\n"));
@@ -650,7 +650,7 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
         {
             DDD(bug("\n"));
             DERROR(bug("[ATAPI] atapi_SendPacket - ERROR: ATAF_DATAREQ not set!"));
-            break;
+            return HFERR_BadStatus;
         }         
     } while ((status & ATAF_DATAREQ) != ATAF_DATAREQ);  // Wait for DRQ to SET
     DDD(bug("\n"));
@@ -1183,24 +1183,37 @@ static BYTE ata_Identify(struct ata_Unit *unit)
                 unit->au_Heads          = 1;
                 unit->au_Sectors        = 75;
                 unit->au_Cylinders      = 4440;
+                unit->au_StartCyl       = 0;        // Handled by CD Filesystem
+                unit->au_EndCyl         = 0;        // Handled by CD Filesystem
+                unit->au_Capacity   = unit->au_Heads * unit->au_Sectors * unit->au_Cylinders;
+                unit->au_Capacity48 = unit->au_Capacity;
                 break;
 
             case DG_DIRECT_ACCESS:
-                unit->au_SectorShift = 9;
-                /*if (!strcmp("LS-120", &unit->au_Model[0]))                  // CHANGE: HARDCODED SUCKS
+                //DINIT(bug("[ATA:%02ld] ata_Identify: MODEL[0]=%s | MODEL[8]=%s | STRCMP = %u\n", unit->au_UnitNum, &unit->au_Model[0], &unit->au_Model[8], strcmp("ZIP 100", &unit->au_Model[8]) ));
+                
+                /*if (strcmp("LS-120", &unit->au_Model[0]) == 0)                  // CHANGE: HARDCODED SUCKS
                 {
                     unit->au_Heads      = 2;
                     unit->au_Sectors    = 18;
                     unit->au_Cylinders  = 6848;
                 }
-                else if (!strcmp("ZIP 100 ", &unit->au_Model[8]))           // CHANGE: HARDCODED SUCKS
-                {
-                    unit->au_Heads      = 1;
-                    unit->au_Sectors    = 64;
-                    unit->au_Cylinders  = 3072;
-                }*/
+                else if (strcmp("ZIP 100", &unit->au_Model[8]) == 0)           // CHANGE: HARDCODED SUCKS
+                {*/
+                    unit->au_SectorShift = 9;
+                    unit->au_Heads      = 16;
+                    unit->au_Sectors    = 63;
+                    unit->au_Cylinders  = 195;
+                    unit->au_StartCyl   = 4;                        // First partition starts on Cylinder 4
+                    unit->au_EndCyl     = unit->au_Cylinders - 1;         // Partition covers full disk
+                    unit->au_Capacity   = unit->au_Heads * unit->au_Sectors * unit->au_Cylinders;
+                    unit->au_Capacity48 = unit->au_Capacity;
+
+                    //}
                 break;
         }
+
+        DINIT(bug("[ATA:%02ld] ata_Identify: HARDCODE =   Cap28=%u | Cap48=%llu | CHS=%u/%u/%u\n", unit->au_UnitNum, unit->au_Capacity, unit->au_Capacity48, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors);)
 
         ULONG retry_test = 10;
         while(!(atapi_TestUnitOK(unit)) || (retry_test > 5))
@@ -1213,19 +1226,9 @@ static BYTE ata_Identify(struct ata_Unit *unit)
         }
         
     } else {
-        /*
-           For drive capacities > 8.3GB assume maximal possible layout.
-           It really doesn't matter here, as BIOS will not handle them in
-           CHS way anyway :)
-           i guess this just solves that weirdo div-by-zero crash, if nothing
-           else...
-           */
         if (supportLBA && ((unit->au_Drive->id_LBA48Sectors > (63 * 255 * 1024)) || (unit->au_Drive->id_LBASectors > (63 * 255 * 1024))))
         {
             ULONG div = 1;
-            /*
-             * TODO: this shouldn't be casted down here.
-             */
             ULONG sec = unit->au_Capacity48;
 
             if (sec < unit->au_Capacity48)
@@ -1236,9 +1239,6 @@ static BYTE ata_Identify(struct ata_Unit *unit)
 
             unit->au_Sectors = 63;
             sec /= 63;
-            /*
-             * keep dividing by 2
-             */
             do
             {
                 if (((sec >> 1) << 1) != sec)
@@ -1267,6 +1267,10 @@ static BYTE ata_Identify(struct ata_Unit *unit)
             unit->au_Cylinders  = unit->au_Drive->id_OldLCylinders;
             unit->au_Heads      = unit->au_Drive->id_OldLHeads;
             unit->au_Sectors    = unit->au_Drive->id_OldLSectors;
+
+            unit->au_StartCyl       = 0;                        // RDB starts on Cylinder 0
+            unit->au_EndCyl         = unit->au_Cylinders - 1;         // Full disk
+
             if (!supportLBA) {
                 unit->au_Capacity   = unit->au_Cylinders * unit->au_Heads * unit->au_Sectors;
                 unit->au_Capacity48 = unit->au_Capacity;
@@ -1580,6 +1584,9 @@ BOOL atapi_TestUnitOK(struct ata_Unit *unit)
         
     result = unit->au_DirectSCSI(unit, &sc);
 
+    DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: DETECTED   = LBA = %u | Block = %u\n",
+        unit->au_UnitNum, capacity.logicalsectors, capacity.blocksize));
+
     if ( (unit->au_cmd_error) == HFERR_BadStatus )
     {
         DINIT(bug("[ATA:%02ld] unit->au_cmd_error == HFERR_BadStatus\n", unit->au_UnitNum));
@@ -1590,20 +1597,13 @@ BOOL atapi_TestUnitOK(struct ata_Unit *unit)
             unit->au_Flags |= AF_DiscChanged;                           // Set AF_DiscChanged
         }    
 
-        /*unit->au_Capacity = 196575;
-        unit->au_Capacity48 = 0;
-        unit->au_Heads = 16;
-        unit->au_Cylinders = 195;
-        unit->au_Sectors = 63;
-        capacity.blocksize = 512;*/
-
-        DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: LBA = %u | Block = %u | Cylinders = %u | Heads = %u | Sectors = %u |",
+        DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: REGISTERED = LBA = %u | Block = %u | Cylinders = %u | Heads = %u | Sectors = %u |",
             unit->au_UnitNum, unit->au_Capacity, 1<<unit->au_SectorShift , unit->au_Cylinders, unit->au_Heads, unit->au_Sectors));
 
         DINIT(bug("Result = %d | Media = %s | Change = %s\n",
             result, unit->au_Flags & AF_DiscPresent ? "YES" : "NO", unit->au_Flags & AF_DiscChanged ? "YES" : "NO"));
 
-        if (result == 0)
+        if (result == 0 || result == 29)
         {   
             return(TRUE);                                               // No Media but valid Device
         } else {
@@ -1616,9 +1616,10 @@ BOOL atapi_TestUnitOK(struct ata_Unit *unit)
             unit->au_Flags |= AF_DiscChanged;                           // Set AF_DiscChanged
         }      
         
-        if ((unit->au_DevType) == DG_DIRECT_ACCESS)
+        if ( ((unit->au_DevType) == DG_DIRECT_ACCESS) && ((unit->au_Flags & AF_Removable) == 0) )
         {
             unit->au_Capacity   = capacity.logicalsectors;
+            unit->au_Capacity48 = capacity.logicalsectors;
 
             #define HEADS_PER_CYLINDER  16
             #define SECTORS_PER_TRACK   63
@@ -1630,7 +1631,7 @@ BOOL atapi_TestUnitOK(struct ata_Unit *unit)
             unit->au_Sectors    = (UBYTE)SECTORS_PER_TRACK;
         }
     
-        DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: LBA = %u | Block = %u | Cylinders = %u | Heads = %u | Sectors = %u | ",
+        DINIT(bug("[ATA:%02ld] atapi_TestUnitOK: REGISTERED = LBA = %u | Block = %u | Cylinders = %u | Heads = %u | Sectors = %u | ",
             unit->au_UnitNum, unit->au_Capacity, capacity.blocksize, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors));
 
         DINIT(bug("Result = %d | Media = %s | Change = %s\n",
@@ -1939,16 +1940,6 @@ static BYTE atapi_EndCmd(struct ata_Unit *unit)
     } else {
         error = PIO_In(bus, atapi_Error);
         DERROR(bug("[ATA:%02ld] atapi_EndCmd: ERROR code 0x%lx\n", unit->au_UnitNum, error));
-        
-        /*if (error != 0x60)
-        {
-            ULONG   sense_lenght = 18;
-            UBYTE*  sense_data = AllocMem(sense_lenght, MEMF_ANY|MEMF_PUBLIC);
-            
-            atapi_RequestSense(unit, sense_data, sense_lenght);
-
-            FreeMem(sense_data,sense_lenght);
-        }*/
         
         return ErrorMap[error >> 4];
     }

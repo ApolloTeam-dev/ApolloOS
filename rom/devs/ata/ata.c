@@ -644,8 +644,8 @@ static void cmd_GetGeometry(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
         dg->dg_TrackSectors             = unit->au_Sectors;
         dg->dg_BufMemType               = MEMF_PUBLIC;
         dg->dg_DeviceType               = unit->au_DevType;
-        //if (dg->dg_DeviceType != DG_DIRECT_ACCESS) 
-        dg->dg_Flags                    = (unit->au_Flags & AF_Removable) ? DGF_REMOVABLE : 0;
+        //if (dg->dg_DeviceType != DG_DIRECT_ACCESS)
+         dg->dg_Flags                   = (unit->au_Flags & AF_Removable) ? DGF_REMOVABLE : 0;
         //else dg->dg_Flags                = 0;
         dg->dg_Reserved                 = 0;
 
@@ -1188,7 +1188,7 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
                         
                         struct ata_Controller *ataNode = NULL;
 
-                        ata_RegisterVolume(0, 0, unit);
+                        ata_RegisterVolume(unit->au_StartCyl, unit->au_EndCyl, unit);
 
                         //OOP_GetAttr(bus->ab_Object, aHidd_ATABus_Controller, (IPTR *)ataNode);        // [WD]: This does not work, replaced buy code below
                         
@@ -1226,7 +1226,7 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
                     }
                     else
                     {
-                        ata_RegisterVolume(0, unit->au_Cylinders - 1, unit);
+                        ata_RegisterVolume(unit->au_StartCyl, unit->au_EndCyl, unit);
                     }
                 }
                 else
@@ -1315,7 +1315,7 @@ void BusTaskCode2(struct ata_Bus *bus, struct ataBase *ATABase)
                     {
                         struct ata_Controller *ataNode = NULL;
 
-                        ata_RegisterVolume(0, 0, unit);
+                        ata_RegisterVolume(unit->au_StartCyl, unit->au_EndCyl, unit);
 
                         //OOP_GetAttr(bus->ab_Object, aHidd_ATABus_Controller, (IPTR *)&ataNode);
 
@@ -1344,7 +1344,7 @@ void BusTaskCode2(struct ata_Bus *bus, struct ataBase *ATABase)
                     }
                     else
                     {
-                        ata_RegisterVolume(0, unit->au_Cylinders - 1, unit);
+                        ata_RegisterVolume(unit->au_StartCyl, unit->au_EndCyl, unit);
                     }
                 }
                 else

@@ -156,7 +156,7 @@ BOOL ObjectTypeOk(struct DosList* device)
 {
 	struct FileSysStartupMsg *pfssm;
 	struct DosEnvec *pdenDevice;
-	
+
 	if( (pfssm = (struct FileSysStartupMsg *)
 	BADDR(device->dol_misc.dol_handler.dol_Startup)) == 0
 	|| (IPTR)device->dol_misc.dol_handler.dol_Startup == 1  // RAW: device
@@ -165,11 +165,10 @@ BOOL ObjectTypeOk(struct DosList* device)
 	|| (pdenDevice = (struct DosEnvec *)BADDR(pfssm->fssm_Environ)) == 0
 	|| TypeOfMem(pdenDevice) == 0
 	|| pdenDevice->de_TableSize < DE_DOSTYPE
-	/* Check that parameters that should always be 0, are */
+	/* Check that parameters that should always be 0, are 
 	|| pdenDevice->de_SecOrg != 0
-	|| pdenDevice->de_Interleave != 0 )
+	|| pdenDevice->de_Interleave != 0 */)
 	{
-		/* error object wrong type */
 		return FALSE;
 	}
 	
@@ -179,6 +178,9 @@ BOOL ObjectTypeOk(struct DosList* device)
 	ibyStart = pdenDevice->de_LowCyl * cbyCylinder;
 	ibyEnd = (pdenDevice->de_HighCyl + 1) * cbyCylinder;    
 	
+	DD(bug("ObjectTypeOk: LowCyl = %u | HighCyl = %u | Heads = %u | Sectors = %u | ibyStart = %u | ibyEnd = %u\n",
+		pdenDevice->de_LowCyl, pdenDevice->de_HighCyl, pdenDevice->de_Surfaces, pdenDevice->de_BlocksPerTrack, ibyStart, ibyEnd));
+
 	return TRUE;
 }
 
@@ -197,10 +199,6 @@ void ComputeCapacity(struct DosList *pdlVolume, struct InfoData *pInfoData)
 	cUnits = ibyEnd - ibyStart;
 	while( (cUnits >>= 10) > 9999 ) ++pchUnitSymbol;
 
-	//if(pdlVolume && pInfoData)
-	//    RawDoFmtSz( szCapacityInfo, _(MSG_CAPACITY_USED), (ULONG)cUnits, (ULONG)*pchUnitSymbol, (ULONG)(((ULLONG)pInfoData->id_NumBlocksUsed*100ULL + pInfoData->id_NumBlocks/2) / pInfoData->id_NumBlocks) );
-	//else
-	
 	RawDoFmtSz( szCapacityInfo, _(MSG_CAPACITY), (ULONG)cUnits, (ULONG)*pchUnitSymbol );
 	DD(bug("Done: %s\n", szCapacityInfo));
 }
@@ -473,7 +471,7 @@ AROS_UFH3S(void, btn_format_function,
 				break;
 			}
 			set(gauge, MUIA_Gauge_Current, (((icyl-LowCyl)*100) / ((HighCyl-LowCyl))) );   
-			DD(bug("MUIA_Gauge_Current = %u\n", (((icyl-LowCyl)*100) / ((HighCyl-LowCyl))) ));
+			DD(bug("LowCyl = %u | HighCyl = %u | Cylinder = %u | MUIA_Gauge_Current = %u\n", LowCyl, HighCyl, icyl, (((icyl-LowCyl)*100) / ((HighCyl-LowCyl))) ));
 		}
 		FreeExecDevice();
 		DD(bug("FreeExecDevice done\n"));
@@ -515,15 +513,18 @@ int rcGuiMain(void)
 
 		if( _WBenchMsg->sm_ArgList[1].wa_Lock == 0 )
 		{
-			DD(bug("Object specified by name: %s\n", _WBenchMsg->sm_ArgList[1].wa_Name);)
+			DD(bug("Object specified by Device name: %s\n", _WBenchMsg->sm_ArgList[1].wa_Name);)
 			if( !bSetSzDosDeviceFromSz(_WBenchMsg->sm_ArgList[1].wa_Name) )
 			{
 				DD(bug("Bad device name from Workbench: %s\n", _WBenchMsg->sm_ArgList[1].wa_Name));
 				goto cleanup;
 			}
+			strcpy(szVolumeName, "_____");
 		} else {
 			if( _WBenchMsg->sm_ArgList[1].wa_Name[0] == 0 )
 			{
+				DD(bug("Object specified by Volume name (Lock)\n"));
+				
 				if( !Info( _WBenchMsg->sm_ArgList[1].wa_Lock, &dinf ) )
 				{
 					ReportErrSz( ertFailure, 0, 0 );
@@ -546,6 +547,8 @@ int rcGuiMain(void)
 					goto cleanup;
 				}
 				RawDoFmtSz( szDosDevice, "%b", pdlDevice->dol_Name );
+				strcpy(szVolumeName, AROS_BSTR_ADDR(pdlVolume->dol_Name));
+
 				pchDosDeviceColon = szDosDevice + strlen(szDosDevice);
 				*(pchDosDeviceColon+1) = 0;
 			}
@@ -555,14 +558,6 @@ int rcGuiMain(void)
 				goto cleanup;
 			}
 		}
-
-		ObjectTypeOk(pdlDevice);
-		ComputeCapacity(pdlVolume, &dinf );
-		
-		if (pdlVolume) strcpy(szVolumeName, AROS_BSTR_ADDR(pdlVolume->dol_Name));
-
-		DD(bug("Device specified by lock: Device = %s | Volume = %s | Capacity = %s\n", szDosDevice, szVolumeName, szCapacityInfo));
-
 	} else {
 		if ( _WBenchMsg->sm_NumArgs == 1 )
 		{
@@ -574,8 +569,6 @@ int rcGuiMain(void)
 			strcpy(szCapacityInfo, entry->capacityInfo);
 			FreeMem(entry, sizeof(struct SFormatEntry));
 
-			DD(bug("Device selected via SelectDevice: Device = %s | Volume = %s | Capacity = %s\n", szDosDevice, szVolumeName, szCapacityInfo));
-
 			if( !bSetSzDosDeviceFromSz(szDosDevice) )
 			{
 				DD(bug("Bad device name from SelectDevice: %s\n", szDosDevice));
@@ -585,7 +578,11 @@ int rcGuiMain(void)
 	}
 
 	if (!bGetDosDevice(pdlDevice, LDF_DEVICES|LDF_READ)) goto cleanup;
-		
+	
+	ComputeCapacity(pdlVolume, &dinf );
+
+	DD(bug("Device = %s | Volume = %s | Capacity = %s\n", szDosDevice, szVolumeName, szCapacityInfo));
+
 	RawDoFmtSz( szTitle, _(MSG_WINDOW_TITLE), szDosDevice );
 	DD(bug("Setting window title to '%s'\n", szTitle));
 	

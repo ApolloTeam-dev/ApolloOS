@@ -286,46 +286,45 @@ BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
     struct DosList *pdlList;
     struct DosEnvec * pdenDevice;
 
-    if (!pdlDevice) {
-	flags = LDF_DEVICES|LDF_READ;
-	pdlList = LockDosList(flags);
-	DD(bug( "LockDosList( LDF_DEVICES | LDF_READ ) = 0x%08lx\n", (ULONG)pdlList ));
-	*pchDosDeviceColon = 0;
-	pdlDevice = FindDosEntry( pdlList, szDosDevice, LDF_DEVICES );
-	DD(bug("FindDosEntry( 0x%08lx, \"%s\", LDF_DEVICES ) = 0x%08lx\n",
-		 (ULONG)pdlList, (ULONG)szDosDevice, (ULONG)pdlDevice ));
-	if( pdlDevice == 0 )
+    if (!pdlDevice)
 	{
-	    UnLockDosList(flags);
-	    ReportErrSz( ertError, ERROR_DEVICE_NOT_MOUNTED, 0 );
-	    return FALSE;
+		flags = LDF_DEVICES|LDF_READ;
+		pdlList = LockDosList(flags);
+		DD(bug( "LockDosList( LDF_DEVICES | LDF_READ ) = 0x%08lx\n", (ULONG)pdlList ));
+		*pchDosDeviceColon = 0;
+		pdlDevice = FindDosEntry( pdlList, szDosDevice, LDF_DEVICES );
+		DD(bug("FindDosEntry( 0x%08lx, \"%s\", LDF_DEVICES ) = 0x%08lx\n", (ULONG)pdlList, (ULONG)szDosDevice, (ULONG)pdlDevice ));
+		if( pdlDevice == 0 )
+		{
+			UnLockDosList(flags);
+			DD(bug("bGetDosDevice: ERROR_DEVICE_NOT_MOUNTED\n"));
+			ReportErrSz( ertError, ERROR_DEVICE_NOT_MOUNTED, 0 );
+			return FALSE;
+		}
 	}
-    }
 
-    /* Find startup message and verify file-system settings. Use
-       TypeOfMem to protect against devices that use integer or string
-       startup values. */
-    if( (pfssm = (struct FileSysStartupMsg *)
-	 BADDR(pdlDevice->dol_misc.dol_handler.dol_Startup)) == 0
-	|| TypeOfMem(pfssm) == 0
-	|| pfssm->fssm_Device == 0
-	|| (pdenDevice = (struct DosEnvec *)BADDR(pfssm->fssm_Environ)) == 0
-	|| TypeOfMem(pdenDevice) == 0
-	|| pdenDevice->de_TableSize < DE_DOSTYPE
-	/* Check that parameters that should always be 0, are */
-	|| pdenDevice->de_SecOrg != 0
-	|| pdenDevice->de_Interleave != 0 )
-    {
-        UnLockDosList(flags);
-	ReportErrSz( ertError, ERROR_OBJECT_WRONG_TYPE, 0 );
-	return FALSE;
-    }
+	/* Find startup message and verify file-system settings. Use TypeOfMem to protect against devices that use integer or string startup values. */
+	if( (pfssm = (struct FileSysStartupMsg *)
+		BADDR(pdlDevice->dol_misc.dol_handler.dol_Startup)) == 0
+		|| TypeOfMem(pfssm) == 0
+		|| pfssm->fssm_Device == 0
+		|| (pdenDevice = (struct DosEnvec *)BADDR(pfssm->fssm_Environ)) == 0
+		|| TypeOfMem(pdenDevice) == 0
+		|| pdenDevice->de_TableSize < DE_DOSTYPE
+		/* Check that parameters that should always be 0, are 
+		|| pdenDevice->de_SecOrg != 0
+		|| pdenDevice->de_Interleave != 0 */)
+	{
+		UnLockDosList(flags);
+		DD(bug("bGetDosDevice: ERROR_OBJECT_WRONG_TYPE\n"));
+		ReportErrSz( ertError, ERROR_OBJECT_WRONG_TYPE, 0 );
+		return FALSE;
+	}
 
     /* Get the device name with the original correct case */
     RawDoFmtSz( szDosDevice, "%b", pdlDevice->dol_Name );
 
-    /* Unlike most BCPL strings, this one is guaranteed to be null-
-       terminated. */
+    /* Unlike most BCPL strings, this one is guaranteed to be null-terminated. */
     pszExecDevice = AROS_BSTR_ADDR(pfssm->fssm_Device);
     ExecUnit = pfssm->fssm_Unit;
     ExecDeviceFlags = pfssm->fssm_Flags;
@@ -340,6 +339,9 @@ BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
 
     ibyStart = pdenDevice->de_LowCyl * cbyCylinder;
     ibyEnd = (pdenDevice->de_HighCyl + 1) * cbyCylinder;
+
+	DD(bug("bGetDosDevice: LowCyl = %u | HighCyl = %u | Heads = %u | Sectors = %u | ibyStart = %u | ibyEnd = %u\n",
+		pdenDevice->de_LowCyl, pdenDevice->de_HighCyl, pdenDevice->de_Surfaces, pdenDevice->de_BlocksPerTrack, ibyStart, ibyEnd));
 
 #if defined(__mc68000) && !defined(__AROS__)
     /* If the device has a native Amiga file-system, we can check for
