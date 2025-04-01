@@ -166,7 +166,7 @@ AFILES  := ext_entry
 ifeq ($(APOLLOROM),V4)
 	KLIBS   := keymap graphics layers intuition gadtools workbench mathffp mathieeesingbas freeanim lowlevel setpatch
 	KDEVS   := ata trackdisk
-	KHNDLRS := 
+	KHNDLRS := cdrom
 	KHIDDS  := bus storage system
 	KRSRCS  := shellcommands wbtag misc shell card bootloader
 	KHOOKS  := alert 

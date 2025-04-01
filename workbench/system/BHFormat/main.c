@@ -284,7 +284,7 @@ BOOL bSetDevfFromSz( const char * pszDevFlags )
 BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
 {
     struct DosList *pdlList;
-    struct DosEnvec * pdenDevice;
+    struct DosEnvec *pdenDevice;
 
     if (!pdlDevice)
 	{
@@ -304,8 +304,7 @@ BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
 	}
 
 	/* Find startup message and verify file-system settings. Use TypeOfMem to protect against devices that use integer or string startup values. */
-	if( (pfssm = (struct FileSysStartupMsg *)
-		BADDR(pdlDevice->dol_misc.dol_handler.dol_Startup)) == 0
+	if( (pfssm = (struct FileSysStartupMsg *)BADDR(pdlDevice->dol_misc.dol_handler.dol_Startup)) == 0
 		|| TypeOfMem(pfssm) == 0
 		|| pfssm->fssm_Device == 0
 		|| (pdenDevice = (struct DosEnvec *)BADDR(pfssm->fssm_Environ)) == 0
@@ -340,16 +339,23 @@ BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
     ibyStart = pdenDevice->de_LowCyl * cbyCylinder;
     ibyEnd = (pdenDevice->de_HighCyl + 1) * cbyCylinder;
 
-	DD(bug("bGetDosDevice: LowCyl = %u | HighCyl = %u | Heads = %u | Sectors = %u | ibyStart = %u | ibyEnd = %u\n",
-		pdenDevice->de_LowCyl, pdenDevice->de_HighCyl, pdenDevice->de_Surfaces, pdenDevice->de_BlocksPerTrack, ibyStart, ibyEnd));
+	DD(bug("bGetDosDevice: LowCyl = %u | HighCyl = %u | Heads = %u | Sectors = %u | ibyStart = %llu | ibyEnd = %llu | DosType = %u\n",
+		LowCyl, HighCyl, pdenDevice->de_Surfaces, pdenDevice->de_BlocksPerTrack, ibyStart, ibyEnd, DosType));
+
+	if(DosType == 0x444F5300)	// Check for DOS/0 and if found then Drive needs to be partitioned by HDToolBox first
+	{
+		DD(bug("bGetDosDevice: ERROR: No Partition(s) Found!\n"));
+		ReportErrSz( ertError, 0, "\nERROR: No Partition(s) Found!\n\nUse Tools->HDToolBox to Create Partition(s)\n");
+		return FALSE;
+	}
+	DD(bug("bGetDosDevice: OK: Partition(s) Found!\n"));
 
 #if defined(__mc68000) && !defined(__AROS__)
     /* If the device has a native Amiga file-system, we can check for
        various limitations and also apply the various command-line
        flags that specify which variant to use for the new volume. */
-       
-    if( pdenDevice->de_DosType >= 0x444F5300
-	&& pdenDevice->de_DosType <= 0x444F5305 )
+
+    if( pdenDevice->de_DosType >= 0x444F5300 && pdenDevice->de_DosType <= 0x444F5305 )			// Filter for classic AmigaDOS OFS/FFS
     {
 	const struct Resident * prt;
 	UWORD verFS;
@@ -360,14 +366,10 @@ BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
 	   would be a bit pointless. Perhaps I should use TypeOfMem
 	   to decide whether the segment is in ROM or RAM first? */
 
-	prt = (struct Resident *)((char *)BADDR(
-	    pdlDevice->dol_misc.dol_handler.dol_SegList) + 4);
-	while( prt->rt_MatchWord != RTC_MATCHWORD
-	       || prt->rt_MatchTag != prt )
-	    prt = (struct Resident *)((UWORD *)prt + 1);
+	prt = (struct Resident *)((char *)BADDR(pdlDevice->dol_misc.dol_handler.dol_SegList) + 4);
+	while( prt->rt_MatchWord != RTC_MATCHWORD || prt->rt_MatchTag != prt ) prt = (struct Resident *)((UWORD *)prt + 1);
 	verFS = prt->rt_Version;
-	DD(bug( "found RomTag at 0x%08lx; rt_Version = %lu\n",
-		  (ULONG)prt, (ULONG)verFS ));
+	DD(bug( "found RomTag at 0x%08lx; rt_Version = %lu\n", (ULONG)prt, (ULONG)verFS ));
 	    
 	/* check that the fs can handle this device correctly */
 

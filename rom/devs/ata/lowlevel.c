@@ -1204,7 +1204,7 @@ static BYTE ata_Identify(struct ata_Unit *unit)
                     unit->au_Heads      = 16;
                     unit->au_Sectors    = 63;
                     unit->au_Cylinders  = 195;
-                    unit->au_StartCyl   = 4;                        // First partition starts on Cylinder 4
+                    unit->au_StartCyl   = 2;                        // First partition starts on Cylinder 4
                     unit->au_EndCyl     = unit->au_Cylinders - 1;         // Partition covers full disk
                     unit->au_Capacity   = unit->au_Heads * unit->au_Sectors * unit->au_Cylinders;
                     unit->au_Capacity48 = unit->au_Capacity;

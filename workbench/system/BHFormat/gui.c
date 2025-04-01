@@ -520,6 +520,7 @@ int rcGuiMain(void)
 				goto cleanup;
 			}
 			strcpy(szVolumeName, "_____");
+
 		} else {
 			if( _WBenchMsg->sm_ArgList[1].wa_Name[0] == 0 )
 			{
@@ -578,7 +579,7 @@ int rcGuiMain(void)
 	}
 
 	if (!bGetDosDevice(pdlDevice, LDF_DEVICES|LDF_READ)) goto cleanup;
-	
+
 	ComputeCapacity(pdlVolume, &dinf );
 
 	DD(bug("Device = %s | Volume = %s | Capacity = %s\n", szDosDevice, szVolumeName, szCapacityInfo));
