@@ -1208,7 +1208,6 @@ static BYTE ata_Identify(struct ata_Unit *unit)
                     unit->au_EndCyl     = unit->au_Cylinders - 1;         // Partition covers full disk
                     unit->au_Capacity   = unit->au_Heads * unit->au_Sectors * unit->au_Cylinders;
                     unit->au_Capacity48 = unit->au_Capacity;
-
                     //}
                 break;
         }
@@ -1279,6 +1278,8 @@ static BYTE ata_Identify(struct ata_Unit *unit)
     }
 
     DINIT(bug("[ATA:%02ld] ata_Identify: Cap28=%u | Cap48=%llu | CHS=%u/%u/%u\n", unit->au_UnitNum, unit->au_Capacity, unit->au_Capacity48, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors);)
+
+    if(atapi) unit->au_Flags &= ~AF_DiscPresent;
 
     return 0;
 }
@@ -1638,8 +1639,6 @@ BOOL atapi_TestUnitOK(struct ata_Unit *unit)
             result, unit->au_Flags & AF_DiscPresent ? "YES" : "NO", unit->au_Flags & AF_DiscChanged ? "YES" : "NO"));
 
     }
-
-
     
     return(TRUE);
 }

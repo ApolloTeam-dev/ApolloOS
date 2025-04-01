@@ -586,7 +586,7 @@ static void cmd_GetNumTracks(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
     IOStdReq(io)->io_Actual = ((struct ata_Unit *)io->io_Unit)->au_Cylinders;
 }
 
-static void cmd_AddChangeInt(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
+static void cmd_AddChangeInt(struct IOStdReq *io, LIBBASETYPEPTR LIBBASE)
 {
     struct ata_Unit *unit = (struct ata_Unit *)io->io_Unit;
 
@@ -595,6 +595,9 @@ static void cmd_AddChangeInt(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
     Forbid();
     AddHead(&unit->au_SoftList, (struct Node *)io);
     Permit();
+    
+    DD(bug("[ATA%02ld] : Change Interrupt Added: Command=%u | DeviceLib=%s | Code=%u\n",
+        ((struct ata_Unit*)io->io_Unit)->au_UnitNum, io->io_Command, io->io_Device->dd_Library.lib_IdString, io->io_Data));
 
     io->io_Flags &= ~IOF_QUICK;
     unit->au_Unit.unit_flags &= ~UNITF_ACTIVE;
