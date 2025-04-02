@@ -91,8 +91,7 @@ LONG ReadFATSuper(struct FSSuper *sb)
     D(bug("[%s] Reading boot sector\n",__FUNCTION__ ));
 
     boot = AllocMem(bsize, MEMF_ANY);
-    if (!boot)
-        return ERROR_NO_FREE_STORE;
+    if (!boot) return ERROR_NO_FREE_STORE;
 
 tryagain:    
     invalid = FALSE;
@@ -102,15 +101,11 @@ tryagain:
     D(bug("[%s] Lowcyl %ld\n", __FUNCTION__ , de->de_LowCyl));
     D(bug("[%s] Highcyl %ld\n", __FUNCTION__ , de->de_HighCyl));
 
-    sb->first_device_sector =
-        de->de_BlocksPerTrack * de->de_Surfaces * de->de_LowCyl;
+    sb->first_device_sector = de->de_BlocksPerTrack * de->de_Surfaces * de->de_LowCyl;
     D(bug("[%s] Boot sector at sector %ld\n", __FUNCTION__ , sb->first_device_sector));
 
-    /* Get a preliminary total-sectors value so we don't risk going outside
-     * partition limits */
-    sb->total_sectors =
-        de->de_BlocksPerTrack * de->de_Surfaces * (de->de_HighCyl + 1)
-        - sb->first_device_sector;
+    /* Get a preliminary total-sectors value so we don't risk going outside partition limits */
+    sb->total_sectors = de->de_BlocksPerTrack * de->de_Surfaces * (de->de_HighCyl + 1) - sb->first_device_sector;
     D(bug("[%s] Calculated Total Sectors %ld\n", __FUNCTION__ , sb->total_sectors));
 
     /*
@@ -119,8 +114,7 @@ tryagain:
      * the boot sector. In practice it doesn't matter - we're going to use
      * this once and once only.
      */
-    if ((td_err = AccessDisk(FALSE, sb->first_device_sector, 1, bsize,
-        (UBYTE *) boot, glob)) != 0)
+    if ((td_err = AccessDisk(FALSE, sb->first_device_sector, 1, bsize, (UBYTE *) boot, glob)) != 0)
     {
         D(bug("[%s] Couldn't read boot block (%ld)\n", __FUNCTION__ , td_err));
         FreeMem(boot, bsize);
@@ -968,8 +962,7 @@ void DoDiskInsert(struct Globals *glob)
     struct NotifyNode *nn;
     struct DosList *newvol = NULL;
 
-    if (glob->sb == NULL
-        && (sb = AllocVecPooled(glob->mempool, sizeof(struct FSSuper))))
+    if (glob->sb == NULL && (sb = AllocVecPooled(glob->mempool, sizeof(struct FSSuper))))
     {
         SetMem(sb, 0, sizeof(struct FSSuper));
 
@@ -978,11 +971,9 @@ void DoDiskInsert(struct Globals *glob)
         if (err == 0)
         {
 
-            /* Scan volume list for a matching volume (would be better to
-             * match by serial number) */
+            /* Scan volume list for a matching volume (would be better to match by serial number) */
             dl = LockDosList(LDF_VOLUMES | LDF_WRITE);
-            dl = FindDosEntry(dl, sb->volume.name + 1,
-                LDF_VOLUMES | LDF_WRITE);
+            dl = FindDosEntry(dl, sb->volume.name + 1, LDF_VOLUMES | LDF_WRITE);
             UnLockDosList(LDF_VOLUMES | LDF_WRITE);
 
             if (dl != NULL &&

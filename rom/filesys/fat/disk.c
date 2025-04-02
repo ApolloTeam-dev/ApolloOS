@@ -85,7 +85,7 @@ void ProcessDiskChange(struct Globals *glob)
         de->de_SizeBlock        = geometry.dg_SectorSize >> 2; // Sizeblock = LONG p/Block = Shift 2
         de->de_Surfaces         = geometry.dg_Heads;           // Surfaces = Heads
         de->de_BlocksPerTrack   = geometry.dg_TrackSectors;    // Block p/Track = #Sectors
-        de->de_LowCyl           = 2;                           // HOW TO DETERMINE???
+        de->de_LowCyl           = 0;                           // HOW TO DETERMINE???
         de->de_HighCyl          = geometry.dg_Cylinders - 1;   // Assume 1 partition ???
 
         D(bug("[%s] de_SizeBlock      : %d\n",__FUNCTION__ , de->de_SizeBlock));
@@ -174,8 +174,7 @@ void Probe64BitSupport(struct Globals *glob)
 }
 
 /* N.B. returns an Exec error code, not a DOS error code! */
-LONG AccessDisk(BOOL do_write, ULONG num, ULONG nblocks, ULONG block_size,
-    UBYTE *data, APTR priv)
+LONG AccessDisk(BOOL do_write, ULONG num, ULONG nblocks, ULONG block_size, UBYTE *data, APTR priv)
 {
     D(bug("----------------------------------------------------------------\n"));
     D(bug("[%s] Start \n",__FUNCTION__ ));

@@ -3,6 +3,8 @@
     $Id$
 */
 
+#define DEBUG 1
+
 #ifdef __AROS__
 #include <aros/debug.h>
 #else

@@ -49,7 +49,7 @@ BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit)
     struct ExpansionBase *ExpansionBase;
     struct DeviceNode *devnode;
     TEXT dosdevname[4] = "HD0";
-    const ULONG IdDOS = AROS_MAKE_ID('D','O','S','\000');
+    const ULONG IdDOS = AROS_MAKE_ID('F','A','T','\000');
     const ULONG IdCDVD = AROS_MAKE_ID('C','D','F','S');         // Opticals are all using CDFS
 
     ExpansionBase = (struct ExpansionBase *)TaggedOpenLibrary(TAGGEDOPEN_EXPANSION);

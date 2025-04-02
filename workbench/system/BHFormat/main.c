@@ -345,8 +345,8 @@ BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
 	if(DosType == 0x444F5300)	// Check for DOS/0 and if found then Drive needs to be partitioned by HDToolBox first
 	{
 		DD(bug("bGetDosDevice: ERROR: No Partition(s) Found!\n"));
-		ReportErrSz( ertError, 0, "\nERROR: No Partition(s) Found!\n\nUse Tools->HDToolBox to Create Partition(s)\n");
-		return FALSE;
+		//ReportErrSz( ertError, 0, "\nERROR: No Partition(s) Found!\n\nUse Tools->HDToolBox to Create Partition(s)\n");
+		//return FALSE;
 	}
 	DD(bug("bGetDosDevice: OK: Partition(s) Found!\n"));
 
