@@ -19,6 +19,9 @@
 /autom4te.cache
 /.vscode
 
+# Apollo
+/ApolloROM.*
+
 # /boot/
 /boot/mmakefile
 
@@ -2130,3 +2133,8 @@
 
 # /workbench/utilities/Presenter/
 /workbench/utilities/Presenter/mmakefile
+config/features.status
+config/config.log
+compiler/include/geninc.cfg
+bin/Sources/.freetype-2.10.0-fetched
+aros.rom

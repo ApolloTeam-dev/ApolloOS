@@ -1,4 +1,4 @@
-# Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+# Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
 # $Id$
 #
 # Static makefile rule file for AROS.
@@ -302,3 +302,6 @@ WILDCARD                      = $(shell cd $(SRCDIR)/$(CURDIR); for file in $(1)
 
 # Defined to quieten output..
 Q                             ?= @
+
+#Apollo Make Variables
+APOLLOROM := @apollorom_target@
