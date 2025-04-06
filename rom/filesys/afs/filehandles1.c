@@ -1,12 +1,7 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 */
-
-#ifdef DEBUG
-#undef DEBUG
-#endif
-#define DEBUG 0
 
 #include "os.h"
 #include "filehandles1.h"

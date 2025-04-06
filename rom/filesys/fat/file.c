@@ -1,8 +1,8 @@
 /*
  * fat-handler - FAT12/16/32 filesystem handler
  *
- * Copyright � 2006 Marek Szyprowski
- * Copyright � 2007-2015 The AROS Development Team
+ * Copyright (C) 2006 Marek Szyprowski
+ * Copyright (C) 2007-2015 The AROS Development Team
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the same terms as AROS itself.
@@ -38,7 +38,7 @@ static void HexDump(unsigned char *buf, int bufsz, struct Globals *glob)
     for (i = 0; i < bufsz; i += CHUNK)
     {
         /* Show the offset */
-        D(bug("0x%06x  ", i));
+        bug("0x%06x  ", i);
 
         /* Max of CHUNK or remaining bytes */
         count = ((bufsz - i) > CHUNK ? CHUNK : bufsz - i);
@@ -48,7 +48,7 @@ static void HexDump(unsigned char *buf, int bufsz, struct Globals *glob)
         {
             if (j == CHUNK / 2)
                 bug(" ");
-            D(bug("%02x ", buf[i + j]));
+            bug("%02x ", buf[i + j]);
         }
 
         /* Pad with spaces if less than CHUNK */
@@ -63,9 +63,9 @@ static void HexDump(unsigned char *buf, int bufsz, struct Globals *glob)
         bug(" ");
 
         for (j = 0; j < count; j++)
-            D(bug("%c", (isprint(buf[i + j]) ? buf[i + j] : '.')));
+            bug("%c", (isprint(buf[i + j]) ? buf[i + j] : '.'));
 
-        D(bug("\n"));
+        bug("\n");
     }
 }
 #else

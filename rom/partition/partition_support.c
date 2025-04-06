@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2011, The AROS Development Team. All rights reserved.
     $Id$
 
 */
@@ -27,71 +27,62 @@ const struct PTFunctionTable * const PartitionSupport[] =
  */
 
 /* get geometry */
-LONG PartitionGetGeometry
-   (
-      struct Library *PartitionBase,
-      struct IOExtTD *ioreq,
-      struct DriveGeometry *dg
-   )
+LONG PartitionGetGeometry(struct Library *PartitionBase, struct IOExtTD *ioreq, struct DriveGeometry *dg)
 {
+    D(bug("[PART:ROOT] PartitionGetGeometry\n"));
 
-   ioreq->iotd_Req.io_Command = TD_GETGEOMETRY;
-   ioreq->iotd_Req.io_Data = dg;
-   ioreq->iotd_Req.io_Length = sizeof(struct DriveGeometry);
-   return DoIO((struct IORequest *)ioreq);
+    ioreq->iotd_Req.io_Command = TD_GETGEOMETRY;
+    ioreq->iotd_Req.io_Data = dg;
+    ioreq->iotd_Req.io_Length = sizeof(struct DriveGeometry);
+    return DoIO((struct IORequest *)ioreq);
 }
 
 /* query NSD commands */
-void PartitionNsdCheck
-    (
-        struct Library *PartitionBase,
-        struct PartitionHandle *root
-    )
+void PartitionNsdCheck(struct Library *PartitionBase, struct PartitionHandle *root)
 {
-struct NSDeviceQueryResult nsdq;
-struct IOExtTD *ioreq = root->bd->ioreq;
-UWORD *cmdcheck;
+    struct NSDeviceQueryResult nsdq;
+    struct IOExtTD *ioreq = root->bd->ioreq;
+    UWORD *cmdcheck;
 
-   if (
-         (
-                root->de.de_HighCyl*
-                root->de.de_Surfaces*
-                root->de.de_BlocksPerTrack*
-                ((root->de.de_SizeBlock<<2)/512)
-         )>8388608)
-   {
-      nsdq.SizeAvailable=0;
-      nsdq.DevQueryFormat=0;
-      ioreq->iotd_Req.io_Command=NSCMD_DEVICEQUERY;
-      ioreq->iotd_Req.io_Data=&nsdq;
-      ioreq->iotd_Req.io_Length=sizeof(struct NSDeviceQueryResult);
-      if (DoIO((struct IORequest *)ioreq)==0)
-      {
-         if (
-               (ioreq->iotd_Req.io_Actual<=sizeof(struct NSDeviceQueryResult)) &&
-               (ioreq->iotd_Req.io_Actual!=0) &&
-               (ioreq->iotd_Req.io_Actual==nsdq.SizeAvailable)
+    D(bug("[PART:ROOT] PartitionNSDCheck\n"));
+
+    if ((root->de.de_HighCyl * root->de.de_Surfaces * root->de.de_BlocksPerTrack * ((root->de.de_SizeBlock<<2)/512)) > 8388608)
+    {
+        nsdq.SizeAvailable=0;
+        nsdq.DevQueryFormat=0;
+        ioreq->iotd_Req.io_Command=NSCMD_DEVICEQUERY;
+        ioreq->iotd_Req.io_Data=&nsdq;
+        ioreq->iotd_Req.io_Length=sizeof(struct NSDeviceQueryResult);
+        if (DoIO((struct IORequest *)ioreq)==0)
+        {
+            if (
+                (ioreq->iotd_Req.io_Actual<=sizeof(struct NSDeviceQueryResult)) &&
+                (ioreq->iotd_Req.io_Actual!=0) &&
+                (ioreq->iotd_Req.io_Actual==nsdq.SizeAvailable)
             )
-         {
+            {
             if (nsdq.DeviceType != NSDEVTYPE_TRACKDISK)
-               D(bug("partition: NSDcheck: WARNING no trackdisk type\n"));
+                D(bug("[PART:ROOT] NSDcheck: WARNING no trackdisk type\n"));
             for (cmdcheck=nsdq.SupportedCommands;*cmdcheck;cmdcheck++)
             {
-               if (*cmdcheck == NSCMD_TD_READ64)
-                  root->bd->cmdread = NSCMD_TD_READ64;
-               if (*cmdcheck == NSCMD_TD_WRITE64)
-                  root->bd->cmdwrite = NSCMD_TD_WRITE64;
+                if (*cmdcheck == NSCMD_TD_READ64)
+                    root->bd->cmdread = NSCMD_TD_READ64;
+                if (*cmdcheck == NSCMD_TD_WRITE64)
+                    root->bd->cmdwrite = NSCMD_TD_WRITE64;
             }
-         }
+            }
             else
-            D(bug("partition: NSDcheck: WARNING wrong io_Actual using NSD\n"));
-      }
-   }
+            D(bug("[PART:ROOT] NSDcheck: WARNING wrong io_Actual using NSD\n"));
+        }
+    }
 }
 
 /* get real first block of partition ph */
-ULONG getStartBlock(struct PartitionHandle *ph) {
-ULONG start = 0;
+ULONG getStartBlock(struct PartitionHandle *ph)
+{
+    ULONG start = 0;
+
+    //D(bug("[PART:%s] GetStartBlock\n", ph->ln.ln_Name));
 
     while (ph)
     {
@@ -103,6 +94,8 @@ ULONG start = 0;
 
 LONG deviceError(LONG err)
 {
+    D(bug("[PART] deviceError\n"));
+    
     switch (err)
     {
     case 0:
@@ -127,6 +120,8 @@ LONG deviceError(LONG err)
 void initPartitionHandle(struct PartitionHandle *root, struct PartitionHandle *ph, ULONG first_sector, ULONG count_sector)
 {
     ULONG cylsecs = root->de.de_BlocksPerTrack * root->de.de_Surfaces;
+
+    D(bug("[PART:%s] initPartitionHandle\n", ph->ln.ln_Name));
 
     /* Attach parent */
     ph->root = root;
@@ -175,6 +170,8 @@ void initPartitionHandle(struct PartitionHandle *root, struct PartitionHandle *p
 /* Set DOSType and some defaults according to it */
 void setDosType(struct DosEnvec *de, ULONG type)
 {
+    D(bug("[PART] setDosType: 0x%8lx\n", type ));
+   
     de->de_TableSize      = DE_DOSTYPE;
     de->de_SectorPerBlock = 1;
     de->de_DosType        = type;

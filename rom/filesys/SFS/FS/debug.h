@@ -9,9 +9,11 @@
 #include "fs.h"
 #include "globals.h"
 
-#ifdef __AROS__
+//#ifdef __AROS__
 #include <aros/debug.h>
-#else
+//#else
+
+#define DEBUG 1
 
 #ifdef DEBUG
 #define D(x) x
@@ -19,9 +21,9 @@
 #define D(x)
 #endif
 
-#define bug _DEBUG
+#define bug kprintf
 
-#endif
+//#endif
 
 #ifdef DEBUGCODE
         

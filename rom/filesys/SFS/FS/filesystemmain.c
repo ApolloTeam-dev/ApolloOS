@@ -316,6 +316,13 @@ LONG mainprogram(struct ExecBase *SysBase)
 
                         globals->dosenvec=(struct DosEnvec *)BADDR(globals->startupmsg->fssm_Environ);
 
+                        struct DosEnvec *de = BADDR(globals->startupmsg->fssm_Environ);
+
+                        D(bug("\t[%s] Blockspertrack %ld\n",__FUNCTION__ , de->de_BlocksPerTrack));
+                        D(bug("\t[%s] Surfaces %ld\n", __FUNCTION__ , de->de_Surfaces));
+                        D(bug("\t[%s] Lowcyl %ld\n", __FUNCTION__ , de->de_LowCyl));
+                        D(bug("\t[%s] Highcyl %ld\n", __FUNCTION__ , de->de_HighCyl));
+
                         globals->timerBase=(struct Device *)globals->inactivitytimer_ioreq->tr_node.io_Device;
 
                         /* Create a msgport and iorequest for opening the filesystem device */

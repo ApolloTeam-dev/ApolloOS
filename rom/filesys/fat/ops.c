@@ -1,8 +1,8 @@
 /*
  * fat-handler - FAT12/16/32 filesystem handler
  *
- * Copyright ? 2007-2020 The AROS Development Team
- * Copyright ? 2006 Marek Szyprowski
+ * Copyright (C) 2007-2020 The AROS Development Team
+ * Copyright (C) 2006 Marek Szyprowski
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the same terms as AROS itself.
@@ -17,6 +17,8 @@
 #include <exec/types.h>
 #include <dos/dos.h>
 #include <dos/notify.h>
+
+#include <string.h>
 
 #include "fat_fs.h"
 #include "fat_protos.h"
@@ -562,12 +564,15 @@ LONG OpRenameFile(struct ExtFileLock *sdirlock, UBYTE *sname,
         return ERROR_WRITE_PROTECTED;
     }
 
-    /* Now see if the wanted name is in this dir. If it exists, do nothing */
+    /* Now see if the wanted name is in this dir. If it exists, and is not a capilazation change, do nothing */
     if ((err = GetDirEntryByName(&ddh, dname, dnamelen, &dde, glob)) == 0)
     {
-        ReleaseDirHandle(&ddh, glob);
-        ReleaseDirHandle(&sdh, glob);
-        return ERROR_OBJECT_EXISTS;
+        if ((dnamelen != snamelen) || (strnicmp(sname, dname, snamelen) != 0))
+        {
+            ReleaseDirHandle(&ddh, glob);
+            ReleaseDirHandle(&sdh, glob);
+            return ERROR_OBJECT_EXISTS;
+        }
     }
     else if (err != ERROR_OBJECT_NOT_FOUND)
     {
@@ -577,7 +582,7 @@ LONG OpRenameFile(struct ExtFileLock *sdirlock, UBYTE *sname,
     }
 
     /* At this point we have the source entry in sde, and we know the dest
-     * doesn't exist */
+     * doesn't exist or it is a capitalization change */
 
     /* XXX: if sdh and ddh are the same dir and there's room in the existing
      * entries for the new name, just overwrite the name */
@@ -585,12 +590,11 @@ LONG OpRenameFile(struct ExtFileLock *sdirlock, UBYTE *sname,
     /* Make a new entry in the target dir */
     if ((err = CreateDirEntry(&ddh, dname, dnamelen,
         sde.e.entry.attr | ATTR_ARCHIVE,
-        AROS_LE2WORD(sde.e.entry.first_cluster_hi << 16) | AROS_LE2WORD(sde.e.entry.first_cluster_lo),
+        (sde.e.entry.first_cluster_hi << 16) | sde.e.entry.first_cluster_lo,
         &dde, glob)) != 0)
     {
         ReleaseDirHandle(&ddh, glob);
         ReleaseDirHandle(&sdh, glob);
-        return err;
     }
 
     /* Copy in the leftover attributes */
@@ -738,8 +742,8 @@ LONG OpCreateDir(struct ExtFileLock *dirlock, UBYTE *name, ULONG namelen,
     cluster = dh.ioh.first_cluster;
     if (cluster == dh.ioh.sb->rootdir_cluster)
         cluster = 0;
-    sde.e.entry.first_cluster_lo = AROS_LE2WORD(cluster & 0xffff);
-    sde.e.entry.first_cluster_hi = AROS_LE2WORD(cluster >> 16);
+    sde.e.entry.first_cluster_lo = cluster & 0xffff;
+    sde.e.entry.first_cluster_hi = cluster >> 16;
     UpdateDirEntry(&sde, glob);
 
     /* Clear all remaining entries (the first of which marks the end of the
@@ -875,9 +879,9 @@ LONG OpWrite(struct ExtFileLock *lock, UBYTE *data, ULONG want,
                 glob);
             GetDirEntry(&dh, lock->gl->dir_entry, &de, glob);
 
-            de.e.entry.file_size = AROS_LE2LONG(lock->gl->size);
-            de.e.entry.first_cluster_lo = AROS_LE2WORD(lock->gl->first_cluster & 0xffff);
-            de.e.entry.first_cluster_hi = AROS_LE2WORD(lock->gl->first_cluster >> 16);
+            de.e.entry.file_size = lock->gl->size;
+            de.e.entry.first_cluster_lo = lock->gl->first_cluster & 0xffff;
+            de.e.entry.first_cluster_hi = lock->gl->first_cluster >> 16;
 
             de.e.entry.attr |= ATTR_ARCHIVE;
             UpdateDirEntry(&de, glob);
@@ -1049,8 +1053,8 @@ LONG OpSetFileSize(struct ExtFileLock *lock, LONG offset, LONG whence,
     }
 
     /* Clusters are fixed, now update the directory entry */
-    de.e.entry.first_cluster_lo = AROS_LE2WORD( first & 0xffff );
-    de.e.entry.first_cluster_hi = AROS_LE2WORD( first >> 16);
+    de.e.entry.first_cluster_lo = first & 0xffff;
+    de.e.entry.first_cluster_hi = first >> 16;
     de.e.entry.file_size = size;
     de.e.entry.attr |= ATTR_ARCHIVE;
     UpdateDirEntry(&de, glob);

@@ -1,10 +1,9 @@
-# $Id$
 
 include $(SRCDIR)/config/aros.cfg
 
 USER_CPPFLAGS := -D__NOLIBBASE__
 
-USER_LDFLAGS := -static
+USER_LDFLAGS := -lstdc.static
 
 FILES := cache direntry date disk fat file lock main names notify ops packet\
  support timer volume

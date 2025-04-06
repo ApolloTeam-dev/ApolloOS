@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
     
     Desc: GPT partition table handler
@@ -261,7 +261,7 @@ static LONG PartitionGPTCheckPartitionTable(struct Library *PartitionBase, struc
     {
         struct PCPartitionTable *pcpt = ((struct MBR *)blk)->pcpt;
 
-        D(bug("[GPT] MBR check passed, first partition type 0x%02X, start block %u\n", pcpt[0].type, pcpt[0].first_sector));
+        D(bug("[PART:GPT] PartitionGPTCheckPartitionTable: MBR check passed, first partition type 0x%02X, start block %u |", pcpt[0].type, pcpt[0].first_sector));
 
         /* We must have partition 0 of type GPT starting at block 1 */
         if ((pcpt[0].type == MBRT_GPT) && (AROS_LE2LONG(pcpt[0].first_sector) == 1))
@@ -279,8 +279,17 @@ static LONG PartitionGPTCheckPartitionTable(struct Library *PartitionBase, struc
                 /* There's no third backup :( */
                 if (res == ERROR_BAD_CRC)
                     res = 0;
+
+                    D(bug("ERROR_BAD_CRC\n"));
+            } else {
+                D(bug("GPT FOUND\n"));
             }
+        } else {
+            D(bug("NO GPT FOUND\n"));
         }
+
+    } else {
+        D(bug("[PART:GPT] PartitionGPTCheckPartitionTable: NO MBR FOUND -> NO GPT\n"));
     }
 
     FreeMem(blk, root->de.de_SizeBlock << 2);

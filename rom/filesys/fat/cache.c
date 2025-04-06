@@ -1,24 +1,23 @@
 /*
-    Copyright © 2010-2015, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 2010-2022, The AROS Development Team. All rights reserved.
 
     Disk cache.
  */
 
-/* 
+/*
  * This is an LRU copyback cache.
  *
  * The cache consists of a fixed number of cache blocks, each of which can
  * hold a contiguous range of disk blocks (each range is of a fixed
  * length). Each range is addressed by its base block number, calculated by
  * applying a mask to the requested block number.
- * 
+ *
  * Each cache block contains two Exec list nodes, so it can be part of two
  * lists simultaneously. The first node links a block into a hash table
  * list, while the second links it into either the free list or the dirty
  * list. Initially, all cache blocks are present in the free list, and are
  * absent from the hash table.
- * 
+ *
  * When a disk block is requested by the client, the range that contains
  * that disk block is calculated. The range is then sought by looking up
  * the hash table. Each position in the hash table holds a list containing
@@ -26,26 +25,26 @@
  * blocks are not used internally) that map to that hash location. Each
  * list in the hash table is typically very short, so look-up time is
  * quick.
- * 
+ *
  * If the requested range is not in the hash table, a cache block is
  * removed from the head of the free list and from any hash table list it
  * is in, and used to read the appropriate range from disk. This block is
  * then added to the hash table at its new location.
- * 
+ *
  * Two elements are returned to the client when a requested block is found:
  * an opaque cache block handle, and a pointer to the data buffer.
- * 
+ *
  * When a range is freed, it remains in the hash table so that it can be
  * found quickly if needed again. Unless dirty, it is also added to the
  * tail of the free list through its second list node. The block then
  * remains in the hash table until reused for a different range.
- * 
+ *
  * If a disk block is marked dirty by the client, the entire containing
  * range is marked dirty and added to the tail of the dirty list through
  * the cache block's second node. The dirty list is flushed periodically
  * (currently once per second), and additionally whenever the free list
  * becomes empty.
- * 
+ *
  */
 
 #include <dos/dos.h>
@@ -109,7 +108,7 @@ APTR Cache_CreateCache(APTR priv, ULONG hash_size, ULONG block_count,
 
         c->blocks = AllocVec(sizeof(APTR) * block_count,
             MEMF_PUBLIC | MEMF_CLEAR);
-        if(c == NULL)
+        if(c->blocks == NULL)
             success = FALSE;
 
         for(i = 0; i < block_count && success; i++)
@@ -212,31 +211,36 @@ APTR Cache_GetBlock(APTR cache, ULONG blockNum, UBYTE **data)
 
             /* Read the block from disk */
 
-            if(AccessDisk(FALSE, blockNum, RANGE_SIZE, c->block_size,
-                b->data, c->priv) == 0)
+            if (b)
             {
-                /* Remove block from its old position in the hash */
+                if(AccessDisk(FALSE, blockNum, RANGE_SIZE, c->block_size,
+                    b->data, c->priv) == 0)
+                {
+                    /* Remove block from its old position in the hash */
 
-                if(b->state == BS_VALID)
-                    Remove((struct Node *)b);
+                    if(b->state == BS_VALID)
+                        Remove((struct Node *)b);
 
-                /* Add it to the hash at the new location */
+                    /* Add it to the hash at the new location */
 
-                AddHead((struct List *)l, (struct Node *)&b->node1);
-                b->num = blockNum;
-                b->state = BS_VALID;
-                b->use_count = 1;
+                    AddHead((struct List *)l, (struct Node *)&b->node1);
+                    b->num = blockNum;
+                    b->state = BS_VALID;
+                    b->use_count = 1;
+                }
+                else
+                {
+                    /* Read failed, so put the block back on the free list */
+
+                    b->state = BS_EMPTY;
+                    AddHead((struct List *)&c->free_list,
+                        (struct Node *)&b->node2);
+                    b = NULL;
+                    error = ERROR_UNKNOWN;
+                }
             }
             else
-            {
-                /* Read failed, so put the block back on the free list */
-
-                b->state = BS_EMPTY;
-                AddHead((struct List *)&c->free_list,
-                    (struct Node *)&b->node2);
-                b = NULL;
                 error = ERROR_UNKNOWN;
-            }
         }
         else
             error = ERROR_NO_FREE_STORE;
@@ -295,25 +299,27 @@ BOOL Cache_Flush(APTR cache)
         != NULL && error == 0)
     {
         /* Write dirty block range to disk */
-
         b = NODE2(n);
-        td_error = AccessDisk(TRUE, b->num, RANGE_SIZE, c->block_size,
-            b->data, c->priv);
-
-        /* Transfer block range to free list if unused, or put back on dirty
-         * list upon an error */
-
-        if(td_error == 0)
+        if (b)
         {
-            b->state = BS_VALID;
-            if(b->use_count == 0)
-                AddTail((struct List *)&c->free_list,
-                    (struct Node *)&b->node2);
-        }
-        else
-        {
-            AddHead((struct List *)&c->dirty_list, (struct Node *)&b->node2);
-            error = ERROR_UNKNOWN;
+            td_error = AccessDisk(TRUE, b->num, RANGE_SIZE, c->block_size,
+                b->data, c->priv);
+
+            /* Transfer block range to free list if unused, or put back on dirty
+             * list upon an error */
+
+            if(td_error == 0)
+            {
+                b->state = BS_VALID;
+                if(b->use_count == 0)
+                    AddTail((struct List *)&c->free_list,
+                        (struct Node *)&b->node2);
+            }
+            else
+            {
+                AddHead((struct List *)&c->dirty_list, (struct Node *)&b->node2);
+                error = ERROR_UNKNOWN;
+            }
         }
     }
 

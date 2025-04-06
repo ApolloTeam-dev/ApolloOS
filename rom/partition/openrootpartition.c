@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
 
 */
@@ -10,7 +10,7 @@
 #include "partition_intern.h"
 #include "partition_support.h"
 #include "platform.h"
-
+#include "debug.h"
 /*****************************************************************************
 
     NAME */
@@ -52,6 +52,8 @@
     if (Device == NULL)
         return NULL;
 
+    D(bug("\n[PART:%s] OpenRootPartition: Device = %s | Unit = %u\n", Device, Device, Unit));
+        
     ph = AllocMem(sizeof(struct PartitionHandle), MEMF_PUBLIC | MEMF_CLEAR);
     if (ph)
     {
@@ -82,6 +84,12 @@
                                 ph->de.de_TableSize      = DE_BUFMEMTYPE;
                                 ph->de.de_SectorPerBlock = 1;
                                 ph->de.de_NumBuffers     = 20;
+
+                                D(bug("\t[%s] de_SizeBlock      = %10ld\t(dg_SectorSize>>2)\n",   __FUNCTION__ , ph->de.de_SizeBlock));
+                                D(bug("\t[%s] de_Surfaces       = %10ld\t(dg_Heads)\n",           __FUNCTION__ , ph->de.de_Surfaces));
+                                D(bug("\t[%s] de_BlocksPerTrack = %10ld\t(dg_TrackSectors)\n",    __FUNCTION__ , ph->de.de_BlocksPerTrack));
+                                D(bug("\t[%s] de_BufMemType     = %10ld\t(dg_BufMemType)\n",      __FUNCTION__ , ph->dg.dg_BufMemType));
+                                D(bug("\t[%s] de_HighCyl        = %10ld\t(dg_Cylinders - 1)\n",     __FUNCTION__ , ph->de.de_HighCyl));
 
                                 PartitionNsdCheck(PartitionBase, ph);
                                 return ph;

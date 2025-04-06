@@ -1,8 +1,8 @@
 /*
  * fat-handler - FAT12/16/32 filesystem handler
  *
- * Copyright � 2007-2020 The AROS Development Team
- * Copyright � 2006 Marek Szyprowski
+ * Copyright (C) 2007-2020 The AROS Development Team
+ * Copyright (C) 2006 Marek Szyprowski
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the same terms as AROS itself.
@@ -25,6 +25,7 @@
 #include <clib/macros.h>
 
 #include <ctype.h>
+#include <string.h>
 
 #include "fat_fs.h"
 #include "fat_protos.h"
@@ -65,14 +66,12 @@ static const struct DateStamp unset_date_limit =
 #define ID_BUSY 0x42555359
 #endif
 
-static LONG GetVolumeIdentity(struct FSSuper *sb, struct VolumeIdentity *volume);
+static LONG GetVolumeIdentity(struct FSSuper *sb,
+    struct VolumeIdentity *volume);
 static void FreeFATSuper(struct FSSuper *s);
 
 LONG ReadFATSuper(struct FSSuper *sb)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
-
     struct Globals *glob = sb->glob;
     struct DosEnvec *de = BADDR(glob->fssm->fssm_Environ);
     LONG err = 0, td_err;
@@ -88,25 +87,18 @@ LONG ReadFATSuper(struct FSSuper *sb)
     APTR block_ref;
     UBYTE *fat_block;
 
-    D(bug("[%s] Reading boot sector\n",__FUNCTION__ ));
+    D(bug("[fat] reading boot sector\n"));
 
     boot = AllocMem(bsize, MEMF_ANY);
-    if (!boot) return ERROR_NO_FREE_STORE;
-
-tryagain:    
-    invalid = FALSE;
-        
-    D(bug("[%s] Blockspertrack %ld\n",__FUNCTION__ , de->de_BlocksPerTrack));
-    D(bug("[%s] Surfaces %ld\n", __FUNCTION__ , de->de_Surfaces));
-    D(bug("[%s] Lowcyl %ld\n", __FUNCTION__ , de->de_LowCyl));
-    D(bug("[%s] Highcyl %ld\n", __FUNCTION__ , de->de_HighCyl));
+    if (!boot)
+        return ERROR_NO_FREE_STORE;
 
     sb->first_device_sector = de->de_BlocksPerTrack * de->de_Surfaces * de->de_LowCyl;
-    D(bug("[%s] Boot sector at sector %ld\n", __FUNCTION__ , sb->first_device_sector));
 
     /* Get a preliminary total-sectors value so we don't risk going outside partition limits */
     sb->total_sectors = de->de_BlocksPerTrack * de->de_Surfaces * (de->de_HighCyl + 1) - sb->first_device_sector;
-    D(bug("[%s] Calculated Total Sectors %ld\n", __FUNCTION__ , sb->total_sectors));
+
+    D(bug("[fat] boot sector at sector %ld\n", sb->first_device_sector));
 
     /*
      * Read the boot sector. We go direct because we don't have a cache yet,
@@ -116,136 +108,110 @@ tryagain:
      */
     if ((td_err = AccessDisk(FALSE, sb->first_device_sector, 1, bsize, (UBYTE *) boot, glob)) != 0)
     {
-        D(bug("[%s] Couldn't read boot block (%ld)\n", __FUNCTION__ , td_err));
+        D(bug("[fat] couldn't read boot block (%ld)\n", td_err));
         FreeMem(boot, bsize);
         return ERROR_UNKNOWN;
     }
 
-    D(bug("[%s]Boot sector:\n",__FUNCTION__ ));
+    D(bug("\tBoot sector:\n"));
 
     sb->sectorsize = AROS_LE2WORD(boot->bpb_bytes_per_sect);
     sb->sectorsize_bits = log2(sb->sectorsize);
-    D(bug("[%s] SectorSize = %ld\n", __FUNCTION__ , sb->sectorsize));
-    D(bug("[%s] SectorSize Bits = %ld\n", __FUNCTION__ , sb->sectorsize_bits));
+    D(bug("\tSectorSize = %ld\n", sb->sectorsize));
+    D(bug("\tSectorSize Bits = %ld\n", sb->sectorsize_bits));
 
     sb->cluster_sectors = boot->bpb_sect_per_clust;
     sb->clustersize = sb->sectorsize * boot->bpb_sect_per_clust;
     sb->clustersize_bits = log2(sb->clustersize);
     sb->cluster_sectors_bits = sb->clustersize_bits - sb->sectorsize_bits;
 
-    D(bug("[%s] SectorsPerCluster = %ld\n",__FUNCTION__ , (ULONG) boot->bpb_sect_per_clust));
-    D(bug("[%s] ClusterSize = %ld\n", __FUNCTION__ , sb->clustersize));
-    D(bug("[%s] ClusterSize Bits = %ld\n", __FUNCTION__ , sb->clustersize_bits));
-    D(bug("[%s] Cluster Sectors Bits = %ld\n", __FUNCTION__ , sb->cluster_sectors_bits));
+    D(bug("\tSectorsPerCluster = %ld\n", (ULONG) boot->bpb_sect_per_clust));
+    D(bug("\tClusterSize = %ld\n", sb->clustersize));
+    D(bug("\tClusterSize Bits = %ld\n", sb->clustersize_bits));
+    D(bug("\tCluster Sectors Bits = %ld\n", sb->cluster_sectors_bits));
 
     sb->first_fat_sector = AROS_LE2WORD(boot->bpb_rsvd_sect_count);
-    D(bug("[%s] First FAT Sector = %ld\n", __FUNCTION__ , sb->first_fat_sector));
+    D(bug("\tFirst FAT Sector = %ld\n", sb->first_fat_sector));
 
     sb->fat_count = boot->bpb_num_fats;
-    D(bug("[%s]Number of FATs = %d\n", __FUNCTION__ , sb->fat_count));
+    D(bug("\tNumber of FATs = %d\n", sb->fat_count));
 
     if (boot->bpb_fat_size_16 != 0)
         sb->fat_size = AROS_LE2WORD(boot->bpb_fat_size_16);
     else
         sb->fat_size = AROS_LE2LONG(boot->ebpbs.ebpb32.bpb_fat_size_32);
-    D(bug("[%s] FAT Size = %ld\n", __FUNCTION__ , sb->fat_size));
+    D(bug("\tFAT Size = %ld\n", sb->fat_size));
 
     if (boot->bpb_total_sectors_16 != 0)
         total_sectors = AROS_LE2WORD(boot->bpb_total_sectors_16);
     else
         total_sectors = AROS_LE2LONG(boot->bpb_total_sectors_32);
-    D(bug("[%s] Total Sectors = %ld\n", __FUNCTION__ , sb->total_sectors));
+    D(bug("\tTotal Sectors (BB) = %ld | (DE) = %ld\n", total_sectors, sb->total_sectors));
 
     /* Check that the boot block's sector count is the same as the
      * partition's sector count. This stops a resized partition being
      * mounted before reformatting */
-    //if ((total_sectors +4096) < sb->total_sectors)
-    //{
-    //    invalid = TRUE;
-    //    D(bug("[%s] #Boot-Sectors (%ld) < Partition-Sectors (%ld)\n", __FUNCTION__ , total_sectors, sb->total_sectors));
-    //}
+    /* Note: Linux can create partitions where these two values differ, but still are valid for read / write
+     * under Linux, Windows and MacOS */
+    if ((total_sectors < sb->total_sectors - 64) || (total_sectors > sb->total_sectors))
+    {
+        D(bug("\tInvalid FAT: Sector Mismatch between BB and DE\n"));   
+        invalid = TRUE;
+    }
 
     sb->rootdir_sectors = ((AROS_LE2WORD(boot->bpb_root_entries_count)
         * sizeof(struct FATDirEntry)) + (sb->sectorsize - 1))
         >> sb->sectorsize_bits;
-    D(bug("[%s] RootDir Sectors = %ld\n", __FUNCTION__ , sb->rootdir_sectors));
+    D(bug("\tRootDir Sectors = %ld\n", sb->rootdir_sectors));
 
     sb->data_sectors = sb->total_sectors - (sb->first_fat_sector
         + (sb->fat_count * sb->fat_size) + sb->rootdir_sectors);
-    D(bug("[%s] Data Sectors = %ld\n", __FUNCTION__ , sb->data_sectors));
+    D(bug("\tData Sectors = %ld\n", sb->data_sectors));
 
     sb->clusters_count = sb->data_sectors >> sb->cluster_sectors_bits;
-    D(bug("[%s] Clusters Count = %ld\n", __FUNCTION__ , sb->clusters_count));
+    D(bug("\tClusters Count = %ld\n", sb->clusters_count));
 
     sb->first_rootdir_sector =
         sb->first_fat_sector + (sb->fat_count * sb->fat_size);
-    D(bug("[%s] First RootDir Sector = %ld\n", __FUNCTION__ , sb->first_rootdir_sector));
+    D(bug("\tFirst RootDir Sector = %ld\n", sb->first_rootdir_sector));
 
     sb->first_data_sector =
         sb->first_fat_sector + (sb->fat_count * sb->fat_size)
         + sb->rootdir_sectors;
-    D(bug("[%s] First Data Sector = %ld\n", __FUNCTION__ , sb->first_data_sector));
+    D(bug("\tFirst Data Sector = %ld\n", sb->first_data_sector));
 
     /* Check if disk is in fact a FAT filesystem */
 
     /* Valid sector size: 512, 1024, 2048, 4096 */
     if (sb->sectorsize != 512 && sb->sectorsize != 1024
         && sb->sectorsize != 2048 && sb->sectorsize != 4096)
-    {
         invalid = TRUE;
-        D(bug("[%s] Invalid FAT Sectorsize: %ld\n", __FUNCTION__ , sb->sectorsize));
-    }
 
     /* Valid bpb_sect_per_clust: 1, 2, 4, 8, 16, 32, 64, 128 */
     if ((boot->bpb_sect_per_clust & (boot->bpb_sect_per_clust - 1)) != 0
         || boot->bpb_sect_per_clust == 0 || boot->bpb_sect_per_clust > 128)
-    {
         invalid = TRUE;
-        D(bug("[%s] Invalid FAT Sectorsize: %ld\n", __FUNCTION__ , sb->sectorsize));
-    }
 
     /* Valid cluster size: 512, 1024, 2048, 4096, 8192, 16k, 32k, 64k */
     if (sb->clustersize > 64 * 1024)
-    {
         invalid = TRUE;
-        D(bug("[%s] Invalid FAT Clustersize: %ld\n", __FUNCTION__ , sb->clustersize));
-    }
 
     if (sb->first_fat_sector == 0)
-    {
         invalid = TRUE;
-        D(bug("[%s] Invalid first FAT Sector (0) %ld\n", __FUNCTION__ , sb->first_fat_sector));
-    }
 
     if (sb->fat_count == 0)
-    {
         invalid = TRUE;
-        D(bug("[%s] Invalid FAT Count: %ld\n", __FUNCTION__ , sb->fat_count));
-    }
 
     if (boot->bpb_media < 0xF0)
-    {
         invalid = TRUE;
-        D(bug("[%s] Invalid Media (boot->bpb_Media < 0xF0\n", __FUNCTION__));
-    }
 
     /* FAT "signature" */
     if (boot->bpb_signature[0] != 0x55 || boot->bpb_signature[1] != 0xaa)
-    {
         invalid = TRUE;
-        D(bug("[%s] Invalid FAT Signature (boot->bpb_signature\n", __FUNCTION__ ));
-    }
 
-    if (invalid == TRUE)
+    if (invalid)
     {
-        if (de->de_LowCyl < 256)        //ugly hack for special SDcards, we should read the MBR and calculate the offset
-        {   
-            de->de_LowCyl+=1;
-            D(bug("[%s] FAT32 =%c %c %c %c \n", __FUNCTION__, boot->bpb_signature[82], boot->bpb_signature[83], boot->bpb_signature[84], boot->bpb_signature[85]));
-            D(bug("[%s] Invalid FAT Boot Sector, try again with offset %ld\n",__FUNCTION__ , de->de_LowCyl));
-            goto tryagain;
-        }
-        D(bug("[%s] Invalid FAT Boot Sector\n",__FUNCTION__ ));
+        D(bug("\tInvalid FAT Boot Sector\n"));
         FreeMem(boot, bsize);
         return ERROR_NOT_A_DOS_DISK;
     }
@@ -254,7 +220,7 @@ tryagain:
     if ((sb->first_device_sector + sb->total_sectors - 1 > end)
         && (glob->readcmd == CMD_READ))
     {
-        D(bug("[%s] Device is too large\n",__FUNCTION__ ));
+        D(bug("\tDevice is too large\n"));
         ErrorMessage("Your device driver does not support 64-bit\n"
             "disk addressing, but it is needed to access\n"
             "the volume in device %s.\n\n"
@@ -277,7 +243,7 @@ tryagain:
 
     if (sb->clusters_count < 4085)
     {
-        D(bug("[%s] FAT12 filesystem detected\n",__FUNCTION__ ));
+        D(bug("\tFAT12 filesystem detected\n"));
         sb->type = 12;
         sb->eoc_mark = 0x0FFF;
         sb->func_get_fat_entry = GetFat12Entry;
@@ -285,7 +251,7 @@ tryagain:
     }
     else if (sb->clusters_count < 65525)
     {
-        D(bug("[%s] FAT16 filesystem detected\n",__FUNCTION__ ));
+        D(bug("\tFAT16 filesystem detected\n"));
         sb->type = 16;
         sb->eoc_mark = 0xFFFF;
         sb->func_get_fat_entry = GetFat16Entry;
@@ -293,7 +259,7 @@ tryagain:
     }
     else
     {
-        D(bug("[%s] FAT32 filesystem detected\n",__FUNCTION__ ));
+        D(bug("\tFAT32 filesystem detected\n"));
         sb->type = 32;
         sb->eoc_mark = 0x0FFFFFFF;
         sb->func_get_fat_entry = GetFat32Entry;
@@ -343,7 +309,7 @@ tryagain:
         ebpb = &boot->ebpbs.ebpb32.ebpb;
     }
 
-    D(bug("[%s] Rootdir at cluster %ld sector %ld\n", __FUNCTION__ , sb->rootdir_cluster,
+    D(bug("[fat] rootdir at cluster %ld sector %ld\n", sb->rootdir_cluster,
         sb->rootdir_sector));
 
     /* Initialise the root directory if this is a newly formatted volume */
@@ -401,7 +367,7 @@ tryagain:
 
             ReleaseDirHandle(&dh, glob);
             glob->formatting = FALSE;
-            D(bug("[%s] Root dir created.\n",__FUNCTION__ ));
+            D(bug("\tRoot dir created.\n"));
         }
 
         if (err == 0)
@@ -450,7 +416,8 @@ tryagain:
         sb->volume.create_time.ds_Days = 0;
         sb->volume.create_time.ds_Minute = 0;
         sb->volume.create_time.ds_Tick = (id >> 22 ^ id >> 11 ^ id) & 0x7FF;
-        D(bug("[%s] Set hash time to %ld ticks\n", __FUNCTION__ , sb->volume.create_time.ds_Tick));
+        D(bug("[fat] Set hash time to %ld ticks\n",
+            sb->volume.create_time.ds_Tick));
     }
 
     /* Get initial number of free clusters */
@@ -469,7 +436,7 @@ tryagain:
             {
                 sb->free_clusters = AROS_LE2LONG(fsinfo->free_count);
                 sb->next_cluster = AROS_LE2LONG(fsinfo->next_free);
-                D(bug("[%s] Valid FATFSInfo block found\n",__FUNCTION__ ));
+                D(bug("[fat] valid FATFSInfo block found\n"));
                 sb->fsinfo_buffer = fsinfo;
             }
             else
@@ -486,9 +453,9 @@ tryagain:
         FreeFATSuper(sb);
     else
     {
-        D(bug("[%s] FAT Filesystem successfully detected.\n",__FUNCTION__ ));
-        D(bug("[%s] Free Clusters = %ld\n", __FUNCTION__ , sb->free_clusters));
-        D(bug("[%s] Next Free Cluster = %ld\n", __FUNCTION__ , sb->next_cluster));
+        D(bug("\tFAT Filesystem successfully detected.\n"));
+        D(bug("\tFree Clusters = %ld\n", sb->free_clusters));
+        D(bug("\tNext Free Cluster = %ld\n", sb->next_cluster));
     }
 
     return err;
@@ -497,16 +464,13 @@ tryagain:
 static LONG GetVolumeIdentity(struct FSSuper *sb,
     struct VolumeIdentity *volume)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
-
     struct Globals *glob = sb->glob;
     struct DirHandle dh;
     struct DirEntry de;
     LONG err;
     int i;
 
-    D(bug("[%s] Searching root directory for volume name\n",__FUNCTION__ ));
+    D(bug("[fat] searching root directory for volume name\n"));
 
     /* Search the directory for the volume ID entry. It would've been nice to
      * just use GetNextDirEntry but I didn't want a flag or something to tell
@@ -520,7 +484,7 @@ static LONG GetVolumeIdentity(struct FSSuper *sb,
         if ((de.e.entry.attr & ATTR_VOLUME_ID_MASK) == ATTR_VOLUME_ID
             && de.e.entry.name[0] != 0xe5)
         {
-            D(bug("[%s] Found volume id entry %ld\n", __FUNCTION__ , dh.cur_index));
+            D(bug("[fat] found volume id entry %ld\n", dh.cur_index));
 
             /* Copy the name in. 'volume->name' is a BSTR */
             volume->name[1] = de.e.entry.name[0];
@@ -540,7 +504,7 @@ static LONG GetVolumeIdentity(struct FSSuper *sb,
             ConvertFATDate(de.e.entry.create_date, de.e.entry.create_time,
                 &volume->create_time, glob);
 
-            D(bug("[%s] Volume name is '%s'\n", __FUNCTION__ , &(volume->name[1])));
+            D(bug("[fat] volume name is '%s'\n", &(volume->name[1])));
 
             break;
         }
@@ -548,7 +512,8 @@ static LONG GetVolumeIdentity(struct FSSuper *sb,
         /* Bail out if we hit the end of the dir */
         if (de.e.entry.name[0] == 0x00)
         {
-            D(bug("[%s] Found end-of-directory marker, volume name entry not found\n",__FUNCTION__ ));
+            D(bug("[fat] found end-of-directory marker,"
+                " volume name entry not found\n"));
             err = ERROR_OBJECT_NOT_FOUND;
             break;
         }
@@ -560,9 +525,6 @@ static LONG GetVolumeIdentity(struct FSSuper *sb,
 
 LONG FormatFATVolume(const UBYTE *name, UWORD len, struct Globals *glob)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
-
     struct DosEnvec *de = BADDR(glob->fssm->fssm_Environ);
     LONG td_err;
     ULONG bsize = de->de_SizeBlock * 4;
@@ -584,7 +546,7 @@ LONG FormatFATVolume(const UBYTE *name, UWORD len, struct Globals *glob)
     else
         type = 32;
 
-    D(bug("[%s] Writing boot sector\n",__FUNCTION__ ));
+    D(bug("[fat] writing boot sector\n"));
 
     /* Decide on cluster size and root dir entries */
     first_fat_sector = 1;
@@ -625,7 +587,7 @@ LONG FormatFATVolume(const UBYTE *name, UWORD len, struct Globals *glob)
         first_fat_sector = 32;
     }
 
-    D(bug("[%s] First FAT Sector = %ld\n", __FUNCTION__ , first_fat_sector));
+    D(bug("\tFirst FAT Sector = %ld\n", first_fat_sector));
 
     /* Determine FAT size */
     root_dir_sectors = (root_entries_count * 32 + (bsize - 1)) / bsize;
@@ -710,12 +672,12 @@ LONG FormatFATVolume(const UBYTE *name, UWORD len, struct Globals *glob)
     first_device_sector =
         de->de_BlocksPerTrack * de->de_Surfaces * de->de_LowCyl;
 
-    D(bug("[%s] Boot sector at sector %ld\n", __FUNCTION__ , first_device_sector));
+    D(bug("[fat] boot sector at sector %ld\n", first_device_sector));
 
     if ((td_err = AccessDisk(TRUE, first_device_sector, 1, bsize,
         (UBYTE *) boot, glob)) != 0)
     {
-        D(bug("[%s] Couldn't write boot block (%ld)\n", __FUNCTION__ , td_err));
+        D(bug("[fat] couldn't write boot block (%ld)\n", td_err));
         FreeMem(boot, bsize);
         return ERROR_UNKNOWN;
     }
@@ -726,7 +688,7 @@ LONG FormatFATVolume(const UBYTE *name, UWORD len, struct Globals *glob)
         if ((td_err = AccessDisk(TRUE, first_device_sector + 6, 1, bsize,
             (UBYTE *) boot, glob)) != 0)
         {
-            D(bug("[%s] Couldn't write back-up boot block (%ld)\n", __FUNCTION__ , td_err));
+            D(bug("[fat] couldn't write back-up boot block (%ld)\n", td_err));
             FreeMem(boot, bsize);
             return ERROR_UNKNOWN;
         }
@@ -743,7 +705,7 @@ LONG FormatFATVolume(const UBYTE *name, UWORD len, struct Globals *glob)
         if ((td_err = AccessDisk(TRUE, first_device_sector + 1, 1, bsize,
             (UBYTE *) fsinfo, glob)) != 0)
         {
-            D(bug("[%s] Couldn't write back-up boot block (%ld)\n", __FUNCTION__ , td_err));
+            D(bug("[fat] couldn't write back-up boot block (%ld)\n", td_err));
             FreeMem(boot, bsize);
             return ERROR_UNKNOWN;
         }
@@ -758,9 +720,6 @@ LONG FormatFATVolume(const UBYTE *name, UWORD len, struct Globals *glob)
 
 LONG SetVolumeName(struct FSSuper *sb, UBYTE *name, UWORD len)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
-
     struct Globals *glob = sb->glob;
     struct DirHandle dh;
     struct DirEntry de;
@@ -782,12 +741,12 @@ LONG SetVolumeName(struct FSSuper *sb, UBYTE *name, UWORD len)
     if ((td_err = AccessDisk(FALSE, sb->first_device_sector, 1, bsize,
         (UBYTE *) boot, glob)) != 0)
     {
-        D(bug("[%s] Couldn't read boot block (%ld)\n", __FUNCTION__ , td_err));
+        D(bug("[fat] couldn't read boot block (%ld)\n", td_err));
         FreeMem(boot, bsize);
         return ERROR_UNKNOWN;
     }
 
-    D(bug("[%s] Searching root directory for volume name\n", __FUNCTION__ ));
+    D(bug("[fat] searching root directory for volume name\n"));
 
     /* Search the directory for the volume ID entry. It would've been nice to
      * just use GetNextDirEntry but I didn't want a flag or something to tell
@@ -801,7 +760,7 @@ LONG SetVolumeName(struct FSSuper *sb, UBYTE *name, UWORD len)
         if ((de.e.entry.attr & ATTR_VOLUME_ID_MASK) == ATTR_VOLUME_ID
             && de.e.entry.name[0] != 0xe5)
         {
-            D(bug("[%s] Found volume id entry %ld\n", __FUNCTION__ , dh.cur_index));
+            D(bug("[fat] found volume id entry %ld\n", dh.cur_index));
             err = 0;
             break;
         }
@@ -809,7 +768,8 @@ LONG SetVolumeName(struct FSSuper *sb, UBYTE *name, UWORD len)
         /* Bail out if we hit the end of the dir */
         if (de.e.entry.name[0] == 0x00)
         {
-            D(bug("[%s] Found end-of-directory marker, volume name entry not found\n",__FUNCTION__ ));
+            D(bug("[fat] found end-of-directory marker,"
+                " volume name entry not found\n"));
             err = ERROR_OBJECT_NOT_FOUND;
             break;
         }
@@ -834,7 +794,7 @@ LONG SetVolumeName(struct FSSuper *sb, UBYTE *name, UWORD len)
 
         if ((err = UpdateDirEntry(&de, glob)) != 0)
         {
-            D(bug("[%s] Couldn't change volume name\n",__FUNCTION__ ));
+            D(bug("[fat] couldn't change volume name\n"));
             return err;
         }
     }
@@ -849,7 +809,7 @@ LONG SetVolumeName(struct FSSuper *sb, UBYTE *name, UWORD len)
 
     if ((td_err = AccessDisk(TRUE, sb->first_device_sector, 1, bsize,
         (UBYTE *) boot, glob)) != 0)
-        D(bug("[%s] Couldn't write boot block (%ld)\n", __FUNCTION__ , td_err));
+        D(bug("[fat] couldn't write boot block (%ld)\n", td_err));
     FreeMem(boot, bsize);
 
     /* Update name in SB */
@@ -859,7 +819,7 @@ LONG SetVolumeName(struct FSSuper *sb, UBYTE *name, UWORD len)
         sb->volume.name[i + 1] = tolower(name[i]);
     sb->volume.name[len + 1] = '\0';
 
-    D(bug("[%s] New volume name is '%s'\n", __FUNCTION__ , &(sb->volume.name[1])));
+    D(bug("[fat] new volume name is '%s'\n", &(sb->volume.name[1])));
 
     ReleaseDirHandle(&dh, glob);
     return err;
@@ -867,26 +827,17 @@ LONG SetVolumeName(struct FSSuper *sb, UBYTE *name, UWORD len)
 
 static void FreeFATSuper(struct FSSuper *sb)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
-
     struct Globals *glob = sb->glob;
-    D(bug("[%s] Removing Super Block from memory\n",__FUNCTION__ ));
+    D(bug("\tRemoving Super Block from memory\n"));
     Cache_DestroyCache(sb->cache);
-    D(bug("[%s] Removing FAT Buffers\n",__FUNCTION__ ));
     FreeVecPooled(glob->mempool, sb->fat_buffers);
     sb->fat_buffers = NULL;
-    D(bug("[%s] Removing FAT Blocks\n",__FUNCTION__ ));
     FreeVecPooled(glob->mempool, sb->fat_blocks);
     sb->fat_blocks = NULL;
-    D(bug("[%s] Done clearing memory\n",__FUNCTION__ ));
 }
 
 void FillDiskInfo(struct InfoData *id, struct Globals *glob)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
-
     struct DosEnvec *de = BADDR(glob->fssm->fssm_Environ);
 
     id->id_NumSoftErrors = 0;
@@ -931,9 +882,6 @@ void FillDiskInfo(struct InfoData *id, struct Globals *glob)
 static void SendVolumePacket(struct DosList *vol, ULONG action,
     struct Globals *glob)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
-
     struct DosPacket *dospacket;
 
     dospacket = AllocDosObject(DOS_STDPKT, TAG_DONE);
@@ -948,9 +896,6 @@ static void SendVolumePacket(struct DosList *vol, ULONG action,
 
 void DoDiskInsert(struct Globals *glob)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
-
     struct FSSuper *sb;
     ULONG err;
     struct DosList *dl;
@@ -971,9 +916,11 @@ void DoDiskInsert(struct Globals *glob)
         if (err == 0)
         {
 
-            /* Scan volume list for a matching volume (would be better to match by serial number) */
+            /* Scan volume list for a matching volume (would be better to
+             * match by serial number) */
             dl = LockDosList(LDF_VOLUMES | LDF_WRITE);
-            dl = FindDosEntry(dl, sb->volume.name + 1, LDF_VOLUMES | LDF_WRITE);
+            dl = FindDosEntry(dl, sb->volume.name + 1,
+                LDF_VOLUMES | LDF_WRITE);
             UnLockDosList(LDF_VOLUMES | LDF_WRITE);
 
             if (dl != NULL &&
@@ -986,7 +933,7 @@ void DoDiskInsert(struct Globals *glob)
                 dl->dol_Task = glob->ourport;
                 sb->doslist = dl;
 
-                D(bug("[%s] Found old volume.\n", __FUNCTION__ ));
+                D(bug("\tFound old volume.\n"));
 
                 vol_info = BADDR(dl->dol_misc.dol_volume.dol_LockList);
 
@@ -1010,8 +957,9 @@ void DoDiskInsert(struct Globals *glob)
                     ForeachNode(&global_lock->locks, lock_node)
                     {
                         ext_lock = LOCKFROMNODE(lock_node);
-                        D(bug("[%s] Patching adopted lock %p. old port = %p, new port = %p\n",
-                            __FUNCTION__ , ext_lock, ext_lock->fl_Task, glob->ourport));
+                        D(bug("[fat] Patching adopted lock %p. old port = %p,"
+                            " new port = %p\n", ext_lock,
+                            ext_lock->fl_Task, glob->ourport));
                         ext_lock->fl_Task = glob->ourport;
                         ext_lock->sb = sb;
                         ext_lock->ioh.sb = sb;
@@ -1021,8 +969,9 @@ void DoDiskInsert(struct Globals *glob)
                 ForeachNode(&vol_info->root_lock.locks, lock_node)
                 {
                     ext_lock = LOCKFROMNODE(lock_node);
-                    D(bug("[%s] Patching adopted ROOT lock %p. old port = %p, new port = %p\n",
-                          __FUNCTION__ , ext_lock, ext_lock->fl_Task, glob->ourport));
+                    D(bug("[fat] Patching adopted ROOT lock %p. old port = %p,"
+                        " new port = %p\n", ext_lock, ext_lock->fl_Task,
+                        glob->ourport));
                     ext_lock->fl_Task = glob->ourport;
                     ext_lock->sb = sb;
                     ext_lock->ioh.sb = sb;
@@ -1033,7 +982,7 @@ void DoDiskInsert(struct Globals *glob)
             }
             else
             {
-                D(bug("[%s] Creating new volume.\n",__FUNCTION__ ));
+                D(bug("\tCreating new volume.\n"));
 
                 /* Create transferable core volume info */
                 pool =
@@ -1112,7 +1061,7 @@ void DoDiskInsert(struct Globals *glob)
             else
                 SendVolumePacket(newvol, ACTION_VOLUME_ADD, glob);
 
-            D(bug("[%s] Disk successfully initialised\n",__FUNCTION__ ));
+            D(bug("\tDisk successfully initialised\n"));
 
             return;
         }
@@ -1127,18 +1076,15 @@ void DoDiskInsert(struct Globals *glob)
 
 BOOL AttemptDestroyVolume(struct FSSuper *sb)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
-
     struct Globals *glob = sb->glob;
     BOOL destroyed = FALSE;
 
-    D(bug("[%s] Attempting to destroy volume\n",__FUNCTION__ ));
+    D(bug("[fat] Attempting to destroy volume\n"));
 
     /* Check if the volume can be removed */
     if (IsListEmpty(&sb->info->locks) && IsListEmpty(&sb->info->notifies))
     {
-        D(bug("[%s] Removing volume completely\n", __FUNCTION__ ));
+        D(bug("\tRemoving volume completely\n"));
 
         if (sb == glob->sb)
             glob->sb = NULL;
@@ -1157,8 +1103,6 @@ BOOL AttemptDestroyVolume(struct FSSuper *sb)
 
 void DoDiskRemove(struct Globals *glob)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
 
     if (glob->sb)
     {
@@ -1168,9 +1112,11 @@ void DoDiskRemove(struct Globals *glob)
         {
             sb->doslist->dol_Task = NULL;
             glob->sb = NULL;
-            D(bug("[%s] Moved in-mem SB block to spare, waiting for locks and notifications to be freed\n",__FUNCTION__ ));
+            D(bug("\tMoved in-memory super block to spare list. "
+                "Waiting for locks and notifications to be freed\n"));
             AddTail((struct List *)&glob->sblist, (struct Node *)sb);
             SendEvent(IECLASS_DISKREMOVED, glob);
         }
     }
 }
+

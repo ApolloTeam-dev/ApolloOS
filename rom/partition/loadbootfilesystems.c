@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -11,6 +11,7 @@
 
 #include "partition_support.h"
 #include "fsloader.h"
+#include "debug.h"
 
 /*****************************************************************************
 
@@ -55,7 +56,7 @@
     PBASE(PartitionBase)->pb_DOSBase = TaggedOpenLibrary(TAGGEDOPEN_DOS);
     DOSBase = (struct DosLibrary *)PBASE(PartitionBase)->pb_DOSBase;
     /* We should really have dos.library online now */
-    D(bug("[LoadBootPartitions] DOSBase 0x%p\n", DOSBase));
+    D(bug("\n[LoadBootPartitions] DOSBase 0x%p\n", DOSBase));
     if (!DOSBase)
     	return ERROR_INVALID_RESIDENT_LIBRARY;
 
@@ -64,24 +65,27 @@
     ForeachNodeSafe(&PBASE(PartitionBase)->bootList, bfs, bfs2)
     {
     	ULONG res;
-	/*
-	 * Unfortunately we have no way to process errors here.
-	 * Well, let's hope that everything will be okay.
-	 */
-	D(bug("[LoadBootPartitions] Loading %s...\n", bfs->ln.ln_Name));
+        /*
+        * Unfortunately we have no way to process errors here.
+        * Well, let's hope that everything will be okay.
+        */
 
-	res = AddFS(PartitionBase, bfs->handle);
-	if (res)
-	{
-	    lasterr = res;
-	}
-	else
-	{
-	    /* A filesystem is loaded, remove it from the queue and free associated data. */
-	    Remove(&bfs->ln);
-	    bfs->handle->handler->freeFileSystem(bfs->handle);
-	    FreeMem(bfs, sizeof(struct BootFileSystem));
-	}
+        res = AddFS(PartitionBase, bfs->handle);
+
+        D(bug("[LoadBootPartitions] Loading %s... ", bfs->ln.ln_Name));
+        if (res)
+        {
+            D(bug("ABORTED: Code = %u\n", res));
+            lasterr = res;
+        }
+        else
+        {
+            D(bug("SUCCESS\n"));
+            /* A filesystem is loaded, remove it from the queue and free associated data. */
+            Remove(&bfs->ln);
+            bfs->handle->handler->freeFileSystem(bfs->handle);
+            FreeMem(bfs, sizeof(struct BootFileSystem));
+        }
     }
 
     ReleaseSemaphore(&PBASE(PartitionBase)->bootSem);
@@ -91,6 +95,9 @@
      * (see dos_init.c and cliinit.c).
      */
     CloseLibrary(&DOSBase->dl_lib);
+
+    D(bug("[LoadBootPartitions] Finished\n\n"));
+
     return lasterr;
 
     AROS_LIBFUNC_EXIT

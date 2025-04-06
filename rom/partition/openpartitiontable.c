@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -9,6 +9,7 @@
 #include "partition_intern.h"
 #include "partition_support.h"
 #include "platform.h"
+#include "debug.h"
 
 /*****************************************************************************
 
@@ -49,6 +50,8 @@
 {
     AROS_LIBFUNC_INIT
 
+    D(bug("[PART:ROOT] OpenPartitionTable\n"));
+    
     const struct PTFunctionTable * const *pst;
 
     pst = PartitionSupport;
@@ -62,10 +65,12 @@
             {
             	LONG retval;
 
-	        NEWLIST(&root->table->list);
+	            NEWLIST(&root->table->list);
 
                 root->table->type    = pst[0]->type;
                 root->table->handler = (void *)pst[0];
+
+                D(bug("[PART:ROOT] OpenPartitionTable: Type = %u | Handler = %u\n", root->table->type, root->table->handler ));
 
                 retval = pst[0]->openPartitionTable(PartitionBase, root);
                 if (retval)

@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -12,11 +12,6 @@
  */
 
 #include <string.h>
-
-#ifdef DEBUG
-#undef DEBUG
-#endif
-#define DEBUG 0
 
 #include "os.h"
 #include "bitmap.h"

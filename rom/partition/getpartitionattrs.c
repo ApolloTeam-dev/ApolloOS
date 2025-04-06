@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -89,6 +89,8 @@
 {
     AROS_LIBFUNC_INIT
 
+    //D(bug("[PART] GetPartitionAttributes\n"));
+
     LONG (*getPartitionAttr)(struct Library *, struct PartitionHandle *,
         const struct TagItem *) = NULL;
 
@@ -105,88 +107,88 @@
     {
     	ULONG sup;
 
-	/* If we have partition handler, call its function first */
+	    /* If we have partition handler, call its function first */
         if (getPartitionAttr)
             sup = getPartitionAttr(PartitionBase, ph, tag);
         else
             sup = FALSE;
 
-	if (!sup)
-	{
-	    struct PartitionHandle *list_ph = NULL;
+        if (!sup)
+        {
+            struct PartitionHandle *list_ph = NULL;
 
-	    /*
-	     * No handler (root partition) or the handler didn't process the attribute.
-	     * Return defaults.
-	     */
+            /*
+            * No handler (root partition) or the handler didn't process the attribute.
+            * Return defaults.
+            */
             switch (tag->ti_Tag)
             {
-            case PT_GEOMETRY:
-                CopyMem(&ph->dg, (APTR)tag->ti_Data, sizeof(struct DriveGeometry));
+                case PT_GEOMETRY:
+                    CopyMem(&ph->dg, (APTR)tag->ti_Data, sizeof(struct DriveGeometry));
+                    break;
+
+                case PT_DOSENVEC:
+                    CopyMem(&ph->de, (APTR)tag->ti_Data, sizeof(struct DosEnvec));
+                    break;
+                    
+                case PT_TYPE:
+                    /* We have no type semantics */
+                PTYPE(tag->ti_Data)->id_len = 0;
                 break;
 
-            case PT_DOSENVEC:
-                CopyMem(&ph->de, (APTR)tag->ti_Data, sizeof(struct DosEnvec));
-                break;
-                
-	    case PT_TYPE:
-	    	/* We have no type semantics */
-		PTYPE(tag->ti_Data)->id_len = 0;
-		break;
+                case PT_LEADIN:
+                case PT_ACTIVE:
+                case PT_BOOTABLE:
+                case PT_AUTOMOUNT:
+                    *((ULONG *)tag->ti_Data) = 0;
+                    break;
 
-	    case PT_LEADIN:
-	    case PT_ACTIVE:
-	    case PT_BOOTABLE:
-	    case PT_AUTOMOUNT:
-	    	*((ULONG *)tag->ti_Data) = 0;
-	    	break;
+                case PT_POSITION:
+                    D(bug("[GetPartitionAttrs] PT_POSITION(0x%p)\n", ph));
 
-	    case PT_POSITION:
-  		D(bug("[GetPartitionAttrs] PT_POSITION(0x%p)\n", ph));
+                    if (ph->root)
+                    {
+                            ULONG i = 0;
 
-		if (ph->root)
-		{
-	            ULONG i = 0;
+                        D(bug("[GetPartitionAttrs] Parent table 0x%p\n", ph->root->table));
 
-		    D(bug("[GetPartitionAttrs] Parent table 0x%p\n", ph->root->table));
+                        ForeachNode(&ph->root->table->list, list_ph)
+                        {
+                            D(bug("[GetPartitionAttrs] Child handle 0x%p\n", list_ph));
 
-		    ForeachNode(&ph->root->table->list, list_ph)
-		    {
-		    	D(bug("[GetPartitionAttrs] Child handle 0x%p\n", list_ph));
+                            if (list_ph == ph)
+                            {
+                                *((ULONG *)tag->ti_Data) = i;
+                                break;
+                            }
+                            i++;
+                        }
+                    }
 
-	            	if (list_ph == ph)
-        	    	{
-			    *((ULONG *)tag->ti_Data) = i;
-			    break;
-			}
-            	    	i++;
-            	    }
-            	}
+                    /* If nothing was found, return -1 (means "not applicable") */
+                    if (list_ph != ph)
+                        *((ULONG *)tag->ti_Data) = -1;
+                        
+                    break;
 
-		/* If nothing was found, return -1 (means "not applicable") */
-            	if (list_ph != ph)
-            	    *((ULONG *)tag->ti_Data) = -1;
+                case PT_NAME:
+                    if (ph->ln.ln_Name)
+                    {
+                        strncpy((STRPTR)tag->ti_Data, ph->ln.ln_Name, 31);
+                        /* Make sure that name is NULL-terminated */
+                        ((STRPTR)tag->ti_Data)[31] = 0;
+                    }
+                    else
+                        ((STRPTR)tag->ti_Data)[0] = 0;
+                    break;
 
-            	break;
+                case PT_STARTBLOCK:
+                    *((UQUAD *)tag->ti_Data) = (UQUAD)ph->de.de_LowCyl * ph->de.de_Surfaces * ph->de.de_BlocksPerTrack;
+                    break;
 
-	    case PT_NAME:
-	        if (ph->ln.ln_Name)
-	        {
-	            strncpy((STRPTR)tag->ti_Data, ph->ln.ln_Name, 31);
-	            /* Make sure that name is NULL-terminated */
-	            ((STRPTR)tag->ti_Data)[31] = 0;
-	        }
-	        else
-	    	    ((STRPTR)tag->ti_Data)[0] = 0;
-	    	break;
-
-	    case PT_STARTBLOCK:
-	    	*((UQUAD *)tag->ti_Data) = (UQUAD)ph->de.de_LowCyl * ph->de.de_Surfaces * ph->de.de_BlocksPerTrack;
-	    	break;
-
-	    case PT_ENDBLOCK:
-	    	*((UQUAD *)tag->ti_Data) = ((UQUAD)ph->de.de_HighCyl + 1) * ph->de.de_Surfaces * ph->de.de_BlocksPerTrack - 1;
-	    	break;
+                case PT_ENDBLOCK:
+                    *((UQUAD *)tag->ti_Data) = ((UQUAD)ph->de.de_HighCyl + 1) * ph->de.de_Surfaces * ph->de.de_BlocksPerTrack - 1;
+                    break;
             }
         }
     }

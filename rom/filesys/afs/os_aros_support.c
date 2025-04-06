@@ -1,11 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2013, The AROS Development Team. All rights reserved.
     $Id$
 */
-
-#ifndef DEBUG
-#define DEBUG 0
-#endif
 
 #include <exec/types.h>
 #include <devices/input.h>
@@ -123,14 +119,14 @@ BSTR bname;
 UBYTE i;
 
 	if (volume->volumenode) {
-	    D(bug("[afs 0x%08lX] VolumeNode is already present!\n", volume));
+	    D(bug("[AFS] VolumeNode 0x%08lX is already present!\n", volume));
 	    return DOSTRUE;
 	}
 	bname = volume->devicelist.dl_Name;
 	for (i=0; i<AROS_BSTR_strlen(bname); i++)
 		string[i] = AROS_BSTR_getchar(bname,i);
 	string[AROS_BSTR_strlen(bname)] = 0;
-	D(bug("[afs 0x%08lX] Processing inserted volume %s\n", volume, string));
+	D(bug("[AFS] Processing inserted volume node=0x%08lX | name=%s\n", volume, string));
 	/* is the volume already in the list? */
 	doslist = AttemptLockDosList(LDF_WRITE | LDF_VOLUMES);
 	if (doslist != NULL)
@@ -144,7 +140,7 @@ UBYTE i;
 	/* if not create a new doslist */
 	if (dl == NULL)
 	{
-		D(bug("[afs 0x%08lX] Creating new VolumeNode\n", volume));
+		D(bug("[AFS] Creating new VolumeNode: 0x%08lX\n", volume));
 		doslist = MakeDosEntry(string,DLT_VOLUME);
 		if (doslist == NULL)
 			return DOSFALSE;
@@ -180,12 +176,12 @@ struct DosList *dl;
 	if (dl) {
 		if (volume->locklist != NULL)
 		{
-			D(bug("[afs 0x%08lX] VolumeNode in use, keeping as offline\n", volume));
+			D(bug("[AFS] VolumeNode in use, keeping as offline: 0x%08lX\n", volume));
 			dl->dol_misc.dol_volume.dol_LockList = MKBADDR(volume->locklist);
 		}
 		else
 		{
-			D(bug("[afs 0x%08lX] Removing VolumeNode\n", volume));
+			D(bug("[AFS] Removing VolumeNode: 0x%08lX\n", volume));
 			remDosNode(afsbase, dl);
 		}
 		volume->volumenode = NULL;
@@ -268,7 +264,9 @@ LONG getGeometry
 
 AROS_INTP(changeIntCode);
 
-LONG addChangeInt(struct AFSBase *afsbase, struct IOHandle *ioh) {
+LONG addChangeInt(struct AFSBase *afsbase, struct IOHandle *ioh)
+{
+	D(bug("[AFS] AddChangeInt() Hook sent to exec device driver: 0x%08lX\n", ioh->mc_int.is_Code));
 
 	ioh->mc_int.is_Code = (VOID_FUNC)changeIntCode;
 	ioh->mc_int.is_Data = ioh;
@@ -372,22 +370,25 @@ void motorOff(struct AFSBase *afsbase, struct IOHandle *ioh) {
 	DoIO((struct IORequest *)&ioh->ioreq->iotd_Req);
 }
 
-void checkDeviceFlags(struct AFSBase *afsbase) {
+void checkDeviceFlags(struct AFSBase *afsbase)
+{
 struct Volume *volume;
 struct IOHandle *ioh;
 
 	volume = (struct Volume *)afsbase->device_list.lh_Head;
+	D(bug("[AFS] Check Device Flags: 0x%08lX\n", volume));
+
 	while (volume->ln.ln_Succ != NULL)
 	{
 		ioh = &volume->ioh;
 		if ((ioh->ioflags & IOHF_MEDIA_CHANGE) && (!volume->inhibitcounter))
 		{
-			D(bug("[afs 0x%08lX] Media change signalled\n", volume));
+			D(bug("[AFS] Media change signalled: 0x%08lX\n", volume));
 			if (diskPresent(afsbase, ioh))
 			{
 			    if (!volume->inhibitcounter)
 			    {
-				D(bug("[afs 0x%08lX] Media inserted\n", volume));
+				D(bug("[AFS] Media inserted: 0x%08lX\n", volume));
 				newMedium(afsbase, volume);
 			    }
 			    ioh->ioflags |= IOHF_DISK_IN;
@@ -424,7 +425,7 @@ UWORD *cmdcheck;
 		volume->ioh.ioreq->iotd_Req.io_Length = sizeof(struct NSDeviceQueryResult);
 		if (DoIO((struct IORequest *)volume->ioh.ioreq) == IOERR_NOCMD)
 		{
-			D(bug("[afs] initVolume-NSD: device doesn't understand NSD-Query\n"));
+			D(bug("[AFS] initVolume-NSD: device doesn't understand NSD-Query\n"));
 		}
 		else
 		{
@@ -434,13 +435,13 @@ UWORD *cmdcheck;
 					(volume->ioh.ioreq->iotd_Req.io_Actual != nsdq.SizeAvailable)
 				)
 			{
-				D(bug("[afs] initVolume-NSD: WARNING wrong io_Actual using NSD\n"));
+				D(bug("[AFS] initVolume-NSD: WARNING wrong io_Actual using NSD\n"));
 			}
 			else
 			{
-				D(bug("[afs] initVolume-NSD: using NSD commands\n"));
+				D(bug("[AFS] initVolume-NSD: using NSD commands\n"));
 				if (nsdq.DeviceType != NSDEVTYPE_TRACKDISK)
-					D(bug("[afs] initVolume-NSD: WARNING no trackdisk type\n"));
+					D(bug("[AFS] initVolume-NSD: WARNING no trackdisk type\n"));
 				for (cmdcheck=nsdq.SupportedCommands; *cmdcheck; cmdcheck++)
 				{
 					if (*cmdcheck == NSCMD_TD_READ64)
@@ -456,13 +457,13 @@ UWORD *cmdcheck;
 						(volume->ioh.cmdread != NSCMD_TD_READ64) ||
 						(volume->ioh.cmdwrite != NSCMD_TD_WRITE64)
 					)
-					D(bug("[afs] initVolume-NSD: WARNING no READ64/WRITE64\n")); 
+					D(bug("[AFS] initVolume-NSD: WARNING no READ64/WRITE64\n")); 
 			}
 		}
 	}
 	else
 	{
-			D(bug("[afs] initVolume-NSD: no need for NSD\n"));
+			D(bug("[AFS] initVolume-NSD: no need for NSD\n"));
 	}
 }
 
@@ -527,7 +528,7 @@ BOOL retry = TRUE;
 
 	while (retry)
 	{
-		DB2(bug("[afs]    readDisk: reading blocks %lu to %lu\n", start, start+count-1));
+		DB2(bug("[AFS] ReadDisk: reading blocks %lu to %lu\n", start, start+count-1));
 		result = readwriteDisk(afsbase, volume, start, count, data, volume->ioh.cmdread);
 		if (result == 0)
 			retry = FALSE;
@@ -544,7 +545,7 @@ BOOL retry = TRUE;
 
 	while (retry)
 	{
-		DB2(bug("[afs]    writeDisk: writing blocks %lu to %lu\n", start, start+count-1));
+		DB2(bug("[AFS] EriteDisk: writing blocks %lu to %lu\n", start, start+count-1));
 		result = readwriteDisk(afsbase, volume, start, count, data, volume->ioh.cmdwrite);
 		if (result == 0)
 			retry = FALSE;
@@ -563,6 +564,7 @@ AROS_INTH1(changeIntCode, struct IOHandle *, ioh)
 
 	ioh->ioflags |= IOHF_MEDIA_CHANGE;
 	Signal(ioh->afsbase->port.mp_SigTask, 1<<ioh->afsbase->port.mp_SigBit);
+	D(bug("[AFS] ChangeIntCode INVOKED\n"));
 
 	return FALSE;
 

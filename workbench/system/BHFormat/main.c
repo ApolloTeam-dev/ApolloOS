@@ -339,7 +339,7 @@ BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
     ibyStart = pdenDevice->de_LowCyl * cbyCylinder;
     ibyEnd = (pdenDevice->de_HighCyl + 1) * cbyCylinder;
 
-	DD(bug("bGetDosDevice: LowCyl = %u | HighCyl = %u | Heads = %u | Sectors = %u | ibyStart = %llu | ibyEnd = %llu | DosType = %u\n",
+	DD(bug("bGetDosDevice: LowCyl = %u | HighCyl = %u | Heads = %u | Sectors = %u | ibyStart = %llu | ibyEnd = %llu | DosType = 0x%08lx\n",
 		LowCyl, HighCyl, pdenDevice->de_Surfaces, pdenDevice->de_BlocksPerTrack, ibyStart, ibyEnd, DosType));
 
 	if(DosType == 0x444F5300)	// Check for DOS/0 and if found then Drive needs to be partitioned by HDToolBox first

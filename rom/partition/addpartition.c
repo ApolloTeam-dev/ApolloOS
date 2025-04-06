@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
 
 */
@@ -7,6 +7,7 @@
 #include "partition_intern.h"
 #include "partition_support.h"
 #include "platform.h"
+#include "debug.h"
 
 /*****************************************************************************
 
@@ -54,6 +55,8 @@
 *****************************************************************************/
 {
     AROS_LIBFUNC_INIT
+
+    D(bug("[PART] AddPartition\n"));
 
     if (root->table)
     {

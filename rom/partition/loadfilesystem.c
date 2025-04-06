@@ -1,10 +1,11 @@
 /*
-    Copyright © 2011-2017, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2011-2017, The AROS Development Team. All rights reserved.
     $Id$
 */
 
 #include "partition_support.h"
 #include "platform.h"
+#include "debug.h"
 
 /*****************************************************************************
 
@@ -41,6 +42,8 @@
 *****************************************************************************/
 {
     AROS_LIBFUNC_INIT
+
+    D(bug("[PART] LoadFileSystem\n"));
 
     const struct FSFunctionTable *handler = ((struct FileSysHandle *)handle)->handler;
 

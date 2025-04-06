@@ -1,11 +1,7 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 */
-
-#ifndef DEBUG
-#define DEBUG 0
-#endif
 
 #include <proto/dos.h>
 #include <proto/exec.h>
@@ -96,15 +92,17 @@ static struct Volume *AFS_open_volume(struct AFSBase *handler, struct DosPacket 
 {
     struct FileSysStartupMsg *fssm = BADDR(dp->dp_Arg2);
 
-    D(bug("AFS: Volume on Device %b, Unit %ld, Flags %ld, Environ %p\n",
-    		fssm->fssm_Device, fssm->fssm_Unit, 
-    		fssm->fssm_Flags, BADDR(fssm->fssm_Environ)));
-    return initVolume(handler, 
-    	    NULL, AROS_BSTR_ADDR(fssm->fssm_Device),
-    	    fssm->fssm_Unit,
-    	    fssm->fssm_Flags,
-    	    BADDR(fssm->fssm_Environ),
-    	    error);
+    D(bug("[AFS] Volume on Device=%b | Unit=%ld | Flags %ld | Environ %p\n", fssm->fssm_Device, fssm->fssm_Unit));
+
+	struct DosEnvec *de = BADDR(fssm->fssm_Environ);
+
+	D(bug("\t[%s] de_SizeBlock      = %10ld\n",	__FUNCTION__ , de->de_SizeBlock));
+	D(bug("\t[%s] de_Surfaces       = %10ld\n", __FUNCTION__ , de->de_Surfaces));
+	D(bug("\t[%s] de_BlocksPerTrack = %10ld\n", __FUNCTION__ , de->de_BlocksPerTrack));
+	D(bug("\t[%s] de_LowCyl         = %10ld\n", __FUNCTION__ , de->de_LowCyl));
+	D(bug("\t[%s] de_HighCyl        = %10ld\n", __FUNCTION__ , de->de_HighCyl));
+
+    return initVolume(handler, NULL, AROS_BSTR_ADDR(fssm->fssm_Device), fssm->fssm_Unit, fssm->fssm_Flags, BADDR(fssm->fssm_Environ), error);
 }
 
 static BOOL AFS_close_volume(struct AFSBase *handler, struct Volume *volume, SIPTR *io_DosError)
@@ -143,7 +141,7 @@ static VOID startFlushTimer(struct AFSBase *handler)
     if (handler->timer_flags & TIMER_ACTIVE) {
 	handler->timer_flags |= TIMER_RESTART;
     } else {
-	/* D(bug("[afs] Starting timer\n")); */
+	/* D(bug("[AFS] Starting timer\n")); */
 	request = handler->timer_request;
 	request->tr_node.io_Command = TR_ADDREQUEST;
 	request->tr_time.tv_secs = 1;
@@ -162,7 +160,7 @@ static VOID onFlushTimer(struct AFSBase *handler, struct Volume *volume)
     } else {
 	struct BlockCache *blockbuffer;
 
-	/* D(bug("[afs] Alarm rang.\n")); */
+	/* D(bug("[AFS] Alarm rang.\n")); */
 	if (((volume->dostype == ID_DOS_DISK) || (volume->dostype == ID_DOS_muFS_DISK)) && mediumPresent(&volume->ioh))
 	{
 	    /* Check if adding volume node needs to be retried */
@@ -241,11 +239,12 @@ LONG AFS_work(struct ExecBase *SysBase)
     LONG retval;
     BOOL dead = FALSE;
 
-    D(bug("[AFS] started\n"));
+    D(bug("\n[AFS] Started\n"));
+
     mp = &((struct Process *)FindTask(NULL))->pr_MsgPort;
     WaitPort(mp);
     dp = (struct DosPacket *)GetMsg(mp)->mn_Node.ln_Name;
-    D(bug("[AFS] start message recevied. port=%p, path='%b'\n", mp, dp->dp_Arg1));
+    D(bug("[AFS] Start message received: Port=%p | Path=%b\n", mp, dp->dp_Arg1));
 
     handler = AFS_alloc();
 
@@ -261,7 +260,9 @@ LONG AFS_work(struct ExecBase *SysBase)
     	replypkt2(dp, DOSFALSE, retval);
     	AFS_free(handler);
     	return RETURN_FAIL;
-    }
+    } else {
+		D(bug("[AFS] SUCCES opening volume: 0x%8lx\n", volume));
+	}
 
     /* make non-packet functions to see our volume */
     NEWLIST(&handler->device_list);
@@ -284,7 +285,7 @@ LONG AFS_work(struct ExecBase *SysBase)
     	    onFlushTimer(handler, volume);
     	if (sigs & changemask) {
     	    checkDeviceFlags(handler);
-	}
+		}
 
     	if (!(sigs & packetmask))
     	    continue;

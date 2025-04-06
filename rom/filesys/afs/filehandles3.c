@@ -1,11 +1,7 @@
 /*
-    Copyright © 1995-2015, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2015, The AROS Development Team. All rights reserved.
     $Id$
 */
-
-#ifndef DEBUG
-#define DEBUG 0
-#endif
 
 #include <stddef.h>
 #include "os.h"

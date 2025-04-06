@@ -1,12 +1,7 @@
 /*
-    Copyright © 1995-2005, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2005, The AROS Development Team. All rights reserved.
     $Id$
 */
-
-#ifndef DEBUG
-#define DEBUG 0
-#endif
-
 #include "os.h"
 #include "bitmap.h"
 #include "cache.h"

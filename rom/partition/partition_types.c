@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2019, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2019, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -7,6 +7,7 @@
 #include <libraries/uuid.h>
 
 #include "partition_types.h"
+#include "debug.h"
 
 /*
  * TODO: This should not be a hardcoded mapping, instead it should be loaded
@@ -51,6 +52,8 @@ const struct TypeMapping PartTypes[] =
 
 ULONG MBR_FindDosType(UBYTE id)
 {
+    D(bug("[PART] MBR_FindDosType\n"));
+    
     const struct TypeMapping *m;
 
     for (m = PartTypes; m->DOSType; m++)
