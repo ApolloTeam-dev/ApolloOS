@@ -52,7 +52,7 @@ static void ata_ResetBus(struct ata_Bus *bus);
 static BYTE ata_Eject(struct ata_Unit *);
 static BOOL ata_WaitBusyTO(struct ata_Unit *unit, UWORD tout, BOOL irq, BOOL fake_irq, UBYTE *stout);
 
-static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG datalen, BOOL *dma, BOOL write);
+static BYTE atapi_SendPacket(struct ata_Unit *unit, struct SCSICmd *cmd);
 static BYTE atapi_DirectSCSI(struct ata_Unit *unit, struct SCSICmd *cmd);
 static BYTE atapi_Read(struct ata_Unit *, ULONG, ULONG, APTR, ULONG *);
 static BYTE atapi_Write(struct ata_Unit *, ULONG, ULONG, APTR, ULONG *);
@@ -211,7 +211,7 @@ static void ata_IRQPIOReadAtapi(struct ata_Unit *unit, UBYTE status)
 
 AGAIN:
     retry_busy = 5000000;
-    retry_datareq = 50000; //WAS 5000, testing higher value
+    retry_datareq = 5000; //WAS 5000, testing higher value
 
 WAITBUSY: 
     status = PIO_In(unit->au_Bus, ata_Status);
@@ -243,17 +243,17 @@ WAITDATAREQ:
     if (retry_datareq == 0)
     {
         ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
-        unit->au_cmd_error = HFERR_BadStatus;
-        DERROR(bug("[ATAPI] ata_IRQPIOReadAtapi: ERROR = RetryCount (50.000) reached ZERO on ATAF_DATAREQ SET\n"));
+        //unit->au_cmd_error = HFERR_BadStatus;
+        DERROR(bug("[ATAPI] ata_IRQPIOReadAtapi: ERROR = RetryCount (5.000) reached ZERO on ATAF_DATAREQ SET\n"));
         return;
     }
 
-    DDD(bug("R"));
+    DD(bug("R"));
     if ((status & ATAF_DATAREQ) != ATAF_DATAREQ) // Wait for DRQ to SET
     {
         goto WAITDATAREQ;
     }
-    DDD(bug("\n"));
+    DD(bug("\n"));
     size = PIO_In(bus, atapi_ByteCntH) << 8 | PIO_In(bus, atapi_ByteCntL);
     
     DATAPI(bug("[ATAPI] ata_IRQPIOReadAtapi: Data ready to Read from Device=%ld bytes | Data requested to Read from Device=%ld bytes)\n", size, unit->au_cmd_total));
@@ -586,44 +586,51 @@ static BYTE ata_exec_cmd(struct ata_Unit* unit, ata_CommandBlock *block)
 }
 
 
-static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG datalen, BOOL *dma, BOOL write)
+static BYTE atapi_SendPacket(struct ata_Unit *unit, struct SCSICmd *scsi_cmd)
 {
     struct ata_Bus *bus = unit->au_Bus;
-    *dma = FALSE;
+
     LONG err = 0;
     UBYTE status;
 
+    UBYTE *atapi_command    = scsi_cmd->scsi_Command;
+    ULONG  atapi_lenght     = scsi_cmd->scsi_Length;
+    UWORD *atapi_data       = scsi_cmd->scsi_Data;
+    BOOL   atapi_write      = (scsi_cmd->scsi_Flags & SCSIF_READ) == 0;
+    
     ULONG retry_busy = 200000;
     ULONG retry_datareq = 5000;
 
-    UBYTE cmd[12] = {0};
+    // Translate atapi_cmd to atapi_packet
+
+    UBYTE atapi_packet[12] = {0};
     register int t=5,l=0;
 
-    if (((UBYTE*)packet)[0] > 0x1f) t+= 4;
-    if (((UBYTE*)packet)[0] > 0x5f) t+= 2;
+    if (((UBYTE*)atapi_command)[0] > 0x1f) t+= 4;
+    if (((UBYTE*)atapi_command)[0] > 0x5f) t+= 2;
 
     while (l<=t)
     {
-        cmd[l] = ((UBYTE*)packet)[l];
+        atapi_packet[l] = ((UBYTE*)atapi_command)[l];
         ++l;
     }
     
     DATAPI({
-        bug("[ATA:%02lx] atapi_SendPacket - Sending %s ATA packet: ", unit->au_UnitNum, (*dma) ? "DMA" : "PIO");
+        bug("[ATA:%02lx] atapi_SendPacket - Prepared ATAPI packet: ", unit->au_UnitNum);
         l=0;
         while (l<12)
         {
-            bug("%02lx ", ((UBYTE*)cmd)[l]);
+            bug("%02lx ", ((UBYTE*)atapi_packet)[l]);
             ++l;
         }
         bug("\n");
 
-        DERROR(if (datalen & 1) bug("[ATAPI] atapi_SendPacket - ERROR: DATA LENGTH NOT EVEN! Rounding Up! (%ld bytes requested)\n", datalen));
+        DERROR(if (atapi_lenght & 1) bug("[ATAPI] atapi_SendPacket - ERROR: DATA LENGTH NOT EVEN! Rounding Up! (%ld bytes requested)\n", atapi_lenght));
     });
 
-    datalen = (datalen+1)&~1;
+    atapi_lenght = (atapi_lenght + 1) & ~1;
 
-    if (FALSE == ata_SelectUnit(unit))
+    if (ata_SelectUnit(unit) == FALSE)
     {
         DERROR(bug("[ATAPI] atapi_SendPacket - WaitBusy failed at first check\n"));
         return IOERR_UNITBUSY;
@@ -645,9 +652,9 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
     } while ((status & (ATAF_BUSY | ATAF_DATAREQ)) != 0);  // Wait for BSY and DRQ to CLEAR
     DDD(bug("\n"));
 
-    DDD(bug("[ATAPI] atapi_SendPacket - Data Lenght = %u\n", datalen));
-    PIO_Out(bus, (datalen & 0xff), atapi_ByteCntL);
-    PIO_Out(bus, (datalen >> 8) & 0xff, atapi_ByteCntH);
+    DDD(bug("[ATAPI] atapi_SendPacket - Data Lenght = %u\n", atapi_lenght));
+    PIO_Out(bus, (atapi_lenght & 0xff), atapi_ByteCntL);
+    PIO_Out(bus, (atapi_lenght >> 8) & 0xff, atapi_ByteCntH);
     
     DDD(status = PIO_In(bus, ata_Status));
     DDD(bug("[ATAPI] atapi_SendPacket - Status after atapi_ByteCntL/H: %lx\n", status)); 
@@ -670,15 +677,15 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
     } while ((status & ATAF_DATAREQ) != ATAF_DATAREQ);  // Wait for DRQ to SET
     DDD(bug("\n"));
 
-    if (datalen == 0) ata_IRQSetHandler(unit, &ata_IRQNoData, 0, 0, 0);
-    else if (write)   ata_IRQSetHandler(unit, &ata_IRQPIOWriteAtapi, data, 0, datalen);
-    else              ata_IRQSetHandler(unit, &ata_IRQPIOReadAtapi, data, 0, datalen);
+    if (atapi_lenght == 0)  ata_IRQSetHandler(unit, &ata_IRQNoData, 0, 0, 0);
+    else if (atapi_write)   ata_IRQSetHandler(unit, &ata_IRQPIOWriteAtapi, atapi_data, 0, atapi_lenght);
+    else                    ata_IRQSetHandler(unit, &ata_IRQPIOReadAtapi, atapi_data, 0, atapi_lenght);
 
-    Unit_OutS(unit, cmd, 12);
+    Unit_OutS(unit, atapi_packet, 12);
     ata_WaitNano(400, bus->ab_Base);
 
     status = PIO_In(bus, ata_Status);
-    DDD(bug("[ATAPI] atapi_SendPacket - Status after atapi_Command: %lx\n", status));  
+    DDD(bug("[ATAPI] atapi_SendPacket - Status after atapi_packet: %lx\n", status));  
 
     if (status & ATAF_ERROR) // Check for BUS Error
     {
@@ -686,9 +693,9 @@ static BYTE atapi_SendPacket(struct ata_Unit *unit, APTR packet, APTR data, LONG
         return HFERR_BadStatus;
     } 
 
-    if (datalen > 0)
+    if (atapi_lenght > 0)
     {
-        if (write)
+        if (atapi_write)
         {
             DDD(bug("[ATAPI] atapi_SendPacket - Start ata_IRQPIOWriteAtapi\n"));
             ata_IRQPIOWriteAtapi(unit, ATAF_BUSY);
@@ -707,13 +714,79 @@ static BYTE atapi_DirectSCSI(struct ata_Unit *unit, struct SCSICmd *cmd)
 {
     BYTE err = 0;
     BOOL dma = FALSE;
-    
+
     cmd->scsi_Actual = 0;
     unit->au_cmd_error = 0;
 
-    DATAPI(bug("[ATA:%02lx] atapi_DirectSCSI: Sending ATAPI packet\n", unit->au_UnitNum));
+    if (cmd->scsi_Command[0] == 0x1a)                                                   // MODE SENSE (6) must be translated to MODE SENSE (10) for ATAPI
+    {
+        UBYTE   *modetendata = NULL;
+        UBYTE   *modesixdata = (UBYTE*)cmd->scsi_Data;;
+        ULONG   modetendatalenght = cmd->scsi_Command[4] + 4;                       // Adjust MODESENSE(6->10) Lenght 
 
-    err = atapi_SendPacket(unit, cmd->scsi_Command, cmd->scsi_Data, cmd->scsi_Length, &dma, (cmd->scsi_Flags & SCSIF_READ) == 0);
+        struct SCSICmd *modeten     = NULL;
+
+        modetendata         = AllocMem(modetendatalenght, MEMF_ANY|MEMF_CLEAR);             // Create MODESENSE(10) Data Buffer
+
+        UBYTE               *modetencommand = NULL;
+        modetencommand      = AllocMem(10, MEMF_ANY|MEMF_CLEAR);                            // Create SCSI Command Array[10]  
+        modeten             = AllocMem(sizeof(struct SCSICmd), MEMF_ANY|MEMF_CLEAR);        // Create new SCSI Command for MODESENSE(10)
+       
+        modeten->scsi_Command       = (UBYTE*)modetencommand;
+        modeten->scsi_CmdLength     = 10;
+        modeten->scsi_Data          = (UWORD*)modetendata;
+        modeten->scsi_Length        = modetendatalenght;
+        modeten->scsi_SenseData     = NULL;
+        modeten->scsi_Flags         = SCSIF_READ;
+
+        modeten->scsi_Command[0]    = 0x5a;
+        modeten->scsi_Command[1]    = cmd->scsi_Command[1];
+        modeten->scsi_Command[2]    = cmd->scsi_Command[2];
+        modeten->scsi_Command[3]    = cmd->scsi_Command[3];
+        modeten->scsi_Command[7]    = ( (modetendatalenght >> 8 ) & 0xFF );             // High Byte
+        modeten->scsi_Command[8]    = modetendatalenght;                                // Low Byte 
+
+        DATAPI(bug("[ATA:%02lx] atapi_DirectSCSI: 0x1a=MODESENSE(6) translated to 0x5a=MODESENSE(10)\n", unit->au_UnitNum));
+
+        err = atapi_SendPacket(unit, modeten);
+        
+        if ( (err ==0) && (modeten->scsi_Status == 0))
+        {
+            DATAPI(bug("[ATA:%02lx] atapi_DirectSCSI: 0x5a = MODESENSE(10) translating #1 back to 0x1a=MODESENSE(6) . . . ", unit->au_UnitNum));
+       
+            modesixdata[0]      = (modetendata[1] - 3);            // Response lenght adjusment -3
+            modesixdata[1]      = modetendata[2];
+            modesixdata[2]      = modetendata[3];
+            modesixdata[3]      = modetendata[7];
+
+            DATAPI(bug("[ATA:%02lx] atapi_DirectSCSI: 0x5a = MODESENSE(10) translating #2 back to 0x1a=MODESENSE(6) ", unit->au_UnitNum));
+            for (int i = 0 ; i < (modeten->scsi_Actual - 8) ; i++ )
+            {
+                modesixdata[i+4] = modetendata[i+8];
+                DATAPI(bug("*"));
+            }
+            cmd->scsi_Actual    = modeten->scsi_Actual - 4;
+            cmd->scsi_Status    = 0; 
+            DATAPI(bug("SUCCESS\n"));
+        } else {
+            cmd->scsi_Status    = 2;
+            DATAPI(bug("FAIL\n"));
+        }
+
+        cmd->scsi_CmdActual     = cmd->scsi_CmdLength;
+        cmd->scsi_SenseActual   = modeten->scsi_SenseActual;
+
+        DATAPI(bug("[ATA:%02lx] atapi_DirectSCSI: Releasing MODESENSE(10) allocations\n", unit->au_UnitNum));
+
+        FreeMem(modetendata, modetendatalenght);
+        FreeMem(modetencommand, 10);
+        FreeMem(modeten, sizeof(struct SCSICmd));
+
+        DATAPI(bug("[ATA:%02lx] atapi_DirectSCSI: 0x5a = MODESENSE(10) translated back to 0x1a=MODESENSE(6)\n", unit->au_UnitNum));
+    } else {
+        DATAPI(bug("[ATA:%02lx] atapi_DirectSCSI: Sending ATAPI packet\n", unit->au_UnitNum));
+        err = atapi_SendPacket(unit, cmd);
+    }
 
     DATAPI(bug("[ATA:%02lx] atapi_DirectSCSI: SCSI Flags: %02lx / Error: %ld\n", unit->au_UnitNum, cmd->scsi_Flags, err));
 
