@@ -81,9 +81,9 @@ LONG markspace(BLCK block,ULONG blocks) {
   ULONG freeblocks;
   LONG errorcode;
 
-  _XDEBUG((DEBUG_BITMAP,"markspace: Marking %ld blocks from block %ld\n",blocks,block));
+  _XDEBUG(DEBUG_BITMAP,"markspace: Marking %ld blocks from block %ld\n",blocks,block);
 
-  if((availablespace(block, blocks))<blocks) {
+  if(((ULONG)availablespace(block, blocks))<blocks) {
     req_unusual("Attempted to mark %ld blocks from block %ld,\n but some of them were already full.", blocks, block);
     return(-1);
   }
@@ -139,7 +139,7 @@ LONG freespace(BLCK block,ULONG blocks) {
   ULONG freeblocks;
   LONG errorcode;
 
-  _XDEBUG((DEBUG_BITMAP,"freespace: Freeing %ld blocks from block %ld\n",blocks,block));
+  _XDEBUG(DEBUG_BITMAP,"freespace: Freeing %ld blocks from block %ld\n",blocks,block);
 
   if((errorcode=getfreeblocks(&freeblocks))==0) {
     if((errorcode=setfreeblocks(freeblocks+blocks))==0) {
@@ -248,13 +248,13 @@ LONG availablespace(BLCK block,ULONG maxneeded) {
   while(nextblock<maxbitmapblock && (errorcode=readcachebuffercheck(&cb,nextblock++,BITMAP_ID))==0) {
     b=cb->data;
 
-    if((bitend=bmffz(b->bitmap,longs,bitstart))<(32*longs)) {
+    if((bitend=bmffz(b->bitmap,longs,bitstart))< ((LONG)(32*longs))) {
       blocksfound+=bitend-bitstart;
       return(blocksfound);
     }
 
     blocksfound+=globals->blocks_inbitmap-bitstart;
-    if(blocksfound>=maxneeded) {
+    if((ULONG)blocksfound>=maxneeded) {
       return(blocksfound);
     }
 
@@ -292,13 +292,13 @@ LONG allocatedspace(BLCK block,ULONG maxneeded) {
   while(nextblock<maxbitmapblock && (errorcode=readcachebuffercheck(&cb,nextblock++,BITMAP_ID))==0) {
     b=cb->data;
 
-    if((bitend=bmffo(b->bitmap,longs,bitstart))<(32*longs)) {
+    if((bitend=bmffo(b->bitmap,longs,bitstart))<((LONG)(32*longs))) {
       blocksfound+=bitend-bitstart;
       return(blocksfound);
     }
 
     blocksfound+=globals->blocks_inbitmap-bitstart;
-    if(blocksfound>=maxneeded) {
+    if((ULONG)blocksfound>=maxneeded) {
       return(blocksfound);
     }
 
@@ -386,11 +386,11 @@ LONG findspace2(ULONG maxneeded, BLCK start, BLCK end, BLCK *returned_block, ULO
        free blocks at the start of this bitmap block, space will
        be set to zero, since in that case the space isn't adjacent. */
 
-    while((bitstart=bmffo(b->bitmap, longs, bitend))<globals->blocks_inbitmap) {
+    while((bitstart=bmffo(b->bitmap, longs, bitend)) < (LONG)globals->blocks_inbitmap) {
 
       /* found the start of an empty space, now find out how large it is */
 
-      if(bitstart >= localbreakpoint) {     // Oct  3 1999: Check if the start of this empty space is within bounds.
+      if((ULONG)bitstart >= localbreakpoint) {     // Oct  3 1999: Check if the start of this empty space is within bounds.
         break;
       }
 
@@ -400,7 +400,7 @@ LONG findspace2(ULONG maxneeded, BLCK start, BLCK end, BLCK *returned_block, ULO
 
       bitend=bmffz(b->bitmap, longs, bitstart);
 
-      if(bitend > localbreakpoint) {
+      if((ULONG)bitend > localbreakpoint) {
         bitend=localbreakpoint;
       }
 
@@ -415,7 +415,7 @@ LONG findspace2(ULONG maxneeded, BLCK start, BLCK end, BLCK *returned_block, ULO
         *returned_blocks=space;
       }
 
-      if(bitend>=localbreakpoint) {
+      if((ULONG)bitend>=localbreakpoint) {
         break;
       }
     }
@@ -426,7 +426,7 @@ LONG findspace2(ULONG maxneeded, BLCK start, BLCK end, BLCK *returned_block, ULO
 
     /* no (more) empty spaces found in this block */
 
-    if(bitend!=globals->blocks_inbitmap) {
+    if((ULONG)bitend!=globals->blocks_inbitmap) {
       space=0;
     }
 
@@ -458,7 +458,7 @@ LONG findspace(ULONG blocksneeded,BLCK startblock,BLCK endblock,BLCK *returned_b
 
   if((errorcode=findspace2(blocksneeded, startblock, endblock, returned_block, &blocks))==0) {
     if(blocks!=blocksneeded) {
-      _DEBUG(("findspace: %ld != %ld\n", blocks, blocksneeded));
+      _DEBUG("findspace: %ld != %ld\n", blocks, blocksneeded);
       return(ERROR_DISK_FULL);
     }
   }
@@ -493,7 +493,7 @@ LONG findspace(ULONG blocksneeded, BLCK startblock, BLCK endblock, BLCK *returne
 
   if((errorcode=findspace2(blocksneeded, startblock, endblock, returned_block, &blocks))==0) {
     if(blocks!=blocksneeded) {
-      _DEBUG(("findspace: %ld != %ld\n", blocks, blocksneeded));
+      _DEBUG("findspace: %ld != %ld\n", blocks, blocksneeded);
       return(ERROR_DISK_FULL);
     }
   }
@@ -557,10 +557,10 @@ LONG smartfindandmarkspace(BLCK startblock,ULONG blocksneeded) {
 
     while(entry<SPACELIST_MAX) {
       freeblocks=availablespace(block,blocksneeded);
-      _XDEBUG((DEBUG_BITMAP,"sfams: availablespace returned %ld for block %ld while we needed %ld blocks\n",freeblocks,block,blocksneeded));
+      _XDEBUG(DEBUG_BITMAP,"sfams: availablespace returned %ld for block %ld while we needed %ld blocks\n",freeblocks,block,blocksneeded);
 
       if(freeblocks>0) {
-        if(freeblocks>=blocksneeded) {
+        if((ULONG)freeblocks>=blocksneeded) {
           entry=0;
           globals->spacelist[entry].block=block;
           globals->spacelist[entry++].blocks=freeblocks;
@@ -594,10 +594,10 @@ LONG smartfindandmarkspace(BLCK startblock,ULONG blocksneeded) {
       }
 
       allocblocks=allocatedspace(block,globals->blocks_inbitmap*2);
-      _XDEBUG((DEBUG_BITMAP,"sfams: allocatedspace returned %ld for block %ld while we needed %ld blocks\n",allocblocks,block,globals->blocks_inbitmap*2));
+      _XDEBUG(DEBUG_BITMAP,"sfams: allocatedspace returned %ld for block %ld while we needed %ld blocks\n",allocblocks,block,globals->blocks_inbitmap*2);
 
       if(allocblocks<0) {
-        _DEBUG(("sfams: disk full 1\n"));
+        _DEBUG("sfams: disk full 1\n");
         return(ERROR_DISK_FULL);
       }
       else if(block<startblock && block+allocblocks>=startblock) {
@@ -614,7 +614,7 @@ LONG smartfindandmarkspace(BLCK startblock,ULONG blocksneeded) {
     }
 
     if(entry==0) {
-      _DEBUG(("sfams: disk full 2\n"));
+      _DEBUG("sfams: disk full 2\n");
       return(ERROR_DISK_FULL);
     }
 
@@ -673,7 +673,7 @@ LONG smartfindandmarkspace(BLCK startblock,ULONG blocksneeded) {
     }
   }
   else {
-    _DEBUG(("sfams: disk full 3\n"));
+    _DEBUG("sfams: disk full 3\n");
     return(ERROR_DISK_FULL);
   }
 
@@ -743,7 +743,7 @@ LONG findspace2_backwards(ULONG maxneeded, BLCK start, BLCK end, BLCK *returned_
     struct fsBitmap *b=cb->data;
     LONG localbreakpoint=breakpoint-block;
 
-    if(localbreakpoint<0 || localbreakpoint>=globals->blocks_inbitmap) {
+    if(localbreakpoint<0 || (ULONG)localbreakpoint>=globals->blocks_inbitmap) {
       localbreakpoint=0;
     }
 
@@ -755,7 +755,7 @@ LONG findspace2_backwards(ULONG maxneeded, BLCK start, BLCK end, BLCK *returned_
         break;
       }
 
-      if(bitend!=globals->blocks_inbitmap-1) {
+      if((ULONG)bitend!=globals->blocks_inbitmap-1) {
         space=0;
       }
 
