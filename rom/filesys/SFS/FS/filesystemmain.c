@@ -2505,14 +2505,14 @@ void mainloop(void) {
 
                                 break;
                             case ACTION_INFO:
-                                _DEBUG("ACTION_INFO\n");
+                                DD(bug("[SFS] ACTION_INFO\n"));
 
                                 {
                                     struct ExtFileLock *lock = BADDR(globals->packet->dp_Arg1);
                                     struct InfoData *id = BADDR(globals->packet->dp_Arg2);
 
                                     if(lock != 0 && globals->volumenode != (struct DeviceList *)BADDR(lock->volume)) {
-                                        _DEBUG("ACTION_INFO: returning error\n");
+                                        DD(bug("[SFS] ACTION_INFO: returning error\n"));
 
                                         returnpacket(DOSFALSE, ERROR_DEVICE_NOT_MOUNTED);
                                         break;
@@ -2924,7 +2924,7 @@ static void returnpacket2(struct DosPacket *packet, SIPTR res1, SIPTR res2) {
     struct Message *msg;
     struct MsgPort *replyport;
 
-    D(bug("[SFS] Replying, results are %ld/%ld\n", res1, res2));
+    DD(bug("[SFS] Replying, results are %ld/%ld\n", res1, res2));
 
     packet->dp_Res1 = res1; /* set return codes */
     packet->dp_Res2 = res2;
@@ -3234,7 +3234,7 @@ LONG initdisk() {
 
             /* Root blocks are valid for this filesystem */
 
-            _DEBUG("Initdisk: Root blocks read\n");
+            DD(bug("[SFS] Initdisk: Root blocks read\n"));
 
 #ifdef STARTDEBUG
             dreq("Root blocks are okay!");
@@ -3242,7 +3242,7 @@ LONG initdisk() {
 
             if((errorcode = checkfortransaction()) == 0) {
 
-                _DEBUG("Initdisk: Checked for an old Transaction and applied it if it was present.\n");
+                DD(bug("[SFS] Initdisk: Checked for an old Transaction and applied it if it was present.\n"));
 
                 if((errorcode = readcachebuffercheck(&cb, globals->block_root, OBJECTCONTAINER_ID)) == 0) {
                     struct fsRootInfo *ri = (struct fsRootInfo *)((UBYTE *)cb->data + globals->bytes_block - sizeof(struct fsRootInfo));
@@ -3251,7 +3251,7 @@ LONG initdisk() {
                     lockcachebuffer(cb);
                     oc = cb->data;
 
-                    _DEBUG("Initdisk: '%s' was inserted\n", oc->object[0].name);
+                    DD(bug("[SFS] Initdisk: '%s' was inserted\n", oc->object[0].name));
 
                     /* ROOT block is valid for this filesystem */
 
@@ -3282,7 +3282,7 @@ LONG initdisk() {
 
                     unlockcachebuffer(cb);
 
-                    _DEBUG("Initdisk: Traversed bitmap, found %ld free blocks\n", blocksfree);
+                    DD(bug("[SFS] Initdisk: Traversed bitmap, found %ld free blocks\n", blocksfree));
 
                     if(errorcode == 0 && BE2L(ri->be_freeblocks) != blocksfree) {
                         if(ri->be_freeblocks != 0) {
@@ -3305,7 +3305,7 @@ LONG initdisk() {
                     }
 
                     if(errorcode == 0) {
-                        _DEBUG("Initdisk: A valid DOS disk\n");
+                        DD(bug("[SFS] Initdisk: A valid DOS disk\n"));
 
                         newdisktype = DOSTYPE_ID;
 
@@ -3318,6 +3318,7 @@ LONG initdisk() {
                         dreq("SFS disk is invalid; bitmap error.");
 #endif
 
+                        DD(bug("[SFS] ERROR: SFS disk is invalid; bitmap error\n"));
                         newdisktype = ID_NOT_REALLY_DOS;
                         errorcode = ERROR_NOT_A_DOS_DISK;
                     }
@@ -3327,6 +3328,7 @@ LONG initdisk() {
                     dreq("SFS disk is invalid; root objectcontainer error.");
 #endif
 
+                    DD(bug("[SFS] ERROR: SFS disk is invalid; root objectcontainer error\n"));        
                     newdisktype = ID_NOT_REALLY_DOS;
                     errorcode = ERROR_NOT_A_DOS_DISK;
                 }
@@ -3336,10 +3338,12 @@ LONG initdisk() {
                 dreq("SFS disk is invalid; transaction error.");
 #endif
 
+                DD(bug("[SFS] ERROR: SFS disk is invalid; transaction error\n")); 
                 newdisktype = ID_NOT_REALLY_DOS;
                 errorcode = ERROR_NOT_A_DOS_DISK;
             }
         } else if(errorcode == INTERR_CHECKSUM_FAILURE || errorcode == ERROR_NOT_A_DOS_DISK) {
+            DD(bug("[SFS] ERROR: SFS disk is invalid; checksum failure\n"));
             newdisktype = ID_NOT_REALLY_DOS;
             errorcode = ERROR_NOT_A_DOS_DISK;
 
@@ -3351,6 +3355,7 @@ LONG initdisk() {
             dreq("SFS disk is invalid; wrong block type.");
 #endif
 
+            DD(bug("[SFS] ERROR: FS disk is invalid; wrong block type\n"));
             newdisktype = ID_NOT_REALLY_DOS;
             errorcode = ERROR_NOT_A_DOS_DISK;
         } else if(errorcode == TDERR_DiskChanged) {
@@ -3358,6 +3363,7 @@ LONG initdisk() {
             dreq("SFS disk is invalid; disk was changed.");
 #endif
 
+            DD(bug("[SFS] ERROR: SFS disk is invalid; disk was changed\n"));
             newdisktype = ID_NO_DISK_PRESENT;
             errorcode = ERROR_NO_DISK;
         } else {
@@ -3365,23 +3371,27 @@ LONG initdisk() {
             dreq("SFS disk is invalid; unreadable disk.");
 #endif
 
+            DD(bug("[SFS] ERROR: SFS disk is invalid; unreadable disk\n"));
             newdisktype = ID_UNREADABLE_DISK;
             errorcode = ERROR_NOT_A_DOS_DISK;
         }
 
-        if(errorcode == 0) {
+        /*
+        if(errorcode == 0)
+        {
             struct DeviceList *vn;
             struct fsRootInfo *ri = (struct fsRootInfo *)((UBYTE *)oc + globals->bytes_block - sizeof(struct fsRootInfo));
 
-            _DEBUG("initdisk: Checking for an existing volume-node\n");
+            DD(bug("[SFS] Initdisk: Checking for an existing volume-node\n"));
 
             if((vn = usevolumenode(oc->object[0].name, BE2L(ri->be_datecreated))) != (struct DeviceList *) - 1) {
                 if(vn == 0) {
-                    /* VolumeNode was not found, so we need to create a new one. */
+                    // VolumeNode was not found, so we need to create a new one
 
-                    _DEBUG("initdisk: No volume-node found, creating new one instead.\n");
+                    DD(bug("[SFS] Initdisk: No volume-node found, creating new one instead.\n"));
 
-                    if((vn = (struct DeviceList *)MakeDosEntry("                              ", DLT_VOLUME)) != 0) {
+                    if((vn = (struct DeviceList *)MakeDosEntry("                              ", DLT_VOLUME)) != 0)
+                    {
                         struct SFSMessage *sfsm;
                         UBYTE *d2 = (UBYTE *)BADDR(vn->dl_Name);
 #ifdef AROS_FAST_BSTR
@@ -3402,7 +3412,7 @@ LONG initdisk() {
 
                         datetodatestamp(BE2L(ri->be_datecreated), &vn->dl_VolumeDate);
 
-                        _DEBUG("initdisk: Sending msg.\n");
+                        DD(bug("[SFS] Initdisk: Sending msg.\n"));
 
                         if((sfsm = AllocVec(sizeof(struct SFSMessage), MEMF_CLEAR)) != 0) {
                             sfsm->command = SFSM_ADD_VOLUMENODE;
@@ -3416,26 +3426,27 @@ LONG initdisk() {
                     }
                 }
 
-                _DEBUG("initdisk: Using new or old volumenode.\n");
+                DD(bug("[SFS] Initdisk: Using new or old volumenode.\n"));
 
-                if(errorcode == 0) {  /* Reusing the found VolumeNode or using the new VolumeNode */
+                if(errorcode == 0) {  // Reusing the found VolumeNode or using the new VolumeNode
                     vn->dl_Task = globals->devnode->dn_Task;
                     vn->dl_DiskType = globals->dosenvec->de_DosType;
                     globals->volumenode = vn;
                 }
-            } else { /* Volume is in use by another handler -- stay off */
-                _DEBUG("Initdisk: Found DosEntry with same date, and locklist==0\n");
-                newdisktype = ID_NO_DISK_PRESENT;           /* Hmmm... EXTREMELY unlikely, but may explain the strange bug Laire had. */
+            } else { // Volume is in use by another handler -- stay off
+                DD(bug("[SFS] Initdisk: ERROR: Found DosEntry with same date, and locklist==0\n"));
+                newdisktype = ID_NO_DISK_PRESENT;           // Hmmm... EXTREMELY unlikely, but may explain the strange bug Laire had.
                 errorcode = ERROR_NO_DISK;
                 //   vn=0;
                 globals->volumenode = 0;
             }
-        }
+        }*/
 
         if(errorcode == 0) {
             diskchangenotify(IECLASS_DISKINSERTED);
         }
 
+        DD(bug("[SFS] Initdisk: Updating globals->disktype = DiskType 0x%8xl\n", newdisktype));
         globals->disktype = newdisktype;
 
         return(errorcode);
@@ -3581,29 +3592,32 @@ static void deinitdisk() {
 LONG handlesimplepackets(struct DosPacket *packet) {
     LONG type = packet->dp_Type; /* After returnpacket, packet->dp_Type is invalid! */
 
-    switch(packet->dp_Type) {
-    case ACTION_IS_FILESYSTEM:
-        returnpacket2(packet, DOSTRUE, 0);
-        break;
-#ifndef __AROS__
-    case ACTION_GET_DISK_FSSM:
-        returnpacket2(packet, (LONG)startupmsg, 0);
-        break;
-    case ACTION_FREE_DISK_FSSM:
-        returnpacket2(packet, DOSTRUE, 0);
-        break;
-#endif
-    case ACTION_DISK_INFO:
-        actiondiskinfo(packet);
-        break;
-    case ACTION_SAME_LOCK:
-        actionsamelock(packet);
-        break;
-    case ACTION_CURRENT_VOLUME:
-        actioncurrentvolume(packet);
-        break;
-    default:
-        return(0);
+    //DD(bug("[SFS] handlesimplepackets | packet->dp_Type = 0x%8xl\n", type));
+
+    switch(packet->dp_Type)
+    {
+        case ACTION_IS_FILESYSTEM:
+            returnpacket2(packet, DOSTRUE, 0);
+            break;
+    #ifndef __AROS__
+        case ACTION_GET_DISK_FSSM:
+            returnpacket2(packet, (LONG)startupmsg, 0);
+            break;
+        case ACTION_FREE_DISK_FSSM:
+            returnpacket2(packet, DOSTRUE, 0);
+            break;
+    #endif
+        case ACTION_DISK_INFO:
+            actiondiskinfo(packet);
+            break;
+        case ACTION_SAME_LOCK:
+            actionsamelock(packet);
+            break;
+        case ACTION_CURRENT_VOLUME:
+            actioncurrentvolume(packet);
+            break;
+        default:
+            return(0);
     }
 
     return(type);
@@ -3694,10 +3708,10 @@ static void dumppacket() {
 static void actioncurrentvolume(struct DosPacket *packet) {
     struct ExtFileLock *lock = (struct ExtFileLock *)packet->dp_Arg1;
 
-    _DEBUG("ACTION_CURRENT_VOLUME(%ld)\n", lock);
+    DD(bug("[SFS] ACTION_CURRENT_VOLUME(%ld)\n", lock));
 
     if(lock == 0) {
-        _DEBUG("ACTION_CURRENT_VOLUME: volumenode = %ld\n", globals->volumenode);
+        DD(bug("[SFS] mACTION_CURRENT_VOLUME: volumenode = %ld\n", globals->volumenode));
         returnpacket2(packet, (SIPTR)TOBADDR(globals->volumenode), 0);
     } else {
         returnpacket2(packet, (SIPTR)lock->volume, 0);
@@ -3713,6 +3727,8 @@ static void actionsamelock(struct DosPacket *packet) {
     lock = (struct ExtFileLock *)BADDR(packet->dp_Arg1);
     lock2 = (struct ExtFileLock *)BADDR(packet->dp_Arg2);
 
+    DD(bug("[SFS] ACTION_SAME_LOCK(%ld = %ld)\n", lock, lock2));
+
     if(lock->objectnode == lock2->objectnode && lock->task == lock2->task) {
         returnpacket2(packet, DOSTRUE, 0);
         return;
@@ -3725,7 +3741,7 @@ static void actionsamelock(struct DosPacket *packet) {
 static void actiondiskinfo(struct DosPacket *packet) {
     struct InfoData *id = BADDR(packet->dp_Arg1);
 
-    _DEBUG("ACTION_DISK_INFO\n");
+    DD(bug("[SFS] ACTION_DISK_INFO\n"));
 
     fillinfodata(id);
 
@@ -3734,7 +3750,8 @@ static void actiondiskinfo(struct DosPacket *packet) {
 
 
 
-static void fillinfodata(struct InfoData *id) {
+static void fillinfodata(struct InfoData *id)
+{
     ULONG usedblocks;
 
     id->id_NumSoftErrors = globals->numsofterrors;
@@ -3744,11 +3761,13 @@ static void fillinfodata(struct InfoData *id) {
 
     usedblocks = id->id_NumBlocks;
 
-    if(globals->disktype == DOSTYPE_ID) {
+    if(globals->disktype == DOSTYPE_ID)
+    {
         ULONG deletedfiles, deletedblocks;
 
         getusedblocks(&usedblocks);
-        if(getrecycledinfo(&deletedfiles, &deletedblocks) == 0) {
+        if(getrecycledinfo(&deletedfiles, &deletedblocks) == 0)
+        {
             usedblocks -= deletedblocks;
         }
     }
@@ -3757,11 +3776,11 @@ static void fillinfodata(struct InfoData *id) {
     id->id_BytesPerBlock = globals->bytes_block;
     id->id_DiskType = globals->disktype;
 
-    D(kprintf("Filling InfoData structure with a volumenode ptr to address %ld.  Disktype = 0x%08lx\n", globals->volumenode, globals->disktype));
+    DD(bug("[SFS] Filling InfoData structure with a volumenode ptr to address %ld.  Disktype = 0x%08lx\n", globals->volumenode, globals->disktype));
 
     id->id_VolumeNode = TOBADDR(globals->volumenode);
 
-    _DEBUG("fillinfodata: volumenode = %ld, disktype = 0x%08lx\n", globals->volumenode, globals->disktype);
+    DD(bug("[SFS] fillinfodata: volumenode = %ld, disktype = 0x%08lx\n", globals->volumenode, globals->disktype));
 
     if(globals->locklist != 0) {
         id->id_InUse = DOSTRUE;
