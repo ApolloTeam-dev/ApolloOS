@@ -41,8 +41,6 @@ static struct FileSysEntry *FindResidentFS(struct FileSysResource *fsr, ULONG do
         }
     }
 
-    D(bug("NO Resident version found\n"));
-
     return NULL;
 }
 

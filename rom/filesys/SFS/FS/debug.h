@@ -9,10 +9,17 @@
 #include "fs.h"
 #include "globals.h"
 
-//#ifdef __AROS__
-//#include <aros/debug.h>
-//#else
-//#endif
+#define DEBUG 1
+
+#ifdef DEBUG
+    #define DD(x) x
+    #define D(x)
+#else
+    #define DD(x)
+    #define D(x)
+#endif
+
+#define bug kprintf
 
 #ifdef DEBUGCODE
 #if 0
@@ -76,16 +83,5 @@ do {                                                                            
 #define DDEBUG_LOCK        (DEBUG_DETAILED + DEBUG_LOCK)
 #define DDEBUG_OBJECTS     (DEBUG_DETAILED + DEBUG_OBJECTS)
 #define DDEBUG_TRANSACTION (DEBUG_DETAILED + DEBUG_TRANSACTION)
-
-#define DEBUG 1
-
-#ifdef DEBUG
-#define D(x) x
-#define _DEBUG(fmt,args...)
-#else
-#define D(x)
-#define _DEBUG(fmt,args...)
-#endif
-#define bug kprintf
 
 #endif // _DEBUG_H
