@@ -6533,27 +6533,20 @@ static void sdlhtask(void) {
                             }
 
                             struct DosList *vn = (struct DosList *)sfsm->data;
-
                             DD(bug("[SFS] SFS DosList handler: AddDosEntry VolumeNode=0x%8lx | Name=%s | Type=%0x%8lx | Task=%u | ErrorCode=%u\n", vn, AROS_BSTR_ADDR(vn->dol_Name), vn->dol_Type, vn->dol_Task, sfsm->errorcode ));
 
-                            //            if(AddDosEntry((struct DosList *)sfsm->data)==DOSFALSE) {
-                            //              errorcode=IoErr();
-                            //              FreeDosEntry((struct DosList *)vn);
-                            //              vn=0;
-                            //            }
                         } else if(sfsm->command == SFSM_REMOVE_VOLUMENODE) {
                             struct DosList *vn = (struct DosList *)sfsm->data;
 
                             while((dol = NextDosEntry(dol, LDF_VOLUMES)) != 0) {
-                                if(dol == vn) {
+                                if(dol == vn)
+                                {
+                                    DD(bug("[SFS] SFS DosList handler: RemDosEntry VolumeNode=0x%8lx | Name=%s | Type=%0x%8lx | Task=%u\n", dol, AROS_BSTR_ADDR(dol), dol->dol_Type, dol->dol_Task));         
                                     RemDosEntry(dol);
                                     break;
                                 }
                             }
 
-                            DD(bug("[SFS] SFS DosList handler: RemDosEntry VolumeNode=0x%8lx | Name=%s | Type=%0x%8lx | Task=%u\n", dol, AROS_BSTR_ADDR(dol), dol->dol_Type, dol->dol_Task));
-
-                            //  removevolumenode(dol, (struct DosList *)sfsm->data);      /* Dangerous because of DOSBase?? */
                             FreeDosEntry(vn);
                         }
 

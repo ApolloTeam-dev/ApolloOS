@@ -1194,7 +1194,7 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
                         
                         ataNode = (void *)(((struct List *)(&ATABase->ata_Controllers))->lh_Head);      // First Controller on $DA
                         
-                        if (FALSE) //(ataNode) - CHANGEMEBACK
+                        if (ataNode)
                         {
                             DD(bug("[ATA:BusTask] Device %u | ataNode = TRUE\n", iter));
                             

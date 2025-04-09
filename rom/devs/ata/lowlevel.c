@@ -211,7 +211,7 @@ static void ata_IRQPIOReadAtapi(struct ata_Unit *unit, UBYTE status)
 
 AGAIN:
     retry_busy = 5000000;
-    retry_datareq = 5000; //WAS 5000, testing higher value
+    retry_datareq = 5000; 
 
 WAITBUSY: 
     status = PIO_In(unit->au_Bus, ata_Status);
@@ -243,7 +243,7 @@ WAITDATAREQ:
     if (retry_datareq == 0)
     {
         ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
-        //unit->au_cmd_error = HFERR_BadStatus;
+        unit->au_cmd_error = HFERR_BadStatus;
         DERROR(bug("[ATAPI] ata_IRQPIOReadAtapi: ERROR = RetryCount (5.000) reached ZERO on ATAF_DATAREQ SET\n"));
         return;
     }
@@ -352,7 +352,7 @@ WAITDATAREQW:
     if (retry_datareq == 0)
     {
         ata_IRQSetHandler(unit, &ata_IRQNoData, NULL, 0, 0);
-        //unit->au_cmd_error = HFERR_BadStatus;
+        unit->au_cmd_error = HFERR_BadStatus;
         DERROR(bug("\n[ATAPI] *** ERROR: ata_IRQPIOWriteAtapi: ERROR = RetryCount (5000) reached ZERO on ATAF_DATAREQ SET\n"));
         return;
     }
@@ -1313,8 +1313,8 @@ static BYTE ata_Identify(struct ata_Unit *unit)
 
         DINIT(bug("[ATA:%02ld] ata_Identify: HARDCODE =   Cap28=%u | Cap48=%llu | CHS=%u/%u/%u\n", unit->au_UnitNum, unit->au_Capacity, unit->au_Capacity48, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors);)
 
-        ULONG retry_test = 10;
-        while(!(atapi_TestUnitOK(unit)) || (retry_test > 5))
+        ULONG retry_test = 3;
+        while(!(atapi_TestUnitOK(unit)) || (retry_test > 0))
         {
             if ((retry_test--) == 0)
             {
@@ -1901,18 +1901,22 @@ static void ata_ResetBus(struct ata_Bus *bus)
         
         DINIT(bug("[ATA:ResetBus] Wait for Master to clear BSY\n", bus->ab_BusNum);)
         bus->ab_Dev[0] = DEV_NONE;
-        for(Counter=20000000; Counter ; Counter--)
-        {
-            if ((ata_ReadStatus(bus) & ATAF_BUSY) == 0)
+        
+        //if (bus->ab_Dev[1] == DEV_NONE)
+        //{
+            for(Counter=20000000; Counter ; Counter--)
             {
-                bus->ab_Dev[0] = DEV_UNKNOWN;
-                break;
-            } else {
-                *color0=0x0090;
-                *color0=0x0000;
+                if ((ata_ReadStatus(bus) & ATAF_BUSY) == 0)
+                {
+                    bus->ab_Dev[0] = DEV_UNKNOWN;
+                    break;
+                } else {
+                    *color0=0x0090;
+                    *color0=0x0000;
+                }
             }
-        }
-        if (Counter==0) DERROR(bug("[ATA:ResetBus] ERROR: Master did NOT clear BSY\n", bus->ab_BusNum));
+            if (Counter==0) DERROR(bug("[ATA:ResetBus] ERROR: Master did NOT clear BSY\n", bus->ab_BusNum));
+        //}
     }
 
     if ( bus->ab_Dev[1] != DEV_NONE )
@@ -1922,6 +1926,7 @@ static void ata_ResetBus(struct ata_Bus *bus)
         
         DINIT(bug("[ATA:ResetBus] Wait for Slave to clear BSY\n", bus->ab_BusNum);)
         bus->ab_Dev[1] = DEV_NONE;
+        
         for(Counter=20000000; Counter ; Counter--)
         {
             if ((ata_ReadStatus(bus) & ATAF_BUSY) == 0)
@@ -1934,6 +1939,7 @@ static void ata_ResetBus(struct ata_Bus *bus)
             }
         }
         if (Counter==0) DERROR(bug("[ATA:ResetBus] ERROR: Slave did NOT clear BSY\n", bus->ab_BusNum));
+        
     }
 
     if ( bus->ab_Dev[0] != DEV_NONE ) bus->ab_Dev[0] = ata_ReadSignature(bus, 0, &DiagExecuted);

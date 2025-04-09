@@ -37,9 +37,12 @@ LONG initcachebuffers(void) {
 
 
 
-static void checkcb(struct CacheBuffer *cb,UBYTE *string) {
+static void checkcb(struct CacheBuffer *cb,UBYTE *string)
+{
 //  if(cb->id!=0x4A48 || cb->data!=&cb->attached_data[0] || (cb->bits & (CB_ORIGINAL|CB_EMPTY))==(CB_ORIGINAL|CB_EMPTY) || (cb->bits & (CB_ORIGINAL|CB_LATEST))==(CB_ORIGINAL|CB_LATEST) || (cb->bits & (CB_ORIGINAL|CB_LATEST|CB_EMPTY))==CB_EMPTY) {
-  if(cb->id!=0x4A48 || cb->data!=&cb->attached_data[0] || (cb->bits & (CB_ORIGINAL|CB_EMPTY))==(CB_ORIGINAL|CB_EMPTY) || (cb->bits & (CB_ORIGINAL|CB_LATEST|CB_EMPTY))==CB_EMPTY) {
+
+  if(cb->id!=0x4A48 || cb->data!=&cb->attached_data[0] || (cb->bits & (CB_ORIGINAL|CB_EMPTY))==(CB_ORIGINAL|CB_EMPTY) || (cb->bits & (CB_ORIGINAL|CB_LATEST|CB_EMPTY))==CB_EMPTY)
+  {
 
     /* Aargh, this doesn't seem to be a REAL cachebuffer... */
 
@@ -192,18 +195,20 @@ void emptyoriginalcachebuffer(BLCK blckno) {
 
 
 
-void resetcachebuffer(struct CacheBuffer *cb) {
+void resetcachebuffer(struct CacheBuffer *cb)
+{
   /* Resets the CacheBuffer to its default state.  All fields are resetted
      to their defaults, the CacheBuffer will be properly delinked */
 
   checkcb(cb,"resetcachebuffer");
 
-  #ifdef CHECKCODE
-    if(cb->locked!=0) {
+  /*#ifdef CHECKCODE
+    if(cb->locked!=0)
+    {
       dreq("resetcachebuffer: CacheBuffer is still locked!\nPlease notify the author!");
       outputcachebuffer(cb);
     }
-  #endif
+  #endif*/
 
   if(cb->hashnode.mln_Succ!=0 && cb->hashnode.mln_Pred!=0) {
     removem(&cb->hashnode);
@@ -821,7 +826,8 @@ LONG addcachebuffers(LONG buffers) {
 void invalidatecachebuffers() {
   struct CacheBuffer *cb;
 
-  for(cb=(struct CacheBuffer *)globals->cblrulist.mlh_Head; cb!=(struct CacheBuffer *)&globals->cblrulist.mlh_Tail; cb=(struct CacheBuffer *)cb->node.mln_Succ) {
+  for(cb=(struct CacheBuffer *)globals->cblrulist.mlh_Head; cb!=(struct CacheBuffer *)&globals->cblrulist.mlh_Tail; cb=(struct CacheBuffer *)cb->node.mln_Succ)
+  {
     resetcachebuffer(cb);
   }
 }
