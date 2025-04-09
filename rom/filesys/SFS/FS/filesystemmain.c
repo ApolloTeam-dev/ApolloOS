@@ -294,7 +294,7 @@ LONG mainprogram(struct ExecBase *SysBase) {
 
             if((IntuitionBase = (APTR)TaggedOpenLibrary(TAGGEDOPEN_INTUITION)) != 0) {
 
-                DD(bug("[SFS] (1) Filesystem initializing...\n"));
+                DD(bug("[SFS] (1 ) Filesystem initializing\n"));
 
                 if((UtilityBase = (APTR)OpenLibrary("utility.library", 37)) != 0) {
 
@@ -306,7 +306,7 @@ LONG mainprogram(struct ExecBase *SysBase) {
                                 if((globals->inactivitytimer_ioreq = (struct timerequest *)CreateIORequest(globals->msgporttimer, sizeof(struct timerequest))) != 0) {
                                     if((globals->activitytimer_ioreq = (struct timerequest *)CreateIORequest(globals->msgportflushtimer, sizeof(struct timerequest))) != 0) {
 
-                                        DD(bug("[SFS] (2) Message ports and iorequests created\n"));
+                                        DD(bug("[SFS] (2 ) Message ports and iorequests created\n"));
 
                                         if(OpenDevice("timer.device", UNIT_VBLANK, &globals->inactivitytimer_ioreq->tr_node, 0) == 0) {
                                             if(OpenDevice("timer.device", UNIT_VBLANK, &globals->activitytimer_ioreq->tr_node, 0) == 0) {
@@ -319,10 +319,10 @@ LONG mainprogram(struct ExecBase *SysBase) {
 
                                                 initlist((struct List *)&globals->globalhandles);
 
-                                                DD(bug("[SFS] (3) Timer.device opened\n"));
+                                                DD(bug("[SFS] (3 ) Timer.device opened\n"));
 
                                                 if(initcachedio(AROS_BSTR_ADDR(globals->startupmsg->fssm_Device), globals->startupmsg->fssm_Unit, globals->startupmsg->fssm_Flags, globals->dosenvec) == 0) {
-                                                    DD(bug("[SFS] (4) Cached IO layer started\n"));
+                                                    DD(bug("[SFS] (4 ) Cached IO layer started\n"));
 
                                                     globals->shifts_block32 = globals->shifts_block - BLCKFACCURACY;
 
@@ -354,7 +354,7 @@ LONG mainprogram(struct ExecBase *SysBase) {
 
                                                         globals->block_rovingblockptr = globals->blocks_reserved_start + globals->blocks_admin + globals->blocks_bitmap + reserve;
 
-                                                        DD(bug("[SFS] RovingBlockPtr = %ld, reserve = %ld\n", globals->block_rovingblockptr, reserve));
+                                                        //DD(bug("[SFS] RovingBlockPtr = %ld, reserve = %ld\n", globals->block_rovingblockptr, reserve));
 
                                                         // block_rovingblockptr=0;
                                                     }
@@ -365,23 +365,21 @@ LONG mainprogram(struct ExecBase *SysBase) {
 
                                                     addchangeint((struct Task *)globals->mytask, 1 << globals->mytask->pr_MsgPort.mp_SigBit);
 
-                                                    DD(bug("[SFS] Initializing transactions\n"));
-
-                                                    if(inittransactions() == 0) {
-                                                        DD(bug("[SFS] (5) Transaction layer started\n"));
+                                                    if(inittransactions() == 0)
+                                                    {
+                                                        DD(bug("[SFS] (5 ) Transaction layer started\n"));
 
                                                         if(addcachebuffers(globals->dosenvec->de_NumBuffers) == 0) {
 
-                                                            DD(bug("[SFS] (6) Filesystem started succesfully!\n"));
-
                                                             /* return startup-packet, the handler runs now */
 
-                                                            DD(bug("[SFS] Filesystem started!  Volumenode = 0x%8lx\n", globals->volumenode));
-                                                            DD(bug("[SFS] Mountlist entry says: Allocate %ld buffers of memtype 0x%08lx\n", globals->dosenvec->de_NumBuffers, globals->dosenvec->de_BufMemType));
+                                                            DD(bug("[SFS] (6 ) Filesystem started!  Volumenode = 0x%8lx\n", globals->volumenode));
+
+                                                            DD(bug("[SFS] (6A) Mountlist entry says: Allocate %ld buffers of memtype 0x%08lx\n", globals->dosenvec->de_NumBuffers, globals->dosenvec->de_BufMemType));
 
                                                             //  returnpacket(DOSTRUE,0);   // Sep 19 1999: Moved down again.
 
-                                                            DD(bug("[SFS] CreateNewProc..."));
+                                                            DD(bug("[SFS] (6B) CreateNewProc..."));
 
                                                             const struct TagItem 	     tags[] = {
                                                                 {NP_Entry, (IPTR)sdlhtask    	    	},
@@ -392,23 +390,23 @@ LONG mainprogram(struct ExecBase *SysBase) {
 
                                                             if(CreateNewProc(tags) != 0) {
 
-                                                                DD(bug("[SFS] ok\n"));
+                                                                DD(bug("SFS DosList handler installed\n"));
 
                                                                 while((globals->sdlhport = FindPort("SFS DosList handler")) == 0) {
                                                                     Delay(2);
                                                                 }
 
                                                                 if(isdiskpresent() != FALSE) {
-                                                                    DD(bug("[SFS] There is a disk present\n"));
+                                                                    DD(bug("[SFS] (6C) Detect Medium: Disk Present\n"));
                                                                     initdisk();
                                                                 } else {
-                                                                    DD(bug("[SFS] No disk inserted\n"));
+                                                                    DD(bug("[SFS] (6C) Detect Medium: NO Disk Present\n"));
                                                                     globals->disktype = ID_NO_DISK_PRESENT;
                                                                 }
 
                                                                 returnpacket(DOSTRUE, 0);   // Jul  4 1999: Moved up...
 
-                                                                DD(bug("[SFS] (7) Informed DOS about the new partition!\n"));
+                                                                DD(bug("[SFS] (7 ) Informed DOS about the new partition!\n"));
 
                                                                 mainloop();
                                                             }
@@ -649,19 +647,21 @@ void mainloop(void) {
         Wait(signalbits);
 
         do {
-            while((msg = GetMsg(globals->msgportflushtimer)) != 0) {
-                DD(bug("[SFS] mainloop: activity timeout -> flushed transaction\n"));
+            while((msg = GetMsg(globals->msgportflushtimer)) != 0)
+            {
+                //DD(bug("[SFS] mainloop: activity timeout -> flushed transaction\n"));
                 flushtransaction();
                 globals->activitytimeractive = FALSE;
             }
 
-            while((msg = GetMsg(globals->msgporttimer)) != 0) {
+            while((msg = GetMsg(globals->msgporttimer)) != 0)
+            {
                 if(globals->timerreset == TRUE) {
                     /* There was another request during the timeout/2 period, so we extend the timeout a bit longer. */
                     globals->pendingchanges = FALSE;
                     starttimeout();
                 } else {
-                    DD(bug("[SFS] mainloop: inactivity timeout -> flushed transaction\n"));
+                    //DD(bug("[SFS] mainloop: inactivity timeout -> flushed transaction\n"));
                     flushcaches();
                     globals->pendingchanges = FALSE;
                 }
@@ -675,7 +675,7 @@ void mainloop(void) {
 
                 /* The disk was inserted or removed! */
 
-                DD(bug("[SFS] mainloop: disk inserted or removed\n"));
+                DD(bug("[SFS] mainloop: Disk Change\n"));
 
                 if(isdiskpresent() == FALSE) {
                     /* Disk was removed */
@@ -2509,7 +2509,7 @@ void mainloop(void) {
                                     struct ExtFileLock *lock = BADDR(globals->packet->dp_Arg1);
                                     struct InfoData *id = BADDR(globals->packet->dp_Arg2);
 
-                                    DD(bug("[SFS] ACTION_INFO      Disktype=0x%8lx | Packet VolumeNode = 0x%8lx | Global Volumenode = 0x%8lx\n", id->id_DiskType, (ULONG)id->id_VolumeNode, globals->volumenode));
+                                    DD(bug("[SFS] ACTION_INFO      Global Volumenode = 0x%8lx | Globals Disktype = 0x%8lx\n", globals->volumenode, globals->disktype));
 
                                     if(lock != 0 && globals->volumenode != (struct DeviceList *)BADDR(lock->volume)) {
                                         DD(bug("[SFS] ACTION_INFO: returning error\n"));
@@ -3196,7 +3196,7 @@ struct DeviceList *usevolumenode(UBYTE *name, ULONG creationdate) {
 
     UnLockDosList(LDF_READ | LDF_VOLUMES);
 
-    DD(bug("[SFS] usevolumenode | return =0x%8lx\n", vn));
+    //DD(bug("[SFS] usevolumenode | return =0x%8lx\n", vn));
 
     return(vn);
 }
@@ -3242,11 +3242,12 @@ LONG initdisk() {
             dreq("Root blocks are okay!");
 #endif
 
-            if((errorcode = checkfortransaction()) == 0) {
-
+            if((errorcode = checkfortransaction()) == 0)
+            {
                 DD(bug("[SFS] Initdisk: Checked for an old Transaction and applied it if it was present.\n"));
 
-                if((errorcode = readcachebuffercheck(&cb, globals->block_root, OBJECTCONTAINER_ID)) == 0) {
+                if((errorcode = readcachebuffercheck(&cb, globals->block_root, OBJECTCONTAINER_ID)) == 0)
+                {
                     struct fsRootInfo *ri = (struct fsRootInfo *)((UBYTE *)cb->data + globals->bytes_block - sizeof(struct fsRootInfo));
                     ULONG blocksfree = 0;
 
@@ -3257,40 +3258,43 @@ LONG initdisk() {
 
                     /* ROOT block is valid for this filesystem */
 
-                    /* We should count the number of set bits in the bitmap now */
+                    /* We should count the number of set bits in the bitmap now 
 
+                    struct CacheBuffer *cb;
+                    struct fsBitmap *b;
+                    BLCK bitmapblock = globals->block_bitmapbase;
+                    UWORD cnt = globals->blocks_bitmap;
+                    WORD n;
+
+                    while(cnt-- > 0 && (errorcode = readcachebuffercheck(&cb, bitmapblock, BITMAP_ID)) == 0)
                     {
-                        struct CacheBuffer *cb;
-                        struct fsBitmap *b;
-                        BLCK bitmapblock = globals->block_bitmapbase;
-                        UWORD cnt = globals->blocks_bitmap;
-                        WORD n;
+                        b = cb->data;
 
-                        while(cnt-- > 0 && (errorcode = readcachebuffercheck(&cb, bitmapblock, BITMAP_ID)) == 0) {
-                            b = cb->data;
-
-                            for(n = 0; n < ((WORD)((globals->bytes_block - sizeof(struct fsBitmap)) >> 2)); n++) {
-                                if(b->bitmap[n] != 0) {
-                                    if(b->bitmap[n] == 0xFFFFFFFF) {
-                                        blocksfree += 32;
-                                    } else {
-                                        blocksfree += bfcnto(b->bitmap[n]);
-                                    }
+                        for(n = 0; n < ((WORD)((globals->bytes_block - sizeof(struct fsBitmap)) >> 2)); n++)
+                        {
+                            if(b->bitmap[n] != 0)
+                            {
+                                if(b->bitmap[n] == 0xFFFFFFFF)
+                                {
+                                    blocksfree += 32;
+                                } else {
+                                    blocksfree += bfcnto(b->bitmap[n]);
                                 }
                             }
-                            bitmapblock++;
                         }
+                        bitmapblock++;
                     }
 
                     unlockcachebuffer(cb);
 
                     DD(bug("[SFS] Initdisk: Traversed bitmap, found %ld free blocks\n", blocksfree));
 
-                    if(errorcode == 0 && BE2L(ri->be_freeblocks) != blocksfree) {
-                        if(ri->be_freeblocks != 0) {
-                            dreq("The number of free blocks (%ld) is incorrect.\n"\
-                                 "According to the bitmap it should be %ld.\n"\
-                                 "The number of free blocks will now be updated.", BE2L(ri->be_freeblocks), blocksfree);
+                    if(errorcode == 0 && BE2L(ri->be_freeblocks) != blocksfree)
+                    {
+                        if(ri->be_freeblocks != 0)
+                        {
+                            dreq("The number of free blocks (%ld) is incorrect.\nAccording to the bitmap it should be %ld.\nThe number of free blocks will now be updated.",
+                                BE2L(ri->be_freeblocks), blocksfree);
                         }
 
                         newtransaction();
@@ -3304,7 +3308,7 @@ LONG initdisk() {
                         } else {
                             deletetransaction();
                         }
-                    }
+                    } */
 
                     if(errorcode == 0) {
                         DD(bug("[SFS] Initdisk: A valid DOS disk\n"));
@@ -3733,7 +3737,7 @@ static void actionsamelock(struct DosPacket *packet) {
     lock = (struct ExtFileLock *)BADDR(packet->dp_Arg1);
     lock2 = (struct ExtFileLock *)BADDR(packet->dp_Arg2);
 
-    DD(bug("[SFS] ACTION_SAME_LOCK(%ld = %ld)\n", lock, lock2));
+    //DD(bug("[SFS] ACTION_SAME_LOCK(%ld = %ld)\n", lock, lock2));
 
     if(lock->objectnode == lock2->objectnode && lock->task == lock2->task) {
         returnpacket2(packet, DOSTRUE, 0);
@@ -3747,7 +3751,7 @@ static void actionsamelock(struct DosPacket *packet) {
 static void actiondiskinfo(struct DosPacket *packet) {
     struct InfoData *id = BADDR(packet->dp_Arg1);
 
-    DD(bug("[SFS] ACTION_DISK_INFO Disktype=0x%8lx | Packet VolumeNode = 0x%8lx | Global Volumenode = 0x%8lx\n", id->id_DiskType, (ULONG)id->id_VolumeNode, globals->volumenode));
+    DD(bug("[SFS] ACTION_DISK_INFO Global Volumenode = 0x%8lx | Globals Disktype = 0x%8lx | Disktype=0x%8lx | Packet VolumeNode = 0x%8lx \n", globals->volumenode, globals->disktype, id->id_DiskType, (ULONG)id->id_VolumeNode));
 
     fillinfodata(id);
 
@@ -3790,7 +3794,7 @@ static void fillinfodata(struct InfoData *id)
 
     id->id_VolumeNode = TOBADDR(globals->volumenode);
 
-    DD(bug("[SFS] fillinfodata: volumenode = 0x%08lx, disktype = 0x%08lx\n", globals->volumenode, globals->disktype));
+    //DD(bug("[SFS] fillinfodata: volumenode = 0x%08lx, disktype = 0x%08lx\n", globals->volumenode, globals->disktype));
 
     if(globals->locklist != 0) {
         id->id_InUse = DOSTRUE;
@@ -3826,23 +3830,28 @@ void setchecksum(struct CacheBuffer *cb) {
 
 
 
-LONG readcachebuffercheck(struct CacheBuffer **returnedcb, ULONG blckno, ULONG type) {
+LONG readcachebuffercheck(struct CacheBuffer **returnedcb, ULONG blckno, ULONG type)
+{
     LONG errorcode;
     struct fsBlockHeader *bh;
 
-    while((errorcode = readcachebuffer(returnedcb, blckno)) == 0) {
+    while((errorcode = readcachebuffer(returnedcb, blckno)) == 0)
+    {
         bh = (*returnedcb)->data;
-        if(type != 0 && bh->id != type) {
+        if(type != 0 && bh->id != type)
+        {
             dumpcachebuffers();
             outputcachebuffer(*returnedcb);
             emptycachebuffer(*returnedcb);
 
-            if(blckno != 0) {
+            if(blckno != 0)
+            {
                 if(request(PROGRAMNAME " request", "%s\n"\
                            "has a blockid error in block %ld.\n"\
                            "Expected was blockid 0x%08lx,\n"\
                            "but the block says it is blockid 0x%08lx.",
-                           "Reread|Cancel", AROS_BSTR_ADDR(globals->devnode->dn_Name), blckno, type, bh->id) <= 0) {
+                           "Reread|Cancel", AROS_BSTR_ADDR(globals->devnode->dn_Name), blckno, type, bh->id) <= 0)
+                {
                     return(INTERR_BLOCK_WRONG_TYPE);
                 }
             } else {
@@ -3856,18 +3865,22 @@ LONG readcachebuffercheck(struct CacheBuffer **returnedcb, ULONG blckno, ULONG t
             }
             continue;
         }
-        if(checkchecksum(*returnedcb) == DOSFALSE) {
+        
+        if(checkchecksum(*returnedcb) == DOSFALSE)
+        {
             dumpcachebuffers();
             outputcachebuffer(*returnedcb);
             emptycachebuffer(*returnedcb);
 
             if(request(PROGRAMNAME " request", "%s\n"\
                        "has a checksum error in block %ld.",
-                       "Reread|Cancel", AROS_BSTR_ADDR(globals->devnode->dn_Name), blckno) <= 0) {
+                       "Reread|Cancel", AROS_BSTR_ADDR(globals->devnode->dn_Name), blckno) <= 0)
+            {
                 return(INTERR_CHECKSUM_FAILURE);
             }
             continue;
         }
+
         if(BE2L(bh->be_ownblock) != blckno) {
             dumpcachebuffers();
             outputcachebuffer(*returnedcb);
@@ -3877,7 +3890,8 @@ LONG readcachebuffercheck(struct CacheBuffer **returnedcb, ULONG blckno, ULONG t
                        "has a block error in block %ld.\n"\
                        "Expected was block %ld,\n"\
                        "but the block says it is block %ld.",
-                       "Reread|Cancel", AROS_BSTR_ADDR(globals->devnode->dn_Name), blckno, blckno, BE2L(bh->be_ownblock)) <= 0) {
+                       "Reread|Cancel", AROS_BSTR_ADDR(globals->devnode->dn_Name), blckno, blckno, BE2L(bh->be_ownblock)) <= 0)
+            {
                 return(INTERR_OWNBLOCK_WRONG);
             }
             continue;
