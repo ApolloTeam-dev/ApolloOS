@@ -376,7 +376,7 @@ LONG mainprogram(struct ExecBase *SysBase) {
 
                                                             /* return startup-packet, the handler runs now */
 
-                                                            DD(bug("[SFS] Filesystem started!  Volumenode = %ld\n", globals->volumenode));
+                                                            DD(bug("[SFS] Filesystem started!  Volumenode = 0x%8lx\n", globals->volumenode));
                                                             DD(bug("[SFS] Mountlist entry says: Allocate %ld buffers of memtype 0x%08lx\n", globals->dosenvec->de_NumBuffers, globals->dosenvec->de_BufMemType));
 
                                                             //  returnpacket(DOSTRUE,0);   // Sep 19 1999: Moved down again.
@@ -642,9 +642,7 @@ void mainloop(void) {
     signalbits |= 1 << globals->msgportnotify->mp_SigBit;
     signalbits |= 1 << globals->msgportflushtimer->mp_SigBit;
 
-#ifdef STARTDEBUG
-    dreq("Entering packet loop.");
-#endif
+    DD(bug("[SFS] Entering packet loop."));
 
     for(;;) {
 
@@ -652,7 +650,7 @@ void mainloop(void) {
 
         do {
             while((msg = GetMsg(globals->msgportflushtimer)) != 0) {
-                _TDEBUG("mainloop: activity timeout -> flushed transaction\n");
+                DD(bug("[SFS] mainloop: activity timeout -> flushed transaction\n"));
                 flushtransaction();
                 globals->activitytimeractive = FALSE;
             }
@@ -663,7 +661,7 @@ void mainloop(void) {
                     globals->pendingchanges = FALSE;
                     starttimeout();
                 } else {
-                    _TDEBUG("mainloop: inactivity timeout -> flushed transaction\n");
+                    DD(bug("[SFS] mainloop: inactivity timeout -> flushed transaction\n"));
                     flushcaches();
                     globals->pendingchanges = FALSE;
                 }
@@ -677,7 +675,7 @@ void mainloop(void) {
 
                 /* The disk was inserted or removed! */
 
-                _DEBUG("mainloop: disk inserted or removed\n");
+                DD(bug("[SFS] mainloop: disk inserted or removed\n"));
 
                 if(isdiskpresent() == FALSE) {
                     /* Disk was removed */
@@ -1274,9 +1272,7 @@ void mainloop(void) {
                        with one to uninhibit the disk. */
 
                     if(globals->packet->dp_Arg1 != DOSFALSE) {
-#ifdef STARTDEBUG
-                        dreq("Disk inhibited (nesting = %ld).", globals->inhibitnestcounter);
-#endif
+                        DD(bug("Disk inhibited (nesting = %ld).", globals->inhibitnestcounter));
 
                         if(globals->inhibitnestcounter++ == 0) { // Inhibited for the first time?
                             globals->disktype = ID_BUSY; /* Must be put before deinitdisk() Feb 27 1999: Maybe not needed anymore */
@@ -1341,6 +1337,9 @@ void mainloop(void) {
                             /* If volume was made offline instead of removed because of pending notifies, see if removing
                                notifies can fully close the volume. Case of Wanderer setting up root directory notification
                                on SFS pendrive / disk partition before re-formatting. */
+                            
+                            DD(bug("[SFS] Mainloop ACTION_REMOVE_NOTIFY globals->volumenode_inh=0x%8lx\n", globals->volumenode_inh));
+                            
                             struct NotifyRequest *head, *nr = (struct NotifyRequest *)globals->packet->dp_Arg1;
                             BOOL found = FALSE;
 
@@ -1700,6 +1699,7 @@ void mainloop(void) {
                                             s = BADDR(globals->packet->dp_Arg1);
                                             sfsCopyBSTRSafe((BSTR)globals->packet->dp_Arg1, oname->dname, 30);
                                             if((errorcode = storecachebuffer(cb)) == 0 && globals->volumenode != 0) {
+                                                DD(bug("[SFS] ACTION_RENAME_DISK Volumenode = 0x%8lx\n", globals->volumenode));
                                                 s = BADDR(globals->packet->dp_Arg1);
                                                 char *vname = BADDR(globals->volumenode->dl_Name);
 #ifdef USE_FAST_BSTR
@@ -2505,11 +2505,11 @@ void mainloop(void) {
 
                                 break;
                             case ACTION_INFO:
-                                DD(bug("[SFS] ACTION_INFO\n"));
-
                                 {
                                     struct ExtFileLock *lock = BADDR(globals->packet->dp_Arg1);
                                     struct InfoData *id = BADDR(globals->packet->dp_Arg2);
+
+                                    DD(bug("[SFS] ACTION_INFO      Disktype=0x%8lx | Packet VolumeNode = 0x%8lx | Global Volumenode = 0x%8lx\n", id->id_DiskType, (ULONG)id->id_VolumeNode, globals->volumenode));
 
                                     if(lock != 0 && globals->volumenode != (struct DeviceList *)BADDR(lock->volume)) {
                                         DD(bug("[SFS] ACTION_INFO: returning error\n"));
@@ -2924,7 +2924,7 @@ static void returnpacket2(struct DosPacket *packet, SIPTR res1, SIPTR res2) {
     struct Message *msg;
     struct MsgPort *replyport;
 
-    DD(bug("[SFS] Replying, results are %ld/%ld\n", res1, res2));
+    //DD(bug("[SFS] Replying, results are %ld/%ld\n", res1, res2));
 
     packet->dp_Res1 = res1; /* set return codes */
     packet->dp_Res2 = res2;
@@ -3156,7 +3156,7 @@ struct DeviceList *usevolumenode(UBYTE *name, ULONG creationdate) {
 
                 /* Volume is not currently in use, so grab locklist & notifyrequests and patch fl_Task fields */
 
-                _DEBUG("usevolumenode: Found DosEntry with same date, and locklist!=0\n");
+                DD(bug("[SFS] usevolumenode: Found DosEntry with same date, and locklist!=0\n"));
 
                 lock = (struct ExtFileLock *)BADDR(dol->dol_misc.dol_volume.dol_LockList);
                 nr = (struct NotifyRequest *)BADDR((((struct DeviceList *)dol)->dl_unused));
@@ -3184,7 +3184,7 @@ struct DeviceList *usevolumenode(UBYTE *name, ULONG creationdate) {
             } else {
                 Permit();
 
-                _DEBUG("usevolumenode: Found DosEntry with same date, but it is in use!\n");
+                DD(bug("[SFS] usevolumenode: Found DosEntry with same date, but it is in use!\n"));
 
                 vn = (struct DeviceList *) - 1;
             }
@@ -3195,6 +3195,8 @@ struct DeviceList *usevolumenode(UBYTE *name, ULONG creationdate) {
     }
 
     UnLockDosList(LDF_READ | LDF_VOLUMES);
+
+    DD(bug("[SFS] usevolumenode | return =0x%8lx\n", vn));
 
     return(vn);
 }
@@ -3376,7 +3378,7 @@ LONG initdisk() {
             errorcode = ERROR_NOT_A_DOS_DISK;
         }
 
-        /*
+        
         if(errorcode == 0)
         {
             struct DeviceList *vn;
@@ -3394,9 +3396,7 @@ LONG initdisk() {
                     {
                         struct SFSMessage *sfsm;
                         UBYTE *d2 = (UBYTE *)BADDR(vn->dl_Name);
-#ifdef AROS_FAST_BSTR
-                        copystr(oc->object[0].name, d2, 30);
-#else
+
                         UBYTE *d = d2 + 1;
                         UBYTE *s = oc->object[0].name;
                         UBYTE len = 0;
@@ -3408,30 +3408,35 @@ LONG initdisk() {
 
                         *d = 0;
                         *d2 = len;
-#endif
 
                         datetodatestamp(BE2L(ri->be_datecreated), &vn->dl_VolumeDate);
 
-                        DD(bug("[SFS] Initdisk: Sending msg.\n"));
+                        vn->dl_Task = globals->devnode->dn_Task;
+                        vn->dl_DiskType = globals->dosenvec->de_DosType;
+                        globals->volumenode = vn;
+                        
+                        DD(bug("[SFS] Initdisk: NEW VolumeNode Created = 0x%8lx\n", globals->volumenode));
 
-                        if((sfsm = AllocVec(sizeof(struct SFSMessage), MEMF_CLEAR)) != 0) {
+                        DD(bug("[SFS] Initdisk: Sending Message to SFS DosList Handler\n"));
+
+                        if((sfsm = AllocVec(sizeof(struct SFSMessage), MEMF_CLEAR)) != 0)
+                        {
                             sfsm->command = SFSM_ADD_VOLUMENODE;
                             sfsm->data = (IPTR)vn;
                             sfsm->msg.mn_Length = sizeof(struct SFSMessage);
 
                             PutMsg(globals->sdlhport, (struct Message *)sfsm);
                         }
+
                     } else {
                         errorcode = ERROR_NO_FREE_STORE;
                     }
-                }
-
-                DD(bug("[SFS] Initdisk: Using new or old volumenode.\n"));
-
-                if(errorcode == 0) {  // Reusing the found VolumeNode or using the new VolumeNode
+                } else {
                     vn->dl_Task = globals->devnode->dn_Task;
                     vn->dl_DiskType = globals->dosenvec->de_DosType;
                     globals->volumenode = vn;
+
+                    DD(bug("[SFS] Initdisk: Existing VolumeNode Used = 0x%8lx\n", globals->volumenode));
                 }
             } else { // Volume is in use by another handler -- stay off
                 DD(bug("[SFS] Initdisk: ERROR: Found DosEntry with same date, and locklist==0\n"));
@@ -3439,14 +3444,15 @@ LONG initdisk() {
                 errorcode = ERROR_NO_DISK;
                 //   vn=0;
                 globals->volumenode = 0;
+                DD(bug("[SFS] Initdisk: ERROR - Volumenode RESET = 0x%8lx\n", globals->volumenode));
             }
-        }*/
+        }
 
         if(errorcode == 0) {
             diskchangenotify(IECLASS_DISKINSERTED);
         }
 
-        DD(bug("[SFS] Initdisk: Updating globals->disktype = DiskType 0x%8xl\n", newdisktype));
+        DD(bug("[SFS] Initdisk: Updating globals->disktype = DiskType 0x%8lx\n", newdisktype));
         globals->disktype = newdisktype;
 
         return(errorcode);
@@ -3554,7 +3560,7 @@ static void deinitdisk() {
        the volumenode, or transfer any outstanding locks/notifies to
        it.  Finally it notifies the system of the disk removal. */
 
-    _DEBUG("deinitdisk: entry\n");
+    DD(bug("[SFS] deinitdisk: entry\n"));
 
     flushcaches();
     invalidatecaches();
@@ -3580,7 +3586,7 @@ static void deinitdisk() {
             globals->locklist = 0;
             globals->notifyrequests = 0;
 
-            _DEBUG("deinitdisk: done\n");
+            DD(bug("deinitdisk: done\n"));
 
             globals->volumenode = 0;
 
@@ -3711,7 +3717,7 @@ static void actioncurrentvolume(struct DosPacket *packet) {
     DD(bug("[SFS] ACTION_CURRENT_VOLUME(%ld)\n", lock));
 
     if(lock == 0) {
-        DD(bug("[SFS] mACTION_CURRENT_VOLUME: volumenode = %ld\n", globals->volumenode));
+        DD(bug("[SFS] mACTION_CURRENT_VOLUME: volumenode = 0x%8lx\n", globals->volumenode));
         returnpacket2(packet, (SIPTR)TOBADDR(globals->volumenode), 0);
     } else {
         returnpacket2(packet, (SIPTR)lock->volume, 0);
@@ -3741,11 +3747,17 @@ static void actionsamelock(struct DosPacket *packet) {
 static void actiondiskinfo(struct DosPacket *packet) {
     struct InfoData *id = BADDR(packet->dp_Arg1);
 
-    DD(bug("[SFS] ACTION_DISK_INFO\n"));
+    DD(bug("[SFS] ACTION_DISK_INFO Disktype=0x%8lx | Packet VolumeNode = 0x%8lx | Global Volumenode = 0x%8lx\n", id->id_DiskType, (ULONG)id->id_VolumeNode, globals->volumenode));
 
     fillinfodata(id);
 
-    returnpacket2(packet, DOSTRUE, 0);
+    if(globals->volumenode == 0)
+    {
+        returnpacket2(packet, DOSTRUE, 0);
+    } else {
+        returnpacket2(packet, DOSFALSE, 0);
+    }
+    
 }
 
 
@@ -3776,11 +3788,9 @@ static void fillinfodata(struct InfoData *id)
     id->id_BytesPerBlock = globals->bytes_block;
     id->id_DiskType = globals->disktype;
 
-    DD(bug("[SFS] Filling InfoData structure with a volumenode ptr to address %ld.  Disktype = 0x%08lx\n", globals->volumenode, globals->disktype));
-
     id->id_VolumeNode = TOBADDR(globals->volumenode);
 
-    DD(bug("[SFS] fillinfodata: volumenode = %ld, disktype = 0x%08lx\n", globals->volumenode, globals->disktype));
+    DD(bug("[SFS] fillinfodata: volumenode = 0x%08lx, disktype = 0x%08lx\n", globals->volumenode, globals->disktype));
 
     if(globals->locklist != 0) {
         id->id_InUse = DOSTRUE;
@@ -3791,9 +3801,11 @@ static void fillinfodata(struct InfoData *id)
 
 
 
-BOOL checkchecksum(struct CacheBuffer *cb) {
+BOOL checkchecksum(struct CacheBuffer *cb)
+{
 #ifdef CHECKCHECKSUMSALWAYS
-    if(CALCCHECKSUM(globals->bytes_block, cb->data) == 0) {
+    if(CALCCHECKSUM(globals->bytes_block, cb->data) == 0)
+    {
 #else
     if((cb->bits & CB_CHECKSUM) != 0 || CALCCHECKSUM(globals->bytes_block, cb->data) == 0) { //    -> copycachebuffer screws this up!
 #endif
@@ -6506,6 +6518,10 @@ static void sdlhtask(void) {
                                 sfsm->errorcode = IoErr();
                             }
 
+                            struct DosList *vn = (struct DosList *)sfsm->data;
+
+                            DD(bug("[SFS] SFS DosList handler: AddDosEntry VolumeNode=0x%8lx | Name=%s | Type=%0x%8lx | Task=%u | ErrorCode=%u\n", vn, AROS_BSTR_ADDR(vn->dol_Name), vn->dol_Type, vn->dol_Task, sfsm->errorcode ));
+
                             //            if(AddDosEntry((struct DosList *)sfsm->data)==DOSFALSE) {
                             //              errorcode=IoErr();
                             //              FreeDosEntry((struct DosList *)vn);
@@ -6520,6 +6536,9 @@ static void sdlhtask(void) {
                                     break;
                                 }
                             }
+
+                            DD(bug("[SFS] SFS DosList handler: RemDosEntry VolumeNode=0x%8lx | Name=%s | Type=%0x%8lx | Task=%u\n", dol, AROS_BSTR_ADDR(dol), dol->dol_Type, dol->dol_Task));
+
                             //  removevolumenode(dol, (struct DosList *)sfsm->data);      /* Dangerous because of DOSBase?? */
                             FreeDosEntry(vn);
                         }

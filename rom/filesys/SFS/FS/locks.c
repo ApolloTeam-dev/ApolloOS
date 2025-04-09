@@ -182,7 +182,7 @@ LONG lockobject2(struct fsObject *o, LONG accessmode, struct ExtFileLock **retur
 
       lock->task=&globals->mytask->pr_MsgPort;
       lock->volume=TOBADDR(globals->volumenode);
-
+      //DD(bug("[SFS] lockobject2 globals->volumenode = 0x%8lx\n", globals->volumenode));
       lock->link=TOBADDR(globals->locklist);
       lock->next=globals->locklist;
       lock->prev=0;
