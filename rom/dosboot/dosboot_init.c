@@ -298,8 +298,8 @@ int dosboot_Init(LIBBASETYPEPTR DOSBootBase)
     {
         dosboot_BootStrap(DOSBootBase);
 
-        if (!DOSBootBase->bm_Screen)
-        	DOSBootBase->bm_Screen = NoBootMediaScreen(DOSBootBase);
+        if (!DOSBootBase->bm_Screen) Alert(0x0700000a);
+        	//DOSBootBase->bm_Screen = NoBootMediaScreen(DOSBootBase);
 
         D(bug("No bootable disk was found.\n"));
         D(bug("Please insert a bootable disk in any drive.\n"));
@@ -309,8 +309,8 @@ int dosboot_Init(LIBBASETYPEPTR DOSBootBase)
         {
             bootDelay(DOSBootBase->delayTicks);
 
-            if (DOSBootBase->bm_Screen)
-                anim_Animate(DOSBootBase->bm_Screen, DOSBootBase);
+            //if (DOSBootBase->bm_Screen)
+                //anim_Animate(DOSBootBase->bm_Screen, DOSBootBase);
         }
     }
 

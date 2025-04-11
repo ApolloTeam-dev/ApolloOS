@@ -14,10 +14,12 @@
 #include <proto/graphics.h>
 
 #include "dosboot_intern.h"
-#include "nomedia_image.h"
+//#include "nomedia_image.h"
 #include "nomedia_anim.h"
 
 #define D(x) x
+
+/*
 
 struct AnimData
 {
@@ -92,7 +94,7 @@ APTR anim_Init(struct Screen *scr, struct DOSBootBase *DOSBootBase)
 
 		ad->frame = 0;
 		DOSBootBase->animData = ad;
-		DOSBootBase->delayTicks = 25;	/* We run at 2 frames per second */
+		DOSBootBase->delayTicks = 25;	//* We run at 2 frames per second 
 		return ad;
 	    }
 	    FreeMem(ad, sizeof(struct AnimData));
@@ -104,7 +106,7 @@ APTR anim_Init(struct Screen *scr, struct DOSBootBase *DOSBootBase)
 void anim_Animate(struct Screen *scr, struct DOSBootBase *DOSBootBase)
 {
     struct AnimData *ad = DOSBootBase->animData;
-/*    
+  
     ad->frame = !ad->frame;
     if (ad->frame)
     	RectFill(&scr->RastPort, ad->x + FLASH_X, ad->y + FLASH_Y,
@@ -115,7 +117,7 @@ void anim_Animate(struct Screen *scr, struct DOSBootBase *DOSBootBase)
     			  ad->x + FLASH_X + FLASH_WIDTH - 1, ad->y + FLASH_Y + FLASH_HEIGHT - 1,
     			  ad->picture + FLASH_X, NOMEDIA_WIDTH);
     }
-*/
+
 }
 
 void anim_Stop(struct DOSBootBase *DOSBootBase)
@@ -130,3 +132,5 @@ void anim_Stop(struct DOSBootBase *DOSBootBase)
     	DOSBootBase->animData = NULL;
     }
 }
+
+*/

@@ -58,7 +58,8 @@ AROS_UFH3(static APTR, dosboot_Cleanup,
     	/* Close "No boot media" screen. This is actually what we are here for. */
     	CloseBootScreen(base->bm_Screen, base);
     }
-    anim_Stop(base);
+    
+    //anim_Stop(base);
 
     /* Well, since we are here, let's completely expunge. :) */
     CloseLibrary(&base->bm_ExpansionBase->LibNode);

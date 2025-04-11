@@ -99,9 +99,10 @@ struct Screen *OpenBootScreen(struct DOSBootBase *DOSBootBase)
     return OpenBootScreenType(DOSBootBase, 2, FALSE);
 }
 
+/*
 struct Screen *NoBootMediaScreen(struct DOSBootBase *DOSBootBase)
 {
-    /* Boot anim requires 16+ color screen and 1:1 pixels */
+    // Boot anim requires 16+ color screen and 1:1 pixels
     struct Screen *scr = OpenBootScreenType2(DOSBootBase, 4, TRUE);
 
     if (!anim_Init(scr, DOSBootBase))
@@ -112,7 +113,7 @@ struct Screen *NoBootMediaScreen(struct DOSBootBase *DOSBootBase)
     }
 
     return scr;
-}
+}*/
 
 void CloseBootScreen(struct Screen *scr, struct DOSBootBase *DOSBootBase)
 {
