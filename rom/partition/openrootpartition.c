@@ -52,7 +52,7 @@
     if (Device == NULL)
         return NULL;
 
-    D(bug("\n[PART:%s] OpenRootPartition: Device = %s | Unit = %u\n", Device, Device, Unit));
+    D(bug("\n[PART] OpenRootPartition: Device = %s | Unit = %u\n", Device, Unit));
         
     ph = AllocMem(sizeof(struct PartitionHandle), MEMF_PUBLIC | MEMF_CLEAR);
     if (ph)

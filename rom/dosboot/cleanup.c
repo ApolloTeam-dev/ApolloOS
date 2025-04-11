@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2013, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -12,6 +12,8 @@
 #include LC_LIBDEFS_FILE
 
 #include "dosboot_intern.h"
+
+#define D(x) x
 
 extern const char Dosboot_LibID[];
 extern const int Dosboot_End;

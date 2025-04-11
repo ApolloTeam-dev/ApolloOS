@@ -209,7 +209,7 @@ LONG PartitionRDBCheckPartitionTable(struct Library *PartitionBase, struct Parti
             (type.id[0] != 0x30 && type.id[0] != 0x76)
             )
         {
-            D(bug("[PART:RDB] PartitionRDBCheckPartitionTable: No RDB Boot Record Found\n"));
+            D(bug("[PART:RDB] PartitionRDBCheckPartitionTable: NOT a ROOT Partition, so NO RDB Boot Record Found\n"));
             return 0;
         }              
     }
@@ -292,7 +292,7 @@ struct BadBlockNode *PartitionRDBNewBadBlock(struct Library *PartitionBase, stru
 
 struct PartitionHandle *PartitionRDBNewHandle(struct Library *PartitionBase, struct PartitionHandle *root, struct PartitionBlock *buffer)
 {
-    //D(bug("[PART:RDB] PartitionRDBNewHandle\n"));
+    D(bug("[PART:RDB] PartitionRDBNewHandle\n"));
 
     struct PartitionBlock *pblock;
     struct PartitionHandle *ph;
@@ -321,6 +321,19 @@ struct PartitionHandle *PartitionRDBNewHandle(struct Library *PartitionBase, str
                     ph->dg.dg_TrackSectors = ph->de.de_BlocksPerTrack;
                     ph->dg.dg_Cylinders = ph->de.de_HighCyl - ph->de.de_LowCyl + 1;
                     ph->dg.dg_BufMemType = ph->de.de_BufMemType;
+
+                    D(bug("\t[%s] ph->ln.ln_Name            = %s\n",      __FUNCTION__ , ph->ln.ln_Name));
+                    D(bug("\t[%s] ph->data->pb_Flags        = %10ld\n",   __FUNCTION__ , pblock->pb_Flags));
+                    D(bug("\t[%s] ph->de.de_BootPri         = %10ld\n",   __FUNCTION__ , ph->de.de_BootPri));
+                    D(bug("\t[%s] ph->de.de_SizeBlock       = %10ld\n",   __FUNCTION__ , ph->de.de_SizeBlock));
+                    D(bug("\t[%s] ph->de.de_Surfaces        = %10ld\n",   __FUNCTION__ , ph->de.de_Surfaces));
+                    D(bug("\t[%s] ph->de.de_BlocksperTrack  = %10ld\n",   __FUNCTION__ , ph->de.de_BlocksPerTrack));
+                    D(bug("\t[%s] ph->de.de_BufMemType      = %10ld\n",   __FUNCTION__ , ph->de.de_BufMemType)); 
+                    D(bug("\t[%s] ph->de.de_LowCyl          = %10ld\n",   __FUNCTION__ , ph->de.de_LowCyl)); 
+                    D(bug("\t[%s] ph->de.de_HighCyl         = %10ld\n",   __FUNCTION__ , ph->de.de_HighCyl));
+                    D(bug("\t[%s] ph->de.de_DosType         = 0x%x\n",    __FUNCTION__ , ph->de.de_DosType)); 
+                    D(bug("\t[%s] ph->de.de_MaxTransfer     = 0x%x\n",    __FUNCTION__ , ph->de.de_MaxTransfer)); 
+                    
                     return ph;
                 }
                 FreeVec(ph->ln.ln_Name);
@@ -488,6 +501,7 @@ LONG PartitionRDBOpenPartitionTable(struct Library *PartitionBase, struct Partit
                 else
                     break;
             }
+
             /* read partition blocks */
             block = AROS_BE2LONG(data->rdb.rdb_PartitionList);
             while (block != (ULONG)-1)
@@ -507,6 +521,7 @@ LONG PartitionRDBOpenPartitionTable(struct Library *PartitionBase, struct Partit
                 else
                     break;
             }
+
             /* read filesystem blocks */
             block = AROS_BE2LONG(data->rdb.rdb_FileSysHeaderList);
             while (block != (ULONG)-1)

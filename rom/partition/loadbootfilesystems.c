@@ -56,7 +56,7 @@
     PBASE(PartitionBase)->pb_DOSBase = TaggedOpenLibrary(TAGGEDOPEN_DOS);
     DOSBase = (struct DosLibrary *)PBASE(PartitionBase)->pb_DOSBase;
     /* We should really have dos.library online now */
-    D(bug("\n[LoadBootPartitions] DOSBase 0x%p\n", DOSBase));
+    D(bug("\n[PART:BOOT] DOSBase 0x%p\n", DOSBase));
     if (!DOSBase)
     	return ERROR_INVALID_RESIDENT_LIBRARY;
 
@@ -72,7 +72,7 @@
 
         res = AddFS(PartitionBase, bfs->handle);
 
-        D(bug("[LoadBootPartitions] Loading %s... ", bfs->ln.ln_Name));
+        D(bug("[PART:BOOT] Loading %s... ", bfs->ln.ln_Name));
         if (res)
         {
             D(bug("ABORTED: Code = %u\n", res));
@@ -96,7 +96,7 @@
      */
     CloseLibrary(&DOSBase->dl_lib);
 
-    D(bug("[LoadBootPartitions] Finished\n\n"));
+    D(bug("[PART:BOOT] Finished\n\n"));
 
     return lasterr;
 

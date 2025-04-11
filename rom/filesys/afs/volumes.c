@@ -62,7 +62,7 @@ UBYTE dosflags;
 		OS_BE2LONG(blockbuffer->buffer[BLK_PRIMARY_TYPE]) != T_SHORT ||
 		OS_BE2LONG(blockbuffer->buffer[BLK_SECONDARY_TYPE(volume)]) != ST_ROOT)
 	{
-		D(bug("[afs] newMedium: incorrect checksum or root block type (%ld)\n",
+		D(bug("[AFS] newMedium: incorrect checksum or root block type (%ld)\n",
 			OS_BE2LONG(blockbuffer->buffer[BLK_SECONDARY_TYPE(volume)])));
 		volume->dostype = ID_NOT_REALLY_DOS;
 		return ERROR_NOT_A_DOS_DISK;
@@ -80,7 +80,7 @@ UBYTE dosflags;
 	}
 	if ((dostype != ID_DOS_DISK) && (dostype != ID_DOS_muFS_DISK))
 	{
-		D(bug("[afs] newMedium: incorrect DOS type (0x%lx)\n",
+		D(bug("[AFS] newMedium: incorrect DOS type (0x%lx)\n",
 			volume->dostype));
 		volume->dostype = ID_NOT_REALLY_DOS;
 		return ERROR_NOT_A_DOS_DISK;
@@ -171,7 +171,7 @@ struct Volume *initVolume
 	if (volume != NULL)
 	{
 		volume->FNameMax = MAX_NAME_LENGTH;
-		D(bug("[afs] initVolume: NameLen MAX =%d\n",volume->FNameMax));
+		D(bug("[AFS] initVolume: NameLen MAX =%d\n",volume->FNameMax));
 		volume->device = device;
 		volume->ioh.blockdevice = (STRPTR)(&volume[1]); /* Data after the volume alloc */
 		strcpy(volume->ioh.blockdevice, blockdevice);
@@ -220,8 +220,8 @@ struct Volume *initVolume
 					*error = 0;
 				if ((*error == 0) || (*error == ERROR_NOT_A_DOS_DISK))
 				{
-					D(bug("[afs] initVolume: BootBlocks=%d\n",volume->bootblocks));
-					D(bug("[afs] initVolume: RootBlock=%ld\n",volume->rootblock));
+					D(bug("[AFS] initVolume: BootBlocks=%d\n",volume->bootblocks));
+					D(bug("[AFS] initVolume: RootBlock=%ld\n",volume->rootblock));
 					volume->ah.header_block = volume->rootblock;
 					return volume;
 				}

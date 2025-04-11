@@ -522,6 +522,8 @@ static void cmd_TestChanged(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 
             unit->au_Flags &= ~AF_DiscChanged;
 
+            
+
             Permit();
         }
     }

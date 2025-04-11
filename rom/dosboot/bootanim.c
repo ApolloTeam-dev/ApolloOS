@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2014, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -16,6 +16,8 @@
 #include "dosboot_intern.h"
 #include "nomedia_image.h"
 #include "nomedia_anim.h"
+
+#define D(x) x
 
 struct AnimData
 {

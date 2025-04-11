@@ -65,6 +65,8 @@
 
 #ifdef INITHIDDS_KLUDGE
 
+#define D(x) x
+
 /*
  * This is an extremely obsolete kludge.
  * It's still needed for ATI driver on PowerPC native.

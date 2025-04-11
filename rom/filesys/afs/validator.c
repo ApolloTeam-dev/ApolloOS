@@ -91,7 +91,7 @@ LONG checkValid(struct AFSBase *afsbase, struct Volume *vol)
 LONG launchValidator(struct AFSBase *afsbase, struct Volume *volume)
 {
 #ifdef __AROS__
-	D(bug("[afs]: flushing cache...\n"));
+	D(bug("[AFS]: flushing cache...\n"));
 	flushCache(afsbase, volume);
 
 	/*

@@ -40,6 +40,9 @@
 
 #define uppercase(x) ((x >= 'a' && x <= 'z') ? (x & 0xdf) : x)
 
+#define D(x) x
+
+
 static ULONG GetOffset(struct Library *PartitionBase, struct PartitionHandle *ph)
 {
     IPTR tags[3];
@@ -77,7 +80,7 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
     BOOL appended, changed;
     struct Node *fsnode;
 
-    D(bug("[Boot] AddPartitionVolume\n"));
+    D(bug("[BOOT] AddPartitionVolume\n"));
     GetPartitionTableAttrsTags(table, PTT_TYPE, &pttype, TAG_DONE);
 
     attrs = QueryPartitionAttrs(table);
@@ -86,7 +89,7 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
 
     if (attrs->attribute != TAG_DONE)
     {
-        D(bug("[Boot] RDB/GPT partition\n"));
+        D(bug("[BOOT] RDB/GPT partition\n"));
 
         /* partition has a name => RDB/GPT partition */
         tags[0] = PT_NAME;
@@ -100,17 +103,17 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
         tags[8] = TAG_DONE;
         GetPartitionAttrs(pn, (struct TagItem *)tags);
 
-        D(bug("[Boot] Partition name: %s bootable: %d automount: %d\n", name, bootable, automount));
+        D(bug("[BOOT] Partition name: %s | Bootable: %d | Automount: %d\n", name, bootable, automount));
 
         if (automount == FALSE)
         {
-        	D(bug("[Boot] Skipping %s so NOMOUNT is SET\n", name));
+        	D(bug("[BOOT] Skipping %s so NOMOUNT is SET\n", name));
         	return;
         }
     }
     else
     {
-        D(bug("[Boot] MBR/EBR partition\n"));
+        D(bug("[BOOT] MBR/EBR partition\n"));
 
         /* partition doesn't have a name => MBR/EBR partition */
         tags[0] = PT_POSITION;
@@ -147,7 +150,7 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
         name[i++] = '0' + (UBYTE)(ppos % 10);
         name[i] = '\0';
 
-        D(bug("[Boot] Partition name: %s\n", name));
+        D(bug("[BOOT] Partition name: %s\n", name));
     }
 
     if ((pp[4 + DE_TABLESIZE] < DE_DOSTYPE) || (pp[4 + DE_DOSTYPE] == 0))
@@ -159,7 +162,7 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
     	 * Here we ignore partitions with DosType == 0 and won't enter them into
     	 * mountlist.
     	 */
-    	D(bug("[Boot] Unknown DosType for %s, skipping partition\n"));
+    	D(bug("[BOOT] Unknown DosType for %s, skipping partition\n"));
     	return;
     }
 
@@ -202,7 +205,7 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
     blockspercyl = pp[4 + DE_BLKSPERTRACK] * pp[4 + DE_NUMHEADS];
     if (i % blockspercyl != 0)
     {
-        D(bug("[Boot] Start block of subtable not on cylinder boundary: "
+        D(bug("[BOOT] Start block of subtable not on cylinder boundary: "
             "%ld (Blocks per Cylinder = %ld)\n", i, blockspercyl));
         return;
     }
@@ -235,14 +238,14 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
 
     fsnode = FindFileSystem(table, FST_ID, pp[4 + DE_DOSTYPE], TAG_DONE);
     if (fsnode) {
-        D(bug("[Boot] Found on-disk filesystem 0x%08x\n", pp[4 + DE_DOSTYPE]));
+        D(bug("[BOOT] Found on-disk filesystem 0x%08x\n", pp[4 + DE_DOSTYPE]));
         AddBootFileSystem(fsnode);
     }
 
     devnode = MakeDosNode(pp);
     if (devnode != NULL) {
         AddBootNode(bootable ? pp[4 + DE_BOOTPRI] : -128, ADNF_STARTPROC, devnode, NULL);
-        D(bug("[Boot] AddBootNode(%b, 0, 0x%p, NULL)\n",  devnode->dn_Name, pp[4 + DE_DOSTYPE]));
+        D(bug("[BOOT] AddBootNode(%b, 0, 0x%p, NULL)\n",  devnode->dn_Name, pp[4 + DE_DOSTYPE]));
         return;
     }
 }
@@ -263,8 +266,7 @@ static BOOL CheckTables(struct ExpansionBase *ExpansionBase, struct Library *Par
         {
             /* Attempt to add partition to system if it isn't a subtable */
             if (!CheckTables(ExpansionBase, PartitionBase, fssm, ph, SysBase))
-                AddPartitionVolume(ExpansionBase, PartitionBase, fssm, table,
-                    ph, SysBase);
+                AddPartitionVolume(ExpansionBase, PartitionBase, fssm, table, ph, SysBase);
             ph = (struct PartitionHandle *)ph->ln.ln_Succ;
         }
         retval = TRUE;
@@ -278,8 +280,7 @@ static VOID CheckPartitions(struct ExpansionBase *ExpansionBase, struct Library 
     struct DeviceNode *dn = bn->bn_DeviceNode;
     BOOL res = FALSE;
 
-    D(bug("CheckPartitions('%b') handler seglist = %x, handler = %s\n", dn->dn_Name,
-            dn->dn_SegList, AROS_BSTR_ADDR(dn->dn_Handler)));
+    D(bug("[BOOT] CheckPartitions('%b') handler seglist = %x, handler = %s\n", dn->dn_Name, dn->dn_SegList, AROS_BSTR_ADDR(dn->dn_Handler)));
 
     /* Examples:
      * ata.device registers a HDx device describing whole disk with no handler name and no seglist
@@ -291,15 +292,15 @@ static VOID CheckPartitions(struct ExpansionBase *ExpansionBase, struct Library 
     {
     	struct FileSysStartupMsg *fssm = BADDR(dn->dn_Startup);
 
-	if (fssm && fssm->fssm_Device)
-	{
-            struct PartitionHandle *pt = OpenRootPartition(AROS_BSTR_ADDR(fssm->fssm_Device), fssm->fssm_Unit);
+	    if (fssm && fssm->fssm_Device)
+	    {
+        struct PartitionHandle *pt = OpenRootPartition(AROS_BSTR_ADDR(fssm->fssm_Device), fssm->fssm_Unit);
 
 	    if (pt)
             {
                 res = CheckTables(ExpansionBase, PartitionBase, fssm, pt, SysBase);
 
-           	CloseRootPartition(pt);
+           	    CloseRootPartition(pt);
            }
         }
     }
@@ -320,6 +321,8 @@ void dosboot_BootScan(LIBBASETYPEPTR DOSBootBase)
     struct BootNode *bootNode, *temp;
     struct List rootList;
 
+    D(bug("[BOOT] dosboot_BootScan\n"));
+
     /* If we have partition.library, we can look for partitions */
     PartitionBase = OpenLibrary("partition.library", 2);
     if (PartitionBase)
@@ -330,21 +333,22 @@ void dosboot_BootScan(LIBBASETYPEPTR DOSBootBase)
            The assumption is that all bootnodes created before now represent
            entire disks */
         NewList(&rootList);
-        while ((temp = (struct BootNode *)RemHead(&ExpansionBase->MountList))
-            != NULL)
+        while ((temp = (struct BootNode *)RemHead(&ExpansionBase->MountList)) != NULL)
             AddTail(&rootList, (struct Node *) temp);
 
         ForeachNodeSafe (&rootList, bootNode, temp)
         {
-        	struct DeviceNode *deviceNode = bootNode->bn_DeviceNode;
+        	// No Clue what this does? [WD]
+            struct DeviceNode *deviceNode = bootNode->bn_DeviceNode;
         	char deviceName[ 256 ];
         	UBYTE deviceNameLength = *(char*)deviceNode->dn_Name;
         	if( deviceNameLength) {	CopyMem( (char*)deviceNode->dn_Name, deviceName, deviceNameLength );	deviceName[ deviceNameLength ] = 0; }
+
             CheckPartitions(ExpansionBase, PartitionBase, SysBase, bootNode);
         }
 
         ReleaseSemaphore(&IntExpBase(ExpansionBase)->BootSemaphore);
 
-	CloseLibrary(PartitionBase);
+	    CloseLibrary(PartitionBase);
     }
 }

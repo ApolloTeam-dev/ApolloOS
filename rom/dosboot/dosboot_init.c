@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Boot AROS
@@ -38,6 +38,8 @@
 #include "dosboot_intern.h"
 #include "../expansion/expansion_intern.h"
 #include "menu.h"
+
+#define D(x) x
 
 /* Delay just like Dos/Delay(), ticks are
  * in 1/50th of a second.
@@ -92,9 +94,7 @@ static void selectBootDevice(LIBBASETYPEPTR DOSBootBase, STRPTR bootDeviceName)
 {
     struct BootNode *bn = NULL;
 
-    if (bootDeviceName == NULL &&
-        DOSBootBase->db_BootNode != NULL)
-        return;
+    if (bootDeviceName == NULL && DOSBootBase->db_BootNode != NULL) return;
 
     Forbid(); /* .. access to ExpansionBase->MountList */
 
@@ -137,14 +137,14 @@ int dosboot_Init(LIBBASETYPEPTR DOSBootBase)
 
     DOSBootBase->delayTicks = 50;
 
-    D(bug("dosboot_Init: GO GO GO!\n"));
+    D(bug("[BOOT] Init: GO GO GO!\n"));
 
     ExpansionBase = (APTR)TaggedOpenLibrary(TAGGEDOPEN_EXPANSION);
 
-    D(bug("[Strap] ExpansionBase 0x%p\n", ExpansionBase));
+    D(bug("[BOOT] ExpansionBase 0x%p\n", ExpansionBase));
     if( ExpansionBase == NULL )
     {
-        D(bug( "Could not open expansion.library, something's wrong!\n"));
+        D(bug( "[BOOT] Could not open expansion.library, something's wrong!\n"));
         Alert(AT_DeadEnd | AG_OpenLib | AN_BootStrap | AO_ExpansionLib);
     }
 
@@ -170,13 +170,13 @@ int dosboot_Init(LIBBASETYPEPTR DOSBootBase)
                 {
                     ULONG delay = atoi(&node->ln_Name[10]);
 
-                    D(bug("[Boot] delay of %d seconds requested.", delay));
+                    D(bug("[BOOT] delay of %d seconds requested.", delay));
                     if (delay)
                         bootDelay(delay * 50);
                 }
                 else if (0 == stricmp(node->ln_Name, "bootmenu"))
                 {
-                    D(bug("[BootMenu] bootmenu_Init: Forced with bootloader argument\n"));
+                    D(bug("[BOOT] bootmenu_Init: Forced with bootloader argument\n"));
                     WantBootMenu = TRUE;
                 }
                 /*
@@ -198,12 +198,15 @@ int dosboot_Init(LIBBASETYPEPTR DOSBootBase)
                 else if (0 == stricmp(node->ln_Name, "econsole"))
                 {
                 	DOSBootBase->db_BootFlags |= BF_EMERGENCY_CONSOLE;
-                    D(bug("[Boot] Emergency console selected\n"));
+                    D(bug("[BOOT] Emergency console selected\n"));
                 }
             }
             IntExpBase(ExpansionBase)->BootFlags = DOSBootBase->db_BootFlags;
         }
     }
+
+    
+
 
     /* Scan for any additional partition volumes */
     dosboot_BootScan(DOSBootBase);

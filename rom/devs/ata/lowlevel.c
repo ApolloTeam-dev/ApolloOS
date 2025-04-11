@@ -1313,10 +1313,10 @@ static BYTE ata_Identify(struct ata_Unit *unit)
 
         DINIT(bug("[ATA:%02ld] ata_Identify: HARDCODE =   Cap28=%u | Cap48=%llu | CHS=%u/%u/%u\n", unit->au_UnitNum, unit->au_Capacity, unit->au_Capacity48, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors);)
 
-        ULONG retry_test = 3;
-        while(!(atapi_TestUnitOK(unit)) || (retry_test > 0))
+        ULONG retry_test = 1;
+        while(!(atapi_TestUnitOK(unit)) && (retry_test < 2))
         {
-            if ((retry_test--) == 0)
+            if ((retry_test++) == 10)
             {
                 DERROR(bug("[ATA:%02ld] ata_Identify: ERROR = atapi_TestUnitOK FAILED\n", unit->au_UnitNum);)
                 return IOERR_UNITBUSY;
@@ -1885,6 +1885,7 @@ static void ata_ResetBus(struct ata_Bus *bus)
 
     DINIT(bug("[ATA:ResetBus] Reset ATA Bus\n", bus->ab_BusNum);)
 
+    /*
     PIO_OutAlt(bus, ATACTLF_RESET | ATACTLF_INT_DISABLE, ata_AltControl);
     for(Counter=100000; Counter ; Counter--)
     {
@@ -1940,7 +1941,7 @@ static void ata_ResetBus(struct ata_Bus *bus)
         }
         if (Counter==0) DERROR(bug("[ATA:ResetBus] ERROR: Slave did NOT clear BSY\n", bus->ab_BusNum));
         
-    }
+    }*/
 
     if ( bus->ab_Dev[0] != DEV_NONE ) bus->ab_Dev[0] = ata_ReadSignature(bus, 0, &DiagExecuted);
     if ( bus->ab_Dev[1] != DEV_NONE ) bus->ab_Dev[1] = ata_ReadSignature(bus, 1, &DiagExecuted);
