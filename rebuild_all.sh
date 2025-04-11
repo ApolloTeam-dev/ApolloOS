@@ -44,6 +44,9 @@ DISTOPTVER="--enable-dist-version=${DISTROVERSION}"
 make -j${THREADS}
 make -j${THREADS} distfiles
 
+echo ""
+echo "### ApolloROM Info ###"
+
 if [ "${args[ 0 ]}" == "--with-nonvampire-support" ]
 then
 	cat bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin > ApolloROM.UAE
@@ -52,3 +55,5 @@ else
 	cat bin/amiga-m68k/gen/boot/aros-amiga-m68k-ext.bin bin/amiga-m68k/gen/boot/aros-amiga-m68k-rom.bin > ApolloROM.V4
 	ls -lah ApolloROM.V4
 fi
+
+more arch/m68k-amiga/boot/romlog.txt

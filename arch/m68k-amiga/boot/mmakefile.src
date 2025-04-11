@@ -93,7 +93,7 @@ include $(SRCDIR)/config/aros.cfg
 #MM- kernel-workbench-devs-amiga-m68k : workbench-devs-amiga-m68k
 
 # Make sure we optimize this code for size ..
-OPTIMIZATION_CFLAGS := -O2
+OPTIMIZATION_CFLAGS := -Os
 
 USELIBS := amiga arossupport autoinit libinit stdc.static
 LIBS    := -L$(GENDIR)/lib -lloadseg $(addprefix -l,$(USELIBS))
@@ -122,7 +122,8 @@ ROMLOC_ss  := 0x003f800
 # Main ROM (0xf80000 - 0xffffff)
 ROMLOC_rom := 0x0f80000
 
-FILES=start early debug mmu
+FILES=start early debug
+# debug mmu
 AFILES=rom_entry rom_init cpu_detect superstack_swap
 
 # APOLLOROM = V4 -> Native V4
@@ -165,8 +166,8 @@ AFILES  := ext_entry
 # APOLLOROM = V4 -> Native V4
 ifeq ($(APOLLOROM),V4)
 	KLIBS   := keymap graphics layers intuition gadtools workbench mathffp mathieeesingbas freeanim lowlevel setpatch
-	KDEVS   := ata trackdisk
-	KHNDLRS := cdrom
+	KDEVS   := sagasd ata trackdisk
+	KHNDLRS := 
 	KHIDDS  := bus storage system
 	KRSRCS  := shellcommands wbtag misc shell card bootloader
 	KHOOKS  := alert 
@@ -238,7 +239,7 @@ $(GENDIR)/boot/aros-amiga-m68k.elf: $(GENDIR)/boot/aros-amiga-m68k-reloc.elf
 		--section-start .ext=$(ROMLOC_ext) \
 		--section-start .ss=$(ROMLOC_ss) \
 		$<
-	$(Q)$(TARGET_OBJDUMP) -h $@ | grep '[rea][oxm][mte]   '
+	$(Q)$(TARGET_OBJDUMP) -h $@ | grep '[rea][oxm][mte]   ' > romlog.txt
 
 $(GENDIR)/boot/aros-amiga-m68k-%.bin : $(GENDIR)/boot/aros-amiga-m68k.elf $(HOSTGENDIR)/tools/romcheck
 	$(Q)$(TARGET_OBJCOPY) \
