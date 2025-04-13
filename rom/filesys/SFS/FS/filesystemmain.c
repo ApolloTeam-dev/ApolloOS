@@ -2509,7 +2509,7 @@ void mainloop(void) {
                                     struct ExtFileLock *lock = BADDR(globals->packet->dp_Arg1);
                                     struct InfoData *id = BADDR(globals->packet->dp_Arg2);
 
-                                    DD(bug("[SFS] ACTION_INFO      Global Volumenode = 0x%8lx | Globals Disktype = 0x%8lx\n", globals->volumenode, globals->disktype));
+                                    //DD(bug("[SFS] ACTION_INFO      Global Volumenode = 0x%8lx | Globals Disktype = 0x%8lx\n", globals->volumenode, globals->disktype));
 
                                     if(lock != 0 && globals->volumenode != (struct DeviceList *)BADDR(lock->volume)) {
                                         DD(bug("[SFS] ACTION_INFO: returning error\n"));
@@ -3751,7 +3751,7 @@ static void actionsamelock(struct DosPacket *packet) {
 static void actiondiskinfo(struct DosPacket *packet) {
     struct InfoData *id = BADDR(packet->dp_Arg1);
 
-    DD(bug("[SFS] ACTION_DISK_INFO Global Volumenode = 0x%8lx | Globals Disktype = 0x%8lx | Disktype=0x%8lx | Packet VolumeNode = 0x%8lx \n", globals->volumenode, globals->disktype, id->id_DiskType, (ULONG)id->id_VolumeNode));
+    //DD(bug("[SFS] ACTION_DISK_INFO Global Volumenode = 0x%8lx | Globals Disktype = 0x%8lx | Disktype=0x%8lx | Packet VolumeNode = 0x%8lx \n", globals->volumenode, globals->disktype, id->id_DiskType, (ULONG)id->id_VolumeNode));
 
     fillinfodata(id);
 

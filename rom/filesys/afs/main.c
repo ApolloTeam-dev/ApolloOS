@@ -298,7 +298,7 @@ LONG AFS_work(struct ExecBase *SysBase)
 
     	    dp = (struct DosPacket *)mn->mn_Node.ln_Name;
 
-    	    D(bug("[AFS] packet %p:%d\n", dp, dp->dp_Type));
+    	    //D(bug("[AFS] packet %p:%d\n", dp, dp->dp_Type));
     	    startFlushTimer(handler);
 
     	    switch (dp->dp_Type) {

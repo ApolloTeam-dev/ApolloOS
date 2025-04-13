@@ -66,8 +66,7 @@ static const struct DateStamp unset_date_limit =
 #define ID_BUSY 0x42555359
 #endif
 
-static LONG GetVolumeIdentity(struct FSSuper *sb,
-    struct VolumeIdentity *volume);
+static LONG GetVolumeIdentity(struct FSSuper *sb, struct VolumeIdentity *volume);
 static void FreeFATSuper(struct FSSuper *s);
 
 LONG ReadFATSuper(struct FSSuper *sb)
@@ -155,8 +154,8 @@ LONG ReadFATSuper(struct FSSuper *sb)
      * under Linux, Windows and MacOS */
     if ((total_sectors < sb->total_sectors - 64) || (total_sectors > sb->total_sectors))
     {
-        D(bug("\tInvalid FAT: Sector Mismatch between BB and DE\n"));   
-        invalid = TRUE;
+        D(bug("\tWARNING: LBA size read from SUperBlock (SB) does not match with DosEnvec from dos.library\n"));   
+        //invalid = TRUE;
     }
 
     sb->rootdir_sectors = ((AROS_LE2WORD(boot->bpb_root_entries_count)

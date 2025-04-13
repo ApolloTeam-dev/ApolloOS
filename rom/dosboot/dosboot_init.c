@@ -290,14 +290,7 @@ int dosboot_Init(LIBBASETYPEPTR DOSBootBase)
     DOSBootBase->bm_Screen = NULL;
     AddResource(&DOSBootBase->db_Node);
 
-    // Wait for dos.library to finish with initializing Filesystems
-
-    
-
-
-
-
-
+ 
     /* Attempt to boot until we succeed */
     for (;;)
     {
