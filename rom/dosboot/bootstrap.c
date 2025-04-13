@@ -247,6 +247,8 @@ static inline void dosboot_BootDos(void)
 {
     struct Resident *DOSResident;
 
+    D(bug("[BOOT] dosboot_BootDos - Initialising dos.library so Filesystems can be loaded before boot\n"));
+
     /* Initialize dos.library manually. This is what Workbench floppy bootblocks do. */
     DOSResident = FindResident( "dos.library" );
 
@@ -257,12 +259,12 @@ static inline void dosboot_BootDos(void)
 
     /* InitResident() of dos.library will not return on success. */
     InitResident( DOSResident, BNULL );
+
+    D(bug("[BOOT] dosboot_BootDos - Initialized dos.library Finished\n"));
 }
 
 
-/* Attempt to boot, first from the BootNode boot blocks,
- * then via the DOS handlers
- */
+/* Attempt to boot, first from the BootNode boot blocks, then via the DOS handlers */
 LONG dosboot_BootStrap(LIBBASETYPEPTR LIBBASE)
 {
     struct ExpansionBase *ExpansionBase = LIBBASE->bm_ExpansionBase;
@@ -271,9 +273,7 @@ LONG dosboot_BootStrap(LIBBASETYPEPTR LIBBASE)
 
     D(bug("\n [BOOT] ApolloOS BootStrap\n"));
     /*
-     * Try to boot from any device in the boot list,
-     * highest priority first.
-     */
+     * Try to boot from any device in the boot list, highest priority first. */
     ListLength(&ExpansionBase->MountList, nodes);
     for (i = 0; i < nodes; i++)
     {
@@ -291,11 +291,8 @@ LONG dosboot_BootStrap(LIBBASETYPEPTR LIBBASE)
             continue;
         }
 
-        /* For each attempt, this node is at the head
-         * of the MountList, so that DOS will try to
-         * use it as SYS: if the strap works
-         */
-
+        // For each attempt, this node is at the head of the MountList, so that DOS will try to use it as SYS: if the strap works
+        
         /* First try as a BootBlock.
          * dosboot_BootBlock returns TRUE if it *was*
          * a BootBlock device, but couldn't be booted.
@@ -304,7 +301,9 @@ LONG dosboot_BootStrap(LIBBASETYPEPTR LIBBASE)
          * was successful.
          */
         D(bug("[BOOT] %s: Attempting %b as BootBlock\n",__func__, ((struct DeviceNode *)bn->bn_DeviceNode)->dn_Name));
-        if (!dosboot_BootBlock(bn, ExpansionBase)) {
+
+        if (!dosboot_BootBlock(bn, ExpansionBase))
+        {
             /* Then as a BootPoint node */
             D(bug("[BOOT] %s: Attempting %b as BootPoint\n", __func__, ((struct DeviceNode *)bn->bn_DeviceNode)->dn_Name));
             dosboot_BootPoint(bn);

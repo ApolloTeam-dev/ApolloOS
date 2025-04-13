@@ -1314,7 +1314,7 @@ static BYTE ata_Identify(struct ata_Unit *unit)
         DINIT(bug("[ATA:%02ld] ata_Identify: HARDCODE =   Cap28=%u | Cap48=%llu | CHS=%u/%u/%u\n", unit->au_UnitNum, unit->au_Capacity, unit->au_Capacity48, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors);)
 
         ULONG retry_test = 1;
-        while(!(atapi_TestUnitOK(unit)) && (retry_test < 2))
+        while(!(atapi_TestUnitOK(unit)) || (retry_test < 5))
         {
             if ((retry_test++) == 10)
             {

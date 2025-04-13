@@ -59,6 +59,8 @@
 #define SAGASD_SECTORS  64
 #define SAGASD_RETRY    6      /* By default, retry up to N times */
 
+#define DEBUG 1
+
 #if DEBUG
 #define bug(x,args...)   kprintf(x ,##args)
 #define debug(x,args...) bug("%s:%ld " x "\n", __func__, (unsigned long)__LINE__ ,##args)
@@ -137,7 +139,7 @@ static LONG SAGASD_ReadWrite(struct IORequest *io, UQUAD off64, BOOL is_write)
     }
 
     if (sderr) {
-        debug("sderr=$%02x", sderr);
+        debug("[SAGASD] sderr=$%02x\n", sderr);
         iostd->io_Actual = 0;
 
         /* Decode sderr into IORequest io_Errors */
@@ -180,7 +182,7 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
             //scsi->scsi_CmdLength);
     if (iostd->io_Length < sizeof(*scsi)) {
         // RDPrep sends a bad io_Length sometimes
-        debug("====== BAD PROGRAM: iostd->io_Length < sizeof(struct SCSICmd)");
+        debug("[SAGASD] ERROR: Application sent wrong IO size | iostd->io_Length < sizeof(struct SCSICmd)");
         //return IOERR_BADLENGTH;
     }
 
@@ -251,7 +253,7 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
             break;
         }
         if (scsi->scsi_Length < blocks * sdc->info.block_size) {
-            debug("Len (%ld) too small (%ld)", scsi->scsi_Length, blocks * sdc->info.block_size);
+            debug("[SAGASD] ERROR: Len (%ld) too small (%ld)", scsi->scsi_Length, blocks * sdc->info.block_size);
             err = IOERR_BADLENGTH;
             break;
         }
@@ -425,14 +427,14 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
             err = 0;
             break;
         default:
-            debug("MODE SENSE: Unknown Page $%02lx.$%02lx",
+            debug("[SAGASD] MODE SENSE: Unknown Page $%02lx.$%02lx",
                     scsi->scsi_Command[2], scsi->scsi_Command[3]);
             err = HFERR_BadStatus;
             break;
         }
         break;
     default:
-        debug("Unknown SCSI command %d (%d)\n", scsi->scsi_Command[0], scsi->scsi_CmdLength);
+        debug("[SAGASD] Unknown SCSI command %d (%d)\n", scsi->scsi_Command[0], scsi->scsi_CmdLength);
         err = IOERR_NOCMD;
         break;
     }
@@ -524,22 +526,21 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
 
     switch (io->io_Command) {
     case CMD_CLEAR:     /* Invalidate read buffer */
-    	bug( "%s CMD_CLEAR\n", __FUNCTION__ );
+    	bug( "[SAGASD] %s CMD_CLEAR\n", __FUNCTION__ );
         iostd->io_Actual = 0;
         err = 0;
         break;
     case CMD_UPDATE:    /* Flush write buffer */
-    	bug( "%s CMD_UPDATE\n", __FUNCTION__ );
+    	bug( "[SAGASD] %s CMD_UPDATE\n", __FUNCTION__ );
         iostd->io_Actual = 0;
         err = 0;
         break;
     case NSCMD_DEVICEQUERY:
-    	bug( "%s NSCMD_DEVICEQUERY\n", __FUNCTION__ );
+    	bug( "[SAGASD] %s NSCMD_DEVICEQUERY\n", __FUNCTION__ );
         if (len < sizeof(*nsqr)) {
             err = IOERR_BADLENGTH;
             break;
         }
-
         nsqr = data;
         nsqr->DevQueryFormat = 0;
         nsqr->SizeAvailable  = sizeof(struct NSDeviceQueryResult);
@@ -550,43 +551,40 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         err = 0;
         break;
     case TD_PROTSTATUS:
-    	bug( "%s TD_PROTSTATUS\n", __FUNCTION__ );
+    	bug( "[SAGASD] %s TD_PROTSTATUS\n", __FUNCTION__ );
         iostd->io_Actual = sdu->sdu_ReadOnly ? 1 : 0;
         err = 0;
         break;
     case TD_CHANGENUM:
-    	bug( "%s TD_CHANGENUM\n", __FUNCTION__ );
+    	bug( "[SAGASD] %s TD_CHANGENUM\n", __FUNCTION__ );
         iostd->io_Actual = sdu->sdu_ChangeNum;
         err = 0;
         break;
     case TD_CHANGESTATE:
-    	bug( "%s TD_CHANGESTATE\n", __FUNCTION__ );
+    	bug( "[SAGASD] %s TD_CHANGESTATE - SD-Card = %s\n", __FUNCTION__, sdu->sdu_Present ? "PRESENT" : "ABSENT");
         Forbid();
         iostd->io_Actual = sdu->sdu_Present ? 0 : 1;
         Permit();
         err = 0;
         break;
     case TD_EJECT:
-        // Eject removable media
-        // We mark is as invalid, then wait for Present to toggle.
-    	bug( "%s TD_EJECT\n", __FUNCTION__ );
+    	bug( "[SAGASD] %s TD_EJECT\n", __FUNCTION__ );
         Forbid();
         sdu->sdu_Valid = FALSE;
         Permit();
         err = 0;
         break;
     case TD_GETDRIVETYPE:
-    	bug( "%s TD_GETDRIVETYPE\n", __FUNCTION__ );
+    	bug( "[SAGASD] %s TD_GETDRIVETYPE\n", __FUNCTION__ );
         iostd->io_Actual = DRIVE_NEWSTYLE;
         err = 0;
         break;
     case TD_GETGEOMETRY:
-    	bug( "%s TD_GETGEOMETRY\n", __FUNCTION__ );
+    	bug( "[SAGASD] %s TD_GETGEOMETRY\n", __FUNCTION__ );
         if (len < sizeof(*geom)) {
             err = IOERR_BADLENGTH;
             break;
         }
-
         geom = data;
         memset(geom, 0, len);
         geom->dg_SectorSize   = sdu->sdu_SDCmd.info.block_size;
@@ -597,18 +595,26 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         geom->dg_TrackSectors = SAGASD_SECTORS;
         geom->dg_BufMemType   = MEMF_PUBLIC;
         geom->dg_DeviceType   = DG_DIRECT_ACCESS;
-        geom->dg_Flags        = DGF_REMOVABLE;
+        geom->dg_Flags        = 0; //DGF_REMOVABLE;
         iostd->io_Actual = sizeof(*geom);
         err = 0;
+        debug("\t[%s] geom->dg_SectorSize   = %10ld", __FUNCTION__ , geom->dg_SectorSize);
+        debug("\t[%s] geom->dg_TotalSectors = %10ld", __FUNCTION__ , geom->dg_TotalSectors);
+        debug("\t[%s] geom->dg_Cylinders    = %10ld", __FUNCTION__ , geom->dg_Cylinders);
+        debug("\t[%s] geom->dg_CylSectors   = %10ld", __FUNCTION__ , geom->dg_CylSectors);
+        debug("\t[%s] geom->dg_Heads        = %10ld", __FUNCTION__ , geom->dg_Heads);
+        debug("\t[%s] geom->dg_TrackSectors = %10ld", __FUNCTION__ , geom->dg_TrackSectors);
+        debug("\t[%s] geom->dg_BufMemType   = %10ld", __FUNCTION__ , geom->dg_BufMemType); 
+        debug("\t[%s] geom->dg_DeviceType   = %10ld", __FUNCTION__ , geom->dg_DeviceType); 
+        debug("\t[%s] geom->dg_Flags        = %10ld", __FUNCTION__ , geom->dg_Flags);
         break;
     case TD_FORMAT:
-    	bug( "%s TD_FORMAT\n", __FUNCTION__ );
+    	bug( "[SAGASD] %s TD_FORMAT\n", __FUNCTION__ );
         off64  = iotd->iotd_Req.io_Offset;
         err = SAGASD_ReadWrite(io, off64, TRUE);
         break;
     case TD_MOTOR:
-        // FIXME: Tie in with power management
-    	//bug( "%s TD_MOTOR\n", __FUNCTION__ );
+        bug( "%s TD_MOTOR\n", __FUNCTION__ );
         iostd->io_Actual = sdu->sdu_Motor;
         sdu->sdu_Motor = iostd->io_Length ? 1 : 0;
         err = 0;
@@ -634,10 +640,16 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         err = SAGASD_ReadWrite(io, off64, FALSE);
         break;
     case HD_SCSICMD:
+       bug( "[SAGASD] %s HD_SCSICMD: %u\n", __FUNCTION__ , io->io_Command);
         err = SAGASD_PerformSCSI(io);
         break;
+    case TD_ADDCHANGEINT:
+        bug( "[SAGASD] %s TD_ADDCHANGEINT - [NOT IMPLEMENTED YET]: %u\n", __FUNCTION__ , io->io_Command);
+        err = 0;
+        break;
+        
     default:
-        debug("Unknown IO command: %d", io->io_Command);
+        debug("[SAGASD] ERROR = Unknown IO command: %d\n", io->io_Command);
         err = IOERR_NOCMD;
         break;
     }
@@ -813,20 +825,20 @@ AROS_LH1(void, BeginIO,
 
     if (io->io_Flags & IOF_QUICK) {
         /* Commands that don't require any IO */
-	switch(io->io_Command)
-	{
-        case NSCMD_DEVICEQUERY:
-	    case TD_GETNUMTRACKS:
-	    case TD_GETDRIVETYPE:
-	    case TD_GETGEOMETRY:
-	    case TD_REMCHANGEINT:
-	    case TD_ADDCHANGEINT:
-	    case TD_PROTSTATUS:
-	    case TD_CHANGENUM:
-	    io->io_Error = SAGASD_PerformIO(io);
+        switch(io->io_Command)
+        {
+            case NSCMD_DEVICEQUERY:
+            case TD_GETNUMTRACKS:
+            case TD_GETDRIVETYPE:
+            case TD_GETGEOMETRY:
+            case TD_REMCHANGEINT:
+            case TD_ADDCHANGEINT:
+            case TD_PROTSTATUS:
+            case TD_CHANGENUM:
+            io->io_Error = SAGASD_PerformIO(io);
             io->io_Message.mn_Node.ln_Type=NT_MESSAGE;
-	    return;
-	}
+            return;
+        }
     }
 
     /* Not done quick */
@@ -869,13 +881,8 @@ static void SAGASD_BootNode(
     IPTR pp[4 + DE_BOOTBLOCKS + 1] = {};
     struct DeviceNode *devnode;
 
-    if (1)
-        return;
-
-    debug("");
-
     dosdevname[2] += unit;
-    debug("Adding bootnode %s %d x %d", dosdevname,sdu->sdu_SDCmd.info.blocks, sdu->sdu_SDCmd.info.block_size);
+    debug("[SAGASD] Adding bootnode %s %d x %d", dosdevname,sdu->sdu_SDCmd.info.blocks, sdu->sdu_SDCmd.info.block_size);
 
     pp[0] = (IPTR)dosdevname;
     pp[1] = (IPTR)"sagasd.device";
@@ -914,7 +921,6 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
     struct Library *SysBase = SAGASDBase->sd_ExecBase;
     struct SAGASDUnit *sdu = &SAGASDBase->sd_Unit[id];
 
-    //debug("");
     switch (id) {
     case 0:
         sdu->sdu_SDCmd.iobase  = SAGA_SD_BASE;
@@ -969,7 +975,7 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
         }
     }
 
-    debug("unit=%d enabled=%d", id, SAGASDBase->sd_Unit[id].sdu_Enabled ? 1 : 0);
+    debug("[SAGASD] unit=%d enabled=%d", id, SAGASDBase->sd_Unit[id].sdu_Enabled ? 1 : 0);
 }
 
 // Direct init routine
@@ -1042,7 +1048,7 @@ static int GM_UNIQUENAME(open)(struct SAGASDBase * SAGASDBase,
     	    iotd->iotd_Req.io_Error = 0;
 	}
 
-        debug("Open=%d", unitnum, iotd->iotd_Req.io_Error);
+        debug("[SAGASD] Open=%d", unitnum, iotd->iotd_Req.io_Error);
     }
   
     return iotd->iotd_Req.io_Error == 0;

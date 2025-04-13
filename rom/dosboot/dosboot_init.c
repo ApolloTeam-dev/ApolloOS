@@ -205,9 +205,6 @@ int dosboot_Init(LIBBASETYPEPTR DOSBootBase)
         }
     }
 
-    
-
-
     /* Scan for any additional partition volumes */
     dosboot_BootScan(DOSBootBase);
 
@@ -292,6 +289,14 @@ int dosboot_Init(LIBBASETYPEPTR DOSBootBase)
     /* We want to be able to find ourselves in RTF_AFTERDOS */
     DOSBootBase->bm_Screen = NULL;
     AddResource(&DOSBootBase->db_Node);
+
+    // Wait for dos.library to finish with initializing Filesystems
+
+    
+
+
+
+
 
     /* Attempt to boot until we succeed */
     for (;;)
