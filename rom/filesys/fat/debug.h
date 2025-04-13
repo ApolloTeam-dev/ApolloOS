@@ -7,9 +7,13 @@
 //#else
 //#if DEBUG > 0
 //#include <clib/debug_protos.h>
+
+#if DEBUG
 #define D(x) x
 #define bug kprintf
-
+#else
+#define D(x) 
+#endif
 
 /*/static inline void RawPutChars(const UBYTE *string, int len)
 {

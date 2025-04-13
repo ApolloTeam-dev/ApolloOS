@@ -9,7 +9,7 @@
 #include "fs.h"
 #include "globals.h"
 
-#define DEBUG 1
+#define DEBUG 0
 
 #ifdef DEBUG
     #define DD(x) x

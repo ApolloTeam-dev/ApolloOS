@@ -1,7 +1,3 @@
-/*
-#define DEBUG 1
-#define DEBUGCODE
-*/
 
 #include <devices/scsidisk.h>
 #include <devices/trackdisk.h>

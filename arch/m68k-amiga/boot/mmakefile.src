@@ -37,6 +37,7 @@ include $(SRCDIR)/config/aros.cfg
 #MM     kernel-filesystem-kobj \
 #MM     kernel-freeanim-kobj \
 #MM     kernel-fs-core-kobj \
+#MM		kernel-fs-fat-kobj \
 #MM     kernel-fs-con-kobj \
 #MM     kernel-fs-ram-kobj \
 #MM     kernel-gameport-kobj \
@@ -130,7 +131,7 @@ AFILES=rom_entry rom_init cpu_detect superstack_swap
 ifeq ($(APOLLOROM),V4)
 	KLIBS   := exec aros dos utility oop expansion partition 
 	KDEVS   := timer input keyboard console gameport audio
-	KHNDLRS := con afs ram
+	KHNDLRS := con fat ram 
 	KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse 
 	KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem vampire
 	KHOOKS  := diag romboot
