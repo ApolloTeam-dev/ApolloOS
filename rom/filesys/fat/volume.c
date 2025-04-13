@@ -162,11 +162,12 @@ LONG ReadFATSuper(struct FSSuper *sb)
     /* Check that the boot block's sector count is the same as the
      * partition's sector count. This stops a resized partition being
      * mounted before reformatting */
-    //if ((total_sectors +4096) < sb->total_sectors)
-    //{
-    //    invalid = TRUE;
-    //    D(bug("[%s] #Boot-Sectors (%ld) < Partition-Sectors (%ld)\n", __FUNCTION__ , total_sectors, sb->total_sectors));
-    //}
+    
+    if ((total_sectors +4096) < sb->total_sectors)
+    {
+        invalid = TRUE;
+        D(bug("[%s] #Boot-Sectors (%ld) < Partition-Sectors (%ld)\n", __FUNCTION__ , total_sectors, sb->total_sectors));
+    }
 
     sb->rootdir_sectors = ((AROS_LE2WORD(boot->bpb_root_entries_count)
         * sizeof(struct FATDirEntry)) + (sb->sectorsize - 1))
@@ -965,19 +966,24 @@ void DoDiskInsert(struct Globals *glob)
 
         sb->glob = glob;
         err = ReadFATSuper(sb);
+
+        D(bug("[%s] ReadFatSuper Result = %u\n", __FUNCTION__, err));
+
         if (err == 0)
         {
 
-            /* Scan volume list for a matching volume (would be better to
-             * match by serial number) */
-            dl = LockDosList(LDF_VOLUMES | LDF_WRITE);
-            dl = FindDosEntry(dl, sb->volume.name + 1,
-                LDF_VOLUMES | LDF_WRITE);
+            D(bug("[%s] Scan volume list for a matching volume\n", __FUNCTION__)); // would be better to match by serial number)
+
+            D(bug("[%s] LockDosList\n", __FUNCTION__));
+            dl = AttemptLockDosList(LDF_VOLUMES | LDF_WRITE);
+            
+            D(bug("[%s] FindDosEntry\n", __FUNCTION__));
+            dl = FindDosEntry(dl, sb->volume.name + 1, LDF_VOLUMES | LDF_WRITE);
+            
+            D(bug("[%s] UnLockDosList\n", __FUNCTION__));
             UnLockDosList(LDF_VOLUMES | LDF_WRITE);
 
-            if (dl != NULL &&
-                CompareDates(&dl->dol_misc.dol_volume.dol_VolumeDate,
-                    &sb->volume.create_time) != 0)
+            if (dl != NULL && CompareDates(&dl->dol_misc.dol_volume.dol_VolumeDate, &sb->volume.create_time) != 0)
                 dl = NULL;
 
             if (dl != NULL)
@@ -992,13 +998,10 @@ void DoDiskInsert(struct Globals *glob)
 #if 0    /* No point until we match volumes by serial number */
                 /* Update name */
 #ifdef AROS_FAST_BPTR
-                /* ReadFATSuper() sets a null byte after the
-                 * string, so this should be fine */
-                CopyMem(sb->volume.name + 1, dl->dol_Name,
-                    sb->volume.name[0] + 1);
+                /* ReadFATSuper() sets a null byte after the string, so this should be fine */
+                CopyMem(sb->volume.name + 1, dl->dol_Name, sb->volume.name[0] + 1);
 #else
-                CopyMem(sb->volume.name, dl->dol_Name,
-                    sb->volume.name[0] + 2);
+                CopyMem(sb->volume.name, dl->dol_Name, sb->volume.name[0] + 2);
 #endif
 #endif
 
@@ -1035,13 +1038,10 @@ void DoDiskInsert(struct Globals *glob)
                 D(bug("[%s] Creating new volume.\n",__FUNCTION__ ));
 
                 /* Create transferable core volume info */
-                pool =
-                    CreatePool(MEMF_PUBLIC, DEF_POOL_SIZE,
-                    DEF_POOL_THRESHOLD);
+                pool = CreatePool(MEMF_PUBLIC, DEF_POOL_SIZE, DEF_POOL_THRESHOLD);
                 if (pool != NULL)
                 {
-                    vol_info =
-                        AllocVecPooled(pool, sizeof(struct VolumeInfo));
+                    vol_info = AllocVecPooled(pool, sizeof(struct VolumeInfo));
                     if (vol_info != NULL)
                     {
                         vol_info->mem_pool = pool;
@@ -1055,25 +1055,20 @@ void DoDiskInsert(struct Globals *glob)
                         vol_info->root_lock.first_cluster = 0;
                         vol_info->root_lock.attr = ATTR_DIRECTORY;
                         vol_info->root_lock.size = 0;
-                        CopyMem(sb->volume.name, vol_info->root_lock.name,
-                            sb->volume.name[0] + 1);
+                        CopyMem(sb->volume.name, vol_info->root_lock.name, sb->volume.name[0] + 1);
                         NEWLIST(&vol_info->root_lock.locks);
                     }
 
-                    if ((newvol =
-                        AllocVecPooled(pool, sizeof(struct DosList))))
+                    if ((newvol = AllocVecPooled(pool, sizeof(struct DosList))))
                     {
                         newvol->dol_Next = BNULL;
                         newvol->dol_Type = DLT_VOLUME;
                         newvol->dol_Task = glob->ourport;
                         newvol->dol_Lock = BNULL;
 
-                        CopyMem(&sb->volume.create_time,
-                            &newvol->dol_misc.dol_volume.dol_VolumeDate,
-                            sizeof(struct DateStamp));
+                        CopyMem(&sb->volume.create_time, &newvol->dol_misc.dol_volume.dol_VolumeDate, sizeof(struct DateStamp));
 
-                        newvol->dol_misc.dol_volume.dol_LockList =
-                            MKBADDR(vol_info);
+                        newvol->dol_misc.dol_volume.dol_LockList = MKBADDR(vol_info);
 
                         newvol->dol_misc.dol_volume.dol_DiskType =
                             (sb->type == 12) ? ID_FAT12_DISK :
@@ -1081,8 +1076,7 @@ void DoDiskInsert(struct Globals *glob)
                             (sb->type == 32) ? ID_FAT32_DISK :
                             ID_FAT12_DISK;
 
-                        if ((newvol->dol_Name = MKBADDR(
-                            AllocVecPooled(pool, FAT_MAX_SHORT_NAME + 2))))
+                        if ((newvol->dol_Name = MKBADDR(AllocVecPooled(pool, FAT_MAX_SHORT_NAME + 2))))
                         {
 #ifdef AROS_FAST_BPTR
                             /* ReadFATSuper() sets a null byte after the

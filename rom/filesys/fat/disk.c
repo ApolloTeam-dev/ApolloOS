@@ -42,9 +42,9 @@ void ProcessDiskChange(struct Globals *glob)
     D(bug("----------------------------------------------------------------\n"));
     D(bug("[%s] Start\n",__FUNCTION__ ));
 
-    struct DriveGeometry geometry;
-    struct FileSysStartupMsg *fssm = glob->fssm;
-    struct DosEnvec *de = BADDR(fssm->fssm_Environ);
+    //struct DriveGeometry geometry;
+    //struct FileSysStartupMsg *fssm = glob->fssm;
+    //struct DosEnvec *de = BADDR(fssm->fssm_Environ);
 
     D(bug("[%s] Got disk change request\n",__FUNCTION__ ));
 
@@ -67,32 +67,32 @@ void ProcessDiskChange(struct Globals *glob)
         D(bug("[%s] Disk has been inserted\n",__FUNCTION__ ));
         glob->disk_inserted = TRUE;
 
-        glob->diskioreq->iotd_Req.io_Data = &geometry;
-        glob->diskioreq->iotd_Req.io_Command = TD_GETGEOMETRY;
-        glob->diskioreq->iotd_Req.io_Length = sizeof(struct DriveGeometry);
-        DoIO((struct IORequest *)glob->diskioreq);
+        //glob->diskioreq->iotd_Req.io_Data = &geometry;
+        //glob->diskioreq->iotd_Req.io_Command = TD_GETGEOMETRY;
+        //glob->diskioreq->iotd_Req.io_Length = sizeof(struct DriveGeometry);
+        //DoIO((struct IORequest *)glob->diskioreq);
 
-        D(bug("[%s] Disk geometry retrieved in DriveGeometry structure\n",__FUNCTION__ ));
-        D(bug("[%s] dg_SectorSize    : %d\n",__FUNCTION__ , geometry.dg_SectorSize));
-        D(bug("[%s] dg_TotalSectors  : %d\n",__FUNCTION__ , geometry.dg_TotalSectors));
-        D(bug("[%s] dg_Cylinders     : %d\n",__FUNCTION__ , geometry.dg_Cylinders));
-        D(bug("[%s] dg_CylSectors    : %d\n",__FUNCTION__ , geometry.dg_CylSectors));
-        D(bug("[%s] dg_Heads         : %d\n",__FUNCTION__ , geometry.dg_Heads));
-        D(bug("[%s] dg_TrackSectors  : %d\n",__FUNCTION__ , geometry.dg_TrackSectors));
+        //D(bug("[%s] Disk geometry retrieved in DriveGeometry structure\n",__FUNCTION__ ));
+        //D(bug("[%s] dg_SectorSize    : %d\n",__FUNCTION__ , geometry.dg_SectorSize));
+        //D(bug("[%s] dg_TotalSectors  : %d\n",__FUNCTION__ , geometry.dg_TotalSectors));
+        //D(bug("[%s] dg_Cylinders     : %d\n",__FUNCTION__ , geometry.dg_Cylinders));
+        //D(bug("[%s] dg_CylSectors    : %d\n",__FUNCTION__ , geometry.dg_CylSectors));
+        //D(bug("[%s] dg_Heads         : %d\n",__FUNCTION__ , geometry.dg_Heads));
+        //D(bug("[%s] dg_TrackSectors  : %d\n",__FUNCTION__ , geometry.dg_TrackSectors));
 
-        D(bug("[%s] Drive Geometry structure transfer to glob->fssm->fssm_Environ\n",__FUNCTION__ ));
+        //D(bug("[%s] Drive Geometry structure transfer to glob->fssm->fssm_Environ\n",__FUNCTION__ ));
 
-        de->de_SizeBlock        = geometry.dg_SectorSize >> 2; // Sizeblock = LONG p/Block = Shift 2
-        de->de_Surfaces         = geometry.dg_Heads;           // Surfaces = Heads
-        de->de_BlocksPerTrack   = geometry.dg_TrackSectors;    // Block p/Track = #Sectors
-        de->de_LowCyl           = 2;                           // HOW TO DETERMINE???
-        de->de_HighCyl          = geometry.dg_Cylinders - 1;   // Assume 1 partition ???
+        //de->de_SizeBlock        = geometry.dg_SectorSize >> 2; // Sizeblock = LONG p/Block = Shift 2
+        //de->de_Surfaces         = geometry.dg_Heads;           // Surfaces = Heads
+        //de->de_BlocksPerTrack   = geometry.dg_TrackSectors;    // Block p/Track = #Sectors
+        //de->de_LowCyl           = 2;                           // HOW TO DETERMINE???
+        //de->de_HighCyl          = geometry.dg_Cylinders - 1;   // Assume 1 partition ???
 
-        D(bug("[%s] de_SizeBlock      : %d\n",__FUNCTION__ , de->de_SizeBlock));
-        D(bug("[%s] de_Surfaces       : %d\n",__FUNCTION__ , de->de_Surfaces));
-        D(bug("[%s] de_BlocksPerTrack : %d\n",__FUNCTION__ , de->de_BlocksPerTrack));
-        D(bug("[%s] dg_LowCyl         : %d\n",__FUNCTION__ , de->de_LowCyl));
-        D(bug("[%s] dg_HighCyl        : %d\n",__FUNCTION__ , de->de_HighCyl));
+        //D(bug("[%s] de_SizeBlock      : %d\n",__FUNCTION__ , de->de_SizeBlock));
+        //D(bug("[%s] de_Surfaces       : %d\n",__FUNCTION__ , de->de_Surfaces));
+        //D(bug("[%s] de_BlocksPerTrack : %d\n",__FUNCTION__ , de->de_BlocksPerTrack));
+        //D(bug("[%s] dg_LowCyl         : %d\n",__FUNCTION__ , de->de_LowCyl));
+        //D(bug("[%s] dg_HighCyl        : %d\n",__FUNCTION__ , de->de_HighCyl));
 
         DoDiskInsert(glob);
     }
