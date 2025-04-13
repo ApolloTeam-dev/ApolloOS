@@ -1,8 +1,8 @@
 /*
  * fat-handler - FAT12/16/32 filesystem handler
  *
- * Copyright (C) 2006 Marek Szyprowski
- * Copyright (C) 2007-2015 The AROS Development Team
+ * Copyright � 2006 Marek Szyprowski
+ * Copyright � 2007-2015 The AROS Development Team
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the same terms as AROS itself.
@@ -37,7 +37,7 @@ static void DumpLocks(struct FSSuper *sb, struct Globals *glob)
     struct GlobalLock *gl;
     ULONG count;
 
-    bug("[fat] global locks:\n");
+    D(bug("[fat] global locks:\n"));
 
     ListLength(&sb->info->root_lock.locks, count);
     bug("    root: %ld references\n", count);
@@ -45,7 +45,7 @@ static void DumpLocks(struct FSSuper *sb, struct Globals *glob)
     ForeachNode(&sb->info->locks, gl)
     {
         ListLength(&gl->locks, count);
-        bug("    (%ld/%ld) ", gl->dir_cluster, gl->dir_entry);
+        D(bug("    (%ld/%ld) ", gl->dir_cluster, gl->dir_entry));
         RawPutChars(&(gl->name[1]), gl->name[0]);
         bug(": %ld references\n", count);
     }

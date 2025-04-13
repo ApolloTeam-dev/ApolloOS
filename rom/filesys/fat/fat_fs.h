@@ -1,8 +1,8 @@
 /*
  * fat-handler - FAT12/16/32 filesystem handler
  *
- * Copyright (C) 2006 Marek Szyprowski
- * Copyright (C) 2007-2018 The AROS Development Team
+ * Copyright � 2006 Marek Szyprowski
+ * Copyright � 2007-2018 The AROS Development Team
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the same terms as AROS itself.
@@ -22,7 +22,7 @@
 #define DEBUG_OPS           0
 #define DEBUG_PACKETS       0
 #define DEBUG_CACHESTATS    0
-#define DEBUG_MISC          1
+#define DEBUG_MISC          0
 
 #include <dos/dos.h>
 #include <exec/interrupts.h>
