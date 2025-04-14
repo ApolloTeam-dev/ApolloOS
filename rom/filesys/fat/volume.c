@@ -103,8 +103,7 @@ LONG ReadFATSuper(struct FSSuper *sb)
         de->de_BlocksPerTrack * de->de_Surfaces * de->de_LowCyl;
     D(bug("[%s] Boot sector at sector %ld\n", __FUNCTION__ , sb->first_device_sector));
 
-    /* Get a preliminary total-sectors value so we don't risk going outside
-     * partition limits */
+    /* Get a preliminary total-sectors value so we don't risk going outside partition limits */
     sb->total_sectors =
         de->de_BlocksPerTrack * de->de_Surfaces * (de->de_HighCyl + 1)
         - sb->first_device_sector;
@@ -304,10 +303,8 @@ LONG ReadFATSuper(struct FSSuper *sb)
 
     sb->fat_blocks_count =
         MIN(sb->fat_size, sb->fat_cachesize >> sb->sectorsize_bits);
-    sb->fat_blocks = AllocVecPooled(glob->mempool,
-        sizeof(APTR) * sb->fat_blocks_count);
-    sb->fat_buffers = AllocVecPooled(glob->mempool,
-        sizeof(APTR) * sb->fat_blocks_count);
+    sb->fat_blocks = AllocVecPooled(glob->mempool, sizeof(APTR) * sb->fat_blocks_count);
+    sb->fat_buffers = AllocVecPooled(glob->mempool, sizeof(APTR) * sb->fat_blocks_count);
     if (sb->fat_blocks == NULL || sb->fat_buffers == NULL)
     {
         err = ERROR_NO_FREE_STORE;
@@ -340,18 +337,17 @@ LONG ReadFATSuper(struct FSSuper *sb)
         ebpb = &boot->ebpbs.ebpb32.ebpb;
     }
 
-    D(bug("[%s] Rootdir at cluster %ld sector %ld\n", __FUNCTION__ , sb->rootdir_cluster,
-        sb->rootdir_sector));
+    D(bug("[%s] Rootdir at cluster %ld sector %ld\n", __FUNCTION__ , sb->rootdir_cluster, sb->rootdir_sector));
 
     /* Initialise the root directory if this is a newly formatted volume */
     if (glob->formatting)
     {
+        D(bug("[%s] Initialise the CACHE root directory if this is a newly formatted volume\n", __FUNCTION__ ));
+
         /* Clear all FAT sectors */
         for (i = 0; err == 0 && i < sb->fat_size * 2; i++)
         {
-            block_ref = Cache_GetBlock(sb->cache,
-                sb->first_device_sector + sb->first_fat_sector + i,
-                &fat_block);
+            block_ref = Cache_GetBlock(sb->cache, sb->first_device_sector + sb->first_fat_sector + i, &fat_block);
             if (block_ref != NULL)
             {
                 /* FIXME: Handle IO errors on cache read! */
@@ -360,8 +356,7 @@ LONG ReadFATSuper(struct FSSuper *sb)
                 {
                     /* The first two entries are special */
                     if (sb->type == 32)
-                        *(UQUAD *) fat_block =
-                            AROS_QUAD2LE(0x0FFFFFFF0FFFFFF8);
+                        *(UQUAD *) fat_block = AROS_QUAD2LE(0x0FFFFFFF0FFFFFF8);
                     else if (sb->type == 16)
                         *(ULONG *) fat_block = AROS_LONG2LE(0xFFFFFFF8);
                     else
@@ -374,6 +369,8 @@ LONG ReadFATSuper(struct FSSuper *sb)
                 err = IoErr();
         }
 
+        D(bug("[%s] Finished Cleaning all CACHE FAT sectors - Result = %u\n", __FUNCTION__, err ));
+
         if (err == 0)
         {
             /* Allocate first cluster of the root directory */
@@ -382,7 +379,11 @@ LONG ReadFATSuper(struct FSSuper *sb)
 
             /* Get a handle on the root directory */
             InitDirHandle(sb, 0, &dh, FALSE, glob);
+
+            D(bug("[%s] Finished allocating first cluster and obtaining handle on root\n", __FUNCTION__ ));
         }
+
+
 
         /* Clear all entries in the root directory */
         for (i = 0; err == 0 && GetDirEntry(&dh, i, &dir_entry, glob) == 0;
@@ -391,6 +392,8 @@ LONG ReadFATSuper(struct FSSuper *sb)
             SetMem(&dir_entry.e.entry, 0, sizeof(struct FATDirEntry));
             err = UpdateDirEntry(&dir_entry, glob);
         }
+
+        D(bug("[%s] Finished Clear all entries in the root directory\n", __FUNCTION__ ));
 
         if (err == 0)
         {
@@ -406,6 +409,7 @@ LONG ReadFATSuper(struct FSSuper *sb)
             /* Check everything is really written to disk before we proceed */
             if (!Cache_Flush(sb->cache))
                 err = IoErr();
+            D(bug("[%s] SUCCESS - Cache Flushed\n", __FUNCTION__ ));    
         }
     }
 
@@ -568,12 +572,15 @@ LONG FormatFATVolume(const UBYTE *name, UWORD len, struct Globals *glob)
     struct FATFSInfo *fsinfo;
     UWORD type, i, root_entries_count;
     struct EClockVal eclock;
-    ULONG sectors_per_cluster = 0, sector_count, first_fat_sector,
-        fat_size, root_dir_sectors, first_device_sector, temp1, temp2;
+    ULONG sectors_per_cluster = 0, sector_count, first_fat_sector, fat_size, root_dir_sectors, first_device_sector, temp1, temp2;
+
+    D(bug("[%s] Blockspertrack %ld\n",__FUNCTION__ , de->de_BlocksPerTrack));
+    D(bug("[%s] Surfaces %ld\n", __FUNCTION__ , de->de_Surfaces));
+    D(bug("[%s] Lowcyl %ld\n", __FUNCTION__ , de->de_LowCyl));
+    D(bug("[%s] Highcyl %ld\n", __FUNCTION__ , de->de_HighCyl));
 
     /* Decide on FAT type based on number of sectors */
-    sector_count = (de->de_HighCyl - de->de_LowCyl + 1)
-        * de->de_Surfaces * de->de_BlocksPerTrack;
+    sector_count = (de->de_HighCyl - de->de_LowCyl + 1) * de->de_Surfaces * de->de_BlocksPerTrack;
     if (sector_count < 4085)
         type = 12;
     else if (sector_count < 1024 * 1024)
@@ -581,6 +588,8 @@ LONG FormatFATVolume(const UBYTE *name, UWORD len, struct Globals *glob)
     else
         type = 32;
 
+
+    D(bug("[%s] FAT version chosen based on total sector count = %u | FAT%2d\n",__FUNCTION__, sector_count, type ));
     D(bug("[%s] Writing boot sector\n",__FUNCTION__ ));
 
     /* Decide on cluster size and root dir entries */
@@ -627,7 +636,7 @@ LONG FormatFATVolume(const UBYTE *name, UWORD len, struct Globals *glob)
     /* Determine FAT size */
     root_dir_sectors = (root_entries_count * 32 + (bsize - 1)) / bsize;
     temp1 = sector_count - (first_fat_sector + root_dir_sectors);
-    temp2 = 256 * sectors_per_cluster + 2;
+    temp2 = 256 * sectors_per_cluster + 4;
     if (type == 32)
         temp2 /= 2;
     fat_size = (temp1 + temp2 - 1) / temp2;
@@ -680,8 +689,7 @@ LONG FormatFATVolume(const UBYTE *name, UWORD len, struct Globals *glob)
     ebpb->bs_drvnum = 0x80;
     ebpb->bs_bootsig = 0x29;
 
-    /* Generate a pseudo-random serial number. Not the original algorithm,
-     * but it shouldn't matter */
+    /* Generate a pseudo-random serial number. Not the original algorithm, but it shouldn't matter */
     ReadEClock(&eclock);
     ebpb->bs_volid = FastRand(eclock.ev_lo ^ eclock.ev_hi);
 
@@ -708,6 +716,14 @@ LONG FormatFATVolume(const UBYTE *name, UWORD len, struct Globals *glob)
         de->de_BlocksPerTrack * de->de_Surfaces * de->de_LowCyl;
 
     D(bug("[%s] Boot sector at sector %ld\n", __FUNCTION__ , first_device_sector));
+    D(bug("[%s] Calculated Total Sectors %ld\n", __FUNCTION__ , sector_count));
+    D(bug("[%s] SectorSize = %ld\n", __FUNCTION__ , bsize));
+    D(bug("[%s] SectorsPerCluster = %ld\n",__FUNCTION__ , sectors_per_cluster));
+    D(bug("[%s] First FAT Sector = %ld\n", __FUNCTION__ , first_fat_sector));
+    D(bug("[%s] FAT Size = %ld\n", __FUNCTION__ , fat_size));
+    D(bug("[%s] Total Sectors = %ld\n", __FUNCTION__ , sector_count));
+
+
 
     if ((td_err = AccessDisk(TRUE, first_device_sector, 1, bsize,
         (UBYTE *) boot, glob)) != 0)
@@ -959,8 +975,7 @@ void DoDiskInsert(struct Globals *glob)
     struct NotifyNode *nn;
     struct DosList *newvol = NULL;
 
-    if (glob->sb == NULL
-        && (sb = AllocVecPooled(glob->mempool, sizeof(struct FSSuper))))
+    if (glob->sb == NULL && (sb = AllocVecPooled(glob->mempool, sizeof(struct FSSuper))))
     {
         SetMem(sb, 0, sizeof(struct FSSuper));
 
@@ -1129,8 +1144,8 @@ BOOL AttemptDestroyVolume(struct FSSuper *sb)
     D(bug("[%s] Attempting to destroy volume\n",__FUNCTION__ ));
 
     /* Check if the volume can be removed */
-    if (IsListEmpty(&sb->info->locks) && IsListEmpty(&sb->info->notifies))
-    {
+    //if (IsListEmpty(&sb->info->locks) && IsListEmpty(&sb->info->notifies))
+    //{
         D(bug("[%s] Removing volume completely\n", __FUNCTION__ ));
 
         if (sb == glob->sb)
@@ -1141,9 +1156,15 @@ BOOL AttemptDestroyVolume(struct FSSuper *sb)
         SendVolumePacket(sb->doslist, ACTION_VOLUME_REMOVE, glob);
 
         FreeFATSuper(sb);
+
+        D(bug("[%s] FreeFATSuper finished\n", __FUNCTION__ ));
+
         FreeVecPooled(glob->mempool, sb);
+
+        D(bug("[%s] SuperBlock Freed completely\n", __FUNCTION__ ));
+
         destroyed = TRUE;
-    }
+    //}
 
     return destroyed;
 }

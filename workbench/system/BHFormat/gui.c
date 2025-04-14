@@ -178,7 +178,7 @@ BOOL ObjectTypeOk(struct DosList* device)
 	ibyStart = pdenDevice->de_LowCyl * cbyCylinder;
 	ibyEnd = (pdenDevice->de_HighCyl + 1) * cbyCylinder;    
 	
-	DD(bug("ObjectTypeOk: LowCyl = %u | HighCyl = %u | Heads = %u | Sectors = %u | ibyStart = %u | ibyEnd = %u\n",
+	DD(bug("[FORMAT] ObjectTypeOk: LowCyl = %u | HighCyl = %u | Heads = %u | Sectors = %u | ibyStart = %u | ibyEnd = %u\n",
 		pdenDevice->de_LowCyl, pdenDevice->de_HighCyl, pdenDevice->de_Surfaces, pdenDevice->de_BlocksPerTrack, ibyStart, ibyEnd));
 
 	return TRUE;
@@ -195,12 +195,12 @@ void ComputeCapacity(struct DosList *pdlVolume, struct InfoData *pInfoData)
 		possible disk size is 2^64 bytes = 16 exabytes. */
 	const char * pchUnitSymbol = _(MSG_UNITS);
 
-	DD(bug("Calculating capacity info...\n"));
+	DD(bug("[FORMAT] Calculating capacity info...\n"));
 	cUnits = ibyEnd - ibyStart;
 	while( (cUnits >>= 10) > 9999 ) ++pchUnitSymbol;
 
 	RawDoFmtSz( szCapacityInfo, _(MSG_CAPACITY), (ULONG)cUnits, (ULONG)*pchUnitSymbol );
-	DD(bug("Done: %s\n", szCapacityInfo));
+	DD(bug("[FORMAT] Done: %s\n", szCapacityInfo));
 }
 
 void VolumesToList(Object* listObject)
@@ -215,7 +215,7 @@ void VolumesToList(Object* listObject)
 	while((device = NextDosEntry(device, flags - LDF_VOLUMES)) != NULL)
 	{
 
-		DD(bug("Device = %s \n", AROS_BSTR_ADDR(device->dol_Name)));
+		DD(bug("[FORMAT] Device = %s \n", AROS_BSTR_ADDR(device->dol_Name)));
 		
 		TEXT name[128];
 		strcpy(name, AROS_BSTR_ADDR(device->dol_Name));
@@ -247,7 +247,7 @@ void VolumesToList(Object* listObject)
 			do
 			{
 				volume = NextDosEntry(volume, LDF_VOLUMES);
-				if (volume) DD(bug("Device = %s | Volume = %s\n", AROS_BSTR_ADDR(device->dol_Name), AROS_BSTR_ADDR(volume->dol_Name)));
+				if (volume) DD(bug("[FORMAT] Device = %s | Volume = %s\n", AROS_BSTR_ADDR(device->dol_Name), AROS_BSTR_ADDR(volume->dol_Name)));
 				else break;
 				
 			} while (volume->dol_Task != device->dol_Task);
@@ -348,7 +348,7 @@ struct SFormatEntry* SelectDevice(void)
 	set(ok, MUIA_HorizWeight, 75);
 	set(cancel, MUIA_HorizWeight, 25);
 
-	DD(bug("[SelectDevice] Mainloop\n"));
+	DD(bug("[FORMAT] [SelectDevice] Mainloop\n"));
 	struct SFormatEntry* selectedEntry = NULL;
 
 	ULONG sigs = 0;
@@ -359,13 +359,13 @@ struct SFormatEntry* SelectDevice(void)
 	{
 		returnId = DoMethod(app, MUIM_Application_NewInput, &sigs);
 
-		DD(bug("[SelectDevice] Checking Buttons | ReturnID = %u\n", returnId));
+		DD(bug("[FORMAT] [SelectDevice] Checking Buttons | ReturnID = %u\n", returnId));
 		
 		switch(returnId)
 		{
 			case 5:
 			{
-				DD(bug("[SelectDevice] Button = OK\n"));
+				DD(bug("[FORMAT] [SelectDevice] Button = OK\n"));
 				IPTR active = XGET(list, MUIA_List_Active);
 				struct SFormatEntry *entry;
 				DoMethod(list, MUIM_List_GetEntry, active, &entry);
@@ -409,7 +409,7 @@ AROS_UFH3S(void, btn_format_function,
 	BOOL bDirCache = FALSE;
 	LONG rc = FALSE;
 
-	DD(bug("Select Format: %s\n", bDoFormat ? "Full" : "Quick" ));
+	DD(bug("[FORMAT] Select Format: %s\n", bDoFormat ? "Full" : "Quick" ));
 	
 	if( !bSetSzDosDeviceFromSz(szDosDevice) ) goto cleanup;
 	if( !bSetSzVolumeFromSz( (char *)XGET(str_volume, MUIA_String_Contents) ) )	goto cleanup;
@@ -452,7 +452,7 @@ AROS_UFH3S(void, btn_format_function,
 	{
 		ULONG icyl, sigs;
 		if(!bGetExecDevice(TRUE)) goto cleanup;
-		DD(bug("GetExecDevice done\n"));
+		DD(bug("[FORMAT] GetExecDevice done\n"));
 		
 		set(gauge, MUIA_Gauge_Max, 100);
 
@@ -471,10 +471,10 @@ AROS_UFH3S(void, btn_format_function,
 				break;
 			}
 			set(gauge, MUIA_Gauge_Current, (((icyl-LowCyl)*100) / ((HighCyl-LowCyl))) );   
-			DD(bug("LowCyl = %u | HighCyl = %u | Cylinder = %u | MUIA_Gauge_Current = %u\n", LowCyl, HighCyl, icyl, (((icyl-LowCyl)*100) / ((HighCyl-LowCyl))) ));
+			DD(bug("[FORMAT] LowCyl = %u | HighCyl = %u | Cylinder = %u | MUIA_Gauge_Current = %u\n", LowCyl, HighCyl, icyl, (((icyl-LowCyl)*100) / ((HighCyl-LowCyl))) ));
 		}
 		FreeExecDevice();
-		DD(bug("FreeExecDevice done\n"));
+		DD(bug("[FORMAT] FreeExecDevice done\n"));
 	}
 
 	if(formatOk)
@@ -513,10 +513,10 @@ int rcGuiMain(void)
 
 		if( _WBenchMsg->sm_ArgList[1].wa_Lock == 0 )
 		{
-			DD(bug("Object specified by Device name: %s\n", _WBenchMsg->sm_ArgList[1].wa_Name);)
+			DD(bug("[FORMAT] Object specified by Device name: %s\n", _WBenchMsg->sm_ArgList[1].wa_Name);)
 			if( !bSetSzDosDeviceFromSz(_WBenchMsg->sm_ArgList[1].wa_Name) )
 			{
-				DD(bug("Bad device name from Workbench: %s\n", _WBenchMsg->sm_ArgList[1].wa_Name));
+				DD(bug("[FORMAT] Bad device name from Workbench: %s\n", _WBenchMsg->sm_ArgList[1].wa_Name));
 				goto cleanup;
 			}
 			strcpy(szVolumeName, "_____");
@@ -524,7 +524,7 @@ int rcGuiMain(void)
 		} else {
 			if( _WBenchMsg->sm_ArgList[1].wa_Name[0] == 0 )
 			{
-				DD(bug("Object specified by Volume name (Lock)\n"));
+				DD(bug("[FORMAT] Object specified by Volume name (Lock)\n"));
 				
 				if( !Info( _WBenchMsg->sm_ArgList[1].wa_Lock, &dinf ) )
 				{
@@ -572,7 +572,7 @@ int rcGuiMain(void)
 
 			if( !bSetSzDosDeviceFromSz(szDosDevice) )
 			{
-				DD(bug("Bad device name from SelectDevice: %s\n", szDosDevice));
+				DD(bug("[FORMAT] Bad device name from SelectDevice: %s\n", szDosDevice));
 				goto cleanup;
 			}
 		}
@@ -582,10 +582,10 @@ int rcGuiMain(void)
 
 	ComputeCapacity(pdlVolume, &dinf );
 
-	DD(bug("Device = %s | Volume = %s | Capacity = %s\n", szDosDevice, szVolumeName, szCapacityInfo));
+	DD(bug("[FORMAT] Device = %s | Volume = %s | Capacity = %s\n", szDosDevice, szVolumeName, szCapacityInfo));
 
 	RawDoFmtSz( szTitle, _(MSG_WINDOW_TITLE), szDosDevice );
-	DD(bug("Setting window title to '%s'\n", szTitle));
+	DD(bug("[FORMAT] Setting window title to '%s'\n", szTitle));
 	
 	Object *btn_format, *btn_qformat, *btn_cancel, *btn_stop;
 
@@ -594,7 +594,7 @@ int rcGuiMain(void)
 	//RawDoFmtSz( szDeviceInfo, _(MSG_DEVICE), szDosDevice );
 	//RawDoFmtSz( szVolumeInfo, _(MSG_VOLUME), szVolumeName );
 
-	DD(bug("Creating GUI...\n"));
+	DD(bug("[FORMAT] Creating GUI...\n"));
 	
 	app = 	(Object *)ApplicationObject,
 			MUIA_Application_Title, __(MSG_APPLICATION_TITLE),

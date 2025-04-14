@@ -1,5 +1,5 @@
 /*
-    Copyright © 2010-2015, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2010-2015, The AROS Development Team. All rights reserved.
     $Id$
 
     Disk cache.
@@ -212,8 +212,7 @@ APTR Cache_GetBlock(APTR cache, ULONG blockNum, UBYTE **data)
 
             /* Read the block from disk */
 
-            if(AccessDisk(FALSE, blockNum, RANGE_SIZE, c->block_size,
-                b->data, c->priv) == 0)
+            if(AccessDisk(FALSE, blockNum, RANGE_SIZE, c->block_size, b->data, c->priv) == 0)
             {
                 /* Remove block from its old position in the hash */
 

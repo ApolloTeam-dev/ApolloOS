@@ -177,8 +177,8 @@ void Probe64BitSupport(struct Globals *glob)
 LONG AccessDisk(BOOL do_write, ULONG num, ULONG nblocks, ULONG block_size,
     UBYTE *data, APTR priv)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start \n",__FUNCTION__ ));
+    //D(bug("----------------------------------------------------------------\n"));
+    //D(bug("[%s] Start \n",__FUNCTION__ ));
     struct Globals *glob = priv;
     UQUAD off;
     ULONG err;

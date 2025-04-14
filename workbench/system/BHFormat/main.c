@@ -290,14 +290,14 @@ BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
 	{
 		flags = LDF_DEVICES|LDF_READ;
 		pdlList = LockDosList(flags);
-		DD(bug( "LockDosList( LDF_DEVICES | LDF_READ ) = 0x%08lx\n", (ULONG)pdlList ));
+		DD(bug("[FORMAT] LockDosList( LDF_DEVICES | LDF_READ ) = 0x%08lx\n", (ULONG)pdlList ));
 		*pchDosDeviceColon = 0;
 		pdlDevice = FindDosEntry( pdlList, szDosDevice, LDF_DEVICES );
-		DD(bug("FindDosEntry( 0x%08lx, \"%s\", LDF_DEVICES ) = 0x%08lx\n", (ULONG)pdlList, (ULONG)szDosDevice, (ULONG)pdlDevice ));
+		DD(bug("[FORMAT] FindDosEntry( 0x%08lx, \"%s\", LDF_DEVICES ) = 0x%08lx\n", (ULONG)pdlList, (ULONG)szDosDevice, (ULONG)pdlDevice ));
 		if( pdlDevice == 0 )
 		{
 			UnLockDosList(flags);
-			DD(bug("bGetDosDevice: ERROR_DEVICE_NOT_MOUNTED\n"));
+			DD(bug("[FORMAT] bGetDosDevice: ERROR_DEVICE_NOT_MOUNTED\n"));
 			ReportErrSz( ertError, ERROR_DEVICE_NOT_MOUNTED, 0 );
 			return FALSE;
 		}
@@ -315,7 +315,7 @@ BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
 		|| pdenDevice->de_Interleave != 0 */)
 	{
 		UnLockDosList(flags);
-		DD(bug("bGetDosDevice: ERROR_OBJECT_WRONG_TYPE\n"));
+		DD(bug("[FORMAT] bGetDosDevice: ERROR_OBJECT_WRONG_TYPE\n"));
 		ReportErrSz( ertError, ERROR_OBJECT_WRONG_TYPE, 0 );
 		return FALSE;
 	}
@@ -339,16 +339,16 @@ BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
     ibyStart = pdenDevice->de_LowCyl * cbyCylinder;
     ibyEnd = (pdenDevice->de_HighCyl + 1) * cbyCylinder;
 
-	DD(bug("bGetDosDevice: LowCyl = %u | HighCyl = %u | Heads = %u | Sectors = %u | ibyStart = %llu | ibyEnd = %llu | DosType = 0x%08lx\n",
+	DD(bug("[FORMAT] bGetDosDevice: LowCyl = %u | HighCyl = %u | Heads = %u | Sectors = %u | ibyStart = %llu | ibyEnd = %llu | DosType = 0x%08lx\n",
 		LowCyl, HighCyl, pdenDevice->de_Surfaces, pdenDevice->de_BlocksPerTrack, ibyStart, ibyEnd, DosType));
 
 	if(DosType == 0x444F5300)	// Check for DOS/0 and if found then Drive needs to be partitioned by HDToolBox first
 	{
-		DD(bug("bGetDosDevice: ERROR: No Partition(s) Found!\n"));
+		DD(bug("[FORMAT] bGetDosDevice: ERROR: No Partition(s) Found!\n"));
 		//ReportErrSz( ertError, 0, "\nERROR: No Partition(s) Found!\n\nUse Tools->HDToolBox to Create Partition(s)\n");
 		//return FALSE;
 	}
-	DD(bug("bGetDosDevice: OK: Partition(s) Found!\n"));
+	DD(bug("[FORMAT] bGetDosDevice: OK: Partition(s) Found!\n"));
 
 #if defined(__mc68000) && !defined(__AROS__)
     /* If the device has a native Amiga file-system, we can check for
@@ -369,7 +369,7 @@ BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
 	prt = (struct Resident *)((char *)BADDR(pdlDevice->dol_misc.dol_handler.dol_SegList) + 4);
 	while( prt->rt_MatchWord != RTC_MATCHWORD || prt->rt_MatchTag != prt ) prt = (struct Resident *)((UWORD *)prt + 1);
 	verFS = prt->rt_Version;
-	DD(bug( "found RomTag at 0x%08lx; rt_Version = %lu\n", (ULONG)prt, (ULONG)verFS ));
+	DD(bug("[FORMAT] Found RomTag at 0x%08lx; rt_Version = %lu\n", (ULONG)prt, (ULONG)verFS ));
 	    
 	/* check that the fs can handle this device correctly */
 
@@ -433,7 +433,7 @@ void FreeDosDevice(void)
     if(bInhibited)
     {
 	*pchDosDeviceColon = ':';
-	DD(bug( "Inhibit( \"%s\", DOSFALSE );\n", (ULONG)szDosDevice ));
+	DD(bug("[FORMAT] Inhibit( \"%s\", DOSFALSE );\n", (ULONG)szDosDevice ));
 	(void) Inhibit( szDosDevice, DOSFALSE );
 	bInhibited = FALSE;
     }
@@ -443,7 +443,7 @@ void FreeDosDevice(void)
 BOOL bGetExecDevice( BOOL bWillVerify )
 {
     *pchDosDeviceColon = ':';
-    DD(bug( "Inhibit( \"%s\", DOSTRUE );\n", (ULONG)szDosDevice ));
+    DD(bug("[FORMAT] Inhibit( \"%s\", DOSTRUE );\n", (ULONG)szDosDevice ));
     if(!Inhibit( szDosDevice, DOSTRUE ))
     {
 	/* This is a bit stupid, but compatible with v40 Format */
@@ -456,7 +456,7 @@ BOOL bGetExecDevice( BOOL bWillVerify )
 	|| (piosDisk = (struct IOStdReq *)
 	    CreateIORequest( pmpDiskIO, sizeof(struct IOStdReq) )) == 0 )
     {
-	DD(bug("pmpDiskIO = 0x%08lX, piosDisk = 0x%08lX\n", pmpDiskIO, piosDisk));
+	DD(bug("[FORMAT] pmpDiskIO = 0x%08lX, piosDisk = 0x%08lX\n", pmpDiskIO, piosDisk));
 	ReportErrSz( ertFailure, ERROR_NO_FREE_STORE, 0 );
 	return FALSE;
     }
@@ -554,7 +554,7 @@ BOOL bGetExecDevice( BOOL bWillVerify )
 
     /* We need two buffers - one for writing and one for reading back to
        verify the write */
-    DD(bug("Allocating buffers, size %lu bytes\n", cbyCylinder));
+    DD(bug("[FORMAT] Allocating buffers, size %lu bytes\n", cbyCylinder));
     if( (paulWriteBuffer = AllocMem( cbyCylinder,
 				     BufMemType )) == 0
 	|| (bWillVerify
@@ -710,8 +710,7 @@ static BOOL bTransferCylinder(
 	piosDisk->io_Length      = cbyLength;
 	piosDisk->io_Data        = pBuffer;
 
-	DD(bug( "DoIO() Cmd=%2lu Act=0x%08lx Len=0x%08lx "
-		  "Data=0x%08lx Off=0x%08lx\n",
+	DD(bug("[FORMAT] DoIO() Cmd=%2lu Act=0x%08lx Len=0x%08lx Data=0x%08lx Off=0x%08lx\n",
 		  piosDisk->io_Command,
 		  piosDisk->io_Actual,
 		  piosDisk->io_Length,
@@ -779,7 +778,7 @@ BOOL bMakeFileSys( BOOL bFFS, BOOL bOFS, BOOL bIntl, BOOL bNoIntl,
     if(!bInhibited)
     {
 	*pchDosDeviceColon = ':';
-	DD(bug( "Inhibit( \"%s\", DOSTRUE );\n", (ULONG)szDosDevice ));
+	DD(bug("[FORMAT] Inhibit( \"%s\", DOSTRUE );\n", (ULONG)szDosDevice ));
 	if(!Inhibit( szDosDevice, DOSTRUE ))
 	{
 	    /* This is a bit stupid, but compatible with v40 Format */
@@ -789,7 +788,7 @@ BOOL bMakeFileSys( BOOL bFFS, BOOL bOFS, BOOL bIntl, BOOL bNoIntl,
 	bInhibited = TRUE;
     }
 
-    DD(bug( "Format( \"%s\", \"%s\", 0x%08lx );\n",
+    DD(bug("[FORMAT] Format( \"%s\", \"%s\", 0x%08lx );\n",
 	      (ULONG)szDosDevice, (ULONG)(szVolume + 1), fstCurrent ));
     if( !Format( szDosDevice,
 		 (DOSBase->dl_lib.lib_Version == 36) ?

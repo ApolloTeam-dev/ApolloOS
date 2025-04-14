@@ -23,8 +23,8 @@
 static APTR GetFatEntryPtr(struct FSSuper *sb, ULONG offset, APTR *rb,
     UWORD fat_no)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
+    //D(bug("----------------------------------------------------------------\n"));
+    //D(bug("[%s] Start\n",__FUNCTION__ ));
 
     struct Globals *glob = sb->glob;
     ULONG entry_cache_block = offset >> sb->fat_cachesize_bits;
@@ -37,10 +37,10 @@ static APTR GetFatEntryPtr(struct FSSuper *sb, ULONG offset, APTR *rb,
     if (sb->fat_cache_block != entry_cache_block
         || sb->fat_cache_no != fat_no)
     {
-        D(bug("[%s] loading %ld FAT sectors starting at sector %ld\n",__FUNCTION__ ,
+        /*D(bug("[%s] loading %ld FAT sectors starting at sector %ld\n",__FUNCTION__ ,
             sb->fat_blocks_count,
             entry_cache_block << (sb->fat_cachesize_bits -
-            sb->sectorsize_bits)));
+            sb->sectorsize_bits)));*/
 
         /* Put the old ones back */
         if (sb->fat_cache_block != 0xffffffff)
@@ -101,8 +101,8 @@ static APTR GetFatEntryPtr(struct FSSuper *sb, ULONG offset, APTR *rb,
  */
 ULONG GetFat12Entry(struct FSSuper *sb, ULONG n)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
+    //D(bug("----------------------------------------------------------------\n"));
+    //D(bug("[%s] Start\n",__FUNCTION__ ));
 
     struct Globals *glob = sb->glob;
     ULONG offset = n + n / 2;
@@ -146,8 +146,8 @@ ULONG GetFat12Entry(struct FSSuper *sb, ULONG n)
  */
 ULONG GetFat16Entry(struct FSSuper *sb, ULONG n)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start \n",__FUNCTION__ ));
+    //D(bug("----------------------------------------------------------------\n"));
+    //D(bug("[%s] Start \n",__FUNCTION__ ));
 
     UWORD val = 0, *p;
 
@@ -160,8 +160,8 @@ ULONG GetFat16Entry(struct FSSuper *sb, ULONG n)
 
 ULONG GetFat32Entry(struct FSSuper *sb, ULONG n)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
+    //D(bug("----------------------------------------------------------------\n"));
+    //D(bug("[%s] Start\n",__FUNCTION__ ));
 
     ULONG val = 0, *p;
 
@@ -174,8 +174,8 @@ ULONG GetFat32Entry(struct FSSuper *sb, ULONG n)
 
 BOOL SetFat12Entry(struct FSSuper *sb, ULONG n, ULONG val)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
+    //D(bug("----------------------------------------------------------------\n"));
+    //D(bug("[%s] Start\n",__FUNCTION__ ));
 
     struct Globals *glob = sb->glob;
     APTR b;
@@ -258,8 +258,8 @@ BOOL SetFat12Entry(struct FSSuper *sb, ULONG n, ULONG val)
 
 BOOL SetFat16Entry(struct FSSuper *sb, ULONG n, ULONG val)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
+    //D(bug("----------------------------------------------------------------\n"));
+    //D(bug("[%s] Start\n",__FUNCTION__ ));
 
     BOOL success = TRUE;
     APTR b;
@@ -282,8 +282,8 @@ BOOL SetFat16Entry(struct FSSuper *sb, ULONG n, ULONG val)
 
 BOOL SetFat32Entry(struct FSSuper *sb, ULONG n, ULONG val)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
+    //D(bug("----------------------------------------------------------------\n"));
+    //D(bug("[%s] Start\n",__FUNCTION__ ));
 
     BOOL success = TRUE;
     APTR b;

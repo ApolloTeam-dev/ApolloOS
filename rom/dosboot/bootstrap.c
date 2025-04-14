@@ -271,7 +271,6 @@ LONG dosboot_BootStrap(LIBBASETYPEPTR LIBBASE)
     struct BootNode *bn;
     int i, nodes;
 
-    D(bug("\n [BOOT] ApolloOS BootStrap\n"));
     /*
      * Try to boot from any device in the boot list, highest priority first. */
     ListLength(&ExpansionBase->MountList, nodes);

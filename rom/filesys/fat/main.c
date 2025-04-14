@@ -138,12 +138,6 @@ LONG handler(struct ExecBase *SysBase)
     D(bug("----------------------------------------------------------------\n"));
     D(bug("[%s] Start \n",__FUNCTION__ ));
 
-    for (int i=0;i<10000;i++)
-    {
-        D(bug("#"));
-    }
-    D(bug("\n"));
-    
     struct Globals *glob;
     struct Process *proc;
     struct MsgPort *mp;

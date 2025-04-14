@@ -84,9 +84,8 @@ static VOID SAGASD_log(struct sdcmd *sd, int level, const char *format, ...)
     va_end(args);
 }
 
-/* Execute the SD read or write command, return IOERR_* or TDERR_*
- */
-static LONG SAGASD_ReadWrite(struct IORequest *io, UQUAD off64, BOOL is_write)
+// Execute the SD read or write command, return IOERR_* or TDERR_*
+ static LONG SAGASD_ReadWrite(struct IORequest *io, UQUAD off64, BOOL is_write)
 {
     struct IOStdReq *iostd = (struct IOStdReq *)io;
     struct IOExtTD *iotd = (struct IOExtTD *)io;
@@ -176,13 +175,12 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
     LONG err;
     UBYTE r1;
 
-    //debug("len=%ld, cmd = %02lx %02lx %02lx ... (%ld)",
-            //iostd->io_Length, scsi->scsi_Command[0],
-            //scsi->scsi_Command[1], scsi->scsi_Command[2],
-            //scsi->scsi_CmdLength);
-    if (iostd->io_Length < sizeof(*scsi)) {
+    //debug("len=%ld, cmd = %02lx %02lx %02lx ... (%ld)", iostd->io_Length, scsi->scsi_Command[0], scsi->scsi_Command[1], scsi->scsi_Command[2], scsi->scsi_CmdLength);
+
+    if (iostd->io_Length < sizeof(*scsi))
+    {
         // RDPrep sends a bad io_Length sometimes
-        debug("[SAGASD] ERROR: Application sent wrong IO size | iostd->io_Length < sizeof(struct SCSICmd)");
+        debug("[SAGASD] WARNING: Application sent wrong IO size | iostd->io_Length < sizeof(struct SCSICmd)");
         //return IOERR_BADLENGTH;
     }
 
@@ -199,7 +197,8 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
         err = 0;
         break;
     case 0x12:      // INQUIRY
-        for (i = 0; i < scsi->scsi_Length; i++) {
+        for (i = 0; i < scsi->scsi_Length; i++)
+        {
             UBYTE val;
 
             switch (i) {
@@ -220,9 +219,9 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
                     break;
             default:
                     if (i >= 8 && i < 16)
-                        val = "Vampire "[i - 8];
+                        val = "Apollo  "[i - 8];
                     else if (i >= 16 && i < 32)
-                        val = "SAGA-SD        "[i - 16];
+                        val = "sagasd.device   "[i - 16];
                     else if (i >= 32 && i < 36)
                         val = ((UBYTE *)(((struct Library *)sd)->lib_IdString))[i-32];
                     else if (i >= 36 && i < 44) {

@@ -640,7 +640,7 @@ void mainloop(void) {
     signalbits |= 1 << globals->msgportnotify->mp_SigBit;
     signalbits |= 1 << globals->msgportflushtimer->mp_SigBit;
 
-    DD(bug("[SFS] Entering packet loop."));
+    DD(bug("[SFS] Entering packet loop\n\n"));
 
     for(;;) {
 

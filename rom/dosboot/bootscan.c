@@ -123,12 +123,9 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
         tags[4] = TAG_DONE;
         GetPartitionAttrs(pn, (struct TagItem *)tags);
 
-        /*
-         * 'Active' is not the same as 'Bootable'. Theoretically we can set Active flag for multiple
-         * partitions, but this may screw up Microsoft system software which expects to see only one
-         * active partition.
-         */
+        // Default behaviour is to give BOOT priority to RDB disks (user can choose in Early Startup)
         bootable = TRUE;
+        pp[4 + DE_BOOTPRI] = -1;
 
         /* make the name */
         devname = AROS_BSTR_ADDR(fssm->fssm_Device);
@@ -139,15 +136,20 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
             name[i] = (UBYTE)uppercase(*devname);
             devname++;
         }
+
         if ((fssm->fssm_Unit / 10))
             name[i++] = '0' + (UBYTE)(fssm->fssm_Unit / 10);
+        
         name[i++] = '0' + (UBYTE)(fssm->fssm_Unit % 10);
         name[i++] = 'P';
+        
         if (table->table->type == PHPTT_EBR)
             ppos += 4;
+        
         if ((ppos / 10))
             name[i++] = '0' + (UBYTE)(ppos / 10);
-        name[i++] = '0' + (UBYTE)(ppos % 10);
+        
+            name[i++] = '0' + (UBYTE)(ppos % 10);
         name[i] = '\0';
 
         D(bug("[BOOT] Partition name: %s\n", name));
