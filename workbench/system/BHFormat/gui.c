@@ -186,21 +186,27 @@ BOOL ObjectTypeOk(struct DosList* device)
 
 void ComputeCapacity(struct DosList *pdlVolume, struct InfoData *pInfoData)
 {
-	/* The units of the size are initially bytes, but we shift the
-	number until the units are kilobytes, megabytes or
-	something larger and the number of units has at most 4
-	digits. */
 	ULLONG cUnits;
-	/* The unit symbols go up to exabytes, since the maximum
-		possible disk size is 2^64 bytes = 16 exabytes. */
-	const char * pchUnitSymbol = _(MSG_UNITS);
+	ULONG UnitDecimal = 0;
+	char UnitString[10];
 
 	DD(bug("[FORMAT] Calculating capacity info...\n"));
 	cUnits = ibyEnd - ibyStart;
-	while( (cUnits >>= 10) > 9999 ) ++pchUnitSymbol;
+	while( (cUnits >>= 10) > 9999 ) UnitDecimal++;
 
-	RawDoFmtSz( szCapacityInfo, _(MSG_CAPACITY), (ULONG)cUnits, (ULONG)*pchUnitSymbol );
-	DD(bug("[FORMAT] Done: %s\n", szCapacityInfo));
+	switch(UnitDecimal)
+	{
+		case 0: strcpy(UnitString,"Bytes"); break;
+		case 1: strcpy(UnitString,"KiloBytes"); break;
+		case 2: strcpy(UnitString,"MegaBytes"); break;
+		case 3: strcpy(UnitString,"GigaBytes"); break;
+		case 4: strcpy(UnitString,"TeraBytes"); break;
+		case 5: strcpy(UnitString,"PetaBytes"); break;
+		case 6: strcpy(UnitString,"ExaBytes"); break;
+	}
+
+	RawDoFmtSz( szCapacityInfo, _(MSG_CAPACITY), (ULONG)cUnits, UnitString );
+	DD(bug("[FORMAT] Done: Unitstring:%s | szCapacityInfo:%s\n", UnitString, szCapacityInfo));
 }
 
 void VolumesToList(Object* listObject)
@@ -483,6 +489,8 @@ AROS_UFH3S(void, btn_format_function,
 	}
 
 cleanup:
+	DD(bug("[FORMAT] Format Finished, Cleaning Up and Exit\n" ));
+
 	DoMethod(app, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 
 	AROS_USERFUNC_EXIT
@@ -494,9 +502,13 @@ int rcGuiMain(void)
 	char szVolumeInfo[6+2+MAX_FS_NAME_LEN+2];
 	char szDeviceInfo[6+2+MAX_FS_NAME_LEN+2];
 	char szVolumeName[108];
+	char szDosType[11];
+	char szLowCyl[2];
+	char szHighCyl[10];
+
 	struct DosList *pdlDevice = NULL;
 	szVolumeInfo[0] = '\0';
-	struct FileLock * pflVolume = 0;
+	struct FileLock *pflVolume = 0;
 	static struct InfoData dinf __attribute__((aligned (4)));
 	LONG rc = RETURN_FAIL;
 
@@ -582,7 +594,36 @@ int rcGuiMain(void)
 
 	ComputeCapacity(pdlVolume, &dinf );
 
-	DD(bug("[FORMAT] Device = %s | Volume = %s | Capacity = %s\n", szDosDevice, szVolumeName, szCapacityInfo));
+	struct FileSysStartupMsg *fssm = BADDR(pdlDevice->dol_misc.dol_handler.dol_Startup);
+	struct DosEnvec *de = BADDR(fssm->fssm_Environ);
+
+	RawDoFmtSz(szDosType, "0x%08lx", de->de_DosType);
+	szDosType[10] = 0;
+
+	char szDosTypeName[5];
+	
+	for (int i = 0; i < 4; i++)
+	{
+		szDosTypeName[i] = (de->de_DosType >> ((3 - i) * 8)) & 0xff;
+
+		if (szDosTypeName[i] < 9)
+			szDosTypeName[i] += '0';
+		else if (szDosTypeName[i] < 32)
+			szDosTypeName[i] = '.';
+	}
+	szDosTypeName[4] = 0;
+
+	char szDosTypeString[8];
+
+	RawDoFmtSz( szDosTypeString, "\33c%s", szDosTypeName);
+
+	DD(bug("[FORMAT] DosType [0]=%lx | [1]=%lx | [2]=%lx | [3]=%lx | [4]%lx\n", szDosTypeName[0],szDosTypeName[1],szDosTypeName[2],szDosTypeName[3],szDosTypeName[4])); 
+
+	RawDoFmtSz( szLowCyl, "%lu", de->de_LowCyl);
+	RawDoFmtSz( szHighCyl, "%lu", de->de_HighCyl);
+		
+	DD(bug("[FORMAT] Device = %s | Volume = %s | Capacity = %s | DosType = %8lx = %s | LowCyl = %u | HighCyl = %u\n",
+		szDosDevice, szVolumeName, szCapacityInfo, de->de_DosType, szDosTypeString, de->de_LowCyl, de->de_HighCyl));
 
 	RawDoFmtSz( szTitle, _(MSG_WINDOW_TITLE), szDosDevice );
 	DD(bug("[FORMAT] Setting window title to '%s'\n", szTitle));
@@ -591,56 +632,65 @@ int rcGuiMain(void)
 
 	btn_format_hook.h_Entry = (HOOKFUNC)btn_format_function;
 
-	//RawDoFmtSz( szDeviceInfo, _(MSG_DEVICE), szDosDevice );
-	//RawDoFmtSz( szVolumeInfo, _(MSG_VOLUME), szVolumeName );
-
 	DD(bug("[FORMAT] Creating GUI...\n"));
 	
-	app = 	(Object *)ApplicationObject,
-			MUIA_Application_Title, __(MSG_APPLICATION_TITLE),
-			MUIA_Application_Version, (IPTR)szVersion,
-			MUIA_Application_Description, __(MSG_DESCRIPTION),
-			MUIA_Application_Copyright, __(MSG_COPYRIGHT),
-			MUIA_Application_Author, __(MSG_AUTHOR),
-			MUIA_Application_Base, (IPTR)"FORMAT",
-			MUIA_Application_SingleTask, FALSE,
+	app = (Object *)ApplicationObject,
+		MUIA_Application_Title, __(MSG_APPLICATION_TITLE),
+		MUIA_Application_Version, (IPTR)szVersion,
+		MUIA_Application_Description, __(MSG_DESCRIPTION),
+		MUIA_Application_Copyright, __(MSG_COPYRIGHT),
+		MUIA_Application_Author, __(MSG_AUTHOR),
+		MUIA_Application_Base, (IPTR)"FORMAT",
+		MUIA_Application_SingleTask, FALSE,
 
-			SubWindow, (IPTR)(mainwin = (Object *)WindowObject,
+		SubWindow, (IPTR)(mainwin = (Object *)WindowObject,
 			MUIA_Window_ID, MAKE_ID('F','R','M','1'),
 			MUIA_Window_Title, (IPTR)szTitle,
-				WindowContents, (IPTR)(VGroup,
 
-			Child, HGroup,
-				MUIA_Background,         MUII_SHINE,
-				MUIA_Frame,              MUIV_Frame_Group,
+			WindowContents, (IPTR)(VGroup,
+
+				Child, HGroup,
+					MUIA_Background,         MUII_SHINE,
+					MUIA_Frame,              MUIV_Frame_Group,
+					MUIA_Group_HorizSpacing, 4,
+					MUIA_Group_VertSpacing,  4,
+					Child, Label("\33c\33b ApolloFormat \33n\n\n    Enter Format Parameters    "),
+				End,
+
+				Child, (IPTR)(ColGroup(2),
 				MUIA_Group_HorizSpacing, 4,
 				MUIA_Group_VertSpacing,  4,
-				Child, Label("\33c\33b ApolloFormat \33n\n\n    Enter Format Parameters    "),
-			End,
-
-					Child, (IPTR)(ColGroup(2),
-					MUIA_Group_HorizSpacing, 4,
-					MUIA_Group_VertSpacing,  4,
+					
 					Child, (IPTR)LLabel2("Device:"),
-						Child, (IPTR)(TextObject, TextFrame, MUIA_FixWidth, 128, MUIA_Text_Contents, (IPTR)szDosDevice, End),
+					Child, (IPTR)(TextObject, TextFrame, MUIA_FixWidth, 128, MUIA_Text_Contents, (IPTR)szDosDevice, End),
+				
 					Child, (IPTR)LLabel2("Capacity:"),
-							Child, (IPTR)(TextObject, TextFrame, MUIA_Text_Contents, (IPTR)szCapacityInfo, End),
+					Child, (IPTR)(TextObject, TextFrame, MUIA_Text_Contents, (IPTR)szCapacityInfo, End),
+				
+					Child, LLabel2("DosType:"),
+					Child, HGroup,
+						Child, (IPTR)(TextObject, TextFrame, MUIA_Text_Contents, (IPTR)szDosType, End),
+						Child, (IPTR)(TextObject, TextFrame, MUIA_Text_Contents, (IPTR)szDosTypeString, End),
+					End,
+
 					Child, (IPTR)LLabel2("Volume:"),
-						Child, (IPTR)(str_volume = (Object *)StringObject, StringFrame, MUIA_String_Contents, (IPTR)szVolumeName, MUIA_String_MaxLen, MAX_FS_NAME_LEN, End),
+					Child, (IPTR)(str_volume = (Object *)StringObject, StringFrame, MUIA_String_Contents, (IPTR)szVolumeName, MUIA_String_MaxLen, MAX_FS_NAME_LEN, End),
+				
 					Child, (IPTR)LLabel2("Trashcan:"),
-							Child, (IPTR)(chk_trash = MUI_MakeObject(MUIO_Checkmark, NULL)),
-					End), /* ColGroup */
+					Child, (IPTR)(chk_trash = MUI_MakeObject(MUIO_Checkmark, NULL)),
+					
+				End), // ColGroup
 			
-					Child, (IPTR)(RectangleObject, MUIA_Rectangle_HBar, TRUE, MUIA_FixHeight, 2, End),
-					Child, (IPTR)(HGroup,
-					MUIA_Group_HorizSpacing, 4,
-					MUIA_Group_VertSpacing,  4,
-						Child, (IPTR)(btn_format  = SimpleButton( _(MSG_BTN_FORMAT) )),
-						Child, (IPTR)(btn_qformat = SimpleButton( _(MSG_BTN_QFORMAT))),
-						Child, (IPTR)(btn_cancel  = SimpleButton( _(MSG_BTN_CANCEL) )),
-					End), /* HGroup */
-				End), /* VGroup */
-			End), /* Window */
+				Child, (IPTR)(RectangleObject, MUIA_Rectangle_HBar, TRUE, MUIA_FixHeight, 2, End),
+				Child, (IPTR)(HGroup,
+				MUIA_Group_HorizSpacing, 4,
+				MUIA_Group_VertSpacing,  4,
+					Child, (IPTR)(btn_format  = SimpleButton( _(MSG_BTN_FORMAT) )),
+					Child, (IPTR)(btn_qformat = SimpleButton( _(MSG_BTN_QFORMAT))),
+					Child, (IPTR)(btn_cancel  = SimpleButton( _(MSG_BTN_CANCEL) )),
+				End), /* HGroup */
+			End), /* VGroup */
+		End), /* Window */
 
 		SubWindow, (IPTR)(formatwin = (Object *)WindowObject,
 		//MUIA_Window_ID, MAKE_ID('F','R','M','2'),

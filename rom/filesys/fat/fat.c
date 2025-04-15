@@ -307,8 +307,8 @@ BOOL SetFat32Entry(struct FSSuper *sb, ULONG n, ULONG val)
 
 LONG FindFreeCluster(struct FSSuper *sb, ULONG *rcluster)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
+    //D(bug("----------------------------------------------------------------\n"));
+    //D(bug("[%s] Start\n",__FUNCTION__ ));
 
     struct Globals *glob = sb->glob;
     ULONG cluster = 0;
@@ -344,7 +344,7 @@ LONG FindFreeCluster(struct FSSuper *sb, ULONG *rcluster)
 
     sb->next_cluster = *rcluster;
 
-    D(bug("[%s] Found free cluster %ld\n", __FUNCTION__, *rcluster));
+    //D(bug("[%s] Found free cluster %ld\n", __FUNCTION__, *rcluster));
 
     return 0;
 }
@@ -375,8 +375,8 @@ void CountFreeClusters(struct FSSuper *sb)
 
 void AllocCluster(struct FSSuper *sb, ULONG cluster)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
+    //D(bug("----------------------------------------------------------------\n"));
+    //D(bug("[%s] Start\n",__FUNCTION__ ));
 
     SET_NEXT_CLUSTER(sb, cluster, sb->eoc_mark);
     sb->free_clusters--;
@@ -390,8 +390,8 @@ void AllocCluster(struct FSSuper *sb, ULONG cluster)
 
 void FreeCluster(struct FSSuper *sb, ULONG cluster)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
+    //D(bug("----------------------------------------------------------------\n"));
+    //D(bug("[%s] Start\n",__FUNCTION__ ));
 
     SET_NEXT_CLUSTER(sb, cluster, 0);
     sb->free_clusters++;

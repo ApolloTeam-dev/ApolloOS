@@ -383,8 +383,6 @@ LONG ReadFATSuper(struct FSSuper *sb)
             D(bug("[%s] Finished allocating first cluster and obtaining handle on root\n", __FUNCTION__ ));
         }
 
-
-
         /* Clear all entries in the root directory */
         for (i = 0; err == 0 && GetDirEntry(&dh, i, &dir_entry, glob) == 0;
             i++)
@@ -527,10 +525,7 @@ static LONG GetVolumeIdentity(struct FSSuper *sb,
             volume->name[1] = de.e.entry.name[0];
             for (i = 1; i < FAT_MAX_SHORT_NAME; i++)
             {
-                if (volume->name[i] == ' ')
-                    volume->name[i + 1] = de.e.entry.name[i];
-                else
-                    volume->name[i + 1] = tolower(de.e.entry.name[i]);
+                volume->name[i + 1] = de.e.entry.name[i];
             }
 
             for (i = 10; volume->name[i + 1] == ' '; i--);
@@ -792,8 +787,7 @@ LONG SetVolumeName(struct FSSuper *sb, UBYTE *name, UWORD len)
     if (!boot)
         return ERROR_NO_FREE_STORE;
 
-    if ((td_err = AccessDisk(FALSE, sb->first_device_sector, 1, bsize,
-        (UBYTE *) boot, glob)) != 0)
+    if ((td_err = AccessDisk(FALSE, sb->first_device_sector, 1, bsize, (UBYTE *) boot, glob)) != 0)
     {
         D(bug("[%s] Couldn't read boot block (%ld)\n", __FUNCTION__ , td_err));
         FreeMem(boot, bsize);
@@ -867,9 +861,9 @@ LONG SetVolumeName(struct FSSuper *sb, UBYTE *name, UWORD len)
 
     /* Update name in SB */
     sb->volume.name[0] = len;
-    sb->volume.name[1] = toupper(name[0]);
+    sb->volume.name[1] = name[0];
     for (i = 1; i < len; i++)
-        sb->volume.name[i + 1] = tolower(name[i]);
+        sb->volume.name[i + 1] = name[i];
     sb->volume.name[len + 1] = '\0';
 
     D(bug("[%s] New volume name is '%s'\n", __FUNCTION__ , &(sb->volume.name[1])));
@@ -897,8 +891,8 @@ static void FreeFATSuper(struct FSSuper *sb)
 
 void FillDiskInfo(struct InfoData *id, struct Globals *glob)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[%s] Start\n",__FUNCTION__ ));
+    //D(bug("----------------------------------------------------------------\n"));
+    //D(bug("[%s] Start\n",__FUNCTION__ ));
 
     struct DosEnvec *de = BADDR(glob->fssm->fssm_Environ);
 

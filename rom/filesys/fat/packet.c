@@ -585,8 +585,7 @@ void ProcessPackets(struct Globals *glob)
 
                 D(
                     bug("[fat] RENAME_DISK: name '");
-                    RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg1),
-                        AROS_BSTR_strlen(pkt->dp_Arg1));
+                    RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg1), AROS_BSTR_strlen(pkt->dp_Arg1));
                     bug("'\n");
                 )
 
@@ -600,8 +599,7 @@ void ProcessPackets(struct Globals *glob)
                 while (!AttemptLockDosList(LDF_VOLUMES | LDF_WRITE))
                     ProcessPackets(glob);
 
-                err = SetVolumeName(glob->sb, AROS_BSTR_ADDR(pkt->dp_Arg1),
-                    AROS_BSTR_strlen(pkt->dp_Arg1));
+                err = SetVolumeName(glob->sb, AROS_BSTR_ADDR(pkt->dp_Arg1), AROS_BSTR_strlen(pkt->dp_Arg1));
                 UnLockDosList(LDF_VOLUMES | LDF_WRITE);
                 if (err != 0)
                     break;

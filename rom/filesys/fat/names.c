@@ -78,7 +78,7 @@ LONG GetDirEntryShortName(struct DirEntry *de, STRPTR name, ULONG *len,
     c = name;
     for (i = 0; i < FAT_MAX_SHORT_NAME; i++)
     {
-        *c = tolower(raw[i]);
+        *c = raw[i];
 
         /*
          * FAT names are weird. the name FOO.BAR is stored as "FOO     BAR".

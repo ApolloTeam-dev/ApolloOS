@@ -747,8 +747,7 @@ static BOOL bTransferCylinder(
 }
 
 
-BOOL bMakeFileSys( BOOL bFFS, BOOL bOFS, BOOL bIntl, BOOL bNoIntl,
-		   BOOL bDirCache, BOOL bNoDirCache )
+BOOL bMakeFileSys( BOOL bFFS, BOOL bOFS, BOOL bIntl, BOOL bNoIntl, BOOL bDirCache, BOOL bNoDirCache )
 {
     if(!bFstSet)
     {
@@ -777,26 +776,23 @@ BOOL bMakeFileSys( BOOL bFFS, BOOL bOFS, BOOL bIntl, BOOL bNoIntl,
 
     if(!bInhibited)
     {
-	*pchDosDeviceColon = ':';
-	DD(bug("[FORMAT] Inhibit( \"%s\", DOSTRUE );\n", (ULONG)szDosDevice ));
-	if(!Inhibit( szDosDevice, DOSTRUE ))
-	{
-	    /* This is a bit stupid, but compatible with v40 Format */
-	    ReportErrSz( ertFailure, ERROR_OBJECT_WRONG_TYPE, 0 );
-	    return FALSE;
-	}
-	bInhibited = TRUE;
+		*pchDosDeviceColon = ':';
+		DD(bug("[FORMAT] Inhibit( \"%s\", DOSTRUE );\n", (ULONG)szDosDevice ));
+		if(!Inhibit( szDosDevice, DOSTRUE ))
+		{
+			/* This is a bit stupid, but compatible with v40 Format */
+			ReportErrSz( ertFailure, ERROR_OBJECT_WRONG_TYPE, 0 );
+			return FALSE;
+		}
+		bInhibited = TRUE;
     }
 
-    DD(bug("[FORMAT] Format( \"%s\", \"%s\", 0x%08lx );\n",
-	      (ULONG)szDosDevice, (ULONG)(szVolume + 1), fstCurrent ));
-    if( !Format( szDosDevice,
-		 (DOSBase->dl_lib.lib_Version == 36) ?
-		 (char *)MKBADDR(szVolume) : szVolume + 1,
-		 fstCurrent ) )
+    DD(bug("[FORMAT] Format( \"%s\", \"%s\", 0x%08lx );\n", (ULONG)szDosDevice, (ULONG)(szVolume + 1), fstCurrent ));
+
+    if( !Format( szDosDevice, (DOSBase->dl_lib.lib_Version == 36) ? (char *)MKBADDR(szVolume) : szVolume + 1, fstCurrent ) )
     {
-	ReportErrSz( ertFailure, 0, 0 );
-	return FALSE;
+		ReportErrSz( ertFailure, 0, 0 );
+		return FALSE;
     }
 
     return TRUE;
