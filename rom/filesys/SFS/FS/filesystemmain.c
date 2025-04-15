@@ -260,7 +260,7 @@ LONG mainprogram(struct ExecBase *SysBase) {
 	}
 #endif
 
-DD(bug("----------------------------------------------------------------\n"));
+DD(bug("\n----------------------------------------------------------------\n"));
 DD(bug("[SFS] Filesystem main\n"));
 
 #ifndef __AROS__
@@ -289,6 +289,7 @@ DD(bug("[SFS] Filesystem main\n"));
         globals->devnode = (struct DeviceNode *)BADDR(globals->packet->dp_Arg3);
         globals->devnode->dn_Task = &globals->mytask->pr_MsgPort;
         globals->startupmsg = BADDR(globals->devnode->dn_Startup);
+        DD(bug("[SFS] DEVICE = %s\n", AROS_BSTR_ADDR(globals->devnode->dn_Name)));
         DD(bug("[SFS] devnode = %p\n", globals->devnode));
         DD(bug("[SFS] startupmsg = %p\n", globals->startupmsg));
 

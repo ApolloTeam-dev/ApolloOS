@@ -48,13 +48,9 @@ void ProcessPackets(struct Globals *glob)
                 LONG access = pkt->dp_Arg3;
 
                 D(
-                    bug("[FAT] LOCATE_OBJECT: lock 0x%08x (dir %ld/%ld) name '",
-                        pkt->dp_Arg1, fl != NULL ? fl->gl->dir_cluster : 0,
-                        fl != NULL ? fl->gl->dir_entry : 0);
-                    RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg2),
-                        AROS_BSTR_strlen(pkt->dp_Arg2));
-                    bug("' type %s\n", pkt->dp_Arg3 == EXCLUSIVE_LOCK ?
-                        "EXCLUSIVE" : "SHARED");
+                    bug("[FAT] ACTION_LOCATE_OBJECT: lock = 0x%08x (dir %ld/%ld)\n", pkt->dp_Arg1, fl != NULL ? fl->gl->dir_cluster : 0, fl != NULL ? fl->gl->dir_entry : 0);
+                    bug("\t- name = "); RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg2), AROS_BSTR_strlen(pkt->dp_Arg2)); bug("\n");
+                    bug("\t- type = %s\n", pkt->dp_Arg3 == EXCLUSIVE_LOCK ? "EXCLUSIVE" : "SHARED");
                 )
 
                 if ((err = TestLock(fl, glob)))
@@ -72,10 +68,7 @@ void ProcessPackets(struct Globals *glob)
             {
                 struct ExtFileLock *fl = BADDR(pkt->dp_Arg1);
 
-                D(bug("[FAT] FREE_LOCK: lock 0x%08x (dir %ld/%ld)\n",
-                    pkt->dp_Arg1,
-                    fl != NULL ? fl->gl->dir_cluster : 0,
-                    fl != NULL ? fl->gl->dir_entry : 0));
+                D(bug("[FAT] ACTION_FREE_LOCK: lock = 0x%08x (dir %ld/%ld)\n", pkt->dp_Arg1, fl != NULL ? fl->gl->dir_cluster : 0, fl != NULL ? fl->gl->dir_entry : 0));
 
                 OpUnlockFile(fl, glob);
 
@@ -88,10 +81,7 @@ void ProcessPackets(struct Globals *glob)
             {
                 struct ExtFileLock *fl = BADDR(pkt->dp_Arg1), *lock;
 
-                D(bug("[FAT] COPY_DIR: lock 0x%08x (dir %ld/%ld)\n",
-                    pkt->dp_Arg1,
-                    fl != NULL ? fl->gl->dir_cluster : 0,
-                    fl != NULL ? fl->gl->dir_entry : 0));
+                D(bug("[FAT] ACTION_COPY_DIR: lock = 0x%08x (dir %ld/%ld)\n", pkt->dp_Arg1, fl != NULL ? fl->gl->dir_cluster : 0, fl != NULL ? fl->gl->dir_entry : 0));
 
                 if ((err = TestLock(fl, glob)))
                     break;
@@ -107,7 +97,7 @@ void ProcessPackets(struct Globals *glob)
             {
                 struct ExtFileLock *fl = BADDR(pkt->dp_Arg1), *lock;
 
-                D(bug("[FAT] ACTION_PARENT: lock 0x%08x (dir %ld/%ld)\n",
+                D(bug("[FAT] ACTION_PARENT: lock = 0x%08x (dir %ld/%ld)\n",
                     pkt->dp_Arg1,
                     fl != NULL ? fl->gl->dir_cluster : 0,
                     fl != NULL ? fl->gl->dir_entry : 0));
@@ -126,8 +116,7 @@ void ProcessPackets(struct Globals *glob)
                 struct ExtFileLock *fl1 = BADDR(pkt->dp_Arg1);
                 struct ExtFileLock *fl2 = BADDR(pkt->dp_Arg2);
 
-                D(bug("[FAT] ACTION_SAME_LOCK: lock #1 0x%08x (dir %ld/%ld)"
-                    " lock #2 0x%08x (dir %ld/%ld)\n",
+                D(bug("[FAT] ACTION_SAME_LOCK: lock #1 = 0x%08x (dir %ld/%ld) lock #2 = 0x%08x (dir %ld/%ld)\n",
                     pkt->dp_Arg1,
                     fl1 != NULL ? fl1->gl->dir_cluster : 0,
                     fl1 != NULL ? fl1->gl->dir_entry : 0, pkt->dp_Arg2,
@@ -148,7 +137,7 @@ void ProcessPackets(struct Globals *glob)
                 struct ExtFileLock *fl = BADDR(pkt->dp_Arg1);
                 struct FileInfoBlock *fib = BADDR(pkt->dp_Arg2);
 
-                D(bug("[FAT] EXAMINE_OBJECT: lock 0x%08x (dir %ld/%ld)\n",
+                D(bug("[FAT] ACTION_EXAMINE_OBJECT: lock = 0x%08x (dir %ld/%ld)\n",
                     pkt->dp_Arg1,
                     fl != NULL ? fl->gl->dir_cluster : 0,
                     fl != NULL ? fl->gl->dir_entry : 0));
@@ -169,7 +158,7 @@ void ProcessPackets(struct Globals *glob)
                 struct DirHandle dh;
                 struct DirEntry de;
 
-                D(bug("[FAT] EXAMINE_NEXT: lock 0x%08x (dir %ld/%ld)\n",
+                D(bug("[FAT] ACTION_EXAMINE_NEXT: lock = 0x%08x (dir %ld/%ld)\n",
                     pkt->dp_Arg1,
                     fl != NULL ? fl->gl->dir_cluster : 0,
                     fl != NULL ? fl->gl->dir_entry : 0));
@@ -219,7 +208,7 @@ void ProcessPackets(struct Globals *glob)
                 struct ExtFileLock *lock;
 
                 D(
-                    bug("[FAT] %s: lock 0x%08x (dir %ld/%ld) path '",
+                    bug("[FAT] %s: lock = 0x%08x (dir %ld/%ld) path '",
                         pkt->dp_Type == ACTION_FINDINPUT ? "FINDINPUT" :
                         pkt->dp_Type == ACTION_FINDOUTPUT ? "FINDOUTPUT" :
                         "FINDUPDATE",
@@ -253,8 +242,7 @@ void ProcessPackets(struct Globals *glob)
                 APTR buffer = (APTR) pkt->dp_Arg2;
                 ULONG want = pkt->dp_Arg3, read;
 
-                D(bug("[FAT] READ: lock 0x%08x (dir %ld/%ld pos %ld)"
-                    " want %ld\n",
+                D(bug("[FAT] ACTION_READ: lock = 0x%08x (dir %ld/%ld pos %ld) want = %ld\n",
                     pkt->dp_Arg1, fl != NULL ? fl->gl->dir_cluster : 0,
                     fl != NULL ? fl->gl->dir_entry : 0, fl->pos, want));
 
@@ -278,8 +266,7 @@ void ProcessPackets(struct Globals *glob)
                 APTR buffer = (APTR) pkt->dp_Arg2;
                 ULONG want = pkt->dp_Arg3, written;
 
-                D(bug("[FAT] WRITE: lock 0x%08x (dir %ld/%ld pos %ld)"
-                    " want %ld\n",
+                D(bug("[FAT] ACTION_WRITE: lock = 0x%08x (dir %ld/%ld pos %ld) want = %ld\n",
                     pkt->dp_Arg1, fl != NULL ? fl->gl->dir_cluster : 0,
                     fl != NULL ? fl->gl->dir_entry : 0, fl->pos, want));
 
@@ -303,8 +290,7 @@ void ProcessPackets(struct Globals *glob)
                 LONG offset = pkt->dp_Arg2;
                 ULONG whence = pkt->dp_Arg3;
 
-                D(bug("[FAT] SEEK: lock 0x%08x (dir %ld/%ld pos %ld)"
-                    " offset %ld whence %s\n",
+                D(bug("[FAT] ACTION_SEEK: lock = 0x%08x (dir %ld/%ld pos %ld) offset = %ld whence = %s\n",
                     pkt->dp_Arg1, fl != NULL ? fl->gl->dir_cluster : 0,
                     fl != NULL ? fl->gl->dir_entry : 0, fl->pos, offset,
                     whence == OFFSET_BEGINNING ? "BEGINNING" :
@@ -347,8 +333,7 @@ void ProcessPackets(struct Globals *glob)
                 LONG whence = pkt->dp_Arg3;
                 LONG newsize;
 
-                D(bug("[FAT] SET_FILE_SIZE: lock 0x%08x"
-                    " (dir %ld/%ld pos %ld) offset %ld whence %s\n",
+                D(bug("[FAT] ACTION_SET_FILE_SIZE: lock = 0x%08x (dir %ld/%ld pos %ld) offset = %ld whence = %s\n",
                     pkt->dp_Arg1, fl != NULL ? fl->gl->dir_cluster : 0,
                     fl != NULL ? fl->gl->dir_entry : 0, fl->pos, offset,
                     whence == OFFSET_BEGINNING ? "BEGINNING" :
@@ -375,7 +360,7 @@ void ProcessPackets(struct Globals *glob)
             {
                 struct ExtFileLock *fl = BADDR(pkt->dp_Arg1);
 
-                D(bug("[FAT] END: lock 0x%08x (dir %ld/%ld)\n",
+                D(bug("[FAT] ACTION_END: lock = 0x%08x (dir %ld/%ld)\n",
                     pkt->dp_Arg1,
                     fl != NULL ? fl->gl->dir_cluster : 0,
                     fl != NULL ? fl->gl->dir_entry : 0));
@@ -390,7 +375,7 @@ void ProcessPackets(struct Globals *glob)
             }
 
         case ACTION_IS_FILESYSTEM:
-            D(bug("[FAT] IS_FILESYSTEM\n"));
+            D(bug("[FAT] ACTION_IS_FILESYSTEM\n"));
 
             res = DOSTRUE;
             break;
@@ -399,7 +384,7 @@ void ProcessPackets(struct Globals *glob)
             {
                 struct ExtFileLock *fl = BADDR(pkt->dp_Arg1);
 
-                D(bug("[FAT] CURRENT_VOLUME: lock 0x%08x\n", pkt->dp_Arg1));
+                D(bug("[FAT] ACTION_CURRENT_VOLUME: lock = 0x%08x\n", pkt->dp_Arg1));
 
                 res = (IPTR) ((fl) ? fl->fl_Volume : ((glob->sb != NULL) ?
                     MKBADDR(glob->sb->doslist) : BNULL));
@@ -415,7 +400,7 @@ void ProcessPackets(struct Globals *glob)
                 {
                     struct FileLock *fl = BADDR(pkt->dp_Arg1);
 
-                    D(bug("[FAT] INFO: lock 0x%08x\n", pkt->dp_Arg1));
+                    D(bug("[FAT] ACTION_INFO: lock = 0x%08x\n", pkt->dp_Arg1));
 
                     if (fl && (glob->sb == NULL
                         || fl->fl_Volume != MKBADDR(glob->sb->doslist)))
@@ -428,7 +413,7 @@ void ProcessPackets(struct Globals *glob)
                 }
                 else
                 {
-                    D(bug("[FAT] DISK_INFO\n"));
+                    //D(bug("[FAT] ACTION_DISK_INFO\n"));
 
                     id = BADDR(pkt->dp_Arg1);
                 }
@@ -443,7 +428,7 @@ void ProcessPackets(struct Globals *glob)
             {
                 LONG inhibit = pkt->dp_Arg1;
 
-                D(bug("[FAT] INHIBIT: %sinhibit\n",
+                D(bug("[FAT] ACTION_INHIBIT: %sinhibit\n",
                     inhibit == DOSTRUE ? "" : "un"));
 
                 if (inhibit == DOSTRUE)
@@ -468,10 +453,9 @@ void ProcessPackets(struct Globals *glob)
                 struct FSSuper *sb;
                 struct NotifyNode *nn;
 
-                D(bug("[FAT] DIE\n"));
+                D(bug("[FAT] ACTION_DIE\n"));
 
-                /* Clear our message port from notification requests so DOS
-                 * won't send notification-end packets to us after we're gone */
+                /* Clear our message port from notification requests so DOS won't send notification-end packets to us after we're gone */
                 ForeachNode(&glob->sblist, sb)
                 {
                     ForeachNode(&sb->info->notifies, nn)
@@ -485,14 +469,13 @@ void ProcessPackets(struct Globals *glob)
                     && IsListEmpty(&glob->sb->info->notifies))))
                 {
 
-                    D(bug("\tThere are remaining locks or notification "
-                        "requests. Shutting down is not possible\n"));
+                    D(bug("\t- WARNING: Remaining locks/notifications - Shutdown NOT possible\n"));
 
                     err = ERROR_OBJECT_IN_USE;
                     break;
                 }
 
-                D(bug("\tNothing pending. Shutting down the handler\n"));
+                D(bug("\t- CLEAR: Nothing pending. Shutting down Handler\n"));
 
                 /* Risky, because of async. volume remove, but works */
                 DoDiskRemove(glob);
@@ -529,11 +512,10 @@ void ProcessPackets(struct Globals *glob)
         case ACTION_DISK_CHANGE:    /* Internal */
             {
                 struct DosList *vol = (struct DosList *)pkt->dp_Arg2;
-                struct VolumeInfo *vol_info =
-                    BADDR(vol->dol_misc.dol_volume.dol_LockList);
+                struct VolumeInfo *vol_info = BADDR(vol->dol_misc.dol_volume.dol_LockList);
                 ULONG type = pkt->dp_Arg3;
 
-                D(bug("[FAT] DISK_CHANGE [INTERNAL]\n"));
+                D(bug("[FAT] ACTION_DISK_CHANGE (Internal):\n"));
 
                 if (pkt->dp_Arg1 == ID_FAT_DISK)    /* Security check */
                 {
@@ -546,7 +528,7 @@ void ProcessPackets(struct Globals *glob)
 
                             SendEvent(IECLASS_DISKINSERTED, glob);
 
-                            D(bug("\tVolume added\n"));
+                            D(bug("\t- Volume added\n"));
                         }
                         else if (type == ACTION_VOLUME_REMOVE)
                         {
@@ -556,22 +538,19 @@ void ProcessPackets(struct Globals *glob)
 
                             SendEvent(IECLASS_DISKREMOVED, glob);
 
-                            D(bug("\tVolume removed\n"));
+                            D(bug("\t-Volume removed\n"));
                         }
 
                         FreeDosObject(DOS_STDPKT, pkt); /* Cleanup */
 
                         pkt = NULL;
-                        D(bug("Packet destroyed\n"));
-                    }
-
-                    else
-                    {
-                        D(bug("\tDosList is locked\n"));
+                        D(bug("\t- Packet destroyed\n"));
+                    } else {
+                        D(bug("\t- DosList is locked\n"));
                         Delay(5);
                         PutMsg(glob->ourport, pkt->dp_Link);
                         pkt = NULL;
-                        D(bug("Message moved to the end of the queue\n"));
+                        D(bug("\t- Message moved to queue end\n"));
                     }
                 }
                 else
@@ -584,7 +563,7 @@ void ProcessPackets(struct Globals *glob)
             {
 
                 D(
-                    bug("[FAT] RENAME_DISK: name '");
+                    bug("[FAT] ACTION_RENAME_DISK: name '");
                     RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg1), AROS_BSTR_strlen(pkt->dp_Arg1));
                     bug("'\n");
                 )
@@ -628,7 +607,7 @@ void ProcessPackets(struct Globals *glob)
         case ACTION_FORMAT:
             {
                 D(
-                    bug("[FAT] FORMAT: name '");
+                    bug("[FAT] ACTION_FORMAT: name '");
                     RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg1),
                         AROS_BSTR_strlen(pkt->dp_Arg1));
                     bug("'\n");
@@ -656,13 +635,8 @@ void ProcessPackets(struct Globals *glob)
                 struct ExtFileLock *fl = BADDR(pkt->dp_Arg1);
 
                 D(
-                    bug("[FAT] DELETE_OBJECT:"
-                        " lock 0x%08x (dir %ld/%ld) path '",
-                        pkt->dp_Arg1, fl != NULL ? fl->gl->dir_cluster : 0,
-                        fl != NULL ? fl->gl->dir_entry : 0);
-                    RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg2),
-                        AROS_BSTR_strlen(pkt->dp_Arg2));
-                    bug("'\n");
+                    bug("[FAT] ACTION_DELETE_OBJECT: lock = 0x%08x (dir %ld/%ld)\n", pkt->dp_Arg1, fl != NULL ? fl->gl->dir_cluster : 0, fl != NULL ? fl->gl->dir_entry : 0);
+                    bug("\t- path = "); RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg2), AROS_BSTR_strlen(pkt->dp_Arg2)); bug("\n");
                 )
 
                 if ((err = TestLock(fl, glob)))
@@ -682,20 +656,11 @@ void ProcessPackets(struct Globals *glob)
                     BADDR(pkt->dp_Arg3);
 
                 D(
-                    bug("[FAT] RENAME_OBJECT:"
-                    " srclock 0x%08x (dir %ld/%ld) name '",
-                        pkt->dp_Arg1,
-                        sfl != NULL ? sfl->gl->dir_cluster : 0,
-                        sfl != NULL ? sfl->gl->dir_entry : 0);
-                    RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg2),
-                        AROS_BSTR_strlen(pkt->dp_Arg2));
-                    bug("' destlock 0x%08x (dir %ld/%ld) name '",
-                        pkt->dp_Arg3,
-                        dfl != NULL ? dfl->gl->dir_cluster : 0,
-                        dfl != NULL ? dfl->gl->dir_entry : 0);
-                    RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg4),
-                        AROS_BSTR_strlen(pkt->dp_Arg4));
-                    bug("'\n");
+                    bug("[FAT] ACTION_RENAME_OBJECT:\n");
+                    bug("\t- srclock = 0x%08x (dir %ld/%ld)\n", pkt->dp_Arg1, sfl != NULL ? sfl->gl->dir_cluster : 0, sfl != NULL ? sfl->gl->dir_entry : 0);
+                    bug("\t- name = "); RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg2), AROS_BSTR_strlen(pkt->dp_Arg2)); bug("\n");
+                    bug("\t- destlock = 0x%08x (dir %ld/%ld)\n", pkt->dp_Arg3, dfl != NULL ? dfl->gl->dir_cluster : 0, dfl != NULL ? dfl->gl->dir_entry : 0);
+                    bug("\t- name = "); RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg4), AROS_BSTR_strlen(pkt->dp_Arg4)); bug("\n");
                 )
 
                 if ((err = TestLock(sfl, glob)) != 0
@@ -717,13 +682,8 @@ void ProcessPackets(struct Globals *glob)
                 struct ExtFileLock *fl = BADDR(pkt->dp_Arg1), *new;
 
                 D(
-                    bug("[FAT] CREATE_DIR: lock 0x%08x (dir %ld/%ld) name '",
-                        pkt->dp_Arg1,
-                        fl != NULL ? fl->gl->dir_cluster : 0,
-                        fl != NULL ? fl->gl->dir_entry : 0);
-                    RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg2),
-                        AROS_BSTR_strlen(pkt->dp_Arg2));
-                    bug("'\n");
+                    bug("[FAT] ACTION_CREATE_DIR: lock = 0x%08x (dir %ld/%ld)\n", pkt->dp_Arg1, fl != NULL ? fl->gl->dir_cluster : 0, fl != NULL ? fl->gl->dir_entry : 0);
+                    bug("\t- name = "); RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg2), AROS_BSTR_strlen(pkt->dp_Arg2)); bug("'\n");
                 )
 
                 if ((err = TestLock(fl, glob)))
@@ -742,13 +702,11 @@ void ProcessPackets(struct Globals *glob)
                 ULONG prot = pkt->dp_Arg4;
 
                 D(
-                    bug("[FAT] SET_PROTECT: lock 0x%08x (dir %ld/%ld) name '",
-                        pkt->dp_Arg2, fl != NULL ? fl->gl->dir_cluster : 0,
-                        fl != NULL ? fl->gl->dir_entry : 0);
-                    RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg3),
-                        AROS_BSTR_strlen(pkt->dp_Arg3));
-                    bug("' prot 0x%08x\n", prot);
+                    bug("[FAT] ACTION_SET_PROTECT: lock = 0x%08x (dir %ld/%ld)\n", pkt->dp_Arg2, fl != NULL ? fl->gl->dir_cluster : 0, fl != NULL ? fl->gl->dir_entry : 0);
+                    bug("\t- name = "); RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg3), AROS_BSTR_strlen(pkt->dp_Arg3)); bug("\n");
+                    bug("\t- prot = 0x%08x\n", prot);
                 )
+
                 if ((err = TestLock(fl, glob)))
                     break;
 
@@ -777,13 +735,9 @@ void ProcessPackets(struct Globals *glob)
                     DateToStr(&dt);
 
                     D(
-                        bug("[FAT] SET_DATE: lock 0x%08x (dir %ld/%ld) name '",
-                            pkt->dp_Arg2,
-                            fl != NULL ? fl->gl->dir_cluster : 0,
-                            fl != NULL ? fl->gl->dir_entry : 0);
-                        RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg3),
-                            AROS_BSTR_strlen(pkt->dp_Arg3));
-                        bug("' ds '%s'\n", datestr);
+                        bug("[FAT] ACTION_SET_DATE: lock = 0x%08x (dir %ld/%ld)\n", pkt->dp_Arg2, fl != NULL ? fl->gl->dir_cluster : 0, fl != NULL ? fl->gl->dir_entry : 0);
+                        bug("\t- name = "); RawPutChars(AROS_BSTR_ADDR(pkt->dp_Arg3), AROS_BSTR_strlen(pkt->dp_Arg3)); bug("\n");
+                        bug("\t- ds = '%s'\n", datestr);
                     )
                 }
 #endif
@@ -802,8 +756,7 @@ void ProcessPackets(struct Globals *glob)
                 struct NotifyRequest *nr =
                     (struct NotifyRequest *)pkt->dp_Arg1;
 
-                D(bug("[FAT] ADD_NOTIFY: nr 0x%08x name '%s'\n", nr,
-                    nr->nr_FullName));
+                D(bug("[FAT] ACTION_ADD_NOTIFY: nr = 0x%08x name = '%s'\n", nr, nr->nr_FullName));
 
                 err = OpAddNotify(nr, glob);
 
@@ -815,8 +768,7 @@ void ProcessPackets(struct Globals *glob)
                 struct NotifyRequest *nr =
                     (struct NotifyRequest *)pkt->dp_Arg1;
 
-                D(bug("[FAT] REMOVE_NOTIFY: nr 0x%08x name '%s'\n", nr,
-                    nr->nr_FullName));
+                D(bug("[FAT] ACTION_REMOVE_NOTIFY: nr = 0x%08x name = '%s'\n", nr, nr->nr_FullName));
 
                 err = OpRemoveNotify(nr, glob);
 
@@ -824,7 +776,7 @@ void ProcessPackets(struct Globals *glob)
             }
 
         default:
-            D(bug("[FAT] got unknown packet type %ld\n", pkt->dp_Type));
+            D(bug("[FAT] ERROR_ACTION_NOT_KNOWN = %ld\n", pkt->dp_Type));
 
             err = ERROR_ACTION_NOT_KNOWN;
         }
@@ -835,8 +787,7 @@ void ProcessPackets(struct Globals *glob)
             pkt->dp_Res2 = err;
             if (!glob->quit)
             {
-                D(bug("[FAT] replying to packet: result 0x%lx, error %ld\n",
-                    res, err));
+                //D(bug("[FAT] Replying to packet: result = 0x%lx | error = %ld\n", res, err));
                 ReplyPacket(pkt, SysBase);
             }
         }

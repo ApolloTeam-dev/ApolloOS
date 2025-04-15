@@ -935,11 +935,10 @@ void FillDiskInfo(struct InfoData *id, struct Globals *glob)
     }
 }
 
-static void SendVolumePacket(struct DosList *vol, ULONG action,
-    struct Globals *glob)
+static void SendVolumePacket(struct DosList *vol, ULONG action, struct Globals *glob)
 {
-    D(bug("----------------------------------------------------------------\n"));
-    D(bug("[FAT] [%s] Start\n",__FUNCTION__ ));
+    //D(bug("----------------------------------------------------------------\n"));
+    D(bug("[FAT] [%s] ACTION_DISK_CHANGE\n",__FUNCTION__ ));
 
     struct DosPacket *dospacket;
 
@@ -1129,7 +1128,6 @@ void DoDiskInsert(struct Globals *glob)
 
 BOOL AttemptDestroyVolume(struct FSSuper *sb)
 {
-    D(bug("----------------------------------------------------------------\n"));
     D(bug("[FAT] [%s] Start\n",__FUNCTION__ ));
 
     struct Globals *glob = sb->glob;
@@ -1138,8 +1136,8 @@ BOOL AttemptDestroyVolume(struct FSSuper *sb)
     D(bug("[FAT] [%s] Attempting to destroy volume\n",__FUNCTION__ ));
 
     /* Check if the volume can be removed */
-    //if (IsListEmpty(&sb->info->locks) && IsListEmpty(&sb->info->notifies))
-    //{
+    if (IsListEmpty(&sb->info->locks) && IsListEmpty(&sb->info->notifies))
+    {
         D(bug("[FAT] [%s] Removing volume completely\n", __FUNCTION__ ));
 
         if (sb == glob->sb)
@@ -1158,7 +1156,7 @@ BOOL AttemptDestroyVolume(struct FSSuper *sb)
         D(bug("[FAT] [%s] SuperBlock Freed completely\n", __FUNCTION__ ));
 
         destroyed = TRUE;
-    //}
+    }
 
     return destroyed;
 }
@@ -1166,7 +1164,7 @@ BOOL AttemptDestroyVolume(struct FSSuper *sb)
 void DoDiskRemove(struct Globals *glob)
 {
     D(bug("----------------------------------------------------------------\n"));
-    D(bug("[FAT] [%s] Start\n",__FUNCTION__ ));
+    D(bug("[FAT] [%s] %s\n",__FUNCTION__, AROS_BSTR_ADDR(glob->sb->doslist->dol_Name) ));
 
     if (glob->sb)
     {
@@ -1181,4 +1179,5 @@ void DoDiskRemove(struct Globals *glob)
             SendEvent(IECLASS_DISKREMOVED, glob);
         }
     }
+    D(bug("\n"));
 }

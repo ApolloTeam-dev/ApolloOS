@@ -37,17 +37,16 @@ static void DumpLocks(struct FSSuper *sb, struct Globals *glob)
     struct GlobalLock *gl;
     ULONG count;
 
-    D(bug("[FAT] global locks:\n"));
-
     ListLength(&sb->info->root_lock.locks, count);
-    bug("    root: %ld references\n", count);
+
+    D(bug("[FAT] [%s] Global Locks Root: %ld references:\n",__FUNCTION__, count));
 
     ForeachNode(&sb->info->locks, gl)
     {
         ListLength(&gl->locks, count);
-        D(bug("    (%ld/%ld) ", gl->dir_cluster, gl->dir_entry));
+        D(bug("\t(%ld/%ld) ", gl->dir_cluster, gl->dir_entry));
         RawPutChars(&(gl->name[1]), gl->name[0]);
-        bug(": %ld references\n", count);
+        D(bug(": %ld references\n", count));
     }
 }
 #endif
@@ -105,7 +104,7 @@ LONG LockFileByName(struct ExtFileLock *fl, UBYTE *name, LONG namelen,
     /* The . and .. entries are invisible to the user */
     if (name[0] == '.' && (namelen == 1 || (name[1] == '.' && namelen == 2)))
     {
-        D(bug("[FAT] not allowing access to '.' or '..' entries\n"));
+        D(bug("[FAT] [%s] not allowing access to '.' or '..' entries\n",__FUNCTION__));
         return ERROR_OBJECT_NOT_FOUND;
     }
 
@@ -118,7 +117,7 @@ LONG LockFileByName(struct ExtFileLock *fl, UBYTE *name, LONG namelen,
         dir_cluster = fl->gl->dir_cluster;
 
     D(
-        bug("[FAT] trying to obtain lock on '");
+        bug("[FAT] [%s] trying to obtain lock on '",__FUNCTION__);
         RawPutChars(name, namelen);
         bug("' in dir at cluster %ld\n", dir_cluster);
     )
@@ -130,7 +129,7 @@ LONG LockFileByName(struct ExtFileLock *fl, UBYTE *name, LONG namelen,
     if ((err = GetDirEntryByPath(&dh, name, namelen, &de, glob)) != 0)
     {
         ReleaseDirHandle(&dh, glob);
-        D(bug("[FAT] couldn't get lock\n"));
+        D(bug("[FAT] [%s] couldn't get lock\n",__FUNCTION__));
         return err;
     }
 
@@ -155,8 +154,7 @@ LONG LockFile(ULONG dir_cluster, ULONG dir_entry, LONG access,
     struct DirEntry de;
     ULONG len;
 
-    D(bug("[FAT] locking file (%ld/%ld) (%s)\n", dir_cluster, dir_entry,
-        access == SHARED_LOCK ? "shared" : "exclusive"));
+    D(bug("[FAT] [%s] locking file (%ld/%ld) (%s)\n",__FUNCTION__, dir_cluster, dir_entry, access == SHARED_LOCK ? "shared" : "exclusive"));
 
     /* First see if we already have a global lock for this file */
     gl = NULL;
@@ -173,7 +171,7 @@ LONG LockFile(ULONG dir_cluster, ULONG dir_entry, LONG access,
     /* If we do and we're trying for an exclusive lock, then bail out */
     if (gl != NULL && access == EXCLUSIVE_LOCK)
     {
-        D(bug("[FAT] can't obtain exclusive lock on already-locked file\n"));
+        D(bug("[FAT] [%s] can't obtain exclusive lock on already-locked file\n",__FUNCTION__));
         return ERROR_OBJECT_IN_USE;
     }
 
@@ -224,7 +222,7 @@ LONG LockFile(ULONG dir_cluster, ULONG dir_entry, LONG access,
 
         ADDTAIL(&glob->sb->info->locks, gl);
 
-        D(bug("[FAT] created new global lock\n"));
+        D(bug("[FAT] [%s] created new global lock\n",__FUNCTION__));
 
         /* Look through the notify list. If there's any in there that aren't
          * currently attached to a global lock, expand them and if they are
@@ -236,8 +234,7 @@ LONG LockFile(ULONG dir_cluster, ULONG dir_entry, LONG access,
             {
                 if (nn->gl == NULL)
                 {
-                    D(bug("[FAT] searching for notify name '%s'\n",
-                        nn->nr->nr_FullName));
+                    D(bug("[FAT] [%s] searching for notify name '%s'\n",__FUNCTION__, nn->nr->nr_FullName));
 
                     if (InitDirHandle(glob->sb, 0, &dh, TRUE, glob) != 0)
                         continue;
@@ -249,9 +246,7 @@ LONG LockFile(ULONG dir_cluster, ULONG dir_entry, LONG access,
                     if (gl->dir_cluster == de.cluster
                         && gl->dir_entry == de.index)
                     {
-                        D(bug("[FAT] found and matched to the global lock"
-                            " (%ld/%ld)\n",
-                            gl->dir_cluster, gl->dir_entry));
+                        D(bug("[FAT] [%s] found and matched to the global lock (%ld/%ld)\n",__FUNCTION__, gl->dir_cluster, gl->dir_entry));
                         nn->gl = gl;
                     }
                 }
@@ -281,7 +276,7 @@ LONG LockFile(ULONG dir_cluster, ULONG dir_entry, LONG access,
     fl->sb = glob->sb;
     ADDTAIL(&gl->locks, &fl->node);
 
-    D(bug("[FAT] created file lock 0x%08x\n", fl));
+    D(bug("[FAT] [%s] created file lock 0x%08x\n",__FUNCTION__, fl));
 
     DumpLocks(glob->sb, glob);
 
@@ -293,11 +288,11 @@ LONG LockRoot(LONG access, struct ExtFileLock **lock, struct Globals *glob)
 {
     struct ExtFileLock *fl;
 
-    D(bug("[FAT] locking root\n"));
+    D(bug("[FAT] [%s] locking root\n",__FUNCTION__));
 
     if (access == EXCLUSIVE_LOCK)
     {
-        D(bug("[FAT] can't obtain exclusive lock on the fs root\n"));
+        D(bug("[FAT] [%s] can't obtain exclusive lock on the fs root\n",__FUNCTION__));
         return ERROR_OBJECT_IN_USE;
     }
 
@@ -328,7 +323,7 @@ LONG LockRoot(LONG access, struct ExtFileLock **lock, struct Globals *glob)
     fl->sb = glob->sb;
     ADDTAIL(&glob->sb->info->root_lock.locks, &fl->node);
 
-    D(bug("[FAT] created root lock 0x%08x\n", fl));
+    D(bug("[FAT] [%s] created root lock 0x%08x\n",__FUNCTION__, fl));
 
     DumpLocks(glob->sb, glob);
 
@@ -339,14 +334,14 @@ LONG LockRoot(LONG access, struct ExtFileLock **lock, struct Globals *glob)
 LONG CopyLock(struct ExtFileLock *fl, struct ExtFileLock **lock,
     struct Globals *glob)
 {
-    D(bug("[FAT] copying lock\n"));
+    D(bug("[FAT] [%s] copying lock\n",__FUNCTION__));
 
     if (fl == NULL || fl->gl == &glob->sb->info->root_lock)
         return LockRoot(SHARED_LOCK, lock, glob);
 
     if (fl->fl_Access == EXCLUSIVE_LOCK)
     {
-        D(bug("[FAT] can't copy exclusive lock\n"));
+        D(bug("[FAT] [%s] can't copy exclusive lock\n",__FUNCTION__));
         return ERROR_OBJECT_IN_USE;
     }
 
@@ -361,7 +356,7 @@ void FreeLock(struct ExtFileLock *fl, struct Globals *glob)
     if (fl == NULL)
         return;
 
-    D(bug("[FAT] freeing lock 0x%08x\n", fl));
+    D(bug("[FAT] [%s] freeing lock 0x%08x\n",__FUNCTION__, fl));
 
     if (fl->do_notify)
         SendNotifyByLock(fl->ioh.sb, fl->gl);
@@ -379,7 +374,7 @@ void FreeLock(struct ExtFileLock *fl, struct Globals *glob)
         if (fl->gl != &fl->sb->info->root_lock)
             FreeVecPooled(glob->sb->info->mem_pool, fl->gl);
 
-        D(bug("[FAT] freed associated global lock\n"));
+        D(bug("[FAT] [%s] freed associated global lock\n",__FUNCTION__));
     }
 
     DumpLocks(fl->sb, glob);
@@ -389,5 +384,10 @@ void FreeLock(struct ExtFileLock *fl, struct Globals *glob)
     if (fl->sb != glob->sb)
         AttemptDestroyVolume(fl->sb);
 
-    FreeVecPooled(glob->sb->info->mem_pool, fl);
+    D(bug("[FAT] [%s] Lock is Freed, cleaning up glob->sb->info->mem_pool\n",__FUNCTION__));
+
+    //FreeVecPooled(glob->sb->info->mem_pool, fl);
+    FreeVecPooled(fl->sb->info->mem_pool, fl);
+    
+    D(bug("[FAT] [%s] Lock Cleaned\n",__FUNCTION__));
 }

@@ -620,8 +620,8 @@ int rcGuiMain(void)
 
 	RawDoFmtSz( szDosTypeString, "\33c%s", szDosTypeName);
 	DD(bug("[FORMAT] DosType [0]=%lx | [1]=%lx | [2]=%lx | [3]=%lx | [4]%lx\n", szDosTypeName[0],szDosTypeName[1],szDosTypeName[2],szDosTypeName[3],szDosTypeName[4])); 
-	DD(bug("[FORMAT] Device = %s | Volume = %s | Capacity = %s | DosType = %8lx = %s | LowCyl = %u | HighCyl = %u\n",
-		szDosDevice, szVolumeName, szCapacityInfo, de->de_DosType, szDosTypeString, de->de_LowCyl, de->de_HighCyl));
+	DD(bug("[FORMAT] Device = %s | Volume = %s | Capacity = %s | DosType = %8lx | LowCyl = %u | HighCyl = %u\n",
+		szDosDevice, szVolumeName, szCapacityInfo, de->de_DosType, de->de_LowCyl, de->de_HighCyl));
 
 	RawDoFmtSz( szTitle, _(MSG_WINDOW_TITLE), szDosDevice );
 	DD(bug("[FORMAT] Setting window title to '%s'\n", szTitle));
