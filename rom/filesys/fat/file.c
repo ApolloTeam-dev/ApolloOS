@@ -84,7 +84,7 @@ LONG ReadFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
     /* Files with no data can't be read from */
     if (ioh->first_cluster == 0xffffffff && nwant > 0)
     {
-        D(bug("[fat] file has no first cluster, so nothing to read!\n"));
+        D(bug("[FAT] file has no first cluster, so nothing to read!\n"));
         return ERROR_OBJECT_NOT_FOUND;
     }
 
@@ -97,7 +97,7 @@ LONG ReadFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
     while (nwant > 0)
     {
 
-        D(bug("[fat] trying to read %ld bytes"
+        D(bug("[FAT] trying to read %ld bytes"
             " (%ld sectors + %ld bytes into the file)\n",
             nwant, sector_offset, byte_offset));
 
@@ -116,7 +116,7 @@ LONG ReadFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
                 ioh->cluster_offset = 0;
             }
 
-            D(bug("[fat] moving forward %ld clusters from cluster %ld\n",
+            D(bug("[FAT] moving forward %ld clusters from cluster %ld\n",
                 cluster_offset - ioh->cluster_offset, ioh->cur_cluster));
 
             /* Find it */
@@ -131,7 +131,7 @@ LONG ReadFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
                 if (ioh->cur_cluster == 0
                     || ioh->cur_cluster >= ioh->sb->eoc_mark - 7)
                 {
-                    D(bug("[fat] hit empty or eoc cluster,"
+                    D(bug("[FAT] hit empty or eoc cluster,"
                         " no more file left\n"));
 
                     RESET_HANDLE(ioh);
@@ -143,7 +143,7 @@ LONG ReadFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
             /* Remember how far in we are now */
             ioh->cluster_offset = cluster_offset;
 
-            D(bug("[fat] moved to cluster %ld\n", ioh->cur_cluster));
+            D(bug("[FAT] moved to cluster %ld\n", ioh->cur_cluster));
 
             /* Reset the sector offset so the sector recalc gets triggered */
             ioh->sector_offset = 0xffffffff;
@@ -180,12 +180,12 @@ LONG ReadFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
                     return ERROR_OBJECT_NOT_FOUND;
                 }
 
-                D(bug("[fat] adjusted for cluster 0,"
+                D(bug("[FAT] adjusted for cluster 0,"
                     " chunk starts in sector %ld\n",
                     ioh->cur_sector));
             }
             else
-                D(bug("[fat] chunk starts %ld sectors into the cluster,"
+                D(bug("[FAT] chunk starts %ld sectors into the cluster,"
                     " which is sector %ld\n",
                     ioh->sector_offset, ioh->cur_sector));
         }
@@ -200,7 +200,7 @@ LONG ReadFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
                 ioh->block = NULL;
             }
 
-            D(bug("[fat] requesting sector %ld from cache\n",
+            D(bug("[FAT] requesting sector %ld from cache\n",
                 ioh->cur_sector));
 
             b = Cache_GetBlock(ioh->sb->cache,
@@ -209,7 +209,7 @@ LONG ReadFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
             {
                 RESET_HANDLE(ioh);
 
-                D(bug("[fat] couldn't load sector, returning error %ld\n",
+                D(bug("[FAT] couldn't load sector, returning error %ld\n",
                     IoErr()));
 
                 return IoErr();
@@ -220,7 +220,7 @@ LONG ReadFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
         }
 
         else
-            D(bug("[fat] using cached sector %ld\n", ioh->cur_sector));
+            D(bug("[FAT] using cached sector %ld\n", ioh->cur_sector));
 
         /* Now copy in the data */
         ncopy = ioh->sb->sectorsize - byte_offset;
@@ -229,14 +229,14 @@ LONG ReadFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
         CopyMem(ioh->data + byte_offset, data + pos, ncopy);
 
 #if defined(DEBUG_DUMP) && DEBUG_DUMP != 0
-        D(bug("[fat] dump of last read, %ld bytes:\n", ncopy));
+        D(bug("[FAT] dump of last read, %ld bytes:\n", ncopy));
         HexDump(&(data[pos]), ncopy, glob);
 #endif
 
         pos += ncopy;
         nwant -= ncopy;
 
-        D(bug("[fat] copied %ld bytes, want %ld more\n", ncopy, nwant));
+        D(bug("[FAT] copied %ld bytes, want %ld more\n", ncopy, nwant));
 
         if (nwant > 0)
         {
@@ -269,7 +269,7 @@ LONG WriteFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
     while (nwant > 0)
     {
 
-        D(bug("[fat] trying to write %ld bytes"
+        D(bug("[FAT] trying to write %ld bytes"
             " (%ld sectors + %ld bytes into the file)\n",
             nwant, sector_offset, byte_offset));
 
@@ -286,7 +286,7 @@ LONG WriteFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
             {
                 ULONG cluster;
 
-                D(bug("[fat] no first cluster, allocating one\n"));
+                D(bug("[FAT] no first cluster, allocating one\n"));
 
                 /* Allocate a cluster */
                 if ((err = FindFreeCluster(ioh->sb, &cluster)) != 0)
@@ -311,7 +311,7 @@ LONG WriteFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
                 ioh->cluster_offset = 0;
             }
 
-            D(bug("[fat] moving forward %ld clusters from cluster %ld\n",
+            D(bug("[FAT] moving forward %ld clusters from cluster %ld\n",
                 cluster_offset - ioh->cluster_offset, ioh->cur_cluster));
 
             /* Find it */
@@ -327,7 +327,7 @@ LONG WriteFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
                 if (next_cluster == 0
                     || next_cluster >= ioh->sb->eoc_mark - 7)
                 {
-                    D(bug("[fat] hit empty or eoc cluster,"
+                    D(bug("[FAT] hit empty or eoc cluster,"
                         " allocating another\n"));
 
                     if ((err = FindFreeCluster(ioh->sb, &next_cluster)) != 0)
@@ -345,7 +345,7 @@ LONG WriteFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
 
                     ioh->cur_cluster = next_cluster;
 
-                    D(bug("[fat] allocated cluster %d\n", next_cluster));
+                    D(bug("[FAT] allocated cluster %d\n", next_cluster));
                 }
                 else
                     ioh->cur_cluster = next_cluster;
@@ -354,7 +354,7 @@ LONG WriteFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
             /* Remember how far in we are now */
             ioh->cluster_offset = cluster_offset;
 
-            D(bug("[fat] moved to cluster %ld\n", ioh->cur_cluster));
+            D(bug("[FAT] moved to cluster %ld\n", ioh->cur_cluster));
 
             /* Reset the sector offset so the sector recalc gets triggered */
             ioh->sector_offset = 0xffffffff;
@@ -383,11 +383,11 @@ LONG WriteFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
                 ioh->sector_offset = sector_offset - ioh->first_sector;
                 ioh->cur_sector = ioh->first_sector + sector_offset;
 
-                D(bug("[fat] adjusted for cluster 0,"
+                D(bug("[FAT] adjusted for cluster 0,"
                     " chunk starts in sector %ld\n", ioh->cur_sector));
             }
             else
-                D(bug("[fat] chunk starts %ld sectors into the cluster,"
+                D(bug("[FAT] chunk starts %ld sectors into the cluster,"
                     " which is sector %ld\n",
                     ioh->sector_offset, ioh->cur_sector));
         }
@@ -402,7 +402,7 @@ LONG WriteFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
                 ioh->block = NULL;
             }
 
-            D(bug("[fat] requesting sector %ld from cache\n",
+            D(bug("[FAT] requesting sector %ld from cache\n",
                 ioh->cur_sector));
 
             b = Cache_GetBlock(ioh->sb->cache, ioh->sb->first_device_sector
@@ -411,7 +411,7 @@ LONG WriteFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
             {
                 RESET_HANDLE(ioh);
 
-                D(bug("[fat] couldn't load sector, returning error %ld\n",
+                D(bug("[FAT] couldn't load sector, returning error %ld\n",
                     IoErr()));
 
                 return IoErr();
@@ -421,7 +421,7 @@ LONG WriteFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
             ioh->data = p;
         }
         else
-            D(bug("[fat] using cached sector %ld\n", ioh->cur_sector));
+            D(bug("[FAT] using cached sector %ld\n", ioh->cur_sector));
 
         /* Copy our data into the block */
         ncopy = ioh->sb->sectorsize - byte_offset;
@@ -430,7 +430,7 @@ LONG WriteFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
         CopyMem(data + pos, ioh->data + byte_offset, ncopy);
 
 #if defined(DEBUG_DUMP) && DEBUG_DUMP != 0
-        D(bug("[fat] dump of last write, %ld bytes:\n", ncopy));
+        D(bug("[FAT] dump of last write, %ld bytes:\n", ncopy));
         HexDump(&(ioh->data[byte_offset]), ncopy, glob);
 #endif
 
@@ -439,7 +439,7 @@ LONG WriteFileChunk(struct IOHandle *ioh, ULONG file_pos, ULONG nwant,
         pos += ncopy;
         nwant -= ncopy;
 
-        D(bug("[fat] wrote %ld bytes, want %ld more\n", ncopy, nwant));
+        D(bug("[FAT] wrote %ld bytes, want %ld more\n", ncopy, nwant));
 
         if (nwant > 0)
         {

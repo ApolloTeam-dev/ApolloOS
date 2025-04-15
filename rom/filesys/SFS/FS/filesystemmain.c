@@ -259,7 +259,9 @@ LONG mainprogram(struct ExecBase *SysBase) {
 		globals->logHandle = logInitialise(&globals->sfsNode);
 	}
 #endif
-    DD(bug("[SFS] Filesystem main\n"));
+
+DD(bug("----------------------------------------------------------------\n"));
+DD(bug("[SFS] Filesystem main\n"));
 
 #ifndef __AROS__
 #undef SysBase
@@ -640,7 +642,9 @@ void mainloop(void) {
     signalbits |= 1 << globals->msgportnotify->mp_SigBit;
     signalbits |= 1 << globals->msgportflushtimer->mp_SigBit;
 
-    DD(bug("[SFS] Entering packet loop\n\n"));
+    DD(bug("[SFS] Entering packet loop\n"));
+    DD(bug("----------------------------------------------------------------\n\n"));
+
 
     for(;;) {
 

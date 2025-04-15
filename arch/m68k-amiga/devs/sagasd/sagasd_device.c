@@ -63,7 +63,7 @@
 
 #if DEBUG
 #define bug(x,args...)   kprintf(x ,##args)
-#define debug(x,args...) bug("%s:%ld " x "\n", __func__, (unsigned long)__LINE__ ,##args)
+#define debug(x,args...) bug("[SAGASD] %s:%ld " x "\n", __func__, (unsigned long)__LINE__ ,##args)
 #else
 #define bug(x,args...)   asm("nop\r\n")
 #define debug(x,args...) asm("nop\r\n")
@@ -138,7 +138,7 @@ static VOID SAGASD_log(struct sdcmd *sd, int level, const char *format, ...)
     }
 
     if (sderr) {
-        debug("[SAGASD] sderr=$%02x\n", sderr);
+        debug("sderr=$%02x\n", sderr);
         iostd->io_Actual = 0;
 
         /* Decode sderr into IORequest io_Errors */
@@ -180,7 +180,7 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
     if (iostd->io_Length < sizeof(*scsi))
     {
         // RDPrep sends a bad io_Length sometimes
-        debug("[SAGASD] WARNING: Application sent wrong IO size | iostd->io_Length < sizeof(struct SCSICmd)");
+        debug("WARNING: Application sent wrong IO size | iostd->io_Length < sizeof(struct SCSICmd)");
         //return IOERR_BADLENGTH;
     }
 
@@ -248,7 +248,7 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
             break;
         }
         if (scsi->scsi_Length < blocks * sdc->info.block_size) {
-            debug("[SAGASD] ERROR: Len (%ld) too small (%ld)", scsi->scsi_Length, blocks * sdc->info.block_size);
+            debug("ERROR: Len (%ld) too small (%ld)", scsi->scsi_Length, blocks * sdc->info.block_size);
             err = IOERR_BADLENGTH;
             break;
         }
@@ -422,14 +422,14 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
             err = 0;
             break;
         default:
-            debug("[SAGASD] MODE SENSE: Unknown Page $%02lx.$%02lx",
+            debug("MODE SENSE: Unknown Page $%02lx.$%02lx",
                     scsi->scsi_Command[2], scsi->scsi_Command[3]);
             err = HFERR_BadStatus;
             break;
         }
         break;
     default:
-        debug("[SAGASD] Unknown SCSI command %d (%d)\n", scsi->scsi_Command[0], scsi->scsi_CmdLength);
+        debug("Unknown SCSI command %d (%d)\n", scsi->scsi_Command[0], scsi->scsi_CmdLength);
         err = IOERR_NOCMD;
         break;
     }
@@ -526,7 +526,7 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         err = 0;
         break;
     case CMD_UPDATE:    /* Flush write buffer */
-    	bug( "[SAGASD] %s CMD_UPDATE\n", __FUNCTION__ );
+    	//bug( "[SAGASD] %s CMD_UPDATE\n", __FUNCTION__ );
         iostd->io_Actual = 0;
         err = 0;
         break;
@@ -609,7 +609,7 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         err = SAGASD_ReadWrite(io, off64, TRUE);
         break;
     case TD_MOTOR:
-        bug( "%s TD_MOTOR\n", __FUNCTION__ );
+        //bug( "%s TD_MOTOR\n", __FUNCTION__ );
         iostd->io_Actual = sdu->sdu_Motor;
         sdu->sdu_Motor = iostd->io_Length ? 1 : 0;
         err = 0;
@@ -644,7 +644,7 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         break;
         
     default:
-        debug("[SAGASD] ERROR = Unknown IO command: %d\n", io->io_Command);
+        debug("ERROR = Unknown IO command: %d\n", io->io_Command);
         err = IOERR_NOCMD;
         break;
     }
@@ -877,7 +877,7 @@ static void SAGASD_BootNode(
     struct DeviceNode *devnode;
 
     dosdevname[2] += unit;
-    debug("[SAGASD] Adding bootnode %s %d x %d", dosdevname,sdu->sdu_SDCmd.info.blocks, sdu->sdu_SDCmd.info.block_size);
+    debug("Adding bootnode %s %d x %d", dosdevname,sdu->sdu_SDCmd.info.blocks, sdu->sdu_SDCmd.info.block_size);
 
     pp[0] = (IPTR)dosdevname;
     pp[1] = (IPTR)"sagasd.device";
@@ -970,7 +970,7 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
         }
     }
 
-    debug("[SAGASD] unit=%d enabled=%d", id, SAGASDBase->sd_Unit[id].sdu_Enabled ? 1 : 0);
+    debug("unit=%d enabled=%d", id, SAGASDBase->sd_Unit[id].sdu_Enabled ? 1 : 0);
 }
 
 // Direct init routine
@@ -1043,7 +1043,7 @@ static int GM_UNIQUENAME(open)(struct SAGASDBase * SAGASDBase,
     	    iotd->iotd_Req.io_Error = 0;
 	}
 
-        debug("[SAGASD] Open=%d", unitnum, iotd->iotd_Req.io_Error);
+        debug("Open=%d", unitnum, iotd->iotd_Req.io_Error);
     }
   
     return iotd->iotd_Req.io_Error == 0;

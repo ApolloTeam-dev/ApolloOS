@@ -48,6 +48,7 @@
 
 /* Maximum length of a name component - I can't find this defined anywhere */
 #define MAX_FS_NAME_LEN 30
+#define MAX_FAT_NAME_LEN 11+1
 
 /* Short name for an unsigned 64-bit integer type */
 typedef unsigned long long ULLONG;

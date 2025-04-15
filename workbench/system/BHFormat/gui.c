@@ -452,6 +452,9 @@ AROS_UFH3S(void, btn_format_function,
 		if (MUI_Request( app, formatwin, 0, "Format Request Confirmation", "_Confirm|_Cancel", "WARNING !!!\n\nALL data will be lost on %s:\n\nPlease Confirm your Choice . . .", szDosDevice) == 0) goto cleanup;
 	}
 
+	set(formatwin, MUIA_Window_Open, TRUE);
+	set(mainwin, MUIA_Window_Open, FALSE);
+
 	BOOL formatOk = TRUE;
 
 	if(bDoFormat)
@@ -616,18 +619,15 @@ int rcGuiMain(void)
 	char szDosTypeString[8];
 
 	RawDoFmtSz( szDosTypeString, "\33c%s", szDosTypeName);
-
 	DD(bug("[FORMAT] DosType [0]=%lx | [1]=%lx | [2]=%lx | [3]=%lx | [4]%lx\n", szDosTypeName[0],szDosTypeName[1],szDosTypeName[2],szDosTypeName[3],szDosTypeName[4])); 
-
-	RawDoFmtSz( szLowCyl, "%lu", de->de_LowCyl);
-	RawDoFmtSz( szHighCyl, "%lu", de->de_HighCyl);
-		
 	DD(bug("[FORMAT] Device = %s | Volume = %s | Capacity = %s | DosType = %8lx = %s | LowCyl = %u | HighCyl = %u\n",
 		szDosDevice, szVolumeName, szCapacityInfo, de->de_DosType, szDosTypeString, de->de_LowCyl, de->de_HighCyl));
 
 	RawDoFmtSz( szTitle, _(MSG_WINDOW_TITLE), szDosDevice );
 	DD(bug("[FORMAT] Setting window title to '%s'\n", szTitle));
-	
+
+	BOOL IsDeviceFAT = ( (de->de_DosType >= 0x46415400) && (de->de_DosType <= 0x46415402) );
+
 	Object *btn_format, *btn_qformat, *btn_cancel, *btn_stop;
 
 	btn_format_hook.h_Entry = (HOOKFUNC)btn_format_function;
@@ -674,7 +674,7 @@ int rcGuiMain(void)
 					End,
 
 					Child, (IPTR)LLabel2("Volume:"),
-					Child, (IPTR)(str_volume = (Object *)StringObject, StringFrame, MUIA_String_Contents, (IPTR)szVolumeName, MUIA_String_MaxLen, MAX_FS_NAME_LEN, End),
+					Child, (IPTR)(str_volume = (Object *)StringObject, StringFrame, MUIA_String_Contents, (IPTR)szVolumeName, MUIA_String_MaxLen, IsDeviceFAT ? MAX_FAT_NAME_LEN : MAX_FS_NAME_LEN, End),
 				
 					Child, (IPTR)LLabel2("Trashcan:"),
 					Child, (IPTR)(chk_trash = MUI_MakeObject(MUIO_Checkmark, NULL)),
