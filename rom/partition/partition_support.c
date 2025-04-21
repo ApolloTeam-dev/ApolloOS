@@ -82,13 +82,14 @@ ULONG getStartBlock(struct PartitionHandle *ph)
 {
     ULONG start = 0;
 
-    //D(bug("[PART:%s] GetStartBlock\n", ph->ln.ln_Name));
-
     while (ph)
     {
         start += ph->de.de_LowCyl*ph->de.de_BlocksPerTrack*ph->de.de_Surfaces;
         ph = ph->root;
     }
+
+    //D(bug("[PART:%s] GetStartBlock: %u\n", ph->ln.ln_Name, start));
+
     return start;
 }
 

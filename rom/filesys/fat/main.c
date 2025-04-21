@@ -138,6 +138,9 @@ LONG handler(struct ExecBase *SysBase)
     D(bug("\n----------------------------------------------------------------\n"));
     D(bug("[FAT] [%s] Start \n",__FUNCTION__ ));
 
+    
+
+
     struct Globals *glob;
     struct Process *proc;
     struct MsgPort *mp;
@@ -270,24 +273,16 @@ static LONG InitDiskHandler(struct Globals *glob)
                         glob->DiskChangeIntData.task = glob->ourtask;
                         glob->DiskChangeIntData.signal = 1 << diskchgintbit;
 
-                        glob->DiskChangeIntData.Interrupt.is_Node.ln_Type =
-                            NT_INTERRUPT;
-                        glob->DiskChangeIntData.Interrupt.is_Node.ln_Pri =
-                            0;
+                        glob->DiskChangeIntData.Interrupt.is_Node.ln_Type = NT_INTERRUPT;
+                        glob->DiskChangeIntData.Interrupt.is_Node.ln_Pri = 0;
                         glob->DiskChangeIntData.Interrupt.is_Node.ln_Name = "FATFS";
-                        glob->DiskChangeIntData.Interrupt.is_Data =
-                            &glob->DiskChangeIntData;
-                        glob->DiskChangeIntData.Interrupt.is_Code =
-                            (VOID_FUNC)
-                            AROS_ASMSYMNAME(DiskChangeIntHandler);
+                        glob->DiskChangeIntData.Interrupt.is_Data = &glob->DiskChangeIntData;
+                        glob->DiskChangeIntData.Interrupt.is_Code = (VOID_FUNC) AROS_ASMSYMNAME(DiskChangeIntHandler);
 
                         /* Fill I/O request data */
-                        glob->diskchgreq->iotd_Req.io_Command =
-                            TD_ADDCHANGEINT;
-                        glob->diskchgreq->iotd_Req.io_Data =
-                            &glob->DiskChangeIntData.Interrupt;
-                        glob->diskchgreq->iotd_Req.io_Length =
-                            sizeof(struct Interrupt);
+                        glob->diskchgreq->iotd_Req.io_Command = TD_ADDCHANGEINT;
+                        glob->diskchgreq->iotd_Req.io_Data = &glob->DiskChangeIntData.Interrupt;
+                        glob->diskchgreq->iotd_Req.io_Length = sizeof(struct Interrupt);
                         glob->diskchgreq->iotd_Req.io_Flags = 0;
 
                         SendIO((struct IORequest *)glob->diskchgreq);

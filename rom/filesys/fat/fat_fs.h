@@ -16,11 +16,11 @@
 #define DEBUG_DIRENTRY      0
 #define DEBUG_FILE          0
 #define DEBUG_DUMP          0
-#define DEBUG_LOCK          1
+#define DEBUG_LOCK          0
 #define DEBUG_NAMES         0
 #define DEBUG_NOTIFY        0
 #define DEBUG_OPS           0
-#define DEBUG_PACKETS       1
+#define DEBUG_PACKETS       0
 #define DEBUG_CACHESTATS    0
 #define DEBUG_MISC          1
 

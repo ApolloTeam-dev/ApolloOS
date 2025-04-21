@@ -166,8 +166,7 @@ static void FakeGfxHidd_ObtainSemaphore(struct SignalSemaphore *sigSem, BOOL urg
 
 /******************************************************************************/
 
-static void FakeGfxHidd_ReleaseSemaphore(struct SignalSemaphore *sigSem,
-    	    	    	    	    	 struct GfxBase *GfxBase)
+static void FakeGfxHidd_ReleaseSemaphore(struct SignalSemaphore *sigSem, struct GfxBase *GfxBase)
 {
    /* Protect the semaphore structure from multiple access. */
     Forbid();
@@ -258,7 +257,10 @@ static void FakeGfxHidd_ReleaseSemaphore(struct SignalSemaphore *sigSem,
 	    This can't happen. It means that somebody has released
 	    more times than they have obtained.
 	*/
-	Alert( AN_SemCorrupt );
+	
+    D(bug("FakeGfxHidd_ReleaseSemaphore(): This can't happen. It means that somebody has released more times than they have obtained.d\n"));
+
+    Alert( AN_SemCorrupt );
     }
 
     /* All done. */

@@ -292,8 +292,6 @@ int dosboot_Init(LIBBASETYPEPTR DOSBootBase)
 
     D(bug("\n[BOOT] ApolloOS BootStrap (Delayed 2 seconds)\n"));
 
-    bootDelay(100);
-
     /* Attempt to boot until we succeed */
     for (;;)
     {

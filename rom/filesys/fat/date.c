@@ -34,8 +34,7 @@ void ConvertFATDate(UWORD date, UWORD time, struct DateStamp *ds,
     mins = (time & 0x07e0) >> 5;    /* Bits 10-5 */
     secs = time & 0x001f;           /* Bits 4-0 */
 
-    D(bug("[FAT] converting fat date: year %d month %d day %d hours %d"
-        " mins %d secs %d\n", year, month, day, hours, mins, secs));
+    //D(bug("[FAT] converting fat date: year %d month %d day %d hours %d mins %d secs %d\n", year, month, day, hours, mins, secs));
 
     if (month < 1 || month > 12 || day < 1 || day > 31 || hours > 23 ||
         mins > 59 || secs > 29)
@@ -63,8 +62,7 @@ void ConvertFATDate(UWORD date, UWORD time, struct DateStamp *ds,
     /* 1/50 sec ticks since last minute */
     ds->ds_Tick = secs % 60 * TICKS_PER_SECOND;
 
-    D(bug("[FAT] converted fat date: days %ld minutes %ld ticks %ld\n",
-        ds->ds_Days, ds->ds_Minute, ds->ds_Tick));
+    //D(bug("[FAT] converted fat date: days %ld minutes %ld ticks %ld\n", ds->ds_Days, ds->ds_Minute, ds->ds_Tick));
 }
 
 void ConvertDOSDate(struct DateStamp *ds, UWORD * date, UWORD * time,

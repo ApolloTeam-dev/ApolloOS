@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Internal types and stuff for dos
@@ -20,6 +20,7 @@
 #include <proto/utility.h>
 
 #include "fs_driver.h"
+
 
 /*
  * These bases are historically placed in public portion of DOSBase.

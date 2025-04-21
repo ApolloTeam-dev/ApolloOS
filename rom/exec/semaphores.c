@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Semaphore internal handling
@@ -37,8 +37,7 @@ BOOL CheckSemaphore(struct SignalSemaphore *sigSem, struct TraceLocation *caller
     {
         struct Task *ThisTask = GET_THIS_TASK;
 
-        kprintf("%s called on a not initialized semaphore!!!\n"
-                "sem = 0x%p task = 0x%p (%s)\n\n", caller->function, sigSem, ThisTask, ThisTask->tc_Node.ln_Name);
+        kprintf("%s called on a not initialized semaphore!!!\nsem = 0x%p task = 0x%p (%s)\n\n", caller->function, sigSem, ThisTask, ThisTask->tc_Node.ln_Name);
         Exec_ExtAlert(AN_SemCorrupt, __builtin_return_address(0), CALLER_FRAME, 0, NULL, SysBase);
 
         return FALSE;

@@ -82,44 +82,85 @@ LONG MBRCheckPartitionTable(struct Library *PartitionBase, struct PartitionHandl
     struct rootblock *blk = buffer;
     LONG res = 0;
 
+    struct PCPartitionTable *pcpt = blk->u.mbr.pcpt;
+
+    D(bug("[PART:MBR] [%s] Check if we have a valid MBR . . . \n",__FUNCTION__));
+
     if (readBlock(PartitionBase, root, 0, blk) == 0)
     {
-        /* Check it doesn't look like a FAT boot sector */
+        /* Check status bytes of all partition slots and block signature */
+        if ((AROS_LE2WORD(blk->u.mbr.magic) != MBR_MAGIC) ||
+            (!MBR_STATUS_VALID(pcpt[0].status)) || (!MBR_STATUS_VALID(pcpt[1].status)) || 
+            (!MBR_STATUS_VALID(pcpt[2].status)) || (!MBR_STATUS_VALID(pcpt[3].status)))
+        {
+            D(bug("NO\n"));
+            res = 0;
+        } else {
+            D(bug("YES\n"));
+            res = 1;
+        }
+    } else {
+        D(bug("[PART:MBR] [%s] readBlock FAIL\n",__FUNCTION__));
+    }
+
+    if (res == 0)
+    {
+        D(bug("[PART:MBR] [%s] No MBR, but maybe we have a valid FAT Boot record . . . \n",__FUNCTION__));
+
 	    ULONG sectorsize, clustersectors;
 
         /* Valid sector size: 512, 1024, 2048, 4096 */
         sectorsize = AROS_LE2WORD(blk->u.bs.bpb_bytes_per_sect);
-        if (sectorsize != 512 && sectorsize != 1024 && sectorsize != 2048 && sectorsize != 4096)
+
+        D(bug("[PART:MBR] [%s] Sector Size : %u\n",__FUNCTION__, sectorsize));
+
+        if (sectorsize == 512 || sectorsize == 1024 || sectorsize == 2048 || sectorsize == 4096)
+        {
             res = 1;
+            D(bug("[PART:MBR] [%s] res is set (%u)\n",__FUNCTION__,res));
+        } 
 
         /* Valid bpb_sect_per_clust: 1, 2, 4, 8, 16, 32, 64, 128 */
         clustersectors = blk->u.bs.bpb_sect_per_clust;
-        if ((clustersectors & (clustersectors - 1)) != 0 || clustersectors == 0 || clustersectors > 128)
+
+        D(bug("[PART:MBR] [%s] Sectors per Cluster : %u\n",__FUNCTION__, clustersectors));
+
+        if ((clustersectors & (clustersectors - 1)) == 0 && clustersectors != 0 && clustersectors <= 128)
+        {
             res = 1;
+            D(bug("[PART:MBR] [%s] res is set (%u)\n",__FUNCTION__,res));
+        } else {
+            res = 0;
+            D(bug("[PART:MBR] [%s] res is cleared (%u)\n",__FUNCTION__,res));     
+        }
 
         /* Valid cluster size: 512, 1024, 2048, 4096, 8192, 16k, 32k, 64k */
-        if (clustersectors * sectorsize > 64 * 1024)
+        D(bug("[PART:MBR] [%s] Cluster Size: %u\n",__FUNCTION__, clustersectors * sectorsize ));
+
+        if (clustersectors * sectorsize <= 64 * 1024)
+        {
             res = 1;
-
-        if (blk->u.bs.bpb_media < 0xF0)
-            res = 1;
-
-	if (res)
-	{
-	    struct PCPartitionTable *pcpt = blk->u.mbr.pcpt;
-
-	    /* Check status bytes of all partition slots and block signature */
-            if ((AROS_LE2WORD(blk->u.mbr.magic) != MBR_MAGIC) ||
-                (!MBR_STATUS_VALID(pcpt[0].status)) || (!MBR_STATUS_VALID(pcpt[1].status)) || 
-            	(!MBR_STATUS_VALID(pcpt[2].status)) || (!MBR_STATUS_VALID(pcpt[3].status)))
-            {
-            	res = 0;
-            }
+            D(bug("[PART:MBR] [%s] res is set (%u)\n",__FUNCTION__,res));
+        } else {
+            res = 0;
+            D(bug("[PART:MBR] [%s] res is cleared (%u)\n",__FUNCTION__,res));     
         }
-    }
 
-    D(bug("[PART:MBR] MBRCheckPartitionTable: "));
-    D(bug(res ? "FOUND\n" : "NOT FOUND\n"));
+        D(bug("[PART:MBR] [%s] bpb_media : 0x%x\n",__FUNCTION__, blk->u.bs.bpb_media));
+
+        if (blk->u.bs.bpb_media >= 0xF0)
+        {
+            res = 1;
+            D(bug("[PART:MBR] [%s] res is set (%u)\n",__FUNCTION__,res));
+        } else {
+            res = 0;
+            D(bug("[PART:MBR] [%s] res is cleared (%u)\n",__FUNCTION__,res));     
+        }
+    
+    } 
+
+    D(bug("[PART:MBR] [%s]]: res = %u",__FUNCTION__,res));
+    D(bug(res ? " = FOUND\n" : " = NOT FOUND\n"));
 
     return res;
 }
@@ -142,7 +183,7 @@ static LONG PartitionMBRCheckPartitionTable(struct Library *PartitionBase, struc
     if (!blk)
     	return 0;
 
-    D(bug("MBR FOUND - Checking Partition Table\n"));
+    D(bug("Partition is valid Root -> Checking Partition Table\n"));
 
     res = MBRCheckPartitionTable(PartitionBase, root, blk);
 

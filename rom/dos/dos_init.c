@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Header for dos.library
@@ -25,6 +25,10 @@
 #include LC_LIBDEFS_FILE
 
 #include "dos_intern.h"
+
+#define DEBUG 1
+#define D(x) x
+#define bug kprintf
 
 static const UBYTE version[];
 extern const char LIBEND;
