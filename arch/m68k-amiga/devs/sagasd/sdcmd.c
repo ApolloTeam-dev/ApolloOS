@@ -457,7 +457,12 @@ UBYTE sdcmd_read_block(struct sdcmd *sd, ULONG addr, UBYTE *buff)
         sdcmd_send(sd, SDCMD_READ_SINGLE_BLOCK, addr << sd->info.addr_shift);
         r1 = sdcmd_r1a(sd);
         if (!r1)
+        {
             r1 = sdcmd_read_packet(sd, buff, SDSIZ_BLOCK);
+            debug("sdcmd_read_packet = %x", r1);
+        } else {
+            debug("sdcmd_r1a = %x", r1);
+        }
 
         sdcmd_select(sd, FALSE);
 
@@ -591,15 +596,26 @@ UBYTE sdcmd_write_blocks(struct sdcmd *sd, ULONG addr, CONST UBYTE *buff, int bl
 
 BOOL sdcmd_present(struct sdcmd *sd)
 {
-    UBYTE err;
-    ULONG test_block = 0;
-    ULONG read_buffer[512 * 16 / sizeof(ULONG)];
+    UBYTE r1;
+    int i;
 
-    err = sdcmd_read_block(sd, test_block, (UBYTE *)&read_buffer[0]);
+    debug("starting sdcmd_present routine");
 
-    debug("running sdcmd_present routine - err = %x | readbuffer[0] = %x", err, read_buffer[0]);
+    sdcmd_send(sd, SDCMD_READ_SINGLE_BLOCK, 0);
 
-    return err;
+    for (i = 0; i < 50; i++)
+    {
+        r1 = sdcmd_in(sd);
+        if (!(r1 & SDERRF_TIMEOUT)) break;
+    }
+
+    if (i == 50)
+    {
+        return FALSE;
+    } else {
+        sdcmd_stop_transmission(sd);
+        return TRUE;
+    }
 }
 
 UBYTE sdcmd_detect(struct sdcmd *sd)
@@ -610,7 +626,7 @@ UBYTE sdcmd_detect(struct sdcmd *sd)
     ULONG r7;
     int i;
 
-    debug("running sdcmd_detect routine with SDCMD_GO_IDLE_STATE");
+    debug("starting sdcmd_detect routine with SDCMD_GO_IDLE_STATE");
 
     sdcmd_select(sd, TRUE);
 
@@ -737,6 +753,8 @@ UBYTE sdcmd_detect(struct sdcmd *sd)
 
 exit:
     sdcmd_select(sd, FALSE);
+
+    debug("finishing sdcmd_detect routine with SDCMD_GO_IDLE_STATE");
 
     return r1;
 }

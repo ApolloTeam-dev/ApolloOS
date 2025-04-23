@@ -592,9 +592,16 @@ static void cmd_AddChangeInt(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 
     DD(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
 
-    Forbid();
+    //Forbid();
     AddHead(&unit->au_SoftList, (struct Node *)io);
-    Permit();
+    //Permit();
+
+    struct IORequest *msg;
+
+    ForeachNode(&unit->au_SoftList, msg)
+    {
+        DD(bug("Handler Entry added in unit->au_SoftList: handler = %x | unit = %d\n", (struct Interrupt *)IOStdReq(msg)->io_Data, unit->au_UnitNum));
+    }
     
     io->io_Flags &= ~IOF_QUICK;
     unit->au_Unit.unit_flags &= ~UNITF_ACTIVE;

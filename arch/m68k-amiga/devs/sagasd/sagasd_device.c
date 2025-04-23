@@ -52,6 +52,7 @@
 #include "common.h"
 
 #include <sd.h>
+#include "sagasd_intern.h"
 
 #include LC_LIBDEFS_FILE
 
@@ -68,6 +69,27 @@ static VOID SAGASD_log(struct sdcmd *sd, int level, const char *format, ...)
     vkprintf(format, args);
     kprintf("\n");
     va_end(args);
+}
+
+static void SAGASD_AddChangeInt(struct IORequest *io)
+{
+    struct SAGASDBase *sd = (struct SAGASDBase *)io->io_Device;
+    struct SAGASDUnit *sdu = (struct SAGASDUnit *)io->io_Unit;
+    struct Library *SysBase = sd->sd_ExecBase;
+    struct IORequest *msg;
+    
+    if (sdu->sdu_AddChangeListItems < 10)
+    {
+        sdu->sdu_AddChangeList[sdu->sdu_AddChangeListItems] = (APTR)((struct IOStdReq *)io)->io_Data;
+        sdu->sdu_AddChangeListItems++;
+    }
+
+    for (int i=sdu->sdu_AddChangeListItems-1; i>=0; i--)
+    {
+        debug("Listing sdu->sdu_AddChangeList[%d] (%x) for %s", i, sdu->sdu_AddChangeList[i], sdu->sdu_Name);
+    } 
+
+    io->io_Flags &= ~IOF_QUICK;
 }
 
 // Execute the SD read or write command, return IOERR_* or TDERR_*
@@ -151,7 +173,7 @@ static VOID SAGASD_log(struct sdcmd *sd, int level, const char *format, ...)
 static LONG SAGASD_PerformSCSI(struct IORequest *io)
 {
     struct SAGASDBase *sd = (struct SAGASDBase *)io->io_Device;
-    //struct Library *SysBase = sd->sd_ExecBase;
+    struct Library *SysBase = sd->sd_ExecBase;
     struct SAGASDUnit *sdu = (struct SAGASDUnit *)io->io_Unit;
     struct IOStdReq *iostd = (struct IOStdReq *)io;
     struct SCSICmd *scsi = iostd->io_Data;
@@ -486,9 +508,10 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         HD_SCSICMD,
         0
     };
+
     struct SAGASDBase *sd = (struct SAGASDBase *)io->io_Device;
-    struct Library *SysBase = sd->sd_ExecBase;
     struct SAGASDUnit *sdu = (struct SAGASDUnit *)io->io_Unit;
+    struct Library *SysBase = sd->sd_ExecBase;
     struct IOStdReq *iostd = (struct IOStdReq *)io;
     struct IOExtTD *iotd = (struct IOExtTD *)io;
     APTR data = iotd->iotd_Req.io_Data;
@@ -497,6 +520,7 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
     struct DriveGeometry *geom;
     struct NSDeviceQueryResult *nsqr;
     LONG err = IOERR_NOCMD;
+    struct IORequest *msg;
 
     //debug("");
 
@@ -543,9 +567,7 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         break;
     case TD_CHANGESTATE:
     	bug( "%s TD_CHANGESTATE - SD-Card = %s\n", __FUNCTION__, sdu->sdu_Present ? "PRESENT" : "ABSENT");
-        Forbid();
         iostd->io_Actual = sdu->sdu_Present ? 0 : 1;
-        Permit();
         err = 0;
         break;
     case TD_EJECT:
@@ -625,8 +647,8 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         err = SAGASD_PerformSCSI(io);
         break;
     case TD_ADDCHANGEINT:
-        bug( "%s TD_ADDCHANGEINT - [NOT IMPLEMENTED YET]: %u\n", __FUNCTION__ , io->io_Command);
-        err = 0;
+        bug( "%s TD_ADDCHANGEINT - [NEW !!!]: %u\n", __FUNCTION__ , io->io_Command);
+        SAGASD_AddChangeInt(io);
         break;
         
     default:
@@ -640,15 +662,18 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
     return err;
 }
 
-/* This low-priority task handles all the non-quick IO
- */
+
+// This low-priority task handles all the non-quick IO
+ 
 static void SAGASD_IOTask(struct Library *SysBase)
 {
     struct Task *this = FindTask(NULL);
-    struct SAGASDUnit *sdu = this->tc_UserData;
+    struct SAGASDUnit *sdu = (struct SAGASDUnit*)this->tc_UserData;
     struct MsgPort *mport = sdu->sdu_MsgPort;
     struct MsgPort *tport = NULL;
     struct timerequest *treq = NULL;
+    struct IORequest *msg;
+
     ULONG sigset;
     struct Message status;
     BOOL present;
@@ -757,25 +782,42 @@ static void SAGASD_IOTask(struct Library *SysBase)
 
                 if(detectcounter++ == 100)
                 {
-                    sderr = sdcmd_present(&sdu->sdu_SDCmd);
-                    if (sderr)
+                    present = sdcmd_present(&sdu->sdu_SDCmd);
+                    if (!present)
                     {
-                        sderr = sdcmd_detect(&sdu->sdu_SDCmd);
-    
-                        if (!sderr)
+                        if (sdu->sdu_Present)
                         {
-                            Forbid();
-                            sdu->sdu_Present = TRUE;
-                            sdu->sdu_ChangeNum++;
-                            sdu->sdu_Valid = (sderr == 0) ? TRUE : FALSE;
-                            debug("\t sdu_Valid: %s", sdu->sdu_Valid ? "TRUE" : "FALSE");
-                            debug("\t Blocks: %ld", sdu->sdu_SDCmd.info.blocks);
-                            Permit();
-                        } else {
                             Forbid();
                             sdu->sdu_Present = FALSE;
                             sdu->sdu_Valid = FALSE;
-                            Permit();
+                            
+                            for (int i=sdu->sdu_AddChangeListItems-1; i>=0; i--)
+                            {
+                                debug("SD-Card EJECT = Calling sdu->sdu_AddChangeList[%d] (%x) for %s", i, sdu->sdu_AddChangeList[i], sdu->sdu_Name);
+                                Cause((struct Interrupt *)(sdu->sdu_AddChangeList[i]));
+                            }
+                            Permit(); 
+
+                        } else {
+                            sderr = sdcmd_detect(&sdu->sdu_SDCmd);
+
+                            if (!sderr)
+                            {
+                                Forbid();
+                                sdu->sdu_Present = TRUE;
+                                sdu->sdu_ChangeNum++;
+                                sdu->sdu_Valid = TRUE;
+                                debug("\t sdu_Valid: %s", sdu->sdu_Valid ? "TRUE" : "FALSE");
+                                debug("\t Blocks: %ld", sdu->sdu_SDCmd.info.blocks);
+
+                                for (int i=sdu->sdu_AddChangeListItems-1; i>=0; i--)
+                                {
+                                    debug("SD-Card INSERT = Calling sdu->sdu_AddChangeList[%d] (%x) for %s", i, sdu->sdu_AddChangeList[i], sdu->sdu_Name);
+                                    Cause((struct Interrupt *)(sdu->sdu_AddChangeList[i]));
+                                }
+                                Permit();
+
+                            } 
                         }
                     }
                     detectcounter = 0;
@@ -811,9 +853,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
     DeleteMsgPort(mport);
 }
 
-AROS_LH1(void, BeginIO,
- AROS_LHA(struct IORequest *, io, A1),
-    struct SAGASDBase *, SAGASDBase, 5, SAGASD)
+AROS_LH1(void, BeginIO, AROS_LHA(struct IORequest *, io, A1), struct SAGASDBase *, SAGASDBase, 5, SAGASD)
 {
     AROS_LIBFUNC_INIT
 
@@ -822,7 +862,8 @@ AROS_LH1(void, BeginIO,
     struct Library *SysBase = SAGASDBase->sd_ExecBase;
     struct SAGASDUnit *sdu = (struct SAGASDUnit *)io->io_Unit;
 
-    if (io->io_Flags & IOF_QUICK) {
+    if (io->io_Flags & IOF_QUICK)
+    {
         /* Commands that don't require any IO */
         switch(io->io_Command)
         {
@@ -938,13 +979,18 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
     sdu->sdu_SDCmd.retry.read = SAGASD_RETRY;
     sdu->sdu_SDCmd.retry.write = SAGASD_RETRY;
 
+    //NEWLIST(&sdu->sdu_AddChangeList);
+    sdu->sdu_AddChangeListItems = 0;
+     
     /* If the unit is present, create an IO task for it
      */
-    if (sdu->sdu_Enabled) {
+    if (sdu->sdu_Enabled)
+    {
         struct Task *utask = &sdu->sdu_Task;
         struct MsgPort *initport;
 
-        if ((initport = CreateMsgPort())) {
+        if ((initport = CreateMsgPort()))
+        {
             struct Message *msg;
 
             strncpy(sdu->sdu_Name, "SDIO0", sizeof(sdu->sdu_Name));

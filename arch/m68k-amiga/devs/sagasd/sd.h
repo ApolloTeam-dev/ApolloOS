@@ -42,6 +42,8 @@
 #define SDCMD_CLKDIV_FAST       0x01
 #define SDCMD_CLKDIV_FASTER     0x00
 
+#define IOStdReq(io) ((struct IOStdReq *)io)
+
 #define DEBUG 1
 #if DEBUG
 #define bug(x,args...)      kprintf(x ,##args)

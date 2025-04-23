@@ -22,7 +22,8 @@ struct SAGASDBase {
     struct Device       sd_Device;
     struct Library *    sd_ExecBase;
     IPTR                sd_SegList;
-    struct SAGASDUnit {
+    struct SAGASDUnit
+    {
         struct Unit sdu_Unit;
         struct Task sdu_Task;
         TEXT        sdu_Name[6];                /* "SDIOx" */
@@ -38,6 +39,9 @@ struct SAGASDBase {
         BOOL sdu_Motor;                 /* TD_MOTOR state */
         ULONG sdu_ChangeNum;
 
+        APTR sdu_AddChangeList[10];    /* Storage for TD_ADDCHANGEINT Pointers from Filesystems */
+        int sdu_AddChangeListItems;
+        
         struct Library *sdu_ExecBase;
     } sd_Unit[SAGASD_UNITS];
 };

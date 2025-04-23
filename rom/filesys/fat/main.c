@@ -138,9 +138,6 @@ LONG handler(struct ExecBase *SysBase)
     D(bug("\n----------------------------------------------------------------\n"));
     D(bug("[FAT] [%s] Start \n",__FUNCTION__ ));
 
-    
-
-
     struct Globals *glob;
     struct Process *proc;
     struct MsgPort *mp;
@@ -285,8 +282,8 @@ static LONG InitDiskHandler(struct Globals *glob)
                         glob->diskchgreq->iotd_Req.io_Length = sizeof(struct Interrupt);
                         glob->diskchgreq->iotd_Req.io_Flags = 0;
 
+                        D(bug("[FAT] [%s] Request Install Disk change handler\n",__FUNCTION__ ));
                         SendIO((struct IORequest *)glob->diskchgreq);
-
                         D(bug("[FAT] [%s] Disk change interrupt handler installed\n",__FUNCTION__ ));
 
                         return 0;
