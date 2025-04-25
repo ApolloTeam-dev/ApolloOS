@@ -57,6 +57,7 @@ ULLONG ibyStart, ibyEnd;
 IPTR MaxTransfer;
 IPTR LowCyl, HighCyl;
 ULONG DosType;
+BSTR DeviceName;
 
 static char szVolume[MAX_FS_NAME_LEN+2] __attribute__((aligned (4)));
 static char * pszExecDevice;
@@ -77,7 +78,7 @@ static ULONG * paulWriteBuffer, * paulReadBuffer;
 static ULONG cbyTransfer;
 
 
-const char szVersion[] = "$VER: BHFormat 43.8 (" ADATE ")";
+const char szVersion[] = "$VER: BHFormat 44.0 (" ADATE ")";
 
 int main(void)
 {
@@ -332,7 +333,10 @@ BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
     LowCyl = pdenDevice->de_LowCyl;
     HighCyl = pdenDevice->de_HighCyl;
     DosType = pdenDevice->de_DosType;
+	DeviceName = pdlDevice->dol_Name;
 
+	DD(bug("[FORMAT] szDosDevice = %s | DeviceName = %s\n", szDosDevice, DeviceName));
+	
     cbyTrack = (ULLONG)pdenDevice->de_BlocksPerTrack * (ULLONG)(pdenDevice->de_SizeBlock * sizeof(LONG));
     cbyCylinder = cbyTrack * pdenDevice->de_Surfaces;
 

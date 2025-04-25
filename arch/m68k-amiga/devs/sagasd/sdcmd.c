@@ -459,9 +459,9 @@ UBYTE sdcmd_read_block(struct sdcmd *sd, ULONG addr, UBYTE *buff)
         if (!r1)
         {
             r1 = sdcmd_read_packet(sd, buff, SDSIZ_BLOCK);
-            debug("sdcmd_read_packet = %x", r1);
+            //debug("sdcmd_read_packet = %x", r1);
         } else {
-            debug("sdcmd_r1a = %x", r1);
+            //debug("sdcmd_r1a = %x", r1);
         }
 
         sdcmd_select(sd, FALSE);

@@ -165,6 +165,9 @@ BOOL ObjectTypeOk(struct DosList* device)
 	|| (pdenDevice = (struct DosEnvec *)BADDR(pfssm->fssm_Environ)) == 0
 	|| TypeOfMem(pdenDevice) == 0
 	|| pdenDevice->de_TableSize < DE_DOSTYPE
+	|| pdenDevice->de_DosType == 0x43443031		// Virtual CD
+	|| pdenDevice->de_DosType == 0x43444653		// CD
+	
 	/* Check that parameters that should always be 0, are 
 	|| pdenDevice->de_SecOrg != 0
 	|| pdenDevice->de_Interleave != 0 */)
@@ -184,7 +187,7 @@ BOOL ObjectTypeOk(struct DosList* device)
 	return TRUE;
 }
 
-void ComputeCapacity(struct DosList *pdlVolume, struct InfoData *pInfoData)
+void ComputeCapacity()
 {
 	ULLONG cUnits;
 	ULONG UnitDecimal = 0;
@@ -196,13 +199,12 @@ void ComputeCapacity(struct DosList *pdlVolume, struct InfoData *pInfoData)
 
 	switch(UnitDecimal)
 	{
-		case 0: strcpy(UnitString,"Bytes"); break;
-		case 1: strcpy(UnitString,"KiloBytes"); break;
-		case 2: strcpy(UnitString,"MegaBytes"); break;
-		case 3: strcpy(UnitString,"GigaBytes"); break;
-		case 4: strcpy(UnitString,"TeraBytes"); break;
-		case 5: strcpy(UnitString,"PetaBytes"); break;
-		case 6: strcpy(UnitString,"ExaBytes"); break;
+		case 0: strcpy(UnitString,"KiloBytes"); break;
+		case 1: strcpy(UnitString,"MegaBytes"); break;
+		case 2: strcpy(UnitString,"GigaBytes"); break;
+		case 3: strcpy(UnitString,"TeraBytes"); break;
+		case 4: strcpy(UnitString,"PetaBytes"); break;
+		case 5: strcpy(UnitString,"ExaBytes"); break;
 	}
 
 	RawDoFmtSz( szCapacityInfo, _(MSG_CAPACITY), (ULONG)cUnits, UnitString );
@@ -259,9 +261,9 @@ void VolumesToList(Object* listObject)
 			} while (volume->dol_Task != device->dol_Task);
 		
 			if (volume) strcpy(entry.volumeName, AROS_BSTR_ADDR(volume->dol_Name));
-			else strcpy(entry.volumeName, "_____");
+			else strcpy(entry.volumeName, AROS_BSTR_ADDR(device->dol_Name));
 		
-			ComputeCapacity(volume, pInfoData);
+			ComputeCapacity();
 			strcpy(entry.capacityInfo, szCapacityInfo);
 		
 			DoMethod(listObject, MUIM_List_InsertSingle, &entry,
@@ -305,7 +307,7 @@ struct SFormatEntry* SelectDevice(void)
 							MUIA_Group_HorizSpacing, 4,
 							MUIA_Group_VertSpacing,  4,
 	
-						Child, Label("\33c\33b ApolloFormat \33n\n\n    Select Device to Format    "),
+						Child, Label("\33c\33b ApolloFormat \33n\n\n       Select Device to Format       "),
 						End,
 
 						Child, HGroup,
@@ -508,6 +510,7 @@ int rcGuiMain(void)
 	char szDosType[11];
 	char szLowCyl[2];
 	char szHighCyl[10];
+	BOOL busedevicename;
 
 	struct DosList *pdlDevice = NULL;
 	szVolumeInfo[0] = '\0';
@@ -534,8 +537,7 @@ int rcGuiMain(void)
 				DD(bug("[FORMAT] Bad device name from Workbench: %s\n", _WBenchMsg->sm_ArgList[1].wa_Name));
 				goto cleanup;
 			}
-			strcpy(szVolumeName, "_____");
-
+			busedevicename = TRUE;
 		} else {
 			if( _WBenchMsg->sm_ArgList[1].wa_Name[0] == 0 )
 			{
@@ -590,24 +592,26 @@ int rcGuiMain(void)
 				DD(bug("[FORMAT] Bad device name from SelectDevice: %s\n", szDosDevice));
 				goto cleanup;
 			}
+			busedevicename = FALSE;
 		}
 	}
 
 	if (!bGetDosDevice(pdlDevice, LDF_DEVICES|LDF_READ)) goto cleanup;
 
-	ComputeCapacity(pdlVolume, &dinf );
+	if (busedevicename) strcpy(szVolumeName, AROS_BSTR_ADDR(DeviceName));
 
-	struct FileSysStartupMsg *fssm = BADDR(pdlDevice->dol_misc.dol_handler.dol_Startup);
-	struct DosEnvec *de = BADDR(fssm->fssm_Environ);
+	//DD(bug("[FORMAT] DeviceName: %s\n", DeviceName));
 
-	RawDoFmtSz(szDosType, "0x%08lx", de->de_DosType);
+	ComputeCapacity();
+
+	RawDoFmtSz(szDosType, "0x%08lx", DosType);
 	szDosType[10] = 0;
 
 	char szDosTypeName[5];
 	
 	for (int i = 0; i < 4; i++)
 	{
-		szDosTypeName[i] = (de->de_DosType >> ((3 - i) * 8)) & 0xff;
+		szDosTypeName[i] = (DosType >> ((3 - i) * 8)) & 0xff;
 
 		if (szDosTypeName[i] < 9)
 			szDosTypeName[i] += '0';
@@ -621,12 +625,12 @@ int rcGuiMain(void)
 	RawDoFmtSz( szDosTypeString, "\33c%s", szDosTypeName);
 	DD(bug("[FORMAT] DosType [0]=%lx | [1]=%lx | [2]=%lx | [3]=%lx | [4]%lx\n", szDosTypeName[0],szDosTypeName[1],szDosTypeName[2],szDosTypeName[3],szDosTypeName[4])); 
 	DD(bug("[FORMAT] Device = %s | Volume = %s | Capacity = %s | DosType = %8lx | LowCyl = %u | HighCyl = %u\n",
-		szDosDevice, szVolumeName, szCapacityInfo, de->de_DosType, de->de_LowCyl, de->de_HighCyl));
+		szDosDevice, szVolumeName, szCapacityInfo, DosType, LowCyl, HighCyl));
 
 	RawDoFmtSz( szTitle, _(MSG_WINDOW_TITLE), szDosDevice );
 	DD(bug("[FORMAT] Setting window title to '%s'\n", szTitle));
 
-	BOOL IsDeviceFAT = ( (de->de_DosType >= 0x46415400) && (de->de_DosType <= 0x46415402) );
+	BOOL IsDeviceFAT = ( (DosType >= 0x46415400) && (DosType <= 0x46415402) );
 
 	Object *btn_format, *btn_qformat, *btn_cancel, *btn_stop;
 

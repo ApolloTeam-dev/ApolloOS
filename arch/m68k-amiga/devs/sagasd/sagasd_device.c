@@ -227,7 +227,7 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
                     break;
             default:
                     if (i >= 8 && i < 36)
-                        val = "Apollo  SD-Card Slot #1 2.52"[i - 8];
+                        val = "Apollo  SD-Card Slot #1     "[i - 8];
                     else if (i >= 36 && i < 44) {
                         val = sdc->info.cid[7 + (i-36)/2];
                         if ((i & 1) == 0)
