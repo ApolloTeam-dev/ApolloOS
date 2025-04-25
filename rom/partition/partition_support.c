@@ -131,22 +131,29 @@ void initPartitionHandle(struct PartitionHandle *root, struct PartitionHandle *p
     /* initialize DosEnvec */
     CopyMem(&root->de, &ph->de, sizeof(struct DosEnvec));
 
+    D(bug("\n[PART] [%s] Disk geometry received from MBR:\n",__FUNCTION__ ));
+    D(bug("[PART] [%s] first_sector     : %d\n",__FUNCTION__ , first_sector));
+    D(bug("[PART] [%s] count_sector     : %d\n",__FUNCTION__ , count_sector));
+    D(bug("[PART] [%s] cylsecs          : %d\n",__FUNCTION__ , cylsecs));
+
     /* Check if partition starts and ends on a cylinder boundary */
     if ((first_sector % cylsecs != 0) || (count_sector % cylsecs != 0))
     {
         /* Treat each track as a cylinder if possible */
         ph->de.de_Surfaces = 1;
         cylsecs = ph->de.de_BlocksPerTrack;
+        D(bug("\n[PART] [%s] Disk geometry adjusted (flat LBA):\n",__FUNCTION__ ));
+        D(bug("[PART] [%s] cylsecs          : %d\n",__FUNCTION__ , cylsecs));
+        D(bug("[PART] [%s] de.de_Surfaces   : %d\n",__FUNCTION__ , ph->de.de_Surfaces));
 
         if ((first_sector % cylsecs != 0) || (count_sector % cylsecs != 0))
         {
-            /*
-             * We can't. We could find the highest common factor of
-             * first_sector and count_sector here, but currently we
-             * simply use one block per cylinder (flat LBA)
-             */
+            /* We can't. We could find the highest common factor of first_sector and count_sector here, but currently we simply use one block per cylinder (flat LBA) */
             ph->de.de_BlocksPerTrack = 1;
             cylsecs = 1;
+            
+            D(bug("[PART] [%s] cylsecs          : %d\n",__FUNCTION__ , cylsecs));
+            D(bug("[PART] [%s] de.BlocksperTrack: %d\n",__FUNCTION__ , ph->de.de_BlocksPerTrack));
         }
     }
 
@@ -159,9 +166,21 @@ void initPartitionHandle(struct PartitionHandle *root, struct PartitionHandle *p
     ph->dg.dg_CylSectors   = cylsecs;
     ph->dg.dg_BufMemType   = ph->de.de_BufMemType;
 
+    D(bug("\n[PART] [%s] Disk geometry received from Device Driver:\n",__FUNCTION__ ));
+    D(bug("[PART] [%s] dg_SectorSize    : %d\n",__FUNCTION__ , ph->dg.dg_SectorSize));
+    D(bug("[PART] [%s] dg_TotalSectors  : %d\n",__FUNCTION__ , ph->dg.dg_TotalSectors));
+    D(bug("[PART] [%s] dg_Cylinders     : %d\n",__FUNCTION__ , ph->dg.dg_Cylinders));
+    D(bug("[PART] [%s] dg_CylSectors    : %d\n",__FUNCTION__ , ph->dg.dg_CylSectors));
+    D(bug("[PART] [%s] dg_Heads         : %d\n",__FUNCTION__ , ph->dg.dg_Heads));
+    D(bug("[PART] [%s] dg_TrackSectors  : %d\n",__FUNCTION__ , ph->dg.dg_TrackSectors));
+
     /* Set start/end cylinder in DosEnvec */
     ph->de.de_LowCyl    = first_sector / cylsecs;
     ph->de.de_HighCyl   = ph->de.de_LowCyl + ph->dg.dg_Cylinders - 1;
+
+    D(bug("\n[PART] [%s] Drive Geometry transfer to ph->de (DosEnvec):\n",__FUNCTION__ ));
+    D(bug("[PART] [%s] de_LowCyl         : %d\n",__FUNCTION__ , ph->de.de_LowCyl));
+    D(bug("[PART] [%s] de_HighCyl        : %d\n\n",__FUNCTION__ , ph->de.de_HighCyl));
 
     /* Fix up DosEnvec size if necessary */
     if (ph->de.de_TableSize < DE_BUFMEMTYPE)

@@ -28,7 +28,7 @@
 
 #include <exec/types.h>
 
-#include <sd.h>
+#include "sd.h"
 
 #include "sdcmd.h"
 
@@ -632,7 +632,7 @@ UBYTE sdcmd_detect(struct sdcmd *sd)
 
     sdcmd_send(sd, SDCMD_GO_IDLE_STATE, 0);
 
-    for (i = 0; i < 100; i++)
+    for (i = 0; i < 50; i++)
     {
         r1 = sdcmd_in(sd);
         if (!(r1 & SDERRF_TIMEOUT)) break;
@@ -747,7 +747,11 @@ UBYTE sdcmd_detect(struct sdcmd *sd)
                     info->blocks = (c_size + 1) * 1024;
                     info->addr_shift = 0;
                 } 
+            } else {
+                info->block_size = SDSIZ_BLOCK;
+                info->blocks = 0; // virtual value as stub if no SD is present (dynamically set by FAT filesystem on DoDiskInsert())
             }
+            sdcmd_clkdiv(sd, SDCMD_CLKDIV_FASTER);
         }
     }
 

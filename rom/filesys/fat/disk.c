@@ -42,10 +42,6 @@ void ProcessDiskChange(struct Globals *glob)
     D(bug("----------------------------------------------------------------\n"));
     D(bug("[FAT] [%s] Start\n",__FUNCTION__ ));
 
-    //struct DriveGeometry geometry;
-    //struct FileSysStartupMsg *fssm = glob->fssm;
-    //struct DosEnvec *de = BADDR(fssm->fssm_Environ);
-
     D(bug("[FAT] [%s] Got disk change request\n",__FUNCTION__ ));
 
     if (glob->disk_inhibited != 0)
@@ -60,48 +56,17 @@ void ProcessDiskChange(struct Globals *glob)
     glob->diskioreq->iotd_Req.io_Flags = IOF_QUICK;
     DoIO((struct IORequest *)glob->diskioreq);
 
-    if (glob->diskioreq->iotd_Req.io_Error == 0
-        && glob->diskioreq->iotd_Req.io_Actual == 0)
+    if (glob->diskioreq->iotd_Req.io_Error == 0 && glob->diskioreq->iotd_Req.io_Actual == 0)
     {
-        /* Disk has been inserted. */
-        D(bug("[FAT] [%s] Disk has been inserted\n",__FUNCTION__ ));
         glob->disk_inserted = TRUE;
-
-        //glob->diskioreq->iotd_Req.io_Data = &geometry;
-        //glob->diskioreq->iotd_Req.io_Command = TD_GETGEOMETRY;
-        //glob->diskioreq->iotd_Req.io_Length = sizeof(struct DriveGeometry);
-        //DoIO((struct IORequest *)glob->diskioreq);
-
-        //D(bug("[FAT] [%s] Disk geometry retrieved in DriveGeometry structure\n",__FUNCTION__ ));
-        //D(bug("[FAT] [%s] dg_SectorSize    : %d\n",__FUNCTION__ , geometry.dg_SectorSize));
-        //D(bug("[FAT] [%s] dg_TotalSectors  : %d\n",__FUNCTION__ , geometry.dg_TotalSectors));
-        //D(bug("[FAT] [%s] dg_Cylinders     : %d\n",__FUNCTION__ , geometry.dg_Cylinders));
-        //D(bug("[FAT] [%s] dg_CylSectors    : %d\n",__FUNCTION__ , geometry.dg_CylSectors));
-        //D(bug("[FAT] [%s] dg_Heads         : %d\n",__FUNCTION__ , geometry.dg_Heads));
-        //D(bug("[FAT] [%s] dg_TrackSectors  : %d\n",__FUNCTION__ , geometry.dg_TrackSectors));
-
-        //D(bug("[FAT] [%s] Drive Geometry structure transfer to glob->fssm->fssm_Environ\n",__FUNCTION__ ));
-
-        //de->de_SizeBlock        = geometry.dg_SectorSize >> 2; // Sizeblock = LONG p/Block = Shift 2
-        //de->de_Surfaces         = geometry.dg_Heads;           // Surfaces = Heads
-        //de->de_BlocksPerTrack   = geometry.dg_TrackSectors;    // Block p/Track = #Sectors
-        //de->de_LowCyl           = 2;                           // HOW TO DETERMINE???
-        //de->de_HighCyl          = geometry.dg_Cylinders - 1;   // Assume 1 partition ???
-
-        //D(bug("[FAT] [%s] de_SizeBlock      : %d\n",__FUNCTION__ , de->de_SizeBlock));
-        //D(bug("[FAT] [%s] de_Surfaces       : %d\n",__FUNCTION__ , de->de_Surfaces));
-        //D(bug("[FAT] [%s] de_BlocksPerTrack : %d\n",__FUNCTION__ , de->de_BlocksPerTrack));
-        //D(bug("[FAT] [%s] dg_LowCyl         : %d\n",__FUNCTION__ , de->de_LowCyl));
-        //D(bug("[FAT] [%s] dg_HighCyl        : %d\n",__FUNCTION__ , de->de_HighCyl));
-
         DoDiskInsert(glob);
+        D(bug("[FAT] [%s] Disk has been inserted\n",__FUNCTION__ ));
     }
     else
     {
-        /* Disk has been removed. */
-        D(bug("[FAT] [%s] Disk has been removed\n",__FUNCTION__ ));
         glob->disk_inserted = FALSE;
         DoDiskRemove(glob);
+        D(bug("[FAT] [%s] Disk has been removed\n",__FUNCTION__ ));
     }
 
     D(bug("[FAT] [%s] Done process disk change request\n",__FUNCTION__ ));

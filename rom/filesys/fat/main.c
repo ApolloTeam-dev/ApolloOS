@@ -56,8 +56,7 @@ static void InitCharsetTables(struct Globals *glob)
     }
 }
 
-static struct Globals *fat_init(struct Process *proc, struct DosPacket *dp,
-    struct ExecBase *SysBase)
+static struct Globals *fat_init(struct Process *proc, struct DosPacket *dp, struct ExecBase *SysBase)
 {
     D(bug("----------------------------------------------------------------\n"));
     D(bug("[FAT] [%s] Start \n",__FUNCTION__ ));
@@ -68,8 +67,7 @@ static struct Globals *fat_init(struct Process *proc, struct DosPacket *dp,
     if (glob)
     {
         glob->gl_SysBase = SysBase;
-        if ((glob->gl_DOSBase =
-                (struct DosLibrary *)TaggedOpenLibrary(TAGGEDOPEN_DOS)))
+        if ((glob->gl_DOSBase = (struct DosLibrary *)TaggedOpenLibrary(TAGGEDOPEN_DOS)))
         {
             if ((glob->gl_UtilityBase = OpenLibrary("utility.library", 0)))
             {
@@ -179,30 +177,25 @@ LONG handler(struct ExecBase *SysBase)
         dp->dp_Res2 = 0;
         ReplyPacket(dp, SysBase);
 
-        D(bug("[FAT] [%s] Handler init finished\n",__FUNCTION__ ));
+        //Force a DoDiskInsert regardless if Disk is present
+        DoDiskInsert(glob);
 
-        /* Insert disk */
-        ProcessDiskChange(glob);
+        D(bug("[FAT] [%s] Handler init finished, starting Main Loop\n",__FUNCTION__ ));
 
         while (!glob->quit)
         {
             sigs = Wait(mask);
-            if (sigs & diskchgsig)
-                ProcessDiskChange(glob);
-            if (sigs & pktsig)
-                ProcessPackets(glob);
-            if (sigs & notifysig)
-                ProcessNotify(glob);
-            if (sigs & timersig)
-                HandleTimer(glob);
+            if (sigs & diskchgsig) ProcessDiskChange(glob);
+            if (sigs & pktsig) ProcessPackets(glob);
+            if (sigs & notifysig) ProcessNotify(glob);
+            if (sigs & timersig) HandleTimer(glob);
         }
 
         D(bug("[FAT] [%s] Handler shutdown initiated\n",__FUNCTION__ ));
 
         dp = NULL;
 
-        if (glob->death_packet != NULL)
-            ReplyPacket(glob->death_packet, SysBase);
+        if (glob->death_packet != NULL) ReplyPacket(glob->death_packet, SysBase);
 
         fat_exit(glob);
     }
@@ -253,8 +246,7 @@ static LONG InitDiskHandler(struct Globals *glob)
             if ((glob->diskioreq = CreateIORequest(glob->diskport,
                 sizeof(struct IOExtTD))))
             {
-                if (OpenDevice(device, unit,
-                    (struct IORequest *)glob->diskioreq, flags) == 0)
+                if (OpenDevice(device, unit, (struct IORequest *)glob->diskioreq, flags) == 0)
                 {
                     D(bug("[FAT] [%s] Device successfully opened\n",__FUNCTION__ ));
                     Probe64BitSupport(glob);

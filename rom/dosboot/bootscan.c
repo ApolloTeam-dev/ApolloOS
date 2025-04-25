@@ -331,20 +331,18 @@ void dosboot_BootScan(LIBBASETYPEPTR DOSBootBase)
     {
         ObtainSemaphore(&IntExpBase(ExpansionBase)->BootSemaphore);
 
-        /* Transfer all bootnodes in the mountlist into a temporary list.
-           The assumption is that all bootnodes created before now represent
-           entire disks */
+        /* Transfer all bootnodes in the mountlist into a temporary list. The assumption is that all bootnodes created before now represent entire disks */
         NewList(&rootList);
         while ((temp = (struct BootNode *)RemHead(&ExpansionBase->MountList)) != NULL)
             AddTail(&rootList, (struct Node *) temp);
 
         ForeachNodeSafe (&rootList, bootNode, temp)
         {
-        	// No Clue what this does? [WD]
+        	/* No Clue what this does? [WD]
             struct DeviceNode *deviceNode = bootNode->bn_DeviceNode;
         	char deviceName[ 256 ];
         	UBYTE deviceNameLength = *(char*)deviceNode->dn_Name;
-        	if( deviceNameLength) {	CopyMem( (char*)deviceNode->dn_Name, deviceName, deviceNameLength );	deviceName[ deviceNameLength ] = 0; }
+        	if( deviceNameLength) {	CopyMem( (char*)deviceNode->dn_Name, deviceName, deviceNameLength );	deviceName[ deviceNameLength ] = 0; }*/
 
             CheckPartitions(ExpansionBase, PartitionBase, SysBase, bootNode);
         }

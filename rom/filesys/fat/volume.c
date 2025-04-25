@@ -19,6 +19,7 @@
 #include <devices/inputevent.h>
 #include <dos/dos.h>
 #include <dos/dosextens.h>
+#include <devices/trackdisk.h>
 
 #include <clib/alib_protos.h>
 
@@ -89,15 +90,14 @@ LONG ReadFATSuper(struct FSSuper *sb)
     UBYTE *fat_block;
 
     D(bug("[FAT] [%s] Reading boot sector\n",__FUNCTION__ ));
-
-    boot = AllocMem(bsize, MEMF_ANY);
-    if (!boot)
-        return ERROR_NO_FREE_STORE;
-
     D(bug("[FAT] [%s] Blockspertrack %ld\n",__FUNCTION__ , de->de_BlocksPerTrack));
     D(bug("[FAT] [%s] Surfaces %ld\n", __FUNCTION__ , de->de_Surfaces));
     D(bug("[FAT] [%s] Lowcyl %ld\n", __FUNCTION__ , de->de_LowCyl));
     D(bug("[FAT] [%s] Highcyl %ld\n", __FUNCTION__ , de->de_HighCyl));
+
+    boot = AllocMem(bsize, MEMF_ANY);
+    if (!boot)
+        return ERROR_NO_FREE_STORE;
 
     sb->first_device_sector =
         de->de_BlocksPerTrack * de->de_Surfaces * de->de_LowCyl;
@@ -954,7 +954,6 @@ static void SendVolumePacket(struct DosList *vol, ULONG action, struct Globals *
 
 void DoDiskInsert(struct Globals *glob)
 {
-    D(bug("----------------------------------------------------------------\n"));
     D(bug("[FAT] [%s] Start\n",__FUNCTION__ ));
 
     struct FSSuper *sb;
@@ -968,6 +967,43 @@ void DoDiskInsert(struct Globals *glob)
     struct NotifyNode *nn;
     struct DosList *newvol = NULL;
 
+    struct DriveGeometry geometry;
+    struct FileSysStartupMsg *fssm = glob->fssm;
+    struct DosEnvec *de = BADDR(fssm->fssm_Environ);
+
+    D(bug("\n[FAT] [%s] Current glob->fssm->fssm_Environ (DOSENVEC):\n",__FUNCTION__));
+    D(bug("[FAT] [%s] de_SizeBlock      : %d\n",__FUNCTION__ , de->de_SizeBlock));
+    D(bug("[FAT] [%s] de_Surfaces       : %d\n",__FUNCTION__ , de->de_Surfaces));
+    D(bug("[FAT] [%s] de_BlocksPerTrack : %d\n",__FUNCTION__ , de->de_BlocksPerTrack));
+    D(bug("[FAT] [%s] dg_LowCyl         : %d\n",__FUNCTION__ , de->de_LowCyl));
+    D(bug("[FAT] [%s] dg_HighCyl        : %d\n\n",__FUNCTION__ , de->de_HighCyl));
+
+    glob->diskioreq->iotd_Req.io_Data = &geometry;
+    glob->diskioreq->iotd_Req.io_Command = TD_GETGEOMETRY;
+    glob->diskioreq->iotd_Req.io_Length = sizeof(struct DriveGeometry);
+    DoIO((struct IORequest *)glob->diskioreq);
+
+    D(bug("\n[FAT] [%s] Disk geometry received from Device Driver:\n",__FUNCTION__ ));
+    D(bug("[FAT] [%s] dg_SectorSize    : %d\n",__FUNCTION__ , geometry.dg_SectorSize));
+    D(bug("[FAT] [%s] dg_TotalSectors  : %d\n",__FUNCTION__ , geometry.dg_TotalSectors));
+    D(bug("[FAT] [%s] dg_Cylinders     : %d\n",__FUNCTION__ , geometry.dg_Cylinders));
+    D(bug("[FAT] [%s] dg_CylSectors    : %d\n",__FUNCTION__ , geometry.dg_CylSectors));
+    D(bug("[FAT] [%s] dg_Heads         : %d\n",__FUNCTION__ , geometry.dg_Heads));
+    D(bug("[FAT] [%s] dg_TrackSectors  : %d\n",__FUNCTION__ , geometry.dg_TrackSectors));
+
+    de->de_SizeBlock        = geometry.dg_SectorSize >> 2; // Sizeblock = LONG p/Block = Shift 2
+    de->de_Surfaces         = geometry.dg_Heads;           // Surfaces = Heads
+    de->de_BlocksPerTrack   = geometry.dg_TrackSectors;    // Block p/Track = #Sectors
+    de->de_LowCyl           = 2;                           // Assume 1 partition !?
+    de->de_HighCyl          = geometry.dg_TotalSectors / (geometry.dg_Heads * geometry.dg_TrackSectors);    
+
+    D(bug("\n[FAT] [%s] Drive Geometry transfer to glob->fssm->fssm_Environ:\n",__FUNCTION__ ));
+    D(bug("[FAT] [%s] de_SizeBlock      : %d\n",__FUNCTION__ , de->de_SizeBlock));
+    D(bug("[FAT] [%s] de_Surfaces       : %d\n",__FUNCTION__ , de->de_Surfaces));
+    D(bug("[FAT] [%s] de_BlocksPerTrack : %d\n",__FUNCTION__ , de->de_BlocksPerTrack));
+    D(bug("[FAT] [%s] de_LowCyl         : %d\n",__FUNCTION__ , de->de_LowCyl));
+    D(bug("[FAT] [%s] de_HighCyl        : %d\n\n",__FUNCTION__ , de->de_HighCyl));
+
     if (glob->sb == NULL && (sb = AllocVecPooled(glob->mempool, sizeof(struct FSSuper))))
     {
         SetMem(sb, 0, sizeof(struct FSSuper));
@@ -979,7 +1015,6 @@ void DoDiskInsert(struct Globals *glob)
 
         if (err == 0)
         {
-
             D(bug("[FAT] [%s] Scan volume list for a matching volume\n", __FUNCTION__)); // would be better to match by serial number)
 
             D(bug("[FAT] [%s] LockDosList\n", __FUNCTION__));
@@ -1163,7 +1198,6 @@ BOOL AttemptDestroyVolume(struct FSSuper *sb)
 
 void DoDiskRemove(struct Globals *glob)
 {
-    D(bug("----------------------------------------------------------------\n"));
     D(bug("[FAT] [%s] %s\n",__FUNCTION__, AROS_BSTR_ADDR(glob->sb->doslist->dol_Name) ));
 
     if (glob->sb)

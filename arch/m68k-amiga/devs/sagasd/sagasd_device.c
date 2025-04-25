@@ -584,7 +584,8 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         break;
     case TD_GETGEOMETRY:
     	bug( "%s TD_GETGEOMETRY\n", __FUNCTION__ );
-        if (len < sizeof(*geom)) {
+        if (len < sizeof(*geom))
+        {
             err = IOERR_BADLENGTH;
             break;
         }
@@ -780,7 +781,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
                 /* Timeout was signalled */
                 io = NULL;
 
-                if(detectcounter++ == 100)
+                if(detectcounter++ == 50)
                 {
                     present = sdcmd_present(&sdu->sdu_SDCmd);
                     if (!present)
@@ -815,6 +816,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
                                     debug("SD-Card INSERT = Calling sdu->sdu_AddChangeList[%d] (%x) for %s", i, sdu->sdu_AddChangeList[i], sdu->sdu_Name);
                                     Cause((struct Interrupt *)(sdu->sdu_AddChangeList[i]));
                                 }
+
                                 Permit();
 
                             } 
@@ -941,7 +943,7 @@ static void SAGASD_BootNode(
     pp[DE_MAXTRANSFER + 4] = 0x00200000;
     pp[DE_MASK + 4] = 0xFFFFFFFE;
     pp[DE_BOOTPRI + 4] = 5 - (unit * 10);
-    pp[DE_DOSTYPE + 4] = 0x444f5303;
+    pp[DE_DOSTYPE + 4] = 0x46415402;                //FAT2 (FAT32) Default DosType for file-transfer
     pp[DE_BOOTBLOCKS + 4] = 2;
     devnode = MakeDosNode(pp);
 
@@ -1035,6 +1037,7 @@ static int GM_UNIQUENAME(init)(struct SAGASDBase * SAGASDBase)
 
     struct Library *SysBase = SAGASDBase->sd_ExecBase;
     struct Library *ExpansionBase;
+
     ULONG i;
 
     asm ( "tst.b 0xbfe001\r\n" );    // Wait a moment, then...
@@ -1046,11 +1049,10 @@ static int GM_UNIQUENAME(init)(struct SAGASDBase * SAGASDBase)
     for (i = 0; i < SAGASD_UNITS; i++)
 	    SAGASD_InitUnit(SAGASDBase, i);
 
-    /* Only add bootnode if recalibration succeeded */
+
     for (i = 0; i < SAGASD_UNITS; i++)
     {
-    	if (SAGASDBase->sd_Unit[i].sdu_Valid)
-    		SAGASD_BootNode(SAGASDBase, ExpansionBase, i);
+        SAGASD_BootNode(SAGASDBase, ExpansionBase, i);
     }
 
     CloseLibrary((struct Library *)ExpansionBase);
