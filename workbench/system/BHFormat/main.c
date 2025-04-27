@@ -58,8 +58,9 @@ IPTR MaxTransfer;
 IPTR LowCyl, HighCyl;
 ULONG DosType;
 BSTR DeviceName;
+char *DeviceName_String;
 
-static char szVolume[MAX_FS_NAME_LEN+2] __attribute__((aligned (4)));
+char szVolume[MAX_FS_NAME_LEN+2] __attribute__((aligned (4)));
 static char * pszExecDevice;
 static ULONG ExecUnit, ExecDeviceFlags;
 static ULONG BufMemType;
@@ -178,14 +179,15 @@ BOOL bSetSzDosDeviceFromSz( const char * pszDevice )
 
     if( cch != 0 && cch <= MAX_FS_NAME_LEN )
     {
-	/* Make a copy, without the colon */
-	strncpy( szDosDevice, pszDevice, cch );
-	pchDosDeviceColon = &szDosDevice[cch]; /* need to put it back later */
-	*pchDosDeviceColon = 0;
-	*(pchDosDeviceColon+1) = 0;
-	return TRUE;
+		/* Make a copy, without the colon */
+		strncpy( szDosDevice, pszDevice, cch );
+		pchDosDeviceColon = &szDosDevice[cch]; /* need to put it back later */
+		*pchDosDeviceColon = 0;
+		*(pchDosDeviceColon+1) = 0;
+		return TRUE;
     }
 
+	DD(bug("[FORMAT] bSetSzDosDeviceFromSz: ERROR_INVALID_COMPONENT_NAME\n"));
     ReportErrSz( ertError, ERROR_INVALID_COMPONENT_NAME, 0 );
     return FALSE;
 }
@@ -196,17 +198,25 @@ BOOL bSetSzVolumeFromSz( const char * pszVolume )
     /* Check the length and validity of the volume name */
     size_t cch = strlen(pszVolume);
 
-    if( cch != 0 && cch <= MAX_FS_NAME_LEN && strpbrk( pszVolume, ":/" ) == 0 )
-    {
-	/* Make a copy with a length prefix because v36 Format function
-	   incorrectly expects a BSTR */
-	szVolume[0] = cch;
-	strcpy( &szVolume[1], pszVolume );
-	return TRUE;
-    }
-
-    ReportErrSz( ertError, ERROR_INVALID_COMPONENT_NAME, 0 );
-    return FALSE;
+    if(cch == 0)
+	{
+		return 1;
+	} else {
+		if (cch > MAX_FS_NAME_LEN)
+		{
+			return 2;
+		} else {
+			if (strpbrk( pszVolume, ":/" ) != 0 )
+			{
+				return 3;
+			} else {
+				/* Make a copy with a length prefix because v36 Format function incorrectly expects a BSTR */
+				szVolume[0] = cch;
+				strcpy( &szVolume[1], pszVolume );
+			}
+		}
+	}
+	return 0;
 }
 
 
@@ -334,8 +344,9 @@ BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
     HighCyl = pdenDevice->de_HighCyl;
     DosType = pdenDevice->de_DosType;
 	DeviceName = pdlDevice->dol_Name;
+	DeviceName_String = AROS_BSTR_ADDR(DeviceName);
 
-	DD(bug("[FORMAT] szDosDevice = %s | DeviceName = %s\n", szDosDevice, DeviceName));
+	DD(bug("[FORMAT] szDosDevice = %s | DeviceName = %s\n", szDosDevice, DeviceName_String));
 	
     cbyTrack = (ULLONG)pdenDevice->de_BlocksPerTrack * (ULLONG)(pdenDevice->de_SizeBlock * sizeof(LONG));
     cbyCylinder = cbyTrack * pdenDevice->de_Surfaces;
@@ -450,9 +461,10 @@ BOOL bGetExecDevice( BOOL bWillVerify )
     DD(bug("[FORMAT] Inhibit( \"%s\", DOSTRUE );\n", (ULONG)szDosDevice ));
     if(!Inhibit( szDosDevice, DOSTRUE ))
     {
-	/* This is a bit stupid, but compatible with v40 Format */
-	ReportErrSz( ertFailure, ERROR_OBJECT_WRONG_TYPE, 0 );
-	return FALSE;
+		/* This is a bit stupid, but compatible with v40 Format */
+		DD(bug("[FORMAT] bGetExecDevice - ERROR_OBJECT_WRONG_TYPE\n"));
+		ReportErrSz( ertFailure, ERROR_OBJECT_WRONG_TYPE, 0 );
+		return FALSE;
     }
     bInhibited = TRUE;
 

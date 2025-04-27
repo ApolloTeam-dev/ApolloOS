@@ -131,7 +131,7 @@ AFILES=rom_entry rom_init cpu_detect superstack_swap
 ifeq ($(APOLLOROM),V4)
 	KLIBS   := exec aros dos utility oop expansion partition 
 	KDEVS   := timer input keyboard console gameport audio
-	KHNDLRS := con fat ram 
+	KHNDLRS := afs fat ram 
 	KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse 
 	KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem vampire
 	KHOOKS  := diag romboot
@@ -168,7 +168,7 @@ AFILES  := ext_entry
 ifeq ($(APOLLOROM),V4)
 	KLIBS   := keymap graphics layers intuition gadtools workbench mathffp mathieeesingbas freeanim lowlevel setpatch
 	KDEVS   := sagasd ata trackdisk
-	KHNDLRS := 
+	KHNDLRS := con
 	KHIDDS  := bus storage system
 	KRSRCS  := shellcommands wbtag misc shell card bootloader
 	KHOOKS  := alert 

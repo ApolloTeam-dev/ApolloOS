@@ -167,6 +167,7 @@ BOOL ObjectTypeOk(struct DosList* device)
 	|| pdenDevice->de_TableSize < DE_DOSTYPE
 	|| pdenDevice->de_DosType == 0x43443031		// Virtual CD
 	|| pdenDevice->de_DosType == 0x43444653		// CD
+	|| ( (AROS_BSTR_ADDR(device->dol_Name)[0] ==  'I') && (AROS_BSTR_ADDR(device->dol_Name)[1] == 'D') && (AROS_BSTR_ADDR(device->dol_Name)[2] ==  'F') )
 	
 	/* Check that parameters that should always be 0, are 
 	|| pdenDevice->de_SecOrg != 0
@@ -416,11 +417,29 @@ AROS_UFH3S(void, btn_format_function,
 	BOOL bMakeTrashcan, bFFS, bIntl;
 	BOOL bDirCache = FALSE;
 	LONG rc = FALSE;
+	char *VolumeName_String;
 
-	DD(bug("[FORMAT] Select Format: %s\n", bDoFormat ? "Full" : "Quick" ));
+	DD(bug("[FORMAT] Selected Format: %s\n", bDoFormat ? "Full" : "Quick" ));
 	
-	if( !bSetSzDosDeviceFromSz(szDosDevice) ) goto cleanup;
-	if( !bSetSzVolumeFromSz( (char *)XGET(str_volume, MUIA_String_Contents) ) )	goto cleanup;
+	if (!bSetSzDosDeviceFromSz(szDosDevice)) goto cleanup;
+	
+	VolumeName_String = (char *)XGET(str_volume, MUIA_String_Contents);
+	
+	switch ( bSetSzVolumeFromSz(VolumeName_String) )
+	{
+		case 1: MUI_Request( app, mainwin, 0, "Format Error Message", "_Return", "Please enter Volume name"); return;
+		case 2: MUI_Request( app, mainwin, 0, "Format Error Message", "_Return", "Volume name is too long\nMaximum lenght is %d characters", MAX_FS_NAME_LEN); return;
+		case 3: MUI_Request( app, mainwin, 0, "Format Error Message", "_Return", "Volume name contains illegal : character"); return;
+		default: break;
+	}
+
+	DD(bug("[FORMAT] Check if Volume Name (%s) equals Device Name (%s) | Result = %d\n", VolumeName_String, DeviceName_String, strcmp(VolumeName_String, DeviceName_String) ));
+
+	if (strcmp(VolumeName_String, DeviceName_String) == 0)
+	{
+		MUI_Request( app, mainwin, 0, "Format Error Message", "_Return", "Volume name must be different from Device name");
+		return;
+	}	
 
 	bMakeTrashcan = XGET(chk_trash, MUIA_Selected);
 	bFFS = FALSE; 		//XGET(chk_ffs, MUIA_Selected);
@@ -454,8 +473,8 @@ AROS_UFH3S(void, btn_format_function,
 		if (MUI_Request( app, formatwin, 0, "Format Request Confirmation", "_Confirm|_Cancel", "WARNING !!!\n\nALL data will be lost on %s:\n\nPlease Confirm your Choice . . .", szDosDevice) == 0) goto cleanup;
 	}
 
-	set(formatwin, MUIA_Window_Open, TRUE);
-	set(mainwin, MUIA_Window_Open, FALSE);
+	if (bDoFormat) set(txt_action, MUIA_Text_Contents, "\33cFull Format");
+	else set(txt_action, MUIA_Text_Contents, "\33cQuick Format in Progress");
 
 	BOOL formatOk = TRUE;
 
@@ -510,7 +529,7 @@ int rcGuiMain(void)
 	char szDosType[11];
 	char szLowCyl[2];
 	char szHighCyl[10];
-	BOOL busedevicename;
+	BOOL bCreateVolName;
 
 	struct DosList *pdlDevice = NULL;
 	szVolumeInfo[0] = '\0';
@@ -537,7 +556,7 @@ int rcGuiMain(void)
 				DD(bug("[FORMAT] Bad device name from Workbench: %s\n", _WBenchMsg->sm_ArgList[1].wa_Name));
 				goto cleanup;
 			}
-			busedevicename = TRUE;
+			bCreateVolName = TRUE;
 		} else {
 			if( _WBenchMsg->sm_ArgList[1].wa_Name[0] == 0 )
 			{
@@ -592,15 +611,13 @@ int rcGuiMain(void)
 				DD(bug("[FORMAT] Bad device name from SelectDevice: %s\n", szDosDevice));
 				goto cleanup;
 			}
-			busedevicename = FALSE;
+			bCreateVolName = FALSE;
 		}
 	}
 
 	if (!bGetDosDevice(pdlDevice, LDF_DEVICES|LDF_READ)) goto cleanup;
 
-	if (busedevicename) strcpy(szVolumeName, AROS_BSTR_ADDR(DeviceName));
-
-	//DD(bug("[FORMAT] DeviceName: %s\n", DeviceName));
+	if (bCreateVolName) strcpy(szVolumeName, "");
 
 	ComputeCapacity();
 

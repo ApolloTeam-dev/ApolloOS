@@ -62,12 +62,14 @@ typedef enum {
 extern struct WBStartup * _WBenchMsg;
 extern BPTR bpfhStdErr;
 extern char szDosDevice[MAX_FS_NAME_LEN+2];
+extern char szVolume[MAX_FS_NAME_LEN+2];
 extern char * pchDosDeviceColon;
 extern ULLONG ibyStart, ibyEnd;
 extern IPTR MaxTransfer;
 extern IPTR LowCyl, HighCyl;
 extern ULONG DosType;
 extern BSTR DeviceName;
+extern char *DeviceName_String;
 extern const char szVersion[];
 
 void ReportErrSz( ErrorType ert, LONG err, const char * pszMessage, ... );
