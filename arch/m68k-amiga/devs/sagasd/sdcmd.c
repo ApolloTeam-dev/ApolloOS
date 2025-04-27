@@ -628,6 +628,8 @@ UBYTE sdcmd_detect(struct sdcmd *sd)
 
     debug("starting sdcmd_detect routine with SDCMD_GO_IDLE_STATE");
 
+    sdcmd_clkdiv(sd, SDCMD_CLKDIV_SLOW);
+
     sdcmd_select(sd, TRUE);
 
     sdcmd_send(sd, SDCMD_GO_IDLE_STATE, 0);

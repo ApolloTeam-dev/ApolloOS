@@ -383,7 +383,7 @@ ULONG bblock,togo,maxinbitmap;
 LONG markBlock(struct AFSBase *afsbase, struct Volume *volume, ULONG block, ULONG mode) {
 ULONG bitnr, longnr,null=0;
 
-	D(bug("[AFS]    markBlock: block=%lu mode=%lu\n",block,mode));
+	//D(bug("[AFS]    markBlock: block=%lu mode=%lu\n",block,mode));
 	if (block>=volume->countblocks)
 		null = null/null;
 	if (!gotoBitmapBlock(afsbase, volume, block, &longnr, &bitnr))

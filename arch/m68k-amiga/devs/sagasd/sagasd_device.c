@@ -599,7 +599,7 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         geom->dg_TrackSectors = SAGASD_SECTORS;
         geom->dg_BufMemType   = MEMF_PUBLIC;
         geom->dg_DeviceType   = DG_DIRECT_ACCESS;
-        geom->dg_Flags        = 0; //DGF_REMOVABLE;
+        geom->dg_Flags        = DGF_REMOVABLE;
         iostd->io_Actual = sizeof(*geom);
         err = 0;
         debug("\t[%s] geom->dg_SectorSize   = %10ld", __FUNCTION__ , geom->dg_SectorSize);

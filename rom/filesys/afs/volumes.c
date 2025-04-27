@@ -32,13 +32,16 @@ BOOL mediumPresent(struct IOHandle *ioh) {
  Input : volume  -
  Output: 0 for success; error code otherwise
 ********************************************/
-LONG newMedium(struct AFSBase *afsbase, struct Volume *volume) {
+LONG newMedium(struct AFSBase *afsbase, struct Volume *volume)
+{
 struct BlockCache *blockbuffer;
 UWORD i;
 BOOL gotdostype = FALSE;
 LONG error;
 ULONG dostype;
 UBYTE dosflags;
+
+	D(bug("[AFS] newMedium: START\n"));
 
 	/* Check validity of root block first, since boot block may be left over
 	   from an overwritten partition of a different size
@@ -47,17 +50,20 @@ UBYTE dosflags;
 	blockbuffer=getBlock(afsbase, volume,0);
 	volume->dostype = dostype = 0;
 	volume->dosflags = dosflags = 0;
-	if (blockbuffer != NULL) {
+	if (blockbuffer != NULL)
+	{
 		gotdostype = TRUE;
 		dostype = OS_BE2LONG(blockbuffer->buffer[0]) & 0xFFFFFF00;
 		dosflags = OS_BE2LONG(blockbuffer->buffer[0]) & 0xFF;
 	}
-
+	D(bug("[AFS] newMedium: 1\n"));
 	blockbuffer=getBlock(afsbase, volume,volume->rootblock);
-	if (blockbuffer == NULL) {
+	if (blockbuffer == NULL)
+	{
 		volume->dostype = ID_UNREADABLE_DISK;
 		return ERROR_UNKNOWN;
 	}
+	D(bug("[AFS] newMedium: 2\n"));
 	if (calcChkSum(volume->SizeBlock, blockbuffer->buffer) != 0 ||
 		OS_BE2LONG(blockbuffer->buffer[BLK_PRIMARY_TYPE]) != T_SHORT ||
 		OS_BE2LONG(blockbuffer->buffer[BLK_SECONDARY_TYPE(volume)]) != ST_ROOT)
@@ -67,17 +73,20 @@ UBYTE dosflags;
 		volume->dostype = ID_NOT_REALLY_DOS;
 		return ERROR_NOT_A_DOS_DISK;
 	}
-
-	if (gotdostype == FALSE) {
+	D(bug("[AFS] newMedium: 3\n"));
+	if (gotdostype == FALSE)
+	{
 		volume->dostype = ID_UNREADABLE_DISK;
 		return ERROR_UNKNOWN;
 	}
+	D(bug("[AFS] newMedium: 4\n"));
 	if ((dostype != ID_DOS_DISK) && (dostype != ID_DOS_muFS_DISK))
 	{
 		blockbuffer = getBlock(afsbase, volume, 1);
 		dostype = OS_BE2LONG(blockbuffer->buffer[0]) & 0xFFFFFF00;
 		dosflags = OS_BE2LONG(blockbuffer->buffer[0]) & 0xFF;
 	}
+	D(bug("[AFS] newMedium: 5\n"));
 	if ((dostype != ID_DOS_DISK) && (dostype != ID_DOS_muFS_DISK))
 	{
 		D(bug("[AFS] newMedium: incorrect DOS type (0x%lx)\n",
@@ -85,7 +94,9 @@ UBYTE dosflags;
 		volume->dostype = ID_NOT_REALLY_DOS;
 		return ERROR_NOT_A_DOS_DISK;
 	}
+	D(bug("[AFS] newMedium: 6\n"));
 	blockbuffer=getBlock(afsbase, volume,volume->rootblock);
+	
 	if (blockbuffer == NULL) {
 		volume->dostype = ID_UNREADABLE_DISK;
 		return ERROR_UNKNOWN;
@@ -93,18 +104,14 @@ UBYTE dosflags;
 
 	volume->dostype = dostype;
 	volume->dosflags = dosflags;
-
+	D(bug("[AFS] newMedium: 7\n"));
 	for (i=0;i<=24;i++)
 	{
-		volume->bitmapblockpointers[i]=OS_BE2LONG
-			(
-				blockbuffer->buffer[BLK_BITMAP_POINTERS_START(volume)+i]
-			);
+		volume->bitmapblockpointers[i]=OS_BE2LONG(blockbuffer->buffer[BLK_BITMAP_POINTERS_START(volume)+i]);
 	}
-	volume->bitmapextensionblock=OS_BE2LONG
-		(
-			blockbuffer->buffer[BLK_BITMAP_EXTENSION(volume)]
-		);
+	D(bug("[AFS] newMedium: 8\n"));
+	volume->bitmapextensionblock=OS_BE2LONG(blockbuffer->buffer[BLK_BITMAP_EXTENSION(volume)]);
+	D(bug("[AFS] newMedium: 9\n"));
 	if (!blockbuffer->buffer[BLK_BITMAP_VALID_FLAG(volume)])
 	{
 		/* since our disk is invalid at this point, *
@@ -116,7 +123,7 @@ UBYTE dosflags;
 
 		launchValidator(afsbase, volume);
 	}
-
+	D(bug("[AFS] newMedium: 10\n"));
 	/*
 	 * it's safe to assume that the block is still there
 	 */
@@ -125,14 +132,17 @@ UBYTE dosflags;
 	if (blockbuffer->buffer[BLK_BITMAP_VALID_FLAG(volume)])
 	{
 		blockbuffer->flags |= BCF_USED;	// won't be cleared until volume is ejected
-		volume->usedblockscount=countUsedBlocks(afsbase, volume);
-		volume->state = volume->state != ID_VALIDATING || diskWritable(afsbase, &volume->ioh) ?
-			ID_VALIDATED : ID_WRITE_PROTECTED;
+		//volume->usedblockscount=countUsedBlocks(afsbase, volume);
+		volume->state = volume->state != ID_VALIDATING || diskWritable(afsbase, &volume->ioh) ? ID_VALIDATED : ID_WRITE_PROTECTED;
 	}
+
+	D(bug("[AFS] newMedium: 11\n"));
 	error = osMediumInit(afsbase, volume, blockbuffer);
+	
 	if (error != 0)
 		return error;
-	/* for free block searching */
+	
+		/* for free block searching */
 	volume->lastaccess=volume->rootblock;
 	return 0;
 }

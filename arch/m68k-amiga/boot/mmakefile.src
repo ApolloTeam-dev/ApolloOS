@@ -134,7 +134,7 @@ ifeq ($(APOLLOROM),V4)
 	KHNDLRS := afs fat ram 
 	KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse 
 	KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem vampire
-	KHOOKS  := diag romboot
+	KHOOKS  := 
 endif
 
 # APOLLOROM = UAE -> UAE with P96
@@ -169,9 +169,9 @@ ifeq ($(APOLLOROM),V4)
 	KLIBS   := keymap graphics layers intuition gadtools workbench mathffp mathieeesingbas freeanim lowlevel setpatch
 	KDEVS   := sagasd ata trackdisk
 	KHNDLRS := con
-	KHIDDS  := bus storage system
+	KHIDDS  := bus storage system 
 	KRSRCS  := shellcommands wbtag misc shell card bootloader
-	KHOOKS  := alert 
+	KHOOKS  := alert diag romboot
 endif
 
 # APOLLOROM = UAE -> UAE with P96

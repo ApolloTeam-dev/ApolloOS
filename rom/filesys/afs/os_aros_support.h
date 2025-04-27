@@ -24,7 +24,7 @@
 #include "error.h"
 #include "afshandler.h"
 
-#define DEBUG 0
+#define DEBUG 1
 #if DEBUG
 #	define D(x) x
 #else
