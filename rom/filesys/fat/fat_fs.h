@@ -22,7 +22,7 @@
 #define DEBUG_OPS           0
 #define DEBUG_PACKETS       0
 #define DEBUG_CACHESTATS    0
-#define DEBUG_MISC          0
+#define DEBUG_MISC          1
 
 #include <dos/dos.h>
 #include <exec/interrupts.h>

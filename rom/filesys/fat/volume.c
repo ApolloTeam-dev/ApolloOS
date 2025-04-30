@@ -160,13 +160,13 @@ LONG ReadFATSuper(struct FSSuper *sb)
 
     /* Check that the boot block's sector count is the same as the
      * partition's sector count. This stops a resized partition being
-     * mounted before reformatting */
+     * mounted before reformatting 
     
     if ((total_sectors +4096) < sb->total_sectors)
     {
         invalid = TRUE;
         D(bug("[FAT] [%s] #Boot-Sectors (%ld) < Partition-Sectors (%ld)\n", __FUNCTION__ , total_sectors, sb->total_sectors));
-    }
+    }*/
 
     sb->rootdir_sectors = ((AROS_LE2WORD(boot->bpb_root_entries_count)
         * sizeof(struct FATDirEntry)) + (sb->sectorsize - 1))
@@ -384,8 +384,7 @@ LONG ReadFATSuper(struct FSSuper *sb)
         }
 
         /* Clear all entries in the root directory */
-        for (i = 0; err == 0 && GetDirEntry(&dh, i, &dir_entry, glob) == 0;
-            i++)
+        for (i = 0; err == 0 && GetDirEntry(&dh, i, &dir_entry, glob) == 0; i++)
         {
             SetMem(&dir_entry.e.entry, 0, sizeof(struct FATDirEntry));
             err = UpdateDirEntry(&dir_entry, glob);
