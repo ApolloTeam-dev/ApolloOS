@@ -767,27 +767,27 @@ BOOL bMakeFileSys( BOOL bFFS, BOOL bOFS, BOOL bIntl, BOOL bNoIntl, BOOL bDirCach
 {
     if(!bFstSet)
     {
-	fstCurrent = DosType;
+		fstCurrent = DosType;
 
-	if( fstCurrent >= 0x444F5300 && fstCurrent <= 0x444F5305 )
-	{
-	    /* Adjust the file-system type according to command-line
-	       switches or check-boxes (this exactly matches the logic of the
-	       official version 40 Format command). */
-	
-	    if(bFFS)		fstCurrent |= 1;
-	    if(bOFS)		fstCurrent &= ~1;
-	    if( !(fstCurrent & 2) )
-	    {
-		if(bDirCache)	fstCurrent |= 4;
-		if(bNoDirCache)	fstCurrent &= ~4;
-	    }
-	    if( !(fstCurrent & 4) )
-	    {
-		if(bIntl)	fstCurrent |= 2;
-		if(bNoIntl)	fstCurrent &= ~2;
-	    }
-	} /* if( fstCurrent >= 0x444F5300 && fstCurrent <= 0x444F5305 ) */
+		if( fstCurrent >= 0x444F5300 && fstCurrent <= 0x444F5305 )
+		{
+			/* Adjust the file-system type according to command-line
+			switches or check-boxes (this exactly matches the logic of the
+			official version 40 Format command). */
+		
+			if(bFFS)		fstCurrent |= 1;
+			if(bOFS)		fstCurrent &= ~1;
+			if( !(fstCurrent & 2) )
+			{
+				if(bDirCache)	fstCurrent |= 4;
+				if(bNoDirCache)	fstCurrent &= ~4;
+			}
+			if( !(fstCurrent & 4) )
+			{
+				if(bIntl)	fstCurrent |= 2;
+				if(bNoIntl)	fstCurrent &= ~2;
+			}
+		} /* if( fstCurrent >= 0x444F5300 && fstCurrent <= 0x444F5305 ) */
     } /* if(!bFstSet) */
 
     if(!bInhibited)

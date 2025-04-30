@@ -442,9 +442,9 @@ AROS_UFH3S(void, btn_format_function,
 	}	
 
 	bMakeTrashcan = XGET(chk_trash, MUIA_Selected);
-	bFFS = FALSE; 		//XGET(chk_ffs, MUIA_Selected);
-	bIntl = FALSE; 		//XGET(chk_intl, MUIA_Selected);
-	bDirCache = FALSE; 	//XGET(chk_cache, MUIA_Selected);
+	bFFS = TRUE; 		//XGET(chk_ffs, MUIA_Selected);
+	bIntl = TRUE; 		//XGET(chk_intl, MUIA_Selected);
+	bDirCache = TRUE; 	//XGET(chk_cache, MUIA_Selected);
 
 	if (bDoFormat) set(txt_action, MUIA_Text_Contents, "\33cFull Format");
 	else set(txt_action, MUIA_Text_Contents, "\33cQuick Format");

@@ -314,13 +314,14 @@ UBYTE sdcmd_read_packet(struct sdcmd *sd, UBYTE *buff, int len)
     int i;
 
     /* Wait for the Data Token */
-    for (i = 0; i < SDCMD_TIMEOUT; i++) {
+    for (i = 0; i < SDCMD_TIMEOUT; i++)
+    {
         byte = sdcmd_in(sd);
-        if (byte == token)
-            break;
+        if (byte == token) break;
     }
 
-    if (i == SDCMD_TIMEOUT) {
+    if (i == SDCMD_TIMEOUT)
+    {
         sdcmd_select(sd, FALSE);
         return SDERRF_TIMEOUT;
     }
@@ -753,7 +754,7 @@ UBYTE sdcmd_detect(struct sdcmd *sd)
                 info->block_size = SDSIZ_BLOCK;
                 info->blocks = 0; // virtual value as stub if no SD is present (dynamically set by FAT filesystem on DoDiskInsert())
             }
-            sdcmd_clkdiv(sd, SDCMD_CLKDIV_FASTER);
+            sdcmd_clkdiv(sd, SDCMD_CLKDIV_FAST);
         }
     }
 
