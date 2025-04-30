@@ -99,14 +99,11 @@ LONG ReadFATSuper(struct FSSuper *sb)
     if (!boot)
         return ERROR_NO_FREE_STORE;
 
-    sb->first_device_sector =
-        de->de_BlocksPerTrack * de->de_Surfaces * de->de_LowCyl;
+    sb->first_device_sector = de->de_BlocksPerTrack * de->de_Surfaces * de->de_LowCyl;
     D(bug("[FAT] [%s] Boot sector at sector %ld\n", __FUNCTION__ , sb->first_device_sector));
 
     /* Get a preliminary total-sectors value so we don't risk going outside partition limits */
-    sb->total_sectors =
-        de->de_BlocksPerTrack * de->de_Surfaces * (de->de_HighCyl + 1)
-        - sb->first_device_sector;
+    sb->total_sectors = de->de_BlocksPerTrack * de->de_Surfaces * (de->de_HighCyl + 1) - sb->first_device_sector;
     D(bug("[FAT] [%s] Calculated Total Sectors %ld\n", __FUNCTION__ , sb->total_sectors));
 
     /*
@@ -115,8 +112,7 @@ LONG ReadFATSuper(struct FSSuper *sb)
      * the boot sector. In practice it doesn't matter - we're going to use
      * this once and once only.
      */
-    if ((td_err = AccessDisk(FALSE, sb->first_device_sector, 1, bsize,
-        (UBYTE *) boot, glob)) != 0)
+    if ((td_err = AccessDisk(FALSE, sb->first_device_sector, 1, bsize, (UBYTE *) boot, glob)) != 0)
     {
         D(bug("[FAT] [%s] Couldn't read boot block (%ld)\n", __FUNCTION__ , td_err));
         FreeMem(boot, bsize);
@@ -1002,7 +998,7 @@ void DoDiskInsert(struct Globals *glob)
     D(bug("[FAT] [%s] de_BlocksPerTrack : %d\n",__FUNCTION__ , de->de_BlocksPerTrack));
     D(bug("[FAT] [%s] de_LowCyl         : %d\n",__FUNCTION__ , de->de_LowCyl));
     D(bug("[FAT] [%s] de_HighCyl        : %d\n\n",__FUNCTION__ , de->de_HighCyl));
-
+    
     if (glob->sb == NULL && (sb = AllocVecPooled(glob->mempool, sizeof(struct FSSuper))))
     {
         SetMem(sb, 0, sizeof(struct FSSuper));
