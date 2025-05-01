@@ -65,6 +65,8 @@ void dosboot_BootPoint(struct BootNode *bn)
     struct DosEnvec *de;
     IPTR bootblocks;
 
+    D(Bug("dosboot_BootPoint\n"));
+
     dn = bn->bn_DeviceNode;
     if (dn == NULL || dn->dn_Name == BNULL)
         return;
