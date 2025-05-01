@@ -211,8 +211,7 @@ int dosboot_Init(LIBBASETYPEPTR DOSBootBase)
     /* Select the initial boot device, so that the choice is available in the menu */
     selectBootDevice(DOSBootBase, bootDeviceName);
 
-
-    // Set all devices ENALBED by default
+    // Set all devices ENABLED by default
     {
         ListLength(&ExpansionBase->MountList, DOSBootBase->devicesCount);
 
@@ -227,14 +226,10 @@ int dosboot_Init(LIBBASETYPEPTR DOSBootBase)
         }
     }
 
-
     /* Show the boot menu if needed */
     bootmenu_Init(DOSBootBase, WantBootMenu);
 
-
-    // Disable selected Devices
-    // and
-    // Set final boot device
+    // Disable selected Devices and Set final boot device
     if (DOSBootBase->devicesCount > 0)
     {
 		struct List tempList;
@@ -273,7 +268,6 @@ int dosboot_Init(LIBBASETYPEPTR DOSBootBase)
 
 		ReleaseSemaphore(&IntExpBase(ExpansionBase)->BootSemaphore);
 
-
 		if (DOSBootBase->devicesEnabled != NULL)
 		{
 			FreeVec(DOSBootBase->devicesEnabled);
@@ -281,16 +275,14 @@ int dosboot_Init(LIBBASETYPEPTR DOSBootBase)
 
     }
 
-
     /* updates the boot flags */
     IntExpBase(DOSBootBase->bm_ExpansionBase)->BootFlags = DOSBootBase->db_BootFlags;
-
 
     /* We want to be able to find ourselves in RTF_AFTERDOS */
     DOSBootBase->bm_Screen = NULL;
     AddResource(&DOSBootBase->db_Node);
 
-    D(bug("\n[BOOT] ApolloOS BootStrap (Delayed 2 seconds)\n"));
+    D(bug("\n[BOOT] ApolloOS BootStrap\n"));
 
     /* Attempt to boot until we succeed */
     for (;;)
@@ -307,9 +299,7 @@ int dosboot_Init(LIBBASETYPEPTR DOSBootBase)
         for (t = 0; t < 150; t += DOSBootBase->delayTicks)
         {
             bootDelay(DOSBootBase->delayTicks);
-
-            //if (DOSBootBase->bm_Screen)
-                //anim_Animate(DOSBootBase->bm_Screen, DOSBootBase);
+            //if (DOSBootBase->bm_Screen) anim_Animate(DOSBootBase->bm_Screen, DOSBootBase);
         }
     }
 

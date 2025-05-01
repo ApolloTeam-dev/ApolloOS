@@ -942,7 +942,7 @@ static void SAGASD_BootNode(
     pp[DE_BUFMEMTYPE + 4] = MEMF_PUBLIC;
     pp[DE_MAXTRANSFER + 4] = 0x00200000;
     pp[DE_MASK + 4] = 0xFFFFFFFE;
-    pp[DE_BOOTPRI + 4] = 5 - (unit * 10);
+    pp[DE_BOOTPRI + 4] = -5;                        //Default Prio (-5) is lower than primary HDD (0)
     pp[DE_DOSTYPE + 4] = 0x46415402;                //FAT2 (FAT32) Default DosType for file-transfer
     pp[DE_BOOTBLOCKS + 4] = 2;
     devnode = MakeDosNode(pp);

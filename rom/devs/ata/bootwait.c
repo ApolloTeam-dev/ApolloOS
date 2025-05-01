@@ -87,7 +87,7 @@ AROS_UFH3(static APTR, ata_Wait,
 
     if (ATABase)
     {
-        DD(bug("\n**************************************************************\n[ATAWAIT] Waiting for device detection to complete...\n**************************************************************\n\n"));
+        DD(bug("\n**************************************************************\n[ATA_WAIT] Waiting for device detection to complete...\n**************************************************************\n\n"));
         ObtainSemaphore(&ATABase->DetectionSem);
         ReleaseSemaphore(&ATABase->DetectionSem);
     }
