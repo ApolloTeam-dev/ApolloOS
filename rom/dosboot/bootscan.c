@@ -293,17 +293,23 @@ static VOID CheckPartitions(struct ExpansionBase *ExpansionBase, struct Library 
     if (dn->dn_SegList == BNULL && dn->dn_Handler == BNULL)
     {
     	struct FileSysStartupMsg *fssm = BADDR(dn->dn_Startup);
+        struct DosEnvec *de = BADDR(fssm->fssm_Environ);
 
-	    if (fssm && fssm->fssm_Device)
-	    {
-        struct PartitionHandle *pt = OpenRootPartition(AROS_BSTR_ADDR(fssm->fssm_Device), fssm->fssm_Unit);
-
-	    if (pt)
+        if ( (de->de_DosType == 0x46415400) || (de->de_DosType == 0x46415401) || (de->de_DosType == 0x46415402) )
+        {
+            D(bug("[BOOT] CheckPartitions - Skipping FAT DosTypes (0x%x)\n", de->de_DosType));
+        } else {
+            D(bug("[BOOT] CheckPartitions - Checking DosType (0x%x)\n", de->de_DosType));
+            if (fssm && fssm->fssm_Device)
             {
-                res = CheckTables(ExpansionBase, PartitionBase, fssm, pt, SysBase);
+                struct PartitionHandle *pt = OpenRootPartition(AROS_BSTR_ADDR(fssm->fssm_Device), fssm->fssm_Unit);
 
-           	    CloseRootPartition(pt);
-           }
+                if (pt)
+                {
+                    res = CheckTables(ExpansionBase, PartitionBase, fssm, pt, SysBase);
+                    CloseRootPartition(pt);
+                }
+            }
         }
     }
 

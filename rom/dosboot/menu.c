@@ -44,18 +44,22 @@
 #define PAGE_EXPANSION 4
 #define EXIT_BOOT 5
 #define EXIT_BOOT_WNSS 6
+#define PAGE_APOLLOFLOPPY 7
 
 #define BUTTON_BOOT            1
 #define BUTTON_BOOT_WNSS       2
 #define BUTTON_BOOT_OPTIONS    3
-#define BUTTON_DISPLAY_OPTIONS 4
-#define BUTTON_EXPBOARDDIAG    5
+#define BUTTON_APOLLOFLOPPY 4
+
 #define BUTTON_USE             6
 #define BUTTON_CANCEL          7
 #define BUTTON_CONTINUE        8
 #define BUTTONLIST_BOOT        10
 #define BUTTONLIST_DEVICES     11
+#define BUTTON_APOLLOFLOPPY_DF0 12
+#define BUTTON_APOLLOFLOPPY_DF1 13
 
+#define MAX_PATH_LEN    512
 
 #if (AROS_FLAVOUR & AROS_FLAVOUR_STANDALONE)
 #ifdef __ppc__
@@ -63,60 +67,9 @@
 #endif
 #endif
 
-#ifdef INITHIDDS_KLUDGE
-
 #define D(x) x
 
-/*
- * This is an extremely obsolete kludge.
- * It's still needed for ATI driver on PowerPC native.
- */
-
-static BOOL init_gfx(STRPTR gfxclassname, BOOL bootmode, LIBBASETYPEPTR DOSBootBase)
-{
-    OOP_Class *gfxclass;
-    BOOL success = FALSE;
-
-    D(bug("[BootMenu] init_gfx('%s')\n", gfxclassname));
-
-    GfxBase = (void *)TaggedOpenLibrary(TAGGEDOPEN_GRAPHICS);
-    if (GfxBase)
-    {
-        struct Library *OOPBase = OpenLibrary("oop.library", 0);
-        if (OOPBase)
-        {
-            gfxclass = OOP_FindClass(gfxclassname);
-            if (gfxclass)
-            {
-                if (!AddDisplayDriver(gfxclass, NULL, DDRV_BootMode, bootmode, TAG_DONE))
-                    success = TRUE;
-            }
-            CloseLibrary(OOPBase);
-        }
-        CloseLibrary(&GfxBase->LibNode);
-    }
-    ReturnBool ("init_gfxhidd", success);
-}
-
-static BOOL initHidds(LIBBASETYPEPTR DOSBootBase)
-{
-    struct BootConfig *bootcfg = &DOSBootBase->bm_BootConfig;
-
-    D(bug("[BootMenu] initHidds()\n"));
-
-    if (bootcfg->gfxhidd) {
-        if (!OpenLibrary(bootcfg->gfxlib, 0))
-            return FALSE;
-
-        if (!init_gfx(bootcfg->gfxhidd, bootcfg->bootmode, DOSBootBase))
-            return FALSE;
-    }
-
-    D(bug("[BootMenu] initHidds: Hidds initialised\n"));
-    return TRUE;
-}
-
-#endif
+THIS_PROGRAM_HANDLES_SYMBOLSET(LIBS)
 
 static LONG centerx(LIBBASETYPEPTR DOSBootBase, LONG width)
 {
@@ -128,15 +81,17 @@ static LONG rightto(LIBBASETYPEPTR DOSBootBase, LONG width, LONG right)
     return DOSBootBase->bm_Screen->Width - width - right;
 }
 
-
-
-
 static void centertext(LIBBASETYPEPTR DOSBootBase, BYTE pen, WORD y, const char *text)
 {
     struct Window *win = DOSBootBase->bm_Window;
     SetAPen(win->RPort, pen);
     Move(win->RPort, win->Width / 2 - TextLength(win->RPort, text, strlen(text)) / 2, y);
     Text(win->RPort, text, strlen(text));
+}
+
+BOOL ApolloFloppy(int drive)
+{
+    D(bug("[BootMenu] ApolloFloppy: %d\n", drive));
 }
 
 
@@ -147,9 +102,9 @@ static BOOL populateGadgets_PageMain(LIBBASETYPEPTR DOSBootBase, struct Gadget *
 {
     struct NewGadget ng;
 
-    LONG cx = centerx((struct DOSBootBase *)DOSBootBase, 280);
+    LONG cx = centerx((struct DOSBootBase *)DOSBootBase, 200);
 
-    ng.ng_Width = 280;
+    ng.ng_Width = 200;
     ng.ng_Height = 15;
     ng.ng_TextAttr = NULL;
     ng.ng_Flags = 0;
@@ -158,17 +113,42 @@ static BOOL populateGadgets_PageMain(LIBBASETYPEPTR DOSBootBase, struct Gadget *
 
     if (gadget != NULL)
     {
-		ng.ng_GadgetText = "Boot Options...";
+		ng.ng_GadgetText = "Boot Options";
 		ng.ng_GadgetID = BUTTON_BOOT_OPTIONS;
 		ng.ng_LeftEdge = cx;
-		ng.ng_TopEdge = 63;
+		ng.ng_TopEdge = 84;
 		gadget = CreateGadgetA(BUTTON_KIND, gadget, &ng, NULL);
     }
 
+    /*if (gadget != NULL)
+    {
+		ng.ng_GadgetText = "ApolloFloppy";
+		ng.ng_GadgetID = BUTTON_APOLLOFLOPPY;
+		ng.ng_LeftEdge = cx;
+		ng.ng_TopEdge = 105;
+		gadget = CreateGadgetA(BUTTON_KIND, gadget, &ng, NULL);
+	}*/
+
+    return (gadget != NULL);
+}
+
+static BOOL populateGadgets_PageApolloFloppy(LIBBASETYPEPTR DOSBootBase, struct Gadget *gadget)
+{
+    struct NewGadget ng;
+
+    LONG cx = centerx((struct DOSBootBase *)DOSBootBase, 200);
+
+    ng.ng_Width = 200;
+    ng.ng_Height = 15;
+    ng.ng_TextAttr = NULL;
+    ng.ng_Flags = 0;
+    ng.ng_VisualInfo = DOSBootBase->bm_VisualInfo;
+    ng.ng_UserData = 0;
+
     if (gadget != NULL)
     {
-		ng.ng_GadgetText = "Display Options...";
-		ng.ng_GadgetID = BUTTON_DISPLAY_OPTIONS;
+		ng.ng_GadgetText = "DF0:";
+		ng.ng_GadgetID = BUTTON_APOLLOFLOPPY_DF0;
 		ng.ng_LeftEdge = cx;
 		ng.ng_TopEdge = 84;
 		gadget = CreateGadgetA(BUTTON_KIND, gadget, &ng, NULL);
@@ -176,8 +156,8 @@ static BOOL populateGadgets_PageMain(LIBBASETYPEPTR DOSBootBase, struct Gadget *
 
     if (gadget != NULL)
     {
-		ng.ng_GadgetText = "Expansion Board Diagnostic...";
-		ng.ng_GadgetID = BUTTON_EXPBOARDDIAG;
+		ng.ng_GadgetText = "DF1:";
+		ng.ng_GadgetID = BUTTON_APOLLOFLOPPY_DF1;
 		ng.ng_LeftEdge = cx;
 		ng.ng_TopEdge = 105;
 		gadget = CreateGadgetA(BUTTON_KIND, gadget, &ng, NULL);
@@ -185,7 +165,6 @@ static BOOL populateGadgets_PageMain(LIBBASETYPEPTR DOSBootBase, struct Gadget *
 
     return (gadget != NULL);
 }
-
 
 
 static BOOL populateGadgets_PageBoot(LIBBASETYPEPTR DOSBootBase, struct Gadget *gadget)
@@ -196,223 +175,209 @@ static BOOL populateGadgets_PageBoot(LIBBASETYPEPTR DOSBootBase, struct Gadget *
     	DOSBootBase->devicesEnabled[DOSBootBase->devicesCount + i] = DOSBootBase->devicesEnabled[i];
     }
 
+    struct List *bootList;
+    struct List *devicesList;
 
-	{
-		struct List *bootList;
-		struct List *devicesList;
+    struct Node *listNode;
 
-		struct Node *listNode;
+    UWORD bootNodeSelected = 0;
 
-		UWORD bootNodeSelected = 0;
+    struct BootNode *bn;
+    UWORD listIndex = 0;
 
-		struct BootNode *bn;
-		UWORD listIndex = 0;
+    NEWLIST (&DOSBootBase->bootList);
+    NEWLIST (&DOSBootBase->devicesList);
 
-		NEWLIST (&DOSBootBase->bootList);
-		NEWLIST (&DOSBootBase->devicesList);
+    bootList = &DOSBootBase->bootList;
+    devicesList = &DOSBootBase->devicesList;
 
-		bootList = &DOSBootBase->bootList;
-		devicesList = &DOSBootBase->devicesList;
+    ForeachNode(&DOSBootBase->bm_ExpansionBase->MountList, bn)
+    {
+        struct DeviceNode *dn = bn->bn_DeviceNode;
+        struct FileSysStartupMsg *fssm = BADDR(dn->dn_Startup);
+        struct DosEnvec *de = NULL;
+        struct IOStdReq *io;
+        struct MsgPort *port;
+        char dostype[5];
+        UBYTE i;
+        ULONG size;
+        BOOL devopen, ismedia;
 
+        if (!fssm || !fssm->fssm_Device)
+        {
+            listIndex++;
+            continue;
+        }
 
-		ForeachNode(&DOSBootBase->bm_ExpansionBase->MountList, bn)
-		{
-			struct DeviceNode *dn = bn->bn_DeviceNode;
-			struct FileSysStartupMsg *fssm = BADDR(dn->dn_Startup);
-			struct DosEnvec *de = NULL;
-			struct IOStdReq *io;
-			struct MsgPort *port;
-			char dostype[5];
-			UBYTE i;
-			ULONG size;
-			BOOL devopen, ismedia;
+        if (fssm->fssm_Environ > (BPTR)0x64)
+        {
+            de = BADDR(fssm->fssm_Environ);
 
+            if (de->de_TableSize < 15)
+            {
+                de = NULL;
+            }
+        }
 
-			if (!fssm || !fssm->fssm_Device)
-			{
-				listIndex++;
-				continue;
-			}
+        if (IsBootableNode(bn))
+        {
+            if (listNode = AllocVec(sizeof(struct Node), MEMF_FAST) )
+            {
+                listNode->ln_Name = AROS_BSTR_ADDR(dn->dn_Name);
+                listNode->ln_Type = 100L;
+                listNode->ln_Pri = 0;
+                AddTail (bootList, listNode);
+            }
 
-			if (fssm->fssm_Environ > (BPTR)0x64)
-			{
-				de = BADDR(fssm->fssm_Environ);
+            if (DOSBootBase->db_BootNode == bn)
+            {
+                bootNodeSelected = listIndex;
+            }
+        }
 
-				if (de->de_TableSize < 15)
-				{
-					de = NULL;
-				}
-			}
+        if (listNode = AllocVec(sizeof(struct Node) + 96, MEMF_FAST|MEMF_CLEAR) )
+        {
+            listNode->ln_Name = (char *)(listNode + 1);
+            listNode->ln_Type = 100L;
+            listNode->ln_Pri = 0;
+            AddTail (devicesList, listNode);
+        }
 
+        devopen = ismedia = FALSE;
+        if ((port = (struct MsgPort*)CreateMsgPort()))
+        {
+            if ((io = (struct IOStdReq*)CreateIORequest(port, sizeof(struct IOStdReq))))
+            {
+                if (!OpenDevice(AROS_BSTR_ADDR(fssm->fssm_Device), fssm->fssm_Unit, (struct IORequest*)io, fssm->fssm_Flags))
+                {
+                    devopen = TRUE;
+                    io->io_Command = TD_CHANGESTATE;
+                    io->io_Actual = 1;
+                    DoIO((struct IORequest*)io);
 
-			if (IsBootableNode(bn))
-			{
-				if (listNode = AllocVec(sizeof(struct Node), MEMF_FAST) )
-				{
-					listNode->ln_Name = AROS_BSTR_ADDR(dn->dn_Name);
-					listNode->ln_Type = 100L;
-					listNode->ln_Pri = 0;
-					AddTail (bootList, listNode);
-				}
+                    if (!io->io_Error && io->io_Actual == 0)
+                        ismedia = TRUE;
 
-				if (DOSBootBase->db_BootNode == bn)
-				{
-					bootNodeSelected = listIndex;
-				}
-			}
+                    CloseDevice((struct IORequest*)io);
+                }
+                DeleteIORequest((struct IORequest*)io);
+            }
+            DeleteMsgPort(port);
+        }
 
+        if (de && ismedia)
+        {
+            STRPTR sunit = "kMGT";
 
-			if (listNode = AllocVec(sizeof(struct Node) + 96, MEMF_FAST|MEMF_CLEAR) )
-			{
-				listNode->ln_Name = (char *)(listNode + 1);
-				listNode->ln_Type = 100L;
-				listNode->ln_Pri = 0;
-				AddTail (devicesList, listNode);
-			}
+            for (i = 0; i < 4; i++)
+            {
+                dostype[i] = (de->de_DosType >> ((3 - i) * 8)) & 0xff;
 
+                if (dostype[i] < 9)
+                    dostype[i] += '0';
+                else if (dostype[i] < 32)
+                    dostype[i] = '.';
+            }
+            dostype[4] = 0;
 
-			devopen = ismedia = FALSE;
-			if ((port = (struct MsgPort*)CreateMsgPort()))
-			{
-				if ((io = (struct IOStdReq*)CreateIORequest(port, sizeof(struct IOStdReq))))
-				{
-					if (!OpenDevice(AROS_BSTR_ADDR(fssm->fssm_Device), fssm->fssm_Unit, (struct IORequest*)io, fssm->fssm_Flags))
-					{
-						devopen = TRUE;
-						io->io_Command = TD_CHANGESTATE;
-						io->io_Actual = 1;
-						DoIO((struct IORequest*)io);
+            size = (de->de_HighCyl - de->de_LowCyl + 1) * de->de_Surfaces * de->de_BlocksPerTrack;
 
-						if (!io->io_Error && io->io_Actual == 0)
-							ismedia = TRUE;
+            /* try to prevent ULONG overflow */
+            if (de->de_SizeBlock <= 128)
+                size /= 2;
+            else
+                size *= de->de_SizeBlock / 256;
 
-						CloseDevice((struct IORequest*)io);
-					}
-					DeleteIORequest((struct IORequest*)io);
-				}
-				DeleteMsgPort(port);
-			}
+            while(size > 1024 * 10)	/* Wrap on 10x unit to be more precise in displaying */
+            {
+                size /= 1024;
+                sunit++;
+            }
 
+            NewRawDoFmt("%s%6s: %s [%08lx]%5d%c %4d %s-%ld", RAWFMTFUNC_STRING, listNode->ln_Name,
+                (DOSBootBase->devicesEnabled[listIndex]? "Enabled: " : "Disabled:"),
+                AROS_BSTR_ADDR(dn->dn_Name),
+                dostype,
+                de->de_DosType,
+                size,
+                (*sunit),
+                bn->bn_Node.ln_Pri,
+                AROS_BSTR_ADDR(fssm->fssm_Device),
+                fssm->fssm_Unit);
+        }
+        else if (!devopen)
+        {
+            NewRawDoFmt("%s%6s: [device open error] %s-%ld", RAWFMTFUNC_STRING, listNode->ln_Name,
+                (DOSBootBase->devicesEnabled[listIndex]? "Enabled: " : "Disabled:"),
+                AROS_BSTR_ADDR(dn->dn_Name),
+                AROS_BSTR_ADDR(fssm->fssm_Device),
+                fssm->fssm_Unit);
+        }
+        else if (!ismedia)
+        {
+            NewRawDoFmt("%s%6s: [no media] %s-%ld", RAWFMTFUNC_STRING, listNode->ln_Name,
+                (DOSBootBase->devicesEnabled[listIndex]? "Enabled: " : "Disabled:"),
+                AROS_BSTR_ADDR(dn->dn_Name),
+                AROS_BSTR_ADDR(fssm->fssm_Device),
+                fssm->fssm_Unit);
+        }
 
-			if (de && ismedia)
-			{
-				STRPTR sunit = "kMGT";
+        listIndex++;
+    }
 
-				for (i = 0; i < 4; i++)
-				{
-					dostype[i] = (de->de_DosType >> ((3 - i) * 8)) & 0xff;
+    if (gadget != NULL)
+    {
+        struct TagItem bootTAGS[] =
+        {
+            { GTLV_Labels, (IPTR)bootList },	// (IPTR)
+            { GTLV_ShowSelected, 0 },
+            { GTLV_Selected, bootNodeSelected },
+            { GTLV_MakeVisible, 0},
+            { TAG_DONE }
+        };
 
-					if (dostype[i] < 9)
-						dostype[i] += '0';
-					else if (dostype[i] < 32)
-						dostype[i] = '.';
-				}
-				dostype[4] = 0;
+        struct NewGadget bootGadget;
 
+        bootGadget.ng_LeftEdge = 10;
+        bootGadget.ng_TopEdge = 40;
+        bootGadget.ng_Width = 100;
+        bootGadget.ng_Height = 100;
+        bootGadget.ng_GadgetText = "Boot from:";
+        bootGadget.ng_TextAttr = NULL;
+        bootGadget.ng_GadgetID = BUTTONLIST_BOOT;
+        bootGadget.ng_Flags = 0;
+        bootGadget.ng_VisualInfo = DOSBootBase->bm_VisualInfo;
+        bootGadget.ng_UserData = 0;
 
-			    size = (de->de_HighCyl - de->de_LowCyl + 1) * de->de_Surfaces * de->de_BlocksPerTrack;
+        gadget = CreateGadgetA(LISTVIEW_KIND, gadget, &bootGadget, bootTAGS);
+    }
 
-			    /* try to prevent ULONG overflow */
-			    if (de->de_SizeBlock <= 128)
-				    size /= 2;
-			    else
-				    size *= de->de_SizeBlock / 256;
-
-			    while(size > 1024 * 10)	/* Wrap on 10x unit to be more precise in displaying */
-			    {
-				    size /= 1024;
-				    sunit++;
-			    }
-
-
-				NewRawDoFmt("%s%6s: %s [%08lx]%5d%c %4d %s-%ld", RAWFMTFUNC_STRING, listNode->ln_Name,
-					(DOSBootBase->devicesEnabled[listIndex]? "Enabled: " : "Disabled:"),
-					AROS_BSTR_ADDR(dn->dn_Name),
-					dostype,
-					de->de_DosType,
-					size,
-					(*sunit),
-					bn->bn_Node.ln_Pri,
-					AROS_BSTR_ADDR(fssm->fssm_Device),
-					fssm->fssm_Unit);
-			}
-			else if (!devopen)
-			{
-				NewRawDoFmt("%s%6s: [device open error] %s-%ld", RAWFMTFUNC_STRING, listNode->ln_Name,
-					(DOSBootBase->devicesEnabled[listIndex]? "Enabled: " : "Disabled:"),
-					AROS_BSTR_ADDR(dn->dn_Name),
-					AROS_BSTR_ADDR(fssm->fssm_Device),
-					fssm->fssm_Unit);
-			}
-			else if (!ismedia)
-			{
-				NewRawDoFmt("%s%6s: [no media] %s-%ld", RAWFMTFUNC_STRING, listNode->ln_Name,
-					(DOSBootBase->devicesEnabled[listIndex]? "Enabled: " : "Disabled:"),
-					AROS_BSTR_ADDR(dn->dn_Name),
-					AROS_BSTR_ADDR(fssm->fssm_Device),
-					fssm->fssm_Unit);
-			}
-
-
-			listIndex++;
-		}
-
-
-	    if (gadget != NULL)
-	    {
-			struct TagItem bootTAGS[] =
-			{
-				{ GTLV_Labels, (IPTR)bootList },	// (IPTR)
-				{ GTLV_ShowSelected, 0 },
-				{ GTLV_Selected, bootNodeSelected },
-				{ GTLV_MakeVisible, 0},
-				{ TAG_DONE }
-			};
-
-	        struct NewGadget bootGadget;
-
-	        bootGadget.ng_LeftEdge = 10;
-	        bootGadget.ng_TopEdge = 40;
-	        bootGadget.ng_Width = 100;
-	        bootGadget.ng_Height = 100;
-	        bootGadget.ng_GadgetText = "Boot from:";
-	        bootGadget.ng_TextAttr = NULL;
-	        bootGadget.ng_GadgetID = BUTTONLIST_BOOT;
-	        bootGadget.ng_Flags = 0;
-	        bootGadget.ng_VisualInfo = DOSBootBase->bm_VisualInfo;
-	        bootGadget.ng_UserData = 0;
-
-	    	gadget = CreateGadgetA(LISTVIEW_KIND, gadget, &bootGadget, bootTAGS);
-	    }
-
-
-	    if (gadget != NULL)
-	    {
-			struct TagItem devicesTAGS[] =
-			{
-				{ GTLV_Labels, (IPTR)devicesList },	// (IPTR)
+    if (gadget != NULL)
+    {
+        struct TagItem devicesTAGS[] =
+        {
+            { GTLV_Labels, (IPTR)devicesList },	// (IPTR)
 //				{ GTLV_ShowSelected, 0 },
 //				{ GTLV_Selected, 0 },
 //				{ GTLV_MakeVisible, 0},
-				{ TAG_DONE }
-			};
+            { TAG_DONE }
+        };
 
-	        struct NewGadget devicesGadget;
+        struct NewGadget devicesGadget;
 
-	        devicesGadget.ng_LeftEdge = 120;
-	        devicesGadget.ng_TopEdge = 40;
-	        devicesGadget.ng_Width = 510;
-	        devicesGadget.ng_Height = 100;
-	        devicesGadget.ng_GadgetText = "Devices List";
-	        devicesGadget.ng_TextAttr = NULL;
-	        devicesGadget.ng_GadgetID = BUTTONLIST_DEVICES;
-	        devicesGadget.ng_Flags = 0;
-	        devicesGadget.ng_VisualInfo = DOSBootBase->bm_VisualInfo;
-	        devicesGadget.ng_UserData = 0;
+        devicesGadget.ng_LeftEdge = 120;
+        devicesGadget.ng_TopEdge = 40;
+        devicesGadget.ng_Width = 510;
+        devicesGadget.ng_Height = 100;
+        devicesGadget.ng_GadgetText = "Devices List";
+        devicesGadget.ng_TextAttr = NULL;
+        devicesGadget.ng_GadgetID = BUTTONLIST_DEVICES;
+        devicesGadget.ng_Flags = 0;
+        devicesGadget.ng_VisualInfo = DOSBootBase->bm_VisualInfo;
+        devicesGadget.ng_UserData = 0;
 
-	    	gadget = CreateGadgetA(LISTVIEW_KIND, gadget, &devicesGadget, devicesTAGS);
-	    }
-	}
+        gadget = CreateGadgetA(LISTVIEW_KIND, gadget, &devicesGadget, devicesTAGS);
+    }
 
 	return (gadget != NULL);
 }
@@ -426,7 +391,6 @@ static void freeGadgets_PageBoot(LIBBASETYPEPTR DOSBootBase)
 	{
 		FreeVec(node);
 	}
-
 
 	while ((node = RemHead(&DOSBootBase->devicesList)) != NULL)
 	{
@@ -447,7 +411,6 @@ static BOOL populateGadgets(LIBBASETYPEPTR DOSBootBase, struct Gadget *gadget, W
     ng.ng_VisualInfo = DOSBootBase->bm_VisualInfo;
     ng.ng_UserData = 0;
 
-
     if (gadget != NULL)
     {
 		ng.ng_GadgetText = (page == PAGE_MAIN ? "Boot" : "Use");
@@ -466,25 +429,21 @@ static BOOL populateGadgets(LIBBASETYPEPTR DOSBootBase, struct Gadget *gadget, W
 		gadget = CreateGadgetA(BUTTON_KIND, gadget, &ng, NULL);
     }
 
-
 	switch (page)
 	{
-	case PAGE_MAIN:			populateGadgets_PageMain(DOSBootBase, gadget); break;
-	case PAGE_BOOT:			populateGadgets_PageBoot(DOSBootBase, gadget); break;
-//	case PAGE_DISPLAY:		populateGadgets_PageDisplay(DOSBootBase, gadget); break;
-//	case PAGE_EXPANSION:	populateGadgets_PageExpansion(DOSBootBase, gadget); break;
+        case PAGE_MAIN:			populateGadgets_PageMain(DOSBootBase, gadget); break;
+        case PAGE_BOOT:			populateGadgets_PageBoot(DOSBootBase, gadget); break;
+        case PAGE_APOLLOFLOPPY: populateGadgets_PageApolloFloppy(DOSBootBase, gadget); break;
 	}
 
 	return (gadget != NULL);
 }
+
 static void freeGadgets(LIBBASETYPEPTR DOSBootBase, WORD page)
 {
 	switch (page)
 	{
-//	case PAGE_MAIN:			freeGadgets_PageMain(DOSBootBase); break;
-	case PAGE_BOOT:			freeGadgets_PageBoot(DOSBootBase); break;
-//	case PAGE_DISPLAY:		freeGadgets_PageDisplay(DOSBootBase); break;
-//	case PAGE_EXPANSION:	freeGadgets_PageExpansion(DOSBootBase); break;
+    	case PAGE_BOOT:			freeGadgets_PageBoot(DOSBootBase); break;
 	}
 }
 
@@ -519,38 +478,9 @@ static UWORD msgLoop(LIBBASETYPEPTR DOSBootBase, struct Window *win, WORD page)
             {
                 if (msg->Class == IDCMP_VANILLAKEY)
                 {
-                    if (msg->Code == 27)
-                            exit = PAGE_MAIN;
-                    else if (msg->Code >= '1' && msg->Code <= '3')
-                            exit = PAGE_MAIN + msg->Code - '0';
-/*                  else if (msg->Code >= 'a' && msg->Code <='j')
-                    {
-                        BYTE pos = msg->Code - 'a', i = 0;
-                        struct BootNode *bn;
-                        DOSBootBase->bm_BootNode = NULL;
-
-                        Forbid(); // .. access to ExpansionBase->MountList
-                        ForeachNode(&DOSBootBase->bm_ExpansionBase->MountList, bn)
-                        {
-                            if (i++ == pos)
-                            {
-                                DOSBootBase->bm_BootNode = bn;
-                                break;
-                            }
-                        }
-                        Permit();
-
-                        if (DOSBootBase->bm_BootNode != NULL)
-                        {
-                            // Refresh itself
-                            exit = PAGE_BOOT;
-                            break;
-                        }
-                    }
-*/                  else
-                    {
-                        toggleMode(DOSBootBase);
-                    }
+                    if (msg->Code == 27) exit = PAGE_MAIN;
+                    else if (msg->Code >= '1' && msg->Code <= '3') exit = PAGE_MAIN + msg->Code - '0';
+                    else toggleMode(DOSBootBase);
                 }
                 else if (msg->Class == IDCMP_GADGETUP)
                 {
@@ -595,13 +525,18 @@ static UWORD msgLoop(LIBBASETYPEPTR DOSBootBase, struct Window *win, WORD page)
                         exit = PAGE_BOOT;
                         break;
 
-                    case BUTTON_EXPBOARDDIAG:
-                        exit = PAGE_EXPANSION;
+                    case BUTTON_APOLLOFLOPPY:
+                        exit = PAGE_APOLLOFLOPPY;
                         break;
 
-                    case BUTTON_DISPLAY_OPTIONS:
-                        exit = PAGE_DISPLAY;
-                        break;
+                    case BUTTON_APOLLOFLOPPY_DF0:
+                    ApolloFloppy(BUTTON_APOLLOFLOPPY_DF0);
+                    break;    
+
+                    case BUTTON_APOLLOFLOPPY_DF1:
+                    ApolloFloppy(BUTTON_APOLLOFLOPPY_DF1);
+                    break;
+
 
                     case BUTTONLIST_BOOT:
                     {
@@ -700,33 +635,31 @@ static void initPageExpansion(LIBBASETYPEPTR DOSBootBase)
 static void initPage(LIBBASETYPEPTR DOSBootBase, WORD page)
 {
     UBYTE *text;
+    UWORD* const ApolloCore_Pointer = (UWORD*)0xDFF3EA;
+    char ApolloROM_Release[80];
+    char ApolloCore_Release[80];
 
-    if (page == PAGE_DISPLAY)
-            text = "Display Options";
-    else if (page == PAGE_EXPANSION)
-            text = "Expansion Board Diagnostic";
-    else if (page == PAGE_BOOT)
-        text = "Boot Options";
-    else
-        text = __DISTRONAME__ " Early Startup Control";
+    if (page == PAGE_BOOT) text = "Boot Options";
+    //else if (page == PAGE_APOLLOFLOPPY) text = "ApolloFloppy Options";
+    else text = __DISTRONAME__ " Boot Menu";
     centertext(DOSBootBase, 2, 10, text);
 
     if (page == PAGE_BOOT)
     {
-        /* Set the default */
-        if (DOSBootBase->bm_BootNode == NULL)
-            DOSBootBase->bm_BootNode = DOSBootBase->db_BootNode;
+        if (DOSBootBase->bm_BootNode == NULL) DOSBootBase->bm_BootNode = DOSBootBase->db_BootNode;
     }
-    else if (page == PAGE_EXPANSION)
-        initPageExpansion(DOSBootBase);
 
-    if (page == PAGE_MAIN && (GfxBase->DisplayFlags & (NTSC | PAL))) {
-            ULONG modeid = GetVPModeID(&DOSBootBase->bm_Screen->ViewPort);
-            if (modeid != INVALID_ID && (((modeid & MONITOR_ID_MASK) == NTSC_MONITOR_ID) || ((modeid & MONITOR_ID_MASK) == PAL_MONITOR_ID))) {
-            centertext(DOSBootBase, 1, 30, "" __DISTROVERSION__ " (" __DISTRODATE__ ")");
+    if (page == PAGE_MAIN && (GfxBase->DisplayFlags & (NTSC | PAL)))
+    {
+        ULONG modeid = GetVPModeID(&DOSBootBase->bm_Screen->ViewPort);
+        if (modeid != INVALID_ID && (((modeid & MONITOR_ID_MASK) == NTSC_MONITOR_ID) || ((modeid & MONITOR_ID_MASK) == PAL_MONITOR_ID)))
+        {
+            sprintf(ApolloROM_Release, "ApolloROM %s", __DISTROVERSION__);
+            centertext(DOSBootBase, 1, 30, ApolloROM_Release );
+            sprintf(ApolloCore_Release, "ApolloCore Release %d", *ApolloCore_Pointer);
+            centertext(DOSBootBase, 1, 50, ApolloCore_Release );
         }
     }
-
 }
 
 static WORD initWindow(LIBBASETYPEPTR DOSBootBase, struct BootConfig *bcfg, WORD page)
@@ -739,7 +672,6 @@ static WORD initWindow(LIBBASETYPEPTR DOSBootBase, struct BootConfig *bcfg, WORD
     DOSBootBase->bm_VisualInfo = GetVisualInfoA(DOSBootBase->bm_Screen, NULL);
 
     firstGadget = CreateContext(&gadlist);
-
 
 	if (populateGadgets(DOSBootBase, firstGadget, page))
     {
@@ -797,10 +729,11 @@ static BOOL initScreen(LIBBASETYPEPTR DOSBootBase, struct BootConfig *bcfg)
     DOSBootBase->bm_Screen = OpenBootScreen(DOSBootBase);
     if (DOSBootBase->bm_Screen)
     {
-        DOSBootBase->bottomY = 190;
+        DOSBootBase->bottomY = 256 - 15 - 10;
 
         page = PAGE_MAIN;
-        do {
+        do
+        {
             page = initWindow(DOSBootBase, bcfg, page);
         } while (page != EXIT_BOOT && page != EXIT_BOOT_WNSS);
         CloseBootScreen(DOSBootBase->bm_Screen, DOSBootBase);
@@ -879,25 +812,13 @@ int bootmenu_Init(LIBBASETYPEPTR DOSBootBase, BOOL WantBootMenu)
 
     D(bug("[BootMenu] bootmenu_Init()\n"));
 
-#ifdef INITHIDDS_KLUDGE
-   /*
-    * PCI hardware display drivers still need external initialization.
-    * This urgently needs to be fixed. After fixing this kludge
-    * will not be needed any more.
-    */
-    InitBootConfig(&LIBBASE->bm_BootConfig);
-    if (!initHidds(LIBBASE))
-        return FALSE;
-#endif
-
     /* check keyboard if needed */
-    if (!WantBootMenu)
-        WantBootMenu = buttonsPressed(DOSBootBase);
+    if (!WantBootMenu) WantBootMenu = buttonsPressed(DOSBootBase);
 
     /* Bring up early startup menu if requested */
     if (WantBootMenu)
     {
-        D(kprintf("[BootMenu] bootmenu_Init: Entering Boot Menu ...\n"));
+        D(bug("[BootMenu] bootmenu_Init: Entering Boot Menu ...\n"));
         bmi_RetVal = initScreen(DOSBootBase, &DOSBootBase->bm_BootConfig);
     }
 
