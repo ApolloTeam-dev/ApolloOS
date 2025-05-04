@@ -103,13 +103,13 @@ LONG MBRCheckPartitionTable(struct Library *PartitionBase, struct PartitionHandl
         D(bug("[PART:MBR] [%s] readBlock FAIL\n",__FUNCTION__));
     }
 
-    if (res == 0)
+    /* if (res == 0)
     {
         D(bug("[PART:MBR] [%s] No MBR, but maybe we have a valid FAT Boot record . . . \n",__FUNCTION__));
 
 	    ULONG sectorsize, clustersectors;
 
-        /* Valid sector size: 512, 1024, 2048, 4096 */
+        // Valid sector size: 512, 1024, 2048, 4096 
         sectorsize = AROS_LE2WORD(blk->u.bs.bpb_bytes_per_sect);
 
         D(bug("[PART:MBR] [%s] Sector Size : %u\n",__FUNCTION__, sectorsize));
@@ -120,7 +120,7 @@ LONG MBRCheckPartitionTable(struct Library *PartitionBase, struct PartitionHandl
             D(bug("[PART:MBR] [%s] res is set (%u)\n",__FUNCTION__,res));
         } 
 
-        /* Valid bpb_sect_per_clust: 1, 2, 4, 8, 16, 32, 64, 128 */
+        // Valid bpb_sect_per_clust: 1, 2, 4, 8, 16, 32, 64, 128 
         clustersectors = blk->u.bs.bpb_sect_per_clust;
 
         D(bug("[PART:MBR] [%s] Sectors per Cluster : %u\n",__FUNCTION__, clustersectors));
@@ -134,7 +134,7 @@ LONG MBRCheckPartitionTable(struct Library *PartitionBase, struct PartitionHandl
             D(bug("[PART:MBR] [%s] res is cleared (%u)\n",__FUNCTION__,res));     
         }
 
-        /* Valid cluster size: 512, 1024, 2048, 4096, 8192, 16k, 32k, 64k */
+        // Valid cluster size: 512, 1024, 2048, 4096, 8192, 16k, 32k, 64k 
         D(bug("[PART:MBR] [%s] Cluster Size: %u\n",__FUNCTION__, clustersectors * sectorsize ));
 
         if (clustersectors * sectorsize <= 64 * 1024)
@@ -157,13 +157,14 @@ LONG MBRCheckPartitionTable(struct Library *PartitionBase, struct PartitionHandl
             D(bug("[PART:MBR] [%s] res is cleared (%u)\n",__FUNCTION__,res));     
         }
     
-    } 
+    } */
 
     D(bug("[PART:MBR] [%s]]: res = %u",__FUNCTION__,res));
     D(bug(res ? " = FOUND\n" : " = NOT FOUND\n"));
 
     return res;
 }
+
 
 static LONG PartitionMBRCheckPartitionTable(struct Library *PartitionBase, struct PartitionHandle *root)
 {

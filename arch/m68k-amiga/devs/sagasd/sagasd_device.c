@@ -48,6 +48,7 @@
 #include <proto/exec.h>
 #include <proto/disk.h>
 #include <proto/expansion.h>
+#include <proto/intuition.h>
 
 #include "common.h"
 
@@ -84,9 +85,13 @@ static void SAGASD_AddChangeInt(struct IORequest *io)
         sdu->sdu_AddChangeListItems++;
     }
 
-    for (int i=sdu->sdu_AddChangeListItems-1; i>=0; i--)
+    struct IOStdReq *io_std = (struct IOStdReq*)io;
+    struct Interrupt *io_int = (struct Interrupt*)io_std->io_Data;
+
+    for (int i=sdu->sdu_AddChangeListItems; i>0; i--)
     {
         debug("Listing sdu->sdu_AddChangeList[%d] (%x) for %s", i, sdu->sdu_AddChangeList[i], sdu->sdu_Name);
+        debug("Caller = %s\n", (char*)io_int->is_Node.ln_Name);
     } 
 
     io->io_Flags &= ~IOF_QUICK;
@@ -571,11 +576,34 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         err = 0;
         break;
     case TD_EJECT:
-    	bug( "%s TD_EJECT\n", __FUNCTION__ );
-        Forbid();
-        sdu->sdu_Valid = FALSE;
-        Permit();
-        err = 0;
+        if (sdu->sdu_AddChangeList[0] == 0)     // We only eject FAT SD-Card when we are in "FAT only" mode
+        {
+            bug( "%s TD_EJECT\n", __FUNCTION__ );
+            Forbid();
+            sdu->sdu_Valid = FALSE;
+            Permit();
+            err = 0;
+            struct IntuitionBase *IntuitionBase;
+            IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 36);
+            if( IntuitionBase != NULL )
+            {
+                struct EasyStruct requestmessage =
+                {
+                    sizeof(struct EasyStruct),
+                    0,
+                    "ApolloOS Warning",
+                    "Inserted Disk does not contain a valid FAT File System\n"
+                    "Only FAT File System is supported for hot-swap Disks\n"
+                    "For RDB Disks with OFS, FFS, SFS or PFS File Systems\n"
+                    "Please Reboot ApolloOS with Disk inserted to Mount . . .",
+                    "Understood"
+                };
+                
+                EasyRequestArgs(NULL, &requestmessage, NULL, NULL);
+        
+                CloseLibrary(&IntuitionBase->LibNode);
+            }
+        }
         break;
     case TD_GETDRIVETYPE:
     	bug( "%s TD_GETDRIVETYPE\n", __FUNCTION__ );
@@ -762,6 +790,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
         if (!io)
         {
             ULONG sigs;
+            struct Interrupt *io_int;
 
             /* Wait up to IO_TIMINGLOOP_MICROSEC for a IO message. If none, then re-check SD if counter is reached */
             treq->tr_node.io_Command = TR_ADDREQUEST;
@@ -792,10 +821,24 @@ static void SAGASD_IOTask(struct Library *SysBase)
                             sdu->sdu_Present = FALSE;
                             sdu->sdu_Valid = FALSE;
                             
-                            for (int i=sdu->sdu_AddChangeListItems-1; i>=0; i--)
+                            for (int i=sdu->sdu_AddChangeListItems; i>0; i--)
                             {
-                                debug("SD-Card EJECT = Calling sdu->sdu_AddChangeList[%d] (%x) for %s", i, sdu->sdu_AddChangeList[i], sdu->sdu_Name);
-                                Cause((struct Interrupt *)(sdu->sdu_AddChangeList[i]));
+                                if (sdu->sdu_AddChangeList[i])
+                                {
+                                    io_int = (struct Interrupt*)sdu->sdu_AddChangeList[i];
+                                    
+                                    debug("SD-Card EJECT = Calling sdu->sdu_AddChangeList[%d] (%x) from %s for %s", i,
+                                        sdu->sdu_AddChangeList[i], (char*)io_int->is_Node.ln_Name, sdu->sdu_Name);
+                                    
+                                    Cause((struct Interrupt *)(sdu->sdu_AddChangeList[i]));
+
+                                    if (strncmp((char*)io_int->is_Node.ln_Name,"FATFS",5) != 0)
+                                    {
+                                        sdu->sdu_AddChangeList[i] = 0;
+                                        sdu->sdu_AddChangeList[0] = 0;  // reset FLAG to signal we are now in "only FAT" mode
+                                        debug("SD-Card AddChange() routine removed because only FAT is supported as removable HDD\n");
+                                    } 
+                                }
                             }
                             Permit(); 
 
@@ -811,22 +854,26 @@ static void SAGASD_IOTask(struct Library *SysBase)
                                 debug("\t sdu_Valid: %s", sdu->sdu_Valid ? "TRUE" : "FALSE");
                                 debug("\t Blocks: %ld", sdu->sdu_SDCmd.info.blocks);
 
-                                for (int i=sdu->sdu_AddChangeListItems-1; i>=0; i--)
+                                for (int i=sdu->sdu_AddChangeListItems; i>0; i--)
                                 {
-                                    debug("SD-Card INSERT = Calling sdu->sdu_AddChangeList[%d] (%x) for %s", i, sdu->sdu_AddChangeList[i], sdu->sdu_Name);
-                                    Cause((struct Interrupt *)(sdu->sdu_AddChangeList[i]));
+                                    if (sdu->sdu_AddChangeList[i])
+                                    {
+                                        io_int = (struct Interrupt*)sdu->sdu_AddChangeList[i];
+                                        
+                                        debug("SD-Card INSERT = Calling sdu->sdu_AddChangeList[%d] (%x) from %s for %s", i,
+                                            sdu->sdu_AddChangeList[i], (char*)io_int->is_Node.ln_Name, sdu->sdu_Name);
+                                        
+                                        Cause((struct Interrupt *)(sdu->sdu_AddChangeList[i]));
+
+                                    }
                                 }
-
                                 Permit();
-
                             } 
                         }
                     }
                     detectcounter = 0;
                 }
             }
-
-            /* Clean up the timer IO */
             WaitIO((struct IORequest *)treq);
         }
 
@@ -977,12 +1024,12 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
     sdu->sdu_Present = FALSE;
     sdu->sdu_Valid = FALSE;
 
+    sdu->sdu_AddChangeListItems = 1;        // sdu->sdu_AddChangeListItems[0] serves as a FLAG
+    sdu->sdu_AddChangeList[0] = 1;          // FLAG == 1 means that we start in "multiple FS support" mode (FLAG == 0 means "FAT only" mode
+
     sdu->sdu_SDCmd.func.log = SAGASD_log;
     sdu->sdu_SDCmd.retry.read = SAGASD_RETRY;
     sdu->sdu_SDCmd.retry.write = SAGASD_RETRY;
-
-    //NEWLIST(&sdu->sdu_AddChangeList);
-    sdu->sdu_AddChangeListItems = 0;
      
     /* If the unit is present, create an IO task for it
      */

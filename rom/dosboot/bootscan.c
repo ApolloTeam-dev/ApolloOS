@@ -252,23 +252,26 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
     }
 }
 
-static BOOL CheckTables(struct ExpansionBase *ExpansionBase, struct Library *PartitionBase,
-			struct FileSysStartupMsg *fssm,	struct PartitionHandle *table,
-			struct ExecBase *SysBase)
+static BOOL CheckTables(struct ExpansionBase *ExpansionBase, struct Library *PartitionBase, struct FileSysStartupMsg *fssm,	struct PartitionHandle *table, struct ExecBase *SysBase)
 {
     BOOL retval = FALSE;
     struct PartitionHandle *ph;
 
-    /* Traverse partition tables recursively, and attempt to add a BootNode
-       for any non-subtable partitions found */
+    D(bug("\n[BOOT] CheckTables - Start\n"));
+
+    /* Traverse partition tables recursively, and attempt to add a BootNode for any non-subtable partitions found */
     if (OpenPartitionTable(table) == 0)
     {
         ph = (struct PartitionHandle *)table->table->list.lh_Head;
+
+        D(bug("\n[BOOT] CheckTables - Table Type = %d\n", table->table->type));
+        if (table->table->type == 2) return FALSE;
+
         while (ph->ln.ln_Succ)
         {
-            /* Attempt to add partition to system if it isn't a subtable */
-            if (!CheckTables(ExpansionBase, PartitionBase, fssm, ph, SysBase))
-                AddPartitionVolume(ExpansionBase, PartitionBase, fssm, table, ph, SysBase);
+                      
+            /* Attempt to add partition to system if it isn't a subtable or a FAT table */
+            if (!CheckTables(ExpansionBase, PartitionBase, fssm, ph, SysBase)) AddPartitionVolume(ExpansionBase, PartitionBase, fssm, table, ph, SysBase);
             ph = (struct PartitionHandle *)ph->ln.ln_Succ;
         }
         retval = TRUE;
@@ -284,39 +287,28 @@ static VOID CheckPartitions(struct ExpansionBase *ExpansionBase, struct Library 
 
     D(bug("\n[BOOT] CheckPartitions('%b') handler seglist = %x, handler = %s\n", dn->dn_Name, dn->dn_SegList, AROS_BSTR_ADDR(dn->dn_Handler)));
 
-    /* Examples:
-     * ata.device registers a HDx device describing whole disk with no handler name and no seglist
-     * massstorage.class registers each partition giving it a handler name but not seglist
-     */
-
     /* If we already have filesystem handler, don't do anything */
     if (dn->dn_SegList == BNULL && dn->dn_Handler == BNULL)
     {
     	struct FileSysStartupMsg *fssm = BADDR(dn->dn_Startup);
-        struct DosEnvec *de = BADDR(fssm->fssm_Environ);
 
-        if ( (de->de_DosType == 0x46415400) || (de->de_DosType == 0x46415401) || (de->de_DosType == 0x46415402) )
+        if (fssm && fssm->fssm_Device)
         {
-            D(bug("[BOOT] CheckPartitions - Skipping FAT DosTypes (0x%x)\n", de->de_DosType));
-        } else {
-            D(bug("[BOOT] CheckPartitions - Checking DosType (0x%x)\n", de->de_DosType));
-            if (fssm && fssm->fssm_Device)
+            struct PartitionHandle *pt = OpenRootPartition(AROS_BSTR_ADDR(fssm->fssm_Device), fssm->fssm_Unit);
+            
+            if (pt)
             {
-                struct PartitionHandle *pt = OpenRootPartition(AROS_BSTR_ADDR(fssm->fssm_Device), fssm->fssm_Unit);
-
-                if (pt)
-                {
-                    res = CheckTables(ExpansionBase, PartitionBase, fssm, pt, SysBase);
-                    CloseRootPartition(pt);
-                }
+                res = CheckTables(ExpansionBase, PartitionBase, fssm, pt, SysBase);
+                CloseRootPartition(pt);
             }
+
         }
     }
-
+    
+    //* Cleanup Device Node and if no partitions were found for the DeviceNode or device is SD0: then we put it back 
     Remove(&bn->bn_Node);
-    if (!res)
+    if (!res || (AROS_BSTR_ADDR(dn->dn_Name)[0] == 'S' && AROS_BSTR_ADDR(dn->dn_Name)[1] == 'D' && AROS_BSTR_ADDR(dn->dn_Name)[2] == '0') )
     {
-        /* If no partitions were found for the DeviceNode, put it back */
         Enqueue(&ExpansionBase->MountList, &bn->bn_Node);
     }
 }
@@ -327,6 +319,7 @@ void dosboot_BootScan(LIBBASETYPEPTR DOSBootBase)
     struct ExpansionBase *ExpansionBase = DOSBootBase->bm_ExpansionBase;
     APTR PartitionBase;
     struct BootNode *bootNode, *temp;
+    struct DeviceNode *deviceNode;
     struct List rootList;
 
     D(bug("[BOOT] dosboot_BootScan\n"));
@@ -344,12 +337,6 @@ void dosboot_BootScan(LIBBASETYPEPTR DOSBootBase)
 
         ForeachNodeSafe (&rootList, bootNode, temp)
         {
-        	/* No Clue what this does? [WD]
-            struct DeviceNode *deviceNode = bootNode->bn_DeviceNode;
-        	char deviceName[ 256 ];
-        	UBYTE deviceNameLength = *(char*)deviceNode->dn_Name;
-        	if( deviceNameLength) {	CopyMem( (char*)deviceNode->dn_Name, deviceName, deviceNameLength );	deviceName[ deviceNameLength ] = 0; }*/
-
             CheckPartitions(ExpansionBase, PartitionBase, SysBase, bootNode);
         }
 
@@ -358,3 +345,5 @@ void dosboot_BootScan(LIBBASETYPEPTR DOSBootBase)
 	    CloseLibrary(PartitionBase);
     }
 }
+
+

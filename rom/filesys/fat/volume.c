@@ -16,6 +16,7 @@
 #include <proto/timer.h>
 
 #include <exec/types.h>
+
 #include <devices/inputevent.h>
 #include <dos/dos.h>
 #include <dos/dosextens.h>
@@ -1138,20 +1139,19 @@ void DoDiskInsert(struct Globals *glob)
             sb->info = vol_info;
             glob->last_num = -1;
 
-            if (dl != NULL)
-                SendEvent(IECLASS_DISKINSERTED, glob);
-            else
-                SendVolumePacket(newvol, ACTION_VOLUME_ADD, glob);
-
+            if (dl != NULL) SendEvent(IECLASS_DISKINSERTED, glob);
+            else SendVolumePacket(newvol, ACTION_VOLUME_ADD, glob);
             D(bug("[FAT] [%s] Disk successfully initialised\n",__FUNCTION__ ));
-
             return;
-        }
-
+        } 
         FreeVecPooled(glob->mempool, sb);
     }
 
-    SendEvent(IECLASS_DISKINSERTED, glob);
+    glob->diskioreq->iotd_Req.io_Command = TD_EJECT;
+    glob->diskioreq->iotd_Req.io_Length = 1;
+    DoIO((struct IORequest *)glob->diskioreq);
+
+    D(bug("[FAT] [%s] Disk NOT initialised or non-FAT File System\n",__FUNCTION__ ));
 
     return;
 }
