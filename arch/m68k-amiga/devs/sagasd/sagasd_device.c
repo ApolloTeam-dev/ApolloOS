@@ -78,20 +78,26 @@ static void SAGASD_AddChangeInt(struct IORequest *io)
     struct SAGASDUnit *sdu = (struct SAGASDUnit *)io->io_Unit;
     struct Library *SysBase = sd->sd_ExecBase;
     struct IORequest *msg;
-    
+
+    struct IOStdReq *io_std = (struct IOStdReq*)io;
+    struct Interrupt *io_int = (struct Interrupt*)io_std->io_Data;
+
+    if (strncmp((char*)io_int->is_Node.ln_Name,"FATFS",5) != 0)
+    {
+        debug("Changed to MULTIPLE FS support mode");
+        sdu->sdu_AddChangeList[0] = 1;      // Change to "Multiple FS support" when non-FAT File handler is inserting change IRQ
+    }
+
     if (sdu->sdu_AddChangeListItems < 10)
     {
         sdu->sdu_AddChangeList[sdu->sdu_AddChangeListItems] = (APTR)((struct IOStdReq *)io)->io_Data;
         sdu->sdu_AddChangeListItems++;
     }
 
-    struct IOStdReq *io_std = (struct IOStdReq*)io;
-    struct Interrupt *io_int = (struct Interrupt*)io_std->io_Data;
-
-    for (int i=sdu->sdu_AddChangeListItems; i>0; i--)
+    for (int i=sdu->sdu_AddChangeListItems-1; i>0; i--)
     {
         debug("Listing sdu->sdu_AddChangeList[%d] (%x) for %s", i, sdu->sdu_AddChangeList[i], sdu->sdu_Name);
-        debug("Caller = %s\n", (char*)io_int->is_Node.ln_Name);
+        debug("Caller = %s", (char*)io_int->is_Node.ln_Name);
     } 
 
     io->io_Flags &= ~IOF_QUICK;
@@ -736,16 +742,14 @@ static void SAGASD_IOTask(struct Library *SysBase)
 
     /* Update status for the boot node */
  
-    UBYTE sderr;
+    present = sdcmd_detect(&sdu->sdu_SDCmd);
 
-    sderr = sdcmd_detect(&sdu->sdu_SDCmd);
-
-    if (!sderr)
+    if (present)
     {
         Forbid();
         sdu->sdu_Present = TRUE;
         sdu->sdu_ChangeNum++;
-        sdu->sdu_Valid = (sderr == 0) ? TRUE : FALSE;
+        sdu->sdu_Valid = present;
         debug("\t sdu_Valid: %s", sdu->sdu_Valid ? "TRUE" : "FALSE");
         debug("\t Blocks: %ld", sdu->sdu_SDCmd.info.blocks);
         Permit();
@@ -810,12 +814,38 @@ static void SAGASD_IOTask(struct Library *SysBase)
                 /* Timeout was signalled */
                 io = NULL;
 
-                if(detectcounter++ == 50)
+               if(detectcounter++ == 50)
                 {
-                    present = sdcmd_present(&sdu->sdu_SDCmd);
-                    if (!present)
+                    if (!sdu->sdu_Present)
                     {
-                        if (sdu->sdu_Present)
+                        present = sdcmd_detect(&sdu->sdu_SDCmd);            // We have to do a "full" detect when NOT in sdu_Present mode
+                        if (present)                                        // SD-Card is Inserted
+                        {
+                            Forbid();
+                            sdu->sdu_Present = TRUE;
+                            sdu->sdu_ChangeNum++;
+                            sdu->sdu_Valid = TRUE;
+                            debug("\t sdu_Valid: %s", sdu->sdu_Valid ? "TRUE" : "FALSE");
+                            debug("\t Blocks: %ld", sdu->sdu_SDCmd.info.blocks);
+
+                            for (int i=sdu->sdu_AddChangeListItems; i>0; i--)
+                            {
+                                if (sdu->sdu_AddChangeList[i])
+                                {
+                                    io_int = (struct Interrupt*)sdu->sdu_AddChangeList[i];
+                                    
+                                    debug("SD-Card INSERT = Calling sdu->sdu_AddChangeList[%d] (%x) from %s for %s", i,
+                                        sdu->sdu_AddChangeList[i], (char*)io_int->is_Node.ln_Name, sdu->sdu_Name);
+                                    
+                                    Cause((struct Interrupt *)(sdu->sdu_AddChangeList[i]));
+
+                                }
+                            }
+                            Permit();
+                        }
+                    } else {
+                        present = sdcmd_present(&sdu->sdu_SDCmd);           // We can do a "light" detect when in sdu_Present mode
+                        if (!present)                                       // SD-Card is Removed
                         {
                             Forbid();
                             sdu->sdu_Present = FALSE;
@@ -836,41 +866,14 @@ static void SAGASD_IOTask(struct Library *SysBase)
                                     {
                                         sdu->sdu_AddChangeList[i] = 0;
                                         sdu->sdu_AddChangeList[0] = 0;  // reset FLAG to signal we are now in "only FAT" mode
-                                        debug("SD-Card AddChange() routine removed because only FAT is supported as removable HDD\n");
+                                        debug("Changed to FAT ONLY support mode because only FAT is supported as removable HDD");
                                     } 
                                 }
                             }
                             Permit(); 
-
-                        } else {
-                            sderr = sdcmd_detect(&sdu->sdu_SDCmd);
-
-                            if (!sderr)
-                            {
-                                Forbid();
-                                sdu->sdu_Present = TRUE;
-                                sdu->sdu_ChangeNum++;
-                                sdu->sdu_Valid = TRUE;
-                                debug("\t sdu_Valid: %s", sdu->sdu_Valid ? "TRUE" : "FALSE");
-                                debug("\t Blocks: %ld", sdu->sdu_SDCmd.info.blocks);
-
-                                for (int i=sdu->sdu_AddChangeListItems; i>0; i--)
-                                {
-                                    if (sdu->sdu_AddChangeList[i])
-                                    {
-                                        io_int = (struct Interrupt*)sdu->sdu_AddChangeList[i];
-                                        
-                                        debug("SD-Card INSERT = Calling sdu->sdu_AddChangeList[%d] (%x) from %s for %s", i,
-                                            sdu->sdu_AddChangeList[i], (char*)io_int->is_Node.ln_Name, sdu->sdu_Name);
-                                        
-                                        Cause((struct Interrupt *)(sdu->sdu_AddChangeList[i]));
-
-                                    }
-                                }
-                                Permit();
-                            } 
                         }
                     }
+
                     detectcounter = 0;
                 }
             }
@@ -1025,7 +1028,7 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
     sdu->sdu_Valid = FALSE;
 
     sdu->sdu_AddChangeListItems = 1;        // sdu->sdu_AddChangeListItems[0] serves as a FLAG
-    sdu->sdu_AddChangeList[0] = 1;          // FLAG == 1 means that we start in "multiple FS support" mode (FLAG == 0 means "FAT only" mode
+    sdu->sdu_AddChangeList[0] = 0;          // FLAG == 1 means that we start in "multiple FS support" mode (FLAG == 0 means "FAT only" mode
 
     sdu->sdu_SDCmd.func.log = SAGASD_log;
     sdu->sdu_SDCmd.retry.read = SAGASD_RETRY;

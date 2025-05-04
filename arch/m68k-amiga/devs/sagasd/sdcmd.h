@@ -147,7 +147,7 @@ BOOL sdcmd_present(struct sdcmd *sd);
  *
  * Fills in the sd->info fields
  */
-UBYTE sdcmd_detect(struct sdcmd *sd);
+BOOL sdcmd_detect(struct sdcmd *sd);
 
 /* NOTE: Depending on SDOCRF_HCS, you will need to use either
  *       SDOCRF_HCS == 0   => addr is in bytes

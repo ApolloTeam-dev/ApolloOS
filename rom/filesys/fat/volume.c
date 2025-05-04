@@ -1147,11 +1147,16 @@ void DoDiskInsert(struct Globals *glob)
         FreeVecPooled(glob->mempool, sb);
     }
 
-    glob->diskioreq->iotd_Req.io_Command = TD_EJECT;
-    glob->diskioreq->iotd_Req.io_Length = 1;
-    DoIO((struct IORequest *)glob->diskioreq);
-
-    D(bug("[FAT] [%s] Disk NOT initialised or non-FAT File System\n",__FUNCTION__ ));
+    if (err != 103)     // error 103 = trying to mount FAT volume(s) on default SD0: Device Node (which is expected once during Boot if no SD-Card is inserted)
+    {
+        glob->diskioreq->iotd_Req.io_Command = TD_EJECT;
+        glob->diskioreq->iotd_Req.io_Length = 1;
+        DoIO((struct IORequest *)glob->diskioreq);
+        
+        D(bug("[FAT] [%s] Disk NOT initialised or non-FAT File System\n",__FUNCTION__ ));
+    } else {
+        D(bug("[FAT] [%s] No Disk Inserted - Default SD0: Device is ready for FAT Disks\n",__FUNCTION__ ));
+    }
 
     return;
 }

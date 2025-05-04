@@ -200,7 +200,8 @@ void sdcmd_send(struct sdcmd *sd, UBYTE cmd, ULONG arg)
 
     sdcmd_out(sd, (cmd & 0x3f) | 0x40);
 
-    for (i = 0; i < 4; i++, arg <<= 8) {
+    for (i = 0; i < 4; i++, arg <<= 8)
+    {
         UBYTE byte = (arg >> 24) & 0xff;
         crc = crc7(crc, byte);
 
@@ -617,14 +618,16 @@ BOOL sdcmd_present(struct sdcmd *sd)
 
     if (i == 50)
     {
+        debug("FALSE");
         return FALSE;
     } else {
         sdcmd_stop_transmission(sd);
+        debug("TRUE");
         return TRUE;
     }
 }
 
-UBYTE sdcmd_detect(struct sdcmd *sd)
+BOOL sdcmd_detect(struct sdcmd *sd)
 {
     struct sdcmd_info *info = &sd->info;
     UBYTE r1;
@@ -777,5 +780,5 @@ exit:
 
     debug("finishing sdcmd_detect routine with SDCMD_GO_IDLE_STATE");
 
-    return r1;
+    return r1 ? FALSE : TRUE;
 }
