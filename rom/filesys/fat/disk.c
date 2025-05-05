@@ -139,8 +139,7 @@ void Probe64BitSupport(struct Globals *glob)
 }
 
 /* N.B. returns an Exec error code, not a DOS error code! */
-LONG AccessDisk(BOOL do_write, ULONG num, ULONG nblocks, ULONG block_size,
-    UBYTE *data, APTR priv)
+LONG AccessDisk(BOOL do_write, ULONG num, ULONG nblocks, ULONG block_size, UBYTE *data, APTR priv)
 {
     //D(bug("----------------------------------------------------------------\n"));
     //D(bug("[FAT] [%s] Start \n",__FUNCTION__ ));

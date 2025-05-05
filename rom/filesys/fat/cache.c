@@ -162,8 +162,7 @@ APTR Cache_GetBlock(APTR cache, ULONG blockNum, UBYTE **data)
     struct Cache *c = cache;
     struct BlockRange *b = NULL, *b2;
     LONG error = 0, data_offset;
-    struct MinList *l =
-        &c->hash_table[(blockNum >> RANGE_SHIFT) & (c->hash_size - 1)];
+    struct MinList *l = &c->hash_table[(blockNum >> RANGE_SHIFT) & (c->hash_size - 1)];
     struct MinNode *n;
 
     /* Change block number to the start block of a range and get byte offset

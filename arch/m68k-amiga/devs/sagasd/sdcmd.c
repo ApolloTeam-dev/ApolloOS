@@ -155,7 +155,7 @@ static void sdcmd_ins(struct sdcmd *sd, UBYTE *buff, size_t len)
 
 static VOID sdcmd_clkdiv(struct sdcmd *sd, UBYTE val)
 {
-    debug("SD_CLK  => $%04lx", val);
+    //debug("SD_CLK  => $%04lx", val);
 
     Write16(sd->iobase + SAGA_SD_CLK, val);
 }
@@ -164,9 +164,9 @@ VOID sdcmd_select(struct sdcmd *sd, BOOL cs)
 {
     UWORD val;
 
-    val = cs ? 0 : SAGA_SD_CTL_NCS;
-
-    debug("SD_CTL  => $%04lx", val);
+    //val = cs ? 0 : SAGA_SD_CTL_NCS;
+    val = cs ? 0 : SAGA_CS_DRIVE0;
+    //debug("SD_CTL  => $%04lx", val);
 
     Write16(sd->iobase + SAGA_SD_CTL, val);
     sdcmd_out(sd, 0xff);
@@ -182,7 +182,7 @@ VOID sdcmd_select(struct sdcmd *sd, BOOL cs)
         }
         if (i == SDCMD_TIMEOUT) 
         {
-            debug("sdcmd_select ERROR (SDCMD_TIMEOUT)");
+            //debug("sdcmd_select ERROR (SDCMD_TIMEOUT)");
         }
     }
 }
@@ -606,8 +606,6 @@ BOOL sdcmd_present(struct sdcmd *sd)
     UBYTE r1;
     int i;
 
-    debug("starting sdcmd_present routine");
-
     sdcmd_send(sd, SDCMD_READ_SINGLE_BLOCK, 0);
 
     for (i = 0; i < 50; i++)
@@ -618,11 +616,11 @@ BOOL sdcmd_present(struct sdcmd *sd)
 
     if (i == 50)
     {
-        debug("FALSE");
+        //debug("starting sdcmd_present routine: FALSE");
         return FALSE;
     } else {
         sdcmd_stop_transmission(sd);
-        debug("TRUE");
+        //debug("starting sdcmd_present routine: TRUE");
         return TRUE;
     }
 }
@@ -635,7 +633,7 @@ BOOL sdcmd_detect(struct sdcmd *sd)
     ULONG r7;
     int i;
 
-    debug("starting sdcmd_detect routine with SDCMD_GO_IDLE_STATE");
+    //debug("starting sdcmd_detect routine with SDCMD_GO_IDLE_STATE");
 
     sdcmd_clkdiv(sd, SDCMD_CLKDIV_SLOW);
 
@@ -651,7 +649,7 @@ BOOL sdcmd_detect(struct sdcmd *sd)
 
     if (i == 50)
     {
-        debug("ERROR (SDERRF_TIMEOUT)");
+        //debug("ERROR (SDERRF_TIMEOUT)");
     } else {
         r1 &= SDERRF_IDLE;
         debug("running sdcmd_detect routine - IDLE state #1");
@@ -734,11 +732,11 @@ BOOL sdcmd_detect(struct sdcmd *sd)
                     r1 = sdcmd_read_packet(sd, csd, 16);
                     if (r1) goto exit;
 
-                    //info("csd=%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx",
-                    //        csd[0], csd[1], csd[2], csd[3],
-                    //        csd[4], csd[5], csd[6], csd[7],
-                    //        csd[8], csd[9], csd[10], csd[11],
-                    //        csd[12], csd[13], csd[14], csd[15]);
+                    debug("csd=%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx",
+                            csd[0], csd[1], csd[2], csd[3],
+                            csd[4], csd[5], csd[6], csd[7],
+                            csd[8], csd[9], csd[10], csd[11],
+                            csd[12], csd[13], csd[14], csd[15]);
 
                     /* Get the CID data */
                     sdcmd_send(sd, SDCMD_SEND_CID, 0);
@@ -748,11 +746,11 @@ BOOL sdcmd_detect(struct sdcmd *sd)
                     sdcmd_select(sd, FALSE);
                     if (r1) goto exit;
 
-                    //info("cid=%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx",
-                    //        cid[0], cid[1], cid[2], cid[3],
-                    //        cid[4], cid[5], cid[6], cid[7],
-                    //        cid[8], cid[9], cid[10], cid[11],
-                    //        cid[12], cid[13], cid[14], cid[15]);
+                    debug("cid=%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx",
+                            cid[0], cid[1], cid[2], cid[3],
+                            cid[4], cid[5], cid[6], cid[7],
+                            cid[8], cid[9], cid[10], cid[11],
+                            cid[12], cid[13], cid[14], cid[15]);
 
                     info->block_size = SDSIZ_BLOCK;
 

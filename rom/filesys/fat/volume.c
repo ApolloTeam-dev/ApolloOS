@@ -144,26 +144,32 @@ LONG ReadFATSuper(struct FSSuper *sb)
     D(bug("[FAT] [%s] Number of FATs = %d\n", __FUNCTION__ , sb->fat_count));
 
     if (boot->bpb_fat_size_16 != 0)
+    {
         sb->fat_size = AROS_LE2WORD(boot->bpb_fat_size_16);
-    else
+        D(bug("[FAT] [%s] FAT16 Size = %ld\n", __FUNCTION__ , sb->fat_size));
+    } else {
         sb->fat_size = AROS_LE2LONG(boot->ebpbs.ebpb32.bpb_fat_size_32);
-    D(bug("[FAT] [%s] FAT Size = %ld\n", __FUNCTION__ , sb->fat_size));
+        D(bug("[FAT] [%s] FAT32 Size = %ld\n", __FUNCTION__ , sb->fat_size));
+    }
 
     if (boot->bpb_total_sectors_16 != 0)
+    {
         total_sectors = AROS_LE2WORD(boot->bpb_total_sectors_16);
-    else
+        D(bug("[FAT] [%s] Total Sectors (FAT16) = %ld\n", __FUNCTION__ , total_sectors));
+    } else {
         total_sectors = AROS_LE2LONG(boot->bpb_total_sectors_32);
-    D(bug("[FAT] [%s] Total Sectors = %ld\n", __FUNCTION__ , sb->total_sectors));
-
+        D(bug("[FAT] [%s] Total Sectors (FAT32) = %ld\n", __FUNCTION__ , total_sectors));
+    }
+    
     /* Check that the boot block's sector count is the same as the
      * partition's sector count. This stops a resized partition being
-     * mounted before reformatting 
+     * mounted before reformatting */
     
     if ((total_sectors +4096) < sb->total_sectors)
     {
         invalid = TRUE;
-        D(bug("[FAT] [%s] #Boot-Sectors (%ld) < Partition-Sectors (%ld)\n", __FUNCTION__ , total_sectors, sb->total_sectors));
-    }*/
+        D(bug("[FAT] [%s] #Boot-Sectors (%ld) < Partition-Sectors (%ld)\n", __FUNCTION__ , total_sectors + 4096, sb->total_sectors));
+    }
 
     sb->rootdir_sectors = ((AROS_LE2WORD(boot->bpb_root_entries_count)
         * sizeof(struct FATDirEntry)) + (sb->sectorsize - 1))
@@ -453,28 +459,24 @@ LONG ReadFATSuper(struct FSSuper *sb)
     sb->next_cluster = -1;
     if (sb->type == 32)
     {
-        sb->fsinfo_block = Cache_GetBlock(sb->cache, sb->first_device_sector
-            + AROS_LE2WORD(boot->ebpbs.ebpb32.bpb_fs_info),
-            (UBYTE **) &fsinfo);
+        sb->fsinfo_block = Cache_GetBlock(sb->cache, sb->first_device_sector + AROS_LE2WORD(boot->ebpbs.ebpb32.bpb_fs_info), (UBYTE **) &fsinfo);
         if (sb->fsinfo_block != NULL)
         {
-            if (fsinfo->lead_sig == AROS_LONG2LE(FSI_LEAD_SIG)
-                && fsinfo->struct_sig == AROS_LONG2LE(FSI_STRUCT_SIG)
-                && fsinfo->trail_sig == AROS_LONG2LE(FSI_TRAIL_SIG))
+            if (fsinfo->lead_sig == AROS_LONG2LE(FSI_LEAD_SIG) && fsinfo->struct_sig == AROS_LONG2LE(FSI_STRUCT_SIG) && fsinfo->trail_sig == AROS_LONG2LE(FSI_TRAIL_SIG))
             {
                 sb->free_clusters = AROS_LE2LONG(fsinfo->free_count);
                 sb->next_cluster = AROS_LE2LONG(fsinfo->next_free);
                 D(bug("[FAT] [%s] Valid FATFSInfo block found\n",__FUNCTION__ ));
                 sb->fsinfo_buffer = fsinfo;
-            }
-            else
+            } else {
                 Cache_FreeBlock(sb->cache, sb->fsinfo_block);
+            }
         }
     }
-    if (sb->free_clusters == -1)
-        CountFreeClusters(sb);
-    if (sb->next_cluster == -1)
-        sb->next_cluster = 2;
+    if (sb->free_clusters == -1) CountFreeClusters(sb);
+    if (sb->next_cluster == -1) sb->next_cluster = 2;
+
+    
 
     FreeMem(boot, bsize);
     if (err != 0)
@@ -703,8 +705,7 @@ LONG FormatFATVolume(const UBYTE *name, UWORD len, struct Globals *glob)
     boot->bpb_signature[1] = 0xaa;
 
     /* Write the boot sector */
-    first_device_sector =
-        de->de_BlocksPerTrack * de->de_Surfaces * de->de_LowCyl;
+    first_device_sector = de->de_BlocksPerTrack * de->de_Surfaces * de->de_LowCyl;
 
     D(bug("[FAT] [%s] Boot sector at sector %ld\n", __FUNCTION__ , first_device_sector));
     D(bug("[FAT] [%s] Calculated Total Sectors %ld\n", __FUNCTION__ , sector_count));
@@ -714,10 +715,7 @@ LONG FormatFATVolume(const UBYTE *name, UWORD len, struct Globals *glob)
     D(bug("[FAT] [%s] FAT Size = %ld\n", __FUNCTION__ , fat_size));
     D(bug("[FAT] [%s] Total Sectors = %ld\n", __FUNCTION__ , sector_count));
 
-
-
-    if ((td_err = AccessDisk(TRUE, first_device_sector, 1, bsize,
-        (UBYTE *) boot, glob)) != 0)
+    if ((td_err = AccessDisk(TRUE, first_device_sector, 1, bsize, (UBYTE *) boot, glob)) != 0)
     {
         D(bug("[FAT] [%s] Couldn't write boot block (%ld)\n", __FUNCTION__ , td_err));
         FreeMem(boot, bsize);
@@ -899,15 +897,13 @@ void FillDiskInfo(struct InfoData *id, struct Globals *glob)
     if (glob->sb)
     {
         id->id_NumBlocks = glob->sb->total_sectors;
-        id->id_NumBlocksUsed = glob->sb->total_sectors
-            - (glob->sb->free_clusters << glob->sb->cluster_sectors_bits);
+        id->id_NumBlocksUsed = glob->sb->total_sectors - (glob->sb->free_clusters << glob->sb->cluster_sectors_bits);
         id->id_BytesPerBlock = glob->sb->sectorsize;
 
         id->id_DiskType = ID_DOS_DISK;
 
         id->id_VolumeNode = MKBADDR(glob->sb->doslist);
-        id->id_InUse = (IsListEmpty(&glob->sb->info->locks)
-            && IsListEmpty(&glob->sb->info->notifies)) ? DOSFALSE : DOSTRUE;
+        id->id_InUse = (IsListEmpty(&glob->sb->info->locks) && IsListEmpty(&glob->sb->info->notifies)) ? DOSFALSE : DOSTRUE;
     }
 
     else
@@ -992,6 +988,8 @@ void DoDiskInsert(struct Globals *glob)
     de->de_BlocksPerTrack   = geometry.dg_TrackSectors;    // Block p/Track = #Sectors
     de->de_LowCyl           = 2;                           // Assume 1 partition !?
     de->de_HighCyl          = geometry.dg_TotalSectors / (geometry.dg_Heads * geometry.dg_TrackSectors);    
+
+    if (de->de_HighCyl == 0) de->de_HighCyl = 524288;        // Default value (256Gb)
 
     D(bug("\n[FAT] [%s] Drive Geometry transfer to glob->fssm->fssm_Environ:\n",__FUNCTION__ ));
     D(bug("[FAT] [%s] de_SizeBlock      : %d\n",__FUNCTION__ , de->de_SizeBlock));

@@ -203,13 +203,9 @@ LONG PartitionRDBCheckPartitionTable(struct Library *PartitionBase, struct Parti
     if (root->root != NULL)
     {
         GetPartitionAttrs(root, tags);
-        if (
-            (root->root->table->type != PHPTT_MBR &&
-             root->root->table->type != PHPTT_EBR) ||
-            (type.id[0] != 0x30 && type.id[0] != 0x76)
-            )
+        if ((root->root->table->type != PHPTT_MBR && root->root->table->type != PHPTT_EBR) ||(type.id[0] != 0x30 && type.id[0] != 0x76) )
         {
-            D(bug("[PART:RDB] PartitionRDBCheckPartitionTable: NOT a ROOT Partition, so NO RDB Boot Record Found\n"));
+            D(bug("[PART:RDB] PartitionRDBCheckPartitionTable: root->root already exists, skipping RDB partitioning scheme\n"));
             return 0;
         }              
     }

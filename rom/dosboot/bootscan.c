@@ -265,7 +265,7 @@ static BOOL CheckTables(struct ExpansionBase *ExpansionBase, struct Library *Par
         ph = (struct PartitionHandle *)table->table->list.lh_Head;
 
         D(bug("\n[BOOT] CheckTables - Table Type = %d\n", table->table->type));
-        if (table->table->type == 2) return FALSE;
+        if (table->table->type == 2) return FALSE;                                      // Skipping FAT tables (handled by fat-handler)
 
         while (ph->ln.ln_Succ)
         {

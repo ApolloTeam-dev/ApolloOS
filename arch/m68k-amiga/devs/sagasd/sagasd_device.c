@@ -114,10 +114,7 @@ static void SAGASD_AddChangeInt(struct IORequest *io)
     ULONG block, block_size, bmask;
     UBYTE sderr;
 
-    //debug("%s: Flags: $%lx, Command: $%04lx, Offset: $%lx%08lx Length: %5ld, Data: $%08lx",
-            //is_write ? "write" : "read",
-            //io->io_Flags, io->io_Command,
-            //(ULONG)(off64 >> 32), (ULONG)off64, len, data);
+    //debug("%s: Flags: $%lx, Command: $%04lx, Offset: $%lx%08lx Length: %5ld, Data: $%08lx", is_write ? "write" : "read", io->io_Flags, io->io_Command, (ULONG)(off64 >> 32), (ULONG)off64, len, data);
 
     block_size = sdu->sdu_SDCmd.info.block_size;
     bmask = block_size - 1;
@@ -147,7 +144,7 @@ static void SAGASD_AddChangeInt(struct IORequest *io)
         return 0;
     }
 
-    //debug("%s: block=%ld, blocks=%ld", is_write ? "Write" : "Read", block, len);
+    debug("%s: block=%ld, blocks=%ld", is_write ? "Write" : "Read", block, len);
 
     /* Do the IO */
     if (is_write) {
@@ -157,7 +154,7 @@ static void SAGASD_AddChangeInt(struct IORequest *io)
     }
 
     if (sderr) {
-        debug("sderr=$%02x\n", sderr);
+        debug("sderr=$%02x", sderr);
         iostd->io_Actual = 0;
 
         /* Decode sderr into IORequest io_Errors */
@@ -582,12 +579,26 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         err = 0;
         break;
     case TD_EJECT:
-        if (sdu->sdu_AddChangeList[0] == 0)     // We only eject FAT SD-Card when we are in "FAT only" mode
+        if (sdu->sdu_AddChangeList[0] == 0)     // We use EJECT from fat-handler to warn if Inserted SD-Card is non-FAT when we are in "FAT only" mode
         {
+
+            UBYTE result;
+            ULONG bootblock;
+            ULONG read_buffer[(128*16*4)];
+
+            for (int i=0; i<16; i++)
+            {
+                result = sdcmd_read_block(&sdu->sdu_SDCmd, i, (UBYTE*)&read_buffer[i*128]);
+                
+                for (int j=0; j<128; j++)
+                {
+                    if (j%16 == 0) kprintf("\n");
+                    kprintf("%4d|%08x ", (i*128)+j, (ULONG)read_buffer[(i*128)+j]);
+                }
+                kprintf("\n");
+            }
+            
             bug( "%s TD_EJECT\n", __FUNCTION__ );
-            Forbid();
-            sdu->sdu_Valid = FALSE;
-            Permit();
             err = 0;
             struct IntuitionBase *IntuitionBase;
             IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 36);
@@ -606,7 +617,7 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
                 };
                 
                 EasyRequestArgs(NULL, &requestmessage, NULL, NULL);
-        
+                
                 CloseLibrary(&IntuitionBase->LibNode);
             }
         }
@@ -746,18 +757,18 @@ static void SAGASD_IOTask(struct Library *SysBase)
 
     if (present)
     {
-        Forbid();
+        //Forbid();
         sdu->sdu_Present = TRUE;
         sdu->sdu_ChangeNum++;
         sdu->sdu_Valid = present;
         debug("\t sdu_Valid: %s", sdu->sdu_Valid ? "TRUE" : "FALSE");
         debug("\t Blocks: %ld", sdu->sdu_SDCmd.info.blocks);
-        Permit();
+        //Permit();
     } else {
-        Forbid();
+        //Forbid();
         sdu->sdu_Present = FALSE;
         sdu->sdu_Valid = FALSE;
-        Permit();
+        //Permit();
     }
     
     /* Send the 'I'm Ready' message */
@@ -821,7 +832,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
                         present = sdcmd_detect(&sdu->sdu_SDCmd);            // We have to do a "full" detect when NOT in sdu_Present mode
                         if (present)                                        // SD-Card is Inserted
                         {
-                            Forbid();
+                            //Forbid();
                             sdu->sdu_Present = TRUE;
                             sdu->sdu_ChangeNum++;
                             sdu->sdu_Valid = TRUE;
@@ -841,13 +852,13 @@ static void SAGASD_IOTask(struct Library *SysBase)
 
                                 }
                             }
-                            Permit();
+                            //Permit();
                         }
                     } else {
                         present = sdcmd_present(&sdu->sdu_SDCmd);           // We can do a "light" detect when in sdu_Present mode
                         if (!present)                                       // SD-Card is Removed
                         {
-                            Forbid();
+                            //Forbid();
                             sdu->sdu_Present = FALSE;
                             sdu->sdu_Valid = FALSE;
                             
@@ -870,7 +881,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
                                     } 
                                 }
                             }
-                            Permit(); 
+                            //Permit(); 
                         }
                     }
 
@@ -895,6 +906,8 @@ static void SAGASD_IOTask(struct Library *SysBase)
             io->io_Message.mn_Node.ln_Type=NT_MESSAGE;
     
             ReplyMsg(&io->io_Message);
+
+            if ((io->io_Error != 0) && (io->io_Error != -3)) debug("ERROR in SAGASD_PerformIO = %d", io->io_Error);
         } 
     }
 
@@ -1091,6 +1104,12 @@ static int GM_UNIQUENAME(init)(struct SAGASDBase * SAGASDBase)
     ULONG i;
 
     asm ( "tst.b 0xbfe001\r\n" );    // Wait a moment, then...
+
+    //Temporary hack:  Remove this if you find it
+    //Hard coding the first device for now
+    debug("Hard setting chipselect 0 for now.....");
+    volatile unsigned char *chipselectRegister =  (unsigned char*)(SAGA_SD_BASE + SAGA_SD_CTL);
+    *chipselectRegister = SAGA_CS_DRIVE0;
 
     ExpansionBase = TaggedOpenLibrary(TAGGEDOPEN_EXPANSION);
     if (!ExpansionBase)
