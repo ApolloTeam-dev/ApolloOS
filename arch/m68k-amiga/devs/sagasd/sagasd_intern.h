@@ -7,7 +7,7 @@
 
 #include "sdcmd.h"
 
-#define SAGASD_UNITS        1
+#define SAGASD_UNITS        2
 #define IO_TIMINGLOOP_MSEC  100000
 
 #define SDU_STACK_SIZE      (4096 / sizeof(ULONG))

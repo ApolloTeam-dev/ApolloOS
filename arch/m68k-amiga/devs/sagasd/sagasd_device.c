@@ -1033,14 +1033,14 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
 
     switch (id)
     {
-        //case 0:                                             // SPI#1 | CS=0 | Micro-SD-Card slot (backside)
-        //sdu->sdu_SDCmd.iobase = SAGA_SD_BASE_SPI1;
-        //sdu->sdu_SDCmd.cs = SAGA_SD_CTL_NCS;   
-        //sdu->sdu_SDCmd.unitnumber = id+1;    
-        //sdu->sdu_Enabled = TRUE;
-        //break;
+        case 0:                                             // SPI#1 | CS=0 | Micro-SD-Card slot (backside)
+        sdu->sdu_SDCmd.iobase = SAGA_SD_BASE_SPI1;
+        sdu->sdu_SDCmd.cs = SAGA_SD_CTL_NCS;   
+        sdu->sdu_SDCmd.unitnumber = id+1;    
+        sdu->sdu_Enabled = TRUE;
+        break;
         
-        case 0:                                             // SPI#2 | CS=0 | SD-Card slot 1 (Expansion Port)
+        case 1:                                             // SPI#2 | CS=0 | SD-Card slot 1 (Expansion Port)
         sdu->sdu_SDCmd.iobase  = SAGA_SD_BASE_SPI2;
         sdu->sdu_SDCmd.cs = SAGA_CS_DRIVE0; 
         sdu->sdu_SDCmd.unitnumber = id+1; 
