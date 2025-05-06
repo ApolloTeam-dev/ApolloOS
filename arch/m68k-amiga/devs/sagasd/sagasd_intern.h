@@ -14,7 +14,7 @@
 #include "sdcmd.h"
 
 #define SAGASD_UNITS    1       /* Only one chip select for now */
-#define IO_TIMINGLOOP_MSEC 20000
+#define IO_TIMINGLOOP_MSEC 100000
 
 #define SDU_STACK_SIZE  (4096 / sizeof(ULONG))
 

@@ -142,12 +142,12 @@ static void sdcmd_ins(struct sdcmd *sd, UBYTE *buff, size_t len)
      * the CRC16 while waiting for the next fill.
      */
 	asm volatile(
-			"       move.b #0xff,(0xDE0000)        \n"
+			"       move.b #0xff,(0xDE0010)        \n"
 			"       subq.l #1,%[count]              \n"
 			"       bra 2f                         \n"
-			"1:     move.b (0xDE0002),(%[buff])+   \n"
+			"1:     move.b (0xDE0012),(%[buff])+   \n"
 			"2:     dbra   %[count],1b             \n"
-			"       move.b (0xDE0000),(%[buff])+   \n"
+			"       move.b (0xDE0010),(%[buff])+   \n"
 				:[count]"+d"(len),[buff]"+a"(buff)::"cc");
 
     return;
@@ -164,9 +164,8 @@ VOID sdcmd_select(struct sdcmd *sd, BOOL cs)
 {
     UWORD val;
 
-    //val = cs ? 0 : SAGA_SD_CTL_NCS;
-    val = cs ? 0 : SAGA_CS_DRIVE0;
-    //debug("SD_CTL  => $%04lx", val);
+    val = cs ? SAGA_CS_DRIVE0 : SAGA_CS_NODRIVE;
+    debug("SD_CTL  => $%04lx", val);
 
     Write16(sd->iobase + SAGA_SD_CTL, val);
     sdcmd_out(sd, 0xff);
@@ -182,7 +181,7 @@ VOID sdcmd_select(struct sdcmd *sd, BOOL cs)
         }
         if (i == SDCMD_TIMEOUT) 
         {
-            //debug("sdcmd_select ERROR (SDCMD_TIMEOUT)");
+            debug("sdcmd_select ERROR (SDCMD_TIMEOUT)");
         }
     }
 }
@@ -762,7 +761,27 @@ BOOL sdcmd_detect(struct sdcmd *sd)
                         debug("SDHC-Card info: c_size=%ld  | blocks=%ld", c_size, info->blocks);
                         info->blocks = (c_size + 1) * 1024;
                         info->addr_shift = 0;
-                    } 
+                    } else {
+                        /* SD calculation */
+                        /* Bits 49:47 of the CSD */
+                        c_size_mult = bits(&csd[15], 47, 3);
+                        /* Bits 83:80 of the CSD */
+                        read_bl_len = bits(&csd[15], 80, 4);
+                        /* Bits 73:62 of the CSD */
+                        c_size = bits(&csd[15], 62, 12);
+            
+                        info("SD: c_size_mult=%ld, read_bl_len=%ld, c_size=%ld", c_size_mult, read_bl_len, c_size);
+            
+                        info->blocks = (1UL << (c_size_mult + read_bl_len + 2 - 9)) * (c_size + 1);
+            
+                        /* Set block size */
+                        sdcmd_send(sd, SDCMD_SET_BLOCKLEN, info->block_size);
+                        r1 = sdcmd_r1(sd);
+                        if (r1)
+                            return r1;
+            
+                        info->addr_shift = 9;
+                    }
                 } else {
                     info->block_size = SDSIZ_BLOCK;
                     info->blocks = 0; // virtual value as stub if no SD is present (dynamically set by FAT filesystem on DoDiskInsert())

@@ -825,7 +825,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
                 /* Timeout was signalled */
                 io = NULL;
 
-               if(detectcounter++ == 50)
+               if(detectcounter++ == 10)
                 {
                     if (!sdu->sdu_Present)
                     {
