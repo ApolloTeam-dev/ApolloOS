@@ -1,9 +1,3 @@
-/*
- * Copyright (C) 2016, Netronome Systems, Inc.
- * All rights reserved.
- *
- */
-
 #ifndef SAGASD_INTERN_H
 #define SAGASD_INTERN_H
 
@@ -13,12 +7,13 @@
 
 #include "sdcmd.h"
 
-#define SAGASD_UNITS    1       /* Only one chip select for now */
-#define IO_TIMINGLOOP_MSEC 100000
+#define SAGASD_UNITS        1
+#define IO_TIMINGLOOP_MSEC  100000
 
-#define SDU_STACK_SIZE  (4096 / sizeof(ULONG))
+#define SDU_STACK_SIZE      (4096 / sizeof(ULONG))
 
-struct SAGASDBase {
+struct SAGASDBase
+{
     struct Device       sd_Device;
     struct Library *    sd_ExecBase;
     IPTR                sd_SegList;
@@ -26,8 +21,8 @@ struct SAGASDBase {
     {
         struct Unit sdu_Unit;
         struct Task sdu_Task;
-        TEXT        sdu_Name[6];                /* "SDIOx" */
-        ULONG       sdu_Stack[1024];          /* 4K stack */
+        TEXT        sdu_Name[6];        /* "SDIOx" */
+        ULONG       sdu_Stack[1024];    /* 4K stack */
         BOOL        sdu_Enabled;
 
         struct sdcmd sdu_SDCmd;
@@ -46,5 +41,4 @@ struct SAGASDBase {
     } sd_Unit[SAGASD_UNITS];
 };
 
-#endif /* SAGASD_INTERN_H */
-/* vim: set shiftwidth=4 expandtab:  */
+#endif 

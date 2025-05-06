@@ -31,8 +31,8 @@
 
 #define SDSIZ_BLOCK        512          /* Block size in bytes */
 
-#define SDCMD_TIMEOUT      5000000       /* Times to read for new status */
-#define SDCMD_IDLE_RETRY   50000
+#define SDCMD_TIMEOUT      100000       /* Times to read for new status */
+#define SDCMD_IDLE_RETRY   100000
 
 #define SDERRF_TIMEOUT  (1 << 7)
 #define SDERRF_PARAM    (1 << 6)
@@ -94,12 +94,16 @@
 #define SDLOG_DIAG      4       /* All I/O transactions */
 
 /* Raw SD card interface */
-struct sdcmd {
+struct sdcmd
+{
     struct Node *owner; /* Owner of this structure */
 
     ULONG iobase;
+    UWORD cs;
+    ULONG unitnumber;
 
-    struct sdcmd_retry {
+    struct sdcmd_retry
+    {
         LONG read;      /* Number of retries to read a block */
         LONG write;     /* Number of retries to write a block */
     } retry;
@@ -120,9 +124,9 @@ struct sdcmd {
     } info;
 
     /** Functions to be provided by the caller **/
-    struct sdcmd_func {
-        /* Add to the debug log.
-         */
+    struct sdcmd_func
+    {
+        /* Add to the debug log.*/
         VOID (*log)(struct sdcmd *sd, int level, const char *format, ...);
     } func;
 };

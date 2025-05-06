@@ -25,7 +25,9 @@
 
 #ifndef SAGA_SD_H
 #define SAGA_SD_H
-#define SAGA_SD_BASE            0xDE0010        /* Base address */
+#define SAGA_SD_BASE_SPI1       0xDE0000        /* Base address for SPI#1*/
+#define SAGA_SD_BASE_SPI2       0xDE0010        /* Base address for SPI#2*/
+
 #define SAGA_SD_DATA            0x0000          /* Read as UBYTE/Write as UBYTE */
 #define SAGA_SD_CTL             0x0004          /* UWORD, Write only */
 #define SAGA_SD_CTL_NCS         (1 << 0)        /* nChipSelect */

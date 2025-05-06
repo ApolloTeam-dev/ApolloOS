@@ -36,7 +36,7 @@
 #include "sdcmd.h"
 #include "common.h"
 
-#include <sd.h>
+#include "sd.h"
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x)   (sizeof(x)/sizeof((x)[0]))
@@ -78,7 +78,7 @@ AROS_SHAH(ULONG *  ,D= ,DEBUG,/N, 0, "Debug level\n")
 {
     AROS_SHCOMMAND_INIT
 
-    ULONG iobase = SHArg(IOBASE) ? *SHArg(IOBASE) : SAGA_SD_BASE;
+    ULONG iobase = SHArg(IOBASE) ? *SHArg(IOBASE) : SAGA_SD_BASE_SPI1;
     ULONG pattern = SHArg(PATTERN) ? *SHArg(PATTERN) : 0x5af00000;
     BOOL readTest = SHArg(READ);
     BOOL writeTest = SHArg(WRITE);

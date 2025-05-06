@@ -52,7 +52,7 @@
 
 #include "common.h"
 
-#include <sd.h>
+#include "sd.h"
 #include "sagasd_intern.h"
 
 #include LC_LIBDEFS_FILE
@@ -144,7 +144,7 @@ static void SAGASD_AddChangeInt(struct IORequest *io)
         return 0;
     }
 
-    debug("%s: block=%ld, blocks=%ld", is_write ? "Write" : "Read", block, len);
+    //debug("%s: block=%ld, blocks=%ld", is_write ? "Write" : "Read", block, len);
 
     /* Do the IO */
     if (is_write) {
@@ -235,14 +235,20 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
                     break;
             default:
                     if (i >= 8 && i < 36)
-                        val = "Apollo  SD-Card Slot #1     "[i - 8];
-                    else if (i >= 36 && i < 44) {
-                        val = sdc->info.cid[7 + (i-36)/2];
-                        if ((i & 1) == 0)
-                            val >>= 4;
-                        val = "0123456789ABCDEF"[val & 0xf];
-                    } else
-                        val = 0;
+                    {
+                        if (sdu->sdu_SDCmd.unitnumber == 1) val = "Apollo  SD-Card Slot #1     "[i - 8];
+                        if (sdu->sdu_SDCmd.unitnumber == 2) val = "Apollo  SD-Card Slot #2     "[i - 8];
+                        if (sdu->sdu_SDCmd.unitnumber == 3) val = "Apollo  SD-Card Slot #3     "[i - 8];
+                    } else {
+                        if (i >= 36 && i < 44)
+                        {
+                            val = sdc->info.cid[7 + (i-36)/2];
+                            if ((i & 1) == 0) val >>= 4;
+                            val = "0123456789ABCDEF"[val & 0xf];
+                        } else {
+                            val = 0;
+                        }
+                    }
                     break;
             }
 
@@ -976,10 +982,7 @@ AROS_LH1(LONG, AbortIO,
 }
 
 
-static void SAGASD_BootNode(
-        struct SAGASDBase *SAGASDBase,
-        struct Library *ExpansionBase,
-        ULONG unit)
+static void SAGASD_BootNode(struct SAGASDBase *SAGASDBase, struct Library *ExpansionBase, ULONG unit)
 {
     struct SAGASDUnit *sdu = &SAGASDBase->sd_Unit[unit];
     TEXT dosdevname[4] = "SD0";
@@ -1028,11 +1031,29 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
     struct Library *SysBase = SAGASDBase->sd_ExecBase;
     struct SAGASDUnit *sdu = &SAGASDBase->sd_Unit[id];
 
-    switch (id) {
-    case 0:
-        sdu->sdu_SDCmd.iobase  = SAGA_SD_BASE;
+    switch (id)
+    {
+        //case 0:                                             // SPI#1 | CS=0 | Micro-SD-Card slot (backside)
+        //sdu->sdu_SDCmd.iobase = SAGA_SD_BASE_SPI1;
+        //sdu->sdu_SDCmd.cs = SAGA_SD_CTL_NCS;   
+        //sdu->sdu_SDCmd.unitnumber = id+1;    
+        //sdu->sdu_Enabled = TRUE;
+        //break;
+        
+        case 0:                                             // SPI#2 | CS=0 | SD-Card slot 1 (Expansion Port)
+        sdu->sdu_SDCmd.iobase  = SAGA_SD_BASE_SPI2;
+        sdu->sdu_SDCmd.cs = SAGA_CS_DRIVE0; 
+        sdu->sdu_SDCmd.unitnumber = id+1; 
         sdu->sdu_Enabled = TRUE;
         break;
+        
+        //case 2:                                             // SPI#2 | CS=1 | SD-Card slot 1 (Expansion Port)
+        //sdu->sdu_SDCmd.iobase  = SAGA_SD_BASE_SPI2;
+        //sdu->sdu_SDCmd.cs = SAGA_CS_DRIVE1; 
+        //sdu->sdu_SDCmd.unitnumber = id+1; 
+        //sdu->sdu_Enabled = TRUE;
+        //break;
+
     default:
         sdu->sdu_Enabled = FALSE;
     }
@@ -1040,15 +1061,14 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
     sdu->sdu_Present = FALSE;
     sdu->sdu_Valid = FALSE;
 
-    sdu->sdu_AddChangeListItems = 1;        // sdu->sdu_AddChangeListItems[0] serves as a FLAG
-    sdu->sdu_AddChangeList[0] = 0;          // FLAG == 1 means that we start in "multiple FS support" mode (FLAG == 0 means "FAT only" mode
+    sdu->sdu_AddChangeListItems = 1;                        // sdu->sdu_AddChangeListItems[0] serves as a FLAG
+    sdu->sdu_AddChangeList[0] = 0;                          // FLAG == 1 means that we start in "multiple FS support" mode (FLAG == 0 means "FAT only" mode
 
     sdu->sdu_SDCmd.func.log = SAGASD_log;
     sdu->sdu_SDCmd.retry.read = SAGASD_RETRY;
     sdu->sdu_SDCmd.retry.write = SAGASD_RETRY;
      
-    /* If the unit is present, create an IO task for it
-     */
+    /* If the unit is present, create an IO task for it */
     if (sdu->sdu_Enabled)
     {
         struct Task *utask = &sdu->sdu_Task;
@@ -1093,7 +1113,6 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
     debug("unit=%d enabled=%d", id, SAGASDBase->sd_Unit[id].sdu_Enabled ? 1 : 0);
 }
 
-// Direct init routine
 static int GM_UNIQUENAME(init)(struct SAGASDBase * SAGASDBase)
 {
     debug("Starting Init()");
@@ -1105,19 +1124,13 @@ static int GM_UNIQUENAME(init)(struct SAGASDBase * SAGASDBase)
 
     asm ( "tst.b 0xbfe001\r\n" );    // Wait a moment, then...
 
-    //Temporary hack:  Remove this if you find it
-    //Hard coding the first device for now
-    debug("Hard setting chipselect 0 for now.....");
-    volatile unsigned char *chipselectRegister =  (unsigned char*)(SAGA_SD_BASE + SAGA_SD_CTL);
-    *chipselectRegister = SAGA_CS_DRIVE0;
-
     ExpansionBase = TaggedOpenLibrary(TAGGEDOPEN_EXPANSION);
-    if (!ExpansionBase)
-  	    Alert(AT_DeadEnd | AO_TrackDiskDev | AG_OpenLib);
+    if (!ExpansionBase) Alert(AT_DeadEnd | AO_TrackDiskDev | AG_OpenLib);
 
     for (i = 0; i < SAGASD_UNITS; i++)
+    {
 	    SAGASD_InitUnit(SAGASDBase, i);
-
+    }
 
     for (i = 0; i < SAGASD_UNITS; i++)
     {
@@ -1135,9 +1148,8 @@ static int GM_UNIQUENAME(expunge)(struct SAGASDBase * SAGASDBase)
     struct IORequest io = {};
     int i;
 
-    //debug("");
-
-    for (i = 0; i < SAGASD_UNITS; i++) {
+    for (i = 0; i < SAGASD_UNITS; i++)
+    {
         io.io_Device = &SAGASDBase->sd_Device;
         io.io_Unit = &SAGASDBase->sd_Unit[i].sdu_Unit;
         io.io_Flags = 0;
@@ -1157,18 +1169,20 @@ static int GM_UNIQUENAME(open)(struct SAGASDBase * SAGASDBase,
     iotd->iotd_Req.io_Error = IOERR_OPENFAIL;
 
     /* Is the requested unitNumber valid? */
-    if (unitnum < SAGASD_UNITS) {
+    if (unitnum < SAGASD_UNITS)
+    {
         struct SAGASDUnit *sdu;
 
         iotd->iotd_Req.io_Device = (struct Device *)SAGASDBase;
 
         /* Get SDU structure */
         sdu = &SAGASDBase->sd_Unit[unitnum];
-	if (sdu->sdu_Enabled) {
+	    if (sdu->sdu_Enabled)
+        {
     	    iotd->iotd_Req.io_Unit = &sdu->sdu_Unit;
     	    sdu->sdu_Unit.unit_OpenCnt++;
     	    iotd->iotd_Req.io_Error = 0;
-	}
+	    }
 
         debug("Open=%d", unitnum, iotd->iotd_Req.io_Error);
     }
