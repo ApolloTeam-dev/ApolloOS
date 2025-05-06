@@ -211,7 +211,9 @@ void sdcmd_send(struct sdcmd *sd, UBYTE cmd, ULONG arg)
     int i;
     UBYTE crc;
 
+    debug("before sdcmd_select");
     sdcmd_select(sd, TRUE);
+    debug("after sdcmd_select");
 
     cmd = (cmd & 0x3f) | SDCMD_VALID;
 
@@ -674,15 +676,26 @@ BOOL sdcmd_detect(struct sdcmd *sd)
 
     debug("Put into idle state");
     sdcmd_send(sd, SDCMD_GO_IDLE_STATE, 0);
-    r1 = sdcmd_r1(sd);
-    /* It's ok (and expected) that we are in IDLE state */
+
+    // Quick IDLE test to shorten Detect if no media is present 
+
+    for (i = 0; i < 100; i++)
+    {
+        r1 = sdcmd_in(sd);
+        if (!(r1 & SDERRF_TIMEOUT)) break;
+    }
+    if (i==100)
+    {
+        debug("Quick IDLE Test failed (100)");
+        return FALSE;
+    }
     r1 &= ~SDERRF_IDLE;
     if (r1) return FALSE;
+    debug("Quick IDLE Test succeeded");
 
     debug("Do SHDC detection during idle");
     sdcmd_send(sd, SDCMD_SEND_IF_COND, 0x000001aa);
     r1 = sdcmd_r7(sd, &r7);
-    /* It's ok (and expected) that we are in IDLE state */
     r1 &= ~SDERRF_IDLE;
     if (!r1)
     {
@@ -692,7 +705,6 @@ BOOL sdcmd_detect(struct sdcmd *sd)
             debug(" HCS (SDHC) mode");
             sdcmd_asend(sd, SDCMD_SD_SEND_OP_COND, SDOCRF_HCS);
             r1 = sdcmd_r1(sd);
-            /* It's ok (and expected) that we are in IDLE state */
             r1 &= ~SDERRF_IDLE;
             if (r1) return FALSE;
         }
