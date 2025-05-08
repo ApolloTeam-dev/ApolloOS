@@ -175,7 +175,7 @@ static void sdcmd_ins_spi2(struct sdcmd *sd, UBYTE *buff, size_t len)
 
 static VOID sdcmd_clkdiv(struct sdcmd *sd, UBYTE val)
 {
-    debug("SD_CLK  => $%04lx", val);
+    //debug("SD_CLK  => $%04lx", val);
 
     Write16(sd->iobase + SAGA_SD_CLK, val);
 }
@@ -211,9 +211,7 @@ void sdcmd_send(struct sdcmd *sd, UBYTE cmd, ULONG arg)
     int i;
     UBYTE crc;
 
-    debug("before sdcmd_select");
     sdcmd_select(sd, TRUE);
-    debug("after sdcmd_select");
 
     cmd = (cmd & 0x3f) | SDCMD_VALID;
 
@@ -655,14 +653,14 @@ BOOL sdcmd_detect(struct sdcmd *sd)
     ULONG r7;
     int i;
 
-    debug("starting sdcmd_detect routine");
+    debug("sdcmd_detect for SD-Card unit: %d", sd->unitnumber);
 
     memset(info, 0, sizeof(*info));
 
-    debug("Switch to slow speed mode");
+    //debug("Switch to slow speed mode");
     sdcmd_clkdiv(sd, SDCMD_CLKDIV_SLOW);
 
-    debug("Emit at least 74 clocks of idle");
+    //debug("Emit at least 74 clocks of idle");
     sdcmd_select(sd, TRUE);
     for (i = 0; i < 16; i++)
     {
@@ -670,11 +668,11 @@ BOOL sdcmd_detect(struct sdcmd *sd)
     }
     sdcmd_select(sd, FALSE);
 
-    debug("Stuff two idle bytes while deasserted");
+    //debug("Stuff two idle bytes while deasserted");
     sdcmd_out(sd, 0xff);
     sdcmd_out(sd, 0xff);
 
-    debug("Put into idle state");
+    //debug("Put into idle state");
     sdcmd_send(sd, SDCMD_GO_IDLE_STATE, 0);
 
     // Quick IDLE test to shorten Detect if no media is present 
@@ -686,7 +684,7 @@ BOOL sdcmd_detect(struct sdcmd *sd)
     }
     if (i==100)
     {
-        debug("Quick IDLE Test failed (100)");
+        //debug("Quick IDLE Test failed (100)");
         return FALSE;
     }
     r1 &= ~SDERRF_IDLE;

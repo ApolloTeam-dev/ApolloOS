@@ -48,7 +48,7 @@ BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit)
 {
     struct ExpansionBase *ExpansionBase;
     struct DeviceNode *devnode;
-    TEXT dosdevname[4] = "HD0";
+    TEXT dosdevname[7] = "DHROM0";
     const ULONG IdDOS = AROS_MAKE_ID('D','O','S','\000');
     const ULONG IdCDVD = AROS_MAKE_ID('C','D','F','S');         // Opticals are all using CDFS
 
@@ -64,13 +64,14 @@ BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit)
                 break;
             case DG_CDROM:
                 dosdevname[0] = 'C';
+                dosdevname[1] = 'D';
                 break;
             default:
                 DD(bug("[ATA>>]:-ata_RegisterVolume called on unknown devicetype\n"));
         }
 
-        if (unit->au_UnitNum < 10) dosdevname[2] += unit->au_UnitNum % 10;
-        else dosdevname[2] = 'A' - 10 + unit->au_UnitNum;
+        if (unit->au_UnitNum < 10) dosdevname[5] += unit->au_UnitNum % 10;
+        else dosdevname[5] = 'A' - 10 + unit->au_UnitNum;
     
         pp[0] 		            = (IPTR)dosdevname;
         pp[1]		            = (IPTR)MOD_NAME_STRING;

@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2013, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: ColdReboot() - Reboot the computer.
@@ -20,10 +20,13 @@ asm (
 	"	.align 4\n"
 	"	.globl Exec_MagicResetCode\n"
 	"Exec_MagicResetCode:\n"
-	"	nop\n"
-        "	move.l #2,%a0\n"
-        "	reset\n"
-        "	jmp    (%a0)\n"
+	    "	nop\n                   "
+        "   lea.l 0x01000000,%a0\n   "
+        "   sub.l -0x14(%a0),%a0\n   "
+        "   move.l 4(%a0),%a0\n     "
+        "   subq.l #2,%a0\n         "
+        "	reset\n                 "
+        "	jmp (%a0)\n             "
      );
 
 
@@ -36,11 +39,15 @@ AROS_LH0(void, ColdReboot,
 {
     AROS_LIBFUNC_INIT
 
+    kprintf("COLDREBOOT");
+
     /* Disable interrupts, and do all the reset callbacks
      */
     Exec_DoResetCallbacks((struct IntExecBase *)SysBase, SD_ACTION_WARMREBOOT);
 
     Supervisor((ULONG_FUNC)Exec_MagicResetCode);
+
+    kprintf("COLDREBOOT FAILED");
 
     AROS_LIBFUNC_EXIT
 } /* ColdReboot() */

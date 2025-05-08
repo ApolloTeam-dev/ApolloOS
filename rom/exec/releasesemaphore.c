@@ -70,8 +70,8 @@
     if (ThisTask->tc_State == TS_REMOVED)
         return;
 
-    if (!CheckSemaphore(sigSem, &tp, SysBase))
-        return;
+    //if (!CheckSemaphore(sigSem, &tp, SysBase))
+    //    return;
 
     /* Protect the semaphore structure from multiple access. */
     Forbid();

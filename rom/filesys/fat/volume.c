@@ -1211,5 +1211,4 @@ void DoDiskRemove(struct Globals *glob)
             SendEvent(IECLASS_DISKREMOVED, glob);
         }
     }
-    D(bug("\n"));
 }

@@ -24,8 +24,7 @@ BOOL CheckSemaphore(struct SignalSemaphore *sigSem, struct TraceLocation *caller
         /* FindTask() is called only here, for speedup */
         struct Task *ThisTask = GET_THIS_TASK;
 
-        kprintf("%s called in supervisor mode!!!\n"
-                "sem = 0x%p task = 0x%p (%s)\n\n", caller->function, sigSem, ThisTask, ThisTask->tc_Node.ln_Name);
+        kprintf("%s called in supervisor mode!!!\nsem = 0x%p task = 0x%p (%s)\n\n", caller->function, sigSem, ThisTask, ThisTask->tc_Node.ln_Name);
         Exec_ExtAlert(ACPU_PrivErr & ~AT_DeadEnd, __builtin_return_address(0), CALLER_FRAME, 0, NULL, SysBase);
 
         return FALSE;
@@ -66,8 +65,8 @@ void InternalObtainSemaphore(struct SignalSemaphore *sigSem, struct Task *owner,
     if (ThisTask->tc_State == TS_REMOVED)
         return;
 
-    if (!CheckSemaphore(sigSem, caller, SysBase))
-        return;  /* A crude attempt to recover... */
+    //if (!CheckSemaphore(sigSem, caller, SysBase))
+    //    return;  /* A crude attempt to recover... */
 
     /*
      * Arbitrate for the semaphore structure.
@@ -144,8 +143,8 @@ ULONG InternalAttemptSemaphore(struct SignalSemaphore *sigSem, struct Task *owne
     struct Task *ThisTask = GET_THIS_TASK;
     ULONG retval = TRUE;
 
-    if (!CheckSemaphore(sigSem, caller, SysBase))
-        return FALSE;  /* A crude attempt to recover... */
+    //if (!CheckSemaphore(sigSem, caller, SysBase))
+    //    return FALSE;  /* A crude attempt to recover... */
 
     /*
      * Arbitrate for the semaphore structure.
