@@ -653,7 +653,7 @@ BOOL sdcmd_detect(struct sdcmd *sd)
     ULONG r7;
     int i;
 
-    debug("sdcmd_detect for SD-Card unit: %d", sd->unitnumber);
+    //debug("sdcmd_detect for SD-Card unit: %d", sd->unitnumber);
 
     memset(info, 0, sizeof(*info));
 

@@ -138,6 +138,24 @@ void Probe64BitSupport(struct Globals *glob)
         }
 }
 
+
+LONG RawDiskSectorRead(ULONG Sector, ULONG SectorSize, UBYTE *SectorBuffer, struct Globals *glob)
+{
+    ULONG err;
+
+    glob->diskioreq->iotd_Req.io_Offset    = (Sector * SectorSize) & 0xFFFFFFFF;
+    glob->diskioreq->iotd_Req.io_Actual    = 0;
+    glob->diskioreq->iotd_Req.io_Length    = SectorSize;
+    glob->diskioreq->iotd_Req.io_Data      = SectorBuffer;
+    glob->diskioreq->iotd_Req.io_Command   = glob->readcmd;
+
+    err = DoIO((struct IORequest *)glob->diskioreq);
+
+    return err;
+}
+
+
+
 /* N.B. returns an Exec error code, not a DOS error code! */
 LONG AccessDisk(BOOL do_write, ULONG num, ULONG nblocks, ULONG block_size, UBYTE *data, APTR priv)
 {
@@ -150,11 +168,9 @@ LONG AccessDisk(BOOL do_write, ULONG num, ULONG nblocks, ULONG block_size, UBYTE
     BOOL retry = TRUE;
     TEXT vol_name[100];
 
-#if DEBUG_CACHESTATS > 1
-    ErrorMessage("Accessing %lu sector(s) starting at %lu.\n"
-        "First volume sector is %lu, sector size is %lu.\n", "OK", nblocks,
-         num, glob->sb->first_device_sector, block_size);
-#endif
+//#if DEBUG_CACHESTATS > 1
+    //D(bug("Accessing %lu sector(s) starting at %lu.\nFirst volume sector is %lu, sector size is %lu.\n", nblocks, num, glob->sb->first_device_sector, block_size));
+//#endif
 
     /* Adjust parameters if range is partially outside boundaries, or
      * warn user and bale out if completely outside boundaries */
@@ -206,6 +222,8 @@ LONG AccessDisk(BOOL do_write, ULONG num, ULONG nblocks, ULONG block_size, UBYTE
     }
 
     off = ((UQUAD) num) * block_size;
+
+    //D(bug("Reading from offset: %lu a total of %lu bytes", num * block_size, nblocks * block_size ));
 
     while (retry)
     {

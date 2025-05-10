@@ -120,14 +120,14 @@ static BOOL populateGadgets_PageMain(LIBBASETYPEPTR DOSBootBase, struct Gadget *
 		gadget = CreateGadgetA(BUTTON_KIND, gadget, &ng, NULL);
     }
 
-    /*if (gadget != NULL)
+    if (gadget != NULL)
     {
 		ng.ng_GadgetText = "ApolloFloppy";
 		ng.ng_GadgetID = BUTTON_APOLLOFLOPPY;
 		ng.ng_LeftEdge = cx;
 		ng.ng_TopEdge = 105;
 		gadget = CreateGadgetA(BUTTON_KIND, gadget, &ng, NULL);
-	}*/
+	}
 
     return (gadget != NULL);
 }
@@ -537,7 +537,6 @@ static UWORD msgLoop(LIBBASETYPEPTR DOSBootBase, struct Window *win, WORD page)
                     ApolloFloppy(BUTTON_APOLLOFLOPPY_DF1);
                     break;
 
-
                     case BUTTONLIST_BOOT:
                     {
                     	struct BootNode *bn;
@@ -640,7 +639,7 @@ static void initPage(LIBBASETYPEPTR DOSBootBase, WORD page)
     char ApolloCore_Release[80];
 
     if (page == PAGE_BOOT) text = "Boot Options";
-    //else if (page == PAGE_APOLLOFLOPPY) text = "ApolloFloppy Options";
+    else if (page == PAGE_APOLLOFLOPPY) text = "ApolloFloppy Options";
     else text = __DISTRONAME__ " Boot Menu";
     centertext(DOSBootBase, 2, 10, text);
 

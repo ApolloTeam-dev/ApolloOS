@@ -82,13 +82,14 @@ LONG ReadFATSuper(struct FSSuper *sb)
     struct FATBootSector *boot;
     struct FATEBPB *ebpb;
     struct FATFSInfo *fsinfo;
-    BOOL invalid = FALSE;
+    BOOL invalid;
     ULONG end;
     LONG i;
     struct DirHandle dh;
     struct DirEntry dir_entry;
     APTR block_ref;
     UBYTE *fat_block;
+    invalid = FALSE;
 
     D(bug("[FAT] [%s] Reading boot sector\n",__FUNCTION__ ));
     D(bug("[FAT] [%s] Blockspertrack %ld\n",__FUNCTION__ , de->de_BlocksPerTrack));
@@ -101,7 +102,7 @@ LONG ReadFATSuper(struct FSSuper *sb)
         return ERROR_NO_FREE_STORE;
 
     sb->first_device_sector = de->de_BlocksPerTrack * de->de_Surfaces * de->de_LowCyl;
-    D(bug("[FAT] [%s] Boot sector at sector %ld\n", __FUNCTION__ , sb->first_device_sector));
+    D(bug("\n[FAT] [%s] TRYING Boot sector at sector %ld\n", __FUNCTION__ , sb->first_device_sector));
 
     /* Get a preliminary total-sectors value so we don't risk going outside partition limits */
     sb->total_sectors = de->de_BlocksPerTrack * de->de_Surfaces * (de->de_HighCyl + 1) - sb->first_device_sector;
@@ -245,6 +246,7 @@ LONG ReadFATSuper(struct FSSuper *sb)
     if (invalid)
     {
         D(bug("[FAT] [%s] Invalid FAT Boot Sector\n",__FUNCTION__ ));
+        
         FreeMem(boot, bsize);
         return ERROR_NOT_A_DOS_DISK;
     }
@@ -969,7 +971,9 @@ void DoDiskInsert(struct Globals *glob)
     D(bug("[FAT] [%s] de_BlocksPerTrack : %d\n",__FUNCTION__ , de->de_BlocksPerTrack));
     D(bug("[FAT] [%s] dg_LowCyl         : %d\n",__FUNCTION__ , de->de_LowCyl));
     D(bug("[FAT] [%s] dg_HighCyl        : %d\n\n",__FUNCTION__ , de->de_HighCyl));
-
+    
+    // To Support hot-swap for FAT32 we need to reset DosEnvec based on Inserted Disk properties
+    // First we obtain SizeBlock, Surfaces and BlocksPerTrack directly from TD_GETGEOMETRY query to device driver
     glob->diskioreq->iotd_Req.io_Data = &geometry;
     glob->diskioreq->iotd_Req.io_Command = TD_GETGEOMETRY;
     glob->diskioreq->iotd_Req.io_Length = sizeof(struct DriveGeometry);
@@ -982,14 +986,89 @@ void DoDiskInsert(struct Globals *glob)
     D(bug("[FAT] [%s] dg_CylSectors    : %d\n",__FUNCTION__ , geometry.dg_CylSectors));
     D(bug("[FAT] [%s] dg_Heads         : %d\n",__FUNCTION__ , geometry.dg_Heads));
     D(bug("[FAT] [%s] dg_TrackSectors  : %d\n",__FUNCTION__ , geometry.dg_TrackSectors));
+    
+    de->de_SizeBlock        = geometry.dg_SectorSize >> 2;                                  // Sizeblock = #LONG p/Sector = SectorSize/4 = BitShift 2
+    de->de_Surfaces         = geometry.dg_Heads;                                            // Surfaces = #Heads
+    de->de_BlocksPerTrack   = geometry.dg_TrackSectors;                                     // Block p/Track = #Sectors
 
-    de->de_SizeBlock        = geometry.dg_SectorSize >> 2; // Sizeblock = LONG p/Block = Shift 2
-    de->de_Surfaces         = geometry.dg_Heads;           // Surfaces = Heads
-    de->de_BlocksPerTrack   = geometry.dg_TrackSectors;    // Block p/Track = #Sectors
-    de->de_LowCyl           = 2;                           // Assume 1 partition !?
-    de->de_HighCyl          = geometry.dg_TotalSectors / (geometry.dg_Heads * geometry.dg_TrackSectors);    
+    // First we check if there is a disk inserted (Sector Size == 512) or no disk is inserted (Sector Size == 0)
+    if (geometry.dg_SectorSize == 0)
+    {
+        D(bug("[FAT] [%s] No Disk Inserted - Device is ready for insertion of FAT Disk\n",__FUNCTION__ ));
+        return;
+    }
 
-    if (de->de_HighCyl == 0) de->de_HighCyl = 524288;        // Default value (256Gb)
+    // Then we check if disk inserted is a Amiga Partitioned RDB Disk (BYTE 0x200=512 = Sector#1/LONG#0x0 | ID=0x5244534b=RDSK). IN the case of a hybrid disk (RDB + MBR) we give priority to RDB
+    // if RDB is found then we cannot do anything and we present user with a requester to inform that inserted disk is Amiga RDB and a reboot is required to perform DosBoot process to Mount RDB  
+    
+    UBYTE read_buffer[0x200];
+
+    err = RawDiskSectorRead(1, geometry.dg_SectorSize, (UBYTE*)&read_buffer[0], glob);
+    if (err)
+    {
+        D(bug("[FAT] [%s] Read Error = %d on BootSector #1 (RDB Check)\n",__FUNCTION__, err ));
+        return;
+    } else {
+        ULONG RDB_ID = ((read_buffer[0]<<24) + (read_buffer[1]<<16) + (read_buffer[2]<<8) + read_buffer[3]);
+        kprintf("[FAT] [%s] RDB = %4d|%08x\n", __FUNCTION__, 0x200, RDB_ID); 
+        if(RDB_ID == 0x5244534b)
+        {
+            glob->diskioreq->iotd_Req.io_Command = 0xffff;
+            glob->diskioreq->iotd_Req.io_Length = 1;
+            DoIO((struct IORequest *)glob->diskioreq);
+            return;
+        }
+    }
+
+    // Now we check if disk inserted is a PC Partitoned MBR Disk (BYTE 0x1fe=510 = Sector#0/WORD#0x1fe | ID=0x55aa=MBR)
+    // if MBR is found then we read MBR-PART-1 to obtain start sector and total sector count for first partition (which gives us LowCyl and HighCyl) and from there we try to Mount
+    err = RawDiskSectorRead(0, geometry.dg_SectorSize, (UBYTE*)&read_buffer[0], glob);
+    if (err)
+    {
+        D(bug("[FAT] [%s] Read Error on BootSector #0 (MBR Check)\n",__FUNCTION__ ));
+        return;
+    }
+
+    UWORD MBR_ID = (read_buffer[0x1fe]<<8) + read_buffer[0x1ff];
+    kprintf("[FAT] [%s] MBR = %4d|%08x\n", __FUNCTION__, 0x1fe, MBR_ID);
+    if(MBR_ID != 0x55aa)
+    {
+        D(bug("[FAT] [%s] No RDB or MBR Boot Record found\n",__FUNCTION__ ));
+        return;
+    }
+    
+    ULONG MDB_PART1_START = (read_buffer[0x1be + 0x8])+(read_buffer[0x1be + 0x9]<<8)+(read_buffer[0x1be + 0xa]<<16)+(read_buffer[0x1be + 0xb]<<24);
+    ULONG MDB_PART1_TOTAL = (read_buffer[0x1be + 0xc])+(read_buffer[0x1be + 0xd]<<8)+(read_buffer[0x1be + 0xe]<<16)+(read_buffer[0x1be + 0xf]<<24);
+    ULONG MDB_PART2_START = (read_buffer[0x1ce + 0x8])+(read_buffer[0x1ce + 0x9]<<8)+(read_buffer[0x1ce + 0xa]<<16)+(read_buffer[0x1ce + 0xb]<<24);
+    ULONG MDB_PART2_TOTAL = (read_buffer[0x1ce + 0xc])+(read_buffer[0x1ce + 0xd]<<8)+(read_buffer[0x1ce + 0xe]<<16)+(read_buffer[0x1ce + 0xf]<<24);
+    ULONG MDB_PART3_START = (read_buffer[0x1de + 0x8])+(read_buffer[0x1de + 0x9]<<8)+(read_buffer[0x1de + 0xa]<<16)+(read_buffer[0x1de + 0xb]<<24);
+    ULONG MDB_PART3_TOTAL = (read_buffer[0x1de + 0xc])+(read_buffer[0x1de + 0xd]<<8)+(read_buffer[0x1de + 0xe]<<16)+(read_buffer[0x1de + 0xf]<<24);
+    ULONG MDB_PART4_START = (read_buffer[0x1ee + 0x8])+(read_buffer[0x1ee + 0x9]<<8)+(read_buffer[0x1ee + 0xa]<<16)+(read_buffer[0x1ee + 0xb]<<24);
+    ULONG MDB_PART4_TOTAL = (read_buffer[0x1ee + 0xc])+(read_buffer[0x1ee + 0xd]<<8)+(read_buffer[0x1ee + 0xe]<<16)+(read_buffer[0x1ee + 0xf]<<24);
+                
+    kprintf("\tPART#1-LBA-Start = %4d|%08x\n", 0x1be + 0x8, MDB_PART1_START);
+    kprintf("\tPART#1-LBA-Total = %4d|%08x\n", 0x1be + 0xc, MDB_PART1_TOTAL);
+    kprintf("\tPART#2-LBA-Start = %4d|%08x\n", 0x1ce + 0x8, MDB_PART2_START);
+    kprintf("\tPART#2-LBA-Total = %4d|%08x\n", 0x1ce + 0xc, MDB_PART2_TOTAL);
+    kprintf("\tPART#3-LBA-Start = %4d|%08x\n", 0x1de + 0x8, MDB_PART3_START);
+    kprintf("\tPART#3-LBA-Total = %4d|%08x\n", 0x1de + 0xc, MDB_PART3_TOTAL);
+    kprintf("\tPART#4-LBA-Start = %4d|%08x\n", 0x1ee + 0x8, MDB_PART4_START);
+    kprintf("\tPART#4-LBA-Total = %4d|%08x\n\n", 0x1ee + 0xc, MDB_PART4_TOTAL);
+
+    //Final step is to translate MDB_PART1_START LBA addresses to a valid LowCyl and with MDB_PART1_TOTAL also a valid HighCyl
+    //LBA = Surfaces * BlocksPerTrack * Cylinders or Cylinders = LBA / Surfaces / BlocksPerTrack
+    //In most cases the default values of Surfaces = 16 and BlocksPerTrack = 64 will work, but for smaller SD this may fail because Cylinder must be an integer and >0
+    
+    if ((MDB_PART1_START % de->de_BlocksPerTrack % de->de_Surfaces) == 0)
+    {
+        de->de_LowCyl           = MDB_PART1_START / de->de_BlocksPerTrack / de->de_Surfaces ;                      // Read ULONG from MBR-PART1 = 0x1BE + 0x8
+        de->de_HighCyl          = MDB_PART1_TOTAL / de->de_BlocksPerTrack / de->de_Surfaces + de->de_LowCyl;      // Read ULONG from MBR-PART1 = 0x1BE + 0xC
+    } else {
+        de->de_Surfaces         = 1;
+        de->de_BlocksPerTrack   = 1;
+        de->de_LowCyl           = MDB_PART1_START;
+        de->de_HighCyl          = MDB_PART1_TOTAL;
+    }
 
     D(bug("\n[FAT] [%s] Drive Geometry transfer to glob->fssm->fssm_Environ:\n",__FUNCTION__ ));
     D(bug("[FAT] [%s] de_SizeBlock      : %d\n",__FUNCTION__ , de->de_SizeBlock));
@@ -997,7 +1076,7 @@ void DoDiskInsert(struct Globals *glob)
     D(bug("[FAT] [%s] de_BlocksPerTrack : %d\n",__FUNCTION__ , de->de_BlocksPerTrack));
     D(bug("[FAT] [%s] de_LowCyl         : %d\n",__FUNCTION__ , de->de_LowCyl));
     D(bug("[FAT] [%s] de_HighCyl        : %d\n\n",__FUNCTION__ , de->de_HighCyl));
-    
+
     if (glob->sb == NULL && (sb = AllocVecPooled(glob->mempool, sizeof(struct FSSuper))))
     {
         SetMem(sb, 0, sizeof(struct FSSuper));
@@ -1145,16 +1224,9 @@ void DoDiskInsert(struct Globals *glob)
         FreeVecPooled(glob->mempool, sb);
     }
 
-    if (err != 103)     // error 103 = trying to mount FAT volume(s) on default SD0: Device Node (which is expected once during Boot if no SD-Card is inserted)
-    {
-        glob->diskioreq->iotd_Req.io_Command = TD_EJECT;
-        glob->diskioreq->iotd_Req.io_Length = 1;
-        DoIO((struct IORequest *)glob->diskioreq);
-        
-        D(bug("[FAT] [%s] Disk NOT initialised or non-FAT File System\n",__FUNCTION__ ));
-    } else {
-        D(bug("[FAT] [%s] No Disk Inserted - Default SD0: Device is ready for FAT Disks\n",__FUNCTION__ ));
-    }
+    glob->diskioreq->iotd_Req.io_Command = TD_EJECT;
+    glob->diskioreq->iotd_Req.io_Length = 1;
+    DoIO((struct IORequest *)glob->diskioreq);
 
     return;
 }

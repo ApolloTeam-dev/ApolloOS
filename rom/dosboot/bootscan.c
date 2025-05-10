@@ -323,7 +323,7 @@ void dosboot_BootScan(LIBBASETYPEPTR DOSBootBase)
     struct DeviceNode *deviceNode;
     struct List rootList;
 
-    D(bug("[BOOT] dosboot_BootScan\n"));
+    D(bug("\n[BOOT] dosboot_BootScan START\n"));
 
     /* If we have partition.library, we can look for partitions */
     PartitionBase = OpenLibrary("partition.library", 2);
@@ -345,6 +345,8 @@ void dosboot_BootScan(LIBBASETYPEPTR DOSBootBase)
 
 	    CloseLibrary(PartitionBase);
     }
+
+    D(bug("[BOOT] dosboot_BootScan FINISH\n\n"));
 }
 
 

@@ -134,6 +134,8 @@ void InternalObtainSemaphore(struct SignalSemaphore *sigSem, struct Task *owner,
         Wait(SIGF_SINGLE);
     }
 
+    //kprintf("SEMAPHORE] ObtainSemaphore \t%s\t%d\t%d\n", ThisTask->tc_Node.ln_Name, sigSem->ss_NestCount, sigSem->ss_QueueCount);
+
     /* All Done! */
     Permit();
 }

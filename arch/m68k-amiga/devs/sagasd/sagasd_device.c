@@ -581,76 +581,71 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
         iostd->io_Actual = sdu->sdu_Present ? 0 : 1;
         err = 0;
         break;
-    case TD_EJECT:
-        // We use EJECT from fat-handler to warn if Inserted SD-Card is non-FAT when we are in "FAT only" mode
-        bug( "%s TD_EJECT\n", __FUNCTION__ );
-        if (sdu->sdu_AddChangeList[0] == 0 && sdu->sdu_ChangeNum > 1)     
+    
+    case 0xffff:
+        bug( "%s TD_LASTCOMM = RDB Disk inserted\n", __FUNCTION__ );
+        if (sdu->sdu_AddChangeList[0] == 0 && sdu->sdu_ChangeNum > 1)
         {
-            UBYTE result;
-            ULONG read_buffer[128];
             char message[250];
             char *choices;
+            int result;
+            
+            sprintf(message,"Inserted SD-Card in Slot#%d contains a RDB Boot Record\n"
+                "Only FAT File System is supported for hot-swap Disks\n"
+                "For RDB Disks with OFS, FFS, SFS or PFS File Systems\n"
+                "Please Reboot ApolloOS with Disk inserted to Mount", sdu->sdu_SDCmd.unitnumber);
+            choices = "Reboot|Continue";
 
-            result = sdcmd_read_block(&sdu->sdu_SDCmd, 0, (UBYTE*)&read_buffer[0]);
-            kprintf("MBR = %4d|%08x\n", 127, (ULONG)read_buffer[127]);
-
-            if((ULONG)read_buffer[127] == 0x000055aa)
+            struct IntuitionBase *IntuitionBase;
+            IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 36);
+            if( IntuitionBase != NULL )
             {
-                sprintf(message,"Inserted SD-Card in Slot#%d contains a MBR Boot Record\n"
-                    "But the FAT File System is not readable/initialised\n"
-                    "Please use HDToolBox to create one fullsize FAT partition\n"
-                    "After that use Format to initialize the FAT Partition", sdu->sdu_SDCmd.unitnumber);
-                choices = "Continue";
-
-                struct IntuitionBase *IntuitionBase;
-                IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 36);
-                if( IntuitionBase != NULL )
+                struct EasyStruct requestmessage =
                 {
-                    struct EasyStruct requestmessage =
-                    {
-                        sizeof(struct EasyStruct), 0, "ApolloOS Warning", message, choices
-                    };
-                    
-                    EasyRequestArgs(NULL, &requestmessage, NULL, NULL);
-                    
-                    CloseLibrary(&IntuitionBase->LibNode);
-                }
-            } else {
-                result = sdcmd_read_block(&sdu->sdu_SDCmd, 1, (UBYTE*)&read_buffer[0]);
-                kprintf("RDB = %4d|%08x\n", 128, (ULONG)read_buffer[0]); 
+                    sizeof(struct EasyStruct), 0, "ApolloOS Warning", message, choices
+                };
+                
+                result = EasyRequestArgs(NULL, &requestmessage, NULL, NULL);
+                
+                CloseLibrary(&IntuitionBase->LibNode);
 
-                if((ULONG)read_buffer[0] == 0x5244534b)
-                {
-                    sprintf(message,"Inserted SD-Card in Slot#%d contains a RDB Boot Record\n"
-                        "Only FAT File System is supported for hot-swap Disks\n"
-                        "For RDB Disks with OFS, FFS, SFS or PFS File Systems\n"
-                        "Please Reboot ApolloOS with Disk inserted to Mount", sdu->sdu_SDCmd.unitnumber);
-                    choices = "Reboot|Continue";
-
-                    struct IntuitionBase *IntuitionBase;
-                    IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 36);
-                    if( IntuitionBase != NULL )
-                    {
-                        struct EasyStruct requestmessage =
-                        {
-                            sizeof(struct EasyStruct), 0, "ApolloOS Warning", message, choices
-                        };
-                        
-                        result = EasyRequestArgs(NULL, &requestmessage, NULL, NULL);
-                        
-                        CloseLibrary(&IntuitionBase->LibNode);
-
-                        if (result == 1)
-                        {
-                            err = IOERR_DIE_REBOOT;     // We are telling SAGASD_IOTask to commit suicide 
-                            return err;
-                        } 
-                    }
-                }
+                if (result == 1) ColdReboot();
             }
         }
         err = 0;
         break;
+    
+    case TD_EJECT:
+        bug( "%s TD_EJECT = MDB FAT Disk not readable/initialized\n", __FUNCTION__ );
+        if (sdu->sdu_AddChangeList[0] == 0 && sdu->sdu_ChangeNum > 1)     
+        {
+            char message[250];
+            char *choices;
+
+            sprintf(message,"Inserted SD-Card in Slot#%d contains a MBR Boot Record\n"
+                "But the FAT File System is not readable/initialised\n"
+                "Please use HDToolBox to create one fullsize FAT partition\n"
+                "After that use Format to initialize the FAT Partition", sdu->sdu_SDCmd.unitnumber);
+            choices = "Continue";
+
+            struct IntuitionBase *IntuitionBase;
+            IntuitionBase = (struct IntuitionBase *)OpenLibrary("intuition.library", 36);
+            if( IntuitionBase != NULL )
+            {
+                struct EasyStruct requestmessage =
+                {
+                    sizeof(struct EasyStruct), 0, "ApolloOS Warning", message, choices
+                };
+                
+                EasyRequestArgs(NULL, &requestmessage, NULL, NULL);
+                
+                CloseLibrary(&IntuitionBase->LibNode);
+            }
+
+        }
+        err = 0;
+        break;
+
     case TD_GETDRIVETYPE:
     	bug( "%s TD_GETDRIVETYPE\n", __FUNCTION__ );
         iostd->io_Actual = DRIVE_NEWSTYLE;
@@ -864,8 +859,8 @@ static void SAGASD_IOTask(struct Library *SysBase)
                             sdu->sdu_Present = TRUE;
                             sdu->sdu_ChangeNum++;
                             sdu->sdu_Valid = TRUE;
-                            debug("\t sdu_Valid: %s", sdu->sdu_Valid ? "TRUE" : "FALSE");
-                            debug("\t Blocks: %ld", sdu->sdu_SDCmd.info.blocks);
+                            //debug("\t sdu_Valid: %s", sdu->sdu_Valid ? "TRUE" : "FALSE");
+                            //debug("\t Blocks: %ld", sdu->sdu_SDCmd.info.blocks);
 
                             for (int i=sdu->sdu_AddChangeListItems; i>0; i--)
                             {
@@ -921,7 +916,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
 
         if (io)
         {
-            debug("io_Command received: %d", io->io_Command);
+            //debug("io_Command received: %d", io->io_Command);
             
             io->io_Error = SAGASD_PerformIO(io);
             io->io_Message.mn_Node.ln_Type=NT_MESSAGE;
@@ -944,7 +939,7 @@ AROS_LH1(void, BeginIO, AROS_LHA(struct IORequest *, io, A1), struct SAGASDBase 
 {
     AROS_LIBFUNC_INIT
 
-    debug("io_Command = %d, io_Flags = 0x%x", io->io_Command, io->io_Flags);
+    //debug("io_Command = %d, io_Flags = 0x%x", io->io_Command, io->io_Flags);
 
     struct Library *SysBase = SAGASDBase->sd_ExecBase;
     struct SAGASDUnit *sdu = (struct SAGASDUnit *)io->io_Unit;
@@ -965,16 +960,6 @@ AROS_LH1(void, BeginIO, AROS_LHA(struct IORequest *, io, A1), struct SAGASDBase 
             
             io->io_Error = SAGASD_PerformIO(io);
             io->io_Message.mn_Node.ln_Type=NT_MESSAGE;
-            return;
-
-            case TD_EJECT:
-            io->io_Flags &= ~IOF_QUICK;
-            io->io_Error = SAGASD_PerformIO(io);
-            debug("returned from PerformIO, error = %d", io->io_Error);
-            if (io->io_Error == IOERR_DIE_REBOOT)
-            {
-                ColdReboot();
-            }
             return;
 
             default:

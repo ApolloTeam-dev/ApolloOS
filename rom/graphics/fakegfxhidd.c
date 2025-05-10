@@ -258,7 +258,7 @@ static void FakeGfxHidd_ReleaseSemaphore(struct SignalSemaphore *sigSem, struct 
 	    more times than they have obtained.
 	*/
 	
-    D(bug("FakeGfxHidd_ReleaseSemaphore(): This can't happen. It means that somebody has released more times than they have obtained.d\n"));
+    kprintf("FakeGfxHidd_ReleaseSemaphore(): This can't happen. It means that somebody has released more times than they have obtained.d\n");
 
     Alert( AN_SemCorrupt );
     }
