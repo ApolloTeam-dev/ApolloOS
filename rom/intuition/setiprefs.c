@@ -73,8 +73,8 @@
         {
             struct IScreenModePrefs *smp;
             smp = data;
-            bug("[SetiPrefs] ModeID: 0x%08lX, Size: %dx%d, Depth: %d, Control: 0x%08lX\n",
-                smp->smp_DisplayID, smp->smp_Width, smp->smp_Height, smp->smp_Depth, smp->smp_Control);
+            D(bug("[SetiPrefs] ModeID: 0x%08lX, Size: %dx%d, Depth: %d, Control: 0x%08lX\n",
+                smp->smp_DisplayID, smp->smp_Width, smp->smp_Height, smp->smp_Depth, smp->smp_Control));
                 
             BOOL reopen = FALSE, closed = (GetPrivIBase(IntuitionBase)->WorkBench) ? FALSE : TRUE;
 

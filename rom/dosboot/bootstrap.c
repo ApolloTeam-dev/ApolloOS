@@ -9,7 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <aros/debug.h>
+//#include <aros/debug.h>
 #include <exec/alerts.h>
 #include <aros/asmcall.h>
 #include <aros/bootloader.h>
@@ -52,7 +52,6 @@ extern void dosboot_BootPoint(struct BootNode *bn);
 
 #endif
 
-#define D(x) x
 
 static BOOL GetBootNodeDeviceUnit(struct BootNode *bn, BPTR *device, IPTR *unit, ULONG *bootblocks)
 {

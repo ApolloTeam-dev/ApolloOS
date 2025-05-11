@@ -67,8 +67,6 @@
 #endif
 #endif
 
-#define D(x) x
-
 THIS_PROGRAM_HANDLES_SYMBOLSET(LIBS)
 
 static LONG centerx(LIBBASETYPEPTR DOSBootBase, LONG width)

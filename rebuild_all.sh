@@ -19,6 +19,7 @@ then
 	echo "Options are:"
 	echo "-h				prints this help text"
 	echo "--with-nonvampire-support	building for non-vampire platforms"
+	echo "--with-serialdebug for enabling serial debug output"
 	exit
 fi
 

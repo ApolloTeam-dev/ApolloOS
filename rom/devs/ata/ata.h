@@ -48,6 +48,32 @@
 #define CACHE_SIZE              (1<<CACHE_SIZE_BITS)
 #define CACHE_MASK              (CACHE_SIZE-1)
 
+#if APOLLO_DEBUG
+#define DEBUG 1
+#else
+#define DEBUG 0
+#endif
+
+#if DEBUG
+#define DINIT(x) x
+#define D(x) x
+#define DD(x)
+#define DDD(x) 
+#define DERROR(x) x
+#define DIRQ(x) 
+#define DATTR(x) 
+#define DATAPI(x)
+#else
+#define DINIT(x)
+#define D(x)
+#define DD(x)
+#define DDD(x) 
+#define DERROR(x)
+#define DIRQ(x) 
+#define DATTR(x) 
+#define DATAPI(x)
+#endif
+
 /*
    Don't blame me for information redundance here!
 

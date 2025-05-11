@@ -18,7 +18,6 @@
 
 #include "ata.h"
 
-#define DD(x) 
 
 /* perform the S.M.A.R.T operation specified in io_Reserved1 */
 void ata_SMARTCmd(struct IOStdReq *io)
@@ -39,7 +38,7 @@ void ata_SMARTCmd(struct IOStdReq *io)
         CT_NoBlock
     };
 #endif
-    DD(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+    D(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
 #if (0)
 	if (IOStdReq(io)->io_Reserved1 == SMARTC_READ_VALUES || IOStdReq(io)->io_Reserved1 == SMARTC_READ_THRESHOLDS) {
 		acb.buffer = IOStdReq(io)->io_Data;

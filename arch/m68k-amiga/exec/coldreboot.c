@@ -39,7 +39,7 @@ AROS_LH0(void, ColdReboot,
 {
     AROS_LIBFUNC_INIT
 
-    kprintf("COLDREBOOT");
+    //kprintf("COLDREBOOT");
 
     /* Disable interrupts, and do all the reset callbacks
      */
@@ -47,7 +47,7 @@ AROS_LH0(void, ColdReboot,
 
     Supervisor((ULONG_FUNC)Exec_MagicResetCode);
 
-    kprintf("COLDREBOOT FAILED");
+    //kprintf("COLDREBOOT FAILED");
 
     AROS_LIBFUNC_EXIT
 } /* ColdReboot() */

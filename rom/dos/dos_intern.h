@@ -21,6 +21,20 @@
 
 #include "fs_driver.h"
 
+#if APOLLO_DEBUG
+#define DEBUG 0
+#else
+#define DEBUG 0
+#endif
+
+#if DEBUG
+#define D(x) x
+#define DD(x)
+#define bug kprintf
+#else
+#define D(x)
+#define DD(x)
+#endif
 
 /*
  * These bases are historically placed in public portion of DOSBase.

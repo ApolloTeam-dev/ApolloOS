@@ -19,7 +19,6 @@
 
 #undef UtilityBase
 
-#define DD(x)
 
 static void wl(UBYTE *p, ULONG v)
 {

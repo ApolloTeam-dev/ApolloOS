@@ -30,7 +30,7 @@ OOP_Object *GAYLEATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *
     struct ataBase *base = cl->UserData;
     struct ata_ProbedBus *bus = (struct ata_ProbedBus *)GetTagData(aHidd_DriverData, 0, msg->attrList);
 
-    bug("[ATA:Gayle] %s()\n", __func__);
+    D(bug("[ATA:Gayle] %s()\n", __func__));
 
     if (!bus)
         return NULL;
@@ -47,7 +47,7 @@ OOP_Object *GAYLEATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *
         data->da = data->bus->da;
         data->v4 = data->bus->v4;
     }
-    bug("[ATA:Gayle] %s: Instance @ %p\n", __func__, o);
+    D(bug("[ATA:Gayle] %s: Instance @ %p\n", __func__, o));
     return o;
 }
 
@@ -55,7 +55,7 @@ void GAYLEATA__Root__Dispose(OOP_Class *cl, OOP_Object *o, OOP_Msg msg)
 {
     struct ATA_BusData *data = OOP_INST_DATA(cl, o);
 
-    bug("[ATA:Gayle] %s()\n", __func__);
+    D(bug("[ATA:Gayle] %s()\n", __func__));
 
     FreeVec(data->bus);
 
@@ -67,7 +67,7 @@ void GAYLEATA__Root__Get(OOP_Class *cl, OOP_Object *o, struct pRoot_Get *msg)
     struct ataBase *base = cl->UserData;
     ULONG idx;
 
-    bug("[ATA:Gayle] %s()\n", __func__);
+    D(bug("[ATA:Gayle] %s()\n", __func__));
 
     Hidd_ATABus_Switch(msg->attrID, idx)
     {
@@ -94,7 +94,7 @@ void GAYLEATA__Root__Set(OOP_Class *cl, OOP_Object *o, struct pRoot_Set *msg)
     struct TagItem *tstate = msg->attrList;
     struct TagItem *tag;
 
-    bug("[ATA:Gayle] %s()\n", __func__);
+    D(bug("[ATA:Gayle] %s()\n", __func__));
 
     while ((tag = NextTagItem(&tstate)))
     {
@@ -120,7 +120,7 @@ APTR GAYLEATA__Hidd_ATABus__GetPIOInterface(OOP_Class *cl, OOP_Object *o, OOP_Ms
     struct ATA_BusData *data = OOP_INST_DATA(cl, o);
     struct pio_data *pio;
 
-    bug("[ATA:Gayle] %s()\n", __func__);
+    D(bug("[ATA:Gayle] %s()\n", __func__));
 
     pio = (struct pio_data *)OOP_DoSuperMethod(cl, o, msg);
     if (pio)

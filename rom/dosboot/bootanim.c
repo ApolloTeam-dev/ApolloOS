@@ -17,8 +17,6 @@
 //#include "nomedia_image.h"
 #include "nomedia_anim.h"
 
-#define D(x) x
-
 /*
 
 struct AnimData

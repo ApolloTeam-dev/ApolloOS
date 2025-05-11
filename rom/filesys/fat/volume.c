@@ -1010,7 +1010,7 @@ void DoDiskInsert(struct Globals *glob)
         return;
     } else {
         ULONG RDB_ID = ((read_buffer[0]<<24) + (read_buffer[1]<<16) + (read_buffer[2]<<8) + read_buffer[3]);
-        kprintf("[FAT] [%s] RDB = %4d|%08x\n", __FUNCTION__, 0x200, RDB_ID); 
+        D(kprintf("[FAT] [%s] RDB = %4d|%08x\n", __FUNCTION__, 0x200, RDB_ID)); 
         if(RDB_ID == 0x5244534b)
         {
             glob->diskioreq->iotd_Req.io_Command = 0xffff;
@@ -1030,7 +1030,7 @@ void DoDiskInsert(struct Globals *glob)
     }
 
     UWORD MBR_ID = (read_buffer[0x1fe]<<8) + read_buffer[0x1ff];
-    kprintf("[FAT] [%s] MBR = %4d|%08x\n", __FUNCTION__, 0x1fe, MBR_ID);
+    D(kprintf("[FAT] [%s] MBR = %4d|%08x\n", __FUNCTION__, 0x1fe, MBR_ID));
     if(MBR_ID != 0x55aa)
     {
         D(bug("[FAT] [%s] No RDB or MBR Boot Record found\n",__FUNCTION__ ));
@@ -1046,14 +1046,14 @@ void DoDiskInsert(struct Globals *glob)
     ULONG MDB_PART4_START = (read_buffer[0x1ee + 0x8])+(read_buffer[0x1ee + 0x9]<<8)+(read_buffer[0x1ee + 0xa]<<16)+(read_buffer[0x1ee + 0xb]<<24);
     ULONG MDB_PART4_TOTAL = (read_buffer[0x1ee + 0xc])+(read_buffer[0x1ee + 0xd]<<8)+(read_buffer[0x1ee + 0xe]<<16)+(read_buffer[0x1ee + 0xf]<<24);
                 
-    kprintf("\tPART#1-LBA-Start = %4d|%08x\n", 0x1be + 0x8, MDB_PART1_START);
-    kprintf("\tPART#1-LBA-Total = %4d|%08x\n", 0x1be + 0xc, MDB_PART1_TOTAL);
-    kprintf("\tPART#2-LBA-Start = %4d|%08x\n", 0x1ce + 0x8, MDB_PART2_START);
-    kprintf("\tPART#2-LBA-Total = %4d|%08x\n", 0x1ce + 0xc, MDB_PART2_TOTAL);
-    kprintf("\tPART#3-LBA-Start = %4d|%08x\n", 0x1de + 0x8, MDB_PART3_START);
-    kprintf("\tPART#3-LBA-Total = %4d|%08x\n", 0x1de + 0xc, MDB_PART3_TOTAL);
-    kprintf("\tPART#4-LBA-Start = %4d|%08x\n", 0x1ee + 0x8, MDB_PART4_START);
-    kprintf("\tPART#4-LBA-Total = %4d|%08x\n\n", 0x1ee + 0xc, MDB_PART4_TOTAL);
+    D(kprintf("\tPART#1-LBA-Start = %4d|%08x\n", 0x1be + 0x8, MDB_PART1_START));
+    D(kprintf("\tPART#1-LBA-Total = %4d|%08x\n", 0x1be + 0xc, MDB_PART1_TOTAL));
+    D(kprintf("\tPART#2-LBA-Start = %4d|%08x\n", 0x1ce + 0x8, MDB_PART2_START));
+    D(kprintf("\tPART#2-LBA-Total = %4d|%08x\n", 0x1ce + 0xc, MDB_PART2_TOTAL));
+    D(kprintf("\tPART#3-LBA-Start = %4d|%08x\n", 0x1de + 0x8, MDB_PART3_START));
+    D(kprintf("\tPART#3-LBA-Total = %4d|%08x\n", 0x1de + 0xc, MDB_PART3_TOTAL));
+    D(kprintf("\tPART#4-LBA-Start = %4d|%08x\n", 0x1ee + 0x8, MDB_PART4_START));
+    D(kprintf("\tPART#4-LBA-Total = %4d|%08x\n\n", 0x1ee + 0xc, MDB_PART4_TOTAL));
 
     //Final step is to translate MDB_PART1_START LBA addresses to a valid LowCyl and with MDB_PART1_TOTAL also a valid HighCyl
     //LBA = Surfaces * BlocksPerTrack * Cylinders or Cylinders = LBA / Surfaces / BlocksPerTrack

@@ -39,8 +39,6 @@
 #include "../expansion/expansion_intern.h"
 #include "menu.h"
 
-#define D(x) x
-
 /* Delay just like Dos/Delay(), ticks are
  * in 1/50th of a second.
  */

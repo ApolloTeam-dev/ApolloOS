@@ -43,7 +43,7 @@ BOOL ata_Calibrate(struct IORequest* tmr, struct ataBase *base)
 	// ok, it's going to be totally insane, if secs > 1.
 	if (t2.tv_secs != 0)
 	{
-	    bug("[ATA  ] micro wait useless.\n");
+	    D(bug("[ATA  ] micro wait useless.\n"));
 	    return FALSE;
 	}
 
@@ -64,7 +64,7 @@ BOOL ata_Calibrate(struct IORequest* tmr, struct ataBase *base)
     x = (x + t2.tv_micro - 1) / t2.tv_micro;
     x = (x+9) / 10;
 
-    bug("[ATA  ] Approximate number of iterations per 100 nanoseconds: %ld\n", x);
+    D(bug("[ATA  ] Approximate number of iterations per 100 nanoseconds: %ld\n", x));
     base->ata_ItersPer100ns = x;
     return TRUE;
 }

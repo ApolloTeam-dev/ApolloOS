@@ -18,6 +18,13 @@
 
 #define BUFSIZE 100
 
+#if APOLLO_DEBUG
+#define DEBUG 1
+#else
+#define DEBUG 0
+#endif
+
+
 struct BootConfig
 {
     /* default hidds used in bootmenu and for fallback mode */

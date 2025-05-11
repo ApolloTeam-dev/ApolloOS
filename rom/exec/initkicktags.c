@@ -1,14 +1,18 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2011, The AROS Development Team. All rights reserved.
     $Id: initkicktags.c
 
     Desc: Handle CoolCapture and KickTags (reset proof residents)
     Lang: english
 */
 
-#if AROS_SERIAL_DEBUG
-#define PRINT_LIST
 #define DEBUG 1
+
+#if DEBUG
+#define D(x) x
+#define PRINT_LIST
+#else
+#define D(x)
 #endif
 
 #include <aros/debug.h>
@@ -41,12 +45,12 @@ static IPTR *CopyResidents(IPTR *list, IPTR *dst, IPTR *oldlist)
 	RomTag = (struct Resident*)*list;
 
 #ifdef PRINT_LIST
-	bug("* %p: %4d %02x %3d \"%s\"\n",
+	D(bug("* %p: %4d %02x %3d \"%s\"\n",
             RomTag,
             RomTag->rt_Pri,
             RomTag->rt_Flags,
             RomTag->rt_Version,
-            RomTag->rt_Name);
+            RomTag->rt_Name));
 #endif
 
 	/* Try to find a resident with this name in original list */

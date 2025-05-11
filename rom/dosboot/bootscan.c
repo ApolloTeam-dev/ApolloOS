@@ -40,8 +40,6 @@
 
 #define uppercase(x) ((x >= 'a' && x <= 'z') ? (x & 0xdf) : x)
 
-#define D(x) x
-
 
 static ULONG GetOffset(struct Library *PartitionBase, struct PartitionHandle *ph)
 {

@@ -18,7 +18,6 @@
 
 #include "ata.h"
 
-#define DD(x) x
 
 const char ata_IDEName[] = "IDE Controller";
 
@@ -32,7 +31,7 @@ OOP_Object *ATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg)
         struct ata_Controller *data = OOP_INST_DATA(cl, ataController);
 
         /*register the controller in ata.device */
-        DD(bug ("[ATA:Controller] %s: Controller Entry @ 0x%p\n", __func__, data);)
+        D(bug ("[ATA:Controller] %s: Controller Entry @ 0x%p\n", __func__, data);)
 
         data->ac_Class = cl;
         data->ac_Object = ataController;
@@ -52,12 +51,12 @@ OOP_Object *ATA__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg)
                            TASKTAG_ARG2       , data,
                            TAG_DONE))
         {
-            bug("[ATA:Controller] %s: Failed to start up daemon!\n", __func__);
+            D(bug("[ATA:Controller] %s: Failed to start up daemon!\n", __func__));
             return FALSE;
         }
 
         Wait(SIGF_SINGLE);
-        DD(bug("[ATA:Controller] %s: Daemon task set to 0x%p\n", __func__, data->ac_Daemon));
+        D(bug("[ATA:Controller] %s: Daemon task set to 0x%p\n", __func__, data->ac_Daemon));
 
         AddTail(&ATABase->ata_Controllers, &data->ac_Node);
     }
@@ -69,20 +68,20 @@ VOID ATA__Root__Dispose(OOP_Class *cl, OOP_Object *o, OOP_Msg msg)
     struct ataBase *ATABase = cl->UserData;
     struct ata_Controller *ataNode, *tmpNode;
 
-    DD(bug ("[ATA:Controller] %s(0x%p)\n", o);)
+    D(bug ("[ATA:Controller] %s(0x%p)\n", o);)
 
     ForeachNodeSafe (&ATABase->ata_Controllers, ataNode, tmpNode)
     {
         if (ataNode->ac_Object == o)
         {
-            DD(bug("[ATA:Controller] %s: Stopping Daemon...\n", __func__));
+            D(bug("[ATA:Controller] %s: Stopping Daemon...\n", __func__));
             ataNode->ac_daemonParent = FindTask(NULL);
             SetSignal(0, SIGF_SINGLE);
             Signal(ataNode->ac_Daemon, SIGBREAKF_CTRL_C);
             Wait(SIGF_SINGLE);
-            DD(bug("[ATA:Controller] %s: Daemon stopped\n", __func__));
+            D(bug("[ATA:Controller] %s: Daemon stopped\n", __func__));
 
-            DD(bug ("[ATA:Controller] %s: Destroying Controller Entry @ 0x%p\n", __func__, ataNode);)
+            D(bug ("[ATA:Controller] %s: Destroying Controller Entry @ 0x%p\n", __func__, ataNode);)
             Remove(&ataNode->ac_Node);
 
             OOP_DoSuperMethod(cl, o, (OOP_Msg)msg);
@@ -112,7 +111,7 @@ void ATA__Root__Get(OOP_Class *cl, OOP_Object *o, struct pRoot_Get *msg)
 
 BOOL ATA__Hidd_StorageController__RemoveBus(OOP_Class *cl, OOP_Object *o, struct pHidd_StorageController_RemoveBus *msg)
 {
-    DD(bug ("[ATA:Controller] Hidd_StorageController__RemoveBus(0x%p)\n", msg->busObject);)
+    D(bug ("[ATA:Controller] Hidd_StorageController__RemoveBus(0x%p)\n", msg->busObject);)
    /*
      * Currently we don't support unloading ATA bus drivers.
      * This is a very-very big TODO.
@@ -125,7 +124,7 @@ BOOL ATA__Hidd_StorageController__SetUpBus(OOP_Class *cl, OOP_Object *o, struct 
     struct ataBase *ATABase = cl->UserData;
     struct TagItem busTags[2];
 
-    bug ("[ATA:Controller] Hidd_StorageController__SetUpBus(0x%p)\n", msg->busObject);
+    D(bug ("[ATA:Controller] Hidd_StorageController__SetUpBus(0x%p)\n", msg->busObject));
 
     /*
      * Instantiate interfaces. PIO is mandatory, DMA is not.
@@ -136,7 +135,7 @@ BOOL ATA__Hidd_StorageController__SetUpBus(OOP_Class *cl, OOP_Object *o, struct 
      */
     if (!HIDD_ATABus_GetPIOInterface(msg->busObject)) return FALSE;
 
-    bug ("[ATA:Controller] Hidd_StorageController__SetUpBus: PIO Interfaces obtained\n");
+    D(bug ("[ATA:Controller] Hidd_StorageController__SetUpBus: PIO Interfaces obtained\n"));
 
     if (!ATABase->ata_NoDMA) HIDD_ATABus_GetDMAInterface(msg->busObject);
 
@@ -145,7 +144,7 @@ BOOL ATA__Hidd_StorageController__SetUpBus(OOP_Class *cl, OOP_Object *o, struct 
     busTags[1].ti_Tag = TAG_DONE;
     OOP_SetAttrs(msg->busObject, busTags);
 
-    bug ("[ATA:Controller] Hidd_StorageController__SetUpBus: Starting Bus...\n");
+    D(bug ("[ATA:Controller] Hidd_StorageController__SetUpBus: Starting Bus...\n"));
 
     /* Add the bus to the device and start service */
     return Hidd_ATABus_Start(msg->busObject, ATABase);
@@ -153,6 +152,6 @@ BOOL ATA__Hidd_StorageController__SetUpBus(OOP_Class *cl, OOP_Object *o, struct 
 
 void ATA__Hidd_StorageController__CleanUpBus(OOP_Class *cl, OOP_Object *o, struct pHidd_StorageController_CleanUpBus *msg)
 {
-    DD(bug ("[ATA:Controller] Hidd_StorageController__CleanUpBus(0x%p)\n", msg->busObject);)
+    D(bug ("[ATA:Controller] Hidd_StorageController__CleanUpBus(0x%p)\n", msg->busObject);)
     /* By default we have nothing to do here */
 }

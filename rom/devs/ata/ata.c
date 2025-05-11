@@ -29,10 +29,8 @@
 #include "ata.h"
 #include LC_LIBDEFS_FILE
 
-#define DINIT(x) x
-#define DD(x) x
-#define DDD(x) 
-#define DERROR(x) x
+
+
 //---------------------------IO Commands---------------------------------------
 
 /* Invalid comand does nothing, complains only. */
@@ -470,7 +468,7 @@ static void cmd_Flush(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
     struct IORequest *msg;
     struct ata_Bus *bus = ((struct ata_Unit *)io->io_Unit)->au_Bus;
 
-    DD(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+    D(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
  
     Forbid();
 
@@ -501,7 +499,7 @@ static void cmd_TestChanged(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
         {
             unit->au_ChangeNum++;
 
-            DD(bug("#############################################\n[ATA%02ld] cmd_TestChanged: Disk %s Detected | unit->au_ChangeNum = %d\n#############################################\n",
+            D(bug("#############################################\n[ATA%02ld] cmd_TestChanged: Disk %s Detected | unit->au_ChangeNum = %d\n#############################################\n",
                 unit->au_UnitNum, (unit->au_Flags & AF_DiscPresent)? "INSERT" : "REMOVE", unit->au_ChangeNum);)
 
             Forbid();
@@ -510,14 +508,14 @@ static void cmd_TestChanged(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
             if (unit->au_RemoveInt)
             {
                 Cause(unit->au_RemoveInt);
-                DD(bug("[ATA%02ld] Calling unit->au_RemoveInt\n", unit->au_UnitNum));
+                D(bug("[ATA%02ld] Calling unit->au_RemoveInt\n", unit->au_UnitNum));
             }
 
             // And now the whole list of possible calls 
             ForeachNode(&unit->au_SoftList, msg)
             {
                 Cause((struct Interrupt *)IOStdReq(msg)->io_Data);
-                DD(bug("[ATA%02ld] Calling unit->au_SoftList\n", unit->au_UnitNum));
+                D(bug("[ATA%02ld] Calling unit->au_SoftList\n", unit->au_UnitNum));
             }
 
             unit->au_Flags &= ~AF_DiscChanged;
@@ -537,7 +535,7 @@ static void cmd_Remove(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
     struct ata_Unit *unit = (struct ata_Unit *)io->io_Unit;
 
-    DD(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+    D(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
 
     if (unit->au_RemoveInt)
         io->io_Error = TDERR_DriveInUse;
@@ -547,7 +545,7 @@ static void cmd_Remove(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 
 static void cmd_ChangeNum(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
-    DD(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+    D(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
 
     IOStdReq(io)->io_Actual = ((struct ata_Unit *)io->io_Unit)->au_ChangeNum;
 }
@@ -563,14 +561,14 @@ static void cmd_ChangeState(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
     else
         IOStdReq(io)->io_Actual = 1;
 
-    DD(bug("[ATA%02ld] %s: Media %s\n", unit->au_UnitNum, __func__, IOStdReq(io)->io_Actual ? "ABSENT" : "PRESENT"));
+    D(bug("[ATA%02ld] %s: Media %s\n", unit->au_UnitNum, __func__, IOStdReq(io)->io_Actual ? "ABSENT" : "PRESENT"));
 }
 
 static void cmd_ProtStatus(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
     struct ata_Unit *unit = (struct ata_Unit *)io->io_Unit;
 
-    DD(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+    D(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
 
     if (unit->au_DevType)
         IOStdReq(io)->io_Actual = -1;
@@ -581,7 +579,7 @@ static void cmd_ProtStatus(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 
 static void cmd_GetNumTracks(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
-    DD(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+    D(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
 
     IOStdReq(io)->io_Actual = ((struct ata_Unit *)io->io_Unit)->au_Cylinders;
 }
@@ -590,7 +588,7 @@ static void cmd_AddChangeInt(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
     struct ata_Unit *unit = (struct ata_Unit *)io->io_Unit;
 
-    DD(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+    D(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
 
     //Forbid();
     AddHead(&unit->au_SoftList, (struct Node *)io);
@@ -600,7 +598,7 @@ static void cmd_AddChangeInt(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 
     ForeachNode(&unit->au_SoftList, msg)
     {
-        DD(bug("Handler Entry added in unit->au_SoftList: handler = %x | unit = %d\n", (struct Interrupt *)IOStdReq(msg)->io_Data, unit->au_UnitNum));
+        D(bug("Handler Entry added in unit->au_SoftList: handler = %x | unit = %d\n", (struct Interrupt *)IOStdReq(msg)->io_Data, unit->au_UnitNum));
     }
     
     io->io_Flags &= ~IOF_QUICK;
@@ -609,7 +607,7 @@ static void cmd_AddChangeInt(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 
 static void cmd_RemChangeInt(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
-    DD(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+    D(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
 
     Forbid();
     Remove((struct Node *)io);
@@ -620,7 +618,7 @@ static void cmd_Eject(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
     struct ata_Unit *unit = (struct ata_Unit *)io->io_Unit;
 
-    DD(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+    D(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
 
     IOStdReq(io)->io_Error = unit->au_Eject(unit);
     cmd_TestChanged(io, LIBBASE);
@@ -656,7 +654,7 @@ static void cmd_GetGeometry(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
         //else dg->dg_Flags                = 0;
         dg->dg_Reserved                 = 0;
 
-        DD(bug("[ATA%02ld] %s(): LBA:%u | LBA48:%llu | CYL:%u | HDS:%u | SEC:%u | BLOCK:%u | TYPE:%u | REMOVABLE:%s\n",
+        D(bug("[ATA%02ld] %s(): LBA:%u | LBA48:%llu | CYL:%u | HDS:%u | SEC:%u | BLOCK:%u | TYPE:%u | REMOVABLE:%s\n",
             ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, unit->au_Capacity, unit->au_Capacity48, unit->au_Cylinders, unit->au_Heads, unit->au_Sectors, dg->dg_SectorSize, unit->au_DevType, (unit->au_Flags & AF_Removable) ? "YES" : "NO" ));
 
         IOStdReq(io)->io_Actual = sizeof(struct DriveGeometry);
@@ -672,7 +670,7 @@ static void cmd_DirectScsi(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
     struct ata_Unit *unit = (struct ata_Unit *)io->io_Unit;
 
-    DD(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+    D(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
 
     IOStdReq(io)->io_Actual = sizeof(struct SCSICmd);
     if (unit->au_XferModes & AF_XFER_PACKET)
@@ -699,13 +697,13 @@ static BOOL ValidSMARTCmd(struct IORequest *io)
         case SMARTC_READ_THRESHOLDS:
                     if (!IOStdReq(io)->io_Data) 
                     {
-                        DD(bug("[ATA%02ld] %s: invalid io_Data (%p)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, IOStdReq(io)->io_Data));
+                        D(bug("[ATA%02ld] %s: invalid io_Data (%p)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, IOStdReq(io)->io_Data));
                         io->io_Error = IOERR_BADADDRESS;
                         return FALSE;
                     }
                     if ((IOStdReq(io)->io_Offset != SMARTC_TEST_AVAIL) && (IOStdReq(io)->io_Length != SMART_DATA_LENGTH))
                     {
-                        DD(bug("[ATA%02ld] %s: invalid io_Length (%d)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, IOStdReq(io)->io_Length));
+                        D(bug("[ATA%02ld] %s: invalid io_Length (%d)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, IOStdReq(io)->io_Length));
                         io->io_Error = IOERR_BADLENGTH;
                         return FALSE;
                     }
@@ -717,7 +715,7 @@ static BOOL ValidSMARTCmd(struct IORequest *io)
                     break;
 
             default:
-                    DD(bug("[ATA%02ld] %s: invalid SMART command (%d)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, IOStdReq(io)->io_Offset));
+                    D(bug("[ATA%02ld] %s: invalid SMART command (%d)\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__, IOStdReq(io)->io_Offset));
                     io->io_Error = IOERR_NOCMD;
                     return FALSE;
         }
@@ -732,7 +730,7 @@ static void cmd_SMART(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
     struct ata_Bus *bus = unit->au_Bus;
     UBYTE u;
 #endif
-    DD(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+    D(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
 
     if (unit->au_Flags & AF_DiscPresent)
     {
@@ -768,11 +766,11 @@ static void cmd_TRIM(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 {
     struct ata_Unit *unit = (struct ata_Unit *)io->io_Unit;
 
-    DD(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+    D(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
 
     if ((unit->au_Drive->id_ATAVersion >= 7) && (unit->au_Drive->id_DSManagement & 1))
     {
-        DD(bug("[ATA%02ld] %s: Unit supports TRIM\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+        D(bug("[ATA%02ld] %s: Unit supports TRIM\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
 #if (0)
         if (IOStdReq(io)->io_Reserved1 == ATAFEATURE_TEST_AVAIL)
         {
@@ -1060,7 +1058,7 @@ void DaemonCode(struct ataBase *ATABase, struct ata_Controller *ataNode)
     UBYTE b = 0;
     ULONG sigs;
 
-    DD(bug("[ATA**] ATA DAEMON woke for controller @ 0x%p\n", ataNode));
+    D(bug("[ATA**] ATA DAEMON woke for controller @ 0x%p\n", ataNode));
 
     /*
      * Prepare message ports and timer.device's request
@@ -1088,7 +1086,7 @@ void DaemonCode(struct ataBase *ATABase, struct ata_Controller *ataNode)
     ataNode->ac_Daemon = FindTask(NULL);
     Signal(ataNode->ac_daemonParent, SIGF_SINGLE);
 
-    DD(bug("[ATA++] Starting sweep medium presence detection\n"));
+    D(bug("[ATA++] Starting sweep medium presence detection\n"));
 
     /*
      * Endless loop
@@ -1112,7 +1110,7 @@ void DaemonCode(struct ataBase *ATABase, struct ata_Controller *ataNode)
         {
             struct IOStdReq *ios;
 
-            //DD(bug("[ATA++] Detecting media presence\n"));
+            //D(bug("[ATA++] Detecting media presence\n"));
             ObtainSemaphore(&ataNode->DaemonSem);
 
             ForeachNode(&ataNode->Daemon_ios, ios)
@@ -1135,7 +1133,7 @@ void DaemonCode(struct ataBase *ATABase, struct ata_Controller *ataNode)
     } while (!sigs);
 
     ataNode->ac_Daemon = NULL;
-    DD(bug("[ATA++] Daemon quits\n"));
+    D(bug("[ATA++] Daemon quits\n"));
 
     ata_CloseTimer(timer);
 
@@ -1157,7 +1155,7 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
     OOP_Object *unitObj;
     struct ata_Unit *unit;
 
-    bug("[ATA:BusTask] TaskCode started (bus: %u)\n", bus->ab_BusNum);
+    D(bug("[ATA:BusTask] TaskCode started (bus: %u)\n", bus->ab_BusNum));
 
     bus->ab_Timer = ata_OpenTimer(ATABase);
     bus->ab_BounceBufferPool = CreatePool(MEMF_CLEAR | MEMF_31BIT, 131072, 65536);
@@ -1175,7 +1173,7 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
     {
         if (bus->ab_Dev[iter] > DEV_UNKNOWN)
         {
-            DD(bug("[ATA:BusTask] Device %u type %d\n", iter, bus->ab_Dev[iter]));
+            D(bug("[ATA:BusTask] Device %u type %d\n", iter, bus->ab_Dev[iter]));
             unitObj = OOP_NewObject(ATABase->unitClass, NULL, NULL);
             if (unitObj)
             {
@@ -1191,7 +1189,7 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
 
                     if (unit->au_XferModes & AF_XFER_PACKET)
                     {
-                        DD(bug("[ATA:BusTask] Device %u | AF_XFER_PACKET (ATAPI DEVICE)\n", iter));
+                        D(bug("[ATA:BusTask] Device %u | AF_XFER_PACKET (ATAPI DEVICE)\n", iter));
                         
                         struct ata_Controller *ataNode = NULL;
 
@@ -1203,13 +1201,13 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
                         
                         if (ataNode)
                         {
-                            DD(bug("[ATA:BusTask] Device %u | ataNode = TRUE\n", iter));
+                            D(bug("[ATA:BusTask] Device %u | ataNode = TRUE\n", iter));
                             
                             // For ATAPI device we submit media presence detection request 
                             unit->DaemonReq = (struct IOStdReq *)CreateIORequest(ataNode->DaemonPort, sizeof(struct IOStdReq));
                             if (unit->DaemonReq)
                             {
-                                DD(bug("[ATA:BusTask] Device %u | unit->DaemonReq = TRUE\n", iter));
+                                D(bug("[ATA:BusTask] Device %u | unit->DaemonReq = TRUE\n", iter));
                                 /*
                                  * We don't want to keep stalled open count of 1, so we
                                  * don't call OpenDevice() here. Instead we fill in the needed
@@ -1223,12 +1221,12 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
                                 AddTail((struct List *)&ataNode->Daemon_ios, &unit->DaemonReq->io_Message.mn_Node);
                                 ReleaseSemaphore(&ataNode->DaemonSem);
 
-                                DD(bug("[ATA:BusTask] Device %u | Deamon Request for Media Detection Inserted\n", iter));
+                                D(bug("[ATA:BusTask] Device %u | Deamon Request for Media Detection Inserted\n", iter));
                             } else {
-                                DD(bug("[ATA:BusTask] Device %u | unit->DaemonReq = FALSE\n", iter));
+                                D(bug("[ATA:BusTask] Device %u | unit->DaemonReq = FALSE\n", iter));
                             }
                         } else {
-                            DD(bug("[ATA:BusTask] Device %u | ataNode = FALSE\n", iter));
+                            D(bug("[ATA:BusTask] Device %u | ataNode = FALSE\n", iter));
                         }
                     }
                     else
@@ -1246,7 +1244,7 @@ void BusTaskCode(struct ata_Bus *bus, struct ataBase *ATABase)
         }
     }
 
-    bug("[ATA:BusTask] TaskCode Bus %u scan finished **************************************************************\n\n", bus->ab_BusNum);
+    D(bug("[ATA:BusTask] TaskCode Bus %u scan finished **************************************************************\n\n", bus->ab_BusNum));
     ReleaseSemaphore(&ATABase->DetectionSem);
 
     /* Wait forever and process messages */
@@ -1286,7 +1284,7 @@ void BusTaskCode2(struct ata_Bus *bus, struct ataBase *ATABase)
     OOP_Object *unitObj;
     struct ata_Unit *unit;
 
-    DD(bug("[ATA:BusTask2] TaskCode started (bus: %u)\n", bus->ab_BusNum));
+    D(bug("[ATA:BusTask2] TaskCode started (bus: %u)\n", bus->ab_BusNum));
 
     bus->ab_Timer = ata_OpenTimer(ATABase);
 
@@ -1301,7 +1299,7 @@ void BusTaskCode2(struct ata_Bus *bus, struct ataBase *ATABase)
 
     for (iter = 0; iter < MAX_BUSUNITS; ++iter)
     {
-        DD(bug("[ATA:BusTask2] Device %u type %d\n", iter, bus->ab_Dev[iter]));
+        D(bug("[ATA:BusTask2] Device %u type %d\n", iter, bus->ab_Dev[iter]));
 
         if (bus->ab_Dev[iter] > DEV_UNKNOWN)
         {
@@ -1364,7 +1362,7 @@ void BusTaskCode2(struct ata_Bus *bus, struct ataBase *ATABase)
         }
     }
 
-    bug("[ATA:BusTask2] TaskCode Bus %u scan finished **************************************************************\n\n", bus->ab_BusNum);
+    D(bug("[ATA:BusTask2] TaskCode Bus %u scan finished **************************************************************\n\n", bus->ab_BusNum));
 
     ReleaseSemaphore(&ATABase->DetectionSem);
 

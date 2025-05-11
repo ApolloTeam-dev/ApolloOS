@@ -41,8 +41,6 @@
 
 #include LC_LIBDEFS_FILE
 
-#define DD(x) x
-
 /* Add a bootnode using expansion.library */
 BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit)
 {
@@ -67,7 +65,7 @@ BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit)
                 dosdevname[1] = 'D';
                 break;
             default:
-                DD(bug("[ATA>>]:-ata_RegisterVolume called on unknown devicetype\n"));
+                D(bug("[ATA>>]:-ata_RegisterVolume called on unknown devicetype\n"));
         }
 
         if (unit->au_UnitNum < 10) dosdevname[5] += unit->au_UnitNum % 10;
@@ -98,15 +96,15 @@ BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit)
 
         if (devnode)
         {
-            DD(bug("[ATA>>]:-ata_RegisterVolume=%b, DosType=0x%08lx | LowCyl=%d | HighCyl=%d | Heads=%d | Blocksize=%d | BlockPerTrack=%d .. ",
+            D(bug("[ATA>>]:-ata_RegisterVolume=%b, DosType=0x%08lx | LowCyl=%d | HighCyl=%d | Heads=%d | Blocksize=%d | BlockPerTrack=%d .. ",
                 devnode->dn_Name, pp[DE_DOSTYPE + 4], StartCyl, EndCyl, unit->au_Heads, 1 << unit->au_SectorShift, unit->au_Sectors));
 
             if (unit->au_DevType == DG_DIRECT_ACCESS) // && ((unit->au_Flags & AF_Removable) == 0))
             {
                 AddBootNode(pp[DE_BOOTPRI + 4], ADNF_STARTPROC, devnode, NULL);
-                DD(bug("BootNode (Direct Access Medium)\n"));
+                D(bug("BootNode (Direct Access Medium)\n"));
             } else {
-                DD(bug("DosNode (CD/DVD or other Non-Direct Access Medium)\n"));
+                D(bug("DosNode (CD/DVD or other Non-Direct Access Medium)\n"));
             }
 
             return TRUE;
@@ -143,7 +141,7 @@ static int ATA_init(struct ataBase *ATABase)
 {
     struct BootLoaderBase	*BootLoaderBase;
 
-    DD(bug("[ATA--] %s: ata.device Initialization\n", __func__));
+    D(bug("[ATA--] %s: ata.device Initialization\n", __func__));
 
     /* Prepare the list of detected controllers */
     NEWLIST(&ATABase->ata_Controllers);
@@ -159,7 +157,7 @@ static int ATA_init(struct ataBase *ATABase)
      * obtain kernel parameters
      */
     BootLoaderBase = OpenResource("bootloader.resource");
-    DD(bug("[ATA--] %s: BootloaderBase = %p\n", __func__, BootLoaderBase));
+    D(bug("[ATA--] %s: BootloaderBase = %p\n", __func__, BootLoaderBase));
     if (BootLoaderBase != NULL)
     {
         struct List *list;
@@ -176,27 +174,27 @@ static int ATA_init(struct ataBase *ATABase)
 
                     if (strstr(CmdLine, "disable"))
                     {
-                        DD(bug("[ATA  ] %s: Disabling ATA support\n", __func__));
+                        D(bug("[ATA  ] %s: Disabling ATA support\n", __func__));
                         return FALSE;
                     }
                     if (strstr(CmdLine, "32bit"))
                     {
-                        DD(bug("[ATA  ] %s: Using 32-bit IO transfers\n", __func__));
+                        D(bug("[ATA  ] %s: Using 32-bit IO transfers\n", __func__));
                         ATABase->ata_32bit = TRUE;
                     }
                     if (strstr(CmdLine, "nomulti"))
                     {
-                        DD(bug("[ATA  ] %s: Disabled multisector transfers\n", __func__));
+                        D(bug("[ATA  ] %s: Disabled multisector transfers\n", __func__));
                         ATABase->ata_NoMulti = TRUE;
                     }
                     if (strstr(CmdLine, "nodma"))
                     {
-                        DD(bug("[ATA  ] %s: Disabled DMA transfers\n", __func__));
+                        D(bug("[ATA  ] %s: Disabled DMA transfers\n", __func__));
                         ATABase->ata_NoDMA = TRUE;
                     }
                     if (strstr(CmdLine, "poll"))
                     {
-                        DD(bug("[ATA  ] %s: Using polling to detect end of busy state\n", __func__));
+                        D(bug("[ATA  ] %s: Using polling to detect end of busy state\n", __func__));
                         ATABase->ata_Poll = TRUE;
                     }
                 }
@@ -221,7 +219,7 @@ static int ATA_init(struct ataBase *ATABase)
         return FALSE;
     }
 
-    DD(bug("[ATA--] %s: MemPool @ %p\n", __func__, ATABase->ata_MemPool));
+    D(bug("[ATA--] %s: MemPool @ %p\n", __func__, ATABase->ata_MemPool));
 
     /*
      * ata drive cache memory allocation
@@ -233,7 +231,7 @@ static int ATA_init(struct ataBase *ATABase)
         return FALSE;
     }
 
-    DD(bug("[ATA--] %s: CacheData @ %p\n", __func__, ATABase->ata_CacheData));
+    D(bug("[ATA--] %s: CacheData @ %p\n", __func__, ATABase->ata_CacheData));
 
     ATABase->ata_CacheTags = AllocMem(CACHE_SIZE*8, MEMF_CLEAR | MEMF_PUBLIC);
     if (ATABase->ata_CacheTags == NULL)
@@ -246,7 +244,7 @@ static int ATA_init(struct ataBase *ATABase)
         ATABase->ata_CacheTags[i] = 0xfffffffffffffffful;
     }
 
-    DD(bug("[ATA--] %s: CacheTags @ %p\n", __func__, ATABase->ata_CacheTags));
+    D(bug("[ATA--] %s: CacheTags @ %p\n", __func__, ATABase->ata_CacheTags));
 
 #if defined(__OOP_NOATTRBASES__)
     if (OOP_ObtainAttrBasesArray(&ATABase->unitAttrBase, attrBaseIDs))
@@ -254,7 +252,7 @@ static int ATA_init(struct ataBase *ATABase)
         bug("[ATA--] %s: Failed to obtain AttrBases!\n", __func__);
         return FALSE;
     }
-    DD(
+    D(
       bug("[ATA--] %s: HiddBusAB %x @ 0x%p\n", __func__, HiddBusAB, &HiddBusAB);
       bug("[ATA--] %s: HiddATABusAB %x @ 0x%p\n", __func__, HiddATABusAB, &HiddATABusAB);
     )
@@ -276,7 +274,7 @@ static int ATA_init(struct ataBase *ATABase)
 
     InitSemaphore(&ATABase->DetectionSem);
 
-    DD(bug("[ATA  ] %s: Base ATA Hidd Class @ 0x%p\n", __func__, ATABase->ataClass));
+    D(bug("[ATA  ] %s: Base ATA Hidd Class @ 0x%p\n", __func__, ATABase->ataClass));
 
     return TRUE;
 }
@@ -302,27 +300,27 @@ static int ata_expunge(struct ataBase *ATABase)
             /* Destroy our singletone */
             OOP_MethodID disp_msg = OOP_GetMethodID(IID_Root, moRoot_Dispose);
 
-            DD(bug("[ATA  ] ata_expunge: destroying subystem object\n"));
+            D(bug("[ATA  ] ata_expunge: destroying subystem object\n"));
             OOP_DoSuperMethod(ataNode->ac_Class, ataNode->ac_Object, &disp_msg);
             FreeMem(ataNode, sizeof(struct ata_Controller));
         }
         else
         {
             /* Our subsystem is in use, we have some bus driver(s) around. */
-            DD(bug("[ATA  ] ata_expunge: ATA subsystem is in use\n"));
+            D(bug("[ATA  ] ata_expunge: ATA subsystem is in use\n"));
             return FALSE;
         }
     }
 
 #if defined(__OOP_NOATTRBASES__)
-    DD(bug("[ATA  ] ata_expunge: Releasing attribute bases\n"));
+    D(bug("[ATA  ] ata_expunge: Releasing attribute bases\n"));
     OOP_ReleaseAttrBasesArray(&ATABase->unitAttrBase, attrBaseIDs);
 #endif
 
     if (ATABase->ata_UtilityBase)
         CloseLibrary(ATABase->ata_UtilityBase);
 
-    DD(bug("[ATA  ] ata_expunge: Exiting\n"));
+    D(bug("[ATA  ] ata_expunge: Exiting\n"));
     return TRUE;
 }
 
@@ -345,7 +343,7 @@ static int open(struct ataBase *ATABase, struct IORequest *iorq, ULONG unitnum, 
     {
         HIDD_StorageController_EnumBuses(ataNode->ac_Object, &searchHook, (APTR)(IPTR)unitnum);
     }
-    DD(bug("[ATA%02d] Open result: %d\n", unitnum, iorq->io_Error));
+    D(bug("[ATA%02d] Open result: %d\n", unitnum, iorq->io_Error));
 
     /* If found, io_Error will be reset to zero */
     return iorq->io_Error ? FALSE : TRUE;

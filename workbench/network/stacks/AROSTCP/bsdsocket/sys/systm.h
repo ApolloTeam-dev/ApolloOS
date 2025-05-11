@@ -74,6 +74,7 @@
 
 #include <dos/rdargs.h>
 
+
 /*
  * queue node definition for _insque and _remque. _insque and _remque expect
  * to find this structure from the start of every node they handle.
@@ -113,11 +114,13 @@ _remque(register struct queue_node *node)
 void cs_putchar(unsigned char, struct CSource *);
 void panic(const char *, ...);
 #ifdef __AROS__
-#define __log(A, B, C...) \
-bug("[AROSTCP] "), bug(B , ## C), bug("\n")
-#define log(A, B, C...) __log(A, B , ## C)
+ #if DEBUG
+  #define __log(A, B, C...) \
+  bug("[AROSTCP] "), bug(B , ## C), bug("\n")
+  #define log(A, B, C...) __log(A, B , ## C)
+ #endif
 #else
-void __log(unsigned long, const char *, ...);
+ void __log(unsigned long, const char *, ...);
 #endif
 int vlog(unsigned long, const char *, const char *, va_list);
 int printf(const char *, ...);

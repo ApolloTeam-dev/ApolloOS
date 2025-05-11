@@ -14,20 +14,7 @@
 #include "ata_bus.h"
 #include "timer.h"
 
-// use #define DERROR(x) x for error output
-#define DERROR(x) x
 
-// add #define DINIT(x) x for output on Initialization routines
-#define DINIT(x) x
-
-// add #define DD(x) x for regular level debug output
-#define DD(x) x
-
-// add #define DDD(x) x for output on low level routines
-#define DDD(x)
-
-// add #define DATAPI(x) x for output on Atapi routines
-#define DATAPI(x)
 
 #define VREG_BOARD_Unknown  0x00 /* Unknown                         */
 #define VREG_BOARD_V600     0x01 /* Vampire V2 V600(+),   for A600  */
@@ -96,7 +83,7 @@ static inline BOOL ata_SelectUnit(struct ata_Unit* unit)
 
     if (unit == bus->ab_SelectedUnit) return TRUE;
 
-    DD(bug("[ATA%02ld] ata_SelectUnit: CHANGE SELECTUNIT\n", unit->au_UnitNum);)
+    D(bug("[ATA%02ld] ata_SelectUnit: CHANGE SELECTUNIT\n", unit->au_UnitNum);)
 
     PIO_Out(bus, unit->au_DevMask, ata_DevHead);
 
@@ -1648,7 +1635,7 @@ static BYTE ata_Eject(struct ata_Unit *unit)
         CT_NoBlock
     };
 
-    DD(bug("[ATA:%02ld] ata_Eject()\n", unit->au_UnitNum));
+    D(bug("[ATA:%02ld] ata_Eject()\n", unit->au_UnitNum));
 
     return ata_exec_cmd(unit, &acb);
 }
@@ -1787,7 +1774,7 @@ static BYTE atapi_Eject(struct ata_Unit *unit)
        0
     };
 
-    DD(bug("[ATA:%02ld] atapi_Eject()\n", unit->au_UnitNum));
+    D(bug("[ATA:%02ld] atapi_Eject()\n", unit->au_UnitNum));
 
     sc.scsi_Command = (void*) &cmd;
     sc.scsi_CmdLength = sizeof(cmd);
@@ -1801,7 +1788,7 @@ static void atapi_RequestSense(struct ata_Unit* unit, UBYTE* sense, ULONG sensel
     UBYTE cmd[] = {3, 0, 0, 0, senselen & 0xfe, 0};
     struct SCSICmd sc = {0};
 
-    DD(bug("[ATA:%02ld] atapi_RequestSense() - Sense Bytes requested:%u\n", unit->au_UnitNum, senselen));
+    D(bug("[ATA:%02ld] atapi_RequestSense() - Sense Bytes requested:%u\n", unit->au_UnitNum, senselen));
 
     if ((senselen == 0) || (sense == 0)) return 0;
     
@@ -1813,7 +1800,7 @@ static void atapi_RequestSense(struct ata_Unit* unit, UBYTE* sense, ULONG sensel
 
     unit->au_DirectSCSI(unit, &sc);
 
-    DD(bug("[ATA:%02ld] atapi_RequestSense: SenseKey: %lx | ASC: %lx | ASCQ: %lx\n", unit->au_UnitNum, sense[2]&0xf, sense[12], sense[13]));
+    D(bug("[ATA:%02ld] atapi_RequestSense: SenseKey: %lx | ASC: %lx | ASCQ: %lx\n", unit->au_UnitNum, sense[2]&0xf, sense[12], sense[13]));
     return;
 }
 

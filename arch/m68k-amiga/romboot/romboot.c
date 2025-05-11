@@ -3,7 +3,11 @@
     $Id$
 */
 
+#if APOLLO_DEBUG
 #define DEBUG 1
+#else
+#define DEBUG 0
+#endif
 
 #include <aros/debug.h>
 #include <exec/types.h>

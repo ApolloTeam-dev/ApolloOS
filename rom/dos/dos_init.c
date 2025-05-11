@@ -26,9 +26,7 @@
 
 #include "dos_intern.h"
 
-#define DEBUG 1
-#define D(x) x
-#define bug kprintf
+
 
 static const UBYTE version[];
 extern const char LIBEND;

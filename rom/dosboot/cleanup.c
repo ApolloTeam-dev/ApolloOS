@@ -13,8 +13,6 @@
 
 #include "dosboot_intern.h"
 
-#define D(x) x
-
 extern const char Dosboot_LibID[];
 extern const int Dosboot_End;
 

@@ -9,17 +9,20 @@
 #include "fs.h"
 #include "globals.h"
 
+#if APOLLO_DEBUG
 #define DEBUG 0
-
-#ifdef DEBUG
-    #define DD(x) x
-    #define D(x)
 #else
-    #define DD(x)
-    #define D(x)
+#define DEBUG 0
 #endif
 
+#if DEBUG
+#define DD(x) x
+#define D(x)
 #define bug kprintf
+#else
+#define DD(x)
+#define D(x)
+#endif
 
 #ifdef DEBUGCODE
 #if 0

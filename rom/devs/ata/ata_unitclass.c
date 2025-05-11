@@ -16,8 +16,6 @@
 
 #include "ata.h"
 
-#define DD(x) x
-
 static const char *str_devicename = "ata.device";
 
 /*****************************************************************************************
@@ -40,7 +38,7 @@ static const char *str_devicename = "ata.device";
  */
 static BYTE ata_STUB(struct ata_Unit *au)
 {
-    DD(bug("[ATA%02ld] CALLED STUB FUNCTION (GENERIC). THIS OPERATION IS NOT "
+    D(bug("[ATA%02ld] CALLED STUB FUNCTION (GENERIC). THIS OPERATION IS NOT "
         "SUPPORTED BY DEVICE\n", au->au_UnitNum));
     return CDERR_NOCMD;
 }
@@ -48,7 +46,7 @@ static BYTE ata_STUB(struct ata_Unit *au)
 static BYTE ata_STUB_IO32(struct ata_Unit *au, ULONG blk, ULONG len,
     APTR buf, ULONG* act)
 {
-    DD(bug("[ATA%02ld] CALLED STUB FUNCTION (IO32). THIS OPERATION IS NOT "
+    D(bug("[ATA%02ld] CALLED STUB FUNCTION (IO32). THIS OPERATION IS NOT "
         "SUPPORTED BY DEVICE\n", au->au_UnitNum));
     return CDERR_NOCMD;
 }
@@ -56,19 +54,19 @@ static BYTE ata_STUB_IO32(struct ata_Unit *au, ULONG blk, ULONG len,
 static BYTE ata_STUB_IO64(struct ata_Unit *au, UQUAD blk, ULONG len,
     APTR buf, ULONG* act)
 {
-    DD(bug("[ATA%02ld] CALLED STUB FUNCTION -- IO ACCESS TO BLOCK %08lx:%08lx, LENGTH %08lx. THIS OPERATION IS NOT SUPPORTED BY DEVICE\n", au->au_UnitNum, (blk >> 32), (blk & 0xffffffff), len));
+    D(bug("[ATA%02ld] CALLED STUB FUNCTION -- IO ACCESS TO BLOCK %08lx:%08lx, LENGTH %08lx. THIS OPERATION IS NOT SUPPORTED BY DEVICE\n", au->au_UnitNum, (blk >> 32), (blk & 0xffffffff), len));
     return CDERR_NOCMD;
 }
 
 static BYTE ata_STUB_SCSI(struct ata_Unit *au, struct SCSICmd* cmd)
 {
-    DD(bug("[ATA%02ld] CALLED STUB FUNCTION. THIS OPERATION IS NOT SUPPORTED BY DEVICE\n", au->au_UnitNum));
+    D(bug("[ATA%02ld] CALLED STUB FUNCTION. THIS OPERATION IS NOT SUPPORTED BY DEVICE\n", au->au_UnitNum));
     return CDERR_NOCMD;
 }
 
 OOP_Object *ATAUnit__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *msg)
 {
-    DD(bug("[ATA:Unit] %s()\n", __PRETTY_FUNCTION__));
+    D(bug("[ATA:Unit] %s()\n", __PRETTY_FUNCTION__));
 
     o = (OOP_Object *)OOP_DoSuperMethod(cl, o, &msg->mID);
     if (o)
@@ -76,7 +74,7 @@ OOP_Object *ATAUnit__Root__New(OOP_Class *cl, OOP_Object *o, struct pRoot_New *m
         struct ataBase *ATABase = cl->UserData;
         struct ata_Unit *unit = OOP_INST_DATA(cl, o);
 
-        DD(bug("[ATA:Unit] %s: instance @ 0x%p\n", __PRETTY_FUNCTION__, o));
+        D(bug("[ATA:Unit] %s: instance @ 0x%p\n", __PRETTY_FUNCTION__, o));
 
         unit->au_Drive = AllocPooled(ATABase->ata_MemPool, sizeof(struct DriveIdent));
         if (!unit->au_Drive)
@@ -111,7 +109,7 @@ void ATAUnit__Root__Dispose(OOP_Class *cl, OOP_Object *o, OOP_Msg msg)
     struct ataBase *ATABase = cl->UserData;
     struct ata_Unit *unit = OOP_INST_DATA(cl, o);
 
-    DD(bug("[ATA:Unit] %s()\n", __PRETTY_FUNCTION__));
+    D(bug("[ATA:Unit] %s()\n", __PRETTY_FUNCTION__));
 
     FreePooled(ATABase->ata_MemPool, unit->au_Drive, sizeof(struct DriveIdent));
     OOP_DoSuperMethod(cl, o, msg);

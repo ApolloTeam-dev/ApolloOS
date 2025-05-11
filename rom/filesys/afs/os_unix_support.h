@@ -204,11 +204,19 @@ struct DosEnvec {
 #define MODE_NEWFILE   1006
 
 /* aros/debug.h */
+
+#if APOLLO_DEBUG
+#define DEBUG 0
+#else
+#define DEBUG 0
+#endif
+
 #if DEBUG
 #	define D(x) x
 #else
 #	define D(x)
 #endif
+
 #define bug kprintf
 #define kprintf printf
 

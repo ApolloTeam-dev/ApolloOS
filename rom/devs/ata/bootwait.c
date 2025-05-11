@@ -20,8 +20,6 @@
 #include <resources/execlock.h>
 #endif
 
-#define DD(x) x
-
 extern const char ata_LibName[];
 extern const char ata_LibID[];
 extern const int ata_End;
@@ -87,7 +85,7 @@ AROS_UFH3(static APTR, ata_Wait,
 
     if (ATABase)
     {
-        DD(bug("\n**************************************************************\n[ATA_WAIT] Waiting for device detection to complete...\n**************************************************************\n\n"));
+        D(bug("\n**************************************************************\n[ATA_WAIT] Waiting for device detection to complete...\n**************************************************************\n\n"));
         ObtainSemaphore(&ATABase->DetectionSem);
         ReleaseSemaphore(&ATABase->DetectionSem);
     }

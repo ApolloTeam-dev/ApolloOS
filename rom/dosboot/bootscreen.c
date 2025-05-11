@@ -15,8 +15,6 @@
 
 #include "dosboot_intern.h"
 
-#define D(x) x
-
 #define VREG_SAGACTRL1  0xdff3ec /* AGA, Scanlines, Zoom modes */
 #define VREG_SAGACTRL2  0xdff3ee /* AGA, Zoom shift            */
 

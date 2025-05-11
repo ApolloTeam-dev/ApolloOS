@@ -39,7 +39,7 @@ extern char *generate_banner(void);
 
 #include <proto/intuition.h>
 
-#define D(x) x
+#define DEBUG 1
 
 static void load_system_configuration(struct DosLibrary *DOSBase)
 {

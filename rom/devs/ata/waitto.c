@@ -24,19 +24,19 @@ ULONG ata_WaitTO(struct IORequest* tmr, ULONG secs, ULONG micro, ULONG sigs)
 {
     ULONG sig = 1 << tmr->io_Message.mn_ReplyPort->mp_SigBit;
 
-    D(struct Node *t = (struct Node *)FindTask(NULL));
-    D(bug("[ATA  ] Timed wait %lds %ldu (task='%s')\n", secs, micro, t->ln_Name));
+    DD(struct Node *t = (struct Node *)FindTask(NULL));
+    DD(bug("[ATA  ] Timed wait %lds %ldu (task='%s')\n", secs, micro, t->ln_Name));
 
     tmr->io_Command = TR_ADDREQUEST;
     ((struct timerequest*)tmr)->tr_time.tv_secs = secs;
     ((struct timerequest*)tmr)->tr_time.tv_micro = micro;
 
     SendIO(tmr);
-    D(bug("[ATA  ] Preset signals: %lx ('%s')\n", SetSignal(0, 0), t->ln_Name));
-    D(bug("[ATA  ] Signals requested: %lx ('%s')\n", sigs, t->ln_Name));
-    D(bug("[ATA  ] Timer signal: %lx ('%s')\n", sig, t->ln_Name));
+    DD(bug("[ATA  ] Preset signals: %lx ('%s')\n", SetSignal(0, 0), t->ln_Name));
+    DD(bug("[ATA  ] Signals requested: %lx ('%s')\n", sigs, t->ln_Name));
+    DD(bug("[ATA  ] Timer signal: %lx ('%s')\n", sig, t->ln_Name));
     sigs = Wait(sigs | sig);
-    D(bug("[ATA  ] Signals received: %lx ('%s')\n", sigs, t->ln_Name));
+    DD(bug("[ATA  ] Signals received: %lx ('%s')\n", sigs, t->ln_Name));
     if (0 == (sigs & sig))
     {
 	if (!CheckIO(tmr))

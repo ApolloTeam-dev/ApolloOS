@@ -29,17 +29,27 @@
 #include "bus_class.h"
 #include "interface_pio.h"
 
+#if APOLLO_DEBUG
+#define DEBUG 1
+#else
+#define DEBUG 0
+#endif
+
+#if DEBUG
 // use #define DERROR(x) x for error output
 #define DERROR(x) x
-
 // add #define DINIT(x) x for output on Initialization routines
 #define DINIT(x) x
-
 // add #define DD(x) x for regular level debug output
 #define DD(x) 
-
 // add #define DDD(x) x for output on low level routines
 #define DDD(x)
+#else
+#define DERROR(x)
+#define DINIT(x)
+#define DD(x) 
+#define DDD(x)
+#endif
 
 #define VREG_BOARD_Unknown  0x00 /* Unknown                         */
 #define VREG_BOARD_V600     0x01 /* Vampire V2 V600(+),   for A600  */
