@@ -208,7 +208,7 @@ void ComputeCapacity()
 		case 5: strcpy(UnitString,"ExaBytes"); break;
 	}
 
-	RawDoFmtSz( szCapacityInfo, _(MSG_CAPACITY), (ULONG)cUnits, UnitString );
+	RawDoFmtSz( szCapacityInfo, "%d %s", (ULONG)cUnits, UnitString );
 	DD(bug("[FORMAT] Done: Unitstring:%s | szCapacityInfo:%s\n", UnitString, szCapacityInfo));
 }
 

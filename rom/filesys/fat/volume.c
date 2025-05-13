@@ -1261,6 +1261,8 @@ BOOL AttemptDestroyVolume(struct FSSuper *sb)
         D(bug("[FAT] [%s] SuperBlock Freed completely\n", __FUNCTION__ ));
 
         destroyed = TRUE;
+    } else {
+        D(bug("[FAT] [%s] Volume NOT REMOVED as it has Locks and/or Notifications pending\n",__FUNCTION__ ));
     }
 
     return destroyed;

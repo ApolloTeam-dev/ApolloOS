@@ -58,87 +58,81 @@ __inline void cleartemporarylock(void) {
 }
 
 
-LONG freelock(struct ExtFileLock *lock) {
+LONG freelock(struct ExtFileLock *lock)
+{
+  /* You may assume that this function never fails for locks temporarily allocated internally. */
 
-  /* You may assume that this function never fails for locks
-     temporarily allocated internally. */
+	if(lock != 0)
+	{
+	    if(lock->id == DOSTYPE_ID)
+    	{
+      		lock->task=0;
 
-  if(lock!=0) {
-    if(lock->id==DOSTYPE_ID) {
-      lock->task=0;
+			if(lock->next!=0) 	// remove our lock from the chain
+			{
+				lock->next->prev=lock->prev;
+			}
 
-      if(lock->next!=0) {
-        lock->next->prev=lock->prev;
-      }
+			if(lock->prev!=0)	
+			{
+				lock->prev->next=lock->next;
+				lock->prev->link=TOBADDR(lock->next);
+			} else {
+				
+				struct DeviceList *vn=BADDR(lock->volume);
 
-      if(lock->prev!=0) {
-        lock->prev->next=lock->next;
-        lock->prev->link=TOBADDR(lock->next);
-      }
-      else {
+				if(vn->dl_LockList!=0)
+				{
+					if(lock->next==0)
+					{
+						DD(bug("[SFS] freelock: This was the last lock associated with that volume!\n"));
 
-#if 0
-//            #ifdef STARTDEBUG
-              {
-                struct DeviceList *vn=BADDR(lock->volume);
+						if((vn == globals->volumenode_inh) && (vn->dl_unused==0))
+						{
+							/* structs */
+							#define SFSM_ADD_VOLUMENODE    (1)
+							#define SFSM_REMOVE_VOLUMENODE (2)
 
-                if(vn->dl_LockList!=0) {
-                  req("Freeing lock!", "Ok");
+							struct SFSMessage {
+								struct Message msg;
+								ULONG command;
+								IPTR  data;
+								LONG errorcode;
+							};
+														
+							struct SFSMessage *sfsm;
 
-                  if(lock->next==0) {
-                    req("This was the last lock!", "Ok");
-                  }
-                }
-              }
-//            #endif
-#endif
+					        DD(bug("[SFS] freelock: message sdlh to destroy volumenode = %ld\n", AROS_BSTR_ADDR(vn->dl_LockList)));
 
-#if 0
-        struct DeviceList *vn=BADDR(lock->volume);
+							if((sfsm = AllocVec(sizeof(struct SFSMessage), MEMF_CLEAR)) != 0)
+							{
+								sfsm->command = SFSM_REMOVE_VOLUMENODE;
+								sfsm->data = (IPTR)vn;
+								sfsm->msg.mn_Length = sizeof(struct SFSMessage);
 
-        if(vn->dl_LockList!=0) {
-          _DEBUG("freelock: Freeing a lock of a volume which isn't currently inserted.\n");
+								PutMsg(globals->sdlhport, (struct Message *)sfsm);
+							}
+						}
+					} else {
+						vn->dl_LockList=TOBADDR(lock->next);
+					}
+				} else {
+					vn->dl_LockList=TOBADDR(lock->next);
+				}
+				globals->locklist=lock->next;
+			}
 
-          if(lock->next==0) {
-            /* Whoops... this was the last lock which was associated with a volume
-               not currently inserted.  This means the volumenode's LockList pointer
-               becomes zero if there are still some NotifyRequest's left, or it is
-               completely removed. */
+			if(lock->gh!=0)
+			{
+				freeglobalhandle(lock->gh);
+			}
 
-            _DEBUG("freelock: This was the last lock associated with that volume!\n");
-
-//            #ifdef STARTDEBUG
-//              req("Last lock was freed!", "Ok");
-//            #endif
-
-            if(vn->dl_unused==0) {
-              /* remove the volumenode! */
-            }
-          }
-          else {
-            vn->dl_LockList=TOBADDR(lock->next);
-          }
-        }
-        else {
-          locklist=lock->next;
-        }
-
-#endif
-
-        globals->locklist=lock->next;
-      }
-
-      if(lock->gh!=0) {
-        freeglobalhandle(lock->gh);
-      }
-
-      FreeMem(lock,sizeof(struct ExtFileLock));
-    }
-    else {
-      return(ERROR_INVALID_LOCK);
-    }
-  }
-  return(0);
+      		FreeMem(lock,sizeof(struct ExtFileLock));
+    	} else {
+      		return(ERROR_INVALID_LOCK);
+    	}
+  	}
+  	return(0);
 }
 
 

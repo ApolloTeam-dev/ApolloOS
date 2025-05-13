@@ -682,14 +682,13 @@ void mainloop(void) {
 
                 DD(bug("[SFS] mainloop: Disk Change\n"));
 
-                if(isdiskpresent() == FALSE) {
+                if(isdiskpresent() == FALSE)
+                {
                     /* Disk was removed */
-
                     globals->disktype = ID_NO_DISK_PRESENT; /* Must be put before deinitdisk() */
                     deinitdisk();
                 } else {
                     /* Disk was inserted */
-
                     initdisk();
                 }
             }
@@ -1338,7 +1337,8 @@ void mainloop(void) {
                 default:
                     if(handlesimplepackets(globals->packet) == 0) {
 
-                        if(globals->volumenode_inh != 0 && globals->packet->dp_Type == ACTION_REMOVE_NOTIFY) {
+                        if(globals->volumenode_inh != 0 && globals->packet->dp_Type == ACTION_REMOVE_NOTIFY)
+                        {
                             /* If volume was made offline instead of removed because of pending notifies, see if removing
                                notifies can fully close the volume. Case of Wanderer setting up root directory notification
                                on SFS pendrive / disk partition before re-formatting. */
@@ -1359,7 +1359,8 @@ void mainloop(void) {
                                 tmp = (struct NotifyRequest *)tmp->nr_Prev;
                             }
 
-                            if (found) {
+                            if (found)
+                            {
                                 if(nr->nr_Prev)
                                     ((struct NotifyRequest *)nr->nr_Prev)->nr_Next = nr->nr_Next;
                                 else
@@ -2514,9 +2515,11 @@ void mainloop(void) {
                                     struct ExtFileLock *lock = BADDR(globals->packet->dp_Arg1);
                                     struct InfoData *id = BADDR(globals->packet->dp_Arg2);
 
-                                    //DD(bug("[SFS] ACTION_INFO      Global Volumenode = 0x%8lx | Globals Disktype = 0x%8lx\n", globals->volumenode, globals->disktype));
+                                    DD(bug("[SFS] ACTION_INFO      Global Volumenode = %s (0x%8lx) | Locklist = %s\n",
+                                         AROS_BSTR_ADDR(globals->volumenode->dl_Name), globals->volumenode, globals->volumenode->dl_LockList ? "YES":"NO"));
 
-                                    if(lock != 0 && globals->volumenode != (struct DeviceList *)BADDR(lock->volume)) {
+                                    if(lock != 0 && globals->volumenode != (struct DeviceList *)BADDR(lock->volume))
+                                    {
                                         DD(bug("[SFS] ACTION_INFO: returning error\n"));
 
                                         returnpacket(DOSFALSE, ERROR_DEVICE_NOT_MOUNTED);
@@ -3208,7 +3211,8 @@ struct DeviceList *usevolumenode(UBYTE *name, ULONG creationdate) {
 
 
 
-LONG initdisk() {
+LONG initdisk()
+{
 
     /* This routine is called whenever a disk has changed (via ACTION_INHIBIT or
        on startup).  The routine scans the disk and initializes the necessary
@@ -3237,7 +3241,8 @@ LONG initdisk() {
 
         globals->diskstate = writeprotection();
 
-        if((errorcode = readroots()) == 0) {
+        if((errorcode = readroots()) == 0)
+        {
 
             /* Root blocks are valid for this filesystem */
 
@@ -3396,7 +3401,8 @@ LONG initdisk() {
             DD(bug("[SFS] Initdisk: Checking for an existing volume-node\n"));
 
             if((vn = usevolumenode(oc->object[0].name, BE2L(ri->be_datecreated))) != (struct DeviceList *) - 1) {
-                if(vn == 0) {
+                if(vn == 0)
+                {
                     // VolumeNode was not found, so we need to create a new one
 
                     DD(bug("[SFS] Initdisk: No volume-node found, creating new one instead.\n"));
@@ -3498,46 +3504,68 @@ static struct DosList *attemptlockdoslist(LONG tries, LONG delay) {
 }
 
 
-void removevolumenode(struct DosList *dol, struct DosList *vn) {
+void removevolumenode(struct DosList *dol, struct DosList *vn)
+{
     while((dol = NextDosEntry(dol, LDF_VOLUMES)) != 0) {
-        if(dol == vn) {
-            RemDosEntry(dol);
+        if(dol == vn)
+        {
+            BOOL result;
+            
+            DD(bug("[SFS] TryDestroyVolumeNode: RemDosEntry VolumeNode=0x%8lx | Name=%s | Type=%0x%8lx | Task=%u\n", dol, AROS_BSTR_ADDR(dol->dol_Name), dol->dol_Type, dol->dol_Task));         
+            result = RemDosEntry(dol);
+            DD(bug("[SFS] TryDestroyVolumeNode: RemDosEntry = %s\n", result ? "SUCCESS":"FAILURE"));
             break;
         }
     }
 }
 
-static BOOL trydestroyvolumenode(struct DeviceList *argvn) {
+static BOOL trydestroyvolumenode(struct DeviceList *argvn)
+{
     struct DeviceList **vn = NULL;
 
     if (argvn == NULL)
+    {
+        DD(bug("[SFS] ERROR on argvn\n"));
         return FALSE;
+    }
 
     /* Two cases when volume can be destroyed:
        1) volume is active and there are no locks and no notify requests
        2) volume is offline and there are no locks and no notify requests */
 
+
+    DD(bug("[SFS] volumenode     = 0x%x | locklist = 0x%x | notify = %s\n",
+        (argvn == globals->volumenode) ? "ACTIVE ":"OFFLINE", globals->locklist, globals->notifyrequests));
+    DD(bug("[SFS] volumenode-inh = 0x%x | locklist = 0x%x | notify = %s\n",
+        (argvn == globals->volumenode_inh) ? "ACTIVE " :"OFFLINE", globals->volumenode_inh->dl_LockList, globals->volumenode_inh->dl_unused));
+
     if (argvn == globals->volumenode && globals->locklist == 0 && globals->notifyrequests == 0)
+    {
         vn = &globals->volumenode;
-    else if (argvn == globals->volumenode_inh &&
-                globals->volumenode_inh->dl_LockList == BNULL && globals->volumenode_inh->dl_unused == BNULL)
+    } else {
+        if (argvn == globals->volumenode_inh && globals->volumenode_inh->dl_LockList == BNULL && globals->volumenode_inh->dl_unused == BNULL)
+        {
             vn = &globals->volumenode_inh;
+        } 
+    }
 
     /*  If VolumeNode must be removed, we first attempt to lock the DosList
         synchronously; whether this fails or not, we always send a
         removal message to the DosList subtask. */
-    if (vn && *vn) {
+    if (vn && *vn)
+    {
         struct SFSMessage *sfsm;
         struct DosList *dol = attemptlockdoslist(5, 1);
 
-        _DEBUG("trydestroyvolumenode: dol = %ld\n", dol);
+        DD(bug("[SFS] trydestroyvolumenode: dol = %ld\n", dol));
 
-        if(dol != 0) { /* Is DosList locked? */
+        if(dol != 0)
+        { /* Is DosList locked? */
             removevolumenode(dol, (struct DosList *)(*vn));
             UnLockDosList(LDF_WRITE | LDF_VOLUMES);
         }
 
-        _DEBUG("trydestroyvolumenode: sending msg\n");
+        DD(bug("[SFS] trydestroyvolumenode: sending msg\n"));
 
         /* Even if we succesfully locked the DosList, we still should notify
         the DosList task to remove the node as well (and to free it), just
@@ -3552,17 +3580,20 @@ static BOOL trydestroyvolumenode(struct DeviceList *argvn) {
 
         *vn = 0; /* clear pointer in the globals structure */
 
-        _DEBUG("trydestroyvolumenode: done\n");
+        DD(bug("[SFS] trydestroyvolumenode: done\n"));
 
         diskchangenotify(IECLASS_DISKREMOVED);
 
         return TRUE;
     }
 
+    DD(bug("[SFS] ERROR on vn-2\n"));
+
     return FALSE;
 }
 
-static void deinitdisk() {
+static void deinitdisk()
+{
 
     /* This function flushes all caches, and then invalidates them.
        If successful, this function then proceeds to either remove
@@ -3574,14 +3605,12 @@ static void deinitdisk() {
     flushcaches();
     invalidatecaches();
 
-    if (!trydestroyvolumenode(globals->volumenode) && globals->volumenode != 0) {
-
-        if(globals->locklist != 0 || globals->notifyrequests != 0) {
-
+    if (!trydestroyvolumenode(globals->volumenode) && globals->volumenode != 0)
+    {
+        if(globals->locklist != 0 || globals->notifyrequests != 0)
+        {
             /* There are locks or notifyrequests, so we cannot kill the volumenode. */
-
-            /* We haven't got the DosList locked here, but I think it is fairly
-               safe to modify these fields directly. */
+            /* We haven't got the DosList locked here, but I think it is fairly safe to modify these fields directly. */
 
             Forbid();
 
@@ -3595,11 +3624,11 @@ static void deinitdisk() {
             globals->locklist = 0;
             globals->notifyrequests = 0;
 
-            DD(bug("deinitdisk: done\n"));
-
             globals->volumenode = 0;
 
             diskchangenotify(IECLASS_DISKREMOVED);
+
+            DD(bug("[SFS] deinitdisk: done\n"));
         }
     }
 }
@@ -3622,9 +3651,9 @@ LONG handlesimplepackets(struct DosPacket *packet) {
             returnpacket2(packet, DOSTRUE, 0);
             break;
     #endif
-        case ACTION_DISK_INFO:
-            actiondiskinfo(packet);
-            break;
+        //case ACTION_DISK_INFO:
+        //    actiondiskinfo(packet);
+        //    break;
         case ACTION_SAME_LOCK:
             actionsamelock(packet);
             break;
@@ -3753,20 +3782,20 @@ static void actionsamelock(struct DosPacket *packet) {
 
 
 
-static void actiondiskinfo(struct DosPacket *packet) {
+static void actiondiskinfo(struct DosPacket *packet)
+{
     struct InfoData *id = BADDR(packet->dp_Arg1);
 
-    //DD(bug("[SFS] ACTION_DISK_INFO Global Volumenode = 0x%8lx | Globals Disktype = 0x%8lx | Disktype=0x%8lx | Packet VolumeNode = 0x%8lx \n", globals->volumenode, globals->disktype, id->id_DiskType, (ULONG)id->id_VolumeNode));
+    DD(bug("[SFS] ACTION_DISK_INFO Global Volumenode = %s (0x%8lx) | Locklist = %s\n",
+        AROS_BSTR_ADDR(globals->volumenode->dl_Name), globals->volumenode, globals->volumenode->dl_LockList ? "YES":"NO"));
 
-    fillinfodata(id);
-
-    if(globals->volumenode == 0)
-    {
+    if( globals->volumenode != 0)          // We only return volume node info if volumenode is not empty (to avoid creating ghosted icons during boot)
+    { 
+        fillinfodata(id);
         returnpacket2(packet, DOSTRUE, 0);
     } else {
         returnpacket2(packet, DOSFALSE, 0);
     }
-    
 }
 
 
@@ -3799,13 +3828,15 @@ static void fillinfodata(struct InfoData *id)
 
     id->id_VolumeNode = TOBADDR(globals->volumenode);
 
-    //DD(bug("[SFS] fillinfodata: volumenode = 0x%08lx, disktype = 0x%08lx\n", globals->volumenode, globals->disktype));
-
-    if(globals->locklist != 0) {
+    if(globals->locklist != 0)
+    {
         id->id_InUse = DOSTRUE;
     } else {
         id->id_InUse = DOSFALSE;
     }
+
+    //DD(bug("[SFS] fillinfodata: volumenode = 0x%08lx, disktype = 0x%08lx, loclstatus = %s\n", globals->volumenode, globals->disktype, (id->id_InUse == -1) ? "DOSTRUE":"DOSFALSE"));
+
 }
 
 
@@ -6522,35 +6553,46 @@ static void sdlhtask(void) {
                 AddPort(port);
                 Permit();
 
-                for(;;) {
+                for(;;)
+                {
                     struct DosList *dol;
 
                     WaitPort(port);
 
                     dol = LockDosList(LDF_WRITE | LDF_VOLUMES);
 
-                    while((sfsm = (struct SFSMessage *)GetMsg(port)) != 0) {
-                        if(sfsm->command == SFSM_ADD_VOLUMENODE) {
+                    while((sfsm = (struct SFSMessage *)GetMsg(port)) != 0)
+                    {
+                        if(sfsm->command == SFSM_ADD_VOLUMENODE)
+                        {
                             /* AddDosEntry rejects volumes based on their name and date. */
-
-                            if(AddDosEntry((struct DosList *)sfsm->data) == DOSFALSE) {
+                            if(AddDosEntry((struct DosList *)sfsm->data) == DOSFALSE)
+                            {
                                 sfsm->errorcode = IoErr();
                             }
 
                             struct DosList *vn = (struct DosList *)sfsm->data;
                             DD(bug("[SFS] SFS DosList handler: AddDosEntry VolumeNode=0x%8lx | Name=%s | Type=%0x%8lx | Task=%u | ErrorCode=%u\n", vn, AROS_BSTR_ADDR(vn->dol_Name), vn->dol_Type, vn->dol_Task, sfsm->errorcode ));
 
-                        } else if(sfsm->command == SFSM_REMOVE_VOLUMENODE) {
+                        } else if(sfsm->command == SFSM_REMOVE_VOLUMENODE)
+                        {
                             struct DosList *vn = (struct DosList *)sfsm->data;
 
-                            while((dol = NextDosEntry(dol, LDF_VOLUMES)) != 0) {
+                            DD(bug("[SFS] SFS DosList handler:  RemDosEntry VolumeNode=0x%8lx | Name=%s | Type=%0x%8lx | Task=%u\n", vn, AROS_BSTR_ADDR(vn->dol_Name), vn->dol_Type, vn->dol_Task));         
+                            
+                            while((dol = NextDosEntry(dol, LDF_VOLUMES)) != 0)
+                            {
                                 if(dol == vn)
                                 {
-                                    DD(bug("[SFS] SFS DosList handler: RemDosEntry VolumeNode=0x%8lx | Name=%s | Type=%0x%8lx | Task=%u\n", dol, AROS_BSTR_ADDR(dol), dol->dol_Type, dol->dol_Task));         
-                                    RemDosEntry(dol);
+                                    BOOL result;
+                                    
+                                    result = RemDosEntry(dol);
+                                    DD(bug("[SFS] TryDestroyVolumeNode: RemDosEntry = %s\n", result ? "SUCCESS":"FAILURE"));
                                     break;
                                 }
                             }
+
+                            if (dol == 0) DD(bug("[SFS] TryDestroyVolumeNode ERROR = DosEntry NOT Found in DosList\n"));
 
                             FreeDosEntry(vn);
                         }

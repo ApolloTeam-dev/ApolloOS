@@ -447,7 +447,7 @@ void FreeDosDevice(void)
 {
     if(bInhibited)
     {
-	*pchDosDeviceColon = ':';
+	//*pchDosDeviceColon = ':';
 	DD(bug("[FORMAT] Inhibit( \"%s\", DOSFALSE );\n", (ULONG)szDosDevice ));
 	(void) Inhibit( szDosDevice, DOSFALSE );
 	bInhibited = FALSE;
@@ -790,6 +790,7 @@ BOOL bMakeFileSys( BOOL bFFS, BOOL bOFS, BOOL bIntl, BOOL bNoIntl, BOOL bDirCach
 		} /* if( fstCurrent >= 0x444F5300 && fstCurrent <= 0x444F5305 ) */
     } /* if(!bFstSet) */
 
+	
     if(!bInhibited)
     {
 		*pchDosDeviceColon = ':';
@@ -803,9 +804,30 @@ BOOL bMakeFileSys( BOOL bFFS, BOOL bOFS, BOOL bIntl, BOOL bNoIntl, BOOL bDirCach
 		bInhibited = TRUE;
     }
 
-    DD(bug("[FORMAT] Format( \"%s\", \"%s\", 0x%08lx );\n", (ULONG)szDosDevice, (ULONG)(szVolume + 1), fstCurrent ));
+	if(fstCurrent >= 0x46415400 && fstCurrent <= 0x46615402) // Additional free/inhibit cycle for FAT Devices (to avoid "no disk in drive" error on Format)
+	{
+		FreeDosDevice();
 
-    if( !Format( szDosDevice, (DOSBase->dl_lib.lib_Version == 36) ? (char *)MKBADDR(szVolume) : szVolume + 1, fstCurrent ) )
+		if(!bInhibited)
+		{
+			*pchDosDeviceColon = ':';
+			DD(bug("[FORMAT] Inhibit( \"%s\", DOSTRUE );\n", (ULONG)szDosDevice ));
+			if(!Inhibit( szDosDevice, DOSTRUE ))
+			{
+				// This is a bit stupid, but compatible with v40 Format 
+				ReportErrSz( ertFailure, ERROR_OBJECT_WRONG_TYPE, 0 );
+				return FALSE;
+			}
+			bInhibited = TRUE;
+		}
+	}
+
+	int result;
+
+	DD(bug("[FORMAT] Format( \"%s\", \"%s\", 0x%08lx );\n", (ULONG)szDosDevice, (ULONG)(szVolume + 1), fstCurrent ));
+	result = Format( szDosDevice, (DOSBase->dl_lib.lib_Version == 36) ? (char *)MKBADDR(szVolume) : szVolume + 1, fstCurrent );
+
+    if(!result)
     {
 		ReportErrSz( ertFailure, 0, 0 );
 		return FALSE;
