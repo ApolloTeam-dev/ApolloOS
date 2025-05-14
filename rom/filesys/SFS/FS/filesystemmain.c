@@ -3539,9 +3539,9 @@ static BOOL trydestroyvolumenode(struct DeviceList *argvn)
        2) volume is offline and there are no locks and no notify requests */
 
 
-    DD(bug("[SFS] volumenode     = 0x%x | locklist = 0x%x | notify = %s\n",
+    DD(bug("[SFS] volumenode     = 0x%x | locklist = 0x%x | notify = 0x%x\n",
         (argvn == globals->volumenode) ? "ACTIVE ":"OFFLINE", globals->locklist, globals->notifyrequests));
-    DD(bug("[SFS] volumenode-inh = 0x%x | locklist = 0x%x | notify = %s\n",
+    DD(bug("[SFS] volumenode-inh = 0x%x | locklist = 0x%x | notify = 0x%x\n",
         (argvn == globals->volumenode_inh) ? "ACTIVE " :"OFFLINE", globals->volumenode_inh->dl_LockList, globals->volumenode_inh->dl_unused));
 
     if (argvn == globals->volumenode && globals->locklist == 0 && globals->notifyrequests == 0)
@@ -3656,9 +3656,9 @@ LONG handlesimplepackets(struct DosPacket *packet) {
             returnpacket2(packet, DOSTRUE, 0);
             break;
     #endif
-        //case ACTION_DISK_INFO:
-        //    actiondiskinfo(packet);
-        //    break;
+        case ACTION_DISK_INFO:
+            actiondiskinfo(packet);
+            break;
         case ACTION_SAME_LOCK:
             actionsamelock(packet);
             break;
@@ -3787,20 +3787,20 @@ static void actionsamelock(struct DosPacket *packet) {
 
 
 
-static void actiondiskinfo(struct DosPacket *packet)
-{
+static void actiondiskinfo(struct DosPacket *packet) {
     struct InfoData *id = BADDR(packet->dp_Arg1);
 
-    DD(bug("[SFS] ACTION_DISK_INFO Global Volumenode = %s (0x%8lx) | Locklist = %s\n",
-        AROS_BSTR_ADDR(globals->volumenode->dl_Name), globals->volumenode, globals->volumenode->dl_LockList ? "YES":"NO"));
+    //DD(bug("[SFS] ACTION_DISK_INFO Global Volumenode = 0x%8lx | Globals Disktype = 0x%8lx | Disktype=0x%8lx | Packet VolumeNode = 0x%8lx \n", globals->volumenode, globals->disktype, id->id_DiskType, (ULONG)id->id_VolumeNode));
 
-    if( globals->volumenode != 0)          // We only return volume node info if volumenode is not empty (to avoid creating ghosted icons during boot)
-    { 
-        fillinfodata(id);
+    fillinfodata(id);
+
+    if(globals->volumenode == 0)
+    {
         returnpacket2(packet, DOSTRUE, 0);
     } else {
         returnpacket2(packet, DOSFALSE, 0);
     }
+    
 }
 
 
