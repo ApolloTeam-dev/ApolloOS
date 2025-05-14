@@ -243,6 +243,18 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
     }
 
     devnode = MakeDosNode(pp);
+
+    struct FileSysStartupMsg *fssm_devnode = BADDR(devnode->dn_Startup);
+    struct DosEnvec *de_devnode = BADDR(fssm->fssm_Environ);
+
+    D(bug("\n[BOOT] [%s] Current glob->fssm->fssm_Environ (DOSENVEC):\n",__FUNCTION__));
+    D(bug("[BOOT] [%s] de_SizeBlock      : %d\n",__FUNCTION__ , de_devnode->de_SizeBlock));
+    D(bug("[BOOT] [%s] de_Surfaces       : %d\n",__FUNCTION__ ,  de_devnode->de_Surfaces));
+    D(bug("[BOOT] [%s] de_BlocksPerTrack : %d\n",__FUNCTION__ ,  de_devnode->de_BlocksPerTrack));
+    D(bug("[BOOT] [%s] dg_LowCyl         : %d\n",__FUNCTION__ ,  de_devnode->de_LowCyl));
+    D(bug("[BOOT] [%s] dg_HighCyl        : %d\n\n",__FUNCTION__ ,  de_devnode->de_HighCyl));
+
+
     if (devnode != NULL) {
         AddBootNode(bootable ? pp[4 + DE_BOOTPRI] : -128, ADNF_STARTPROC, devnode, NULL);
         D(bug("[BOOT] AddBootNode(%b, 0, 0x%p, NULL)\n",  devnode->dn_Name, pp[4 + DE_DOSTYPE]));

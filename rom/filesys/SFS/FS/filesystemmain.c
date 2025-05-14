@@ -278,18 +278,16 @@ DD(bug("[SFS] Filesystem main\n"));
 #endif
 
     if((DOSBase = (struct DosLibrary *)TaggedOpenLibrary(TAGGEDOPEN_DOS)) != 0) {
-        DD(bug("[SFS] DOSBase = %p\n", DOSBase));
-
         globals->mytask = (struct Process *)FindTask(0);
-        DD(bug("[SFS] mytask = %p\n", globals->mytask));
-
         globals->packet = waitpacket(globals->mytask);
-        DD(bug("[SFS] packet = %p\n", globals->packet));
-
         globals->devnode = (struct DeviceNode *)BADDR(globals->packet->dp_Arg3);
         globals->devnode->dn_Task = &globals->mytask->pr_MsgPort;
         globals->startupmsg = BADDR(globals->devnode->dn_Startup);
+
         DD(bug("[SFS] DEVICE = %s\n", AROS_BSTR_ADDR(globals->devnode->dn_Name)));
+        DD(bug("[SFS] DOSBase = %p\n", DOSBase));
+        DD(bug("[SFS] mytask = %p\n", globals->mytask));
+        DD(bug("[SFS] packet = %p\n", globals->packet));
         DD(bug("[SFS] devnode = %p\n", globals->devnode));
         DD(bug("[SFS] startupmsg = %p\n", globals->startupmsg));
 
@@ -379,6 +377,13 @@ DD(bug("[SFS] Filesystem main\n"));
                                                             DD(bug("[SFS] (6 ) Filesystem started!  Volumenode = 0x%8lx\n", globals->volumenode));
 
                                                             DD(bug("[SFS] (6A) Mountlist entry says: Allocate %ld buffers of memtype 0x%08lx\n", globals->dosenvec->de_NumBuffers, globals->dosenvec->de_BufMemType));
+
+                                                            DD(bug("\n[SFS] [%s] Current glob->fssm->fssm_Environ (DOSENVEC):\n",__FUNCTION__));
+                                                            DD(bug("[SFS] [%s] de_SizeBlock      : %d\n",__FUNCTION__ , globals->dosenvec->de_SizeBlock));
+                                                            DD(bug("[SFS] [%s] de_Surfaces       : %d\n",__FUNCTION__ , globals->dosenvec->de_Surfaces));
+                                                            DD(bug("[SFS] [%s] de_BlocksPerTrack : %d\n",__FUNCTION__ , globals->dosenvec->de_BlocksPerTrack));
+                                                            DD(bug("[SFS] [%s] dg_LowCyl         : %d\n",__FUNCTION__ , globals->dosenvec->de_LowCyl));
+                                                            DD(bug("[SFS] [%s] dg_HighCyl        : %d\n\n",__FUNCTION__ , globals->dosenvec->de_HighCyl));
 
                                                             //  returnpacket(DOSTRUE,0);   // Sep 19 1999: Moved down again.
 
