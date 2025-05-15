@@ -98,7 +98,7 @@ AROS_SHAH(ULONG *  ,D= ,DEBUG,/N, 0, "Debug level\n")
     sd.retry.write = retry;
     sd.func.log = sdcmd_log;
 
-    present = sdcmd_detect(&sd);
+    present = sdcmd_sw_detect_full(&sd);
 
     if (present) {
         Printf("SD Card Detected on $0x%lx:\n", iobase);

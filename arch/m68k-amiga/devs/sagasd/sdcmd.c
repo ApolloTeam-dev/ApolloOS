@@ -621,7 +621,19 @@ UBYTE sdcmd_write_blocks(struct sdcmd *sd, ULONG addr, CONST UBYTE *buff, int bl
     return r1;
 }
 
-BOOL sdcmd_present(struct sdcmd *sd)
+BOOL sdcmd_hw_detect(struct sdcmd *sd)
+{
+    UWORD val;
+    
+    val = Read16(sd->iobase + SAGA_SD_STAT);
+
+    //debug("SD_STAT => $%04lx", val);
+
+    return (val & SAGA_SD_STAT_NCD) ? FALSE : TRUE;
+}
+
+
+BOOL sdcmd_sw_detect_quick(struct sdcmd *sd)
 {
     UBYTE r1;
     int i;
@@ -636,16 +648,16 @@ BOOL sdcmd_present(struct sdcmd *sd)
 
     if (i == 50)
     {
-        //debug("starting sdcmd_present routine: FALSE");
+        //debug("starting sdcmd_sw_detect_quick routine: FALSE");
         return FALSE;
     } else {
         sdcmd_stop_transmission(sd);
-        //debug("starting sdcmd_present routine: TRUE");
+        //debug("starting sdcmd_sw_detect_quick routine: TRUE");
         return TRUE;
     }
 }
 
-BOOL sdcmd_detect(struct sdcmd *sd)
+BOOL sdcmd_sw_detect_full(struct sdcmd *sd)
 {
     struct sdcmd_info *info = &sd->info;
     UBYTE r1;
@@ -653,7 +665,7 @@ BOOL sdcmd_detect(struct sdcmd *sd)
     ULONG r7;
     int i;
 
-    //debug("sdcmd_detect for SD-Card unit: %d", sd->unitnumber);
+    //debug("sdcmd_sw_detect_full for SD-Card unit: %d", sd->unitnumber);
 
     memset(info, 0, sizeof(*info));
 
@@ -870,7 +882,7 @@ exit:
 
     sdcmd_select(sd, FALSE);
 
-    debug("finishing sdcmd_detect routine");
+    debug("finishing sdcmd_sw_detect_full routine");
 
     return TRUE;
 }

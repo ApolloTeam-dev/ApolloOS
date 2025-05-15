@@ -143,15 +143,9 @@ UBYTE sdcmd_read_packet(struct sdcmd *sd, UBYTE *buff, int len);
 UBYTE sdcmd_write_packet(struct sdcmd *sd, UBYTE token, CONST UBYTE *buff, int len);
 UBYTE sdcmd_stop_transmission(struct sdcmd *sd);
 
-/* Is there something in the SD slot?
- */
-BOOL sdcmd_present(struct sdcmd *sd);
-
-/* Detect and initialize the SD device
- *
- * Fills in the sd->info fields
- */
-BOOL sdcmd_detect(struct sdcmd *sd);
+BOOL sdcmd_hw_detect(struct sdcmd *sd);
+BOOL sdcmd_sw_detect_quick(struct sdcmd *sd);
+BOOL sdcmd_sw_detect_full(struct sdcmd *sd);
 
 /* NOTE: Depending on SDOCRF_HCS, you will need to use either
  *       SDOCRF_HCS == 0   => addr is in bytes

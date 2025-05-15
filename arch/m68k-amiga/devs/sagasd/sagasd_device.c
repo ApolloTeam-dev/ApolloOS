@@ -746,6 +746,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
     ULONG sigset;
     struct Message status;
     BOOL present;
+    BOOL sdpin = FALSE;
     ULONG detectcounter = 0;
 
     debug("Starting SAGASD_IOTask");
@@ -776,7 +777,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
 
     /* Update status for the boot node */
  
-    present = sdcmd_detect(&sdu->sdu_SDCmd);
+    present = sdcmd_sw_detect_full(&sdu->sdu_SDCmd);
     sdu->sdu_ChangeNum++;
     if (present)
     {
@@ -852,7 +853,22 @@ static void SAGASD_IOTask(struct Library *SysBase)
                 {
                     if (!sdu->sdu_Present)
                     {
-                        present = sdcmd_detect(&sdu->sdu_SDCmd);            // We have to do a "full" detect when NOT in sdu_Present mode
+                        present = sdcmd_hw_detect(&sdu->sdu_SDCmd);                     // First we try hw detect
+                        if(present)                                 
+                        {
+                            sdpin = TRUE;                                               // If hw detect reports TRUE, so we know now that SD pin works   
+                            if (sdu->sdu_SDCmd.unitnumber == 2) debug("SD-Card Quick HW Detection: unit = %d | sdu_Present = %s | detect = %s",
+                            sdu->sdu_SDCmd.unitnumber, sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
+                            present = sdcmd_sw_detect_full(&sdu->sdu_SDCmd);                                          
+                        } else {
+                            if (!sdpin)
+                            {
+                                present = sdcmd_sw_detect_full(&sdu->sdu_SDCmd);            // If hw detect reports FALSE we have to do a second sw detect for V4 without SD pin
+                                if (sdu->sdu_SDCmd.unitnumber == 2) debug("SD-Card Full  SW Detection: unit = %d | sdu_Present = %s | detect = %s",
+                                sdu->sdu_SDCmd.unitnumber, sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
+                            }
+                        }
+
                         if (present)                                        // SD-Card is Inserted
                         {
                             //Forbid();
@@ -878,7 +894,19 @@ static void SAGASD_IOTask(struct Library *SysBase)
                             //Permit();
                         }
                     } else {
-                        present = sdcmd_present(&sdu->sdu_SDCmd);           // We can do a "light" detect when in sdu_Present mode
+                        if (sdpin)
+                        {
+                            present = sdcmd_hw_detect(&sdu->sdu_SDCmd);
+                            if (sdu->sdu_SDCmd.unitnumber == 2) debug("SD-Card Quick HW Detection: unit = %d | sdu_Present = %s | detect = %s",
+                            sdu->sdu_SDCmd.unitnumber, sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
+                        } else {
+                            present = sdcmd_sw_detect_quick(&sdu->sdu_SDCmd);           // We can do a "light" detect when in sdu_Present mode
+                            if (sdu->sdu_SDCmd.unitnumber == 2) debug("SD-Card Quick SW Detection: unit = %d | sdu_Present = %s | detect = %s",
+                            sdu->sdu_SDCmd.unitnumber, sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
+                        }
+                        
+
+
                         if (!present)                                       // SD-Card is Removed
                         {
                             //Forbid();

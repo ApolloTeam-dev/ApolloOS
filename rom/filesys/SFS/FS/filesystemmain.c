@@ -2521,8 +2521,8 @@ void mainloop(void) {
                                     struct ExtFileLock *lock = BADDR(globals->packet->dp_Arg1);
                                     struct InfoData *id = BADDR(globals->packet->dp_Arg2);
 
-                                    DD(bug("[SFS] ACTION_INFO      Global Volumenode = %s (0x%8lx) | Globals Disktype = 0x%8lx | Locklist = %s\n",
-                                        AROS_BSTR_ADDR(globals->volumenode->dl_Name), globals->volumenode, globals->disktype, globals->volumenode->dl_LockList ? "YES":"NO"));
+                                    //DD(bug("[SFS] ACTION_INFO      Global Volumenode = %s (0x%8lx) | Globals Disktype = 0x%8lx | Locklist = %s\n",
+                                    //    AROS_BSTR_ADDR(globals->volumenode->dl_Name), globals->volumenode, globals->disktype, globals->volumenode->dl_LockList ? "YES":"NO"));
 
                                     if(lock != 0 && globals->volumenode != (struct DeviceList *)BADDR(lock->volume))
                                     {
@@ -3827,7 +3827,8 @@ static void fillinfodata(struct InfoData *id)
     
     if(globals->disktype == DOSTYPE_ID)
     {
-        id->id_DiskType = 0x444f5300;           // HACK: We have to report a known FS to WB or else it will decide to display Ghost Disk icons 
+        id->id_DiskType = 0x444f5300;       // HACK: We have to report a known FS to WB or else it will decide to display Ghost Disk icons
+        id->id_VolumeNode = 0;               
     } else {
         id->id_DiskType = globals->disktype;
     }

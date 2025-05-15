@@ -317,9 +317,8 @@ static VOID CheckPartitions(struct ExpansionBase *ExpansionBase, struct Library 
     
     //* Cleanup Device Node and if no partitions were found for the DeviceNode or device is SDx: then we put it back 
     Remove(&bn->bn_Node);
-    if (!res)
-    // || (AROS_BSTR_ADDR(dn->dn_Name)[0] == 'S' && AROS_BSTR_ADDR(dn->dn_Name)[1] == 'D' ) )
-    //&& AROS_BSTR_ADDR(dn->dn_Name)[2] == 'R' && AROS_BSTR_ADDR(dn->dn_Name)[3] == 'O' && AROS_BSTR_ADDR(dn->dn_Name)[4] == 'M') )
+    if (!res || (AROS_BSTR_ADDR(dn->dn_Name)[0] == 'S' && AROS_BSTR_ADDR(dn->dn_Name)[1] == 'D'  
+        && AROS_BSTR_ADDR(dn->dn_Name)[2] == 'R' && AROS_BSTR_ADDR(dn->dn_Name)[3] == 'O' && AROS_BSTR_ADDR(dn->dn_Name)[4] == 'M') )
     {
         Enqueue(&ExpansionBase->MountList, &bn->bn_Node);
     }
