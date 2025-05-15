@@ -927,6 +927,10 @@ void FillDiskInfo(struct InfoData *id, struct Globals *glob)
         id->id_VolumeNode = BNULL;
         id->id_InUse = DOSFALSE;
     }
+
+        D(bug("[FAT] fillinfodata: VolumeNode = %12s (0x%8lx) | DiskType = 0x%08lx | DiskState = %d | LockList = %s\n",
+        AROS_BSTR_ADDR(glob->devnode->dol_Name), id->id_VolumeNode, id->id_DiskType,  id->id_DiskState, (id->id_InUse == DOSTRUE)? "DOSTRUE":"DOSFALSE"));
+
 }
 
 static void SendVolumePacket(struct DosList *vol, ULONG action, struct Globals *glob)

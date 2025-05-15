@@ -1283,8 +1283,9 @@ void mainloop(void) {
                     if(globals->packet->dp_Arg1 != DOSFALSE) {
                         DD(bug("Disk inhibited (nesting = %ld).", globals->inhibitnestcounter));
 
-                        if(globals->inhibitnestcounter++ == 0) { // Inhibited for the first time?
-                            globals->disktype = ID_BUSY; /* Must be put before deinitdisk() Feb 27 1999: Maybe not needed anymore */
+                        if(globals->inhibitnestcounter++ == 0)
+                        { // Inhibited for the first time?
+                            globals->disktype = ID_BUSY;
                             deinitdisk();
                         }
 
@@ -2520,8 +2521,8 @@ void mainloop(void) {
                                     struct ExtFileLock *lock = BADDR(globals->packet->dp_Arg1);
                                     struct InfoData *id = BADDR(globals->packet->dp_Arg2);
 
-                                    DD(bug("[SFS] ACTION_INFO      Global Volumenode = %s (0x%8lx) | Locklist = %s\n",
-                                         AROS_BSTR_ADDR(globals->volumenode->dl_Name), globals->volumenode, globals->volumenode->dl_LockList ? "YES":"NO"));
+                                    DD(bug("[SFS] ACTION_INFO      Global Volumenode = %s (0x%8lx) | Globals Disktype = 0x%8lx | Locklist = %s\n",
+                                        AROS_BSTR_ADDR(globals->volumenode->dl_Name), globals->volumenode, globals->disktype, globals->volumenode->dl_LockList ? "YES":"NO"));
 
                                     if(lock != 0 && globals->volumenode != (struct DeviceList *)BADDR(lock->volume))
                                     {
@@ -3238,7 +3239,8 @@ LONG initdisk()
 
     changegeometry(globals->dosenvec);
 
-    if(globals->volumenode == 0) {
+    if(globals->volumenode == 0)
+    {
         struct CacheBuffer *cb;
         struct fsObjectContainer *oc = 0;
         ULONG newdisktype;
@@ -3516,9 +3518,9 @@ void removevolumenode(struct DosList *dol, struct DosList *vn)
         {
             BOOL result;
             
-            DD(bug("[SFS] TryDestroyVolumeNode: RemDosEntry VolumeNode=0x%8lx | Name=%s | Type=%0x%8lx | Task=%u\n", dol, AROS_BSTR_ADDR(dol->dol_Name), dol->dol_Type, dol->dol_Task));         
+            DD(bug("[SFS] RemoveVolumeNode: RemDosEntry VolumeNode=0x%8lx | Name=%s | Type=%0x%8lx | Task=%u\n", dol, AROS_BSTR_ADDR(dol->dol_Name), dol->dol_Type, dol->dol_Task));         
             result = RemDosEntry(dol);
-            DD(bug("[SFS] TryDestroyVolumeNode: RemDosEntry = %s\n", result ? "SUCCESS":"FAILURE"));
+            DD(bug("[SFS] RemoveVolumeNode: RemDosEntry = %s\n", result ? "SUCCESS":"FAILURE"));
             break;
         }
     }
@@ -3530,7 +3532,7 @@ static BOOL trydestroyvolumenode(struct DeviceList *argvn)
 
     if (argvn == NULL)
     {
-        DD(bug("[SFS] ERROR on argvn\n"));
+        DD(bug("[SFS] TryDestroyVolumeNode: No Volume to Destroy\n"));
         return FALSE;
     }
 
@@ -3539,9 +3541,9 @@ static BOOL trydestroyvolumenode(struct DeviceList *argvn)
        2) volume is offline and there are no locks and no notify requests */
 
 
-    DD(bug("[SFS] volumenode     = 0x%x | locklist = 0x%x | notify = 0x%x\n",
+    DD(bug("[SFS] TryDestroyVolumeNode: volumenode     = 0x%x | locklist = 0x%x | notify = 0x%x\n",
         (argvn == globals->volumenode) ? "ACTIVE ":"OFFLINE", globals->locklist, globals->notifyrequests));
-    DD(bug("[SFS] volumenode-inh = 0x%x | locklist = 0x%x | notify = 0x%x\n",
+    DD(bug("[SFS] TryDestroyVolumeNode: volumenode-inh = 0x%x | locklist = 0x%x | notify = 0x%x\n",
         (argvn == globals->volumenode_inh) ? "ACTIVE " :"OFFLINE", globals->volumenode_inh->dl_LockList, globals->volumenode_inh->dl_unused));
 
     if (argvn == globals->volumenode && globals->locklist == 0 && globals->notifyrequests == 0)
@@ -3562,7 +3564,7 @@ static BOOL trydestroyvolumenode(struct DeviceList *argvn)
         struct SFSMessage *sfsm;
         struct DosList *dol = attemptlockdoslist(5, 1);
 
-        DD(bug("[SFS] trydestroyvolumenode: dol = %ld\n", dol));
+        DD(bug("[SFS] TryDestroyVolumeNode: dol = %ld\n", dol));
 
         if(dol != 0)
         { /* Is DosList locked? */
@@ -3570,7 +3572,7 @@ static BOOL trydestroyvolumenode(struct DeviceList *argvn)
             UnLockDosList(LDF_WRITE | LDF_VOLUMES);
         }
 
-        DD(bug("[SFS] trydestroyvolumenode: sending msg\n"));
+        DD(bug("[SFS] TryDestroyVolumeNode: sending msg\n"));
 
         /* Even if we succesfully locked the DosList, we still should notify
         the DosList task to remove the node as well (and to free it), just
@@ -3585,14 +3587,14 @@ static BOOL trydestroyvolumenode(struct DeviceList *argvn)
 
         *vn = 0; /* clear pointer in the globals structure */
 
-        DD(bug("[SFS] trydestroyvolumenode: done\n"));
+        DD(bug("[SFS] TryDestroyVolumeNode: done\n"));
 
         diskchangenotify(IECLASS_DISKREMOVED);
 
         return TRUE;
     }
 
-    DD(bug("[SFS] ERROR on vn-2\n"));
+    DD(bug("[SFS] TryDestroyVolumeNode: ERROR on vn-2\n"));
 
     return FALSE;
 }
@@ -3787,20 +3789,12 @@ static void actionsamelock(struct DosPacket *packet) {
 
 
 
-static void actiondiskinfo(struct DosPacket *packet) {
+static void actiondiskinfo(struct DosPacket *packet)
+{
     struct InfoData *id = BADDR(packet->dp_Arg1);
 
-    //DD(bug("[SFS] ACTION_DISK_INFO Global Volumenode = 0x%8lx | Globals Disktype = 0x%8lx | Disktype=0x%8lx | Packet VolumeNode = 0x%8lx \n", globals->volumenode, globals->disktype, id->id_DiskType, (ULONG)id->id_VolumeNode));
-
     fillinfodata(id);
-
-    if(globals->volumenode == 0)
-    {
-        returnpacket2(packet, DOSTRUE, 0);
-    } else {
-        returnpacket2(packet, DOSFALSE, 0);
-    }
-    
+    returnpacket2(packet, DOSTRUE, 0);
 }
 
 
@@ -3829,9 +3823,14 @@ static void fillinfodata(struct InfoData *id)
 
     id->id_NumBlocksUsed = usedblocks;
     id->id_BytesPerBlock = globals->bytes_block;
-    id->id_DiskType = globals->disktype;
-
     id->id_VolumeNode = TOBADDR(globals->volumenode);
+    
+    if(globals->disktype == DOSTYPE_ID)
+    {
+        id->id_DiskType = 0x444f5300;           // HACK: We have to report a known FS to WB or else it will decide to display Ghost Disk icons 
+    } else {
+        id->id_DiskType = globals->disktype;
+    }
 
     if(globals->locklist != 0)
     {
@@ -3840,7 +3839,8 @@ static void fillinfodata(struct InfoData *id)
         id->id_InUse = DOSFALSE;
     }
 
-    //DD(bug("[SFS] fillinfodata: volumenode = 0x%08lx, disktype = 0x%08lx, loclstatus = %s\n", globals->volumenode, globals->disktype, (id->id_InUse == -1) ? "DOSTRUE":"DOSFALSE"));
+    DD(bug("[SFS] fillinfodata: VolumeNode = %12s (0x%8lx) | DiskType = 0x%08lx | DiskState = %d | LockList = %s\n",
+        AROS_BSTR_ADDR(globals->volumenode->dl_Name), id->id_VolumeNode, id->id_DiskType,  id->id_DiskState, (id->id_InUse == DOSTRUE)? "DOSTRUE":"DOSFALSE"));
 
 }
 
@@ -3848,12 +3848,13 @@ static void fillinfodata(struct InfoData *id)
 
 BOOL checkchecksum(struct CacheBuffer *cb)
 {
-#ifdef CHECKCHECKSUMSALWAYS
-    if(CALCCHECKSUM(globals->bytes_block, cb->data) == 0)
-    {
-#else
-    if((cb->bits & CB_CHECKSUM) != 0 || CALCCHECKSUM(globals->bytes_block, cb->data) == 0) { //    -> copycachebuffer screws this up!
-#endif
+//#ifdef CHECKCHECKSUMSALWAYS
+//    if(CALCCHECKSUM(globals->bytes_block, cb->data) == 0)
+//    {
+//#else
+    if((cb->bits & CB_CHECKSUM) != 0 || CALCCHECKSUM(globals->bytes_block, cb->data) == 0)      //    -> copycachebuffer screws this up!
+    { 
+//#endif
         cb->bits |= CB_CHECKSUM;
         return(DOSTRUE);
     }

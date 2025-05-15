@@ -85,7 +85,7 @@ LONG freelock(struct ExtFileLock *lock)
 				{
 					if(lock->next==0)
 					{
-						DD(bug("[SFS] freelock: This was the last lock associated with that volume!\n"));
+						DD(bug("[SFS] freelock: This was the last lock associated with volume %s\n", AROS_BSTR_ADDR(vn->dl_Name)));
 
 						if((vn == globals->volumenode_inh) && (vn->dl_unused==0))
 						{
