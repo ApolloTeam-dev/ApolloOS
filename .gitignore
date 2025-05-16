@@ -2139,3 +2139,4 @@ compiler/include/geninc.cfg
 bin/Sources/.freetype-2.10.0-fetched
 aros.rom
 ApolloOS.code-workspace
+arch/m68k-amiga/boot/romlog.txt
