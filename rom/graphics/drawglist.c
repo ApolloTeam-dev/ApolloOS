@@ -311,7 +311,7 @@
 				struct Spr *spr = (struct Spr *)0xdff120;
 
 				WORD tx, ty, t, dy, dx, h;
-				UWORD pos, ctl, offset;
+				UWORD pos, ctl, offset, xprec;
 				WORD *nextline, *image;
 		
 				nextline = rp->GelsInfo->nextLine + pick;
@@ -319,7 +319,18 @@
 				ty = GfxBase->ActiView->DyOffset;
 			    
 				if(CurVSprite->X < 0)dx = 0; else dx = CurVSprite->X;
-				tx = tx + dx; // Should we do Hires >>1, SHIRES >> 2 ??
+				xprec = 0;
+				if(vp->Modes & 0x20)
+				{
+					tx = tx + (dx>>2);
+					xprec = 2;
+				}
+				else if(vp->Modes & 0x8000)
+				{
+					tx = tx + (dx>>1);
+					xprec = 1;
+				}
+				else tx = tx + dx;
 			    
 				if(CurVSprite->Y < 0) dy = 0; else dy = CurVSprite->Y;
 				ty = ty + dy;
@@ -331,7 +342,11 @@
 				{
 					// PosCtl
 			 		pos = (ty<<8) | ((tx >> 1) & 0xff); //(y<<15) | (x >> 1);
-			   		ctl = (t << 8) | ((ty>>6)&0x4) | ((t>>7)&0x2) | (tx&0x1);
+			   		ctl = ((t&0xff) << 8) | ((ty>>6)&0x4) | ((t>>7)&0x2) | (tx&0x1) | ((ty>>3)&0x40) | ((t>>4)&0x20);
+					if(xprec > 0)
+					{
+						ctl |= (((CurVSprite->X) & (3 >> (2-xprec))) << (5-xprec));
+					}
 					
 					// image clipping
 			   		image = CurVSprite->ImageData + ((UWORD)CurVSprite->Depth * (UWORD)(dy-CurVSprite->Y));

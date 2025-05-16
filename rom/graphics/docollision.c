@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2007, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Graphics function DoCollision()
@@ -52,10 +52,19 @@
 
     struct VSprite * CurVSprite, * _CurVSprite;
     int shift, _shift;
+    BOOL brdh;
+    struct Layer *layer;
+    struct VSprite brdSprite, *brds;
     
     if (NULL != rp->GelsInfo)
     {
       CurVSprite = rp->GelsInfo->gelHead->NextVSprite;
+
+      brdh = (LONG)(rp->GelsInfo->collHandler->collPtrs[0]) != 0;
+      layer = rp->Layer;
+      if(layer)
+        ObtainSemaphore(&layer->Lock);    
+	    
       if (CurVSprite->Flags & VSPRITE)
         shift = 1;
       else
@@ -64,6 +73,67 @@
       while (NULL != CurVSprite->NextVSprite)
       {
         _CurVSprite = CurVSprite->NextVSprite;
+
+	// For safety, break at the tail GEL      
+	if(CurVSprite == rp->GelsInfo->gelTail)
+          break;    
+
+	/*
+         *  Check border collision
+	 */
+        brds = CurVSprite;
+	if(layer && (brds->Flags & VSPRITE))
+        {
+          brdSprite = *CurVSprite;
+          brds = &brdSprite;
+          brds->X = brds->X - (layer->bounds.MinX - layer->Scroll_X);
+          brds->Y = brds->Y - (layer->bounds.MinY - layer->Scroll_Y);
+        }
+	if(brdh)
+        { 
+	  if(brds->HitMask | 0)
+	  {
+	    WORD hit = 0;
+            WORD lr; 
+
+	    // top hit
+            if(brds->Y <= rp->GelsInfo->topmost)
+            {
+              hit = 1;
+            }
+	    // bottom hit
+            if( ((brds->Y + brds->Height) ) >= rp->GelsInfo->bottommost)
+            {
+              hit |= 2;
+            }
+            // left hit
+            lr = rp->GelsInfo->leftmost - brds->X;
+            if(lr >= 0)
+            {
+              if(lr > (brds->Width << 4))
+                lr = (brds->Width << 4);      
+              hit |= 4;
+            }        
+            // right hit
+            lr = (brds->X + (brds->Width << 4)) - rp->GelsInfo->rightmost;
+            if(lr >= 0)
+            {
+               if(lr > (brds->Width << 4))
+                 lr = (brds->Width << 4);
+               hit |= 8;
+            }
+	    /*
+             *  Did we hit a border? Then call Collision 0
+	     */
+	    if(hit != 0)
+            {
+              if(CurVSprite->VSBob && (CurVSprite->VSBob->Flags & BOBSAWAY))
+              {}
+              else
+                rp->GelsInfo->collHandler->collPtrs[0]( CurVSprite, hit);
+            }            
+          }
+        }  
         
         /*
          * As long as they can overlap vertically..
@@ -212,7 +282,7 @@
             if (collision)
             {
               UWORD mask = CurVSprite->MeMask & _CurVSprite->HitMask;
-              int i = 0;
+              int i = 1;
               while (i < 16 && 0 != mask)
               {
                 if (mask & 0x01)
@@ -232,6 +302,9 @@
         }
         CurVSprite = CurVSprite->NextVSprite;
       }
+	    
+      if(layer)
+        ReleaseSemaphore( &layer->Lock);
     }
 
     AROS_LIBFUNC_EXIT
