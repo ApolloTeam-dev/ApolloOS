@@ -2,8 +2,8 @@
 #define INTUITION_INTERN_H
 
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2013, The MorphOS Development Team. All Rights Reserved.
+    Copyright ï¿½ 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2001-2013, The MorphOS Development Team. All Rights Reserved.
     $Id$
 */
 
@@ -1249,19 +1249,32 @@ AROS_UFPA(APTR  , args      , A1));
 #define DEBUG_UNLOCKPUBSCREENLIST(x)    ;
 #define DEBUG_RETHINKDISPLAY(x)   	;
 
-#ifdef NO_RUNTIME_DEBUG
+#if APOLLO_DEBUG
+#define DEBUG 1
+#else
+#define DEBUG 0
+#endif
 
+#if DEBUG
+#define DEBUG_INIT(x)               	;//if (SysBase->ex_DebugFlags & EXECDEBUGF_INIT) x;
+#define DEBUG_SETIPREFS(x)  x        	;//if (SysBase->ex_DebugFlags & EXECDEBUGF_INIT) x;
+#define DEBUG_SETPREFS(x)           	;//if (SysBase->ex_DebugFlags & EXECDEBUGF_INIT) x;
+#else
 #define DEBUG_INIT(x)               	;
 #define DEBUG_SETIPREFS(x)          	;
 #define DEBUG_SETPREFS(x)           	;
-
-#else
-
-#define DEBUG_INIT(x)               	if (SysBase->ex_DebugFlags & EXECDEBUGF_INIT) x;
-#define DEBUG_SETIPREFS(x)          	if (SysBase->ex_DebugFlags & EXECDEBUGF_INIT) x;
-#define DEBUG_SETPREFS(x)           	if (SysBase->ex_DebugFlags & EXECDEBUGF_INIT) x;
-
 #endif
+
+
+
+
+
+
+
+
+
+
+
 
 /*
  * Private data structures of the classes defined by intuition.library

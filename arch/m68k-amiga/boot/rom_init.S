@@ -99,8 +99,8 @@ arosbootstrap_init:
 	
 	#if VAMPIRECARDSERIES==4
 	//V4 version
-	move.l	#0x01800000,%a0		//Reserve 8MB for ApolloFloppy
-	move.l	#0x40000000,%a1
+	move.l	#0x01800000,%a0		// Reserve 8MB for ApolloFloppy
+	move.l	#0x80000000,%a1		// UniCorn 2Gb
 	move.l	#0x00100000,%d0
 	jsr	__MemoryTest
 	#else

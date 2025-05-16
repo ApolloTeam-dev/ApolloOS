@@ -2,7 +2,7 @@
 #define EXEC_ERRORS_H
 
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2001, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: IO errors
@@ -16,5 +16,6 @@
 #define IOERR_BADADDRESS (-5)
 #define IOERR_UNITBUSY   (-6)
 #define IOERR_SELFTEST   (-7)
+#define IOERR_DIE_REBOOT (-8)
 
 #endif /* EXEC_ERRORS_H */

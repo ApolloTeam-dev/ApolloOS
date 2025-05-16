@@ -39,6 +39,8 @@ extern char *generate_banner(void);
 
 #include <proto/intuition.h>
 
+#define DEBUG 1
+
 static void load_system_configuration(struct DosLibrary *DOSBase)
 {
     BPTR fh;
@@ -75,10 +77,13 @@ void __dos_Boot(struct DosLibrary *DOSBase, ULONG BootFlags, UBYTE Flags)
         try and boot the system. */
 
     D(
+        bug("[DOS] %s: ** boot delayed by 1000ms\n", __func__);
         bug("[DOS] %s: ** starting generic boot sequence\n", __func__);
         bug("[DOS] %s: BootFlags 0x%08X Flags 0x%02X\n", __func__, BootFlags, Flags);
         bug("[DOS] %s: DOSBase @ 0x%p\n", __func__, DOSBase);
       )
+
+      Delay(50);
 
     /* m68000 uses this to get the default colors and
      * cursors for Workbench
@@ -140,7 +145,7 @@ void __dos_Boot(struct DosLibrary *DOSBase, ULONG BootFlags, UBYTE Flags)
 
 #if defined(__DISTRONAME__)
 	if (cis == BNULL)
-        cis = Open("CON:////ApolloDOS/AUTO/CLOSE/SMART/BOOT", MODE_OLDFILE);
+        cis = Open("CON:////ApolloOS/AUTO/CLOSE/SMART/BOOT", MODE_OLDFILE);
 #else
 	if (cis == BNULL)
         cis = Open("CON:////AROS/AUTO/CLOSE/SMART/BOOT", MODE_OLDFILE);

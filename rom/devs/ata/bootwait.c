@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2013, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -65,13 +65,8 @@ AROS_UFH3(static APTR, ata_Wait,
     struct ataBase *ATABase;
 #if defined(__AROSPLATFORM_SMP__)
     void *ExecLockBase = OpenResource("execlock.resource");
-#endif
-
-#if defined(__AROSPLATFORM_SMP__)
-    if (ExecLockBase)
-        ObtainSystemLock(&SysBase->DeviceList, SPINLOCK_MODE_READ, LOCKF_FORBID);
-    else
-        Forbid();
+    if (ExecLockBase) ObtainSystemLock(&SysBase->DeviceList, SPINLOCK_MODE_READ, LOCKF_FORBID);
+    else Forbid();
 #else
     Forbid();
 #endif
@@ -90,7 +85,7 @@ AROS_UFH3(static APTR, ata_Wait,
 
     if (ATABase)
     {
-        D(bug("[ATA  ] Waiting for device detection to complete...\n"));
+        D(bug("\n**************************************************************\n[ATA_WAIT] Waiting for device detection to complete...\n**************************************************************\n\n"));
         ObtainSemaphore(&ATABase->DetectionSem);
         ReleaseSemaphore(&ATABase->DetectionSem);
     }

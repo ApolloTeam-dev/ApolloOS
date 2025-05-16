@@ -22,8 +22,9 @@
 #include "ata.h"
 #include "ata_bus.h"
 
-#define DIRQ(x)
-#define DATTR(x)
+
+
+
 
 static void Hidd_ATABus_HandleIRQ(UBYTE status, struct ata_Bus *bus)
 {
@@ -744,8 +745,7 @@ APTR ATABus__Hidd_ATABus__GetPIOInterface(OOP_Class *cl, OOP_Object *o, OOP_Msg 
       bug("[ATA:Bus] %s: ata_Bus @ 0x%p\n", __func__, data);
      )
 
-    vec = AllocMem(sizeof(struct ATA_BusInterface) + data->pioDataSize,
-                   MEMF_PUBLIC|MEMF_CLEAR);
+    vec = AllocMem(sizeof(struct ATA_BusInterface) + data->pioDataSize, MEMF_PUBLIC|MEMF_CLEAR);
     if (vec)
     {
         D(bug("[ATA:Bus] %s: ATA_BusInterface @ 0x%p (%d bytes + %d)\n", __func__, vec, sizeof(struct ATA_BusInterface), data->pioDataSize);)
@@ -754,8 +754,7 @@ APTR ATABus__Hidd_ATABus__GetPIOInterface(OOP_Class *cl, OOP_Object *o, OOP_Msg 
         vec->ata_out_alt = default_out_alt;
         vec->ata_in_alt  = default_in_alt;
 
-        CopyVectors((APTR *)vec, (APTR *)data->busVectors,
-                    sizeof(struct ATA_BusInterface) / sizeof(APTR));
+        CopyVectors((APTR *)vec, (APTR *)data->busVectors, sizeof(struct ATA_BusInterface) / sizeof(APTR));
 
         data->pioInterface = &vec[1];
         return data->pioInterface;
@@ -941,101 +940,53 @@ void ATABus__Hidd_ATABus__Shutdown(OOP_Class *cl, OOP_Object *o, OOP_Msg *msg)
 BOOL Hidd_ATABus_Start(OOP_Object *o, struct ataBase *ATABase)
 {
     struct ata_Bus *ab = OOP_INST_DATA(ATABase->busClass, o);
-    STRPTR TaskName = "ATA[PI] Subsystem";
 
-    D(bug("[ATA:Bus] %s()\n", __func__));
+    D(bug("[ATA:Bus] %s()\n", __func__);)
 
-    /* Attach IRQ handler */
     OOP_SetAttrsTags(o, aHidd_Bus_IRQHandler, Hidd_ATABus_HandleIRQ,
                         aHidd_Bus_IRQData   , ab,
                         TAG_DONE);
-    unsigned short *pd = (unsigned char *)0xdd0018;
-    unsigned short *pa = (unsigned char *)0xda0018;  
-    unsigned short d, a;
-    d = *pd;
-    a = *pa;
 
-    // is this check correct? Please find more accurate way if possible
-    if(ATABase->ata__buscount == 0)
-    {
-    	if((d & 0xFF) != 0xFF)
-    		ab->use_da = FALSE;
-    	else ab->use_da = TRUE;
-    }
-    else
-    {
-    	if((a & 0xFF) != 0xFF)
-    		ab->use_da = TRUE;
-    	else ab->use_da = FALSE;
-    	TaskName = "ATA[PI] Subsystem 2";
-    }
-	
-    /* scan bus - try to locate all devices (disables irq) */    
     ata_InitBus(ab);
 
-    if ((ab->ab_Dev[0] == DEV_NONE) && (ab->ab_Dev[1] == DEV_NONE) &&
-        (!ab->keepEmpty))
-    {
-        /*
-         * If there are no devices, and KeepEmpty is not set
-         * the bus will be thrown away.
-         */
-        return FALSE;
-    }
-
-    /*
-     * Assign bus number.
-     * TODO:
-     * 1. This does not take into account possibility to
-     * unload drivers. In this case existing units will disappear,
-     * freeing up their numbers. These numbers should be reused.
-     * 2. We REALLY need modify-and-fetch atomics.
-     */
     Forbid();
     ab->ab_BusNum = ATABase->ata__buscount++;
     Permit();
+    D(bug("[ATA:Bus] ATABase->ata__buscount = %01d\n", ATABase->ata__buscount);)
 
     if ((ab->ab_Dev[0] < DEV_ATA) && (ab->ab_Dev[1] < DEV_ATA))
     {
-        /* Do not start up task if there are no usable devices. */
-        return TRUE;
+        D(bug("[ATA:Bus] No ATA Drives found on Bus %01d\n", ab->ab_BusNum);)
+        return FALSE;    
     }
 
-    /*
-     * This small trick is based on the fact that shared semaphores
-     * have no specific owner. You can obtain and release them from
-     * within any task. It will block only on attempt to re-lock it
-     * in exclusive mode.
-     * So instead of complex handshake we obtain the semaphore before
-     * starting bus task. It will release the semaphore when done.
-     */
     ObtainSemaphoreShared(&ATABase->DetectionSem);
     
-    /*
-     * Start up bus task. It will perform scanning asynchronously, and
-     * then, if successful, insert units. This allows to keep things parallel.
-     */
-    D(bug("[ATA>>] Start: Bus %u: Unit 0 - %d, Unit 1 - %d\n", ab->ab_BusNum, ab->ab_Dev[0], ab->ab_Dev[1]));
-    if(ATABase->ata__buscount == 0)
+    if(ab->ab_BusNum == 0)
     {
-   	 return NewCreateTask(TASKTAG_PC    , BusTaskCode,
-                         TASKTAG_NAME       , TaskName,
+        D(bug("[ATA:Bus] Start BusTask: %01d | Unit 0: %01d | Unit 1: %01d\n", ab->ab_BusNum, ab->ab_Dev[0], ab->ab_Dev[1]);)
+        return NewCreateTask(TASKTAG_PC    , BusTaskCode,
+                         TASKTAG_NAME       , "ATA[PI] Bus #0",
                          TASKTAG_STACKSIZE  , STACK_SIZE,
                          TASKTAG_PRI        , TASK_PRI,
                          TASKTAG_TASKMSGPORT, &ab->ab_MsgPort,
                          TASKTAG_ARG1       , ab,
                          TASKTAG_ARG2       , ATABase,
                          TAG_DONE) ? TRUE : FALSE;
-     }else{
-   	 return NewCreateTask(TASKTAG_PC    , BusTaskCode2,
-                         TASKTAG_NAME       , TaskName,
-                         TASKTAG_STACKSIZE  , STACK_SIZE,
-                         TASKTAG_PRI        , TASK_PRI,
-                         TASKTAG_TASKMSGPORT, &ab->ab_MsgPort,
-                         TASKTAG_ARG1       , ab,
-                         TASKTAG_ARG2       , ATABase,
-                         TAG_DONE) ? TRUE : FALSE;     
-     }
+    } else {
+        if(ab->ab_BusNum == 1)
+   	    {
+            D(bug("[ATA:Bus] Start BusTask: %01d | Unit 0: %01d | Unit 1: %01d\n", ab->ab_BusNum, ab->ab_Dev[0], ab->ab_Dev[1]);)
+            return NewCreateTask(TASKTAG_PC    , BusTaskCode2,
+                            TASKTAG_NAME       , "ATA[PI] Bus #1",
+                            TASKTAG_STACKSIZE  , STACK_SIZE,
+                            TASKTAG_PRI        , TASK_PRI,
+                            TASKTAG_TASKMSGPORT, &ab->ab_MsgPort,
+                            TASKTAG_ARG1       , ab,
+                            TASKTAG_ARG2       , ATABase,
+                            TAG_DONE) ? TRUE : FALSE;     
+        }
+    }
 }
 
 AROS_UFH3(BOOL, Hidd_ATABus_Open,

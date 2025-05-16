@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2012, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: NewShell CLI Command
@@ -97,7 +97,7 @@
 #include <aros/shcommands.h>
 
 AROS_SH3(NewShell, 41.2,
-AROS_SHA(STRPTR, ,WINDOW, ,"CON:10/50/640/480/AROS-Shell/CLOSE"),
+AROS_SHA(STRPTR, ,WINDOW, ,"CON:100/100/1080/500/ApolloOS Shell/CLOSE"),
 AROS_SHA(STRPTR, ,FROM,   ,"S:Shell-Startup"),
 AROS_SHA(LONG *, ,STACK,/N,NULL))
 {

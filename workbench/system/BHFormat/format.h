@@ -41,19 +41,14 @@
 #ifdef __AROS__
 #include <aros/debug.h>
 #define _WBenchMsg WBenchMsg
-#else
-#include <clib/debug_protos.h>
+#define DD(x) x
 #define bug kprintf
-#ifdef DEBUG
-#define D(x) (x)
-#else
-#define D(x)
-#endif
 #endif
 
 
 /* Maximum length of a name component - I can't find this defined anywhere */
 #define MAX_FS_NAME_LEN 30
+#define MAX_FAT_NAME_LEN 11+1
 
 /* Short name for an unsigned 64-bit integer type */
 typedef unsigned long long ULLONG;
@@ -67,11 +62,14 @@ typedef enum {
 extern struct WBStartup * _WBenchMsg;
 extern BPTR bpfhStdErr;
 extern char szDosDevice[MAX_FS_NAME_LEN+2];
+extern char szVolume[MAX_FS_NAME_LEN+2];
 extern char * pchDosDeviceColon;
 extern ULLONG ibyStart, ibyEnd;
 extern IPTR MaxTransfer;
 extern IPTR LowCyl, HighCyl;
 extern ULONG DosType;
+extern BSTR DeviceName;
+extern char *DeviceName_String;
 extern const char szVersion[];
 
 void ReportErrSz( ErrorType ert, LONG err, const char * pszMessage, ... );

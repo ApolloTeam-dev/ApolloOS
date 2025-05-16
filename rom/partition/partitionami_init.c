@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2002, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2002, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: AmigaOS specific partition initialization code.
@@ -15,6 +15,7 @@
 #include <libraries/partition.h>
 #include "platform.h"
 #include "partition_support.h"
+#include "debug.h"
 
 /****************************************************************************************/
 

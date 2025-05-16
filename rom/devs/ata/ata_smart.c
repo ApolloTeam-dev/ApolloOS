@@ -1,5 +1,5 @@
 /*
-    Copyright © 2019, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2019, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -17,6 +17,7 @@
 #include <devices/ata.h>
 
 #include "ata.h"
+
 
 /* perform the S.M.A.R.T operation specified in io_Reserved1 */
 void ata_SMARTCmd(struct IOStdReq *io)

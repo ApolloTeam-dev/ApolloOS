@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2016, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2016, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Boot AROS
@@ -9,7 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <aros/debug.h>
+//#include <aros/debug.h>
 #include <exec/alerts.h>
 #include <aros/asmcall.h>
 #include <aros/bootloader.h>
@@ -52,6 +52,7 @@ extern void dosboot_BootPoint(struct BootNode *bn);
 
 #endif
 
+
 static BOOL GetBootNodeDeviceUnit(struct BootNode *bn, BPTR *device, IPTR *unit, ULONG *bootblocks)
 {
     struct DeviceNode *dn;
@@ -59,26 +60,46 @@ static BOOL GetBootNodeDeviceUnit(struct BootNode *bn, BPTR *device, IPTR *unit,
     struct DosEnvec *de;
 
     if (bn == NULL)
+    {
+        D(bug("GetBootNodeDeviceUnit - FALSE -> bn == NULL\n"));
         return FALSE;
+    }
 
     dn = bn->bn_DeviceNode;
+
     if (dn == NULL)
+    {
+        D(bug("GetBootNodeDeviceUnit - FALSE -> dn == NULL\n"));
         return FALSE;
+    }
 
     fssm = BADDR(dn->dn_Startup);
     if (fssm == NULL)
+    {
+        D(bug("GetBootNodeDeviceUnit - FALSE -> fssm == NULL\n"));
         return FALSE;
+    }
 
     *unit = fssm->fssm_Unit;
     *device = fssm->fssm_Device;
 
     de = BADDR(fssm->fssm_Environ);
+    
     /* Following check from Guru Book */
+    D(bug("GetBootNodeDeviceUnit - Tablesize = %d\n", de->de_TableSize));
     if (de == NULL || (de->de_TableSize & 0xffffff00) != 0 || de->de_TableSize < DE_BOOTBLOCKS)
-    	return FALSE;
+    {
+        D(bug("GetBootNodeDeviceUnit - FALSE -> Guru Book\n"));        
+        return FALSE;
+    }
+    
     *bootblocks = de->de_BootBlocks * de->de_SizeBlock * sizeof(ULONG);
     if (*bootblocks == 0)
-    	return FALSE;
+    {
+        D(bug("GetBootNodeDeviceUnit - FALSE -> *bootblocks == 0\n"));
+        return FALSE;
+    }
+
     return TRUE;
 }
 
@@ -98,7 +119,7 @@ static BOOL BootBlockCheckSum(UBYTE *bootblock, ULONG bootblock_size)
 	crc += v;
     }
     crc ^= 0xffffffff;
-    D(bug("[Strap] bootblock %08x checksum %s (%08x %08x)\n",
+    D(bug("[BOOT] bootblock %08x checksum %s (%08x %08x)\n",
 	AROS_LONG2BE(*(ULONG*)bootblock), crc == crc2 ? "ok" : "error", crc, crc2));
     return crc == crc2;
 }
@@ -118,7 +139,7 @@ static BOOL BootBlockCheck(UBYTE *bootblock, ULONG bootblock_size)
 	if (fse->fse_DosType == dostype)
 	    return TRUE;
     }
-    D(bug("[Strap] unknown bootblock dostype %08x\n", dostype));
+    D(bug("[BOOT] unknown bootblock dostype %08x\n", dostype));
     return FALSE;
 }
 
@@ -157,15 +178,16 @@ static BOOL dosboot_BootBlock(struct BootNode *bn, struct ExpansionBase *Expansi
     VOID_FUNC init = NULL;
     UBYTE *buffer;
 
-    if (!GetBootNodeDeviceUnit(bn, &device, &unit, &bootblock_size))
-        return FALSE;
+    
+
+    if (!GetBootNodeDeviceUnit(bn, &device, &unit, &bootblock_size)) return FALSE;
 
     D(bug("%s: Probing for boot block on %b.%d\n", __func__, device, unit));
     /* memf_chip not required but more compatible with old bootblocks */
     buffer = AllocMem(bootblock_size, MEMF_CHIP);
     if (buffer != NULL)
     {
-       D(bug("[Strap] bootblock address %p\n", buffer));
+       D(bug("[BOOT] bootblock address %p\n", buffer));
        if ((msgport = CreateMsgPort()))
        {
            if ((io = CreateIORequest(msgport, sizeof(struct IOStdReq))))
@@ -177,12 +199,12 @@ static BOOL dosboot_BootBlock(struct BootNode *bn, struct ExpansionBase *Expansi
                    io->io_Data = buffer;
                    io->io_Offset = 0;
                    io->io_Command = CMD_READ;
-                   D(bug("[Strap] %b.%d bootblock read (%d bytes)\n", device, unit, bootblock_size));
+                   D(bug("[BOOT] %b.%d bootblock read (%d bytes)\n", device, unit, bootblock_size));
                    DoIO((struct IORequest*)io);
 
                    if (io->io_Error == 0)
                    {
-                       D(bug("[Strap] %b.%d bootblock read to %p ok\n", device, unit, buffer));
+                       D(bug("[BOOT] %b.%d bootblock read to %p ok\n", device, unit, buffer));
                        if (BootBlockCheck(buffer, bootblock_size))
                        {
                            SetBootNodeDosType(bn, AROS_LONG2BE(*(LONG *)buffer));
@@ -191,10 +213,10 @@ static BOOL dosboot_BootBlock(struct BootNode *bn, struct ExpansionBase *Expansi
                        }
                        else
                        {
-                           D(bug("[Strap] Not a valid bootblock\n"));
+                           D(bug("[BOOT] Not a valid bootblock\n"));
                        }
                    } else {
-                       D(bug("[Strap] io_Error %d\n", io->io_Error));
+                       D(bug("[BOOT] io_Error %d\n", io->io_Error));
                    }
                    io->io_Command = TD_MOTOR;
                    io->io_Length = 0;
@@ -245,6 +267,8 @@ static inline void dosboot_BootDos(void)
 {
     struct Resident *DOSResident;
 
+    D(bug("[BOOT] dosboot_BootDos - Initialising dos.library so Filesystems can be loaded before boot\n"));
+
     /* Initialize dos.library manually. This is what Workbench floppy bootblocks do. */
     DOSResident = FindResident( "dos.library" );
 
@@ -255,32 +279,29 @@ static inline void dosboot_BootDos(void)
 
     /* InitResident() of dos.library will not return on success. */
     InitResident( DOSResident, BNULL );
+
+    D(bug("[BOOT] dosboot_BootDos - Initialized dos.library Finished\n"));
 }
 
 
-/* Attempt to boot, first from the BootNode boot blocks,
- * then via the DOS handlers
- */
+/* Attempt to boot, first from the BootNode boot blocks, then via the DOS handlers */
 LONG dosboot_BootStrap(LIBBASETYPEPTR LIBBASE)
 {
     struct ExpansionBase *ExpansionBase = LIBBASE->bm_ExpansionBase;
     struct BootNode *bn;
+    struct DeviceNode *dn;
     int i, nodes;
+    char *bootdevice;
 
-    /*
-     * Try to boot from any device in the boot list,
-     * highest priority first.
-     */
+    // Try to boot from any device in the boot list, highest priority first.
     ListLength(&ExpansionBase->MountList, nodes);
     for (i = 0; i < nodes; i++)
     {
         bn = (struct BootNode *)GetHead(&ExpansionBase->MountList);
 
-        if (bn->bn_Node.ln_Type != NT_BOOTNODE ||
-            bn->bn_Node.ln_Pri <= -128 ||
-            bn->bn_DeviceNode == NULL)
+        if (bn->bn_Node.ln_Type != NT_BOOTNODE || bn->bn_Node.ln_Pri <= -128 || bn->bn_DeviceNode == NULL)
         {
-            D(bug("%s: Ignoring %p, not a bootable node\n", __func__, bn));
+            D(bug("[BOOT] %s: Ignoring %p, not a bootable node\n", __func__, bn));
             ObtainSemaphore(&IntExpBase(ExpansionBase)->BootSemaphore);
             REMOVE(bn);
             ADDTAIL(&ExpansionBase->MountList, bn);
@@ -288,45 +309,32 @@ LONG dosboot_BootStrap(LIBBASETYPEPTR LIBBASE)
             continue;
         }
 
-        /* For each attempt, this node is at the head
-         * of the MountList, so that DOS will try to
-         * use it as SYS: if the strap works
-         */
+        // Select Boot Method - DFx device = BootBlock - Other devices = Dos.Library
+        dn = bn->bn_DeviceNode;
+        bootdevice = AROS_BSTR_ADDR(dn->dn_Name);
 
-        /* First try as a BootBlock.
-         * dosboot_BootBlock returns TRUE if it *was*
-         * a BootBlock device, but couldn't be booted.
-         * Returns FALSE if not a bootblock device,
-         * and doesn't return at all if the bootblock
-         * was successful.
-         */
-        D(bug("%s: Attempting %b as BootBlock\n",__func__, ((struct DeviceNode *)bn->bn_DeviceNode)->dn_Name));
-        if (!dosboot_BootBlock(bn, ExpansionBase)) {
-            /* Then as a BootPoint node */
-            D(bug("%s: Attempting %b as BootPoint\n", __func__, ((struct DeviceNode *)bn->bn_DeviceNode)->dn_Name));
-            dosboot_BootPoint(bn);
+        // For each attempt, this node is at the head of the MountList, so that DOS will try to use it as SYS: if the strap works
+        D(bug("[BOOT] %s: Processing BootNode %s using Boot Method: ",__func__, bootdevice));
 
-            /* And finally with DOS */
-            D(bug("%s: Attempting %b with DOS\n", __func__, ((struct DeviceNode *)bn->bn_DeviceNode)->dn_Name));
+        if ( (bootdevice[0] == 'D') && (bootdevice[1] == 'F') )
+        {
+            D(bug("BOOTBLOCK\n"));
+            dosboot_BootBlock(bn, ExpansionBase);
+        } else {
+            D(bug("DOS.Library\n"));
             dosboot_BootDos();
         }
 
         /* Didn't work. Next! */
-        D(bug("%s: DeviceNode %b (%d) was not bootable\n", __func__,
-                    ((struct DeviceNode *)bn->bn_DeviceNode)->dn_Name,
-                    bn->bn_Node.ln_Pri));
-
+        D(bug("[BOOT] %s: DeviceNode %b (%d) was not bootable\n", __func__, ((struct DeviceNode *)bn->bn_DeviceNode)->dn_Name, bn->bn_Node.ln_Pri));
         ObtainSemaphore(&IntExpBase(ExpansionBase)->BootSemaphore);
         REMOVE(bn);
         ADDTAIL(&ExpansionBase->MountList, bn);
         ReleaseSemaphore(&IntExpBase(ExpansionBase)->BootSemaphore);
     }
 
-    D(bug("%s: No BootBlock, BootPoint, or BootDos nodes found\n",__func__));
+    D(bug("[BOOT] %s: No BootBlock, BootPoint, or BootDos nodes found\n",__func__));
 
-    /* At this point we now know that we were unable to
-     * strap any bootable devices.
-     */
-
+    /* At this point we now know that we were unable to strap any bootable devices. */
     return ERROR_NO_DISK;
 }

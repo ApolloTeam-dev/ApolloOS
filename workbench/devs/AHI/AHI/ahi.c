@@ -41,6 +41,9 @@
 
 #define DBSTEP      0.5
 
+#define DD(x) x
+#define bug kprintf
+
 const char *Version = "$VER: AHI preferences " VERS "";
 
 #define TEMPLATE "FROM,EDIT/S,USE/S,SAVE/S,PUBSCREEN/K"
@@ -83,7 +86,7 @@ int main(int argc, char **argv) {
   int i;
   char pubscreen[32];
 
-  D(bug("[AHI:Prefs] %s()\n", __func__);)
+  DD(bug("[AHI:Prefs] %s()\n", __func__);)
 
   if(argc) {
     rdargs=ReadArgs( TEMPLATE , (SIPTR *) &args, NULL);

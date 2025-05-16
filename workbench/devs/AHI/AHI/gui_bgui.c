@@ -37,6 +37,8 @@
 #include "support.h"
 #include "gui.h"
 
+#define D(x) x
+
 static void GUINewSettings(void);
 static void GUINewUnit(void);
 static void GUINewMode(void);

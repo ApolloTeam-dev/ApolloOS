@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2013, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -56,7 +56,8 @@ AROS_UFH3(static APTR, dosboot_Cleanup,
     	/* Close "No boot media" screen. This is actually what we are here for. */
     	CloseBootScreen(base->bm_Screen, base);
     }
-    anim_Stop(base);
+    
+    //anim_Stop(base);
 
     /* Well, since we are here, let's completely expunge. :) */
     CloseLibrary(&base->bm_ExpansionBase->LibNode);

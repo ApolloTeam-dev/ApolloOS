@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -44,9 +44,9 @@ LONG stopchunks[] =
 
 void FontPrefs_Handler(STRPTR filename)
 {
-    struct IFFHandle *iff;
+	struct IFFHandle *iff;
     
-    D(bug("In IPrefs:FontPrefs_Handler\n"));
+    bug("In IPrefs:FontPrefs_Handler\n");
     
     if ((iff = CreateIFF(filename, stopchunks, 1)))
     {
@@ -126,13 +126,12 @@ void FontPrefs_Handler(STRPTR filename)
 				/* Keep trying to close WB screen unless user
 				   cancels or it wasn't open in the first
 				   place */
-				while (!(closed || cancel ||
-				    NextPubScreen(NULL, screen_name) == NULL))
+				while (!(closed || cancel || NextPubScreen(NULL, screen_name) == NULL))
 				{
 				    closed = CloseWorkBench();
 				    if (!closed)
 					cancel = ShowMessage("System Request",
-					    "Intuition is attempting to reset"
+					    "FontPrefs is attempting to reset"
 					    " the Workbench Screen.\n"
 					    "Please close all windows,"
 					    " except drawers.",

@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2008, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2008, The AROS Development Team. All rights reserved.
     $Id$
 */
 /*
@@ -8,10 +8,6 @@
  * 04-jan-2008 [Tomasz Wiszkowski]      corrected tabulation
  */
 
-
-#ifndef DEBUG
-#define DEBUG 0
-#endif
 
 #include "os.h"
 #include "misc.h"

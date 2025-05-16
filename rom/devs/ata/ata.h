@@ -38,13 +38,41 @@
 #define STACK_SIZE              16384
 #define TASK_PRI                10
 #define TIMEOUT                 30
+
 #if VAMPIRECARDSERIES==2
 #define CACHE_SIZE_BITS         14      /* V2 = 2^14 * 512 byte blocks = 8Mb */
 #else
 #define CACHE_SIZE_BITS         17      /* V4 = 2^17 * 512 byte blocks = 64Mb */
 #endif
+
 #define CACHE_SIZE              (1<<CACHE_SIZE_BITS)
 #define CACHE_MASK              (CACHE_SIZE-1)
+
+#if APOLLO_DEBUG
+#define DEBUG 1
+#else
+#define DEBUG 0
+#endif
+
+#if DEBUG
+#define DINIT(x) x
+#define D(x) x
+#define DD(x)
+#define DDD(x) 
+#define DERROR(x) x
+#define DIRQ(x) 
+#define DATTR(x) 
+#define DATAPI(x)
+#else
+#define DINIT(x)
+#define D(x)
+#define DD(x)
+#define DDD(x) 
+#define DERROR(x)
+#define DIRQ(x) 
+#define DATTR(x) 
+#define DATAPI(x)
+#endif
 
 /*
    Don't blame me for information redundance here!
@@ -155,11 +183,11 @@ struct ata_Controller
 struct ata_Bus
 {
    struct ataBase          	*ab_Base;  			/* device self */
-    OOP_Object          	*ab_Object;
+    OOP_Object          	   *ab_Object;
 
    /** Bus object data **/
-   struct ATA_BusInterface	*busVectors;     		/* Control vector table     */
-   struct ATA_PIOInterface	*pioVectors;     		/* PIO vector table         */
+   struct ATA_BusInterface	   *busVectors;     		/* Control vector table     */
+   struct ATA_PIOInterface	   *pioVectors;     		/* PIO vector table         */
    APTR                    	*dmaVectors;     		/* DMA vector table         */
    ULONG                   	pioDataSize;     		/* PIO interface data size  */
    ULONG                   	dmaDataSize;     		/* DMA interface data size  */
@@ -175,7 +203,7 @@ struct ata_Bus
    /** Data Requests/DMA **/
    UBYTE                   	ab_BusNum;  			/* bus id - used to calculate device id */
 
-   OOP_Object        		*ab_Units[MAX_BUSUNITS];   	/* Units on the bus */
+   OOP_Object        		   *ab_Units[MAX_BUSUNITS];   	/* Units on the bus */
    struct ata_Unit         	*ab_SelectedUnit;    		/* Currently selected unit */
 
    ULONG                   	ab_IntCnt;
@@ -187,8 +215,6 @@ struct ata_Bus
    struct Interrupt        	ab_ResetInt;
 
    APTR                    	ab_BounceBufferPool;
-
-   BOOL use_da;
 
    /** functions go here **/
    void                   	(*ab_HandleIRQ)(struct ata_Unit* unit, UBYTE status);
@@ -331,6 +357,8 @@ struct ata_Unit
    ULONG               au_Capacity;    /* Highest sector accessible through LBA28 */
    UQUAD               au_Capacity48;  /* Highest sector accessible through LBA48 */
    ULONG               au_Cylinders;
+   ULONG               au_StartCyl;    // Start Cylinder for Partition on ATAPI Devices
+   ULONG               au_EndCyl;      // End Cylinder for Partition on ATAPI Devices
    UBYTE               au_Heads;
    UBYTE               au_Sectors;
    UBYTE               au_Model[41];
@@ -403,7 +431,7 @@ AROS_UFP3(BOOL, Hidd_ATABus_Open,
           AROS_UFPA(IPTR, reqUnit, A1));
 
 void ata_InitBus(struct ata_Bus *);
-int atapi_TestUnitOK(struct ata_Unit *);
+BOOL atapi_TestUnitOK(struct ata_Unit *);
 BOOL ata_setup_unit(struct ata_Bus *bus, struct ata_Unit *unit);
 void ata_init_unit(struct ata_Bus *bus, struct ata_Unit *unit, UBYTE u);
 

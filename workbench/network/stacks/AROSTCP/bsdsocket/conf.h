@@ -215,6 +215,12 @@ extern struct ExecBase *SysBase;
 #include <limits.h>
 #include <stddef.h>
 
+#if APOLLO_DEBUG
+#define DEBUG 0
+#else
+#define DEBUG 0
+#endif
+
 #ifdef DEBUG
 #define D(x) x
 #else

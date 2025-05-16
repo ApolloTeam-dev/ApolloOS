@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2015, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2015, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Release a semaphore.
@@ -13,7 +13,7 @@
 #include "exec_util.h"
 #include "semaphores.h"
 
-#define CHECK_TASK	0 /* it seems to be legal to call ObtainSemaphore in one task and ReleaseSemaphore in another */
+#define CHECK_TASK	1 /* it seems to be legal to call ObtainSemaphore in one task and ReleaseSemaphore in another */
 
 /*****************************************************************************/
 #undef  Exec
@@ -63,6 +63,9 @@
     struct TraceLocation tp = CURRENT_LOCATION("ReleaseSemaphore");
     struct Task *ThisTask = GET_THIS_TASK;
 
+	
+
+
     /* We can be called from within exec's pre-init code. It's okay. */
     if (!ThisTask)
     	return;
@@ -70,8 +73,8 @@
     if (ThisTask->tc_State == TS_REMOVED)
         return;
 
-    if (!CheckSemaphore(sigSem, &tp, SysBase))
-        return;
+    //if (!CheckSemaphore(sigSem, &tp, SysBase))
+    //    return;
 
     /* Protect the semaphore structure from multiple access. */
     Forbid();
@@ -79,6 +82,8 @@
     /* Release one on the nest count */
     sigSem->ss_NestCount--;
     sigSem->ss_QueueCount--;
+
+	//kprintf("SEMAPHORE] ReleaseSemaphore \t%s\t%d\t%d\n", ThisTask->tc_Node.ln_Name, sigSem->ss_NestCount, sigSem->ss_QueueCount);
 
     if(sigSem->ss_NestCount == 0)
     {
@@ -95,6 +100,7 @@
 		If it is not, there is a chance that the semaphore
 		is corrupt. It will be afterwards anyway :-) 
 	    */
+	    D(bug("Alert(AN_SemCorrupt) - SHould NOT happen\n"));
 	    Alert( AN_SemCorrupt );
 	}
 #endif
@@ -187,17 +193,16 @@
 	    sigSem->ss_Owner = NULL;
 	    sigSem->ss_QueueCount = -1;
 
-	    D(bug("ReleaseSemaphore(): No tasks - ss_NestCount == %ld\n",
-		sigSem->ss_NestCount);)
+	    D(bug("ReleaseSemaphore(): No tasks - ss_NestCount == %ld\n", sigSem->ss_NestCount);)
 	}
     }
     else if(sigSem->ss_NestCount < 0)
     {
-	/*
-	    This can't happen. It means that somebody has released
-	    more times than they have obtained.
-	*/
+	// This can't happen. It means that somebody has released times than they have obtained.
+
+	kprintf("ReleaseSemaphore(): sigSem->ss_NestCount < 0 = ILLEGAL | Task = %s\n", ThisTask->tc_Node.ln_Name);
 	Alert( AN_SemCorrupt );
+	while(TRUE);
     }
 
     /* All done. */

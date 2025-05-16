@@ -799,7 +799,7 @@ aros_cxx_libs=
 aros_target_genmap="-Wl,-Map -Xlinker"
 
 # Native flavour stuff
-aros_serial_debug="0"
+apollo_serial_debug="0"
 
 # Palm native flavour stuff
 aros_palm_debug_hack="0"
@@ -1378,6 +1378,7 @@ case "$target_os" in
                 AC_MSG_ERROR("Unknown CPU for Linux -- $target_cpu")
                 ;;
         esac
+
         case "$aros_target_variant" in
             android)
 
@@ -1441,7 +1442,6 @@ case "$target_os" in
             *x86_64*)
                 PLATFORM_EXECSMP="#define __AROSPLATFORM_SMP__"
                 aros_target_cpu="x86_64"
-                aros_serial_debug=1
                 if test "$aros_object_format" = "" ; then
                     aros_object_format="elf_x86_64"
                 fi
@@ -2020,42 +2020,6 @@ case "$target_os" in
         esac
         ;;
 
-    mac*)
-        aros_target_arch="mac"
-        aros_shared_default="no"
-        case "$target_cpu" in
-            *m68k*)
-                aros_target_cpu="m68k"
-                aros_object_format="m68kelf"
-                aros_flavour="mac68knative"
-                aros_target_mkdep="$aros_target_mkdep -D__GNUC__ -Dm68k"
-                aros_isa_flags="$""(ISA_MC68000_FLAGS)"
-                aros_nominal_width=512
-                aros_nominal_height=384
-                aros_nominal_depth=8
-                aros_target_ar_flags="cru"
-                aros_c_libs="$aros_c_libs -lgcc1"
-                aros_shared_default=no
-                aros_shared_cflags="-fpic"
-                aros_shared_aflags=""
-                aros_shared_ldflags="-Wl,-rpath,./lib -shared"
-                aros_kernel_ldflags="-Wl,-rpath,./lib"
-                aros_debug_cppflags="$aros_messages_debug"
-                aros_debug_cflags="$aros_symbols_debug"
-                aros_debug_aflags=""
-                aros_debug_ldflags="$aros_symbols_debug"
-                aros_mungwall_debug="0"
-                aros_modules_debug="0"
-                gcc_target_cpu="mc68000"
-                ignore_undefined_symbols="-ius"
-                ;;
-           *)
-                AC_MSG_ERROR("Unknown CPU for Mac68k -- $target_cpu")
-                ;;
-        esac
-        ;;
-
-    *)
         AC_MSG_ERROR([Unsupported target architecture $target])
         ;;
 esac
@@ -3036,24 +3000,10 @@ fi
 
 dnl See if the user wants the serial debug output for native flavour
 AC_MSG_CHECKING([whether serial debug is enabled])
-AC_ARG_WITH(serial-debug,AC_HELP_STRING([--with-serial-debug],[Enable serial debug output in native (default=no)]),serial_debug=$withval,serial_debug=none)
-if test "$aros_serial_debug" = 0 ; then
-    serial_debug_forced=""
-    if test "$serial_debug" = "yes" ; then
-        serial_debug="1"
-    fi
-    if test "$serial_debug" = "no" ; then
-        serial_debug="none"
-    fi
-else
-    serial_debug_forced="(forced)"
-    serial_debug=$aros_serial_debug
-fi
-if test "$serial_debug" != "none" ; then
-    aros_serial_debug=$serial_debug
-    AC_MSG_RESULT($serial_debug_forced on port $serial_debug)
-else
-    AC_MSG_RESULT(no)
+AC_ARG_WITH(serial-debug,AC_HELP_STRING([--with-serialdebug],[Enable serial debug output in native (default=no)]),serial_debug=$withval,serial_debug=none)
+
+if test "$serial_debug" = "yes" ; then
+    apollo_serial_debug="1"
 fi
 
 dnl See if the user wants the palm debug output hack for palm native flavour
@@ -3535,7 +3485,7 @@ AC_SUBST(aros_dist_date)
 AC_SUBST(aros_dist_amigadate)
 
 # Native version related
-AC_SUBST(aros_serial_debug)
+AC_SUBST(apollo_serial_debug)
 AC_SUBST(PLATFORM_EXECSMP)
 AC_SUBST(ENABLE_EXECSMP)
 
