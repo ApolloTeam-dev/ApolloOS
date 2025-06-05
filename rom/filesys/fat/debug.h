@@ -5,7 +5,9 @@
 
 #if DEBUG
 #define D(x) x
+#define DD(x)
 #define bug kprintf
 #else
 #define D(x)
+#define DD(x)
 #endif

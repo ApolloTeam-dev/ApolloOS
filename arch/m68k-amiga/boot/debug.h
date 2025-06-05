@@ -18,7 +18,7 @@ void DebugInit(void);
 int DebugPutChar(register int chr);
 int DebugMayGetChar(void);
 
-#if APOLLO_DEBUG2
+#if APOLLO_DEBUG
 void DebugPutStr(register const char *buff);
 void DebugPutHex(const char *what, ULONG val);
 void DebugPutDec(const char *what, ULONG val);

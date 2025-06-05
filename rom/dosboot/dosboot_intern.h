@@ -64,13 +64,13 @@ void InitBootConfig(struct BootConfig *bootcfg);
 LONG dosboot_BootStrap(struct DOSBootBase *DOSBootBase);
 void dosboot_BootScan(struct DOSBootBase *DOSBootBase);
 
-//struct Screen *NoBootMediaScreen(struct DOSBootBase *DOSBootBase);
+struct Screen *NoBootMediaScreen(struct DOSBootBase *DOSBootBase);
 struct Screen *OpenBootScreen(struct DOSBootBase *DOSBootBase);
 void CloseBootScreen(struct Screen *scr, struct DOSBootBase *DOSBootBase);
 
-//APTR anim_Init(struct Screen *scr, struct DOSBootBase *DOSBootBase);
-//void anim_Stop(struct DOSBootBase *DOSBootBase);
-//void anim_Animate(struct Screen *scr, struct DOSBootBase *DOSBootBase);
+APTR anim_Init(struct Screen *scr, struct DOSBootBase *DOSBootBase);
+void anim_Stop(struct DOSBootBase *DOSBootBase);
+void anim_Animate(struct Screen *scr, struct DOSBootBase *DOSBootBase);
 
 #define IntuitionBase DOSBootBase->bm_IntuitionBase
 #define GadToolsBase DOSBootBase->bm_GadToolsBase

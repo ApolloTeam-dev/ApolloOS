@@ -3840,8 +3840,8 @@ static void fillinfodata(struct InfoData *id)
         id->id_InUse = DOSFALSE;
     }
 
-    DD(bug("[SFS] fillinfodata: VolumeNode = %12s (0x%8lx) | DiskType = 0x%08lx | DiskState = %d | LockList = %s\n",
-        AROS_BSTR_ADDR(globals->volumenode->dl_Name), id->id_VolumeNode, id->id_DiskType,  id->id_DiskState, (id->id_InUse == DOSTRUE)? "DOSTRUE":"DOSFALSE"));
+    D(bug("[SFS] fillinfodata: VolumeNode = %12s (0x%8lx) | DiskType = 0x%08lx | DiskState = %d | LockList = %s\n",
+        AROS_BSTR_ADDR(globals->volumenode->dl_Name), TOBADDR(globals->volumenode), id->id_DiskType,  id->id_DiskState, (id->id_InUse == DOSTRUE)? "DOSTRUE":"DOSFALSE"));
 
 }
 

@@ -928,8 +928,8 @@ void FillDiskInfo(struct InfoData *id, struct Globals *glob)
         id->id_InUse = DOSFALSE;
     }
 
-        D(bug("[FAT] fillinfodata: VolumeNode = %12s (0x%8lx) | DiskType = 0x%08lx | DiskState = %d | LockList = %s\n",
-            AROS_BSTR_ADDR(glob->devnode->dol_Name), id->id_VolumeNode, id->id_DiskType,  id->id_DiskState, (id->id_InUse == DOSTRUE)? "DOSTRUE":"DOSFALSE"));
+        DD(bug("[FAT] fillinfodata: VolumeNode = %12s (0x%8lx) | DiskType = 0x%08lx | DiskState = %d | LockList = %s\n",
+            AROS_BSTR_ADDR(glob->devnode->dol_Name), MKBADDR(glob->sb->doslist), id->id_DiskType,  id->id_DiskState, (id->id_InUse == DOSTRUE)? "DOSTRUE":"DOSFALSE"));
 
 }
 
@@ -1002,10 +1002,27 @@ void DoDiskInsert(struct Globals *glob)
         return;
     }
 
-    // Then we check if disk inserted is a Amiga Partitioned RDB Disk (BYTE 0x200=512 = Sector#1/LONG#0x0 | ID=0x5244534b=RDSK). IN the case of a hybrid disk (RDB + MBR) we give priority to RDB
+    // Then we check if disk inserted is a Amiga Partitioned RDB Disk (BYTE 0x200=512 = Sector#0 or #1/LONG#0x0 | ID=0x5244534b=RDSK). IN the case of a hybrid disk (RDB + MBR) we give priority to RDB
     // if RDB is found then we cannot do anything and we present user with a requester to inform that inserted disk is Amiga RDB and a reboot is required to perform DosBoot process to Mount RDB  
     
     UBYTE read_buffer[0x200];
+
+    err = RawDiskSectorRead(0, geometry.dg_SectorSize, (UBYTE*)&read_buffer[0], glob);
+    if (err)
+    {
+        D(bug("[FAT] [%s] Read Error = %d on BootSector #1 (RDB Check)\n",__FUNCTION__, err ));
+        return;
+    } else {
+        ULONG RDB_ID = ((read_buffer[0]<<24) + (read_buffer[1]<<16) + (read_buffer[2]<<8) + read_buffer[3]);
+        D(kprintf("[FAT] [%s] RDB = %4d|%08x\n", __FUNCTION__, 0x200, RDB_ID)); 
+        if(RDB_ID == 0x5244534b)
+        {
+            glob->diskioreq->iotd_Req.io_Command = 0xffff;
+            glob->diskioreq->iotd_Req.io_Length = 1;
+            DoIO((struct IORequest *)glob->diskioreq);
+            return;
+        }
+    }
 
     err = RawDiskSectorRead(1, geometry.dg_SectorSize, (UBYTE*)&read_buffer[0], glob);
     if (err)

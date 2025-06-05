@@ -118,14 +118,14 @@ static BOOL populateGadgets_PageMain(LIBBASETYPEPTR DOSBootBase, struct Gadget *
 		gadget = CreateGadgetA(BUTTON_KIND, gadget, &ng, NULL);
     }
 
-    if (gadget != NULL)
+    /*if (gadget != NULL)
     {
 		ng.ng_GadgetText = "ApolloFloppy";
 		ng.ng_GadgetID = BUTTON_APOLLOFLOPPY;
 		ng.ng_LeftEdge = cx;
 		ng.ng_TopEdge = 105;
 		gadget = CreateGadgetA(BUTTON_KIND, gadget, &ng, NULL);
-	}
+	}*/
 
     return (gadget != NULL);
 }
@@ -431,7 +431,7 @@ static BOOL populateGadgets(LIBBASETYPEPTR DOSBootBase, struct Gadget *gadget, W
 	{
         case PAGE_MAIN:			populateGadgets_PageMain(DOSBootBase, gadget); break;
         case PAGE_BOOT:			populateGadgets_PageBoot(DOSBootBase, gadget); break;
-        case PAGE_APOLLOFLOPPY: populateGadgets_PageApolloFloppy(DOSBootBase, gadget); break;
+        //case PAGE_APOLLOFLOPPY: populateGadgets_PageApolloFloppy(DOSBootBase, gadget); break;
 	}
 
 	return (gadget != NULL);
@@ -523,17 +523,17 @@ static UWORD msgLoop(LIBBASETYPEPTR DOSBootBase, struct Window *win, WORD page)
                         exit = PAGE_BOOT;
                         break;
 
-                    case BUTTON_APOLLOFLOPPY:
-                        exit = PAGE_APOLLOFLOPPY;
-                        break;
+                    //case BUTTON_APOLLOFLOPPY:
+                    //    exit = PAGE_APOLLOFLOPPY;
+                    //    break;
 
-                    case BUTTON_APOLLOFLOPPY_DF0:
-                    ApolloFloppy(BUTTON_APOLLOFLOPPY_DF0);
-                    break;    
+                    //case BUTTON_APOLLOFLOPPY_DF0:
+                    //ApolloFloppy(BUTTON_APOLLOFLOPPY_DF0);
+                    //break;    
 
-                    case BUTTON_APOLLOFLOPPY_DF1:
-                    ApolloFloppy(BUTTON_APOLLOFLOPPY_DF1);
-                    break;
+                    //case BUTTON_APOLLOFLOPPY_DF1:
+                    //ApolloFloppy(BUTTON_APOLLOFLOPPY_DF1);
+                    //break;
 
                     case BUTTONLIST_BOOT:
                     {
@@ -637,7 +637,7 @@ static void initPage(LIBBASETYPEPTR DOSBootBase, WORD page)
     char ApolloCore_Release[80];
 
     if (page == PAGE_BOOT) text = "Boot Options";
-    else if (page == PAGE_APOLLOFLOPPY) text = "ApolloFloppy Options";
+    //else if (page == PAGE_APOLLOFLOPPY) text = "ApolloFloppy Options";
     else text = __DISTRONAME__ " Boot Menu";
     centertext(DOSBootBase, 2, 10, text);
 

@@ -749,6 +749,8 @@ static void SAGASD_IOTask(struct Library *SysBase)
     BOOL sdpin = FALSE;
     ULONG detectcounter = 0;
 
+    if (sdu->sdu_SDCmd.unitnumber > 0) sdpin = TRUE;           //hardware pin enable for SD-Cards Slots #1 and higher
+
     debug("Starting SAGASD_IOTask");
 
     status.mn_Length = 1;   // Failed?

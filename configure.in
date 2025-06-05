@@ -3000,7 +3000,7 @@ fi
 
 dnl See if the user wants the serial debug output for native flavour
 AC_MSG_CHECKING([whether serial debug is enabled])
-AC_ARG_WITH(serial-debug,AC_HELP_STRING([--with-serialdebug],[Enable serial debug output in native (default=no)]),serial_debug=$withval,serial_debug=none)
+AC_ARG_WITH(serial-debug,AC_HELP_STRING([--with-serialdebug],[Enable serial debug output in native (default=no)]),serial_debug="yes",serial_debug="no")
 
 if test "$serial_debug" = "yes" ; then
     apollo_serial_debug="1"

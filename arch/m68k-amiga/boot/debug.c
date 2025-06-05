@@ -51,7 +51,7 @@ int DebugMayGetChar(void)
 	return c;
 }
 
-#if APOLLO_DEBUG2
+#if APOLLO_DEBUG
 
 void DebugPutStr(register const char *buff)
 {

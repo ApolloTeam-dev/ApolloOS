@@ -14,10 +14,10 @@
 #include <proto/graphics.h>
 
 #include "dosboot_intern.h"
-//#include "nomedia_image.h"
+#include "nomedia_image.h"
 #include "nomedia_anim.h"
 
-/*
+
 
 struct AnimData
 {
@@ -131,4 +131,3 @@ void anim_Stop(struct DOSBootBase *DOSBootBase)
     }
 }
 
-*/

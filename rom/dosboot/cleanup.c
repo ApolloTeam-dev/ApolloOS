@@ -57,7 +57,7 @@ AROS_UFH3(static APTR, dosboot_Cleanup,
     	CloseBootScreen(base->bm_Screen, base);
     }
     
-    //anim_Stop(base);
+    anim_Stop(base);
 
     /* Well, since we are here, let's completely expunge. :) */
     CloseLibrary(&base->bm_ExpansionBase->LibNode);

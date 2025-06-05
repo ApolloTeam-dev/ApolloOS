@@ -21,4 +21,10 @@ USER_LDFLAGS := -static
   modname=dosboot modtype=resource \
   files="$(FILES)" uselibs="hiddstubs"
 
+$(GENDIR)/$(CURDIR)/dosboot/bootanim.d : $(GENDIR)/$(CURDIR)/dosboot/nomedia_image.h
+
+$(GENDIR)/$(CURDIR)/dosboot/nomedia_image.h : $(NOMEDIA_IMAGE).ilbm
+	@$(ECHO) "Creating   $@..."
+	@$(ILBMTOC) $< >$@
+
 %common

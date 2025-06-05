@@ -8942,7 +8942,7 @@ aros_cxx_libs=
 aros_target_genmap="-Wl,-Map -Xlinker"
 
 # Native flavour stuff
-apollo_debug="0"
+# apollo_debug="1"
 
 # Palm native flavour stuff
 aros_palm_debug_hack="0"
@@ -16665,9 +16665,9 @@ printf %s "checking whether serial debug is enabled... " >&6; }
 # Check whether --with-serial-debug was given.
 if test ${with_serial_debug+y}
 then :
-  withval=$with_serial_debug; serial_debug=$withval
+  serial_debug="yes"
 else $as_nop
-  serial_debug=none
+  serial_debug="no"
 fi
 
 if test "$serial_debug" = "yes" ; then

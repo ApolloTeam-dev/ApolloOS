@@ -28,8 +28,8 @@
 #endif
 
 #if DEBUG
-#define D(x) x
-#define DD(x)
+#define DD(x) x
+#define D(x)
 #define bug kprintf
 #else
 #define D(x)
