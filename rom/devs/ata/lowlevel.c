@@ -16,15 +16,16 @@
 
 
 
-#define VREG_BOARD_Unknown  0x00 /* Unknown                         */
+#define VREG_BOARD_Unknown  0x00 /* Unknown,                        */
 #define VREG_BOARD_V600     0x01 /* Vampire V2 V600(+),   for A600  */
 #define VREG_BOARD_V500     0x02 /* Vampire V2 V500(+),   for A500  */
-#define VREG_BOARD_V4FB     0x03 /* Apollo V4 FireBird,   for A500  */
-#define VREG_BOARD_V4ID     0x04 /* Apollo V4 IceDrake,   for A1200 */
+#define VREG_BOARD_V4FB     0x03 /* Apollo V4 Firebird,   for A500  */
+#define VREG_BOARD_V4ID     0x04 /* Apollo V4 Icedrake,   for A1200 */
 #define VREG_BOARD_V4SA     0x05 /* Apollo V4 Standalone            */
 #define VREG_BOARD_V1200    0x06 /* Vampire V2 V1200,     for A1200 */
 #define VREG_BOARD_V4MC     0x07 /* Apollo V4 Manticore,  for A600  */
-#define VREG_BOARD_Future   0x08 /* Unknow                          */
+#define VREG_BOARD_V4UNI    0x08 /* Apollo V4 Unicorn,              */
+#define VREG_BOARD_Future   0x09 /* Unknown                         */
 
 static BYTE ata_Identify(struct ata_Unit *unit);
 static BYTE ata_ReadSector32(struct ata_Unit *, ULONG, ULONG, APTR, ULONG *);

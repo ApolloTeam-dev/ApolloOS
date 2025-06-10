@@ -59,7 +59,8 @@
 #define VREG_BOARD_V4SA     0x05 /* Apollo V4 Standalone            */
 #define VREG_BOARD_V1200    0x06 /* Vampire V2 V1200,     for A1200 */
 #define VREG_BOARD_V4MC     0x07 /* Apollo V4 Manticore,  for A600  */
-#define VREG_BOARD_Future   0x08 /* Unknow                          */
+#define VREG_BOARD_V4UNI    0x08 /* Apollo V4 Unicorn,              */
+#define VREG_BOARD_Future   0x09 /* Unknown                         */
 
 static UBYTE *getport(struct ata_ProbedBus *ddata, int buscounter)
 {
@@ -96,7 +97,8 @@ static UBYTE *getport(struct ata_ProbedBus *ddata, int buscounter)
              ||(ApolloBoardID == VREG_BOARD_V600)
              ||(ApolloBoardID == VREG_BOARD_V1200)
              ||(ApolloBoardID == VREG_BOARD_V4FB)
-             ||(ApolloBoardID == VREG_BOARD_V4SA))
+             ||(ApolloBoardID == VREG_BOARD_V4SA)
+             ||(ApolloBoardID == VREG_BOARD_V4UNI))
             {
                 ddata->v4 = TRUE;
                 DINIT(bug("[ATA:Probe] Port = GAYLE_BASE_DA (V4 Fast-IDE)\n");)
