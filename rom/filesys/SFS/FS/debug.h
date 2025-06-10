@@ -9,52 +9,63 @@
 #include "fs.h"
 #include "globals.h"
 
-#ifdef __AROS__
-#include <aros/debug.h>
+#if APOLLO_DEBUG
+#define DEBUG 1
 #else
+#define DEBUG 0
+#endif
 
-#ifdef DEBUG
-#define D(x) x
+#if DEBUG
+#define DD(x) x
+#define D(x)
+#define bug kprintf
 #else
+#define DD(x)
 #define D(x)
 #endif
 
-#define bug _DEBUG
-
-#endif
-
 #ifdef DEBUGCODE
-        
-#define _TDEBUG(x)                                  \
-do {                                                \
-    struct DateStamp ds;                            \
-    DateStamp(&ds);                                 \
-    KPrintF("%4ld.%4ld ", ds.ds_Minute, ds.ds_Tick*2);  \
-    KPrintF x;                                          \
+#if 0
+#define _DEBUG(fmt,args...)                                                                             \
+    if (globals->logHandle) {                                                                           \
+        logAddEntry((LOGF_Flag_Type_Debug | 50), globals->logHandle, "", __func__, 0, fmt, ##args);     \
+    }
+#define _TDEBUG _DEBUG
+#define _XDEBUG(type,fmt,args...)                                                                       \
+do {                                                                                                    \
+    ULONG debug=globals->mask_debug;                                                                    \
+    ULONG debugdetailed=globals->mask_debug & ~(DEBUG_CACHEBUFFER|DEBUG_NODES|DEBUG_LOCK|DEBUG_BITMAP); \
+    if((debugdetailed & type)!=0 || ((type & 1)==0 && (debug & type)!=0))                               \
+    {                                                                                                   \
+        if (globals->logHandle) {                                                                       \
+            logAddEntry((LOGF_Flag_Type_Debug | 50), globals->logHandle, "", __func__, 0, fmt, ##args); \
+        }                                                                                               \
+    }                                                                                                   \
 } while (0)
-
-#define _DEBUG(x) KPrintF("[SFS] "); KPrintF x
-
-#define xdebug(type,x...)                                                                                 \
-do {                                                                                                      \
-    ULONG debug=globals->mask_debug;                                                                      \
-    ULONG debugdetailed=globals->mask_debug & ~(DEBUG_CACHEBUFFER|DEBUG_NODES|DEBUG_LOCK|DEBUG_BITMAP);   \
-    if((debugdetailed & type)!=0 || ((type & 1)==0 && (debug & type)!=0))                                 \
-    {                                                                                                     \
-        KPrintF(x);                                                                                       \
-    }                                                                                                     \
-} while (0)
-  
-#define _XDEBUG(x) xdebug x
-
 #else
-
-#define _TDEBUG(x)
-#define _DEBUG(x)
-#define _XDEBUG(x)
-
+#define _TDEBUG(fmt,args...)                                                                            \
+do {                                                                                                    \
+    struct DateStamp ds;                                                                                \
+    DateStamp(&ds);                                                                                     \
+    KPrintF("%4ld.%4ld ", ds.ds_Minute, ds.ds_Tick*2);                                                  \
+    KPrintF(fmt,##args);                                                                                \
+} while (0)
+#define _DEBUG(fmt,args...) KPrintF("[SFS] "); KPrintF(fmt,##args)
+#define _XDEBUG(type,fmt,args...)                                                                       \
+do {                                                                                                    \
+    ULONG debug=globals->mask_debug;                                                                    \
+    ULONG debugdetailed=globals->mask_debug & ~(DEBUG_CACHEBUFFER|DEBUG_NODES|DEBUG_LOCK|DEBUG_BITMAP); \
+    if((debugdetailed & type)!=0 || ((type & 1)==0 && (debug & type)!=0))                               \
+    {                                                                                                   \
+        KPrintF(fmt,##args);                                                                            \
+    }                                                                                                   \
+} while (0)
 #endif
-
+#else
+#define _TDEBUG(fmt,args...)
+#define _DEBUG(fmt,args...)
+#define _XDEBUG(type,fmt,args...)
+#endif
 
 #define DEBUG_DETAILED (1)
 

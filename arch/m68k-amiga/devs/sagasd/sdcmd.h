@@ -31,8 +31,8 @@
 
 #define SDSIZ_BLOCK        512          /* Block size in bytes */
 
-#define SDCMD_TIMEOUT      51200       /* Times to read for new status */
-#define SDCMD_IDLE_RETRY   5000
+#define SDCMD_TIMEOUT      100000       /* Times to read for new status */
+#define SDCMD_IDLE_RETRY   100000
 
 #define SDERRF_TIMEOUT  (1 << 7)
 #define SDERRF_PARAM    (1 << 6)
@@ -62,6 +62,7 @@
 #define SDCMD_SEND_CSD                  9
 #define SDCMD_SEND_CID                  10
 #define SDCMD_STOP_TRANSMISSION         12
+#define SDCMD_SEND_STATUS               13
 #define SDCMD_SET_BLOCKLEN              16
 #define SDCMD_READ_SINGLE_BLOCK         17
 #define SDCMD_READ_MULTIPLE_BLOCK       18
@@ -93,12 +94,16 @@
 #define SDLOG_DIAG      4       /* All I/O transactions */
 
 /* Raw SD card interface */
-struct sdcmd {
+struct sdcmd
+{
     struct Node *owner; /* Owner of this structure */
 
     ULONG iobase;
+    UWORD cs;
+    ULONG unitnumber;
 
-    struct sdcmd_retry {
+    struct sdcmd_retry
+    {
         LONG read;      /* Number of retries to read a block */
         LONG write;     /* Number of retries to write a block */
     } retry;
@@ -119,9 +124,9 @@ struct sdcmd {
     } info;
 
     /** Functions to be provided by the caller **/
-    struct sdcmd_func {
-        /* Add to the debug log.
-         */
+    struct sdcmd_func
+    {
+        /* Add to the debug log.*/
         VOID (*log)(struct sdcmd *sd, int level, const char *format, ...);
     } func;
 };
@@ -138,15 +143,9 @@ UBYTE sdcmd_read_packet(struct sdcmd *sd, UBYTE *buff, int len);
 UBYTE sdcmd_write_packet(struct sdcmd *sd, UBYTE token, CONST UBYTE *buff, int len);
 UBYTE sdcmd_stop_transmission(struct sdcmd *sd);
 
-/* Is there something in the SD slot?
- */
-BOOL sdcmd_present(struct sdcmd *sd);
-
-/* Detect and initialize the SD device
- *
- * Fills in the sd->info fields
- */
-UBYTE sdcmd_detect(struct sdcmd *sd);
+BOOL sdcmd_hw_detect(struct sdcmd *sd);
+BOOL sdcmd_sw_detect_quick(struct sdcmd *sd);
+BOOL sdcmd_sw_detect_full(struct sdcmd *sd);
 
 /* NOTE: Depending on SDOCRF_HCS, you will need to use either
  *       SDOCRF_HCS == 0   => addr is in bytes

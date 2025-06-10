@@ -57,8 +57,10 @@ ULLONG ibyStart, ibyEnd;
 IPTR MaxTransfer;
 IPTR LowCyl, HighCyl;
 ULONG DosType;
+BSTR DeviceName;
+char *DeviceName_String;
 
-static char szVolume[MAX_FS_NAME_LEN+2] __attribute__((aligned (4)));
+char szVolume[MAX_FS_NAME_LEN+2] __attribute__((aligned (4)));
 static char * pszExecDevice;
 static ULONG ExecUnit, ExecDeviceFlags;
 static ULONG BufMemType;
@@ -77,7 +79,7 @@ static ULONG * paulWriteBuffer, * paulReadBuffer;
 static ULONG cbyTransfer;
 
 
-const char szVersion[] = "$VER: BHFormat 43.8 (" ADATE ")";
+const char szVersion[] = "$VER: BHFormat 44.0 (" ADATE ")";
 
 int main(void)
 {
@@ -177,14 +179,15 @@ BOOL bSetSzDosDeviceFromSz( const char * pszDevice )
 
     if( cch != 0 && cch <= MAX_FS_NAME_LEN )
     {
-	/* Make a copy, without the colon */
-	strncpy( szDosDevice, pszDevice, cch );
-	pchDosDeviceColon = &szDosDevice[cch]; /* need to put it back later */
-	*pchDosDeviceColon = 0;
-	*(pchDosDeviceColon+1) = 0;
-	return TRUE;
+		/* Make a copy, without the colon */
+		strncpy( szDosDevice, pszDevice, cch );
+		pchDosDeviceColon = &szDosDevice[cch]; /* need to put it back later */
+		*pchDosDeviceColon = 0;
+		*(pchDosDeviceColon+1) = 0;
+		return TRUE;
     }
 
+	DD(bug("[FORMAT] bSetSzDosDeviceFromSz: ERROR_INVALID_COMPONENT_NAME\n"));
     ReportErrSz( ertError, ERROR_INVALID_COMPONENT_NAME, 0 );
     return FALSE;
 }
@@ -195,17 +198,25 @@ BOOL bSetSzVolumeFromSz( const char * pszVolume )
     /* Check the length and validity of the volume name */
     size_t cch = strlen(pszVolume);
 
-    if( cch != 0 && cch <= MAX_FS_NAME_LEN && strpbrk( pszVolume, ":/" ) == 0 )
-    {
-	/* Make a copy with a length prefix because v36 Format function
-	   incorrectly expects a BSTR */
-	szVolume[0] = cch;
-	strcpy( &szVolume[1], pszVolume );
-	return TRUE;
-    }
-
-    ReportErrSz( ertError, ERROR_INVALID_COMPONENT_NAME, 0 );
-    return FALSE;
+    if(cch == 0)
+	{
+		return 1;
+	} else {
+		if (cch > MAX_FS_NAME_LEN)
+		{
+			return 2;
+		} else {
+			if (strpbrk( pszVolume, ":/" ) != 0 )
+			{
+				return 3;
+			} else {
+				/* Make a copy with a length prefix because v36 Format function incorrectly expects a BSTR */
+				szVolume[0] = cch;
+				strcpy( &szVolume[1], pszVolume );
+			}
+		}
+	}
+	return 0;
 }
 
 
@@ -284,48 +295,46 @@ BOOL bSetDevfFromSz( const char * pszDevFlags )
 BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
 {
     struct DosList *pdlList;
-    struct DosEnvec * pdenDevice;
+    struct DosEnvec *pdenDevice;
 
-    if (!pdlDevice) {
-	flags = LDF_DEVICES|LDF_READ;
-	pdlList = LockDosList(flags);
-	D(Printf( "LockDosList( LDF_DEVICES | LDF_READ ) = 0x%08lx\n", (ULONG)pdlList ));
-	*pchDosDeviceColon = 0;
-	pdlDevice = FindDosEntry( pdlList, szDosDevice, LDF_DEVICES );
-	D(Printf("FindDosEntry( 0x%08lx, \"%s\", LDF_DEVICES ) = 0x%08lx\n",
-		 (ULONG)pdlList, (ULONG)szDosDevice, (ULONG)pdlDevice ));
-	if( pdlDevice == 0 )
+    if (!pdlDevice)
 	{
-	    UnLockDosList(flags);
-	    ReportErrSz( ertError, ERROR_DEVICE_NOT_MOUNTED, 0 );
-	    return FALSE;
+		flags = LDF_DEVICES|LDF_READ;
+		pdlList = LockDosList(flags);
+		DD(bug("[FORMAT] LockDosList( LDF_DEVICES | LDF_READ ) = 0x%08lx\n", (ULONG)pdlList ));
+		*pchDosDeviceColon = 0;
+		pdlDevice = FindDosEntry( pdlList, szDosDevice, LDF_DEVICES );
+		DD(bug("[FORMAT] FindDosEntry( 0x%08lx, \"%s\", LDF_DEVICES ) = 0x%08lx\n", (ULONG)pdlList, (ULONG)szDosDevice, (ULONG)pdlDevice ));
+		if( pdlDevice == 0 )
+		{
+			UnLockDosList(flags);
+			DD(bug("[FORMAT] bGetDosDevice: ERROR_DEVICE_NOT_MOUNTED\n"));
+			ReportErrSz( ertError, ERROR_DEVICE_NOT_MOUNTED, 0 );
+			return FALSE;
+		}
 	}
-    }
 
-    /* Find startup message and verify file-system settings. Use
-       TypeOfMem to protect against devices that use integer or string
-       startup values. */
-    if( (pfssm = (struct FileSysStartupMsg *)
-	 BADDR(pdlDevice->dol_misc.dol_handler.dol_Startup)) == 0
-	|| TypeOfMem(pfssm) == 0
-	|| pfssm->fssm_Device == 0
-	|| (pdenDevice = (struct DosEnvec *)BADDR(pfssm->fssm_Environ)) == 0
-	|| TypeOfMem(pdenDevice) == 0
-	|| pdenDevice->de_TableSize < DE_DOSTYPE
-	/* Check that parameters that should always be 0, are */
-	|| pdenDevice->de_SecOrg != 0
-	|| pdenDevice->de_Interleave != 0 )
-    {
-        UnLockDosList(flags);
-	ReportErrSz( ertError, ERROR_OBJECT_WRONG_TYPE, 0 );
-	return FALSE;
-    }
+	/* Find startup message and verify file-system settings. Use TypeOfMem to protect against devices that use integer or string startup values. */
+	if( (pfssm = (struct FileSysStartupMsg *)BADDR(pdlDevice->dol_misc.dol_handler.dol_Startup)) == 0
+		|| TypeOfMem(pfssm) == 0
+		|| pfssm->fssm_Device == 0
+		|| (pdenDevice = (struct DosEnvec *)BADDR(pfssm->fssm_Environ)) == 0
+		|| TypeOfMem(pdenDevice) == 0
+		|| pdenDevice->de_TableSize < DE_DOSTYPE
+		/* Check that parameters that should always be 0, are 
+		|| pdenDevice->de_SecOrg != 0
+		|| pdenDevice->de_Interleave != 0 */)
+	{
+		UnLockDosList(flags);
+		DD(bug("[FORMAT] bGetDosDevice: ERROR_OBJECT_WRONG_TYPE\n"));
+		ReportErrSz( ertError, ERROR_OBJECT_WRONG_TYPE, 0 );
+		return FALSE;
+	}
 
     /* Get the device name with the original correct case */
     RawDoFmtSz( szDosDevice, "%b", pdlDevice->dol_Name );
 
-    /* Unlike most BCPL strings, this one is guaranteed to be null-
-       terminated. */
+    /* Unlike most BCPL strings, this one is guaranteed to be null-terminated. */
     pszExecDevice = AROS_BSTR_ADDR(pfssm->fssm_Device);
     ExecUnit = pfssm->fssm_Unit;
     ExecDeviceFlags = pfssm->fssm_Flags;
@@ -334,20 +343,34 @@ BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
     LowCyl = pdenDevice->de_LowCyl;
     HighCyl = pdenDevice->de_HighCyl;
     DosType = pdenDevice->de_DosType;
+	DeviceName = pdlDevice->dol_Name;
+	DeviceName_String = AROS_BSTR_ADDR(DeviceName);
 
+	DD(bug("[FORMAT] szDosDevice = %s | DeviceName = %s\n", szDosDevice, DeviceName_String));
+	
     cbyTrack = (ULLONG)pdenDevice->de_BlocksPerTrack * (ULLONG)(pdenDevice->de_SizeBlock * sizeof(LONG));
     cbyCylinder = cbyTrack * pdenDevice->de_Surfaces;
 
     ibyStart = pdenDevice->de_LowCyl * cbyCylinder;
     ibyEnd = (pdenDevice->de_HighCyl + 1) * cbyCylinder;
 
+	DD(bug("[FORMAT] bGetDosDevice: LowCyl = %u | HighCyl = %u | Heads = %u | Sectors = %u | ibyStart = %llu | ibyEnd = %llu | DosType = 0x%08lx\n",
+		LowCyl, HighCyl, pdenDevice->de_Surfaces, pdenDevice->de_BlocksPerTrack, ibyStart, ibyEnd, DosType));
+
+	if(DosType == 0x444F5300)	// Check for DOS/0 and if found then Drive needs to be partitioned by HDToolBox first
+	{
+		DD(bug("[FORMAT] bGetDosDevice: ERROR: No Partition(s) Found!\n"));
+		//ReportErrSz( ertError, 0, "\nERROR: No Partition(s) Found!\n\nUse Tools->HDToolBox to Create Partition(s)\n");
+		//return FALSE;
+	}
+	DD(bug("[FORMAT] bGetDosDevice: OK: Partition(s) Found!\n"));
+
 #if defined(__mc68000) && !defined(__AROS__)
     /* If the device has a native Amiga file-system, we can check for
        various limitations and also apply the various command-line
        flags that specify which variant to use for the new volume. */
-       
-    if( pdenDevice->de_DosType >= 0x444F5300
-	&& pdenDevice->de_DosType <= 0x444F5305 )
+
+    if( pdenDevice->de_DosType >= 0x444F5300 && pdenDevice->de_DosType <= 0x444F5305 )			// Filter for classic AmigaDOS OFS/FFS
     {
 	const struct Resident * prt;
 	UWORD verFS;
@@ -358,14 +381,10 @@ BOOL bGetDosDevice(struct DosList *pdlDevice, ULONG flags)
 	   would be a bit pointless. Perhaps I should use TypeOfMem
 	   to decide whether the segment is in ROM or RAM first? */
 
-	prt = (struct Resident *)((char *)BADDR(
-	    pdlDevice->dol_misc.dol_handler.dol_SegList) + 4);
-	while( prt->rt_MatchWord != RTC_MATCHWORD
-	       || prt->rt_MatchTag != prt )
-	    prt = (struct Resident *)((UWORD *)prt + 1);
+	prt = (struct Resident *)((char *)BADDR(pdlDevice->dol_misc.dol_handler.dol_SegList) + 4);
+	while( prt->rt_MatchWord != RTC_MATCHWORD || prt->rt_MatchTag != prt ) prt = (struct Resident *)((UWORD *)prt + 1);
 	verFS = prt->rt_Version;
-	D(Printf( "found RomTag at 0x%08lx; rt_Version = %lu\n",
-		  (ULONG)prt, (ULONG)verFS ));
+	DD(bug("[FORMAT] Found RomTag at 0x%08lx; rt_Version = %lu\n", (ULONG)prt, (ULONG)verFS ));
 	    
 	/* check that the fs can handle this device correctly */
 
@@ -428,8 +447,8 @@ void FreeDosDevice(void)
 {
     if(bInhibited)
     {
-	*pchDosDeviceColon = ':';
-	D(Printf( "Inhibit( \"%s\", DOSFALSE );\n", (ULONG)szDosDevice ));
+	//*pchDosDeviceColon = ':';
+	DD(bug("[FORMAT] Inhibit( \"%s\", DOSFALSE );\n", (ULONG)szDosDevice ));
 	(void) Inhibit( szDosDevice, DOSFALSE );
 	bInhibited = FALSE;
     }
@@ -439,12 +458,13 @@ void FreeDosDevice(void)
 BOOL bGetExecDevice( BOOL bWillVerify )
 {
     *pchDosDeviceColon = ':';
-    D(Printf( "Inhibit( \"%s\", DOSTRUE );\n", (ULONG)szDosDevice ));
+    DD(bug("[FORMAT] Inhibit( \"%s\", DOSTRUE );\n", (ULONG)szDosDevice ));
     if(!Inhibit( szDosDevice, DOSTRUE ))
     {
-	/* This is a bit stupid, but compatible with v40 Format */
-	ReportErrSz( ertFailure, ERROR_OBJECT_WRONG_TYPE, 0 );
-	return FALSE;
+		/* This is a bit stupid, but compatible with v40 Format */
+		DD(bug("[FORMAT] bGetExecDevice - ERROR_OBJECT_WRONG_TYPE\n"));
+		ReportErrSz( ertFailure, ERROR_OBJECT_WRONG_TYPE, 0 );
+		return FALSE;
     }
     bInhibited = TRUE;
 
@@ -452,7 +472,7 @@ BOOL bGetExecDevice( BOOL bWillVerify )
 	|| (piosDisk = (struct IOStdReq *)
 	    CreateIORequest( pmpDiskIO, sizeof(struct IOStdReq) )) == 0 )
     {
-	D(Printf("pmpDiskIO = 0x%08lX, piosDisk = 0x%08lX\n", pmpDiskIO, piosDisk));
+	DD(bug("[FORMAT] pmpDiskIO = 0x%08lX, piosDisk = 0x%08lX\n", pmpDiskIO, piosDisk));
 	ReportErrSz( ertFailure, ERROR_NO_FREE_STORE, 0 );
 	return FALSE;
     }
@@ -471,35 +491,25 @@ BOOL bGetExecDevice( BOOL bWillVerify )
 	bExecDevOpen = TRUE;
     }
 
-#ifdef __mc68000
-    {
 	/* This is an attempt to spot a scsi.device that is really an
 	   IDE driver. If we have a card slot (A600/A1200) or AGA
 	   (A1200/A4000/A4000T/CD32/clones) then it probably is.  If
 	   the version number is lower than 40 then it does not limit
 	   transfers to 128 blocks as required for correct operation
 	   of some drives. */
-	struct GfxBase * GfxBase = (struct GfxBase *)
-	    OpenLibrary( "graphics.library", 39 );
-	if( !strcmp( pszExecDevice, "scsi.device" )
-	    && piosDisk->io_Device->dd_Library.lib_Version < 40
-	    && (OpenResource("card.resource")
-		|| (GfxBase && (GfxBase->ChipRevBits0 & GFXF_AA_ALICE)) ))
+	
+	   struct GfxBase * GfxBase = (struct GfxBase *) OpenLibrary( "graphics.library", 39 );
+
+	if( !strcmp( pszExecDevice, "scsi.device" ) && piosDisk->io_Device->dd_Library.lib_Version < 40 && (OpenResource("card.resource") || (GfxBase && (GfxBase->ChipRevBits0 & GFXF_AA_ALICE)) ))
 	{
 	    bSuspectIDE = TRUE;
 	    if( MaxTransfer > 0x10000 )
 	    {
-		MaxTransfer = 0x10000;
-		ReportErrSz(
-		    ertWarning,
-		    -1,
-		    _(MSG_ERROR_IDE) );
+			MaxTransfer = 0x10000;
+			ReportErrSz(ertWarning, -1, _(MSG_ERROR_IDE) );
 	    }
 	}
-	if(GfxBase)
-	    CloseLibrary((struct Library *)GfxBase);
-    }
-#endif
+	if(GfxBase) CloseLibrary((struct Library *)GfxBase);
 
     if( ibyEnd > 0x100000000ULL )
     {
@@ -560,7 +570,7 @@ BOOL bGetExecDevice( BOOL bWillVerify )
 
     /* We need two buffers - one for writing and one for reading back to
        verify the write */
-    D(Printf("Allocating buffers, size %lu bytes\n", cbyCylinder));
+    DD(bug("[FORMAT] Allocating buffers, size %lu bytes\n", cbyCylinder));
     if( (paulWriteBuffer = AllocMem( cbyCylinder,
 				     BufMemType )) == 0
 	|| (bWillVerify
@@ -658,11 +668,9 @@ BOOL bFormatCylinder( ULONG icyl )
 
     /* put a "BAD\0" marker at the beginning in case format is aborted */
     /* put normal "DOS\0" marker at the beginning of other cylinders */
-    paulWriteBuffer[0] =
-	(icyl == LowCyl) ? 0x42414400 : 0x444F5300;
+    paulWriteBuffer[0] = (icyl == LowCyl) ? 0x42414400 : 0x444F5300;
 
-    if( !bTransferCylinder( paulWriteBuffer, icyl,
-			    NSCMD_TD_FORMAT64, TD_FORMAT ) )
+    if( !bTransferCylinder( paulWriteBuffer, icyl, NSCMD_TD_FORMAT64, TD_FORMAT ) )
 	return FALSE;
 
     /* Write out and invalidate the track buffer */
@@ -670,17 +678,12 @@ BOOL bFormatCylinder( ULONG icyl )
     derr = DoIO((struct IORequest *)piosDisk);
     if( derr == 0 )
     {
-	piosDisk->io_Command = CMD_CLEAR;
-	derr = DoIO((struct IORequest *)piosDisk);
-	if( derr == 0 )
-	    return TRUE;
+		piosDisk->io_Command = CMD_CLEAR;
+		derr = DoIO((struct IORequest *)piosDisk);
+		if( derr == 0 ) return TRUE;
     }
 
-    ReportErrSz( ertFailure, -1,
-		 _(MSG_ERROR_DEVICE_RETURN),
-		 (piosDisk->io_Command == CMD_UPDATE) ?
-		 _(MSG_ERROR_FLUSH) : _(MSG_ERROR_INVALIDATE),
-		 (ULONG)derr );
+    ReportErrSz( ertFailure, -1, _(MSG_ERROR_DEVICE_RETURN), (piosDisk->io_Command == CMD_UPDATE) ? _(MSG_ERROR_FLUSH) : _(MSG_ERROR_INVALIDATE), (ULONG)derr );
     return FALSE;
 }
 
@@ -723,8 +726,7 @@ static BOOL bTransferCylinder(
 	piosDisk->io_Length      = cbyLength;
 	piosDisk->io_Data        = pBuffer;
 
-	D(Printf( "DoIO() Cmd=%2lu Act=0x%08lx Len=0x%08lx "
-		  "Data=0x%08lx Off=0x%08lx\n",
+	DD(bug("[FORMAT] DoIO() Cmd=%2lu Act=0x%08lx Len=0x%08lx Data=0x%08lx Off=0x%08lx\n",
 		  piosDisk->io_Command,
 		  piosDisk->io_Actual,
 		  piosDisk->io_Length,
@@ -761,56 +763,74 @@ static BOOL bTransferCylinder(
 }
 
 
-BOOL bMakeFileSys( BOOL bFFS, BOOL bOFS, BOOL bIntl, BOOL bNoIntl,
-		   BOOL bDirCache, BOOL bNoDirCache )
+BOOL bMakeFileSys( BOOL bFFS, BOOL bOFS, BOOL bIntl, BOOL bNoIntl, BOOL bDirCache, BOOL bNoDirCache )
 {
     if(!bFstSet)
     {
-	fstCurrent = DosType;
+		fstCurrent = DosType;
 
-	if( fstCurrent >= 0x444F5300 && fstCurrent <= 0x444F5305 )
-	{
-	    /* Adjust the file-system type according to command-line
-	       switches or check-boxes (this exactly matches the logic of the
-	       official version 40 Format command). */
-	
-	    if(bFFS)		fstCurrent |= 1;
-	    if(bOFS)		fstCurrent &= ~1;
-	    if( !(fstCurrent & 2) )
-	    {
-		if(bDirCache)	fstCurrent |= 4;
-		if(bNoDirCache)	fstCurrent &= ~4;
-	    }
-	    if( !(fstCurrent & 4) )
-	    {
-		if(bIntl)	fstCurrent |= 2;
-		if(bNoIntl)	fstCurrent &= ~2;
-	    }
-	} /* if( fstCurrent >= 0x444F5300 && fstCurrent <= 0x444F5305 ) */
+		if( fstCurrent >= 0x444F5300 && fstCurrent <= 0x444F5305 )
+		{
+			/* Adjust the file-system type according to command-line
+			switches or check-boxes (this exactly matches the logic of the
+			official version 40 Format command). */
+		
+			if(bFFS)		fstCurrent |= 1;
+			if(bOFS)		fstCurrent &= ~1;
+			if( !(fstCurrent & 2) )
+			{
+				if(bDirCache)	fstCurrent |= 4;
+				if(bNoDirCache)	fstCurrent &= ~4;
+			}
+			if( !(fstCurrent & 4) )
+			{
+				if(bIntl)	fstCurrent |= 2;
+				if(bNoIntl)	fstCurrent &= ~2;
+			}
+		} /* if( fstCurrent >= 0x444F5300 && fstCurrent <= 0x444F5305 ) */
     } /* if(!bFstSet) */
 
+	
     if(!bInhibited)
     {
-	*pchDosDeviceColon = ':';
-	D(Printf( "Inhibit( \"%s\", DOSTRUE );\n", (ULONG)szDosDevice ));
-	if(!Inhibit( szDosDevice, DOSTRUE ))
-	{
-	    /* This is a bit stupid, but compatible with v40 Format */
-	    ReportErrSz( ertFailure, ERROR_OBJECT_WRONG_TYPE, 0 );
-	    return FALSE;
-	}
-	bInhibited = TRUE;
+		*pchDosDeviceColon = ':';
+		DD(bug("[FORMAT] Inhibit( \"%s\", DOSTRUE );\n", (ULONG)szDosDevice ));
+		if(!Inhibit( szDosDevice, DOSTRUE ))
+		{
+			/* This is a bit stupid, but compatible with v40 Format */
+			ReportErrSz( ertFailure, ERROR_OBJECT_WRONG_TYPE, 0 );
+			return FALSE;
+		}
+		bInhibited = TRUE;
     }
 
-    D(Printf( "Format( \"%s\", \"%s\", 0x%08lx );\n",
-	      (ULONG)szDosDevice, (ULONG)(szVolume + 1), fstCurrent ));
-    if( !Format( szDosDevice,
-		 (DOSBase->dl_lib.lib_Version == 36) ?
-		 (char *)MKBADDR(szVolume) : szVolume + 1,
-		 fstCurrent ) )
+	if(fstCurrent >= 0x46415400 && fstCurrent <= 0x46615402) // Additional free/inhibit cycle for FAT Devices (to avoid "no disk in drive" error on Format)
+	{
+		FreeDosDevice();
+
+		if(!bInhibited)
+		{
+			*pchDosDeviceColon = ':';
+			DD(bug("[FORMAT] Inhibit( \"%s\", DOSTRUE );\n", (ULONG)szDosDevice ));
+			if(!Inhibit( szDosDevice, DOSTRUE ))
+			{
+				// This is a bit stupid, but compatible with v40 Format 
+				ReportErrSz( ertFailure, ERROR_OBJECT_WRONG_TYPE, 0 );
+				return FALSE;
+			}
+			bInhibited = TRUE;
+		}
+	}
+
+	int result;
+
+	DD(bug("[FORMAT] Format( \"%s\", \"%s\", 0x%08lx );\n", (ULONG)szDosDevice, (ULONG)(szVolume + 1), fstCurrent ));
+	result = Format( szDosDevice, (DOSBase->dl_lib.lib_Version == 36) ? (char *)MKBADDR(szVolume) : szVolume + 1, fstCurrent );
+
+    if(!result)
     {
-	ReportErrSz( ertFailure, 0, 0 );
-	return FALSE;
+		ReportErrSz( ertFailure, 0, 0 );
+		return FALSE;
     }
 
     return TRUE;
@@ -918,8 +938,7 @@ static const UWORD AddChSz[] = {0x16C0, 0x4E75}; /* move.l d0,(a3)+ : rts */
 
 void RawDoFmtSz( char * pszBuffer, const char * pszFormat, ... )
 {
-    RawDoFmt( (char *)pszFormat, (APTR)(&pszFormat+1),
-	      (void (*)())AddChSz, pszBuffer );
+    RawDoFmt( (char *)pszFormat, (APTR)(&pszFormat+1), (void (*)())AddChSz, pszBuffer );
 }
 
 void RawDoVFmtSz( char * pszBuffer, const char * pszFormat, APTR pData )

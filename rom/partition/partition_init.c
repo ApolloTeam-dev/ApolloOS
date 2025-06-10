@@ -1,5 +1,5 @@
 /*
-   Copyright © 2001-2020, The AROS Development Team. All rights reserved.
+   Copyright ï¿½ 2001-2020, The AROS Development Team. All rights reserved.
    $Id$
 
    Desc: Partition initialization code
@@ -9,6 +9,7 @@
 #include <aros/symbolsets.h>
 #include <aros/debug.h>
 #include <proto/alib.h>
+#include "debug.h"
 
 #include "partition_intern.h"
 #include "partition_support.h"
@@ -16,6 +17,8 @@
 
 static int PartitionInit(LIBBASETYPEPTR LIBBASE)
 {
+    D(bug("[PART] PartitionInit\n"));
+    
     LIBBASE->partbase.tables =  (struct PartitionTableInfo **)PartitionSupport;
     NewList(&LIBBASE->bootList);
     InitSemaphore(&LIBBASE->bootSem);
@@ -32,6 +35,8 @@ static int PartitionInit(LIBBASETYPEPTR LIBBASE)
 
 static int PartitionCleanup(struct PartitionBase_intern *base)
 {
+    D(bug("[PART] PartitionCleanup\n"));
+    
     /* If there's something in our boot list, we can't quit without losing it */
     if (!IsListEmpty(&base->bootList))
     	return FALSE;

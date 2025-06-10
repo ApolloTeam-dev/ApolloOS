@@ -22,7 +22,6 @@ SCSI_DEVICEFILES :=             \
     lowlevel                    \
     timer                       \
     bootwait                    \
-    waitnano                    \
     waitto
 
 SCSI_CLASSFILES :=              \

@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: CLI Command
@@ -96,7 +96,7 @@
 //#define DEBUG 1
 #include <aros/debug.h>
 
-const TEXT ver[] = "$VER:CLI 1.2 (07.02.2017) © AROS Dev Team";
+const TEXT ver[] = "$VER:CLI 1.2 (07.02.2017) ï¿½ AROS Dev Team";
 static BPTR olddir = (BPTR)-1;
 
 int main(int argc, char **argv)
@@ -163,7 +163,7 @@ int main(int argc, char **argv)
         fromspec = "S:Shell-Startup";
 
     if (winspec == NULL)
-        winspec = "CON:0/50//130/AROS-Shell/CLOSE";
+        winspec = "CON:100/100/1080/500/ApolloOS Shell/CLOSE";
 
     D(bug("[CLI] stack %d from %s window %s\n", stack, fromspec, winspec));
 

@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: DOS function InternalLoadSeg()
@@ -82,7 +82,7 @@
         D(CONST_STRPTR format;)
     } segfunc_t;
 
-    #define SEGFUNC(id, format) {id, InternalLoadSeg_##format D(, (STRPTR)#format)}
+    #define SEGFUNC(id, format) {id, InternalLoadSeg_##format } //D(, (STRPTR)#format)}
     
     static const segfunc_t funcs[] = 
     {

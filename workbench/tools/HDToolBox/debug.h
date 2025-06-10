@@ -28,4 +28,8 @@ void kprintf(char *, ...);
 #endif
 #endif
 
+//Enable for Apollo Serial Debug
+//#define D(x) x
+//#define bug kprintf
+
 #endif /* PDEBUG_H */

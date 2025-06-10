@@ -1,0 +1,10 @@
+# Copyright © 2019, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+CATALOGS:=french czech polish norwegian german
+
+%build_catalogs mmake=workbench-system-sysmon-catalogs \
+    catalogs=$(CATALOGS) \
+    name=SysMon subdir=System/System

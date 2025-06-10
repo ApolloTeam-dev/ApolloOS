@@ -28,7 +28,7 @@
 
 #include <exec/types.h>
 
-#include <sd.h>
+#include "sd.h"
 
 #include "sdcmd.h"
 
@@ -39,16 +39,6 @@
 //        if (sd->func.log) \
 //            sd->func.log(sd, level, "%s:%ld " fmt, __func__, (ULONG)__LINE__ ,##args); \
 //    } while (0)
-
-#define diag(fmt,args...)       sdcmd_log(sd, SDLOG_DIAG, fmt ,##args)
-#define debug(fmt,args...)      sdcmd_log(sd, SDLOG_DEBUG, fmt ,##args)
-#define info(fmt,args...)       sdcmd_log(sd, SDLOG_INFO,  fmt ,##args)
-#define warn(fmt,args...)       sdcmd_log(sd, SDLOG_WARN, fmt ,##args)
-#define error(fmt,args...)      sdcmd_log(sd, SDLOG_ERROR, fmt ,##args)
-
-#define SDCMD_CLKDIV_SLOW       0xFF
-#define SDCMD_CLKDIV_FAST       0x01
-#define SDCMD_CLKDIV_FASTER     0x00
 
 static UBYTE crc7(UBYTE crc, UBYTE byte)
 {
@@ -141,8 +131,7 @@ static UBYTE sdcmd_in(struct sdcmd *sd)
     return val;
 }
 
-
-static void sdcmd_ins(struct sdcmd *sd, UBYTE *buff, size_t len)
+static void sdcmd_ins_spi1(struct sdcmd *sd, UBYTE *buff, size_t len)
 {
     if (len == 0)
         return;
@@ -162,41 +151,60 @@ static void sdcmd_ins(struct sdcmd *sd, UBYTE *buff, size_t len)
 
     return;
 }
-            
-BOOL sdcmd_present(struct sdcmd *sd)
+
+static void sdcmd_ins_spi2(struct sdcmd *sd, UBYTE *buff, size_t len)
 {
-    return TRUE;
+    if (len == 0)
+        return;
+
+    /* Since the read of the SAGA_SD_DATA will stall until
+     * filled by the SPI, we amortize that cost by computing
+     * the CRC16 while waiting for the next fill.
+     */
+	asm volatile(
+			"       move.b #0xff,(0xDE0010)        \n"
+			"       subq.l #1,%[count]              \n"
+			"       bra 2f                         \n"
+			"1:     move.b (0xDE0012),(%[buff])+   \n"
+			"2:     dbra   %[count],1b             \n"
+			"       move.b (0xDE0010),(%[buff])+   \n"
+				:[count]"+d"(len),[buff]"+a"(buff)::"cc");
+
+    return;
+}
+
+static VOID sdcmd_clkdiv(struct sdcmd *sd, UBYTE val)
+{
+    //debug("SD_CLK  => $%04lx", val);
+
+    Write16(sd->iobase + SAGA_SD_CLK, val);
 }
 
 VOID sdcmd_select(struct sdcmd *sd, BOOL cs)
 {
     UWORD val;
 
-    val = cs ? 0 : SAGA_SD_CTL_NCS;
-
-    //diag("SD_CTL  => $%04lx", val);
+    val = cs ? sd->cs : SAGA_CS_NODRIVE;
+    //debug("SD_CTL  => $%04lx", val);
 
     Write16(sd->iobase + SAGA_SD_CTL, val);
     sdcmd_out(sd, 0xff);
 
     /*  Wait for card ready */
-    if (cs) {
+    if (cs)
+    {
         int i;
-        for (i = 0; i < SDCMD_TIMEOUT; i++) {
+        for (i = 0; i < SDCMD_TIMEOUT; i++)
+        {
             UBYTE r1 = sdcmd_in(sd);
-            if (r1 == 0xff)
-                break;
+            if (r1 == 0xff) break;
+        }
+        if (i == SDCMD_TIMEOUT) 
+        {
+            debug("sdcmd_select ERROR (SDCMD_TIMEOUT)");
         }
     }
 }
-
-static VOID sdcmd_clkdiv(struct sdcmd *sd, UBYTE val)
-{
-    diag("SD_CLK  => $%04lx", val);
-
-    Write16(sd->iobase + SAGA_SD_CLK, val);
-}
-
 
 void sdcmd_send(struct sdcmd *sd, UBYTE cmd, ULONG arg)
 {
@@ -211,7 +219,8 @@ void sdcmd_send(struct sdcmd *sd, UBYTE cmd, ULONG arg)
 
     sdcmd_out(sd, (cmd & 0x3f) | 0x40);
 
-    for (i = 0; i < 4; i++, arg <<= 8) {
+    for (i = 0; i < 4; i++, arg <<= 8)
+    {
         UBYTE byte = (arg >> 24) & 0xff;
         crc = crc7(crc, byte);
 
@@ -226,10 +235,10 @@ static UBYTE sdcmd_r1a(struct sdcmd *sd)
     UBYTE r1;
     int i;
 
-    for (i = 0; i < SDCMD_TIMEOUT; i++) {
+    for (i = 0; i < SDCMD_TIMEOUT; i++)
+    {
         r1 = sdcmd_in(sd);
-        if (!(r1 & SDERRF_TIMEOUT))
-            return r1;
+        if (!(r1 & SDERRF_TIMEOUT)) return r1;
     }
 
     return SDERRF_TIMEOUT;
@@ -330,19 +339,21 @@ UBYTE sdcmd_read_packet(struct sdcmd *sd, UBYTE *buff, int len)
     int i;
 
     /* Wait for the Data Token */
-    for (i = 0; i < SDCMD_TIMEOUT; i++) {
+    for (i = 0; i < SDCMD_TIMEOUT; i++)
+    {
         byte = sdcmd_in(sd);
-        if (byte == token)
-            break;
+        if (byte == token) break;
     }
 
-    if (i == SDCMD_TIMEOUT) {
+    if (i == SDCMD_TIMEOUT)
+    {
         sdcmd_select(sd, FALSE);
         return SDERRF_TIMEOUT;
     }
 
-    sdcmd_ins(sd, buff, len);
-
+    if (sd->iobase == SAGA_SD_BASE_SPI1) sdcmd_ins_spi1(sd, buff, len);
+    if (sd->iobase == SAGA_SD_BASE_SPI2) sdcmd_ins_spi2(sd, buff, len);
+    
     /* Read the CRC16 */
     tmp = (UWORD)sdcmd_in(sd) << 8;
     tmp |= sdcmd_in(sd);
@@ -461,216 +472,6 @@ static ULONG bits(UBYTE *mask, int start, int len)
     return ret;
 }
 
-/* If non-zero, filled in the total size in blocks of the device
- */
-UBYTE sdcmd_detect(struct sdcmd *sd)
-{
-    struct sdcmd_info *info = &sd->info;
-    UBYTE r1;
-    UBYTE speed;
-    ULONG r7;
-    int i;
-
-    memset(info, 0, sizeof(*info));
-
-    /* First, check the DETECT bit */
-    if (!sdcmd_present(sd))
-        return ~0;
-
-    /* Switch to slow speed mode */
-    sdcmd_clkdiv(sd, SDCMD_CLKDIV_SLOW);
-
-    /* Emit at least 74 clocks of idle */
-    sdcmd_select(sd, TRUE);
-    for (i = 0; i < 16; i++) {
-        sdcmd_out(sd, 0xff);
-    }
-    sdcmd_select(sd, FALSE);
-
-    /* Stuff two idle bytes while deasserted */
-    sdcmd_out(sd, 0xff);
-    sdcmd_out(sd, 0xff);
-
-    /* Put into idle state */
-    sdcmd_send(sd, SDCMD_GO_IDLE_STATE, 0);
-    r1 = sdcmd_r1(sd);
-    /* It's ok (and expected) that we are in IDLE state */
-    r1 &= ~SDERRF_IDLE;
-    if (r1)
-        return r1;
-
-    /* Do SHDC detection during idle */
-    sdcmd_send(sd, SDCMD_SEND_IF_COND, 0x000001aa);
-    r1 = sdcmd_r7(sd, &r7);
-    /* It's ok (and expected) that we are in IDLE state */
-    r1 &= ~SDERRF_IDLE;
-    if (!r1) {
-        /* Looks like a SDHC card? */
-        if ((r7 & 0x000001ff) == 0x000001aa) {
-            /* Set HCS (SDHC) mode */
-            sdcmd_asend(sd, SDCMD_SD_SEND_OP_COND, SDOCRF_HCS);
-            r1 = sdcmd_r1(sd);
-            /* It's ok (and expected) that we are in IDLE state */
-            r1 &= ~SDERRF_IDLE;
-            if (r1)
-                return r1;
-        }
-    }
-
-    /* Wait for card to complete idle */
-    for (i = 0; i < SDCMD_IDLE_RETRY; i++) {
-        UBYTE err;
-       
-        /* Initiate SDC init process */
-        err = sdcmd_asend(sd, SDCMD_SD_SEND_OP_COND, 0);
-        if (err)
-            return err;
-
-        r1 = sdcmd_r1(sd);
-        if (!(r1 & SDERRF_IDLE))
-            break;
-    }
-
-    //debug("r1=0x%lx", r1);
-    if (r1)
-        return r1;
-
-    /* Enable CRC check mode */
-    sdcmd_send(sd, SDCMD_CRC_ON_OFF, 1);
-    r1 = sdcmd_r1(sd);
-    if (r1) {
-        /* Non-fatal if this failed */
-        //debug("r1=0x%lx", r1);
-    }
-
-    /* Check for voltage levels */
-    sdcmd_send(sd, SDCMD_READ_OCR, 0);
-    r1 = sdcmd_r3(sd, &info->ocr);
-    //debug("r1=0x%lx", r1);
-    if (r1)
-        return r1;
-
-    /* Not in our voltage range */
-    //info("ocr=0x%08lx (vs 0x%08lx)", info->ocr, SDOCRF_MAX_3_3V | SDOCRF_MAX_3_4V);
-    if (!(info->ocr & (SDOCRF_MAX_3_3V | SDOCRF_MAX_3_4V)))
-        return SDERRF_IDLE;
-
-    if (info) {
-        ULONG c_size_mult, read_bl_len, c_size;
-        UBYTE *csd = &info->csd[0];
-        UBYTE *cid = &info->cid[0];
-
-        /* Get the CSD data */
-        sdcmd_send(sd, SDCMD_SEND_CSD, 0);
-        r1 = sdcmd_r1a(sd);
-        //debug("r1=0x%lx", r1);
-        if (r1)
-            goto exit;
-
-        r1 = sdcmd_read_packet(sd, csd, 16);
-        //debug("r1=0x%lx", r1);
-        if (r1)
-            goto exit;
-
-        //info("csd=%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx",
-        //        csd[0], csd[1], csd[2], csd[3],
-        //        csd[4], csd[5], csd[6], csd[7],
-        //        csd[8], csd[9], csd[10], csd[11],
-        //        csd[12], csd[13], csd[14], csd[15]);
-
-        /* Get the CID data */
-        sdcmd_send(sd, SDCMD_SEND_CID, 0);
-        r1 = sdcmd_r1a(sd);
-        //debug("r1=%d", r1);
-        if (r1)
-            goto exit;
-
-        r1 = sdcmd_read_packet(sd, cid, 16);
-        sdcmd_select(sd, FALSE);
-
-        //debug("r1=0x%lx", r1);
-        if (r1)
-            return r1;
-        //info("cid=%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx",
-        //        cid[0], cid[1], cid[2], cid[3],
-        //        cid[4], cid[5], cid[6], cid[7],
-        //        cid[8], cid[9], cid[10], cid[11],
-        //        cid[12], cid[13], cid[14], cid[15]);
-
-        info->block_size = SDSIZ_BLOCK;
-
-        if (info->ocr & SDOCRF_HCS) {
-            /* SDHC calculation */
-
-            /* Bits 68:48 of the CSD */
-            c_size = bits(&csd[15], 48, 20);
-
-            info("SDHC: c_size=%ld", c_size);
-
-            info->blocks = (c_size + 1) * 1024;
-
-            info->addr_shift = 0;
-        } else {
-            /* SD calculation */
-            /* Bits 49:47 of the CSD */
-            c_size_mult = bits(&csd[15], 47, 3);
-            /* Bits 83:80 of the CSD */
-            read_bl_len = bits(&csd[15], 80, 4);
-            /* Bits 73:62 of the CSD */
-            c_size = bits(&csd[15], 62, 12);
-
-            info("SD: c_size_mult=%ld, read_bl_len=%ld, c_size=%ld", c_size_mult, read_bl_len, c_size);
-
-            info->blocks = (1UL << (c_size_mult + read_bl_len + 2 - 9)) * (c_size + 1);
-
-            /* Set block size */
-            sdcmd_send(sd, SDCMD_SET_BLOCKLEN, info->block_size);
-            r1 = sdcmd_r1(sd);
-            if (r1)
-                return r1;
-
-            info->addr_shift = 9;
-        }
-        //info("blocks=%ld", info->blocks);
-    }
-
-    /* Default speed mode */
-    speed = SDCMD_CLKDIV_FAST;
-
-    /* Try setting the card into high speed mode.  It's possible
-     * to check first, but just trying to set is enough?
-     *
-     * First nibble is Function Group 1 - Access mode / Bus Speed mode;
-     * the only thing that applies to us in SPI mode.
-     */
-    sdcmd_send(sd, SDCMD_SWITCH_FUNCTION, 0x80fffff1);
-    r1 = sdcmd_r1a(sd);
-    //debug("r1=0x%lx", r1);
-    if (!r1) {
-        UBYTE cmd6[512/8];
-        ULONG f1_sel;
-
-        r1 = sdcmd_read_packet(sd, cmd6, sizeof(cmd6));
-        sdcmd_select(sd, FALSE);
-
-        f1_sel = bits(&cmd6[63], 376, 4);
-
-        /* Out of all of the above, just check f1_sel to see
-         * if it is what we set it to.
-         */
-        if (f1_sel == 1)
-            speed = SDCMD_CLKDIV_FASTER;
-    }
-
-    /* Switch to high speed mode */
-    sdcmd_clkdiv(sd, speed);
-    r1 = 0;
-
-exit:
-    sdcmd_select(sd, FALSE);
-    return r1;
-}
-
 UBYTE sdcmd_read_block(struct sdcmd *sd, ULONG addr, UBYTE *buff)
 {
     UBYTE r1;
@@ -683,7 +484,12 @@ UBYTE sdcmd_read_block(struct sdcmd *sd, ULONG addr, UBYTE *buff)
         sdcmd_send(sd, SDCMD_READ_SINGLE_BLOCK, addr << sd->info.addr_shift);
         r1 = sdcmd_r1a(sd);
         if (!r1)
+        {
             r1 = sdcmd_read_packet(sd, buff, SDSIZ_BLOCK);
+            //debug("sdcmd_read_packet = %x", r1);
+        } else {
+            //debug("sdcmd_r1a = %x", r1);
+        }
 
         sdcmd_select(sd, FALSE);
 
@@ -691,7 +497,6 @@ UBYTE sdcmd_read_block(struct sdcmd *sd, ULONG addr, UBYTE *buff)
 
     return r1;
 }
-
 
 UBYTE sdcmd_read_blocks(struct sdcmd *sd, ULONG addr, UBYTE *buff, int blocks)
 {
@@ -815,4 +620,269 @@ UBYTE sdcmd_write_blocks(struct sdcmd *sd, ULONG addr, CONST UBYTE *buff, int bl
 
     return r1;
 }
-/* vim: set shiftwidth=4 expandtab:  */
+
+BOOL sdcmd_hw_detect(struct sdcmd *sd)
+{
+    UWORD val;
+    
+    val = Read16(sd->iobase + SAGA_SD_STAT);
+
+    //debug("SD_STAT => $%04lx", val);
+
+    return (val & SAGA_SD_STAT_NCD) ? FALSE : TRUE;
+}
+
+
+BOOL sdcmd_sw_detect_quick(struct sdcmd *sd)
+{
+    UBYTE r1;
+    int i;
+
+    sdcmd_send(sd, SDCMD_READ_SINGLE_BLOCK, 0);
+
+    for (i = 0; i < 50; i++)
+    {
+        r1 = sdcmd_in(sd);
+        if (!(r1 & SDERRF_TIMEOUT)) break;
+    }
+
+    if (i == 50)
+    {
+        //debug("starting sdcmd_sw_detect_quick routine: FALSE");
+        return FALSE;
+    } else {
+        sdcmd_stop_transmission(sd);
+        //debug("starting sdcmd_sw_detect_quick routine: TRUE");
+        return TRUE;
+    }
+}
+
+BOOL sdcmd_sw_detect_full(struct sdcmd *sd)
+{
+    struct sdcmd_info *info = &sd->info;
+    UBYTE r1;
+    UBYTE speed;
+    ULONG r7;
+    int i;
+
+    //debug("sdcmd_sw_detect_full for SD-Card unit: %d", sd->unitnumber);
+
+    memset(info, 0, sizeof(*info));
+
+    //debug("Switch to slow speed mode");
+    sdcmd_clkdiv(sd, SDCMD_CLKDIV_SLOW);
+
+    //debug("Emit at least 74 clocks of idle");
+    sdcmd_select(sd, TRUE);
+    for (i = 0; i < 16; i++)
+    {
+        sdcmd_out(sd, 0xff);
+    }
+    sdcmd_select(sd, FALSE);
+
+    //debug("Stuff two idle bytes while deasserted");
+    sdcmd_out(sd, 0xff);
+    sdcmd_out(sd, 0xff);
+
+    //debug("Put into idle state");
+    sdcmd_send(sd, SDCMD_GO_IDLE_STATE, 0);
+
+    // Quick IDLE test to shorten Detect if no media is present 
+
+    for (i = 0; i < 100; i++)
+    {
+        r1 = sdcmd_in(sd);
+        if (!(r1 & SDERRF_TIMEOUT)) break;
+    }
+    if (i==100)
+    {
+        //debug("Quick IDLE Test failed (100)");
+        return FALSE;
+    }
+    r1 &= ~SDERRF_IDLE;
+    if (r1) return FALSE;
+    debug("Quick IDLE Test succeeded");
+
+    debug("Do SHDC detection during idle");
+    sdcmd_send(sd, SDCMD_SEND_IF_COND, 0x000001aa);
+    r1 = sdcmd_r7(sd, &r7);
+    r1 &= ~SDERRF_IDLE;
+    if (!r1)
+    {
+        debug("Looks like a SDHC card?");
+        if ((r7 & 0x000001ff) == 0x000001aa)
+        {
+            debug(" HCS (SDHC) mode");
+            sdcmd_asend(sd, SDCMD_SD_SEND_OP_COND, SDOCRF_HCS);
+            r1 = sdcmd_r1(sd);
+            r1 &= ~SDERRF_IDLE;
+            if (r1) return FALSE;
+        }
+    }
+
+    debug("Wait for card to complete idle");
+    for (i = 0; i < SDCMD_IDLE_RETRY; i++)
+    {
+        UBYTE err;
+       
+        /* Initiate SDC init process */
+        err = sdcmd_asend(sd, SDCMD_SD_SEND_OP_COND, 0);
+        if (err) return FALSE;
+
+        r1 = sdcmd_r1(sd);
+        if (!(r1 & SDERRF_IDLE))
+        {
+            debug("SD-Card SUCCESS on SDCMD_SD_SEND_OP_COND");
+            break;
+        }
+        if (i==SDCMD_IDLE_RETRY-1)
+        {
+            debug("SD-Card TIMEOUT on SDCMD_SD_SEND_OP_COND");
+            return FALSE;
+        }
+    }
+
+    debug("Enable CRC check mode");
+    sdcmd_send(sd, SDCMD_CRC_ON_OFF, 1);
+    r1 = sdcmd_r1(sd);
+    if (r1)
+    {
+        /* Non-fatal if this failed */
+        debug("r1=0x%lx", r1);
+        debug("SD-Card CRC-Check Mode FAIL (non-fatal)");
+    } else {
+        debug("SD-Card CRC-Check Mode enabled");
+    }
+
+    debug("Check for voltage levels");
+    sdcmd_send(sd, SDCMD_READ_OCR, 0);
+    r1 = sdcmd_r3(sd, &info->ocr);
+    debug("r1=0x%lx", r1);
+    if (r1)
+    {
+        debug("FAIL = SD-Card Voltage Info could NOT be read");
+        return FALSE;
+    }
+
+    debug("ocr=0x%08lx (vs 0x%08lx)", info->ocr, SDOCRF_MAX_3_3V | SDOCRF_MAX_3_4V);
+    if (!(info->ocr & (SDOCRF_MAX_3_3V | SDOCRF_MAX_3_4V)))
+    {
+        debug("FAIL on Voltage Check = ocr=0x%08lx (vs 0x%08lx)", info->ocr, SDOCRF_MAX_3_3V | SDOCRF_MAX_3_4V);
+        r1 = SDERRF_IDLE;
+        return FALSE;
+    } else {
+        debug("SUCCES on Voltage Check = ocr=0x%08lx (vs 0x%08lx)", info->ocr, SDOCRF_MAX_3_3V | SDOCRF_MAX_3_4V);
+    }
+
+    if (info)
+    {
+        ULONG c_size_mult, read_bl_len, c_size;
+        UBYTE *csd = &info->csd[0];
+        UBYTE *cid = &info->cid[0];
+
+        /* Get the CSD data */
+        sdcmd_send(sd, SDCMD_SEND_CSD, 0);
+        r1 = sdcmd_r1a(sd);
+        debug("r1=0x%lx", r1);
+        if (r1) return FALSE;
+
+        r1 = sdcmd_read_packet(sd, csd, 16);
+        //debug("r1=0x%lx", r1);
+        if (r1) return FALSE;
+
+        debug("csd=%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx",
+                csd[0], csd[1], csd[2], csd[3],
+                csd[4], csd[5], csd[6], csd[7],
+                csd[8], csd[9], csd[10], csd[11],
+                csd[12], csd[13], csd[14], csd[15]);
+
+        /* Get the CID data */
+        sdcmd_send(sd, SDCMD_SEND_CID, 0);
+        r1 = sdcmd_r1a(sd);
+        debug("r1=%d", r1);
+        if (r1) return FALSE;
+
+        r1 = sdcmd_read_packet(sd, cid, 16);
+        sdcmd_select(sd, FALSE);
+
+        debug("r1=0x%lx", r1);
+        if (r1) return FALSE;
+
+        debug("cid=%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx-%02lx%02lx%02lx%02lx",
+                cid[0], cid[1], cid[2], cid[3],
+                cid[4], cid[5], cid[6], cid[7],
+                cid[8], cid[9], cid[10], cid[11],
+                cid[12], cid[13], cid[14], cid[15]);
+
+        info->block_size = SDSIZ_BLOCK;
+
+        if (info->ocr & SDOCRF_HCS) {
+            /* SDHC calculation */
+
+            /* Bits 68:48 of the CSD */
+            c_size = bits(&csd[15], 48, 20);
+
+            debug("SDHC-Card info: c_size=%ld  | blocks=%ld", c_size, info->blocks);
+
+            info->blocks = (c_size + 1) * 1024;
+
+            info->addr_shift = 0;
+        } else {
+            /* SD calculation */
+            /* Bits 49:47 of the CSD */
+            c_size_mult = bits(&csd[15], 47, 3);
+            /* Bits 83:80 of the CSD */
+            read_bl_len = bits(&csd[15], 80, 4);
+            /* Bits 73:62 of the CSD */
+            c_size = bits(&csd[15], 62, 12);
+
+            debug("SD: c_size_mult=%ld, read_bl_len=%ld, c_size=%ld", c_size_mult, read_bl_len, c_size);
+
+            info->blocks = (1UL << (c_size_mult + read_bl_len + 2 - 9)) * (c_size + 1);
+
+            /* Set block size */
+            sdcmd_send(sd, SDCMD_SET_BLOCKLEN, info->block_size);
+            r1 = sdcmd_r1(sd);
+            if (r1) return FALSE;
+
+            info->addr_shift = 9;
+        }
+        //info("blocks=%ld", info->blocks);
+    } else {
+        info->block_size = SDSIZ_BLOCK;
+        info->blocks = 0; // virtual value as stub if no SD is present (dynamically set by FAT filesystem on DoDiskInsert())
+    }
+            
+exit:
+
+    speed = SDCMD_CLKDIV_FAST;
+
+    // Try setting the card into high speed mode.  It's possible to check first, but just trying to set is enough?
+    // First nibble is Function Group 1 - Access mode / Bus Speed mode; the only thing that applies to us in SPI mode. 
+
+    sdcmd_send(sd, SDCMD_SWITCH_FUNCTION, 0x80fffff1);
+    r1 = sdcmd_r1a(sd);
+    debug("r1=0x%lx", r1);
+    if (!r1)
+    {
+        UBYTE cmd6[512/8];
+        ULONG f1_sel;
+
+        r1 = sdcmd_read_packet(sd, cmd6, sizeof(cmd6));
+        sdcmd_select(sd, FALSE);
+
+        f1_sel = bits(&cmd6[63], 376, 4);
+
+        /* Out of all of the above, just check f1_sel to see if it is what we set it to.*/
+        if (f1_sel == 1) speed = SDCMD_CLKDIV_FASTER;
+    }
+
+    /* Switch to high speed mode */
+    sdcmd_clkdiv(sd, speed);
+
+    sdcmd_select(sd, FALSE);
+
+    debug("finishing sdcmd_sw_detect_full routine");
+
+    return TRUE;
+}

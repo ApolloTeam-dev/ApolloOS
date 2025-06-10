@@ -47,98 +47,92 @@ LONG lockable(NODE objectnode,LONG accessmode) {
 
 
 
-void __inline settemporarylock(NODE objectnode) {
+__inline void settemporarylock(NODE objectnode) {
   globals->templockedobjectnode=objectnode;
 }
 
 
 
-void __inline cleartemporarylock(void) {
+__inline void cleartemporarylock(void) {
   globals->templockedobjectnode=0;
 }
 
 
-LONG freelock(struct ExtFileLock *lock) {
+LONG freelock(struct ExtFileLock *lock)
+{
+  /* You may assume that this function never fails for locks temporarily allocated internally. */
 
-  /* You may assume that this function never fails for locks
-     temporarily allocated internally. */
+	if(lock != 0)
+	{
+	    if(lock->id == DOSTYPE_ID)
+    	{
+      		lock->task=0;
 
-  if(lock!=0) {
-    if(lock->id==DOSTYPE_ID) {
-      lock->task=0;
+			if(lock->next!=0) 	// remove our lock from the chain
+			{
+				lock->next->prev=lock->prev;
+			}
 
-      if(lock->next!=0) {
-        lock->next->prev=lock->prev;
-      }
+			if(lock->prev!=0)	
+			{
+				lock->prev->next=lock->next;
+				lock->prev->link=TOBADDR(lock->next);
+			} else {
+				
+				struct DeviceList *vn=BADDR(lock->volume);
 
-      if(lock->prev!=0) {
-        lock->prev->next=lock->next;
-        lock->prev->link=TOBADDR(lock->next);
-      }
-      else {
+				if(vn->dl_LockList!=0)
+				{
+					if(lock->next==0)
+					{
+						DD(bug("[SFS] freelock: This was the last lock associated with volume %s\n", AROS_BSTR_ADDR(vn->dl_Name)));
 
-#if 0
-//            #ifdef STARTDEBUG
-              {
-                struct DeviceList *vn=BADDR(lock->volume);
+						if((vn == globals->volumenode_inh) && (vn->dl_unused==0))
+						{
+							/* structs */
+							#define SFSM_ADD_VOLUMENODE    (1)
+							#define SFSM_REMOVE_VOLUMENODE (2)
 
-                if(vn->dl_LockList!=0) {
-                  req("Freeing lock!", "Ok");
+							struct SFSMessage {
+								struct Message msg;
+								ULONG command;
+								IPTR  data;
+								LONG errorcode;
+							};
+														
+							struct SFSMessage *sfsm;
 
-                  if(lock->next==0) {
-                    req("This was the last lock!", "Ok");
-                  }
-                }
-              }
-//            #endif
-#endif
+					        DD(bug("[SFS] freelock: message sdlh to destroy volumenode = %ld\n", AROS_BSTR_ADDR(vn->dl_LockList)));
 
-#if 0
-        struct DeviceList *vn=BADDR(lock->volume);
+							if((sfsm = AllocVec(sizeof(struct SFSMessage), MEMF_CLEAR)) != 0)
+							{
+								sfsm->command = SFSM_REMOVE_VOLUMENODE;
+								sfsm->data = (IPTR)vn;
+								sfsm->msg.mn_Length = sizeof(struct SFSMessage);
 
-        if(vn->dl_LockList!=0) {
-          _DEBUG(("freelock: Freeing a lock of a volume which isn't currently inserted.\n"));
+								PutMsg(globals->sdlhport, (struct Message *)sfsm);
+							}
+						}
+					} else {
+						vn->dl_LockList=TOBADDR(lock->next);
+					}
+				} else {
+					vn->dl_LockList=TOBADDR(lock->next);
+				}
+				globals->locklist=lock->next;
+			}
 
-          if(lock->next==0) {
-            /* Whoops... this was the last lock which was associated with a volume
-               not currently inserted.  This means the volumenode's LockList pointer
-               becomes zero if there are still some NotifyRequest's left, or it is
-               completely removed. */
+			if(lock->gh!=0)
+			{
+				freeglobalhandle(lock->gh);
+			}
 
-            _DEBUG(("freelock: This was the last lock associated with that volume!\n"));
-
-//            #ifdef STARTDEBUG
-//              req("Last lock was freed!", "Ok");
-//            #endif
-
-            if(vn->dl_unused==0) {
-              /* remove the volumenode! */
-            }
-          }
-          else {
-            vn->dl_LockList=TOBADDR(lock->next);
-          }
-        }
-        else {
-          locklist=lock->next;
-        }
-
-#endif
-
-        globals->locklist=lock->next;
-      }
-
-      if(lock->gh!=0) {
-        freeglobalhandle(lock->gh);
-      }
-
-      FreeMem(lock,sizeof(struct ExtFileLock));
-    }
-    else {
-      return(ERROR_INVALID_LOCK);
-    }
-  }
-  return(0);
+      		FreeMem(lock,sizeof(struct ExtFileLock));
+    	} else {
+      		return(ERROR_INVALID_LOCK);
+    	}
+  	}
+  	return(0);
 }
 
 
@@ -150,7 +144,7 @@ LONG lockobject2(struct fsObject *o, LONG accessmode, struct ExtFileLock **retur
 
   if(BE2L(o->be_objectnode)==ROOTNODE && accessmode==EXCLUSIVE_LOCK) {
     /* Exclusive locks on the ROOT directory are not allowed */
-    _DEBUG(("lockobject: someone tried to lock the ROOT directory exclusively -- denied\n"));
+    _DEBUG("lockobject: someone tried to lock the ROOT directory exclusively -- denied\n");
 
     return(ERROR_OBJECT_IN_USE);
   }
@@ -162,7 +156,7 @@ LONG lockobject2(struct fsObject *o, LONG accessmode, struct ExtFileLock **retur
 
   if(lockable(BE2L(o->be_objectnode), accessmode)!=DOSFALSE) {
 
-    _XDEBUG((DEBUG_LOCK,"lockobject: lockable returned TRUE\n"));
+    _XDEBUG(DEBUG_LOCK,"lockobject: lockable returned TRUE\n");
 
     /* If we got this far then we can safely create the requested lock and
        add it to the locklist. */
@@ -182,7 +176,7 @@ LONG lockobject2(struct fsObject *o, LONG accessmode, struct ExtFileLock **retur
 
       lock->task=&globals->mytask->pr_MsgPort;
       lock->volume=TOBADDR(globals->volumenode);
-
+      //DD(bug("[SFS] lockobject2 globals->volumenode = 0x%8lx\n", globals->volumenode));
       lock->link=TOBADDR(globals->locklist);
       lock->next=globals->locklist;
       lock->prev=0;
@@ -232,7 +226,7 @@ LONG lockobject(struct ExtFileLock *efl, UBYTE *path, LONG accessmode, struct Ex
       return(lockobject2(o, accessmode, returned_efl));
     }
     else {
-      _XDEBUG((DEBUG_LOCK,"lockobject: locateobject failed\n"));
+      _XDEBUG(DEBUG_LOCK,"lockobject: locateobject failed\n");
 
       return(errorcode);
     }
@@ -315,7 +309,7 @@ LONG locateobject2(UBYTE **io_path, struct CacheBuffer **io_cb, struct fsObject 
 
   path=stripcolon(path);
 
-  _XDEBUG((DEBUG_LOCK,"locateobject: Locating object with path '%s' from ObjectNode %ld\n",path,BE2L((*io_o)->be_objectnode)));
+  _XDEBUG(DEBUG_LOCK,"locateobject: Locating object with path '%s' from ObjectNode %ld\n",path,BE2L((*io_o)->be_objectnode));
 
   while(*path!=0) {
 
@@ -332,7 +326,7 @@ LONG locateobject2(UBYTE **io_path, struct CacheBuffer **io_cb, struct fsObject 
       if(BE2L(oc->be_parent)==0) {
         /* We can't get the parent of the root! */
 
-        _XDEBUG((DEBUG_LOCK,"locateobject: Can't get parent of the root\n"));
+        _XDEBUG(DEBUG_LOCK,"locateobject: Can't get parent of the root\n");
 
         errorcode=ERROR_OBJECT_NOT_FOUND;
         break;
@@ -355,7 +349,7 @@ LONG locateobject2(UBYTE **io_path, struct CacheBuffer **io_cb, struct fsObject 
       */
 
       if(((*io_o)->bits & OTYPE_DIR)==0) {
-        _XDEBUG((DEBUG_LOCK,"locateobject: Not a directory\n"));
+        _XDEBUG(DEBUG_LOCK,"locateobject: Not a directory\n");
 
         errorcode=ERROR_OBJECT_WRONG_TYPE;
         break;
@@ -397,7 +391,7 @@ LONG createglobalhandle(struct ExtFileLock *efl) {
         efl->gh=lock->gh;
         lock->gh->count++;
 
-        // _DEBUG(("createglobalhandle: Returning existing gh structure\n"));
+        // _DEBUG("createglobalhandle: Returning existing gh structure\n");
 
         return(0);
       }
@@ -409,7 +403,7 @@ LONG createglobalhandle(struct ExtFileLock *efl) {
     if((efl->gh=AllocMem(sizeof(struct GlobalHandle), MEMF_PUBLIC))!=0) {
       struct GlobalHandle *gh=efl->gh;
 
-      // _DEBUG(("createglobalhandle: Allocated new gh structure\n"));
+      // _DEBUG("createglobalhandle: Allocated new gh structure\n");
 
       gh->count=1;
 

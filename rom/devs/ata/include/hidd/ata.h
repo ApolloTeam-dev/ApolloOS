@@ -2,7 +2,7 @@
 #define HIDD_ATA_H
 
 /*
-    Copyright © 2013-2018, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2013-2018, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: ATA bus driver HIDD definitions

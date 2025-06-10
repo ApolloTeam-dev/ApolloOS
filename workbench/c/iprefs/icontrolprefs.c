@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -74,7 +74,7 @@ void IControlPrefs_Handler(STRPTR filename)
 {
     struct IFFHandle *iff;
     
-    D(bug("In IPrefs:IControlPrefs_Handler\n"));
+    bug("In IPrefs:IControlPrefs_Handler\n");
     
     if ((iff = CreateIFF(filename, stopchunks, 1)))
     {

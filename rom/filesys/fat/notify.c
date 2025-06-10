@@ -25,12 +25,12 @@ void SendNotify(struct NotifyRequest *nr, struct Globals *glob)
 {
     struct NotifyMessage *nm;
 
-    D(bug("[fat] notifying for '%s'\n", nr->nr_FullName));
+    D(bug("[FAT] notifying for '%s'\n", nr->nr_FullName));
 
     /* Signals are a doddle */
     if (nr->nr_Flags & NRF_SEND_SIGNAL)
     {
-        D(bug("[fat] sending signal %ld to task 0x%08x\n",
+        D(bug("[FAT] sending signal %ld to task 0x%08x\n",
             nr->nr_stuff.nr_Signal.nr_SignalNum,
             nr->nr_stuff.nr_Signal.nr_Task));
 
@@ -43,7 +43,7 @@ void SendNotify(struct NotifyRequest *nr, struct Globals *glob)
     /* If message isn't set, then they screwed up, and there's nothing to do */
     if (!(nr->nr_Flags & NRF_SEND_MESSAGE))
     {
-        D(bug("[fat] weird, request doesn't have SIGNAL or MESSAGE bits set,"
+        D(bug("[FAT] weird, request doesn't have SIGNAL or MESSAGE bits set,"
             " doing nothing\n"));
         return;
     }
@@ -52,7 +52,7 @@ void SendNotify(struct NotifyRequest *nr, struct Globals *glob)
      * still messages outstanding */
     if (nr->nr_Flags & NRF_WAIT_REPLY && nr->nr_MsgCount > 0)
     {
-        D(bug("[fat] request has WAIT_REPLY set and there are %ld messages"
+        D(bug("[FAT] request has WAIT_REPLY set and there are %ld messages"
             " outstanding, doing nothing\n", nr->nr_MsgCount));
         return;
     }
@@ -60,7 +60,7 @@ void SendNotify(struct NotifyRequest *nr, struct Globals *glob)
     /* New message */
     nr->nr_MsgCount++;
 
-    D(bug("[fat] request now has %ld messages outstanding\n",
+    D(bug("[FAT] request now has %ld messages outstanding\n",
         nr->nr_MsgCount));
 
     /* Allocate and build the message */
@@ -71,7 +71,7 @@ void SendNotify(struct NotifyRequest *nr, struct Globals *glob)
     nm->nm_Code = NOTIFY_CODE;
     nm->nm_NReq = nr;
 
-    D(bug("[fat] sending notify message to port 0x%08x\n",
+    D(bug("[FAT] sending notify message to port 0x%08x\n",
         nr->nr_stuff.nr_Msg.nr_Port));
 
     /* Send it */
@@ -84,7 +84,7 @@ void SendNotifyByLock(struct FSSuper *sb, struct GlobalLock *gl)
     struct Globals *glob = sb->glob;
     struct NotifyNode *nn;
 
-    D(bug("[fat] notifying for lock (%ld/%ld)\n", gl->dir_cluster,
+    D(bug("[FAT] notifying for lock (%ld/%ld)\n", gl->dir_cluster,
         gl->dir_entry));
 
     ForeachNode(&sb->info->notifies, nn)
@@ -104,7 +104,7 @@ void SendNotifyByDirEntry(struct FSSuper *sb, struct DirEntry *de)
        it as uninitialised */
     sdh.ioh.sb = NULL;
 
-    D(bug("[fat] notifying for dir entry (%ld/%ld)\n", de->cluster,
+    D(bug("[FAT] notifying for dir entry (%ld/%ld)\n", de->cluster,
         de->index));
 
     ForeachNode(&sb->info->notifies, nn)
@@ -145,12 +145,12 @@ void ProcessNotify(struct Globals *glob)
             if (nm->nm_NReq->nr_MsgCount < 0)
                 nm->nm_NReq->nr_MsgCount = 0;
 
-            D(bug("[fat] received notify message reply,"
+            D(bug("[FAT] received notify message reply,"
                 " %ld messages outstanding for this request\n",
                 nm->nm_NReq->nr_MsgCount));
 
             FreeVec(nm);
         }
         else
-            D(bug("[fat] non-notify message received, dropping it\n"));
+            D(bug("[FAT] non-notify message received, dropping it\n"));
 }

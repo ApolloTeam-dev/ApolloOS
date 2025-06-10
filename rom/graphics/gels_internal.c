@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2016, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2016, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Internal function for improved gels handling.
@@ -235,12 +235,13 @@ void _ClearBobAndFollowClearPath(struct VSprite * CurVSprite,
 			/*
 			 * No background was saved. So let's restore the
 			 * standard background!
-			 */
+			 * Edit: This is not really correct, this might end up in black squares. Just do nothing here
 			EraseRect(rp,
 			          CurVSprite->OldX,
 			          CurVSprite->OldY,
 			          CurVSprite->OldX + ( CurVSprite->Width << 4 ) - 1,
 			          CurVSprite->OldY +   CurVSprite->Height	- 1);
+			*/ 
 		}
 		/*
 		 * Mark the BOB as cleared.

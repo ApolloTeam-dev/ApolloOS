@@ -2,7 +2,7 @@
 #define DOSBOOT_INTERN_H
 
 /*
-   Copyright © 1995-2014, The AROS Development Team. All rights reserved.
+   Copyright ï¿½ 1995-2014, The AROS Development Team. All rights reserved.
    $Id$
 
    Desc: Internal definitions for dosboot
@@ -17,6 +17,13 @@
 #include "bootflags.h"
 
 #define BUFSIZE 100
+
+#if APOLLO_DEBUG
+#define DEBUG 1
+#else
+#define DEBUG 0
+#endif
+
 
 struct BootConfig
 {

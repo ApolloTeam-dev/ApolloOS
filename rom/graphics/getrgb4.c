@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2012, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Graphics function GetRGB4()
@@ -60,7 +60,7 @@
 
     /* All we're currently doing is read the entry and return it. */
     CT = colormap->ColorTable;
-    return CT[entry];
+    return CT[entry] & 0xFFF;
 
     AROS_LIBFUNC_EXIT
     

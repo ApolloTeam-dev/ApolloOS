@@ -687,7 +687,7 @@ target_grub2_version
 aros_enable_mmu
 ENABLE_EXECSMP
 PLATFORM_EXECSMP
-aros_serial_debug
+apollo_debug
 aros_dist_amigadate
 aros_dist_date
 aros_dist_version
@@ -3524,7 +3524,7 @@ printf "%s\n" "$msg_result" >&6; }
 
 aros_dist_name=AROS
 aros_dist_version=ABIv1
-aros_dist_date=$(date +%Y-%m-%d)
+aros_dist_date=$(date +%d-%m-%Y)
 aros_dist_amigadate=$(date +"%-d.%-m.%Y")
 
 aros_nominal_width=800
@@ -8942,7 +8942,7 @@ aros_cxx_libs=
 aros_target_genmap="-Wl,-Map -Xlinker"
 
 # Native flavour stuff
-aros_serial_debug="0"
+# apollo_debug="1"
 
 # Palm native flavour stuff
 aros_palm_debug_hack="0"
@@ -9965,7 +9965,6 @@ case "$target_os" in
             *x86_64*)
                 PLATFORM_EXECSMP="#define __AROSPLATFORM_SMP__"
                 aros_target_cpu="x86_64"
-                aros_serial_debug=1
                 if test "$aros_object_format" = "" ; then
                     aros_object_format="elf_x86_64"
                 fi
@@ -16666,31 +16665,18 @@ printf %s "checking whether serial debug is enabled... " >&6; }
 # Check whether --with-serial-debug was given.
 if test ${with_serial_debug+y}
 then :
-  withval=$with_serial_debug; serial_debug=$withval
+  serial_debug="yes"
 else $as_nop
-  serial_debug=none
+  serial_debug="no"
 fi
 
-if test "$aros_serial_debug" = 0 ; then
-    serial_debug_forced=""
-    if test "$serial_debug" = "yes" ; then
-        serial_debug="1"
-    fi
-    if test "$serial_debug" = "no" ; then
-        serial_debug="none"
-    fi
-else
-    serial_debug_forced="(forced)"
-    serial_debug=$aros_serial_debug
+if test "$serial_debug" = "yes" ; then
+    apollo_debug="1"
 fi
-if test "$serial_debug" != "none" ; then
-    aros_serial_debug=$serial_debug
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $serial_debug_forced on port $serial_debug" >&5
-printf "%s\n" "$serial_debug_forced on port $serial_debug" >&6; }
-else
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
+if test "$serial_debug" = "no" ; then
+    apollo_debug="none"
 fi
+
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether palm debug hack is enabled" >&5
 printf %s "checking whether palm debug hack is enabled... " >&6; }

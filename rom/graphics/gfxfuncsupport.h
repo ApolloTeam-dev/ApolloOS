@@ -220,6 +220,8 @@ void BltRastPortBitMap(struct RastPort *srcRastPort, WORD xSrc, WORD ySrc,
 		       struct GfxBase *GfxBase);
 
 void GenMinterms(struct RastPort *rp);
+void pokeCL(UWORD *ci, UWORD target, UWORD table);
+struct CopIns *pokeCI(struct CopIns *ci, UWORD *field1, short field2);
 
 /****************************************************************************************/
 

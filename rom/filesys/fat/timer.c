@@ -39,7 +39,7 @@ LONG InitTimer(struct Globals *glob)
                 glob->timer_active = FALSE;
                 glob->restart_timer = TRUE;
                 glob->gl_TimerBase = glob->timereq->tr_node.io_Device;
-                D(bug("[fat] Timer ready\n"));
+                D(bug("[FAT] Timer ready\n"));
                 return 0;
             }
             DeleteIORequest((struct IORequest *)glob->timereq);
@@ -51,10 +51,10 @@ LONG InitTimer(struct Globals *glob)
 
 void CleanupTimer(struct Globals *glob)
 {
-    D(bug("[fat] Cleaning up timer\n"));
+    D(bug("[FAT] Cleaning up timer\n"));
     if (glob->timer_active)
     {
-        D(bug("[fat] Terminating active request\n"));
+        D(bug("[FAT] Terminating active request\n"));
         AbortIO((struct IORequest *)glob->timereq);
         WaitIO((struct IORequest *)glob->timereq);
     }

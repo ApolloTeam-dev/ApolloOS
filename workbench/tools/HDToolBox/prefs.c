@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2011, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -204,7 +204,7 @@ LONG parsePrefs(char *buffer, LONG size)
     	DB2(bug("[parsePrefs] Cur %d, Length %d\n", csrc.CS_CurChr, csrc.CS_Length));
         res = ReadItem(ident, 256, &csrc);
 
-	DB2(bug("[parsePrefs] Got item %d (%s)\n", res, ident));
+	    DB2(bug("[parsePrefs] Got item %d (%s)\n", res, ident));
 
         switch (res)
         {

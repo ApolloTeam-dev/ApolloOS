@@ -1,5 +1,5 @@
 /*
-    Copyright © 2019, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2019, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -36,5 +36,5 @@ void ata_TRIMCmd(struct IOStdReq *io)
         0
     };
 #endif
-    D(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
+    bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__);
 }

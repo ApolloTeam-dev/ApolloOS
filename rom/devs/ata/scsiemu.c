@@ -19,6 +19,7 @@
 
 #undef UtilityBase
 
+
 static void wl(UBYTE *p, ULONG v)
 {
     p[0] = v >> 24;
@@ -44,8 +45,10 @@ static ULONG rw(UBYTE *p)
 
 static UBYTE scsi_read32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG len, ULONG *outlen)
 {
+    bug("[SCSI] scsi_read32\n");
+    
      UBYTE io_Error = 0;
-     if (unit->au_SectorShift == 9) /* use cache with 512 Byte sectors only */
+     if ((unit->au_SectorShift == 9) && ((unit->au_XferModes & AF_XFER_PACKET)==0))  /* use cache with 512 Byte sectors only */
      {
          struct ata_Bus *bus = unit->au_Bus;
          struct ataBase *base = bus->ab_Base;
@@ -107,14 +110,22 @@ static UBYTE scsi_read32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG l
 
 static UBYTE scsi_write32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG len, ULONG *outlen)
 {
-     struct ata_Bus *bus = unit->au_Bus;
-     struct ataBase *base = bus->ab_Base;
-     UBYTE err;
-     for (int i = 0; i < len; i++)
-     {
-         ULONG blockAdr = (offset + i) & CACHE_MASK;
-         base->ata_CacheTags[blockAdr] = 0xfffffffffffffffful;
-     }
+    bug("[SCSI] scsi_write32\n");
+
+    UBYTE err;
+
+    if ((unit->au_SectorShift == 9) && ((unit->au_XferModes & AF_XFER_PACKET)==0)) 
+    {
+        struct ata_Bus *bus = unit->au_Bus;
+        struct ataBase *base = bus->ab_Base;
+        
+        for (int i = 0; i < len; i++)
+        {
+            ULONG blockAdr = (offset + i) & CACHE_MASK;
+            base->ata_CacheTags[blockAdr] = 0xfffffffffffffffful;
+        }
+    }
+    
      err = unit->au_Write32(unit, offset, len, data, outlen);
      if (err) /* on error try again */
           return unit->au_Write32(unit, offset, len, data, outlen);
@@ -123,29 +134,36 @@ static UBYTE scsi_write32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG 
 
 static UBYTE scsi_inquiry(struct ata_Unit *unit, struct SCSICmd *cmd, ULONG *outlen)
 {
+    bug("[SCSI] scsi_inquiry\n");
+    
     struct Library *UtilityBase = unit->au_Bus->ab_Base->ata_UtilityBase;
     UBYTE *cmdbuf = cmd->scsi_Command;
     UBYTE *out = (UBYTE*)cmd->scsi_Data;
     UBYTE len;
     
-    if ((cmdbuf[1] & 1) || cmdbuf[2] != 0)
-    	return 0xff;
+    if ((cmdbuf[1] & 1) || cmdbuf[2] != 0) return 0xff;
     len = cmdbuf[4];
-    if (cmdbuf[1] >> 5)
-    	return 0xff; /* no lun supported */
+    if (cmdbuf[1] >> 5) return 0xff; /* no lun supported */
+
+    out[0] = 0;
+    out[1] = 0;
     out[2] = 2; /* supports SCSI-2 */
     out[3] = 2; /* response data format */
     out[4] = 32; /* additional length */
     out[7] = 0x20; /* 16 bit bus */
     *outlen = len < 36 ? len : 36;
     SetMem(out + 8, ' ', 8 + 16 + 4);
-    CopyMem(unit->au_Model, out + 8, strlen(unit->au_Model) > 16 + 8 ? 16 + 8 : strlen(unit->au_Model));
-    CopyMem(unit->au_FirmwareRev, out + 8 + 16, strlen(unit->au_FirmwareRev) > 4 ? 4 : strlen(unit->au_FirmwareRev));
+    
+    CopyMem(unit->au_Model, out + 8, strlen(unit->au_Model) > 24 ? 24 : strlen(unit->au_Model));
+
+    CopyMem(unit->au_FirmwareRev, out + 32, strlen(unit->au_FirmwareRev) > 4 ? 4 : strlen(unit->au_FirmwareRev));
     return 0;
 }
 
 static UBYTE scsi_modesense(struct ata_Unit *unit, struct SCSICmd *cmd, ULONG *outlen)
 {
+    bug("[SCSI] scsi_modesense\n");
+    
     UBYTE *cmdbuf = cmd->scsi_Command;
     UBYTE *out = (UBYTE*)cmd->scsi_Data;
     UBYTE pcode = cmdbuf[2] & 0x3f;
@@ -200,6 +218,8 @@ static UBYTE scsi_modesense(struct ata_Unit *unit, struct SCSICmd *cmd, ULONG *o
 
 static UBYTE scsi_readcapacity(struct ata_Unit *unit, struct SCSICmd *cmd, ULONG *outlen)
 {
+    bug("[SCSI] scsi_readcapacity\n");
+    
     UBYTE *cmdbuf = cmd->scsi_Command;
     UBYTE *out = (UBYTE*)cmd->scsi_Data;
     BOOL pmi;
@@ -227,6 +247,8 @@ static UBYTE scsi_readcapacity(struct ata_Unit *unit, struct SCSICmd *cmd, ULONG
 
 BYTE SCSIEmu(struct ata_Unit *unit, struct SCSICmd *cmd)
 {
+    bug("[SCSI] SCSIEmu\n");
+    
     struct Library *UtilityBase = unit->au_Bus->ab_Base->ata_UtilityBase;
     ULONG len, offset;
     ULONG scsi_len;
@@ -237,7 +259,7 @@ BYTE SCSIEmu(struct ata_Unit *unit, struct SCSICmd *cmd)
     UWORD senselen;
     UBYTE err, status;
  
-    /* bug("SCSIEMU CMD=%02x\n", cmdbuf[0]); */
+    bug("SCSIEMU CMD=%02x\n", cmdbuf[0]); 
     err = 0;
     status = 0;
     scsi_len = 0;
@@ -247,79 +269,86 @@ BYTE SCSIEmu(struct ata_Unit *unit, struct SCSICmd *cmd)
     switch(cmdbuf[0])
     {
     	case 0x00: /* TEST UNIT READY */
-	break;
+	    break;
 
-	case 0x08: /* READ (6) */
-	offset = ((cmdbuf[1] & 31) << 16) | (cmdbuf[2] << 8) | cmdbuf[3];
-	len = cmdbuf[4];
-	if (!len)
-	    len = 256;
-	err = scsi_read32(unit, cmd->scsi_Data, offset, len, &scsi_len);
-	break;
-	case 0x28: /* READ (10) */
-	offset = rl(cmdbuf + 2);
-	len = rw(cmdbuf + 7);
-	err = scsi_read32(unit, cmd->scsi_Data, offset, len, &scsi_len);
-	break;	
-	case 0xa8: /* READ (12) */
-	offset = rl(cmdbuf + 2);
-	len = rl(cmdbuf + 6);
-	err = scsi_read32(unit, cmd->scsi_Data, offset, len, &scsi_len);
-	break;
-	case 0x0a: /* WRITE (6) */
-	offset = ((cmdbuf[1] & 31) << 16) | (cmdbuf[2] << 8) | cmdbuf[3];
-	len = cmdbuf[4];
-	if (!len)
-	    len = 256;
-	err = scsi_write32(unit, cmd->scsi_Data, offset, len, &scsi_len);
-	break;
-	case 0x2a: /* WRITE (10) */
-	offset = rl(cmdbuf + 2);
-	len = rw(cmdbuf + 7);
-	err = scsi_write32(unit, cmd->scsi_Data, offset, len, &scsi_len);
-	break;
-	case 0xaa: /* WRITE (12) */
-	offset = rl(cmdbuf + 2);
-	len = rl(cmdbuf + 6);
-	err = scsi_write32(unit, cmd->scsi_Data, offset, len, &scsi_len);
-	break;
+        case 0x08: /* READ (6) */
+        offset = ((cmdbuf[1] & 31) << 16) | (cmdbuf[2] << 8) | cmdbuf[3];
+        len = cmdbuf[4];
+        if (!len)
+            len = 256;
+        err = scsi_read32(unit, cmd->scsi_Data, offset, len, &scsi_len);
+        break;
 
-	case 0x37: /* READ DEFECT DATA */
-	status = 2;
-	senselen = 32;
-	SetMem(sense, 0, senselen);
-	sense[0] = 0x70;
-	sense[2] = 0x00;
-	sense[12] = 0x1c;
-	break;
+        case 0x28: /* READ (10) */
+        offset = rl(cmdbuf + 2);
+        len = rw(cmdbuf + 7);
+        err = scsi_read32(unit, cmd->scsi_Data, offset, len, &scsi_len);
+        break;	
 
-	case 0x12: /* INQUIRY */
-	err = scsi_inquiry(unit, cmd, &scsi_len);
-	break;
-	case 0x1a: /* MODE SENSE(6) */
-	err = scsi_modesense(unit, cmd, &scsi_len);
-	break;
-	case 0x25: /* READ CAPACITY */
-	err = scsi_readcapacity(unit, cmd, &scsi_len);
-	break;
+        case 0xa8: /* READ (12) */
+        offset = rl(cmdbuf + 2);
+        len = rl(cmdbuf + 6);
+        err = scsi_read32(unit, cmd->scsi_Data, offset, len, &scsi_len);
+        break;
 
-	case 0x1d: /* SEND DIAGNOSTICS */
-	case 0x35: /* SYNCHRONIZE CACHE */
-	break;
-	
-	default:
-	err = 0xff;
-	break;
-    }
-    
-    if (err == 0xff) {
-	status = 2; /* CHECK CONDITION */
-	senselen = 32;
-	SetMem(sense, 0, senselen);
-	sense[0] = 0x70;
-	sense[2] = 5; /* ILLEGAL REQUEST */
-	sense[12] = 0x24; /* ILLEGAL FIELD IN CDB */
-	err = TDERR_NotSpecified;
+        case 0x0a: /* WRITE (6) */
+        offset = ((cmdbuf[1] & 31) << 16) | (cmdbuf[2] << 8) | cmdbuf[3];
+        len = cmdbuf[4];
+        if (!len)
+            len = 256;
+        err = scsi_write32(unit, cmd->scsi_Data, offset, len, &scsi_len);
+        break;
+
+        case 0x2a: /* WRITE (10) */
+        offset = rl(cmdbuf + 2);
+        len = rw(cmdbuf + 7);
+        err = scsi_write32(unit, cmd->scsi_Data, offset, len, &scsi_len);
+        break;
+
+        case 0xaa: /* WRITE (12) */
+        offset = rl(cmdbuf + 2);
+        len = rl(cmdbuf + 6);
+        err = scsi_write32(unit, cmd->scsi_Data, offset, len, &scsi_len);
+        break;
+
+        case 0x37: /* READ DEFECT DATA */
+        status = 2;
+        senselen = 32;
+        SetMem(sense, 0, senselen);
+        sense[0] = 0x70;
+        sense[2] = 0x00;
+        sense[12] = 0x1c;
+        break;
+
+        case 0x12: /* INQUIRY */
+        err = scsi_inquiry(unit, cmd, &scsi_len);
+        break;
+
+        case 0x1a: /* MODE SENSE(6) */
+        err = scsi_modesense(unit, cmd, &scsi_len);
+        break;
+
+        case 0x25: /* READ CAPACITY */
+        err = scsi_readcapacity(unit, cmd, &scsi_len);
+        break;
+
+        case 0x1d: /* SEND DIAGNOSTICS */
+        case 0x35: /* SYNCHRONIZE CACHE */
+        break;
+        
+        default:
+        err = 0xff;
+        break;
+        }
+        
+        if (err == 0xff) {
+        status = 2; /* CHECK CONDITION */
+        senselen = 32;
+        SetMem(sense, 0, senselen);
+        sense[0] = 0x70;
+        sense[2] = 5; /* ILLEGAL REQUEST */
+        sense[12] = 0x24; /* ILLEGAL FIELD IN CDB */
+        err = TDERR_NotSpecified;
     }
     
     if (senselen && scsi_sense_len) {

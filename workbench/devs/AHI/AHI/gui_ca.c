@@ -54,6 +54,8 @@ HookEntry(struct Hook *hookPtr, Object *obj, APTR message) {
 }
 #endif
 
+#define D(x) x
+
 static void GUINewSettings(void);
 static void GUINewUnit(void);
 static void GUINewMode(void);

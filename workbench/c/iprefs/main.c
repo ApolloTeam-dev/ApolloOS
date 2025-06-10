@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 	
     Desc: Iprefs
@@ -94,17 +94,17 @@ static struct prefinfo
 }
 preftable[] =
 {
-    {"input"	    , inputprefsname     , InputPrefs_Handler      },
-    {"locale"	    , localeprefsname	 , LocalePrefs_Handler     }, /* Keep before font */
-    {"font" 	    , fontprefsname      , FontPrefs_Handler       },
-    {"palette"	    , paletteprefsname   , PalettePrefs_Handler    },
-    {"wbpattern"    , patternprefsname   , WBPatternPrefs_Handler  },
-    {"icontrol"     , icontrolprefsname  , IControlPrefs_Handler   },
-    {"screenmode"   , screenmodeprefsname, ScreenModePrefs_Handler },
-    {"serial"	    , serialprefsname	 , SerialPrefs_Handler     },
-    {"printer"	    , printerprefsname	 , PrinterPrefs_Handler    },
-    {"pointer"	    , pointerprefsname   , PointerPrefs_Handler    },
-    {"overscan"     , overscanprefsname  , NULL                    },
+    {"input"	    , inputprefsname     , InputPrefs_Handler      },       // ApolloOS IPrefs + Prefs/Input (REWRITE!)    
+    {"locale"	    , localeprefsname	 , LocalePrefs_Handler     },       // ApolloOS IPrefs + Prefs/Locale (REWRITE!) 
+    {"font" 	    , fontprefsname      , FontPrefs_Handler       },       // ApolloOS IPrefs + AmiNet Prefs/Font (Triton) 
+    {"palette"	    , paletteprefsname   , PalettePrefs_Handler    },       // ApolloOS IPrefs + Prefs/Palette (REWRITE!)
+    //{"icontrol"     , icontrolprefsname  , IControlPrefs_Handler   },     // Redundant
+    {"screenmode"   , screenmodeprefsname, ScreenModePrefs_Handler },       // ApolloOS IPrefs + Prefs/ScreenMode (REWRITE!)
+    //{"wbpattern"    , patternprefsname   , WBPatternPrefs_Handler  },     // AOS39 IPrefs + Prefs/WBPattern
+    {"serial"	    , serialprefsname	 , SerialPrefs_Handler     },       // ApolloOS IPrefs + Prefs/Serial (REWRITE!)
+    {"printer"	    , printerprefsname	 , PrinterPrefs_Handler    },       // ApolloOS IPrefs + Prefs/Printer (REWRITE!)
+    //{"pointer"	    , pointerprefsname   , PointerPrefs_Handler    },   //
+    //{"overscan"     , overscanprefsname  , NULL                    },     // Redundant
     {NULL   	    	    	    	      	    	    	   }
 
 };

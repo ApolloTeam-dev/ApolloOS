@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -182,6 +182,6 @@ static void LoadPointerPrefs(STRPTR filename, WORD which, WORD installas, LONG n
 
 void PointerPrefs_Handler(STRPTR filename)
 {
-    D(bug("In IPrefs:PointerPrefs_Handler\n"));
+    bug("In IPrefs:PointerPrefs_Handler\n");
     LoadPointerPrefs(filename, -1, -1, 2);
 }

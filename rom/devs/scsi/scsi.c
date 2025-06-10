@@ -1,5 +1,5 @@
 /*
-    Copyright © 2019, The AROS Development Team. All rights reserved
+    Copyright ï¿½ 2019, The AROS Development Team. All rights reserved
     $Id$
 
     Desc:
@@ -883,7 +883,7 @@ void DaemonCode(LIBBASETYPEPTR LIBBASE)
     UBYTE b = 0;
     ULONG sigs;
 
-    D(bug("[SCSI**] You woke up DAEMON\n"));
+    bug("[SCSI**] You woke up DAEMON\n");
 
     /*
      * Prepare message ports and timer.device's request
@@ -911,7 +911,7 @@ void DaemonCode(LIBBASETYPEPTR LIBBASE)
     LIBBASE->scsi_Daemon = FindTask(NULL);
     Signal(LIBBASE->daemonParent, SIGF_SINGLE);
 
-    D(bug("[SCSI++] Starting sweep medium presence detection\n"));
+    bug("[SCSI++] Starting sweep medium presence detection\n");
 
     /*
      * Endless loop
@@ -933,7 +933,7 @@ void DaemonCode(LIBBASETYPEPTR LIBBASE)
         {
             struct IOStdReq *ios;
 
-            DB2(bug("[SCSI++] Detecting media presence\n"));
+            bug("[SCSI++] Detecting media presence\n");
             ObtainSemaphore(&LIBBASE->DaemonSem);
 
             ForeachNode(&LIBBASE->Daemon_ios, ios)
@@ -961,7 +961,7 @@ void DaemonCode(LIBBASETYPEPTR LIBBASE)
         b++;
     } while (!sigs);
 
-    D(bug("[SCSI++] Daemon quits\n"));
+    bug("[SCSI++] Daemon quits\n");
 
     scsi_CloseTimer(timer);
 
@@ -982,7 +982,7 @@ void BusTaskCode(struct scsi_Bus *bus, LIBBASETYPEPTR LIBBASE)
     OOP_Object *unitObj;
     struct scsi_Unit *unit;
 
-    DINIT(bug("[SCSI**] Task started (bus: %u)\n", bus->sb_BusNum));
+    bug("[SCSI**] Task started (bus: %u)\n", bus->sb_BusNum);
 
     bus->sb_Timer = scsi_OpenTimer(LIBBASE);
     bus->sb_BounceBufferPool = CreatePool(MEMF_CLEAR | MEMF_31BIT, 131072, 65536);
@@ -998,7 +998,7 @@ void BusTaskCode(struct scsi_Bus *bus, LIBBASETYPEPTR LIBBASE)
 
     for (iter = 0; iter < MAX_BUSUNITS; ++iter)
     {
-        DINIT(bug("[SCSI**] Device %u type %d\n", iter, bus->sb_Dev[iter]));
+        bug("[SCSI**] Device %u type %d\n", iter, bus->sb_Dev[iter]);
 
         if (bus->sb_Dev[iter] > DEV_UNKNOWN)
         {
@@ -1053,7 +1053,7 @@ void BusTaskCode(struct scsi_Bus *bus, LIBBASETYPEPTR LIBBASE)
         }
     }
 
-    D(bug("[SCSI--] Bus %u scan finished\n", bus->sb_BusNum));
+    bug("[SCSI--] Bus %u scan finished\n", bus->sb_BusNum);
     ReleaseSemaphore(&LIBBASE->DetectionSem);
 
     /* Wait forever and process messages */
