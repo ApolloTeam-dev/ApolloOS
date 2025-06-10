@@ -97,7 +97,7 @@ static UBYTE *getport(struct ata_ProbedBus *ddata, int buscounter)
              ||(ApolloBoardID == VREG_BOARD_V600)
              ||(ApolloBoardID == VREG_BOARD_V1200)
              ||(ApolloBoardID == VREG_BOARD_V4FB)
-             ||(ApolloBoardID == VREG_BOARD_V4SA))
+             ||(ApolloBoardID == VREG_BOARD_V4SA)
              ||(ApolloBoardID == VREG_BOARD_V4UNI))
             {
                 ddata->v4 = TRUE;
