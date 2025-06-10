@@ -1,12 +1,7 @@
 /*
-    Copyright © 1995-2005, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2005, The AROS Development Team. All rights reserved.
     $Id$
 */
-
-#ifndef DEBUG
-#define DEBUG 0
-#endif
-
 #include "os.h"
 #include "bitmap.h"
 #include "cache.h"
@@ -240,7 +235,7 @@ ULONG i, blocks, maxinbitmap;
 LONG setBitmapFlag(struct AFSBase *afsbase, struct Volume *volume, LONG flag) {
 struct BlockCache *blockbuffer;
 
-	D(bug("[afs] setBitmapFlag()\n"));
+	D(bug("[AFS] setBitmapFlag()\n"));
 	blockbuffer = getBlock(afsbase, volume, volume->rootblock);
 	if (blockbuffer == NULL)
 		return DOSFALSE;
@@ -388,7 +383,7 @@ ULONG bblock,togo,maxinbitmap;
 LONG markBlock(struct AFSBase *afsbase, struct Volume *volume, ULONG block, ULONG mode) {
 ULONG bitnr, longnr,null=0;
 
-	D(bug("[afs]    markBlock: block=%lu mode=%lu\n",block,mode));
+	//D(bug("[AFS]    markBlock: block=%lu mode=%lu\n",block,mode));
 	if (block>=volume->countblocks)
 		null = null/null;
 	if (!gotoBitmapBlock(afsbase, volume, block, &longnr, &bitnr))
@@ -548,7 +543,7 @@ ULONG block;
 	block = getFreeBlock(afsbase, volume);
 	if (block != 0)
 	{
-		D(bug("[afs]    allocBlock: found a free block on %lu\n", block));
+		D(bug("[AFS]    allocBlock: found a free block on %lu\n", block));
 		if (!markBlock(afsbase, volume,block,0))
 			block = 0;
 	}

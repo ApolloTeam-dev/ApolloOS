@@ -1,8 +1,8 @@
 /*
  * fat-handler - FAT12/16/32 filesystem handler
  *
- * Copyright © 2006 Marek Szyprowski
- * Copyright © 2007-2020 The AROS Development Team
+ * Copyright ï¿½ 2006 Marek Szyprowski
+ * Copyright ï¿½ 2007-2020 The AROS Development Team
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the same terms as AROS itself.
@@ -36,17 +36,13 @@ void SendEvent(LONG event, struct Globals *glob)
 
     if ((InputPort = (struct MsgPort *)CreateMsgPort()))
     {
-
-        if ((InputRequest = (struct IOStdReq *)CreateIORequest(InputPort,
-            sizeof(struct IOStdReq))))
+        if ((InputRequest = (struct IOStdReq *)CreateIORequest(InputPort, sizeof(struct IOStdReq))))
         {
-
             if (!OpenDevice("input.device", 0,
                 (struct IORequest *)InputRequest, 0))
             {
 
-                if ((ie = AllocVec(sizeof(struct InputEvent),
-                    MEMF_PUBLIC | MEMF_CLEAR)))
+                if ((ie = AllocVec(sizeof(struct InputEvent), MEMF_PUBLIC | MEMF_CLEAR)))
                 {
                     ie->ie_Class = event;
                     InputRequest->io_Command = IND_WRITEEVENT;

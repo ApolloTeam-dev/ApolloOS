@@ -18,7 +18,7 @@ void DebugInit(void);
 int DebugPutChar(register int chr);
 int DebugMayGetChar(void);
 
-#if AROS_SERIAL_DEBUG
+#if APOLLO_DEBUG
 void DebugPutStr(register const char *buff);
 void DebugPutHex(const char *what, ULONG val);
 void DebugPutDec(const char *what, ULONG val);
@@ -28,7 +28,7 @@ void DebugPutHexVal(ULONG val);
 #define DEBUGPUTD(x) do { DebugPutDec x; } while(0)
 #define DEBUGPUTHEX(x) do { DebugPutHex x; } while(0)
 #endif
-#endif /* !AROS_SERIAL_DEBUG */
+#endif /* !APOLLO_DEBUG */
 
 #ifndef DEBUGPUTS
 #define DEBUGPUTS(x) do { } while (0)

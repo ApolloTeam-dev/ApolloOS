@@ -1,11 +1,7 @@
 /*
-    Copyright © 1995-2015, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2015, The AROS Development Team. All rights reserved.
     $Id$
 */
-
-#ifndef DEBUG
-#define DEBUG 0
-#endif
 
 #include <stddef.h>
 #include "os.h"
@@ -106,7 +102,7 @@ ULONG examine
 {
 struct BlockCache *entryblock;
 
-	D(bug("[afs] examine(%ld,ead,%ld,%ld)\n",ah->header_block,size,mode));
+	D(bug("[AFS] examine(%ld,ead,%ld,%ld)\n",ah->header_block,size,mode));
 	if (mode > ED_OWNER)
 		return ERROR_BAD_NUMBER;
 	entryblock = getBlock(afsbase, ah->volume, ah->header_block);
@@ -181,7 +177,7 @@ struct BlockCache *entryblock;
 struct ExAllData *last;
 ULONG error,i,block;
 
-	D(bug("[afs] examineAll(%ld,ead,%ld,%ld)\n",ah->header_block,size,mode));
+	D(bug("[AFS] examineAll(%ld,ead,%ld,%ld)\n",ah->header_block,size,mode));
 	eac->eac_Entries = 0;
 	if (mode > ED_OWNER)
 		return ERROR_BAD_NUMBER;
@@ -264,8 +260,8 @@ ULONG examineNext
 	ULONG error,filekey;
 	ULONG dirkey = fib->fib_DiskKey; /* fib_DiskKey is an IPTR, so we need this conversion */
 
-	D(bug("[afs] examineNext(%ld,fib)\n", ah->header_block));
-	D(bug("[afs] examineNext: diskey=%ld\n", dirkey));
+	D(bug("[AFS] examineNext(%ld,fib)\n", ah->header_block));
+	D(bug("[AFS] examineNext: diskey=%ld\n", dirkey));
 
 	error = getNextExamineBlock(afsbase, ah, &dirkey, &filekey);
 	fib->fib_DiskKey = dirkey;

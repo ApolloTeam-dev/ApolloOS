@@ -1,5 +1,5 @@
 /*
-    Copyright © 2011-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2011-2020, The AROS Development Team. All rights reserved.
     $Id$
 
 */
@@ -10,6 +10,7 @@
 #include "partition_support.h"
 #include "platform.h"
 #include "fsloader.h"
+#include "debug.h"
 
 /*****************************************************************************
 
@@ -51,6 +52,8 @@
 *****************************************************************************/
 {
     AROS_LIBFUNC_INIT
+
+    D(bug("[PART] AddBootFileSystem\n"));
 
     ObtainSemaphore(&PBASE(PartitionBase)->bootSem);
 

@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -38,7 +38,7 @@ void SerialPrefs_Handler(STRPTR filename)
     struct IFFHandle *iff;	
     struct SerialPrefs *serialprefs;
 
-    D(bug("In IPrefs:SerialPrefs_Handler\n"));
+    bug("In IPrefs:SerialPrefs_Handler\n");
     D(bug("filename=%s\n",filename));
     
     iff = CreateIFF(filename, stopchunks, 1);

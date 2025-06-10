@@ -5,25 +5,25 @@
 struct ata_ProbedBus
 {
     struct Node atapb_Node;
-    UBYTE *port;
-    UBYTE *altport;
-    UBYTE *gayleirqbase;
-    BOOL a4000;
-    BOOL a500;
-    UBYTE doubler;
+    UBYTE   *port;
+    UBYTE   *altport;
+    UBYTE   *gayleirqbase;
+    BOOL    da;
+    BOOL    v4;
 };
 
 struct ATA_BusData
 {
-    struct ata_ProbedBus *bus;
-    void (*ata_HandleIRQ)(UBYTE, APTR);
-    APTR irqData;
-    struct Interrupt ideint;
-    UBYTE *gaylebase;
-    UBYTE *gayleirqbase;
-    UBYTE *gayleintbase;
-    BOOL ideintadded;
-    BOOL a500;
+    struct  ata_ProbedBus *bus;
+    void    (*ata_HandleIRQ)(UBYTE, APTR);
+    APTR    irqData;
+    struct  Interrupt ideint;
+    UBYTE   *gaylebase;
+    UBYTE   *gayleirqbase;
+    UBYTE   *gayleintbase;
+    BOOL    ideintadded;
+    BOOL    da;
+    BOOL    v4;
 };
 
 struct ataBase

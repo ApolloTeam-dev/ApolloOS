@@ -1,5 +1,5 @@
 /*
-    Copyright © 2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -32,7 +32,7 @@ void PalettePrefs_Handler(STRPTR filename)
     struct PalettePrefs paletteprefs;
     struct IFFHandle *iff;
 
-    D(bug("[IPrefs:Palette] %s('%s')\n", __func__, filename));
+    bug("[IPrefs:Palette] %s('%s')\n", __func__, filename);
     
     if ((iff = CreateIFF(filename, stopchunks, 2)))
     {

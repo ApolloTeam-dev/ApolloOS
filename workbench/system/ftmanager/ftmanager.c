@@ -262,14 +262,11 @@ static int ftmanager_gui(void)
         DoMethod(codepagecycle, MUIM_Notify, MUIA_Cycle_Active, MUIV_EveryTime,
                 app, 2, MUIM_Application_ReturnID, ID_SetCodePage);
 
-        DoMethod(fontlv, MUIM_Notify, MUIA_Listview_DoubleClick, TRUE,
-                app, 2, MUIM_Application_ReturnID, ID_ShowFont);
+        DoMethod(fontlv, MUIM_Notify, MUIA_Listview_DoubleClick, TRUE, app, 2, MUIM_Application_ReturnID, ID_ShowFont);
 
-        DoMethod(win, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
-                app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
+        DoMethod(win, MUIM_Notify, MUIA_Window_CloseRequest, TRUE, app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 
-        DoMethod(quit, MUIM_Notify, MUIA_Pressed, FALSE,
-                app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
+        DoMethod(quit, MUIM_Notify, MUIA_Pressed, FALSE, app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
 
                 DoMethod(fontlist, MUIM_FontList_AddDir, XGET(src, MUIA_String_Contents));
 

@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -40,7 +40,7 @@ void PrinterPrefs_Handler(STRPTR filename)
     ULONG devnamelen;
     BOOL name_too_long = FALSE;
 
-    D(bug("[PrinterPrefs] filename=%s\n", filename));
+    bug("[PrinterPrefs] filename=%s\n", filename);
 
     iff = CreateIFF(filename, stopchunks, 2);
     if (iff)

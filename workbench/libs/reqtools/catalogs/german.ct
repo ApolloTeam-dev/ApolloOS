@@ -1,0 +1,250 @@
+## version $VER: reqtools.catalog 39.0 (31.03.2016)
+## language deutsch
+## codeset 0
+;
+;******************
+;
+;   ReqTools V38
+;
+;******************
+;
+;
+; *** General ***
+;
+; Note: there are two spaces around the Ok string to make it 4 chars wide.
+MSG_OK
+ _Ok
+;  _Ok
+;
+MSG_CANCEL
+_Abbrechen
+; _Cancel
+;
+; *** EZRequester ***
+;
+MSG_OK_BAR_CANCEL
+ _Ok |_Abbrechen
+;  _Ok |_Cancel
+;
+MSG_LAST_BAR_CANCEL
+_Letztes|_Abbrechen
+; _Last|_Cancel
+;
+MSG_REQUEST
+Meldung
+; Request
+;
+MSG_INFORMATION
+Information
+; Information
+;
+; *** GetLong Requester ***
+;
+; Note: there are two spaces around the next three strings!
+MSG_MIN_FMT
+ Min: %ld
+;  Min: %ld
+;
+MSG_MAX_FMT
+ Max: %ld
+;  Max: %ld
+;
+MSG_MIN_MAX_FMT
+ Min: %ld, Max: %ld
+;  Min: %ld, Max: %ld
+;
+MSG_TOO_SMALL
+Zu klein!
+; Too small!
+;
+MSG_TOO_BIG
+Zu groß!
+; Too big!
+;
+; *** Palette Requester ***
+;
+MSG_PALETTE_COLORS
+_Farben:
+; _Palette Colors:
+;
+MSG_RED
+_Rot:
+; _Red:
+;
+MSG_GREEN
+_Grün:
+; _Green:
+;
+MSG_BLUE
+_Blau:
+; _Blue:
+;
+MSG_COPY
+_Kopieren
+; Cop_y
+;
+MSG_SWAP
+_Vertauschen
+; _Swap
+;
+MSG_SPREAD
+_Verlauf
+; Spr_ead
+;
+MSG_UNDO
+Rü_ckgängig
+; _Undo
+;
+; ** 2.5 **
+;
+MSG_COPY_TITLE
+Kopieren nach...
+; Copy to...
+;
+MSG_SWAP_TITLE
+Vertauschen mit...
+; Swap with...
+;
+MSG_SPREAD_TITLE
+Verlauf nach...
+; Spread to...
+;
+; *** File Requester ***
+;
+MSG_CREATE_DRAWER
+Schublade '%s' existiert\nnicht, neu anlegen?
+; Drawer '%s' does\nnot exist. Create it?
+;
+MSG_DIR_ERROR
+Falsche Schublade!
+; Directory error!
+;
+MSG_MATCH_WINTITLE
+Muster...
+; Match...
+;
+MSG_DRAWER
+Schublade
+; Drawer
+;
+MSG_ASSIGN
+Assign
+; Assign
+;
+MSG_ALL
+All_e
+; _All
+;
+MSG_MATCH
+M_uster...
+; _Match...
+;
+MSG_CLEAR
+_Keine
+; C_lear
+;
+MSG_VOLUMES
+_Datenträger
+; _Volumes
+;
+MSG_PARENT
+_Übergeordnet
+; _Parent
+;
+MSG_PATTERN
+Mus_ter:
+; Pa_ttern:
+;
+MSG_GET
+_Neu
+; _Get
+;
+MSG_DOT_INFO
+._info
+; ._info
+;
+MSG_SELECTED
+Ausgewählt:
+; Selected:
+;
+MSG_FULL
+%ld%% voll
+; %ld%% full
+;
+; *** Font Requester ***
+;
+MSG_COULDNT_OPEN_FONT
+Zeichensatz konnte nicht geöffnet werden!
+; Couldn't open font!
+;
+MSG_BOLD
+_Fett
+; _Bold
+;
+MSG_ITALIC
+_Kursiv
+; _Italic
+;
+MSG_UNDERLINE
+_Unterstrichen
+; _Underline
+;
+; *** ScreenMode Requester ***
+;
+MSG_DASH_INTERLACED
+-Interlaced
+; -Interlaced
+;
+MSG_DASH_HAM
+-HAM
+; -HAM
+;
+MSG_DASH_EHB
+-EHB
+; -EHB
+;
+MSG_REGULAR_SIZE
+Normale Abmessung
+; Regular Size
+;
+MSG_TEXT_SIZE
+Textabmessung
+; Text Size
+;
+MSG_GFX_SIZE
+Grafikabmessung
+; Graphics Size
+;
+MSG_MAX_SIZE
+Maximale Abmessung
+; Maximum Size
+;
+MSG_OVERSCAN
+O_verscan:
+; O_verscan:
+;
+MSG_WIDTH
+_Breite:
+; _Width:
+;
+MSG_HEIGHT
+_Höhe:
+; _Height:
+;
+;
+MSG_DEFAULT
+Vorgabe
+; Default
+;
+MSG_COLORS
+_Farben:
+; Co_lors:
+;
+MSG_MAX
+Max:
+; Max:
+;
+MSG_AUTOSCROLL
+A_uto-Rollen:
+; _AutoScroll:
+;

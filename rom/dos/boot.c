@@ -74,18 +74,21 @@ void __dos_Boot(struct DosLibrary *DOSBase, ULONG BootFlags, UBYTE Flags)
     /*  We have been created as a process by DOS, we should now
         try and boot the system. */
 
-    D(
+    DD(
+        bug("[DOS] %s: ** boot delayed by 1000ms\n", __func__);
         bug("[DOS] %s: ** starting generic boot sequence\n", __func__);
         bug("[DOS] %s: BootFlags 0x%08X Flags 0x%02X\n", __func__, BootFlags, Flags);
         bug("[DOS] %s: DOSBase @ 0x%p\n", __func__, DOSBase);
       )
+
+      Delay(50);
 
     /* m68000 uses this to get the default colors and
      * cursors for Workbench
      */
     load_system_configuration(DOSBase);
 
-    D(bug("[DOS] %s: system config loaded\n", __func__);)
+    DD(bug("[DOS] %s: system config loaded\n", __func__);)
 
     /*
      * If needed, run the display drivers loader.
@@ -98,7 +101,7 @@ void __dos_Boot(struct DosLibrary *DOSBase, ULONG BootFlags, UBYTE Flags)
         /* Check that it exists first... */
         BPTR seg;
 
-        D(bug("[DOS] %s: initialising displays\n", __func__);)
+        DD(bug("[DOS] %s: initialising displays\n", __func__);)
 
         if ((seg = LoadSeg("C:AROSMonDrvs")) != BNULL)
         {
@@ -114,7 +117,7 @@ void __dos_Boot(struct DosLibrary *DOSBase, ULONG BootFlags, UBYTE Flags)
             else if (BootFlags & BF_NO_DISPLAY_DRIVERS)
                 args = "ONLYCOMPOSITION\n";
 
-            D(bug("[DOS] %s: Running AROSMonDrvs %s\n", __func__, args);)
+            DD(bug("[DOS] %s: Running AROSMonDrvs %s\n", __func__, args);)
 
             /* RunCommand needs a valid Input() handle
              * for passing in its arguments.
@@ -130,17 +133,17 @@ void __dos_Boot(struct DosLibrary *DOSBase, ULONG BootFlags, UBYTE Flags)
         }
     }
 
-    D(bug("[DOS] %s: preparing console\n", __func__);)
+    DD(bug("[DOS] %s: preparing console\n", __func__);)
 
     if (BootFlags & BF_EMERGENCY_CONSOLE) {
-        D(bug("[DOS] %s:     (emergency console)\n", __func__);)
+        DD(bug("[DOS] %s:     (emergency console)\n", __func__);)
         BootFlags |= BF_NO_STARTUP_SEQUENCE;
         cis = Open("ECON:", MODE_OLDFILE);
     }
 
 #if defined(__DISTRONAME__)
 	if (cis == BNULL)
-        cis = Open("CON:////ApolloDOS/AUTO/CLOSE/SMART/BOOT", MODE_OLDFILE);
+        cis = Open("CON:////ApolloOS/AUTO/CLOSE/SMART/BOOT", MODE_OLDFILE);
 #else
 	if (cis == BNULL)
         cis = Open("CON:////AROS/AUTO/CLOSE/SMART/BOOT", MODE_OLDFILE);
@@ -150,7 +153,7 @@ void __dos_Boot(struct DosLibrary *DOSBase, ULONG BootFlags, UBYTE Flags)
         BPTR cos = OpenFromLock(DupLockFromFH(cis));
         BYTE *C = generate_banner();
 
-        D(bug("[DOS] %s:  handle @ 0x%p (0x%p)\n", __func__, cis, cos);)
+        DD(bug("[DOS] %s:  handle @ 0x%p (0x%p)\n", __func__, cis, cos);)
 
         if (cos) {
             BPTR cas = BNULL;
@@ -168,7 +171,7 @@ void __dos_Boot(struct DosLibrary *DOSBase, ULONG BootFlags, UBYTE Flags)
                 FPuts(cos, C);
             }
 
-            D(bug("[DOS] %s: initialising CLI\n", __func__);)
+            DD(bug("[DOS] %s: initialising CLI\n", __func__);)
 
             if (SystemTags(NULL,
                            NP_Name, "Initial CLI",
@@ -178,7 +181,7 @@ void __dos_Boot(struct DosLibrary *DOSBase, ULONG BootFlags, UBYTE Flags)
                            SYS_Output, cos,
                            SYS_ScriptInput, cas,
                            TAG_END) == -1) {
-                D(bug("[DOS] %s:  .. failed!\n", __func__);)
+                DD(bug("[DOS] %s:  .. failed!\n", __func__);)
                 Alert(AT_DeadEnd | AN_BootStrap);
             }
 
@@ -198,7 +201,7 @@ void __dos_Boot(struct DosLibrary *DOSBase, ULONG BootFlags, UBYTE Flags)
         }
         FreeVec(C);
     } else {
-        D(bug("[DOS] %s:  .. failed!\n", __func__);)
+        DD(bug("[DOS] %s:  .. failed!\n", __func__);)
         Alert(AN_NoWindow);
     }
 }

@@ -1,9 +1,8 @@
-#   $Id$
 
 include $(SRCDIR)/config/aros.cfg
 
-KEYMAPS := \
-    pc105_gb
+KMDESCRIPTORS :=  $(call WILDCARD, *.akmd)
+KEYMAPS :=  $(KMDESCRIPTORS:.akmd=)
 
 OLDKEYMAPS := \
     pc104_il pc104_usa pc104_usa2 \
@@ -28,7 +27,7 @@ workbench-devs-keymaps-build : $(foreach f,$(KEYMAPS),$(AROS_DEVS)/Keymaps/$(f))
 
 OBJDIR := $(GENDIR)/$(CURDIR)
 
-$(AROS_DEVS)/Keymaps/% : $(SRCDIR)/$(CURDIR)/%.akmd
+$(AROS_DEVS)/Keymaps/% : $(SRCDIR)/$(CURDIR)/%.akmd $(MKKEYMAP)
 	$(Q)$(ECHO) "Generating $(notdir $@) KeyMap..."
 	$(Q)$(MKKEYMAP) -d $< -k $@
 

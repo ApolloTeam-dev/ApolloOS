@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2015, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2015, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -1803,16 +1803,31 @@ LONG initGUI(void)
 
     MUIMasterBase = OpenLibrary("muimaster.library", 0);
     if (!MUIMasterBase)
+    {
+        D(bug("[HDToolBox] initGUI() - ERROR muimaster\n"));
         return ERR_MUIMASTER;
+    } else {
+        D(bug("[HDToolBox] initGUI() - SUCCESS muimaster\n"));
+    }
 
     ptclass = makePTClass();
     if (ptclass == NULL)
+    {
+        D(bug("[HDToolBox] initGUI() - ERROR makePTClass\n"));
         return ERR_GADGETS;
+    } else {
+        D(bug("[HDToolBox] initGUI() - SUCCESS makePTClass\n"));
+    }
 
     listcc = MUI_CreateCustomClass(NULL, MUIC_Listview, NULL,
         sizeof(struct LeftListview__Data), LeftListview_Dispatcher);
     if (listcc == NULL)
+    {
+        D(bug("[HDToolBox] initGUI() - ERROR MUI_CreateCustomClass\n"));
         return ERR_GADGETS;
+    } else {
+        D(bug("[HDToolBox] initGUI() - SUCCESS MUI_CreateCustomClass\n"));
+    }
 
     hook_display.h_Entry = (HOOKFUNC)display_function;
     hook_buttons.h_Entry = (HOOKFUNC)buttons_function;
@@ -1821,6 +1836,8 @@ LONG initGUI(void)
     hook_lv_click.h_Entry = (HOOKFUNC)lv_click;
     partitiontypegadgets.hook_hexidedit.h_Entry = (HOOKFUNC)hexidedit_function;
 
+    D(bug("[HDToolBox] initGUI() - Opening APP\n"));
+
     app = ApplicationObject,
                 MUIA_Application_Title      , "HDToolBox",
                 MUIA_Application_Version    , "$VER: HDToolBox 0.5 (19.5.2015)",
@@ -1828,6 +1845,7 @@ LONG initGUI(void)
                 MUIA_Application_Author     , "Bearly, Ogun, Fats and others at AROS",
                 MUIA_Application_Description, "Partition your disks.",
                 MUIA_Application_Base       , "HDTOOLBOX",
+
         MUIA_Application_Menustrip, MenustripObject,
             MUIA_Family_Child, MenuObject,
                 MUIA_Menu_Title, MSG(WORD_MENU_Project),
@@ -1838,29 +1856,28 @@ LONG initGUI(void)
                     quit_item  = MenuitemObject, MUIA_Menuitem_Title, MSG(WORD_MENU_Quit),
                 End,
             End,
-            MUIA_Family_Child,
-		part_item = MenuObject,
+            MUIA_Family_Child, part_item = MenuObject,
                 MUIA_Menu_Title, MSG(WORD_MENU_Partition),
-		MUIA_Menu_Enabled, FALSE,
+		        MUIA_Menu_Enabled, FALSE,
                 MUIA_Family_Child,
-                    createml_item = MenuitemObject,
-		    MUIA_Menuitem_Title, MSG(WORD_MENU_CreateMountlist),
+                    createml_item = MenuitemObject, MUIA_Menuitem_Title, MSG(WORD_MENU_CreateMountlist),
                 End,
             End,
         End,
+
         SubWindow, mainwin = WindowObject,
             MUIA_Window_Title, "HDToolBox",
             MUIA_Window_ID, MAKE_ID('H','D','T','B'),
             MUIA_Window_Activate, TRUE,
             MUIA_Window_Height, MUIV_Window_Height_Visible(50),
             MUIA_Window_Width, MUIV_Window_Width_Visible(60),
+
             WindowContents, VGroup,
-                Child, VGroup,
-                    GroupFrame,
-                    Child, gadgets.text = TextObject,
-                        TextFrame,
-                        MUIA_Text_Contents, MSG(MSG_Welcome),
+
+                Child, VGroup, GroupFrame,
+                    Child, gadgets.text = TextObject, TextFrame, MUIA_Text_Contents, MSG(MSG_Welcome),
                     End,
+
                     Child, HGroup,
                         Child, (gadgets.leftlv = NewObject(listcc->mcc_Class, NULL,
                             MUIA_Listview_List, ListObject,
@@ -1882,39 +1899,45 @@ LONG initGUI(void)
                         End,
                     End,
                 End,
-                Child, VGroup,
-                    GroupFrame,
+
+                Child, VGroup, GroupFrame,
                     Child, HGroup,
-                        Child, VGroup,
-                            Child, gadgets.buttons[GB_ADD_ENTRY] = SIMPLEBUTTON(WORD_AddEntry),
-                            Child, gadgets.buttons[GB_REMOVE_ENTRY] = SIMPLEBUTTON(WORD_RemoveEntry),
-                        End,
-                        Child, VGroup,
-                            Child, gadgets.buttons[GB_CREATE_TABLE] = SIMPLEBUTTON(WORD_Create_Table),
-                            Child, gadgets.buttons[GB_CHANGE_TYPE] = SIMPLEBUTTON(WORD_Change_Type),
-                        End,
-                        Child, VGroup,
-                            Child, gadgets.buttons[GB_RESIZE_MOVE] = SIMPLEBUTTON(WORD_Resize_Move),
-                            Child, gadgets.buttons[GB_PARENT] = SIMPLEBUTTON(WORD_Parent),
-                        End,
-                        Child, VGroup,
-                            Child, gadgets.buttons[GB_RENAME] = SIMPLEBUTTON(WORD_Rename),
-                            Child, gadgets.buttons[GB_DOSENVEC] = SIMPLEBUTTON(WORD_DosEnvec),
-                        End,
-                        Child, VGroup,
-                            Child, gadgets.buttons[GB_SWITCHES] = SIMPLEBUTTON(WORD_Switches),
-                            Child, HVSpace,
-                        End,
-                    End,
-                    Child, HGroup,
-                            MUIA_Group_SameWidth, TRUE,
-                        MUIA_FixHeight, 1,
-                            Child, gadgets.buttons[GB_SAVE_CHANGES] = IMAGEBUTTON(WORD_Save_Changes, COOL_SAVEIMAGE_ID),
-                            Child, gadgets.buttons[GB_EXIT] = IMAGEBUTTON(WORD_Exit, COOL_CANCELIMAGE_ID),
-                    End,
-                End,
+						Child, VGroup,
+							Child, gadgets.buttons[GB_ADD_ENTRY] 	= SIMPLEBUTTON(WORD_AddEntry),
+							Child, gadgets.buttons[GB_REMOVE_ENTRY] = SIMPLEBUTTON(WORD_RemoveEntry),
+						End,
+						Child, VGroup,
+							Child, gadgets.buttons[GB_CREATE_TABLE] = SIMPLEBUTTON(WORD_Create_Table),
+							Child, gadgets.buttons[GB_CHANGE_TYPE] 	= SIMPLEBUTTON(WORD_Change_Type),
+						End,
+						Child, VGroup,
+							Child, gadgets.buttons[GB_RESIZE_MOVE] 	= SIMPLEBUTTON(WORD_Resize_Move),
+							Child, gadgets.buttons[GB_PARENT] 		= SIMPLEBUTTON(WORD_Parent),
+						End,
+						Child, VGroup,
+							Child, gadgets.buttons[GB_RENAME] 		= SIMPLEBUTTON(WORD_Rename),
+							Child, gadgets.buttons[GB_DOSENVEC] 	= SIMPLEBUTTON(WORD_DosEnvec),
+						End,
+						Child, VGroup,
+							Child, gadgets.buttons[GB_SWITCHES] 	= SIMPLEBUTTON(WORD_Switches),
+							Child, HVSpace,
+						End,
+
+						Child, HGroup,
+							MUIA_Group_SameWidth, TRUE,
+							MUIA_FixHeight, 1,
+							Child, gadgets.buttons[GB_SAVE_CHANGES] = SIMPLEBUTTON(WORD_Save_Changes), 	//COOL_SAVEIMAGE_ID),
+							Child, gadgets.buttons[GB_EXIT] 		= SIMPLEBUTTON(WORD_Exit), 			//COOL_CANCELIMAGE_ID),
+						End,
+
+					End,
+
+				End,
             End,
         End,
+
+
+
         SubWindow, adddevicegadgets.win = WindowObject,
             MUIA_Window_Title, MSG(WORD_Devices),
             MUIA_Window_Activate, TRUE,
@@ -1928,8 +1951,8 @@ LONG initGUI(void)
                 Child, HGroup,
                         MUIA_Group_SameWidth, TRUE,
                     MUIA_FixHeight, 1,
-                    Child, adddevicegadgets.ok = IMAGEBUTTON(WORD_Ok, COOL_USEIMAGE_ID),
-                    Child, adddevicegadgets.cancel = IMAGEBUTTON(WORD_Cancel, COOL_CANCELIMAGE_ID),
+                    Child, adddevicegadgets.ok = SIMPLEBUTTON(WORD_Ok), //COOL_USEIMAGE_ID),
+                    Child, adddevicegadgets.cancel = SIMPLEBUTTON(WORD_Cancel), //COOL_CANCELIMAGE_ID),
                 End,
             End,
         End,
@@ -1957,8 +1980,8 @@ LONG initGUI(void)
                 Child, HGroup,
                         MUIA_Group_SameWidth, TRUE,
                         MUIA_FixHeight, 1,
-                    Child, addpartitiongadgets.ok = IMAGEBUTTON(WORD_Ok, COOL_USEIMAGE_ID),
-                    Child, addpartitiongadgets.cancel = IMAGEBUTTON(WORD_Cancel, COOL_CANCELIMAGE_ID),
+                    Child, addpartitiongadgets.ok = SIMPLEBUTTON(WORD_Ok), //COOL_USEIMAGE_ID),
+                    Child, addpartitiongadgets.cancel = SIMPLEBUTTON(WORD_Cancel), //COOL_CANCELIMAGE_ID),
                 End,
             End,
         End,
@@ -1988,8 +2011,8 @@ LONG initGUI(void)
                 Child, HGroup,
                         MUIA_Group_SameWidth, TRUE,
                     MUIA_FixHeight, 1,
-                    Child, partitiontypegadgets.ok = IMAGEBUTTON(WORD_Ok, COOL_USEIMAGE_ID),
-                    Child, partitiontypegadgets.cancel = IMAGEBUTTON(WORD_Cancel, COOL_CANCELIMAGE_ID),
+                    Child, partitiontypegadgets.ok = SIMPLEBUTTON(WORD_Ok), //COOL_USEIMAGE_ID),
+                    Child, partitiontypegadgets.cancel = SIMPLEBUTTON(WORD_Cancel), //COOL_CANCELIMAGE_ID),
                 End,
             End,
         End,
@@ -2008,8 +2031,8 @@ LONG initGUI(void)
                 Child, HGroup,
                         MUIA_Group_SameWidth, TRUE,
                     MUIA_FixHeight, 1,
-                    Child, partitiontabletypegadgets.ok = IMAGEBUTTON(WORD_Ok, COOL_USEIMAGE_ID),
-                    Child, partitiontabletypegadgets.cancel = IMAGEBUTTON(WORD_Cancel, COOL_CANCELIMAGE_ID),
+                    Child, partitiontabletypegadgets.ok = SIMPLEBUTTON(WORD_Ok), //COOL_USEIMAGE_ID),
+                    Child, partitiontabletypegadgets.cancel = SIMPLEBUTTON(WORD_Cancel), //COOL_CANCELIMAGE_ID),
                 End,
             End,
         End,
@@ -2076,8 +2099,8 @@ LONG initGUI(void)
                 Child, HGroup,
                         MUIA_Group_SameWidth, TRUE,
                     MUIA_FixHeight, 1,
-                    Child, resizemovegadgets.ok = IMAGEBUTTON(WORD_Ok, COOL_USEIMAGE_ID),
-                    Child, resizemovegadgets.cancel = IMAGEBUTTON(WORD_Cancel, COOL_CANCELIMAGE_ID),
+                    Child, resizemovegadgets.ok = SIMPLEBUTTON(WORD_Ok), //COOL_USEIMAGE_ID),
+                    Child, resizemovegadgets.cancel = SIMPLEBUTTON(WORD_Cancel), //COOL_CANCELIMAGE_ID),
                 End,
             End,
         End,
@@ -2091,8 +2114,8 @@ LONG initGUI(void)
                 Child, HGroup,
                         MUIA_Group_SameWidth, TRUE,
                     MUIA_FixHeight, 1,
-                    Child, renamegadgets.ok = IMAGEBUTTON(WORD_Ok, COOL_USEIMAGE_ID),
-                    Child, renamegadgets.cancel = IMAGEBUTTON(WORD_Cancel, COOL_CANCELIMAGE_ID),
+                    Child, renamegadgets.ok = SIMPLEBUTTON(WORD_Ok), //COOL_USEIMAGE_ID),
+                    Child, renamegadgets.cancel = SIMPLEBUTTON(WORD_Cancel), //COOL_CANCELIMAGE_ID),
                 End,
             End,
         End,
@@ -2180,8 +2203,8 @@ LONG initGUI(void)
                 Child, HGroup,
                         MUIA_Group_SameWidth, TRUE,
                     MUIA_FixHeight, 1,
-                    Child, dosenvecgadgets.ok = IMAGEBUTTON(WORD_Ok, COOL_USEIMAGE_ID),
-                    Child, dosenvecgadgets.cancel = IMAGEBUTTON(WORD_Cancel, COOL_CANCELIMAGE_ID),
+                    Child, dosenvecgadgets.ok = SIMPLEBUTTON(WORD_Ok), // COOL_USEIMAGE_ID),
+                    Child, dosenvecgadgets.cancel = SIMPLEBUTTON(WORD_Cancel), //COOL_CANCELIMAGE_ID),
                 End,
             End,
         End,
@@ -2227,15 +2250,20 @@ LONG initGUI(void)
                 Child, HGroup,
                         MUIA_Group_SameWidth, TRUE,
                     MUIA_FixHeight, 1,
-                    Child, mountbootgadgets.ok = IMAGEBUTTON(WORD_Ok, COOL_USEIMAGE_ID),
-                    Child, mountbootgadgets.cancel = IMAGEBUTTON(WORD_Cancel, COOL_CANCELIMAGE_ID),
+                    Child, mountbootgadgets.ok = SIMPLEBUTTON(WORD_Ok), // COOL_USEIMAGE_ID),
+                    Child, mountbootgadgets.cancel = SIMPLEBUTTON(WORD_Cancel), // COOL_CANCELIMAGE_ID),
                 End,
             End,
         End,
     End;
 
     if (!app)
+    {
+        D(bug("[HDToolBox] initGUI() - ERROR opening APP\n"));
         return ERR_GADGETS;
+    } else {
+        D(bug("[HDToolBox] initGUI() - SUCCESS opening APP\n"));
+    }
 
     /* Main Window */
     DoMethod

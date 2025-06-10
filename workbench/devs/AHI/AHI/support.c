@@ -47,6 +47,8 @@
 #include "ahiprefs_Cat.h"
 #include "support.h"
 
+#define D(x) x
+
 static BOOL AddUnit(struct List *, int);
 static void FillUnitName(struct UnitNode *);
 

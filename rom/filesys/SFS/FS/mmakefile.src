@@ -1,4 +1,3 @@
-# $Id$
 
 include $(SRCDIR)/config/aros.cfg
 
@@ -20,7 +19,7 @@ FILES := adminspaces \
 	 req
 
 USER_CPPFLAGS := -DSFS_BE -DADATE="\"$(shell date '+%d.%m.%Y')\""
-USER_LDFLAGS := -static
+USER_LDFLAGS := -lstdc.static
 
 %build_module mmake=kernel-fs-sfs \
     modname=sfs modtype=handler \

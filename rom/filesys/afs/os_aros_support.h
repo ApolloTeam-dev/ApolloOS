@@ -2,7 +2,7 @@
 #define OS_AROS_H
 
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -23,6 +23,14 @@
 
 #include "error.h"
 #include "afshandler.h"
+
+#define DEBUG 0
+#if DEBUG
+#	define D(x) x
+#else
+#	define D(x)
+#endif
+#define bug kprintf
 
 #define OS_BE2LONG AROS_BE2LONG
 #define OS_LONG2BE AROS_LONG2BE

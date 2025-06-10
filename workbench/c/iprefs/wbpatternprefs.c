@@ -1,5 +1,5 @@
 /*
-    Copyright © 2004-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2004-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -60,7 +60,7 @@ void WBPatternPrefs_Handler(STRPTR filename)
 {
     struct IFFHandle *iff;
     
-    D(bug("In IPrefs:WBPatternPrefs_Handler\n"));
+    bug("In IPrefs:WBPatternPrefs_Handler\n");
     
     if ((iff = CreateIFF(filename, stopchunks, 1)))
     {

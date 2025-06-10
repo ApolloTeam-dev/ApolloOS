@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
 */
@@ -21,9 +21,6 @@
 #include "partition_support.h"
 #include "platform.h"
 
-#ifndef DEBUG
-#define DEBUG 1
-#endif
 #include "debug.h"
 
 #include <string.h>
@@ -67,6 +64,8 @@ static AROS_UFH4(LONG, ReadFunc,
 {
     AROS_USERFUNC_INIT
 
+    //D(bug("[PART] ReadFunc\n"));
+    
     struct FileSysReader *fsr = (struct FileSysReader*)file;
     ULONG outsize = 0;
     UBYTE *outbuf = buffer;
@@ -108,6 +107,8 @@ static AROS_UFH4(LONG, SeekFunc,
 {
     AROS_USERFUNC_INIT
 
+    D(bug("[PART] SeekFunc\n"));
+
     struct FileSysReader *fsr = (struct FileSysReader*)file;
     LONG oldpos = fsr->offset;
 
@@ -131,6 +132,13 @@ static AROS_UFH4(LONG, SeekFunc,
 /* Load a filesystem into DOS seglist */
 static BPTR LoadFS(struct FileSysNode *node, struct DosLibrary *DOSBase)
 {
+    D(ULONG version_major);
+    D(ULONG version_minor);
+    D(version_minor = node->fhb.fhb_Version % 65536);
+    D(version_major = ( (node->fhb.fhb_Version - version_minor) / 65536 ));
+    
+    D(bug("[PART:RDB] LoadFS: Name=%s | DOSType=0x%8lx | Version=%u.%u\n", node->fhb.fhb_FileSysName, node->fhb.fhb_DosType, version_major, version_minor));
+
     LONG_FUNC FunctionArray[4];
     struct FileSysReader fakefile;
 
@@ -165,8 +173,10 @@ static BPTR LoadFS(struct FileSysNode *node, struct DosLibrary *DOSBase)
 
 static ULONG calcChkSum(ULONG *ptr, ULONG size)
 {
-  ULONG i;
-  ULONG sum=0;
+    //D(bug("[PART] calcChkSum\n"));
+  
+    ULONG i;
+    ULONG sum=0;
 
   for (i=0;i<size;i++)
   {
@@ -176,49 +186,61 @@ static ULONG calcChkSum(ULONG *ptr, ULONG size)
   return sum;
 }
 
-LONG PartitionRDBCheckPartitionTable
-    (
-        struct Library *PartitionBase,
-        struct PartitionHandle *root
-    )
+LONG PartitionRDBCheckPartitionTable(struct Library *PartitionBase, struct PartitionHandle *root)
 {
-UBYTE i;
-struct RigidDiskBlock *rdb = (struct RigidDiskBlock *)root->buffer;
-struct PartitionType type;
-struct TagItem tags[] = {{PT_TYPE, (IPTR)&type}, {TAG_DONE, 0}};
+    UBYTE i;
+    struct RigidDiskBlock *rdb = (struct RigidDiskBlock *)root->buffer;
+    struct PartitionType type;
+    struct TagItem tags[] = {{PT_TYPE, (IPTR)&type}, {TAG_DONE, 0}};
 
     if (sizeof(root->buffer) < (root->de.de_SizeBlock << 2))
+    {
+        D(bug("[PART:RDB] PartitionRDBCheckPartitionTable: "));
+        D(bug("ERROR: Buffer too small\n"));
         return 0;
+    }
 
     if (root->root != NULL)
     {
         GetPartitionAttrs(root, tags);
-        if (
-            (root->root->table->type != PHPTT_MBR &&
-             root->root->table->type != PHPTT_EBR) ||
-            (type.id[0] != 0x30 && type.id[0] != 0x76)
-            )
+        if ((root->root->table->type != PHPTT_MBR && root->root->table->type != PHPTT_EBR) ||(type.id[0] != 0x30 && type.id[0] != 0x76) )
         {
+            D(bug("[PART:RDB] PartitionRDBCheckPartitionTable: root->root already exists, skipping RDB partitioning scheme\n"));
             return 0;
         }              
     }
+
     for (i=0;i<RDB_LOCATION_LIMIT; i++)
     {
         if (readBlock(PartitionBase, root, i, rdb) != 0)
+        {
+            D(bug("[PART:RDB] PartitionRDBCheckPartitionTable: "));
+            D(bug("Cannot Read Boot Record\n"));
             return 0;
+        }
+
         if (rdb->rdb_ID == AROS_BE2LONG(IDNAME_RIGIDDISK))
             break;
     }
+
     if (i != RDB_LOCATION_LIMIT)
     {
         if (calcChkSum((ULONG *)rdb, AROS_BE2LONG(rdb->rdb_SummedLongs))==0)
+        {
+            D(bug("[PART:RDB] PartitionRDBCheckPartitionTable: RDB Boot Record Found\n"));
             return 1;
+        }
     }
+
+    D(bug("[PART:RDB] PartitionRDBCheckPartitionTable: No RDB Boot Record Found\n"));
     return 0;
 }
 
-void CopyBE2HostDosEnvec(LONG *src, SIPTR *dst, ULONG size) {
-ULONG count=0;
+void CopyBE2HostDosEnvec(LONG *src, SIPTR *dst, ULONG size)
+{
+    //D(bug("[PART] CopyBE2HostDosEnvec\n"));
+
+    ULONG count=0;
 
     while (count != size)
     {
@@ -228,7 +250,9 @@ ULONG count=0;
     }
 }
 
-void CopyHost2BEDosEnvec(SIPTR *src, ULONG *dst, ULONG size) {
+void CopyHost2BEDosEnvec(SIPTR *src, ULONG *dst, ULONG size)
+{
+    //D(bug("[PART] CopyHost2BEDosEnvec\n"));
 
     ULONG count=0;
 
@@ -241,14 +265,11 @@ void CopyHost2BEDosEnvec(SIPTR *src, ULONG *dst, ULONG size) {
 
 }
 
-struct BadBlockNode *PartitionRDBNewBadBlock
-    (
-        struct Library *PartitionBase,
-        struct PartitionHandle *root,
-        struct BadBlockBlock *buffer
-    )
+struct BadBlockNode *PartitionRDBNewBadBlock(struct Library *PartitionBase, struct PartitionHandle *root, struct BadBlockBlock *buffer)
 {
-struct BadBlockNode *bn;
+    D(bug("[PART:RDB] PartitionRDBNewBadBlock\n"));
+
+    struct BadBlockNode *bn;
 
     if (
             (AROS_BE2LONG(buffer->bbb_ID) == IDNAME_BADBLOCK) &&
@@ -265,20 +286,14 @@ struct BadBlockNode *bn;
     return NULL;
 }
 
-struct PartitionHandle *PartitionRDBNewHandle
-    (
-        struct Library *PartitionBase,
-        struct PartitionHandle *root,
-        struct PartitionBlock *buffer
-    )
+struct PartitionHandle *PartitionRDBNewHandle(struct Library *PartitionBase, struct PartitionHandle *root, struct PartitionBlock *buffer)
 {
-struct PartitionBlock *pblock;
-struct PartitionHandle *ph;
+    D(bug("[PART:RDB] PartitionRDBNewHandle\n"));
 
-    if (
-            (AROS_BE2LONG(buffer->pb_ID) == IDNAME_PARTITION) &&
-            (calcChkSum((ULONG *)buffer, AROS_BE2LONG(buffer->pb_SummedLongs))==0)
-        )
+    struct PartitionBlock *pblock;
+    struct PartitionHandle *ph;
+
+    if ( (AROS_BE2LONG(buffer->pb_ID) == IDNAME_PARTITION) && (calcChkSum((ULONG *)buffer, AROS_BE2LONG(buffer->pb_SummedLongs))==0) )
     {
         ph = AllocMem(sizeof(struct PartitionHandle), MEMF_PUBLIC | MEMF_CLEAR);
         if (ph)
@@ -302,6 +317,19 @@ struct PartitionHandle *ph;
                     ph->dg.dg_TrackSectors = ph->de.de_BlocksPerTrack;
                     ph->dg.dg_Cylinders = ph->de.de_HighCyl - ph->de.de_LowCyl + 1;
                     ph->dg.dg_BufMemType = ph->de.de_BufMemType;
+
+                    D(bug("\t[%s] ph->ln.ln_Name            = %s\n",      __FUNCTION__ , ph->ln.ln_Name));
+                    D(bug("\t[%s] ph->data->pb_Flags        = %10ld\n",   __FUNCTION__ , pblock->pb_Flags));
+                    D(bug("\t[%s] ph->de.de_BootPri         = %10ld\n",   __FUNCTION__ , ph->de.de_BootPri));
+                    D(bug("\t[%s] ph->de.de_SizeBlock       = %10ld\n",   __FUNCTION__ , ph->de.de_SizeBlock));
+                    D(bug("\t[%s] ph->de.de_Surfaces        = %10ld\n",   __FUNCTION__ , ph->de.de_Surfaces));
+                    D(bug("\t[%s] ph->de.de_BlocksperTrack  = %10ld\n",   __FUNCTION__ , ph->de.de_BlocksPerTrack));
+                    D(bug("\t[%s] ph->de.de_BufMemType      = %10ld\n",   __FUNCTION__ , ph->de.de_BufMemType)); 
+                    D(bug("\t[%s] ph->de.de_LowCyl          = %10ld\n",   __FUNCTION__ , ph->de.de_LowCyl)); 
+                    D(bug("\t[%s] ph->de.de_HighCyl         = %10ld\n",   __FUNCTION__ , ph->de.de_HighCyl));
+                    D(bug("\t[%s] ph->de.de_DosType         = 0x%x\n",    __FUNCTION__ , ph->de.de_DosType)); 
+                    D(bug("\t[%s] ph->de.de_MaxTransfer     = 0x%x\n",    __FUNCTION__ , ph->de.de_MaxTransfer)); 
+                    
                     return ph;
                 }
                 FreeVec(ph->ln.ln_Name);
@@ -312,26 +340,20 @@ struct PartitionHandle *ph;
     return NULL;
 }
 
-struct FileSysNode *PartitionRDBNewFileSys
-    (
-        struct Library *PartitionBase,
-        struct PartitionHandle *root,
-        struct FileSysHeaderBlock *buffer
-    )
+struct FileSysNode *PartitionRDBNewFileSys(struct Library *PartitionBase, struct PartitionHandle *root, struct FileSysHeaderBlock *buffer)
 {
-struct FileSysNode *fn;
+    D(bug("[PART:RDB] PartitionRDBNewFileSys\n"));
 
-    if (
-            (AROS_BE2LONG(buffer->fhb_ID) == IDNAME_FILESYSHEADER) &&
-            (calcChkSum((ULONG *)buffer, AROS_BE2LONG(buffer->fhb_SummedLongs))==0)
-        )
+    struct FileSysNode *fn;
+
+    if ( (AROS_BE2LONG(buffer->fhb_ID) == IDNAME_FILESYSHEADER) && (calcChkSum((ULONG *)buffer, AROS_BE2LONG(buffer->fhb_SummedLongs))==0) )
     {
         fn = AllocMem(sizeof(struct FileSysNode), MEMF_PUBLIC | MEMF_CLEAR);
         if (fn)
         {
             CopyMem(buffer, &fn->fhb, sizeof(struct FileSysHeaderBlock));
 
-	    /* Fill in common part of the handle */
+	        /* Fill in common part of the handle */
             fn->h.ln.ln_Name = fn->fhb.fhb_FileSysName;
             fn->h.ln.ln_Pri  = 0;
             fn->h.handler    = &FilesystemRDB;
@@ -344,22 +366,20 @@ struct FileSysNode *fn;
 
 static void PartitionRDBFreeFileSystem(struct FileSysHandle *fsh)
 {
+    D(bug("[PART:RDB] PartitionRDBFreeFileSystem\n"));
+    
     struct FileSysNode *fn = (struct FileSysNode *)fsh;
 
     FreeVec(fn->filesystem);
     FreeMem(fn, sizeof(struct FileSysNode));
 }
 
-ULONG PartitionRDBCalcFSSize
-    (
-        struct Library *PartitionBase,
-        struct PartitionHandle *root,
-        struct FileSysNode *fn,
-        struct LoadSegBlock *buffer
-    )
+ULONG PartitionRDBCalcFSSize(struct Library *PartitionBase, struct PartitionHandle *root, struct FileSysNode *fn, struct LoadSegBlock *buffer)
 {
-ULONG size;
-ULONG block;
+    D(bug("[PART:RDB] PartitionRDBCalcFSSize\n"));
+
+    ULONG size;
+    ULONG block;
 
     size = 0;
     block = AROS_BE2LONG(fn->fhb.fhb_SegListBlocks);
@@ -378,16 +398,12 @@ ULONG block;
     return size;
 }
 
-void PartitionRDBReadFileSys
-    (
-        struct Library *PartitionBase,
-        struct PartitionHandle *root,
-        struct FileSysNode *fn,
-        struct LoadSegBlock *buffer
-    )
+void PartitionRDBReadFileSys(struct Library *PartitionBase, struct PartitionHandle *root, struct FileSysNode *fn, struct LoadSegBlock *buffer)
 {
-ULONG size;
-ULONG block;
+    D(bug("[PART:RDB] PartitionRDBReadFileSys\n"));
+
+    ULONG size;
+    ULONG block;
 
     size = PartitionRDBCalcFSSize(PartitionBase, root, fn, buffer);
     if (size)
@@ -409,15 +425,13 @@ ULONG block;
     }
 }
 
-LONG PartitionRDBOpenPartitionTable
-    (
-        struct Library *PartitionBase,
-        struct PartitionHandle *root
-    )
+LONG PartitionRDBOpenPartitionTable(struct Library *PartitionBase, struct PartitionHandle *root)
 {
-UBYTE *buffer;
-struct RDBData *data;
-UBYTE i;
+    D(bug("[PART:RDB] PartitionRDBOpenPartitionTable\n"));
+        
+    UBYTE *buffer;
+    struct RDBData *data;
+    UBYTE i;
 
     buffer = AllocVec(root->de.de_SizeBlock << 2, MEMF_PUBLIC);
     if (!buffer)
@@ -450,6 +464,12 @@ UBYTE i;
             root->dg.dg_Cylinders    = AROS_BE2LONG(data->rdb.rdb_Cylinders);
             root->dg.dg_TrackSectors = AROS_BE2LONG(data->rdb.rdb_Sectors);
             root->dg.dg_Heads        = AROS_BE2LONG(data->rdb.rdb_Heads);
+
+            D(bug("\t[%s] dg_SectorSize   = %10ld\t(rdb_BlockBytes)\n",   __FUNCTION__ , root->dg.dg_SectorSize));
+            D(bug("\t[%s] dg_Cylinders    = %10ld\t(rdb_Cylinders)\n",    __FUNCTION__ , root->dg.dg_Cylinders));
+            D(bug("\t[%s] dg_TrackSectors = %10ld\t(rdb_Sectors)\n",      __FUNCTION__ , root->dg.dg_TrackSectors));
+            D(bug("\t[%s] dg_Heads        = %10ld\t(rdb_Heads)\n",        __FUNCTION__ , root->dg.dg_Heads));
+
             /*
              * Before v3.1 partition.library left rdb_CylBlocks uninitialized, so don't rely on it here.
              * Otherwise you'll get problem reading drives partitioned with earlier partition.library.
@@ -477,6 +497,7 @@ UBYTE i;
                 else
                     break;
             }
+
             /* read partition blocks */
             block = AROS_BE2LONG(data->rdb.rdb_PartitionList);
             while (block != (ULONG)-1)
@@ -496,6 +517,7 @@ UBYTE i;
                 else
                     break;
             }
+
             /* read filesystem blocks */
             block = AROS_BE2LONG(data->rdb.rdb_FileSysHeaderList);
             while (block != (ULONG)-1)
@@ -526,12 +548,10 @@ UBYTE i;
     return 1;
 }
 
-void PartitionRDBFreeHandle
-    (
-        struct Library *PartitionBase,
-        struct PartitionHandle *ph
-    )
+void PartitionRDBFreeHandle(struct Library *PartitionBase, struct PartitionHandle *ph)
 {
+    //D(bug("[PART:RDB] PartitionRDBFreeHandle\n"));
+
     ClosePartitionTable(ph);
     Remove(&ph->ln);
     FreeMem(ph->data, sizeof(struct PartitionBlock));
@@ -539,16 +559,14 @@ void PartitionRDBFreeHandle
     FreeMem(ph, sizeof(struct PartitionHandle));
 }
 
-void PartitionRDBClosePartitionTable
-    (
-        struct Library *PartitionBase,
-        struct PartitionHandle *root
-    )
+void PartitionRDBClosePartitionTable(struct Library *PartitionBase, struct PartitionHandle *root)
 {
-struct PartitionHandle *ph;
-struct BadBlockNode *bn;
-struct FileSysNode *fn;
-struct RDBData *data;
+    //D(bug("[PART:RDB] PartitionRDBClosePartitionTable\n"));
+
+    struct PartitionHandle *ph;
+    struct BadBlockNode *bn;
+    struct FileSysNode *fn;
+    struct RDBData *data;
 
     while ((ph = (struct PartitionHandle *)RemTail(&root->table->list)))
         PartitionRDBFreeHandle(PartitionBase, ph);
@@ -565,15 +583,16 @@ struct RDBData *data;
     FreeMem(data, sizeof(struct RDBData));
 }
 
-ULONG PartitionRDBWriteFileSys
-    (
-        struct Library *PartitionBase,
-        struct PartitionHandle *root,
-        struct FileSysNode *fn,
-        ULONG block
-    )
+ULONG PartitionRDBWriteFileSys(struct Library *PartitionBase, struct PartitionHandle *root, struct FileSysNode *fn, ULONG block)
 {
-ULONG size;
+    D(ULONG version_major);
+    D(ULONG version_minor);
+    D(version_minor = fn->fhb.fhb_Version % 65536);
+    D(version_major = ( (fn->fhb.fhb_Version - version_minor) / 65536 ));
+    
+    D(bug("[PART:RDB] PartitionRDBWriteFileSys: Name=%s | DOSType=0x%8lx | Version=%u.%u\n", fn->fhb.fhb_FileSysName, fn->fhb.fhb_DosType, version_major, version_minor));
+
+    ULONG size;
 
     if (fn->filesystem)
     {
@@ -598,6 +617,8 @@ ULONG size;
 
 static LONG PartitionRDBWritePartitionTable(struct Library *PartitionBase, struct PartitionHandle *root)
 {
+    D(bug("[PART:RDB] PartitionRDBWritePartitionTable\n"));
+
     struct RDBData *data;
     struct PartitionHandle *ph;
     struct PartitionBlock *pblock;
@@ -699,6 +720,8 @@ static LONG PartitionRDBWritePartitionTable(struct Library *PartitionBase, struc
 
 LONG PartitionRDBCreatePartitionTable(struct Library *PartitionBase, struct PartitionHandle *ph)
 {
+    D(bug("[PART:RDB] PartitionRDBCreatePartitionTabel\n"));
+
     struct RDBData *data;
     ULONG i;
 
@@ -760,9 +783,10 @@ LONG PartitionRDBCreatePartitionTable(struct Library *PartitionBase, struct Part
     return 1;
 }
 
-static LONG PartitionRDBGetPartitionTableAttr(struct Library *PartitionBase,
-    struct PartitionHandle *root, const struct TagItem *tag)
+static LONG PartitionRDBGetPartitionTableAttr(struct Library *PartitionBase, struct PartitionHandle *root, const struct TagItem *tag)
 {
+    //D(bug("[PART:RDB] PartitionRDBGetPartitionTableAttr\n"));
+
     struct RDBData *data = root->table->data;
 
     switch (tag->ti_Tag)
@@ -775,9 +799,10 @@ static LONG PartitionRDBGetPartitionTableAttr(struct Library *PartitionBase,
     return 0;
 }
 
-static LONG PartitionRDBGetPartitionAttr(struct Library *PartitionBase,
-    struct PartitionHandle *ph, const struct TagItem *tag)
+static LONG PartitionRDBGetPartitionAttr(struct Library *PartitionBase, struct PartitionHandle *ph, const struct TagItem *tag)
 {
+    //D(bug("[PART:RDB] PartitionRDBGetPArtitionAttr\n"));
+
     struct PartitionBlock *data = (struct PartitionBlock *)ph->data;
 
     switch (tag->ti_Tag)
@@ -801,6 +826,8 @@ static LONG PartitionRDBGetPartitionAttr(struct Library *PartitionBase,
 
 static LONG PartitionRDBSetPartitionAttrs(struct Library *PartitionBase, struct PartitionHandle *ph, const struct TagItem *taglist)
 {
+    D(bug("[PART:RDB] PartitionRDBSetPartitionAttrs\n"));
+
     struct TagItem *tag;
     struct PartitionBlock *data = (struct PartitionBlock *)ph->data;
 
@@ -856,6 +883,8 @@ static LONG PartitionRDBSetPartitionAttrs(struct Library *PartitionBase, struct 
 
 struct PartitionHandle *PartitionRDBAddPartition(struct Library *PartitionBase, struct PartitionHandle *root, const struct TagItem *taglist)
 {
+    D(bug("[PART:RDB] PartitionRDBAddPartition\n"));
+
     if (FindTagItem(PT_DOSENVEC, taglist) != NULL)
     {
  	struct PartitionBlock *pblock;
@@ -915,13 +944,10 @@ struct PartitionHandle *PartitionRDBAddPartition(struct Library *PartitionBase, 
     return NULL;
 }
 
-void PartitionRDBDeletePartition
-    (
-        struct Library *PartitionBase,
-        struct PartitionHandle *ph
-    )
+void PartitionRDBDeletePartition(struct Library *PartitionBase, struct PartitionHandle *ph)
 {
-
+    D(bug("[PART:RDB] PartitionRDBDeletePartition\n"));
+    
     PartitionRDBFreeHandle(PartitionBase, ph);
 }
 
@@ -944,14 +970,12 @@ const struct PartitionAttribute PartitionRDBPartitionAttrs[]=
     {TAG_DONE,      0}
 };
 
-ULONG PartitionRDBDestroyPartitionTable
-    (
-        struct Library *PartitionBase,
-        struct PartitionHandle *root
-    )
+ULONG PartitionRDBDestroyPartitionTable(struct Library *PartitionBase, struct PartitionHandle *root)
 {
-struct RDBData *data;
-struct RigidDiskBlock *rdb;
+    D(bug("[PART:RDB] PartitionDestroyPartitionTable\n"));
+
+    struct RDBData *data;
+    struct RigidDiskBlock *rdb;
 
     if (sizeof(root->buffer) < (root->de.de_SizeBlock << 2))
     	    return 0;
@@ -967,34 +991,45 @@ struct RigidDiskBlock *rdb;
 
 struct Node *PartitionRDBFindFileSystem(struct Library *PartitionBase, struct PartitionHandle *ph, const struct TagItem *tags)
 {
+    D(bug("[PART:RDB] PartitionRDBFindFileSystem\n"));
+
     struct RDBData *data = (struct RDBData *)ph->table->data;
     struct FileSysNode *fn;
     struct TagItem *idTag   = FindTagItem(FST_ID  , tags);
     struct TagItem *nameTag = FindTagItem(FST_NAME, tags);
 
-    for (fn = (struct FileSysNode *)data->fsheaderlist.lh_Head; fn->h.ln.ln_Succ;
-    	 fn = (struct FileSysNode *)fn->h.ln.ln_Succ)
+    for (fn = (struct FileSysNode *)data->fsheaderlist.lh_Head; fn->h.ln.ln_Succ; fn = (struct FileSysNode *)fn->h.ln.ln_Succ)
     {
-	if (idTag)
-	{
-	    if (fn->fhb.fhb_DosType != idTag->ti_Data)
-	    	continue;
-	}
+        if (idTag)
+        {
+            D(bug("\tSearching DosType=0x%8lx ||| Inspecting DosType=0x%8lx\n", idTag->ti_Data, fn->fhb.fhb_DosType));
+    
+            if (fn->fhb.fhb_DosType != idTag->ti_Data)
+                continue;
+        }
 
-	if (nameTag)
-	{
-	    if (strcmp(fn->fhb.fhb_FileSysName, (char *)nameTag->ti_Data))
-	    	continue;
-	}
+        if (nameTag)
+        {
+            D(bug("\tSearching FS=%s ||| Inspecting FS=%s\n", (char *)nameTag->ti_Data, fn->fhb.fhb_FileSysName));
+    
+            if (strcmp(fn->fhb.fhb_FileSysName, (char *)nameTag->ti_Data))
+                continue;
+        }
 
-	return &fn->h.ln;
+        D(bug("\tReturn FS=%s | DosType=0x%8lx\n", fn->fhb.fhb_FileSysName, fn->fhb.fhb_DosType));
+
+    	return &fn->h.ln;
     }
+
+    D(bug("\tNo FileSystems available in RDB\n"));
 
     return NULL;
 }
 
 BPTR PartitionRDBLoadFileSystem(struct PartitionBase_intern *PartitionBase, struct FileSysHandle *fn)
 {
+    D(bug("[PART:RDB] PartitionRDBLoadFileSystem\n"));
+
     if (PartitionBase->pb_DOSBase)
     	return LoadFS((struct FileSysNode *)fn, (struct DosLibrary *)PartitionBase->pb_DOSBase);
     else
@@ -1003,49 +1038,51 @@ BPTR PartitionRDBLoadFileSystem(struct PartitionBase_intern *PartitionBase, stru
 
 static LONG PartitionRDBGetFileSystemAttr(struct Library *PartitionBase, struct FileSysHandle *fn, const struct TagItem *tag)
 {
+    D(bug("[PART:RDB] PartitionRDBGetFileSystemAttr\n"));
+
     struct FileSysEntry *fse;
     struct FileSysHeaderBlock *fhb = &((struct FileSysNode *)fn)->fhb;
 
     switch (tag->ti_Tag)
     {
-    case FST_ID:
-        *((ULONG *)tag->ti_Data) = AROS_BE2LONG(fhb->fhb_DosType);
+        case FST_ID:
+            *((ULONG *)tag->ti_Data) = AROS_BE2LONG(fhb->fhb_DosType);
+            return TRUE;
+
+        case FST_NAME:
+            *((STRPTR *)tag->ti_Data) = fhb->fhb_FileSysName;
+            return TRUE;
+
+        case FST_FSENTRY:
+        fse = (struct FileSysEntry *)tag->ti_Data;
+
+        /* RDB filesystems are not prioritized */
+        fse->fse_Node.ln_Pri = 0;
+
+        /*
+        * Don't use CopyMem() or something like that.
+        * First, you need to deal with endianess.
+        * Second, some things are actually pointers, you need
+        * to sign-extend them on 64 bits.
+        */
+        fse->fse_DosType    = AROS_BE2LONG(fhb->fhb_DosType);
+        fse->fse_Version    = AROS_BE2LONG(fhb->fhb_Version);
+        fse->fse_PatchFlags = AROS_BE2LONG(fhb->fhb_PatchFlags);
+        fse->fse_Type	    = AROS_BE2LONG(fhb->fhb_Type);
+        fse->fse_Task	    = AROS_BE2LONG(fhb->fhb_Task);
+        fse->fse_Lock	    = (BPTR)(SIPTR)AROS_BE2LONG(fhb->fhb_Lock);
+        /* Just for convenience. This is expected to be zero. */
+        fse->fse_Handler    = (BPTR)(SIPTR)AROS_BE2LONG(fhb->fhb_Handler);
+        fse->fse_StackSize  = AROS_BE2LONG(fhb->fhb_StackSize);
+        fse->fse_Priority   = AROS_BE2LONG(fhb->fhb_Priority);
+        fse->fse_Startup    = (BPTR)(SIPTR)AROS_BE2LONG(fhb->fhb_Startup);
+        /* Skip fse_SegList */
+        fse->fse_GlobalVec  = (BPTR)(SIPTR)AROS_BE2LONG(fhb->fhb_GlobalVec);
         return TRUE;
 
-    case FST_NAME:
-        *((STRPTR *)tag->ti_Data) = fhb->fhb_FileSysName;
+        case FST_VERSION:
+        *((ULONG *)tag->ti_Data) = AROS_BE2LONG(fhb->fhb_Version);
         return TRUE;
-
-    case FST_FSENTRY:
-	fse = (struct FileSysEntry *)tag->ti_Data;
-
-	/* RDB filesystems are not prioritized */
-	fse->fse_Node.ln_Pri = 0;
-
-	/*
-	 * Don't use CopyMem() or something like that.
-	 * First, you need to deal with endianess.
-	 * Second, some things are actually pointers, you need
-	 * to sign-extend them on 64 bits.
-	 */
-	fse->fse_DosType    = AROS_BE2LONG(fhb->fhb_DosType);
-	fse->fse_Version    = AROS_BE2LONG(fhb->fhb_Version);
-	fse->fse_PatchFlags = AROS_BE2LONG(fhb->fhb_PatchFlags);
-	fse->fse_Type	    = AROS_BE2LONG(fhb->fhb_Type);
-	fse->fse_Task	    = AROS_BE2LONG(fhb->fhb_Task);
-	fse->fse_Lock	    = (BPTR)(SIPTR)AROS_BE2LONG(fhb->fhb_Lock);
-	/* Just for convenience. This is expected to be zero. */
-	fse->fse_Handler    = (BPTR)(SIPTR)AROS_BE2LONG(fhb->fhb_Handler);
-	fse->fse_StackSize  = AROS_BE2LONG(fhb->fhb_StackSize);
-	fse->fse_Priority   = AROS_BE2LONG(fhb->fhb_Priority);
-	fse->fse_Startup    = (BPTR)(SIPTR)AROS_BE2LONG(fhb->fhb_Startup);
-	/* Skip fse_SegList */
-	fse->fse_GlobalVec  = (BPTR)(SIPTR)AROS_BE2LONG(fhb->fhb_GlobalVec);
-	return TRUE;
-
-    case FST_VERSION:
-	*((ULONG *)tag->ti_Data) = AROS_BE2LONG(fhb->fhb_Version);
-	return TRUE;
     }
 
     return 0;

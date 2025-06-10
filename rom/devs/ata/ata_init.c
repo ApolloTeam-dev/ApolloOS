@@ -1,5 +1,5 @@
 /*
-    Copyright © 2004-2020, The AROS Development Team. All rights reserved
+    Copyright ï¿½ 2004-2020, The AROS Development Team. All rights reserved
     $Id$
 
     Desc:
@@ -46,9 +46,9 @@ BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit)
 {
     struct ExpansionBase *ExpansionBase;
     struct DeviceNode *devnode;
-    TEXT dosdevname[4] = "HD0";
-    const ULONG IdDOS = AROS_MAKE_ID('D','O','S','\001');
-    const ULONG IdCDVD = AROS_MAKE_ID('C','D','V','D');
+    TEXT dosdevname[7] = "DHROM0";
+    const ULONG IdDOS = AROS_MAKE_ID('D','O','S','\000');
+    const ULONG IdCDVD = AROS_MAKE_ID('C','D','F','S');         // Opticals are all using CDFS
 
     ExpansionBase = (struct ExpansionBase *)TaggedOpenLibrary(TAGGEDOPEN_EXPANSION);
     if (ExpansionBase)
@@ -62,21 +62,21 @@ BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit)
                 break;
             case DG_CDROM:
                 dosdevname[0] = 'C';
+                dosdevname[1] = 'D';
                 break;
             default:
                 D(bug("[ATA>>]:-ata_RegisterVolume called on unknown devicetype\n"));
         }
 
-        if (unit->au_UnitNum < 10)
-            dosdevname[2] += unit->au_UnitNum % 10;
-        else
-            dosdevname[2] = 'A' - 10 + unit->au_UnitNum;
+        if (unit->au_UnitNum < 10) dosdevname[5] += unit->au_UnitNum % 10;
+        else dosdevname[5] = 'A' - 10 + unit->au_UnitNum;
     
-        pp[0] 		    = (IPTR)dosdevname;
-        pp[1]		    = (IPTR)MOD_NAME_STRING;
-        pp[2]		    = unit->au_UnitNum;
+        pp[0] 		            = (IPTR)dosdevname;
+        pp[1]		            = (IPTR)MOD_NAME_STRING;
+        pp[2]		            = unit->au_UnitNum;
         pp[DE_TABLESIZE    + 4] = DE_BOOTBLOCKS;
-        pp[DE_SIZEBLOCK    + 4] = 1 << (unit->au_SectorShift - 2);
+
+        pp[DE_SIZEBLOCK    + 4] = 1 << (unit->au_SectorShift - 2);          // LONG (32-bit) per Sector = (#Bytes/Sector)/4 = SectorSift-2 
         pp[DE_NUMHEADS     + 4] = unit->au_Heads;
         pp[DE_SECSPERBLOCK + 4] = 1;
         pp[DE_BLKSPERTRACK + 4] = unit->au_Sectors;
@@ -85,7 +85,7 @@ BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit)
         pp[DE_HIGHCYL      + 4] = EndCyl;
         pp[DE_NUMBUFFERS   + 4] = 10;
         pp[DE_BUFMEMTYPE   + 4] = MEMF_PUBLIC | MEMF_31BIT;
-        pp[DE_MAXTRANSFER  + 4] = 0x00200000;
+        pp[DE_MAXTRANSFER  + 4] = 0x1FE00;
         pp[DE_MASK         + 4] = 0x7FFFFFFE;
         pp[DE_BOOTPRI      + 4] = ((unit->au_DevType == DG_DIRECT_ACCESS) ? 0 : 10);
         pp[DE_DOSTYPE      + 4] = ((unit->au_DevType == DG_DIRECT_ACCESS) ? IdDOS : IdCDVD);
@@ -96,18 +96,21 @@ BOOL ata_RegisterVolume(ULONG StartCyl, ULONG EndCyl, struct ata_Unit *unit)
 
         if (devnode)
         {
-            D(bug("[ATA>>]:-ata_RegisterVolume: '%b', type=0x%08lx with StartCyl=%d, EndCyl=%d .. ",
-                  devnode->dn_Name, pp[DE_DOSTYPE + 4], StartCyl, EndCyl));
+            D(bug("[ATA>>]:-ata_RegisterVolume=%b, DosType=0x%08lx | LowCyl=%d | HighCyl=%d | Heads=%d | Blocksize=%d | BlockPerTrack=%d .. ",
+                devnode->dn_Name, pp[DE_DOSTYPE + 4], StartCyl, EndCyl, unit->au_Heads, 1 << unit->au_SectorShift, unit->au_Sectors));
 
-            AddBootNode(pp[DE_BOOTPRI + 4], ADNF_STARTPROC, devnode, NULL);
-            D(bug("done\n"));
-            
+            if (unit->au_DevType == DG_DIRECT_ACCESS) // && ((unit->au_Flags & AF_Removable) == 0))
+            {
+                AddBootNode(pp[DE_BOOTPRI + 4], ADNF_STARTPROC, devnode, NULL);
+                D(bug("BootNode (Direct Access Medium)\n"));
+            } else {
+                D(bug("DosNode (CD/DVD or other Non-Direct Access Medium)\n"));
+            }
+
             return TRUE;
         }
-
         CloseLibrary((struct Library *)ExpansionBase);
     }
-
     return FALSE;
 }
 
@@ -321,8 +324,7 @@ static int ata_expunge(struct ataBase *ATABase)
     return TRUE;
 }
 
-static int open(struct ataBase *ATABase, struct IORequest *iorq,
-                ULONG unitnum, ULONG flags)
+static int open(struct ataBase *ATABase, struct IORequest *iorq, ULONG unitnum, ULONG flags)
 {
     struct ata_Controller *ataNode;
     struct Hook searchHook =

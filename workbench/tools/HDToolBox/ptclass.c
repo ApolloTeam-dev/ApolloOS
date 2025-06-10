@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2008, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2008, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -1138,6 +1138,8 @@ Class *makePTClass(void)
             ptcl->cl_Dispatcher.h_Entry = AROS_ASMSYMNAME(dispatch_ptclass);
             ptcl->cl_Dispatcher.h_SubEntry = NULL;
             ptcl->cl_UserData = (IPTR)NULL;
+        } else {
+            D(bug("[HDToolBox] makePTClass() FAILED\n"));
         }
     }
     return ptcl;

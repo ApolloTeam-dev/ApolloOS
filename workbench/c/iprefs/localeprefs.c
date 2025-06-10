@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -18,7 +18,7 @@ void LocalePrefs_Handler(STRPTR filename)
 {
     struct Locale  *newloc /*, *oldloc */;
     
-    D(bug("In IPrefs:LocalePrefs_Handler\n"));
+    bug("In IPrefs:LocalePrefs_Handler\n");
     
     if ((newloc = OpenLocale(filename)))
     {

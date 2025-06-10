@@ -2,7 +2,7 @@
 #define EXEC_TYPES_H
 
 /*
-    Copyright © 1995-2001, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2001, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Data typing - must be included before any other file.
@@ -34,8 +34,8 @@
 /* Distinguish between 64 and 32bit systems */
 #ifndef __typedef_LONG
 #   define __typedef_LONG
-    typedef   signed AROS_32BIT_TYPE	        LONG;	/* signed 32-bit value */
-    typedef unsigned AROS_32BIT_TYPE	        ULONG;	/* unsigned 32-bit value */
+    typedef   signed int	        LONG;	/* signed 32-bit value */
+    typedef unsigned int	        ULONG;	/* unsigned 32-bit value */
 #endif
 
 #ifndef __typedef_QUAD

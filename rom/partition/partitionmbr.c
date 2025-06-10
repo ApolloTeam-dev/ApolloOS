@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -82,57 +82,109 @@ LONG MBRCheckPartitionTable(struct Library *PartitionBase, struct PartitionHandl
     struct rootblock *blk = buffer;
     LONG res = 0;
 
+    struct PCPartitionTable *pcpt = blk->u.mbr.pcpt;
+
+    D(bug("[PART:MBR] [%s] Check if we have a valid MBR . . . \n",__FUNCTION__));
+
     if (readBlock(PartitionBase, root, 0, blk) == 0)
     {
-        /* Check it doesn't look like a FAT boot sector */
-	ULONG sectorsize, clustersectors;
-
-        /* Valid sector size: 512, 1024, 2048, 4096 */
-        sectorsize = AROS_LE2WORD(blk->u.bs.bpb_bytes_per_sect);
-        if (sectorsize != 512 && sectorsize != 1024 && sectorsize != 2048 && sectorsize != 4096)
+        /* Check status bytes of all partition slots and block signature */
+        if ((AROS_LE2WORD(blk->u.mbr.magic) != MBR_MAGIC) ||
+            (!MBR_STATUS_VALID(pcpt[0].status)) || (!MBR_STATUS_VALID(pcpt[1].status)) || 
+            (!MBR_STATUS_VALID(pcpt[2].status)) || (!MBR_STATUS_VALID(pcpt[3].status)))
+        {
+            D(bug("NO\n"));
+            res = 0;
+        } else {
+            D(bug("YES\n"));
             res = 1;
-
-        /* Valid bpb_sect_per_clust: 1, 2, 4, 8, 16, 32, 64, 128 */
-        clustersectors = blk->u.bs.bpb_sect_per_clust;
-        if ((clustersectors & (clustersectors - 1)) != 0 || clustersectors == 0 || clustersectors > 128)
-            res = 1;
-
-        /* Valid cluster size: 512, 1024, 2048, 4096, 8192, 16k, 32k, 64k */
-        if (clustersectors * sectorsize > 64 * 1024)
-            res = 1;
-
-        if (blk->u.bs.bpb_media < 0xF0)
-            res = 1;
-
-	if (res)
-	{
-	    struct PCPartitionTable *pcpt = blk->u.mbr.pcpt;
-
-	    /* Check status bytes of all partition slots and block signature */
-            if ((AROS_LE2WORD(blk->u.mbr.magic) != MBR_MAGIC) ||
-                (!MBR_STATUS_VALID(pcpt[0].status)) || (!MBR_STATUS_VALID(pcpt[1].status)) || 
-            	(!MBR_STATUS_VALID(pcpt[2].status)) || (!MBR_STATUS_VALID(pcpt[3].status)))
-            {
-            	res = 0;
-            }
         }
+    } else {
+        D(bug("[PART:MBR] [%s] readBlock FAIL\n",__FUNCTION__));
     }
+
+    /* if (res == 0)
+    {
+        D(bug("[PART:MBR] [%s] No MBR, but maybe we have a valid FAT Boot record . . . \n",__FUNCTION__));
+
+	    ULONG sectorsize, clustersectors;
+
+        // Valid sector size: 512, 1024, 2048, 4096 
+        sectorsize = AROS_LE2WORD(blk->u.bs.bpb_bytes_per_sect);
+
+        D(bug("[PART:MBR] [%s] Sector Size : %u\n",__FUNCTION__, sectorsize));
+
+        if (sectorsize == 512 || sectorsize == 1024 || sectorsize == 2048 || sectorsize == 4096)
+        {
+            res = 1;
+            D(bug("[PART:MBR] [%s] res is set (%u)\n",__FUNCTION__,res));
+        } 
+
+        // Valid bpb_sect_per_clust: 1, 2, 4, 8, 16, 32, 64, 128 
+        clustersectors = blk->u.bs.bpb_sect_per_clust;
+
+        D(bug("[PART:MBR] [%s] Sectors per Cluster : %u\n",__FUNCTION__, clustersectors));
+
+        if ((clustersectors & (clustersectors - 1)) == 0 && clustersectors != 0 && clustersectors <= 128)
+        {
+            res = 1;
+            D(bug("[PART:MBR] [%s] res is set (%u)\n",__FUNCTION__,res));
+        } else {
+            res = 0;
+            D(bug("[PART:MBR] [%s] res is cleared (%u)\n",__FUNCTION__,res));     
+        }
+
+        // Valid cluster size: 512, 1024, 2048, 4096, 8192, 16k, 32k, 64k 
+        D(bug("[PART:MBR] [%s] Cluster Size: %u\n",__FUNCTION__, clustersectors * sectorsize ));
+
+        if (clustersectors * sectorsize <= 64 * 1024)
+        {
+            res = 1;
+            D(bug("[PART:MBR] [%s] res is set (%u)\n",__FUNCTION__,res));
+        } else {
+            res = 0;
+            D(bug("[PART:MBR] [%s] res is cleared (%u)\n",__FUNCTION__,res));     
+        }
+
+        D(bug("[PART:MBR] [%s] bpb_media : 0x%x\n",__FUNCTION__, blk->u.bs.bpb_media));
+
+        if (blk->u.bs.bpb_media >= 0xF0)
+        {
+            res = 1;
+            D(bug("[PART:MBR] [%s] res is set (%u)\n",__FUNCTION__,res));
+        } else {
+            res = 0;
+            D(bug("[PART:MBR] [%s] res is cleared (%u)\n",__FUNCTION__,res));     
+        }
+    
+    } */
+
+    D(bug("[PART:MBR] [%s]]: res = %u",__FUNCTION__,res));
+    D(bug(res ? " = FOUND\n" : " = NOT FOUND\n"));
 
     return res;
 }
 
+
 static LONG PartitionMBRCheckPartitionTable(struct Library *PartitionBase, struct PartitionHandle *root)
 {
+    D(bug("[PART:MBR] PartitionMBRCheckPartitionTable: "));
+
     LONG res;
     void *blk;
 
     /* MBR can be placed only in the root of the disk */
     if (root->root)
-    	return 0;
+    {
+        D(bug("NO MBR FOUND\n"));
+        return 0;
+    }
 
     blk = AllocMem(root->de.de_SizeBlock << 2, MEMF_ANY);    
     if (!blk)
     	return 0;
+
+    D(bug("Partition is valid Root -> Checking Partition Table\n"));
 
     res = MBRCheckPartitionTable(PartitionBase, root, blk);
 
@@ -142,6 +194,8 @@ static LONG PartitionMBRCheckPartitionTable(struct Library *PartitionBase, struc
 
 static struct PartitionHandle *PartitionMBRNewHandle(struct Library *PartitionBase, struct PartitionHandle *root, UBYTE position, struct PCPartitionTable *entry)
 {
+    D(bug("[PART:MBR] PartitionMBRNewHandle\n"));
+
     struct PartitionHandle *ph;
 
     if (entry->first_sector != 0)
@@ -176,6 +230,8 @@ static struct PartitionHandle *PartitionMBRNewHandle(struct Library *PartitionBa
 
 static LONG PartitionMBROpenPartitionTable(struct Library *PartitionBase, struct PartitionHandle *root)
 {
+    D(bug("[PART] PartitionMBROpenPartitionTable\n"));
+    
     struct PartitionHandle *ph;
     struct MBR *mbr;
     UBYTE i;
@@ -205,6 +261,8 @@ static void PartitionMBRFreeHandle
         struct PartitionHandle *ph
     )
 {
+    D(bug("[PART] PartitionMBRFreeHandle\n"));
+    
     ClosePartitionTable(ph);
     FreeMem(ph->data, sizeof(struct MBRData));
     FreeMem(ph, sizeof(struct PartitionHandle));
@@ -216,7 +274,9 @@ static void PartitionMBRClosePartitionTable
         struct PartitionHandle *root
     )
 {
-struct PartitionHandle *ph;
+    D(bug("[PART] PartitionMBRClosePartitionTable\n"));
+
+    struct PartitionHandle *ph;
 
     while ((ph = (struct PartitionHandle *)RemTail(&root->table->list)))
         PartitionMBRFreeHandle(PartitionBase, ph);
@@ -229,6 +289,7 @@ static LONG PartitionMBRWritePartitionTable
         struct PartitionHandle *root
     )
 {
+    D(bug("[PART] PartitionMBRWritePartitionTable\n"));
     /* FIXME: readBlock(0) and synchronize data */
 
     /* root->data = mbr is up to date */
@@ -243,7 +304,9 @@ static LONG PartitionMBRCreatePartitionTable
         struct PartitionHandle *ph
     )
 {
-struct MBR *mbr;
+    D(bug("[PART] PartitionMBRCreatePartitionTable\n")); 
+    
+    struct MBR *mbr;
 
     mbr = AllocMem(ph->de.de_SizeBlock<<2, MEMF_PUBLIC);
     if (mbr)
@@ -272,9 +335,12 @@ void PartitionMBRSetGeometry
         ULONG relative_sector
     )
 {
-ULONG track;
-ULONG cyl;
+    D(bug("[PART] PartitionMBRSetGeometry\n")); 
+    
+    ULONG track;
+    ULONG cyl;
 
+    
     /* Store LBA start block and block count */
 
     entry->first_sector = AROS_LONG2LE(sector - relative_sector);
@@ -327,7 +393,9 @@ static void PartitionMBRSetDosEnvec
         struct DosEnvec *de
     )
 {
-ULONG sector, count;
+    D(bug("[PART] PartitionMBRSetDosEnvec\n")); 
+    
+    ULONG sector, count;
 
     sector = de->de_LowCyl * de->de_Surfaces * de->de_BlocksPerTrack;
     count = (de->de_HighCyl - de->de_LowCyl + 1) *
@@ -338,6 +406,8 @@ ULONG sector, count;
 
 static struct PartitionHandle *PartitionMBRAddPartition(struct Library *PartitionBase, struct PartitionHandle *root, const struct TagItem *taglist)
 {
+    D(bug("[PART] PartitionMBRAddPartition\n")); 
+    
     struct TagItem *tag;
 
     tag = FindTagItem(PT_DOSENVEC, taglist);
@@ -395,6 +465,8 @@ static struct PartitionHandle *PartitionMBRAddPartition(struct Library *Partitio
 
 static void PartitionMBRDeletePartition(struct Library *PartitionBase, struct PartitionHandle *ph)
 {
+    D(bug("[PART] PartitionMBRDeletePartition\n"));
+    
     struct MBRData *data = (struct MBRData *)ph->data;
 
     SetMem(data->entry, 0, sizeof(struct PCPartitionTable));
@@ -406,6 +478,8 @@ static void PartitionMBRDeletePartition(struct Library *PartitionBase, struct Pa
 static LONG PartitionMBRGetPartitionTableAttr(struct Library *PartitionBase,
     struct PartitionHandle *root, const struct TagItem *tag)
 {
+    D(bug("[PART] PartitionMBRGetPartitionTableAttr\n"));
+    
     switch (tag->ti_Tag)
     {
     case PTT_RESERVED:
@@ -423,6 +497,8 @@ static LONG PartitionMBRGetPartitionTableAttr(struct Library *PartitionBase,
 static LONG PartitionMBRGetPartitionAttr(struct Library *PartitionBase,
     struct PartitionHandle *ph, const struct TagItem *tag)
 {
+    D(bug("[PART] PartitionMBRGetPartitionAttr\n"));
+
     struct MBRData *data = (struct MBRData *)ph->data;
 
     switch (tag->ti_Tag)
@@ -455,6 +531,8 @@ static LONG PartitionMBRGetPartitionAttr(struct Library *PartitionBase,
 
 static LONG PartitionMBRSetPartitionAttrs(struct Library *PartitionBase, struct PartitionHandle *ph, const struct TagItem *taglist)
 {
+    D(bug("[PART] PartitionMBRSetPartitionAttrs\n"));
+ 
     struct MBRData *data = (struct MBRData *)ph->data;
     struct TagItem *tag;
 
@@ -532,6 +610,8 @@ static const struct PartitionAttribute PartitionMBRPartitionAttrs[]=
 ULONG PartitionMBRDestroyPartitionTable(struct Library *PartitionBase,
     struct PartitionHandle *root)
 {
+    D(bug("[PART] PartitionMBRDestroyPartitionTable\n"));
+
     struct MBR *mbr = root->table->data;
 
     SetMem(mbr->pcpt, 0, sizeof(mbr->pcpt));

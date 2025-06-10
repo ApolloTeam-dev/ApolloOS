@@ -13,6 +13,6 @@
 #define DPF(x)
 #define DCOPYBOX(x)
 
-#define DSOFTEV(x) x
-#define DSOFTE(x) x
-#define DSOFTEDRAW(x) x
+#define DSOFTEV(x)
+#define DSOFTE(x)
+#define DSOFTEDRAW(x)

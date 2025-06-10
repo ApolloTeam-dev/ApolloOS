@@ -37,6 +37,7 @@ include $(SRCDIR)/config/aros.cfg
 #MM     kernel-filesystem-kobj \
 #MM     kernel-freeanim-kobj \
 #MM     kernel-fs-core-kobj \
+#MM		kernel-fs-fat-kobj \
 #MM     kernel-fs-con-kobj \
 #MM     kernel-fs-ram-kobj \
 #MM     kernel-gameport-kobj \
@@ -93,7 +94,7 @@ include $(SRCDIR)/config/aros.cfg
 #MM- kernel-workbench-devs-amiga-m68k : workbench-devs-amiga-m68k
 
 # Make sure we optimize this code for size ..
-OPTIMIZATION_CFLAGS := -O2
+OPTIMIZATION_CFLAGS := -Os
 
 USELIBS := amiga arossupport autoinit libinit stdc.static
 LIBS    := -L$(GENDIR)/lib -lloadseg $(addprefix -l,$(USELIBS))
@@ -122,17 +123,18 @@ ROMLOC_ss  := 0x003f800
 # Main ROM (0xf80000 - 0xffffff)
 ROMLOC_rom := 0x0f80000
 
-FILES=start early debug mmu
+FILES=start early debug
+# debug mmu
 AFILES=rom_entry rom_init cpu_detect superstack_swap
 
 # APOLLOROM = V4 -> Native V4
 ifeq ($(APOLLOROM),V4)
-	KLIBS   := exec aros dos utility oop expansion partition debug
+	KLIBS   := exec aros dos utility oop expansion partition 
 	KDEVS   := timer input keyboard console gameport audio
-	KHNDLRS := con afs ram
+	KHNDLRS := afs fat ram 
 	KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse 
-	KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem misc shell card bootloader vampire
-	KHOOKS  := diag romboot
+	KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem vampire
+	KHOOKS  := 
 endif
 
 # APOLLOROM = UAE -> UAE with P96
@@ -141,8 +143,8 @@ ifeq ($(APOLLOROM),UAE)
 	KDEVS   := timer input keyboard console gameport audio
 	KHNDLRS := con afs ram
 	KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse p96gfx
-	KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem 
-	KHOOKS  := 
+	KRSRCS  := kernel processor task lddemon dosboot cia potgo disk FileSystem 
+	KHOOKS  := diag romboot
 endif
 
 KOBJS_rom := $(addprefix $(KOBJSDIR)/,$(addsuffix _library.ko ,$(KLIBS))) \
@@ -165,22 +167,24 @@ AFILES  := ext_entry
 # APOLLOROM = V4 -> Native V4
 ifeq ($(APOLLOROM),V4)
 	KLIBS   := keymap graphics layers intuition gadtools workbench mathffp mathieeesingbas freeanim lowlevel setpatch
-	KDEVS   := cd ata trackdisk
-	KHNDLRS := cdrom
-	KHIDDS  := bus storage system
-	KRSRCS  := shellcommands wbtag
-	KHOOKS  := alert
+	KDEVS   := sagasd ata trackdisk
+	KHNDLRS := con
+	KHIDDS  := bus storage system 
+	KRSRCS  := shellcommands wbtag misc shell card bootloader
+	KHOOKS  := alert diag romboot
 endif
 
 # APOLLOROM = UAE -> UAE with P96
 ifeq ($(APOLLOROM),UAE)
 	KLIBS   := keymap graphics layers intuition gadtools workbench mathffp mathieeesingbas freeanim lowlevel setpatch
-	KDEVS   := cd ata trackdisk
-	KHNDLRS := cdrom
+	KDEVS   := ata trackdisk
+	KHNDLRS := 
 	KHIDDS  := bus storage system
 	KRSRCS  := shellcommands wbtag misc shell card bootloader
-	KHOOKS  := alert diag romboot
+	KHOOKS  := alert 
 endif
+
+# diag romboot
 
 ROMLOC_ext := 0xe00000
 KOBJS_ext := \
@@ -236,7 +240,7 @@ $(GENDIR)/boot/aros-amiga-m68k.elf: $(GENDIR)/boot/aros-amiga-m68k-reloc.elf
 		--section-start .ext=$(ROMLOC_ext) \
 		--section-start .ss=$(ROMLOC_ss) \
 		$<
-	$(Q)$(TARGET_OBJDUMP) -h $@ | grep '[rea][oxm][mte]   '
+	$(Q)$(TARGET_OBJDUMP) -h $@ | grep '[rea][oxm][mte]   ' > romlog.txt
 
 $(GENDIR)/boot/aros-amiga-m68k-%.bin : $(GENDIR)/boot/aros-amiga-m68k.elf $(HOSTGENDIR)/tools/romcheck
 	$(Q)$(TARGET_OBJCOPY) \

@@ -1,13 +1,7 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2013, The AROS Development Team. All rights reserved.
     $Id$
 */
-
-#undef DEBUG
-#define DEBUG 0
-#if defined(__AROS__)
-#include <aros/debug.h>
-#endif
 
 #include "os.h"
 #include "cache.h"
@@ -52,12 +46,7 @@ ULONG i;
 		cache->buffer = (ULONG *)((char *)cache+sizeof(struct BlockCache));
 		cache->next = NULL;
 	}
-	D(bug
-		(
-			"initCache: my Mem is 0x%p size 0x%lx\n",
-			head,
-			numBuffers*(sizeof(struct BlockCache)+BLOCK_SIZE(volume))
-		));
+	D(bug("[AFS] InitCache: my Mem is 0x%p size 0x%lx\n", head, numBuffers*(sizeof(struct BlockCache)+BLOCK_SIZE(volume))));
 	return head;
 }
 
@@ -104,7 +93,7 @@ struct BlockCache *bestcache=NULL;
 BOOL found = FALSE;
 
 	/* Check if block is already cached, or else reuse least-recently-used buffer */
-	D(bug("[afs]    getCacheBlock: getting cacheblock %lu\n",blocknum));
+	//D(bug("[AFS] GetCacheBlock: getting cacheblock %lu\n",blocknum));
 	cache = volume->blockcache;
 	while ((cache != NULL) && !found)
 	{
@@ -112,8 +101,7 @@ BOOL found = FALSE;
 		{
 			if (!(cache->flags & BCF_USED))
 			{
-				D(bug("[afs]    getCacheBlock: already cached (counter=%lu)\n",
-					cache->newness));
+				//D(bug("[AFS] GetCacheBlock: already cached (counter=%lu)\n", cache->newness));
 				bestcache = cache;
 				found = TRUE;
 			}
@@ -123,7 +111,7 @@ BOOL found = FALSE;
 				{
 					/*	should only occur while using setBitmap()
 						->that's ok (see setBitmap()) */
-					D(bug("Concurrent access on block %lu!\n",blocknum));
+					//D(bug("[AFS] Concurrent access on block %lu!\n",blocknum));
 				}
 				else
 				{
@@ -240,7 +228,7 @@ struct BlockCache *blockbuffer;
 			}
 		}
 	}
-	D(bug("[afs]    getBlock: using cache block with address 0x%p\n", blockbuffer));
+	//D(bug("[AFS] GetBlock: using cache block with address 0x%p\n", blockbuffer));
 	return blockbuffer;
 }
 
