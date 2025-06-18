@@ -110,7 +110,8 @@ static int SAGAGfx_Init(LIBBASETYPEPTR LIBBASE)
 	case VREG_BOARD_V4_V500:
 	case VREG_BOARD_V4_V1200:
 	case VREG_BOARD_V4_V600:		
-	case VREG_BOARD_V4_UNI:				
+	case VREG_BOARD_V4_UNI:	
+    default:			
             // SAGA V4 METHODS
             xsd->SAGAGfx_GetPixFmt         = SAGAHW_V4_GetPixFmt;
             xsd->SAGAGfx_GetModeID         = SAGAHW_V4_GetModeID;
@@ -126,9 +127,9 @@ static int SAGAGfx_Init(LIBBASETYPEPTR LIBBASE)
             xsd->SAGAGfx_SetSpritePosition = SAGAHW_V4_SetSpritePosition;
             break;			
 			
-	default:
-	    return(FALSE);	
- 	    break;
+	//default:
+	//    return(FALSE);	
+ 	//    break;
 	}
     
     /* Create a memory pool */

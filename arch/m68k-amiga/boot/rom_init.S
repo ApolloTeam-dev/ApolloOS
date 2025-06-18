@@ -96,23 +96,34 @@ arosbootstrap_init:
 
 	/* set AttnFlags AFB_ADDR32 */
 	or.w	#0x2000,%a4@(2)
-	
+
 	#if VAMPIRECARDSERIES==4
 	//V4 version
 	move.l	#0x01800000,%a0		// Reserve 8MB for ApolloFloppy
-	move.l	#0x80000000,%a1		// UniCorn 2Gb
+	move.l	#0x40000000,%a1		// SA 1Gb
 	move.l	#0x00100000,%d0
 	jsr	__MemoryTest
 	#else
-	move.l	#0x08000000,%a0
-	move.l	#0x20000000,%a1
-	move.l	#0x00100000,%d0
-	jsr	__MemoryTest
 
-	move.l	#0x01000000,%a0
-	move.l	#0x08000000,%a1
-	move.l	#0x00100000,%d0
-	jsr	__MemoryTest
+		#if VAMPIRECARDSERIES==8
+		//V4 version
+		move.l	#0x01800000,%a0		// Reserve 8MB for ApolloFloppy
+		move.l	#0x80000000,%a1		// UniCorn 2Gb
+		move.l	#0x00100000,%d0
+		jsr	__MemoryTest
+
+		#else
+		move.l	#0x08000000,%a0
+		move.l	#0x20000000,%a1
+		move.l	#0x00100000,%d0
+		jsr	__MemoryTest
+
+		move.l	#0x01000000,%a0
+		move.l	#0x08000000,%a1
+		move.l	#0x00100000,%d0
+		jsr	__MemoryTest
+		#endif
+
 	#endif
 
 
