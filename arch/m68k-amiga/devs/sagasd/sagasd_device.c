@@ -236,9 +236,9 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
             default:
                     if (i >= 8 && i < 36)
                     {
-                        if (sdu->sdu_SDCmd.unitnumber == 1) val = "Apollo  SD-Card Slot #1     "[i - 8];
-                        if (sdu->sdu_SDCmd.unitnumber == 2) val = "Apollo  SD-Card Slot #2     "[i - 8];
-                        if (sdu->sdu_SDCmd.unitnumber == 3) val = "Apollo  SD-Card Slot #3     "[i - 8];
+                        if (sdu->sdu_SDCmd.unitnumber == 0) val = "Apollo  SD-Card Slot #1     "[i - 8];
+                        if (sdu->sdu_SDCmd.unitnumber == 1) val = "Apollo  SD-Card Slot #2     "[i - 8];
+                        if (sdu->sdu_SDCmd.unitnumber == 2) val = "Apollo  SD-Card Slot #3     "[i - 8];
                     } else {
                         if (i >= 36 && i < 44)
                         {
@@ -593,7 +593,7 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
             sprintf(message,"Inserted SD-Card in Slot#%d contains a RDB Boot Record\n"
                 "Only FAT File System is supported for hot-swap Disks\n"
                 "For RDB Disks with OFS, FFS, SFS or PFS File Systems\n"
-                "Please Reboot ApolloOS with Disk inserted to Mount", sdu->sdu_SDCmd.unitnumber);
+                "Please Reboot ApolloOS with Disk inserted to Mount", sdu->sdu_SDCmd.unitnumber+1);
             choices = "Reboot|Continue";
 
             struct IntuitionBase *IntuitionBase;
@@ -625,7 +625,7 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
             sprintf(message,"Inserted SD-Card in Slot#%d contains a MBR Boot Record\n"
                 "But the FAT File System is not readable/initialised\n"
                 "Please use HDToolBox to create one fullsize FAT partition\n"
-                "After that use Format to initialize the FAT Partition", sdu->sdu_SDCmd.unitnumber);
+                "After that use Format to initialize the FAT Partition", sdu->sdu_SDCmd.unitnumber+1);
             choices = "Continue";
 
             struct IntuitionBase *IntuitionBase;
@@ -749,7 +749,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
     BOOL sdpin = FALSE;
     ULONG detectcounter = 0;
 
-    if (sdu->sdu_SDCmd.unitnumber > 0) sdpin = TRUE;           //hardware pin enable for SD-Cards Slots #1 and higher
+    //if (sdu->sdu_SDCmd.unitnumber > 0) sdpin = TRUE;           //hardware pin enable for SD-Cards Slots #1 and higher
 
     debug("Starting SAGASD_IOTask");
 
@@ -859,14 +859,14 @@ static void SAGASD_IOTask(struct Library *SysBase)
                         if(present)                                 
                         {
                             sdpin = TRUE;                                               // If hw detect reports TRUE, so we know now that SD pin works   
-                            if (sdu->sdu_SDCmd.unitnumber == 2) debug("SD-Card Quick HW Detection: unit = %d | sdu_Present = %s | detect = %s",
+                            debug("SD-Card Quick HW Detection: unit = %d | sdu_Present = %s | detect = %s",
                             sdu->sdu_SDCmd.unitnumber, sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
                             present = sdcmd_sw_detect_full(&sdu->sdu_SDCmd);                                          
                         } else {
                             if (!sdpin)
                             {
                                 present = sdcmd_sw_detect_full(&sdu->sdu_SDCmd);            // If hw detect reports FALSE we have to do a second sw detect for V4 without SD pin
-                                if (sdu->sdu_SDCmd.unitnumber == 2) debug("SD-Card Full  SW Detection: unit = %d | sdu_Present = %s | detect = %s",
+                                debug("SD-Card Full  SW Detection: unit = %d | sdu_Present = %s | detect = %s",
                                 sdu->sdu_SDCmd.unitnumber, sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
                             }
                         }
@@ -899,16 +899,14 @@ static void SAGASD_IOTask(struct Library *SysBase)
                         if (sdpin)
                         {
                             present = sdcmd_hw_detect(&sdu->sdu_SDCmd);
-                            if (sdu->sdu_SDCmd.unitnumber == 2) debug("SD-Card Quick HW Detection: unit = %d | sdu_Present = %s | detect = %s",
+                            debug("SD-Card Quick HW Detection: unit = %d | sdu_Present = %s | detect = %s",
                             sdu->sdu_SDCmd.unitnumber, sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
                         } else {
                             present = sdcmd_sw_detect_quick(&sdu->sdu_SDCmd);           // We can do a "light" detect when in sdu_Present mode
-                            if (sdu->sdu_SDCmd.unitnumber == 2) debug("SD-Card Quick SW Detection: unit = %d | sdu_Present = %s | detect = %s",
+                            debug("SD-Card Quick SW Detection: unit = %d | sdu_Present = %s | detect = %s",
                             sdu->sdu_SDCmd.unitnumber, sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
                         }
                         
-
-
                         if (!present)                                       // SD-Card is Removed
                         {
                             //Forbid();
@@ -1081,14 +1079,14 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
         case 0:                                             // SPI#1 | CS=0 | Micro-SD-Card slot (backside)
         sdu->sdu_SDCmd.iobase = SAGA_SD_BASE_SPI1;
         sdu->sdu_SDCmd.cs = SAGA_SD_CTL_NCS;   
-        sdu->sdu_SDCmd.unitnumber = id+1;    
+        sdu->sdu_SDCmd.unitnumber = id;    
         sdu->sdu_Enabled = TRUE;
         break;
         
         case 1:                                             // SPI#2 | CS=0 | SD-Card slot 1 (Expansion Port)
         sdu->sdu_SDCmd.iobase  = SAGA_SD_BASE_SPI2;
         sdu->sdu_SDCmd.cs = SAGA_CS_DRIVE0; 
-        sdu->sdu_SDCmd.unitnumber = id+1; 
+        sdu->sdu_SDCmd.unitnumber = id; 
         sdu->sdu_Enabled = TRUE;
         break;
         

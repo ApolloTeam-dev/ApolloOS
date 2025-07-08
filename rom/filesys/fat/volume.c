@@ -1291,10 +1291,10 @@ BOOL AttemptDestroyVolume(struct FSSuper *sb)
 
 void DoDiskRemove(struct Globals *glob)
 {
-    D(bug("[FAT] [%s] %s\n",__FUNCTION__, AROS_BSTR_ADDR(glob->sb->doslist->dol_Name) ));
-
     if (glob->sb)
     {
+        D(bug("[FAT] [%s] %s\n",__FUNCTION__, AROS_BSTR_ADDR(glob->sb->doslist->dol_Name) ));
+
         struct FSSuper *sb = glob->sb;
 
         if (!AttemptDestroyVolume(sb))
@@ -1305,5 +1305,7 @@ void DoDiskRemove(struct Globals *glob)
             AddTail((struct List *)&glob->sblist, (struct Node *)sb);
             SendEvent(IECLASS_DISKREMOVED, glob);
         }
+    } else {
+        D(bug("[FAT] [%s] No existing disk to remove\n",__FUNCTION__ ));
     }
 }

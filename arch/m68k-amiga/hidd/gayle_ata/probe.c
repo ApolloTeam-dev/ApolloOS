@@ -212,14 +212,11 @@ static int gayle_bus_Scan(struct ataBase *base)
                 if (bus)
                 {
                     DINIT(bug("[ATA:Probe] Added: %s\n", attrs[1].ti_Data);)
-                    return TRUE;
                 }
                 DERROR(bug("[ATA:Probe] Failed to create object for device IO: %x:%x IRQ: %x\n", probedbus->port, probedbus->altport, probedbus->gayleirqbase);)
                 if (!probedbus->atapb_Node.ln_Succ) FreeVec(probedbus);
-                return TRUE;
             }
         }
-        FreeVec(probedbus);
     }
     return TRUE;
 }
