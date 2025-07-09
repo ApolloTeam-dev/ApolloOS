@@ -11,7 +11,7 @@
 #include <dos/dos.h>
 #include <datatypes/datatypesclass.h>
 #include <libraries/iffparse.h>
-
+//#define DEBUG 1
 #include <aros/debug.h>
 
 static inline struct DataType *DataTypeFromANode(struct Node *aNode)
@@ -210,15 +210,17 @@ static inline struct DataType *DataTypeFromANode(struct Node *aNode)
         break;
     }
     
-    if(cdt)
+    if(cdt) {
+        D(bug("[datatypes.library/ObtainDataTypeA] : Datatype %x OpenCount being incremented to %d\n", cdt, cdt->OpenCount + 1));
         cdt->OpenCount++;
+    }
     
     ReleaseSemaphore(&(GPB(DataTypesBase)->dtb_DTList->dtl_Lock));
     
     if(IoErr() == ERROR_OBJECT_NOT_FOUND)
         SetIoErr(DTERROR_COULDNT_OPEN);
 
-    D(bug("datatypes.library/ObtainDataType: Done. Returning %x\n", cdt));
+    D(bug("[datatypes.library/ObtainDataType] : Done. Returning %x\n", cdt));
     
     return (struct DataType *)cdt;
     
