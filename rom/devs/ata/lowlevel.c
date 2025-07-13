@@ -1811,11 +1811,11 @@ static ULONG ata_ReadSignature(struct ata_Bus *bus, int unit, BOOL *DiagExecuted
     UBYTE tmp1, tmp2;
     ULONG retrycount = 5000000;
 
-    DINIT(bug("[ATA  ] ata_ReadSignature(%02ld)\n", unit));
+    DSIGNATURE(bug("[ATA  ] ata_ReadSignature(%02ld)\n", unit));
 
     if (!*DiagExecuted)
     {
-        DINIT(bug("[ATA  ] ata_ReadSignature: ATA_EXECUTE_DIAG\n"));
+        DSIGNATURE(bug("[ATA  ] ata_ReadSignature: ATA_EXECUTE_DIAG\n"));
         PIO_Out(bus, ATA_EXECUTE_DIAG, ata_Command);
         ata_WaitNano(400, bus->ab_Base);
         *DiagExecuted = TRUE;
@@ -1831,34 +1831,36 @@ static ULONG ata_ReadSignature(struct ata_Bus *bus, int unit, BOOL *DiagExecuted
     }
     while ((retrycount > 0) && (status & ATAF_BUSY));
     
-    DINIT( if (retrycount == 0) bug("[ATA  ] ata_ReadSignature: ERROR = ATAF_BUSY failed to clear within 5000000 tries\n") );
+    DSIGNATURE( if (retrycount == 0) bug("[ATA  ] ata_ReadSignature: ERROR = ATAF_BUSY failed to clear within 5000000 tries\n") );
     
     tmp1 = PIO_In(bus, ata_LBAMid);
     tmp2 = PIO_In(bus, ata_LBAHigh);
+    
+    ata_WaitNano(10000000, bus->ab_Base);  // 1 millisecond paise to make sure the 
 
-    DINIT(bug("[ATA  ] ata_ReadSignature: LBAMid=%02lx | LBAHigh=%02lx | LBA=%04lx | Status=%02x\n", tmp1, tmp2, (tmp1 << 8) | tmp2, status));
+    DSIGNATURE(bug("[ATA  ] ata_ReadSignature: LBAMid=%02lx | LBAHigh=%02lx | LBA=%04lx | Status=%02x\n", tmp1, tmp2, (tmp1 << 8) | tmp2, status));
 
     switch ((tmp1 << 8) | tmp2)
     {
         case 0x14eb:
-            DINIT(bug("[ATA  ] ata_ReadSignature: Found signature for ATAPI device\n"));
+            DSIGNATURE(bug("[ATA  ] ata_ReadSignature: Found signature for ATAPI device\n"));
             return DEV_ATAPI;
 
         case 0x3cc3:
-            DINIT(bug("[ATA  ] ata_ReadSignature: Found signature for SATA device\n"));
+            DSIGNATURE(bug("[ATA  ] ata_ReadSignature: Found signature for SATA device\n"));
             return DEV_SATA;
 
         case 0x6996:
-            DINIT(bug("[ATA  ] ata_ReadSignature: Found signature for SATAPI device\n"));
+            DSIGNATURE(bug("[ATA  ] ata_ReadSignature: Found signature for SATAPI device\n"));
             return DEV_SATAPI;
 
         default:
             if ( (ata_ReadStatus(bus) & 0xfe) == 0 )
             {
-                DINIT(bug("[ATA  ] ata_ReadSignature: ERROR = NO Signature Found\n"));
+                DSIGNATURE(bug("[ATA  ] ata_ReadSignature: ERROR = NO Signature Found\n"));
                 return DEV_NONE;
             } else {
-                DINIT(bug("[ATA  ] ata_ReadSignature: Found signature for ATA device\n"));
+                DSIGNATURE(bug("[ATA  ] ata_ReadSignature: Found signature for ATA device\n"));
                 return DEV_ATA;
             }
     }
@@ -1871,7 +1873,7 @@ static void ata_ResetBus(struct ata_Bus *bus)
     BOOL  DiagExecuted = FALSE;
     volatile UWORD *color0=0xDFF180;
 
-    DINIT(bug("[ATA:ResetBus] Reset ATA Bus\n", bus->ab_BusNum);)
+    DINITBUS(bug("[ATA:ResetBus] Reset ATA Bus\n", bus->ab_BusNum);)
 
     /*
     PIO_OutAlt(bus, ATACTLF_RESET | ATACTLF_INT_DISABLE, ata_AltControl);
@@ -1953,7 +1955,7 @@ void ata_InitBus(struct ata_Bus *bus)
     OOP_GetAttr(obj, aHidd_ATABus_UseIOAlt, &haveAltIO);
     bus->haveAltIO = haveAltIO != 0;
 
-    DINIT(bug("[ATA:InitBus] ata_InitBus(%p)\n", bus);)
+    DINITBUS(bug("[ATA:InitBus] ata_InitBus(%p)\n", bus);)
 
     bus->ab_Dev[0] = DEV_NONE;
     bus->ab_Dev[1] = DEV_NONE;
@@ -1981,20 +1983,20 @@ void ata_InitBus(struct ata_Bus *bus)
 
         tmp1 = PIO_In(bus, ata_LBALow);
         tmp2 = PIO_In(bus, ata_LBAMid);
-        DINIT(bug("[ATA:%02d] ata_InitBus: Reply 0x%02X 0x%02X\n", i, tmp1, tmp2);)
+        DINITBUS(bug("[ATA:%02d] ata_InitBus: Reply 0x%02X 0x%02X\n", i, tmp1, tmp2);)
  
         if ((tmp1 == 0x55) && (tmp2 == 0xaa))
         {
             bus->ab_Dev[i] = DEV_UNKNOWN;
-            DINIT(bug("[ATA:%02d] ata_InitBus: Device type = 0x%02X\n", i, bus->ab_Dev[i]);)
+            DINITBUS(bug("[ATA:%02d] ata_InitBus: Device type = 0x%02X\n", i, bus->ab_Dev[i]);)
         } else {
-            DINIT(bug("[ATA:%02d] ata_InitBus: No Device Found\n", i);)
+            DINITBUS(bug("[ATA:%02d] ata_InitBus: No Device Found\n", i);)
         }
     }
 exit:
     ata_ResetBus(bus);
     ata_CloseTimer(bus->ab_Timer);
-    DINIT(bug("[ATA:InitBus] ata_InitBus: Finished\n");)
+    DINITBUS(bug("[ATA:InitBus] ata_InitBus: Finished\n");)
 }
 
 /*

@@ -55,6 +55,11 @@
 #endif
 
 #if DEBUG
+
+#define DATAINIT(x) x 
+#define DCONTROL(x) x
+#define DINITBUS(x) x
+#define DSIGNATURE(x) x
 #define DINIT(x) x
 #define D(x) x
 #define DD(x)
@@ -64,6 +69,10 @@
 #define DATTR(x) 
 #define DATAPI(x)
 #else
+#define DATAINIT(x) 
+#define DCONTROL(x)
+#define DINITBUS(x) 
+#define DSIGNATURE(x)
 #define DINIT(x)
 #define D(x)
 #define DD(x)

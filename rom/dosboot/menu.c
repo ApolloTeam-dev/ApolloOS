@@ -651,7 +651,7 @@ static void initPage(LIBBASETYPEPTR DOSBootBase, WORD page)
         ULONG modeid = GetVPModeID(&DOSBootBase->bm_Screen->ViewPort);
         if (modeid != INVALID_ID && (((modeid & MONITOR_ID_MASK) == NTSC_MONITOR_ID) || ((modeid & MONITOR_ID_MASK) == PAL_MONITOR_ID)))
         {
-            sprintf(ApolloROM_Release, "ApolloROM %s", __DISTROVERSION__);
+            sprintf(ApolloROM_Release, "ApolloROM %s (%s)", __DISTROVERSION__, __DISTRODATE__);
             centertext(DOSBootBase, 1, 30, ApolloROM_Release );
             sprintf(ApolloCore_Release, "ApolloCore Release %d", *ApolloCore_Pointer);
             centertext(DOSBootBase, 1, 50, ApolloCore_Release );

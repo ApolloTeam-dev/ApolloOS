@@ -128,6 +128,8 @@ static UBYTE *getport(struct ata_ProbedBus *ddata, int buscounter)
         return NULL;
     } 
 
+RETRY:
+
     ddata->port = (UBYTE*)port;
     altport = port + 0x1010;
     ddata->altport = (UBYTE*)altport;
@@ -141,8 +143,6 @@ static UBYTE *getport(struct ata_ProbedBus *ddata, int buscounter)
     Enable();
 
     DINIT(bug("[ATA:Probe] Status=%02x,%02x\n", status1, status2);)
-
-RETRY:
 
     if ((((status1 | status2) & (ATAF_BUSY | ATAF_DRDY)) == (ATAF_BUSY | ATAF_DRDY)) || ((status1 | status2) & (ATAF_ERROR | ATAF_DATAREQ)))
     {
