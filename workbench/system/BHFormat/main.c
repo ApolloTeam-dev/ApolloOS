@@ -172,8 +172,7 @@ static void WordWrapSz( char * psz )
 
 BOOL bSetSzDosDeviceFromSz( const char * pszDevice )
 {
-    /* Check the length of the device name - it may be followed by a
-       colon, and possibly some junk which we must ignore */
+    /* Check the length of the device name - it may be followed by a colon, and possibly some junk which we must ignore */
     char * pszEnd = strchr( pszDevice, ':' );
     size_t cch = pszEnd ? (pszEnd - pszDevice) : strlen(pszDevice);
 
@@ -195,7 +194,9 @@ BOOL bSetSzDosDeviceFromSz( const char * pszDevice )
 
 BOOL bSetSzVolumeFromSz( const char * pszVolume )
 {
-    /* Check the length and validity of the volume name */
+    DD(bug("[FORMAT] bSetSzVolumeFromSz: Name = %s\n", pszVolume));
+	
+	/* Check the length and validity of the volume name */
     size_t cch = strlen(pszVolume);
 
     if(cch == 0)
@@ -216,6 +217,7 @@ BOOL bSetSzVolumeFromSz( const char * pszVolume )
 			}
 		}
 	}
+	DD(bug("[FORMAT] bSetSzVolumeFromSz: ERROR_INVALID_VOLUME_NAME\n"));
 	return 0;
 }
 
@@ -228,16 +230,16 @@ BOOL bSetFstFromSz( const char * pszFileSysType )
 
     if( *pszFileSysType == 0 )
     {
-	bFstSet = FALSE;
-	return TRUE;
+		bFstSet = FALSE;
+		return TRUE;
     }
 
     /* Look for a C-style number as used in Mountlists. */
     fstCurrent = strtoul( pszFileSysType, &pszEnd, 0 );
     if( *pszEnd == 0 )
     {
-	bFstSet = TRUE;
-	return TRUE;
+		bFstSet = TRUE;
+		return TRUE;
     }
 
     /* Look for a type in the standard-ish format of text with
@@ -249,25 +251,26 @@ BOOL bSetFstFromSz( const char * pszFileSysType )
     fstCurrent = 0;
     while( (ub = (unsigned char)*pszFileSysType++) != 0 )
     {
-	if( ub == (unsigned char)'\\' )
-	{
-	    ub = strtoul( pszFileSysType, (char **)&pszFileSysType, 8 );
-	    if( ub >= 0x100 )
-	    {
-		cub = 0;
-		break;
-	    }
+		if( ub == (unsigned char)'\\' )
+		{
+			ub = strtoul( pszFileSysType, (char **)&pszFileSysType, 8 );
+			if( ub >= 0x100 )
+			{
+				cub = 0;
+				break;
+			}
+		}
+		fstCurrent = (fstCurrent << 8) + ub;
+		++cub;
 	}
-	fstCurrent = (fstCurrent << 8) + ub;
-	++cub;
-    }
-    if( cub == 4 )
-    {
-	bFstSet = TRUE;
-	return TRUE;
+	if( cub == 4 )
+	{
+		bFstSet = TRUE;
+		return TRUE;
     }
 
-    ReportErrSz( ertError, -1, _(MSG_ERROR_INVALID_DOSTYPE) );
+    DD(bug("[FORMAT] bSetFstFromSz: MSG_ERROR_INVALID_DOSTYPE\n"));
+	ReportErrSz( ertError, -1, _(MSG_ERROR_INVALID_DOSTYPE) );
     return FALSE;
 }
 
@@ -287,6 +290,7 @@ BOOL bSetDevfFromSz( const char * pszDevFlags )
 	return TRUE;
     }
 
+	DD(bug("[FORMAT] bSetDevfFromSz: ERROR_BAD_NUMBER\n"));
     ReportErrSz( ertError, ERROR_BAD_NUMBER, 0 );
     return FALSE;
 }

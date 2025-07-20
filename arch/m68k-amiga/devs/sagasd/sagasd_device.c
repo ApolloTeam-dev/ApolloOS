@@ -236,9 +236,9 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
             default:
                     if (i >= 8 && i < 36)
                     {
-                        if (sdu->sdu_SDCmd.unitnumber == 0) val = "Apollo  SD-Card Slot #1     "[i - 8];
-                        if (sdu->sdu_SDCmd.unitnumber == 1) val = "Apollo  SD-Card Slot #2     "[i - 8];
-                        if (sdu->sdu_SDCmd.unitnumber == 2) val = "Apollo  SD-Card Slot #3     "[i - 8];
+                        if (sdu->sdu_SDCmd.unitnumber == 0) val = "Apollo  SD-Card Slot #0     "[i - 8];
+                        if (sdu->sdu_SDCmd.unitnumber == 1) val = "Apollo  SD-Card Slot #1     "[i - 8];
+                        if (sdu->sdu_SDCmd.unitnumber == 2) val = "Apollo  SD-Card Slot #2     "[i - 8];
                     } else {
                         if (i >= 36 && i < 44)
                         {
@@ -749,7 +749,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
     BOOL sdpin = FALSE;
     ULONG detectcounter = 0;
 
-    //if (sdu->sdu_SDCmd.unitnumber > 0) sdpin = TRUE;           //hardware pin enable for SD-Cards Slots #1 and higher
+    if (sdu->sdu_SDCmd.unitnumber > 0) sdpin = TRUE;           //hardware pin enable for SD-Cards Slots #1 and higher
 
     debug("Starting SAGASD_IOTask");
 
@@ -1076,28 +1076,21 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
 
     switch (id)
     {
-        case 0:                                             // SPI#1 | CS=0 | Micro-SD-Card slot (backside)
+        case 0:                                             // SPI#1 | CS=0 | Micro-SD-Card slot #0 (Backside)
         sdu->sdu_SDCmd.iobase = SAGA_SD_BASE_SPI1;
         sdu->sdu_SDCmd.cs = SAGA_SD_CTL_NCS;   
         sdu->sdu_SDCmd.unitnumber = id;    
         sdu->sdu_Enabled = TRUE;
         break;
         
-        case 1:                                             // SPI#2 | CS=0 | SD-Card slot 1 (Expansion Port)
+        case 1:                                             // SPI#2 | CS=0 | SD-Card Slot #1 (Expansion Port)
         sdu->sdu_SDCmd.iobase  = SAGA_SD_BASE_SPI2;
         sdu->sdu_SDCmd.cs = SAGA_CS_DRIVE0; 
         sdu->sdu_SDCmd.unitnumber = id; 
         sdu->sdu_Enabled = TRUE;
         break;
-        
-        //case 2:                                             // SPI#2 | CS=1 | SD-Card slot 1 (Expansion Port)
-        //sdu->sdu_SDCmd.iobase  = SAGA_SD_BASE_SPI2;
-        //sdu->sdu_SDCmd.cs = SAGA_CS_DRIVE1; 
-        //sdu->sdu_SDCmd.unitnumber = id+1; 
-        //sdu->sdu_Enabled = TRUE;
-        //break;
 
-    default:
+        default:
         sdu->sdu_Enabled = FALSE;
     }
 

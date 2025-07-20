@@ -1014,24 +1014,7 @@ void DoDiskInsert(struct Globals *glob)
         return;
     } else {
         ULONG RDB_ID = ((read_buffer[0]<<24) + (read_buffer[1]<<16) + (read_buffer[2]<<8) + read_buffer[3]);
-        D(kprintf("[FAT] [%s] RDB = %4d|%08x\n", __FUNCTION__, 0x200, RDB_ID)); 
-        if(RDB_ID == 0x5244534b)
-        {
-            glob->diskioreq->iotd_Req.io_Command = 0xffff;
-            glob->diskioreq->iotd_Req.io_Length = 1;
-            DoIO((struct IORequest *)glob->diskioreq);
-            return;
-        }
-    }
-
-    err = RawDiskSectorRead(1, geometry.dg_SectorSize, (UBYTE*)&read_buffer[0], glob);
-    if (err)
-    {
-        D(bug("[FAT] [%s] Read Error = %d on BootSector #1 (RDB Check)\n",__FUNCTION__, err ));
-        return;
-    } else {
-        ULONG RDB_ID = ((read_buffer[0]<<24) + (read_buffer[1]<<16) + (read_buffer[2]<<8) + read_buffer[3]);
-        D(kprintf("[FAT] [%s] RDB = %4d|%08x\n", __FUNCTION__, 0x200, RDB_ID)); 
+        D(kprintf("[FAT] [%s] RDB = %04x|%08x\n", __FUNCTION__, 0x200, RDB_ID)); 
         if(RDB_ID == 0x5244534b)
         {
             glob->diskioreq->iotd_Req.io_Command = 0xffff;
@@ -1051,44 +1034,57 @@ void DoDiskInsert(struct Globals *glob)
     }
 
     UWORD MBR_ID = (read_buffer[0x1fe]<<8) + read_buffer[0x1ff];
-    D(kprintf("[FAT] [%s] MBR = %4d|%08x\n", __FUNCTION__, 0x1fe, MBR_ID));
+    D(kprintf("[FAT] [%s] MBR = %04x|%08x\n", __FUNCTION__, 0x1fe, MBR_ID));
     if(MBR_ID != 0x55aa)
     {
         D(bug("[FAT] [%s] No RDB or MBR Boot Record found\n",__FUNCTION__ ));
         return;
     }
     
+    UBYTE MDB_PART1_STATUS = (read_buffer[0x1be + 0x0]);
     ULONG MDB_PART1_START = (read_buffer[0x1be + 0x8])+(read_buffer[0x1be + 0x9]<<8)+(read_buffer[0x1be + 0xa]<<16)+(read_buffer[0x1be + 0xb]<<24);
     ULONG MDB_PART1_TOTAL = (read_buffer[0x1be + 0xc])+(read_buffer[0x1be + 0xd]<<8)+(read_buffer[0x1be + 0xe]<<16)+(read_buffer[0x1be + 0xf]<<24);
+    
+    UBYTE MDB_PART2_STATUS = (read_buffer[0x1ce + 0x0]);
     ULONG MDB_PART2_START = (read_buffer[0x1ce + 0x8])+(read_buffer[0x1ce + 0x9]<<8)+(read_buffer[0x1ce + 0xa]<<16)+(read_buffer[0x1ce + 0xb]<<24);
     ULONG MDB_PART2_TOTAL = (read_buffer[0x1ce + 0xc])+(read_buffer[0x1ce + 0xd]<<8)+(read_buffer[0x1ce + 0xe]<<16)+(read_buffer[0x1ce + 0xf]<<24);
+    
+    UBYTE MDB_PART3_STATUS = (read_buffer[0x1de + 0x0]);
     ULONG MDB_PART3_START = (read_buffer[0x1de + 0x8])+(read_buffer[0x1de + 0x9]<<8)+(read_buffer[0x1de + 0xa]<<16)+(read_buffer[0x1de + 0xb]<<24);
     ULONG MDB_PART3_TOTAL = (read_buffer[0x1de + 0xc])+(read_buffer[0x1de + 0xd]<<8)+(read_buffer[0x1de + 0xe]<<16)+(read_buffer[0x1de + 0xf]<<24);
+    
+    UBYTE MDB_PART4_STATUS = (read_buffer[0x1ee + 0x0]);
     ULONG MDB_PART4_START = (read_buffer[0x1ee + 0x8])+(read_buffer[0x1ee + 0x9]<<8)+(read_buffer[0x1ee + 0xa]<<16)+(read_buffer[0x1ee + 0xb]<<24);
     ULONG MDB_PART4_TOTAL = (read_buffer[0x1ee + 0xc])+(read_buffer[0x1ee + 0xd]<<8)+(read_buffer[0x1ee + 0xe]<<16)+(read_buffer[0x1ee + 0xf]<<24);
                 
-    D(kprintf("\tPART#1-LBA-Start = %4d|%08x\n", 0x1be + 0x8, MDB_PART1_START));
-    D(kprintf("\tPART#1-LBA-Total = %4d|%08x\n", 0x1be + 0xc, MDB_PART1_TOTAL));
-    D(kprintf("\tPART#2-LBA-Start = %4d|%08x\n", 0x1ce + 0x8, MDB_PART2_START));
-    D(kprintf("\tPART#2-LBA-Total = %4d|%08x\n", 0x1ce + 0xc, MDB_PART2_TOTAL));
-    D(kprintf("\tPART#3-LBA-Start = %4d|%08x\n", 0x1de + 0x8, MDB_PART3_START));
-    D(kprintf("\tPART#3-LBA-Total = %4d|%08x\n", 0x1de + 0xc, MDB_PART3_TOTAL));
-    D(kprintf("\tPART#4-LBA-Start = %4d|%08x\n", 0x1ee + 0x8, MDB_PART4_START));
-    D(kprintf("\tPART#4-LBA-Total = %4d|%08x\n\n", 0x1ee + 0xc, MDB_PART4_TOTAL));
+    D(bug("\tPART#1 LBA-Start = %04x|%08x | LBA-Total = %04x|%08x | STATUS = %04x|%02x\n", 0x1be + 0x8, MDB_PART1_START, 0x1be + 0xc, MDB_PART1_TOTAL, 0x1be, MDB_PART1_STATUS ));
+    D(bug("\tPART#2 LBA-Start = %04x|%08x | LBA-Total = %04x|%08x | STATUS = %04x|%02x\n", 0x1ce + 0x8, MDB_PART2_START, 0x1ce + 0xc, MDB_PART2_TOTAL, 0x1ce, MDB_PART2_STATUS ));
+    D(bug("\tPART#3 LBA-Start = %04x|%08x | LBA-Total = %04x|%08x | STATUS = %04x|%02x\n", 0x1de + 0x8, MDB_PART3_START, 0x1de + 0xc, MDB_PART3_TOTAL, 0x1de, MDB_PART3_STATUS ));
+    D(bug("\tPART#4 LBA-Start = %04x|%08x | LBA-Total = %04x|%08x | STATUS = %04x|%02x\n", 0x1ee + 0x8, MDB_PART4_START, 0x1ee + 0xc, MDB_PART4_TOTAL, 0x1ee, MDB_PART4_STATUS ));
 
     //Final step is to translate MDB_PART1_START LBA addresses to a valid LowCyl and with MDB_PART1_TOTAL also a valid HighCyl
     //LBA = Surfaces * BlocksPerTrack * Cylinders or Cylinders = LBA / Surfaces / BlocksPerTrack
     //In most cases the default values of Surfaces = 16 and BlocksPerTrack = 64 will work, but for smaller SD this may fail because Cylinder must be an integer and >0
     
-    if ((MDB_PART1_START % de->de_BlocksPerTrack % de->de_Surfaces) == 0)
+    if (MDB_PART1_STATUS == 0x00)
     {
-        de->de_LowCyl           = MDB_PART1_START / de->de_BlocksPerTrack / de->de_Surfaces ;                      // Read ULONG from MBR-PART1 = 0x1BE + 0x8
-        de->de_HighCyl          = MDB_PART1_TOTAL / de->de_BlocksPerTrack / de->de_Surfaces + de->de_LowCyl;      // Read ULONG from MBR-PART1 = 0x1BE + 0xC
+        D(bug("[FAT] Valid First Partition Found\n"));
+        if ((MDB_PART1_START % de->de_BlocksPerTrack % de->de_Surfaces) == 0)
+        {
+            D(bug("[FAT] First Partition Start Block (%d) aligns with Cylinders/Tracks (%d) and Heads/Surfaces (%d)\n", MDB_PART1_START, de->de_BlocksPerTrack, de->de_Surfaces));
+            de->de_LowCyl           = MDB_PART1_START / de->de_BlocksPerTrack / de->de_Surfaces ;                      
+            de->de_HighCyl          = MDB_PART1_TOTAL / de->de_BlocksPerTrack / de->de_Surfaces + de->de_LowCyl;      
+        } else {
+            D(bug("[FAT] First Partition Start Block (%d) does NOT align with Cylinders/Tracks (%d) and Heads/Surfaces (%d)\n", MDB_PART1_START, de->de_BlocksPerTrack, de->de_Surfaces));
+            de->de_Surfaces         = 1;
+            de->de_BlocksPerTrack   = 1;
+            de->de_LowCyl           = MDB_PART1_START;
+            de->de_HighCyl          = MDB_PART1_TOTAL;
+        }
     } else {
-        de->de_Surfaces         = 1;
-        de->de_BlocksPerTrack   = 1;
-        de->de_LowCyl           = MDB_PART1_START;
-        de->de_HighCyl          = MDB_PART1_TOTAL;
+        D(bug("[FAT] NO Valid First Partition Found, default to Full Disk Partition\n"));
+        de->de_LowCyl           = 0;
+        de->de_HighCyl          = geometry.dg_Cylinders;
     }
 
     D(bug("\n[FAT] [%s] Drive Geometry transfer to glob->fssm->fssm_Environ:\n",__FUNCTION__ ));

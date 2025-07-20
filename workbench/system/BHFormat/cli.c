@@ -76,8 +76,9 @@ int rcCliMain(void)
     prda = ReadArgs(ARGS_TEMPLATE, (IPTR *)&args, 0 );
     if( prda == 0 )
     {
-	PrintFault( IoErr(), 0 );
-	return RETURN_ERROR;
+		PrintFault( IoErr(), 0 );
+		DD(bug("[FORMAT-CLI] Error Reading Args\n"));
+		return RETURN_ERROR;
     }
 
     {
@@ -89,22 +90,22 @@ int rcCliMain(void)
 	   try opening the console, or as a last resort sending errors to
 	   COS instead */
 	if( bpfhStdErr == 0 )
-	{
-	    if( (bpfhStdErr = Open( "*", MODE_NEWFILE )) == 0 )
-		bpfhStdErr = bpfhStdOut;
-	    else
-		bCloseStdErr = TRUE;
-	}
+		{
+			if( (bpfhStdErr = Open( "*", MODE_NEWFILE )) == 0 )
+			bpfhStdErr = bpfhStdOut;
+			else
+			bCloseStdErr = TRUE;
+		}
     }
 
-    if( !bSetSzDosDeviceFromSz(args.pszDevice)
-	|| !bSetSzVolumeFromSz(args.pszName)
-	|| (args.pszType && !bSetFstFromSz(args.pszType))
-	|| (args.pszFlags && !bSetDevfFromSz(args.pszFlags))
-	|| !bGetDosDevice(NULL, 0) )
+
+
+    if( !bSetSzDosDeviceFromSz(args.pszDevice) || bSetSzVolumeFromSz(args.pszName) || (args.pszType && !bSetFstFromSz(args.pszType)) || (args.pszFlags && !bSetDevfFromSz(args.pszFlags)) || !bGetDosDevice(NULL, 0) )
     {
-	rc = RETURN_ERROR;
-	goto cleanup;
+		rc = RETURN_ERROR;
+		DD(bug("[FORMAT-CLI] %d %d %d %d %d\n", !bSetSzDosDeviceFromSz(args.pszDevice), bSetSzVolumeFromSz(args.pszName), (args.pszType && !bSetFstFromSz(args.pszType)), (args.pszFlags && !bSetDevfFromSz(args.pszFlags)), !bGetDosDevice(NULL, 0) ));
+		DD(bug("[FORMAT-CLI] Error Interpreting Args\n"));
+		goto cleanup;
     }
 
     /* Get confirmation before we start the process */
@@ -117,7 +118,7 @@ int rcCliMain(void)
 	LONG cch;
 	do {
 	    cch = Read( bpfhStdIn, &ch, 1 );
-	    D(Printf("Character code: %lu\n", ch));
+	    DD(bug("Character code: %lu\n", ch));
 	} while( cch == 1 && ch != 3 && ch != 13 );
     }
     SetMode( bpfhStdIn, 0 ); /* cooked input */
@@ -149,14 +150,14 @@ int rcCliMain(void)
 	    if(CheckSignal(SIGBREAKF_CTRL_C))
 	    {
 		PutStr("\033[ p\n");
-		D(Printf("Cancelled by user\n"));
+		DD(bug("Cancelled by user\n"));
 		PrintFault( ERROR_BREAK, 0 );
 		formatOk = FALSE;
 		break;
 	    }
 
 	    Printf( _(MSG_FORMATTING), icyl, HighCyl-icyl );
-	    D(PutStr("\n"));
+	    DD(bug("\n"));
 	    Flush(bpfhStdOut);
 	    if(!bFormatCylinder(icyl))
 	    {
@@ -167,7 +168,7 @@ int rcCliMain(void)
 	    if(!args.bNoVerify)
 	    {
 		PutStr( _(MSG_VERIFYING) );
-		D(PutStr("\n"));
+		DD(bug("\n"));
 		Flush(bpfhStdOut);
 		if(!bVerifyCylinder(icyl))
 		{
