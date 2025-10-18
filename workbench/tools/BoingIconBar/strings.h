@@ -1,6 +1,6 @@
 /****************************************************************
    This file was created automatically by `FlexCat 2.19'
-   from "/home/willem/ApolloOS/workbench/tools/BoingIconBar/catalogs/boingiconbar.cd".
+   from "/home/willem/ApolloTeam/ApolloOS/workbench/tools/BoingIconBar/catalogs/boingiconbar.cd".
 
    Do NOT edit by hand!
 ****************************************************************/

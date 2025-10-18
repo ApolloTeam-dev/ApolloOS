@@ -1066,7 +1066,7 @@ void DoDiskInsert(struct Globals *glob)
     //LBA = Surfaces * BlocksPerTrack * Cylinders or Cylinders = LBA / Surfaces / BlocksPerTrack
     //In most cases the default values of Surfaces = 16 and BlocksPerTrack = 64 will work, but for smaller SD this may fail because Cylinder must be an integer and >0
     
-    if (MDB_PART1_STATUS == 0x00)
+    if (MDB_PART1_STATUS == 0x00 || MDB_PART1_STATUS == 0x80)
     {
         D(bug("[FAT] Valid First Partition Found\n"));
         if ((MDB_PART1_START % de->de_BlocksPerTrack % de->de_Surfaces) == 0)
