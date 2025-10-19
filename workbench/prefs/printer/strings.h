@@ -1,6 +1,6 @@
 /****************************************************************
    This file was created automatically by `FlexCat 2.19'
-   from "/home/willem/ApolloTeam/ApolloOS/workbench/prefs/printer/catalogs/printer.cd".
+   from "/home/willem/ApolloOS/workbench/prefs/printer/catalogs/printer.cd".
 
    Do NOT edit by hand!
 ****************************************************************/

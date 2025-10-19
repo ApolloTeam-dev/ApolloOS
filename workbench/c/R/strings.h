@@ -1,6 +1,6 @@
 /****************************************************************
    This file was created automatically by `FlexCat 2.19'
-   from "/home/willem/ApolloTeam/ApolloOS/workbench/c/R/catalogs/R.cd".
+   from "/home/willem/ApolloOS/workbench/c/R/catalogs/R.cd".
 
    Do NOT edit by hand!
 ****************************************************************/

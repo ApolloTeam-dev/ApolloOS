@@ -1,6 +1,6 @@
 /****************************************************************
    This file was created automatically by `FlexCat 2.19'
-   from "/home/willem/ApolloTeam/ApolloOS/workbench/tools/SysExplorer/catalogs/sysexplorer.cd".
+   from "/home/willem/ApolloOS/workbench/tools/SysExplorer/catalogs/sysexplorer.cd".
 
    Do NOT edit by hand!
 ****************************************************************/
