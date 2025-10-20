@@ -25,6 +25,8 @@
 aros.rom
 ApolloOS.code-workspace
 arch/m68k-amiga/boot/romlog.txt
+compiler/include/geninc.cfg
+ApolloOS.code-workspace
 
 # /boot/
 /boot/mmakefile
@@ -2139,12 +2141,6 @@ arch/m68k-amiga/boot/romlog.txt
 /workbench/utilities/Presenter/mmakefile
 config/features.status
 config/config.log
-compiler/include/geninc.cfg
-bin/Sources/.freetype-2.10.0-fetched
-aros.rom
-ApolloOS.code-workspace
-arch/m68k-amiga/boot/romlog.txt
-arch/m68k-amiga/boot/romlog.txt
 rom/hidds/pci/pcitool/strings.h
 workbench/c/R/strings.h
 workbench/devs/diskimage/device/strings.h
