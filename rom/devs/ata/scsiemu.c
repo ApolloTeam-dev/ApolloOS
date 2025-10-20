@@ -45,7 +45,7 @@ static ULONG rw(UBYTE *p)
 
 static UBYTE scsi_read32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG len, ULONG *outlen)
 {
-    bug("[SCSI] scsi_read32\n");
+    //bug"[SCSI] scsi_read32\n");
     
      UBYTE io_Error = 0;
      if ((unit->au_SectorShift == 9) && ((unit->au_XferModes & AF_XFER_PACKET)==0))  /* use cache with 512 Byte sectors only */
@@ -110,7 +110,7 @@ static UBYTE scsi_read32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG l
 
 static UBYTE scsi_write32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG len, ULONG *outlen)
 {
-    bug("[SCSI] scsi_write32\n");
+    //bug"[SCSI] scsi_write32\n");
 
     UBYTE err;
 
@@ -134,7 +134,7 @@ static UBYTE scsi_write32(struct ata_Unit *unit, APTR data, ULONG offset, ULONG 
 
 static UBYTE scsi_inquiry(struct ata_Unit *unit, struct SCSICmd *cmd, ULONG *outlen)
 {
-    bug("[SCSI] scsi_inquiry\n");
+    //bug"[SCSI] scsi_inquiry\n");
     
     struct Library *UtilityBase = unit->au_Bus->ab_Base->ata_UtilityBase;
     UBYTE *cmdbuf = cmd->scsi_Command;
@@ -162,7 +162,7 @@ static UBYTE scsi_inquiry(struct ata_Unit *unit, struct SCSICmd *cmd, ULONG *out
 
 static UBYTE scsi_modesense(struct ata_Unit *unit, struct SCSICmd *cmd, ULONG *outlen)
 {
-    bug("[SCSI] scsi_modesense\n");
+    //bug"[SCSI] scsi_modesense\n");
     
     UBYTE *cmdbuf = cmd->scsi_Command;
     UBYTE *out = (UBYTE*)cmd->scsi_Data;
@@ -218,7 +218,7 @@ static UBYTE scsi_modesense(struct ata_Unit *unit, struct SCSICmd *cmd, ULONG *o
 
 static UBYTE scsi_readcapacity(struct ata_Unit *unit, struct SCSICmd *cmd, ULONG *outlen)
 {
-    bug("[SCSI] scsi_readcapacity\n");
+    //bug"[SCSI] scsi_readcapacity\n");
     
     UBYTE *cmdbuf = cmd->scsi_Command;
     UBYTE *out = (UBYTE*)cmd->scsi_Data;
@@ -247,7 +247,7 @@ static UBYTE scsi_readcapacity(struct ata_Unit *unit, struct SCSICmd *cmd, ULONG
 
 BYTE SCSIEmu(struct ata_Unit *unit, struct SCSICmd *cmd)
 {
-    bug("[SCSI] SCSIEmu\n");
+    //bug"[SCSI] SCSIEmu\n");
     
     struct Library *UtilityBase = unit->au_Bus->ab_Base->ata_UtilityBase;
     ULONG len, offset;
@@ -259,7 +259,7 @@ BYTE SCSIEmu(struct ata_Unit *unit, struct SCSICmd *cmd)
     UWORD senselen;
     UBYTE err, status;
  
-    bug("SCSIEMU CMD=%02x\n", cmdbuf[0]); 
+    //bug"SCSIEMU CMD=%02x\n", cmdbuf[0]); 
     err = 0;
     status = 0;
     scsi_len = 0;

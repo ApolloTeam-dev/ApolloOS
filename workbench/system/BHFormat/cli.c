@@ -98,8 +98,6 @@ int rcCliMain(void)
 		}
     }
 
-
-
     if( !bSetSzDosDeviceFromSz(args.pszDevice) || bSetSzVolumeFromSz(args.pszName) || (args.pszType && !bSetFstFromSz(args.pszType)) || (args.pszFlags && !bSetDevfFromSz(args.pszFlags)) || !bGetDosDevice(NULL, 0) )
     {
 		rc = RETURN_ERROR;
@@ -108,12 +106,13 @@ int rcCliMain(void)
 		goto cleanup;
     }
 
-    /* Get confirmation before we start the process */
+
+
+    /* Get confirmation before we start the process 
     *pchDosDeviceColon = 0;
-    Printf( _(MSG_INSERT_DISK),
-	    (IPTR)szDosDevice );
+    Printf( _(MSG_INSERT_DISK), (IPTR)szDosDevice );
     Flush(bpfhStdOut);
-    SetMode( bpfhStdIn, 1 ); /* raw input */
+    SetMode( bpfhStdIn, 1 ); // raw input
     {
 	LONG cch;
 	do {
@@ -121,15 +120,17 @@ int rcCliMain(void)
 	    DD(bug("Character code: %lu\n", ch));
 	} while( cch == 1 && ch != 3 && ch != 13 );
     }
-    SetMode( bpfhStdIn, 0 ); /* cooked input */
+    SetMode( bpfhStdIn, 0 ); // cooked input
     PutStr("\n");
     if (ch == 3)
     {
 	PrintFault( ERROR_BREAK, 0 );
 	goto cleanup;
     }
-    PutStr("\n");
+    PutStr("\n"); */
 	
+
+
     /* Do (low-level) format unless the "QUICK" switch was used */
     BOOL formatOk = TRUE;
     if(!args.bQuick)
