@@ -7,6 +7,7 @@
 /Makefile
 /bin/amiga-m68k
 /bin/linux-x86_64
+/bin/linux-aarch64
 /distfiles
 /config.status
 /contrib
@@ -21,6 +22,9 @@
 
 # Apollo
 /ApolloROM.*
+aros.rom
+ApolloOS.code-workspace
+arch/m68k-amiga/boot/romlog.txt
 
 # /boot/
 /boot/mmakefile
@@ -2137,6 +2141,4 @@ config/features.status
 config/config.log
 compiler/include/geninc.cfg
 bin/Sources/.freetype-2.10.0-fetched
-aros.rom
-ApolloOS.code-workspace
-arch/m68k-amiga/boot/romlog.txt
+

@@ -40,7 +40,18 @@
 #elif defined __powerpc__
 #   include <aros/ppc/cpu.h>
 #elif defined __aarch64__ 
-#   include <aros/aarch64/cpu.h>
+#define AROS_STACK_GROWS_DOWNWARDS 1
+#define AROS_BIG_ENDIAN            0
+#define AROS_SIZEOFULONG           4 /* Size of an ULONG */
+#define AROS_SIZEOFPTR             8 /* Size of a PTR */
+#define AROS_WORDALIGN             2 /* Alignment for WORD */
+#define AROS_LONGALIGN             4 /* Alignment for LONG */
+#define AROS_QUADALIGN             8 /* Alignment for QUAD */
+#define AROS_PTRALIGN              8 /* Alignment for PTR */
+#define AROS_IPTRALIGN             8 /* Alignment for IPTR */
+#define AROS_DOUBLEALIGN           8 /* Alignment for double */
+#define AROS_WORSTALIGN           16 /* Worst case alignment */
+#define AROS_STACKALIGN           16 /* Clean stack alignment */
 #elif defined __arm__
 #   if defined __thumb2__
 #       if defined __ARMEB__
