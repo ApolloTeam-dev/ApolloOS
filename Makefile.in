@@ -128,9 +128,9 @@ makedirs:
 		$(MKDIR) "$$dir" ; \
 	    else true ; fi ; \
 	done
-	@$(IF) [ ! -f $(AROSDIR)/.gdbinit ]; then \
-	    $(CP) $(SRCDIR)/_gdbinit $(AROSDIR)/.gdbinit ; \
-	else true ; fi
+#	@$(IF) [ ! -f $(AROSDIR)/.gdbinit ]; then \
+#	    $(CP) $(SRCDIR)/_gdbinit $(AROSDIR)/.gdbinit ; \
+#	else true ; fi
 
 $(PARSEOFFSETS): $(wildcard $(SRCDIR)/tools/parseoffsets/*.[ch])
 	@$(ECHO) Building parseoffsets...
@@ -285,7 +285,8 @@ clean:
 		$(TOOLDIR)/$(AROS_TARGET_CPU)-$(AROS_TARGET_ARCH)$(AROS_TARGET_SUFFIX)-aros-ld \
 		$(GENDIR)/scripts/genshared $(TOOLDIR)/genmf.py \
 		tools/adflib/myconf.aros tools/collect-aros/env.h \
-		config/features.status
+		config/features.status \
+		ApolloROM.* $(DISTDIR)
 
 # Clean the sources and tools
 arch-clean: clean
