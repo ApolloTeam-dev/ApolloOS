@@ -286,7 +286,8 @@ clean:
 		$(GENDIR)/scripts/genshared $(TOOLDIR)/genmf.py \
 		tools/adflib/myconf.aros tools/collect-aros/env.h \
 		config/features.status \
-		ApolloROM.* $(DISTDIR)
+		ApolloROM.* $(DISTDIR) \
+		$(TOP)/bin/$(AROS_TARGET_ARCH)-$(AROS_TARGET_CPU) $(TOP)/bin/$(AROS_HOST_ARCH)-$(AROS_HOST_CPU) 
 
 # Clean the sources and tools
 arch-clean: clean
