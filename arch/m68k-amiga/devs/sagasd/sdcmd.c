@@ -241,6 +241,7 @@ static UBYTE sdcmd_r1a(struct sdcmd *sd)
         if (!(r1 & SDERRF_TIMEOUT)) return r1;
     }
 
+    debug("r1=0x%08lx", r1);
     return SDERRF_TIMEOUT;
 }
 
@@ -348,6 +349,7 @@ UBYTE sdcmd_read_packet(struct sdcmd *sd, UBYTE *buff, int len)
     if (i == SDCMD_TIMEOUT)
     {
         sdcmd_select(sd, FALSE);
+        debug("SDERRF_TIMEOUT");
         return SDERRF_TIMEOUT;
     }
 
@@ -400,7 +402,7 @@ UBYTE sdcmd_stop_transmission(struct sdcmd *sd)
 
 exit:
     sdcmd_select(sd, FALSE);
-
+    debug("SDERRF_CRC");
     return (i == SDCMD_TIMEOUT) ? SDERRF_TIMEOUT : r1;
 }
 
@@ -433,6 +435,7 @@ UBYTE sdcmd_write_packet(struct sdcmd *sd, UBYTE token, CONST UBYTE *buff, int l
     if ((byte & SDDRS_VALID_MASK) != SDDRS_VALID) {
         /* Terminate the read early */
         sdcmd_stop_transmission(sd);
+        debug("SDERRF_CRC");
         return SDERRF_CRC;
     }
 
@@ -521,7 +524,7 @@ UBYTE sdcmd_read_blocks(struct sdcmd *sd, ULONG addr, UBYTE *buff, int blocks)
         for (; blocks > 0; addr++, blocks--, buff += SDSIZ_BLOCK) {
             r1 = sdcmd_read_packet(sd, buff, SDSIZ_BLOCK);
             if (r1) {
-                //debug("r1=$%02lx", r1);
+                debug("r1=$%02lx", r1);
                 /* Terminate the read early */
                 sdcmd_stop_transmission(sd);
                 break;

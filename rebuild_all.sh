@@ -38,7 +38,6 @@ DISTOPTVER="--enable-dist-version=${DISTROVERSION}"
 
 ./configure "${DISTOPTNAME}" "${DISTOPTVER}" --target=amiga-m68k --with-optimization="-O2" --enable-ccache --with-aros-prefs=classic --with-resolution=640x256x4 --with-cpu=68040 --disable-mmu $@
 
-make -j${THREADS} compiler
 make -j${THREADS}
 make -j${THREADS} distfiles
 
