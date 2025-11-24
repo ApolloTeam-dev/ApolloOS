@@ -858,12 +858,11 @@ BOOL sdcmd_sw_detect_full(struct sdcmd *sd)
             
 exit:
 
-    speed = SDCMD_CLKDIV_FAST;
-
+    //speed = SDCMD_CLKDIV_FAST;
     // Try setting the card into high speed mode.  It's possible to check first, but just trying to set is enough?
     // First nibble is Function Group 1 - Access mode / Bus Speed mode; the only thing that applies to us in SPI mode. 
 
-    sdcmd_send(sd, SDCMD_SWITCH_FUNCTION, 0x80fffff1);
+    /*sdcmd_send(sd, SDCMD_SWITCH_FUNCTION, 0x80fffff1);
     r1 = sdcmd_r1a(sd);
     debug("r1=0x%lx", r1);
     if (!r1)
@@ -876,12 +875,12 @@ exit:
 
         f1_sel = bits(&cmd6[63], 376, 4);
 
-        /* Out of all of the above, just check f1_sel to see if it is what we set it to.*/
+        // Out of all of the above, just check f1_sel to see if it is what we set it to
         if (f1_sel == 1) speed = SDCMD_CLKDIV_FASTER;
-    }
+    } */
 
     /* Switch to high speed mode */
-    sdcmd_clkdiv(sd, speed);
+    sdcmd_clkdiv(sd, SDCMD_CLKDIV_FASTER);
 
     sdcmd_select(sd, FALSE);
 

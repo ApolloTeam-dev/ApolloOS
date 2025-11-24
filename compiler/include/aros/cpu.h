@@ -50,7 +50,7 @@
 #define AROS_PTRALIGN              8 /* Alignment for PTR */
 #define AROS_IPTRALIGN             8 /* Alignment for IPTR */
 #define AROS_DOUBLEALIGN           8 /* Alignment for double */
-#define AROS_WORSTALIGN           16 /* Worst case alignment */
+#define AROS_WORSTALIGN           32 /* Worst case alignment */
 #define AROS_STACKALIGN           16 /* Clean stack alignment */
 #elif defined __arm__
 #   if defined __thumb2__

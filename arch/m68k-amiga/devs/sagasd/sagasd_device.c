@@ -938,7 +938,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
 
         if (io)
         {
-            debug("io_Command received: %d", io->io_Command);
+            //debug("io_Command received: %d", io->io_Command);
             
             io->io_Error = SAGASD_PerformIO(io);
             io->io_Message.mn_Node.ln_Type=NT_MESSAGE;
