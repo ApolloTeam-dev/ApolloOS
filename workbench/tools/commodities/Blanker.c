@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2006, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2006, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -396,6 +396,7 @@ static void MakeWin(void)
 	    WA_BackFill, (IPTR)LAYERS_NOBACKFILL,
 	    WA_SimpleRefresh, TRUE,
 	    WA_Borderless, TRUE,
+	    WA_Activate, TRUE,
 	    TAG_DONE);
 
     if(screenPtr)
@@ -403,6 +404,13 @@ static void MakeWin(void)
 
     if(win)
     {
+	UWORD blank_pointer[] = {
+		0x0000, 0x0000,
+		0x0000, 0x0000,
+		0x0000, 0x0000
+	};
+	SetPointer(win, blank_pointer, 0, 0, 0, 0 );
+
 	rp = win->RPort;
 
 	scrwidth  = win->Width;
@@ -416,6 +424,9 @@ static void MakeWin(void)
 	star3pen = ObtainBestPenA(cm, 0x88888888, 0x88888888, 0x88888888, NULL);
 
 	pens_allocated = TRUE;
+
+	SetAPen(rp, blackpen);
+	Rectfill(rp, 0, 0, scrwidth - 1, scrheight - 1);
 
 	for(i = 0;i < num_stars;i++)
 	{
@@ -436,7 +447,6 @@ static void MakeWin(void)
 	    }
 	}
 
-	SetAPen(rp, blackpen);
 	for(y = 0;y < scrheight - 1;y++, stripheight++)
 	{
 	    if (CheckSignal(actionmask))
@@ -452,11 +462,11 @@ static void MakeWin(void)
 
 	    for(y2 = y;y2 < scrheight - 1;y2 += stripheight)
 	    {
-		ClipBlit(rp, 0, y2, rp, 0, y2 + 1, scrwidth, scrheight - y2 - 1, 192);
-		SetAPen(rp, blackpen);
-		RectFill(rp, 0, y2, scrwidth - 1, y2);
+		//ClipBlit(rp, 0, y2, rp, 0, y2 + 1, scrwidth, scrheight - y2 - 1, 192);
+		//SetAPen(rp, blackpen);
+		//RectFill(rp, 0, y2, scrwidth - 1, y2);
 
-#if 0
+//#if 0
 		if (y2 == y)
 		{
 		    for(i = 0; i < num_stars; i++)
@@ -469,7 +479,7 @@ static void MakeWin(void)
 		    }
 
 		} /* if (y2 == y) */
-#endif
+//#endif
 
 	    } /* for(y2 = y;y2 < scrheight - 1;y2 += stripheight) */
 
