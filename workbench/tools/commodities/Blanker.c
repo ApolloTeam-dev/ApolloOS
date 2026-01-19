@@ -444,6 +444,7 @@ static void MakeWin(void)
 
 			SetAPen(rp, star_col[i]);
 			WritePixel(rp, star_x[i], y);
+			WaitTOF();
 		}
 
 		while (1)
