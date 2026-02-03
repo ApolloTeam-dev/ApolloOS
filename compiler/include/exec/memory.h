@@ -2,7 +2,7 @@
 #define EXEC_MEMORY_H
 
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2012, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Memory handling
@@ -30,7 +30,7 @@ struct MemChunk
 };
 
 /* Total size of struct MemChunk, including padding */
-#define MEMCHUNK_TOTAL  (AROS_WORSTALIGN > sizeof(struct MemChunk) ? AROS_WORSTALIGN : sizeof(struct MemChunk))
+#define MEMCHUNK_TOTAL  32  //[WD] ApolloOS is set to 32 Byte Memory Boundary from Core 11350+ | (AROS_WORSTALIGN > sizeof(struct MemChunk) ? AROS_WORSTALIGN : sizeof(struct MemChunk))
 /* Total size of struct MemHeader, including padding */
 #define MEMHEADER_TOTAL (AROS_ROUNDUP2(sizeof(struct MemHeader), MEMCHUNK_TOTAL))
 

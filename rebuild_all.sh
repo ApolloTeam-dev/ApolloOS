@@ -2,12 +2,6 @@
 CPU_COUNT=$(grep processor /proc/cpuinfo | wc -l)
 THREADS=${CPU_COUNT}
 
-#Some how, running more than 8 tasks doesn't succeed every time
-#if [ ${THREADS} -gt  8 ]
-#then
-#	THREADS=8
-#fi
-
 export DISTRONAME="$(cat distname)"
 export DISTROVERSION="$(cat version)"
 export DISTRODATE="$(date +%Y-%m-%d)"
@@ -34,7 +28,9 @@ sleep 3
 make clean
 git clean -df
 rm -rf bin/amiga-m68k
-rm -rf config/features.status
+rm -rf bin/linux
+
+#rm -rf config/features.status
 
 source ./make_dist_config.sh
 DISTOPTNAME="--enable-dist-name=${DISTRONAME}"

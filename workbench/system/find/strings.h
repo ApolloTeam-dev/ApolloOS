@@ -1,6 +1,6 @@
 /****************************************************************
    This file was created automatically by `FlexCat 2.19'
-   from "/home/willem/ApolloTeam/ApolloOS/workbench/system/find/catalogs/find.cd".
+   from "/home/willem/ApolloOS/workbench/system/find/catalogs/find.cd".
 
    Do NOT edit by hand!
 ****************************************************************/

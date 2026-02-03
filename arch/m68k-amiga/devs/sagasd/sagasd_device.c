@@ -868,9 +868,6 @@ static void SAGASD_IOTask(struct Library *SysBase)
                             Permit();
                         }
 
-                        debug("SD-Card Change Detection: unit = %d | Detect Mode = %s | sdu_Present = %s | detect = %s",
-                        sdu->sdu_SDCmd.unitnumber, sdpin ? "HW":"SW", sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
-
                         if (present)                                 
                         {
                             // SD-Card is Inserted
@@ -879,6 +876,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
                             sdu->sdu_Present = TRUE;
                             sdu->sdu_ChangeNum++;
                             sdu->sdu_Valid = TRUE;
+                            debug("SD-Card Change Detection: unit = %d | Detect Mode = %s | sdu_Present = %s | detect = %s", sdu->sdu_SDCmd.unitnumber, sdpin ? "HW":"SW", sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
                             debug("\t sdu_Valid: %s", sdu->sdu_Valid ? "TRUE" : "FALSE");
                             debug("\t Blocks: %ld", sdu->sdu_SDCmd.info.blocks);
 
@@ -903,16 +901,14 @@ static void SAGASD_IOTask(struct Library *SysBase)
                             Permit();
                         }
 
-                        debug("SD-Card Change Detection: unit = %d | Detect Mode = %s | sdu_Present = %s | detect = %s",
-                        sdu->sdu_SDCmd.unitnumber, sdpin ? "HW":"SW", sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
-
                         if (!present)                                       
                         {
                             // SD-Card is Removed
                             Forbid();
                             sdu->sdu_Present = FALSE;
                             sdu->sdu_Valid = FALSE;
-                            
+                            debug("SD-Card Change Detection: unit = %d | Detect Mode = %s | sdu_Present = %s | detect = %s", sdu->sdu_SDCmd.unitnumber, sdpin ? "HW":"SW", sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
+
                             for (int i=sdu->sdu_AddChangeListItems; i>0; i--)
                             {
                                 if (sdu->sdu_AddChangeList[i])
