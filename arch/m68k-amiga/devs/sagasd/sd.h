@@ -51,7 +51,7 @@
 #define IOStdReq(io) ((struct IOStdReq *)io)
 
 #if APOLLO_DEBUG
-#define DEBUG 1
+#define DEBUG 0
 #else
 #define DEBUG 0
 #endif

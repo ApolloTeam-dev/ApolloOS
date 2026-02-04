@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2011, The AROS Development Team. All rights reserved.
 
     Desc: Detect custom chipset revisions and PAL/NTSC state
     Lang: english
@@ -14,6 +14,7 @@
 #include <hardware/cia.h>
 
 #include <timer_platform.h>
+
 
 static UWORD getline(void)
 {
@@ -59,11 +60,15 @@ void InitCustom(struct GfxBase *gfx)
 
 	while(getline() != 0);
 	pos = gethighestline(400);
-	if (pos > 300)
+	if (TRUE) //(pos > 300) - [WD - TEST]
+	{
 		flags |= PAL;
-	else
+		DD(debug("PAL INIT");)
+	} else {
 		flags |= NTSC;
-	
+		DD(debug("NTSC INIT");)
+	}
+
    	vposr = custom->vposr & 0x7f00;
    	if (!(vposr & 0x1000))
    		flags |= REALLY_PAL;
