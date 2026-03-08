@@ -221,6 +221,19 @@ static int ATA_init(struct ataBase *ATABase)
 
     DATAINIT(bug("[ATA--] %s: MemPool @ %p\n", __func__, ATABase->ata_MemPool));
 
+    // Was bin ich?
+    //
+    ULONG CACHE_SIZE = (1<<20); // 512 MB
+    volatile UBYTE *wasbinich=0xDFF3FC;
+    UBYTE ichbin = *wasbinich;
+    if ( ichbin==0x08) {  // Einhorn
+      CACHE_SIZE = (1<<20);  // 512 MB
+    }else{
+      CACHE_SIZE = (1<<17);  // 64 MB
+    } 
+    ATABase->CACHE_SIZE8 = (CACHE_SIZE>>3);  // set size of 1 way of (8way cache)
+
+
     /*
      * ata drive cache memory allocation
      */

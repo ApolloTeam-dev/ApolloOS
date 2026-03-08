@@ -23,7 +23,7 @@
 #define AROS_PTRALIGN              2 /* Alignment for PTR */
 #define AROS_IPTRALIGN             2 /* Alignment for IPTR */
 #define AROS_DOUBLEALIGN           2 /* Alignment for double */
-#define AROS_WORSTALIGN            4 /* Worst case alignment */
+#define AROS_WORSTALIGN            32 /* Worst case alignment - ApolloOS = 32 Bytes */
 
 #define AROS_SLOWSTACKFORMAT 1
 
