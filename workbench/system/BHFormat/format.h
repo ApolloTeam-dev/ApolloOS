@@ -38,11 +38,21 @@
 
 #include <stdarg.h>
 
-#ifdef __AROS__
+#if APOLLO_DEBUG
+#define DEBUG 1
+#else
+#define DEBUG 0
+#endif
+
+#if DEBUG
 #include <aros/debug.h>
 #define _WBenchMsg WBenchMsg
 #define DD(x) x
 #define bug kprintf
+#else
+#define _WBenchMsg WBenchMsg
+#define DD(x)
+#define bug 
 #endif
 
 

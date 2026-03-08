@@ -29,9 +29,9 @@ static struct Screen *OpenBootScreenType(struct DOSBootBase *DOSBootBase, BYTE M
 
     mode = BestModeID(BIDTAG_DesiredWidth, 640, BIDTAG_DesiredHeight, 256, BIDTAG_Depth, MinDepth, TAG_DONE);
 
-    *((volatile UWORD*)VREG_SAGACTRL1) = 0x0024;
-    *((volatile UWORD*)VREG_SAGACTRL1) = 0x8024;        // SAGA ZoomMode 320x256 
-    *((volatile UWORD*)VREG_SAGACTRL2) = 0x1010;        // SAGA Vertical/Horizontal Shift
+    //*((volatile UWORD*)VREG_SAGACTRL1) = 0x0024;        // Disabled for now until we cvan make this a optional user-setting
+    //*((volatile UWORD*)VREG_SAGACTRL1) = 0x8024;        // SAGA ZoomMode 320x256 
+    //*((volatile UWORD*)VREG_SAGACTRL2) = 0x1010;        // SAGA Vertical/Horizontal Shift
 
     if (mode != INVALID_ID)
     {

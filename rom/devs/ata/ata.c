@@ -92,26 +92,62 @@ static void cmd_Read32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
             struct ata_Bus *bus = unit->au_Bus;
             struct ataBase *base = bus->ab_Base;
             ULONG unitNum = unit->au_UnitNum;
-
+	    ULONG CACHE_SIZE8 = base->CACHE_SIZE8;
+            base->myway = ( base->myway +1) & 7;  // 8 way for good 
+            
             ULONG start;
             ULONG i;
             
             for (start = 0, i = 0; i < count; i++)
             {
-                ULONG blockAdr = (block + i) & CACHE_MASK;
-                UQUAD blockTag = (block + i) & ~CACHE_MASK;
+                ULONG blockAdr = (block + i) & (CACHE_SIZE8-1); // MASK
+                ULONG blockAdr0 = blockAdr;
+                ULONG blockAdr1 = blockAdr + CACHE_SIZE8;
+                ULONG blockAdr2 = blockAdr + CACHE_SIZE8*2;
+                ULONG blockAdr3 = blockAdr + CACHE_SIZE8*3;
+                ULONG blockAdr4 = blockAdr + CACHE_SIZE8*4;
+                ULONG blockAdr5 = blockAdr + CACHE_SIZE8*5;
+                ULONG blockAdr6 = blockAdr + CACHE_SIZE8*6;
+                ULONG blockAdr7 = blockAdr + CACHE_SIZE8*7;
 
-                if ((unitNum < (1<<9)) &&
-                    (base->ata_CacheTags[blockAdr] == (blockTag | unitNum))) /* cache hit */
+                UQUAD blockTag = (block + i) & ~(((UQUAD)CACHE_SIZE8)-1) | unitNum;  // MASKING
+
+                if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr0] == blockTag )) /* cache hit */
                 {
-                    CopyMem(base->ata_CacheData + blockAdr*512, IOStdReq(io)->io_Data + i*512, 512);
+                    CopyMem(base->ata_CacheData + blockAdr0 * 512, IOStdReq(io)->io_Data + i*512, 512);
                     start = i + 1;
-                }
-                else
+                }else if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr1] == blockTag )) /* cache hit */
                 {
+                    CopyMem(base->ata_CacheData + blockAdr1 * 512, IOStdReq(io)->io_Data + i*512, 512);
+                    start = i + 1;
+                }else if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr2] == blockTag )) /* cache hit */
+                {
+                    CopyMem(base->ata_CacheData + blockAdr2 * 512, IOStdReq(io)->io_Data + i*512, 512);
+                    start = i + 1;
+                }else if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr3] == blockTag )) /* cache hit */
+                {
+                    CopyMem(base->ata_CacheData + blockAdr3 * 512, IOStdReq(io)->io_Data + i*512, 512);
+                    start = i + 1;
+                }else if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr4] == blockTag )) /* cache hit */
+                {
+                    CopyMem(base->ata_CacheData + blockAdr4 * 512, IOStdReq(io)->io_Data + i*512, 512);
+                    start = i + 1;
+                }else if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr5] == blockTag )) /* cache hit */
+                {
+                    CopyMem(base->ata_CacheData + blockAdr5 * 512, IOStdReq(io)->io_Data + i*512, 512);
+                    start = i + 1;
+                }else if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr6] == blockTag )) /* cache hit */
+                {
+                    CopyMem(base->ata_CacheData + blockAdr6 * 512, IOStdReq(io)->io_Data + i*512, 512);
+                    start = i + 1;
+                }else if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr7] == blockTag )) /* cache hit */
+                {
+                    CopyMem(base->ata_CacheData + blockAdr7 * 512, IOStdReq(io)->io_Data + i*512, 512);
+                    start = i + 1;
+                } else {
                     i = count;
                     break;
-                } 
+                }
             }
             
             if (start != i)
@@ -128,11 +164,13 @@ static void cmd_Read32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 
                 for (ULONG j = start; j < i; j++)
                 {
-                    ULONG blockAdr = (block + j) & CACHE_MASK;
+                    ULONG blockAdr = (block + j) & (CACHE_SIZE8-1);
+                    blockAdr  += CACHE_SIZE8 * (base->myway &7);  // random 4 way
+
                     CopyMem(IOStdReq(io)->io_Data + j*512, base->ata_CacheData + blockAdr*512, 512);
-                    blockAdr = (block + j) & CACHE_MASK;
-                    ULONG blockTag = (block + j) & ~CACHE_MASK;
-                    base->ata_CacheTags[blockAdr] = blockTag | unitNum;
+                    UQUAD blockTag = (block + j) & ~(((UQUAD)CACHE_SIZE8)-1) | unitNum;
+                    base->ata_CacheTags[blockAdr] = blockTag;
+
                 }
             }
             cnt = count << unit->au_SectorShift;
@@ -199,26 +237,69 @@ static void cmd_Read64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
                 struct ata_Bus *bus = unit->au_Bus;
                 struct ataBase *base = bus->ab_Base;
                 ULONG unitNum = unit->au_UnitNum;
+                ULONG CACHE_SIZE8 = base->CACHE_SIZE8;
+
+		base->myway = (base->myway +1) & 7;  // 7 way for good 
 
                 ULONG start;
                 ULONG i;
+
                 for (start = 0, i = 0; i < count; i++)
                 {
-                    ULONG blockAdr = (block + i) & CACHE_MASK;
-                    UQUAD blockTag = (block + i) & ~CACHE_MASK;
-    
-                    if ((unitNum < (1<<9)) &&
-                        (base->ata_CacheTags[blockAdr] == (blockTag | unitNum))) /* cache hit */
+                    ULONG blockAdr = (block + i) & (CACHE_SIZE8-1); //MASK
+                    ULONG blockAdr0 = blockAdr;
+                    ULONG blockAdr1 = blockAdr + CACHE_SIZE8;
+                    ULONG blockAdr2 = blockAdr + CACHE_SIZE8*2;
+                    ULONG blockAdr3 = blockAdr + CACHE_SIZE8*3;
+                    ULONG blockAdr4 = blockAdr + CACHE_SIZE8*4;
+                    ULONG blockAdr5 = blockAdr + CACHE_SIZE8*5;
+                    ULONG blockAdr6 = blockAdr + CACHE_SIZE8*6;
+                    ULONG blockAdr7 = blockAdr + CACHE_SIZE8*7;
+
+                    UQUAD blockTag = (block + i) & ~(((UQUAD)CACHE_SIZE8)-1) | unitNum; //MASKING
+
+                    if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr0] == blockTag )) /* cache hit */
                     {
-                        CopyMem(base->ata_CacheData + blockAdr*512, IOStdReq(io)->io_Data + i*512, 512);
+                        CopyMem(base->ata_CacheData + blockAdr0*512, IOStdReq(io)->io_Data + i*512, 512);
                         start = i + 1;
-                    }
-                    else
+                    }else if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr1] == blockTag )) /* cache hit */
+                    {
+                        CopyMem(base->ata_CacheData + blockAdr1*512, IOStdReq(io)->io_Data + i*512, 512);
+                        start = i + 1;
+                    }else if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr2] == blockTag )) /* cache hit */
+                    {
+                        CopyMem(base->ata_CacheData + blockAdr2*512, IOStdReq(io)->io_Data + i*512, 512);
+                        start = i + 1;
+                    }else if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr3] == blockTag )) /* cache hit */
+                    {
+                        CopyMem(base->ata_CacheData + blockAdr3*512, IOStdReq(io)->io_Data + i*512, 512);
+                        start = i + 1;
+                    }else if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr4] == blockTag )) /* cache hit */
+                    {
+                        CopyMem(base->ata_CacheData + blockAdr4*512, IOStdReq(io)->io_Data + i*512, 512);
+                        start = i + 1;
+                    }else if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr5] == blockTag )) /* cache hit */
+                    {
+                        CopyMem(base->ata_CacheData + blockAdr5*512, IOStdReq(io)->io_Data + i*512, 512);
+                        start = i + 1;
+                    }else if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr6] == blockTag )) /* cache hit */
+                    {
+                        CopyMem(base->ata_CacheData + blockAdr6*512, IOStdReq(io)->io_Data + i*512, 512);
+                        start = i + 1;
+                    }else if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr7] == blockTag )) /* cache hit */
+                    {
+                        CopyMem(base->ata_CacheData + blockAdr7*512, IOStdReq(io)->io_Data + i*512, 512);
+                        start = i + 1;
+                    } else
                     {
                         i = count;
                         break;
                     }
                 }
+
+
+
+
 
                 if (start != i)
                 {
@@ -234,12 +315,12 @@ static void cmd_Read64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
     
                     for (ULONG j = start; j < i; j++)
                     {
-                        ULONG blockAdr = (block + j) & CACHE_MASK;
+                        ULONG blockAdr = (block + j) & (CACHE_SIZE8-1); // MASK
+                        blockAdr  += CACHE_SIZE8 * (base->myway & 7);  // random 8 way
                         CopyMem(IOStdReq(io)->io_Data + j*512, base->ata_CacheData + blockAdr*512, 512);
-                        blockAdr = (block + j) & CACHE_MASK;
-                        ULONG blockTag = (block + j) & ~CACHE_MASK;
-                        base->ata_CacheTags[blockAdr] = blockTag | unitNum;
-                    }
+                        UQUAD blockTag = (block + j) & ~(((UQUAD)CACHE_SIZE8)-1) |unitNum;
+                        base->ata_CacheTags[blockAdr] = blockTag;
+		    }
                 }
                 cnt = count << unit->au_SectorShift;
             }
@@ -261,19 +342,55 @@ static void cmd_Read64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
             {
                 struct ata_Bus *bus = unit->au_Bus;
                 struct ataBase *base = bus->ab_Base;
-                ULONG unitNum = unit->au_UnitNum;
+                ULONG CACHE_SIZE8 = base->CACHE_SIZE8;
+		ULONG unitNum = unit->au_UnitNum;
     
                 ULONG start;
                 ULONG i;
                 for (start = 0, i = 0; i < count; i++)
                 {
-                    ULONG blockAdr = (block + i) & CACHE_MASK;
-                    UQUAD blockTag = (block + i) & ~CACHE_MASK;
-    
-                    if ((unitNum < (1<<9)) &&
-                        (base->ata_CacheTags[blockAdr] == (blockTag | unitNum ))) /* cache hit */
+                    ULONG blockAdr = (block + i) & (CACHE_SIZE8-1); //MASK
+                    ULONG blockAdr0 = blockAdr;
+                    ULONG blockAdr1 = blockAdr + CACHE_SIZE8;
+                    ULONG blockAdr2 = blockAdr + CACHE_SIZE8*2;
+                    ULONG blockAdr3 = blockAdr + CACHE_SIZE8*3;
+                    ULONG blockAdr4 = blockAdr + CACHE_SIZE8*4;
+                    ULONG blockAdr5 = blockAdr + CACHE_SIZE8*5;
+                    ULONG blockAdr6 = blockAdr + CACHE_SIZE8*6;
+                    ULONG blockAdr7 = blockAdr + CACHE_SIZE8*7;
+                    UQUAD blockTag = (block + i) & ~(((UQUAD)CACHE_SIZE8)-1) | unitNum ;
+
+                    if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr0] == blockTag )) /* cache hit */
                     {
-                        CopyMem(base->ata_CacheData + blockAdr*512, IOStdReq(io)->io_Data + i*512, 512);
+                        CopyMem(base->ata_CacheData + blockAdr0*512, IOStdReq(io)->io_Data + i*512, 512);
+                        start = i + 1;
+                    }else  if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr1] == blockTag )) /* cache hit */
+                    {
+                        CopyMem(base->ata_CacheData + blockAdr1*512, IOStdReq(io)->io_Data + i*512, 512);
+                        start = i + 1;
+                    }else  if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr2] == blockTag )) /* cache hit */
+                    {
+                        CopyMem(base->ata_CacheData + blockAdr2*512, IOStdReq(io)->io_Data + i*512, 512);
+                        start = i + 1;
+                    }else  if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr3] == blockTag )) /* cache hit */
+                    {
+                        CopyMem(base->ata_CacheData + blockAdr3*512, IOStdReq(io)->io_Data + i*512, 512);
+                        start = i + 1;
+                    }else  if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr4] == blockTag )) /* cache hit */
+                    {
+                        CopyMem(base->ata_CacheData + blockAdr4*512, IOStdReq(io)->io_Data + i*512, 512);
+                        start = i + 1;
+                    }else  if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr5] == blockTag )) /* cache hit */
+                    {
+                        CopyMem(base->ata_CacheData + blockAdr5*512, IOStdReq(io)->io_Data + i*512, 512);
+                        start = i + 1;
+                    }else  if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr6] == blockTag )) /* cache hit */
+                    {
+                        CopyMem(base->ata_CacheData + blockAdr6*512, IOStdReq(io)->io_Data + i*512, 512);
+                        start = i + 1;
+                    }else  if ((unitNum < (1<<9)) && (base->ata_CacheTags[blockAdr7] == blockTag )) /* cache hit */
+                    {
+                        CopyMem(base->ata_CacheData + blockAdr7*512, IOStdReq(io)->io_Data + i*512, 512);
                         start = i + 1;
                     }
                     else
@@ -281,6 +398,9 @@ static void cmd_Read64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
                         i = count;
                         break;
                     }
+
+
+
                 }
 
                 if (start != i)
@@ -297,12 +417,12 @@ static void cmd_Read64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
     
                     for (ULONG j = start; j < i; j++)
                     {
-                        ULONG blockAdr = (block + j) & CACHE_MASK;
+                        ULONG blockAdr = (block + j) & (CACHE_SIZE8-1);
+                        blockAdr  += CACHE_SIZE8 * (base->myway &7);  // random 8 way
                         CopyMem(IOStdReq(io)->io_Data + j*512, base->ata_CacheData + blockAdr*512, 512);
-                        blockAdr = (block + j) & CACHE_MASK;
-                        ULONG blockTag = (block + j) & ~CACHE_MASK;
-                        base->ata_CacheTags[blockAdr] = blockTag | unitNum;
-                    }
+                        UQUAD blockTag = (block + j) & ~(((UQUAD)CACHE_SIZE8)-1) | unitNum;
+                        base->ata_CacheTags[blockAdr] = blockTag;
+		    }
                 }
                 cnt = count << unit->au_SectorShift;
             }
@@ -365,13 +485,36 @@ static void cmd_Write32(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 
         if ((unit->au_SectorShift == 9) && ((unit->au_XferModes & AF_XFER_PACKET)==0)) 
         {
-            struct ata_Bus *bus = unit->au_Bus;
-            struct ataBase *base = bus->ab_Base;
+           struct ata_Bus *bus = unit->au_Bus;
+           struct ataBase *base = bus->ab_Base;
+           ULONG CACHE_SIZE8 = base->CACHE_SIZE8;
+
+           ULONG unitNum = unit->au_UnitNum;
+
             for (int i = 0; i < count; i++)
             {
-                ULONG blockAdr = (block + i) & CACHE_MASK;
-                base->ata_CacheTags[blockAdr] = 0xfffffffffffffffful;
+                ULONG blockAdr = (block + i) & (CACHE_SIZE8-1);  // MASK
+                ULONG blockAdr0 = blockAdr;
+                ULONG blockAdr1 = blockAdr + CACHE_SIZE8;
+                ULONG blockAdr2 = blockAdr + CACHE_SIZE8*2;
+                ULONG blockAdr3 = blockAdr + CACHE_SIZE8*3;
+                ULONG blockAdr4 = blockAdr + CACHE_SIZE8*4;
+                ULONG blockAdr5 = blockAdr + CACHE_SIZE8*5;
+                ULONG blockAdr6 = blockAdr + CACHE_SIZE8*6;
+                ULONG blockAdr7 = blockAdr + CACHE_SIZE8*7;
+
+                UQUAD blockTag = (block + i) & ~(((QUAD)CACHE_SIZE8)-1) | unitNum;
+                if( base->ata_CacheTags[blockAdr0] == blockTag ){  base->ata_CacheTags[blockAdr0] = 0xfffffffffffffffful; }
+                if( base->ata_CacheTags[blockAdr1] == blockTag ){  base->ata_CacheTags[blockAdr1] = 0xfffffffffffffffful; }
+                if( base->ata_CacheTags[blockAdr2] == blockTag ){  base->ata_CacheTags[blockAdr2] = 0xfffffffffffffffful; }
+                if( base->ata_CacheTags[blockAdr3] == blockTag ){  base->ata_CacheTags[blockAdr3] = 0xfffffffffffffffful; }
+                if( base->ata_CacheTags[blockAdr4] == blockTag ){  base->ata_CacheTags[blockAdr4] = 0xfffffffffffffffful; }
+                if( base->ata_CacheTags[blockAdr5] == blockTag ){  base->ata_CacheTags[blockAdr5] = 0xfffffffffffffffful; }
+                if( base->ata_CacheTags[blockAdr6] == blockTag ){  base->ata_CacheTags[blockAdr6] = 0xfffffffffffffffful; }
+                if( base->ata_CacheTags[blockAdr7] == blockTag ){  base->ata_CacheTags[blockAdr7] = 0xfffffffffffffffful; }
             }
+
+
         }
         
         IOStdReq(io)->io_Actual = cnt;
@@ -450,11 +593,31 @@ static void cmd_Write64(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
         {
             struct ata_Bus *bus = unit->au_Bus;
             struct ataBase *base = bus->ab_Base;
-            for (int i = 0; i < count; i++)
+            ULONG CACHE_SIZE8 = base->CACHE_SIZE8;
+	    ULONG unitNum = unit->au_UnitNum;
+            for (int i = 0; i < count ; i++)
             {
-                ULONG blockAdr = (block + i) & CACHE_MASK;
-                base->ata_CacheTags[blockAdr] = 0xfffffffffffffffful;
+                ULONG blockAdr = (block + i) & (CACHE_SIZE8-1); // MASK
+                ULONG blockAdr0 = blockAdr;
+                ULONG blockAdr1 = blockAdr + CACHE_SIZE8;
+                ULONG blockAdr2 = blockAdr + CACHE_SIZE8*2;
+                ULONG blockAdr3 = blockAdr + CACHE_SIZE8*3;
+                ULONG blockAdr4 = blockAdr + CACHE_SIZE8*4;
+                ULONG blockAdr5 = blockAdr + CACHE_SIZE8*5;
+                ULONG blockAdr6 = blockAdr + CACHE_SIZE8*6;
+                ULONG blockAdr7 = blockAdr + CACHE_SIZE8*7;
+                UQUAD blockTag = (block + i) & ~(((UQUAD)CACHE_SIZE8)-1) | unitNum;
+                if( base->ata_CacheTags[blockAdr0] == blockTag ){  base->ata_CacheTags[blockAdr0] = 0xfffffffffffffffful; }
+                if( base->ata_CacheTags[blockAdr1] == blockTag ){  base->ata_CacheTags[blockAdr1] = 0xfffffffffffffffful; }
+                if( base->ata_CacheTags[blockAdr2] == blockTag ){  base->ata_CacheTags[blockAdr2] = 0xfffffffffffffffful; }
+                if( base->ata_CacheTags[blockAdr3] == blockTag ){  base->ata_CacheTags[blockAdr3] = 0xfffffffffffffffful; }
+                if( base->ata_CacheTags[blockAdr4] == blockTag ){  base->ata_CacheTags[blockAdr4] = 0xfffffffffffffffful; }
+                if( base->ata_CacheTags[blockAdr5] == blockTag ){  base->ata_CacheTags[blockAdr5] = 0xfffffffffffffffful; }
+                if( base->ata_CacheTags[blockAdr6] == blockTag ){  base->ata_CacheTags[blockAdr6] = 0xfffffffffffffffful; }
+                if( base->ata_CacheTags[blockAdr7] == blockTag ){  base->ata_CacheTags[blockAdr7] = 0xfffffffffffffffful; }
             }
+
+
         }
 
         IOStdReq(io)->io_Actual = cnt;
@@ -590,15 +753,15 @@ static void cmd_AddChangeInt(struct IORequest *io, LIBBASETYPEPTR LIBBASE)
 
     D(bug("[ATA%02ld] %s()\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, __func__));
 
-    //Forbid();
+    Forbid();
     AddHead(&unit->au_SoftList, (struct Node *)io);
-    //Permit();
+    Permit();
 
     struct IORequest *msg;
 
     ForeachNode(&unit->au_SoftList, msg)
     {
-        D(bug("Handler Entry added in unit->au_SoftList: handler = %x | unit = %d\n", (struct Interrupt *)IOStdReq(msg)->io_Data, unit->au_UnitNum));
+        D(bug("[ATA%02ld] Handler Entry added in unit->au_SoftList: handler = %x | unit = %d\n", ((struct ata_Unit*)io->io_Unit)->au_UnitNum, (struct Interrupt *)IOStdReq(msg)->io_Data, unit->au_UnitNum);)
     }
     
     io->io_Flags &= ~IOF_QUICK;

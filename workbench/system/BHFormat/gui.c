@@ -550,7 +550,7 @@ int rcGuiMain(void)
 
 		if( _WBenchMsg->sm_ArgList[1].wa_Lock == 0 )
 		{
-			DD(bug("[FORMAT] Object specified by Device name: %s\n", _WBenchMsg->sm_ArgList[1].wa_Name);)
+			DD(bug("[FORMAT] Object specified by Device name: %s\n", _WBenchMsg->sm_ArgList[1].wa_Name));
 			if( !bSetSzDosDeviceFromSz(_WBenchMsg->sm_ArgList[1].wa_Name) )
 			{
 				DD(bug("[FORMAT] Bad device name from Workbench: %s\n", _WBenchMsg->sm_ArgList[1].wa_Name));
