@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -392,7 +392,7 @@ void About(void)
     struct EasyStruct   es;
     struct DTClassInfo *classInfo;
     char *fmtTemplate;
-    int                         count = 12, tmplLen;
+    int                 count = 13, tmplLen;
     IPTR                *abouttxt;
     WORD                i = 0;
 

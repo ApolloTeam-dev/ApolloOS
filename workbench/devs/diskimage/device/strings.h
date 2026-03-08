@@ -1,6 +1,6 @@
 /****************************************************************
    This file was created automatically by `FlexCat 2.19'
-   from "/home/willem/ApolloTeam/ApolloOS/workbench/devs/diskimage/device/catalogs/diskimagedevice.cd".
+   from "/home/willem/ApolloOS/workbench/devs/diskimage/device/catalogs/diskimagedevice.cd".
 
    Do NOT edit by hand!
 ****************************************************************/
