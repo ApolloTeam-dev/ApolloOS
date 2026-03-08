@@ -178,7 +178,9 @@ LONG handler(struct ExecBase *SysBase)
         ReplyPacket(dp, SysBase);
 
         //Force a DoDiskInsert regardless if Disk is present
-        DoDiskInsert(glob);
+        //DoDiskInsert(glob);
+
+        ProcessDiskChange(glob);
 
         D(bug("[FAT] [%s] Handler init finished, starting Main Loop\n",__FUNCTION__ ));
 
@@ -251,8 +253,7 @@ static LONG InitDiskHandler(struct Globals *glob)
                     D(bug("[FAT] [%s] Device successfully opened\n",__FUNCTION__ ));
                     Probe64BitSupport(glob);
 
-                    if ((glob->diskchgreq =
-                        AllocVec(sizeof(struct IOExtTD), MEMF_PUBLIC)))
+                    if ((glob->diskchgreq = AllocVec(sizeof(struct IOExtTD), MEMF_PUBLIC)))
                     {
                         CopyMem(glob->diskioreq, glob->diskchgreq,
                             sizeof(struct IOExtTD));

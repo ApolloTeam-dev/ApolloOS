@@ -39,14 +39,7 @@
 #define TASK_PRI                10
 #define TIMEOUT                 30
 
-#if VAMPIRECARDSERIES==2
-#define CACHE_SIZE_BITS         14      /* V2 = 2^14 * 512 byte blocks = 8Mb */
-#else
-#define CACHE_SIZE_BITS         17      /* V4 = 2^17 * 512 byte blocks = 64Mb */
-#endif
-
-#define CACHE_SIZE              (1<<CACHE_SIZE_BITS)
-#define CACHE_MASK              (CACHE_SIZE-1)
+#define CACHE_MASK8             (((1<<20)>>3)-1)
 
 #if APOLLO_DEBUG
 #define DEBUG 1
@@ -55,6 +48,11 @@
 #endif
 
 #if DEBUG
+
+#define DATAINIT(x) x 
+#define DCONTROL(x) x
+#define DINITBUS(x) x
+#define DSIGNATURE(x) x
 #define DINIT(x) x
 #define D(x) x
 #define DD(x)
@@ -64,6 +62,10 @@
 #define DATTR(x) 
 #define DATAPI(x)
 #else
+#define DATAINIT(x) 
+#define DCONTROL(x)
+#define DINITBUS(x) 
+#define DSIGNATURE(x)
 #define DINIT(x)
 #define D(x)
 #define DD(x)
@@ -112,6 +114,8 @@ struct ataBase
      */
     UBYTE                    	*ata_CacheData;
     UQUAD                   	*ata_CacheTags;
+    ULONG                       myway;
+    ULONG                       CACHE_SIZE8;
 
     ULONG                   	ata_ItersPer100ns;
 
