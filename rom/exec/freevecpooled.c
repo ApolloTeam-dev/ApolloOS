@@ -57,13 +57,15 @@
     if(!memory)
         return;
 
+#ifdef HANDLE_MANAGED_MEM
     if (IsManagedMem(mhe))
     {
         if (mhe->mhe_FreeVec)
             mhe->mhe_FreeVec(mhe, memory);
     }
     else
-    {
+#endif
+	{
         if (memory != NULL)
         {
             IPTR *real = (IPTR *) memory;

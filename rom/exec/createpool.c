@@ -139,6 +139,7 @@
          * If the pool is in managed memory, don't bother any further setup. The
          * pool should do the rest self.
          */
+#ifdef HANDLE_MANAGED_MEM
         if (IsManagedMem(firstPuddle))
         {
             D(bug("Managed pool\n");)
@@ -152,7 +153,8 @@
             firstPuddle->mh_First = (APTR)(IPTR)requirements;
         }
         else
-        {
+#endif
+		{
             /*
              * Add the puddle to the list (yes, contained in itself).
              * This is the first puddle so it's safe to use AddTail() here.

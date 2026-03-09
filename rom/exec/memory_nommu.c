@@ -36,10 +36,10 @@ APTR nommu_AllocMem(IPTR byteSize, ULONG flags, struct TraceLocation *loc, struc
          * The requirements are OK if there's no bit in the
          * 'attributes' that isn't set in the 'mh->mh_Attributes'.
          */
-        if ((requirements & ~mh->mh_Attributes)
-                || mh->mh_Free < byteSize)
+        if ((requirements & ~mh->mh_Attributes) || mh->mh_Free < byteSize)
             continue;
 
+#ifdef HANDLE_MANAGED_MEM
         if (IsManagedMem(mh))
         {
             struct MemHeaderExt *mhe = (struct MemHeaderExt *)mh;
@@ -48,7 +48,8 @@ APTR nommu_AllocMem(IPTR byteSize, ULONG flags, struct TraceLocation *loc, struc
                 res = mhe->mhe_Alloc(mhe, byteSize, &flags);
         }
         else
-        {
+#endif
+		{
             res = stdAlloc(mh, mhac_GetSysCtx(mh, SysBase), byteSize, flags, loc, SysBase);
         }
         if (res)
@@ -72,6 +73,7 @@ APTR nommu_AllocAbs(APTR location, IPTR byteSize, struct ExecBase *SysBase)
     /* Loop over MemHeader structures */
     ForeachNode(&SysBase->MemList, mh)
     {
+#ifdef HANDLE_MANAGED_MEM
         if (IsManagedMem(mh))
         {
             struct MemHeaderExt *mhe = (struct MemHeaderExt *)mh;
@@ -88,7 +90,8 @@ APTR nommu_AllocAbs(APTR location, IPTR byteSize, struct ExecBase *SysBase)
             }
         }
         else
-            if (mh->mh_Lower <= location && mh->mh_Upper >= endlocation)
+#endif
+		if (mh->mh_Lower <= location && mh->mh_Upper >= endlocation)
                 break;
     }
     
@@ -211,6 +214,7 @@ void nommu_FreeMem(APTR memoryBlock, IPTR byteSize, struct TraceLocation *loc, s
 
     ForeachNode(&SysBase->MemList, mh)
     {
+#ifdef HANDLE_MANAGED_MEM
         if (IsManagedMem(mh))
         {
             struct MemHeaderExt *mhe = (struct MemHeaderExt *)mh;
@@ -224,7 +228,8 @@ void nommu_FreeMem(APTR memoryBlock, IPTR byteSize, struct TraceLocation *loc, s
 
         }
         else
-        {
+#endif
+		{
             /* Test if the memory belongs to this MemHeader. */
             if (mh->mh_Lower > memoryBlock || mh->mh_Upper < blockEnd)
                 continue;
@@ -275,7 +280,7 @@ IPTR nommu_AvailMem(ULONG attributes, struct ExecBase *SysBase)
             D(bug("[MM] Skipping (mh_Attributes = 0x%08X\n", mh->mh_Attributes);)
             continue;
         }
-
+#ifdef HANDLE_MANAGED_MEM
         if (IsManagedMem(mh))
         {
             struct MemHeaderExt *mhe = (struct MemHeaderExt *)mh;
@@ -295,7 +300,7 @@ IPTR nommu_AvailMem(ULONG attributes, struct ExecBase *SysBase)
                 continue;
             }
         }
-
+#endif
         /* Find largest chunk? */
         if (attributes & MEMF_LARGEST)
         {

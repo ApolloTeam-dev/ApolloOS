@@ -56,7 +56,7 @@
     /* 0-sized allocation results in returning NULL (API guarantee) */
     if(!memSize)
         return NULL;
-
+#ifdef HANDLE_MANAGED_MEM
     if (IsManagedMem(mhe))
     {
         ULONG poolrequirements = (ULONG)(IPTR)mhe->mhe_MemHeader.mh_First;
@@ -67,7 +67,8 @@
             return NULL;
     }
     else
-    {
+#endif
+	{
         IPTR *memory;
 
         if (poolHeader == NULL) return NULL;

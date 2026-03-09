@@ -61,13 +61,15 @@
     if(!memSize || !memory)
         return;
 
+#ifdef HANDLE_MANAGED_MEM
     if (IsManagedMem(mhe))
     {
         if (mhe->mhe_Free)
             mhe->mhe_Free(mhe, memory, memSize);
     }
     else
-    {
+#endif
+	{
         struct TraceLocation tp = CURRENT_LOCATION("FreePooled");
 
         InternalFreePooled(poolHeader, memory, memSize, &tp, SysBase);

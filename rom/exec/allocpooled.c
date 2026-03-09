@@ -75,6 +75,7 @@
     if(!memSize)
         return NULL;
 
+#ifdef HANDLE_MANAGED_MEM
     if (IsManagedMem(mhe))
     {
         ULONG poolrequirements = (ULONG)(IPTR)mhe->mhe_MemHeader.mh_First;
@@ -85,7 +86,8 @@
             return NULL;
     }
     else
-    {
+#endif
+	{
         struct TraceLocation tp = CURRENT_LOCATION("AllocPooled");
         struct Pool *pool = poolHeader + MEMHEADER_TOTAL;
 
