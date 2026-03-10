@@ -58,6 +58,7 @@
 {
     AROS_LIBFUNC_INIT
 
+#ifdef HANDLE_MANAGED_MEM
     if ((freeList->mh_Node.ln_Type == NT_MEMORY) && IsManagedMem(freeList))
     {
         struct MemHeaderExt *mhe = (struct MemHeaderExt *)freeList;
@@ -66,7 +67,8 @@
             mhe->mhe_Free(mhe, memoryBlock, byteSize);
     }
     else
-    {
+#endif
+	{
         struct TraceLocation tp = CURRENT_LOCATION("Deallocate");
 
         /* If there is no memory free nothing */

@@ -120,6 +120,7 @@ static APTR allocmem(struct MemHeader *mh, ULONG size, ULONG attributes)
 {
     APTR ret;
 
+#ifdef HANDLE_MANAGED_MEM
     if (IsManagedMem(mh))
     {
         struct MemHeaderExt *mhe = (struct MemHeaderExt *)mh;
@@ -130,7 +131,8 @@ static APTR allocmem(struct MemHeader *mh, ULONG size, ULONG attributes)
             ret = 0;
     }
     else
-    {
+#endif
+	{
         ret = stdAlloc(mh, NULL, size, attributes, NULL, NULL);
     }
 

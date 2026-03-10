@@ -61,12 +61,14 @@
     {
         struct TraceLocation tp = CURRENT_LOCATION("DeletePool");
 
+#ifdef HANDLE_MANAGED_MEM
         if (IsManagedMem(poolHeader))
         {
             /* Do nothing, everything is handled in FreeMemHeader */
         }
         else
-        {
+#endif
+		{
             struct Pool *pool = poolHeader + MEMHEADER_TOTAL;
             struct Node *p, *p2; /* Avoid casts */
 

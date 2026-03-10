@@ -13,6 +13,10 @@
 #include <exec/memory.h>
 #include <stddef.h>
 
+#define NO_CONSISTENCY_CHECKS 1
+#define HANDLE_MANAGED_MEM 0
+
+
 #if defined(__AROSEXEC_SMP__)
 #define MEM_LOCK        do { Forbid(); EXEC_SPINLOCK_LOCK(&PrivExecBase(SysBase)->MemListSpinLock, NULL, SPINLOCK_MODE_WRITE); } while(0)
 #define MEM_LOCK_SHARED do { Forbid(); EXEC_SPINLOCK_LOCK(&PrivExecBase(SysBase)->MemListSpinLock, NULL, SPINLOCK_MODE_READ); } while(0)

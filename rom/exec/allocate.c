@@ -84,6 +84,7 @@
 {
     AROS_LIBFUNC_INIT
 
+#ifdef HANDLE_MANAGED_MEM
     if ((freeList->mh_Node.ln_Type == NT_MEMORY) && IsManagedMem(freeList))
     {
         struct MemHeaderExt *mhe = (struct MemHeaderExt *)freeList;
@@ -94,7 +95,8 @@
             return NULL;
     }
     else
-    {
+#endif
+	{
         struct TraceLocation tp = CURRENT_LOCATION("Allocate");
         APTR res;
 
