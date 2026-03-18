@@ -19,6 +19,7 @@
 /.externalToolBuilders
 /autom4te.cache
 /.vscode
+/.vs
 
 # Apollo
 /ApolloROM.*
