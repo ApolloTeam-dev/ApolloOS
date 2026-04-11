@@ -83,7 +83,7 @@ APTR nommu_AllocAbs(APTR location, IPTR byteSize, struct ExecBase *SysBase)
             {
                 if (mhe->mhe_AllocAbs)
                 {
-                    APTR ret = mhe->mhe_AllocAbs(mhe, byteSize, location);
+                    ret = mhe->mhe_AllocAbs(mhe, byteSize, location);
 
                     MEM_UNLOCK;
 
