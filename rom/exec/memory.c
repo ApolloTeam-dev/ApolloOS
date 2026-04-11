@@ -33,7 +33,7 @@ struct MemHeader *FindMem(APTR address, struct ExecBase *SysBase)
 
     while (mh->mh_Node.ln_Succ != NULL)
     {
-#ifdef HANDLE_MANAGED_MEM
+#if HANDLE_MANAGED_MEM
         if (IsManagedMem(mh))
         {
             struct MemHeaderExt *mhe = (struct MemHeaderExt *)mh;
@@ -376,7 +376,8 @@ void mhac_PoolMemHeaderSetup(struct MemHeader * mh, struct ProtectedPool * pool)
 #define mhac_PoolMemHeaderGetCtx(a)     ((struct MemHeaderAllocatorCtx *)(a->mh_Node.ln_Name))
 #define mhac_PoolMemHeaderGetPool(a)    (mhac_PoolMemHeaderGetCtx(a)->mhac_Data1)
 
-#endif
+#endif // defined(NO_ALLOCATOR_CONTEXT)
+
 
 
 #ifdef NO_CONSISTENCY_CHECKS
@@ -540,12 +541,8 @@ APTR stdAllocReverse(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, I
 			struct MemChunk * pp = p1;
 
 			/* Return the last bytes. */
-			p1->mc_Next=p2;
 			mc = (struct MemChunk *)(MK_UBYTEPTR(p2)+p2->mc_Bytes-byteSize);
-
-			p1 = p1->mc_Next;
-			p1->mc_Next  = p2->mc_Next;
-			p1->mc_Bytes = p2->mc_Bytes-byteSize;
+			p2->mc_Bytes -= byteSize;
 
 			mhac_MemChunkCreated(p1, pp, mhac);
 		}
@@ -556,7 +553,7 @@ APTR stdAllocReverse(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, I
 		if (requirements & MEMF_CLEAR)
 			memset(mc, 0, byteSize);
 	}
-
+#if !defined(NO_ALLOCATOR_CONTEXT)
 	else
 	{
 		if (!mhac_IsIndexEmpty(mhac))
@@ -569,6 +566,7 @@ APTR stdAllocReverse(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, I
 			mc = stdAlloc(mh, mhac, size, requirements, tp, SysBase);
 		}
 	}
+#endif
 	return mc;
 }
 
@@ -588,7 +586,7 @@ APTR stdAlloc(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, IPTR siz
      * The check has to be done for the second time. Exec uses stdAlloc on memheader
      * passed upon startup. This is bad, very bad. So here a temporary hack :)
      */
-#ifdef HANDLE_MANAGED_MEM
+#if HANDLE_MANAGED_MEM
     if ((mh->mh_Node.ln_Type == NT_MEMORY) && IsManagedMem(mh))
     {
         struct MemHeaderExt *mhe = (struct MemHeaderExt *)mh;
@@ -654,7 +652,6 @@ APTR stdAlloc(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, IPTR siz
         /* Something found? */
         if (mc != NULL)
         {
-            /* Remember: if MEMF_REVERSE is set p1 and p2 are now invalid. */
             p1 = mc;
             p2 = p1->mc_Next;
 
@@ -688,6 +685,7 @@ APTR stdAlloc(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, IPTR siz
             if (requirements & MEMF_CLEAR)
                 memset(mc, 0, byteSize);
         }
+#if !defined(NO_ALLOCATOR_CONTEXT)
         else
         {
             if (!mhac_IsIndexEmpty(mhac))
@@ -700,7 +698,8 @@ APTR stdAlloc(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, IPTR siz
                 mc = stdAlloc(mh, mhac, size, requirements, tp, SysBase);
             }
         }
-        return mc;
+#endif
+		return mc;
     }
 }
 
@@ -716,7 +715,7 @@ void stdDealloc(struct MemHeader *freeList, struct MemHeaderAllocatorCtx *mhac, 
     struct MemChunk *p1, *p2, *p3;
     UBYTE *p4;
 
-#ifdef HANDLE_MANAGED_MEM
+#if HANDLE_MANAGED_MEM
     if ((freeList->mh_Node.ln_Type == NT_MEMORY) && IsManagedMem(freeList))
     {
         struct MemHeaderExt *mhe = (struct MemHeaderExt *)freeList;
@@ -774,7 +773,7 @@ void stdDealloc(struct MemHeader *freeList, struct MemHeaderAllocatorCtx *mhac, 
             /* Found a block with a higher address? */
             if (p2 >= p3)
             {
-#if !defined(NO_CONSISTENCY_CHECKS)
+// #if !defined(NO_CONSISTENCY_CHECKS)
                 /*
                 If the memory to be freed overlaps with the current
                 block something must be wrong.
@@ -788,7 +787,7 @@ void stdDealloc(struct MemHeader *freeList, struct MemHeaderAllocatorCtx *mhac, 
                     Alert(AN_FreeTwice);
                     return;
                 }
-#endif
+// #endif
                 /* End the loop with p2 non-zero */
                 break;
             }
@@ -889,7 +888,7 @@ APTR AllocMemHeader(IPTR size, ULONG flags, struct TraceLocation *loc, struct Ex
     {
         struct MemHeader *orig = FindMem(mh, SysBase);
 
-#ifdef HANDLE_MANAGED_MEM
+#if HANDLE_MANAGED_MEM
 		if (IsManagedMem(orig))
         {
             struct MemHeaderExt *mhe_orig = (struct MemHeaderExt *)orig;
@@ -964,7 +963,7 @@ void FreeMemHeader(APTR addr, struct TraceLocation *loc, struct ExecBase *SysBas
 
     IPTR size = (IPTR)mhe->mhe_MemHeader.mh_Upper - (IPTR)addr;
 
-#ifdef HANDLE_MANAGED_MEM
+#if HANDLE_MANAGED_MEM
     if (IsManagedMem(mhe))
     {
         if (mhe->mhe_DestroyPool)
