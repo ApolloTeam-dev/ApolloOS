@@ -82,53 +82,69 @@ void InternalPutMsg(struct MsgPort *port, struct Message *message, struct ExecBa
 
     D(bug("[EXEC] PutMsg: Port @ 0x%p, Msg @ 0x%p\n", port, message);)
 
-    Disable();
-#if defined(__AROSEXEC_SMP__)
-    EXEC_SPINLOCK_LOCK(&port->mp_SpinLock, NULL, SPINLOCK_MODE_WRITE);
-#endif
-    AddTail(&port->mp_MsgList, &message->mn_Node);
-    D(bug("[EXEC] PutMsg: Port MsgList->lh_TailPred =  0x%p\n", port->mp_MsgList.lh_TailPred);)
-#if defined(__AROSEXEC_SMP__)
-    EXEC_SPINLOCK_UNLOCK(&port->mp_SpinLock);
-#endif
-    Enable();
-
-    if (port->mp_SigTask)
+    /*
+     * Capture port fields while under Disable() so they remain consistent
+     * even if an interrupt causes the port owner to wake and modify/free
+     * the port before we get to Signal()/Cause().
+     */
     {
-	ASSERT_VALID_PTR(port->mp_SigTask);
+	APTR sigTask;
+	UBYTE action;
+	UBYTE sigBit;
 
-	/* And trigger the action. */
-	switch(port->mp_Flags & PF_ACTION)
-	{
-	    case PA_SIGNAL:
-	    	D(bug("[EXEC] PutMsg: PA_SIGNAL -> Task 0x%p, Signal %08x\n", port->mp_SigTask, (1 << port->mp_SigBit));)
+	Disable();
+#if defined(__AROSEXEC_SMP__)
+	EXEC_SPINLOCK_LOCK(&port->mp_SpinLock, NULL, SPINLOCK_MODE_WRITE);
+#endif
+	AddTail(&port->mp_MsgList, &message->mn_Node);
+	D(bug("[EXEC] PutMsg: Port MsgList->lh_TailPred =  0x%p\n", port->mp_MsgList.lh_TailPred);)
 
-		/* Send the signal */
-		Signal((struct Task *)port->mp_SigTask, (1 << port->mp_SigBit));
-		break;
-
-	    case PA_SOFTINT:
-	    	D(bug("[EXEC] PutMsg: PA_SOFTINT -> Int %s\n", ((struct Interrupt *)port->mp_SoftInt)->is_Node.ln_Name);)
-
-		/* Raise a software interrupt */
-		Cause((struct Interrupt *)port->mp_SoftInt);
-		break;
-
-	    case PA_IGNORE:
-		/* Do nothing. */
-		break;
-
-            case PA_CALL:
-                D(bug("[EXEC] PutMsg: PA_CALL -> Func @ 0x%p\n", port->mp_SigTask, port);)
+	sigTask = port->mp_SigTask;
+	action  = port->mp_Flags & PF_ACTION;
+	sigBit  = port->mp_SigBit;
 
 #if defined(__AROSEXEC_SMP__)
-                //TODO! - the called function must be SMP safe.
+	EXEC_SPINLOCK_UNLOCK(&port->mp_SpinLock);
 #endif
-                /* Call the function in mp_SigTask. */
-                AROS_UFC2NR(void, port->mp_SigTask,
-                    AROS_UFCA(struct MsgPort *,  port,    D0),
-                    AROS_UFCA(struct ExecBase *, SysBase, A6));
-                break;
+	Enable();
+
+	if (sigTask)
+	{
+	    ASSERT_VALID_PTR(sigTask);
+
+	    /* And trigger the action. */
+	    switch(action)
+	    {
+		case PA_SIGNAL:
+		    D(bug("[EXEC] PutMsg: PA_SIGNAL -> Task 0x%p, Signal %08x\n", sigTask, (1 << sigBit));)
+
+		    /* Send the signal */
+		    Signal((struct Task *)sigTask, (1 << sigBit));
+		    break;
+
+		case PA_SOFTINT:
+		    D(bug("[EXEC] PutMsg: PA_SOFTINT -> Int %s\n", ((struct Interrupt *)sigTask)->is_Node.ln_Name);)
+
+		    /* Raise a software interrupt */
+		    Cause((struct Interrupt *)sigTask);
+		    break;
+
+		case PA_IGNORE:
+		    /* Do nothing. */
+		    break;
+
+		case PA_CALL:
+		    D(bug("[EXEC] PutMsg: PA_CALL -> Func @ 0x%p, Port @ 0x%p\n", sigTask, port);)
+
+#if defined(__AROSEXEC_SMP__)
+		    //TODO! - the called function must be SMP safe.
+#endif
+		    /* Call the function in mp_SigTask. */
+		    AROS_UFC2NR(void, sigTask,
+			AROS_UFCA(struct MsgPort *,  port,    D0),
+			AROS_UFCA(struct ExecBase *, SysBase, A6));
+		    break;
+	    }
 	}
     }
 }

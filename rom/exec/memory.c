@@ -1037,6 +1037,7 @@ APTR InternalAllocPooled(APTR poolHeader, IPTR memSize, ULONG flags, struct Trac
     if (pool->pool.PoolMagic != POOL_MAGIC)
     {
         PoolManagerAlert(PME_ALLOC_INV_POOL, AT_DeadEnd, memSize, NULL, NULL, poolHeader);
+        return NULL;
     }
 
     if (pool->pool.Requirements & MEMF_SEM_PROTECTED)
@@ -1206,11 +1207,13 @@ void InternalFreePooled(APTR poolHeader, APTR memory, IPTR memSize, struct Trace
         if (pool->pool.PoolMagic != POOL_MAGIC)
         {
             PoolManagerAlert(PME_FREE_INV_POOL, AT_DeadEnd, memSize, memory, poolHeaderMH, NULL);
+            return;
         }
 
         if (poolHeaderMH != poolHeader)
         {
             PoolManagerAlert(PME_FREE_MXD_POOL, 0, memSize, memory, poolHeaderMH, poolHeader);
+            return;
         }
 
         if (pool->pool.Requirements & MEMF_SEM_PROTECTED)

@@ -334,11 +334,16 @@ struct ExecBase *PrepareExecBase(struct MemHeader *mh, struct TagItem *msg)
 	 */
 	opts = strcasestr(args, "mungwall");
 	if (opts)
-	    PrivExecBase(SysBase)->IntFlags = EXECF_MungWall;
+	{
+		if(!strcasestr(args, "nomungwall"))
+		{
+	    	PrivExecBase(SysBase)->IntFlags = EXECF_MungWall;
+		}
+	}
 
 	opts = strcasestr(args, "stacksnoop");
 	if (opts)
-	    PrivExecBase(SysBase)->IntFlags = EXECF_StackSnoop;
+	    PrivExecBase(SysBase)->IntFlags |= EXECF_StackSnoop;
 
 	/*
 	 * Parse system runtime debug flags.
@@ -372,7 +377,7 @@ struct ExecBase *PrepareExecBase(struct MemHeader *mh, struct TagItem *msg)
     PrivExecBase(SysBase)->ExecLockBase = ExecLock__PrepareBase(mh);
 #endif
 
-    D(bug("[Exec] %s: Preperation complete.\n"));
+    D(bug("[Exec] %s: Preparation complete.\n", __func__));
 
     return SysBase;
 }
