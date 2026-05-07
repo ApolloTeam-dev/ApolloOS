@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Sets up the ExecBase a bit. (Mostly clearing).

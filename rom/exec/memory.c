@@ -699,7 +699,7 @@ APTR stdAlloc(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, IPTR siz
             }
         }
 #endif
-		return mc;
+    		return mc;
     }
 }
 

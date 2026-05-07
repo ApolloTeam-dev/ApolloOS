@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2012, The AROS Development Team. All rights reserved.
     $Id$
 
     Allocate memory from a specific MemHeader.
@@ -83,7 +83,6 @@
 ******************************************************************************/
 {
     AROS_LIBFUNC_INIT
-
 #if HANDLE_MANAGED_MEM
     if ((freeList->mh_Node.ln_Type == NT_MEMORY) && IsManagedMem(freeList))
     {
