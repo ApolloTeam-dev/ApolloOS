@@ -25,6 +25,8 @@ APTR nommu_AllocMem(IPTR byteSize, ULONG flags, struct TraceLocation *loc, struc
     struct MemHeader *mh;
     ULONG requirements = flags & MEMF_PHYSICAL_MASK;
 
+	byteSize  = (byteSize + MEMCHUNK_TOTAL-1) & ~(MEMCHUNK_TOTAL-1);
+
     /* Protect memory list against other tasks */
     MEM_LOCK;
 
@@ -39,7 +41,7 @@ APTR nommu_AllocMem(IPTR byteSize, ULONG flags, struct TraceLocation *loc, struc
         if ((requirements & ~mh->mh_Attributes) || mh->mh_Free < byteSize)
             continue;
 
-#ifdef HANDLE_MANAGED_MEM
+#if HANDLE_MANAGED_MEM
         if (IsManagedMem(mh))
         {
             struct MemHeaderExt *mhe = (struct MemHeaderExt *)mh;
@@ -73,7 +75,7 @@ APTR nommu_AllocAbs(APTR location, IPTR byteSize, struct ExecBase *SysBase)
     /* Loop over MemHeader structures */
     ForeachNode(&SysBase->MemList, mh)
     {
-#ifdef HANDLE_MANAGED_MEM
+#if HANDLE_MANAGED_MEM
         if (IsManagedMem(mh))
         {
             struct MemHeaderExt *mhe = (struct MemHeaderExt *)mh;
@@ -81,7 +83,7 @@ APTR nommu_AllocAbs(APTR location, IPTR byteSize, struct ExecBase *SysBase)
             {
                 if (mhe->mhe_AllocAbs)
                 {
-                    APTR ret = mhe->mhe_AllocAbs(mhe, byteSize, location);
+                    ret = mhe->mhe_AllocAbs(mhe, byteSize, location);
 
                     MEM_UNLOCK;
 
@@ -214,7 +216,7 @@ void nommu_FreeMem(APTR memoryBlock, IPTR byteSize, struct TraceLocation *loc, s
 
     ForeachNode(&SysBase->MemList, mh)
     {
-#ifdef HANDLE_MANAGED_MEM
+#if HANDLE_MANAGED_MEM
         if (IsManagedMem(mh))
         {
             struct MemHeaderExt *mhe = (struct MemHeaderExt *)mh;
@@ -280,7 +282,7 @@ IPTR nommu_AvailMem(ULONG attributes, struct ExecBase *SysBase)
             D(bug("[MM] Skipping (mh_Attributes = 0x%08X\n", mh->mh_Attributes);)
             continue;
         }
-#ifdef HANDLE_MANAGED_MEM
+#if HANDLE_MANAGED_MEM
         if (IsManagedMem(mh))
         {
             struct MemHeaderExt *mhe = (struct MemHeaderExt *)mh;
@@ -327,7 +329,7 @@ IPTR nommu_AvailMem(ULONG attributes, struct ExecBase *SysBase)
                         /*  2. The end (+1) of the current MemChunk must be lower than the start of the next one. */
                 if (mc->mc_Next && ((UBYTE *)mc + mc->mc_Bytes >= (UBYTE *)mc->mc_Next))
                 {
-                    bug("[MM] Chunk allocator error in MemHeader 0x%p\n");
+                    bug("[MM] Chunk allocator error in MemHeader 0x%p\n", mh);
                     bug("[MM] Overlapping chunks 0x%p (%u bytes) and 0x%p (%u bytes)\n", mc, mc->mc_Bytes, mc->mc_Next, mc->mc_Next->mc_Bytes);
 
                     Alert(AN_MemoryInsane|AT_DeadEnd);

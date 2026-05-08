@@ -36,7 +36,7 @@ AROS_UFH3(IPTR, signal_hook,
     D(
         struct KernelBase *KernelBase = __kernelBase;
         int cpunum = KrnGetCPUNumber();
-        bug("[Exec] CPU%03d: Using IPI to do Signal(%p, %08x), SysBase=%p\n", cpunum, msg->target, msg->sigset, SysBase);
+        bug("[Exec] CPU%03d: Using IPI to do Signal(%p, %08x), SysBase=%p\n", cpunum, target, sigset, SysBase);
     );
     
     Signal(target, sigset);
@@ -203,7 +203,7 @@ AROS_UFH3(IPTR, signal_hook,
                 }
                 else
                 {
-                    (bug("[Exec] Signal: Raising Exception for 'running' Task on CPU %03u\n", IntETask(task->tc_UnionETask.tc_ETask)->iet_CpuNumber));
+                    D(bug("[Exec] Signal: Raising Exception for 'running' Task on CPU %03u\n", IntETask(task->tc_UnionETask.tc_ETask)->iet_CpuNumber));
                     KrnScheduleCPU(IntETask(task->tc_UnionETask.tc_ETask)->iet_CpuAffinity);
                 }
 #endif
@@ -236,7 +236,7 @@ AROS_UFH3(IPTR, signal_hook,
                 (!(PrivExecBase(SysBase)->IntFlags & EXECF_CPUAffinity) ||
                 (KrnCPUInMask(cpunum, IntETask(task->tc_UnionETask.tc_ETask)->iet_CpuAffinity))) &&
 #endif
-                (task->tc_Node.ln_Pri >= thisTask->tc_Node.ln_Pri))
+                (task->tc_Node.ln_Pri > thisTask->tc_Node.ln_Pri))
             {
                 /*
                     Yes. A taskswitch is necessary. Prepare one if possible.
