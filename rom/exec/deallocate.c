@@ -58,7 +58,7 @@
 {
     AROS_LIBFUNC_INIT
 
-#ifdef HANDLE_MANAGED_MEM
+#if HANDLE_MANAGED_MEM
     if ((freeList->mh_Node.ln_Type == NT_MEMORY) && IsManagedMem(freeList))
     {
         struct MemHeaderExt *mhe = (struct MemHeaderExt *)freeList;
