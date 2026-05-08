@@ -54,7 +54,10 @@
     ULONG len = 0;
     LONG  c;
 
-    buflen--;
+	if(!buflen)
+		return NULL;
+
+	buflen--;
 
     do
     {
