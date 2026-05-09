@@ -1,5 +1,5 @@
 /*
-    Copyright � 1995-2018, The AROS Development Team. All rights reserved.
+    Copyright © 1995-2018, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Enable() - Allow interrupts to occur after Disable().
@@ -10,7 +10,6 @@
 
 #include <exec/execbase.h>
 #include <aros/libcall.h>
-#include <aros/atomic.h>
 
 #include "exec_intern.h"
 
@@ -29,7 +28,7 @@
         struct ExecBase *, SysBase, 21, Exec)
 
 /*  FUNCTION
-        This function will allow interrupts to occur (*) after they have
+        This function will allow interrupts to occur after they have
         been disabled by Disable().
 
         Note that calls to Disable() nest, and for every call to
@@ -37,12 +36,8 @@
 
         ***** WARNING *****
 
-
         Using this function is considered very harmful, and it should only
         ever be used to protect data that could also be accessed in interrupts.
-
-        It is quite possible to either crash the system, or to prevent
-        normal activities (disk/port i/o) from occuring.
 
     INPUTS
         None.
@@ -53,16 +48,8 @@
     NOTES
         This function preserves all registers.
 
-        To prevent deadlocks calling Wait() in disabled state breaks
-        the disable - thus interrupts may happen again.
-
-        As the schedulers pre-emption is interrupt driven,
-        this function has the side effect of disabling
-        multitasking.
-
-        (*) On EXECSMP builds, Enable() only applies to the processor
-            it is called from. Data which needs to be protected from
-            parallel access will also require a spinlock.            
+        As the scheduler's pre-emption is interrupt driven,
+        this function has the side effect of disabling multitasking.
 
     EXAMPLE
         In most userspace code, you will not want to use this function.
@@ -84,49 +71,20 @@
 
     D(bug("[Exec] Enable()\n");)
 
-    IDNESTCOUNT_DEC;
+    /* Classic AmigaOS 1.2–3.1 Enable():
+     *  - IDNestCnt--
+     *  - If negative, INTENA = $C000 (enable all)
+     */
+    volatile UWORD *INTENA = (UWORD *)0xDFF09A;
 
-    D(bug("[Exec] Enable: IDNESTCOUNT = %d\n", IDNESTCOUNT_GET);)
+    SysBase->IDNestCnt--;
 
-    if (KernelBase)
+    D(bug("[Exec] Enable: IDNESTCOUNT = %d\n", SysBase->IDNestCnt);)
+
+    if ((BYTE)SysBase->IDNestCnt < 0)
     {
-        if (IDNESTCOUNT_GET < 0)
-        {
-            D(bug("[Exec] Enable: Enabling interrupts\n");)
-
-            /* The following stuff is not safe to call from within supervisor mode */
-            if (!KrnIsSuper())
-            {
-                KrnSti();
-                
-                /*
-                 * There's no dff09c like thing in x86 native which would allow
-                 * us to set delayed (mark it as pending but it gets triggered
-                 * only once interrupts are enabled again) software interrupt,
-                 * so we check it manually here in Enable(), similar to Permit().
-                 */
-                if (SysBase->SysFlags & SFF_SoftInt)
-                {
-                    /*
-                     * First we react on SFF_SoftInt by issuing KrnCause() call. This triggers
-                     * the complete interrupt processing code in kernel, which implies also
-                     * rescheduling if it becomes necessary.
-                     */
-                    D(bug("[Exec] Enable: causing softints\n");)
-                    KrnCause();
-                }
-
-                if ((TDNESTCOUNT_GET < 0) && FLAG_SCHEDSWITCH_ISSET)
-                {
-                    /*
-                     * If SFF_SoftInt hasn't been set, we have a chance that task switching
-                     * is enabled and pending. We need to trigger it here in such a case.
-                     */
-                    D(bug("[Exec] Enable: rescheduling\n");)
-                    KrnSchedule();
-                }
-            }
-        }
+        D(bug("[Exec] Enable: Enabling interrupts\n");)
+        *INTENA = 0xC000;
     }
 
     AROS_LIBFUNC_EXIT

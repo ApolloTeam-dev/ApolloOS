@@ -66,7 +66,6 @@ static void krnIRQwrapper(void *data1, void *data2)
             intNumber, interrupt);
 
     /* ------------------------------------------------------------
-     * Classic AmigaOS 1.2–3.1 behavior:
      * Kernel IRQs are NOT handled here.
      * ------------------------------------------------------------ */
     if (intNumber >= INTB_KERNEL) {
@@ -80,17 +79,11 @@ static void krnIRQwrapper(void *data1, void *data2)
 
     struct List *list = (struct List *)SysBase->IntVects[intNumber].iv_Data;
     volatile UWORD *INTENA = (UWORD *)0xDFF09A;
-    UWORD mask;
 
     /* ------------------------------------------------------------
-     * Disable()
-     * ------------------------------------------------------------
-     *  - Write INTENA = $4000 (clear + disable all interrupts)
-     *  - Increment IDNestCnt
-     *  - Does NOT modify CPU SR (unlike AROS)
+     * Disable() — classic Exec
      * ------------------------------------------------------------ */
-    *INTENA = 0x4000;
-    SysBase->IDNestCnt++;
+    Disable();
 
     /* ------------------------------------------------------------
      * Insert interrupt server into vector list
@@ -100,15 +93,12 @@ static void krnIRQwrapper(void *data1, void *data2)
     /* ------------------------------------------------------------
      * Enable the corresponding hardware interrupt
      * ------------------------------------------------------------ */
-    mask = 0x8000 | (1 << intNumber);
-    *INTENA = mask;
+    *INTENA = 0x8000 | (1 << intNumber);
 
     /* ------------------------------------------------------------
-     * Enable() — AmigaOS 1.2–3.1 behavior
+     * Enable() — classic Exec
      * ------------------------------------------------------------ */
-    SysBase->IDNestCnt--;
-    if ((BYTE)SysBase->IDNestCnt < 0)
-        *INTENA = 0xC000;
+    Enable();
 
     AROS_LIBFUNC_EXIT
 } /* AddIntServer */

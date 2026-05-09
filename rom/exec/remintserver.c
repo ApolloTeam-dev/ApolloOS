@@ -60,16 +60,10 @@
         return;
     }
 
-    volatile UWORD *INTENA = (UWORD *)0xDFF09A;
-
     /* ------------------------------------------------------------
-     * Disable() — same logic as in AddIntServer()
-     *  - Write INTENA = $4000 (clear + disable all interrupts)
-     *  - Increment IDNestCnt
-     *  - Does NOT modify CPU SR
+     * Disable() — classic Exec
      * ------------------------------------------------------------ */
-    *INTENA = 0x4000;
-    SysBase->IDNestCnt++;
+    Disable();
 
     /* ------------------------------------------------------------
      * Remove the interrupt server from the list
@@ -77,13 +71,9 @@
     Remove(&interrupt->is_Node);
 
     /* ------------------------------------------------------------
-     * Enable() — same logic as in AddIntServer()
-     *  - Decrement IDNestCnt
-     *  - If it becomes negative, write INTENA = $C000 (enable all)
+     * Enable() — classic Exec
      * ------------------------------------------------------------ */
-    SysBase->IDNestCnt--;
-    if ((BYTE)SysBase->IDNestCnt < 0)
-        *INTENA = 0xC000;
+    Enable();
 
     AROS_LIBFUNC_EXIT
 } /* RemIntServer */
