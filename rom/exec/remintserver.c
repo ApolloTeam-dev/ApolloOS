@@ -21,14 +21,14 @@
 
     NAME */
 
-    AROS_LH2(void, RemIntServer,
+	AROS_LH2(void, RemIntServer,
 
 /*  SYNOPSIS */
-    AROS_LHA(ULONG,              intNumber, D0),
-    AROS_LHA(struct Interrupt *, interrupt, A1),
+	AROS_LHA(ULONG,              intNumber, D0),
+	AROS_LHA(struct Interrupt *, interrupt, A1),
 
 /*  LOCATION */
-    struct ExecBase *, SysBase, 29, Exec)
+	struct ExecBase *, SysBase, 29, Exec)
 
 /*  FUNCTION
 
@@ -50,11 +50,8 @@
 {
     AROS_LIBFUNC_INIT
 
-    ExecLog(SysBase, EXECDEBUGF_EXCEPTHANDLER,
-            "RemIntServer: Int %d, Interrupt %p\n",
-            intNumber, interrupt);
+    ExecLog(SysBase, EXECDEBUGF_EXCEPTHANDLER, "RemIntServer: Int %d, Interrupt %p\n", intNumber, interrupt);
 
-    /* Kernel IRQs still go through the AROS kernel handler path */
     if (intNumber >= INTB_KERNEL) {
         KrnRemIRQHandler(interrupt->is_Node.ln_Succ);
         return;

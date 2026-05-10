@@ -10,6 +10,7 @@
 
 #include <exec/execbase.h>
 #include <aros/libcall.h>
+#include <aros/atomic.h>
 
 #include "exec_intern.h"
 
@@ -28,13 +29,16 @@
         struct ExecBase *, SysBase, 21, Exec)
 
 /*  FUNCTION
-        This function will allow interrupts to occur after they have
+        This function will allow interrupts to occur (*) after they have
         been disabled by Disable().
 
         Note that calls to Disable() nest, and for every call to
         Disable() you need a matching call to Enable().
 
         ***** WARNING *****
+
+        It is quite possible to either crash the system, or to prevent
+        normal activities (disk/port i/o) from occuring.
 
         Using this function is considered very harmful, and it should only
         ever be used to protect data that could also be accessed in interrupts.
@@ -48,8 +52,16 @@
     NOTES
         This function preserves all registers.
 
-        As the scheduler's pre-emption is interrupt driven,
-        this function has the side effect of disabling multitasking.
+        To prevent deadlocks calling Wait() in disabled state breaks
+        the disable - thus interrupts may happen again.
+
+        As the schedulers pre-emption is interrupt driven,
+        this function has the side effect of disabling
+        multitasking.
+
+        (*) On EXECSMP builds, Enable() only applies to the processor
+            it is called from. Data which needs to be protected from
+            parallel access will also require a spinlock.
 
     EXAMPLE
         In most userspace code, you will not want to use this function.
@@ -71,7 +83,7 @@
 
     D(bug("[Exec] Enable()\n");)
 
-    /* Classic AmigaOS 1.2–3.1 Enable():
+    /* Classic Enable():
      *  - IDNestCnt--
      *  - If negative, INTENA = $C000 (enable all)
      */
