@@ -205,7 +205,7 @@ static BSTR ConvertCSTR(const UBYTE *name)
     if (len > 255)
         len = 255;
     bname[0] = len;
-    strcpy(bname + 1, name);
+    CopyMem(name, bname + 1, len);
     for (i = 0; i < len; i++) {
         if (bname[1 + i] == 13 || bname[1 + i] == 10)
             bname[i + 1] = ' ';
