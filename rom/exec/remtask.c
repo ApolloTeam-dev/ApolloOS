@@ -95,10 +95,15 @@
             /*
              * Remove() here, before freeing the MemEntry list. Because
              * the MemEntry list might contain the task struct itself!
+             *
+             * Use Disable() to protect against interrupt-level Signal()
+             * which can move this task between lists concurrently.
             */
 #if !defined(EXEC_REMTASK_NEEDSSWITCH)
+            Disable();
             task->tc_State = TS_REMOVED;
             Remove(&task->tc_Node);
+            Enable();
 #else
             krnSysCallReschedTask(task, TS_REMOVED);
 #endif

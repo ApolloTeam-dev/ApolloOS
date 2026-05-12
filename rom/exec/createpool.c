@@ -139,7 +139,7 @@
          * If the pool is in managed memory, don't bother any further setup. The
          * pool should do the rest self.
          */
-#ifdef HANDLE_MANAGED_MEM
+#if HANDLE_MANAGED_MEM
         if (IsManagedMem(firstPuddle))
         {
             D(bug("Managed pool\n");)
