@@ -1,5 +1,5 @@
 /*
-    Copyright ï¿½ 1995-2018, The AROS Development Team. All rights reserved.
+    Copyright © 1995-2018, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: CIA timer.device
@@ -264,10 +264,7 @@ AROS_INTH1(cia_vbint, struct TimerBase *, TimerBase)
 		return 0;
 	inc64(&TimerBase->tb_vb_count);
 
-	/* Disable(); */
-	asm volatile ("move.w #0x4000,0xdff09a\n");
-	/* Disable() / Enable() here interfere with demos using AddInterServer called from Disable() */
-	/* replaced by disabling / enabling Interrupt using INTENA */
+	Disable();
     	ForeachNodeSafe(&TimerBase->tb_Lists[UNIT_VBLANK], tr, next) {
 	    	if (cmp64(&TimerBase->tb_vb_count, &tr->tr_time)) {
 	           	Remove((struct Node *)tr);
@@ -283,8 +280,7 @@ AROS_INTH1(cia_vbint, struct TimerBase *, TimerBase)
 	if (IsListEmpty(&TimerBase->tb_Lists[UNIT_VBLANK])) {
 		TimerBase->tb_vblank_on = FALSE;
 	}
-	/* Enable(); */
-	asm volatile ("move.w #0xc000,0xdff09a\n");
+	Enable();
 	
 	return 0;	
 
