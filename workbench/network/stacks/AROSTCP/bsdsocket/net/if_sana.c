@@ -153,8 +153,7 @@ sana_deinit(void)
       CloseDevice((struct IORequest*)req);
       DeleteIOSana2Req(req);
     } else {
-      __log(LOG_ERR, "sana_deinit(): Couldn't close device %s\n",
-	  ssc->ss_name);
+      DSANA(__log(LOG_ERR, "sana_deinit(): Couldn't close device %s\n", ssc->ss_name);)
     }
   }
 
@@ -183,8 +182,7 @@ sana_poll(void)
     if (io->ioip_dispatch) {
       (*io->ioip_dispatch)(io->ioip_if, io);
      } else {
-       __log(LOG_ERR, "No dispatch function in request for %s\n",
-	   io->ioip_if->ss_name);
+       DSANA(__log(LOG_ERR, "No dispatch function in request for %s\n",	   io->ioip_if->ss_name);)
      }
   }
 
@@ -304,7 +302,7 @@ iface_make(struct ssconfig *ifc)
 	/* Allocate the request for opening the device */
 	if ((req = CreateIOSana2Req(NULL)) == NULL) 
 	{
-		__log(LOG_ERR, "iface_find(): CreateIOSana2Req failed\n");
+		DSANA(__log(LOG_ERR, "iface_find(): CreateIOSana2Req failed\n"));
 	}
 	else
 	{
@@ -323,7 +321,7 @@ iface_make(struct ssconfig *ifc)
   
 			if (!ssc)
 			{
-				__log(LOG_ERR, "iface_find: out of memory\n");
+				DSANA((LOG_ERR, "iface_find: out of memory\n");)
 			}
 			else
 			{
@@ -391,7 +389,7 @@ D(bug("[AROSTCP] if_sana.c: iface_make: IP set to 0.0.0.0\n"));
 		  
 					if (!ssc)
 					{
-						__log(LOG_ERR, "iface_find: out of memory\n");
+						DSANA(__log(LOG_ERR, "iface_find: out of memory\n"));
 					}
 					else
 					{
@@ -704,7 +702,7 @@ sana_send_read(struct sana_softc *ssc, WORD count, ULONG type, ULONG mtu,
  no_resources:
   if (req)
     AddHead((struct List*)&ssc->ss_freereq, (struct Node*)req);
-  __log(LOG_ERR, "sana_send_read: could not queue enough read requests\n");
+  DSANA(__log(LOG_ERR, "sana_send_read: could not queue enough read requests\n"));
   return i;
 }
 
@@ -779,7 +777,7 @@ D(bug("[ATCP-SANA] sana_up('%s%d')\n", ssc->ss_if.if_name, ssc->ss_if.if_unit));
       sana2perror("S2_ONLINE", req);
       gui_set_interface_state(&ssc->ss_if, MIAMIPANELV_AddInterface_State_Offline);
     } else {
-      __log(LOG_NOTICE, "%s%d is now online.", ssc->ss_name, ssc->ss_if.if_unit);
+      //__log(LOG_NOTICE, "%s%d is now online.", ssc->ss_name, ssc->ss_if.if_unit);
       sana_restore(ssc);
     }
     DeleteIOSana2Req(req);
@@ -842,7 +840,7 @@ sana_down(struct sana_softc *ssc)
   } else
     success = TRUE;
   if (success) {
-    __log(LOG_NOTICE, "%s%d is now offline.", ssc->ss_name, ssc->ss_if.if_unit);
+    DSANA(__log(LOG_NOTICE, "%s%d is now offline.", ssc->ss_name, ssc->ss_if.if_unit);) 
     gui_set_interface_state(&ssc->ss_if, MIAMIPANELV_AddInterface_State_Offline);
   } else
     gui_set_interface_state(&ssc->ss_if, MIAMIPANELV_AddInterface_State_Online);
@@ -917,7 +915,7 @@ sana_read(struct sana_softc *ssc, struct IOIPReq *req,
       splx(s);
       return m;
     }
-    __log(LOG_ERR, "sana_read (%s): not enough mbufs\n", ssc->ss_name);
+    DSANA(__log(LOG_ERR, "sana_read (%s): not enough mbufs\n", ssc->ss_name);)
   } 
 
   /* do not resend, free used resources */
@@ -997,7 +995,7 @@ sana_online(struct sana_softc *ssc, struct IOIPReq *req)
     ssc->ss_eventsent--;
     req->ioip_dispatch = NULL;
     AddHead((struct List*)&ssc->ss_freereq, (struct Node*)req);
-    __log(LOG_NOTICE, "%s is online again.", ssc->ss_name);
+    DSANA(__log(LOG_NOTICE, "%s is online again.", ssc->ss_name);)
     sana_restore(ssc);
     return;
   }
@@ -1155,8 +1153,7 @@ sana_output(struct ifnet *ifp, struct mbuf *m0,
 #endif
 
   default: 
-    __log(LOG_ERR, "%s%ld: can't handle af%ld\n",
-	ssc->ss_if.if_name, ssc->ss_if.if_unit, dst->sa_family);
+    DSANA(__log(LOG_ERR, "%s%ld: can't handle af%ld\n",	ssc->ss_if.if_name, ssc->ss_if.if_unit, dst->sa_family));
     error = EAFNOSUPPORT; 
     goto bad; 
   }
@@ -1234,22 +1231,22 @@ static int sana_query(struct ifnet *ifn, struct TagItem *tag)
 		*((ULONG *)tag->ti_Data) = ssc->ss_hwtype;
 		break;
         case IFQ_NumReadRequests:
-		__log(LOG_CRIT, "IFQ_NumReadRequests is not implemented");
+		DSANA(__log(LOG_CRIT, "IFQ_NumReadRequests is not implemented"));
 		return -1;
 /*		*((LONG *)tag->ti_Data) = *** TODO ***
 		break;*/
 	case IFQ_MaxReadRequests:
-		__log(LOG_CRIT, "IFQ_MaxReadRequests is not implemented");
+		DSANA(__log(LOG_CRIT, "IFQ_MaxReadRequests is not implemented"));
 		return -1;
 /*		*((LONG *)tag->ti_Data) =
 		break;*/
 	case IFQ_NumWriteRequests:
-		__log(LOG_CRIT, "IFQ_NumWriteRequests is not implemented");
+		DSANA(__log(LOG_CRIT, "IFQ_NumWriteRequests is not implemented"));
 		return -1;
 /*		*((LONG *)tag->ti_Data) =
 		break;*/
 	case IFQ_MaxWriteRequests:
-		__log(LOG_CRIT, "IFQ_MaxWriteRequests is not implemented");
+		DSANA(__log(LOG_CRIT, "IFQ_MaxWriteRequests is not implemented"));
 		return -1;
 /*		*((LONG *)tag->ti_Data) =
 		break;*/
@@ -1257,17 +1254,17 @@ static int sana_query(struct ifnet *ifn, struct TagItem *tag)
 		*((LONG *)tag->ti_Data) = debug_sana;
 		break;
   	case IFQ_GetSANA2CopyStats:
-		__log(LOG_CRIT, "IFQ_GetSANA2CopyStats is not implemented");
+		DSANA(__log(LOG_CRIT, "IFQ_GetSANA2CopyStats is not implemented"));
 		return -1;
 /*	        (struct Sana2CopyStats *)tag->ti_Data
 		break;*/
 	case IFQ_NumReadRequestsPending:
-		__log(LOG_CRIT, "IFQ_NumReadRequestsPending is not implemented");
+		DSANA(__log(LOG_CRIT, "IFQ_NumReadRequestsPending is not implemented"));
 		return -1;
 /*		*((LONG *)tag->ti_Data =
 		break;*/
 	case IFQ_NumWriteRequestsPending:
-		__log(LOG_CRIT, "IFQ_NumWriteRequestsPending is not implemented");
+		DSANA(__log(LOG_CRIT, "IFQ_NumWriteRequestsPending is not implemented"));
 		return -1;
 /*		*((LONG *)tag->ti_Data =
 		break;*/
