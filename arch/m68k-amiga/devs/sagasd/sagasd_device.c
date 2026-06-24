@@ -236,9 +236,9 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
             default:
                     if (i >= 8 && i < 36)
                     {
+                        if (sdu->sdu_SDCmd.unitnumber == 0) val = "Apollo  SD-Card Slot #0     "[i - 8];
                         if (sdu->sdu_SDCmd.unitnumber == 1) val = "Apollo  SD-Card Slot #1     "[i - 8];
                         if (sdu->sdu_SDCmd.unitnumber == 2) val = "Apollo  SD-Card Slot #2     "[i - 8];
-                        if (sdu->sdu_SDCmd.unitnumber == 3) val = "Apollo  SD-Card Slot #3     "[i - 8];
                     } else {
                         if (i >= 36 && i < 44)
                         {
@@ -365,7 +365,7 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
         data[11] = (sdc->info.block_size >> 0) & 0xff;
         switch (((UWORD)scsi->scsi_Command[2] << 8) | scsi->scsi_Command[3]) {
         case 0x0300: // Format Device Mode
-            for (i = 0; i < scsi->scsi_Length - 12; i++) {
+            for (i = 0; i + 12 < scsi->scsi_Length; i++) {
                 UBYTE val;
 
                 switch (i) {
@@ -409,7 +409,7 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
             err = 0;
             break;
         case 0x0400: // Rigid Drive Geometry
-            for (i = 0; i < scsi->scsi_Length - 12; i++) {
+            for (i = 0; i + 12 < scsi->scsi_Length; i++) {
                 UBYTE val;
 
                 switch (i) {
@@ -593,7 +593,7 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
             sprintf(message,"Inserted SD-Card in Slot#%d contains a RDB Boot Record\n"
                 "Only FAT File System is supported for hot-swap Disks\n"
                 "For RDB Disks with OFS, FFS, SFS or PFS File Systems\n"
-                "Please Reboot ApolloOS with Disk inserted to Mount", sdu->sdu_SDCmd.unitnumber);
+                "Please Reboot ApolloOS with Disk inserted to Mount", sdu->sdu_SDCmd.unitnumber+1);
             choices = "Reboot|Continue";
 
             struct IntuitionBase *IntuitionBase;
@@ -625,7 +625,7 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
             sprintf(message,"Inserted SD-Card in Slot#%d contains a MBR Boot Record\n"
                 "But the FAT File System is not readable/initialised\n"
                 "Please use HDToolBox to create one fullsize FAT partition\n"
-                "After that use Format to initialize the FAT Partition", sdu->sdu_SDCmd.unitnumber);
+                "After that use Format to initialize the FAT Partition", sdu->sdu_SDCmd.unitnumber+1);
             choices = "Continue";
 
             struct IntuitionBase *IntuitionBase;
@@ -746,10 +746,12 @@ static void SAGASD_IOTask(struct Library *SysBase)
     ULONG sigset;
     struct Message status;
     BOOL present;
-    BOOL sdpin = FALSE;
-    ULONG detectcounter = 0;
 
-    if (sdu->sdu_SDCmd.unitnumber > 0) sdpin = TRUE;           //hardware pin enable for SD-Cards Slots #1 and higher
+    BOOL sdpin = TRUE;
+
+    //sdpin = apolloreadbios(APOLLO_SDHWPIN);
+
+    ULONG detectcounter = 0;
 
     debug("Starting SAGASD_IOTask");
 
@@ -778,24 +780,30 @@ static void SAGASD_IOTask(struct Library *SysBase)
     sdu->sdu_MsgPort = status.mn_ReplyPort;
 
     /* Update status for the boot node */
- 
-    present = sdcmd_sw_detect_full(&sdu->sdu_SDCmd);
+    if (sdpin)
+    {
+        present = sdcmd_hw_detect(&sdu->sdu_SDCmd);                    
+    } else {
+        Forbid();
+        present = sdcmd_sw_detect_full(&sdu->sdu_SDCmd);        // In sdu_Present == FALSE mode we need a full software detect
+        Permit();
+    }
     sdu->sdu_ChangeNum++;
     if (present)
     {
-        //Forbid();
+        if (sdpin) present = sdcmd_sw_detect_full(&sdu->sdu_SDCmd);
+        Forbid();
         sdu->sdu_Present = TRUE;
-        
         sdu->sdu_Valid = present;
-        debug("\t sdu_Valid: %s", sdu->sdu_Valid ? "TRUE" : "FALSE");
-        debug("\t Blocks: %ld", sdu->sdu_SDCmd.info.blocks);
-        //Permit();
+        Permit();
     } else {
-        //Forbid();
+        Forbid();
         sdu->sdu_Present = FALSE;
         sdu->sdu_Valid = FALSE;
-        //Permit();
+        Permit();
     }
+    debug("\t sdu_Valid: %s", sdu->sdu_Valid ? "TRUE" : "FALSE");
+    debug("\t Blocks: %ld", sdu->sdu_SDCmd.info.blocks);
     
     /* Send the 'I'm Ready' message */
     //debug("sdu_MsgPort=%p", sdu->sdu_MsgPort);
@@ -807,21 +815,17 @@ static void SAGASD_IOTask(struct Library *SysBase)
         WaitPort(status.mn_ReplyPort);
         GetMsg(status.mn_ReplyPort);
     }
-    //debug("");
 
     if (status.mn_Length)
     {
-        /* There was an error... */
         DeleteMsgPort(mport);
-		//debug("");
         return;
     }
 
-    //debug("");
     mport = sdu->sdu_MsgPort;
-       
     sigset = (1 << tport->mp_SigBit) | (1 << mport->mp_SigBit);
 
+    // SAGA-SD LOOP =============================================================================================================
     for (;;)
     {
         struct IORequest *io;
@@ -833,10 +837,10 @@ static void SAGASD_IOTask(struct Library *SysBase)
             ULONG sigs;
             struct Interrupt *io_int;
 
-            /* Wait up to IO_TIMINGLOOP_MICROSEC for a IO message. If none, then re-check SD if counter is reached */
+            /* Wait up to IO_TIMINGLOOP_USEC for a IO message. If none, then re-check SD if counter is reached */
             treq->tr_node.io_Command = TR_ADDREQUEST;
             treq->tr_time.tv_secs = 0;
-            treq->tr_time.tv_micro = IO_TIMINGLOOP_MSEC;
+            treq->tr_time.tv_micro = IO_TIMINGLOOP_USEC;
             SendIO((struct IORequest *)treq);
 
             /* Wait on either the MsgPort, or the timer */
@@ -852,77 +856,66 @@ static void SAGASD_IOTask(struct Library *SysBase)
                 io = NULL;
 
                if(detectcounter++ == 10)
-                {
+               {    
                     if (!sdu->sdu_Present)
                     {
-                        present = sdcmd_hw_detect(&sdu->sdu_SDCmd);                     // First we try hw detect
-                        if(present)                                 
+                        if (sdpin)
                         {
-                            sdpin = TRUE;                                               // If hw detect reports TRUE, so we know now that SD pin works   
-                            if (sdu->sdu_SDCmd.unitnumber == 2) debug("SD-Card Quick HW Detection: unit = %d | sdu_Present = %s | detect = %s",
-                            sdu->sdu_SDCmd.unitnumber, sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
-                            present = sdcmd_sw_detect_full(&sdu->sdu_SDCmd);                                          
+                            present = sdcmd_hw_detect(&sdu->sdu_SDCmd);                    
                         } else {
-                            if (!sdpin)
-                            {
-                                present = sdcmd_sw_detect_full(&sdu->sdu_SDCmd);            // If hw detect reports FALSE we have to do a second sw detect for V4 without SD pin
-                                if (sdu->sdu_SDCmd.unitnumber == 2) debug("SD-Card Full  SW Detection: unit = %d | sdu_Present = %s | detect = %s",
-                                sdu->sdu_SDCmd.unitnumber, sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
-                            }
+                            Forbid();
+                            present = sdcmd_sw_detect_full(&sdu->sdu_SDCmd);        // In sdu_Present == FALSE mode we need a full software detect
+                            Permit();
                         }
 
-                        if (present)                                        // SD-Card is Inserted
+                        if (present)                                 
                         {
-                            //Forbid();
+                            // SD-Card is Inserted
+                            present = sdcmd_sw_detect_full(&sdu->sdu_SDCmd);
+                            Forbid();
                             sdu->sdu_Present = TRUE;
                             sdu->sdu_ChangeNum++;
-                            sdu->sdu_Valid = TRUE;
-                            //debug("\t sdu_Valid: %s", sdu->sdu_Valid ? "TRUE" : "FALSE");
-                            //debug("\t Blocks: %ld", sdu->sdu_SDCmd.info.blocks);
+                            sdu->sdu_Valid = present;
+                            debug("SD-Card Change Detection: unit = %d | Detect Mode = %s | sdu_Present = %s | detect = %s", sdu->sdu_SDCmd.unitnumber, sdpin ? "HW":"SW", sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
+                            debug("\t sdu_Valid: %s", sdu->sdu_Valid ? "TRUE" : "FALSE");
+                            debug("\t Blocks: %ld", sdu->sdu_SDCmd.info.blocks);
 
                             for (int i=sdu->sdu_AddChangeListItems; i>0; i--)
                             {
                                 if (sdu->sdu_AddChangeList[i])
                                 {
                                     io_int = (struct Interrupt*)sdu->sdu_AddChangeList[i];
-                                    
-                                    debug("SD-Card INSERT = Calling sdu->sdu_AddChangeList[%d] (%x) from %s for %s", i,
-                                        sdu->sdu_AddChangeList[i], (char*)io_int->is_Node.ln_Name, sdu->sdu_Name);
-                                    
+                                    debug("SD-Card INSERT = Calling sdu->sdu_AddChangeList[%d] (%x) from %s for %s", i, sdu->sdu_AddChangeList[i], (char*)io_int->is_Node.ln_Name, sdu->sdu_Name);
                                     Cause((struct Interrupt *)(sdu->sdu_AddChangeList[i]));
-
                                 }
                             }
-                            //Permit();
+                            Permit();
                         }
                     } else {
                         if (sdpin)
                         {
-                            present = sdcmd_hw_detect(&sdu->sdu_SDCmd);
-                            if (sdu->sdu_SDCmd.unitnumber == 2) debug("SD-Card Quick HW Detection: unit = %d | sdu_Present = %s | detect = %s",
-                            sdu->sdu_SDCmd.unitnumber, sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
+                            present = sdcmd_hw_detect(&sdu->sdu_SDCmd);                    
                         } else {
-                            present = sdcmd_sw_detect_quick(&sdu->sdu_SDCmd);           // We can do a "light" detect when in sdu_Present mode
-                            if (sdu->sdu_SDCmd.unitnumber == 2) debug("SD-Card Quick SW Detection: unit = %d | sdu_Present = %s | detect = %s",
-                            sdu->sdu_SDCmd.unitnumber, sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
+                            Forbid();
+                            present = sdcmd_sw_detect_quick(&sdu->sdu_SDCmd);        // In sdu_Present == TRUE mode we can do a quick software detect
+                            Permit();
                         }
-                        
 
-
-                        if (!present)                                       // SD-Card is Removed
+                        if (!present)                                       
                         {
-                            //Forbid();
+                            // SD-Card is Removed
+                            Forbid();
                             sdu->sdu_Present = FALSE;
                             sdu->sdu_Valid = FALSE;
-                            
+                            debug("SD-Card Change Detection: unit = %d | Detect Mode = %s | sdu_Present = %s | detect = %s", sdu->sdu_SDCmd.unitnumber, sdpin ? "HW":"SW", sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
+
                             for (int i=sdu->sdu_AddChangeListItems; i>0; i--)
                             {
                                 if (sdu->sdu_AddChangeList[i])
                                 {
                                     io_int = (struct Interrupt*)sdu->sdu_AddChangeList[i];
                                     
-                                    debug("SD-Card EJECT = Calling sdu->sdu_AddChangeList[%d] (%x) from %s for %s", i,
-                                        sdu->sdu_AddChangeList[i], (char*)io_int->is_Node.ln_Name, sdu->sdu_Name);
+                                    debug("SD-Card EJECT = Calling sdu->sdu_AddChangeList[%d] (%x) from %s for %s", i, sdu->sdu_AddChangeList[i], (char*)io_int->is_Node.ln_Name, sdu->sdu_Name);
                                     
                                     Cause((struct Interrupt *)(sdu->sdu_AddChangeList[i]));
 
@@ -934,10 +927,9 @@ static void SAGASD_IOTask(struct Library *SysBase)
                                     } 
                                 }
                             }
-                            //Permit(); 
+                            Permit(); 
                         }
                     }
-
                     detectcounter = 0;
                 }
             }
@@ -984,7 +976,6 @@ AROS_LH1(void, BeginIO, AROS_LHA(struct IORequest *, io, A1), struct SAGASDBase 
             case TD_GETDRIVETYPE:
             case TD_GETGEOMETRY:
             case TD_REMCHANGEINT:
-            case TD_ADDCHANGEINT:
             case TD_PROTSTATUS:
             case TD_CHANGENUM:
             
@@ -1059,7 +1050,9 @@ static void SAGASD_BootNode(struct SAGASDBase *SAGASDBase, struct Library *Expan
     devnode = MakeDosNode(pp);
 
     if (devnode)
-   	AddBootNode(pp[DE_BOOTPRI + 4], 0 & ADNF_STARTPROC, devnode, NULL);
+        /* flags = 0: do not ADNF_STARTPROC. The handler is started on demand
+         * via the DOSTYPE/filesystem, not auto-launched at boot. */
+        AddBootNode(pp[DE_BOOTPRI + 4], 0, devnode, NULL);
 }
 
 #define PUSH(task, type, value) do {\
@@ -1078,28 +1071,21 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
 
     switch (id)
     {
-        case 0:                                             // SPI#1 | CS=0 | Micro-SD-Card slot (backside)
+        case 0:                                             // SPI#1 | CS=0 | Micro-SD-Card slot #0 (Backside)
         sdu->sdu_SDCmd.iobase = SAGA_SD_BASE_SPI1;
         sdu->sdu_SDCmd.cs = SAGA_SD_CTL_NCS;   
-        sdu->sdu_SDCmd.unitnumber = id+1;    
+        sdu->sdu_SDCmd.unitnumber = id;    
         sdu->sdu_Enabled = TRUE;
         break;
         
-        case 1:                                             // SPI#2 | CS=0 | SD-Card slot 1 (Expansion Port)
+        case 1:                                             // SPI#2 | CS=0 | SD-Card Slot #1 (Expansion Port)
         sdu->sdu_SDCmd.iobase  = SAGA_SD_BASE_SPI2;
         sdu->sdu_SDCmd.cs = SAGA_CS_DRIVE0; 
-        sdu->sdu_SDCmd.unitnumber = id+1; 
+        sdu->sdu_SDCmd.unitnumber = id; 
         sdu->sdu_Enabled = TRUE;
         break;
-        
-        //case 2:                                             // SPI#2 | CS=1 | SD-Card slot 1 (Expansion Port)
-        //sdu->sdu_SDCmd.iobase  = SAGA_SD_BASE_SPI2;
-        //sdu->sdu_SDCmd.cs = SAGA_CS_DRIVE1; 
-        //sdu->sdu_SDCmd.unitnumber = id+1; 
-        //sdu->sdu_Enabled = TRUE;
-        //break;
 
-    default:
+        default:
         sdu->sdu_Enabled = FALSE;
     }
 
@@ -1189,22 +1175,22 @@ static int GM_UNIQUENAME(init)(struct SAGASDBase * SAGASDBase)
 
 static int GM_UNIQUENAME(expunge)(struct SAGASDBase * SAGASDBase)
 {
-    struct Library *SysBase = SAGASDBase->sd_ExecBase;
-    struct IORequest io = {};
-    int i;
+    /*
+     * This device installs boot nodes and runs one IO task per unit, all of
+     * which are referenced for the whole lifetime of the system. It therefore
+     * must never be expunged: returning FALSE tells genmodule to refuse the
+     * expunge and keep the device resident.
+     *
+     * NOTE: the previous implementation sent io_Command = ~0 (== 0xFFFF) to
+     * each unit task to "signal it to die". But 0xFFFF is a *live* command
+     * (the FAT handler's "RDB inserted" notification, see SAGASD_PerformIO),
+     * so that path popped an Intuition requester - and could even ColdReboot -
+     * instead of terminating the task, and then let genmodule free the device
+     * base while the tasks were still running. Refusing expunge avoids both.
+     */
+    (void)SAGASDBase;
 
-    for (i = 0; i < SAGASD_UNITS; i++)
-    {
-        io.io_Device = &SAGASDBase->sd_Device;
-        io.io_Unit = &SAGASDBase->sd_Unit[i].sdu_Unit;
-        io.io_Flags = 0;
-        io.io_Command = ~0;
-
-        /* Signal the unit task to die */
-        DoIO(&io);
-    }
-
-    return TRUE;
+    return FALSE;
 }
 
 static int GM_UNIQUENAME(open)(struct SAGASDBase * SAGASDBase,
