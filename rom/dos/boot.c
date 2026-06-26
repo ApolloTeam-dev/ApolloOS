@@ -95,10 +95,10 @@ void __dos_Boot(struct DosLibrary *DOSBase, ULONG BootFlags, UBYTE Flags)
      * In fact the system must have at least one resident driver,
      * which will be used for bootmenu etc. However, it we somehow happen
      * not to have it, this will be our last chance.
-     */
+     
     if ((BootFlags & (BF_NO_DISPLAY_DRIVERS | BF_NO_COMPOSITION)) != (BF_NO_DISPLAY_DRIVERS | BF_NO_COMPOSITION))
     {
-        /* Check that it exists first... */
+        // Check that it exists first...
         BPTR seg;
 
         DD(bug("[DOS] %s: initialising displays\n", __func__);)
@@ -108,10 +108,8 @@ void __dos_Boot(struct DosLibrary *DOSBase, ULONG BootFlags, UBYTE Flags)
             STRPTR args = "";
             BPTR oldin, oldout;
 
-            /*
-             * Argument strings MUST contain terminating LF because of ReadItem() bugs.
-             * Their absence causes ReadArgs() crash.
-             */
+            // Argument strings MUST contain terminating LF because of ReadItem() bugs.
+            // Their absence causes ReadArgs() crash.
             if (BootFlags & BF_NO_COMPOSITION)
                 args = "NOCOMPOSITION\n";
             else if (BootFlags & BF_NO_DISPLAY_DRIVERS)
@@ -119,19 +117,17 @@ void __dos_Boot(struct DosLibrary *DOSBase, ULONG BootFlags, UBYTE Flags)
 
             DD(bug("[DOS] %s: Running AROSMonDrvs %s\n", __func__, args);)
 
-            /* RunCommand needs a valid Input() handle
-             * for passing in its arguments.
-             */
+            // RunCommand needs a valid Input() handle for passing in its arguments.
             oldin = SelectInput(Open("NIL:", MODE_OLDFILE));
             oldout= SelectOutput(Open("NIL:", MODE_NEWFILE));
             RunCommand(seg, AROS_STACKSIZE, args, strlen(args));
             SelectInput(oldin);
             SelectOutput(oldout);
 
-            /* We don't care about the return code */
+            // We don't care about the return code
             UnLoadSeg(seg);
         }
-    }
+    } */
 
     DD(bug("[DOS] %s: preparing console\n", __func__);)
 
