@@ -777,7 +777,7 @@ D(bug("[ATCP-SANA] sana_up('%s%d')\n", ssc->ss_if.if_name, ssc->ss_if.if_unit));
       sana2perror("S2_ONLINE", req);
       gui_set_interface_state(&ssc->ss_if, MIAMIPANELV_AddInterface_State_Offline);
     } else {
-      //__log(LOG_NOTICE, "%s%d is now online.", ssc->ss_name, ssc->ss_if.if_unit);
+      DSANA(__log(LOG_NOTICE, "%s%d is now online.", ssc->ss_name, ssc->ss_if.if_unit));
       sana_restore(ssc);
     }
     DeleteIOSana2Req(req);
