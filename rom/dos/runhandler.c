@@ -73,6 +73,7 @@ struct MsgPort *RunHandler(struct DeviceNode *deviceNode, const char *path, stru
                     D(bug("[RunHandler] LoadSeg(\"L:%s\")\n", cp));
                     deviceNode->dn_SegList = LoadSeg(cp);
                     CurrentDir(olddir);
+					UnLock(dir);
                 }
             }
         }

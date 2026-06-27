@@ -61,7 +61,7 @@
     if(!memSize || !memory)
         return;
 
-#ifdef HANDLE_MANAGED_MEM
+#if HANDLE_MANAGED_MEM
     if (IsManagedMem(mhe))
     {
         if (mhe->mhe_Free)

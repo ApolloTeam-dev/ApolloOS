@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2010, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2010, The AROS Development Team. All rights reserved.
     $Id$
 
     Internal data structures for bootloader.resource
@@ -34,5 +34,17 @@ struct BootLoaderBase
 
 #define BL_FLAGS_CMDLINE 0x01
 #define BL_FLAGS_DRIVES  0x02
+
+#if APOLLO_DEBUG
+#define DEBUG 1
+#else
+#define DEBUG 0
+#endif
+
+#if DEBUG
+#define D(x) x
+#else
+#define D(x)
+#endif
 
 #endif //BOOTLOADER_INTERN_H
