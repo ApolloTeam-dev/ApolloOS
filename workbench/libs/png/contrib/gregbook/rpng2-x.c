@@ -564,10 +564,10 @@ int main(int argc, char **argv)
 
     alen = strlen(appname);
     flen = strlen(filename);
-    if (alen + flen + 3 > 1023)
-        sprintf(titlebar, "%s:  ...%s", appname, filename+(alen+flen+6-1023));
+    if (alen + flen + 6 > 1023)
+        snprintf(titlebar, 1024, "%s:  ...%s", appname, filename+(alen+flen+6-1023));
     else
-        sprintf(titlebar, "%s:  %s", appname, filename);
+        snprintf(titlebar, 1024, "%s:  %s", appname, filename);
 
 
     /* set some final rpng2_info variables before entering main data loop */
@@ -789,13 +789,13 @@ static void rpng2_x_init(void)
         return;
     }
 
-    rpng2_info.image_data = (uch *)malloc(rowbytes * rpng2_info.height);
+    rpng2_info.image_data = (uch *)calloc(rpng2_info.height, rowbytes);
     if (!rpng2_info.image_data) {
         readpng2_cleanup(&rpng2_info);
         return;
     }
 
-    rpng2_info.row_pointers = (uch **)malloc(rpng2_info.height * sizeof(uch *));
+    rpng2_info.row_pointers = (uch **)calloc(rpng2_info.height, sizeof(uch *));
     if (!rpng2_info.row_pointers) {
         free(rpng2_info.image_data);
         rpng2_info.image_data = NULL;
@@ -1003,13 +1003,13 @@ static int rpng2_x_create_window(void)
   ---------------------------------------------------------------------------*/
 
     if (depth == 24 || depth == 32) {
-        xdata = (uch *)malloc(4*rpng2_info.width*rpng2_info.height);
+        xdata = (uch *)calloc(rpng2_info.height, 4*rpng2_info.width);
         pad = 32;
     } else if (depth == 16) {
-        xdata = (uch *)malloc(2*rpng2_info.width*rpng2_info.height);
+        xdata = (uch *)calloc(rpng2_info.height, 2*rpng2_info.width);
         pad = 16;
     } else /* depth == 8 */ {
-        xdata = (uch *)malloc(rpng2_info.width*rpng2_info.height);
+        xdata = (uch *)calloc(rpng2_info.height, rpng2_info.width);
         pad = 8;
     }
 
@@ -1103,7 +1103,7 @@ static int rpng2_x_load_bg_image(void)
   ---------------------------------------------------------------------------*/
 
     bg_rowbytes = 3 * rpng2_info.width;
-    bg_data = (uch *)malloc(bg_rowbytes * rpng2_info.height);
+    bg_data = (uch *)calloc(rpng2_info.height, bg_rowbytes);
     if (!bg_data) {
         fprintf(stderr, PROGNAME
           ":  unable to allocate memory for background image\n");
