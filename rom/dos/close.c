@@ -1,17 +1,18 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2013, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
     Lang: English
 */
 
+#include <aros/debug.h>
 #include <proto/exec.h>
 #include <dos/dosextens.h>
 
 #include <proto/dos.h>
 #include "dos_intern.h"
-#include <aros/debug.h>
+
 
 /*****************************************************************************
 

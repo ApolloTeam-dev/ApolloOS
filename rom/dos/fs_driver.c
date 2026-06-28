@@ -1,5 +1,5 @@
 /*
-    Copyright © 2011-2014, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 2011-2014, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Low-level filesystem access functions, packet version
@@ -16,6 +16,8 @@
 
 LONG fs_LocateObject(BPTR *ret, struct MsgPort *port, BPTR parent, CONST_STRPTR name, LONG accessMode, struct DosLibrary *DOSBase)
 {
+    D(bug("[fs_driver] fs_LocateObject('%s', %d)\n", name, accessMode));
+        
     SIPTR error = 0;
     BSTR bstrname = C2BSTR(name);
 
@@ -24,6 +26,8 @@ LONG fs_LocateObject(BPTR *ret, struct MsgPort *port, BPTR parent, CONST_STRPTR 
 
     *ret = (BPTR)dopacket3(DOSBase, &error, port, ACTION_LOCATE_OBJECT, parent, bstrname, accessMode);
     FREEC2BSTR(bstrname);
+
+    D(bug("[fs_driver] fs_LocateObject returned %p, error=%d\n", *ret, error));
 
     return (*ret) ? 0 : error;
 }

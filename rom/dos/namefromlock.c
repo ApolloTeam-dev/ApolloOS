@@ -1,14 +1,17 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2011, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Retrieve the full pathname from a lock.
     Lang: english
 */
+
+#include <aros/debug.h>
+
 #include <proto/exec.h>
 #include "dos_intern.h"
 
-#include <aros/debug.h>
+
 
 /*****************************************************************************
 
