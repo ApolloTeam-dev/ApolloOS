@@ -85,20 +85,63 @@ static void SAGASD_AddChangeInt(struct IORequest *io)
     if (strncmp((char*)io_int->is_Node.ln_Name,"FATFS",5) != 0)
     {
         debug("Changed to MULTIPLE FS support mode");
-        sdu->sdu_AddChangeList[0] = 1;      // Change to "Multiple FS support" when non-FAT File handler is inserting change IRQ
+        sdu->sdu_MultiFS = TRUE;      // a non-FAT handler is now registered
     }
 
-    if (sdu->sdu_AddChangeListItems < 10)
+    /* Reuse a freed (NULL) slot before growing the high-water count */
     {
-        sdu->sdu_AddChangeList[sdu->sdu_AddChangeListItems] = (APTR)((struct IOStdReq *)io)->io_Data;
-        sdu->sdu_AddChangeListItems++;
+        int slot = -1;
+
+        for (int i = 0; i < sdu->sdu_AddChangeListItems; i++)
+        {
+            if (sdu->sdu_AddChangeList[i] == NULL) { slot = i; break; }
+        }
+
+        if (slot < 0 && sdu->sdu_AddChangeListItems < 10)
+            slot = sdu->sdu_AddChangeListItems++;
+
+        if (slot >= 0)
+            sdu->sdu_AddChangeList[slot] = (APTR)io_std->io_Data;
+        else
+            debug("AddChangeInt: list full (10), interrupt from %s dropped", (char*)io_int->is_Node.ln_Name);
     }
 
-    for (int i=sdu->sdu_AddChangeListItems-1; i>0; i--)
+    io->io_Flags &= ~IOF_QUICK;
+}
+
+static void SAGASD_RemChangeInt(struct IORequest *io)
+{
+    struct SAGASDBase *sd = (struct SAGASDBase *)io->io_Device;
+    struct SAGASDUnit *sdu = (struct SAGASDUnit *)io->io_Unit;
+    struct Library *SysBase = sd->sd_ExecBase;
+    struct IOStdReq *io_std = (struct IOStdReq*)io;
+    APTR target = (APTR)io_std->io_Data;
+    BOOL multi = FALSE;
+    int i;
+
+    (void)SysBase;
+
+    /* Runs in the unit task context (non-quick), serialized with the detect
+     * loop, so no Forbid()/Permit() is required here. Clear every slot that
+     * matches the caller's interrupt (leave a NULL hole for reuse). */
+    for (i = 0; i < sdu->sdu_AddChangeListItems; i++)
     {
-        debug("Listing sdu->sdu_AddChangeList[%d] (%x) for %s", i, sdu->sdu_AddChangeList[i], sdu->sdu_Name);
-        debug("Caller = %s", (char*)io_int->is_Node.ln_Name);
-    } 
+        if (sdu->sdu_AddChangeList[i] == target)
+            sdu->sdu_AddChangeList[i] = NULL;
+    }
+
+    /* Re-evaluate the multi-FS flag from whatever interrupts remain */
+    for (i = 0; i < sdu->sdu_AddChangeListItems; i++)
+    {
+        struct Interrupt *in = (struct Interrupt *)sdu->sdu_AddChangeList[i];
+
+        if (in && strncmp((char*)in->is_Node.ln_Name, "FATFS", 5) != 0)
+        {
+            multi = TRUE;
+            break;
+        }
+    }
+    sdu->sdu_MultiFS = multi;
 
     io->io_Flags &= ~IOF_QUICK;
 }
@@ -213,6 +256,10 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
         err = 0;
         break;
     case 0x12:      // INQUIRY
+        if (data == NULL) {
+            err = IOERR_BADADDRESS;
+            break;
+        }
         for (i = 0; i < scsi->scsi_Length; i++)
         {
             UBYTE val;
@@ -338,6 +385,11 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
             break;
         }
 
+        if (data == NULL) {
+            err = IOERR_BADADDRESS;
+            break;
+        }
+
         for (i = 0; i < 4; i++)
             data[0 + i] = ((sdc->info.blocks - 1) >> (24 - i*8)) & 0xff;
         for (i = 0; i < 4; i++)
@@ -347,6 +399,16 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
         err = 0;
         break;
     case 0x1a: // MODE SENSE (6)
+        if (data == NULL) {
+            err = IOERR_BADADDRESS;
+            break;
+        }
+        /* The header below writes 12 bytes unconditionally (4-byte mode
+         * parameter header + 8-byte block descriptor), so require room. */
+        if (scsi->scsi_Length < 12) {
+            err = IOERR_BADLENGTH;
+            break;
+        }
         data[0] = 3 + 8 + 0x16;
         data[1] = 0; // MEDIUM TYPE
         data[2] = 0;
@@ -365,7 +427,7 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
         data[11] = (sdc->info.block_size >> 0) & 0xff;
         switch (((UWORD)scsi->scsi_Command[2] << 8) | scsi->scsi_Command[3]) {
         case 0x0300: // Format Device Mode
-            for (i = 0; i < scsi->scsi_Length - 12; i++) {
+            for (i = 0; i + 12 < scsi->scsi_Length; i++) {
                 UBYTE val;
 
                 switch (i) {
@@ -409,7 +471,7 @@ static LONG SAGASD_PerformSCSI(struct IORequest *io)
             err = 0;
             break;
         case 0x0400: // Rigid Drive Geometry
-            for (i = 0; i < scsi->scsi_Length - 12; i++) {
+            for (i = 0; i + 12 < scsi->scsi_Length; i++) {
                 UBYTE val;
 
                 switch (i) {
@@ -584,7 +646,7 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
     
     case 0xffff:
         bug( "%s TD_LASTCOMM = RDB Disk inserted\n", __FUNCTION__ );
-        if (sdu->sdu_AddChangeList[0] == 0 && sdu->sdu_ChangeNum > 1)
+        if (!sdu->sdu_MultiFS && sdu->sdu_ChangeNum > 1)
         {
             char message[250];
             char *choices;
@@ -617,7 +679,7 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
     
     case TD_EJECT:
         bug( "%s TD_EJECT = MDB FAT Disk not readable/initialized\n", __FUNCTION__ );
-        if (sdu->sdu_AddChangeList[0] == 0 && sdu->sdu_ChangeNum > 1)     
+        if (!sdu->sdu_MultiFS && sdu->sdu_ChangeNum > 1)     
         {
             char message[250];
             char *choices;
@@ -719,6 +781,10 @@ static LONG SAGASD_PerformIO(struct IORequest *io)
     case TD_ADDCHANGEINT:
         debug( "%s TD_ADDCHANGEINT - [NEW !!!]: %u\n", __FUNCTION__ , io->io_Command);
         SAGASD_AddChangeInt(io);
+        break;
+    case TD_REMCHANGEINT:
+        debug( "%s TD_REMCHANGEINT: %u\n", __FUNCTION__ , io->io_Command);
+        SAGASD_RemChangeInt(io);
         break;
 
     default:
@@ -837,10 +903,10 @@ static void SAGASD_IOTask(struct Library *SysBase)
             ULONG sigs;
             struct Interrupt *io_int;
 
-            /* Wait up to IO_TIMINGLOOP_MICROSEC for a IO message. If none, then re-check SD if counter is reached */
+            /* Wait up to IO_TIMINGLOOP_USEC for a IO message. If none, then re-check SD if counter is reached */
             treq->tr_node.io_Command = TR_ADDREQUEST;
             treq->tr_time.tv_secs = 0;
-            treq->tr_time.tv_micro = IO_TIMINGLOOP_MSEC;
+            treq->tr_time.tv_micro = IO_TIMINGLOOP_USEC;
             SendIO((struct IORequest *)treq);
 
             /* Wait on either the MsgPort, or the timer */
@@ -875,12 +941,12 @@ static void SAGASD_IOTask(struct Library *SysBase)
                             Forbid();
                             sdu->sdu_Present = TRUE;
                             sdu->sdu_ChangeNum++;
-                            sdu->sdu_Valid = TRUE;
+                            sdu->sdu_Valid = present;
                             debug("SD-Card Change Detection: unit = %d | Detect Mode = %s | sdu_Present = %s | detect = %s", sdu->sdu_SDCmd.unitnumber, sdpin ? "HW":"SW", sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
                             debug("\t sdu_Valid: %s", sdu->sdu_Valid ? "TRUE" : "FALSE");
                             debug("\t Blocks: %ld", sdu->sdu_SDCmd.info.blocks);
 
-                            for (int i=sdu->sdu_AddChangeListItems; i>0; i--)
+                            for (int i=0; i<sdu->sdu_AddChangeListItems; i++)
                             {
                                 if (sdu->sdu_AddChangeList[i])
                                 {
@@ -909,7 +975,7 @@ static void SAGASD_IOTask(struct Library *SysBase)
                             sdu->sdu_Valid = FALSE;
                             debug("SD-Card Change Detection: unit = %d | Detect Mode = %s | sdu_Present = %s | detect = %s", sdu->sdu_SDCmd.unitnumber, sdpin ? "HW":"SW", sdu->sdu_Present ? "TRUE":"FALSE", present ? "TRUE":"FALSE");
 
-                            for (int i=sdu->sdu_AddChangeListItems; i>0; i--)
+                            for (int i=0; i<sdu->sdu_AddChangeListItems; i++)
                             {
                                 if (sdu->sdu_AddChangeList[i])
                                 {
@@ -921,8 +987,8 @@ static void SAGASD_IOTask(struct Library *SysBase)
 
                                     if (strncmp((char*)io_int->is_Node.ln_Name,"FATFS",5) != 0)
                                     {
-                                        sdu->sdu_AddChangeList[i] = 0;
-                                        sdu->sdu_AddChangeList[0] = 0;  // reset FLAG to signal we are now in "only FAT" mode
+                                        sdu->sdu_AddChangeList[i] = NULL;   // free the slot (reusable hole)
+                                        sdu->sdu_MultiFS = FALSE;           // back to "FAT only" mode
                                         debug("Changed to FAT ONLY support mode because only FAT is supported as removable HDD");
                                     } 
                                 }
@@ -975,8 +1041,6 @@ AROS_LH1(void, BeginIO, AROS_LHA(struct IORequest *, io, A1), struct SAGASDBase 
             case TD_GETNUMTRACKS:
             case TD_GETDRIVETYPE:
             case TD_GETGEOMETRY:
-            case TD_REMCHANGEINT:
-            case TD_ADDCHANGEINT:
             case TD_PROTSTATUS:
             case TD_CHANGENUM:
             
@@ -1051,7 +1115,9 @@ static void SAGASD_BootNode(struct SAGASDBase *SAGASDBase, struct Library *Expan
     devnode = MakeDosNode(pp);
 
     if (devnode)
-   	AddBootNode(pp[DE_BOOTPRI + 4], 0 & ADNF_STARTPROC, devnode, NULL);
+        /* flags = 0: do not ADNF_STARTPROC. The handler is started on demand
+         * via the DOSTYPE/filesystem, not auto-launched at boot. */
+        AddBootNode(pp[DE_BOOTPRI + 4], 0, devnode, NULL);
 }
 
 #define PUSH(task, type, value) do {\
@@ -1091,8 +1157,8 @@ static void SAGASD_InitUnit(struct SAGASDBase * SAGASDBase, int id)
     sdu->sdu_Present = FALSE;
     sdu->sdu_Valid = FALSE;
 
-    sdu->sdu_AddChangeListItems = 1;                        // sdu->sdu_AddChangeListItems[0] serves as a FLAG
-    sdu->sdu_AddChangeList[0] = 0;                          // FLAG == 1 means that we start in "multiple FS support" mode (FLAG == 0 means "FAT only" mode
+    sdu->sdu_AddChangeListItems = 0;                       // 0-based: entries start at index 0
+    sdu->sdu_MultiFS = FALSE;                              // FALSE = "FAT only" mode; TRUE once a non-FAT handler registers
 
     sdu->sdu_SDCmd.func.log = SAGASD_log;
     sdu->sdu_SDCmd.retry.read = SAGASD_RETRY;
@@ -1174,22 +1240,22 @@ static int GM_UNIQUENAME(init)(struct SAGASDBase * SAGASDBase)
 
 static int GM_UNIQUENAME(expunge)(struct SAGASDBase * SAGASDBase)
 {
-    struct Library *SysBase = SAGASDBase->sd_ExecBase;
-    struct IORequest io = {};
-    int i;
+    /*
+     * This device installs boot nodes and runs one IO task per unit, all of
+     * which are referenced for the whole lifetime of the system. It therefore
+     * must never be expunged: returning FALSE tells genmodule to refuse the
+     * expunge and keep the device resident.
+     *
+     * NOTE: the previous implementation sent io_Command = ~0 (== 0xFFFF) to
+     * each unit task to "signal it to die". But 0xFFFF is a *live* command
+     * (the FAT handler's "RDB inserted" notification, see SAGASD_PerformIO),
+     * so that path popped an Intuition requester - and could even ColdReboot -
+     * instead of terminating the task, and then let genmodule free the device
+     * base while the tasks were still running. Refusing expunge avoids both.
+     */
+    (void)SAGASDBase;
 
-    for (i = 0; i < SAGASD_UNITS; i++)
-    {
-        io.io_Device = &SAGASDBase->sd_Device;
-        io.io_Unit = &SAGASDBase->sd_Unit[i].sdu_Unit;
-        io.io_Flags = 0;
-        io.io_Command = ~0;
-
-        /* Signal the unit task to die */
-        DoIO(&io);
-    }
-
-    return TRUE;
+    return FALSE;
 }
 
 static int GM_UNIQUENAME(open)(struct SAGASDBase * SAGASDBase,
