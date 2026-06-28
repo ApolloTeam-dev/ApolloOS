@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2011, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Locks a file or directory.
@@ -176,10 +176,15 @@ static LONG InternalLock(CONST_STRPTR name, LONG accessMode,
         return ret;
 
     filename = strchr(name, ':');
+
+    D(bug("[Lock] '%s' accessMode=%d, soft_nesting=%d, filename=%s\n", name, accessMode, soft_nesting, filename));
+
     if (!filename)
     {
         struct MsgPort *port;
         BPTR lock;
+
+        D(bug("[Lock] No FileName in path, using current directory\n"));
 
         /* No ':' in the pathname, path is relative to current directory */
         cur = me->pr_CurrentDir;
@@ -197,6 +202,7 @@ static LONG InternalLock(CONST_STRPTR name, LONG accessMode,
     else 
     {
         filename++;
+        D(bug("[Lock] FileName in path, using device %s\n", filename));
         do
         {
             if ((dvp = GetDeviceProc(name, dvp)) == NULL) 
@@ -211,22 +217,13 @@ static LONG InternalLock(CONST_STRPTR name, LONG accessMode,
 
         if (error == ERROR_NO_MORE_ENTRIES)
             error = me->pr_Result2 = ERROR_OBJECT_NOT_FOUND;
-
-#ifndef __mc68000
-        /* FIXME: On Linux hosted we sometimes get ERROR_IS_SOFTLINK with dvp == NULL,
-         * which causes segfaults below if we don't change "error". Adding !dvp below
-         * is probably a hack.
-         *
-         * This is wrong, GetDeviceProc() can return other errors than ERROR_OBJECT_NOT_FOUND.
-         */
-        if (!dvp)
-            error = me->pr_Result2 = ERROR_OBJECT_NOT_FOUND;
-#endif
     }
 
     if (error == ERROR_IS_SOFT_LINK)
     {
         STRPTR softname = ResolveSoftlink(cur, dvp, name, DOSBase);
+
+        D(bug("[Lock] Softlink resolved to %s\n", softname));
 
         if (softname)
         {
@@ -242,6 +239,7 @@ static LONG InternalLock(CONST_STRPTR name, LONG accessMode,
             {
                 olddir = me->pr_CurrentDir;
                 error = RootDir(dvp, DOSBase);
+                D(bug("[Lock] Changed current directory to %p, error=%d\n", me->pr_CurrentDir, error));
             }
             else
                 error = 0;
@@ -266,6 +264,8 @@ static LONG InternalLock(CONST_STRPTR name, LONG accessMode,
 
     if (error)
     {
+        D(bug("[Lock] failed, err=%d\n", error));
+        
         SetIoErr(error);
         ret = DOSFALSE;
     }

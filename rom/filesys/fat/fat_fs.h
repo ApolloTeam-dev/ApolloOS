@@ -14,7 +14,7 @@
 #define FAT_HANDLER_H
 
 #if APOLLO_DEBUG
-#define DEBUG 0
+#define DEBUG 1
 #else
 #define DEBUG 0
 #endif
@@ -27,7 +27,7 @@
 #define DEBUG_NAMES         0
 #define DEBUG_NOTIFY        0
 #define DEBUG_OPS           0
-#define DEBUG_PACKETS       1
+#define DEBUG_PACKETS       0
 #define DEBUG_CACHESTATS    0
 #define DEBUG_MISC          1
 #else

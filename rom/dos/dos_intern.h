@@ -29,7 +29,7 @@
 
 #if DEBUG
 #define DD(x) x
-#define D(x)
+#define D(x) 
 #define bug kprintf
 #else
 #define D(x)
