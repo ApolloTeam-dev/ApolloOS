@@ -147,7 +147,7 @@ static void sdcmd_ins_spi1(struct sdcmd *sd, UBYTE *buff, size_t len)
 			"1:     move.b (0xDE0002),(%[buff])+   \n"
 			"2:     dbra   %[count],1b             \n"
 			"       move.b (0xDE0000),(%[buff])+   \n"
-				:[count]"+d"(len),[buff]"+a"(buff)::"cc");
+				:[count]"+d"(len),[buff]"+a"(buff)::"cc","memory");
 
     return;
 }
@@ -168,7 +168,7 @@ static void sdcmd_ins_spi2(struct sdcmd *sd, UBYTE *buff, size_t len)
 			"1:     move.b (0xDE0012),(%[buff])+   \n"
 			"2:     dbra   %[count],1b             \n"
 			"       move.b (0xDE0010),(%[buff])+   \n"
-				:[count]"+d"(len),[buff]"+a"(buff)::"cc");
+				:[count]"+d"(len),[buff]"+a"(buff)::"cc","memory");
 
     return;
 }
@@ -594,7 +594,7 @@ UBYTE sdcmd_write_blocks(struct sdcmd *sd, ULONG addr, CONST UBYTE *buff, int bl
                 break;
 
             /* Reset the retry counter if we wrote a block */
-            crc_retry = sd->retry.read;
+            crc_retry = sd->retry.write;
         }
 
         sdcmd_select(sd, TRUE);
@@ -822,8 +822,8 @@ BOOL sdcmd_sw_detect_full(struct sdcmd *sd)
         if (info->ocr & SDOCRF_HCS) {
             /* SDHC calculation */
 
-            /* Bits 68:48 of the CSD */
-            c_size = bits(&csd[15], 48, 20);
+            /* Bits 69:48 of the CSD (CSD v2.0 C_SIZE is 22 bits wide) */
+            c_size = bits(&csd[15], 48, 22);
 
             debug("SDHC-Card info: c_size=%ld  | blocks=%ld", c_size, info->blocks);
 
