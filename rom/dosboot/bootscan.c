@@ -101,7 +101,7 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
         tags[8] = TAG_DONE;
         GetPartitionAttrs(pn, (struct TagItem *)tags);
 
-        D(bug("[BOOT] Partition name: %s | Bootable: %d | Automount: %d\n", name, bootable, automount));
+        D(bug("[BOOT] Partition name: %s | Bootable: %d | Automount: %d \n", name, bootable, automount));
 
         if (automount == FALSE)
         {
@@ -121,9 +121,10 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
         tags[4] = TAG_DONE;
         GetPartitionAttrs(pn, (struct TagItem *)tags);
 
-        // Default behaviour is to give BOOT priority to RDB disks (user can choose in Early Startup)
+        // [WD] Default behaviour is to give BOOT priority to RDB disks (user can choose to boot from FAT in Early Startup)
+        //pp[4 + DE_BOOTPRI] = -5;
+
         bootable = TRUE;
-        pp[4 + DE_BOOTPRI] = -1;
 
         /* make the name */
         devname = AROS_BSTR_ADDR(fssm->fssm_Device);
@@ -242,6 +243,34 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
         AddBootFileSystem(fsnode);
     }
 
+    D(bug("\n[BOOT] dosName         pp[0] = %s\n", pp[0]));
+    D(bug("[BOOT] devName           pp[1] = %s\n", pp[1]));
+    D(bug("[BOOT] unitNum           pp[2] = %d\n", pp[2]));
+    D(bug("[BOOT] flags             pp[3] = %d\n", pp[3]));
+    D(bug("[BOOT] tableSize         pp[4] = %d\n", pp[4 + DE_TABLESIZE]));
+    D(bug("[BOOT] sizeBlock         pp[5] = %d\n", pp[4 + DE_SIZEBLOCK]));
+    D(bug("[BOOT] secOrg            pp[6] = %d\n", pp[4 + DE_BLOCKSIZE]));
+    D(bug("[BOOT] surfaces          pp[7] = %d\n", pp[4 + DE_NUMHEADS]));
+    D(bug("[BOOT] secPerBlock       pp[8] = %d\n", pp[4 + DE_SECSPERBLOCK]));
+    D(bug("[BOOT] blocksPerTrack    pp[9] = %d\n", pp[4 + DE_BLKSPERTRACK]));
+    D(bug("[BOOT] reservedBlks      pp[10] = %d\n", pp[4 + DE_RESERVEDBLKS]));
+    D(bug("[BOOT] preAlloc          pp[11] = %d\n", pp[4 + DE_PREFAC]));
+    D(bug("[BOOT] interleave        pp[12] = %d\n", pp[4 + DE_INTERLEAVE]));
+    D(bug("[BOOT] lowCyl            pp[13] = %d\n", pp[4 + DE_LOWCYL]));     
+    D(bug("[BOOT] highCyl           pp[14] = %d\n", pp[4 + DE_HIGHCYL]));
+    D(bug("[BOOT] numBuffers        pp[15] = %d\n", pp[4 + DE_NUMBUFFERS]));
+    D(bug("[BOOT] bufMemType        pp[16] = %d\n", pp[4 + DE_BUFMEMTYPE]));
+    D(bug("[BOOT] maxTransfer       pp[17] = %d\n", pp[4 + DE_MAXTRANSFER]));
+    D(bug("[BOOT] mask              pp[18] = %d\n", pp[4 + DE_MASK]));
+    D(bug("[BOOT] bootPri           pp[19] = %d\n", pp[4 + DE_BOOTPRI]));
+    D(bug("[BOOT] dosType           pp[20] = %d\n", pp[4 + DE_DOSTYPE]));
+
+    if (strcmp((char*)pp[1], "sagasd.device") == 0)
+    {
+        //pp[4 + DE_BOOTPRI] = pp[4 + DE_BOOTPRI] + 5;
+        D(bug("[BOOT] sagasd.device detected, increasing boot priority to %d\n", pp[4 + DE_BOOTPRI]));
+    }
+
     devnode = MakeDosNode(pp);
 
     struct FileSysStartupMsg *fssm_devnode = BADDR(devnode->dn_Startup);
@@ -253,7 +282,6 @@ static VOID AddPartitionVolume(struct ExpansionBase *ExpansionBase, struct Libra
     D(bug("[BOOT] [%s] de_BlocksPerTrack : %d\n",__FUNCTION__ ,  de_devnode->de_BlocksPerTrack));
     D(bug("[BOOT] [%s] dg_LowCyl         : %d\n",__FUNCTION__ ,  de_devnode->de_LowCyl));
     D(bug("[BOOT] [%s] dg_HighCyl        : %d\n\n",__FUNCTION__ ,  de_devnode->de_HighCyl));
-
 
     if (devnode != NULL) {
         AddBootNode(bootable ? pp[4 + DE_BOOTPRI] : -128, ADNF_STARTPROC, devnode, NULL);
