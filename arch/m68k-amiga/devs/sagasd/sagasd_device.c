@@ -1109,8 +1109,8 @@ static void SAGASD_BootNode(struct SAGASDBase *SAGASDBase, struct Library *Expan
     pp[DE_BUFMEMTYPE + 4] = MEMF_PUBLIC;
     pp[DE_MAXTRANSFER + 4] = 0x00200000;
     pp[DE_MASK + 4] = 0xFFFFFFFE;
-    pp[DE_BOOTPRI + 4] = -5;                        //Default Prio (-5) is lower than primary HDD (0)
-    pp[DE_DOSTYPE + 4] = 0x46415402;                //FAT2 (FAT32) Default DosType for file-transfer
+    pp[DE_BOOTPRI + 4] = -5;                         //SD-Card Prio 2 is higher than ata.device to allow booting from SD-Card in case of both devices present
+    pp[DE_DOSTYPE + 4] = 0x46415402;                //FAT32 by default, but it will be changed by AddPartitionVolume for RDB (e.g. OFS, FFS, SFS, PFS)
     pp[DE_BOOTBLOCKS + 4] = 2;
     devnode = MakeDosNode(pp);
 

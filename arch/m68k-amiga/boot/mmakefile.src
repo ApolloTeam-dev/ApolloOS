@@ -88,7 +88,6 @@ include $(SRCDIR)/config/aros.cfg
 #MM     compiler-stdc \
 #MM     compiler-stdcio \
 #MM     kernel-sagasd-device-kobj \
-#MM     sagasd-device \
 #MM     compiler-posixc
 
 #MM- kernel-workbench-devs-amiga-m68k : workbench-devs-amiga-m68k
