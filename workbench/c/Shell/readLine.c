@@ -17,15 +17,21 @@ static BOOL checkPipe(STRPTR pchar, STRPTR mchar, STRPTR in, LONG inlen)
 {
    LONG c, n;
    BOOL quoted = FALSE;
+    BOOL escaped = FALSE;
    int mcharn = strlen(mchar), pcharn = strlen(pchar);
    
    for (n = 0; n < inlen; n++)
    {
         c = in[n];
-        if (c == '"')
+        if (c == '"' && !escaped)
         {
             quoted = !quoted;
         }
+
+        if (c == '*' && !escaped)
+            escaped = TRUE;
+        else
+            escaped = FALSE;
 
         if (quoted)
             continue;
@@ -45,6 +51,7 @@ LONG readLine(ShellState *ss, struct CommandLineInterface *cli, Buffer *out, WOR
     STRPTR buf = out->buf; /* pre-allocated by caller */
     BOOL comment = FALSE;
     BOOL quoted = FALSE;
+    BOOL escaped = FALSE;
     LONG c, i, j, len;
     TEXT pchar[3], mchar[3];
 
@@ -67,8 +74,13 @@ LONG readLine(ShellState *ss, struct CommandLineInterface *cli, Buffer *out, WOR
         if (c == ENDSTREAMCH)
             break;
 
-        if (c == '"')
+        if (c == '"' && !escaped)
              quoted = !quoted;
+ 
+        if (c == '*' && !escaped)
+            escaped = TRUE;
+        else
+            escaped = FALSE;
  
         if (!quoted && c == ';' && c != mchar[0] ) /* comment line */
         {
@@ -111,4 +123,3 @@ LONG readLine(ShellState *ss, struct CommandLineInterface *cli, Buffer *out, WOR
     D(bug("[Shell] readLine %d%s: %s", j, *moreLeft ?  "" : "'", buf));
     return 0;
 }
-
