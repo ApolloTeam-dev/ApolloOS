@@ -88,37 +88,33 @@ static UBYTE *getport(struct ata_ProbedBus *ddata, int buscounter)
     Disable();
     if(buscounter == 0)
     {
-        // V4-ID and V4-MC have mainboard native IDE on $DA, V2-500, V2-600, V2-1200, V4-FB and V4-SA have Fast-IDE Gayle on $DA
-        {
-            port = (UBYTE*)GAYLE_BASE_DA;
-            ddata->gayleirqbase = (UBYTE*)GAYLE_IRQ_DA;
-            ddata->da = TRUE;
-            if((ApolloBoardID == VREG_BOARD_V500)
-             ||(ApolloBoardID == VREG_BOARD_V600)
-             ||(ApolloBoardID == VREG_BOARD_V1200)
-             ||(ApolloBoardID == VREG_BOARD_V4FB)
-             ||(ApolloBoardID == VREG_BOARD_V4SA)
-             ||(ApolloBoardID == VREG_BOARD_V4UNI))
-            {
-                ddata->v4 = TRUE;
-                DINIT(bug("[ATA:Probe] Port = GAYLE_BASE_DA (V4 Fast-IDE)\n");)
-            } else {
-                ddata->v4 = FALSE;
-                DINIT(bug("[ATA:Probe] Port = GAYLE_BASE_DA (Native IDE)\n");)
-            }
-        } 
-    } else {
-        // V4-ID and V4-MC have Fast-IDE Gayle on $DD
-        if((ApolloBoardID == VREG_BOARD_V4ID)
-         ||(ApolloBoardID == VREG_BOARD_V4MC))
+        // V4-ID and V4-MC have Fast-IDE Gayle on $DD and all others on $DA
+        if((ApolloBoardID == VREG_BOARD_V4ID)||(ApolloBoardID == VREG_BOARD_V4MC))
         {
             port = (UBYTE*)GAYLE_BASE_DD;
             ddata->gayleirqbase = (UBYTE*)GAYLE_IRQ_DD;
             ddata->da = FALSE;
             ddata->v4 = TRUE;
             DINIT(bug("[ATA:Probe] Port = GAYLE_BASE_DD (V4 Fast-IDE)\n");)
+        } else {
+            port = (UBYTE*)GAYLE_BASE_DA;
+            ddata->gayleirqbase = (UBYTE*)GAYLE_IRQ_DA;
+            ddata->da = TRUE;
+            ddata->v4 = TRUE;
+            DINIT(bug("[ATA:Probe] Port = GAYLE_BASE_DA (V4 Fast-IDE)\n");)        
+        }
+    } else {
+        // V4-ID and V4-MC have Native-IDE Gayle on $DA
+        if((ApolloBoardID == VREG_BOARD_V4ID)||(ApolloBoardID == VREG_BOARD_V4MC))
+        {
+            port = (UBYTE*)GAYLE_BASE_DA;
+            ddata->gayleirqbase = (UBYTE*)GAYLE_IRQ_DA;
+            ddata->da = TRUE;
+            ddata->v4 = FALSE;
+            DINIT(bug("[ATA:Probe] Port = GAYLE_BASE_DA (Native IDE)\n");)
         }
     }
+
     Enable();
     CloseLibrary((struct Library*)gfx);
 
