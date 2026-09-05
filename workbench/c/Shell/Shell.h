@@ -30,7 +30,7 @@
 
 struct SArg
 {
-    TEXT   name[MAXARGLEN];
+    TEXT   name[MAXARGLEN + 1];
     LONG   namelen;
     LONG   len;
     IPTR   def;
