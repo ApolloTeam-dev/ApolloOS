@@ -3,6 +3,7 @@
     $Id$
  */
 
+#include <proto/dos.h>
 #include <proto/exec.h>
 
 #include "Shell.h"
@@ -30,6 +31,8 @@ void initDefaultInterpreterState(ShellState *ss)
 
         ss->arg[i]  = 0;
     }
+
+    ss->arg_rd = NULL;
 
     ss->bra    = '<';
     ss->ket    = '>';
@@ -67,6 +70,9 @@ void popInterpreterState(ShellState *ss)
         if (a->def)
             FreeMem((APTR) a->def, a->deflen + 1);
     }
+
+    if (ss->arg_rd)
+        FreeDosObject(DOS_RDARGS, ss->arg_rd);
 
     if (tmp_ss)
     {
