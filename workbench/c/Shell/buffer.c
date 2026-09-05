@@ -31,7 +31,7 @@ static BOOL bufferExpand(Buffer *out, LONG size, APTR SysBase)
             CopyMem(out->buf, tmp, out->len);
 
         if (out->mem > 0)
-            FreeMem(out->buf, out->mem);
+            FreeMem(out->buf, out->mem + 1);
 
         out->buf = tmp;
         out->mem = newSize;
