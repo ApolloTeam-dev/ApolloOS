@@ -1,9 +1,7 @@
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2026, The AROS Development Team. All rights reserved.
 
     Desc:
-    Lang: English
 */
 
 /******************************************************************************
@@ -27,7 +25,7 @@
 
     INPUTS
 
-        QUIET    --  avoids printing of the background CLI's number 
+        QUIET    --  avoids printing of the background CLI's number
 
         COMMAND  --  the program to run together with its arguments
 
@@ -67,6 +65,10 @@
 
 #include <aros/shcommands.h>
 
+#include <string.h>
+
+#include "run_handle.h"
+
 AROS_SH2H(Run, 41.3,                  "Start a program as a background process\n",
 AROS_SHAH(BOOL  , ,QUIET  ,/S,FALSE,"\tDon't print the background CLI's number"),
 AROS_SHAH(STRPTR, ,COMMAND,/F,NULL ,  "The program (resp. script) to run (arguments allowed)\n") )
@@ -86,6 +88,8 @@ AROS_SHAH(STRPTR, ,COMMAND,/F,NULL ,  "The program (resp. script) to run (argume
         command = "";
 
     cis = Open("NIL:", MODE_OLDFILE);
+    if (!cis)
+        goto error;
     
     /* To support '+' style continuation, we're
      * going to need to be a little tricky. We
@@ -120,7 +124,9 @@ AROS_SHAH(STRPTR, ,COMMAND,/F,NULL ,  "The program (resp. script) to run (argume
         }
     }
 
-    cos = OpenFromLock(DupLockFromFH(Output()));
+    cos = DuplicateRunHandle(Output(), DOSBase);
+    if (!cos)
+        goto error;
 
     /* All the 'noise' goes to cli_StandardError
      */
@@ -136,9 +142,11 @@ AROS_SHAH(STRPTR, ,COMMAND,/F,NULL ,  "The program (resp. script) to run (argume
     /* Use a duplicate of the CES lock
      */
     if (ces)
-        ces = OpenFromLock(DupLockFromFH(ces));
+        ces = DuplicateRunHandle(ces, DOSBase);
     else
         ces = Open("NIL:", MODE_OLDFILE);
+    if (!ces)
+        goto error;
 
     if ( command[0] != 0)
     {
@@ -154,22 +162,31 @@ AROS_SHAH(STRPTR, ,COMMAND,/F,NULL ,  "The program (resp. script) to run (argume
 
         if ( SystemTagList((CONST_STRPTR)command,
                            tags                                ) == -1 )
-        {
-            PrintFault(IoErr(), "Run");
-            Close(cis);
-            Close(cos);
-            Close(ces);
-            if (cmdsize > 0)
-                FreeMem(command, cmdsize);
-
-            return RETURN_FAIL;
-        }
+            goto error;
+    }
+    else
+    {
+        Close(cis);
+        Close(cos);
+        Close(ces);
     }
 
     if (cmdsize > 0)
         FreeMem(command, cmdsize);
 
     return RETURN_OK;
+
+error:
+    {
+        LONG error = IoErr();
+        PrintFault(error, "Run");
+        if (cis) Close(cis);
+        if (cos) Close(cos);
+        if (ces) Close(ces);
+        if (cmdsize > 0) FreeMem(command, cmdsize);
+        SetIoErr(error);
+    }
+    return RETURN_FAIL;
 
     AROS_SHCOMMAND_EXIT
 }
