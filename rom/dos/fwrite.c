@@ -1,12 +1,19 @@
 /*
+<<<<<<< HEAD
     Copyright © 1995-2013, The AROS Development Team. All rights reserved.
     $Id$
+=======
+    Copyright (C) 1995-2026, The AROS Development Team. All rights reserved.
+>>>>>>> ba40ca031a (dos: preserve pushback and complete direct buffered I/O requests)
 
     Lang: english
 */
 #include "dos_intern.h"
 
 #include <aros/debug.h>
+
+static LONG write_direct(BPTR file, CONST UBYTE *buffer, ULONG length,
+                        struct DosLibrary *DOSBase);
 
 
 /*****************************************************************************
@@ -62,23 +69,46 @@
     ASSERT(blocklen > 0);
     ASSERT(numblocks > 0);
 
-    ULONG   written;
+    ULONG   written = 0;
     const UBYTE  *ptr;
 
     ptr = block;
 
     SetIoErr(0);
 
-    for(written = 0; written < numblocks; written++)
+    if (blocklen == 0 || numblocks == 0)
+        return 0;
+
+    while (written < numblocks)
     {
-        if (FWriteChars(fh, ptr, blocklen, DOSBase) != blocklen)
+        ULONG blocks = numblocks - written;
+        ULONG length;
+
+        /* Batch blocks without overflowing the product or the signed byte
+         * count. A single oversized block is split into smaller writes.
+         */
+        if (blocklen <= 0x7FFFFFFFUL)
         {
-            return(EOF);
+            ULONG maxblocks = 0x7FFFFFFFUL / blocklen;
+            if (blocks > maxblocks)
+                blocks = maxblocks;
+            length = blocks * blocklen;
         }
         else
         {
-            ptr += blocklen;
+            blocks = 1;
+            length = blocklen;
         }
+
+        while (length > 0)
+        {
+            ULONG chunk = length > 0x7FFFFFFFUL ? 0x7FFFFFFFUL : length;
+            if (FWriteChars(fh, ptr, chunk, DOSBase) != (LONG)chunk)
+                return EOF;
+            ptr += chunk;
+            length -= chunk;
+        }
+        written += blocks;
     }
     
     return written;
@@ -144,7 +174,7 @@ FWriteChars(BPTR file, CONST UBYTE* buffer, ULONG length, struct DosLibrary *DOS
 
         if (goOn)
         {
-            written = Write(file, buffer, length);
+            written = write_direct(file, buffer, length, DOSBase);
         }
     }
     else if (!(fh->fh_Flags & FHF_LINEBUF) && length >= (ULONG)fh->fh_End)
@@ -152,7 +182,7 @@ FWriteChars(BPTR file, CONST UBYTE* buffer, ULONG length, struct DosLibrary *DOS
         /* At least a buffer's worth: write it with one packet. Flush()
          * also moves an append-mode handle to the end of the file. */
         if ((fh->fh_Pos == 0 && !(fh->fh_Flags & FHF_APPEND)) || Flush(file))
-            written = Write(file, buffer, length);
+            written = write_direct(file, buffer, length, DOSBase);
     }
     else
     {
@@ -185,4 +215,26 @@ FWriteChars(BPTR file, CONST UBYTE* buffer, ULONG length, struct DosLibrary *DOS
     }
     
     return(written);
+}
+
+static LONG write_direct(BPTR file, CONST UBYTE *buffer, ULONG length,
+                        struct DosLibrary *DOSBase)
+{
+    ULONG written = 0;
+
+    while (written < length)
+    {
+        ULONG chunk = length - written;
+        LONG size;
+
+        if (chunk > 0x7FFFFFFFUL)
+            chunk = 0x7FFFFFFFUL;
+        size = Write(file, buffer + written, chunk);
+        /* A zero-length result makes no progress; do not loop forever. */
+        if (size <= 0)
+            return EOF;
+        written += size;
+    }
+
+    return written;
 }
