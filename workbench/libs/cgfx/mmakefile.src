@@ -53,7 +53,8 @@ FUNCS := \
 
 %build_module mmake=workbench-libs-cgfx \
   modname=cybergraphics modtype=library \
-  files="$(FUNCS) gfxfuncsupport cybergraphics_init"
+  files="$(FUNCS) gfxfuncsupport cybergraphics_init" \
+  uselibs="amiga"
 
 #MM includes-copy
 
