@@ -703,3 +703,15 @@ diff -ruN binutils-2.32/ld/emulparams/armelfb_aros.sh binutils-2.32-aros/ld/emul
 +OUTPUT_FORMAT="elf32-bigarm-aros"
 +BIG_OUTPUT_FORMAT="elf32-bigarm-aros"
 +LITTLE_OUTPUT_FORMAT="elf32-littlearm-aros"
+diff -ruN binutils-2.32/zlib/zutil.h binutils-2.32-aros/zlib/zutil.h
+--- binutils-2.32/zlib/zutil.h	2019-01-19 17:01:34.000000000 +0100
++++ binutils-2.32-aros/zlib/zutil.h	2019-01-19 17:10:54.000000000 +0100
+@@ -130,7 +130,7 @@
+ #  endif
+ #endif
+ 
+-#if defined(MACOS) || defined(TARGET_OS_MAC)
++#if (defined(MACOS) || defined(TARGET_OS_MAC)) && !defined(__APPLE__)
+ #  define OS_CODE  7
+ #  ifndef Z_SOLO
+ #    if defined(__MWERKS__) && __dest_os != __be_os && __dest_os != __win32_os

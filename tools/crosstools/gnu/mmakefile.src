@@ -3,12 +3,28 @@ include $(SRCDIR)/config/aros.cfg
 
 LN ?= ln
 
+# The config.guess bundled inside gmp/mpfr/mpc/isl/binutils/gcc predates Apple
+# Silicon (Nov 2020) and misdetects arm64 Macs as a 32-bit-implying "arm" host,
+# which breaks GMP's ABI sanity check ("Oops, mp_limb_t is 64 bits, but the
+# assembler code..."). Pass an explicit, correct triple to bypass it.
+ifeq ($(AROS_HOST_ARCH),darwin)
+HOST_TRIPLE_EXTRA_OPTS := --build=$(AROS_HOST_CPU)-apple-darwin --host=$(AROS_HOST_CPU)-apple-darwin
+# GMP 6.1.2's hand-written aarch64 assembly predates Apple Silicon and uses
+# ADRP/relocation forms Apple's Mach-O assembler rejects. Force the portable
+# C implementation instead.
+GMP_HOST_EXTRA_OPTS := --disable-assembly
+else
+HOST_TRIPLE_EXTRA_OPTS :=
+GMP_HOST_EXTRA_OPTS :=
+endif
+
 BINUTILS_VERSION = $(TARGET_BINUTILS_VER)
 BINUTILS_VERSION_MAJOR = $(shell echo "$(BINUTILS_VERSION)" | cut -d"." -f1)
 BINUTILS_VERSION_MINOR = $(shell echo "$(BINUTILS_VERSION)" | cut -d"." -f2)
 BINUTILS_VERSION_PATCH = $(shell echo "$(BINUTILS_VERSION)" | cut -d"." -f3)
 
 BINUTILS_EXTRA_OPTS := --target=$(AROS_TARGET_CPU)-aros
+BINUTILS_EXTRA_OPTS += $(HOST_TRIPLE_EXTRA_OPTS)
 BINUTILS_EXTRA_OPTS += -bindir=$(CROSSTOOLSDIR)
 BINUTILS_EXTRA_OPTS += --libdir=$(CROSSTOOLSDIR)/lib
 BINUTILS_EXTRA_OPTS += --with-sysroot=$(AROS_DEVELOPER)
@@ -53,6 +69,7 @@ GCC_LANGUAGES:=$(GCC_LANGUAGES),java
 endif
 
 GCC_COMMON_OPTS := --target=$(AROS_TARGET_CPU)-aros
+GCC_COMMON_OPTS += $(HOST_TRIPLE_EXTRA_OPTS)
 
 # ARM requires additional flags to determine CPU type and FP model
 ifneq (,$(findstring arm,$(AROS_TARGET_CPU)))
@@ -175,7 +192,7 @@ tools-crosstools-gmp :
 	package_repo="$(GNU_REPOSITORY)/gmp" \
 	patch=no \
 	prefix="$(CROSSTOOLSDIR)" usecppflags=no \
-	extraoptions="--bindir=$(CROSSTOOLSDIR) --libdir=$(CROSSTOOLSDIR)/lib --disable-shared"
+	extraoptions="--bindir=$(CROSSTOOLSDIR) --libdir=$(CROSSTOOLSDIR)/lib --disable-shared $(HOST_TRIPLE_EXTRA_OPTS) $(GMP_HOST_EXTRA_OPTS)"
 
 ## ISL ###
 
@@ -193,7 +210,7 @@ tools-crosstools-isl :
 	package_repo="$(ISL_REPOSITORY)" \
 	patch=no \
 	prefix="$(CROSSTOOLSDIR)" usecppflags=no \
-	extraoptions="--bindir=$(CROSSTOOLSDIR) --libdir=$(CROSSTOOLSDIR)/lib --without-piplib --disable-shared"
+	extraoptions="--bindir=$(CROSSTOOLSDIR) --libdir=$(CROSSTOOLSDIR)/lib --without-piplib --disable-shared $(HOST_TRIPLE_EXTRA_OPTS)"
 
 ## MPFR ###
 
@@ -211,7 +228,7 @@ tools-crosstools-mpfr :
 	package_repo="$(GNU_REPOSITORY)/mpfr" \
 	patch=no \
 	prefix="$(CROSSTOOLSDIR)" usecppflags=no \
-	extraoptions="--bindir=$(CROSSTOOLSDIR) --libdir=$(CROSSTOOLSDIR)/lib --disable-shared"
+	extraoptions="--bindir=$(CROSSTOOLSDIR) --libdir=$(CROSSTOOLSDIR)/lib --disable-shared $(HOST_TRIPLE_EXTRA_OPTS)"
 
 ## MPC ###
 
@@ -229,7 +246,7 @@ tools-crosstools-mpc :
 	package_repo="$(MPC_REPOSITORY)" suffixes="tar.gz" \
 	patch=no \
 	prefix="$(CROSSTOOLSDIR)" usecppflags=no \
-	extraoptions="--bindir=$(CROSSTOOLSDIR) --libdir=$(CROSSTOOLSDIR)/lib --disable-shared"
+	extraoptions="--bindir=$(CROSSTOOLSDIR) --libdir=$(CROSSTOOLSDIR)/lib --disable-shared $(HOST_TRIPLE_EXTRA_OPTS)"
 
 ## Binutils ###
 
