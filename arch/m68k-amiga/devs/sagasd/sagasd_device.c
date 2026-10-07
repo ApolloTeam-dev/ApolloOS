@@ -1063,6 +1063,12 @@ AROS_LH1(void, BeginIO, AROS_LHA(struct IORequest *, io, A1), struct SAGASDBase 
     AROS_LIBFUNC_EXIT
 }
 
+#define AROS_LH1(t,n,a1,bt,bn,o,s) __AROS_LH_PREFIX t AROS_SLIB_ENTRY(n,s,o)( __AROS_LHA(a1), __AROS_LH_BASE(bt,bn)) {
+
+Expands to:
+
+ LONG SAGASD_6_AbortIO( struct IORequest * io, struct SAGASDBase * SAGASDBase) {
+
 AROS_LH1(LONG, AbortIO,
     AROS_LHA(struct IORequest *, io, A1),
     struct SAGASDBase *, SAGASDBase, 6, SAGASD)
@@ -1223,14 +1229,15 @@ static int GM_UNIQUENAME(init)(struct SAGASDBase * SAGASDBase)
     ExpansionBase = TaggedOpenLibrary(TAGGEDOPEN_EXPANSION);
     if (!ExpansionBase) Alert(AT_DeadEnd | AO_TrackDiskDev | AG_OpenLib);
 
-    for (i = 0; i < SAGASD_UNITS; i++)
-    {
-	    SAGASD_InitUnit(SAGASDBase, i);
-    }
+    UBYTE ApolloBoardID = ((*(volatile UBYTE *)0xdff3fc));
 
-    for (i = 0; i < SAGASD_UNITS; i++)
+    SAGASD_InitUnit(SAGASDBase, 0);
+    SAGASD_BootNode(SAGASDBase, ExpansionBase, 0);
+
+    if(ApolloBoardID != 0x04)   // Enable Second SD, except on V4 IceDrake (Board-ID == 4)
     {
-        SAGASD_BootNode(SAGASDBase, ExpansionBase, i);
+        SAGASD_InitUnit(SAGASDBase, 1);
+        SAGASD_BootNode(SAGASDBase, ExpansionBase, 1);
     }
 
     CloseLibrary((struct Library *)ExpansionBase);

@@ -78,8 +78,7 @@ static UBYTE *getport(struct ata_ProbedBus *ddata, int buscounter)
     struct GayleAdr *cmda   = (struct GayleAdr *)0xda101C;
     struct GayleAdr *cmdd   = (struct GayleAdr *)0xdd101C;
     
-    UWORD ApolloBoardID     = *(volatile UWORD *)0xdff3fc;  
-    ApolloBoardID = ApolloBoardID >> 8;  
+    UBYTE ApolloBoardID = ((*(volatile UBYTE *)0xdff3fc));  
 
     DINIT(bug("[ATA:Probe] BusNumber = %01d | ApolloBoardID = %d\n", buscounter, ApolloBoardID);)
 
