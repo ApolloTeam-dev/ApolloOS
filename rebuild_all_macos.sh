@@ -1,5 +1,5 @@
 #!/bin/bash
-CPU_COUNT=8
+CPU_COUNT=12
 THREADS=${CPU_COUNT}
 
 export DISTRONAME="$(cat distname)"
