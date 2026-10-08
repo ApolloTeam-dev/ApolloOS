@@ -1063,11 +1063,6 @@ AROS_LH1(void, BeginIO, AROS_LHA(struct IORequest *, io, A1), struct SAGASDBase 
     AROS_LIBFUNC_EXIT
 }
 
-#define AROS_LH1(t,n,a1,bt,bn,o,s) __AROS_LH_PREFIX t AROS_SLIB_ENTRY(n,s,o)( __AROS_LHA(a1), __AROS_LH_BASE(bt,bn)) {
-
-Expands to:
-
- LONG SAGASD_6_AbortIO( struct IORequest * io, struct SAGASDBase * SAGASDBase) {
 
 AROS_LH1(LONG, AbortIO,
     AROS_LHA(struct IORequest *, io, A1),
