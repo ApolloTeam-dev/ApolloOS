@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2007, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Graphics function CalcIVG()
@@ -55,9 +55,13 @@
     AROS_LIBFUNC_INIT
 
     /* TODO: Write graphics/CalcIVG() */
-    aros_print_not_implemented ("CalcIVG");
+    //aros_print_not_implemented ("CalcIVG");
 
-    return 0;
+    //return 0;
+	// We try to guess... this should be more accurate than 0
+	if(ViewPort->Modes & LACE)
+      return 4;
+    else return 2;
 
     AROS_LIBFUNC_EXIT
 } /* CalcIVG */

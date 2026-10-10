@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2007, The AROS Development Team. All rights reserved.
     $Id$	  $Log
 
     Desc: Graphics function SetFont()
@@ -51,14 +51,28 @@
 {
     AROS_LIBFUNC_INIT
 
-    if (textFont)
+	if(!rp)
+        return;
+
+    if(textFont)
     {
-	rp->Font       = textFont;
-	rp->TxWidth    = textFont->tf_XSize;
-	rp->TxHeight   = textFont->tf_YSize;
-	rp->TxBaseline = textFont->tf_Baseline;
+    	if(ExtendFont(textFont, 0))
+    	{
+    		rp->TxWidth    = textFont->tf_XSize;
+	 		rp->TxHeight   = textFont->tf_YSize;
+			rp->TxBaseline = textFont->tf_Baseline;	
+    	}
+    	else return;
     }
-    
+    else
+    {
+        rp->TxWidth = 0;
+        rp->TxHeight = 0;      
+        rp->TxBaseline = 0; 
+    }
+    rp->AlgoStyle = 0;
+    rp->Font = textFont;
+  
     AROS_LIBFUNC_EXIT
     
 } /* SetFont */

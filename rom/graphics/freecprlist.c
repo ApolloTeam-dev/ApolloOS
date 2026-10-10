@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2007, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Graphics function FreeCprList()
@@ -52,7 +52,8 @@
   {
     cprList = NextCprList;
     NextCprList = NextCprList->Next;
-    FreeMem(cprList->start, cprList->MaxCount << 2  );
+	if (cprList->start && cprList->MaxCount > 0)
+      FreeMem(cprList->start, cprList->MaxCount << 2  );
     FreeMem(cprList, sizeof(struct cprlist));
   }
 

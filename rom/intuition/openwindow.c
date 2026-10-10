@@ -1,6 +1,6 @@
 /*
-    Copyright © 1995-2014, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
+    Copyright Â© 1995-2014, The AROS Development Team. All rights reserved.
+    Copyright Â© 2001-2003, The MorphOS Development Team. All Rights Reserved.
     $Id$
 */
 
@@ -615,9 +615,10 @@ moreFlags |= (name); else moreFlags &= ~(name)
         else
         {
             /* The screen wasn't a PublicScreen */
-            UnlockPubScreenList();
+            /* We pretend it is a custom screen and let it happen anyways. This helps tools like AsmPro and is more AmigaOS like */
+            nw.Type = CUSTOMSCREEN;
+            nw.Flags  |= WFLG_VISITOR;
             D(bug("OpenWindow: Not a PublicScreen\n"));
-            goto failexit;
         }
         UnlockPubScreenList();
     }

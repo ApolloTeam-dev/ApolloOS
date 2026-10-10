@@ -279,11 +279,15 @@
 	    break;
 
 	case VTAG_CHROMA_PLANE_SET:
+		if(tag->ti_Data < 8)
+		{
+			cm->TransparencyPlane = tag->ti_Data;
+		}
 	    break;
 
 	case VTAG_CHROMA_PLANE_GET:
 	    tag->ti_Tag = VTAG_CHROMA_PLANE_SET;
-	    tag->ti_Data = 0;
+	    tag->ti_Data = (ULONG)cm->TransparencyPlane;
 	    break;
 
 	case VTAG_IMMEDIATE:

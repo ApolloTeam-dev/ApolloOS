@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2007, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Graphics function AskSoftStyle()
@@ -54,11 +54,22 @@
 
 {
     AROS_LIBFUNC_INIT
+
+	ULONG style;
       
     if(rp->Font == NULL)
-	return 0;
-    
-    return ~rp->Font->tf_Style;
+	  return 0;
+	
+    style = (ULONG)rp->Font->tf_Style;
+    if(!(style & FSF_UNDERLINED))
+    {
+    	if((rp->Font->tf_Baseline + 2) > rp->Font->tf_YSize)
+    	{
+    	    style |=  FSF_UNDERLINED;
+    	}
+    } 
+
+    return ~style;
     
     AROS_LIBFUNC_EXIT
 } /* AskSoftStyle */

@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -53,8 +53,13 @@
 
     struct DimensionInfo info;
 
+	/* New code just simply checks for the RTG mask, who knows if SAGA will have planar modes */
+    if((modeID & 0xF0000000) == 0) return FALSE;
+	return TRUE;
+	
     /* This function works by querying pixelformat for the mode and checking if it is planar */
-    if (GetDisplayInfoData(NULL, (UBYTE *)&info, sizeof(info), DTAG_DIMS, modeID) == sizeof(info)) {
+    /* Leave this code in case this is better...
+	if (GetDisplayInfoData(NULL, (UBYTE *)&info, sizeof(info), DTAG_DIMS, modeID) == sizeof(info)) {
     	HIDDT_StdPixFmt stdpf;
 	OOP_Object *pf = (OOP_Object *)info.reserved[1];
 
@@ -64,6 +69,7 @@
     }
 
     return FALSE;
+	*/
 
     AROS_LIBFUNC_EXIT
 } /* IsCyberModeID */

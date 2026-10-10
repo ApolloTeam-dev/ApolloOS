@@ -1,6 +1,6 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
-    Copyright © 2001-2003, The MorphOS Development Team. All Rights Reserved.
+    Copyright Â© 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright Â© 2001-2003, The MorphOS Development Team. All Rights Reserved.
     $Id$
 
     Get info about a screen. *OBSOLETE*
@@ -68,21 +68,39 @@
 
     EXTENDUWORD(size);
     EXTENDUWORD(type);
+	
+	UWORD screensize;
+	struct Screen *myscreen;
 
-    if (type == WBENCHSCREEN)
+	if(type == CUSTOMSCREEN)
     {
-        screen = GetPrivIBase(IntuitionBase)->WorkBench;
+    	myscreen = screen;	
     }
-    else if (type != CUSTOMSCREEN)
+	else if (type == WBENCHSCREEN)
     {
-	/* FIXME: Handle CUSTOMSCREEN */
-        screen = NULL;
+		/* Do not forget about SHANGHAI */
+        if (GetPrivIBase(IntuitionBase)->pubScrGlobalMode == SHANGHAI)
+        {
+    		myscreen = GetPrivIBase(IntuitionBase)->DefaultPubScreen;
+        }
+        else
+        	myscreen = GetPrivIBase(IntuitionBase)->WorkBench;
     }
+	
+    if(!myscreen) return FALSE;
+	
+    screensize = sizeof(struct Screen);
+    if(size < screensize) screensize = size;
     
-    if (screen)
-        CopyMem (screen, buffer, size);
+	CopyMem (myscreen, buffer, screensize);
+	
+    if (type == WBENCHSCREEN)
+	{
+		/* TODO: Alter Screenmodes for myscreen if it is WBENCHSCREEN*/
 
-    return (screen != NULL);
+	}
+	
+    return (TRUE);
     
     AROS_LIBFUNC_EXIT
 } /* GetScreenData */
