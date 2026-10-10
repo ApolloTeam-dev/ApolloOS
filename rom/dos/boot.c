@@ -94,7 +94,7 @@ void __dos_Boot(struct DosLibrary *DOSBase, ULONG BootFlags, UBYTE Flags)
      * If needed, run the display drivers loader.
      * In fact the system must have at least one resident driver,
      * which will be used for bootmenu etc. However, it we somehow happen
-     * not to have it, this will be our last chance.
+     * not to have it, this will be our last chance.*/
      
     if ((BootFlags & (BF_NO_DISPLAY_DRIVERS | BF_NO_COMPOSITION)) != (BF_NO_DISPLAY_DRIVERS | BF_NO_COMPOSITION))
     {
@@ -127,7 +127,7 @@ void __dos_Boot(struct DosLibrary *DOSBase, ULONG BootFlags, UBYTE Flags)
             // We don't care about the return code
             UnLoadSeg(seg);
         }
-    } */
+    } 
 
     DD(bug("[DOS] %s: preparing console\n", __func__);)
 

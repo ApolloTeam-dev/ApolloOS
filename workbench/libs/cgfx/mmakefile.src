@@ -11,6 +11,7 @@ FUNCS := \
         alloccmodelisttaglist                   \
         bestcmodeidtaglist                      \
         blttemplatealpha                        \
+        cmoderequesttaglist                     \
         cvideoctrltaglist                       \
         docdrawmethodtaglist                    \
         extractcolor                            \

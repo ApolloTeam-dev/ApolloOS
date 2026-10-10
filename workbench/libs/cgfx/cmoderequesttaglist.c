@@ -60,7 +60,6 @@ static ULONG CModeCompatFilterHook(struct Hook *hook, APTR object, APTR message)
     (void)object;
     if((modeID & 0xF0000000) == 0) return FALSE;
     if (GetDisplayInfoData(handle, &display, sizeof(display), DTAG_DISP, modeID) != sizeof(display)) return FALSE;
-    if (!CModeCompatIsCyberModeID(modeID, &display)) return FALSE;
     if (GetDisplayInfoData(handle, &dimensions, sizeof(dimensions), DTAG_DIMS, modeID) != sizeof(dimensions)) return FALSE;
         
     return TRUE; //CModeCompatPixelFormatAllowed(filter->colorModels, CModeCompatPixelFormat(&display, &dimensions));      
@@ -69,8 +68,8 @@ static ULONG CModeCompatFilterHook(struct Hook *hook, APTR object, APTR message)
 	AROS_LH2(ULONG, CModeRequestTagList,
 
 /*  SYNOPSIS */
-	AROS_LHA(APTR            , , A0),
-	AROS_LHA(struct TagItem *, , A1),
+	AROS_LHA(APTR            , requester, A0),
+	AROS_LHA(struct TagItem *, tagItems, A1),
 
 /*  LOCATION */
 	struct Library *, CyberGfxBase, 11, Cybergraphics)
