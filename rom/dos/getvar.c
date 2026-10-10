@@ -237,6 +237,7 @@ static LONG getvar_from(const char *name, const char *volume, STRPTR buffer, LON
         {
             D(bug("GetVar: can't find size\n"));
 
+	        Close(file);
             return -1;
         }
 

@@ -50,6 +50,12 @@ static inline __attribute__((always_inline)) ULONG READ32(IPTR a)
     return (*(volatile ULONG*)a);
 }
 
+static inline __attribute__((always_inline)) VOID WRITE8(IPTR a, UBYTE b)
+{
+    D(bug("WRITE8(%p,%02x)\n", a, b));
+    *(volatile UBYTE *)(a) = (b);
+}
+
 static inline __attribute__((always_inline)) VOID WRITE16(IPTR a, UWORD b)
 {
     D(bug("WRITE16(%p,%04x)\n", a, b));

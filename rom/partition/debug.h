@@ -1,8 +1,9 @@
 #ifndef PDEBUG_H
 #define PDEBUG_H
 
-#ifdef __AMIGAOS__
-
+//#ifdef __AMIGAOS__
+    #include <aros/debug.h>
+    
     #if APOLLO_DEBUG
     #define DEBUG 1
     #else
@@ -11,12 +12,12 @@
 
     #if DEBUG
     #define D(x) x
-    #define bug kprintf
+    //#define bug kprintf
     #endif
 
-    #define kprintf(x)
-#else
-    #include <aros/debug.h>
-#endif
+    //#define kprintf(x)
+//#else
+
+//#endif
 
 #endif

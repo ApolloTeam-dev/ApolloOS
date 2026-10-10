@@ -22,14 +22,14 @@
 #include "fs_driver.h"
 
 #if APOLLO_DEBUG
-#define DEBUG 0
+#define DEBUG 1
 #else
 #define DEBUG 0
 #endif
 
 #if DEBUG
 #define DD(x) x
-#define D(x)
+#define D(x) 
 #define bug kprintf
 #else
 #define D(x)

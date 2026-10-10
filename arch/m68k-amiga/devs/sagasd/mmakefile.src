@@ -28,7 +28,7 @@ USER_INCLUDES := -I$(SRCDIR)/$(CURDIR)/\
                  -I$(SRCDIR)/$(CURDIR)/../include
 
 USER_CFLAGS := -D__NOLIBBASE__ -O2 -DSIMULATE=0 \
-               -DADATE="\"$(shell date "+%d.%m.%Y")\"" -fdata-sections -ffunction-sections -fno-zero-initialized-in-bss -fno-common
+               -DADATE="\"$(shell date "+%d.%m.%Y")\"" -fdata-sections -ffunction-sections -fno-common -fno-zero-initialized-in-bss
 
 USER_LDFLAGS := -static
 

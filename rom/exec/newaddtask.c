@@ -126,7 +126,7 @@
     if (mlExtra)
         AddTail(&task->tc_MemEntry, &mlExtra->ml_Node);
 
-    DADDTASK("NewAddTask MemEntry head: 0x%p", GetHead(&task->tc_MemEntry.lh_Head));
+    DADDTASK("NewAddTask MemEntry head: 0x%p", GetHead(&task->tc_MemEntry));
 
     /* Set node type to NT_TASK if not set to something else. */
     if (!task->tc_Node.ln_Type)

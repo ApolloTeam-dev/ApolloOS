@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -157,7 +157,7 @@ static LONG internalBootCliHandler(void);
 
     DeleteMsgPort(reply_mp);
 
-    D(bug("Dos/CliInit: Process returned Res1=%ld, Res2=%ld\n", Res1, Res2));
+    DD(bug("Dos/CliInit: Process returned Res1=%ld, Res2=%ld\n", Res1, Res2));
 
     /* Did we succeed? */
     if (Res1 == DOSTRUE)
@@ -248,7 +248,7 @@ static void internalPatchBootNode(struct FileSysResource *fsr, struct DeviceNode
     /* If the DosType is 0 and dn_Handler == BNULL, use the default handler */
     if (de->de_DosType == 0 && dn->dn_Handler == BNULL)
     {
-        D(bug("Dos/CliInit: Neither DosType nor Handler specified, using default filesystem\n"));
+        DD(bug("Dos/CliInit: Neither DosType nor Handler specified, using default filesystem\n"));
         dn->dn_SegList = defseg;
         dn->dn_GlobalVec = (BPTR)-1;
         return;
@@ -256,11 +256,11 @@ static void internalPatchBootNode(struct FileSysResource *fsr, struct DeviceNode
 
     /* If no FileSysResource, nothing to do */
     if (fsr == NULL) {
-        D(bug("Dos/CliInit: No FileSystem.resource, not patching DeviceNode %p\n", dn));
+        DD(bug("Dos/CliInit: No FileSystem.resource, not patching DeviceNode %p\n", dn));
         return;
     }
 
-    D(bug("Dos/CliInit: Looking for patches for DeviceNode %p\n", dn));
+    DD(bug("Dos/CliInit: Looking for patches for DeviceNode %p\n", dn));
 
     /*
      * internalMatchFileSystemResourceHandler looks up the filesystem
@@ -268,7 +268,7 @@ static void internalPatchBootNode(struct FileSysResource *fsr, struct DeviceNode
     fse = internalMatchFileSystemResourceHandler(fsr, de->de_DosType, dn->dn_Handler);
     if (fse != NULL)
     {
-        D(bug("Dos/CliInit: found 0x%p in FileSystem.resource\n", fse));
+        DD(bug("Dos/CliInit: found 0x%p in FileSystem.resource\n", fse));
         PRINT_DOSTYPE(fse->fse_DosType);
 
         dn->dn_SegList = fse->fse_SegList;
@@ -296,7 +296,7 @@ static struct MsgPort *mountBootNode(struct DeviceNode *dn, struct FileSysResour
     if ((dn == NULL) || (dn->dn_Name == BNULL))
         return NULL;
 
-    D(bug("Dos/CliInit: Mounting 0x%p (%b)...\n", dn, dn->dn_Name));
+    DD(bug("Dos/CliInit: Mounting 0x%p (%b)...\n", dn, dn->dn_Name));
 
     /* Check if the device is already in DOS list */
     dl = LockDosList(LDF_DEVICES | LDF_READ);
@@ -312,7 +312,7 @@ static struct MsgPort *mountBootNode(struct DeviceNode *dn, struct FileSysResour
     /* Found in DOS list? Do nothing. */
     if (dl)
     {
-        D(bug("Dos/CliInit: Found in DOS list, nothing to do\n"));
+        DD(bug("Dos/CliInit: Found in DOS list, nothing to do\n"));
         return dl->dol_Task;
     }
 
@@ -322,7 +322,7 @@ static struct MsgPort *mountBootNode(struct DeviceNode *dn, struct FileSysResour
     if (!dn->dn_Handler && !dn->dn_SegList)
     {
         /* Don't know how to mount? Error... */
-        D(bug("Dos/CliInit: Don't know how to mount\n"));
+        DD(bug("Dos/CliInit: Don't know how to mount\n"));
         return NULL;
     }
 
@@ -333,18 +333,18 @@ static struct MsgPort *mountBootNode(struct DeviceNode *dn, struct FileSysResour
          * a) On the Amiga ADNF_STARTPROC was not present in KS 1.3 and earlier, there was no deferred mount.
          * b) In fact if we have something in ExpansionBase, we for sure want it to be mounted.
          */
-        D(bug("Dos/CliInit: Added to DOS list, starting up handler...\n"));
+        DD(bug("Dos/CliInit: Added to DOS list, starting up handler...\n"));
 
         if (RunHandler(dn, NULL, DOSBase))
         {
-            D(bug("dn->dn_Task = 0x%p\n", dn->dn_Task));
+            DD(bug("dn->dn_Task = 0x%p\n", dn->dn_Task));
             return dn->dn_Task;
         }
 
-        D(bug("Failed\n"));
+        DD(bug("Failed\n"));
         RemDosEntry((struct DosList *)dn);
     }
-    D(else bug("Dos/CliInit: AddDosEntry() failed\n"));
+    DD(else bug("Dos/CliInit: AddDosEntry() failed\n"));
 
     /*
      * TODO: AddDosEntry() can fail in case of duplicate name. In this case it would be useful
@@ -376,7 +376,7 @@ static BPTR internalBootLock(struct DosLibrary *DOSBase, struct ExpansionBase *E
      */
     ObtainSemaphore(&IntExpBase(ExpansionBase)->BootSemaphore);
     bn = (struct BootNode *)GetHead(&ExpansionBase->MountList);
-    D(bug("Dos/CliInit: MountList head: 0x%p\n", bn));
+    DD(bug("Dos/CliInit: MountList head: 0x%p\n", bn));
 
     if (bn == NULL)
     {
@@ -394,7 +394,7 @@ static BPTR internalBootLock(struct DosLibrary *DOSBase, struct ExpansionBase *E
         return BNULL;
     }
 
-    D(bug("Dos/CliInit: %b (%d) appears usable\n", dn->dn_Name, bn->bn_Node.ln_Pri));
+    DD(bug("Dos/CliInit: %b (%d) appears usable\n", dn->dn_Name, bn->bn_Node.ln_Pri));
 
     /* Try to find a Lock for 'name:' */
     name_len = AROS_BSTR_strlen(dn->dn_Name);
@@ -407,10 +407,10 @@ static BPTR internalBootLock(struct DosLibrary *DOSBase, struct ExpansionBase *E
         CopyMem(AROS_BSTR_ADDR(dn->dn_Name), name, name_len);
         name[name_len+0] = ':';
         name[name_len+1] = 0;
-        D(bug("Dos/CliInit:   Attempt to Lock(\"%s\")... ", name));
+        DD(bug("Dos/CliInit:   Attempt to Lock(\"%s\")... ", name));
 
         lock = Lock(name, SHARED_LOCK);
-        D(bug("=> 0x%p\n", BADDR(lock)));
+        DD(bug("=> 0x%p\n", BADDR(lock)));
 
         if (lock != BNULL)
         {
@@ -435,11 +435,11 @@ static BPTR internalBootLock(struct DosLibrary *DOSBase, struct ExpansionBase *E
             SIPTR dead;
 
             /* Darn. Not bootable. Try to unmount it. */
-            D(bug("Dos/CliInit:   Does not have a bootable filesystem, unmounting...\n"));
+            DD(bug("Dos/CliInit:   Does not have a bootable filesystem, unmounting...\n"));
 
             /* It's acceptable if this fails */
             dead = DoPkt(mp, ACTION_DIE, 0, 0, 0, 0, 0);
-            D(bug("Dos/CliInit:  ACTION_DIE returned %ld\n", dead));
+            DD(bug("Dos/CliInit:  ACTION_DIE returned %ld\n", dead));
 
             if (dead)
             {
@@ -500,7 +500,7 @@ static LONG internalBootCliHandler(void)
 
     DOSBase = (APTR)TaggedOpenLibrary(TAGGEDOPEN_DOS);
     if (DOSBase == NULL) {
-        D(bug("Dos/CliInit: failed to open dos.library!\n"));
+        DD(bug("Dos/CliInit: failed to open dos.library!\n"));
         Alert(AT_DeadEnd | AG_OpenLib | AO_DOSLib);
     }
 
@@ -518,7 +518,7 @@ static LONG internalBootCliHandler(void)
 
         /* Find and Lock the proposed boot device */
         lock = internalBootLock(DOSBase, ExpansionBase, fsr);
-        D(bug("Dos/CliInit: Proposed SYS: lock is: %p\n", BADDR(lock)));
+        DD(bug("Dos/CliInit: Proposed SYS: lock is: %p\n", BADDR(lock)));
         if (lock == BNULL)
             err = IoErr();
     }
@@ -556,7 +556,7 @@ static LONG internalBootCliHandler(void)
     lock = Lock("SYS:", SHARED_LOCK);
     if (lock == BNULL)
     {
-        D(bug("DOS/CliInit: Impossible! The SYS: assign failed!\n"));
+        DD(bug("DOS/CliInit: Impossible! The SYS: assign failed!\n"));
         Alert(AT_DeadEnd | AG_BadParm | AN_DOSLib);
     }
 
@@ -592,11 +592,11 @@ static LONG internalBootCliHandler(void)
      * This means the handler needs to be loaded from disk (fat-handler for example).
      * Here we can already do it.
      */
-    D(bug("Dos/CliInit: Assigns done, mount remaining handlers...\n"));
+    DD(bug("Dos/CliInit: Assigns done, mount remaining handlers...\n"));
 
     BootFlags = IntExpBase(ExpansionBase)->BootFlags;
     Flags = ExpansionBase->Flags;
-    D(bug("Dos/CliInit: BootFlags 0x%lx Flags 0x%x\n", BootFlags, Flags));
+    DD(bug("Dos/CliInit: BootFlags 0x%lx Flags 0x%x\n", BootFlags, Flags));
 
     ForeachNodeSafe(&ExpansionBase->MountList, bn, tmpbn)
     {
@@ -617,14 +617,14 @@ static LONG internalBootCliHandler(void)
     bootProc->pr_WindowPtr = bootWin;
 
     /* Init all the RTF_AFTERDOS code, since we now have SYS:, the dos devices, and all the other assigns */
-    D(bug("Dos/CliInit: Calling InitCode(RTF_AFTERDOS, 0)\n"));
+    DD(bug("Dos/CliInit: Calling InitCode(RTF_AFTERDOS, 0)\n"));
     InitCode(RTF_AFTERDOS, 0);
 
     /* Call the platform-overridable portions */
-    D(bug("Dos/CliInit: Calling __dos_Boot(%p, 0x%lx, 0x%x)\n", DOSBase, BootFlags, Flags));
+    DD(bug("Dos/CliInit: Calling __dos_Boot(%p, 0x%lx, 0x%x)\n", DOSBase, BootFlags, Flags));
     __dos_Boot(DOSBase, BootFlags, Flags);
 
-    D(bug("Dos/CliInit: Boot sequence exited\n"));
+    DD(bug("Dos/CliInit: Boot sequence exited\n"));
     CloseLibrary((APTR)DOSBase);
 
     /* And exit... */

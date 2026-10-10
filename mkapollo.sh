@@ -27,6 +27,7 @@ DEBUG=0
 CONFO=""
 MAKEO=""
 EXCLUDE=0
+PORTS=""
 ## END Configuration ##
 
 ## BEGIN Beauty Variables ##
@@ -48,7 +49,9 @@ setvars () {
 		SRC="${DIR}/${WORK}/src"
 	fi
 	TEST_CFLAGS="" #-I${DIR}/${WORK}"
-	PORTS="${DIR}/${WORK}/prt"
+	if [ -z "${PORTS}" ]; then
+		PORTS="${DIR}/${WORK}/prt"
+	fi
 	BIN="${DIR}/${WORK}/bin"
 	source ${SRC}/make_dist_config.sh
 	DISTOPTNAME="--enable-dist-name=${DISTRONAME}"
@@ -210,6 +213,10 @@ for i in "$@"; do
    REZ="640x256x4"
    shift
   ;;
+  --ports=*)
+   PORTS="${i#*=}"
+   shift
+  ;;
   -v|-v1|--vamp)
    VAMP=1
    shift
@@ -290,6 +297,7 @@ ${BOLD}mkapollo.sh -- Roll your own ApolloOS image and ROM${NC}
   -n,--ntsc                   Select NTSC build
   -o,--opt=#                  Select optimization level
   -p,--pal                    Select PAL build
+  --ports                     Select ports directory
   -v,--vamp                   Compile for True Vampires
   -w,--work=<dir>             Work directory (will be created if not present)
   -x,--exclude                When wiping, do not save cross compile tools

@@ -39,14 +39,7 @@
 #define TASK_PRI                10
 #define TIMEOUT                 30
 
-#if VAMPIRECARDSERIES==2
-#define CACHE_SIZE_BITS         14      /* V2 = 2^14 * 512 byte blocks = 8Mb */
-#else
-#define CACHE_SIZE_BITS         17      /* V4 = 2^17 * 512 byte blocks = 64Mb */
-#endif
-
-#define CACHE_SIZE              (1<<CACHE_SIZE_BITS)
-#define CACHE_MASK              (CACHE_SIZE-1)
+#define CACHE_MASK8             (((1<<20)>>3)-1)
 
 #if APOLLO_DEBUG
 #define DEBUG 1
@@ -121,6 +114,8 @@ struct ataBase
      */
     UBYTE                    	*ata_CacheData;
     UQUAD                   	*ata_CacheTags;
+    ULONG                       myway;
+    ULONG                       CACHE_SIZE8;
 
     ULONG                   	ata_ItersPer100ns;
 

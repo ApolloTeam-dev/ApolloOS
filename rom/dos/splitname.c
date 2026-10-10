@@ -69,6 +69,9 @@
 {
     AROS_LIBFUNC_INIT
 
+	if(!size)
+		return -1;
+
     size --;
 
     name += oldpos;

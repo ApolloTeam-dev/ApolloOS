@@ -1,6 +1,6 @@
 /****************************************************************
    This file was created automatically by `FlexCat 2.19'
-   from "/home/willem/ApolloTeam/ApolloOS/rom/hidds/pci/pcitool/catalogs/pcitool.cd".
+   from "/home/willem/ApolloOS/rom/hidds/pci/pcitool/catalogs/pcitool.cd".
 
    Do NOT edit by hand!
 ****************************************************************/

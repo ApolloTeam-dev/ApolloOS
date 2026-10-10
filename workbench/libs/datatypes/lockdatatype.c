@@ -7,6 +7,8 @@
 #include "datatypes_intern.h"
 #include <datatypes/datatypes.h>
 #include <proto/exec.h>
+//#define DEBUG 1
+#include <aros/debug.h>
 
 /*****************************************************************************
 
@@ -55,11 +57,14 @@
 {
     AROS_LIBFUNC_INIT
 
+    D(bug("datatypes.library/LockDataType: Entered with datatype(%x)\n", dt));
+    
     if(dt == NULL || dt->dtn_Length == 0)
         return;
 
     ObtainSemaphoreShared(&(GPB(DataTypesBase)->dtb_DTList)->dtl_Lock);
-   
+
+    D(bug("datatypes.library/LockDataType: Datatype %x OpenCount being incremented to %d\n", dt, ((struct CompoundDataType *)dt)->OpenCount + 1));
     ((struct CompoundDataType *)dt)->OpenCount++;
     
     ReleaseSemaphore(&(GPB(DataTypesBase)->dtb_DTList)->dtl_Lock);

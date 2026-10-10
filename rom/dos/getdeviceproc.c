@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2017, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2017, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: GetDeviceProc() - Find the filesystem for a path.
@@ -70,12 +70,9 @@ static struct DevProc *deviceproc_internal(struct DosLibrary *DOSBase, CONST_STR
     D(bug("[GetDeviceProc] '%s':0x%p\n", name, dp));
     dp2 = deviceproc_internal(DOSBase, name, dp);
 
-#if DEBUG
-    bug("[GetDeviceProc] = 0x%p", dp2);
-    if (dp2)
-        bug(", port=0x%p lock=0x%p dv=0x%p\n", dp2->dvp_Port, dp2->dvp_Lock, dp2->dvp_DevNode);
-    RawPutChar('\n');
-#endif
+    D(bug("[GetDeviceProc] = 0x%p", dp2);)
+    D(if (dp2) D(bug(", port=0x%p lock=0x%p dv=0x%p\n", dp2->dvp_Port, dp2->dvp_Lock, dp2->dvp_DevNode);))
+    D(RawPutChar('\n');)
 
     return dp2;
 

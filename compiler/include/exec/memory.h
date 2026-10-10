@@ -2,7 +2,7 @@
 #define EXEC_MEMORY_H
 
 /*
-    Copyright © 1995-2012, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2012, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Memory handling

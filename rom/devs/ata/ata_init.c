@@ -221,6 +221,17 @@ static int ATA_init(struct ataBase *ATABase)
 
     DATAINIT(bug("[ATA--] %s: MemPool @ %p\n", __func__, ATABase->ata_MemPool));
 
+    // Determine BoardID and set Cache
+    UBYTE ApolloBoardID = ((*(volatile UBYTE *)0xdff3fc));
+    ULONG CACHE_SIZE = 0;
+    if ( ApolloBoardID==0x08) // 8 = UniCorn
+    {
+        CACHE_SIZE = (1<<20);  // 512 MB
+    } else {
+        CACHE_SIZE = (1<<17);  // 64 MB
+    } 
+    ATABase->CACHE_SIZE8 = (CACHE_SIZE>>3);  // set size of 1 way of (8way cache)
+
     /*
      * ata drive cache memory allocation
      */

@@ -134,44 +134,78 @@ VOID SAGAHW_V4_SetSpriteHide(VOID)
 
 VOID SAGAHW_V4_SetSpriteColors(UWORD *colors)
 {
-    for (int i = 1; i < 4; i++)
-    {
-        WRITE16(SAGA_V4_VIDEO_SPRITE_CLUT + (i << 1), colors[i]);
+    if((ULONG)((*(volatile UWORD *)0xdff3fc) >> 8))
+    {    
+        ULONG colorvalue;
+    
+      for (int i = 0; i < 4; i++)
+        {
+            colorvalue = (colors[i] & (0x0F00)) << 12 | (colors[i] & (0x00F0)) << 8 | (colors[i] & (0x000F)) << 4; // CLUT4->CLUT8
+            
+            //kprintf("Sprite Color %d: %04x -> %08x\n", i, colors[i], colorvalue);
+
+            WRITE16(SAGA_VIDEO_SPRITECLUT_IDX, i);
+            WRITE32(SAGA_VIDEO_SPRITECLUT_RGB, colorvalue);       
+        }
     }
 }
 
 VOID SAGAHW_V4_SetSpriteMemory(UBYTE *memory)
 {
-    IPTR ptr = SAGA_V4_VIDEO_SPRITE_DATA;
-    
-    ULONG x, y, pix, val;
-    
-    for (y = 0; y < 16; y++)
+    if((ULONG)((*(volatile UWORD *)0xdff3fc) >> 8))
     {
-        pix = 0x80008000;
-        val = 0;
+        IPTR ptr = SAGA_VIDEO_SPRITEDATA;
         
-        for (x = 0; x < 16; x++)
+        ULONG x, y, value;
+        
+        for (y=0; y < 16; y++)
         {
-            switch (memory[y * 16 + x])
+            for (x=0; x < 8; x++)
             {
-                case 1:
-                    val |= pix & 0xffff0000;
-                    break;
-                case 2:
-                    val |= pix & 0x0000ffff;
-                    break;
-                case 3:
-                    val |= pix;
-                    break;
-                default:
-                    break;
+                value = (memory[y * 16 + (x*2)] << 24) | (0xAA)<< 16 | (memory[y * 16 + (x*2) + 1] << 8) | (0xAA);
+                WRITE32(ptr, value);
+                ptr+=4;
             }
-            pix >>= 1;
+            for (x=0; x < 8; x++)
+            {
+                WRITE32(ptr, 0x00000000);
+                ptr+=4;
+            }     
         }
-        
-        WRITE32(ptr, val);
-        ptr += 4;
+
+        for (x=0; x < 256; x++)
+        {
+            WRITE32(ptr, 0x00000000);
+            ptr += 4;
+        }       
+
+        /*for (y = 0; y < 16; y++)
+        {
+            pix = 0x80008000;
+            val = 0;
+            
+            for (x = 0; x < 16; x++)
+            {
+                switch (memory[y * 16 + x])
+                {
+                    case 1:
+                        val |= pix & 0xffff0000;
+                        break;
+                    case 2:
+                        val |= pix & 0x0000ffff;
+                        break;
+                    case 3:
+                        val |= pix;
+                        break;
+                    default:
+                        break;
+                }
+                pix >>= 1;
+            }
+            
+            WRITE32(ptr, val);
+            ptr += 4;
+        }*/
     }
 }
 

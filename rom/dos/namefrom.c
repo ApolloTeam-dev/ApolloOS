@@ -1,15 +1,16 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
+    Copyright ï¿½ 1995-2007, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Retrieve the full pathname from a lock or a filehandle.
     Lang: english
 */
 
+#include <aros/debug.h>
 #include <proto/exec.h>
 #include "dos_intern.h"
 #include <proto/dos.h>
-#include <aros/debug.h>
+
 
 BOOL namefrom_internal(struct DosLibrary *DOSBase, BPTR lock, STRPTR buffer, LONG length)
 {

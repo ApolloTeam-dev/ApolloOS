@@ -840,9 +840,6 @@ void ata_init_unit(struct ata_Bus *bus, struct ata_Unit *unit, UBYTE u)
     struct ataBase *ATABase = bus->ab_Base;
     OOP_Object *obj = OOP_OBJECT(ATABase->busClass, bus);
 
-    UWORD ApolloBoardID     = *(volatile UWORD *)0xdff3fc;  
-    ApolloBoardID = ApolloBoardID >> 8; 
-
     unit->au_Bus        = bus;
     unit->pioInterface  = bus->pioInterface;
     unit->au_UnitNum    = bus->ab_BusNum << 1 | u;

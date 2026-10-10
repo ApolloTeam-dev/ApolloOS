@@ -8,9 +8,9 @@
 #include "sdcmd.h"
 
 #define SAGASD_UNITS        2
-#define IO_TIMINGLOOP_MSEC  100000
+#define IO_TIMINGLOOP_USEC  100000  /* timer tick in microseconds (100 ms) for the SD detect poll */
 
-#define SDU_STACK_SIZE      (4096 / sizeof(ULONG))
+#define SDU_STACK_SIZE      (16384 / sizeof(ULONG))
 
 struct SAGASDBase
 {
@@ -22,7 +22,7 @@ struct SAGASDBase
         struct Unit sdu_Unit;
         struct Task sdu_Task;
         TEXT        sdu_Name[6];        /* "SDIOx" */
-        ULONG       sdu_Stack[1024];    /* 4K stack */
+        ULONG       sdu_Stack[SDU_STACK_SIZE];    /* 16K stack (see SDU_STACK_SIZE) */
         BOOL        sdu_Enabled;
 
         struct sdcmd sdu_SDCmd;
@@ -34,8 +34,9 @@ struct SAGASDBase
         BOOL sdu_Motor;                 /* TD_MOTOR state */
         ULONG sdu_ChangeNum;
 
-        APTR sdu_AddChangeList[10];    /* Storage for TD_ADDCHANGEINT Pointers from Filesystems */
-        int sdu_AddChangeListItems;
+        APTR sdu_AddChangeList[10];    /* TD_ADDCHANGEINT interrupt pointers; 0-based, NULL = reusable hole */
+        int sdu_AddChangeListItems;    /* High-water count of used slots */
+        BOOL sdu_MultiFS;              /* TRUE once a non-FAT handler is registered (was AddChangeList[0]) */
         
         struct Library *sdu_ExecBase;
     } sd_Unit[SAGASD_UNITS];

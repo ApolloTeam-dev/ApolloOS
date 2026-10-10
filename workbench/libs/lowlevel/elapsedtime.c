@@ -49,7 +49,7 @@
     SubTime(&b, tlast);
     *tlast = a;
 
-    return b.tv_secs*1000 + b.tv_micro/1000;
+    return (b.tv_secs << 16) | (b.tv_micro*1024/15625);  // Patch by Apollo Team (@Morten)
 
     AROS_LIBFUNC_EXIT
 } /* ElapsedTime */

@@ -33,6 +33,7 @@ struct MemHeader *FindMem(APTR address, struct ExecBase *SysBase)
 
     while (mh->mh_Node.ln_Succ != NULL)
     {
+#if HANDLE_MANAGED_MEM
         if (IsManagedMem(mh))
         {
             struct MemHeaderExt *mhe = (struct MemHeaderExt *)mh;
@@ -47,7 +48,8 @@ struct MemHeader *FindMem(APTR address, struct ExecBase *SysBase)
             }
         }
         else
-        {
+#endif
+		{
             /* Check if this MemHeader fits */
             if (address >= mh->mh_Lower && address < mh->mh_Upper)
             {
@@ -99,9 +101,9 @@ char *FormatMMContext(char *buffer, struct MMContext *ctx, struct ExecBase *SysB
     return buffer;
 }
 
-/* #define NO_ALLOCATOR_CONTEXT */
+#define NO_ALLOCATOR_CONTEXT
 
-#ifdef NO_ALLOCATOR_CONTEXT
+#if defined(NO_ALLOCATOR_CONTEXT)
 
 struct MemHeaderAllocatorCtx * mhac_GetSysCtx(struct MemHeader * mh, struct ExecBase * SysBase)
 {
@@ -374,13 +376,14 @@ void mhac_PoolMemHeaderSetup(struct MemHeader * mh, struct ProtectedPool * pool)
 #define mhac_PoolMemHeaderGetCtx(a)     ((struct MemHeaderAllocatorCtx *)(a->mh_Node.ln_Name))
 #define mhac_PoolMemHeaderGetPool(a)    (mhac_PoolMemHeaderGetCtx(a)->mhac_Data1)
 
-#endif
+#endif // defined(NO_ALLOCATOR_CONTEXT)
+
 
 
 #ifdef NO_CONSISTENCY_CHECKS
 
-#define validateHeader(mh, op, addr, size, SysBase) TRUE
-#define validateChunk(mc, prev, mh, op, addr, size, SysBase) TRUE
+#define validateHeader(mh, op, addr, size, tp, SysBase) TRUE
+#define validateChunk(mc, prev, mh, op, addr, size, tp, SysBase) TRUE
 
 #else
 
@@ -444,10 +447,10 @@ static inline BOOL validateChunk(struct MemChunk *p2, struct MemChunk *p1, struc
                  UBYTE op, APTR addr, IPTR size,
                  struct TraceLocation *tp, struct ExecBase *SysBase)
 {
-    if (((IPTR)p2->mc_Next & (MEMCHUNK_TOTAL-1)) || (p2->mc_Bytes == 0) || (p2->mc_Bytes & (MEMCHUNK_TOTAL-1))    ||    /* 1 */
-    ((APTR)p2 + p2->mc_Bytes > mh->mh_Upper)                                ||    /* 2 */
-    (p2->mc_Next && (((APTR)p2->mc_Next < (APTR)p2 + p2->mc_Bytes + MEMCHUNK_TOTAL) ||                /* 3 */
-                 ((APTR)p2->mc_Next > mh->mh_Upper - MEMCHUNK_TOTAL))))
+    if (((IPTR)p2->mc_Next & (MEMCHUNK_TOTAL-1)) || (p2->mc_Bytes == 0) || (p2->mc_Bytes & (MEMCHUNK_TOTAL-1)) || /* 1 */
+        ((APTR)p2 + p2->mc_Bytes > mh->mh_Upper) ||    /* 2 */
+        (p2->mc_Next && (((APTR)p2->mc_Next < (APTR)p2 + p2->mc_Bytes + MEMCHUNK_TOTAL) || /* 3 */
+        ((APTR)p2->mc_Next > mh->mh_Upper - MEMCHUNK_TOTAL))))
     {
         if (tp)
         {
@@ -471,6 +474,102 @@ static inline BOOL validateChunk(struct MemChunk *p2, struct MemChunk *p1, struc
 
 #endif
 
+ #define MK_UBYTEPTR(a) ((UBYTE *)(a))
+
+APTR stdAllocReverse(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, IPTR size,
+        ULONG requirements, struct TraceLocation *tp, struct ExecBase *SysBase)
+{
+	/* First round byteSize up to a multiple of MEMCHUNK_TOTAL */
+	IPTR byteSize = AROS_ROUNDUP2(size, MEMCHUNK_TOTAL);
+	struct MemChunk *mc=NULL, *p1, *p2;
+
+	/* Validate MemHeader before doing anything. */
+	if (!validateHeader(mh, MM_ALLOC, NULL, size, tp, SysBase))
+		return NULL;
+
+	/* Validate if there is even enough total free memory */
+	if (mh->mh_Free < byteSize) 
+		return NULL;
+	/*
+		* The free memory list is only single linked, i.e. to remove
+		* elements from the list I need the node's predecessor. For the
+		* first element I can use mh->mh_First instead of a real predecessor.
+		*/
+	p1 = mhac_GetBetterPrevMemChunk((struct MemChunk *)&mh->mh_First, size, mhac);
+	p2 = p1->mc_Next;
+
+	/*
+		* Follow the memory list. p1 is the previous MemChunk, p2 is the current one.
+		* On 1st pass p1 points to mh->mh_First, so that changing p1->mc_Next actually
+		* changes mh->mh_First.
+		*/
+	while (p2 != NULL)
+	{
+		/* Validate the current chunk */
+		if (!validateChunk(p2, p1, mh, MM_ALLOC, NULL, size, tp, SysBase))
+			return NULL;
+
+		/* Check if the current block is large enough */
+		if (p2->mc_Bytes>=byteSize)
+		{
+			/* It is. */
+			mc = p1;
+		}
+		/* Go to next block */
+		p1 = p2;
+		p2 = p1->mc_Next;
+	}
+
+	/* Something found? */
+	if (mc != NULL)
+	{
+		/* Remember: MEMF_REVERSE is set p1 and p2 are now invalid. */
+		p1 = mc;
+		p2 = p1->mc_Next;
+
+		mhac_MemChunkClaimed(p2, mhac);
+
+		/* Remove the block from the list and return it. */
+		if (p2->mc_Bytes == byteSize)
+		{
+			/* Fits exactly. Just relink the list. */
+			p1->mc_Next = p2->mc_Next;
+			mc          = p2;
+		}
+		else
+		{
+			struct MemChunk * pp = p1;
+
+			/* Return the last bytes. */
+			mc = (struct MemChunk *)(MK_UBYTEPTR(p2)+p2->mc_Bytes-byteSize);
+			p2->mc_Bytes -= byteSize;
+
+			mhac_MemChunkCreated(p1, pp, mhac);
+		}
+
+		mh->mh_Free -= byteSize;
+
+		/* Clear the block if requested */
+		if (requirements & MEMF_CLEAR)
+			memset(mc, 0, byteSize);
+	}
+#if !defined(NO_ALLOCATOR_CONTEXT)
+	else
+	{
+		if (!mhac_IsIndexEmpty(mhac))
+		{
+			/*
+				* Since chunks created during deallocation are not returned to index,
+				* retry with cleared index.
+				*/
+			mhac_ClearIndex(mhac);
+			mc = stdAlloc(mh, mhac, size, requirements, tp, SysBase);
+		}
+	}
+#endif
+	return mc;
+}
+
 /*
  * Allocate block from the given MemHeader in a specific way.
  * This routine can be called with SysBase = NULL.
@@ -479,6 +578,7 @@ static inline BOOL validateChunk(struct MemChunk *p2, struct MemChunk *p1, struc
  *      However if it was passed once for a given MemHeader it needs to be passed
  *      in all consecutive calls.
  */
+
 APTR stdAlloc(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, IPTR size,
         ULONG requirements, struct TraceLocation *tp, struct ExecBase *SysBase)
 {
@@ -486,6 +586,7 @@ APTR stdAlloc(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, IPTR siz
      * The check has to be done for the second time. Exec uses stdAlloc on memheader
      * passed upon startup. This is bad, very bad. So here a temporary hack :)
      */
+#if HANDLE_MANAGED_MEM
     if ((mh->mh_Node.ln_Type == NT_MEMORY) && IsManagedMem(mh))
     {
         struct MemHeaderExt *mhe = (struct MemHeaderExt *)mh;
@@ -498,8 +599,13 @@ APTR stdAlloc(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, IPTR siz
             return NULL;
     }
     else
+#endif
     {
-        /* First round byteSize up to a multiple of MEMCHUNK_TOTAL */
+		if(requirements & MEMF_REVERSE)
+		{
+			return stdAllocReverse(mh, mhac, size, requirements, tp, SysBase);
+		}
+		/* First round byteSize up to a multiple of MEMCHUNK_TOTAL */
         IPTR byteSize = AROS_ROUNDUP2(size, MEMCHUNK_TOTAL);
         struct MemChunk *mc=NULL, *p1, *p2;
 
@@ -508,9 +614,8 @@ APTR stdAlloc(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, IPTR siz
             return NULL;
 
         /* Validate if there is even enough total free memory */
-        if (mh->mh_Free < byteSize)
+        if (mh->mh_Free < byteSize) 
             return NULL;
-
 
         /*
          * The free memory list is only single linked, i.e. to remove
@@ -536,11 +641,7 @@ APTR stdAlloc(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, IPTR siz
             {
                 /* It is. */
                 mc = p1;
-
-                /* Use this one if MEMF_REVERSE is not set.*/
-                if (!(requirements & MEMF_REVERSE))
-                    break;
-                /* Else continue - there may be more to come. */
+				break;
             }
 
             /* Go to next block */
@@ -551,7 +652,6 @@ APTR stdAlloc(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, IPTR siz
         /* Something found? */
         if (mc != NULL)
         {
-            /* Remember: if MEMF_REVERSE is set p1 and p2 are now invalid. */
             p1 = mc;
             p2 = p1->mc_Next;
 
@@ -568,21 +668,12 @@ APTR stdAlloc(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, IPTR siz
             {
                 struct MemChunk * pp = p1;
 
-                if (requirements & MEMF_REVERSE)
-                {
-                    /* Return the last bytes. */
-                    p1->mc_Next=p2;
-                    mc = (struct MemChunk *)((UBYTE *)p2+p2->mc_Bytes-byteSize);
-                }
-                else
-                {
-                    /* Return the first bytes. */
-                    p1->mc_Next=(struct MemChunk *)((UBYTE *)p2+byteSize);
-                    mc=p2;
-                }
+                /* Return the first bytes. */
+                p1->mc_Next=(struct MemChunk *)(MK_UBYTEPTR(p2)+byteSize);
+                mc=p2;
 
-                p1           = p1->mc_Next;
-                    p1->mc_Next  = p2->mc_Next;
+				p1 = p1->mc_Next;
+                p1->mc_Next  = p2->mc_Next;
                 p1->mc_Bytes = p2->mc_Bytes-byteSize;
 
                 mhac_MemChunkCreated(p1, pp, mhac);
@@ -594,6 +685,7 @@ APTR stdAlloc(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, IPTR siz
             if (requirements & MEMF_CLEAR)
                 memset(mc, 0, byteSize);
         }
+#if !defined(NO_ALLOCATOR_CONTEXT)
         else
         {
             if (!mhac_IsIndexEmpty(mhac))
@@ -606,8 +698,8 @@ APTR stdAlloc(struct MemHeader *mh, struct MemHeaderAllocatorCtx *mhac, IPTR siz
                 mc = stdAlloc(mh, mhac, size, requirements, tp, SysBase);
             }
         }
-
-        return mc;
+#endif
+    		return mc;
     }
 }
 
@@ -623,6 +715,7 @@ void stdDealloc(struct MemHeader *freeList, struct MemHeaderAllocatorCtx *mhac, 
     struct MemChunk *p1, *p2, *p3;
     UBYTE *p4;
 
+#if HANDLE_MANAGED_MEM
     if ((freeList->mh_Node.ln_Type == NT_MEMORY) && IsManagedMem(freeList))
     {
         struct MemHeaderExt *mhe = (struct MemHeaderExt *)freeList;
@@ -631,7 +724,8 @@ void stdDealloc(struct MemHeader *freeList, struct MemHeaderAllocatorCtx *mhac, 
             mhe->mhe_Free(mhe, addr, size);
     }
     else
-    {
+#endif
+	{
         /* Make sure the MemHeader is OK */
         if (!validateHeader(freeList, MM_FREE, addr, size, tp, SysBase))
             return;
@@ -679,12 +773,12 @@ void stdDealloc(struct MemHeader *freeList, struct MemHeaderAllocatorCtx *mhac, 
             /* Found a block with a higher address? */
             if (p2 >= p3)
             {
-#if !defined(NO_CONSISTENCY_CHECKS)
+// #if !defined(NO_CONSISTENCY_CHECKS)
                 /*
                 If the memory to be freed overlaps with the current
                 block something must be wrong.
                 */
-                if (p4>(UBYTE *)p2)
+                if (p4 > MK_UBYTEPTR(p2))
                 {
                     bug("[MM] Chunk allocator error\n");
                     bug("[MM] Attempt to free %u bytes at 0x%p from MemHeader 0x%p\n", byteSize, memoryBlock, freeList);
@@ -693,7 +787,7 @@ void stdDealloc(struct MemHeader *freeList, struct MemHeaderAllocatorCtx *mhac, 
                     Alert(AN_FreeTwice);
                     return;
                 }
-#endif
+// #endif
                 /* End the loop with p2 non-zero */
                 break;
             }
@@ -709,18 +803,17 @@ void stdDealloc(struct MemHeader *freeList, struct MemHeaderAllocatorCtx *mhac, 
         {
 #if !defined(NO_CONSISTENCY_CHECKS)
             /* Check if they overlap. */
-            if ((UBYTE *)p1 + p1->mc_Bytes > (UBYTE *)p3)
+            if (MK_UBYTEPTR(p1) + p1->mc_Bytes > MK_UBYTEPTR(p3))
             {
                 bug("[MM] Chunk allocator error\n");
-                bug("[MM] Attempt to free %u bytes at 0x%p from MemHeader 0x%p\n", byteSize, memoryBlock, freeList);
-                bug("[MM] Block overlaps (2) with chunk 0x%p (%u bytes)\n", p1, p1->mc_Bytes);
-
+                bug("[MM] Attempt to free 0x%08x bytes at 0x%p from MemHeader 0x%p\n", byteSize, memoryBlock, freeList);
+                bug("[MM] Block overlaps (2) with chunk 0x%p (0x%08x bytes)\n", p1, p1->mc_Bytes);
                 Alert(AN_FreeTwice);
                 return;
             }
 #endif
             /* Merge if possible */
-            if ((UBYTE *)p1 + p1->mc_Bytes == (UBYTE *)p3)
+            if ((MK_UBYTEPTR(p1) + p1->mc_Bytes) == MK_UBYTEPTR(p3))
             {
                 mhac_MemChunkClaimed(p1, mhac);
                 p3 = p1;
@@ -740,7 +833,7 @@ void stdDealloc(struct MemHeader *freeList, struct MemHeaderAllocatorCtx *mhac, 
             p1->mc_Next = p3;
 
         /* Try to merge with next block (if there is one ;-) ). */
-        if (p4 == (UBYTE *)p2 && p2 != NULL)
+        if (p4 == MK_UBYTEPTR(p2) && p2 != NULL)
         {
             /*
                Overlap checking already done. Doing it here after
@@ -752,7 +845,7 @@ void stdDealloc(struct MemHeader *freeList, struct MemHeaderAllocatorCtx *mhac, 
         }
         /* relink the list and return. */
         p3->mc_Next = p2;
-        p3->mc_Bytes = p4 - (UBYTE *)p3;
+        p3->mc_Bytes = p4 - MK_UBYTEPTR(p3);
         freeList->mh_Free += byteSize;
         if (p1->mc_Next==p3) mhac_MemChunkCreated(p3, p1, mhac);
     }
@@ -795,7 +888,8 @@ APTR AllocMemHeader(IPTR size, ULONG flags, struct TraceLocation *loc, struct Ex
     {
         struct MemHeader *orig = FindMem(mh, SysBase);
 
-        if (IsManagedMem(orig))
+#if HANDLE_MANAGED_MEM
+		if (IsManagedMem(orig))
         {
             struct MemHeaderExt *mhe_orig = (struct MemHeaderExt *)orig;
             struct MemHeaderExt *mhe = (struct MemHeaderExt *)mh;
@@ -837,7 +931,8 @@ APTR AllocMemHeader(IPTR size, ULONG flags, struct TraceLocation *loc, struct Ex
                 mhe->mhe_InitPool(mhe, size, size - header_size);
         }
         else
-        {
+#endif
+		{
             size -= MEMHEADER_TOTAL;
 
             /*
@@ -868,12 +963,13 @@ void FreeMemHeader(APTR addr, struct TraceLocation *loc, struct ExecBase *SysBas
 
     IPTR size = (IPTR)mhe->mhe_MemHeader.mh_Upper - (IPTR)addr;
 
+#if HANDLE_MANAGED_MEM
     if (IsManagedMem(mhe))
     {
         if (mhe->mhe_DestroyPool)
             mhe->mhe_DestroyPool(mhe);
     }
-
+#endif
     DMH(bug("[FreeMemHeader] Freeing %u bytes at 0x%p\n", size, addr));
     nommu_FreeMem(addr, size, loc, SysBase);
 }
@@ -941,6 +1037,7 @@ APTR InternalAllocPooled(APTR poolHeader, IPTR memSize, ULONG flags, struct Trac
     if (pool->pool.PoolMagic != POOL_MAGIC)
     {
         PoolManagerAlert(PME_ALLOC_INV_POOL, AT_DeadEnd, memSize, NULL, NULL, poolHeader);
+        return NULL;
     }
 
     if (pool->pool.Requirements & MEMF_SEM_PROTECTED)
@@ -1110,11 +1207,13 @@ void InternalFreePooled(APTR poolHeader, APTR memory, IPTR memSize, struct Trace
         if (pool->pool.PoolMagic != POOL_MAGIC)
         {
             PoolManagerAlert(PME_FREE_INV_POOL, AT_DeadEnd, memSize, memory, poolHeaderMH, NULL);
+            return;
         }
 
         if (poolHeaderMH != poolHeader)
         {
             PoolManagerAlert(PME_FREE_MXD_POOL, 0, memSize, memory, poolHeaderMH, poolHeader);
+            return;
         }
 
         if (pool->pool.Requirements & MEMF_SEM_PROTECTED)
