@@ -2,7 +2,7 @@
 #define OS_AROS_H
 
 /*
-    Copyright ï¿½ 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright © 1995-2026, The AROS Development Team. All rights reserved.
     $Id$
 */
 
@@ -23,14 +23,6 @@
 
 #include "error.h"
 #include "afshandler.h"
-
-#define DEBUG 0
-#if DEBUG
-#	define D(x) x
-#else
-#	define D(x)
-#endif
-#define bug kprintf
 
 #define OS_BE2LONG AROS_BE2LONG
 #define OS_LONG2BE AROS_LONG2BE
@@ -64,27 +56,8 @@ enum showReqType;
 LONG showPtrArgsText(struct AFSBase *afsbase, const char *string, enum showReqType type, RAWARG args);
 LONG showError(struct AFSBase *afsbase, ULONG error, ...);
 
-static inline LONG showText(struct AFSBase *afsbase, const char *format, ...)
-{
-    LONG ret;
-
-    AROS_SLOWSTACKFORMAT_PRE(format);
-    ret = showPtrArgsText(afsbase, format, Req_Cancel, AROS_SLOWSTACKFORMAT_ARG(format));
-    AROS_SLOWSTACKFORMAT_POST(format);
-
-    return ret;
-}
-
-static inline LONG showRetriableError(struct AFSBase *afsbase, const char *format, ...)
-{
-    LONG ret;
-
-    AROS_SLOWSTACKFORMAT_PRE(format);
-    ret = showPtrArgsText(afsbase, format, Req_RetryCancel, AROS_SLOWSTACKFORMAT_ARG(format));
-    AROS_SLOWSTACKFORMAT_POST(format);
-
-    return ret;
-}
+LONG showText(struct AFSBase *afsbase, const char *format, ...);
+LONG showRetriableError(struct AFSBase *afsbase, const char *format, ...);
 
 void checkDeviceFlags(struct AFSBase *);
 void motorOff(struct AFSBase *afsbase, struct IOHandle *ioh);
