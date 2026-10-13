@@ -2,7 +2,7 @@
 #define GADTOOLS_INTERN_H
 
 /*
-    Copyright © 1995-2011, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2011, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Internal definitions for gadtools.library.
@@ -300,7 +300,11 @@ struct GT_IntuiMessage
 struct VisualInfo
 {
     struct Screen  		* vi_screen;
+    struct TextFont		* vi_screenfont;
     struct DrawInfo 		* vi_dri;
+    struct ImageLink		* vi_images;
+    UBYTE			vi_textpen;
+    UBYTE			vi_backpen;
 };
 
 /* dummy gadget created by CreateContext */

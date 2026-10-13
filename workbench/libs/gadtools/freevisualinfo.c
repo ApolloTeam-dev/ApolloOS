@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2007, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -47,11 +47,22 @@
 ***************************************************************************/
 {
     AROS_LIBFUNC_INIT
+	struct ImageLink *il;
+    struct ImageLink *nextil;
 
     if (vi)
     {
-	FreeScreenDrawInfo(((struct VisualInfo *)vi)->vi_screen, ((struct VisualInfo *)vi)->vi_dri);
-	FreeVec(vi);
+		il = ((struct VisualInfo *)vi)->vi_images;
+        while(il)
+        {
+           nextil = il->il_Next;
+           DisposeObject(il->il_Image);
+           FreeVec(il);
+           il = nextil;
+        }
+	    FreeScreenDrawInfo(((struct VisualInfo *)vi)->vi_screen, ((struct VisualInfo *)vi)->vi_dri);
+	    CloseFont(((struct VisualInfo *)vi)->vi_screenfont);
+		FreeVec(vi);
     }
     
     AROS_LIBFUNC_EXIT
