@@ -61,7 +61,7 @@
            il = nextil;
         }
 	    FreeScreenDrawInfo(((struct VisualInfo *)vi)->vi_screen, ((struct VisualInfo *)vi)->vi_dri);
-	    CloseFont(vi->vi_ScreenFont);
+	    CloseFont(vi->vi_screenfont);
 		FreeVec(vi);
     }
     
