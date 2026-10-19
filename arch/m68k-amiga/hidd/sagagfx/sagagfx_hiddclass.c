@@ -178,6 +178,25 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
         { aHidd_PixFmt_BitMapType,    vHidd_BitMapType_Chunky    }, /* 15 */
         { TAG_DONE,                   0UL                        }
     };
+
+    const struct TagItem pftags_15bpp[] = 
+    {
+        { aHidd_PixFmt_RedShift,      17                         }, /* bits 10-14 (décalés de 17 car 32 - 15) */
+        { aHidd_PixFmt_GreenShift,    22                         }, /* bits 5-9  (décalés de 22 car 32 - 10) */
+        { aHidd_PixFmt_BlueShift,     27                         }, /* bits 0-4  (décalés de 27 car 32 - 5)  */
+        { aHidd_PixFmt_AlphaShift,    0                          }, /* 0 */
+        { aHidd_PixFmt_RedMask,       0x00007c00                 }, /* 5 bits : 0111 1100 0000 0000 */
+        { aHidd_PixFmt_GreenMask,     0x000003e0                 }, /* 5 bits : 0000 0011 1110 0000 */
+        { aHidd_PixFmt_BlueMask,      0x0000001f                 }, /* 5 bits : 0000 0000 0001 1111 */
+        { aHidd_PixFmt_AlphaMask,     0x00000000                 }, /* 0 */
+        { aHidd_PixFmt_ColorModel,    vHidd_ColorModel_TrueColor }, /* TrueColor */
+        { aHidd_PixFmt_Depth,         15                         }, /* Profondeur réelle : 15 bits */
+        { aHidd_PixFmt_BytesPerPixel, 2                          }, /* Stocké sur 2 octets en mémoire */
+        { aHidd_PixFmt_BitsPerPixel,  16                         }, /* Largeur du type de données : 16 bits */
+        { aHidd_PixFmt_StdPixFmt,     vHidd_StdPixFmt_RGB15      }, /* Format standard RGB15 */
+        { aHidd_PixFmt_BitMapType,    vHidd_BitMapType_Chunky    }, /* Chunky pixels */
+        { TAG_DONE,                   0UL                        }
+    };
     
     const struct TagItem pftags_8bpp[] = 
     {
