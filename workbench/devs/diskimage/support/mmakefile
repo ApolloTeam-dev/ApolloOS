@@ -1,0 +1,535 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM workbench-devs-diskimage-support : includes
+
+CFILES := aros/asprintf aros/asprintfpooled checkbptr \
+	checklib copystringbstrtoc deletelibrary dos64 \
+	envvar getcurrentdir hooks lists messages \
+	mutexes paths ports semaphores \
+	swab2 tooltypes istext trimstr diskimagedevice \
+	localeinfo translatefuncs reallocbuf setprocwindow
+
+USER_CFLAGS := -DABIV1 -DMIN_OS_VERSION=39
+USER_INCLUDES := -I$(AROS_INCLUDES)/SDI \
+                 -I$(SRCDIR)/$(CURDIR)/../include 
+
+
+# assign and generate the local variables used in this macro
+workbench-devs-diskimage-support_LIBNAME           := diskimagesupport
+workbench-devs-diskimage-support_LINKLIB           := $(AROS_LIB)/libdiskimagesupport.a
+
+workbench-devs-diskimage-support_FILES             ?= $(CFILES)
+workbench-devs-diskimage-support_ASMFILES          := 
+workbench-devs-diskimage-support_OBJCFILES         := 
+workbench-devs-diskimage-support_CXXFILES          := 
+
+workbench-devs-diskimage-support_OBJDIR            ?= $(GENDIR)/$(CURDIR)
+workbench-devs-diskimage-support_ARCHOBJS          := $(wildcard $(workbench-devs-diskimage-support_OBJDIR)/arch/*.o)
+ifeq (no,no)
+    workbench-devs-diskimage-support_ARCHFILES     := $(basename $(notdir $(workbench-devs-diskimage-support_ARCHOBJS)))
+else
+    workbench-devs-diskimage-support_ARCHFILES     := $(basename $(patsubst $(workbench-devs-diskimage-support_OBJDIR)/%,%,$(workbench-devs-diskimage-support_ARCHOBJS)))
+endif
+workbench-devs-diskimage-support_C_NARCHFILES      := $(filter-out $(workbench-devs-diskimage-support_ARCHFILES),$(workbench-devs-diskimage-support_FILES))
+workbench-devs-diskimage-support_C_FILES           ?= $(workbench-devs-diskimage-support_C_NARCHFILES)
+workbench-devs-diskimage-support_CXX_NARCHFILES    := $(filter-out $(workbench-devs-diskimage-support_ARCHFILES),$(workbench-devs-diskimage-support_CXXFILES))
+workbench-devs-diskimage-support_CXX_FILES         ?= $(workbench-devs-diskimage-support_CXX_NARCHFILES)
+workbench-devs-diskimage-support_OBJC_NARCHFILES   := $(filter-out $(workbench-devs-diskimage-support_ARCHFILES),$(workbench-devs-diskimage-support_OBJCFILES))
+workbench-devs-diskimage-support_OBJC_FILES        ?= $(workbench-devs-diskimage-support_OBJC_NARCHFILES)
+
+ifeq (no,no)
+    workbench-devs-diskimage-support_OBJ_FILES     ?= $(addprefix $(workbench-devs-diskimage-support_OBJDIR)/,$(notdir $(workbench-devs-diskimage-support_C_NARCHFILES:=.o) $(workbench-devs-diskimage-support_CXX_NARCHFILES:=.o) $(workbench-devs-diskimage-support_ASMFILES:=.o) $(workbench-devs-diskimage-support_OBJC_NARCHFILES:=.o)))
+else
+    workbench-devs-diskimage-support_OBJ_FILES     ?= $(addprefix $(workbench-devs-diskimage-support_OBJDIR)/,$(workbench-devs-diskimage-support_C_NARCHFILES:=.o) $(workbench-devs-diskimage-support_CXX_NARCHFILES:=.o) $(workbench-devs-diskimage-support_ASMFILES:=.o) $(workbench-devs-diskimage-support_OBJC_NARCHFILES:=.o))
+endif
+workbench-devs-diskimage-support_OBJS              ?= $(workbench-devs-diskimage-support_ARCHOBJS) $(workbench-devs-diskimage-support_OBJ_FILES) 
+workbench-devs-diskimage-support_DEPS              := $(patsubst %.o,%.d,$(workbench-devs-diskimage-support_OBJS))
+
+workbench-devs-diskimage-support_CPPFLAGS          := $(CPPFLAGS)
+ifneq (,)
+    workbench-devs-diskimage-support_CPPFLAGS      += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-devs-diskimage-support_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+workbench-devs-diskimage-support_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+workbench-devs-diskimage-support_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+workbench-devs-diskimage-support_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-devs-diskimage-support_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+workbench-devs-diskimage-support_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+workbench-devs-diskimage-support_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+workbench-devs-diskimage-support_CXXFLAGS          := 
+endif
+
+ifeq ($(TARGET_LTO),yes)
+ifeq (target,target)
+        workbench-devs-diskimage-support_CFLAGS    := $(strip $(LTO_CFLAGS) $(workbench-devs-diskimage-support_CFLAGS))
+        workbench-devs-diskimage-support_CXXFLAGS  := $(strip $(LTO_CFLAGS) $(workbench-devs-diskimage-support_CXXFLAGS))
+endif
+endif
+workbench-devs-diskimage-support_AFLAGS            := $(AFLAGS)
+workbench-devs-diskimage-support_DFLAGS            := 
+ifneq (,)
+    workbench-devs-diskimage-support_DFLAGS        := 
+else
+    workbench-devs-diskimage-support_DFLAGS        := $(workbench-devs-diskimage-support_CFLAGS)
+endif
+workbench-devs-diskimage-support_DXXFLAGS          := 
+ifneq (,)
+    workbench-devs-diskimage-support_DXXFLAGS      := 
+else
+    workbench-devs-diskimage-support_DXXFLAGS      := $(workbench-devs-diskimage-support_CXXFLAGS)
+endif
+
+.PHONY : workbench-devs-diskimage-support workbench-devs-diskimage-support-clean workbench-devs-diskimage-support-quick
+
+#MM
+workbench-devs-diskimage-support-quick : workbench-devs-diskimage-support
+
+#MM workbench-devs-diskimage-support : includes-generate-deps
+workbench-devs-diskimage-support : $(workbench-devs-diskimage-support_LINKLIB)
+
+ifneq ($(filter $(TARGET),workbench-devs-diskimage-support workbench-devs-diskimage-support-quick),)
+
+
+workbench-devs-diskimage-support_CXXABSBASENAMES := $(foreach workbench-devs-diskimage-support_CXXBASE,$(workbench-devs-diskimage-support_CXX_FILES),$(if $(filter /%,$(workbench-devs-diskimage-support_CXXBASE)),$(workbench-devs-diskimage-support_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-devs-diskimage-support_CXXBASE))))
+
+ifneq ($(workbench-devs-diskimage-support_CXXABSBASENAMES),)
+
+workbench-devs-diskimage-support_CXXBASENAMES := $(basename $(workbench-devs-diskimage-support_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-devs-diskimage-support_MCXX_FILES  := $(strip $(foreach workbench-devs-diskimage-support_CXXBASE,$(workbench-devs-diskimage-support_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-devs-diskimage-support_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-devs-diskimage-support_EXT),$(workbench-devs-diskimage-support_CXXBASE)))))))
+
+ifeq (,)
+workbench-devs-diskimage-support_MCXX_SRCWILDCARD := %
+else
+workbench-devs-diskimage-support_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-devs-diskimage-support_OBJDIR),)
+  workbench-devs-diskimage-support_CXXTARGETS := $(notdir $(workbench-devs-diskimage-support_CXXBASENAMES:=.o))
+  workbench-devs-diskimage-support_CXXDTARGETS := $(notdir $(workbench-devs-diskimage-support_CXXBASENAMES:=.d))
+  workbench-devs-diskimage-support_MCXX_WILDCARD := %
+else
+  workbench-devs-diskimage-support_CXXTARGETS := $(addprefix $(workbench-devs-diskimage-support_OBJDIR)/,$(notdir $(workbench-devs-diskimage-support_CXXBASENAMES:=.o)))
+  workbench-devs-diskimage-support_CXXDTARGETS := $(addprefix $(workbench-devs-diskimage-support_OBJDIR)/,$(notdir $(workbench-devs-diskimage-support_CXXBASENAMES:=.d)))
+  workbench-devs-diskimage-support_MCXX_WILDCARD := $(workbench-devs-diskimage-support_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-devs-diskimage-support_CXXTARGETS) $(workbench-devs-diskimage-support_CXXDTARGETS) : | $(workbench-devs-diskimage-support_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-devs-diskimage-support_MCXX_CPPFLAGS := $(workbench-devs-diskimage-support_CPPFLAGS)
+workbench-devs-diskimage-support_CXXFLAGS := $(workbench-devs-diskimage-support_CXXFLAGS)
+ifeq ($(workbench-devs-diskimage-support_DXXFLAGS),)
+  workbench-devs-diskimage-support_DXXFLAGS := $(workbench-devs-diskimage-support_CXXFLAGS)
+else
+  workbench-devs-diskimage-support_DXXFLAGS := $(workbench-devs-diskimage-support_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-devs-diskimage-support_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-devs-diskimage-support_STRIP ?= $(HOST_STRIP)
+  workbench-devs-diskimage-support_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-devs-diskimage-support_CXXCMD:=$(HOST_CXX)
+  workbench-devs-diskimage-support_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-devs-diskimage-support_MCXX_CPPFLAGS) $(workbench-devs-diskimage-support_MCXX_EXTRA_CPPFLAGS))
+  workbench-devs-diskimage-support_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-devs-diskimage-support_CXXFLAGS))
+  workbench-devs-diskimage-support_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-devs-diskimage-support_DXXFLAGS))
+  workbench-devs-diskimage-support_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-devs-diskimage-support_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-devs-diskimage-support_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-devs-diskimage-support_STRIP ?= $(TARGET_STRIP)
+  workbench-devs-diskimage-support_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-devs-diskimage-support_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-devs-diskimage-support_MCXX_CPPFLAGS := $(strip $(workbench-devs-diskimage-support_MCXX_CPPFLAGS) $(workbench-devs-diskimage-support_MCXX_EXTRA_CPPFLAGS))
+  workbench-devs-diskimage-support_CXXFLAGS := $(strip $(workbench-devs-diskimage-support_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-devs-diskimage-support_DXXFLAGS := $(workbench-devs-diskimage-support_DXXFLAGS)
+  workbench-devs-diskimage-support_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-devs-diskimage-support_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-devs-diskimage-support_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-devs-diskimage-support_STRIP ?= $(ECHO) >/dev/null
+  workbench-devs-diskimage-support_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-devs-diskimage-support_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-devs-diskimage-support_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-devs-diskimage-support_MCXX_CPPFLAGS) $(workbench-devs-diskimage-support_MCXX_EXTRA_CPPFLAGS))
+  workbench-devs-diskimage-support_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-devs-diskimage-support_CXXFLAGS))
+  workbench-devs-diskimage-support_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-devs-diskimage-support_DXXFLAGS))
+  workbench-devs-diskimage-support_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-devs-diskimage-support_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-devs-diskimage-support_CXXCMD) $(workbench-devs-diskimage-support_CXXIQUOTE) $(dir $(2)) $(workbench-devs-diskimage-support_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-support_CXXIQUOTE) . $(workbench-devs-diskimage-support_CXXIQUOTE_END) $(strip $(workbench-devs-diskimage-support_CXXFLAGS) $(workbench-devs-diskimage-support_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-devs-diskimage-support_CXXCMD) $(workbench-devs-diskimage-support_CXXIQUOTE) $(dir $(2)) $(workbench-devs-diskimage-support_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-support_CXXIQUOTE) . $(workbench-devs-diskimage-support_CXXIQUOTE_END) $(strip $(workbench-devs-diskimage-support_CXXFLAGS) $(workbench-devs-diskimage-support_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-devs-diskimage-support_CXXCMD) $(workbench-devs-diskimage-support_CXXIQUOTE) $(dir $(2)) $(workbench-devs-diskimage-support_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-support_CXXIQUOTE) . $(workbench-devs-diskimage-support_CXXIQUOTE_END) $(strip $(workbench-devs-diskimage-support_CXXFLAGS) $(workbench-devs-diskimage-support_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-devs-diskimage-support_CXXCMD)" $(MKDEPEND) $(strip $(workbench-devs-diskimage-support_DXXFLAGS) $(workbench-devs-diskimage-support_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-devs-diskimage-support_OBJDIR),)
+  $(foreach workbench-devs-diskimage-support_CXXFILE,$(workbench-devs-diskimage-support_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-devs-diskimage-support_CXXFILE))),$(workbench-devs-diskimage-support_CXXFILE))))
+else
+  $(foreach workbench-devs-diskimage-support_CXXFILE,$(workbench-devs-diskimage-support_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-devs-diskimage-support_OBJDIR)/,$(notdir $(basename $(workbench-devs-diskimage-support_CXXFILE)))),$(workbench-devs-diskimage-support_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-devs-diskimage-support_OBJC_FILES),)
+
+ifeq (,)
+workbench-devs-diskimage-support_MOBJC_SRCWILDCARD := %
+else
+workbench-devs-diskimage-support_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-devs-diskimage-support_OBJDIR),)
+  workbench-devs-diskimage-support_MOBJC_TARGETS := $(addsuffix .o,$(workbench-devs-diskimage-support_OBJC_FILES))
+  workbench-devs-diskimage-support_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-devs-diskimage-support_OBJC_FILES))
+  workbench-devs-diskimage-support_MOBJC_WILDCARD := %
+else
+  workbench-devs-diskimage-support_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-support_OBJDIR)/,$(workbench-devs-diskimage-support_OBJC_FILES)))
+  workbench-devs-diskimage-support_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-support_OBJDIR)/,$(workbench-devs-diskimage-support_OBJC_FILES)))
+  workbench-devs-diskimage-support_MOBJC_WILDCARD := $(workbench-devs-diskimage-support_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-devs-diskimage-support_OBJC_FILES))
+
+  # Be sure that all .m files are found
+  workbench-devs-diskimage-support_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-devs-diskimage-support_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-diskimage-support_OBJC_FILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-devs-diskimage-support_MOBJC_DIRS := $(foreach dir, $(workbench-devs-diskimage-support_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-diskimage-support_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-devs-diskimage-support_MOBJC_DIRS),)
+    workbench-devs-diskimage-support_MOBJC_DIRS := $(shell echo $(workbench-devs-diskimage-support_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-devs-diskimage-support_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-devs-diskimage-support_CC := $(TARGET_CC)
+else
+  workbench-devs-diskimage-support_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-devs-diskimage-support_MOBJC_CPPFLAGS := $(workbench-devs-diskimage-support_CPPFLAGS)
+workbench-devs-diskimage-support_OBJCFLAGS := $(workbench-devs-diskimage-support_CFLAGS)
+workbench-devs-diskimage-support_OBJCFLAGS := $(workbench-devs-diskimage-support_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-devs-diskimage-support_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-devs-diskimage-support_OBJCFLAGS)))
+ifeq ($(workbench-devs-diskimage-support_DFLAGS),)
+  workbench-devs-diskimage-support_OBJCDFLAGS := $(workbench-devs-diskimage-support_CFLAGS)
+else
+  workbench-devs-diskimage-support_OBJCDFLAGS := $(workbench-devs-diskimage-support_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-devs-diskimage-support_LINK ?= $(strip $(workbench-devs-diskimage-support_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-devs-diskimage-support_STRIP ?= $(TARGET_STRIP)
+  workbench-devs-diskimage-support_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-devs-diskimage-support_CC) $(TARGET_SYSROOT))
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : workbench-devs-diskimage-support_MOBJC_CPPFLAGS:=$(strip $(workbench-devs-diskimage-support_MOBJC_CPPFLAGS) $(workbench-devs-diskimage-support_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : workbench-devs-diskimage-support_OBJCFLAGS:=$(strip $(workbench-devs-diskimage-support_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : workbench-devs-diskimage-support_OBJCDFLAGS:=$(workbench-devs-diskimage-support_OBJCDFLAGS)
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : workbench-devs-diskimage-support_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : workbench-devs-diskimage-support_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-devs-diskimage-support_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-devs-diskimage-support_STRIP ?= $(HOST_STRIP)
+  workbench-devs-diskimage-support_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : workbench-devs-diskimage-support_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-devs-diskimage-support_MOBJC_CPPFLAGS) $(workbench-devs-diskimage-support_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : workbench-devs-diskimage-support_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-support_OBJCFLAGS))
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : workbench-devs-diskimage-support_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-support_OBJCDFLAGS))
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : workbench-devs-diskimage-support_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : workbench-devs-diskimage-support_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-devs-diskimage-support_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-devs-diskimage-support_STRIP ?= $(ECHO) >/dev/null
+  workbench-devs-diskimage-support_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : workbench-devs-diskimage-support_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-devs-diskimage-support_MOBJC_CPPFLAGS) $(workbench-devs-diskimage-support_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : workbench-devs-diskimage-support_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-support_OBJCFLAGS))
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : workbench-devs-diskimage-support_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-support_OBJCDFLAGS))
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : workbench-devs-diskimage-support_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-devs-diskimage-support_MOBJC_TARGETS) $(workbench-devs-diskimage-support_MOBJC_DTARGETS) : workbench-devs-diskimage-support_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-devs-diskimage-support_MOBJC_TARGETS) : CPPFLAGS := $(workbench-devs-diskimage-support_MOBJC_CPPFLAGS)
+$(workbench-devs-diskimage-support_MOBJC_TARGETS) : CFLAGS := $(workbench-devs-diskimage-support_OBJCFLAGS)
+$(workbench-devs-diskimage-support_MOBJC_TARGETS) : $(workbench-devs-diskimage-support_MOBJC_WILDCARD).o : $(workbench-devs-diskimage-support_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-devs-diskimage-support_IQUOTE) $(dir $<) $(workbench-devs-diskimage-support_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-support_IQUOTE) . $(workbench-devs-diskimage-support_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-devs-diskimage-support_IQUOTE) $(dir $<) $(workbench-devs-diskimage-support_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-support_IQUOTE) . $(workbench-devs-diskimage-support_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-devs-diskimage-support_IQUOTE) $(dir $<) $(workbench-devs-diskimage-support_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-support_IQUOTE) . $(workbench-devs-diskimage-support_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-devs-diskimage-support_MOBJC_DTARGETS) : $(workbench-devs-diskimage-support_MOBJC_WILDCARD).d : $(workbench-devs-diskimage-support_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-devs-diskimage-support_OBJCDFLAGS) $(workbench-devs-diskimage-support_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-devs-diskimage-support_MC_SRCWILDCARD := %
+else
+workbench-devs-diskimage-support_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-devs-diskimage-support_OBJDIR),)
+workbench-devs-diskimage-support_MC_TARGETS := $(addsuffix .o,$(workbench-devs-diskimage-support_C_FILES))
+workbench-devs-diskimage-support_MC_DTARGETS := $(addsuffix .d,$(workbench-devs-diskimage-support_C_FILES))
+workbench-devs-diskimage-support_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-devs-diskimage-support_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-support_OBJDIR)/,$(notdir $(workbench-devs-diskimage-support_C_FILES))))
+    workbench-devs-diskimage-support_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-support_OBJDIR)/,$(notdir $(workbench-devs-diskimage-support_C_FILES))))
+else
+ifeq (,)
+    workbench-devs-diskimage-support_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-support_OBJDIR)/,$(workbench-devs-diskimage-support_C_FILES)))
+    workbench-devs-diskimage-support_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-support_OBJDIR)/,$(workbench-devs-diskimage-support_C_FILES)))
+else
+    workbench-devs-diskimage-support_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-support_OBJDIR)/,$(patsubst /%,%,$(workbench-devs-diskimage-support_C_FILES))))
+    workbench-devs-diskimage-support_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-support_OBJDIR)/,$(patsubst /%,%,$(workbench-devs-diskimage-support_C_FILES))))
+endif
+endif
+workbench-devs-diskimage-support_MC_TGTWILDCARD := $(workbench-devs-diskimage-support_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : | $(addsuffix .c,$(workbench-devs-diskimage-support_C_FILES))
+
+# Be sure that all .c files are found
+workbench-devs-diskimage-support_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-devs-diskimage-support_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-diskimage-support_C_FILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-devs-diskimage-support_MC_DIRS := $(foreach dir, $(workbench-devs-diskimage-support_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-diskimage-support_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-devs-diskimage-support_MC_DIRS),)
+    workbench-devs-diskimage-support_MC_DIRS := $(shell echo $(workbench-devs-diskimage-support_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-devs-diskimage-support_MC_DIRS)
+endif
+
+endif
+
+workbench-devs-diskimage-support_MC_CPPFLAGS := $(workbench-devs-diskimage-support_CPPFLAGS)
+workbench-devs-diskimage-support_CFLAGS := $(workbench-devs-diskimage-support_CFLAGS)
+ifeq ($(workbench-devs-diskimage-support_DFLAGS),)
+  workbench-devs-diskimage-support_DFLAGS := $(workbench-devs-diskimage-support_CFLAGS)
+else
+  workbench-devs-diskimage-support_DFLAGS := $(workbench-devs-diskimage-support_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-devs-diskimage-support_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-devs-diskimage-support_STRIP ?= $(TARGET_STRIP)
+workbench-devs-diskimage-support_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : workbench-devs-diskimage-support_MC_CPPFLAGS:=$(strip $(workbench-devs-diskimage-support_MC_CPPFLAGS) $(workbench-devs-diskimage-support_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : workbench-devs-diskimage-support_CFLAGS:=$(strip $(workbench-devs-diskimage-support_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : workbench-devs-diskimage-support_DFLAGS:=$(workbench-devs-diskimage-support_DFLAGS)
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : workbench-devs-diskimage-support_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : workbench-devs-diskimage-support_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-devs-diskimage-support_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-devs-diskimage-support_STRIP ?= $(HOST_STRIP)
+workbench-devs-diskimage-support_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : workbench-devs-diskimage-support_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-devs-diskimage-support_MC_CPPFLAGS) $(workbench-devs-diskimage-support_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : workbench-devs-diskimage-support_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-support_CFLAGS))
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : workbench-devs-diskimage-support_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-support_DFLAGS))
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : workbench-devs-diskimage-support_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : workbench-devs-diskimage-support_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-devs-diskimage-support_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-devs-diskimage-support_STRIP ?= $(ECHO) >/dev/null
+workbench-devs-diskimage-support_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : workbench-devs-diskimage-support_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-devs-diskimage-support_MC_CPPFLAGS) $(workbench-devs-diskimage-support_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : workbench-devs-diskimage-support_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-support_CFLAGS))
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : workbench-devs-diskimage-support_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-support_DFLAGS))
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : workbench-devs-diskimage-support_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-devs-diskimage-support_MC_TARGETS) $(workbench-devs-diskimage-support_MC_DTARGETS) : workbench-devs-diskimage-support_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-devs-diskimage-support_MC_TARGETS) : CPPFLAGS := $(workbench-devs-diskimage-support_MC_CPPFLAGS)
+$(workbench-devs-diskimage-support_MC_TARGETS) : CFLAGS := $(workbench-devs-diskimage-support_CFLAGS)
+$(workbench-devs-diskimage-support_MC_TARGETS) : $(workbench-devs-diskimage-support_MC_TGTWILDCARD).o : $(workbench-devs-diskimage-support_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-devs-diskimage-support_IQUOTE) $(dir $<) $(workbench-devs-diskimage-support_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-support_IQUOTE) . $(workbench-devs-diskimage-support_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-devs-diskimage-support_IQUOTE) $(dir $<) $(workbench-devs-diskimage-support_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-support_IQUOTE) . $(workbench-devs-diskimage-support_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-devs-diskimage-support_IQUOTE) $(dir $<) $(workbench-devs-diskimage-support_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-support_IQUOTE) . $(workbench-devs-diskimage-support_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-devs-diskimage-support_MC_DTARGETS) : $(workbench-devs-diskimage-support_MC_TGTWILDCARD).d : $(workbench-devs-diskimage-support_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-devs-diskimage-support_DFLAGS) $(workbench-devs-diskimage-support_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-devs-diskimage-support_OBJDIR),)
+workbench-devs-diskimage-support-MA_TARGETS := $(addsuffix .o,$(workbench-devs-diskimage-support_ASMFILES))
+workbench-devs-diskimage-support-MA_WILDCARD := %
+else
+workbench-devs-diskimage-support-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-support_OBJDIR)/,$(notdir $(workbench-devs-diskimage-support_ASMFILES))))
+workbench-devs-diskimage-support-MA_WILDCARD := $(workbench-devs-diskimage-support_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(workbench-devs-diskimage-support-MA_TARGETS) : | $(addsuffix .s,$(workbench-devs-diskimage-support_ASMFILES))
+
+# Be sure that all .c files are found
+workbench-devs-diskimage-support-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-devs-diskimage-support-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-diskimage-support_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-devs-diskimage-support-MA_DIRS := $(foreach dir, $(workbench-devs-diskimage-support-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-diskimage-support-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-devs-diskimage-support-MA_DIRS),)
+    workbench-devs-diskimage-support-MA_DIRS := $(shell echo $(workbench-devs-diskimage-support-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(workbench-devs-diskimage-support-MA_DIRS)
+endif
+
+endif
+
+workbench-devs-diskimage-support-MA_ASSEMBLER ?= $(workbench-devs-diskimage-support_ASSEMBLER)
+
+$(workbench-devs-diskimage-support-MA_TARGETS) : workbench-devs-diskimage-support-MA_CMD:= $(workbench-devs-diskimage-support-MA_ASSEMBLER)
+
+$(workbench-devs-diskimage-support-MA_TARGETS) : CPPFLAGS := $(workbench-devs-diskimage-support_CPPFLAGS)
+$(workbench-devs-diskimage-support-MA_TARGETS) : AFLAGS := $(workbench-devs-diskimage-support_AFLAGS)
+$(workbench-devs-diskimage-support-MA_TARGETS) : $(workbench-devs-diskimage-support-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-devs-diskimage-support-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-devs-diskimage-support-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-devs-diskimage-support-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+ifeq (target,target)
+$(AROS_LIB)/libdiskimagesupport.a : workbench-devs-diskimage-support_AR:=$(AR)
+$(AROS_LIB)/libdiskimagesupport.a : workbench-devs-diskimage-support_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(AROS_LIB)/libdiskimagesupport.a : workbench-devs-diskimage-support_AR:=$(HOST_AR)
+$(AROS_LIB)/libdiskimagesupport.a : workbench-devs-diskimage-support_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(AROS_LIB)/libdiskimagesupport.a : workbench-devs-diskimage-support_AR:=$(KERNEL_AR)
+$(AROS_LIB)/libdiskimagesupport.a : workbench-devs-diskimage-support_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(AROS_LIB)/libdiskimagesupport.a : $(workbench-devs-diskimage-support_OBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-devs-diskimage-support_AR) $@ $^
+	$(Q)$(workbench-devs-diskimage-support_RANLIB) $@
+endif
+
+ifneq ($(workbench-devs-diskimage-support_DEPS),)
+  ifneq (workbench-devs-diskimage-support workbench-devs-diskimage-support-quick,)
+    ifneq ($(findstring $(TARGET),workbench-devs-diskimage-support workbench-devs-diskimage-support-quick),)
+      -include $(workbench-devs-diskimage-support_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-devs-diskimage-support_DEPS)
+    endif
+  endif
+endif
+
+
+
+ifneq ($(workbench-devs-diskimage-support_OBJS) $(workbench-devs-diskimage-support_DEPS) $(workbench-devs-diskimage-support_LINKLIB),)
+$(workbench-devs-diskimage-support_OBJS) $(workbench-devs-diskimage-support_DEPS) $(workbench-devs-diskimage-support_LINKLIB) : | $(workbench-devs-diskimage-support_OBJDIR) $(AROS_LIB)
+else
+$(workbench-devs-diskimage-support_OBJS) $(workbench-devs-diskimage-support_DEPS) $(workbench-devs-diskimage-support_LINKLIB) :: $(workbench-devs-diskimage-support_OBJDIR) $(AROS_LIB)
+endif
+
+GLOB_MKDIRS += $(workbench-devs-diskimage-support_OBJDIR) $(AROS_LIB)
+
+
+workbench-devs-diskimage-support-clean : FILES := $(workbench-devs-diskimage-support_OBJS) $(workbench-devs-diskimage-support_LINKLIB) $(workbench-devs-diskimage-support_DEPS)
+#MM
+workbench-devs-diskimage-support-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-devs-diskimage-support"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,295 @@
+#   $Id$
+#
+#   Makefile for AROS kernel.resource tests
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := mmap stackcheck
+
+EXEDIR := $(AROS_TESTS)/kernel
+
+#MM test-kernel : includes includes-copy linklibs includes-kernel
+
+
+.PHONY : test-kernel
+
+test-kernel_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-kernel_TARGETDIR := $(EXEDIR)
+test-kernel_LIBS := 
+
+test-kernel_FILES     := $(FILES)
+test-kernel_OBJS      := $(addsuffix .o,$(addprefix $(test-kernel_OBJDIR)/,$(test-kernel_FILES)))
+test-kernel_DEPS      := $(addsuffix .d,$(addprefix $(test-kernel_OBJDIR)/,$(test-kernel_FILES)))
+test-kernel_EXES      := $(addprefix $(test-kernel_TARGETDIR)/,$(test-kernel_FILES))
+
+test-kernel_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-kernel_CPPFLAGS += -I
+endif
+test-kernel_CFLAGS    := $(CFLAGS)
+test-kernel_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-kernel_COVERAGE := yes
+test-kernel_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-kernel_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-kernel_CFLAGS    := $(strip $(test-kernel_COVERAGEFLAGS) $(test-kernel_CFLAGS))
+test-kernel_LIBS += $(test-kernel_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-kernel_FUNCINSTR := yes
+test-kernel_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-kernel_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-kernel_CFLAGS    := $(strip $(test-kernel_INSTRFUNCFLAGS) $(test-kernel_CFLAGS))
+test-kernel_LIBS += $(test-kernel_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-kernel_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-kernel_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-kernel_DFLAGS := 
+else
+    test-kernel_DFLAGS := $(test-kernel_CFLAGS)
+endif
+ifeq (target,target)
+test-kernel_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-kernel_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-kernel_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-kernel_LDFLAGS += -L
+endif
+
+#MM
+test-kernel-quick : test-kernel
+
+#MM test-kernel : includes-generate-deps core-linklibs
+test-kernel : $(test-kernel_EXES)
+
+ifneq ($(filter $(TARGET),test-kernel test-kernel-quick),)
+
+ifeq (,)
+test-kernel_MC_SRCWILDCARD := %
+else
+test-kernel_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-kernel_OBJDIR),)
+test-kernel_MC_TARGETS := $(addsuffix .o,$(test-kernel_FILES))
+test-kernel_MC_DTARGETS := $(addsuffix .d,$(test-kernel_FILES))
+test-kernel_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-kernel_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-kernel_OBJDIR)/,$(notdir $(test-kernel_FILES))))
+    test-kernel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-kernel_OBJDIR)/,$(notdir $(test-kernel_FILES))))
+else
+ifeq (,)
+    test-kernel_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-kernel_OBJDIR)/,$(test-kernel_FILES)))
+    test-kernel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-kernel_OBJDIR)/,$(test-kernel_FILES)))
+else
+    test-kernel_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-kernel_OBJDIR)/,$(patsubst /%,%,$(test-kernel_FILES))))
+    test-kernel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-kernel_OBJDIR)/,$(patsubst /%,%,$(test-kernel_FILES))))
+endif
+endif
+test-kernel_MC_TGTWILDCARD := $(test-kernel_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : | $(addsuffix .c,$(test-kernel_FILES))
+
+# Be sure that all .c files are found
+test-kernel_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-kernel_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-kernel_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-kernel_MC_DIRS := $(foreach dir, $(test-kernel_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-kernel_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-kernel_MC_DIRS),)
+    test-kernel_MC_DIRS := $(shell echo $(test-kernel_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-kernel_MC_DIRS)
+endif
+
+endif
+
+test-kernel_MC_CPPFLAGS := $(test-kernel_CPPFLAGS)
+test-kernel_CFLAGS := $(test-kernel_CFLAGS)
+ifeq ($(test-kernel_DFLAGS),)
+  test-kernel_DFLAGS := $(test-kernel_CFLAGS)
+else
+  test-kernel_DFLAGS := $(test-kernel_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-kernel_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-kernel_STRIP ?= $(TARGET_STRIP)
+test-kernel_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : test-kernel_MC_CPPFLAGS:=$(strip $(test-kernel_MC_CPPFLAGS) $(test-kernel_MC_EXTRA_CPPFLAGS))
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : test-kernel_CFLAGS:=$(strip $(test-kernel_CFLAGS) $(SAFETY_CFLAGS))
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : test-kernel_DFLAGS:=$(test-kernel_DFLAGS)
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : test-kernel_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : test-kernel_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-kernel_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-kernel_STRIP ?= $(HOST_STRIP)
+test-kernel_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : test-kernel_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-kernel_MC_CPPFLAGS) $(test-kernel_MC_EXTRA_CPPFLAGS))
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : test-kernel_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-kernel_CFLAGS))
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : test-kernel_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-kernel_DFLAGS))
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : test-kernel_IQUOTE:=$(HOST_IQUOTE)
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : test-kernel_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-kernel_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-kernel_STRIP ?= $(ECHO) >/dev/null
+test-kernel_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : test-kernel_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-kernel_MC_CPPFLAGS) $(test-kernel_MC_EXTRA_CPPFLAGS))
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : test-kernel_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-kernel_CFLAGS))
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : test-kernel_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-kernel_DFLAGS))
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : test-kernel_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-kernel_MC_TARGETS) $(test-kernel_MC_DTARGETS) : test-kernel_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-kernel_MC_TARGETS) : CPPFLAGS := $(test-kernel_MC_CPPFLAGS)
+$(test-kernel_MC_TARGETS) : CFLAGS := $(test-kernel_CFLAGS)
+$(test-kernel_MC_TARGETS) : $(test-kernel_MC_TGTWILDCARD).o : $(test-kernel_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-kernel_IQUOTE) $(dir $<) $(test-kernel_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-kernel_IQUOTE) . $(test-kernel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-kernel_IQUOTE) $(dir $<) $(test-kernel_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-kernel_IQUOTE) . $(test-kernel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-kernel_IQUOTE) $(dir $<) $(test-kernel_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-kernel_IQUOTE) . $(test-kernel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-kernel_MC_DTARGETS) : $(test-kernel_MC_TGTWILDCARD).d : $(test-kernel_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-kernel_DFLAGS) $(test-kernel_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-kernel-link_EXTRA_LDFLAGS := 
+test-kernel-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-kernel-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-kernel-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-kernel-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-kernel-link_DIRS := $(subst -L ,-L,$(strip $(test-kernel_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-kernel-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-kernel-link_DIRS)))
+# Add trailing /
+test-kernel-link_DIRS := $(subst //,/,$(addsuffix /,$(test-kernel-link_DIRS)))
+# Add normal linklib path
+test-kernel-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-kernel-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-kernel_LIBS) $(test-kernel-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-kernel-link_DEPLIBS := $(foreach lib,$(test-kernel-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-kernel-link_DIRS)))) \
+)
+test-kernel-link_PROGS := $(addprefix $(test-kernel_TARGETDIR)/,$(test-kernel_FILES))
+
+$(test-kernel-link_PROGS) : OBJDIR := $(test-kernel_OBJDIR)
+$(test-kernel-link_PROGS) : LDFLAGS := $(strip $(test-kernel_LDFLAGS) $(test-kernel-link_EXTRA_LDFLAGS))
+$(test-kernel-link_PROGS) : LIBS := $(addprefix -l,$(test-kernel_LIBS) $(test-kernel-link_EXTRA_LIBS) )
+$(test-kernel-link_PROGS) : $(test-kernel_TARGETDIR)/% : $(test-kernel_OBJDIR)/%.o $(test-kernel-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-kernel_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-kernel_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-kernel_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-kernel_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-kernel_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-kernel_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-kernel_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-kernel_DEPS),)
+  ifneq (test-kernel test-kernel-quick,)
+    ifneq ($(findstring $(TARGET),test-kernel test-kernel-quick),)
+      -include $(test-kernel_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-kernel_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-kernel_DEPS) $(test-kernel_OBJS) $(addprefix $(test-kernel_TARGETDIR)/,$(test-kernel_FILES)),)
+$(test-kernel_DEPS) $(test-kernel_OBJS) $(addprefix $(test-kernel_TARGETDIR)/,$(test-kernel_FILES)) : | $(test-kernel_TARGETDIR) $(test-kernel_OBJDIR)
+else
+$(test-kernel_DEPS) $(test-kernel_OBJS) $(addprefix $(test-kernel_TARGETDIR)/,$(test-kernel_FILES)) :: $(test-kernel_TARGETDIR) $(test-kernel_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-kernel_TARGETDIR) $(test-kernel_OBJDIR)
+
+
+test-kernel-clean : FILES := $(test-kernel_OBJS) $(test-kernel_EXES) $(test-kernel_DEPS)
+#MM
+test-kernel-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-kernel"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

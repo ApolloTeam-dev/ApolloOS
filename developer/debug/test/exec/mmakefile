@@ -1,0 +1,613 @@
+#   $Id$
+#
+#   Makefile for AROS exec.library tests
+
+include $(SRCDIR)/config/aros.cfg
+
+EXECPUBLICFILES :=		\
+    alert		\
+    allocmem		\
+    allocxxx        \
+    avltest		\
+    childstatus		\
+    childwait		\
+    copymem		\
+    crashtest		\
+    dumpmem		\
+    enqueue		\
+    exceptiontest	\
+    exceptiontest2	\
+    messagetest		\
+    openlib	 	\
+    portsend		\
+    portreceive		\
+    makelib		\
+    pool		\
+    rawdofmt		\
+    semaphoretest	\
+    semtorture		\
+    stackswap 		\
+    signaltest		\
+    supertest		\
+    tasklist		\
+    taskstorage \
+    tasktest		\
+    timeport \
+    traptest		\
+    vblank
+
+EXEDIR := $(AROS_TESTS)/exec
+
+USER_CFLAGS := -D__AROS_GIMME_DEPRECATED_STACKSWAP__
+
+#MM- test : test-exec
+#MM- test-quick : test-exec-quick
+#MM- test-exec : test-exec-public test-exec-private
+#MM- test-exec-quick : test-exec-public-quick test-exec-private-quick
+#MM- test-exec-deps : includes includes-copy linklibs kernel
+#MM test-exec-public : test-exec-deps
+#MM test-exec-private : test-exec-deps
+
+
+.PHONY : test-exec-public
+
+test-exec-public_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-exec-public_TARGETDIR := $(EXEDIR)
+test-exec-public_LIBS := 
+
+test-exec-public_FILES     := $(EXECPUBLICFILES)
+test-exec-public_OBJS      := $(addsuffix .o,$(addprefix $(test-exec-public_OBJDIR)/,$(test-exec-public_FILES)))
+test-exec-public_DEPS      := $(addsuffix .d,$(addprefix $(test-exec-public_OBJDIR)/,$(test-exec-public_FILES)))
+test-exec-public_EXES      := $(addprefix $(test-exec-public_TARGETDIR)/,$(test-exec-public_FILES))
+
+test-exec-public_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-exec-public_CPPFLAGS += -I
+endif
+test-exec-public_CFLAGS    := $(CFLAGS)
+test-exec-public_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-exec-public_COVERAGE := yes
+test-exec-public_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-exec-public_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-exec-public_CFLAGS    := $(strip $(test-exec-public_COVERAGEFLAGS) $(test-exec-public_CFLAGS))
+test-exec-public_LIBS += $(test-exec-public_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-exec-public_FUNCINSTR := yes
+test-exec-public_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-exec-public_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-exec-public_CFLAGS    := $(strip $(test-exec-public_INSTRFUNCFLAGS) $(test-exec-public_CFLAGS))
+test-exec-public_LIBS += $(test-exec-public_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-exec-public_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-exec-public_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-exec-public_DFLAGS := 
+else
+    test-exec-public_DFLAGS := $(test-exec-public_CFLAGS)
+endif
+ifeq (target,target)
+test-exec-public_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-exec-public_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-exec-public_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-exec-public_LDFLAGS += -L
+endif
+
+#MM
+test-exec-public-quick : test-exec-public
+
+#MM test-exec-public : includes-generate-deps core-linklibs
+test-exec-public : $(test-exec-public_EXES)
+
+ifneq ($(filter $(TARGET),test-exec-public test-exec-public-quick),)
+
+ifeq (,)
+test-exec-public_MC_SRCWILDCARD := %
+else
+test-exec-public_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-exec-public_OBJDIR),)
+test-exec-public_MC_TARGETS := $(addsuffix .o,$(test-exec-public_FILES))
+test-exec-public_MC_DTARGETS := $(addsuffix .d,$(test-exec-public_FILES))
+test-exec-public_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-exec-public_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-exec-public_OBJDIR)/,$(notdir $(test-exec-public_FILES))))
+    test-exec-public_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-exec-public_OBJDIR)/,$(notdir $(test-exec-public_FILES))))
+else
+ifeq (,)
+    test-exec-public_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-exec-public_OBJDIR)/,$(test-exec-public_FILES)))
+    test-exec-public_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-exec-public_OBJDIR)/,$(test-exec-public_FILES)))
+else
+    test-exec-public_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-exec-public_OBJDIR)/,$(patsubst /%,%,$(test-exec-public_FILES))))
+    test-exec-public_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-exec-public_OBJDIR)/,$(patsubst /%,%,$(test-exec-public_FILES))))
+endif
+endif
+test-exec-public_MC_TGTWILDCARD := $(test-exec-public_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : | $(addsuffix .c,$(test-exec-public_FILES))
+
+# Be sure that all .c files are found
+test-exec-public_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-exec-public_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-exec-public_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-exec-public_MC_DIRS := $(foreach dir, $(test-exec-public_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-exec-public_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-exec-public_MC_DIRS),)
+    test-exec-public_MC_DIRS := $(shell echo $(test-exec-public_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-exec-public_MC_DIRS)
+endif
+
+endif
+
+test-exec-public_MC_CPPFLAGS := $(test-exec-public_CPPFLAGS)
+test-exec-public_CFLAGS := $(test-exec-public_CFLAGS)
+ifeq ($(test-exec-public_DFLAGS),)
+  test-exec-public_DFLAGS := $(test-exec-public_CFLAGS)
+else
+  test-exec-public_DFLAGS := $(test-exec-public_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-exec-public_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-exec-public_STRIP ?= $(TARGET_STRIP)
+test-exec-public_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : test-exec-public_MC_CPPFLAGS:=$(strip $(test-exec-public_MC_CPPFLAGS) $(test-exec-public_MC_EXTRA_CPPFLAGS))
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : test-exec-public_CFLAGS:=$(strip $(test-exec-public_CFLAGS) $(SAFETY_CFLAGS))
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : test-exec-public_DFLAGS:=$(test-exec-public_DFLAGS)
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : test-exec-public_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : test-exec-public_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-exec-public_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-exec-public_STRIP ?= $(HOST_STRIP)
+test-exec-public_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : test-exec-public_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-exec-public_MC_CPPFLAGS) $(test-exec-public_MC_EXTRA_CPPFLAGS))
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : test-exec-public_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-exec-public_CFLAGS))
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : test-exec-public_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-exec-public_DFLAGS))
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : test-exec-public_IQUOTE:=$(HOST_IQUOTE)
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : test-exec-public_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-exec-public_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-exec-public_STRIP ?= $(ECHO) >/dev/null
+test-exec-public_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : test-exec-public_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-exec-public_MC_CPPFLAGS) $(test-exec-public_MC_EXTRA_CPPFLAGS))
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : test-exec-public_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-exec-public_CFLAGS))
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : test-exec-public_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-exec-public_DFLAGS))
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : test-exec-public_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-exec-public_MC_TARGETS) $(test-exec-public_MC_DTARGETS) : test-exec-public_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-exec-public_MC_TARGETS) : CPPFLAGS := $(test-exec-public_MC_CPPFLAGS)
+$(test-exec-public_MC_TARGETS) : CFLAGS := $(test-exec-public_CFLAGS)
+$(test-exec-public_MC_TARGETS) : $(test-exec-public_MC_TGTWILDCARD).o : $(test-exec-public_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-exec-public_IQUOTE) $(dir $<) $(test-exec-public_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-exec-public_IQUOTE) . $(test-exec-public_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-exec-public_IQUOTE) $(dir $<) $(test-exec-public_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-exec-public_IQUOTE) . $(test-exec-public_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-exec-public_IQUOTE) $(dir $<) $(test-exec-public_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-exec-public_IQUOTE) . $(test-exec-public_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-exec-public_MC_DTARGETS) : $(test-exec-public_MC_TGTWILDCARD).d : $(test-exec-public_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-exec-public_DFLAGS) $(test-exec-public_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-exec-public-link_EXTRA_LDFLAGS := 
+test-exec-public-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-exec-public-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-exec-public-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-exec-public-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-exec-public-link_DIRS := $(subst -L ,-L,$(strip $(test-exec-public_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-exec-public-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-exec-public-link_DIRS)))
+# Add trailing /
+test-exec-public-link_DIRS := $(subst //,/,$(addsuffix /,$(test-exec-public-link_DIRS)))
+# Add normal linklib path
+test-exec-public-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-exec-public-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-exec-public_LIBS) $(test-exec-public-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-exec-public-link_DEPLIBS := $(foreach lib,$(test-exec-public-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-exec-public-link_DIRS)))) \
+)
+test-exec-public-link_PROGS := $(addprefix $(test-exec-public_TARGETDIR)/,$(test-exec-public_FILES))
+
+$(test-exec-public-link_PROGS) : OBJDIR := $(test-exec-public_OBJDIR)
+$(test-exec-public-link_PROGS) : LDFLAGS := $(strip $(test-exec-public_LDFLAGS) $(test-exec-public-link_EXTRA_LDFLAGS))
+$(test-exec-public-link_PROGS) : LIBS := $(addprefix -l,$(test-exec-public_LIBS) $(test-exec-public-link_EXTRA_LIBS) )
+$(test-exec-public-link_PROGS) : $(test-exec-public_TARGETDIR)/% : $(test-exec-public_OBJDIR)/%.o $(test-exec-public-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-exec-public_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-exec-public_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-exec-public_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-exec-public_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-exec-public_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-exec-public_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-exec-public_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-exec-public_DEPS),)
+  ifneq (test-exec-public test-exec-public-quick,)
+    ifneq ($(findstring $(TARGET),test-exec-public test-exec-public-quick),)
+      -include $(test-exec-public_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-exec-public_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-exec-public_DEPS) $(test-exec-public_OBJS) $(addprefix $(test-exec-public_TARGETDIR)/,$(test-exec-public_FILES)),)
+$(test-exec-public_DEPS) $(test-exec-public_OBJS) $(addprefix $(test-exec-public_TARGETDIR)/,$(test-exec-public_FILES)) : | $(test-exec-public_TARGETDIR) $(test-exec-public_OBJDIR)
+else
+$(test-exec-public_DEPS) $(test-exec-public_OBJS) $(addprefix $(test-exec-public_TARGETDIR)/,$(test-exec-public_FILES)) :: $(test-exec-public_TARGETDIR) $(test-exec-public_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-exec-public_TARGETDIR) $(test-exec-public_OBJDIR)
+
+
+test-exec-public-clean : FILES := $(test-exec-public_OBJS) $(test-exec-public_EXES) $(test-exec-public_DEPS)
+#MM
+test-exec-public-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-exec-public"
+	$(Q)$(RM) $(FILES)
+
+
+EXECPRIVATEFILES :=		\
+    tasktest2
+
+USER_INCLUDES += $(PRIV_EXEC_INCLUDES)
+
+
+.PHONY : test-exec-private
+
+test-exec-private_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-exec-private_TARGETDIR := $(EXEDIR)
+test-exec-private_LIBS := 
+
+test-exec-private_FILES     := $(EXECPRIVATEFILES)
+test-exec-private_OBJS      := $(addsuffix .o,$(addprefix $(test-exec-private_OBJDIR)/,$(test-exec-private_FILES)))
+test-exec-private_DEPS      := $(addsuffix .d,$(addprefix $(test-exec-private_OBJDIR)/,$(test-exec-private_FILES)))
+test-exec-private_EXES      := $(addprefix $(test-exec-private_TARGETDIR)/,$(test-exec-private_FILES))
+
+test-exec-private_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-exec-private_CPPFLAGS += -I
+endif
+test-exec-private_CFLAGS    := $(CFLAGS)
+test-exec-private_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-exec-private_COVERAGE := yes
+test-exec-private_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-exec-private_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-exec-private_CFLAGS    := $(strip $(test-exec-private_COVERAGEFLAGS) $(test-exec-private_CFLAGS))
+test-exec-private_LIBS += $(test-exec-private_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-exec-private_FUNCINSTR := yes
+test-exec-private_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-exec-private_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-exec-private_CFLAGS    := $(strip $(test-exec-private_INSTRFUNCFLAGS) $(test-exec-private_CFLAGS))
+test-exec-private_LIBS += $(test-exec-private_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-exec-private_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-exec-private_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-exec-private_DFLAGS := 
+else
+    test-exec-private_DFLAGS := $(test-exec-private_CFLAGS)
+endif
+ifeq (target,target)
+test-exec-private_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-exec-private_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-exec-private_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-exec-private_LDFLAGS += -L
+endif
+
+#MM
+test-exec-private-quick : test-exec-private
+
+#MM test-exec-private : includes-generate-deps core-linklibs
+test-exec-private : $(test-exec-private_EXES)
+
+ifneq ($(filter $(TARGET),test-exec-private test-exec-private-quick),)
+
+ifeq (,)
+test-exec-private_MC_SRCWILDCARD := %
+else
+test-exec-private_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-exec-private_OBJDIR),)
+test-exec-private_MC_TARGETS := $(addsuffix .o,$(test-exec-private_FILES))
+test-exec-private_MC_DTARGETS := $(addsuffix .d,$(test-exec-private_FILES))
+test-exec-private_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-exec-private_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-exec-private_OBJDIR)/,$(notdir $(test-exec-private_FILES))))
+    test-exec-private_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-exec-private_OBJDIR)/,$(notdir $(test-exec-private_FILES))))
+else
+ifeq (,)
+    test-exec-private_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-exec-private_OBJDIR)/,$(test-exec-private_FILES)))
+    test-exec-private_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-exec-private_OBJDIR)/,$(test-exec-private_FILES)))
+else
+    test-exec-private_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-exec-private_OBJDIR)/,$(patsubst /%,%,$(test-exec-private_FILES))))
+    test-exec-private_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-exec-private_OBJDIR)/,$(patsubst /%,%,$(test-exec-private_FILES))))
+endif
+endif
+test-exec-private_MC_TGTWILDCARD := $(test-exec-private_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : | $(addsuffix .c,$(test-exec-private_FILES))
+
+# Be sure that all .c files are found
+test-exec-private_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-exec-private_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-exec-private_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-exec-private_MC_DIRS := $(foreach dir, $(test-exec-private_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-exec-private_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-exec-private_MC_DIRS),)
+    test-exec-private_MC_DIRS := $(shell echo $(test-exec-private_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-exec-private_MC_DIRS)
+endif
+
+endif
+
+test-exec-private_MC_CPPFLAGS := $(test-exec-private_CPPFLAGS)
+test-exec-private_CFLAGS := $(test-exec-private_CFLAGS)
+ifeq ($(test-exec-private_DFLAGS),)
+  test-exec-private_DFLAGS := $(test-exec-private_CFLAGS)
+else
+  test-exec-private_DFLAGS := $(test-exec-private_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-exec-private_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-exec-private_STRIP ?= $(TARGET_STRIP)
+test-exec-private_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : test-exec-private_MC_CPPFLAGS:=$(strip $(test-exec-private_MC_CPPFLAGS) $(test-exec-private_MC_EXTRA_CPPFLAGS))
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : test-exec-private_CFLAGS:=$(strip $(test-exec-private_CFLAGS) $(SAFETY_CFLAGS))
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : test-exec-private_DFLAGS:=$(test-exec-private_DFLAGS)
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : test-exec-private_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : test-exec-private_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-exec-private_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-exec-private_STRIP ?= $(HOST_STRIP)
+test-exec-private_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : test-exec-private_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-exec-private_MC_CPPFLAGS) $(test-exec-private_MC_EXTRA_CPPFLAGS))
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : test-exec-private_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-exec-private_CFLAGS))
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : test-exec-private_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-exec-private_DFLAGS))
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : test-exec-private_IQUOTE:=$(HOST_IQUOTE)
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : test-exec-private_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-exec-private_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-exec-private_STRIP ?= $(ECHO) >/dev/null
+test-exec-private_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : test-exec-private_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-exec-private_MC_CPPFLAGS) $(test-exec-private_MC_EXTRA_CPPFLAGS))
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : test-exec-private_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-exec-private_CFLAGS))
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : test-exec-private_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-exec-private_DFLAGS))
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : test-exec-private_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-exec-private_MC_TARGETS) $(test-exec-private_MC_DTARGETS) : test-exec-private_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-exec-private_MC_TARGETS) : CPPFLAGS := $(test-exec-private_MC_CPPFLAGS)
+$(test-exec-private_MC_TARGETS) : CFLAGS := $(test-exec-private_CFLAGS)
+$(test-exec-private_MC_TARGETS) : $(test-exec-private_MC_TGTWILDCARD).o : $(test-exec-private_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-exec-private_IQUOTE) $(dir $<) $(test-exec-private_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-exec-private_IQUOTE) . $(test-exec-private_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-exec-private_IQUOTE) $(dir $<) $(test-exec-private_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-exec-private_IQUOTE) . $(test-exec-private_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-exec-private_IQUOTE) $(dir $<) $(test-exec-private_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-exec-private_IQUOTE) . $(test-exec-private_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-exec-private_MC_DTARGETS) : $(test-exec-private_MC_TGTWILDCARD).d : $(test-exec-private_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-exec-private_DFLAGS) $(test-exec-private_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-exec-private-link_EXTRA_LDFLAGS := 
+test-exec-private-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-exec-private-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-exec-private-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-exec-private-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-exec-private-link_DIRS := $(subst -L ,-L,$(strip $(test-exec-private_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-exec-private-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-exec-private-link_DIRS)))
+# Add trailing /
+test-exec-private-link_DIRS := $(subst //,/,$(addsuffix /,$(test-exec-private-link_DIRS)))
+# Add normal linklib path
+test-exec-private-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-exec-private-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-exec-private_LIBS) $(test-exec-private-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-exec-private-link_DEPLIBS := $(foreach lib,$(test-exec-private-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-exec-private-link_DIRS)))) \
+)
+test-exec-private-link_PROGS := $(addprefix $(test-exec-private_TARGETDIR)/,$(test-exec-private_FILES))
+
+$(test-exec-private-link_PROGS) : OBJDIR := $(test-exec-private_OBJDIR)
+$(test-exec-private-link_PROGS) : LDFLAGS := $(strip $(test-exec-private_LDFLAGS) $(test-exec-private-link_EXTRA_LDFLAGS))
+$(test-exec-private-link_PROGS) : LIBS := $(addprefix -l,$(test-exec-private_LIBS) $(test-exec-private-link_EXTRA_LIBS) )
+$(test-exec-private-link_PROGS) : $(test-exec-private_TARGETDIR)/% : $(test-exec-private_OBJDIR)/%.o $(test-exec-private-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-exec-private_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-exec-private_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-exec-private_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-exec-private_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-exec-private_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-exec-private_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-exec-private_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-exec-private_DEPS),)
+  ifneq (test-exec-private test-exec-private-quick,)
+    ifneq ($(findstring $(TARGET),test-exec-private test-exec-private-quick),)
+      -include $(test-exec-private_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-exec-private_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-exec-private_DEPS) $(test-exec-private_OBJS) $(addprefix $(test-exec-private_TARGETDIR)/,$(test-exec-private_FILES)),)
+$(test-exec-private_DEPS) $(test-exec-private_OBJS) $(addprefix $(test-exec-private_TARGETDIR)/,$(test-exec-private_FILES)) : | $(test-exec-private_TARGETDIR) $(test-exec-private_OBJDIR)
+else
+$(test-exec-private_DEPS) $(test-exec-private_OBJS) $(addprefix $(test-exec-private_TARGETDIR)/,$(test-exec-private_FILES)) :: $(test-exec-private_TARGETDIR) $(test-exec-private_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-exec-private_TARGETDIR) $(test-exec-private_OBJDIR)
+
+
+test-exec-private-clean : FILES := $(test-exec-private_OBJS) $(test-exec-private_EXES) $(test-exec-private_DEPS)
+#MM
+test-exec-private-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-exec-private"
+	$(Q)$(RM) $(FILES)
+
+    
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,176 @@
+#   $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+OBJDIR := $(GENDIR)/$(CURDIR)
+CAMDOBJDIR := $(OBJDIR)/../camdusbmidi/arch
+
+SRCFILE := poseidonusb
+
+USER_LDFLAGS := -static
+USER_INCLUDES := -I$(OBJDIR)/../include -iquote $(SRCDIR)/$(CURDIR)/..
+
+#MM kernel-usb-classes-camdusbmidi-object : kernel-usb-classes-camdusbmidi-includes
+
+$(OBJDIR)/%.o : $(SRCDIR)/$(CURDIR)/%.c | $(OBJDIR)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(strip $(TARGET_CC) $(TARGET_SYSROOT)) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(strip $(TARGET_CC) $(TARGET_SYSROOT)) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(strip $(TARGET_CC) $(TARGET_SYSROOT)) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+BD_OUTDIR := $(dir $(CAMDOBJDIR)/$(SRCFILE).bin.o)
+# This trick removes the trailing '/', otherwise findstring below fails, causing a warning
+BD_OUTDIR := $(subst /*,,$(addsuffix *,$(BD_OUTDIR)))
+BD_TMPDIR := $(GENDIR)/$(CURDIR)
+BD_OBJS := $(addsuffix .o,$(addprefix $(BD_OBJDIR)/,$(notdir )))
+BD_DEPS := $(addsuffix .d,$(addprefix $(BD_OBJDIR)/,$(notdir )))
+BD_OBJS += $(OBJDIR)/$(SRCFILE).o
+
+
+ifeq (,)
+TMP_MC_SRCWILDCARD := %
+else
+TMP_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(BD_OBJDIR),)
+TMP_MC_TARGETS := $(addsuffix .o,)
+TMP_MC_DTARGETS := $(addsuffix .d,)
+TMP_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    TMP_MC_TARGETS := $(addsuffix .o,$(addprefix $(BD_OBJDIR)/,$(notdir )))
+    TMP_MC_DTARGETS := $(addsuffix .d,$(addprefix $(BD_OBJDIR)/,$(notdir )))
+else
+ifeq (,)
+    TMP_MC_TARGETS := $(addsuffix .o,$(addprefix $(BD_OBJDIR)/,))
+    TMP_MC_DTARGETS := $(addsuffix .d,$(addprefix $(BD_OBJDIR)/,))
+else
+    TMP_MC_TARGETS := $(addsuffix .o,$(addprefix $(BD_OBJDIR)/,$(patsubst /%,%,)))
+    TMP_MC_DTARGETS := $(addsuffix .d,$(addprefix $(BD_OBJDIR)/,$(patsubst /%,%,)))
+endif
+endif
+TMP_MC_TGTWILDCARD := $(BD_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : | $(addsuffix .c,)
+
+# Be sure that all .c files are found
+TMP_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+TMP_MC_BASEDIRS := $(shell echo $(sort $(dir )) | sed 's/\(.\):\//\/\1\//g')
+TMP_MC_DIRS := $(foreach dir, $(TMP_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(TMP_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(TMP_MC_DIRS),)
+    TMP_MC_DIRS := $(shell echo $(TMP_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(TMP_MC_DIRS)
+endif
+
+endif
+
+TMP_MC_CPPFLAGS := $(CPPFLAGS)
+TMP_CFLAGS := $(CFLAGS)
+ifeq (,)
+  TMP_DFLAGS := $(CFLAGS)
+else
+  TMP_DFLAGS := 
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+TMP_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+TMP_STRIP ?= $(TARGET_STRIP)
+TMP_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : TMP_MC_CPPFLAGS:=$(strip $(TMP_MC_CPPFLAGS) $(TMP_MC_EXTRA_CPPFLAGS))
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : TMP_CFLAGS:=$(strip $(TMP_CFLAGS) $(SAFETY_CFLAGS))
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : TMP_DFLAGS:=$(TMP_DFLAGS)
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : TMP_IQUOTE:=$(CFLAGS_IQUOTE)
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : TMP_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+TMP_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+TMP_STRIP ?= $(HOST_STRIP)
+TMP_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : TMP_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(TMP_MC_CPPFLAGS) $(TMP_MC_EXTRA_CPPFLAGS))
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : TMP_CFLAGS:=$(strip $(HOST_CFLAGS) $(TMP_CFLAGS))
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : TMP_DFLAGS:=$(strip $(HOST_CFLAGS) $(TMP_DFLAGS))
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : TMP_IQUOTE:=$(HOST_IQUOTE)
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : TMP_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+TMP_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+TMP_STRIP ?= $(ECHO) >/dev/null
+TMP_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : TMP_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(TMP_MC_CPPFLAGS) $(TMP_MC_EXTRA_CPPFLAGS))
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : TMP_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(TMP_CFLAGS))
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : TMP_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(TMP_DFLAGS))
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : TMP_IQUOTE:=$(KERNEL_IQUOTE)
+$(TMP_MC_TARGETS) $(TMP_MC_DTARGETS) : TMP_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(TMP_MC_TARGETS) : CPPFLAGS := $(TMP_MC_CPPFLAGS)
+$(TMP_MC_TARGETS) : CFLAGS := $(TMP_CFLAGS)
+$(TMP_MC_TARGETS) : $(TMP_MC_TGTWILDCARD).o : $(TMP_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(TMP_IQUOTE) $(dir $<) $(TMP_IQUOTE) $(SRCDIR)/$(CURDIR) $(TMP_IQUOTE) . $(TMP_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(TMP_IQUOTE) $(dir $<) $(TMP_IQUOTE) $(SRCDIR)/$(CURDIR) $(TMP_IQUOTE) . $(TMP_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(TMP_IQUOTE) $(dir $<) $(TMP_IQUOTE) $(SRCDIR)/$(CURDIR) $(TMP_IQUOTE) . $(TMP_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(TMP_MC_DTARGETS) : $(TMP_MC_TGTWILDCARD).d : $(TMP_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(TMP_DFLAGS) $(TMP_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+$(CAMDOBJDIR)/$(SRCFILE).bin.o : $(BD_OBJS) $(BD_DEPS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(KERNEL_LD)  --entry=0 --oformat=binary -Ttext=0 -o $(BD_TMPDIR)/$(SRCFILE) $(BD_OBJS)
+	$(Q)cd $(BD_TMPDIR) && $(AROS_LD)  -r --format binary $(SRCFILE) -o $@
+
+ifeq ($(findstring $(BD_OUTDIR),$(GLOB_MKDIRS)),)
+
+ifneq ($(CAMDOBJDIR)/$(SRCFILE).bin.o,)
+$(CAMDOBJDIR)/$(SRCFILE).bin.o : | $(BD_OUTDIR)
+else
+$(CAMDOBJDIR)/$(SRCFILE).bin.o :: $(BD_OUTDIR)
+endif
+
+GLOB_MKDIRS += $(BD_OUTDIR)
+
+endif
+
+
+#MM
+kernel-usb-classes-camdusbmidi-object : $(CAMDOBJDIR)/$(SRCFILE).bin.o
+
+GLOB_MKDIRS += $(OBJDIR)
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,1663 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES	:=	ParallelClass ParallelUnitClass
+
+#MM- workbench-devs-amiga-m68k: amiga-m68k-hidd-parallel
+
+#USER_CPPLFAGS := -DDEBUG=1
+USER_LDFLAGS := -static
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM amiga-m68k-hidd-parallel
+#MM amiga-m68k-hidd-parallel-quick
+#MM amiga-m68k-hidd-parallel-makefile
+#MM amiga-m68k-hidd-parallel-clean
+
+# ABI targets:
+#MM- includes-all : amiga-m68k-hidd-parallel-includes
+#MM- linklibs-parallel: amiga-m68k-hidd-parallel-linklib
+#MM- linklibs-parallel_rel : amiga-m68k-hidd-parallel-linklib
+#MM- includes-parallel: amiga-m68k-hidd-parallel-includes
+#MM- includes-parallel_rel : amiga-m68k-hidd-parallel-includes
+#MM- amiga-m68k-hidd-parallel : amiga-m68k-hidd-parallel-includes core-linklibs linklibs-hiddstubs
+#MM amiga-m68k-hidd-parallel-linklib : amiga-m68k-hidd-parallel-includes includes-hiddstubs
+#MM- amiga-m68k-hidd-parallel-quick : amiga-m68k-hidd-parallel-includes-quick
+#MM amiga-m68k-hidd-parallel-includes : amiga-m68k-hidd-parallel-makefile amiga-m68k-hidd-parallel-includes-dirs \
+#MM     includes-generate-deps amiga-m68k-hidd-parallel-fd
+#MM amiga-m68k-hidd-parallel-includes-quick
+#MM amiga-m68k-hidd-parallel-includes-dirs
+#MM amiga-m68k-hidd-parallel-fd
+
+# Library targets
+#MM amiga-m68k-hidd-parallel-kobj : core-linklibs linklibs-hiddstubs
+#MM amiga-m68k-hidd-parallel-kobj-quick : 
+
+# Library with ABI targets:
+#MM amiga-m68k-hidd-parallel-kobj : amiga-m68k-hidd-parallel-includes core-linklibs linklibs-hiddstubs
+#MM amiga-m68k-hidd-parallel-kobj-quick : amiga-m68k-hidd-parallel-includes-quick
+
+# All MetaMake targets defined by this macro
+amiga-m68k-hidd-parallel_ALLTARGETS       := amiga-m68k-hidd-parallel amiga-m68k-hidd-parallel-quick amiga-m68k-hidd-parallel-clean
+
+ifeq (M,M)
+amiga-m68k-hidd-parallel_ALLTARGETS       += amiga-m68k-hidd-parallel-kobj amiga-m68k-hidd-parallel-kobj-quick
+endif
+
+ifeq (M,M)
+amiga-m68k-hidd-parallel_ALLTARGETS += amiga-m68k-hidd-parallel-includes \
+                 amiga-m68k-hidd-parallel-includes-quick amiga-m68k-hidd-parallel-includes-dirs  \
+                 amiga-m68k-hidd-parallel-linklib amiga-m68k-hidd-parallel-fd
+endif
+
+.PHONY : $(amiga-m68k-hidd-parallel_ALLTARGETS) amiga-m68k-hidd-parallel-makefile
+
+ifeq (parallel,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (hidd,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    amiga-m68k-hidd-parallel_DEFNAME      := parallel_
+else
+    amiga-m68k-hidd-parallel_DEFNAME      := parallel
+endif
+amiga-m68k-hidd-parallel_DEFLINKLIBNAME   := $(amiga-m68k-hidd-parallel_DEFNAME)
+ifneq (,)
+    amiga-m68k-hidd-parallel_LINKLIBNAME  := 
+else
+    amiga-m68k-hidd-parallel_LINKLIBNAME  = $(amiga-m68k-hidd-parallel_DEFLINKLIBNAME)
+endif
+amiga-m68k-hidd-parallel_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    amiga-m68k-hidd-parallel_DEFCPPFLAGS  += -I
+endif
+amiga-m68k-hidd-parallel_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    amiga-m68k-hidd-parallel_DFLAGS       := 
+else
+    amiga-m68k-hidd-parallel_DFLAGS       = $(amiga-m68k-hidd-parallel_DEFDFLAGS)
+endif
+amiga-m68k-hidd-parallel_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    amiga-m68k-hidd-parallel_DXXFLAGS     := 
+else
+    amiga-m68k-hidd-parallel_DXXFLAGS     = $(amiga-m68k-hidd-parallel_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+amiga-m68k-hidd-parallel_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(amiga-m68k-hidd-parallel_DEFDFLAGS))
+amiga-m68k-hidd-parallel_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(amiga-m68k-hidd-parallel_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+amiga-m68k-hidd-parallel_FUNCINSTR := yes
+amiga-m68k-hidd-parallel_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(amiga-m68k-hidd-parallel_DEFDFLAGS))
+amiga-m68k-hidd-parallel_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(amiga-m68k-hidd-parallel_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+amiga-m68k-hidd-parallel_OBJDIR                     := 
+else
+amiga-m68k-hidd-parallel_OBJDIR                     := $(OBJDIR)/$(amiga-m68k-hidd-parallel_DEFNAME)
+endif
+ifneq (,)
+amiga-m68k-hidd-parallel_OBJDIR           := $(amiga-m68k-hidd-parallel_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+amiga-m68k-hidd-parallel-makefile         := $(amiga-m68k-hidd-parallel_OBJDIR)/Makefile.$(amiga-m68k-hidd-parallel_DEFNAME)hidd
+amiga-m68k-hidd-parallel-genmakefile : $(amiga-m68k-hidd-parallel-makefile)
+
+
+amiga-m68k-hidd-parallel-genmakefile_OPTS := 
+ifneq (,)
+    amiga-m68k-hidd-parallel-genmakefile_OPTS += -f 
+    amiga-m68k-hidd-parallel-genmakefile_MODNAME := parallel_
+else
+    amiga-m68k-hidd-parallel-genmakefile_MODNAME := parallel
+endif
+amiga-m68k-hidd-parallel-genmakefile_TARGET := Makefile.$(amiga-m68k-hidd-parallel-genmakefile_MODNAME)hidd
+amiga-m68k-hidd-parallel-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        amiga-m68k-hidd-parallel-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        amiga-m68k-hidd-parallel-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        amiga-m68k-hidd-parallel-genmakefile_OPTS += -c 
+        amiga-m68k-hidd-parallel-genmakefile_DEPS += 
+    endif 
+else
+    amiga-m68k-hidd-parallel-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/parallel.conf
+    amiga-m68k-hidd-parallel-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/parallel.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        amiga-m68k-hidd-parallel-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        amiga-m68k-hidd-parallel-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        amiga-m68k-hidd-parallel-genmakefile_OPTS += -o 
+        amiga-m68k-hidd-parallel-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    amiga-m68k-hidd-parallel-genmakefile_OPTS += -s 
+endif
+ifneq ($(amiga-m68k-hidd-parallel_OBJDIR),)
+    amiga-m68k-hidd-parallel-genmakefile_OPTS += -d $(amiga-m68k-hidd-parallel_OBJDIR)
+    amiga-m68k-hidd-parallel-genmakefile_TARGET := $(amiga-m68k-hidd-parallel_OBJDIR)/$(amiga-m68k-hidd-parallel-genmakefile_TARGET)
+endif
+
+$(amiga-m68k-hidd-parallel-genmakefile_TARGET) : OPTS := $(amiga-m68k-hidd-parallel-genmakefile_OPTS)
+$(amiga-m68k-hidd-parallel-genmakefile_TARGET) : MODNAME := parallel
+$(amiga-m68k-hidd-parallel-genmakefile_TARGET) : MODTYPE := hidd
+$(amiga-m68k-hidd-parallel-genmakefile_TARGET) : $(amiga-m68k-hidd-parallel-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(amiga-m68k-hidd-parallel-makefile),)
+$(amiga-m68k-hidd-parallel-makefile) : | $(amiga-m68k-hidd-parallel_OBJDIR)
+else
+$(amiga-m68k-hidd-parallel-makefile) :: $(amiga-m68k-hidd-parallel_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(amiga-m68k-hidd-parallel_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(amiga-m68k-hidd-parallel_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(amiga-m68k-hidd-parallel-makefile)
+
+amiga-m68k-hidd-parallel_DEFMODDIR        := $($(amiga-m68k-hidd-parallel_DEFNAME)_MODDIR)
+ifeq (no,yes)
+amiga-m68k-hidd-parallel_DEFMODDIR        := $(AROS_DIR_ARCH)/$(amiga-m68k-hidd-parallel_DEFMODDIR)
+endif
+ifneq (,)
+    amiga-m68k-hidd-parallel_MODDIR       := 
+else
+    amiga-m68k-hidd-parallel_MODDIR       := $(amiga-m68k-hidd-parallel_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+amiga-m68k-hidd-parallel_INCDIR           := 
+else
+amiga-m68k-hidd-parallel_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+amiga-m68k-hidd-parallel_LIBDEFSINC       := $(amiga-m68k-hidd-parallel_OBJDIR)/include/$(amiga-m68k-hidd-parallel_DEFNAME)_libdefs.h
+amiga-m68k-hidd-parallel_DEFLIBDEFSINC    := $(amiga-m68k-hidd-parallel_OBJDIR)/include/$(amiga-m68k-hidd-parallel_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+amiga-m68k-hidd-parallel-includes-quick : amiga-m68k-hidd-parallel-includes
+amiga-m68k-hidd-parallel-includes : $(addprefix $(GENINCDIR)/,$($(amiga-m68k-hidd-parallel_DEFNAME)_INCLUDES)) \
+    $(addprefix $(amiga-m68k-hidd-parallel_INCDIR)/,$($(amiga-m68k-hidd-parallel_DEFNAME)_INCLUDES)) \
+    $(amiga-m68k-hidd-parallel_LIBDEFSINC) $(amiga-m68k-hidd-parallel_DEFLIBDEFSINC)
+
+ifneq ($($(amiga-m68k-hidd-parallel_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    amiga-m68k-hidd-parallel-includes_MODNAME := parallel_
+else
+    amiga-m68k-hidd-parallel-includes_MODNAME := parallel
+endif
+
+ifneq ($($(amiga-m68k-hidd-parallel-includes_MODNAME)_INCLUDES),)
+
+amiga-m68k-hidd-parallel-includes_TARGETS := $($(amiga-m68k-hidd-parallel-includes_MODNAME)_INCLUDES)
+
+amiga-m68k-hidd-parallel-includes_DEPS := $(GENMODULE)
+amiga-m68k-hidd-parallel-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        amiga-m68k-hidd-parallel-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        amiga-m68k-hidd-parallel-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        amiga-m68k-hidd-parallel-includes_OPTS += -c 
+        amiga-m68k-hidd-parallel-includes_DEPS += 
+    endif 
+else
+    amiga-m68k-hidd-parallel-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/parallel.conf
+    amiga-m68k-hidd-parallel-includes_DEPS += $(SRCDIR)/$(CURDIR)/parallel.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        amiga-m68k-hidd-parallel-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        amiga-m68k-hidd-parallel-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        amiga-m68k-hidd-parallel-includes_OPTS += -o 
+        amiga-m68k-hidd-parallel-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    amiga-m68k-hidd-parallel-includes_OPTS += -s 
+endif
+ifneq ($(amiga-m68k-hidd-parallel_OBJDIR)/include,)
+    amiga-m68k-hidd-parallel-includes_OPTS += -d $(amiga-m68k-hidd-parallel_OBJDIR)/include
+    amiga-m68k-hidd-parallel-includes_TARGETS := $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/include/,$(amiga-m68k-hidd-parallel-includes_TARGETS))
+    amiga-m68k-hidd-parallel-includes_GENINCFLAG=$(amiga-m68k-hidd-parallel_OBJDIR)/include/.parallel.hidd-includes
+else
+    amiga-m68k-hidd-parallel-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.parallel.hidd-includes
+endif
+
+$(amiga-m68k-hidd-parallel-includes_TARGETS) : $(amiga-m68k-hidd-parallel-includes_DEPS) $(amiga-m68k-hidd-parallel-includes_GENINCFLAG)
+
+$(amiga-m68k-hidd-parallel-includes_GENINCFLAG) : OPTS := $(amiga-m68k-hidd-parallel-includes_OPTS)
+$(amiga-m68k-hidd-parallel-includes_GENINCFLAG) : MODNAME := parallel
+$(amiga-m68k-hidd-parallel-includes_GENINCFLAG) : MODTYPE := hidd
+$(amiga-m68k-hidd-parallel-includes_GENINCFLAG) : $(amiga-m68k-hidd-parallel-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(amiga-m68k-hidd-parallel_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(amiga-m68k-hidd-parallel_DEFNAME)_INCLUDES)) : | $(amiga-m68k-hidd-parallel_OBJDIR)/parallel_geninc
+
+$(amiga-m68k-hidd-parallel_OBJDIR)/parallel_geninc : COPYSRCDIR := $(amiga-m68k-hidd-parallel_OBJDIR)/include
+$(amiga-m68k-hidd-parallel_OBJDIR)/parallel_geninc : TGTDIR := $(GENINCDIR)
+$(amiga-m68k-hidd-parallel_OBJDIR)/parallel_geninc : FILES := $($(amiga-m68k-hidd-parallel_DEFNAME)_INCLUDES)
+$(amiga-m68k-hidd-parallel_OBJDIR)/parallel_geninc : $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/include/,$($(amiga-m68k-hidd-parallel_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(amiga-m68k-hidd-parallel_OBJDIR)/include
+
+$(addprefix $(amiga-m68k-hidd-parallel_INCDIR)/,$($(amiga-m68k-hidd-parallel_DEFNAME)_INCLUDES)) : | $(amiga-m68k-hidd-parallel_OBJDIR)/parallel_incs
+
+$(amiga-m68k-hidd-parallel_OBJDIR)/parallel_incs : COPYSRCDIR := $(amiga-m68k-hidd-parallel_OBJDIR)/include
+$(amiga-m68k-hidd-parallel_OBJDIR)/parallel_incs : TGTDIR := $(amiga-m68k-hidd-parallel_INCDIR)
+$(amiga-m68k-hidd-parallel_OBJDIR)/parallel_incs : FILES := $($(amiga-m68k-hidd-parallel_DEFNAME)_INCLUDES)
+$(amiga-m68k-hidd-parallel_OBJDIR)/parallel_incs : $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/include/,$($(amiga-m68k-hidd-parallel_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+amiga-m68k-hidd-parallel_INCDIRS := $(filter-out ./,$(sort $(dir $($(amiga-m68k-hidd-parallel_DEFNAME)_INCLUDES))))
+
+TMPparallel_INCDIRS := \
+    $(amiga-m68k-hidd-parallel_OBJDIR)/include $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/include/,$(amiga-m68k-hidd-parallel_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(amiga-m68k-hidd-parallel_INCDIRS)) \
+    $(amiga-m68k-hidd-parallel_INCDIR) $(addprefix $(amiga-m68k-hidd-parallel_INCDIR)/,$(amiga-m68k-hidd-parallel_INCDIRS))
+
+ifneq (amiga-m68k-hidd-parallel-includes-dirs,)
+amiga-m68k-hidd-parallel-includes-dirs : | $(TMPparallel_INCDIRS)
+else
+amiga-m68k-hidd-parallel-includes-dirs :: $(TMPparallel_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPparallel_INCDIRS)
+
+
+endif
+
+endif
+
+
+amiga-m68k-hidd-parallel-genlibdefs_OPTS := 
+ifneq (,)
+    amiga-m68k-hidd-parallel-genlibdefs_OPTS += -f 
+    amiga-m68k-hidd-parallel-genlibdefs_MODNAME := parallel_
+else
+    amiga-m68k-hidd-parallel-genlibdefs_MODNAME := parallel
+endif
+amiga-m68k-hidd-parallel-genlibdefs_TARGET := $(amiga-m68k-hidd-parallel-genlibdefs_MODNAME)_libdefs.h
+amiga-m68k-hidd-parallel-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        amiga-m68k-hidd-parallel-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        amiga-m68k-hidd-parallel-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        amiga-m68k-hidd-parallel-genlibdefs_OPTS += -c 
+        amiga-m68k-hidd-parallel-genlibdefs_DEPS += 
+    endif 
+else
+    amiga-m68k-hidd-parallel-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/parallel.conf
+    amiga-m68k-hidd-parallel-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/parallel.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        amiga-m68k-hidd-parallel-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        amiga-m68k-hidd-parallel-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        amiga-m68k-hidd-parallel-genlibdefs_OPTS += -o 
+        amiga-m68k-hidd-parallel-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    amiga-m68k-hidd-parallel-genlibdefs_OPTS += -s 
+endif
+ifneq ($(amiga-m68k-hidd-parallel_OBJDIR)/include,)
+    amiga-m68k-hidd-parallel-genlibdefs_OPTS += -d $(amiga-m68k-hidd-parallel_OBJDIR)/include
+    amiga-m68k-hidd-parallel-genlibdefs_TARGET := $(amiga-m68k-hidd-parallel_OBJDIR)/include/$(amiga-m68k-hidd-parallel-genlibdefs_TARGET)
+endif
+ifneq (,)
+    amiga-m68k-hidd-parallel-genlibdefs_OPTS += -v 
+endif
+
+$(amiga-m68k-hidd-parallel-genlibdefs_TARGET) : OPTS := $(amiga-m68k-hidd-parallel-genlibdefs_OPTS)
+$(amiga-m68k-hidd-parallel-genlibdefs_TARGET) : MODNAME := parallel
+$(amiga-m68k-hidd-parallel-genlibdefs_TARGET) : MODTYPE := hidd
+$(amiga-m68k-hidd-parallel-genlibdefs_TARGET) : $(amiga-m68k-hidd-parallel-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(amiga-m68k-hidd-parallel_DEFLIBDEFSINC) : FILENAME := $(amiga-m68k-hidd-parallel_LIBDEFSINC)
+$(amiga-m68k-hidd-parallel_DEFLIBDEFSINC) : $(amiga-m68k-hidd-parallel_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(amiga-m68k-hidd-parallel_LIBDEFSINC) $(amiga-m68k-hidd-parallel_DEFLIBDEFSINC) : | $(amiga-m68k-hidd-parallel_OBJDIR)/include
+
+ifneq (amiga-m68k-hidd-parallel-includes-dirs,)
+amiga-m68k-hidd-parallel-includes-dirs : | $(amiga-m68k-hidd-parallel_OBJDIR)/include
+else
+amiga-m68k-hidd-parallel-includes-dirs :: $(amiga-m68k-hidd-parallel_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(amiga-m68k-hidd-parallel_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+amiga-m68k-hidd-parallel-genmodfiles_OPTS :=
+ifneq (,)
+    amiga-m68k-hidd-parallel-genmodfiles_OPTS += -f 
+    amiga-m68k-hidd-parallel-genmodfiles_MODNAME := parallel_
+else
+    amiga-m68k-hidd-parallel-genmodfiles_MODNAME := parallel
+endif
+amiga-m68k-hidd-parallel-genmodfiles_GENTARGETS := $($(amiga-m68k-hidd-parallel-genmodfiles_MODNAME)_STARTFILES) $($(amiga-m68k-hidd-parallel-genmodfiles_MODNAME)_ENDFILES)
+amiga-m68k-hidd-parallel-genmodfiles_STUBTARGETS := $($(amiga-m68k-hidd-parallel-genmodfiles_MODNAME)_LINKLIBFILES) $($(amiga-m68k-hidd-parallel-genmodfiles_MODNAME)_RELLINKLIBFILES)
+amiga-m68k-hidd-parallel-genmodfiles_GENTARGETS := $(addsuffix .c,$(amiga-m68k-hidd-parallel-genmodfiles_GENTARGETS))
+amiga-m68k-hidd-parallel-genmodfiles_STUBTARGETS := $(addsuffix .c,$(amiga-m68k-hidd-parallel-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(amiga-m68k-hidd-parallel-genmodfiles_MODNAME)_LINKLIBAFILES) $($(amiga-m68k-hidd-parallel-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+amiga-m68k-hidd-parallel-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        amiga-m68k-hidd-parallel-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        amiga-m68k-hidd-parallel-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        amiga-m68k-hidd-parallel-genmodfiles_OPTS += -c 
+        amiga-m68k-hidd-parallel-genmodfiles_DEPS += 
+    endif 
+else
+    amiga-m68k-hidd-parallel-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/parallel.conf
+    amiga-m68k-hidd-parallel-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/parallel.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        amiga-m68k-hidd-parallel-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        amiga-m68k-hidd-parallel-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        amiga-m68k-hidd-parallel-genmodfiles_OPTS += -o 
+        amiga-m68k-hidd-parallel-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    amiga-m68k-hidd-parallel-genmodfiles_OPTS += -s 
+endif
+ifneq ($(amiga-m68k-hidd-parallel_OBJDIR),)
+    amiga-m68k-hidd-parallel-genmodfiles_OPTS += -d $(amiga-m68k-hidd-parallel_OBJDIR)
+    amiga-m68k-hidd-parallel-genmodfiles_TARGETDIR := $(shell echo $(amiga-m68k-hidd-parallel_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    amiga-m68k-hidd-parallel-genmodfiles_GENTARGETS := $(addprefix $(amiga-m68k-hidd-parallel-genmodfiles_TARGETDIR)/,$(amiga-m68k-hidd-parallel-genmodfiles_GENTARGETS))
+    amiga-m68k-hidd-parallel-genmodfiles_GENFILEFLAG=$(amiga-m68k-hidd-parallel-genmodfiles_TARGETDIR)/.parallel.hidd-genfiles
+else
+    amiga-m68k-hidd-parallel-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.parallel.hidd-genfiles
+endif
+ifneq ($(amiga-m68k-hidd-parallel_OBJDIR)/linklib,)
+    amiga-m68k-hidd-parallel-genmodfiles_OPTS += -l $(amiga-m68k-hidd-parallel_OBJDIR)/linklib
+    amiga-m68k-hidd-parallel-genmodfiles_STUBTARGETDIR := $(shell echo $(amiga-m68k-hidd-parallel_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    amiga-m68k-hidd-parallel-genmodfiles_STUBTARGETS := $(addprefix $(amiga-m68k-hidd-parallel-genmodfiles_STUBTARGETDIR)/,$(amiga-m68k-hidd-parallel-genmodfiles_STUBTARGETS))
+    amiga-m68k-hidd-parallel-genmodfiles_TARGETDIRS += $(amiga-m68k-hidd-parallel_OBJDIR)/linklib
+else
+ifneq ($(amiga-m68k-hidd-parallel_OBJDIR),)
+    amiga-m68k-hidd-parallel-genmodfiles_STUBTARGETS := $(addprefix $(amiga-m68k-hidd-parallel-genmodfiles_TARGETDIR)/,$(amiga-m68k-hidd-parallel-genmodfiles_STUBTARGETS))
+endif
+endif
+
+amiga-m68k-hidd-parallel-genmodfiles_TARGETS := $(amiga-m68k-hidd-parallel-genmodfiles_GENTARGETS) $(amiga-m68k-hidd-parallel-genmodfiles_STUBTARGETS)
+ifneq ($(amiga-m68k-hidd-parallel-genmodfiles_TARGETDIRS),)
+$(amiga-m68k-hidd-parallel-genmodfiles_TARGETS) : | $(amiga-m68k-hidd-parallel-genmodfiles_TARGETDIRS)
+endif
+
+$(amiga-m68k-hidd-parallel-genmodfiles_TARGETS) : $(amiga-m68k-hidd-parallel-genmodfiles_DEPS) $(amiga-m68k-hidd-parallel-genmodfiles_GENFILEFLAG)
+
+$(amiga-m68k-hidd-parallel-genmodfiles_GENFILEFLAG) : OPTS := $(amiga-m68k-hidd-parallel-genmodfiles_OPTS)
+$(amiga-m68k-hidd-parallel-genmodfiles_GENFILEFLAG) : MODNAME := parallel
+$(amiga-m68k-hidd-parallel-genmodfiles_GENFILEFLAG) : MODTYPE := hidd
+$(amiga-m68k-hidd-parallel-genmodfiles_GENFILEFLAG) : $(amiga-m68k-hidd-parallel-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(amiga-m68k-hidd-parallel-genmodfiles_GENFILEFLAG) : $(amiga-m68k-hidd-parallel_DEFLIBDEFSINC) $(amiga-m68k-hidd-parallel-makefile)
+
+
+ifneq ($(amiga-m68k-hidd-parallel-genmodfiles_GENFILEFLAG),)
+$(amiga-m68k-hidd-parallel-genmodfiles_GENFILEFLAG) : | $(amiga-m68k-hidd-parallel_OBJDIR)/linklib
+else
+$(amiga-m68k-hidd-parallel-genmodfiles_GENFILEFLAG) :: $(amiga-m68k-hidd-parallel_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(amiga-m68k-hidd-parallel_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+amiga-m68k-hidd-parallel_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+amiga-m68k-hidd-parallel_FDDIR            := /../$(AROS_DIR_FD)
+endif
+amiga-m68k-hidd-parallel-fd : $(amiga-m68k-hidd-parallel_FDDIR)/parallel_lib.fd
+
+
+TMP_TARGET := parallel_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/parallel.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/parallel.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(amiga-m68k-hidd-parallel_FDDIR),)
+    TMP_OPTS += -d $(amiga-m68k-hidd-parallel_FDDIR)
+    TMP_TARGET := $(amiga-m68k-hidd-parallel_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := parallel
+$(TMP_TARGET) : MODTYPE := hidd
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(amiga-m68k-hidd-parallel_FDDIR)/parallel_lib.fd : | $(amiga-m68k-hidd-parallel_FDDIR)
+
+
+ifneq (amiga-m68k-hidd-parallel-fd-setup,)
+amiga-m68k-hidd-parallel-fd-setup : | $(amiga-m68k-hidd-parallel_FDDIR)
+else
+amiga-m68k-hidd-parallel-fd-setup :: $(amiga-m68k-hidd-parallel_FDDIR)
+endif
+
+GLOB_MKDIRS += $(amiga-m68k-hidd-parallel_FDDIR)
+
+endif
+
+## Compilation
+##
+amiga-m68k-hidd-parallel_FILES            := $(FILES)
+amiga-m68k-hidd-parallel_OBJCFILES        := 
+amiga-m68k-hidd-parallel_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+amiga-m68k-hidd-parallel_LIBFILES         := 
+amiga-m68k-hidd-parallel_LIBS             := hiddstubs
+
+amiga-m68k-hidd-parallel_FDIRS            := $(sort $(dir $(amiga-m68k-hidd-parallel_FILES)))
+
+amiga-m68k-hidd-parallel_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+amiga-m68k-hidd-parallel_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call amiga-m68k-hidd-parallel_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+amiga-m68k-hidd-parallel_FILTERARCH       = $(filter-out $(call amiga-m68k-hidd-parallel_MATCHARCH,$(1),$(2)),$(2))
+amiga-m68k-hidd-parallel_STARTFILES       := $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$($(amiga-m68k-hidd-parallel_DEFNAME)_STARTFILES))
+amiga-m68k-hidd-parallel_ENDFILES         := $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$($(amiga-m68k-hidd-parallel_DEFNAME)_ENDFILES))
+
+amiga-m68k-hidd-parallel_ARCHOBJS         := $(wildcard $(amiga-m68k-hidd-parallel_OBJDIR)/arch/*.o)
+amiga-m68k-hidd-parallel_LIBARCHOBJS      := $(wildcard $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/arch/*.o)
+amiga-m68k-hidd-parallel_ARCHFILES        := $(basename $(notdir $(amiga-m68k-hidd-parallel_ARCHOBJS)))
+amiga-m68k-hidd-parallel_LIBARCHFILES     := $(basename $(notdir $(amiga-m68k-hidd-parallel_LIBARCHOBJS)))
+amiga-m68k-hidd-parallel_C_NARCHFILES     := $(call amiga-m68k-hidd-parallel_FILTERARCH,$(amiga-m68k-hidd-parallel_ARCHFILES),$(amiga-m68k-hidd-parallel_FILES))
+amiga-m68k-hidd-parallel_CXX_NARCHFILES   := $(call amiga-m68k-hidd-parallel_FILTERARCH,$(amiga-m68k-hidd-parallel_ARCHFILES),$(amiga-m68k-hidd-parallel_CXXFILES))
+amiga-m68k-hidd-parallel_OBJC_NARCHFILES  := $(call amiga-m68k-hidd-parallel_FILTERARCH,$(amiga-m68k-hidd-parallel_ARCHFILES),$(amiga-m68k-hidd-parallel_OBJCFILES))
+amiga-m68k-hidd-parallel_NLIBARCHFILES    := $(call amiga-m68k-hidd-parallel_FILTERARCH,$(amiga-m68k-hidd-parallel_LIBARCHFILES),$(amiga-m68k-hidd-parallel_LIBFILES))
+amiga-m68k-hidd-parallel_ARCHNLIBFILES    := $(call amiga-m68k-hidd-parallel_FILTERARCH,$(amiga-m68k-hidd-parallel_LIBFILES),$(amiga-m68k-hidd-parallel_LIBARCHFILES))
+
+amiga-m68k-hidd-parallel_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(amiga-m68k-hidd-parallel_OBJDIR)/include -include $(amiga-m68k-hidd-parallel_DEFLIBDEFSINC))
+ifneq (,)
+amiga-m68k-hidd-parallel_CPPFLAGS         += -I
+endif
+amiga-m68k-hidd-parallel_LINKLIBCPPFLAGS  := $(amiga-m68k-hidd-parallel_CPPFLAGS)
+amiga-m68k-hidd-parallel_CPPFLAGS         += $(strip $($(amiga-m68k-hidd-parallel_DEFNAME)_CPPFLAGS))
+amiga-m68k-hidd-parallel_LINKLIBCPPFLAGS  += $(strip $($(amiga-m68k-hidd-parallel_DEFNAME)_LINKLIBCPPFLAGS))
+amiga-m68k-hidd-parallel_CFLAGS           := $(strip $(CFLAGS) $($(amiga-m68k-hidd-parallel_DEFNAME)_CFLAGS))
+amiga-m68k-hidd-parallel_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(amiga-m68k-hidd-parallel_DEFNAME)_LINKLIBCFLAGS))
+amiga-m68k-hidd-parallel_CXXFLAGS         := $(strip $(CXXFLAGS) $($(amiga-m68k-hidd-parallel_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+amiga-m68k-hidd-parallel_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+amiga-m68k-hidd-parallel_CFLAGS           := $(strip $(amiga-m68k-hidd-parallel_LTOFLAGS) $(amiga-m68k-hidd-parallel_CFLAGS))
+amiga-m68k-hidd-parallel_LINKLIBCFLAGS    := $(strip $(amiga-m68k-hidd-parallel_LTOFLAGS) $(amiga-m68k-hidd-parallel_LINKLIBCFLAGS))
+amiga-m68k-hidd-parallel_CXXFLAGS         := $(strip $(amiga-m68k-hidd-parallel_LTOFLAGS) $(amiga-m68k-hidd-parallel_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+amiga-m68k-hidd-parallel_SUBSTNULL        :=
+amiga-m68k-hidd-parallel_SUBSTSPACE       := $(amiga-m68k-hidd-parallel_SUBSTNULL) #
+amiga-m68k-hidd-parallel_SUBSTCOMMA       := ,
+amiga-m68k-hidd-parallel_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(amiga-m68k-hidd-parallel_SUBSTSPACE),$(amiga-m68k-hidd-parallel_SUBSTCOMMA),$(strip $($(amiga-m68k-hidd-parallel_DEFNAME)_STARTFILES))))
+amiga-m68k-hidd-parallel_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+amiga-m68k-hidd-parallel_CFLAGS           := $(strip $(amiga-m68k-hidd-parallel_INSTRFUNCFLAGS) $(amiga-m68k-hidd-parallel_CFLAGS))
+amiga-m68k-hidd-parallel_CXXFLAGS         := $(strip $(amiga-m68k-hidd-parallel_INSTRFUNCFLAGS) $(amiga-m68k-hidd-parallel_CXXFLAGS))
+amiga-m68k-hidd-parallel_LIBS             += $(amiga-m68k-hidd-parallel_INSTRFUNCLIBS)
+endif
+endif
+amiga-m68k-hidd-parallel_DFLAGS           := $(strip $(amiga-m68k-hidd-parallel_DFLAGS) $($(amiga-m68k-hidd-parallel_DEFNAME)_DFLAGS))
+amiga-m68k-hidd-parallel_LINKLIBDFLAGS    := $(strip $(amiga-m68k-hidd-parallel_DFLAGS) $($(amiga-m68k-hidd-parallel_DEFNAME)_LINKLIBDFLAGS))
+amiga-m68k-hidd-parallel_DXXFLAGS         := $(strip $(amiga-m68k-hidd-parallel_DXXFLAGS) $($(amiga-m68k-hidd-parallel_DEFNAME)_DXXFLAGS))
+
+ifeq (hidd,library)
+    amiga-m68k-hidd-parallel_LIBSUFFIX    := 
+else
+    amiga-m68k-hidd-parallel_LIBSUFFIX    := .hidd
+endif
+
+ifeq (,)
+amiga-m68k-hidd-parallel_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+amiga-m68k-hidd-parallel_LIBDIR           := 
+endif
+
+ifeq (M,M)
+amiga-m68k-hidd-parallel_LINKLIBCFILES    := $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$($(amiga-m68k-hidd-parallel_DEFNAME)_LINKLIBFILES))
+amiga-m68k-hidd-parallel_LINKLIBAFILES    := $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$($(amiga-m68k-hidd-parallel_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(amiga-m68k-hidd-parallel_DEFNAME)_LINKLIBFILES) $($(amiga-m68k-hidd-parallel_DEFNAME)_LINKLIBAFILES)  $(amiga-m68k-hidd-parallel_ARCHNLIBFILES)),)
+    amiga-m68k-hidd-parallel_LINKLIB      :=
+else
+    amiga-m68k-hidd-parallel_LINKLIB      := $(amiga-m68k-hidd-parallel_LIBDIR)/libparallel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a
+    ifneq (parallel,$(amiga-m68k-hidd-parallel_LINKLIBNAME))
+        amiga-m68k-hidd-parallel_LINKLIB  += $(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_LINKLIBNAME)$(amiga-m68k-hidd-parallel_LIBSUFFIX).a
+    endif
+endif
+amiga-m68k-hidd-parallel_LINKLIBFILES     := $(amiga-m68k-hidd-parallel_LINKLIBCFILES) $(amiga-m68k-hidd-parallel_LINKLIBAFILES)
+
+amiga-m68k-hidd-parallel_RELLINKLIBCFILES := $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$($(amiga-m68k-hidd-parallel_DEFNAME)_RELLINKLIBFILES))
+amiga-m68k-hidd-parallel_RELLINKLIBAFILES := $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$($(amiga-m68k-hidd-parallel_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(amiga-m68k-hidd-parallel_DEFNAME)_RELLINKLIBFILES) $($(amiga-m68k-hidd-parallel_DEFNAME)_RELLINKLIBAFILES)  $(amiga-m68k-hidd-parallel_ARCHNLIBFILES)),)
+    amiga-m68k-hidd-parallel_RELLINKLIB   :=
+else
+    amiga-m68k-hidd-parallel_RELLINKLIB   := $(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_DEFNAME)_rel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a
+    ifneq (parallel,$(amiga-m68k-hidd-parallel_LINKLIBNAME))
+        amiga-m68k-hidd-parallel_RELLINKLIB += $(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_LINKLIBNAME)_rel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a
+    endif
+endif
+amiga-m68k-hidd-parallel_RELLINKLIBFILES  := $(amiga-m68k-hidd-parallel_RELLINKLIBCFILES) $(amiga-m68k-hidd-parallel_RELLINKLIBAFILES)
+endif
+
+amiga-m68k-hidd-parallel_ENDOBJS          := $(addsuffix .o,$(amiga-m68k-hidd-parallel_ENDFILES))
+amiga-m68k-hidd-parallel_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$(notdir $(amiga-m68k-hidd-parallel_NLIBARCHFILES))) $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/arch/,$(notdir $(amiga-m68k-hidd-parallel_ARCHNLIBFILES))) $(amiga-m68k-hidd-parallel_LINKLIBFILES)) \
+                 
+amiga-m68k-hidd-parallel_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$(notdir $(amiga-m68k-hidd-parallel_NLIBARCHFILES))) $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/arch/,$(notdir $(amiga-m68k-hidd-parallel_ARCHNLIBFILES))) $(amiga-m68k-hidd-parallel_RELLINKLIBFILES)) \
+                 
+$(amiga-m68k-hidd-parallel_LINKLIBFILES) $(amiga-m68k-hidd-parallel_RELLINKLIBFILES) : | $(amiga-m68k-hidd-parallel_OBJDIR)/linklib
+$(amiga-m68k-hidd-parallel_LINKLIBOBJS) $(amiga-m68k-hidd-parallel_RELLINKLIBOBJS) : | $(amiga-m68k-hidd-parallel_OBJDIR)/linklib
+
+amiga-m68k-hidd-parallel_CCFILES := $(amiga-m68k-hidd-parallel_C_NARCHFILES)
+amiga-m68k-hidd-parallel_TARGETCCFILES    := $(strip $(amiga-m68k-hidd-parallel_STARTFILES) $(amiga-m68k-hidd-parallel_ENDFILES))
+amiga-m68k-hidd-parallel_LINKLIBCCFILES   := $(strip $(amiga-m68k-hidd-parallel_NLIBARCHFILES) $(amiga-m68k-hidd-parallel_LINKLIBCFILES) $(amiga-m68k-hidd-parallel_RELLINKLIBCFILES))
+amiga-m68k-hidd-parallel_LINKLIBCCGENFILES := $(strip $(amiga-m68k-hidd-parallel_LINKLIBCFILES) $(amiga-m68k-hidd-parallel_RELLINKLIBCFILES))
+
+
+amiga-m68k-hidd-parallel_CXXABSBASENAMES := $(foreach amiga-m68k-hidd-parallel_CXXBASE,$(amiga-m68k-hidd-parallel_CXX_NARCHFILES),$(if $(filter /%,$(amiga-m68k-hidd-parallel_CXXBASE)),$(amiga-m68k-hidd-parallel_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(amiga-m68k-hidd-parallel_CXXBASE))))
+
+ifneq ($(amiga-m68k-hidd-parallel_CXXABSBASENAMES),)
+
+amiga-m68k-hidd-parallel_CXXBASENAMES := $(basename $(amiga-m68k-hidd-parallel_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+amiga-m68k-hidd-parallel_MCXX_FILES  := $(strip $(foreach amiga-m68k-hidd-parallel_CXXBASE,$(amiga-m68k-hidd-parallel_CXXABSBASENAMES), $(firstword $(wildcard $(foreach amiga-m68k-hidd-parallel_EXT, $(AROS_CXXEXTS),$(addsuffix .$(amiga-m68k-hidd-parallel_EXT),$(amiga-m68k-hidd-parallel_CXXBASE)))))))
+
+ifeq (,)
+amiga-m68k-hidd-parallel_MCXX_SRCWILDCARD := %
+else
+amiga-m68k-hidd-parallel_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(amiga-m68k-hidd-parallel_OBJDIR),)
+  amiga-m68k-hidd-parallel_CXXTARGETS := $(notdir $(amiga-m68k-hidd-parallel_CXXBASENAMES:=.o))
+  amiga-m68k-hidd-parallel_CXXDTARGETS := $(notdir $(amiga-m68k-hidd-parallel_CXXBASENAMES:=.d))
+  amiga-m68k-hidd-parallel_MCXX_WILDCARD := %
+else
+  amiga-m68k-hidd-parallel_CXXTARGETS := $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(notdir $(amiga-m68k-hidd-parallel_CXXBASENAMES:=.o)))
+  amiga-m68k-hidd-parallel_CXXDTARGETS := $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(notdir $(amiga-m68k-hidd-parallel_CXXBASENAMES:=.d)))
+  amiga-m68k-hidd-parallel_MCXX_WILDCARD := $(amiga-m68k-hidd-parallel_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(amiga-m68k-hidd-parallel_CXXTARGETS) $(amiga-m68k-hidd-parallel_CXXDTARGETS) : | $(amiga-m68k-hidd-parallel_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+amiga-m68k-hidd-parallel_MCXX_CPPFLAGS := $(amiga-m68k-hidd-parallel_CPPFLAGS)
+amiga-m68k-hidd-parallel_CXXFLAGS := $(amiga-m68k-hidd-parallel_CXXFLAGS)
+ifeq ($(amiga-m68k-hidd-parallel_DXXFLAGS),)
+  amiga-m68k-hidd-parallel_DXXFLAGS := $(amiga-m68k-hidd-parallel_CXXFLAGS)
+else
+  amiga-m68k-hidd-parallel_DXXFLAGS := $(amiga-m68k-hidd-parallel_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  amiga-m68k-hidd-parallel_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  amiga-m68k-hidd-parallel_STRIP ?= $(HOST_STRIP)
+  amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  amiga-m68k-hidd-parallel_CXXCMD:=$(HOST_CXX)
+  amiga-m68k-hidd-parallel_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(amiga-m68k-hidd-parallel_MCXX_CPPFLAGS) $(amiga-m68k-hidd-parallel_MCXX_EXTRA_CPPFLAGS))
+  amiga-m68k-hidd-parallel_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(amiga-m68k-hidd-parallel_CXXFLAGS))
+  amiga-m68k-hidd-parallel_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(amiga-m68k-hidd-parallel_DXXFLAGS))
+  amiga-m68k-hidd-parallel_CXXIQUOTE:=$(HOST_IQUOTE)
+  amiga-m68k-hidd-parallel_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  amiga-m68k-hidd-parallel_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  amiga-m68k-hidd-parallel_STRIP ?= $(TARGET_STRIP)
+  amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  amiga-m68k-hidd-parallel_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  amiga-m68k-hidd-parallel_MCXX_CPPFLAGS := $(strip $(amiga-m68k-hidd-parallel_MCXX_CPPFLAGS) $(amiga-m68k-hidd-parallel_MCXX_EXTRA_CPPFLAGS))
+  amiga-m68k-hidd-parallel_CXXFLAGS := $(strip $(amiga-m68k-hidd-parallel_CXXFLAGS) $(SAFETY_CFLAGS))
+  amiga-m68k-hidd-parallel_DXXFLAGS := $(amiga-m68k-hidd-parallel_DXXFLAGS)
+  amiga-m68k-hidd-parallel_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  amiga-m68k-hidd-parallel_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  amiga-m68k-hidd-parallel_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  amiga-m68k-hidd-parallel_STRIP ?= $(ECHO) >/dev/null
+  amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  amiga-m68k-hidd-parallel_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  amiga-m68k-hidd-parallel_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(amiga-m68k-hidd-parallel_MCXX_CPPFLAGS) $(amiga-m68k-hidd-parallel_MCXX_EXTRA_CPPFLAGS))
+  amiga-m68k-hidd-parallel_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(amiga-m68k-hidd-parallel_CXXFLAGS))
+  amiga-m68k-hidd-parallel_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(amiga-m68k-hidd-parallel_DXXFLAGS))
+  amiga-m68k-hidd-parallel_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  amiga-m68k-hidd-parallel_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(amiga-m68k-hidd-parallel_CXXCMD) $(amiga-m68k-hidd-parallel_CXXIQUOTE) $(dir $(2)) $(amiga-m68k-hidd-parallel_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_CXXIQUOTE) . $(amiga-m68k-hidd-parallel_CXXIQUOTE_END) $(strip $(amiga-m68k-hidd-parallel_CXXFLAGS) $(amiga-m68k-hidd-parallel_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(amiga-m68k-hidd-parallel_CXXCMD) $(amiga-m68k-hidd-parallel_CXXIQUOTE) $(dir $(2)) $(amiga-m68k-hidd-parallel_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_CXXIQUOTE) . $(amiga-m68k-hidd-parallel_CXXIQUOTE_END) $(strip $(amiga-m68k-hidd-parallel_CXXFLAGS) $(amiga-m68k-hidd-parallel_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(amiga-m68k-hidd-parallel_CXXCMD) $(amiga-m68k-hidd-parallel_CXXIQUOTE) $(dir $(2)) $(amiga-m68k-hidd-parallel_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_CXXIQUOTE) . $(amiga-m68k-hidd-parallel_CXXIQUOTE_END) $(strip $(amiga-m68k-hidd-parallel_CXXFLAGS) $(amiga-m68k-hidd-parallel_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(amiga-m68k-hidd-parallel_CXXCMD)" $(MKDEPEND) $(strip $(amiga-m68k-hidd-parallel_DXXFLAGS) $(amiga-m68k-hidd-parallel_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(amiga-m68k-hidd-parallel_OBJDIR),)
+  $(foreach amiga-m68k-hidd-parallel_CXXFILE,$(amiga-m68k-hidd-parallel_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(amiga-m68k-hidd-parallel_CXXFILE))),$(amiga-m68k-hidd-parallel_CXXFILE))))
+else
+  $(foreach amiga-m68k-hidd-parallel_CXXFILE,$(amiga-m68k-hidd-parallel_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(notdir $(basename $(amiga-m68k-hidd-parallel_CXXFILE)))),$(amiga-m68k-hidd-parallel_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(amiga-m68k-hidd-parallel_OBJC_NARCHFILES),)
+
+ifeq (,)
+amiga-m68k-hidd-parallel_MOBJC_SRCWILDCARD := %
+else
+amiga-m68k-hidd-parallel_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(amiga-m68k-hidd-parallel_OBJDIR),)
+  amiga-m68k-hidd-parallel_MOBJC_TARGETS := $(addsuffix .o,$(amiga-m68k-hidd-parallel_OBJC_NARCHFILES))
+  amiga-m68k-hidd-parallel_MOBJC_DTARGETS := $(addsuffix .d,$(amiga-m68k-hidd-parallel_OBJC_NARCHFILES))
+  amiga-m68k-hidd-parallel_MOBJC_WILDCARD := %
+else
+  amiga-m68k-hidd-parallel_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(amiga-m68k-hidd-parallel_OBJC_NARCHFILES)))
+  amiga-m68k-hidd-parallel_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(amiga-m68k-hidd-parallel_OBJC_NARCHFILES)))
+  amiga-m68k-hidd-parallel_MOBJC_WILDCARD := $(amiga-m68k-hidd-parallel_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : | $(addsuffix .m,$(amiga-m68k-hidd-parallel_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  amiga-m68k-hidd-parallel_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  amiga-m68k-hidd-parallel_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(amiga-m68k-hidd-parallel_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  amiga-m68k-hidd-parallel_MOBJC_DIRS := $(foreach dir, $(amiga-m68k-hidd-parallel_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(amiga-m68k-hidd-parallel_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(amiga-m68k-hidd-parallel_MOBJC_DIRS),)
+    amiga-m68k-hidd-parallel_MOBJC_DIRS := $(shell echo $(amiga-m68k-hidd-parallel_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(amiga-m68k-hidd-parallel_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  amiga-m68k-hidd-parallel_CC := $(TARGET_CC)
+else
+  amiga-m68k-hidd-parallel_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+amiga-m68k-hidd-parallel_MOBJC_CPPFLAGS := $(amiga-m68k-hidd-parallel_CPPFLAGS)
+amiga-m68k-hidd-parallel_OBJCFLAGS := $(amiga-m68k-hidd-parallel_CFLAGS)
+amiga-m68k-hidd-parallel_OBJCFLAGS := $(amiga-m68k-hidd-parallel_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+amiga-m68k-hidd-parallel_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(amiga-m68k-hidd-parallel_OBJCFLAGS)))
+ifeq ($(amiga-m68k-hidd-parallel_DFLAGS),)
+  amiga-m68k-hidd-parallel_OBJCDFLAGS := $(amiga-m68k-hidd-parallel_CFLAGS)
+else
+  amiga-m68k-hidd-parallel_OBJCDFLAGS := $(amiga-m68k-hidd-parallel_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  amiga-m68k-hidd-parallel_LINK ?= $(strip $(amiga-m68k-hidd-parallel_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  amiga-m68k-hidd-parallel_STRIP ?= $(TARGET_STRIP)
+  amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : CMD:=$(strip $(amiga-m68k-hidd-parallel_CC) $(TARGET_SYSROOT))
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : amiga-m68k-hidd-parallel_MOBJC_CPPFLAGS:=$(strip $(amiga-m68k-hidd-parallel_MOBJC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MOBJC_EXTRA_CPPFLAGS))
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : amiga-m68k-hidd-parallel_OBJCFLAGS:=$(strip $(amiga-m68k-hidd-parallel_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : amiga-m68k-hidd-parallel_OBJCDFLAGS:=$(amiga-m68k-hidd-parallel_OBJCDFLAGS)
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  amiga-m68k-hidd-parallel_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  amiga-m68k-hidd-parallel_STRIP ?= $(HOST_STRIP)
+  amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : amiga-m68k-hidd-parallel_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MOBJC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MOBJC_EXTRA_CPPFLAGS))
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : amiga-m68k-hidd-parallel_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(amiga-m68k-hidd-parallel_OBJCFLAGS))
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : amiga-m68k-hidd-parallel_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(amiga-m68k-hidd-parallel_OBJCDFLAGS))
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE:=$(HOST_IQUOTE)
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  amiga-m68k-hidd-parallel_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  amiga-m68k-hidd-parallel_STRIP ?= $(ECHO) >/dev/null
+  amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : amiga-m68k-hidd-parallel_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MOBJC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MOBJC_EXTRA_CPPFLAGS))
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : amiga-m68k-hidd-parallel_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(amiga-m68k-hidd-parallel_OBJCFLAGS))
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : amiga-m68k-hidd-parallel_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(amiga-m68k-hidd-parallel_OBJCDFLAGS))
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE:=$(KERNEL_IQUOTE)
+  $(amiga-m68k-hidd-parallel_MOBJC_TARGETS) $(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(amiga-m68k-hidd-parallel_MOBJC_TARGETS) : CPPFLAGS := $(amiga-m68k-hidd-parallel_MOBJC_CPPFLAGS)
+$(amiga-m68k-hidd-parallel_MOBJC_TARGETS) : CFLAGS := $(amiga-m68k-hidd-parallel_OBJCFLAGS)
+$(amiga-m68k-hidd-parallel_MOBJC_TARGETS) : $(amiga-m68k-hidd-parallel_MOBJC_WILDCARD).o : $(amiga-m68k-hidd-parallel_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(amiga-m68k-hidd-parallel_IQUOTE) $(dir $<) $(amiga-m68k-hidd-parallel_IQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_IQUOTE) . $(amiga-m68k-hidd-parallel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(amiga-m68k-hidd-parallel_IQUOTE) $(dir $<) $(amiga-m68k-hidd-parallel_IQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_IQUOTE) . $(amiga-m68k-hidd-parallel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(amiga-m68k-hidd-parallel_IQUOTE) $(dir $<) $(amiga-m68k-hidd-parallel_IQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_IQUOTE) . $(amiga-m68k-hidd-parallel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(amiga-m68k-hidd-parallel_MOBJC_DTARGETS) : $(amiga-m68k-hidd-parallel_MOBJC_WILDCARD).d : $(amiga-m68k-hidd-parallel_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(amiga-m68k-hidd-parallel_OBJCDFLAGS) $(amiga-m68k-hidd-parallel_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+amiga-m68k-hidd-parallel_MC_SRCWILDCARD := %
+else
+amiga-m68k-hidd-parallel_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(amiga-m68k-hidd-parallel_OBJDIR),)
+amiga-m68k-hidd-parallel_MC_TARGETS := $(addsuffix .o,$(amiga-m68k-hidd-parallel_CCFILES))
+amiga-m68k-hidd-parallel_MC_DTARGETS := $(addsuffix .d,$(amiga-m68k-hidd-parallel_CCFILES))
+amiga-m68k-hidd-parallel_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    amiga-m68k-hidd-parallel_MC_TARGETS := $(addsuffix .o,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(notdir $(amiga-m68k-hidd-parallel_CCFILES))))
+    amiga-m68k-hidd-parallel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(notdir $(amiga-m68k-hidd-parallel_CCFILES))))
+else
+ifeq (,)
+    amiga-m68k-hidd-parallel_MC_TARGETS := $(addsuffix .o,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(amiga-m68k-hidd-parallel_CCFILES)))
+    amiga-m68k-hidd-parallel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(amiga-m68k-hidd-parallel_CCFILES)))
+else
+    amiga-m68k-hidd-parallel_MC_TARGETS := $(addsuffix .o,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(patsubst /%,%,$(amiga-m68k-hidd-parallel_CCFILES))))
+    amiga-m68k-hidd-parallel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(patsubst /%,%,$(amiga-m68k-hidd-parallel_CCFILES))))
+endif
+endif
+amiga-m68k-hidd-parallel_MC_TGTWILDCARD := $(amiga-m68k-hidd-parallel_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : | $(addsuffix .c,$(amiga-m68k-hidd-parallel_CCFILES))
+
+# Be sure that all .c files are found
+amiga-m68k-hidd-parallel_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+amiga-m68k-hidd-parallel_MC_BASEDIRS := $(shell echo $(sort $(dir $(amiga-m68k-hidd-parallel_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+amiga-m68k-hidd-parallel_MC_DIRS := $(foreach dir, $(amiga-m68k-hidd-parallel_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(amiga-m68k-hidd-parallel_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(amiga-m68k-hidd-parallel_MC_DIRS),)
+    amiga-m68k-hidd-parallel_MC_DIRS := $(shell echo $(amiga-m68k-hidd-parallel_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(amiga-m68k-hidd-parallel_MC_DIRS)
+endif
+
+endif
+
+amiga-m68k-hidd-parallel_MC_CPPFLAGS := $(amiga-m68k-hidd-parallel_CPPFLAGS)
+amiga-m68k-hidd-parallel_CFLAGS := $(amiga-m68k-hidd-parallel_CFLAGS)
+ifeq ($(amiga-m68k-hidd-parallel_DFLAGS),)
+  amiga-m68k-hidd-parallel_DFLAGS := $(amiga-m68k-hidd-parallel_CFLAGS)
+else
+  amiga-m68k-hidd-parallel_DFLAGS := $(amiga-m68k-hidd-parallel_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+amiga-m68k-hidd-parallel_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+amiga-m68k-hidd-parallel_STRIP ?= $(TARGET_STRIP)
+amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_MC_CPPFLAGS:=$(strip $(amiga-m68k-hidd-parallel_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_EXTRA_CPPFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_CFLAGS:=$(strip $(amiga-m68k-hidd-parallel_CFLAGS) $(SAFETY_CFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_DFLAGS:=$(amiga-m68k-hidd-parallel_DFLAGS)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE:=$(CFLAGS_IQUOTE)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+amiga-m68k-hidd-parallel_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+amiga-m68k-hidd-parallel_STRIP ?= $(HOST_STRIP)
+amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_EXTRA_CPPFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_CFLAGS:=$(strip $(HOST_CFLAGS) $(amiga-m68k-hidd-parallel_CFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_DFLAGS:=$(strip $(HOST_CFLAGS) $(amiga-m68k-hidd-parallel_DFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE:=$(HOST_IQUOTE)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+amiga-m68k-hidd-parallel_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+amiga-m68k-hidd-parallel_STRIP ?= $(ECHO) >/dev/null
+amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_EXTRA_CPPFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(amiga-m68k-hidd-parallel_CFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(amiga-m68k-hidd-parallel_DFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE:=$(KERNEL_IQUOTE)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(amiga-m68k-hidd-parallel_MC_TARGETS) : CPPFLAGS := $(amiga-m68k-hidd-parallel_MC_CPPFLAGS)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) : CFLAGS := $(amiga-m68k-hidd-parallel_CFLAGS)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) : $(amiga-m68k-hidd-parallel_MC_TGTWILDCARD).o : $(amiga-m68k-hidd-parallel_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(amiga-m68k-hidd-parallel_IQUOTE) $(dir $<) $(amiga-m68k-hidd-parallel_IQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_IQUOTE) . $(amiga-m68k-hidd-parallel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(amiga-m68k-hidd-parallel_IQUOTE) $(dir $<) $(amiga-m68k-hidd-parallel_IQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_IQUOTE) . $(amiga-m68k-hidd-parallel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(amiga-m68k-hidd-parallel_IQUOTE) $(dir $<) $(amiga-m68k-hidd-parallel_IQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_IQUOTE) . $(amiga-m68k-hidd-parallel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(amiga-m68k-hidd-parallel_MC_DTARGETS) : $(amiga-m68k-hidd-parallel_MC_TGTWILDCARD).d : $(amiga-m68k-hidd-parallel_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(amiga-m68k-hidd-parallel_DFLAGS) $(amiga-m68k-hidd-parallel_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+amiga-m68k-hidd-parallel_MC_SRCWILDCARD := %
+else
+amiga-m68k-hidd-parallel_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(amiga-m68k-hidd-parallel_OBJDIR),)
+amiga-m68k-hidd-parallel_MC_TARGETS := $(addsuffix .o,$(amiga-m68k-hidd-parallel_TARGETCCFILES))
+amiga-m68k-hidd-parallel_MC_DTARGETS := $(addsuffix .d,$(amiga-m68k-hidd-parallel_TARGETCCFILES))
+amiga-m68k-hidd-parallel_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    amiga-m68k-hidd-parallel_MC_TARGETS := $(addsuffix .o,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(notdir $(amiga-m68k-hidd-parallel_TARGETCCFILES))))
+    amiga-m68k-hidd-parallel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(notdir $(amiga-m68k-hidd-parallel_TARGETCCFILES))))
+else
+ifeq (,)
+    amiga-m68k-hidd-parallel_MC_TARGETS := $(addsuffix .o,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(amiga-m68k-hidd-parallel_TARGETCCFILES)))
+    amiga-m68k-hidd-parallel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(amiga-m68k-hidd-parallel_TARGETCCFILES)))
+else
+    amiga-m68k-hidd-parallel_MC_TARGETS := $(addsuffix .o,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(patsubst /%,%,$(amiga-m68k-hidd-parallel_TARGETCCFILES))))
+    amiga-m68k-hidd-parallel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(patsubst /%,%,$(amiga-m68k-hidd-parallel_TARGETCCFILES))))
+endif
+endif
+amiga-m68k-hidd-parallel_MC_TGTWILDCARD := $(amiga-m68k-hidd-parallel_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : | $(addsuffix .c,$(amiga-m68k-hidd-parallel_TARGETCCFILES))
+
+# Be sure that all .c files are found
+amiga-m68k-hidd-parallel_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+amiga-m68k-hidd-parallel_MC_BASEDIRS := $(shell echo $(sort $(dir $(amiga-m68k-hidd-parallel_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+amiga-m68k-hidd-parallel_MC_DIRS := $(foreach dir, $(amiga-m68k-hidd-parallel_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(amiga-m68k-hidd-parallel_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(amiga-m68k-hidd-parallel_MC_DIRS),)
+    amiga-m68k-hidd-parallel_MC_DIRS := $(shell echo $(amiga-m68k-hidd-parallel_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(amiga-m68k-hidd-parallel_MC_DIRS)
+endif
+
+endif
+
+amiga-m68k-hidd-parallel_MC_CPPFLAGS := $(amiga-m68k-hidd-parallel_CPPFLAGS) -D__AROS__
+amiga-m68k-hidd-parallel_CFLAGS := $(amiga-m68k-hidd-parallel_CFLAGS)
+ifeq ($(amiga-m68k-hidd-parallel_DFLAGS),)
+  amiga-m68k-hidd-parallel_DFLAGS := $(amiga-m68k-hidd-parallel_CFLAGS)
+else
+  amiga-m68k-hidd-parallel_DFLAGS := $(amiga-m68k-hidd-parallel_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+amiga-m68k-hidd-parallel_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+amiga-m68k-hidd-parallel_STRIP ?= $(TARGET_STRIP)
+amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_MC_CPPFLAGS:=$(strip $(amiga-m68k-hidd-parallel_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_EXTRA_CPPFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_CFLAGS:=$(strip $(amiga-m68k-hidd-parallel_CFLAGS) $(SAFETY_CFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_DFLAGS:=$(amiga-m68k-hidd-parallel_DFLAGS)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE:=$(CFLAGS_IQUOTE)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+amiga-m68k-hidd-parallel_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+amiga-m68k-hidd-parallel_STRIP ?= $(HOST_STRIP)
+amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_EXTRA_CPPFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_CFLAGS:=$(strip $(HOST_CFLAGS) $(amiga-m68k-hidd-parallel_CFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_DFLAGS:=$(strip $(HOST_CFLAGS) $(amiga-m68k-hidd-parallel_DFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE:=$(HOST_IQUOTE)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+amiga-m68k-hidd-parallel_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+amiga-m68k-hidd-parallel_STRIP ?= $(ECHO) >/dev/null
+amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_EXTRA_CPPFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(amiga-m68k-hidd-parallel_CFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(amiga-m68k-hidd-parallel_DFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE:=$(KERNEL_IQUOTE)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(amiga-m68k-hidd-parallel_MC_TARGETS) : CPPFLAGS := $(amiga-m68k-hidd-parallel_MC_CPPFLAGS)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) : CFLAGS := $(amiga-m68k-hidd-parallel_CFLAGS)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) : $(amiga-m68k-hidd-parallel_MC_TGTWILDCARD).o : $(amiga-m68k-hidd-parallel_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(amiga-m68k-hidd-parallel_IQUOTE) $(dir $<) $(amiga-m68k-hidd-parallel_IQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_IQUOTE) . $(amiga-m68k-hidd-parallel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(amiga-m68k-hidd-parallel_IQUOTE) $(dir $<) $(amiga-m68k-hidd-parallel_IQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_IQUOTE) . $(amiga-m68k-hidd-parallel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(amiga-m68k-hidd-parallel_IQUOTE) $(dir $<) $(amiga-m68k-hidd-parallel_IQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_IQUOTE) . $(amiga-m68k-hidd-parallel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(amiga-m68k-hidd-parallel_MC_DTARGETS) : $(amiga-m68k-hidd-parallel_MC_TGTWILDCARD).d : $(amiga-m68k-hidd-parallel_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(amiga-m68k-hidd-parallel_DFLAGS) $(amiga-m68k-hidd-parallel_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+amiga-m68k-hidd-parallel_MC_SRCWILDCARD := %
+else
+amiga-m68k-hidd-parallel_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(amiga-m68k-hidd-parallel_OBJDIR)/linklib,)
+amiga-m68k-hidd-parallel_MC_TARGETS := $(addsuffix .o,$(amiga-m68k-hidd-parallel_NLIBARCHFILES))
+amiga-m68k-hidd-parallel_MC_DTARGETS := $(addsuffix .d,$(amiga-m68k-hidd-parallel_NLIBARCHFILES))
+amiga-m68k-hidd-parallel_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    amiga-m68k-hidd-parallel_MC_TARGETS := $(addsuffix .o,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$(notdir $(amiga-m68k-hidd-parallel_NLIBARCHFILES))))
+    amiga-m68k-hidd-parallel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$(notdir $(amiga-m68k-hidd-parallel_NLIBARCHFILES))))
+else
+ifeq (,)
+    amiga-m68k-hidd-parallel_MC_TARGETS := $(addsuffix .o,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$(amiga-m68k-hidd-parallel_NLIBARCHFILES)))
+    amiga-m68k-hidd-parallel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$(amiga-m68k-hidd-parallel_NLIBARCHFILES)))
+else
+    amiga-m68k-hidd-parallel_MC_TARGETS := $(addsuffix .o,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$(patsubst /%,%,$(amiga-m68k-hidd-parallel_NLIBARCHFILES))))
+    amiga-m68k-hidd-parallel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$(patsubst /%,%,$(amiga-m68k-hidd-parallel_NLIBARCHFILES))))
+endif
+endif
+amiga-m68k-hidd-parallel_MC_TGTWILDCARD := $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : | $(addsuffix .c,$(amiga-m68k-hidd-parallel_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+amiga-m68k-hidd-parallel_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+amiga-m68k-hidd-parallel_MC_BASEDIRS := $(shell echo $(sort $(dir $(amiga-m68k-hidd-parallel_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+amiga-m68k-hidd-parallel_MC_DIRS := $(foreach dir, $(amiga-m68k-hidd-parallel_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(amiga-m68k-hidd-parallel_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(amiga-m68k-hidd-parallel_MC_DIRS),)
+    amiga-m68k-hidd-parallel_MC_DIRS := $(shell echo $(amiga-m68k-hidd-parallel_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(amiga-m68k-hidd-parallel_MC_DIRS)
+endif
+
+endif
+
+amiga-m68k-hidd-parallel_MC_CPPFLAGS := $(amiga-m68k-hidd-parallel_LINKLIBCPPFLAGS) -D__AROS__
+amiga-m68k-hidd-parallel_CFLAGS := $(amiga-m68k-hidd-parallel_LINKLIBCFLAGS)
+ifeq ($(amiga-m68k-hidd-parallel_LINKLIBDFLAGS),)
+  amiga-m68k-hidd-parallel_DFLAGS := $(amiga-m68k-hidd-parallel_LINKLIBCFLAGS)
+else
+  amiga-m68k-hidd-parallel_DFLAGS := $(amiga-m68k-hidd-parallel_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+amiga-m68k-hidd-parallel_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+amiga-m68k-hidd-parallel_STRIP ?= $(TARGET_STRIP)
+amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_MC_CPPFLAGS:=$(strip $(amiga-m68k-hidd-parallel_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_EXTRA_CPPFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_CFLAGS:=$(strip $(amiga-m68k-hidd-parallel_CFLAGS) $(SAFETY_CFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_DFLAGS:=$(amiga-m68k-hidd-parallel_DFLAGS)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE:=$(CFLAGS_IQUOTE)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+amiga-m68k-hidd-parallel_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+amiga-m68k-hidd-parallel_STRIP ?= $(HOST_STRIP)
+amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_EXTRA_CPPFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_CFLAGS:=$(strip $(HOST_CFLAGS) $(amiga-m68k-hidd-parallel_CFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_DFLAGS:=$(strip $(HOST_CFLAGS) $(amiga-m68k-hidd-parallel_DFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE:=$(HOST_IQUOTE)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+amiga-m68k-hidd-parallel_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+amiga-m68k-hidd-parallel_STRIP ?= $(ECHO) >/dev/null
+amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_EXTRA_CPPFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(amiga-m68k-hidd-parallel_CFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(amiga-m68k-hidd-parallel_DFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE:=$(KERNEL_IQUOTE)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(amiga-m68k-hidd-parallel_MC_TARGETS) : CPPFLAGS := $(amiga-m68k-hidd-parallel_MC_CPPFLAGS)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) : CFLAGS := $(amiga-m68k-hidd-parallel_CFLAGS)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) : $(amiga-m68k-hidd-parallel_MC_TGTWILDCARD).o : $(amiga-m68k-hidd-parallel_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(amiga-m68k-hidd-parallel_IQUOTE) $(dir $<) $(amiga-m68k-hidd-parallel_IQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_IQUOTE) . $(amiga-m68k-hidd-parallel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(amiga-m68k-hidd-parallel_IQUOTE) $(dir $<) $(amiga-m68k-hidd-parallel_IQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_IQUOTE) . $(amiga-m68k-hidd-parallel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(amiga-m68k-hidd-parallel_IQUOTE) $(dir $<) $(amiga-m68k-hidd-parallel_IQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_IQUOTE) . $(amiga-m68k-hidd-parallel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(amiga-m68k-hidd-parallel_MC_DTARGETS) : $(amiga-m68k-hidd-parallel_MC_TGTWILDCARD).d : $(amiga-m68k-hidd-parallel_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(amiga-m68k-hidd-parallel_DFLAGS) $(amiga-m68k-hidd-parallel_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(amiga-m68k-hidd-parallel_OBJDIR)/linklib,)
+amiga-m68k-hidd-parallel_MC_SRCWILDCARD := %
+else
+amiga-m68k-hidd-parallel_MC_SRCWILDCARD := $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/%
+endif
+
+ifeq ($(amiga-m68k-hidd-parallel_OBJDIR)/linklib,)
+amiga-m68k-hidd-parallel_MC_TARGETS := $(addsuffix .o,$(amiga-m68k-hidd-parallel_LINKLIBCCGENFILES))
+amiga-m68k-hidd-parallel_MC_DTARGETS := $(addsuffix .d,$(amiga-m68k-hidd-parallel_LINKLIBCCGENFILES))
+amiga-m68k-hidd-parallel_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    amiga-m68k-hidd-parallel_MC_TARGETS := $(addsuffix .o,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$(notdir $(amiga-m68k-hidd-parallel_LINKLIBCCGENFILES))))
+    amiga-m68k-hidd-parallel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$(notdir $(amiga-m68k-hidd-parallel_LINKLIBCCGENFILES))))
+else
+ifeq ($(amiga-m68k-hidd-parallel_OBJDIR)/linklib,)
+    amiga-m68k-hidd-parallel_MC_TARGETS := $(addsuffix .o,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$(amiga-m68k-hidd-parallel_LINKLIBCCGENFILES)))
+    amiga-m68k-hidd-parallel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$(amiga-m68k-hidd-parallel_LINKLIBCCGENFILES)))
+else
+    amiga-m68k-hidd-parallel_MC_TARGETS := $(addsuffix .o,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$(patsubst $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/%,%,$(amiga-m68k-hidd-parallel_LINKLIBCCGENFILES))))
+    amiga-m68k-hidd-parallel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$(patsubst $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/%,%,$(amiga-m68k-hidd-parallel_LINKLIBCCGENFILES))))
+endif
+endif
+amiga-m68k-hidd-parallel_MC_TGTWILDCARD := $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : | $(addsuffix .c,$(amiga-m68k-hidd-parallel_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+amiga-m68k-hidd-parallel_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+amiga-m68k-hidd-parallel_MC_BASEDIRS := $(shell echo $(sort $(dir $(amiga-m68k-hidd-parallel_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+amiga-m68k-hidd-parallel_MC_DIRS := $(foreach dir, $(amiga-m68k-hidd-parallel_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(amiga-m68k-hidd-parallel_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(amiga-m68k-hidd-parallel_MC_DIRS),)
+    amiga-m68k-hidd-parallel_MC_DIRS := $(shell echo $(amiga-m68k-hidd-parallel_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(amiga-m68k-hidd-parallel_MC_DIRS)
+endif
+
+endif
+
+amiga-m68k-hidd-parallel_MC_CPPFLAGS := $(amiga-m68k-hidd-parallel_LINKLIBCPPFLAGS) -D__AROS__
+amiga-m68k-hidd-parallel_CFLAGS := $(amiga-m68k-hidd-parallel_LINKLIBCFLAGS)
+ifeq ($(amiga-m68k-hidd-parallel_LINKLIBDFLAGS),)
+  amiga-m68k-hidd-parallel_DFLAGS := $(amiga-m68k-hidd-parallel_LINKLIBCFLAGS)
+else
+  amiga-m68k-hidd-parallel_DFLAGS := $(amiga-m68k-hidd-parallel_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+amiga-m68k-hidd-parallel_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+amiga-m68k-hidd-parallel_STRIP ?= $(TARGET_STRIP)
+amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_MC_CPPFLAGS:=$(strip $(amiga-m68k-hidd-parallel_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_EXTRA_CPPFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_CFLAGS:=$(strip $(amiga-m68k-hidd-parallel_CFLAGS) $(SAFETY_CFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_DFLAGS:=$(amiga-m68k-hidd-parallel_DFLAGS)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE:=$(CFLAGS_IQUOTE)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+amiga-m68k-hidd-parallel_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+amiga-m68k-hidd-parallel_STRIP ?= $(HOST_STRIP)
+amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_EXTRA_CPPFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_CFLAGS:=$(strip $(HOST_CFLAGS) $(amiga-m68k-hidd-parallel_CFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_DFLAGS:=$(strip $(HOST_CFLAGS) $(amiga-m68k-hidd-parallel_DFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE:=$(HOST_IQUOTE)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+amiga-m68k-hidd-parallel_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+amiga-m68k-hidd-parallel_STRIP ?= $(ECHO) >/dev/null
+amiga-m68k-hidd-parallel_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_CPPFLAGS) $(amiga-m68k-hidd-parallel_MC_EXTRA_CPPFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(amiga-m68k-hidd-parallel_CFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(amiga-m68k-hidd-parallel_DFLAGS))
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE:=$(KERNEL_IQUOTE)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) $(amiga-m68k-hidd-parallel_MC_DTARGETS) : amiga-m68k-hidd-parallel_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(amiga-m68k-hidd-parallel_MC_TARGETS) : CPPFLAGS := $(amiga-m68k-hidd-parallel_MC_CPPFLAGS)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) : CFLAGS := $(amiga-m68k-hidd-parallel_CFLAGS)
+$(amiga-m68k-hidd-parallel_MC_TARGETS) : $(amiga-m68k-hidd-parallel_MC_TGTWILDCARD).o : $(amiga-m68k-hidd-parallel_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(amiga-m68k-hidd-parallel_IQUOTE) $(dir $<) $(amiga-m68k-hidd-parallel_IQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_IQUOTE) . $(amiga-m68k-hidd-parallel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(amiga-m68k-hidd-parallel_IQUOTE) $(dir $<) $(amiga-m68k-hidd-parallel_IQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_IQUOTE) . $(amiga-m68k-hidd-parallel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(amiga-m68k-hidd-parallel_IQUOTE) $(dir $<) $(amiga-m68k-hidd-parallel_IQUOTE) $(SRCDIR)/$(CURDIR) $(amiga-m68k-hidd-parallel_IQUOTE) . $(amiga-m68k-hidd-parallel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(amiga-m68k-hidd-parallel_MC_DTARGETS) : $(amiga-m68k-hidd-parallel_MC_TGTWILDCARD).d : $(amiga-m68k-hidd-parallel_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(amiga-m68k-hidd-parallel_DFLAGS) $(amiga-m68k-hidd-parallel_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(amiga-m68k-hidd-parallel_LINKLIBAFILES),)
+
+ifeq ($(amiga-m68k-hidd-parallel_OBJDIR)/linklib,)
+amiga-m68k-hidd-parallel-MA_TARGETS := $(addsuffix .o,$(amiga-m68k-hidd-parallel_LINKLIBAFILES) $(amiga-m68k-hidd-parallel_RELLINKLIBAFILES))
+amiga-m68k-hidd-parallel-MA_WILDCARD := %
+else
+amiga-m68k-hidd-parallel-MA_TARGETS := $(addsuffix .o,$(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$(notdir $(amiga-m68k-hidd-parallel_LINKLIBAFILES) $(amiga-m68k-hidd-parallel_RELLINKLIBAFILES))))
+amiga-m68k-hidd-parallel-MA_WILDCARD := $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(amiga-m68k-hidd-parallel-MA_TARGETS) : | $(addsuffix .S,$(amiga-m68k-hidd-parallel_LINKLIBAFILES) $(amiga-m68k-hidd-parallel_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+amiga-m68k-hidd-parallel-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+amiga-m68k-hidd-parallel-MA_BASEDIRS := $(shell echo $(sort $(dir $(amiga-m68k-hidd-parallel_LINKLIBAFILES) $(amiga-m68k-hidd-parallel_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+amiga-m68k-hidd-parallel-MA_DIRS := $(foreach dir, $(amiga-m68k-hidd-parallel-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(amiga-m68k-hidd-parallel-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(amiga-m68k-hidd-parallel-MA_DIRS),)
+    amiga-m68k-hidd-parallel-MA_DIRS := $(shell echo $(amiga-m68k-hidd-parallel-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(amiga-m68k-hidd-parallel-MA_DIRS)
+endif
+
+endif
+
+amiga-m68k-hidd-parallel-MA_ASSEMBLER ?= $(amiga-m68k-hidd-parallel_ASSEMBLER)
+
+$(amiga-m68k-hidd-parallel-MA_TARGETS) : amiga-m68k-hidd-parallel-MA_CMD:= $(amiga-m68k-hidd-parallel-MA_ASSEMBLER)
+
+$(amiga-m68k-hidd-parallel-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(amiga-m68k-hidd-parallel-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(amiga-m68k-hidd-parallel-MA_TARGETS) : $(amiga-m68k-hidd-parallel-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(amiga-m68k-hidd-parallel-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(amiga-m68k-hidd-parallel-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(amiga-m68k-hidd-parallel-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+amiga-m68k-hidd-parallel_SUFFIX           := hidd
+else
+amiga-m68k-hidd-parallel_SUFFIX           := 
+endif
+
+ifeq (target,target)
+amiga-m68k-hidd-parallel_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+amiga-m68k-hidd-parallel_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+amiga-m68k-hidd-parallel_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(amiga-m68k-hidd-parallel_SUFFIX),handler)
+amiga-m68k-hidd-parallel_MODULE           := $(AROSDIR)/$(amiga-m68k-hidd-parallel_MODDIR)/$(amiga-m68k-hidd-parallel_DEFNAME)-$(amiga-m68k-hidd-parallel_SUFFIX)
+else
+amiga-m68k-hidd-parallel_MODULE           := $(AROSDIR)/$(amiga-m68k-hidd-parallel_MODDIR)/$(amiga-m68k-hidd-parallel_DEFNAME).$(amiga-m68k-hidd-parallel_SUFFIX)
+endif
+amiga-m68k-hidd-parallel_KOBJ             := $(KOBJSDIR)/$(amiga-m68k-hidd-parallel_DEFNAME)_$(amiga-m68k-hidd-parallel_SUFFIX).o
+else
+amiga-m68k-hidd-parallel_MODULE           :=
+amiga-m68k-hidd-parallel_KOBJ             :=
+endif
+
+amiga-m68k-hidd-parallel-quick      : amiga-m68k-hidd-parallel
+amiga-m68k-hidd-parallel            : $(amiga-m68k-hidd-parallel_MODULE) $(amiga-m68k-hidd-parallel_LINKLIB) $(amiga-m68k-hidd-parallel_RELLINKLIB)
+ifeq (M,M)
+amiga-m68k-hidd-parallel-kobj       : $(amiga-m68k-hidd-parallel_KOBJ) $(amiga-m68k-hidd-parallel_LINKLIB) $(amiga-m68k-hidd-parallel_RELLINKLIB)
+amiga-m68k-hidd-parallel-kobj-quick : $(amiga-m68k-hidd-parallel_KOBJ) $(amiga-m68k-hidd-parallel_LINKLIB) $(amiga-m68k-hidd-parallel_RELLINKLIB)
+endif
+ifeq (M,M)
+amiga-m68k-hidd-parallel-linklib    : $(amiga-m68k-hidd-parallel_LINKLIB) $(amiga-m68k-hidd-parallel_RELLINKLIB)
+endif
+
+amiga-m68k-hidd-parallel_OBJS := $(addsuffix .o,$(amiga-m68k-hidd-parallel_STARTFILES)) $(amiga-m68k-hidd-parallel_ARCHOBJS) \
+           $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(notdir $(amiga-m68k-hidd-parallel_C_NARCHFILES:=.o) $(amiga-m68k-hidd-parallel_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (hidd,handler)
+amiga-m68k-hidd-parallel_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (parallel,con)
+    amiga-m68k-hidd-parallel_ERR          := $(notdir $(amiga-m68k-hidd-parallel_MODULE)).err
+else
+    amiga-m68k-hidd-parallel_ERR          := parallel.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(amiga-m68k-hidd-parallel_DEFNAME)_LDFLAGS) $(amiga-m68k-hidd-parallel_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(amiga-m68k-hidd-parallel_LIBS) $($(amiga-m68k-hidd-parallel_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(amiga-m68k-hidd-parallel_MODULE) : LIB_NAMES := $(amiga-m68k-hidd-parallel_LIBS) $($(amiga-m68k-hidd-parallel_DEFNAME)_LIBS)
+$(amiga-m68k-hidd-parallel_MODULE) : OBJS := $(amiga-m68k-hidd-parallel_STARTOBJS) $(amiga-m68k-hidd-parallel_OBJS) $(USER_OBJS)
+$(amiga-m68k-hidd-parallel_MODULE) : ENDTAG := $(amiga-m68k-hidd-parallel_ENDOBJS)
+$(amiga-m68k-hidd-parallel_MODULE) : ERR := $(amiga-m68k-hidd-parallel_ERR)
+$(amiga-m68k-hidd-parallel_MODULE) : OBJDIR := $(amiga-m68k-hidd-parallel_OBJDIR)
+$(amiga-m68k-hidd-parallel_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(amiga-m68k-hidd-parallel_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(amiga-m68k-hidd-parallel_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(amiga-m68k-hidd-parallel_MODULE) : $(amiga-m68k-hidd-parallel_STARTOBJS) $(amiga-m68k-hidd-parallel_OBJS) $(USER_OBJS) $(amiga-m68k-hidd-parallel_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(amiga-m68k-hidd-parallel_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(amiga-m68k-hidd-parallel_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+amiga-m68k-hidd-parallel_LC_LINKLIBNAME   := $(shell echo $(amiga-m68k-hidd-parallel_LINKLIBNAME) | tr A-Z a-z)
+amiga-m68k-hidd-parallel_LC_MODNAME       := $(shell echo parallel | tr A-Z a-z)
+ifneq ($(amiga-m68k-hidd-parallel_LINKLIB),)
+
+ifeq (target,target)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_LINKLIBNAME)$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_AR:=$(AR)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_LINKLIBNAME)$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_LINKLIBNAME)$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_AR:=$(HOST_AR)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_LINKLIBNAME)$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_LINKLIBNAME)$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_AR:=$(KERNEL_AR)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_LINKLIBNAME)$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_LINKLIBNAME)$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : $(amiga-m68k-hidd-parallel_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(amiga-m68k-hidd-parallel_AR) $@ $^
+	$(Q)$(amiga-m68k-hidd-parallel_RANLIB) $@
+ifneq ($(amiga-m68k-hidd-parallel_LC_MODNAME),$(amiga-m68k-hidd-parallel_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(amiga-m68k-hidd-parallel_LIBDIR)/libparallel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_AR:=$(AR)
+$(amiga-m68k-hidd-parallel_LIBDIR)/libparallel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(amiga-m68k-hidd-parallel_LIBDIR)/libparallel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_AR:=$(HOST_AR)
+$(amiga-m68k-hidd-parallel_LIBDIR)/libparallel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(amiga-m68k-hidd-parallel_LIBDIR)/libparallel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_AR:=$(KERNEL_AR)
+$(amiga-m68k-hidd-parallel_LIBDIR)/libparallel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(amiga-m68k-hidd-parallel_LIBDIR)/libparallel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : $(amiga-m68k-hidd-parallel_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(amiga-m68k-hidd-parallel_AR) $@ $^
+	$(Q)$(amiga-m68k-hidd-parallel_RANLIB) $@
+endif
+
+
+ifneq ($(amiga-m68k-hidd-parallel_LINKLIB),)
+$(amiga-m68k-hidd-parallel_LINKLIB) : | $(amiga-m68k-hidd-parallel_LIBDIR)
+else
+$(amiga-m68k-hidd-parallel_LINKLIB) :: $(amiga-m68k-hidd-parallel_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(amiga-m68k-hidd-parallel_LIBDIR)
+
+endif
+
+ifneq ($(amiga-m68k-hidd-parallel_RELLINKLIB),)
+
+ifeq (target,target)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_LINKLIBNAME)_rel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_AR:=$(AR)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_LINKLIBNAME)_rel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_LINKLIBNAME)_rel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_AR:=$(HOST_AR)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_LINKLIBNAME)_rel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_LINKLIBNAME)_rel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_AR:=$(KERNEL_AR)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_LINKLIBNAME)_rel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_LINKLIBNAME)_rel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : $(amiga-m68k-hidd-parallel_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(amiga-m68k-hidd-parallel_AR) $@ $^
+	$(Q)$(amiga-m68k-hidd-parallel_RANLIB) $@
+ifneq ($(amiga-m68k-hidd-parallel_LC_MODNAME),$(amiga-m68k-hidd-parallel_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_DEFNAME)_rel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_AR:=$(AR)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_DEFNAME)_rel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_DEFNAME)_rel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_AR:=$(HOST_AR)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_DEFNAME)_rel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_DEFNAME)_rel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_AR:=$(KERNEL_AR)
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_DEFNAME)_rel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : amiga-m68k-hidd-parallel_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(amiga-m68k-hidd-parallel_LIBDIR)/lib$(amiga-m68k-hidd-parallel_DEFNAME)_rel$(amiga-m68k-hidd-parallel_LIBSUFFIX).a : $(amiga-m68k-hidd-parallel_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(amiga-m68k-hidd-parallel_AR) $@ $^
+	$(Q)$(amiga-m68k-hidd-parallel_RANLIB) $@
+endif
+
+
+ifneq ($(amiga-m68k-hidd-parallel_RELLINKLIB),)
+$(amiga-m68k-hidd-parallel_RELLINKLIB) : | $(amiga-m68k-hidd-parallel_LIBDIR)
+else
+$(amiga-m68k-hidd-parallel_RELLINKLIB) :: $(amiga-m68k-hidd-parallel_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(amiga-m68k-hidd-parallel_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+amiga-m68k-hidd-parallel_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+amiga-m68k-hidd-parallel_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+amiga-m68k-hidd-parallel_SYMBOLS := $(amiga-m68k-hidd-parallel_KBASE)
+
+amiga-m68k-hidd-parallel_KLIB             := hiddstubs amiga arossupport autoinit libinit
+amiga-m68k-hidd-parallel_KOBJ_LIBS        := $(filter-out $(amiga-m68k-hidd-parallel_KLIB),$(amiga-m68k-hidd-parallel_LIBS)) $(amiga-m68k-hidd-parallel_KAUTOLIB)
+$(amiga-m68k-hidd-parallel_KOBJ) : LINKLIBS:=$(amiga-m68k-hidd-parallel_KOBJ_LIBS) $($(amiga-m68k-hidd-parallel_DEFNAME)_LIBS)
+$(amiga-m68k-hidd-parallel_KOBJ) : FILTBASES:=$(addprefix -L ,$(amiga-m68k-hidd-parallel_SYMBOLS))
+$(amiga-m68k-hidd-parallel_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(amiga-m68k-hidd-parallel_KOBJ) : $(amiga-m68k-hidd-parallel_OBJS) $(USER_OBJS) $(amiga-m68k-hidd-parallel_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+amiga-m68k-hidd-parallel_DEPS             := $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/,$(notdir $(amiga-m68k-hidd-parallel_CCFILES:=.d) $(amiga-m68k-hidd-parallel_TARGETCCFILES:=.d) $(amiga-m68k-hidd-parallel_CXXFILES:=.d))) $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/linklib/,$(notdir $(amiga-m68k-hidd-parallel_LINKLIBCCFILES:=.d)))
+
+ifneq ($(amiga-m68k-hidd-parallel_DEPS),)
+  ifneq (amiga-m68k-hidd-parallel amiga-m68k-hidd-parallel-quick amiga-m68k-hidd-parallel-kobj amiga-m68k-hidd-parallel-kobj-quick,)
+    ifneq ($(findstring $(TARGET),amiga-m68k-hidd-parallel amiga-m68k-hidd-parallel-quick amiga-m68k-hidd-parallel-kobj amiga-m68k-hidd-parallel-kobj-quick),)
+      -include $(amiga-m68k-hidd-parallel_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(amiga-m68k-hidd-parallel_DEPS)
+    endif
+  endif
+endif
+
+$(amiga-m68k-hidd-parallel_OBJS) $(amiga-m68k-hidd-parallel_DEPS) : | $(amiga-m68k-hidd-parallel_OBJDIR)/linklib
+
+ifneq ($(amiga-m68k-hidd-parallel_OBJS) $(amiga-m68k-hidd-parallel_DEPS) $(amiga-m68k-hidd-parallel_MODULE) $(amiga-m68k-hidd-parallel_KOBJ),)
+$(amiga-m68k-hidd-parallel_OBJS) $(amiga-m68k-hidd-parallel_DEPS) $(amiga-m68k-hidd-parallel_MODULE) $(amiga-m68k-hidd-parallel_KOBJ) : | $(amiga-m68k-hidd-parallel_OBJDIR) $(AROSDIR)/$(amiga-m68k-hidd-parallel_MODDIR) $(KOBJSDIR)
+else
+$(amiga-m68k-hidd-parallel_OBJS) $(amiga-m68k-hidd-parallel_DEPS) $(amiga-m68k-hidd-parallel_MODULE) $(amiga-m68k-hidd-parallel_KOBJ) :: $(amiga-m68k-hidd-parallel_OBJDIR) $(AROSDIR)/$(amiga-m68k-hidd-parallel_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(amiga-m68k-hidd-parallel_OBJDIR) $(AROSDIR)/$(amiga-m68k-hidd-parallel_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),amiga-m68k-hidd-parallel amiga-m68k-hidd-parallel-includes amiga-m68k-hidd-parallel-quick amiga-m68k-hidd-parallel-kobj amiga-m68k-hidd-parallel-kobj-quick),) # Only for this target these deps are wanted
+
+amiga-m68k-hidd-parallel_DFILE_DEPS := $(amiga-m68k-hidd-parallel_LIBDEFSINC) $(amiga-m68k-hidd-parallel_DEFLIBDEFSINC) \
+    $(addprefix $(amiga-m68k-hidd-parallel_INCDIR)/,$($(amiga-m68k-hidd-parallel_DEFNAME)_INCLUDES))
+$(amiga-m68k-hidd-parallel_DEPS) : $(amiga-m68k-hidd-parallel_DFILE_DEPS)
+endif
+
+amiga-m68k-hidd-parallel_TOCLEAN := $(amiga-m68k-hidd-parallel_OBJS) $(amiga-m68k-hidd-parallel_DEPS) \
+    $(amiga-m68k-hidd-parallel_MODULE) $(amiga-m68k-hidd-parallel_LINKLIB) $(amiga-m68k-hidd-parallel_KOBJ) \
+    $(amiga-m68k-hidd-parallel_OBJDIR)/Makefile.parallelhidd \
+    $(addprefix $(amiga-m68k-hidd-parallel_OBJDIR)/include/,$($(amiga-m68k-hidd-parallel_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(amiga-m68k-hidd-parallel_DEFNAME)_INCLUDES)) \
+    $(addprefix $(amiga-m68k-hidd-parallel_INCDIR)/,$($(amiga-m68k-hidd-parallel_DEFNAME)_INCLUDES)) \
+    $(amiga-m68k-hidd-parallel_OBJDIR)/parallel_geninc $(amiga-m68k-hidd-parallel_OBJDIR)/parallel_incs \
+    $(addsuffix .c,$(amiga-m68k-hidd-parallel_LINKLIBFILES)) $(amiga-m68k-hidd-parallel_LINKLIBOBJS) $(amiga-m68k-hidd-parallel_LIBDEFSINC) \
+    $(amiga-m68k-hidd-parallel_DEFLIBDEFSINC) $(addsuffix .c,$(amiga-m68k-hidd-parallel_STARTFILES) $(amiga-m68k-hidd-parallel_ENDFILES)) \
+    $(amiga-m68k-hidd-parallel_ENDOBJS)
+amiga-m68k-hidd-parallel-clean : FILES              := $(amiga-m68k-hidd-parallel_TOCLEAN)
+amiga-m68k-hidd-parallel-clean ::
+	$(Q)$(ECHO) "Cleaning up for module parallel"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(amiga-m68k-hidd-parallel_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

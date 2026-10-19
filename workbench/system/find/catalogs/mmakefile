@@ -1,0 +1,75 @@
+# Copyright © 2019, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+CATALOGS:=german czech french norwegian
+
+
+ifeq (,)
+workbench-system-find-catalogs_DESC := $(basename $(wildcard $(SRCDIR)/$(CURDIR)/*.cd))
+else
+workbench-system-find-catalogs_DESC := 
+endif
+
+workbench-system-find-catalogs_SRC := $(shell echo $(TOOLDIR)/C_h_aros | sed 's/^\(.\):\//\/\1\//')
+
+ifeq ($(CATALOGS),)
+workbench-system-find-catalogs_LNGS := $(basename $(notdir $(call WILDCARD, $(SRCDIR)/$(CURDIR)/*.ct)))
+else
+workbench-system-find-catalogs_LNGS := $(CATALOGS)
+endif
+
+workbench-system-find-catalogs_OBJS := $(addsuffix /System/System/Find.catalog, $(addprefix $(AROS_CATALOGS)/, $(workbench-system-find-catalogs_LNGS)))
+workbench-system-find-catalogs_DIRS := $(addsuffix /System/System, $(addprefix $(AROS_CATALOGS)/, $(workbench-system-find-catalogs_LNGS))) $(dir ../strings.h)
+
+#MM- workbench-system-find-catalogs-quick : workbench-system-find-catalogs
+
+#MM
+workbench-system-find-catalogs : $(workbench-system-find-catalogs_OBJS) ../strings.h
+
+
+ifneq ($(workbench-system-find-catalogs_OBJS),)
+$(workbench-system-find-catalogs_OBJS) : | $(workbench-system-find-catalogs_DIRS)
+else
+$(workbench-system-find-catalogs_OBJS) :: $(workbench-system-find-catalogs_DIRS)
+endif
+
+GLOB_MKDIRS += $(workbench-system-find-catalogs_DIRS)
+
+
+$(AROS_CATALOGS)/%/System/System/Find.catalog : $(SRCDIR)/$(CURDIR)/%.ct $(workbench-system-find-catalogs_DESC).cd
+	$(Q)$(ECHO) "Creating   Find catalog for language $*."
+	$(Q)$(IF) $(TEST) "$*" = "polish"; then \
+	    $(FLEXCAT) iso88592toamigapl $(workbench-system-find-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/System/Find.catalog" || [ $$? -lt 10 ] ; \
+	elif $(TEST) "$*" = "russian"; then \
+	    $(FLEXCAT) win1251toamiga1251 $(workbench-system-find-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/System/Find.catalog" || [ $$? -lt 10 ] ; \
+	else \
+	    $(FLEXCAT) $(workbench-system-find-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/System/Find.catalog" || [ $$? -lt 10 ] ; \
+	fi
+
+ifneq (../strings.h,)
+../strings.h : workbench-system-find-catalogs_DESC := $(workbench-system-find-catalogs_DESC)
+../strings.h : workbench-system-find-catalogs_SRC := $(workbench-system-find-catalogs_SRC)
+../strings.h : $(workbench-system-find-catalogs_DESC).cd $(workbench-system-find-catalogs_SRC).sd | $(dir ../strings.h)
+	$(Q)$(ECHO) "Creating   Find catalog source file $@"
+	$(Q)$(FLEXCAT) $(workbench-system-find-catalogs_DESC).cd $@=$(workbench-system-find-catalogs_SRC).sd
+endif
+
+workbench-system-find-catalogs-clean : FILES := $(workbench-system-find-catalogs_OBJS) ../strings.h
+#MM
+workbench-system-find-catalogs-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-system-find-catalogs"
+	$(Q)$(RM) $(FILES)
+
+.PHONY: workbench-system-find-catalogs workbench-system-find-catalogs-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,635 @@
+# $Id$
+# Makefile to make Find tool.
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES  := main locale findgroup_class
+EXEDIR := $(AROS_SYSTEM)
+
+#MM- workbench-system : workbench-system-find
+
+#MM workbench-system-find : \
+#MM    includes linklibs \
+#MM    workbench-system-find-catalogs
+
+
+.PHONY : workbench-system-find
+
+workbench-system-find_PROGNAME  := Find
+workbench-system-find_OBJDIR    := $(GENDIR)/$(CURDIR)
+workbench-system-find_TARGETDIR := $(EXEDIR)
+workbench-system-find_LINKER    := 
+workbench-system-find_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(workbench-system-find_LINKER),)
+    workbench-system-find_LINKER := target
+endif
+
+ifneq ("$(strip $(FILES)   )","")
+    workbench-system-find_FILES     := $(FILES)
+    workbench-system-find_OBJCFILES := 
+    workbench-system-find_ASMFILES  := 
+    workbench-system-find_CXXFILES := 
+else
+    workbench-system-find_FILES     := $(workbench-system-find_PROGNAME)
+    workbench-system-find_OBJCFILES :=
+    workbench-system-find_ASMFILES  :=
+    workbench-system-find_CXXFILES :=
+endif
+
+workbench-system-find_ARCHOBJS   := $(wildcard $(workbench-system-find_OBJDIR)/arch/*.o)
+workbench-system-find_ARCHFILES  := $(basename $(notdir $(workbench-system-find_ARCHOBJS)))
+workbench-system-find_C_NARCHFILES := $(filter-out $(workbench-system-find_ARCHFILES),$(workbench-system-find_FILES))
+workbench-system-find_CXX_NARCHFILES := $(filter-out $(workbench-system-find_ARCHFILES),$(workbench-system-find_CXXFILES))
+workbench-system-find_OBJC_NARCHFILES := $(filter-out $(workbench-system-find_ARCHFILES),$(workbench-system-find_OBJCFILES))
+
+TMP_FILES := $(workbench-system-find_C_NARCHFILES) $(workbench-system-find_CXX_NARCHFILES) $(workbench-system-find_ASMFILES) $(workbench-system-find_OBJC_NARCHFILES)
+workbench-system-find_OBJS := $(addsuffix .o,$(addprefix $(workbench-system-find_OBJDIR)/,$(notdir $(TMP_FILES))))
+workbench-system-find_DEPS := $(addsuffix .d,$(addprefix $(workbench-system-find_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+workbench-system-find_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+workbench-system-find_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-system-find_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+workbench-system-find_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+workbench-system-find_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+workbench-system-find_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-system-find_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+workbench-system-find_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+workbench-system-find_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+workbench-system-find_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-system-find_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+workbench-system-find_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+workbench-system-find_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+workbench-system-find_LDFLAGS          := 
+endif
+
+workbench-system-find_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+workbench-system-find_COVERAGE := yes
+workbench-system-find_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+workbench-system-find_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+workbench-system-find_CFLAGS    := $(strip $(workbench-system-find_COVERAGEFLAGS) $(workbench-system-find_CFLAGS))
+workbench-system-find_CXXFLAGS := $(strip $(workbench-system-find_COVERAGEFLAGS) $(workbench-system-find_CXXFLAGS))
+workbench-system-find_LIBS += $(workbench-system-find_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-system-find_FUNCINSTR := yes
+workbench-system-find_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+workbench-system-find_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-system-find_CFLAGS    := $(strip $(workbench-system-find_INSTRFUNCFLAGS) $(workbench-system-find_CFLAGS))
+workbench-system-find_CXXFLAGS := $(strip $(workbench-system-find_INSTRFUNCFLAGS) $(workbench-system-find_CXXFLAGS))
+workbench-system-find_LIBS += $(workbench-system-find_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+workbench-system-find_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(workbench-system-find_CFLAGS))
+workbench-system-find_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(workbench-system-find_CXXFLAGS))
+endif
+endif
+workbench-system-find_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    workbench-system-find_DFLAGS     := 
+else
+    workbench-system-find_DFLAGS     := $(workbench-system-find_CFLAGS)
+endif
+ifneq (,)
+    workbench-system-find_DXXFLAGS     := 
+else
+    workbench-system-find_DXXFLAGS     := $(workbench-system-find_CXXFLAGS)
+endif
+ifeq (target,target)
+workbench-system-find_LDFLAGS           := $(workbench-system-find_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-system-find_LDFLAGS           := $(workbench-system-find_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-system-find_LDFLAGS           := $(workbench-system-find_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+workbench-system-find_LDFLAGS   += -L
+endif
+
+#MM
+workbench-system-find-quick : workbench-system-find
+
+#MM workbench-system-find : includes-generate-deps core-linklibs
+workbench-system-find : $(workbench-system-find_TARGETDIR)/$(workbench-system-find_PROGNAME)
+
+ifneq ($(filter $(TARGET),workbench-system-find workbench-system-find-quick workbench-system-find-gz-quick),)
+
+workbench-system-find_CXXABSBASENAMES := $(foreach workbench-system-find_CXXBASE,$(workbench-system-find_CXX_NARCHFILES),$(if $(filter /%,$(workbench-system-find_CXXBASE)),$(workbench-system-find_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-system-find_CXXBASE))))
+
+ifneq ($(workbench-system-find_CXXABSBASENAMES),)
+
+workbench-system-find_CXXBASENAMES := $(basename $(workbench-system-find_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-system-find_MCXX_FILES  := $(strip $(foreach workbench-system-find_CXXBASE,$(workbench-system-find_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-system-find_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-system-find_EXT),$(workbench-system-find_CXXBASE)))))))
+
+ifeq (,)
+workbench-system-find_MCXX_SRCWILDCARD := %
+else
+workbench-system-find_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-system-find_OBJDIR),)
+  workbench-system-find_CXXTARGETS := $(notdir $(workbench-system-find_CXXBASENAMES:=.o))
+  workbench-system-find_CXXDTARGETS := $(notdir $(workbench-system-find_CXXBASENAMES:=.d))
+  workbench-system-find_MCXX_WILDCARD := %
+else
+  workbench-system-find_CXXTARGETS := $(addprefix $(workbench-system-find_OBJDIR)/,$(notdir $(workbench-system-find_CXXBASENAMES:=.o)))
+  workbench-system-find_CXXDTARGETS := $(addprefix $(workbench-system-find_OBJDIR)/,$(notdir $(workbench-system-find_CXXBASENAMES:=.d)))
+  workbench-system-find_MCXX_WILDCARD := $(workbench-system-find_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-system-find_CXXTARGETS) $(workbench-system-find_CXXDTARGETS) : | $(workbench-system-find_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-system-find_MCXX_CPPFLAGS := $(workbench-system-find_CPPFLAGS)
+workbench-system-find_CXXFLAGS := $(workbench-system-find_CXXFLAGS)
+ifeq ($(workbench-system-find_DXXFLAGS),)
+  workbench-system-find_DXXFLAGS := $(workbench-system-find_CXXFLAGS)
+else
+  workbench-system-find_DXXFLAGS := $(workbench-system-find_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-system-find_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-system-find_STRIP ?= $(HOST_STRIP)
+  workbench-system-find_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-system-find_CXXCMD:=$(HOST_CXX)
+  workbench-system-find_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-system-find_MCXX_CPPFLAGS) $(workbench-system-find_MCXX_EXTRA_CPPFLAGS))
+  workbench-system-find_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-system-find_CXXFLAGS))
+  workbench-system-find_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-system-find_DXXFLAGS))
+  workbench-system-find_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-system-find_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-system-find_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-system-find_STRIP ?= $(TARGET_STRIP)
+  workbench-system-find_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-system-find_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-system-find_MCXX_CPPFLAGS := $(strip $(workbench-system-find_MCXX_CPPFLAGS) $(workbench-system-find_MCXX_EXTRA_CPPFLAGS))
+  workbench-system-find_CXXFLAGS := $(strip $(workbench-system-find_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-system-find_DXXFLAGS := $(workbench-system-find_DXXFLAGS)
+  workbench-system-find_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-system-find_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-system-find_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-system-find_STRIP ?= $(ECHO) >/dev/null
+  workbench-system-find_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-system-find_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-system-find_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-system-find_MCXX_CPPFLAGS) $(workbench-system-find_MCXX_EXTRA_CPPFLAGS))
+  workbench-system-find_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-system-find_CXXFLAGS))
+  workbench-system-find_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-system-find_DXXFLAGS))
+  workbench-system-find_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-system-find_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-system-find_CXXCMD) $(workbench-system-find_CXXIQUOTE) $(dir $(2)) $(workbench-system-find_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-system-find_CXXIQUOTE) . $(workbench-system-find_CXXIQUOTE_END) $(strip $(workbench-system-find_CXXFLAGS) $(workbench-system-find_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-system-find_CXXCMD) $(workbench-system-find_CXXIQUOTE) $(dir $(2)) $(workbench-system-find_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-system-find_CXXIQUOTE) . $(workbench-system-find_CXXIQUOTE_END) $(strip $(workbench-system-find_CXXFLAGS) $(workbench-system-find_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-system-find_CXXCMD) $(workbench-system-find_CXXIQUOTE) $(dir $(2)) $(workbench-system-find_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-system-find_CXXIQUOTE) . $(workbench-system-find_CXXIQUOTE_END) $(strip $(workbench-system-find_CXXFLAGS) $(workbench-system-find_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-system-find_CXXCMD)" $(MKDEPEND) $(strip $(workbench-system-find_DXXFLAGS) $(workbench-system-find_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-system-find_OBJDIR),)
+  $(foreach workbench-system-find_CXXFILE,$(workbench-system-find_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-system-find_CXXFILE))),$(workbench-system-find_CXXFILE))))
+else
+  $(foreach workbench-system-find_CXXFILE,$(workbench-system-find_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-system-find_OBJDIR)/,$(notdir $(basename $(workbench-system-find_CXXFILE)))),$(workbench-system-find_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-system-find_OBJC_NARCHFILES),)
+
+ifeq (,)
+workbench-system-find_MOBJC_SRCWILDCARD := %
+else
+workbench-system-find_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-system-find_OBJDIR),)
+  workbench-system-find_MOBJC_TARGETS := $(addsuffix .o,$(workbench-system-find_OBJC_NARCHFILES))
+  workbench-system-find_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-system-find_OBJC_NARCHFILES))
+  workbench-system-find_MOBJC_WILDCARD := %
+else
+  workbench-system-find_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-system-find_OBJDIR)/,$(workbench-system-find_OBJC_NARCHFILES)))
+  workbench-system-find_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-system-find_OBJDIR)/,$(workbench-system-find_OBJC_NARCHFILES)))
+  workbench-system-find_MOBJC_WILDCARD := $(workbench-system-find_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-system-find_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  workbench-system-find_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-system-find_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-system-find_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-system-find_MOBJC_DIRS := $(foreach dir, $(workbench-system-find_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-system-find_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-system-find_MOBJC_DIRS),)
+    workbench-system-find_MOBJC_DIRS := $(shell echo $(workbench-system-find_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-system-find_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-system-find_CC := $(TARGET_CC)
+else
+  workbench-system-find_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-system-find_MOBJC_CPPFLAGS := $(workbench-system-find_CPPFLAGS)
+workbench-system-find_OBJCFLAGS := $(workbench-system-find_CFLAGS)
+workbench-system-find_OBJCFLAGS := $(workbench-system-find_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-system-find_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-system-find_OBJCFLAGS)))
+ifeq ($(workbench-system-find_DFLAGS),)
+  workbench-system-find_OBJCDFLAGS := $(workbench-system-find_CFLAGS)
+else
+  workbench-system-find_OBJCDFLAGS := $(workbench-system-find_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-system-find_LINK ?= $(strip $(workbench-system-find_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-system-find_STRIP ?= $(TARGET_STRIP)
+  workbench-system-find_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-system-find_CC) $(TARGET_SYSROOT))
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : workbench-system-find_MOBJC_CPPFLAGS:=$(strip $(workbench-system-find_MOBJC_CPPFLAGS) $(workbench-system-find_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : workbench-system-find_OBJCFLAGS:=$(strip $(workbench-system-find_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : workbench-system-find_OBJCDFLAGS:=$(workbench-system-find_OBJCDFLAGS)
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : workbench-system-find_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : workbench-system-find_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-system-find_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-system-find_STRIP ?= $(HOST_STRIP)
+  workbench-system-find_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : workbench-system-find_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-system-find_MOBJC_CPPFLAGS) $(workbench-system-find_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : workbench-system-find_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-system-find_OBJCFLAGS))
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : workbench-system-find_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-system-find_OBJCDFLAGS))
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : workbench-system-find_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : workbench-system-find_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-system-find_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-system-find_STRIP ?= $(ECHO) >/dev/null
+  workbench-system-find_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : workbench-system-find_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-system-find_MOBJC_CPPFLAGS) $(workbench-system-find_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : workbench-system-find_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-system-find_OBJCFLAGS))
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : workbench-system-find_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-system-find_OBJCDFLAGS))
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : workbench-system-find_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-system-find_MOBJC_TARGETS) $(workbench-system-find_MOBJC_DTARGETS) : workbench-system-find_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-system-find_MOBJC_TARGETS) : CPPFLAGS := $(workbench-system-find_MOBJC_CPPFLAGS)
+$(workbench-system-find_MOBJC_TARGETS) : CFLAGS := $(workbench-system-find_OBJCFLAGS)
+$(workbench-system-find_MOBJC_TARGETS) : $(workbench-system-find_MOBJC_WILDCARD).o : $(workbench-system-find_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-system-find_IQUOTE) $(dir $<) $(workbench-system-find_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-system-find_IQUOTE) . $(workbench-system-find_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-system-find_IQUOTE) $(dir $<) $(workbench-system-find_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-system-find_IQUOTE) . $(workbench-system-find_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-system-find_IQUOTE) $(dir $<) $(workbench-system-find_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-system-find_IQUOTE) . $(workbench-system-find_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-system-find_MOBJC_DTARGETS) : $(workbench-system-find_MOBJC_WILDCARD).d : $(workbench-system-find_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-system-find_OBJCDFLAGS) $(workbench-system-find_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-system-find_MC_SRCWILDCARD := %
+else
+workbench-system-find_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-system-find_OBJDIR),)
+workbench-system-find_MC_TARGETS := $(addsuffix .o,$(workbench-system-find_C_NARCHFILES))
+workbench-system-find_MC_DTARGETS := $(addsuffix .d,$(workbench-system-find_C_NARCHFILES))
+workbench-system-find_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-system-find_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-system-find_OBJDIR)/,$(notdir $(workbench-system-find_C_NARCHFILES))))
+    workbench-system-find_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-system-find_OBJDIR)/,$(notdir $(workbench-system-find_C_NARCHFILES))))
+else
+ifeq (,)
+    workbench-system-find_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-system-find_OBJDIR)/,$(workbench-system-find_C_NARCHFILES)))
+    workbench-system-find_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-system-find_OBJDIR)/,$(workbench-system-find_C_NARCHFILES)))
+else
+    workbench-system-find_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-system-find_OBJDIR)/,$(patsubst /%,%,$(workbench-system-find_C_NARCHFILES))))
+    workbench-system-find_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-system-find_OBJDIR)/,$(patsubst /%,%,$(workbench-system-find_C_NARCHFILES))))
+endif
+endif
+workbench-system-find_MC_TGTWILDCARD := $(workbench-system-find_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : | $(addsuffix .c,$(workbench-system-find_C_NARCHFILES))
+
+# Be sure that all .c files are found
+workbench-system-find_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-system-find_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-system-find_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-system-find_MC_DIRS := $(foreach dir, $(workbench-system-find_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-system-find_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-system-find_MC_DIRS),)
+    workbench-system-find_MC_DIRS := $(shell echo $(workbench-system-find_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-system-find_MC_DIRS)
+endif
+
+endif
+
+workbench-system-find_MC_CPPFLAGS := $(workbench-system-find_CPPFLAGS)
+workbench-system-find_CFLAGS := $(workbench-system-find_CFLAGS)
+ifeq ($(workbench-system-find_DFLAGS),)
+  workbench-system-find_DFLAGS := $(workbench-system-find_CFLAGS)
+else
+  workbench-system-find_DFLAGS := $(workbench-system-find_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-system-find_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-system-find_STRIP ?= $(TARGET_STRIP)
+workbench-system-find_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : workbench-system-find_MC_CPPFLAGS:=$(strip $(workbench-system-find_MC_CPPFLAGS) $(workbench-system-find_MC_EXTRA_CPPFLAGS))
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : workbench-system-find_CFLAGS:=$(strip $(workbench-system-find_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : workbench-system-find_DFLAGS:=$(workbench-system-find_DFLAGS)
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : workbench-system-find_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : workbench-system-find_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-system-find_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-system-find_STRIP ?= $(HOST_STRIP)
+workbench-system-find_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : workbench-system-find_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-system-find_MC_CPPFLAGS) $(workbench-system-find_MC_EXTRA_CPPFLAGS))
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : workbench-system-find_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-system-find_CFLAGS))
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : workbench-system-find_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-system-find_DFLAGS))
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : workbench-system-find_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : workbench-system-find_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-system-find_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-system-find_STRIP ?= $(ECHO) >/dev/null
+workbench-system-find_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : workbench-system-find_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-system-find_MC_CPPFLAGS) $(workbench-system-find_MC_EXTRA_CPPFLAGS))
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : workbench-system-find_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-system-find_CFLAGS))
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : workbench-system-find_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-system-find_DFLAGS))
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : workbench-system-find_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-system-find_MC_TARGETS) $(workbench-system-find_MC_DTARGETS) : workbench-system-find_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-system-find_MC_TARGETS) : CPPFLAGS := $(workbench-system-find_MC_CPPFLAGS)
+$(workbench-system-find_MC_TARGETS) : CFLAGS := $(workbench-system-find_CFLAGS)
+$(workbench-system-find_MC_TARGETS) : $(workbench-system-find_MC_TGTWILDCARD).o : $(workbench-system-find_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-system-find_IQUOTE) $(dir $<) $(workbench-system-find_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-system-find_IQUOTE) . $(workbench-system-find_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-system-find_IQUOTE) $(dir $<) $(workbench-system-find_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-system-find_IQUOTE) . $(workbench-system-find_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-system-find_IQUOTE) $(dir $<) $(workbench-system-find_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-system-find_IQUOTE) . $(workbench-system-find_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-system-find_MC_DTARGETS) : $(workbench-system-find_MC_TGTWILDCARD).d : $(workbench-system-find_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-system-find_DFLAGS) $(workbench-system-find_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-system-find_OBJDIR),)
+workbench-system-find-MA_TARGETS := $(addsuffix .o,$(workbench-system-find_ASMFILES))
+workbench-system-find-MA_WILDCARD := %
+else
+workbench-system-find-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-system-find_OBJDIR)/,$(notdir $(workbench-system-find_ASMFILES))))
+workbench-system-find-MA_WILDCARD := $(workbench-system-find_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(workbench-system-find-MA_TARGETS) : | $(addsuffix .s,$(workbench-system-find_ASMFILES))
+
+# Be sure that all .c files are found
+workbench-system-find-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-system-find-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-system-find_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-system-find-MA_DIRS := $(foreach dir, $(workbench-system-find-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-system-find-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-system-find-MA_DIRS),)
+    workbench-system-find-MA_DIRS := $(shell echo $(workbench-system-find-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(workbench-system-find-MA_DIRS)
+endif
+
+endif
+
+workbench-system-find-MA_ASSEMBLER ?= $(workbench-system-find_ASSEMBLER)
+
+$(workbench-system-find-MA_TARGETS) : workbench-system-find-MA_CMD:= $(workbench-system-find-MA_ASSEMBLER)
+
+$(workbench-system-find-MA_TARGETS) : CPPFLAGS := $(workbench-system-find_CPPFLAGS)
+$(workbench-system-find-MA_TARGETS) : AFLAGS := $(workbench-system-find_AFLAGS)
+$(workbench-system-find-MA_TARGETS) : $(workbench-system-find-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-system-find-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-system-find-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-system-find-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+workbench-system-find-link_EXTRA_LDFLAGS := 
+workbench-system-find-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    workbench-system-find-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    workbench-system-find-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    workbench-system-find-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+workbench-system-find-link_DIRS := $(subst -L ,-L,$(strip $(workbench-system-find_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+workbench-system-find-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(workbench-system-find-link_DIRS)))
+# Add trailing /
+workbench-system-find-link_DIRS := $(subst //,/,$(addsuffix /,$(workbench-system-find-link_DIRS)))
+# Add normal linklib path
+workbench-system-find-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+workbench-system-find-link_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-system-find_LIBS) $(workbench-system-find-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    workbench-system-find-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    workbench-system-find-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+workbench-system-find-link_DEPLIBS := $(foreach lib,$(workbench-system-find-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(workbench-system-find-link_DIRS)))) \
+)
+
+$(workbench-system-find_TARGETDIR)/$(workbench-system-find_PROGNAME) : OBJDIR := $(workbench-system-find_OBJDIR)
+$(workbench-system-find_TARGETDIR)/$(workbench-system-find_PROGNAME) : OBJS := $(workbench-system-find_OBJS) $(workbench-system-find_ARCHOBJS) $(USER_OBJS)
+$(workbench-system-find_TARGETDIR)/$(workbench-system-find_PROGNAME) : LDFLAGS := $(strip $(workbench-system-find_LDFLAGS) $(workbench-system-find-link_EXTRA_LDFLAGS))
+$(workbench-system-find_TARGETDIR)/$(workbench-system-find_PROGNAME) : LIBS := $(addprefix -l,$(workbench-system-find_LIBS) $(workbench-system-find-link_EXTRA_LIBS) )
+$(workbench-system-find_TARGETDIR)/$(workbench-system-find_PROGNAME) : $(workbench-system-find_OBJS) $(workbench-system-find_ARCHOBJS) $(USER_OBJS) $(workbench-system-find-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(workbench-system-find_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(workbench-system-find_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(workbench-system-find_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-system-find_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(workbench-system-find_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(workbench-system-find_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-system-find_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(workbench-system-find_DEPS),)
+  ifneq (workbench-system-find workbench-system-find-quick,)
+    ifneq ($(findstring $(TARGET),workbench-system-find workbench-system-find-quick),)
+      -include $(workbench-system-find_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-system-find_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(workbench-system-find_OBJS) $(workbench-system-find_DEPS) $(workbench-system-find_TARGETDIR)/$(workbench-system-find_PROGNAME),)
+$(workbench-system-find_OBJS) $(workbench-system-find_DEPS) $(workbench-system-find_TARGETDIR)/$(workbench-system-find_PROGNAME) : | $(workbench-system-find_OBJDIR) $(workbench-system-find_TARGETDIR)
+else
+$(workbench-system-find_OBJS) $(workbench-system-find_DEPS) $(workbench-system-find_TARGETDIR)/$(workbench-system-find_PROGNAME) :: $(workbench-system-find_OBJDIR) $(workbench-system-find_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-system-find_OBJDIR) $(workbench-system-find_TARGETDIR)
+
+
+workbench-system-find-clean : FILES := $(workbench-system-find_OBJS) $(workbench-system-find_TARGETDIR)/$(workbench-system-find_PROGNAME) $(workbench-system-find_DEPS)
+#MM
+workbench-system-find-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-system-find"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,46 @@
+# Copyright © 2020, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- fonts-truetype : fonts-truetype-artilla-script
+#MM- fonts-truetype-quick : fonts-truetype-artilla-script
+#MM- fonts-truetype-artilla-script : fonts-truetype-artilla-script-ttf fonts-truetype-artilla-script-amifonts
+
+
+fonts-truetype-artilla-script-ttf_SRC := $(shell echo . | sed 's/^\(.\):\//\/\1\//')
+
+
+ifneq (setup,)
+setup : | $(AROSDIR)/Fonts/TrueType
+else
+setup :: $(AROSDIR)/Fonts/TrueType
+endif
+
+GLOB_MKDIRS += $(AROSDIR)/Fonts/TrueType
+
+
+.PHONY : fonts-truetype-artilla-script-ttf
+
+#MM
+fonts-truetype-artilla-script-ttf : | $(AROSDIR)/Fonts/TrueType 
+	$(foreach file, $(call WILDCARD, *.ttf), $(shell $(CP) $(addprefix $(if $(filter /%,$(fonts-truetype-artilla-script-ttf_SRC)),$(fonts-truetype-artilla-script-ttf_SRC),$(SRCDIR)/$(CURDIR)/$(fonts-truetype-artilla-script-ttf_SRC))/, $(file)) $(addprefix $(AROSDIR)/Fonts/TrueType/, $(file))))
+
+
+#MM
+fonts-truetype-artilla-script-amifonts :
+	@cd $(SRCDIR)/$(CURDIR); for file in *.font *.otag; do \
+            if [ ! -e "$(AROSDIR)/Fonts/$$file" ]; then \
+                $(ECHO) Copying "$$file"...; \
+                $(CP) "$$file" $(AROSDIR)/Fonts; \
+            fi; \
+        done
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,1662 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- workbench-devs-common: workbench-devs-printtofile
+
+#MM- workbench-devs-quick: workbench-devs-printtofile-quick
+
+USER_LDFLAGS := -static
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM workbench-devs-printtofile
+#MM workbench-devs-printtofile-quick
+#MM workbench-devs-printtofile-makefile
+#MM workbench-devs-printtofile-clean
+
+# ABI targets:
+#MM- includes-all : workbench-devs-printtofile-includes
+#MM- linklibs-printtofile: workbench-devs-printtofile-linklib
+#MM- linklibs-printtofile_rel : workbench-devs-printtofile-linklib
+#MM- includes-printtofile: workbench-devs-printtofile-includes
+#MM- includes-printtofile_rel : workbench-devs-printtofile-includes
+#MM- workbench-devs-printtofile : workbench-devs-printtofile-includes core-linklibs linklibs-
+#MM workbench-devs-printtofile-linklib : workbench-devs-printtofile-includes includes-
+#MM- workbench-devs-printtofile-quick : workbench-devs-printtofile-includes-quick
+#MM workbench-devs-printtofile-includes : workbench-devs-printtofile-makefile workbench-devs-printtofile-includes-dirs \
+#MM     includes-generate-deps workbench-devs-printtofile-fd
+#MM workbench-devs-printtofile-includes-quick
+#MM workbench-devs-printtofile-includes-dirs
+#MM workbench-devs-printtofile-fd
+
+# Library targets
+#MM workbench-devs-printtofile-kobj : core-linklibs linklibs-
+#MM workbench-devs-printtofile-kobj-quick : 
+
+# Library with ABI targets:
+#MM workbench-devs-printtofile-kobj : workbench-devs-printtofile-includes core-linklibs linklibs-
+#MM workbench-devs-printtofile-kobj-quick : workbench-devs-printtofile-includes-quick
+
+# All MetaMake targets defined by this macro
+workbench-devs-printtofile_ALLTARGETS       := workbench-devs-printtofile workbench-devs-printtofile-quick workbench-devs-printtofile-clean
+
+ifeq (M,M)
+workbench-devs-printtofile_ALLTARGETS       += workbench-devs-printtofile-kobj workbench-devs-printtofile-kobj-quick
+endif
+
+ifeq (M,M)
+workbench-devs-printtofile_ALLTARGETS += workbench-devs-printtofile-includes \
+                 workbench-devs-printtofile-includes-quick workbench-devs-printtofile-includes-dirs  \
+                 workbench-devs-printtofile-linklib workbench-devs-printtofile-fd
+endif
+
+.PHONY : $(workbench-devs-printtofile_ALLTARGETS) workbench-devs-printtofile-makefile
+
+ifeq (printtofile,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (device,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    workbench-devs-printtofile_DEFNAME      := printtofile_
+else
+    workbench-devs-printtofile_DEFNAME      := printtofile
+endif
+workbench-devs-printtofile_DEFLINKLIBNAME   := $(workbench-devs-printtofile_DEFNAME)
+ifneq (,)
+    workbench-devs-printtofile_LINKLIBNAME  := 
+else
+    workbench-devs-printtofile_LINKLIBNAME  = $(workbench-devs-printtofile_DEFLINKLIBNAME)
+endif
+workbench-devs-printtofile_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    workbench-devs-printtofile_DEFCPPFLAGS  += -I
+endif
+workbench-devs-printtofile_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    workbench-devs-printtofile_DFLAGS       := 
+else
+    workbench-devs-printtofile_DFLAGS       = $(workbench-devs-printtofile_DEFDFLAGS)
+endif
+workbench-devs-printtofile_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    workbench-devs-printtofile_DXXFLAGS     := 
+else
+    workbench-devs-printtofile_DXXFLAGS     = $(workbench-devs-printtofile_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+workbench-devs-printtofile_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(workbench-devs-printtofile_DEFDFLAGS))
+workbench-devs-printtofile_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(workbench-devs-printtofile_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-devs-printtofile_FUNCINSTR := yes
+workbench-devs-printtofile_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(workbench-devs-printtofile_DEFDFLAGS))
+workbench-devs-printtofile_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(workbench-devs-printtofile_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+workbench-devs-printtofile_OBJDIR                     := 
+else
+workbench-devs-printtofile_OBJDIR                     := $(OBJDIR)/$(workbench-devs-printtofile_DEFNAME)
+endif
+ifneq (,)
+workbench-devs-printtofile_OBJDIR           := $(workbench-devs-printtofile_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+workbench-devs-printtofile-makefile         := $(workbench-devs-printtofile_OBJDIR)/Makefile.$(workbench-devs-printtofile_DEFNAME)device
+workbench-devs-printtofile-genmakefile : $(workbench-devs-printtofile-makefile)
+
+
+workbench-devs-printtofile-genmakefile_OPTS := 
+ifneq (,)
+    workbench-devs-printtofile-genmakefile_OPTS += -f 
+    workbench-devs-printtofile-genmakefile_MODNAME := printtofile_
+else
+    workbench-devs-printtofile-genmakefile_MODNAME := printtofile
+endif
+workbench-devs-printtofile-genmakefile_TARGET := Makefile.$(workbench-devs-printtofile-genmakefile_MODNAME)device
+workbench-devs-printtofile-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-devs-printtofile-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-devs-printtofile-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-devs-printtofile-genmakefile_OPTS += -c 
+        workbench-devs-printtofile-genmakefile_DEPS += 
+    endif 
+else
+    workbench-devs-printtofile-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/printtofile.conf
+    workbench-devs-printtofile-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/printtofile.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-devs-printtofile-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-devs-printtofile-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-devs-printtofile-genmakefile_OPTS += -o 
+        workbench-devs-printtofile-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-devs-printtofile-genmakefile_OPTS += -s 
+endif
+ifneq ($(workbench-devs-printtofile_OBJDIR),)
+    workbench-devs-printtofile-genmakefile_OPTS += -d $(workbench-devs-printtofile_OBJDIR)
+    workbench-devs-printtofile-genmakefile_TARGET := $(workbench-devs-printtofile_OBJDIR)/$(workbench-devs-printtofile-genmakefile_TARGET)
+endif
+
+$(workbench-devs-printtofile-genmakefile_TARGET) : OPTS := $(workbench-devs-printtofile-genmakefile_OPTS)
+$(workbench-devs-printtofile-genmakefile_TARGET) : MODNAME := printtofile
+$(workbench-devs-printtofile-genmakefile_TARGET) : MODTYPE := device
+$(workbench-devs-printtofile-genmakefile_TARGET) : $(workbench-devs-printtofile-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(workbench-devs-printtofile-makefile),)
+$(workbench-devs-printtofile-makefile) : | $(workbench-devs-printtofile_OBJDIR)
+else
+$(workbench-devs-printtofile-makefile) :: $(workbench-devs-printtofile_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-devs-printtofile_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(workbench-devs-printtofile_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(workbench-devs-printtofile-makefile)
+
+workbench-devs-printtofile_DEFMODDIR        := $($(workbench-devs-printtofile_DEFNAME)_MODDIR)
+ifeq (no,yes)
+workbench-devs-printtofile_DEFMODDIR        := $(AROS_DIR_ARCH)/$(workbench-devs-printtofile_DEFMODDIR)
+endif
+ifneq (,)
+    workbench-devs-printtofile_MODDIR       := 
+else
+    workbench-devs-printtofile_MODDIR       := $(workbench-devs-printtofile_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+workbench-devs-printtofile_INCDIR           := 
+else
+workbench-devs-printtofile_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+workbench-devs-printtofile_LIBDEFSINC       := $(workbench-devs-printtofile_OBJDIR)/include/$(workbench-devs-printtofile_DEFNAME)_libdefs.h
+workbench-devs-printtofile_DEFLIBDEFSINC    := $(workbench-devs-printtofile_OBJDIR)/include/$(workbench-devs-printtofile_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+workbench-devs-printtofile-includes-quick : workbench-devs-printtofile-includes
+workbench-devs-printtofile-includes : $(addprefix $(GENINCDIR)/,$($(workbench-devs-printtofile_DEFNAME)_INCLUDES)) \
+    $(addprefix $(workbench-devs-printtofile_INCDIR)/,$($(workbench-devs-printtofile_DEFNAME)_INCLUDES)) \
+    $(workbench-devs-printtofile_LIBDEFSINC) $(workbench-devs-printtofile_DEFLIBDEFSINC)
+
+ifneq ($($(workbench-devs-printtofile_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    workbench-devs-printtofile-includes_MODNAME := printtofile_
+else
+    workbench-devs-printtofile-includes_MODNAME := printtofile
+endif
+
+ifneq ($($(workbench-devs-printtofile-includes_MODNAME)_INCLUDES),)
+
+workbench-devs-printtofile-includes_TARGETS := $($(workbench-devs-printtofile-includes_MODNAME)_INCLUDES)
+
+workbench-devs-printtofile-includes_DEPS := $(GENMODULE)
+workbench-devs-printtofile-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-devs-printtofile-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-devs-printtofile-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-devs-printtofile-includes_OPTS += -c 
+        workbench-devs-printtofile-includes_DEPS += 
+    endif 
+else
+    workbench-devs-printtofile-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/printtofile.conf
+    workbench-devs-printtofile-includes_DEPS += $(SRCDIR)/$(CURDIR)/printtofile.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-devs-printtofile-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-devs-printtofile-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-devs-printtofile-includes_OPTS += -o 
+        workbench-devs-printtofile-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-devs-printtofile-includes_OPTS += -s 
+endif
+ifneq ($(workbench-devs-printtofile_OBJDIR)/include,)
+    workbench-devs-printtofile-includes_OPTS += -d $(workbench-devs-printtofile_OBJDIR)/include
+    workbench-devs-printtofile-includes_TARGETS := $(addprefix $(workbench-devs-printtofile_OBJDIR)/include/,$(workbench-devs-printtofile-includes_TARGETS))
+    workbench-devs-printtofile-includes_GENINCFLAG=$(workbench-devs-printtofile_OBJDIR)/include/.printtofile.device-includes
+else
+    workbench-devs-printtofile-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.printtofile.device-includes
+endif
+
+$(workbench-devs-printtofile-includes_TARGETS) : $(workbench-devs-printtofile-includes_DEPS) $(workbench-devs-printtofile-includes_GENINCFLAG)
+
+$(workbench-devs-printtofile-includes_GENINCFLAG) : OPTS := $(workbench-devs-printtofile-includes_OPTS)
+$(workbench-devs-printtofile-includes_GENINCFLAG) : MODNAME := printtofile
+$(workbench-devs-printtofile-includes_GENINCFLAG) : MODTYPE := device
+$(workbench-devs-printtofile-includes_GENINCFLAG) : $(workbench-devs-printtofile-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(workbench-devs-printtofile_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(workbench-devs-printtofile_DEFNAME)_INCLUDES)) : | $(workbench-devs-printtofile_OBJDIR)/printtofile_geninc
+
+$(workbench-devs-printtofile_OBJDIR)/printtofile_geninc : COPYSRCDIR := $(workbench-devs-printtofile_OBJDIR)/include
+$(workbench-devs-printtofile_OBJDIR)/printtofile_geninc : TGTDIR := $(GENINCDIR)
+$(workbench-devs-printtofile_OBJDIR)/printtofile_geninc : FILES := $($(workbench-devs-printtofile_DEFNAME)_INCLUDES)
+$(workbench-devs-printtofile_OBJDIR)/printtofile_geninc : $(addprefix $(workbench-devs-printtofile_OBJDIR)/include/,$($(workbench-devs-printtofile_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(workbench-devs-printtofile_OBJDIR)/include
+
+$(addprefix $(workbench-devs-printtofile_INCDIR)/,$($(workbench-devs-printtofile_DEFNAME)_INCLUDES)) : | $(workbench-devs-printtofile_OBJDIR)/printtofile_incs
+
+$(workbench-devs-printtofile_OBJDIR)/printtofile_incs : COPYSRCDIR := $(workbench-devs-printtofile_OBJDIR)/include
+$(workbench-devs-printtofile_OBJDIR)/printtofile_incs : TGTDIR := $(workbench-devs-printtofile_INCDIR)
+$(workbench-devs-printtofile_OBJDIR)/printtofile_incs : FILES := $($(workbench-devs-printtofile_DEFNAME)_INCLUDES)
+$(workbench-devs-printtofile_OBJDIR)/printtofile_incs : $(addprefix $(workbench-devs-printtofile_OBJDIR)/include/,$($(workbench-devs-printtofile_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+workbench-devs-printtofile_INCDIRS := $(filter-out ./,$(sort $(dir $($(workbench-devs-printtofile_DEFNAME)_INCLUDES))))
+
+TMPprinttofile_INCDIRS := \
+    $(workbench-devs-printtofile_OBJDIR)/include $(addprefix $(workbench-devs-printtofile_OBJDIR)/include/,$(workbench-devs-printtofile_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(workbench-devs-printtofile_INCDIRS)) \
+    $(workbench-devs-printtofile_INCDIR) $(addprefix $(workbench-devs-printtofile_INCDIR)/,$(workbench-devs-printtofile_INCDIRS))
+
+ifneq (workbench-devs-printtofile-includes-dirs,)
+workbench-devs-printtofile-includes-dirs : | $(TMPprinttofile_INCDIRS)
+else
+workbench-devs-printtofile-includes-dirs :: $(TMPprinttofile_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPprinttofile_INCDIRS)
+
+
+endif
+
+endif
+
+
+workbench-devs-printtofile-genlibdefs_OPTS := 
+ifneq (,)
+    workbench-devs-printtofile-genlibdefs_OPTS += -f 
+    workbench-devs-printtofile-genlibdefs_MODNAME := printtofile_
+else
+    workbench-devs-printtofile-genlibdefs_MODNAME := printtofile
+endif
+workbench-devs-printtofile-genlibdefs_TARGET := $(workbench-devs-printtofile-genlibdefs_MODNAME)_libdefs.h
+workbench-devs-printtofile-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-devs-printtofile-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-devs-printtofile-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-devs-printtofile-genlibdefs_OPTS += -c 
+        workbench-devs-printtofile-genlibdefs_DEPS += 
+    endif 
+else
+    workbench-devs-printtofile-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/printtofile.conf
+    workbench-devs-printtofile-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/printtofile.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-devs-printtofile-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-devs-printtofile-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-devs-printtofile-genlibdefs_OPTS += -o 
+        workbench-devs-printtofile-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-devs-printtofile-genlibdefs_OPTS += -s 
+endif
+ifneq ($(workbench-devs-printtofile_OBJDIR)/include,)
+    workbench-devs-printtofile-genlibdefs_OPTS += -d $(workbench-devs-printtofile_OBJDIR)/include
+    workbench-devs-printtofile-genlibdefs_TARGET := $(workbench-devs-printtofile_OBJDIR)/include/$(workbench-devs-printtofile-genlibdefs_TARGET)
+endif
+ifneq (,)
+    workbench-devs-printtofile-genlibdefs_OPTS += -v 
+endif
+
+$(workbench-devs-printtofile-genlibdefs_TARGET) : OPTS := $(workbench-devs-printtofile-genlibdefs_OPTS)
+$(workbench-devs-printtofile-genlibdefs_TARGET) : MODNAME := printtofile
+$(workbench-devs-printtofile-genlibdefs_TARGET) : MODTYPE := device
+$(workbench-devs-printtofile-genlibdefs_TARGET) : $(workbench-devs-printtofile-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(workbench-devs-printtofile_DEFLIBDEFSINC) : FILENAME := $(workbench-devs-printtofile_LIBDEFSINC)
+$(workbench-devs-printtofile_DEFLIBDEFSINC) : $(workbench-devs-printtofile_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(workbench-devs-printtofile_LIBDEFSINC) $(workbench-devs-printtofile_DEFLIBDEFSINC) : | $(workbench-devs-printtofile_OBJDIR)/include
+
+ifneq (workbench-devs-printtofile-includes-dirs,)
+workbench-devs-printtofile-includes-dirs : | $(workbench-devs-printtofile_OBJDIR)/include
+else
+workbench-devs-printtofile-includes-dirs :: $(workbench-devs-printtofile_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(workbench-devs-printtofile_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+workbench-devs-printtofile-genmodfiles_OPTS :=
+ifneq (,)
+    workbench-devs-printtofile-genmodfiles_OPTS += -f 
+    workbench-devs-printtofile-genmodfiles_MODNAME := printtofile_
+else
+    workbench-devs-printtofile-genmodfiles_MODNAME := printtofile
+endif
+workbench-devs-printtofile-genmodfiles_GENTARGETS := $($(workbench-devs-printtofile-genmodfiles_MODNAME)_STARTFILES) $($(workbench-devs-printtofile-genmodfiles_MODNAME)_ENDFILES)
+workbench-devs-printtofile-genmodfiles_STUBTARGETS := $($(workbench-devs-printtofile-genmodfiles_MODNAME)_LINKLIBFILES) $($(workbench-devs-printtofile-genmodfiles_MODNAME)_RELLINKLIBFILES)
+workbench-devs-printtofile-genmodfiles_GENTARGETS := $(addsuffix .c,$(workbench-devs-printtofile-genmodfiles_GENTARGETS))
+workbench-devs-printtofile-genmodfiles_STUBTARGETS := $(addsuffix .c,$(workbench-devs-printtofile-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(workbench-devs-printtofile-genmodfiles_MODNAME)_LINKLIBAFILES) $($(workbench-devs-printtofile-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+workbench-devs-printtofile-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-devs-printtofile-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-devs-printtofile-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-devs-printtofile-genmodfiles_OPTS += -c 
+        workbench-devs-printtofile-genmodfiles_DEPS += 
+    endif 
+else
+    workbench-devs-printtofile-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/printtofile.conf
+    workbench-devs-printtofile-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/printtofile.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-devs-printtofile-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-devs-printtofile-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-devs-printtofile-genmodfiles_OPTS += -o 
+        workbench-devs-printtofile-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-devs-printtofile-genmodfiles_OPTS += -s 
+endif
+ifneq ($(workbench-devs-printtofile_OBJDIR),)
+    workbench-devs-printtofile-genmodfiles_OPTS += -d $(workbench-devs-printtofile_OBJDIR)
+    workbench-devs-printtofile-genmodfiles_TARGETDIR := $(shell echo $(workbench-devs-printtofile_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    workbench-devs-printtofile-genmodfiles_GENTARGETS := $(addprefix $(workbench-devs-printtofile-genmodfiles_TARGETDIR)/,$(workbench-devs-printtofile-genmodfiles_GENTARGETS))
+    workbench-devs-printtofile-genmodfiles_GENFILEFLAG=$(workbench-devs-printtofile-genmodfiles_TARGETDIR)/.printtofile.device-genfiles
+else
+    workbench-devs-printtofile-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.printtofile.device-genfiles
+endif
+ifneq ($(workbench-devs-printtofile_OBJDIR)/linklib,)
+    workbench-devs-printtofile-genmodfiles_OPTS += -l $(workbench-devs-printtofile_OBJDIR)/linklib
+    workbench-devs-printtofile-genmodfiles_STUBTARGETDIR := $(shell echo $(workbench-devs-printtofile_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    workbench-devs-printtofile-genmodfiles_STUBTARGETS := $(addprefix $(workbench-devs-printtofile-genmodfiles_STUBTARGETDIR)/,$(workbench-devs-printtofile-genmodfiles_STUBTARGETS))
+    workbench-devs-printtofile-genmodfiles_TARGETDIRS += $(workbench-devs-printtofile_OBJDIR)/linklib
+else
+ifneq ($(workbench-devs-printtofile_OBJDIR),)
+    workbench-devs-printtofile-genmodfiles_STUBTARGETS := $(addprefix $(workbench-devs-printtofile-genmodfiles_TARGETDIR)/,$(workbench-devs-printtofile-genmodfiles_STUBTARGETS))
+endif
+endif
+
+workbench-devs-printtofile-genmodfiles_TARGETS := $(workbench-devs-printtofile-genmodfiles_GENTARGETS) $(workbench-devs-printtofile-genmodfiles_STUBTARGETS)
+ifneq ($(workbench-devs-printtofile-genmodfiles_TARGETDIRS),)
+$(workbench-devs-printtofile-genmodfiles_TARGETS) : | $(workbench-devs-printtofile-genmodfiles_TARGETDIRS)
+endif
+
+$(workbench-devs-printtofile-genmodfiles_TARGETS) : $(workbench-devs-printtofile-genmodfiles_DEPS) $(workbench-devs-printtofile-genmodfiles_GENFILEFLAG)
+
+$(workbench-devs-printtofile-genmodfiles_GENFILEFLAG) : OPTS := $(workbench-devs-printtofile-genmodfiles_OPTS)
+$(workbench-devs-printtofile-genmodfiles_GENFILEFLAG) : MODNAME := printtofile
+$(workbench-devs-printtofile-genmodfiles_GENFILEFLAG) : MODTYPE := device
+$(workbench-devs-printtofile-genmodfiles_GENFILEFLAG) : $(workbench-devs-printtofile-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(workbench-devs-printtofile-genmodfiles_GENFILEFLAG) : $(workbench-devs-printtofile_DEFLIBDEFSINC) $(workbench-devs-printtofile-makefile)
+
+
+ifneq ($(workbench-devs-printtofile-genmodfiles_GENFILEFLAG),)
+$(workbench-devs-printtofile-genmodfiles_GENFILEFLAG) : | $(workbench-devs-printtofile_OBJDIR)/linklib
+else
+$(workbench-devs-printtofile-genmodfiles_GENFILEFLAG) :: $(workbench-devs-printtofile_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(workbench-devs-printtofile_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+workbench-devs-printtofile_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+workbench-devs-printtofile_FDDIR            := /../$(AROS_DIR_FD)
+endif
+workbench-devs-printtofile-fd : $(workbench-devs-printtofile_FDDIR)/printtofile_lib.fd
+
+
+TMP_TARGET := printtofile_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/printtofile.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/printtofile.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(workbench-devs-printtofile_FDDIR),)
+    TMP_OPTS += -d $(workbench-devs-printtofile_FDDIR)
+    TMP_TARGET := $(workbench-devs-printtofile_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := printtofile
+$(TMP_TARGET) : MODTYPE := device
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(workbench-devs-printtofile_FDDIR)/printtofile_lib.fd : | $(workbench-devs-printtofile_FDDIR)
+
+
+ifneq (workbench-devs-printtofile-fd-setup,)
+workbench-devs-printtofile-fd-setup : | $(workbench-devs-printtofile_FDDIR)
+else
+workbench-devs-printtofile-fd-setup :: $(workbench-devs-printtofile_FDDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-devs-printtofile_FDDIR)
+
+endif
+
+## Compilation
+##
+workbench-devs-printtofile_FILES            := printtofile
+workbench-devs-printtofile_OBJCFILES        := 
+workbench-devs-printtofile_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+workbench-devs-printtofile_LIBFILES         := 
+workbench-devs-printtofile_LIBS             := 
+
+workbench-devs-printtofile_FDIRS            := $(sort $(dir $(workbench-devs-printtofile_FILES)))
+
+workbench-devs-printtofile_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+workbench-devs-printtofile_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call workbench-devs-printtofile_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+workbench-devs-printtofile_FILTERARCH       = $(filter-out $(call workbench-devs-printtofile_MATCHARCH,$(1),$(2)),$(2))
+workbench-devs-printtofile_STARTFILES       := $(addprefix $(workbench-devs-printtofile_OBJDIR)/,$($(workbench-devs-printtofile_DEFNAME)_STARTFILES))
+workbench-devs-printtofile_ENDFILES         := $(addprefix $(workbench-devs-printtofile_OBJDIR)/,$($(workbench-devs-printtofile_DEFNAME)_ENDFILES))
+
+workbench-devs-printtofile_ARCHOBJS         := $(wildcard $(workbench-devs-printtofile_OBJDIR)/arch/*.o)
+workbench-devs-printtofile_LIBARCHOBJS      := $(wildcard $(workbench-devs-printtofile_OBJDIR)/linklib/arch/*.o)
+workbench-devs-printtofile_ARCHFILES        := $(basename $(notdir $(workbench-devs-printtofile_ARCHOBJS)))
+workbench-devs-printtofile_LIBARCHFILES     := $(basename $(notdir $(workbench-devs-printtofile_LIBARCHOBJS)))
+workbench-devs-printtofile_C_NARCHFILES     := $(call workbench-devs-printtofile_FILTERARCH,$(workbench-devs-printtofile_ARCHFILES),$(workbench-devs-printtofile_FILES))
+workbench-devs-printtofile_CXX_NARCHFILES   := $(call workbench-devs-printtofile_FILTERARCH,$(workbench-devs-printtofile_ARCHFILES),$(workbench-devs-printtofile_CXXFILES))
+workbench-devs-printtofile_OBJC_NARCHFILES  := $(call workbench-devs-printtofile_FILTERARCH,$(workbench-devs-printtofile_ARCHFILES),$(workbench-devs-printtofile_OBJCFILES))
+workbench-devs-printtofile_NLIBARCHFILES    := $(call workbench-devs-printtofile_FILTERARCH,$(workbench-devs-printtofile_LIBARCHFILES),$(workbench-devs-printtofile_LIBFILES))
+workbench-devs-printtofile_ARCHNLIBFILES    := $(call workbench-devs-printtofile_FILTERARCH,$(workbench-devs-printtofile_LIBFILES),$(workbench-devs-printtofile_LIBARCHFILES))
+
+workbench-devs-printtofile_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(workbench-devs-printtofile_OBJDIR)/include -include $(workbench-devs-printtofile_DEFLIBDEFSINC))
+ifneq (,)
+workbench-devs-printtofile_CPPFLAGS         += -I
+endif
+workbench-devs-printtofile_LINKLIBCPPFLAGS  := $(workbench-devs-printtofile_CPPFLAGS)
+workbench-devs-printtofile_CPPFLAGS         += $(strip $($(workbench-devs-printtofile_DEFNAME)_CPPFLAGS))
+workbench-devs-printtofile_LINKLIBCPPFLAGS  += $(strip $($(workbench-devs-printtofile_DEFNAME)_LINKLIBCPPFLAGS))
+workbench-devs-printtofile_CFLAGS           := $(strip $(CFLAGS) $($(workbench-devs-printtofile_DEFNAME)_CFLAGS))
+workbench-devs-printtofile_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(workbench-devs-printtofile_DEFNAME)_LINKLIBCFLAGS))
+workbench-devs-printtofile_CXXFLAGS         := $(strip $(CXXFLAGS) $($(workbench-devs-printtofile_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+workbench-devs-printtofile_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+workbench-devs-printtofile_CFLAGS           := $(strip $(workbench-devs-printtofile_LTOFLAGS) $(workbench-devs-printtofile_CFLAGS))
+workbench-devs-printtofile_LINKLIBCFLAGS    := $(strip $(workbench-devs-printtofile_LTOFLAGS) $(workbench-devs-printtofile_LINKLIBCFLAGS))
+workbench-devs-printtofile_CXXFLAGS         := $(strip $(workbench-devs-printtofile_LTOFLAGS) $(workbench-devs-printtofile_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-devs-printtofile_SUBSTNULL        :=
+workbench-devs-printtofile_SUBSTSPACE       := $(workbench-devs-printtofile_SUBSTNULL) #
+workbench-devs-printtofile_SUBSTCOMMA       := ,
+workbench-devs-printtofile_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(workbench-devs-printtofile_SUBSTSPACE),$(workbench-devs-printtofile_SUBSTCOMMA),$(strip $($(workbench-devs-printtofile_DEFNAME)_STARTFILES))))
+workbench-devs-printtofile_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-devs-printtofile_CFLAGS           := $(strip $(workbench-devs-printtofile_INSTRFUNCFLAGS) $(workbench-devs-printtofile_CFLAGS))
+workbench-devs-printtofile_CXXFLAGS         := $(strip $(workbench-devs-printtofile_INSTRFUNCFLAGS) $(workbench-devs-printtofile_CXXFLAGS))
+workbench-devs-printtofile_LIBS             += $(workbench-devs-printtofile_INSTRFUNCLIBS)
+endif
+endif
+workbench-devs-printtofile_DFLAGS           := $(strip $(workbench-devs-printtofile_DFLAGS) $($(workbench-devs-printtofile_DEFNAME)_DFLAGS))
+workbench-devs-printtofile_LINKLIBDFLAGS    := $(strip $(workbench-devs-printtofile_DFLAGS) $($(workbench-devs-printtofile_DEFNAME)_LINKLIBDFLAGS))
+workbench-devs-printtofile_DXXFLAGS         := $(strip $(workbench-devs-printtofile_DXXFLAGS) $($(workbench-devs-printtofile_DEFNAME)_DXXFLAGS))
+
+ifeq (device,library)
+    workbench-devs-printtofile_LIBSUFFIX    := 
+else
+    workbench-devs-printtofile_LIBSUFFIX    := .device
+endif
+
+ifeq (,)
+workbench-devs-printtofile_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+workbench-devs-printtofile_LIBDIR           := 
+endif
+
+ifeq (M,M)
+workbench-devs-printtofile_LINKLIBCFILES    := $(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$($(workbench-devs-printtofile_DEFNAME)_LINKLIBFILES))
+workbench-devs-printtofile_LINKLIBAFILES    := $(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$($(workbench-devs-printtofile_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(workbench-devs-printtofile_DEFNAME)_LINKLIBFILES) $($(workbench-devs-printtofile_DEFNAME)_LINKLIBAFILES)  $(workbench-devs-printtofile_ARCHNLIBFILES)),)
+    workbench-devs-printtofile_LINKLIB      :=
+else
+    workbench-devs-printtofile_LINKLIB      := $(workbench-devs-printtofile_LIBDIR)/libprinttofile$(workbench-devs-printtofile_LIBSUFFIX).a
+    ifneq (printtofile,$(workbench-devs-printtofile_LINKLIBNAME))
+        workbench-devs-printtofile_LINKLIB  += $(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_LINKLIBNAME)$(workbench-devs-printtofile_LIBSUFFIX).a
+    endif
+endif
+workbench-devs-printtofile_LINKLIBFILES     := $(workbench-devs-printtofile_LINKLIBCFILES) $(workbench-devs-printtofile_LINKLIBAFILES)
+
+workbench-devs-printtofile_RELLINKLIBCFILES := $(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$($(workbench-devs-printtofile_DEFNAME)_RELLINKLIBFILES))
+workbench-devs-printtofile_RELLINKLIBAFILES := $(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$($(workbench-devs-printtofile_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(workbench-devs-printtofile_DEFNAME)_RELLINKLIBFILES) $($(workbench-devs-printtofile_DEFNAME)_RELLINKLIBAFILES)  $(workbench-devs-printtofile_ARCHNLIBFILES)),)
+    workbench-devs-printtofile_RELLINKLIB   :=
+else
+    workbench-devs-printtofile_RELLINKLIB   := $(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_DEFNAME)_rel$(workbench-devs-printtofile_LIBSUFFIX).a
+    ifneq (printtofile,$(workbench-devs-printtofile_LINKLIBNAME))
+        workbench-devs-printtofile_RELLINKLIB += $(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_LINKLIBNAME)_rel$(workbench-devs-printtofile_LIBSUFFIX).a
+    endif
+endif
+workbench-devs-printtofile_RELLINKLIBFILES  := $(workbench-devs-printtofile_RELLINKLIBCFILES) $(workbench-devs-printtofile_RELLINKLIBAFILES)
+endif
+
+workbench-devs-printtofile_ENDOBJS          := $(addsuffix .o,$(workbench-devs-printtofile_ENDFILES))
+workbench-devs-printtofile_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$(notdir $(workbench-devs-printtofile_NLIBARCHFILES))) $(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/arch/,$(notdir $(workbench-devs-printtofile_ARCHNLIBFILES))) $(workbench-devs-printtofile_LINKLIBFILES)) \
+                 
+workbench-devs-printtofile_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$(notdir $(workbench-devs-printtofile_NLIBARCHFILES))) $(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/arch/,$(notdir $(workbench-devs-printtofile_ARCHNLIBFILES))) $(workbench-devs-printtofile_RELLINKLIBFILES)) \
+                 
+$(workbench-devs-printtofile_LINKLIBFILES) $(workbench-devs-printtofile_RELLINKLIBFILES) : | $(workbench-devs-printtofile_OBJDIR)/linklib
+$(workbench-devs-printtofile_LINKLIBOBJS) $(workbench-devs-printtofile_RELLINKLIBOBJS) : | $(workbench-devs-printtofile_OBJDIR)/linklib
+
+workbench-devs-printtofile_CCFILES := $(workbench-devs-printtofile_C_NARCHFILES)
+workbench-devs-printtofile_TARGETCCFILES    := $(strip $(workbench-devs-printtofile_STARTFILES) $(workbench-devs-printtofile_ENDFILES))
+workbench-devs-printtofile_LINKLIBCCFILES   := $(strip $(workbench-devs-printtofile_NLIBARCHFILES) $(workbench-devs-printtofile_LINKLIBCFILES) $(workbench-devs-printtofile_RELLINKLIBCFILES))
+workbench-devs-printtofile_LINKLIBCCGENFILES := $(strip $(workbench-devs-printtofile_LINKLIBCFILES) $(workbench-devs-printtofile_RELLINKLIBCFILES))
+
+
+workbench-devs-printtofile_CXXABSBASENAMES := $(foreach workbench-devs-printtofile_CXXBASE,$(workbench-devs-printtofile_CXX_NARCHFILES),$(if $(filter /%,$(workbench-devs-printtofile_CXXBASE)),$(workbench-devs-printtofile_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-devs-printtofile_CXXBASE))))
+
+ifneq ($(workbench-devs-printtofile_CXXABSBASENAMES),)
+
+workbench-devs-printtofile_CXXBASENAMES := $(basename $(workbench-devs-printtofile_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-devs-printtofile_MCXX_FILES  := $(strip $(foreach workbench-devs-printtofile_CXXBASE,$(workbench-devs-printtofile_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-devs-printtofile_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-devs-printtofile_EXT),$(workbench-devs-printtofile_CXXBASE)))))))
+
+ifeq (,)
+workbench-devs-printtofile_MCXX_SRCWILDCARD := %
+else
+workbench-devs-printtofile_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-devs-printtofile_OBJDIR),)
+  workbench-devs-printtofile_CXXTARGETS := $(notdir $(workbench-devs-printtofile_CXXBASENAMES:=.o))
+  workbench-devs-printtofile_CXXDTARGETS := $(notdir $(workbench-devs-printtofile_CXXBASENAMES:=.d))
+  workbench-devs-printtofile_MCXX_WILDCARD := %
+else
+  workbench-devs-printtofile_CXXTARGETS := $(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(notdir $(workbench-devs-printtofile_CXXBASENAMES:=.o)))
+  workbench-devs-printtofile_CXXDTARGETS := $(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(notdir $(workbench-devs-printtofile_CXXBASENAMES:=.d)))
+  workbench-devs-printtofile_MCXX_WILDCARD := $(workbench-devs-printtofile_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-devs-printtofile_CXXTARGETS) $(workbench-devs-printtofile_CXXDTARGETS) : | $(workbench-devs-printtofile_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-devs-printtofile_MCXX_CPPFLAGS := $(workbench-devs-printtofile_CPPFLAGS)
+workbench-devs-printtofile_CXXFLAGS := $(workbench-devs-printtofile_CXXFLAGS)
+ifeq ($(workbench-devs-printtofile_DXXFLAGS),)
+  workbench-devs-printtofile_DXXFLAGS := $(workbench-devs-printtofile_CXXFLAGS)
+else
+  workbench-devs-printtofile_DXXFLAGS := $(workbench-devs-printtofile_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-devs-printtofile_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-devs-printtofile_STRIP ?= $(HOST_STRIP)
+  workbench-devs-printtofile_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-devs-printtofile_CXXCMD:=$(HOST_CXX)
+  workbench-devs-printtofile_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-devs-printtofile_MCXX_CPPFLAGS) $(workbench-devs-printtofile_MCXX_EXTRA_CPPFLAGS))
+  workbench-devs-printtofile_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-devs-printtofile_CXXFLAGS))
+  workbench-devs-printtofile_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-devs-printtofile_DXXFLAGS))
+  workbench-devs-printtofile_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-devs-printtofile_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-devs-printtofile_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-devs-printtofile_STRIP ?= $(TARGET_STRIP)
+  workbench-devs-printtofile_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-devs-printtofile_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-devs-printtofile_MCXX_CPPFLAGS := $(strip $(workbench-devs-printtofile_MCXX_CPPFLAGS) $(workbench-devs-printtofile_MCXX_EXTRA_CPPFLAGS))
+  workbench-devs-printtofile_CXXFLAGS := $(strip $(workbench-devs-printtofile_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-devs-printtofile_DXXFLAGS := $(workbench-devs-printtofile_DXXFLAGS)
+  workbench-devs-printtofile_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-devs-printtofile_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-devs-printtofile_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-devs-printtofile_STRIP ?= $(ECHO) >/dev/null
+  workbench-devs-printtofile_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-devs-printtofile_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-devs-printtofile_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-devs-printtofile_MCXX_CPPFLAGS) $(workbench-devs-printtofile_MCXX_EXTRA_CPPFLAGS))
+  workbench-devs-printtofile_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-devs-printtofile_CXXFLAGS))
+  workbench-devs-printtofile_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-devs-printtofile_DXXFLAGS))
+  workbench-devs-printtofile_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-devs-printtofile_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-devs-printtofile_CXXCMD) $(workbench-devs-printtofile_CXXIQUOTE) $(dir $(2)) $(workbench-devs-printtofile_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_CXXIQUOTE) . $(workbench-devs-printtofile_CXXIQUOTE_END) $(strip $(workbench-devs-printtofile_CXXFLAGS) $(workbench-devs-printtofile_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-devs-printtofile_CXXCMD) $(workbench-devs-printtofile_CXXIQUOTE) $(dir $(2)) $(workbench-devs-printtofile_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_CXXIQUOTE) . $(workbench-devs-printtofile_CXXIQUOTE_END) $(strip $(workbench-devs-printtofile_CXXFLAGS) $(workbench-devs-printtofile_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-devs-printtofile_CXXCMD) $(workbench-devs-printtofile_CXXIQUOTE) $(dir $(2)) $(workbench-devs-printtofile_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_CXXIQUOTE) . $(workbench-devs-printtofile_CXXIQUOTE_END) $(strip $(workbench-devs-printtofile_CXXFLAGS) $(workbench-devs-printtofile_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-devs-printtofile_CXXCMD)" $(MKDEPEND) $(strip $(workbench-devs-printtofile_DXXFLAGS) $(workbench-devs-printtofile_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-devs-printtofile_OBJDIR),)
+  $(foreach workbench-devs-printtofile_CXXFILE,$(workbench-devs-printtofile_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-devs-printtofile_CXXFILE))),$(workbench-devs-printtofile_CXXFILE))))
+else
+  $(foreach workbench-devs-printtofile_CXXFILE,$(workbench-devs-printtofile_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(notdir $(basename $(workbench-devs-printtofile_CXXFILE)))),$(workbench-devs-printtofile_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-devs-printtofile_OBJC_NARCHFILES),)
+
+ifeq (,)
+workbench-devs-printtofile_MOBJC_SRCWILDCARD := %
+else
+workbench-devs-printtofile_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-devs-printtofile_OBJDIR),)
+  workbench-devs-printtofile_MOBJC_TARGETS := $(addsuffix .o,$(workbench-devs-printtofile_OBJC_NARCHFILES))
+  workbench-devs-printtofile_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-devs-printtofile_OBJC_NARCHFILES))
+  workbench-devs-printtofile_MOBJC_WILDCARD := %
+else
+  workbench-devs-printtofile_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(workbench-devs-printtofile_OBJC_NARCHFILES)))
+  workbench-devs-printtofile_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(workbench-devs-printtofile_OBJC_NARCHFILES)))
+  workbench-devs-printtofile_MOBJC_WILDCARD := $(workbench-devs-printtofile_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-devs-printtofile_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  workbench-devs-printtofile_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-devs-printtofile_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-printtofile_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-devs-printtofile_MOBJC_DIRS := $(foreach dir, $(workbench-devs-printtofile_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-printtofile_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-devs-printtofile_MOBJC_DIRS),)
+    workbench-devs-printtofile_MOBJC_DIRS := $(shell echo $(workbench-devs-printtofile_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-devs-printtofile_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-devs-printtofile_CC := $(TARGET_CC)
+else
+  workbench-devs-printtofile_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-devs-printtofile_MOBJC_CPPFLAGS := $(workbench-devs-printtofile_CPPFLAGS)
+workbench-devs-printtofile_OBJCFLAGS := $(workbench-devs-printtofile_CFLAGS)
+workbench-devs-printtofile_OBJCFLAGS := $(workbench-devs-printtofile_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-devs-printtofile_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-devs-printtofile_OBJCFLAGS)))
+ifeq ($(workbench-devs-printtofile_DFLAGS),)
+  workbench-devs-printtofile_OBJCDFLAGS := $(workbench-devs-printtofile_CFLAGS)
+else
+  workbench-devs-printtofile_OBJCDFLAGS := $(workbench-devs-printtofile_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-devs-printtofile_LINK ?= $(strip $(workbench-devs-printtofile_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-devs-printtofile_STRIP ?= $(TARGET_STRIP)
+  workbench-devs-printtofile_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-devs-printtofile_CC) $(TARGET_SYSROOT))
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : workbench-devs-printtofile_MOBJC_CPPFLAGS:=$(strip $(workbench-devs-printtofile_MOBJC_CPPFLAGS) $(workbench-devs-printtofile_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : workbench-devs-printtofile_OBJCFLAGS:=$(strip $(workbench-devs-printtofile_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : workbench-devs-printtofile_OBJCDFLAGS:=$(workbench-devs-printtofile_OBJCDFLAGS)
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : workbench-devs-printtofile_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : workbench-devs-printtofile_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-devs-printtofile_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-devs-printtofile_STRIP ?= $(HOST_STRIP)
+  workbench-devs-printtofile_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : workbench-devs-printtofile_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-devs-printtofile_MOBJC_CPPFLAGS) $(workbench-devs-printtofile_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : workbench-devs-printtofile_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-printtofile_OBJCFLAGS))
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : workbench-devs-printtofile_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-printtofile_OBJCDFLAGS))
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : workbench-devs-printtofile_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : workbench-devs-printtofile_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-devs-printtofile_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-devs-printtofile_STRIP ?= $(ECHO) >/dev/null
+  workbench-devs-printtofile_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : workbench-devs-printtofile_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-devs-printtofile_MOBJC_CPPFLAGS) $(workbench-devs-printtofile_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : workbench-devs-printtofile_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-printtofile_OBJCFLAGS))
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : workbench-devs-printtofile_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-printtofile_OBJCDFLAGS))
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : workbench-devs-printtofile_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-devs-printtofile_MOBJC_TARGETS) $(workbench-devs-printtofile_MOBJC_DTARGETS) : workbench-devs-printtofile_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-devs-printtofile_MOBJC_TARGETS) : CPPFLAGS := $(workbench-devs-printtofile_MOBJC_CPPFLAGS)
+$(workbench-devs-printtofile_MOBJC_TARGETS) : CFLAGS := $(workbench-devs-printtofile_OBJCFLAGS)
+$(workbench-devs-printtofile_MOBJC_TARGETS) : $(workbench-devs-printtofile_MOBJC_WILDCARD).o : $(workbench-devs-printtofile_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-devs-printtofile_IQUOTE) $(dir $<) $(workbench-devs-printtofile_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_IQUOTE) . $(workbench-devs-printtofile_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-devs-printtofile_IQUOTE) $(dir $<) $(workbench-devs-printtofile_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_IQUOTE) . $(workbench-devs-printtofile_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-devs-printtofile_IQUOTE) $(dir $<) $(workbench-devs-printtofile_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_IQUOTE) . $(workbench-devs-printtofile_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-devs-printtofile_MOBJC_DTARGETS) : $(workbench-devs-printtofile_MOBJC_WILDCARD).d : $(workbench-devs-printtofile_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-devs-printtofile_OBJCDFLAGS) $(workbench-devs-printtofile_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-devs-printtofile_MC_SRCWILDCARD := %
+else
+workbench-devs-printtofile_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-devs-printtofile_OBJDIR),)
+workbench-devs-printtofile_MC_TARGETS := $(addsuffix .o,$(workbench-devs-printtofile_CCFILES))
+workbench-devs-printtofile_MC_DTARGETS := $(addsuffix .d,$(workbench-devs-printtofile_CCFILES))
+workbench-devs-printtofile_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-devs-printtofile_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(notdir $(workbench-devs-printtofile_CCFILES))))
+    workbench-devs-printtofile_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(notdir $(workbench-devs-printtofile_CCFILES))))
+else
+ifeq (,)
+    workbench-devs-printtofile_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(workbench-devs-printtofile_CCFILES)))
+    workbench-devs-printtofile_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(workbench-devs-printtofile_CCFILES)))
+else
+    workbench-devs-printtofile_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(patsubst /%,%,$(workbench-devs-printtofile_CCFILES))))
+    workbench-devs-printtofile_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(patsubst /%,%,$(workbench-devs-printtofile_CCFILES))))
+endif
+endif
+workbench-devs-printtofile_MC_TGTWILDCARD := $(workbench-devs-printtofile_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : | $(addsuffix .c,$(workbench-devs-printtofile_CCFILES))
+
+# Be sure that all .c files are found
+workbench-devs-printtofile_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-devs-printtofile_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-printtofile_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-devs-printtofile_MC_DIRS := $(foreach dir, $(workbench-devs-printtofile_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-printtofile_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-devs-printtofile_MC_DIRS),)
+    workbench-devs-printtofile_MC_DIRS := $(shell echo $(workbench-devs-printtofile_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-devs-printtofile_MC_DIRS)
+endif
+
+endif
+
+workbench-devs-printtofile_MC_CPPFLAGS := $(workbench-devs-printtofile_CPPFLAGS)
+workbench-devs-printtofile_CFLAGS := $(workbench-devs-printtofile_CFLAGS)
+ifeq ($(workbench-devs-printtofile_DFLAGS),)
+  workbench-devs-printtofile_DFLAGS := $(workbench-devs-printtofile_CFLAGS)
+else
+  workbench-devs-printtofile_DFLAGS := $(workbench-devs-printtofile_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-devs-printtofile_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-devs-printtofile_STRIP ?= $(TARGET_STRIP)
+workbench-devs-printtofile_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_MC_CPPFLAGS:=$(strip $(workbench-devs-printtofile_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_CFLAGS:=$(strip $(workbench-devs-printtofile_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_DFLAGS:=$(workbench-devs-printtofile_DFLAGS)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-devs-printtofile_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-devs-printtofile_STRIP ?= $(HOST_STRIP)
+workbench-devs-printtofile_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-printtofile_CFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-printtofile_DFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-devs-printtofile_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-devs-printtofile_STRIP ?= $(ECHO) >/dev/null
+workbench-devs-printtofile_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-printtofile_CFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-printtofile_DFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-devs-printtofile_MC_TARGETS) : CPPFLAGS := $(workbench-devs-printtofile_MC_CPPFLAGS)
+$(workbench-devs-printtofile_MC_TARGETS) : CFLAGS := $(workbench-devs-printtofile_CFLAGS)
+$(workbench-devs-printtofile_MC_TARGETS) : $(workbench-devs-printtofile_MC_TGTWILDCARD).o : $(workbench-devs-printtofile_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-devs-printtofile_IQUOTE) $(dir $<) $(workbench-devs-printtofile_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_IQUOTE) . $(workbench-devs-printtofile_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-devs-printtofile_IQUOTE) $(dir $<) $(workbench-devs-printtofile_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_IQUOTE) . $(workbench-devs-printtofile_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-devs-printtofile_IQUOTE) $(dir $<) $(workbench-devs-printtofile_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_IQUOTE) . $(workbench-devs-printtofile_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-devs-printtofile_MC_DTARGETS) : $(workbench-devs-printtofile_MC_TGTWILDCARD).d : $(workbench-devs-printtofile_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-devs-printtofile_DFLAGS) $(workbench-devs-printtofile_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+workbench-devs-printtofile_MC_SRCWILDCARD := %
+else
+workbench-devs-printtofile_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-devs-printtofile_OBJDIR),)
+workbench-devs-printtofile_MC_TARGETS := $(addsuffix .o,$(workbench-devs-printtofile_TARGETCCFILES))
+workbench-devs-printtofile_MC_DTARGETS := $(addsuffix .d,$(workbench-devs-printtofile_TARGETCCFILES))
+workbench-devs-printtofile_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-devs-printtofile_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(notdir $(workbench-devs-printtofile_TARGETCCFILES))))
+    workbench-devs-printtofile_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(notdir $(workbench-devs-printtofile_TARGETCCFILES))))
+else
+ifeq (,)
+    workbench-devs-printtofile_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(workbench-devs-printtofile_TARGETCCFILES)))
+    workbench-devs-printtofile_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(workbench-devs-printtofile_TARGETCCFILES)))
+else
+    workbench-devs-printtofile_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(patsubst /%,%,$(workbench-devs-printtofile_TARGETCCFILES))))
+    workbench-devs-printtofile_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(patsubst /%,%,$(workbench-devs-printtofile_TARGETCCFILES))))
+endif
+endif
+workbench-devs-printtofile_MC_TGTWILDCARD := $(workbench-devs-printtofile_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : | $(addsuffix .c,$(workbench-devs-printtofile_TARGETCCFILES))
+
+# Be sure that all .c files are found
+workbench-devs-printtofile_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-devs-printtofile_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-printtofile_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-devs-printtofile_MC_DIRS := $(foreach dir, $(workbench-devs-printtofile_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-printtofile_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-devs-printtofile_MC_DIRS),)
+    workbench-devs-printtofile_MC_DIRS := $(shell echo $(workbench-devs-printtofile_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-devs-printtofile_MC_DIRS)
+endif
+
+endif
+
+workbench-devs-printtofile_MC_CPPFLAGS := $(workbench-devs-printtofile_CPPFLAGS) -D__AROS__
+workbench-devs-printtofile_CFLAGS := $(workbench-devs-printtofile_CFLAGS)
+ifeq ($(workbench-devs-printtofile_DFLAGS),)
+  workbench-devs-printtofile_DFLAGS := $(workbench-devs-printtofile_CFLAGS)
+else
+  workbench-devs-printtofile_DFLAGS := $(workbench-devs-printtofile_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-devs-printtofile_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-devs-printtofile_STRIP ?= $(TARGET_STRIP)
+workbench-devs-printtofile_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_MC_CPPFLAGS:=$(strip $(workbench-devs-printtofile_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_CFLAGS:=$(strip $(workbench-devs-printtofile_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_DFLAGS:=$(workbench-devs-printtofile_DFLAGS)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-devs-printtofile_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-devs-printtofile_STRIP ?= $(HOST_STRIP)
+workbench-devs-printtofile_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-printtofile_CFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-printtofile_DFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-devs-printtofile_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-devs-printtofile_STRIP ?= $(ECHO) >/dev/null
+workbench-devs-printtofile_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-printtofile_CFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-printtofile_DFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-devs-printtofile_MC_TARGETS) : CPPFLAGS := $(workbench-devs-printtofile_MC_CPPFLAGS)
+$(workbench-devs-printtofile_MC_TARGETS) : CFLAGS := $(workbench-devs-printtofile_CFLAGS)
+$(workbench-devs-printtofile_MC_TARGETS) : $(workbench-devs-printtofile_MC_TGTWILDCARD).o : $(workbench-devs-printtofile_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-devs-printtofile_IQUOTE) $(dir $<) $(workbench-devs-printtofile_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_IQUOTE) . $(workbench-devs-printtofile_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-devs-printtofile_IQUOTE) $(dir $<) $(workbench-devs-printtofile_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_IQUOTE) . $(workbench-devs-printtofile_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-devs-printtofile_IQUOTE) $(dir $<) $(workbench-devs-printtofile_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_IQUOTE) . $(workbench-devs-printtofile_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-devs-printtofile_MC_DTARGETS) : $(workbench-devs-printtofile_MC_TGTWILDCARD).d : $(workbench-devs-printtofile_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-devs-printtofile_DFLAGS) $(workbench-devs-printtofile_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+workbench-devs-printtofile_MC_SRCWILDCARD := %
+else
+workbench-devs-printtofile_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-devs-printtofile_OBJDIR)/linklib,)
+workbench-devs-printtofile_MC_TARGETS := $(addsuffix .o,$(workbench-devs-printtofile_NLIBARCHFILES))
+workbench-devs-printtofile_MC_DTARGETS := $(addsuffix .d,$(workbench-devs-printtofile_NLIBARCHFILES))
+workbench-devs-printtofile_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-devs-printtofile_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$(notdir $(workbench-devs-printtofile_NLIBARCHFILES))))
+    workbench-devs-printtofile_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$(notdir $(workbench-devs-printtofile_NLIBARCHFILES))))
+else
+ifeq (,)
+    workbench-devs-printtofile_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$(workbench-devs-printtofile_NLIBARCHFILES)))
+    workbench-devs-printtofile_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$(workbench-devs-printtofile_NLIBARCHFILES)))
+else
+    workbench-devs-printtofile_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$(patsubst /%,%,$(workbench-devs-printtofile_NLIBARCHFILES))))
+    workbench-devs-printtofile_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$(patsubst /%,%,$(workbench-devs-printtofile_NLIBARCHFILES))))
+endif
+endif
+workbench-devs-printtofile_MC_TGTWILDCARD := $(workbench-devs-printtofile_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : | $(addsuffix .c,$(workbench-devs-printtofile_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+workbench-devs-printtofile_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-devs-printtofile_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-printtofile_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-devs-printtofile_MC_DIRS := $(foreach dir, $(workbench-devs-printtofile_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-printtofile_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-devs-printtofile_MC_DIRS),)
+    workbench-devs-printtofile_MC_DIRS := $(shell echo $(workbench-devs-printtofile_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-devs-printtofile_MC_DIRS)
+endif
+
+endif
+
+workbench-devs-printtofile_MC_CPPFLAGS := $(workbench-devs-printtofile_LINKLIBCPPFLAGS) -D__AROS__
+workbench-devs-printtofile_CFLAGS := $(workbench-devs-printtofile_LINKLIBCFLAGS)
+ifeq ($(workbench-devs-printtofile_LINKLIBDFLAGS),)
+  workbench-devs-printtofile_DFLAGS := $(workbench-devs-printtofile_LINKLIBCFLAGS)
+else
+  workbench-devs-printtofile_DFLAGS := $(workbench-devs-printtofile_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-devs-printtofile_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-devs-printtofile_STRIP ?= $(TARGET_STRIP)
+workbench-devs-printtofile_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_MC_CPPFLAGS:=$(strip $(workbench-devs-printtofile_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_CFLAGS:=$(strip $(workbench-devs-printtofile_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_DFLAGS:=$(workbench-devs-printtofile_DFLAGS)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-devs-printtofile_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-devs-printtofile_STRIP ?= $(HOST_STRIP)
+workbench-devs-printtofile_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-printtofile_CFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-printtofile_DFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-devs-printtofile_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-devs-printtofile_STRIP ?= $(ECHO) >/dev/null
+workbench-devs-printtofile_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-printtofile_CFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-printtofile_DFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-devs-printtofile_MC_TARGETS) : CPPFLAGS := $(workbench-devs-printtofile_MC_CPPFLAGS)
+$(workbench-devs-printtofile_MC_TARGETS) : CFLAGS := $(workbench-devs-printtofile_CFLAGS)
+$(workbench-devs-printtofile_MC_TARGETS) : $(workbench-devs-printtofile_MC_TGTWILDCARD).o : $(workbench-devs-printtofile_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-devs-printtofile_IQUOTE) $(dir $<) $(workbench-devs-printtofile_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_IQUOTE) . $(workbench-devs-printtofile_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-devs-printtofile_IQUOTE) $(dir $<) $(workbench-devs-printtofile_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_IQUOTE) . $(workbench-devs-printtofile_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-devs-printtofile_IQUOTE) $(dir $<) $(workbench-devs-printtofile_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_IQUOTE) . $(workbench-devs-printtofile_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-devs-printtofile_MC_DTARGETS) : $(workbench-devs-printtofile_MC_TGTWILDCARD).d : $(workbench-devs-printtofile_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-devs-printtofile_DFLAGS) $(workbench-devs-printtofile_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-devs-printtofile_OBJDIR)/linklib,)
+workbench-devs-printtofile_MC_SRCWILDCARD := %
+else
+workbench-devs-printtofile_MC_SRCWILDCARD := $(workbench-devs-printtofile_OBJDIR)/linklib/%
+endif
+
+ifeq ($(workbench-devs-printtofile_OBJDIR)/linklib,)
+workbench-devs-printtofile_MC_TARGETS := $(addsuffix .o,$(workbench-devs-printtofile_LINKLIBCCGENFILES))
+workbench-devs-printtofile_MC_DTARGETS := $(addsuffix .d,$(workbench-devs-printtofile_LINKLIBCCGENFILES))
+workbench-devs-printtofile_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-devs-printtofile_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$(notdir $(workbench-devs-printtofile_LINKLIBCCGENFILES))))
+    workbench-devs-printtofile_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$(notdir $(workbench-devs-printtofile_LINKLIBCCGENFILES))))
+else
+ifeq ($(workbench-devs-printtofile_OBJDIR)/linklib,)
+    workbench-devs-printtofile_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$(workbench-devs-printtofile_LINKLIBCCGENFILES)))
+    workbench-devs-printtofile_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$(workbench-devs-printtofile_LINKLIBCCGENFILES)))
+else
+    workbench-devs-printtofile_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$(patsubst $(workbench-devs-printtofile_OBJDIR)/linklib/%,%,$(workbench-devs-printtofile_LINKLIBCCGENFILES))))
+    workbench-devs-printtofile_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$(patsubst $(workbench-devs-printtofile_OBJDIR)/linklib/%,%,$(workbench-devs-printtofile_LINKLIBCCGENFILES))))
+endif
+endif
+workbench-devs-printtofile_MC_TGTWILDCARD := $(workbench-devs-printtofile_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : | $(addsuffix .c,$(workbench-devs-printtofile_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+workbench-devs-printtofile_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-devs-printtofile_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-printtofile_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-devs-printtofile_MC_DIRS := $(foreach dir, $(workbench-devs-printtofile_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-printtofile_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-devs-printtofile_MC_DIRS),)
+    workbench-devs-printtofile_MC_DIRS := $(shell echo $(workbench-devs-printtofile_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-devs-printtofile_MC_DIRS)
+endif
+
+endif
+
+workbench-devs-printtofile_MC_CPPFLAGS := $(workbench-devs-printtofile_LINKLIBCPPFLAGS) -D__AROS__
+workbench-devs-printtofile_CFLAGS := $(workbench-devs-printtofile_LINKLIBCFLAGS)
+ifeq ($(workbench-devs-printtofile_LINKLIBDFLAGS),)
+  workbench-devs-printtofile_DFLAGS := $(workbench-devs-printtofile_LINKLIBCFLAGS)
+else
+  workbench-devs-printtofile_DFLAGS := $(workbench-devs-printtofile_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-devs-printtofile_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-devs-printtofile_STRIP ?= $(TARGET_STRIP)
+workbench-devs-printtofile_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_MC_CPPFLAGS:=$(strip $(workbench-devs-printtofile_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_CFLAGS:=$(strip $(workbench-devs-printtofile_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_DFLAGS:=$(workbench-devs-printtofile_DFLAGS)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-devs-printtofile_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-devs-printtofile_STRIP ?= $(HOST_STRIP)
+workbench-devs-printtofile_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-printtofile_CFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-printtofile_DFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-devs-printtofile_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-devs-printtofile_STRIP ?= $(ECHO) >/dev/null
+workbench-devs-printtofile_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_CPPFLAGS) $(workbench-devs-printtofile_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-printtofile_CFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-printtofile_DFLAGS))
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-devs-printtofile_MC_TARGETS) $(workbench-devs-printtofile_MC_DTARGETS) : workbench-devs-printtofile_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-devs-printtofile_MC_TARGETS) : CPPFLAGS := $(workbench-devs-printtofile_MC_CPPFLAGS)
+$(workbench-devs-printtofile_MC_TARGETS) : CFLAGS := $(workbench-devs-printtofile_CFLAGS)
+$(workbench-devs-printtofile_MC_TARGETS) : $(workbench-devs-printtofile_MC_TGTWILDCARD).o : $(workbench-devs-printtofile_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-devs-printtofile_IQUOTE) $(dir $<) $(workbench-devs-printtofile_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_IQUOTE) . $(workbench-devs-printtofile_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-devs-printtofile_IQUOTE) $(dir $<) $(workbench-devs-printtofile_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_IQUOTE) . $(workbench-devs-printtofile_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-devs-printtofile_IQUOTE) $(dir $<) $(workbench-devs-printtofile_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-printtofile_IQUOTE) . $(workbench-devs-printtofile_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-devs-printtofile_MC_DTARGETS) : $(workbench-devs-printtofile_MC_TGTWILDCARD).d : $(workbench-devs-printtofile_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-devs-printtofile_DFLAGS) $(workbench-devs-printtofile_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(workbench-devs-printtofile_LINKLIBAFILES),)
+
+ifeq ($(workbench-devs-printtofile_OBJDIR)/linklib,)
+workbench-devs-printtofile-MA_TARGETS := $(addsuffix .o,$(workbench-devs-printtofile_LINKLIBAFILES) $(workbench-devs-printtofile_RELLINKLIBAFILES))
+workbench-devs-printtofile-MA_WILDCARD := %
+else
+workbench-devs-printtofile-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$(notdir $(workbench-devs-printtofile_LINKLIBAFILES) $(workbench-devs-printtofile_RELLINKLIBAFILES))))
+workbench-devs-printtofile-MA_WILDCARD := $(workbench-devs-printtofile_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(workbench-devs-printtofile-MA_TARGETS) : | $(addsuffix .S,$(workbench-devs-printtofile_LINKLIBAFILES) $(workbench-devs-printtofile_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+workbench-devs-printtofile-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-devs-printtofile-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-printtofile_LINKLIBAFILES) $(workbench-devs-printtofile_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-devs-printtofile-MA_DIRS := $(foreach dir, $(workbench-devs-printtofile-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-printtofile-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-devs-printtofile-MA_DIRS),)
+    workbench-devs-printtofile-MA_DIRS := $(shell echo $(workbench-devs-printtofile-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(workbench-devs-printtofile-MA_DIRS)
+endif
+
+endif
+
+workbench-devs-printtofile-MA_ASSEMBLER ?= $(workbench-devs-printtofile_ASSEMBLER)
+
+$(workbench-devs-printtofile-MA_TARGETS) : workbench-devs-printtofile-MA_CMD:= $(workbench-devs-printtofile-MA_ASSEMBLER)
+
+$(workbench-devs-printtofile-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(workbench-devs-printtofile-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(workbench-devs-printtofile-MA_TARGETS) : $(workbench-devs-printtofile-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-devs-printtofile-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-devs-printtofile-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-devs-printtofile-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+workbench-devs-printtofile_SUFFIX           := device
+else
+workbench-devs-printtofile_SUFFIX           := 
+endif
+
+ifeq (target,target)
+workbench-devs-printtofile_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-devs-printtofile_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-devs-printtofile_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(workbench-devs-printtofile_SUFFIX),handler)
+workbench-devs-printtofile_MODULE           := $(AROSDIR)/$(workbench-devs-printtofile_MODDIR)/$(workbench-devs-printtofile_DEFNAME)-$(workbench-devs-printtofile_SUFFIX)
+else
+workbench-devs-printtofile_MODULE           := $(AROSDIR)/$(workbench-devs-printtofile_MODDIR)/$(workbench-devs-printtofile_DEFNAME).$(workbench-devs-printtofile_SUFFIX)
+endif
+workbench-devs-printtofile_KOBJ             := $(KOBJSDIR)/$(workbench-devs-printtofile_DEFNAME)_$(workbench-devs-printtofile_SUFFIX).o
+else
+workbench-devs-printtofile_MODULE           :=
+workbench-devs-printtofile_KOBJ             :=
+endif
+
+workbench-devs-printtofile-quick      : workbench-devs-printtofile
+workbench-devs-printtofile            : $(workbench-devs-printtofile_MODULE) $(workbench-devs-printtofile_LINKLIB) $(workbench-devs-printtofile_RELLINKLIB)
+ifeq (M,M)
+workbench-devs-printtofile-kobj       : $(workbench-devs-printtofile_KOBJ) $(workbench-devs-printtofile_LINKLIB) $(workbench-devs-printtofile_RELLINKLIB)
+workbench-devs-printtofile-kobj-quick : $(workbench-devs-printtofile_KOBJ) $(workbench-devs-printtofile_LINKLIB) $(workbench-devs-printtofile_RELLINKLIB)
+endif
+ifeq (M,M)
+workbench-devs-printtofile-linklib    : $(workbench-devs-printtofile_LINKLIB) $(workbench-devs-printtofile_RELLINKLIB)
+endif
+
+workbench-devs-printtofile_OBJS := $(addsuffix .o,$(workbench-devs-printtofile_STARTFILES)) $(workbench-devs-printtofile_ARCHOBJS) \
+           $(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(notdir $(workbench-devs-printtofile_C_NARCHFILES:=.o) $(workbench-devs-printtofile_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (device,handler)
+workbench-devs-printtofile_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (printtofile,con)
+    workbench-devs-printtofile_ERR          := $(notdir $(workbench-devs-printtofile_MODULE)).err
+else
+    workbench-devs-printtofile_ERR          := printtofile.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(workbench-devs-printtofile_DEFNAME)_LDFLAGS) $(workbench-devs-printtofile_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-devs-printtofile_LIBS) $($(workbench-devs-printtofile_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(workbench-devs-printtofile_MODULE) : LIB_NAMES := $(workbench-devs-printtofile_LIBS) $($(workbench-devs-printtofile_DEFNAME)_LIBS)
+$(workbench-devs-printtofile_MODULE) : OBJS := $(workbench-devs-printtofile_STARTOBJS) $(workbench-devs-printtofile_OBJS) $(USER_OBJS)
+$(workbench-devs-printtofile_MODULE) : ENDTAG := $(workbench-devs-printtofile_ENDOBJS)
+$(workbench-devs-printtofile_MODULE) : ERR := $(workbench-devs-printtofile_ERR)
+$(workbench-devs-printtofile_MODULE) : OBJDIR := $(workbench-devs-printtofile_OBJDIR)
+$(workbench-devs-printtofile_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(workbench-devs-printtofile_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(workbench-devs-printtofile_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(workbench-devs-printtofile_MODULE) : $(workbench-devs-printtofile_STARTOBJS) $(workbench-devs-printtofile_OBJS) $(USER_OBJS) $(workbench-devs-printtofile_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(workbench-devs-printtofile_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(workbench-devs-printtofile_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+workbench-devs-printtofile_LC_LINKLIBNAME   := $(shell echo $(workbench-devs-printtofile_LINKLIBNAME) | tr A-Z a-z)
+workbench-devs-printtofile_LC_MODNAME       := $(shell echo printtofile | tr A-Z a-z)
+ifneq ($(workbench-devs-printtofile_LINKLIB),)
+
+ifeq (target,target)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_LINKLIBNAME)$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_AR:=$(AR)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_LINKLIBNAME)$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_LINKLIBNAME)$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_AR:=$(HOST_AR)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_LINKLIBNAME)$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_LINKLIBNAME)$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_AR:=$(KERNEL_AR)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_LINKLIBNAME)$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_LINKLIBNAME)$(workbench-devs-printtofile_LIBSUFFIX).a : $(workbench-devs-printtofile_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-devs-printtofile_AR) $@ $^
+	$(Q)$(workbench-devs-printtofile_RANLIB) $@
+ifneq ($(workbench-devs-printtofile_LC_MODNAME),$(workbench-devs-printtofile_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(workbench-devs-printtofile_LIBDIR)/libprinttofile$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_AR:=$(AR)
+$(workbench-devs-printtofile_LIBDIR)/libprinttofile$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-devs-printtofile_LIBDIR)/libprinttofile$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_AR:=$(HOST_AR)
+$(workbench-devs-printtofile_LIBDIR)/libprinttofile$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-devs-printtofile_LIBDIR)/libprinttofile$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_AR:=$(KERNEL_AR)
+$(workbench-devs-printtofile_LIBDIR)/libprinttofile$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-devs-printtofile_LIBDIR)/libprinttofile$(workbench-devs-printtofile_LIBSUFFIX).a : $(workbench-devs-printtofile_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-devs-printtofile_AR) $@ $^
+	$(Q)$(workbench-devs-printtofile_RANLIB) $@
+endif
+
+
+ifneq ($(workbench-devs-printtofile_LINKLIB),)
+$(workbench-devs-printtofile_LINKLIB) : | $(workbench-devs-printtofile_LIBDIR)
+else
+$(workbench-devs-printtofile_LINKLIB) :: $(workbench-devs-printtofile_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-devs-printtofile_LIBDIR)
+
+endif
+
+ifneq ($(workbench-devs-printtofile_RELLINKLIB),)
+
+ifeq (target,target)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_LINKLIBNAME)_rel$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_AR:=$(AR)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_LINKLIBNAME)_rel$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_LINKLIBNAME)_rel$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_AR:=$(HOST_AR)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_LINKLIBNAME)_rel$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_LINKLIBNAME)_rel$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_AR:=$(KERNEL_AR)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_LINKLIBNAME)_rel$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_LINKLIBNAME)_rel$(workbench-devs-printtofile_LIBSUFFIX).a : $(workbench-devs-printtofile_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-devs-printtofile_AR) $@ $^
+	$(Q)$(workbench-devs-printtofile_RANLIB) $@
+ifneq ($(workbench-devs-printtofile_LC_MODNAME),$(workbench-devs-printtofile_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_DEFNAME)_rel$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_AR:=$(AR)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_DEFNAME)_rel$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_DEFNAME)_rel$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_AR:=$(HOST_AR)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_DEFNAME)_rel$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_DEFNAME)_rel$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_AR:=$(KERNEL_AR)
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_DEFNAME)_rel$(workbench-devs-printtofile_LIBSUFFIX).a : workbench-devs-printtofile_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-devs-printtofile_LIBDIR)/lib$(workbench-devs-printtofile_DEFNAME)_rel$(workbench-devs-printtofile_LIBSUFFIX).a : $(workbench-devs-printtofile_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-devs-printtofile_AR) $@ $^
+	$(Q)$(workbench-devs-printtofile_RANLIB) $@
+endif
+
+
+ifneq ($(workbench-devs-printtofile_RELLINKLIB),)
+$(workbench-devs-printtofile_RELLINKLIB) : | $(workbench-devs-printtofile_LIBDIR)
+else
+$(workbench-devs-printtofile_RELLINKLIB) :: $(workbench-devs-printtofile_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-devs-printtofile_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+workbench-devs-printtofile_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+workbench-devs-printtofile_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+workbench-devs-printtofile_SYMBOLS := $(workbench-devs-printtofile_KBASE)
+
+workbench-devs-printtofile_KLIB             := hiddstubs amiga arossupport autoinit libinit
+workbench-devs-printtofile_KOBJ_LIBS        := $(filter-out $(workbench-devs-printtofile_KLIB),$(workbench-devs-printtofile_LIBS)) $(workbench-devs-printtofile_KAUTOLIB)
+$(workbench-devs-printtofile_KOBJ) : LINKLIBS:=$(workbench-devs-printtofile_KOBJ_LIBS) $($(workbench-devs-printtofile_DEFNAME)_LIBS)
+$(workbench-devs-printtofile_KOBJ) : FILTBASES:=$(addprefix -L ,$(workbench-devs-printtofile_SYMBOLS))
+$(workbench-devs-printtofile_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(workbench-devs-printtofile_KOBJ) : $(workbench-devs-printtofile_OBJS) $(USER_OBJS) $(workbench-devs-printtofile_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+workbench-devs-printtofile_DEPS             := $(addprefix $(workbench-devs-printtofile_OBJDIR)/,$(notdir $(workbench-devs-printtofile_CCFILES:=.d) $(workbench-devs-printtofile_TARGETCCFILES:=.d) $(workbench-devs-printtofile_CXXFILES:=.d))) $(addprefix $(workbench-devs-printtofile_OBJDIR)/linklib/,$(notdir $(workbench-devs-printtofile_LINKLIBCCFILES:=.d)))
+
+ifneq ($(workbench-devs-printtofile_DEPS),)
+  ifneq (workbench-devs-printtofile workbench-devs-printtofile-quick workbench-devs-printtofile-kobj workbench-devs-printtofile-kobj-quick,)
+    ifneq ($(findstring $(TARGET),workbench-devs-printtofile workbench-devs-printtofile-quick workbench-devs-printtofile-kobj workbench-devs-printtofile-kobj-quick),)
+      -include $(workbench-devs-printtofile_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-devs-printtofile_DEPS)
+    endif
+  endif
+endif
+
+$(workbench-devs-printtofile_OBJS) $(workbench-devs-printtofile_DEPS) : | $(workbench-devs-printtofile_OBJDIR)/linklib
+
+ifneq ($(workbench-devs-printtofile_OBJS) $(workbench-devs-printtofile_DEPS) $(workbench-devs-printtofile_MODULE) $(workbench-devs-printtofile_KOBJ),)
+$(workbench-devs-printtofile_OBJS) $(workbench-devs-printtofile_DEPS) $(workbench-devs-printtofile_MODULE) $(workbench-devs-printtofile_KOBJ) : | $(workbench-devs-printtofile_OBJDIR) $(AROSDIR)/$(workbench-devs-printtofile_MODDIR) $(KOBJSDIR)
+else
+$(workbench-devs-printtofile_OBJS) $(workbench-devs-printtofile_DEPS) $(workbench-devs-printtofile_MODULE) $(workbench-devs-printtofile_KOBJ) :: $(workbench-devs-printtofile_OBJDIR) $(AROSDIR)/$(workbench-devs-printtofile_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-devs-printtofile_OBJDIR) $(AROSDIR)/$(workbench-devs-printtofile_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),workbench-devs-printtofile workbench-devs-printtofile-includes workbench-devs-printtofile-quick workbench-devs-printtofile-kobj workbench-devs-printtofile-kobj-quick),) # Only for this target these deps are wanted
+
+workbench-devs-printtofile_DFILE_DEPS := $(workbench-devs-printtofile_LIBDEFSINC) $(workbench-devs-printtofile_DEFLIBDEFSINC) \
+    $(addprefix $(workbench-devs-printtofile_INCDIR)/,$($(workbench-devs-printtofile_DEFNAME)_INCLUDES))
+$(workbench-devs-printtofile_DEPS) : $(workbench-devs-printtofile_DFILE_DEPS)
+endif
+
+workbench-devs-printtofile_TOCLEAN := $(workbench-devs-printtofile_OBJS) $(workbench-devs-printtofile_DEPS) \
+    $(workbench-devs-printtofile_MODULE) $(workbench-devs-printtofile_LINKLIB) $(workbench-devs-printtofile_KOBJ) \
+    $(workbench-devs-printtofile_OBJDIR)/Makefile.printtofiledevice \
+    $(addprefix $(workbench-devs-printtofile_OBJDIR)/include/,$($(workbench-devs-printtofile_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(workbench-devs-printtofile_DEFNAME)_INCLUDES)) \
+    $(addprefix $(workbench-devs-printtofile_INCDIR)/,$($(workbench-devs-printtofile_DEFNAME)_INCLUDES)) \
+    $(workbench-devs-printtofile_OBJDIR)/printtofile_geninc $(workbench-devs-printtofile_OBJDIR)/printtofile_incs \
+    $(addsuffix .c,$(workbench-devs-printtofile_LINKLIBFILES)) $(workbench-devs-printtofile_LINKLIBOBJS) $(workbench-devs-printtofile_LIBDEFSINC) \
+    $(workbench-devs-printtofile_DEFLIBDEFSINC) $(addsuffix .c,$(workbench-devs-printtofile_STARTFILES) $(workbench-devs-printtofile_ENDFILES)) \
+    $(workbench-devs-printtofile_ENDOBJS)
+workbench-devs-printtofile-clean : FILES              := $(workbench-devs-printtofile_TOCLEAN)
+workbench-devs-printtofile-clean ::
+	$(Q)$(ECHO) "Cleaning up for module printtofile"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(workbench-devs-printtofile_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

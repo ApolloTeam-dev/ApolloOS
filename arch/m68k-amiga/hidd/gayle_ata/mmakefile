@@ -1,0 +1,1661 @@
+#$Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := class_init probe gayleata_busclass interface_pio 
+
+USER_CPPFLAGS := -D__OOP_NOMETHODBASES__ -D__OOP_NOATTRBASES__
+#USER_CPPFLAGS += -DDEBUG
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-hidd-gayleata
+#MM kernel-hidd-gayleata-quick
+#MM kernel-hidd-gayleata-makefile
+#MM kernel-hidd-gayleata-clean
+
+# ABI targets:
+#MM- includes-all : kernel-hidd-gayleata-includes
+#MM- linklibs-ata_gayle: kernel-hidd-gayleata-linklib
+#MM- linklibs-ata_gayle_rel : kernel-hidd-gayleata-linklib
+#MM- includes-ata_gayle: kernel-hidd-gayleata-includes
+#MM- includes-ata_gayle_rel : kernel-hidd-gayleata-includes
+#MM- kernel-hidd-gayleata : kernel-hidd-gayleata-includes core-linklibs linklibs-
+#MM kernel-hidd-gayleata-linklib : kernel-hidd-gayleata-includes includes-
+#MM- kernel-hidd-gayleata-quick : kernel-hidd-gayleata-includes-quick
+#MM kernel-hidd-gayleata-includes : kernel-hidd-gayleata-makefile kernel-hidd-gayleata-includes-dirs \
+#MM     includes-generate-deps kernel-hidd-gayleata-fd
+#MM kernel-hidd-gayleata-includes-quick
+#MM kernel-hidd-gayleata-includes-dirs
+#MM kernel-hidd-gayleata-fd
+
+# Library targets
+#MM kernel-hidd-gayleata-kobj : core-linklibs linklibs-
+#MM kernel-hidd-gayleata-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-hidd-gayleata-kobj : kernel-hidd-gayleata-includes core-linklibs linklibs-
+#MM kernel-hidd-gayleata-kobj-quick : kernel-hidd-gayleata-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-hidd-gayleata_ALLTARGETS       := kernel-hidd-gayleata kernel-hidd-gayleata-quick kernel-hidd-gayleata-clean
+
+ifeq (M,M)
+kernel-hidd-gayleata_ALLTARGETS       += kernel-hidd-gayleata-kobj kernel-hidd-gayleata-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-hidd-gayleata_ALLTARGETS += kernel-hidd-gayleata-includes \
+                 kernel-hidd-gayleata-includes-quick kernel-hidd-gayleata-includes-dirs  \
+                 kernel-hidd-gayleata-linklib kernel-hidd-gayleata-fd
+endif
+
+.PHONY : $(kernel-hidd-gayleata_ALLTARGETS) kernel-hidd-gayleata-makefile
+
+ifeq (ata_gayle,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (hidd,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-hidd-gayleata_DEFNAME      := ata_gayle_
+else
+    kernel-hidd-gayleata_DEFNAME      := ata_gayle
+endif
+kernel-hidd-gayleata_DEFLINKLIBNAME   := $(kernel-hidd-gayleata_DEFNAME)
+ifneq (,)
+    kernel-hidd-gayleata_LINKLIBNAME  := 
+else
+    kernel-hidd-gayleata_LINKLIBNAME  = $(kernel-hidd-gayleata_DEFLINKLIBNAME)
+endif
+kernel-hidd-gayleata_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-hidd-gayleata_DEFCPPFLAGS  += -I
+endif
+kernel-hidd-gayleata_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-hidd-gayleata_DFLAGS       := 
+else
+    kernel-hidd-gayleata_DFLAGS       = $(kernel-hidd-gayleata_DEFDFLAGS)
+endif
+kernel-hidd-gayleata_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-hidd-gayleata_DXXFLAGS     := 
+else
+    kernel-hidd-gayleata_DXXFLAGS     = $(kernel-hidd-gayleata_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-gayleata_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-gayleata_DEFDFLAGS))
+kernel-hidd-gayleata_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-gayleata_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-gayleata_FUNCINSTR := yes
+kernel-hidd-gayleata_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-gayleata_DEFDFLAGS))
+kernel-hidd-gayleata_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-gayleata_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-hidd-gayleata_OBJDIR                     := 
+else
+kernel-hidd-gayleata_OBJDIR                     := $(OBJDIR)/$(kernel-hidd-gayleata_DEFNAME)
+endif
+ifneq (,)
+kernel-hidd-gayleata_OBJDIR           := $(kernel-hidd-gayleata_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-hidd-gayleata-makefile         := $(kernel-hidd-gayleata_OBJDIR)/Makefile.$(kernel-hidd-gayleata_DEFNAME)hidd
+kernel-hidd-gayleata-genmakefile : $(kernel-hidd-gayleata-makefile)
+
+
+kernel-hidd-gayleata-genmakefile_OPTS := 
+ifneq (,)
+    kernel-hidd-gayleata-genmakefile_OPTS += -f 
+    kernel-hidd-gayleata-genmakefile_MODNAME := ata_gayle_
+else
+    kernel-hidd-gayleata-genmakefile_MODNAME := ata_gayle
+endif
+kernel-hidd-gayleata-genmakefile_TARGET := Makefile.$(kernel-hidd-gayleata-genmakefile_MODNAME)hidd
+kernel-hidd-gayleata-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-gayleata-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-gayleata-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-gayleata-genmakefile_OPTS += -c 
+        kernel-hidd-gayleata-genmakefile_DEPS += 
+    endif 
+else
+    kernel-hidd-gayleata-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/ata_gayle.conf
+    kernel-hidd-gayleata-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/ata_gayle.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-gayleata-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-gayleata-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-gayleata-genmakefile_OPTS += -o 
+        kernel-hidd-gayleata-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-gayleata-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-gayleata_OBJDIR),)
+    kernel-hidd-gayleata-genmakefile_OPTS += -d $(kernel-hidd-gayleata_OBJDIR)
+    kernel-hidd-gayleata-genmakefile_TARGET := $(kernel-hidd-gayleata_OBJDIR)/$(kernel-hidd-gayleata-genmakefile_TARGET)
+endif
+
+$(kernel-hidd-gayleata-genmakefile_TARGET) : OPTS := $(kernel-hidd-gayleata-genmakefile_OPTS)
+$(kernel-hidd-gayleata-genmakefile_TARGET) : MODNAME := ata_gayle
+$(kernel-hidd-gayleata-genmakefile_TARGET) : MODTYPE := hidd
+$(kernel-hidd-gayleata-genmakefile_TARGET) : $(kernel-hidd-gayleata-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-hidd-gayleata-makefile),)
+$(kernel-hidd-gayleata-makefile) : | $(kernel-hidd-gayleata_OBJDIR)
+else
+$(kernel-hidd-gayleata-makefile) :: $(kernel-hidd-gayleata_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-gayleata_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-hidd-gayleata_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-hidd-gayleata-makefile)
+
+kernel-hidd-gayleata_DEFMODDIR        := $($(kernel-hidd-gayleata_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-hidd-gayleata_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-hidd-gayleata_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-hidd-gayleata_MODDIR       := 
+else
+    kernel-hidd-gayleata_MODDIR       := $(kernel-hidd-gayleata_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-hidd-gayleata_INCDIR           := 
+else
+kernel-hidd-gayleata_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-hidd-gayleata_LIBDEFSINC       := $(kernel-hidd-gayleata_OBJDIR)/include/$(kernel-hidd-gayleata_DEFNAME)_libdefs.h
+kernel-hidd-gayleata_DEFLIBDEFSINC    := $(kernel-hidd-gayleata_OBJDIR)/include/$(kernel-hidd-gayleata_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-hidd-gayleata-includes-quick : kernel-hidd-gayleata-includes
+kernel-hidd-gayleata-includes : $(addprefix $(GENINCDIR)/,$($(kernel-hidd-gayleata_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-gayleata_INCDIR)/,$($(kernel-hidd-gayleata_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-gayleata_LIBDEFSINC) $(kernel-hidd-gayleata_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-hidd-gayleata_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-hidd-gayleata-includes_MODNAME := ata_gayle_
+else
+    kernel-hidd-gayleata-includes_MODNAME := ata_gayle
+endif
+
+ifneq ($($(kernel-hidd-gayleata-includes_MODNAME)_INCLUDES),)
+
+kernel-hidd-gayleata-includes_TARGETS := $($(kernel-hidd-gayleata-includes_MODNAME)_INCLUDES)
+
+kernel-hidd-gayleata-includes_DEPS := $(GENMODULE)
+kernel-hidd-gayleata-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-gayleata-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-gayleata-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-gayleata-includes_OPTS += -c 
+        kernel-hidd-gayleata-includes_DEPS += 
+    endif 
+else
+    kernel-hidd-gayleata-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/ata_gayle.conf
+    kernel-hidd-gayleata-includes_DEPS += $(SRCDIR)/$(CURDIR)/ata_gayle.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-gayleata-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-gayleata-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-gayleata-includes_OPTS += -o 
+        kernel-hidd-gayleata-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-gayleata-includes_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-gayleata_OBJDIR)/include,)
+    kernel-hidd-gayleata-includes_OPTS += -d $(kernel-hidd-gayleata_OBJDIR)/include
+    kernel-hidd-gayleata-includes_TARGETS := $(addprefix $(kernel-hidd-gayleata_OBJDIR)/include/,$(kernel-hidd-gayleata-includes_TARGETS))
+    kernel-hidd-gayleata-includes_GENINCFLAG=$(kernel-hidd-gayleata_OBJDIR)/include/.ata_gayle.hidd-includes
+else
+    kernel-hidd-gayleata-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.ata_gayle.hidd-includes
+endif
+
+$(kernel-hidd-gayleata-includes_TARGETS) : $(kernel-hidd-gayleata-includes_DEPS) $(kernel-hidd-gayleata-includes_GENINCFLAG)
+
+$(kernel-hidd-gayleata-includes_GENINCFLAG) : OPTS := $(kernel-hidd-gayleata-includes_OPTS)
+$(kernel-hidd-gayleata-includes_GENINCFLAG) : MODNAME := ata_gayle
+$(kernel-hidd-gayleata-includes_GENINCFLAG) : MODTYPE := hidd
+$(kernel-hidd-gayleata-includes_GENINCFLAG) : $(kernel-hidd-gayleata-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-hidd-gayleata_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-hidd-gayleata_DEFNAME)_INCLUDES)) : | $(kernel-hidd-gayleata_OBJDIR)/ata_gayle_geninc
+
+$(kernel-hidd-gayleata_OBJDIR)/ata_gayle_geninc : COPYSRCDIR := $(kernel-hidd-gayleata_OBJDIR)/include
+$(kernel-hidd-gayleata_OBJDIR)/ata_gayle_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-hidd-gayleata_OBJDIR)/ata_gayle_geninc : FILES := $($(kernel-hidd-gayleata_DEFNAME)_INCLUDES)
+$(kernel-hidd-gayleata_OBJDIR)/ata_gayle_geninc : $(addprefix $(kernel-hidd-gayleata_OBJDIR)/include/,$($(kernel-hidd-gayleata_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-hidd-gayleata_OBJDIR)/include
+
+$(addprefix $(kernel-hidd-gayleata_INCDIR)/,$($(kernel-hidd-gayleata_DEFNAME)_INCLUDES)) : | $(kernel-hidd-gayleata_OBJDIR)/ata_gayle_incs
+
+$(kernel-hidd-gayleata_OBJDIR)/ata_gayle_incs : COPYSRCDIR := $(kernel-hidd-gayleata_OBJDIR)/include
+$(kernel-hidd-gayleata_OBJDIR)/ata_gayle_incs : TGTDIR := $(kernel-hidd-gayleata_INCDIR)
+$(kernel-hidd-gayleata_OBJDIR)/ata_gayle_incs : FILES := $($(kernel-hidd-gayleata_DEFNAME)_INCLUDES)
+$(kernel-hidd-gayleata_OBJDIR)/ata_gayle_incs : $(addprefix $(kernel-hidd-gayleata_OBJDIR)/include/,$($(kernel-hidd-gayleata_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-hidd-gayleata_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-hidd-gayleata_DEFNAME)_INCLUDES))))
+
+TMPata_gayle_INCDIRS := \
+    $(kernel-hidd-gayleata_OBJDIR)/include $(addprefix $(kernel-hidd-gayleata_OBJDIR)/include/,$(kernel-hidd-gayleata_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-hidd-gayleata_INCDIRS)) \
+    $(kernel-hidd-gayleata_INCDIR) $(addprefix $(kernel-hidd-gayleata_INCDIR)/,$(kernel-hidd-gayleata_INCDIRS))
+
+ifneq (kernel-hidd-gayleata-includes-dirs,)
+kernel-hidd-gayleata-includes-dirs : | $(TMPata_gayle_INCDIRS)
+else
+kernel-hidd-gayleata-includes-dirs :: $(TMPata_gayle_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPata_gayle_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-hidd-gayleata-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-hidd-gayleata-genlibdefs_OPTS += -f 
+    kernel-hidd-gayleata-genlibdefs_MODNAME := ata_gayle_
+else
+    kernel-hidd-gayleata-genlibdefs_MODNAME := ata_gayle
+endif
+kernel-hidd-gayleata-genlibdefs_TARGET := $(kernel-hidd-gayleata-genlibdefs_MODNAME)_libdefs.h
+kernel-hidd-gayleata-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-gayleata-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-gayleata-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-gayleata-genlibdefs_OPTS += -c 
+        kernel-hidd-gayleata-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-hidd-gayleata-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/ata_gayle.conf
+    kernel-hidd-gayleata-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/ata_gayle.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-gayleata-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-gayleata-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-gayleata-genlibdefs_OPTS += -o 
+        kernel-hidd-gayleata-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-gayleata-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-gayleata_OBJDIR)/include,)
+    kernel-hidd-gayleata-genlibdefs_OPTS += -d $(kernel-hidd-gayleata_OBJDIR)/include
+    kernel-hidd-gayleata-genlibdefs_TARGET := $(kernel-hidd-gayleata_OBJDIR)/include/$(kernel-hidd-gayleata-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-hidd-gayleata-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-hidd-gayleata-genlibdefs_TARGET) : OPTS := $(kernel-hidd-gayleata-genlibdefs_OPTS)
+$(kernel-hidd-gayleata-genlibdefs_TARGET) : MODNAME := ata_gayle
+$(kernel-hidd-gayleata-genlibdefs_TARGET) : MODTYPE := hidd
+$(kernel-hidd-gayleata-genlibdefs_TARGET) : $(kernel-hidd-gayleata-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-gayleata_DEFLIBDEFSINC) : FILENAME := $(kernel-hidd-gayleata_LIBDEFSINC)
+$(kernel-hidd-gayleata_DEFLIBDEFSINC) : $(kernel-hidd-gayleata_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-hidd-gayleata_LIBDEFSINC) $(kernel-hidd-gayleata_DEFLIBDEFSINC) : | $(kernel-hidd-gayleata_OBJDIR)/include
+
+ifneq (kernel-hidd-gayleata-includes-dirs,)
+kernel-hidd-gayleata-includes-dirs : | $(kernel-hidd-gayleata_OBJDIR)/include
+else
+kernel-hidd-gayleata-includes-dirs :: $(kernel-hidd-gayleata_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-gayleata_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-hidd-gayleata-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-hidd-gayleata-genmodfiles_OPTS += -f 
+    kernel-hidd-gayleata-genmodfiles_MODNAME := ata_gayle_
+else
+    kernel-hidd-gayleata-genmodfiles_MODNAME := ata_gayle
+endif
+kernel-hidd-gayleata-genmodfiles_GENTARGETS := $($(kernel-hidd-gayleata-genmodfiles_MODNAME)_STARTFILES) $($(kernel-hidd-gayleata-genmodfiles_MODNAME)_ENDFILES)
+kernel-hidd-gayleata-genmodfiles_STUBTARGETS := $($(kernel-hidd-gayleata-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-hidd-gayleata-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-hidd-gayleata-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-hidd-gayleata-genmodfiles_GENTARGETS))
+kernel-hidd-gayleata-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-hidd-gayleata-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-hidd-gayleata-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-hidd-gayleata-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-hidd-gayleata-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-gayleata-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-gayleata-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-gayleata-genmodfiles_OPTS += -c 
+        kernel-hidd-gayleata-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-hidd-gayleata-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/ata_gayle.conf
+    kernel-hidd-gayleata-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/ata_gayle.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-gayleata-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-gayleata-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-gayleata-genmodfiles_OPTS += -o 
+        kernel-hidd-gayleata-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-gayleata-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-gayleata_OBJDIR),)
+    kernel-hidd-gayleata-genmodfiles_OPTS += -d $(kernel-hidd-gayleata_OBJDIR)
+    kernel-hidd-gayleata-genmodfiles_TARGETDIR := $(shell echo $(kernel-hidd-gayleata_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-gayleata-genmodfiles_GENTARGETS := $(addprefix $(kernel-hidd-gayleata-genmodfiles_TARGETDIR)/,$(kernel-hidd-gayleata-genmodfiles_GENTARGETS))
+    kernel-hidd-gayleata-genmodfiles_GENFILEFLAG=$(kernel-hidd-gayleata-genmodfiles_TARGETDIR)/.ata_gayle.hidd-genfiles
+else
+    kernel-hidd-gayleata-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.ata_gayle.hidd-genfiles
+endif
+ifneq ($(kernel-hidd-gayleata_OBJDIR)/linklib,)
+    kernel-hidd-gayleata-genmodfiles_OPTS += -l $(kernel-hidd-gayleata_OBJDIR)/linklib
+    kernel-hidd-gayleata-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-hidd-gayleata_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-gayleata-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-gayleata-genmodfiles_STUBTARGETDIR)/,$(kernel-hidd-gayleata-genmodfiles_STUBTARGETS))
+    kernel-hidd-gayleata-genmodfiles_TARGETDIRS += $(kernel-hidd-gayleata_OBJDIR)/linklib
+else
+ifneq ($(kernel-hidd-gayleata_OBJDIR),)
+    kernel-hidd-gayleata-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-gayleata-genmodfiles_TARGETDIR)/,$(kernel-hidd-gayleata-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-hidd-gayleata-genmodfiles_TARGETS := $(kernel-hidd-gayleata-genmodfiles_GENTARGETS) $(kernel-hidd-gayleata-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-hidd-gayleata-genmodfiles_TARGETDIRS),)
+$(kernel-hidd-gayleata-genmodfiles_TARGETS) : | $(kernel-hidd-gayleata-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-hidd-gayleata-genmodfiles_TARGETS) : $(kernel-hidd-gayleata-genmodfiles_DEPS) $(kernel-hidd-gayleata-genmodfiles_GENFILEFLAG)
+
+$(kernel-hidd-gayleata-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-hidd-gayleata-genmodfiles_OPTS)
+$(kernel-hidd-gayleata-genmodfiles_GENFILEFLAG) : MODNAME := ata_gayle
+$(kernel-hidd-gayleata-genmodfiles_GENFILEFLAG) : MODTYPE := hidd
+$(kernel-hidd-gayleata-genmodfiles_GENFILEFLAG) : $(kernel-hidd-gayleata-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-hidd-gayleata-genmodfiles_GENFILEFLAG) : $(kernel-hidd-gayleata_DEFLIBDEFSINC) $(kernel-hidd-gayleata-makefile)
+
+
+ifneq ($(kernel-hidd-gayleata-genmodfiles_GENFILEFLAG),)
+$(kernel-hidd-gayleata-genmodfiles_GENFILEFLAG) : | $(kernel-hidd-gayleata_OBJDIR)/linklib
+else
+$(kernel-hidd-gayleata-genmodfiles_GENFILEFLAG) :: $(kernel-hidd-gayleata_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-gayleata_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-hidd-gayleata_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-hidd-gayleata_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-hidd-gayleata-fd : $(kernel-hidd-gayleata_FDDIR)/ata_gayle_lib.fd
+
+
+TMP_TARGET := ata_gayle_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/ata_gayle.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/ata_gayle.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-gayleata_FDDIR),)
+    TMP_OPTS += -d $(kernel-hidd-gayleata_FDDIR)
+    TMP_TARGET := $(kernel-hidd-gayleata_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := ata_gayle
+$(TMP_TARGET) : MODTYPE := hidd
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-gayleata_FDDIR)/ata_gayle_lib.fd : | $(kernel-hidd-gayleata_FDDIR)
+
+
+ifneq (kernel-hidd-gayleata-fd-setup,)
+kernel-hidd-gayleata-fd-setup : | $(kernel-hidd-gayleata_FDDIR)
+else
+kernel-hidd-gayleata-fd-setup :: $(kernel-hidd-gayleata_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-gayleata_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-hidd-gayleata_FILES            := $(FILES)
+kernel-hidd-gayleata_OBJCFILES        := 
+kernel-hidd-gayleata_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-hidd-gayleata_LIBFILES         := 
+kernel-hidd-gayleata_LIBS             := 
+
+kernel-hidd-gayleata_FDIRS            := $(sort $(dir $(kernel-hidd-gayleata_FILES)))
+
+kernel-hidd-gayleata_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-hidd-gayleata_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-hidd-gayleata_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-hidd-gayleata_FILTERARCH       = $(filter-out $(call kernel-hidd-gayleata_MATCHARCH,$(1),$(2)),$(2))
+kernel-hidd-gayleata_STARTFILES       := $(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$($(kernel-hidd-gayleata_DEFNAME)_STARTFILES))
+kernel-hidd-gayleata_ENDFILES         := $(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$($(kernel-hidd-gayleata_DEFNAME)_ENDFILES))
+
+kernel-hidd-gayleata_ARCHOBJS         := $(wildcard $(kernel-hidd-gayleata_OBJDIR)/arch/*.o)
+kernel-hidd-gayleata_LIBARCHOBJS      := $(wildcard $(kernel-hidd-gayleata_OBJDIR)/linklib/arch/*.o)
+kernel-hidd-gayleata_ARCHFILES        := $(basename $(notdir $(kernel-hidd-gayleata_ARCHOBJS)))
+kernel-hidd-gayleata_LIBARCHFILES     := $(basename $(notdir $(kernel-hidd-gayleata_LIBARCHOBJS)))
+kernel-hidd-gayleata_C_NARCHFILES     := $(call kernel-hidd-gayleata_FILTERARCH,$(kernel-hidd-gayleata_ARCHFILES),$(kernel-hidd-gayleata_FILES))
+kernel-hidd-gayleata_CXX_NARCHFILES   := $(call kernel-hidd-gayleata_FILTERARCH,$(kernel-hidd-gayleata_ARCHFILES),$(kernel-hidd-gayleata_CXXFILES))
+kernel-hidd-gayleata_OBJC_NARCHFILES  := $(call kernel-hidd-gayleata_FILTERARCH,$(kernel-hidd-gayleata_ARCHFILES),$(kernel-hidd-gayleata_OBJCFILES))
+kernel-hidd-gayleata_NLIBARCHFILES    := $(call kernel-hidd-gayleata_FILTERARCH,$(kernel-hidd-gayleata_LIBARCHFILES),$(kernel-hidd-gayleata_LIBFILES))
+kernel-hidd-gayleata_ARCHNLIBFILES    := $(call kernel-hidd-gayleata_FILTERARCH,$(kernel-hidd-gayleata_LIBFILES),$(kernel-hidd-gayleata_LIBARCHFILES))
+
+kernel-hidd-gayleata_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-hidd-gayleata_OBJDIR)/include -include $(kernel-hidd-gayleata_DEFLIBDEFSINC))
+ifneq (,)
+kernel-hidd-gayleata_CPPFLAGS         += -I
+endif
+kernel-hidd-gayleata_LINKLIBCPPFLAGS  := $(kernel-hidd-gayleata_CPPFLAGS)
+kernel-hidd-gayleata_CPPFLAGS         += $(strip $($(kernel-hidd-gayleata_DEFNAME)_CPPFLAGS))
+kernel-hidd-gayleata_LINKLIBCPPFLAGS  += $(strip $($(kernel-hidd-gayleata_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-hidd-gayleata_CFLAGS           := $(strip $(CFLAGS) $($(kernel-hidd-gayleata_DEFNAME)_CFLAGS))
+kernel-hidd-gayleata_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-hidd-gayleata_DEFNAME)_LINKLIBCFLAGS))
+kernel-hidd-gayleata_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-hidd-gayleata_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-gayleata_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-hidd-gayleata_CFLAGS           := $(strip $(kernel-hidd-gayleata_LTOFLAGS) $(kernel-hidd-gayleata_CFLAGS))
+kernel-hidd-gayleata_LINKLIBCFLAGS    := $(strip $(kernel-hidd-gayleata_LTOFLAGS) $(kernel-hidd-gayleata_LINKLIBCFLAGS))
+kernel-hidd-gayleata_CXXFLAGS         := $(strip $(kernel-hidd-gayleata_LTOFLAGS) $(kernel-hidd-gayleata_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-gayleata_SUBSTNULL        :=
+kernel-hidd-gayleata_SUBSTSPACE       := $(kernel-hidd-gayleata_SUBSTNULL) #
+kernel-hidd-gayleata_SUBSTCOMMA       := ,
+kernel-hidd-gayleata_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-hidd-gayleata_SUBSTSPACE),$(kernel-hidd-gayleata_SUBSTCOMMA),$(strip $($(kernel-hidd-gayleata_DEFNAME)_STARTFILES))))
+kernel-hidd-gayleata_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-hidd-gayleata_CFLAGS           := $(strip $(kernel-hidd-gayleata_INSTRFUNCFLAGS) $(kernel-hidd-gayleata_CFLAGS))
+kernel-hidd-gayleata_CXXFLAGS         := $(strip $(kernel-hidd-gayleata_INSTRFUNCFLAGS) $(kernel-hidd-gayleata_CXXFLAGS))
+kernel-hidd-gayleata_LIBS             += $(kernel-hidd-gayleata_INSTRFUNCLIBS)
+endif
+endif
+kernel-hidd-gayleata_DFLAGS           := $(strip $(kernel-hidd-gayleata_DFLAGS) $($(kernel-hidd-gayleata_DEFNAME)_DFLAGS))
+kernel-hidd-gayleata_LINKLIBDFLAGS    := $(strip $(kernel-hidd-gayleata_DFLAGS) $($(kernel-hidd-gayleata_DEFNAME)_LINKLIBDFLAGS))
+kernel-hidd-gayleata_DXXFLAGS         := $(strip $(kernel-hidd-gayleata_DXXFLAGS) $($(kernel-hidd-gayleata_DEFNAME)_DXXFLAGS))
+
+ifeq (hidd,library)
+    kernel-hidd-gayleata_LIBSUFFIX    := 
+else
+    kernel-hidd-gayleata_LIBSUFFIX    := .hidd
+endif
+
+ifeq (,)
+kernel-hidd-gayleata_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-hidd-gayleata_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-hidd-gayleata_LINKLIBCFILES    := $(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$($(kernel-hidd-gayleata_DEFNAME)_LINKLIBFILES))
+kernel-hidd-gayleata_LINKLIBAFILES    := $(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$($(kernel-hidd-gayleata_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-gayleata_DEFNAME)_LINKLIBFILES) $($(kernel-hidd-gayleata_DEFNAME)_LINKLIBAFILES)  $(kernel-hidd-gayleata_ARCHNLIBFILES)),)
+    kernel-hidd-gayleata_LINKLIB      :=
+else
+    kernel-hidd-gayleata_LINKLIB      := $(kernel-hidd-gayleata_LIBDIR)/libata_gayle$(kernel-hidd-gayleata_LIBSUFFIX).a
+    ifneq (ata_gayle,$(kernel-hidd-gayleata_LINKLIBNAME))
+        kernel-hidd-gayleata_LINKLIB  += $(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_LINKLIBNAME)$(kernel-hidd-gayleata_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-gayleata_LINKLIBFILES     := $(kernel-hidd-gayleata_LINKLIBCFILES) $(kernel-hidd-gayleata_LINKLIBAFILES)
+
+kernel-hidd-gayleata_RELLINKLIBCFILES := $(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$($(kernel-hidd-gayleata_DEFNAME)_RELLINKLIBFILES))
+kernel-hidd-gayleata_RELLINKLIBAFILES := $(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$($(kernel-hidd-gayleata_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-gayleata_DEFNAME)_RELLINKLIBFILES) $($(kernel-hidd-gayleata_DEFNAME)_RELLINKLIBAFILES)  $(kernel-hidd-gayleata_ARCHNLIBFILES)),)
+    kernel-hidd-gayleata_RELLINKLIB   :=
+else
+    kernel-hidd-gayleata_RELLINKLIB   := $(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_DEFNAME)_rel$(kernel-hidd-gayleata_LIBSUFFIX).a
+    ifneq (ata_gayle,$(kernel-hidd-gayleata_LINKLIBNAME))
+        kernel-hidd-gayleata_RELLINKLIB += $(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_LINKLIBNAME)_rel$(kernel-hidd-gayleata_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-gayleata_RELLINKLIBFILES  := $(kernel-hidd-gayleata_RELLINKLIBCFILES) $(kernel-hidd-gayleata_RELLINKLIBAFILES)
+endif
+
+kernel-hidd-gayleata_ENDOBJS          := $(addsuffix .o,$(kernel-hidd-gayleata_ENDFILES))
+kernel-hidd-gayleata_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$(notdir $(kernel-hidd-gayleata_NLIBARCHFILES))) $(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-gayleata_ARCHNLIBFILES))) $(kernel-hidd-gayleata_LINKLIBFILES)) \
+                 
+kernel-hidd-gayleata_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$(notdir $(kernel-hidd-gayleata_NLIBARCHFILES))) $(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-gayleata_ARCHNLIBFILES))) $(kernel-hidd-gayleata_RELLINKLIBFILES)) \
+                 
+$(kernel-hidd-gayleata_LINKLIBFILES) $(kernel-hidd-gayleata_RELLINKLIBFILES) : | $(kernel-hidd-gayleata_OBJDIR)/linklib
+$(kernel-hidd-gayleata_LINKLIBOBJS) $(kernel-hidd-gayleata_RELLINKLIBOBJS) : | $(kernel-hidd-gayleata_OBJDIR)/linklib
+
+kernel-hidd-gayleata_CCFILES := $(kernel-hidd-gayleata_C_NARCHFILES)
+kernel-hidd-gayleata_TARGETCCFILES    := $(strip $(kernel-hidd-gayleata_STARTFILES) $(kernel-hidd-gayleata_ENDFILES))
+kernel-hidd-gayleata_LINKLIBCCFILES   := $(strip $(kernel-hidd-gayleata_NLIBARCHFILES) $(kernel-hidd-gayleata_LINKLIBCFILES) $(kernel-hidd-gayleata_RELLINKLIBCFILES))
+kernel-hidd-gayleata_LINKLIBCCGENFILES := $(strip $(kernel-hidd-gayleata_LINKLIBCFILES) $(kernel-hidd-gayleata_RELLINKLIBCFILES))
+
+
+kernel-hidd-gayleata_CXXABSBASENAMES := $(foreach kernel-hidd-gayleata_CXXBASE,$(kernel-hidd-gayleata_CXX_NARCHFILES),$(if $(filter /%,$(kernel-hidd-gayleata_CXXBASE)),$(kernel-hidd-gayleata_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-hidd-gayleata_CXXBASE))))
+
+ifneq ($(kernel-hidd-gayleata_CXXABSBASENAMES),)
+
+kernel-hidd-gayleata_CXXBASENAMES := $(basename $(kernel-hidd-gayleata_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-hidd-gayleata_MCXX_FILES  := $(strip $(foreach kernel-hidd-gayleata_CXXBASE,$(kernel-hidd-gayleata_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-hidd-gayleata_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-hidd-gayleata_EXT),$(kernel-hidd-gayleata_CXXBASE)))))))
+
+ifeq (,)
+kernel-hidd-gayleata_MCXX_SRCWILDCARD := %
+else
+kernel-hidd-gayleata_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-gayleata_OBJDIR),)
+  kernel-hidd-gayleata_CXXTARGETS := $(notdir $(kernel-hidd-gayleata_CXXBASENAMES:=.o))
+  kernel-hidd-gayleata_CXXDTARGETS := $(notdir $(kernel-hidd-gayleata_CXXBASENAMES:=.d))
+  kernel-hidd-gayleata_MCXX_WILDCARD := %
+else
+  kernel-hidd-gayleata_CXXTARGETS := $(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(notdir $(kernel-hidd-gayleata_CXXBASENAMES:=.o)))
+  kernel-hidd-gayleata_CXXDTARGETS := $(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(notdir $(kernel-hidd-gayleata_CXXBASENAMES:=.d)))
+  kernel-hidd-gayleata_MCXX_WILDCARD := $(kernel-hidd-gayleata_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-hidd-gayleata_CXXTARGETS) $(kernel-hidd-gayleata_CXXDTARGETS) : | $(kernel-hidd-gayleata_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-hidd-gayleata_MCXX_CPPFLAGS := $(kernel-hidd-gayleata_CPPFLAGS)
+kernel-hidd-gayleata_CXXFLAGS := $(kernel-hidd-gayleata_CXXFLAGS)
+ifeq ($(kernel-hidd-gayleata_DXXFLAGS),)
+  kernel-hidd-gayleata_DXXFLAGS := $(kernel-hidd-gayleata_CXXFLAGS)
+else
+  kernel-hidd-gayleata_DXXFLAGS := $(kernel-hidd-gayleata_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-hidd-gayleata_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-hidd-gayleata_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-gayleata_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-hidd-gayleata_CXXCMD:=$(HOST_CXX)
+  kernel-hidd-gayleata_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-hidd-gayleata_MCXX_CPPFLAGS) $(kernel-hidd-gayleata_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-gayleata_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-gayleata_CXXFLAGS))
+  kernel-hidd-gayleata_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-gayleata_DXXFLAGS))
+  kernel-hidd-gayleata_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-hidd-gayleata_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-hidd-gayleata_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-gayleata_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-gayleata_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-hidd-gayleata_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-hidd-gayleata_MCXX_CPPFLAGS := $(strip $(kernel-hidd-gayleata_MCXX_CPPFLAGS) $(kernel-hidd-gayleata_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-gayleata_CXXFLAGS := $(strip $(kernel-hidd-gayleata_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-hidd-gayleata_DXXFLAGS := $(kernel-hidd-gayleata_DXXFLAGS)
+  kernel-hidd-gayleata_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-hidd-gayleata_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-hidd-gayleata_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-gayleata_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-gayleata_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-hidd-gayleata_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-hidd-gayleata_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-hidd-gayleata_MCXX_CPPFLAGS) $(kernel-hidd-gayleata_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-gayleata_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-gayleata_CXXFLAGS))
+  kernel-hidd-gayleata_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-gayleata_DXXFLAGS))
+  kernel-hidd-gayleata_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-hidd-gayleata_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-hidd-gayleata_CXXCMD) $(kernel-hidd-gayleata_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-gayleata_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_CXXIQUOTE) . $(kernel-hidd-gayleata_CXXIQUOTE_END) $(strip $(kernel-hidd-gayleata_CXXFLAGS) $(kernel-hidd-gayleata_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-hidd-gayleata_CXXCMD) $(kernel-hidd-gayleata_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-gayleata_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_CXXIQUOTE) . $(kernel-hidd-gayleata_CXXIQUOTE_END) $(strip $(kernel-hidd-gayleata_CXXFLAGS) $(kernel-hidd-gayleata_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-hidd-gayleata_CXXCMD) $(kernel-hidd-gayleata_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-gayleata_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_CXXIQUOTE) . $(kernel-hidd-gayleata_CXXIQUOTE_END) $(strip $(kernel-hidd-gayleata_CXXFLAGS) $(kernel-hidd-gayleata_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-hidd-gayleata_CXXCMD)" $(MKDEPEND) $(strip $(kernel-hidd-gayleata_DXXFLAGS) $(kernel-hidd-gayleata_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-hidd-gayleata_OBJDIR),)
+  $(foreach kernel-hidd-gayleata_CXXFILE,$(kernel-hidd-gayleata_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-hidd-gayleata_CXXFILE))),$(kernel-hidd-gayleata_CXXFILE))))
+else
+  $(foreach kernel-hidd-gayleata_CXXFILE,$(kernel-hidd-gayleata_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(notdir $(basename $(kernel-hidd-gayleata_CXXFILE)))),$(kernel-hidd-gayleata_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-hidd-gayleata_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-hidd-gayleata_MOBJC_SRCWILDCARD := %
+else
+kernel-hidd-gayleata_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-gayleata_OBJDIR),)
+  kernel-hidd-gayleata_MOBJC_TARGETS := $(addsuffix .o,$(kernel-hidd-gayleata_OBJC_NARCHFILES))
+  kernel-hidd-gayleata_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-hidd-gayleata_OBJC_NARCHFILES))
+  kernel-hidd-gayleata_MOBJC_WILDCARD := %
+else
+  kernel-hidd-gayleata_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(kernel-hidd-gayleata_OBJC_NARCHFILES)))
+  kernel-hidd-gayleata_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(kernel-hidd-gayleata_OBJC_NARCHFILES)))
+  kernel-hidd-gayleata_MOBJC_WILDCARD := $(kernel-hidd-gayleata_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-hidd-gayleata_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-hidd-gayleata_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-hidd-gayleata_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-gayleata_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-hidd-gayleata_MOBJC_DIRS := $(foreach dir, $(kernel-hidd-gayleata_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-gayleata_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-hidd-gayleata_MOBJC_DIRS),)
+    kernel-hidd-gayleata_MOBJC_DIRS := $(shell echo $(kernel-hidd-gayleata_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-hidd-gayleata_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-hidd-gayleata_CC := $(TARGET_CC)
+else
+  kernel-hidd-gayleata_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-hidd-gayleata_MOBJC_CPPFLAGS := $(kernel-hidd-gayleata_CPPFLAGS)
+kernel-hidd-gayleata_OBJCFLAGS := $(kernel-hidd-gayleata_CFLAGS)
+kernel-hidd-gayleata_OBJCFLAGS := $(kernel-hidd-gayleata_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-hidd-gayleata_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-hidd-gayleata_OBJCFLAGS)))
+ifeq ($(kernel-hidd-gayleata_DFLAGS),)
+  kernel-hidd-gayleata_OBJCDFLAGS := $(kernel-hidd-gayleata_CFLAGS)
+else
+  kernel-hidd-gayleata_OBJCDFLAGS := $(kernel-hidd-gayleata_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-hidd-gayleata_LINK ?= $(strip $(kernel-hidd-gayleata_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-gayleata_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-gayleata_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-hidd-gayleata_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : kernel-hidd-gayleata_MOBJC_CPPFLAGS:=$(strip $(kernel-hidd-gayleata_MOBJC_CPPFLAGS) $(kernel-hidd-gayleata_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : kernel-hidd-gayleata_OBJCFLAGS:=$(strip $(kernel-hidd-gayleata_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : kernel-hidd-gayleata_OBJCDFLAGS:=$(kernel-hidd-gayleata_OBJCDFLAGS)
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : kernel-hidd-gayleata_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : kernel-hidd-gayleata_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-hidd-gayleata_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-hidd-gayleata_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-gayleata_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : kernel-hidd-gayleata_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-hidd-gayleata_MOBJC_CPPFLAGS) $(kernel-hidd-gayleata_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : kernel-hidd-gayleata_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gayleata_OBJCFLAGS))
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : kernel-hidd-gayleata_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gayleata_OBJCDFLAGS))
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : kernel-hidd-gayleata_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : kernel-hidd-gayleata_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-hidd-gayleata_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-gayleata_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-gayleata_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : kernel-hidd-gayleata_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-hidd-gayleata_MOBJC_CPPFLAGS) $(kernel-hidd-gayleata_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : kernel-hidd-gayleata_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gayleata_OBJCFLAGS))
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : kernel-hidd-gayleata_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gayleata_OBJCDFLAGS))
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : kernel-hidd-gayleata_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-hidd-gayleata_MOBJC_TARGETS) $(kernel-hidd-gayleata_MOBJC_DTARGETS) : kernel-hidd-gayleata_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-gayleata_MOBJC_TARGETS) : CPPFLAGS := $(kernel-hidd-gayleata_MOBJC_CPPFLAGS)
+$(kernel-hidd-gayleata_MOBJC_TARGETS) : CFLAGS := $(kernel-hidd-gayleata_OBJCFLAGS)
+$(kernel-hidd-gayleata_MOBJC_TARGETS) : $(kernel-hidd-gayleata_MOBJC_WILDCARD).o : $(kernel-hidd-gayleata_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-gayleata_IQUOTE) $(dir $<) $(kernel-hidd-gayleata_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_IQUOTE) . $(kernel-hidd-gayleata_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-gayleata_IQUOTE) $(dir $<) $(kernel-hidd-gayleata_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_IQUOTE) . $(kernel-hidd-gayleata_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-gayleata_IQUOTE) $(dir $<) $(kernel-hidd-gayleata_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_IQUOTE) . $(kernel-hidd-gayleata_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-gayleata_MOBJC_DTARGETS) : $(kernel-hidd-gayleata_MOBJC_WILDCARD).d : $(kernel-hidd-gayleata_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-gayleata_OBJCDFLAGS) $(kernel-hidd-gayleata_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-hidd-gayleata_MC_SRCWILDCARD := %
+else
+kernel-hidd-gayleata_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-gayleata_OBJDIR),)
+kernel-hidd-gayleata_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-gayleata_CCFILES))
+kernel-hidd-gayleata_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-gayleata_CCFILES))
+kernel-hidd-gayleata_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-gayleata_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(notdir $(kernel-hidd-gayleata_CCFILES))))
+    kernel-hidd-gayleata_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(notdir $(kernel-hidd-gayleata_CCFILES))))
+else
+ifeq (,)
+    kernel-hidd-gayleata_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(kernel-hidd-gayleata_CCFILES)))
+    kernel-hidd-gayleata_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(kernel-hidd-gayleata_CCFILES)))
+else
+    kernel-hidd-gayleata_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-gayleata_CCFILES))))
+    kernel-hidd-gayleata_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-gayleata_CCFILES))))
+endif
+endif
+kernel-hidd-gayleata_MC_TGTWILDCARD := $(kernel-hidd-gayleata_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-gayleata_CCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-gayleata_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-gayleata_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-gayleata_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-gayleata_MC_DIRS := $(foreach dir, $(kernel-hidd-gayleata_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-gayleata_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-gayleata_MC_DIRS),)
+    kernel-hidd-gayleata_MC_DIRS := $(shell echo $(kernel-hidd-gayleata_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-gayleata_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-gayleata_MC_CPPFLAGS := $(kernel-hidd-gayleata_CPPFLAGS)
+kernel-hidd-gayleata_CFLAGS := $(kernel-hidd-gayleata_CFLAGS)
+ifeq ($(kernel-hidd-gayleata_DFLAGS),)
+  kernel-hidd-gayleata_DFLAGS := $(kernel-hidd-gayleata_CFLAGS)
+else
+  kernel-hidd-gayleata_DFLAGS := $(kernel-hidd-gayleata_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-gayleata_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-gayleata_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-gayleata_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_MC_CPPFLAGS:=$(strip $(kernel-hidd-gayleata_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_CFLAGS:=$(strip $(kernel-hidd-gayleata_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_DFLAGS:=$(kernel-hidd-gayleata_DFLAGS)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-gayleata_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-gayleata_STRIP ?= $(HOST_STRIP)
+kernel-hidd-gayleata_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gayleata_CFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gayleata_DFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-gayleata_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-gayleata_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-gayleata_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gayleata_CFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gayleata_DFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-gayleata_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-gayleata_MC_CPPFLAGS)
+$(kernel-hidd-gayleata_MC_TARGETS) : CFLAGS := $(kernel-hidd-gayleata_CFLAGS)
+$(kernel-hidd-gayleata_MC_TARGETS) : $(kernel-hidd-gayleata_MC_TGTWILDCARD).o : $(kernel-hidd-gayleata_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-gayleata_IQUOTE) $(dir $<) $(kernel-hidd-gayleata_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_IQUOTE) . $(kernel-hidd-gayleata_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-gayleata_IQUOTE) $(dir $<) $(kernel-hidd-gayleata_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_IQUOTE) . $(kernel-hidd-gayleata_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-gayleata_IQUOTE) $(dir $<) $(kernel-hidd-gayleata_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_IQUOTE) . $(kernel-hidd-gayleata_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-gayleata_MC_DTARGETS) : $(kernel-hidd-gayleata_MC_TGTWILDCARD).d : $(kernel-hidd-gayleata_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-gayleata_DFLAGS) $(kernel-hidd-gayleata_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-gayleata_MC_SRCWILDCARD := %
+else
+kernel-hidd-gayleata_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-gayleata_OBJDIR),)
+kernel-hidd-gayleata_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-gayleata_TARGETCCFILES))
+kernel-hidd-gayleata_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-gayleata_TARGETCCFILES))
+kernel-hidd-gayleata_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-gayleata_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(notdir $(kernel-hidd-gayleata_TARGETCCFILES))))
+    kernel-hidd-gayleata_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(notdir $(kernel-hidd-gayleata_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-hidd-gayleata_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(kernel-hidd-gayleata_TARGETCCFILES)))
+    kernel-hidd-gayleata_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(kernel-hidd-gayleata_TARGETCCFILES)))
+else
+    kernel-hidd-gayleata_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-gayleata_TARGETCCFILES))))
+    kernel-hidd-gayleata_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-gayleata_TARGETCCFILES))))
+endif
+endif
+kernel-hidd-gayleata_MC_TGTWILDCARD := $(kernel-hidd-gayleata_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-gayleata_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-gayleata_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-gayleata_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-gayleata_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-gayleata_MC_DIRS := $(foreach dir, $(kernel-hidd-gayleata_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-gayleata_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-gayleata_MC_DIRS),)
+    kernel-hidd-gayleata_MC_DIRS := $(shell echo $(kernel-hidd-gayleata_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-gayleata_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-gayleata_MC_CPPFLAGS := $(kernel-hidd-gayleata_CPPFLAGS) -D__AROS__
+kernel-hidd-gayleata_CFLAGS := $(kernel-hidd-gayleata_CFLAGS)
+ifeq ($(kernel-hidd-gayleata_DFLAGS),)
+  kernel-hidd-gayleata_DFLAGS := $(kernel-hidd-gayleata_CFLAGS)
+else
+  kernel-hidd-gayleata_DFLAGS := $(kernel-hidd-gayleata_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-gayleata_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-gayleata_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-gayleata_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_MC_CPPFLAGS:=$(strip $(kernel-hidd-gayleata_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_CFLAGS:=$(strip $(kernel-hidd-gayleata_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_DFLAGS:=$(kernel-hidd-gayleata_DFLAGS)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-gayleata_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-gayleata_STRIP ?= $(HOST_STRIP)
+kernel-hidd-gayleata_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gayleata_CFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gayleata_DFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-gayleata_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-gayleata_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-gayleata_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gayleata_CFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gayleata_DFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-gayleata_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-gayleata_MC_CPPFLAGS)
+$(kernel-hidd-gayleata_MC_TARGETS) : CFLAGS := $(kernel-hidd-gayleata_CFLAGS)
+$(kernel-hidd-gayleata_MC_TARGETS) : $(kernel-hidd-gayleata_MC_TGTWILDCARD).o : $(kernel-hidd-gayleata_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-gayleata_IQUOTE) $(dir $<) $(kernel-hidd-gayleata_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_IQUOTE) . $(kernel-hidd-gayleata_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-gayleata_IQUOTE) $(dir $<) $(kernel-hidd-gayleata_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_IQUOTE) . $(kernel-hidd-gayleata_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-gayleata_IQUOTE) $(dir $<) $(kernel-hidd-gayleata_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_IQUOTE) . $(kernel-hidd-gayleata_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-gayleata_MC_DTARGETS) : $(kernel-hidd-gayleata_MC_TGTWILDCARD).d : $(kernel-hidd-gayleata_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-gayleata_DFLAGS) $(kernel-hidd-gayleata_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-gayleata_MC_SRCWILDCARD := %
+else
+kernel-hidd-gayleata_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-gayleata_OBJDIR)/linklib,)
+kernel-hidd-gayleata_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-gayleata_NLIBARCHFILES))
+kernel-hidd-gayleata_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-gayleata_NLIBARCHFILES))
+kernel-hidd-gayleata_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-gayleata_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$(notdir $(kernel-hidd-gayleata_NLIBARCHFILES))))
+    kernel-hidd-gayleata_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$(notdir $(kernel-hidd-gayleata_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-hidd-gayleata_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$(kernel-hidd-gayleata_NLIBARCHFILES)))
+    kernel-hidd-gayleata_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$(kernel-hidd-gayleata_NLIBARCHFILES)))
+else
+    kernel-hidd-gayleata_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-gayleata_NLIBARCHFILES))))
+    kernel-hidd-gayleata_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-gayleata_NLIBARCHFILES))))
+endif
+endif
+kernel-hidd-gayleata_MC_TGTWILDCARD := $(kernel-hidd-gayleata_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-gayleata_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-gayleata_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-gayleata_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-gayleata_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-gayleata_MC_DIRS := $(foreach dir, $(kernel-hidd-gayleata_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-gayleata_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-gayleata_MC_DIRS),)
+    kernel-hidd-gayleata_MC_DIRS := $(shell echo $(kernel-hidd-gayleata_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-gayleata_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-gayleata_MC_CPPFLAGS := $(kernel-hidd-gayleata_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-gayleata_CFLAGS := $(kernel-hidd-gayleata_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-gayleata_LINKLIBDFLAGS),)
+  kernel-hidd-gayleata_DFLAGS := $(kernel-hidd-gayleata_LINKLIBCFLAGS)
+else
+  kernel-hidd-gayleata_DFLAGS := $(kernel-hidd-gayleata_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-gayleata_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-gayleata_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-gayleata_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_MC_CPPFLAGS:=$(strip $(kernel-hidd-gayleata_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_CFLAGS:=$(strip $(kernel-hidd-gayleata_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_DFLAGS:=$(kernel-hidd-gayleata_DFLAGS)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-gayleata_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-gayleata_STRIP ?= $(HOST_STRIP)
+kernel-hidd-gayleata_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gayleata_CFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gayleata_DFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-gayleata_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-gayleata_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-gayleata_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gayleata_CFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gayleata_DFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-gayleata_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-gayleata_MC_CPPFLAGS)
+$(kernel-hidd-gayleata_MC_TARGETS) : CFLAGS := $(kernel-hidd-gayleata_CFLAGS)
+$(kernel-hidd-gayleata_MC_TARGETS) : $(kernel-hidd-gayleata_MC_TGTWILDCARD).o : $(kernel-hidd-gayleata_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-gayleata_IQUOTE) $(dir $<) $(kernel-hidd-gayleata_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_IQUOTE) . $(kernel-hidd-gayleata_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-gayleata_IQUOTE) $(dir $<) $(kernel-hidd-gayleata_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_IQUOTE) . $(kernel-hidd-gayleata_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-gayleata_IQUOTE) $(dir $<) $(kernel-hidd-gayleata_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_IQUOTE) . $(kernel-hidd-gayleata_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-gayleata_MC_DTARGETS) : $(kernel-hidd-gayleata_MC_TGTWILDCARD).d : $(kernel-hidd-gayleata_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-gayleata_DFLAGS) $(kernel-hidd-gayleata_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-hidd-gayleata_OBJDIR)/linklib,)
+kernel-hidd-gayleata_MC_SRCWILDCARD := %
+else
+kernel-hidd-gayleata_MC_SRCWILDCARD := $(kernel-hidd-gayleata_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-hidd-gayleata_OBJDIR)/linklib,)
+kernel-hidd-gayleata_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-gayleata_LINKLIBCCGENFILES))
+kernel-hidd-gayleata_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-gayleata_LINKLIBCCGENFILES))
+kernel-hidd-gayleata_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-gayleata_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$(notdir $(kernel-hidd-gayleata_LINKLIBCCGENFILES))))
+    kernel-hidd-gayleata_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$(notdir $(kernel-hidd-gayleata_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-hidd-gayleata_OBJDIR)/linklib,)
+    kernel-hidd-gayleata_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$(kernel-hidd-gayleata_LINKLIBCCGENFILES)))
+    kernel-hidd-gayleata_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$(kernel-hidd-gayleata_LINKLIBCCGENFILES)))
+else
+    kernel-hidd-gayleata_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-gayleata_OBJDIR)/linklib/%,%,$(kernel-hidd-gayleata_LINKLIBCCGENFILES))))
+    kernel-hidd-gayleata_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-gayleata_OBJDIR)/linklib/%,%,$(kernel-hidd-gayleata_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-hidd-gayleata_MC_TGTWILDCARD := $(kernel-hidd-gayleata_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-gayleata_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-gayleata_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-gayleata_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-gayleata_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-gayleata_MC_DIRS := $(foreach dir, $(kernel-hidd-gayleata_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-gayleata_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-gayleata_MC_DIRS),)
+    kernel-hidd-gayleata_MC_DIRS := $(shell echo $(kernel-hidd-gayleata_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-gayleata_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-gayleata_MC_CPPFLAGS := $(kernel-hidd-gayleata_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-gayleata_CFLAGS := $(kernel-hidd-gayleata_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-gayleata_LINKLIBDFLAGS),)
+  kernel-hidd-gayleata_DFLAGS := $(kernel-hidd-gayleata_LINKLIBCFLAGS)
+else
+  kernel-hidd-gayleata_DFLAGS := $(kernel-hidd-gayleata_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-gayleata_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-gayleata_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-gayleata_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_MC_CPPFLAGS:=$(strip $(kernel-hidd-gayleata_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_CFLAGS:=$(strip $(kernel-hidd-gayleata_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_DFLAGS:=$(kernel-hidd-gayleata_DFLAGS)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-gayleata_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-gayleata_STRIP ?= $(HOST_STRIP)
+kernel-hidd-gayleata_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gayleata_CFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gayleata_DFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-gayleata_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-gayleata_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-gayleata_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_CPPFLAGS) $(kernel-hidd-gayleata_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gayleata_CFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gayleata_DFLAGS))
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-gayleata_MC_TARGETS) $(kernel-hidd-gayleata_MC_DTARGETS) : kernel-hidd-gayleata_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-gayleata_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-gayleata_MC_CPPFLAGS)
+$(kernel-hidd-gayleata_MC_TARGETS) : CFLAGS := $(kernel-hidd-gayleata_CFLAGS)
+$(kernel-hidd-gayleata_MC_TARGETS) : $(kernel-hidd-gayleata_MC_TGTWILDCARD).o : $(kernel-hidd-gayleata_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-gayleata_IQUOTE) $(dir $<) $(kernel-hidd-gayleata_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_IQUOTE) . $(kernel-hidd-gayleata_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-gayleata_IQUOTE) $(dir $<) $(kernel-hidd-gayleata_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_IQUOTE) . $(kernel-hidd-gayleata_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-gayleata_IQUOTE) $(dir $<) $(kernel-hidd-gayleata_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gayleata_IQUOTE) . $(kernel-hidd-gayleata_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-gayleata_MC_DTARGETS) : $(kernel-hidd-gayleata_MC_TGTWILDCARD).d : $(kernel-hidd-gayleata_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-gayleata_DFLAGS) $(kernel-hidd-gayleata_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-hidd-gayleata_LINKLIBAFILES),)
+
+ifeq ($(kernel-hidd-gayleata_OBJDIR)/linklib,)
+kernel-hidd-gayleata-MA_TARGETS := $(addsuffix .o,$(kernel-hidd-gayleata_LINKLIBAFILES) $(kernel-hidd-gayleata_RELLINKLIBAFILES))
+kernel-hidd-gayleata-MA_WILDCARD := %
+else
+kernel-hidd-gayleata-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$(notdir $(kernel-hidd-gayleata_LINKLIBAFILES) $(kernel-hidd-gayleata_RELLINKLIBAFILES))))
+kernel-hidd-gayleata-MA_WILDCARD := $(kernel-hidd-gayleata_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-hidd-gayleata-MA_TARGETS) : | $(addsuffix .S,$(kernel-hidd-gayleata_LINKLIBAFILES) $(kernel-hidd-gayleata_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-gayleata-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-gayleata-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-gayleata_LINKLIBAFILES) $(kernel-hidd-gayleata_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-gayleata-MA_DIRS := $(foreach dir, $(kernel-hidd-gayleata-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-gayleata-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-gayleata-MA_DIRS),)
+    kernel-hidd-gayleata-MA_DIRS := $(shell echo $(kernel-hidd-gayleata-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-hidd-gayleata-MA_DIRS)
+endif
+
+endif
+
+kernel-hidd-gayleata-MA_ASSEMBLER ?= $(kernel-hidd-gayleata_ASSEMBLER)
+
+$(kernel-hidd-gayleata-MA_TARGETS) : kernel-hidd-gayleata-MA_CMD:= $(kernel-hidd-gayleata-MA_ASSEMBLER)
+
+$(kernel-hidd-gayleata-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-hidd-gayleata-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-hidd-gayleata-MA_TARGETS) : $(kernel-hidd-gayleata-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-hidd-gayleata-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-hidd-gayleata-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-hidd-gayleata-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-hidd-gayleata_SUFFIX           := hidd
+else
+kernel-hidd-gayleata_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-hidd-gayleata_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-hidd-gayleata_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-hidd-gayleata_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-hidd-gayleata_SUFFIX),handler)
+kernel-hidd-gayleata_MODULE           := $(AROSDIR)/$(kernel-hidd-gayleata_MODDIR)/$(kernel-hidd-gayleata_DEFNAME)-$(kernel-hidd-gayleata_SUFFIX)
+else
+kernel-hidd-gayleata_MODULE           := $(AROSDIR)/$(kernel-hidd-gayleata_MODDIR)/$(kernel-hidd-gayleata_DEFNAME).$(kernel-hidd-gayleata_SUFFIX)
+endif
+kernel-hidd-gayleata_KOBJ             := $(KOBJSDIR)/$(kernel-hidd-gayleata_DEFNAME)_$(kernel-hidd-gayleata_SUFFIX).o
+else
+kernel-hidd-gayleata_MODULE           :=
+kernel-hidd-gayleata_KOBJ             :=
+endif
+
+kernel-hidd-gayleata-quick      : kernel-hidd-gayleata
+kernel-hidd-gayleata            : $(kernel-hidd-gayleata_MODULE) $(kernel-hidd-gayleata_LINKLIB) $(kernel-hidd-gayleata_RELLINKLIB)
+ifeq (M,M)
+kernel-hidd-gayleata-kobj       : $(kernel-hidd-gayleata_KOBJ) $(kernel-hidd-gayleata_LINKLIB) $(kernel-hidd-gayleata_RELLINKLIB)
+kernel-hidd-gayleata-kobj-quick : $(kernel-hidd-gayleata_KOBJ) $(kernel-hidd-gayleata_LINKLIB) $(kernel-hidd-gayleata_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-hidd-gayleata-linklib    : $(kernel-hidd-gayleata_LINKLIB) $(kernel-hidd-gayleata_RELLINKLIB)
+endif
+
+kernel-hidd-gayleata_OBJS := $(addsuffix .o,$(kernel-hidd-gayleata_STARTFILES)) $(kernel-hidd-gayleata_ARCHOBJS) \
+           $(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(notdir $(kernel-hidd-gayleata_C_NARCHFILES:=.o) $(kernel-hidd-gayleata_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (hidd,handler)
+kernel-hidd-gayleata_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (ata_gayle,con)
+    kernel-hidd-gayleata_ERR          := $(notdir $(kernel-hidd-gayleata_MODULE)).err
+else
+    kernel-hidd-gayleata_ERR          := ata_gayle.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-hidd-gayleata_DEFNAME)_LDFLAGS) $(kernel-hidd-gayleata_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-hidd-gayleata_LIBS) $($(kernel-hidd-gayleata_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-hidd-gayleata_MODULE) : LIB_NAMES := $(kernel-hidd-gayleata_LIBS) $($(kernel-hidd-gayleata_DEFNAME)_LIBS)
+$(kernel-hidd-gayleata_MODULE) : OBJS := $(kernel-hidd-gayleata_STARTOBJS) $(kernel-hidd-gayleata_OBJS) $(USER_OBJS)
+$(kernel-hidd-gayleata_MODULE) : ENDTAG := $(kernel-hidd-gayleata_ENDOBJS)
+$(kernel-hidd-gayleata_MODULE) : ERR := $(kernel-hidd-gayleata_ERR)
+$(kernel-hidd-gayleata_MODULE) : OBJDIR := $(kernel-hidd-gayleata_OBJDIR)
+$(kernel-hidd-gayleata_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-hidd-gayleata_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-hidd-gayleata_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-hidd-gayleata_MODULE) : $(kernel-hidd-gayleata_STARTOBJS) $(kernel-hidd-gayleata_OBJS) $(USER_OBJS) $(kernel-hidd-gayleata_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-hidd-gayleata_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-hidd-gayleata_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-hidd-gayleata_LC_LINKLIBNAME   := $(shell echo $(kernel-hidd-gayleata_LINKLIBNAME) | tr A-Z a-z)
+kernel-hidd-gayleata_LC_MODNAME       := $(shell echo ata_gayle | tr A-Z a-z)
+ifneq ($(kernel-hidd-gayleata_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_LINKLIBNAME)$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_AR:=$(AR)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_LINKLIBNAME)$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_LINKLIBNAME)$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_AR:=$(HOST_AR)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_LINKLIBNAME)$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_LINKLIBNAME)$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_AR:=$(KERNEL_AR)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_LINKLIBNAME)$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_LINKLIBNAME)$(kernel-hidd-gayleata_LIBSUFFIX).a : $(kernel-hidd-gayleata_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-gayleata_AR) $@ $^
+	$(Q)$(kernel-hidd-gayleata_RANLIB) $@
+ifneq ($(kernel-hidd-gayleata_LC_MODNAME),$(kernel-hidd-gayleata_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-gayleata_LIBDIR)/libata_gayle$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_AR:=$(AR)
+$(kernel-hidd-gayleata_LIBDIR)/libata_gayle$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-gayleata_LIBDIR)/libata_gayle$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_AR:=$(HOST_AR)
+$(kernel-hidd-gayleata_LIBDIR)/libata_gayle$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-gayleata_LIBDIR)/libata_gayle$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_AR:=$(KERNEL_AR)
+$(kernel-hidd-gayleata_LIBDIR)/libata_gayle$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-gayleata_LIBDIR)/libata_gayle$(kernel-hidd-gayleata_LIBSUFFIX).a : $(kernel-hidd-gayleata_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-gayleata_AR) $@ $^
+	$(Q)$(kernel-hidd-gayleata_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-gayleata_LINKLIB),)
+$(kernel-hidd-gayleata_LINKLIB) : | $(kernel-hidd-gayleata_LIBDIR)
+else
+$(kernel-hidd-gayleata_LINKLIB) :: $(kernel-hidd-gayleata_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-gayleata_LIBDIR)
+
+endif
+
+ifneq ($(kernel-hidd-gayleata_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_LINKLIBNAME)_rel$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_AR:=$(AR)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_LINKLIBNAME)_rel$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_LINKLIBNAME)_rel$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_AR:=$(HOST_AR)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_LINKLIBNAME)_rel$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_LINKLIBNAME)_rel$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_AR:=$(KERNEL_AR)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_LINKLIBNAME)_rel$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_LINKLIBNAME)_rel$(kernel-hidd-gayleata_LIBSUFFIX).a : $(kernel-hidd-gayleata_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-gayleata_AR) $@ $^
+	$(Q)$(kernel-hidd-gayleata_RANLIB) $@
+ifneq ($(kernel-hidd-gayleata_LC_MODNAME),$(kernel-hidd-gayleata_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_DEFNAME)_rel$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_AR:=$(AR)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_DEFNAME)_rel$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_DEFNAME)_rel$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_AR:=$(HOST_AR)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_DEFNAME)_rel$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_DEFNAME)_rel$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_AR:=$(KERNEL_AR)
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_DEFNAME)_rel$(kernel-hidd-gayleata_LIBSUFFIX).a : kernel-hidd-gayleata_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-gayleata_LIBDIR)/lib$(kernel-hidd-gayleata_DEFNAME)_rel$(kernel-hidd-gayleata_LIBSUFFIX).a : $(kernel-hidd-gayleata_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-gayleata_AR) $@ $^
+	$(Q)$(kernel-hidd-gayleata_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-gayleata_RELLINKLIB),)
+$(kernel-hidd-gayleata_RELLINKLIB) : | $(kernel-hidd-gayleata_LIBDIR)
+else
+$(kernel-hidd-gayleata_RELLINKLIB) :: $(kernel-hidd-gayleata_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-gayleata_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-hidd-gayleata_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-hidd-gayleata_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-hidd-gayleata_SYMBOLS := $(kernel-hidd-gayleata_KBASE)
+
+kernel-hidd-gayleata_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-hidd-gayleata_KOBJ_LIBS        := $(filter-out $(kernel-hidd-gayleata_KLIB),$(kernel-hidd-gayleata_LIBS)) $(kernel-hidd-gayleata_KAUTOLIB)
+$(kernel-hidd-gayleata_KOBJ) : LINKLIBS:=$(kernel-hidd-gayleata_KOBJ_LIBS) $($(kernel-hidd-gayleata_DEFNAME)_LIBS)
+$(kernel-hidd-gayleata_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-hidd-gayleata_SYMBOLS))
+$(kernel-hidd-gayleata_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-hidd-gayleata_KOBJ) : $(kernel-hidd-gayleata_OBJS) $(USER_OBJS) $(kernel-hidd-gayleata_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-hidd-gayleata_DEPS             := $(addprefix $(kernel-hidd-gayleata_OBJDIR)/,$(notdir $(kernel-hidd-gayleata_CCFILES:=.d) $(kernel-hidd-gayleata_TARGETCCFILES:=.d) $(kernel-hidd-gayleata_CXXFILES:=.d))) $(addprefix $(kernel-hidd-gayleata_OBJDIR)/linklib/,$(notdir $(kernel-hidd-gayleata_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-hidd-gayleata_DEPS),)
+  ifneq (kernel-hidd-gayleata kernel-hidd-gayleata-quick kernel-hidd-gayleata-kobj kernel-hidd-gayleata-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-hidd-gayleata kernel-hidd-gayleata-quick kernel-hidd-gayleata-kobj kernel-hidd-gayleata-kobj-quick),)
+      -include $(kernel-hidd-gayleata_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-hidd-gayleata_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-hidd-gayleata_OBJS) $(kernel-hidd-gayleata_DEPS) : | $(kernel-hidd-gayleata_OBJDIR)/linklib
+
+ifneq ($(kernel-hidd-gayleata_OBJS) $(kernel-hidd-gayleata_DEPS) $(kernel-hidd-gayleata_MODULE) $(kernel-hidd-gayleata_KOBJ),)
+$(kernel-hidd-gayleata_OBJS) $(kernel-hidd-gayleata_DEPS) $(kernel-hidd-gayleata_MODULE) $(kernel-hidd-gayleata_KOBJ) : | $(kernel-hidd-gayleata_OBJDIR) $(AROSDIR)/$(kernel-hidd-gayleata_MODDIR) $(KOBJSDIR)
+else
+$(kernel-hidd-gayleata_OBJS) $(kernel-hidd-gayleata_DEPS) $(kernel-hidd-gayleata_MODULE) $(kernel-hidd-gayleata_KOBJ) :: $(kernel-hidd-gayleata_OBJDIR) $(AROSDIR)/$(kernel-hidd-gayleata_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-gayleata_OBJDIR) $(AROSDIR)/$(kernel-hidd-gayleata_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-hidd-gayleata kernel-hidd-gayleata-includes kernel-hidd-gayleata-quick kernel-hidd-gayleata-kobj kernel-hidd-gayleata-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-hidd-gayleata_DFILE_DEPS := $(kernel-hidd-gayleata_LIBDEFSINC) $(kernel-hidd-gayleata_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-hidd-gayleata_INCDIR)/,$($(kernel-hidd-gayleata_DEFNAME)_INCLUDES))
+$(kernel-hidd-gayleata_DEPS) : $(kernel-hidd-gayleata_DFILE_DEPS)
+endif
+
+kernel-hidd-gayleata_TOCLEAN := $(kernel-hidd-gayleata_OBJS) $(kernel-hidd-gayleata_DEPS) \
+    $(kernel-hidd-gayleata_MODULE) $(kernel-hidd-gayleata_LINKLIB) $(kernel-hidd-gayleata_KOBJ) \
+    $(kernel-hidd-gayleata_OBJDIR)/Makefile.ata_gaylehidd \
+    $(addprefix $(kernel-hidd-gayleata_OBJDIR)/include/,$($(kernel-hidd-gayleata_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-hidd-gayleata_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-gayleata_INCDIR)/,$($(kernel-hidd-gayleata_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-gayleata_OBJDIR)/ata_gayle_geninc $(kernel-hidd-gayleata_OBJDIR)/ata_gayle_incs \
+    $(addsuffix .c,$(kernel-hidd-gayleata_LINKLIBFILES)) $(kernel-hidd-gayleata_LINKLIBOBJS) $(kernel-hidd-gayleata_LIBDEFSINC) \
+    $(kernel-hidd-gayleata_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-hidd-gayleata_STARTFILES) $(kernel-hidd-gayleata_ENDFILES)) \
+    $(kernel-hidd-gayleata_ENDOBJS)
+kernel-hidd-gayleata-clean : FILES              := $(kernel-hidd-gayleata_TOCLEAN)
+kernel-hidd-gayleata-clean ::
+	$(Q)$(ECHO) "Cleaning up for module ata_gayle"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-hidd-gayleata_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

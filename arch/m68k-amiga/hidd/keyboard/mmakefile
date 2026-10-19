@@ -1,0 +1,1662 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+USER_CPPFLAGS += \
+    -D__UTILITY_NOLIBBASE__ \
+    -D__OOP_NOLIBBASE__ \
+    -D__OOP_NOMETHODBASES__ \
+    -D__OOP_NOATTRBASES__
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-amiga-m68k-kbd
+#MM kernel-amiga-m68k-kbd-quick
+#MM kernel-amiga-m68k-kbd-makefile
+#MM kernel-amiga-m68k-kbd-clean
+
+# ABI targets:
+#MM- includes-all : kernel-amiga-m68k-kbd-includes
+#MM- linklibs-amigakbd: kernel-amiga-m68k-kbd-linklib
+#MM- linklibs-amigakbd_rel : kernel-amiga-m68k-kbd-linklib
+#MM- includes-amigakbd: kernel-amiga-m68k-kbd-includes
+#MM- includes-amigakbd_rel : kernel-amiga-m68k-kbd-includes
+#MM- kernel-amiga-m68k-kbd : kernel-amiga-m68k-kbd-includes core-linklibs linklibs-hiddstubs
+#MM kernel-amiga-m68k-kbd-linklib : kernel-amiga-m68k-kbd-includes includes-hiddstubs
+#MM- kernel-amiga-m68k-kbd-quick : kernel-amiga-m68k-kbd-includes-quick
+#MM kernel-amiga-m68k-kbd-includes : kernel-amiga-m68k-kbd-makefile kernel-amiga-m68k-kbd-includes-dirs \
+#MM     includes-generate-deps kernel-amiga-m68k-kbd-fd
+#MM kernel-amiga-m68k-kbd-includes-quick
+#MM kernel-amiga-m68k-kbd-includes-dirs
+#MM kernel-amiga-m68k-kbd-fd
+
+# Library targets
+#MM kernel-amiga-m68k-kbd-kobj : core-linklibs linklibs-hiddstubs
+#MM kernel-amiga-m68k-kbd-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-amiga-m68k-kbd-kobj : kernel-amiga-m68k-kbd-includes core-linklibs linklibs-hiddstubs
+#MM kernel-amiga-m68k-kbd-kobj-quick : kernel-amiga-m68k-kbd-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-amiga-m68k-kbd_ALLTARGETS       := kernel-amiga-m68k-kbd kernel-amiga-m68k-kbd-quick kernel-amiga-m68k-kbd-clean
+
+ifeq (M,M)
+kernel-amiga-m68k-kbd_ALLTARGETS       += kernel-amiga-m68k-kbd-kobj kernel-amiga-m68k-kbd-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-amiga-m68k-kbd_ALLTARGETS += kernel-amiga-m68k-kbd-includes \
+                 kernel-amiga-m68k-kbd-includes-quick kernel-amiga-m68k-kbd-includes-dirs  \
+                 kernel-amiga-m68k-kbd-linklib kernel-amiga-m68k-kbd-fd
+endif
+
+.PHONY : $(kernel-amiga-m68k-kbd_ALLTARGETS) kernel-amiga-m68k-kbd-makefile
+
+ifeq (amigakbd,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (hidd,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-amiga-m68k-kbd_DEFNAME      := amigakbd_
+else
+    kernel-amiga-m68k-kbd_DEFNAME      := amigakbd
+endif
+kernel-amiga-m68k-kbd_DEFLINKLIBNAME   := $(kernel-amiga-m68k-kbd_DEFNAME)
+ifneq (,)
+    kernel-amiga-m68k-kbd_LINKLIBNAME  := 
+else
+    kernel-amiga-m68k-kbd_LINKLIBNAME  = $(kernel-amiga-m68k-kbd_DEFLINKLIBNAME)
+endif
+kernel-amiga-m68k-kbd_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-amiga-m68k-kbd_DEFCPPFLAGS  += -I
+endif
+kernel-amiga-m68k-kbd_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-amiga-m68k-kbd_DFLAGS       := 
+else
+    kernel-amiga-m68k-kbd_DFLAGS       = $(kernel-amiga-m68k-kbd_DEFDFLAGS)
+endif
+kernel-amiga-m68k-kbd_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-amiga-m68k-kbd_DXXFLAGS     := 
+else
+    kernel-amiga-m68k-kbd_DXXFLAGS     = $(kernel-amiga-m68k-kbd_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-amiga-m68k-kbd_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-amiga-m68k-kbd_DEFDFLAGS))
+kernel-amiga-m68k-kbd_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-amiga-m68k-kbd_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-amiga-m68k-kbd_FUNCINSTR := yes
+kernel-amiga-m68k-kbd_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-amiga-m68k-kbd_DEFDFLAGS))
+kernel-amiga-m68k-kbd_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-amiga-m68k-kbd_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-amiga-m68k-kbd_OBJDIR                     := 
+else
+kernel-amiga-m68k-kbd_OBJDIR                     := $(OBJDIR)/$(kernel-amiga-m68k-kbd_DEFNAME)
+endif
+ifneq (,)
+kernel-amiga-m68k-kbd_OBJDIR           := $(kernel-amiga-m68k-kbd_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-amiga-m68k-kbd-makefile         := $(kernel-amiga-m68k-kbd_OBJDIR)/Makefile.$(kernel-amiga-m68k-kbd_DEFNAME)hidd
+kernel-amiga-m68k-kbd-genmakefile : $(kernel-amiga-m68k-kbd-makefile)
+
+
+kernel-amiga-m68k-kbd-genmakefile_OPTS := 
+ifneq (,)
+    kernel-amiga-m68k-kbd-genmakefile_OPTS += -f 
+    kernel-amiga-m68k-kbd-genmakefile_MODNAME := amigakbd_
+else
+    kernel-amiga-m68k-kbd-genmakefile_MODNAME := amigakbd
+endif
+kernel-amiga-m68k-kbd-genmakefile_TARGET := Makefile.$(kernel-amiga-m68k-kbd-genmakefile_MODNAME)hidd
+kernel-amiga-m68k-kbd-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-kbd-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-kbd-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-kbd-genmakefile_OPTS += -c 
+        kernel-amiga-m68k-kbd-genmakefile_DEPS += 
+    endif 
+else
+    kernel-amiga-m68k-kbd-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/amigakbd.conf
+    kernel-amiga-m68k-kbd-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/amigakbd.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-kbd-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-kbd-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-kbd-genmakefile_OPTS += -o 
+        kernel-amiga-m68k-kbd-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-amiga-m68k-kbd-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-amiga-m68k-kbd_OBJDIR),)
+    kernel-amiga-m68k-kbd-genmakefile_OPTS += -d $(kernel-amiga-m68k-kbd_OBJDIR)
+    kernel-amiga-m68k-kbd-genmakefile_TARGET := $(kernel-amiga-m68k-kbd_OBJDIR)/$(kernel-amiga-m68k-kbd-genmakefile_TARGET)
+endif
+
+$(kernel-amiga-m68k-kbd-genmakefile_TARGET) : OPTS := $(kernel-amiga-m68k-kbd-genmakefile_OPTS)
+$(kernel-amiga-m68k-kbd-genmakefile_TARGET) : MODNAME := amigakbd
+$(kernel-amiga-m68k-kbd-genmakefile_TARGET) : MODTYPE := hidd
+$(kernel-amiga-m68k-kbd-genmakefile_TARGET) : $(kernel-amiga-m68k-kbd-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-amiga-m68k-kbd-makefile),)
+$(kernel-amiga-m68k-kbd-makefile) : | $(kernel-amiga-m68k-kbd_OBJDIR)
+else
+$(kernel-amiga-m68k-kbd-makefile) :: $(kernel-amiga-m68k-kbd_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-kbd_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-amiga-m68k-kbd_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-amiga-m68k-kbd-makefile)
+
+kernel-amiga-m68k-kbd_DEFMODDIR        := $($(kernel-amiga-m68k-kbd_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-amiga-m68k-kbd_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-amiga-m68k-kbd_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-amiga-m68k-kbd_MODDIR       := 
+else
+    kernel-amiga-m68k-kbd_MODDIR       := $(kernel-amiga-m68k-kbd_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-amiga-m68k-kbd_INCDIR           := 
+else
+kernel-amiga-m68k-kbd_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-amiga-m68k-kbd_LIBDEFSINC       := $(kernel-amiga-m68k-kbd_OBJDIR)/include/$(kernel-amiga-m68k-kbd_DEFNAME)_libdefs.h
+kernel-amiga-m68k-kbd_DEFLIBDEFSINC    := $(kernel-amiga-m68k-kbd_OBJDIR)/include/$(kernel-amiga-m68k-kbd_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-amiga-m68k-kbd-includes-quick : kernel-amiga-m68k-kbd-includes
+kernel-amiga-m68k-kbd-includes : $(addprefix $(GENINCDIR)/,$($(kernel-amiga-m68k-kbd_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-amiga-m68k-kbd_INCDIR)/,$($(kernel-amiga-m68k-kbd_DEFNAME)_INCLUDES)) \
+    $(kernel-amiga-m68k-kbd_LIBDEFSINC) $(kernel-amiga-m68k-kbd_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-amiga-m68k-kbd_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-amiga-m68k-kbd-includes_MODNAME := amigakbd_
+else
+    kernel-amiga-m68k-kbd-includes_MODNAME := amigakbd
+endif
+
+ifneq ($($(kernel-amiga-m68k-kbd-includes_MODNAME)_INCLUDES),)
+
+kernel-amiga-m68k-kbd-includes_TARGETS := $($(kernel-amiga-m68k-kbd-includes_MODNAME)_INCLUDES)
+
+kernel-amiga-m68k-kbd-includes_DEPS := $(GENMODULE)
+kernel-amiga-m68k-kbd-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-kbd-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-kbd-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-kbd-includes_OPTS += -c 
+        kernel-amiga-m68k-kbd-includes_DEPS += 
+    endif 
+else
+    kernel-amiga-m68k-kbd-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/amigakbd.conf
+    kernel-amiga-m68k-kbd-includes_DEPS += $(SRCDIR)/$(CURDIR)/amigakbd.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-kbd-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-kbd-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-kbd-includes_OPTS += -o 
+        kernel-amiga-m68k-kbd-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-amiga-m68k-kbd-includes_OPTS += -s 
+endif
+ifneq ($(kernel-amiga-m68k-kbd_OBJDIR)/include,)
+    kernel-amiga-m68k-kbd-includes_OPTS += -d $(kernel-amiga-m68k-kbd_OBJDIR)/include
+    kernel-amiga-m68k-kbd-includes_TARGETS := $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/include/,$(kernel-amiga-m68k-kbd-includes_TARGETS))
+    kernel-amiga-m68k-kbd-includes_GENINCFLAG=$(kernel-amiga-m68k-kbd_OBJDIR)/include/.amigakbd.hidd-includes
+else
+    kernel-amiga-m68k-kbd-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.amigakbd.hidd-includes
+endif
+
+$(kernel-amiga-m68k-kbd-includes_TARGETS) : $(kernel-amiga-m68k-kbd-includes_DEPS) $(kernel-amiga-m68k-kbd-includes_GENINCFLAG)
+
+$(kernel-amiga-m68k-kbd-includes_GENINCFLAG) : OPTS := $(kernel-amiga-m68k-kbd-includes_OPTS)
+$(kernel-amiga-m68k-kbd-includes_GENINCFLAG) : MODNAME := amigakbd
+$(kernel-amiga-m68k-kbd-includes_GENINCFLAG) : MODTYPE := hidd
+$(kernel-amiga-m68k-kbd-includes_GENINCFLAG) : $(kernel-amiga-m68k-kbd-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-amiga-m68k-kbd_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-amiga-m68k-kbd_DEFNAME)_INCLUDES)) : | $(kernel-amiga-m68k-kbd_OBJDIR)/amigakbd_geninc
+
+$(kernel-amiga-m68k-kbd_OBJDIR)/amigakbd_geninc : COPYSRCDIR := $(kernel-amiga-m68k-kbd_OBJDIR)/include
+$(kernel-amiga-m68k-kbd_OBJDIR)/amigakbd_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-amiga-m68k-kbd_OBJDIR)/amigakbd_geninc : FILES := $($(kernel-amiga-m68k-kbd_DEFNAME)_INCLUDES)
+$(kernel-amiga-m68k-kbd_OBJDIR)/amigakbd_geninc : $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/include/,$($(kernel-amiga-m68k-kbd_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-amiga-m68k-kbd_OBJDIR)/include
+
+$(addprefix $(kernel-amiga-m68k-kbd_INCDIR)/,$($(kernel-amiga-m68k-kbd_DEFNAME)_INCLUDES)) : | $(kernel-amiga-m68k-kbd_OBJDIR)/amigakbd_incs
+
+$(kernel-amiga-m68k-kbd_OBJDIR)/amigakbd_incs : COPYSRCDIR := $(kernel-amiga-m68k-kbd_OBJDIR)/include
+$(kernel-amiga-m68k-kbd_OBJDIR)/amigakbd_incs : TGTDIR := $(kernel-amiga-m68k-kbd_INCDIR)
+$(kernel-amiga-m68k-kbd_OBJDIR)/amigakbd_incs : FILES := $($(kernel-amiga-m68k-kbd_DEFNAME)_INCLUDES)
+$(kernel-amiga-m68k-kbd_OBJDIR)/amigakbd_incs : $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/include/,$($(kernel-amiga-m68k-kbd_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-amiga-m68k-kbd_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-amiga-m68k-kbd_DEFNAME)_INCLUDES))))
+
+TMPamigakbd_INCDIRS := \
+    $(kernel-amiga-m68k-kbd_OBJDIR)/include $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/include/,$(kernel-amiga-m68k-kbd_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-amiga-m68k-kbd_INCDIRS)) \
+    $(kernel-amiga-m68k-kbd_INCDIR) $(addprefix $(kernel-amiga-m68k-kbd_INCDIR)/,$(kernel-amiga-m68k-kbd_INCDIRS))
+
+ifneq (kernel-amiga-m68k-kbd-includes-dirs,)
+kernel-amiga-m68k-kbd-includes-dirs : | $(TMPamigakbd_INCDIRS)
+else
+kernel-amiga-m68k-kbd-includes-dirs :: $(TMPamigakbd_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPamigakbd_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-amiga-m68k-kbd-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-amiga-m68k-kbd-genlibdefs_OPTS += -f 
+    kernel-amiga-m68k-kbd-genlibdefs_MODNAME := amigakbd_
+else
+    kernel-amiga-m68k-kbd-genlibdefs_MODNAME := amigakbd
+endif
+kernel-amiga-m68k-kbd-genlibdefs_TARGET := $(kernel-amiga-m68k-kbd-genlibdefs_MODNAME)_libdefs.h
+kernel-amiga-m68k-kbd-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-kbd-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-kbd-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-kbd-genlibdefs_OPTS += -c 
+        kernel-amiga-m68k-kbd-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-amiga-m68k-kbd-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/amigakbd.conf
+    kernel-amiga-m68k-kbd-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/amigakbd.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-kbd-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-kbd-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-kbd-genlibdefs_OPTS += -o 
+        kernel-amiga-m68k-kbd-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-amiga-m68k-kbd-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-amiga-m68k-kbd_OBJDIR)/include,)
+    kernel-amiga-m68k-kbd-genlibdefs_OPTS += -d $(kernel-amiga-m68k-kbd_OBJDIR)/include
+    kernel-amiga-m68k-kbd-genlibdefs_TARGET := $(kernel-amiga-m68k-kbd_OBJDIR)/include/$(kernel-amiga-m68k-kbd-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-amiga-m68k-kbd-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-amiga-m68k-kbd-genlibdefs_TARGET) : OPTS := $(kernel-amiga-m68k-kbd-genlibdefs_OPTS)
+$(kernel-amiga-m68k-kbd-genlibdefs_TARGET) : MODNAME := amigakbd
+$(kernel-amiga-m68k-kbd-genlibdefs_TARGET) : MODTYPE := hidd
+$(kernel-amiga-m68k-kbd-genlibdefs_TARGET) : $(kernel-amiga-m68k-kbd-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-amiga-m68k-kbd_DEFLIBDEFSINC) : FILENAME := $(kernel-amiga-m68k-kbd_LIBDEFSINC)
+$(kernel-amiga-m68k-kbd_DEFLIBDEFSINC) : $(kernel-amiga-m68k-kbd_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-amiga-m68k-kbd_LIBDEFSINC) $(kernel-amiga-m68k-kbd_DEFLIBDEFSINC) : | $(kernel-amiga-m68k-kbd_OBJDIR)/include
+
+ifneq (kernel-amiga-m68k-kbd-includes-dirs,)
+kernel-amiga-m68k-kbd-includes-dirs : | $(kernel-amiga-m68k-kbd_OBJDIR)/include
+else
+kernel-amiga-m68k-kbd-includes-dirs :: $(kernel-amiga-m68k-kbd_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-kbd_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-amiga-m68k-kbd-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-amiga-m68k-kbd-genmodfiles_OPTS += -f 
+    kernel-amiga-m68k-kbd-genmodfiles_MODNAME := amigakbd_
+else
+    kernel-amiga-m68k-kbd-genmodfiles_MODNAME := amigakbd
+endif
+kernel-amiga-m68k-kbd-genmodfiles_GENTARGETS := $($(kernel-amiga-m68k-kbd-genmodfiles_MODNAME)_STARTFILES) $($(kernel-amiga-m68k-kbd-genmodfiles_MODNAME)_ENDFILES)
+kernel-amiga-m68k-kbd-genmodfiles_STUBTARGETS := $($(kernel-amiga-m68k-kbd-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-amiga-m68k-kbd-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-amiga-m68k-kbd-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-amiga-m68k-kbd-genmodfiles_GENTARGETS))
+kernel-amiga-m68k-kbd-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-amiga-m68k-kbd-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-amiga-m68k-kbd-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-amiga-m68k-kbd-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-amiga-m68k-kbd-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-kbd-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-kbd-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-kbd-genmodfiles_OPTS += -c 
+        kernel-amiga-m68k-kbd-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-amiga-m68k-kbd-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/amigakbd.conf
+    kernel-amiga-m68k-kbd-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/amigakbd.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-kbd-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-kbd-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-kbd-genmodfiles_OPTS += -o 
+        kernel-amiga-m68k-kbd-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-amiga-m68k-kbd-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-amiga-m68k-kbd_OBJDIR),)
+    kernel-amiga-m68k-kbd-genmodfiles_OPTS += -d $(kernel-amiga-m68k-kbd_OBJDIR)
+    kernel-amiga-m68k-kbd-genmodfiles_TARGETDIR := $(shell echo $(kernel-amiga-m68k-kbd_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-amiga-m68k-kbd-genmodfiles_GENTARGETS := $(addprefix $(kernel-amiga-m68k-kbd-genmodfiles_TARGETDIR)/,$(kernel-amiga-m68k-kbd-genmodfiles_GENTARGETS))
+    kernel-amiga-m68k-kbd-genmodfiles_GENFILEFLAG=$(kernel-amiga-m68k-kbd-genmodfiles_TARGETDIR)/.amigakbd.hidd-genfiles
+else
+    kernel-amiga-m68k-kbd-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.amigakbd.hidd-genfiles
+endif
+ifneq ($(kernel-amiga-m68k-kbd_OBJDIR)/linklib,)
+    kernel-amiga-m68k-kbd-genmodfiles_OPTS += -l $(kernel-amiga-m68k-kbd_OBJDIR)/linklib
+    kernel-amiga-m68k-kbd-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-amiga-m68k-kbd_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-amiga-m68k-kbd-genmodfiles_STUBTARGETS := $(addprefix $(kernel-amiga-m68k-kbd-genmodfiles_STUBTARGETDIR)/,$(kernel-amiga-m68k-kbd-genmodfiles_STUBTARGETS))
+    kernel-amiga-m68k-kbd-genmodfiles_TARGETDIRS += $(kernel-amiga-m68k-kbd_OBJDIR)/linklib
+else
+ifneq ($(kernel-amiga-m68k-kbd_OBJDIR),)
+    kernel-amiga-m68k-kbd-genmodfiles_STUBTARGETS := $(addprefix $(kernel-amiga-m68k-kbd-genmodfiles_TARGETDIR)/,$(kernel-amiga-m68k-kbd-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-amiga-m68k-kbd-genmodfiles_TARGETS := $(kernel-amiga-m68k-kbd-genmodfiles_GENTARGETS) $(kernel-amiga-m68k-kbd-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-amiga-m68k-kbd-genmodfiles_TARGETDIRS),)
+$(kernel-amiga-m68k-kbd-genmodfiles_TARGETS) : | $(kernel-amiga-m68k-kbd-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-amiga-m68k-kbd-genmodfiles_TARGETS) : $(kernel-amiga-m68k-kbd-genmodfiles_DEPS) $(kernel-amiga-m68k-kbd-genmodfiles_GENFILEFLAG)
+
+$(kernel-amiga-m68k-kbd-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-amiga-m68k-kbd-genmodfiles_OPTS)
+$(kernel-amiga-m68k-kbd-genmodfiles_GENFILEFLAG) : MODNAME := amigakbd
+$(kernel-amiga-m68k-kbd-genmodfiles_GENFILEFLAG) : MODTYPE := hidd
+$(kernel-amiga-m68k-kbd-genmodfiles_GENFILEFLAG) : $(kernel-amiga-m68k-kbd-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-amiga-m68k-kbd-genmodfiles_GENFILEFLAG) : $(kernel-amiga-m68k-kbd_DEFLIBDEFSINC) $(kernel-amiga-m68k-kbd-makefile)
+
+
+ifneq ($(kernel-amiga-m68k-kbd-genmodfiles_GENFILEFLAG),)
+$(kernel-amiga-m68k-kbd-genmodfiles_GENFILEFLAG) : | $(kernel-amiga-m68k-kbd_OBJDIR)/linklib
+else
+$(kernel-amiga-m68k-kbd-genmodfiles_GENFILEFLAG) :: $(kernel-amiga-m68k-kbd_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-kbd_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-amiga-m68k-kbd_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-amiga-m68k-kbd_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-amiga-m68k-kbd-fd : $(kernel-amiga-m68k-kbd_FDDIR)/amigakbd_lib.fd
+
+
+TMP_TARGET := amigakbd_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/amigakbd.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/amigakbd.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-amiga-m68k-kbd_FDDIR),)
+    TMP_OPTS += -d $(kernel-amiga-m68k-kbd_FDDIR)
+    TMP_TARGET := $(kernel-amiga-m68k-kbd_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := amigakbd
+$(TMP_TARGET) : MODTYPE := hidd
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-amiga-m68k-kbd_FDDIR)/amigakbd_lib.fd : | $(kernel-amiga-m68k-kbd_FDDIR)
+
+
+ifneq (kernel-amiga-m68k-kbd-fd-setup,)
+kernel-amiga-m68k-kbd-fd-setup : | $(kernel-amiga-m68k-kbd_FDDIR)
+else
+kernel-amiga-m68k-kbd-fd-setup :: $(kernel-amiga-m68k-kbd_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-kbd_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-amiga-m68k-kbd_FILES            := kbd_init kbdclass
+kernel-amiga-m68k-kbd_OBJCFILES        := 
+kernel-amiga-m68k-kbd_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-amiga-m68k-kbd_LIBFILES         := 
+kernel-amiga-m68k-kbd_LIBS             := hiddstubs
+
+kernel-amiga-m68k-kbd_FDIRS            := $(sort $(dir $(kernel-amiga-m68k-kbd_FILES)))
+
+kernel-amiga-m68k-kbd_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-amiga-m68k-kbd_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-amiga-m68k-kbd_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-amiga-m68k-kbd_FILTERARCH       = $(filter-out $(call kernel-amiga-m68k-kbd_MATCHARCH,$(1),$(2)),$(2))
+kernel-amiga-m68k-kbd_STARTFILES       := $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$($(kernel-amiga-m68k-kbd_DEFNAME)_STARTFILES))
+kernel-amiga-m68k-kbd_ENDFILES         := $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$($(kernel-amiga-m68k-kbd_DEFNAME)_ENDFILES))
+
+kernel-amiga-m68k-kbd_ARCHOBJS         := $(wildcard $(kernel-amiga-m68k-kbd_OBJDIR)/arch/*.o)
+kernel-amiga-m68k-kbd_LIBARCHOBJS      := $(wildcard $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/arch/*.o)
+kernel-amiga-m68k-kbd_ARCHFILES        := $(basename $(notdir $(kernel-amiga-m68k-kbd_ARCHOBJS)))
+kernel-amiga-m68k-kbd_LIBARCHFILES     := $(basename $(notdir $(kernel-amiga-m68k-kbd_LIBARCHOBJS)))
+kernel-amiga-m68k-kbd_C_NARCHFILES     := $(call kernel-amiga-m68k-kbd_FILTERARCH,$(kernel-amiga-m68k-kbd_ARCHFILES),$(kernel-amiga-m68k-kbd_FILES))
+kernel-amiga-m68k-kbd_CXX_NARCHFILES   := $(call kernel-amiga-m68k-kbd_FILTERARCH,$(kernel-amiga-m68k-kbd_ARCHFILES),$(kernel-amiga-m68k-kbd_CXXFILES))
+kernel-amiga-m68k-kbd_OBJC_NARCHFILES  := $(call kernel-amiga-m68k-kbd_FILTERARCH,$(kernel-amiga-m68k-kbd_ARCHFILES),$(kernel-amiga-m68k-kbd_OBJCFILES))
+kernel-amiga-m68k-kbd_NLIBARCHFILES    := $(call kernel-amiga-m68k-kbd_FILTERARCH,$(kernel-amiga-m68k-kbd_LIBARCHFILES),$(kernel-amiga-m68k-kbd_LIBFILES))
+kernel-amiga-m68k-kbd_ARCHNLIBFILES    := $(call kernel-amiga-m68k-kbd_FILTERARCH,$(kernel-amiga-m68k-kbd_LIBFILES),$(kernel-amiga-m68k-kbd_LIBARCHFILES))
+
+kernel-amiga-m68k-kbd_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-amiga-m68k-kbd_OBJDIR)/include -include $(kernel-amiga-m68k-kbd_DEFLIBDEFSINC))
+ifneq (,)
+kernel-amiga-m68k-kbd_CPPFLAGS         += -I
+endif
+kernel-amiga-m68k-kbd_LINKLIBCPPFLAGS  := $(kernel-amiga-m68k-kbd_CPPFLAGS)
+kernel-amiga-m68k-kbd_CPPFLAGS         += $(strip $($(kernel-amiga-m68k-kbd_DEFNAME)_CPPFLAGS))
+kernel-amiga-m68k-kbd_LINKLIBCPPFLAGS  += $(strip $($(kernel-amiga-m68k-kbd_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-amiga-m68k-kbd_CFLAGS           := $(strip $(CFLAGS) $($(kernel-amiga-m68k-kbd_DEFNAME)_CFLAGS))
+kernel-amiga-m68k-kbd_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-amiga-m68k-kbd_DEFNAME)_LINKLIBCFLAGS))
+kernel-amiga-m68k-kbd_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-amiga-m68k-kbd_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-amiga-m68k-kbd_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-amiga-m68k-kbd_CFLAGS           := $(strip $(kernel-amiga-m68k-kbd_LTOFLAGS) $(kernel-amiga-m68k-kbd_CFLAGS))
+kernel-amiga-m68k-kbd_LINKLIBCFLAGS    := $(strip $(kernel-amiga-m68k-kbd_LTOFLAGS) $(kernel-amiga-m68k-kbd_LINKLIBCFLAGS))
+kernel-amiga-m68k-kbd_CXXFLAGS         := $(strip $(kernel-amiga-m68k-kbd_LTOFLAGS) $(kernel-amiga-m68k-kbd_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-amiga-m68k-kbd_SUBSTNULL        :=
+kernel-amiga-m68k-kbd_SUBSTSPACE       := $(kernel-amiga-m68k-kbd_SUBSTNULL) #
+kernel-amiga-m68k-kbd_SUBSTCOMMA       := ,
+kernel-amiga-m68k-kbd_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-amiga-m68k-kbd_SUBSTSPACE),$(kernel-amiga-m68k-kbd_SUBSTCOMMA),$(strip $($(kernel-amiga-m68k-kbd_DEFNAME)_STARTFILES))))
+kernel-amiga-m68k-kbd_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-amiga-m68k-kbd_CFLAGS           := $(strip $(kernel-amiga-m68k-kbd_INSTRFUNCFLAGS) $(kernel-amiga-m68k-kbd_CFLAGS))
+kernel-amiga-m68k-kbd_CXXFLAGS         := $(strip $(kernel-amiga-m68k-kbd_INSTRFUNCFLAGS) $(kernel-amiga-m68k-kbd_CXXFLAGS))
+kernel-amiga-m68k-kbd_LIBS             += $(kernel-amiga-m68k-kbd_INSTRFUNCLIBS)
+endif
+endif
+kernel-amiga-m68k-kbd_DFLAGS           := $(strip $(kernel-amiga-m68k-kbd_DFLAGS) $($(kernel-amiga-m68k-kbd_DEFNAME)_DFLAGS))
+kernel-amiga-m68k-kbd_LINKLIBDFLAGS    := $(strip $(kernel-amiga-m68k-kbd_DFLAGS) $($(kernel-amiga-m68k-kbd_DEFNAME)_LINKLIBDFLAGS))
+kernel-amiga-m68k-kbd_DXXFLAGS         := $(strip $(kernel-amiga-m68k-kbd_DXXFLAGS) $($(kernel-amiga-m68k-kbd_DEFNAME)_DXXFLAGS))
+
+ifeq (hidd,library)
+    kernel-amiga-m68k-kbd_LIBSUFFIX    := 
+else
+    kernel-amiga-m68k-kbd_LIBSUFFIX    := .hidd
+endif
+
+ifeq (,)
+kernel-amiga-m68k-kbd_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-amiga-m68k-kbd_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-amiga-m68k-kbd_LINKLIBCFILES    := $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$($(kernel-amiga-m68k-kbd_DEFNAME)_LINKLIBFILES))
+kernel-amiga-m68k-kbd_LINKLIBAFILES    := $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$($(kernel-amiga-m68k-kbd_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-amiga-m68k-kbd_DEFNAME)_LINKLIBFILES) $($(kernel-amiga-m68k-kbd_DEFNAME)_LINKLIBAFILES)  $(kernel-amiga-m68k-kbd_ARCHNLIBFILES)),)
+    kernel-amiga-m68k-kbd_LINKLIB      :=
+else
+    kernel-amiga-m68k-kbd_LINKLIB      := $(kernel-amiga-m68k-kbd_LIBDIR)/libamigakbd$(kernel-amiga-m68k-kbd_LIBSUFFIX).a
+    ifneq (amigakbd,$(kernel-amiga-m68k-kbd_LINKLIBNAME))
+        kernel-amiga-m68k-kbd_LINKLIB  += $(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_LINKLIBNAME)$(kernel-amiga-m68k-kbd_LIBSUFFIX).a
+    endif
+endif
+kernel-amiga-m68k-kbd_LINKLIBFILES     := $(kernel-amiga-m68k-kbd_LINKLIBCFILES) $(kernel-amiga-m68k-kbd_LINKLIBAFILES)
+
+kernel-amiga-m68k-kbd_RELLINKLIBCFILES := $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$($(kernel-amiga-m68k-kbd_DEFNAME)_RELLINKLIBFILES))
+kernel-amiga-m68k-kbd_RELLINKLIBAFILES := $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$($(kernel-amiga-m68k-kbd_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-amiga-m68k-kbd_DEFNAME)_RELLINKLIBFILES) $($(kernel-amiga-m68k-kbd_DEFNAME)_RELLINKLIBAFILES)  $(kernel-amiga-m68k-kbd_ARCHNLIBFILES)),)
+    kernel-amiga-m68k-kbd_RELLINKLIB   :=
+else
+    kernel-amiga-m68k-kbd_RELLINKLIB   := $(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_DEFNAME)_rel$(kernel-amiga-m68k-kbd_LIBSUFFIX).a
+    ifneq (amigakbd,$(kernel-amiga-m68k-kbd_LINKLIBNAME))
+        kernel-amiga-m68k-kbd_RELLINKLIB += $(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_LINKLIBNAME)_rel$(kernel-amiga-m68k-kbd_LIBSUFFIX).a
+    endif
+endif
+kernel-amiga-m68k-kbd_RELLINKLIBFILES  := $(kernel-amiga-m68k-kbd_RELLINKLIBCFILES) $(kernel-amiga-m68k-kbd_RELLINKLIBAFILES)
+endif
+
+kernel-amiga-m68k-kbd_ENDOBJS          := $(addsuffix .o,$(kernel-amiga-m68k-kbd_ENDFILES))
+kernel-amiga-m68k-kbd_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-kbd_NLIBARCHFILES))) $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/arch/,$(notdir $(kernel-amiga-m68k-kbd_ARCHNLIBFILES))) $(kernel-amiga-m68k-kbd_LINKLIBFILES)) \
+                 
+kernel-amiga-m68k-kbd_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-kbd_NLIBARCHFILES))) $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/arch/,$(notdir $(kernel-amiga-m68k-kbd_ARCHNLIBFILES))) $(kernel-amiga-m68k-kbd_RELLINKLIBFILES)) \
+                 
+$(kernel-amiga-m68k-kbd_LINKLIBFILES) $(kernel-amiga-m68k-kbd_RELLINKLIBFILES) : | $(kernel-amiga-m68k-kbd_OBJDIR)/linklib
+$(kernel-amiga-m68k-kbd_LINKLIBOBJS) $(kernel-amiga-m68k-kbd_RELLINKLIBOBJS) : | $(kernel-amiga-m68k-kbd_OBJDIR)/linklib
+
+kernel-amiga-m68k-kbd_CCFILES := $(kernel-amiga-m68k-kbd_C_NARCHFILES)
+kernel-amiga-m68k-kbd_TARGETCCFILES    := $(strip $(kernel-amiga-m68k-kbd_STARTFILES) $(kernel-amiga-m68k-kbd_ENDFILES))
+kernel-amiga-m68k-kbd_LINKLIBCCFILES   := $(strip $(kernel-amiga-m68k-kbd_NLIBARCHFILES) $(kernel-amiga-m68k-kbd_LINKLIBCFILES) $(kernel-amiga-m68k-kbd_RELLINKLIBCFILES))
+kernel-amiga-m68k-kbd_LINKLIBCCGENFILES := $(strip $(kernel-amiga-m68k-kbd_LINKLIBCFILES) $(kernel-amiga-m68k-kbd_RELLINKLIBCFILES))
+
+
+kernel-amiga-m68k-kbd_CXXABSBASENAMES := $(foreach kernel-amiga-m68k-kbd_CXXBASE,$(kernel-amiga-m68k-kbd_CXX_NARCHFILES),$(if $(filter /%,$(kernel-amiga-m68k-kbd_CXXBASE)),$(kernel-amiga-m68k-kbd_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-amiga-m68k-kbd_CXXBASE))))
+
+ifneq ($(kernel-amiga-m68k-kbd_CXXABSBASENAMES),)
+
+kernel-amiga-m68k-kbd_CXXBASENAMES := $(basename $(kernel-amiga-m68k-kbd_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-amiga-m68k-kbd_MCXX_FILES  := $(strip $(foreach kernel-amiga-m68k-kbd_CXXBASE,$(kernel-amiga-m68k-kbd_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-amiga-m68k-kbd_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-amiga-m68k-kbd_EXT),$(kernel-amiga-m68k-kbd_CXXBASE)))))))
+
+ifeq (,)
+kernel-amiga-m68k-kbd_MCXX_SRCWILDCARD := %
+else
+kernel-amiga-m68k-kbd_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-amiga-m68k-kbd_OBJDIR),)
+  kernel-amiga-m68k-kbd_CXXTARGETS := $(notdir $(kernel-amiga-m68k-kbd_CXXBASENAMES:=.o))
+  kernel-amiga-m68k-kbd_CXXDTARGETS := $(notdir $(kernel-amiga-m68k-kbd_CXXBASENAMES:=.d))
+  kernel-amiga-m68k-kbd_MCXX_WILDCARD := %
+else
+  kernel-amiga-m68k-kbd_CXXTARGETS := $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(notdir $(kernel-amiga-m68k-kbd_CXXBASENAMES:=.o)))
+  kernel-amiga-m68k-kbd_CXXDTARGETS := $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(notdir $(kernel-amiga-m68k-kbd_CXXBASENAMES:=.d)))
+  kernel-amiga-m68k-kbd_MCXX_WILDCARD := $(kernel-amiga-m68k-kbd_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-amiga-m68k-kbd_CXXTARGETS) $(kernel-amiga-m68k-kbd_CXXDTARGETS) : | $(kernel-amiga-m68k-kbd_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-amiga-m68k-kbd_MCXX_CPPFLAGS := $(kernel-amiga-m68k-kbd_CPPFLAGS)
+kernel-amiga-m68k-kbd_CXXFLAGS := $(kernel-amiga-m68k-kbd_CXXFLAGS)
+ifeq ($(kernel-amiga-m68k-kbd_DXXFLAGS),)
+  kernel-amiga-m68k-kbd_DXXFLAGS := $(kernel-amiga-m68k-kbd_CXXFLAGS)
+else
+  kernel-amiga-m68k-kbd_DXXFLAGS := $(kernel-amiga-m68k-kbd_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-amiga-m68k-kbd_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-amiga-m68k-kbd_STRIP ?= $(HOST_STRIP)
+  kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-amiga-m68k-kbd_CXXCMD:=$(HOST_CXX)
+  kernel-amiga-m68k-kbd_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-amiga-m68k-kbd_MCXX_CPPFLAGS) $(kernel-amiga-m68k-kbd_MCXX_EXTRA_CPPFLAGS))
+  kernel-amiga-m68k-kbd_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-amiga-m68k-kbd_CXXFLAGS))
+  kernel-amiga-m68k-kbd_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-amiga-m68k-kbd_DXXFLAGS))
+  kernel-amiga-m68k-kbd_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-amiga-m68k-kbd_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-amiga-m68k-kbd_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-amiga-m68k-kbd_STRIP ?= $(TARGET_STRIP)
+  kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-amiga-m68k-kbd_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-amiga-m68k-kbd_MCXX_CPPFLAGS := $(strip $(kernel-amiga-m68k-kbd_MCXX_CPPFLAGS) $(kernel-amiga-m68k-kbd_MCXX_EXTRA_CPPFLAGS))
+  kernel-amiga-m68k-kbd_CXXFLAGS := $(strip $(kernel-amiga-m68k-kbd_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-amiga-m68k-kbd_DXXFLAGS := $(kernel-amiga-m68k-kbd_DXXFLAGS)
+  kernel-amiga-m68k-kbd_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-amiga-m68k-kbd_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-amiga-m68k-kbd_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-amiga-m68k-kbd_STRIP ?= $(ECHO) >/dev/null
+  kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-amiga-m68k-kbd_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-amiga-m68k-kbd_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-amiga-m68k-kbd_MCXX_CPPFLAGS) $(kernel-amiga-m68k-kbd_MCXX_EXTRA_CPPFLAGS))
+  kernel-amiga-m68k-kbd_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-amiga-m68k-kbd_CXXFLAGS))
+  kernel-amiga-m68k-kbd_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-amiga-m68k-kbd_DXXFLAGS))
+  kernel-amiga-m68k-kbd_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-amiga-m68k-kbd_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-amiga-m68k-kbd_CXXCMD) $(kernel-amiga-m68k-kbd_CXXIQUOTE) $(dir $(2)) $(kernel-amiga-m68k-kbd_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_CXXIQUOTE) . $(kernel-amiga-m68k-kbd_CXXIQUOTE_END) $(strip $(kernel-amiga-m68k-kbd_CXXFLAGS) $(kernel-amiga-m68k-kbd_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-amiga-m68k-kbd_CXXCMD) $(kernel-amiga-m68k-kbd_CXXIQUOTE) $(dir $(2)) $(kernel-amiga-m68k-kbd_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_CXXIQUOTE) . $(kernel-amiga-m68k-kbd_CXXIQUOTE_END) $(strip $(kernel-amiga-m68k-kbd_CXXFLAGS) $(kernel-amiga-m68k-kbd_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-amiga-m68k-kbd_CXXCMD) $(kernel-amiga-m68k-kbd_CXXIQUOTE) $(dir $(2)) $(kernel-amiga-m68k-kbd_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_CXXIQUOTE) . $(kernel-amiga-m68k-kbd_CXXIQUOTE_END) $(strip $(kernel-amiga-m68k-kbd_CXXFLAGS) $(kernel-amiga-m68k-kbd_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-amiga-m68k-kbd_CXXCMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-kbd_DXXFLAGS) $(kernel-amiga-m68k-kbd_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-amiga-m68k-kbd_OBJDIR),)
+  $(foreach kernel-amiga-m68k-kbd_CXXFILE,$(kernel-amiga-m68k-kbd_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-amiga-m68k-kbd_CXXFILE))),$(kernel-amiga-m68k-kbd_CXXFILE))))
+else
+  $(foreach kernel-amiga-m68k-kbd_CXXFILE,$(kernel-amiga-m68k-kbd_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(notdir $(basename $(kernel-amiga-m68k-kbd_CXXFILE)))),$(kernel-amiga-m68k-kbd_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-amiga-m68k-kbd_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-amiga-m68k-kbd_MOBJC_SRCWILDCARD := %
+else
+kernel-amiga-m68k-kbd_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-amiga-m68k-kbd_OBJDIR),)
+  kernel-amiga-m68k-kbd_MOBJC_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-kbd_OBJC_NARCHFILES))
+  kernel-amiga-m68k-kbd_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-amiga-m68k-kbd_OBJC_NARCHFILES))
+  kernel-amiga-m68k-kbd_MOBJC_WILDCARD := %
+else
+  kernel-amiga-m68k-kbd_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(kernel-amiga-m68k-kbd_OBJC_NARCHFILES)))
+  kernel-amiga-m68k-kbd_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(kernel-amiga-m68k-kbd_OBJC_NARCHFILES)))
+  kernel-amiga-m68k-kbd_MOBJC_WILDCARD := $(kernel-amiga-m68k-kbd_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-amiga-m68k-kbd_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-amiga-m68k-kbd_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-amiga-m68k-kbd_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-kbd_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-amiga-m68k-kbd_MOBJC_DIRS := $(foreach dir, $(kernel-amiga-m68k-kbd_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-kbd_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-amiga-m68k-kbd_MOBJC_DIRS),)
+    kernel-amiga-m68k-kbd_MOBJC_DIRS := $(shell echo $(kernel-amiga-m68k-kbd_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-amiga-m68k-kbd_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-amiga-m68k-kbd_CC := $(TARGET_CC)
+else
+  kernel-amiga-m68k-kbd_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-amiga-m68k-kbd_MOBJC_CPPFLAGS := $(kernel-amiga-m68k-kbd_CPPFLAGS)
+kernel-amiga-m68k-kbd_OBJCFLAGS := $(kernel-amiga-m68k-kbd_CFLAGS)
+kernel-amiga-m68k-kbd_OBJCFLAGS := $(kernel-amiga-m68k-kbd_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-amiga-m68k-kbd_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-amiga-m68k-kbd_OBJCFLAGS)))
+ifeq ($(kernel-amiga-m68k-kbd_DFLAGS),)
+  kernel-amiga-m68k-kbd_OBJCDFLAGS := $(kernel-amiga-m68k-kbd_CFLAGS)
+else
+  kernel-amiga-m68k-kbd_OBJCDFLAGS := $(kernel-amiga-m68k-kbd_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-amiga-m68k-kbd_LINK ?= $(strip $(kernel-amiga-m68k-kbd_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-amiga-m68k-kbd_STRIP ?= $(TARGET_STRIP)
+  kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-amiga-m68k-kbd_CC) $(TARGET_SYSROOT))
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : kernel-amiga-m68k-kbd_MOBJC_CPPFLAGS:=$(strip $(kernel-amiga-m68k-kbd_MOBJC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : kernel-amiga-m68k-kbd_OBJCFLAGS:=$(strip $(kernel-amiga-m68k-kbd_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : kernel-amiga-m68k-kbd_OBJCDFLAGS:=$(kernel-amiga-m68k-kbd_OBJCDFLAGS)
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-amiga-m68k-kbd_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-amiga-m68k-kbd_STRIP ?= $(HOST_STRIP)
+  kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : kernel-amiga-m68k-kbd_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MOBJC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : kernel-amiga-m68k-kbd_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-kbd_OBJCFLAGS))
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : kernel-amiga-m68k-kbd_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-kbd_OBJCDFLAGS))
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-amiga-m68k-kbd_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-amiga-m68k-kbd_STRIP ?= $(ECHO) >/dev/null
+  kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : kernel-amiga-m68k-kbd_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MOBJC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : kernel-amiga-m68k-kbd_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-kbd_OBJCFLAGS))
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : kernel-amiga-m68k-kbd_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-kbd_OBJCDFLAGS))
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-amiga-m68k-kbd_MOBJC_TARGETS) $(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-amiga-m68k-kbd_MOBJC_TARGETS) : CPPFLAGS := $(kernel-amiga-m68k-kbd_MOBJC_CPPFLAGS)
+$(kernel-amiga-m68k-kbd_MOBJC_TARGETS) : CFLAGS := $(kernel-amiga-m68k-kbd_OBJCFLAGS)
+$(kernel-amiga-m68k-kbd_MOBJC_TARGETS) : $(kernel-amiga-m68k-kbd_MOBJC_WILDCARD).o : $(kernel-amiga-m68k-kbd_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-amiga-m68k-kbd_IQUOTE) $(dir $<) $(kernel-amiga-m68k-kbd_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_IQUOTE) . $(kernel-amiga-m68k-kbd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-amiga-m68k-kbd_IQUOTE) $(dir $<) $(kernel-amiga-m68k-kbd_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_IQUOTE) . $(kernel-amiga-m68k-kbd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-amiga-m68k-kbd_IQUOTE) $(dir $<) $(kernel-amiga-m68k-kbd_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_IQUOTE) . $(kernel-amiga-m68k-kbd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-amiga-m68k-kbd_MOBJC_DTARGETS) : $(kernel-amiga-m68k-kbd_MOBJC_WILDCARD).d : $(kernel-amiga-m68k-kbd_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-kbd_OBJCDFLAGS) $(kernel-amiga-m68k-kbd_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-amiga-m68k-kbd_MC_SRCWILDCARD := %
+else
+kernel-amiga-m68k-kbd_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-amiga-m68k-kbd_OBJDIR),)
+kernel-amiga-m68k-kbd_MC_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-kbd_CCFILES))
+kernel-amiga-m68k-kbd_MC_DTARGETS := $(addsuffix .d,$(kernel-amiga-m68k-kbd_CCFILES))
+kernel-amiga-m68k-kbd_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-amiga-m68k-kbd_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(notdir $(kernel-amiga-m68k-kbd_CCFILES))))
+    kernel-amiga-m68k-kbd_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(notdir $(kernel-amiga-m68k-kbd_CCFILES))))
+else
+ifeq (,)
+    kernel-amiga-m68k-kbd_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(kernel-amiga-m68k-kbd_CCFILES)))
+    kernel-amiga-m68k-kbd_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(kernel-amiga-m68k-kbd_CCFILES)))
+else
+    kernel-amiga-m68k-kbd_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(patsubst /%,%,$(kernel-amiga-m68k-kbd_CCFILES))))
+    kernel-amiga-m68k-kbd_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(patsubst /%,%,$(kernel-amiga-m68k-kbd_CCFILES))))
+endif
+endif
+kernel-amiga-m68k-kbd_MC_TGTWILDCARD := $(kernel-amiga-m68k-kbd_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : | $(addsuffix .c,$(kernel-amiga-m68k-kbd_CCFILES))
+
+# Be sure that all .c files are found
+kernel-amiga-m68k-kbd_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-amiga-m68k-kbd_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-kbd_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-amiga-m68k-kbd_MC_DIRS := $(foreach dir, $(kernel-amiga-m68k-kbd_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-kbd_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-amiga-m68k-kbd_MC_DIRS),)
+    kernel-amiga-m68k-kbd_MC_DIRS := $(shell echo $(kernel-amiga-m68k-kbd_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-amiga-m68k-kbd_MC_DIRS)
+endif
+
+endif
+
+kernel-amiga-m68k-kbd_MC_CPPFLAGS := $(kernel-amiga-m68k-kbd_CPPFLAGS)
+kernel-amiga-m68k-kbd_CFLAGS := $(kernel-amiga-m68k-kbd_CFLAGS)
+ifeq ($(kernel-amiga-m68k-kbd_DFLAGS),)
+  kernel-amiga-m68k-kbd_DFLAGS := $(kernel-amiga-m68k-kbd_CFLAGS)
+else
+  kernel-amiga-m68k-kbd_DFLAGS := $(kernel-amiga-m68k-kbd_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-amiga-m68k-kbd_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-amiga-m68k-kbd_STRIP ?= $(TARGET_STRIP)
+kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_MC_CPPFLAGS:=$(strip $(kernel-amiga-m68k-kbd_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_CFLAGS:=$(strip $(kernel-amiga-m68k-kbd_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_DFLAGS:=$(kernel-amiga-m68k-kbd_DFLAGS)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-amiga-m68k-kbd_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-amiga-m68k-kbd_STRIP ?= $(HOST_STRIP)
+kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-kbd_CFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-kbd_DFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-amiga-m68k-kbd_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-amiga-m68k-kbd_STRIP ?= $(ECHO) >/dev/null
+kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-kbd_CFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-kbd_DFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-amiga-m68k-kbd_MC_TARGETS) : CPPFLAGS := $(kernel-amiga-m68k-kbd_MC_CPPFLAGS)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) : CFLAGS := $(kernel-amiga-m68k-kbd_CFLAGS)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) : $(kernel-amiga-m68k-kbd_MC_TGTWILDCARD).o : $(kernel-amiga-m68k-kbd_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-amiga-m68k-kbd_IQUOTE) $(dir $<) $(kernel-amiga-m68k-kbd_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_IQUOTE) . $(kernel-amiga-m68k-kbd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-amiga-m68k-kbd_IQUOTE) $(dir $<) $(kernel-amiga-m68k-kbd_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_IQUOTE) . $(kernel-amiga-m68k-kbd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-amiga-m68k-kbd_IQUOTE) $(dir $<) $(kernel-amiga-m68k-kbd_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_IQUOTE) . $(kernel-amiga-m68k-kbd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-amiga-m68k-kbd_MC_DTARGETS) : $(kernel-amiga-m68k-kbd_MC_TGTWILDCARD).d : $(kernel-amiga-m68k-kbd_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-kbd_DFLAGS) $(kernel-amiga-m68k-kbd_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-amiga-m68k-kbd_MC_SRCWILDCARD := %
+else
+kernel-amiga-m68k-kbd_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-amiga-m68k-kbd_OBJDIR),)
+kernel-amiga-m68k-kbd_MC_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-kbd_TARGETCCFILES))
+kernel-amiga-m68k-kbd_MC_DTARGETS := $(addsuffix .d,$(kernel-amiga-m68k-kbd_TARGETCCFILES))
+kernel-amiga-m68k-kbd_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-amiga-m68k-kbd_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(notdir $(kernel-amiga-m68k-kbd_TARGETCCFILES))))
+    kernel-amiga-m68k-kbd_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(notdir $(kernel-amiga-m68k-kbd_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-amiga-m68k-kbd_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(kernel-amiga-m68k-kbd_TARGETCCFILES)))
+    kernel-amiga-m68k-kbd_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(kernel-amiga-m68k-kbd_TARGETCCFILES)))
+else
+    kernel-amiga-m68k-kbd_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(patsubst /%,%,$(kernel-amiga-m68k-kbd_TARGETCCFILES))))
+    kernel-amiga-m68k-kbd_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(patsubst /%,%,$(kernel-amiga-m68k-kbd_TARGETCCFILES))))
+endif
+endif
+kernel-amiga-m68k-kbd_MC_TGTWILDCARD := $(kernel-amiga-m68k-kbd_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : | $(addsuffix .c,$(kernel-amiga-m68k-kbd_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-amiga-m68k-kbd_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-amiga-m68k-kbd_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-kbd_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-amiga-m68k-kbd_MC_DIRS := $(foreach dir, $(kernel-amiga-m68k-kbd_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-kbd_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-amiga-m68k-kbd_MC_DIRS),)
+    kernel-amiga-m68k-kbd_MC_DIRS := $(shell echo $(kernel-amiga-m68k-kbd_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-amiga-m68k-kbd_MC_DIRS)
+endif
+
+endif
+
+kernel-amiga-m68k-kbd_MC_CPPFLAGS := $(kernel-amiga-m68k-kbd_CPPFLAGS) -D__AROS__
+kernel-amiga-m68k-kbd_CFLAGS := $(kernel-amiga-m68k-kbd_CFLAGS)
+ifeq ($(kernel-amiga-m68k-kbd_DFLAGS),)
+  kernel-amiga-m68k-kbd_DFLAGS := $(kernel-amiga-m68k-kbd_CFLAGS)
+else
+  kernel-amiga-m68k-kbd_DFLAGS := $(kernel-amiga-m68k-kbd_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-amiga-m68k-kbd_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-amiga-m68k-kbd_STRIP ?= $(TARGET_STRIP)
+kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_MC_CPPFLAGS:=$(strip $(kernel-amiga-m68k-kbd_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_CFLAGS:=$(strip $(kernel-amiga-m68k-kbd_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_DFLAGS:=$(kernel-amiga-m68k-kbd_DFLAGS)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-amiga-m68k-kbd_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-amiga-m68k-kbd_STRIP ?= $(HOST_STRIP)
+kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-kbd_CFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-kbd_DFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-amiga-m68k-kbd_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-amiga-m68k-kbd_STRIP ?= $(ECHO) >/dev/null
+kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-kbd_CFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-kbd_DFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-amiga-m68k-kbd_MC_TARGETS) : CPPFLAGS := $(kernel-amiga-m68k-kbd_MC_CPPFLAGS)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) : CFLAGS := $(kernel-amiga-m68k-kbd_CFLAGS)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) : $(kernel-amiga-m68k-kbd_MC_TGTWILDCARD).o : $(kernel-amiga-m68k-kbd_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-amiga-m68k-kbd_IQUOTE) $(dir $<) $(kernel-amiga-m68k-kbd_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_IQUOTE) . $(kernel-amiga-m68k-kbd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-amiga-m68k-kbd_IQUOTE) $(dir $<) $(kernel-amiga-m68k-kbd_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_IQUOTE) . $(kernel-amiga-m68k-kbd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-amiga-m68k-kbd_IQUOTE) $(dir $<) $(kernel-amiga-m68k-kbd_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_IQUOTE) . $(kernel-amiga-m68k-kbd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-amiga-m68k-kbd_MC_DTARGETS) : $(kernel-amiga-m68k-kbd_MC_TGTWILDCARD).d : $(kernel-amiga-m68k-kbd_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-kbd_DFLAGS) $(kernel-amiga-m68k-kbd_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-amiga-m68k-kbd_MC_SRCWILDCARD := %
+else
+kernel-amiga-m68k-kbd_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-amiga-m68k-kbd_OBJDIR)/linklib,)
+kernel-amiga-m68k-kbd_MC_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-kbd_NLIBARCHFILES))
+kernel-amiga-m68k-kbd_MC_DTARGETS := $(addsuffix .d,$(kernel-amiga-m68k-kbd_NLIBARCHFILES))
+kernel-amiga-m68k-kbd_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-amiga-m68k-kbd_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-kbd_NLIBARCHFILES))))
+    kernel-amiga-m68k-kbd_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-kbd_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-amiga-m68k-kbd_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$(kernel-amiga-m68k-kbd_NLIBARCHFILES)))
+    kernel-amiga-m68k-kbd_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$(kernel-amiga-m68k-kbd_NLIBARCHFILES)))
+else
+    kernel-amiga-m68k-kbd_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-amiga-m68k-kbd_NLIBARCHFILES))))
+    kernel-amiga-m68k-kbd_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-amiga-m68k-kbd_NLIBARCHFILES))))
+endif
+endif
+kernel-amiga-m68k-kbd_MC_TGTWILDCARD := $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : | $(addsuffix .c,$(kernel-amiga-m68k-kbd_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-amiga-m68k-kbd_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-amiga-m68k-kbd_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-kbd_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-amiga-m68k-kbd_MC_DIRS := $(foreach dir, $(kernel-amiga-m68k-kbd_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-kbd_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-amiga-m68k-kbd_MC_DIRS),)
+    kernel-amiga-m68k-kbd_MC_DIRS := $(shell echo $(kernel-amiga-m68k-kbd_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-amiga-m68k-kbd_MC_DIRS)
+endif
+
+endif
+
+kernel-amiga-m68k-kbd_MC_CPPFLAGS := $(kernel-amiga-m68k-kbd_LINKLIBCPPFLAGS) -D__AROS__
+kernel-amiga-m68k-kbd_CFLAGS := $(kernel-amiga-m68k-kbd_LINKLIBCFLAGS)
+ifeq ($(kernel-amiga-m68k-kbd_LINKLIBDFLAGS),)
+  kernel-amiga-m68k-kbd_DFLAGS := $(kernel-amiga-m68k-kbd_LINKLIBCFLAGS)
+else
+  kernel-amiga-m68k-kbd_DFLAGS := $(kernel-amiga-m68k-kbd_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-amiga-m68k-kbd_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-amiga-m68k-kbd_STRIP ?= $(TARGET_STRIP)
+kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_MC_CPPFLAGS:=$(strip $(kernel-amiga-m68k-kbd_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_CFLAGS:=$(strip $(kernel-amiga-m68k-kbd_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_DFLAGS:=$(kernel-amiga-m68k-kbd_DFLAGS)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-amiga-m68k-kbd_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-amiga-m68k-kbd_STRIP ?= $(HOST_STRIP)
+kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-kbd_CFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-kbd_DFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-amiga-m68k-kbd_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-amiga-m68k-kbd_STRIP ?= $(ECHO) >/dev/null
+kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-kbd_CFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-kbd_DFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-amiga-m68k-kbd_MC_TARGETS) : CPPFLAGS := $(kernel-amiga-m68k-kbd_MC_CPPFLAGS)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) : CFLAGS := $(kernel-amiga-m68k-kbd_CFLAGS)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) : $(kernel-amiga-m68k-kbd_MC_TGTWILDCARD).o : $(kernel-amiga-m68k-kbd_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-amiga-m68k-kbd_IQUOTE) $(dir $<) $(kernel-amiga-m68k-kbd_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_IQUOTE) . $(kernel-amiga-m68k-kbd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-amiga-m68k-kbd_IQUOTE) $(dir $<) $(kernel-amiga-m68k-kbd_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_IQUOTE) . $(kernel-amiga-m68k-kbd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-amiga-m68k-kbd_IQUOTE) $(dir $<) $(kernel-amiga-m68k-kbd_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_IQUOTE) . $(kernel-amiga-m68k-kbd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-amiga-m68k-kbd_MC_DTARGETS) : $(kernel-amiga-m68k-kbd_MC_TGTWILDCARD).d : $(kernel-amiga-m68k-kbd_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-kbd_DFLAGS) $(kernel-amiga-m68k-kbd_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-amiga-m68k-kbd_OBJDIR)/linklib,)
+kernel-amiga-m68k-kbd_MC_SRCWILDCARD := %
+else
+kernel-amiga-m68k-kbd_MC_SRCWILDCARD := $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-amiga-m68k-kbd_OBJDIR)/linklib,)
+kernel-amiga-m68k-kbd_MC_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-kbd_LINKLIBCCGENFILES))
+kernel-amiga-m68k-kbd_MC_DTARGETS := $(addsuffix .d,$(kernel-amiga-m68k-kbd_LINKLIBCCGENFILES))
+kernel-amiga-m68k-kbd_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-amiga-m68k-kbd_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-kbd_LINKLIBCCGENFILES))))
+    kernel-amiga-m68k-kbd_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-kbd_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-amiga-m68k-kbd_OBJDIR)/linklib,)
+    kernel-amiga-m68k-kbd_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$(kernel-amiga-m68k-kbd_LINKLIBCCGENFILES)))
+    kernel-amiga-m68k-kbd_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$(kernel-amiga-m68k-kbd_LINKLIBCCGENFILES)))
+else
+    kernel-amiga-m68k-kbd_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$(patsubst $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/%,%,$(kernel-amiga-m68k-kbd_LINKLIBCCGENFILES))))
+    kernel-amiga-m68k-kbd_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$(patsubst $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/%,%,$(kernel-amiga-m68k-kbd_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-amiga-m68k-kbd_MC_TGTWILDCARD := $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : | $(addsuffix .c,$(kernel-amiga-m68k-kbd_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-amiga-m68k-kbd_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-amiga-m68k-kbd_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-kbd_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-amiga-m68k-kbd_MC_DIRS := $(foreach dir, $(kernel-amiga-m68k-kbd_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-kbd_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-amiga-m68k-kbd_MC_DIRS),)
+    kernel-amiga-m68k-kbd_MC_DIRS := $(shell echo $(kernel-amiga-m68k-kbd_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-amiga-m68k-kbd_MC_DIRS)
+endif
+
+endif
+
+kernel-amiga-m68k-kbd_MC_CPPFLAGS := $(kernel-amiga-m68k-kbd_LINKLIBCPPFLAGS) -D__AROS__
+kernel-amiga-m68k-kbd_CFLAGS := $(kernel-amiga-m68k-kbd_LINKLIBCFLAGS)
+ifeq ($(kernel-amiga-m68k-kbd_LINKLIBDFLAGS),)
+  kernel-amiga-m68k-kbd_DFLAGS := $(kernel-amiga-m68k-kbd_LINKLIBCFLAGS)
+else
+  kernel-amiga-m68k-kbd_DFLAGS := $(kernel-amiga-m68k-kbd_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-amiga-m68k-kbd_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-amiga-m68k-kbd_STRIP ?= $(TARGET_STRIP)
+kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_MC_CPPFLAGS:=$(strip $(kernel-amiga-m68k-kbd_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_CFLAGS:=$(strip $(kernel-amiga-m68k-kbd_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_DFLAGS:=$(kernel-amiga-m68k-kbd_DFLAGS)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-amiga-m68k-kbd_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-amiga-m68k-kbd_STRIP ?= $(HOST_STRIP)
+kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-kbd_CFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-kbd_DFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-amiga-m68k-kbd_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-amiga-m68k-kbd_STRIP ?= $(ECHO) >/dev/null
+kernel-amiga-m68k-kbd_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_CPPFLAGS) $(kernel-amiga-m68k-kbd_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-kbd_CFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-kbd_DFLAGS))
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) $(kernel-amiga-m68k-kbd_MC_DTARGETS) : kernel-amiga-m68k-kbd_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-amiga-m68k-kbd_MC_TARGETS) : CPPFLAGS := $(kernel-amiga-m68k-kbd_MC_CPPFLAGS)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) : CFLAGS := $(kernel-amiga-m68k-kbd_CFLAGS)
+$(kernel-amiga-m68k-kbd_MC_TARGETS) : $(kernel-amiga-m68k-kbd_MC_TGTWILDCARD).o : $(kernel-amiga-m68k-kbd_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-amiga-m68k-kbd_IQUOTE) $(dir $<) $(kernel-amiga-m68k-kbd_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_IQUOTE) . $(kernel-amiga-m68k-kbd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-amiga-m68k-kbd_IQUOTE) $(dir $<) $(kernel-amiga-m68k-kbd_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_IQUOTE) . $(kernel-amiga-m68k-kbd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-amiga-m68k-kbd_IQUOTE) $(dir $<) $(kernel-amiga-m68k-kbd_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-kbd_IQUOTE) . $(kernel-amiga-m68k-kbd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-amiga-m68k-kbd_MC_DTARGETS) : $(kernel-amiga-m68k-kbd_MC_TGTWILDCARD).d : $(kernel-amiga-m68k-kbd_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-kbd_DFLAGS) $(kernel-amiga-m68k-kbd_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-amiga-m68k-kbd_LINKLIBAFILES),)
+
+ifeq ($(kernel-amiga-m68k-kbd_OBJDIR)/linklib,)
+kernel-amiga-m68k-kbd-MA_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-kbd_LINKLIBAFILES) $(kernel-amiga-m68k-kbd_RELLINKLIBAFILES))
+kernel-amiga-m68k-kbd-MA_WILDCARD := %
+else
+kernel-amiga-m68k-kbd-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-kbd_LINKLIBAFILES) $(kernel-amiga-m68k-kbd_RELLINKLIBAFILES))))
+kernel-amiga-m68k-kbd-MA_WILDCARD := $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-amiga-m68k-kbd-MA_TARGETS) : | $(addsuffix .S,$(kernel-amiga-m68k-kbd_LINKLIBAFILES) $(kernel-amiga-m68k-kbd_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-amiga-m68k-kbd-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-amiga-m68k-kbd-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-kbd_LINKLIBAFILES) $(kernel-amiga-m68k-kbd_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-amiga-m68k-kbd-MA_DIRS := $(foreach dir, $(kernel-amiga-m68k-kbd-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-kbd-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-amiga-m68k-kbd-MA_DIRS),)
+    kernel-amiga-m68k-kbd-MA_DIRS := $(shell echo $(kernel-amiga-m68k-kbd-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-amiga-m68k-kbd-MA_DIRS)
+endif
+
+endif
+
+kernel-amiga-m68k-kbd-MA_ASSEMBLER ?= $(kernel-amiga-m68k-kbd_ASSEMBLER)
+
+$(kernel-amiga-m68k-kbd-MA_TARGETS) : kernel-amiga-m68k-kbd-MA_CMD:= $(kernel-amiga-m68k-kbd-MA_ASSEMBLER)
+
+$(kernel-amiga-m68k-kbd-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-amiga-m68k-kbd-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-amiga-m68k-kbd-MA_TARGETS) : $(kernel-amiga-m68k-kbd-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-amiga-m68k-kbd-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-amiga-m68k-kbd-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-amiga-m68k-kbd-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-amiga-m68k-kbd_SUFFIX           := hidd
+else
+kernel-amiga-m68k-kbd_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-amiga-m68k-kbd_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-amiga-m68k-kbd_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-amiga-m68k-kbd_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-amiga-m68k-kbd_SUFFIX),handler)
+kernel-amiga-m68k-kbd_MODULE           := $(AROSDIR)/$(kernel-amiga-m68k-kbd_MODDIR)/$(kernel-amiga-m68k-kbd_DEFNAME)-$(kernel-amiga-m68k-kbd_SUFFIX)
+else
+kernel-amiga-m68k-kbd_MODULE           := $(AROSDIR)/$(kernel-amiga-m68k-kbd_MODDIR)/$(kernel-amiga-m68k-kbd_DEFNAME).$(kernel-amiga-m68k-kbd_SUFFIX)
+endif
+kernel-amiga-m68k-kbd_KOBJ             := $(KOBJSDIR)/$(kernel-amiga-m68k-kbd_DEFNAME)_$(kernel-amiga-m68k-kbd_SUFFIX).o
+else
+kernel-amiga-m68k-kbd_MODULE           :=
+kernel-amiga-m68k-kbd_KOBJ             :=
+endif
+
+kernel-amiga-m68k-kbd-quick      : kernel-amiga-m68k-kbd
+kernel-amiga-m68k-kbd            : $(kernel-amiga-m68k-kbd_MODULE) $(kernel-amiga-m68k-kbd_LINKLIB) $(kernel-amiga-m68k-kbd_RELLINKLIB)
+ifeq (M,M)
+kernel-amiga-m68k-kbd-kobj       : $(kernel-amiga-m68k-kbd_KOBJ) $(kernel-amiga-m68k-kbd_LINKLIB) $(kernel-amiga-m68k-kbd_RELLINKLIB)
+kernel-amiga-m68k-kbd-kobj-quick : $(kernel-amiga-m68k-kbd_KOBJ) $(kernel-amiga-m68k-kbd_LINKLIB) $(kernel-amiga-m68k-kbd_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-amiga-m68k-kbd-linklib    : $(kernel-amiga-m68k-kbd_LINKLIB) $(kernel-amiga-m68k-kbd_RELLINKLIB)
+endif
+
+kernel-amiga-m68k-kbd_OBJS := $(addsuffix .o,$(kernel-amiga-m68k-kbd_STARTFILES)) $(kernel-amiga-m68k-kbd_ARCHOBJS) \
+           $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(notdir $(kernel-amiga-m68k-kbd_C_NARCHFILES:=.o) $(kernel-amiga-m68k-kbd_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (hidd,handler)
+kernel-amiga-m68k-kbd_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (amigakbd,con)
+    kernel-amiga-m68k-kbd_ERR          := $(notdir $(kernel-amiga-m68k-kbd_MODULE)).err
+else
+    kernel-amiga-m68k-kbd_ERR          := amigakbd.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-amiga-m68k-kbd_DEFNAME)_LDFLAGS) $(kernel-amiga-m68k-kbd_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-amiga-m68k-kbd_LIBS) $($(kernel-amiga-m68k-kbd_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-amiga-m68k-kbd_MODULE) : LIB_NAMES := $(kernel-amiga-m68k-kbd_LIBS) $($(kernel-amiga-m68k-kbd_DEFNAME)_LIBS)
+$(kernel-amiga-m68k-kbd_MODULE) : OBJS := $(kernel-amiga-m68k-kbd_STARTOBJS) $(kernel-amiga-m68k-kbd_OBJS) $(USER_OBJS)
+$(kernel-amiga-m68k-kbd_MODULE) : ENDTAG := $(kernel-amiga-m68k-kbd_ENDOBJS)
+$(kernel-amiga-m68k-kbd_MODULE) : ERR := $(kernel-amiga-m68k-kbd_ERR)
+$(kernel-amiga-m68k-kbd_MODULE) : OBJDIR := $(kernel-amiga-m68k-kbd_OBJDIR)
+$(kernel-amiga-m68k-kbd_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-amiga-m68k-kbd_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-amiga-m68k-kbd_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-amiga-m68k-kbd_MODULE) : $(kernel-amiga-m68k-kbd_STARTOBJS) $(kernel-amiga-m68k-kbd_OBJS) $(USER_OBJS) $(kernel-amiga-m68k-kbd_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-amiga-m68k-kbd_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-amiga-m68k-kbd_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-amiga-m68k-kbd_LC_LINKLIBNAME   := $(shell echo $(kernel-amiga-m68k-kbd_LINKLIBNAME) | tr A-Z a-z)
+kernel-amiga-m68k-kbd_LC_MODNAME       := $(shell echo amigakbd | tr A-Z a-z)
+ifneq ($(kernel-amiga-m68k-kbd_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_LINKLIBNAME)$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_AR:=$(AR)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_LINKLIBNAME)$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_LINKLIBNAME)$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_AR:=$(HOST_AR)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_LINKLIBNAME)$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_LINKLIBNAME)$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_AR:=$(KERNEL_AR)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_LINKLIBNAME)$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_LINKLIBNAME)$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : $(kernel-amiga-m68k-kbd_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-amiga-m68k-kbd_AR) $@ $^
+	$(Q)$(kernel-amiga-m68k-kbd_RANLIB) $@
+ifneq ($(kernel-amiga-m68k-kbd_LC_MODNAME),$(kernel-amiga-m68k-kbd_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-amiga-m68k-kbd_LIBDIR)/libamigakbd$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_AR:=$(AR)
+$(kernel-amiga-m68k-kbd_LIBDIR)/libamigakbd$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-amiga-m68k-kbd_LIBDIR)/libamigakbd$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_AR:=$(HOST_AR)
+$(kernel-amiga-m68k-kbd_LIBDIR)/libamigakbd$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-amiga-m68k-kbd_LIBDIR)/libamigakbd$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_AR:=$(KERNEL_AR)
+$(kernel-amiga-m68k-kbd_LIBDIR)/libamigakbd$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-amiga-m68k-kbd_LIBDIR)/libamigakbd$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : $(kernel-amiga-m68k-kbd_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-amiga-m68k-kbd_AR) $@ $^
+	$(Q)$(kernel-amiga-m68k-kbd_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-amiga-m68k-kbd_LINKLIB),)
+$(kernel-amiga-m68k-kbd_LINKLIB) : | $(kernel-amiga-m68k-kbd_LIBDIR)
+else
+$(kernel-amiga-m68k-kbd_LINKLIB) :: $(kernel-amiga-m68k-kbd_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-kbd_LIBDIR)
+
+endif
+
+ifneq ($(kernel-amiga-m68k-kbd_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_LINKLIBNAME)_rel$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_AR:=$(AR)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_LINKLIBNAME)_rel$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_LINKLIBNAME)_rel$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_AR:=$(HOST_AR)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_LINKLIBNAME)_rel$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_LINKLIBNAME)_rel$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_AR:=$(KERNEL_AR)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_LINKLIBNAME)_rel$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_LINKLIBNAME)_rel$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : $(kernel-amiga-m68k-kbd_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-amiga-m68k-kbd_AR) $@ $^
+	$(Q)$(kernel-amiga-m68k-kbd_RANLIB) $@
+ifneq ($(kernel-amiga-m68k-kbd_LC_MODNAME),$(kernel-amiga-m68k-kbd_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_DEFNAME)_rel$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_AR:=$(AR)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_DEFNAME)_rel$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_DEFNAME)_rel$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_AR:=$(HOST_AR)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_DEFNAME)_rel$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_DEFNAME)_rel$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_AR:=$(KERNEL_AR)
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_DEFNAME)_rel$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : kernel-amiga-m68k-kbd_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-amiga-m68k-kbd_LIBDIR)/lib$(kernel-amiga-m68k-kbd_DEFNAME)_rel$(kernel-amiga-m68k-kbd_LIBSUFFIX).a : $(kernel-amiga-m68k-kbd_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-amiga-m68k-kbd_AR) $@ $^
+	$(Q)$(kernel-amiga-m68k-kbd_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-amiga-m68k-kbd_RELLINKLIB),)
+$(kernel-amiga-m68k-kbd_RELLINKLIB) : | $(kernel-amiga-m68k-kbd_LIBDIR)
+else
+$(kernel-amiga-m68k-kbd_RELLINKLIB) :: $(kernel-amiga-m68k-kbd_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-kbd_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-amiga-m68k-kbd_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-amiga-m68k-kbd_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-amiga-m68k-kbd_SYMBOLS := $(kernel-amiga-m68k-kbd_KBASE)
+
+kernel-amiga-m68k-kbd_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-amiga-m68k-kbd_KOBJ_LIBS        := $(filter-out $(kernel-amiga-m68k-kbd_KLIB),$(kernel-amiga-m68k-kbd_LIBS)) $(kernel-amiga-m68k-kbd_KAUTOLIB)
+$(kernel-amiga-m68k-kbd_KOBJ) : LINKLIBS:=$(kernel-amiga-m68k-kbd_KOBJ_LIBS) $($(kernel-amiga-m68k-kbd_DEFNAME)_LIBS)
+$(kernel-amiga-m68k-kbd_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-amiga-m68k-kbd_SYMBOLS))
+$(kernel-amiga-m68k-kbd_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-amiga-m68k-kbd_KOBJ) : $(kernel-amiga-m68k-kbd_OBJS) $(USER_OBJS) $(kernel-amiga-m68k-kbd_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-amiga-m68k-kbd_DEPS             := $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/,$(notdir $(kernel-amiga-m68k-kbd_CCFILES:=.d) $(kernel-amiga-m68k-kbd_TARGETCCFILES:=.d) $(kernel-amiga-m68k-kbd_CXXFILES:=.d))) $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-kbd_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-amiga-m68k-kbd_DEPS),)
+  ifneq (kernel-amiga-m68k-kbd kernel-amiga-m68k-kbd-quick kernel-amiga-m68k-kbd-kobj kernel-amiga-m68k-kbd-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-amiga-m68k-kbd kernel-amiga-m68k-kbd-quick kernel-amiga-m68k-kbd-kobj kernel-amiga-m68k-kbd-kobj-quick),)
+      -include $(kernel-amiga-m68k-kbd_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-amiga-m68k-kbd_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-amiga-m68k-kbd_OBJS) $(kernel-amiga-m68k-kbd_DEPS) : | $(kernel-amiga-m68k-kbd_OBJDIR)/linklib
+
+ifneq ($(kernel-amiga-m68k-kbd_OBJS) $(kernel-amiga-m68k-kbd_DEPS) $(kernel-amiga-m68k-kbd_MODULE) $(kernel-amiga-m68k-kbd_KOBJ),)
+$(kernel-amiga-m68k-kbd_OBJS) $(kernel-amiga-m68k-kbd_DEPS) $(kernel-amiga-m68k-kbd_MODULE) $(kernel-amiga-m68k-kbd_KOBJ) : | $(kernel-amiga-m68k-kbd_OBJDIR) $(AROSDIR)/$(kernel-amiga-m68k-kbd_MODDIR) $(KOBJSDIR)
+else
+$(kernel-amiga-m68k-kbd_OBJS) $(kernel-amiga-m68k-kbd_DEPS) $(kernel-amiga-m68k-kbd_MODULE) $(kernel-amiga-m68k-kbd_KOBJ) :: $(kernel-amiga-m68k-kbd_OBJDIR) $(AROSDIR)/$(kernel-amiga-m68k-kbd_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-kbd_OBJDIR) $(AROSDIR)/$(kernel-amiga-m68k-kbd_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-amiga-m68k-kbd kernel-amiga-m68k-kbd-includes kernel-amiga-m68k-kbd-quick kernel-amiga-m68k-kbd-kobj kernel-amiga-m68k-kbd-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-amiga-m68k-kbd_DFILE_DEPS := $(kernel-amiga-m68k-kbd_LIBDEFSINC) $(kernel-amiga-m68k-kbd_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-amiga-m68k-kbd_INCDIR)/,$($(kernel-amiga-m68k-kbd_DEFNAME)_INCLUDES))
+$(kernel-amiga-m68k-kbd_DEPS) : $(kernel-amiga-m68k-kbd_DFILE_DEPS)
+endif
+
+kernel-amiga-m68k-kbd_TOCLEAN := $(kernel-amiga-m68k-kbd_OBJS) $(kernel-amiga-m68k-kbd_DEPS) \
+    $(kernel-amiga-m68k-kbd_MODULE) $(kernel-amiga-m68k-kbd_LINKLIB) $(kernel-amiga-m68k-kbd_KOBJ) \
+    $(kernel-amiga-m68k-kbd_OBJDIR)/Makefile.amigakbdhidd \
+    $(addprefix $(kernel-amiga-m68k-kbd_OBJDIR)/include/,$($(kernel-amiga-m68k-kbd_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-amiga-m68k-kbd_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-amiga-m68k-kbd_INCDIR)/,$($(kernel-amiga-m68k-kbd_DEFNAME)_INCLUDES)) \
+    $(kernel-amiga-m68k-kbd_OBJDIR)/amigakbd_geninc $(kernel-amiga-m68k-kbd_OBJDIR)/amigakbd_incs \
+    $(addsuffix .c,$(kernel-amiga-m68k-kbd_LINKLIBFILES)) $(kernel-amiga-m68k-kbd_LINKLIBOBJS) $(kernel-amiga-m68k-kbd_LIBDEFSINC) \
+    $(kernel-amiga-m68k-kbd_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-amiga-m68k-kbd_STARTFILES) $(kernel-amiga-m68k-kbd_ENDFILES)) \
+    $(kernel-amiga-m68k-kbd_ENDOBJS)
+kernel-amiga-m68k-kbd-clean : FILES              := $(kernel-amiga-m68k-kbd_TOCLEAN)
+kernel-amiga-m68k-kbd-clean ::
+	$(Q)$(ECHO) "Cleaning up for module amigakbd"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-amiga-m68k-kbd_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

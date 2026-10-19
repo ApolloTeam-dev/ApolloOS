@@ -1,0 +1,45 @@
+include $(SRCDIR)/config/aros.cfg
+
+#MM- includes-copy: external-openurl-includes external-openurl-fd
+
+#MM external-openurl-includes : \
+#MM     kernel-exec-includes \
+#MM     kernel-dos-includes \
+#MM     kernel-utility-includes
+
+
+.PHONY : external-openurl-includes
+
+#MM
+external-openurl-includes :
+	$(Q)cd $(SRCDIR)/$(CURDIR) && $(CPYDIRREC) -s $(SRCDIR)/$(CURDIR)/C/include -d $(AROS_INCLUDES)/ -e 
+
+
+
+external-openurl-fd_SRC := $(shell echo fd | sed 's/^\(.\):\//\/\1\//')
+
+
+ifneq (setup,)
+setup : | $(AROS_SDK_FD)
+else
+setup :: $(AROS_SDK_FD)
+endif
+
+GLOB_MKDIRS += $(AROS_SDK_FD)
+
+
+.PHONY : external-openurl-fd
+
+#MM
+external-openurl-fd : | $(AROS_SDK_FD) 
+	$(foreach file, openurl_lib.fd, $(shell $(CP) $(addprefix $(if $(filter /%,$(external-openurl-fd_SRC)),$(external-openurl-fd_SRC),$(SRCDIR)/$(CURDIR)/$(external-openurl-fd_SRC))/, $(file)) $(addprefix $(AROS_SDK_FD)/, $(file))))
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

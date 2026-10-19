@@ -1,0 +1,2631 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- workbench-libs-freetype-complete : \
+#MM     workbench-libs-freetype-linklib \
+#MM     workbench-libs-freetype-module
+#MM workbench-libs-freetype-linklib : freetype2-fetch
+#MM workbench-libs-freetype-module : freetype2-fetch
+
+FT2NAME         := freetype
+FT2VERS         := 2.10.0
+ARCHBASE        := $(FT2NAME)-$(FT2VERS)
+
+FT2SRCDIR       := $(PORTSDIR)/$(FT2NAME)2/$(ARCHBASE)
+FT2AROSBUILDDIR := $(FT2SRCDIR)/builds/aros/src
+
+PATCHSPEC       := $(ARCHBASE)-aros.diff:$(ARCHBASE):-p1
+REPOSITORIES    := https://download.savannah.gnu.org/releases/freetype
+
+
+.PHONY: freetype2-fetch
+
+ifneq ($(TOOLDIR),)
+    freetype2-fetch-tooldir := "$(TOOLDIR)/"
+else
+    freetype2-fetch-tooldir := "$(TOOLDIR)/"
+endif
+
+ifneq ($(PORTSSOURCEDIR),)
+    freetype2-fetch-location := $(PORTSSOURCEDIR)
+else
+    freetype2-fetch-location := $(PORTSDIR)/$(FT2NAME)2
+endif
+
+freetype2-fetch-fetchedflag := $(freetype2-fetch-location)/.$(ARCHBASE)-fetched
+
+#MM
+freetype2-fetch :
+	$(Q)$(ECHO) "Fetching   $(ARCHBASE) ..."
+	$(Q)TOOLDIR="$(freetype2-fetch-tooldir)" $(FETCH) -ao "$(REPOSITORIES)" -a $(ARCHBASE) -s "tar.gz" -l $(freetype2-fetch-location) \
+	-d $(PORTSDIR)/$(FT2NAME)2 -po "$(SRCDIR)/$(CURDIR)" -p "$(PATCHSPEC)"
+	$(Q)$(IF) ! $(TEST) -f $(freetype2-fetch-fetchedflag) ; then \
+		 $(TOUCH) $(freetype2-fetch-fetchedflag) ; \
+	fi
+
+#	$(Q)$(IF) ! $(TEST) -f $(freetype2-fetch-fetchedflag) ; then \
+#		$(ECHO) "Fetching   $(ARCHBASE) ..." \
+#		&& $(FETCH) -ao "$(REPOSITORIES)" -a $(ARCHBASE) -s "tar.gz" -l $(freetype2-fetch-location) \
+#		-d $(PORTSDIR)/$(FT2NAME)2 -po "$(SRCDIR)/$(CURDIR)" -p "$(PATCHSPEC)" \
+#		&& $(TOUCH) $(freetype2-fetch-fetchedflag) ; \
+#	fi
+
+
+.PHONY: freetype2-create-patch
+
+ifneq (,)
+    freetype2-create-patch-exclude := -X ./exclude.patterns
+endif
+
+ifneq (,)
+    freetype2-create-patch-srcdir   := 
+else
+    freetype2-create-patch-srcdir   := $(ARCHBASE)
+endif
+
+#MM- freetype2-create-patch :  freetype2-create-patch-diff 
+#MM- freetype2-create-patch-quick :  freetype2-create-patch-diff 
+
+#MM
+freetype2-create-patch-diff:
+	$(Q)$(FETCH) -a $(ARCHBASE) -s "tar.gz" -l $(PORTSSOURCEDIR) -d $(PORTSDIR)/$(FT2NAME)2/tmp ; \
+	$(MV) $(PORTSDIR)/$(FT2NAME)2/$(freetype2-create-patch-srcdir) $(PORTSDIR)/$(FT2NAME)2/tmp/$(freetype2-create-patch-srcdir).aros ; \
+	cd $(PORTSDIR)/$(FT2NAME)2/tmp ; \
+	$(FOR) f in  ; do \
+	    $(ECHO) $$f >> ./exclude.patterns ; \
+	done ; \
+	$(ECHO) "Creating   \`$(ARCHBASE)-aros-new.diff'" ; \
+	diff -ruN $(freetype2-create-patch-exclude) \
+	    $(freetype2-create-patch-srcdir) \
+	    $(freetype2-create-patch-srcdir).aros \
+	    >$(SRCDIR)/$(CURDIR)/$(ARCHBASE)-aros-new.diff ; \
+	$(MV) $(PORTSDIR)/$(FT2NAME)2/tmp/$(freetype2-create-patch-srcdir).aros $(PORTSDIR)/$(FT2NAME)2/$(freetype2-create-patch-srcdir) ; \
+	$(RM) $(PORTSDIR)/$(FT2NAME)2/tmp
+
+FT2AUXFILES := \
+    cache/ftcache \
+    gzip/ftgzip \
+    lzw/ftlzw \
+    psaux/psaux \
+    psnames/psnames
+
+FT2RASTFILES := \
+    raster/raster \
+    smooth/smooth
+
+FT2FONTFILES := \
+    cff/cff \
+    sfnt/sfnt \
+    truetype/truetype \
+    type1/type1 \
+    cid/type1cid \
+    type42/type42 \
+    pcf/pcf \
+    pfr/pfr \
+    winfonts/winfnt \
+    bdf/bdf
+
+FT2HINTFILES := \
+    autofit/autofit
+FT2HINTFILES += \
+    pshinter/pshinter
+
+FT2BASEFILES := \
+    base/ftbase \
+    base/ftinit \
+    base/ftdebug \
+    base/ftsystem
+
+FT2BASEEXTFILES := \
+    base/ftbbox \
+    base/ftbdf \
+    base/ftbitmap \
+    base/ftcid \
+    base/ftfstype \
+    base/ftgasp \
+    base/ftglyph \
+    base/ftgxval \
+    base/ftmm \
+    base/ftotval \
+    base/ftpatent \
+    base/ftpfr \
+    base/ftstroke \
+    base/ftsynth \
+    base/fttype1 \
+    base/ftwinfnt
+
+# Substitute BASEFILES with the AROS specific versions
+FT2BASEARCHFILES  := $(patsubst $(FT2AROSBUILDDIR)/%,%,$(basename $(wildcard $(FT2AROSBUILDDIR)/base/*.c)))
+FT2BASENARCHFILES := $(addprefix $(FT2SRCDIR)/src/,$(filter-out $(FT2BASEARCHFILES),$(FT2BASEFILES) $(FT2BASEEXTFILES)))
+
+SHFILES := \
+    ftglyphengine \
+    kerning \
+    glyph \
+    openengine \
+    closeengine \
+    setinfoa \
+    obtaininfoa \
+    releaseinfoa
+
+NOWARN_FLAGS := $(NOWARN_ERROR)
+USER_CFLAGS := $(NOWARN_FLAGS)
+USER_CPPFLAGS := -DFT2_BUILD_LIBRARY
+USER_INCLUDES := -I$(SRCDIR)/$(CURDIR)/src $(addprefix -I,$(DIRS))
+
+#MM- workbench-libs : workbench-libs-freetype-module
+#MM workbench-libs-freetype-linklib : workbench-libs-freetype-includes workbench-libs-freetype-pkgconfig
+#MM workbench-libs-freetype-module : workbench-libs-freetype-includes
+#MM- workbench-libs-freetype-linklibs : workbench-libs-freetype-linklib workbench-libs-freetype-module-linklib
+
+FT2FILES := $(addprefix $(FT2AROSBUILDDIR)/,$(FT2BASEARCHFILES)) $(addprefix $(FT2SRCDIR)/src/,$(FT2AUXFILES) $(FT2RASTFILES) $(FT2FONTFILES) $(FT2HINTFILES)) $(FT2BASENARCHFILES)
+
+
+# assign and generate the local variables used in this macro
+workbench-libs-freetype-linklib_LIBNAME           := freetype2.static
+workbench-libs-freetype-linklib_LINKLIB           := $(AROS_LIB)/libfreetype2.static.a
+
+workbench-libs-freetype-linklib_FILES             ?= $(FT2FILES)
+workbench-libs-freetype-linklib_ASMFILES          := 
+workbench-libs-freetype-linklib_OBJCFILES         := 
+workbench-libs-freetype-linklib_CXXFILES          := 
+
+workbench-libs-freetype-linklib_OBJDIR            ?= $(OBJDIR)/freetype2_static
+workbench-libs-freetype-linklib_ARCHOBJS          := $(wildcard $(workbench-libs-freetype-linklib_OBJDIR)/arch/*.o)
+ifeq (no,no)
+    workbench-libs-freetype-linklib_ARCHFILES     := $(basename $(notdir $(workbench-libs-freetype-linklib_ARCHOBJS)))
+else
+    workbench-libs-freetype-linklib_ARCHFILES     := $(basename $(patsubst $(workbench-libs-freetype-linklib_OBJDIR)/%,%,$(workbench-libs-freetype-linklib_ARCHOBJS)))
+endif
+workbench-libs-freetype-linklib_C_NARCHFILES      := $(filter-out $(workbench-libs-freetype-linklib_ARCHFILES),$(workbench-libs-freetype-linklib_FILES))
+workbench-libs-freetype-linklib_C_FILES           ?= $(workbench-libs-freetype-linklib_C_NARCHFILES)
+workbench-libs-freetype-linklib_CXX_NARCHFILES    := $(filter-out $(workbench-libs-freetype-linklib_ARCHFILES),$(workbench-libs-freetype-linklib_CXXFILES))
+workbench-libs-freetype-linklib_CXX_FILES         ?= $(workbench-libs-freetype-linklib_CXX_NARCHFILES)
+workbench-libs-freetype-linklib_OBJC_NARCHFILES   := $(filter-out $(workbench-libs-freetype-linklib_ARCHFILES),$(workbench-libs-freetype-linklib_OBJCFILES))
+workbench-libs-freetype-linklib_OBJC_FILES        ?= $(workbench-libs-freetype-linklib_OBJC_NARCHFILES)
+
+ifeq (no,no)
+    workbench-libs-freetype-linklib_OBJ_FILES     ?= $(addprefix $(workbench-libs-freetype-linklib_OBJDIR)/,$(notdir $(workbench-libs-freetype-linklib_C_NARCHFILES:=.o) $(workbench-libs-freetype-linklib_CXX_NARCHFILES:=.o) $(workbench-libs-freetype-linklib_ASMFILES:=.o) $(workbench-libs-freetype-linklib_OBJC_NARCHFILES:=.o)))
+else
+    workbench-libs-freetype-linklib_OBJ_FILES     ?= $(addprefix $(workbench-libs-freetype-linklib_OBJDIR)/,$(workbench-libs-freetype-linklib_C_NARCHFILES:=.o) $(workbench-libs-freetype-linklib_CXX_NARCHFILES:=.o) $(workbench-libs-freetype-linklib_ASMFILES:=.o) $(workbench-libs-freetype-linklib_OBJC_NARCHFILES:=.o))
+endif
+workbench-libs-freetype-linklib_OBJS              ?= $(workbench-libs-freetype-linklib_ARCHOBJS) $(workbench-libs-freetype-linklib_OBJ_FILES) 
+workbench-libs-freetype-linklib_DEPS              := $(patsubst %.o,%.d,$(workbench-libs-freetype-linklib_OBJS))
+
+workbench-libs-freetype-linklib_CPPFLAGS          := $(CPPFLAGS)
+ifneq (,)
+    workbench-libs-freetype-linklib_CPPFLAGS      += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-libs-freetype-linklib_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+workbench-libs-freetype-linklib_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+workbench-libs-freetype-linklib_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+workbench-libs-freetype-linklib_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-libs-freetype-linklib_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+workbench-libs-freetype-linklib_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+workbench-libs-freetype-linklib_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+workbench-libs-freetype-linklib_CXXFLAGS          := 
+endif
+
+ifeq ($(TARGET_LTO),yes)
+ifeq (target,target)
+        workbench-libs-freetype-linklib_CFLAGS    := $(strip $(LTO_CFLAGS) $(workbench-libs-freetype-linklib_CFLAGS))
+        workbench-libs-freetype-linklib_CXXFLAGS  := $(strip $(LTO_CFLAGS) $(workbench-libs-freetype-linklib_CXXFLAGS))
+endif
+endif
+workbench-libs-freetype-linklib_AFLAGS            := $(AFLAGS)
+workbench-libs-freetype-linklib_DFLAGS            := 
+ifneq (,)
+    workbench-libs-freetype-linklib_DFLAGS        := 
+else
+    workbench-libs-freetype-linklib_DFLAGS        := $(workbench-libs-freetype-linklib_CFLAGS)
+endif
+workbench-libs-freetype-linklib_DXXFLAGS          := 
+ifneq (,)
+    workbench-libs-freetype-linklib_DXXFLAGS      := 
+else
+    workbench-libs-freetype-linklib_DXXFLAGS      := $(workbench-libs-freetype-linklib_CXXFLAGS)
+endif
+
+.PHONY : workbench-libs-freetype-linklib workbench-libs-freetype-linklib-clean workbench-libs-freetype-linklib-quick
+
+#MM
+workbench-libs-freetype-linklib-quick : workbench-libs-freetype-linklib
+
+#MM workbench-libs-freetype-linklib : includes-generate-deps
+workbench-libs-freetype-linklib : $(workbench-libs-freetype-linklib_LINKLIB)
+
+ifneq ($(filter $(TARGET),workbench-libs-freetype-linklib workbench-libs-freetype-linklib-quick),)
+
+
+workbench-libs-freetype-linklib_CXXABSBASENAMES := $(foreach workbench-libs-freetype-linklib_CXXBASE,$(workbench-libs-freetype-linklib_CXX_FILES),$(if $(filter /%,$(workbench-libs-freetype-linklib_CXXBASE)),$(workbench-libs-freetype-linklib_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-libs-freetype-linklib_CXXBASE))))
+
+ifneq ($(workbench-libs-freetype-linklib_CXXABSBASENAMES),)
+
+workbench-libs-freetype-linklib_CXXBASENAMES := $(basename $(workbench-libs-freetype-linklib_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-libs-freetype-linklib_MCXX_FILES  := $(strip $(foreach workbench-libs-freetype-linklib_CXXBASE,$(workbench-libs-freetype-linklib_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-libs-freetype-linklib_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-libs-freetype-linklib_EXT),$(workbench-libs-freetype-linklib_CXXBASE)))))))
+
+ifeq (,)
+workbench-libs-freetype-linklib_MCXX_SRCWILDCARD := %
+else
+workbench-libs-freetype-linklib_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-freetype-linklib_OBJDIR),)
+  workbench-libs-freetype-linklib_CXXTARGETS := $(notdir $(workbench-libs-freetype-linklib_CXXBASENAMES:=.o))
+  workbench-libs-freetype-linklib_CXXDTARGETS := $(notdir $(workbench-libs-freetype-linklib_CXXBASENAMES:=.d))
+  workbench-libs-freetype-linklib_MCXX_WILDCARD := %
+else
+  workbench-libs-freetype-linklib_CXXTARGETS := $(addprefix $(workbench-libs-freetype-linklib_OBJDIR)/,$(notdir $(workbench-libs-freetype-linklib_CXXBASENAMES:=.o)))
+  workbench-libs-freetype-linklib_CXXDTARGETS := $(addprefix $(workbench-libs-freetype-linklib_OBJDIR)/,$(notdir $(workbench-libs-freetype-linklib_CXXBASENAMES:=.d)))
+  workbench-libs-freetype-linklib_MCXX_WILDCARD := $(workbench-libs-freetype-linklib_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-libs-freetype-linklib_CXXTARGETS) $(workbench-libs-freetype-linklib_CXXDTARGETS) : | $(workbench-libs-freetype-linklib_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-libs-freetype-linklib_MCXX_CPPFLAGS := $(workbench-libs-freetype-linklib_CPPFLAGS)
+workbench-libs-freetype-linklib_CXXFLAGS := $(workbench-libs-freetype-linklib_CXXFLAGS)
+ifeq ($(workbench-libs-freetype-linklib_DXXFLAGS),)
+  workbench-libs-freetype-linklib_DXXFLAGS := $(workbench-libs-freetype-linklib_CXXFLAGS)
+else
+  workbench-libs-freetype-linklib_DXXFLAGS := $(workbench-libs-freetype-linklib_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-libs-freetype-linklib_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-libs-freetype-linklib_STRIP ?= $(HOST_STRIP)
+  workbench-libs-freetype-linklib_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-libs-freetype-linklib_CXXCMD:=$(HOST_CXX)
+  workbench-libs-freetype-linklib_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-libs-freetype-linklib_MCXX_CPPFLAGS) $(workbench-libs-freetype-linklib_MCXX_EXTRA_CPPFLAGS))
+  workbench-libs-freetype-linklib_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-libs-freetype-linklib_CXXFLAGS))
+  workbench-libs-freetype-linklib_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-libs-freetype-linklib_DXXFLAGS))
+  workbench-libs-freetype-linklib_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-libs-freetype-linklib_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-libs-freetype-linklib_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-libs-freetype-linklib_STRIP ?= $(TARGET_STRIP)
+  workbench-libs-freetype-linklib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-libs-freetype-linklib_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-libs-freetype-linklib_MCXX_CPPFLAGS := $(strip $(workbench-libs-freetype-linklib_MCXX_CPPFLAGS) $(workbench-libs-freetype-linklib_MCXX_EXTRA_CPPFLAGS))
+  workbench-libs-freetype-linklib_CXXFLAGS := $(strip $(workbench-libs-freetype-linklib_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-libs-freetype-linklib_DXXFLAGS := $(workbench-libs-freetype-linklib_DXXFLAGS)
+  workbench-libs-freetype-linklib_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-libs-freetype-linklib_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-libs-freetype-linklib_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-libs-freetype-linklib_STRIP ?= $(ECHO) >/dev/null
+  workbench-libs-freetype-linklib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-libs-freetype-linklib_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-libs-freetype-linklib_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-libs-freetype-linklib_MCXX_CPPFLAGS) $(workbench-libs-freetype-linklib_MCXX_EXTRA_CPPFLAGS))
+  workbench-libs-freetype-linklib_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-libs-freetype-linklib_CXXFLAGS))
+  workbench-libs-freetype-linklib_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-libs-freetype-linklib_DXXFLAGS))
+  workbench-libs-freetype-linklib_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-libs-freetype-linklib_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-libs-freetype-linklib_CXXCMD) $(workbench-libs-freetype-linklib_CXXIQUOTE) $(dir $(2)) $(workbench-libs-freetype-linklib_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-linklib_CXXIQUOTE) . $(workbench-libs-freetype-linklib_CXXIQUOTE_END) $(strip $(workbench-libs-freetype-linklib_CXXFLAGS) $(workbench-libs-freetype-linklib_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-libs-freetype-linklib_CXXCMD) $(workbench-libs-freetype-linklib_CXXIQUOTE) $(dir $(2)) $(workbench-libs-freetype-linklib_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-linklib_CXXIQUOTE) . $(workbench-libs-freetype-linklib_CXXIQUOTE_END) $(strip $(workbench-libs-freetype-linklib_CXXFLAGS) $(workbench-libs-freetype-linklib_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-libs-freetype-linklib_CXXCMD) $(workbench-libs-freetype-linklib_CXXIQUOTE) $(dir $(2)) $(workbench-libs-freetype-linklib_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-linklib_CXXIQUOTE) . $(workbench-libs-freetype-linklib_CXXIQUOTE_END) $(strip $(workbench-libs-freetype-linklib_CXXFLAGS) $(workbench-libs-freetype-linklib_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-libs-freetype-linklib_CXXCMD)" $(MKDEPEND) $(strip $(workbench-libs-freetype-linklib_DXXFLAGS) $(workbench-libs-freetype-linklib_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-libs-freetype-linklib_OBJDIR),)
+  $(foreach workbench-libs-freetype-linklib_CXXFILE,$(workbench-libs-freetype-linklib_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-libs-freetype-linklib_CXXFILE))),$(workbench-libs-freetype-linklib_CXXFILE))))
+else
+  $(foreach workbench-libs-freetype-linklib_CXXFILE,$(workbench-libs-freetype-linklib_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-libs-freetype-linklib_OBJDIR)/,$(notdir $(basename $(workbench-libs-freetype-linklib_CXXFILE)))),$(workbench-libs-freetype-linklib_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-libs-freetype-linklib_OBJC_FILES),)
+
+ifeq (,)
+workbench-libs-freetype-linklib_MOBJC_SRCWILDCARD := %
+else
+workbench-libs-freetype-linklib_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-freetype-linklib_OBJDIR),)
+  workbench-libs-freetype-linklib_MOBJC_TARGETS := $(addsuffix .o,$(workbench-libs-freetype-linklib_OBJC_FILES))
+  workbench-libs-freetype-linklib_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-libs-freetype-linklib_OBJC_FILES))
+  workbench-libs-freetype-linklib_MOBJC_WILDCARD := %
+else
+  workbench-libs-freetype-linklib_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-linklib_OBJDIR)/,$(workbench-libs-freetype-linklib_OBJC_FILES)))
+  workbench-libs-freetype-linklib_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-freetype-linklib_OBJDIR)/,$(workbench-libs-freetype-linklib_OBJC_FILES)))
+  workbench-libs-freetype-linklib_MOBJC_WILDCARD := $(workbench-libs-freetype-linklib_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-libs-freetype-linklib_OBJC_FILES))
+
+  # Be sure that all .m files are found
+  workbench-libs-freetype-linklib_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-libs-freetype-linklib_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-freetype-linklib_OBJC_FILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-libs-freetype-linklib_MOBJC_DIRS := $(foreach dir, $(workbench-libs-freetype-linklib_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-freetype-linklib_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-libs-freetype-linklib_MOBJC_DIRS),)
+    workbench-libs-freetype-linklib_MOBJC_DIRS := $(shell echo $(workbench-libs-freetype-linklib_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-libs-freetype-linklib_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-libs-freetype-linklib_CC := $(TARGET_CC)
+else
+  workbench-libs-freetype-linklib_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-libs-freetype-linklib_MOBJC_CPPFLAGS := $(workbench-libs-freetype-linklib_CPPFLAGS)
+workbench-libs-freetype-linklib_OBJCFLAGS := $(workbench-libs-freetype-linklib_CFLAGS)
+workbench-libs-freetype-linklib_OBJCFLAGS := $(workbench-libs-freetype-linklib_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-libs-freetype-linklib_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-libs-freetype-linklib_OBJCFLAGS)))
+ifeq ($(workbench-libs-freetype-linklib_DFLAGS),)
+  workbench-libs-freetype-linklib_OBJCDFLAGS := $(workbench-libs-freetype-linklib_CFLAGS)
+else
+  workbench-libs-freetype-linklib_OBJCDFLAGS := $(workbench-libs-freetype-linklib_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-libs-freetype-linklib_LINK ?= $(strip $(workbench-libs-freetype-linklib_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-libs-freetype-linklib_STRIP ?= $(TARGET_STRIP)
+  workbench-libs-freetype-linklib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-libs-freetype-linklib_CC) $(TARGET_SYSROOT))
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : workbench-libs-freetype-linklib_MOBJC_CPPFLAGS:=$(strip $(workbench-libs-freetype-linklib_MOBJC_CPPFLAGS) $(workbench-libs-freetype-linklib_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : workbench-libs-freetype-linklib_OBJCFLAGS:=$(strip $(workbench-libs-freetype-linklib_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : workbench-libs-freetype-linklib_OBJCDFLAGS:=$(workbench-libs-freetype-linklib_OBJCDFLAGS)
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : workbench-libs-freetype-linklib_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : workbench-libs-freetype-linklib_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-libs-freetype-linklib_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-libs-freetype-linklib_STRIP ?= $(HOST_STRIP)
+  workbench-libs-freetype-linklib_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : workbench-libs-freetype-linklib_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-libs-freetype-linklib_MOBJC_CPPFLAGS) $(workbench-libs-freetype-linklib_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : workbench-libs-freetype-linklib_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-freetype-linklib_OBJCFLAGS))
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : workbench-libs-freetype-linklib_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-freetype-linklib_OBJCDFLAGS))
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : workbench-libs-freetype-linklib_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : workbench-libs-freetype-linklib_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-libs-freetype-linklib_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-libs-freetype-linklib_STRIP ?= $(ECHO) >/dev/null
+  workbench-libs-freetype-linklib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : workbench-libs-freetype-linklib_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-libs-freetype-linklib_MOBJC_CPPFLAGS) $(workbench-libs-freetype-linklib_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : workbench-libs-freetype-linklib_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-freetype-linklib_OBJCFLAGS))
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : workbench-libs-freetype-linklib_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-freetype-linklib_OBJCDFLAGS))
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : workbench-libs-freetype-linklib_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-libs-freetype-linklib_MOBJC_TARGETS) $(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : workbench-libs-freetype-linklib_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-freetype-linklib_MOBJC_TARGETS) : CPPFLAGS := $(workbench-libs-freetype-linklib_MOBJC_CPPFLAGS)
+$(workbench-libs-freetype-linklib_MOBJC_TARGETS) : CFLAGS := $(workbench-libs-freetype-linklib_OBJCFLAGS)
+$(workbench-libs-freetype-linklib_MOBJC_TARGETS) : $(workbench-libs-freetype-linklib_MOBJC_WILDCARD).o : $(workbench-libs-freetype-linklib_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-freetype-linklib_IQUOTE) $(dir $<) $(workbench-libs-freetype-linklib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-linklib_IQUOTE) . $(workbench-libs-freetype-linklib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-freetype-linklib_IQUOTE) $(dir $<) $(workbench-libs-freetype-linklib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-linklib_IQUOTE) . $(workbench-libs-freetype-linklib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-freetype-linklib_IQUOTE) $(dir $<) $(workbench-libs-freetype-linklib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-linklib_IQUOTE) . $(workbench-libs-freetype-linklib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-freetype-linklib_MOBJC_DTARGETS) : $(workbench-libs-freetype-linklib_MOBJC_WILDCARD).d : $(workbench-libs-freetype-linklib_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-freetype-linklib_OBJCDFLAGS) $(workbench-libs-freetype-linklib_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-libs-freetype-linklib_MC_SRCWILDCARD := %
+else
+workbench-libs-freetype-linklib_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-freetype-linklib_OBJDIR),)
+workbench-libs-freetype-linklib_MC_TARGETS := $(addsuffix .o,$(workbench-libs-freetype-linklib_C_FILES))
+workbench-libs-freetype-linklib_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-freetype-linklib_C_FILES))
+workbench-libs-freetype-linklib_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-freetype-linklib_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-linklib_OBJDIR)/,$(notdir $(workbench-libs-freetype-linklib_C_FILES))))
+    workbench-libs-freetype-linklib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-freetype-linklib_OBJDIR)/,$(notdir $(workbench-libs-freetype-linklib_C_FILES))))
+else
+ifeq (,)
+    workbench-libs-freetype-linklib_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-linklib_OBJDIR)/,$(workbench-libs-freetype-linklib_C_FILES)))
+    workbench-libs-freetype-linklib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-freetype-linklib_OBJDIR)/,$(workbench-libs-freetype-linklib_C_FILES)))
+else
+    workbench-libs-freetype-linklib_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-linklib_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-freetype-linklib_C_FILES))))
+    workbench-libs-freetype-linklib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-freetype-linklib_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-freetype-linklib_C_FILES))))
+endif
+endif
+workbench-libs-freetype-linklib_MC_TGTWILDCARD := $(workbench-libs-freetype-linklib_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-freetype-linklib_C_FILES))
+
+# Be sure that all .c files are found
+workbench-libs-freetype-linklib_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-freetype-linklib_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-freetype-linklib_C_FILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-freetype-linklib_MC_DIRS := $(foreach dir, $(workbench-libs-freetype-linklib_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-freetype-linklib_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-freetype-linklib_MC_DIRS),)
+    workbench-libs-freetype-linklib_MC_DIRS := $(shell echo $(workbench-libs-freetype-linklib_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-freetype-linklib_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-freetype-linklib_MC_CPPFLAGS := $(workbench-libs-freetype-linklib_CPPFLAGS)
+workbench-libs-freetype-linklib_CFLAGS := $(workbench-libs-freetype-linklib_CFLAGS)
+ifeq ($(workbench-libs-freetype-linklib_DFLAGS),)
+  workbench-libs-freetype-linklib_DFLAGS := $(workbench-libs-freetype-linklib_CFLAGS)
+else
+  workbench-libs-freetype-linklib_DFLAGS := $(workbench-libs-freetype-linklib_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-freetype-linklib_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-freetype-linklib_STRIP ?= $(TARGET_STRIP)
+workbench-libs-freetype-linklib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : workbench-libs-freetype-linklib_MC_CPPFLAGS:=$(strip $(workbench-libs-freetype-linklib_MC_CPPFLAGS) $(workbench-libs-freetype-linklib_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : workbench-libs-freetype-linklib_CFLAGS:=$(strip $(workbench-libs-freetype-linklib_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : workbench-libs-freetype-linklib_DFLAGS:=$(workbench-libs-freetype-linklib_DFLAGS)
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : workbench-libs-freetype-linklib_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : workbench-libs-freetype-linklib_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-freetype-linklib_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-freetype-linklib_STRIP ?= $(HOST_STRIP)
+workbench-libs-freetype-linklib_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : workbench-libs-freetype-linklib_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-freetype-linklib_MC_CPPFLAGS) $(workbench-libs-freetype-linklib_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : workbench-libs-freetype-linklib_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-freetype-linklib_CFLAGS))
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : workbench-libs-freetype-linklib_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-freetype-linklib_DFLAGS))
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : workbench-libs-freetype-linklib_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : workbench-libs-freetype-linklib_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-freetype-linklib_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-freetype-linklib_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-freetype-linklib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : workbench-libs-freetype-linklib_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-freetype-linklib_MC_CPPFLAGS) $(workbench-libs-freetype-linklib_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : workbench-libs-freetype-linklib_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-freetype-linklib_CFLAGS))
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : workbench-libs-freetype-linklib_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-freetype-linklib_DFLAGS))
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : workbench-libs-freetype-linklib_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-freetype-linklib_MC_TARGETS) $(workbench-libs-freetype-linklib_MC_DTARGETS) : workbench-libs-freetype-linklib_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-freetype-linklib_MC_TARGETS) : CPPFLAGS := $(workbench-libs-freetype-linklib_MC_CPPFLAGS)
+$(workbench-libs-freetype-linklib_MC_TARGETS) : CFLAGS := $(workbench-libs-freetype-linklib_CFLAGS)
+$(workbench-libs-freetype-linklib_MC_TARGETS) : $(workbench-libs-freetype-linklib_MC_TGTWILDCARD).o : $(workbench-libs-freetype-linklib_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-freetype-linklib_IQUOTE) $(dir $<) $(workbench-libs-freetype-linklib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-linklib_IQUOTE) . $(workbench-libs-freetype-linklib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-freetype-linklib_IQUOTE) $(dir $<) $(workbench-libs-freetype-linklib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-linklib_IQUOTE) . $(workbench-libs-freetype-linklib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-freetype-linklib_IQUOTE) $(dir $<) $(workbench-libs-freetype-linklib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-linklib_IQUOTE) . $(workbench-libs-freetype-linklib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-freetype-linklib_MC_DTARGETS) : $(workbench-libs-freetype-linklib_MC_TGTWILDCARD).d : $(workbench-libs-freetype-linklib_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-freetype-linklib_DFLAGS) $(workbench-libs-freetype-linklib_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-libs-freetype-linklib_OBJDIR),)
+workbench-libs-freetype-linklib-MA_TARGETS := $(addsuffix .o,$(workbench-libs-freetype-linklib_ASMFILES))
+workbench-libs-freetype-linklib-MA_WILDCARD := %
+else
+workbench-libs-freetype-linklib-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-linklib_OBJDIR)/,$(notdir $(workbench-libs-freetype-linklib_ASMFILES))))
+workbench-libs-freetype-linklib-MA_WILDCARD := $(workbench-libs-freetype-linklib_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(workbench-libs-freetype-linklib-MA_TARGETS) : | $(addsuffix .s,$(workbench-libs-freetype-linklib_ASMFILES))
+
+# Be sure that all .c files are found
+workbench-libs-freetype-linklib-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-freetype-linklib-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-freetype-linklib_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-freetype-linklib-MA_DIRS := $(foreach dir, $(workbench-libs-freetype-linklib-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-freetype-linklib-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-freetype-linklib-MA_DIRS),)
+    workbench-libs-freetype-linklib-MA_DIRS := $(shell echo $(workbench-libs-freetype-linklib-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(workbench-libs-freetype-linklib-MA_DIRS)
+endif
+
+endif
+
+workbench-libs-freetype-linklib-MA_ASSEMBLER ?= $(workbench-libs-freetype-linklib_ASSEMBLER)
+
+$(workbench-libs-freetype-linklib-MA_TARGETS) : workbench-libs-freetype-linklib-MA_CMD:= $(workbench-libs-freetype-linklib-MA_ASSEMBLER)
+
+$(workbench-libs-freetype-linklib-MA_TARGETS) : CPPFLAGS := $(workbench-libs-freetype-linklib_CPPFLAGS)
+$(workbench-libs-freetype-linklib-MA_TARGETS) : AFLAGS := $(workbench-libs-freetype-linklib_AFLAGS)
+$(workbench-libs-freetype-linklib-MA_TARGETS) : $(workbench-libs-freetype-linklib-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-libs-freetype-linklib-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-libs-freetype-linklib-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-libs-freetype-linklib-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+ifeq (target,target)
+$(AROS_LIB)/libfreetype2.static.a : workbench-libs-freetype-linklib_AR:=$(AR)
+$(AROS_LIB)/libfreetype2.static.a : workbench-libs-freetype-linklib_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(AROS_LIB)/libfreetype2.static.a : workbench-libs-freetype-linklib_AR:=$(HOST_AR)
+$(AROS_LIB)/libfreetype2.static.a : workbench-libs-freetype-linklib_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(AROS_LIB)/libfreetype2.static.a : workbench-libs-freetype-linklib_AR:=$(KERNEL_AR)
+$(AROS_LIB)/libfreetype2.static.a : workbench-libs-freetype-linklib_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(AROS_LIB)/libfreetype2.static.a : $(workbench-libs-freetype-linklib_OBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-libs-freetype-linklib_AR) $@ $^
+	$(Q)$(workbench-libs-freetype-linklib_RANLIB) $@
+endif
+
+ifneq ($(workbench-libs-freetype-linklib_DEPS),)
+  ifneq (workbench-libs-freetype-linklib workbench-libs-freetype-linklib-quick,)
+    ifneq ($(findstring $(TARGET),workbench-libs-freetype-linklib workbench-libs-freetype-linklib-quick),)
+      -include $(workbench-libs-freetype-linklib_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-libs-freetype-linklib_DEPS)
+    endif
+  endif
+endif
+
+
+
+ifneq ($(workbench-libs-freetype-linklib_OBJS) $(workbench-libs-freetype-linklib_DEPS) $(workbench-libs-freetype-linklib_LINKLIB),)
+$(workbench-libs-freetype-linklib_OBJS) $(workbench-libs-freetype-linklib_DEPS) $(workbench-libs-freetype-linklib_LINKLIB) : | $(workbench-libs-freetype-linklib_OBJDIR) $(AROS_LIB)
+else
+$(workbench-libs-freetype-linklib_OBJS) $(workbench-libs-freetype-linklib_DEPS) $(workbench-libs-freetype-linklib_LINKLIB) :: $(workbench-libs-freetype-linklib_OBJDIR) $(AROS_LIB)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-freetype-linklib_OBJDIR) $(AROS_LIB)
+
+
+workbench-libs-freetype-linklib-clean : FILES := $(workbench-libs-freetype-linklib_OBJS) $(workbench-libs-freetype-linklib_LINKLIB) $(workbench-libs-freetype-linklib_DEPS)
+#MM
+workbench-libs-freetype-linklib-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-libs-freetype-linklib"
+	$(Q)$(RM) $(FILES)
+
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM workbench-libs-freetype-module
+#MM workbench-libs-freetype-module-quick
+#MM workbench-libs-freetype-module-makefile
+#MM workbench-libs-freetype-module-clean
+
+# ABI targets:
+#MM- includes-all : workbench-libs-freetype-module-includes
+#MM- linklibs-freetype2: workbench-libs-freetype-module-linklib
+#MM- linklibs-freetype2_rel : workbench-libs-freetype-module-linklib
+#MM- includes-freetype2: workbench-libs-freetype-module-includes
+#MM- includes-freetype2_rel : workbench-libs-freetype-module-includes
+#MM- workbench-libs-freetype-module : workbench-libs-freetype-module-includes core-linklibs linklibs-stdc
+#MM workbench-libs-freetype-module-linklib : workbench-libs-freetype-module-includes includes-stdc
+#MM- workbench-libs-freetype-module-quick : workbench-libs-freetype-module-includes-quick
+#MM workbench-libs-freetype-module-includes : workbench-libs-freetype-module-makefile workbench-libs-freetype-module-includes-dirs \
+#MM     includes-generate-deps workbench-libs-freetype-module-fd
+#MM workbench-libs-freetype-module-includes-quick
+#MM workbench-libs-freetype-module-includes-dirs
+#MM workbench-libs-freetype-module-fd
+
+# Library targets
+#MM workbench-libs-freetype-module-kobj : core-linklibs linklibs-stdc
+#MM workbench-libs-freetype-module-kobj-quick : 
+
+# Library with ABI targets:
+#MM workbench-libs-freetype-module-kobj : workbench-libs-freetype-module-includes core-linklibs linklibs-stdc
+#MM workbench-libs-freetype-module-kobj-quick : workbench-libs-freetype-module-includes-quick
+
+# All MetaMake targets defined by this macro
+workbench-libs-freetype-module_ALLTARGETS       := workbench-libs-freetype-module workbench-libs-freetype-module-quick workbench-libs-freetype-module-clean
+
+ifeq (M,M)
+workbench-libs-freetype-module_ALLTARGETS       += workbench-libs-freetype-module-kobj workbench-libs-freetype-module-kobj-quick
+endif
+
+ifeq (M,M)
+workbench-libs-freetype-module_ALLTARGETS += workbench-libs-freetype-module-includes \
+                 workbench-libs-freetype-module-includes-quick workbench-libs-freetype-module-includes-dirs  \
+                 workbench-libs-freetype-module-linklib workbench-libs-freetype-module-fd
+endif
+
+.PHONY : $(workbench-libs-freetype-module_ALLTARGETS) workbench-libs-freetype-module-makefile
+
+ifeq (freetype2,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (library,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    workbench-libs-freetype-module_DEFNAME      := freetype2_
+else
+    workbench-libs-freetype-module_DEFNAME      := freetype2
+endif
+workbench-libs-freetype-module_DEFLINKLIBNAME   := $(workbench-libs-freetype-module_DEFNAME)
+ifneq (,)
+    workbench-libs-freetype-module_LINKLIBNAME  := 
+else
+    workbench-libs-freetype-module_LINKLIBNAME  = $(workbench-libs-freetype-module_DEFLINKLIBNAME)
+endif
+workbench-libs-freetype-module_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    workbench-libs-freetype-module_DEFCPPFLAGS  += -I
+endif
+workbench-libs-freetype-module_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    workbench-libs-freetype-module_DFLAGS       := 
+else
+    workbench-libs-freetype-module_DFLAGS       = $(workbench-libs-freetype-module_DEFDFLAGS)
+endif
+workbench-libs-freetype-module_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    workbench-libs-freetype-module_DXXFLAGS     := 
+else
+    workbench-libs-freetype-module_DXXFLAGS     = $(workbench-libs-freetype-module_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+workbench-libs-freetype-module_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(workbench-libs-freetype-module_DEFDFLAGS))
+workbench-libs-freetype-module_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(workbench-libs-freetype-module_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-libs-freetype-module_FUNCINSTR := yes
+workbench-libs-freetype-module_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(workbench-libs-freetype-module_DEFDFLAGS))
+workbench-libs-freetype-module_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(workbench-libs-freetype-module_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+workbench-libs-freetype-module_OBJDIR                     := 
+else
+workbench-libs-freetype-module_OBJDIR                     := $(OBJDIR)/$(workbench-libs-freetype-module_DEFNAME)
+endif
+ifneq (,)
+workbench-libs-freetype-module_OBJDIR           := $(workbench-libs-freetype-module_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+workbench-libs-freetype-module-makefile         := $(workbench-libs-freetype-module_OBJDIR)/Makefile.$(workbench-libs-freetype-module_DEFNAME)library
+workbench-libs-freetype-module-genmakefile : $(workbench-libs-freetype-module-makefile)
+
+
+workbench-libs-freetype-module-genmakefile_OPTS := 
+ifneq (,)
+    workbench-libs-freetype-module-genmakefile_OPTS += -f 
+    workbench-libs-freetype-module-genmakefile_MODNAME := freetype2_
+else
+    workbench-libs-freetype-module-genmakefile_MODNAME := freetype2
+endif
+workbench-libs-freetype-module-genmakefile_TARGET := Makefile.$(workbench-libs-freetype-module-genmakefile_MODNAME)library
+workbench-libs-freetype-module-genmakefile_DEPS := $(GENMODULE)
+ifneq (freetype2.conf,)
+    ifeq ($(dir freetype2.conf),./)
+        workbench-libs-freetype-module-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/freetype2.conf
+        workbench-libs-freetype-module-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/freetype2.conf
+    else
+        workbench-libs-freetype-module-genmakefile_OPTS += -c freetype2.conf
+        workbench-libs-freetype-module-genmakefile_DEPS += freetype2.conf
+    endif 
+else
+    workbench-libs-freetype-module-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/freetype2.conf
+    workbench-libs-freetype-module-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/freetype2.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-freetype-module-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-libs-freetype-module-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-freetype-module-genmakefile_OPTS += -o 
+        workbench-libs-freetype-module-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-libs-freetype-module-genmakefile_OPTS += -s 
+endif
+ifneq ($(workbench-libs-freetype-module_OBJDIR),)
+    workbench-libs-freetype-module-genmakefile_OPTS += -d $(workbench-libs-freetype-module_OBJDIR)
+    workbench-libs-freetype-module-genmakefile_TARGET := $(workbench-libs-freetype-module_OBJDIR)/$(workbench-libs-freetype-module-genmakefile_TARGET)
+endif
+
+$(workbench-libs-freetype-module-genmakefile_TARGET) : OPTS := $(workbench-libs-freetype-module-genmakefile_OPTS)
+$(workbench-libs-freetype-module-genmakefile_TARGET) : MODNAME := freetype2
+$(workbench-libs-freetype-module-genmakefile_TARGET) : MODTYPE := library
+$(workbench-libs-freetype-module-genmakefile_TARGET) : $(workbench-libs-freetype-module-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(workbench-libs-freetype-module-makefile),)
+$(workbench-libs-freetype-module-makefile) : | $(workbench-libs-freetype-module_OBJDIR)
+else
+$(workbench-libs-freetype-module-makefile) :: $(workbench-libs-freetype-module_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-freetype-module_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(workbench-libs-freetype-module_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(workbench-libs-freetype-module-makefile)
+
+workbench-libs-freetype-module_DEFMODDIR        := $($(workbench-libs-freetype-module_DEFNAME)_MODDIR)
+ifeq (no,yes)
+workbench-libs-freetype-module_DEFMODDIR        := $(AROS_DIR_ARCH)/$(workbench-libs-freetype-module_DEFMODDIR)
+endif
+ifneq (,)
+    workbench-libs-freetype-module_MODDIR       := 
+else
+    workbench-libs-freetype-module_MODDIR       := $(workbench-libs-freetype-module_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+workbench-libs-freetype-module_INCDIR           := 
+else
+workbench-libs-freetype-module_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+workbench-libs-freetype-module_LIBDEFSINC       := $(workbench-libs-freetype-module_OBJDIR)/include/$(workbench-libs-freetype-module_DEFNAME)_libdefs.h
+workbench-libs-freetype-module_DEFLIBDEFSINC    := $(workbench-libs-freetype-module_OBJDIR)/include/$(workbench-libs-freetype-module_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+workbench-libs-freetype-module-includes-quick : workbench-libs-freetype-module-includes
+workbench-libs-freetype-module-includes : $(addprefix $(GENINCDIR)/,$($(workbench-libs-freetype-module_DEFNAME)_INCLUDES)) \
+    $(addprefix $(workbench-libs-freetype-module_INCDIR)/,$($(workbench-libs-freetype-module_DEFNAME)_INCLUDES)) \
+    $(workbench-libs-freetype-module_LIBDEFSINC) $(workbench-libs-freetype-module_DEFLIBDEFSINC)
+
+ifneq ($($(workbench-libs-freetype-module_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    workbench-libs-freetype-module-includes_MODNAME := freetype2_
+else
+    workbench-libs-freetype-module-includes_MODNAME := freetype2
+endif
+
+ifneq ($($(workbench-libs-freetype-module-includes_MODNAME)_INCLUDES),)
+
+workbench-libs-freetype-module-includes_TARGETS := $($(workbench-libs-freetype-module-includes_MODNAME)_INCLUDES)
+
+workbench-libs-freetype-module-includes_DEPS := $(GENMODULE)
+workbench-libs-freetype-module-includes_OPTS :=
+
+ifneq (freetype2.conf,)
+    ifeq ($(dir freetype2.conf),./)
+        workbench-libs-freetype-module-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/freetype2.conf
+        workbench-libs-freetype-module-includes_DEPS += $(SRCDIR)/$(CURDIR)/freetype2.conf
+    else
+        workbench-libs-freetype-module-includes_OPTS += -c freetype2.conf
+        workbench-libs-freetype-module-includes_DEPS += freetype2.conf
+    endif 
+else
+    workbench-libs-freetype-module-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/freetype2.conf
+    workbench-libs-freetype-module-includes_DEPS += $(SRCDIR)/$(CURDIR)/freetype2.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-freetype-module-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-libs-freetype-module-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-freetype-module-includes_OPTS += -o 
+        workbench-libs-freetype-module-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-libs-freetype-module-includes_OPTS += -s 
+endif
+ifneq ($(workbench-libs-freetype-module_OBJDIR)/include,)
+    workbench-libs-freetype-module-includes_OPTS += -d $(workbench-libs-freetype-module_OBJDIR)/include
+    workbench-libs-freetype-module-includes_TARGETS := $(addprefix $(workbench-libs-freetype-module_OBJDIR)/include/,$(workbench-libs-freetype-module-includes_TARGETS))
+    workbench-libs-freetype-module-includes_GENINCFLAG=$(workbench-libs-freetype-module_OBJDIR)/include/.freetype2.library-includes
+else
+    workbench-libs-freetype-module-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.freetype2.library-includes
+endif
+
+$(workbench-libs-freetype-module-includes_TARGETS) : $(workbench-libs-freetype-module-includes_DEPS) $(workbench-libs-freetype-module-includes_GENINCFLAG)
+
+$(workbench-libs-freetype-module-includes_GENINCFLAG) : OPTS := $(workbench-libs-freetype-module-includes_OPTS)
+$(workbench-libs-freetype-module-includes_GENINCFLAG) : MODNAME := freetype2
+$(workbench-libs-freetype-module-includes_GENINCFLAG) : MODTYPE := library
+$(workbench-libs-freetype-module-includes_GENINCFLAG) : $(workbench-libs-freetype-module-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(workbench-libs-freetype-module_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(workbench-libs-freetype-module_DEFNAME)_INCLUDES)) : | $(workbench-libs-freetype-module_OBJDIR)/freetype2_geninc
+
+$(workbench-libs-freetype-module_OBJDIR)/freetype2_geninc : COPYSRCDIR := $(workbench-libs-freetype-module_OBJDIR)/include
+$(workbench-libs-freetype-module_OBJDIR)/freetype2_geninc : TGTDIR := $(GENINCDIR)
+$(workbench-libs-freetype-module_OBJDIR)/freetype2_geninc : FILES := $($(workbench-libs-freetype-module_DEFNAME)_INCLUDES)
+$(workbench-libs-freetype-module_OBJDIR)/freetype2_geninc : $(addprefix $(workbench-libs-freetype-module_OBJDIR)/include/,$($(workbench-libs-freetype-module_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(workbench-libs-freetype-module_OBJDIR)/include
+
+$(addprefix $(workbench-libs-freetype-module_INCDIR)/,$($(workbench-libs-freetype-module_DEFNAME)_INCLUDES)) : | $(workbench-libs-freetype-module_OBJDIR)/freetype2_incs
+
+$(workbench-libs-freetype-module_OBJDIR)/freetype2_incs : COPYSRCDIR := $(workbench-libs-freetype-module_OBJDIR)/include
+$(workbench-libs-freetype-module_OBJDIR)/freetype2_incs : TGTDIR := $(workbench-libs-freetype-module_INCDIR)
+$(workbench-libs-freetype-module_OBJDIR)/freetype2_incs : FILES := $($(workbench-libs-freetype-module_DEFNAME)_INCLUDES)
+$(workbench-libs-freetype-module_OBJDIR)/freetype2_incs : $(addprefix $(workbench-libs-freetype-module_OBJDIR)/include/,$($(workbench-libs-freetype-module_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+workbench-libs-freetype-module_INCDIRS := $(filter-out ./,$(sort $(dir $($(workbench-libs-freetype-module_DEFNAME)_INCLUDES))))
+
+TMPfreetype2_INCDIRS := \
+    $(workbench-libs-freetype-module_OBJDIR)/include $(addprefix $(workbench-libs-freetype-module_OBJDIR)/include/,$(workbench-libs-freetype-module_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(workbench-libs-freetype-module_INCDIRS)) \
+    $(workbench-libs-freetype-module_INCDIR) $(addprefix $(workbench-libs-freetype-module_INCDIR)/,$(workbench-libs-freetype-module_INCDIRS))
+
+ifneq (workbench-libs-freetype-module-includes-dirs,)
+workbench-libs-freetype-module-includes-dirs : | $(TMPfreetype2_INCDIRS)
+else
+workbench-libs-freetype-module-includes-dirs :: $(TMPfreetype2_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPfreetype2_INCDIRS)
+
+
+endif
+
+endif
+
+
+workbench-libs-freetype-module-genlibdefs_OPTS := 
+ifneq (,)
+    workbench-libs-freetype-module-genlibdefs_OPTS += -f 
+    workbench-libs-freetype-module-genlibdefs_MODNAME := freetype2_
+else
+    workbench-libs-freetype-module-genlibdefs_MODNAME := freetype2
+endif
+workbench-libs-freetype-module-genlibdefs_TARGET := $(workbench-libs-freetype-module-genlibdefs_MODNAME)_libdefs.h
+workbench-libs-freetype-module-genlibdefs_DEPS := $(GENMODULE)
+ifneq (freetype2.conf,)
+    ifeq ($(dir freetype2.conf),./)
+        workbench-libs-freetype-module-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/freetype2.conf
+        workbench-libs-freetype-module-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/freetype2.conf
+    else
+        workbench-libs-freetype-module-genlibdefs_OPTS += -c freetype2.conf
+        workbench-libs-freetype-module-genlibdefs_DEPS += freetype2.conf
+    endif 
+else
+    workbench-libs-freetype-module-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/freetype2.conf
+    workbench-libs-freetype-module-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/freetype2.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-freetype-module-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-libs-freetype-module-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-freetype-module-genlibdefs_OPTS += -o 
+        workbench-libs-freetype-module-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-libs-freetype-module-genlibdefs_OPTS += -s 
+endif
+ifneq ($(workbench-libs-freetype-module_OBJDIR)/include,)
+    workbench-libs-freetype-module-genlibdefs_OPTS += -d $(workbench-libs-freetype-module_OBJDIR)/include
+    workbench-libs-freetype-module-genlibdefs_TARGET := $(workbench-libs-freetype-module_OBJDIR)/include/$(workbench-libs-freetype-module-genlibdefs_TARGET)
+endif
+ifneq (,)
+    workbench-libs-freetype-module-genlibdefs_OPTS += -v 
+endif
+
+$(workbench-libs-freetype-module-genlibdefs_TARGET) : OPTS := $(workbench-libs-freetype-module-genlibdefs_OPTS)
+$(workbench-libs-freetype-module-genlibdefs_TARGET) : MODNAME := freetype2
+$(workbench-libs-freetype-module-genlibdefs_TARGET) : MODTYPE := library
+$(workbench-libs-freetype-module-genlibdefs_TARGET) : $(workbench-libs-freetype-module-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(workbench-libs-freetype-module_DEFLIBDEFSINC) : FILENAME := $(workbench-libs-freetype-module_LIBDEFSINC)
+$(workbench-libs-freetype-module_DEFLIBDEFSINC) : $(workbench-libs-freetype-module_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(workbench-libs-freetype-module_LIBDEFSINC) $(workbench-libs-freetype-module_DEFLIBDEFSINC) : | $(workbench-libs-freetype-module_OBJDIR)/include
+
+ifneq (workbench-libs-freetype-module-includes-dirs,)
+workbench-libs-freetype-module-includes-dirs : | $(workbench-libs-freetype-module_OBJDIR)/include
+else
+workbench-libs-freetype-module-includes-dirs :: $(workbench-libs-freetype-module_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(workbench-libs-freetype-module_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+workbench-libs-freetype-module-genmodfiles_OPTS :=
+ifneq (,)
+    workbench-libs-freetype-module-genmodfiles_OPTS += -f 
+    workbench-libs-freetype-module-genmodfiles_MODNAME := freetype2_
+else
+    workbench-libs-freetype-module-genmodfiles_MODNAME := freetype2
+endif
+workbench-libs-freetype-module-genmodfiles_GENTARGETS := $($(workbench-libs-freetype-module-genmodfiles_MODNAME)_STARTFILES) $($(workbench-libs-freetype-module-genmodfiles_MODNAME)_ENDFILES)
+workbench-libs-freetype-module-genmodfiles_STUBTARGETS := $($(workbench-libs-freetype-module-genmodfiles_MODNAME)_LINKLIBFILES) $($(workbench-libs-freetype-module-genmodfiles_MODNAME)_RELLINKLIBFILES)
+workbench-libs-freetype-module-genmodfiles_GENTARGETS := $(addsuffix .c,$(workbench-libs-freetype-module-genmodfiles_GENTARGETS))
+workbench-libs-freetype-module-genmodfiles_STUBTARGETS := $(addsuffix .c,$(workbench-libs-freetype-module-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(workbench-libs-freetype-module-genmodfiles_MODNAME)_LINKLIBAFILES) $($(workbench-libs-freetype-module-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+workbench-libs-freetype-module-genmodfiles_DEPS := $(GENMODULE)
+ifneq (freetype2.conf,)
+    ifeq ($(dir freetype2.conf),./)
+        workbench-libs-freetype-module-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/freetype2.conf
+        workbench-libs-freetype-module-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/freetype2.conf
+    else
+        workbench-libs-freetype-module-genmodfiles_OPTS += -c freetype2.conf
+        workbench-libs-freetype-module-genmodfiles_DEPS += freetype2.conf
+    endif 
+else
+    workbench-libs-freetype-module-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/freetype2.conf
+    workbench-libs-freetype-module-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/freetype2.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-freetype-module-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-libs-freetype-module-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-freetype-module-genmodfiles_OPTS += -o 
+        workbench-libs-freetype-module-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-libs-freetype-module-genmodfiles_OPTS += -s 
+endif
+ifneq ($(workbench-libs-freetype-module_OBJDIR),)
+    workbench-libs-freetype-module-genmodfiles_OPTS += -d $(workbench-libs-freetype-module_OBJDIR)
+    workbench-libs-freetype-module-genmodfiles_TARGETDIR := $(shell echo $(workbench-libs-freetype-module_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    workbench-libs-freetype-module-genmodfiles_GENTARGETS := $(addprefix $(workbench-libs-freetype-module-genmodfiles_TARGETDIR)/,$(workbench-libs-freetype-module-genmodfiles_GENTARGETS))
+    workbench-libs-freetype-module-genmodfiles_GENFILEFLAG=$(workbench-libs-freetype-module-genmodfiles_TARGETDIR)/.freetype2.library-genfiles
+else
+    workbench-libs-freetype-module-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.freetype2.library-genfiles
+endif
+ifneq ($(workbench-libs-freetype-module_OBJDIR)/linklib,)
+    workbench-libs-freetype-module-genmodfiles_OPTS += -l $(workbench-libs-freetype-module_OBJDIR)/linklib
+    workbench-libs-freetype-module-genmodfiles_STUBTARGETDIR := $(shell echo $(workbench-libs-freetype-module_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    workbench-libs-freetype-module-genmodfiles_STUBTARGETS := $(addprefix $(workbench-libs-freetype-module-genmodfiles_STUBTARGETDIR)/,$(workbench-libs-freetype-module-genmodfiles_STUBTARGETS))
+    workbench-libs-freetype-module-genmodfiles_TARGETDIRS += $(workbench-libs-freetype-module_OBJDIR)/linklib
+else
+ifneq ($(workbench-libs-freetype-module_OBJDIR),)
+    workbench-libs-freetype-module-genmodfiles_STUBTARGETS := $(addprefix $(workbench-libs-freetype-module-genmodfiles_TARGETDIR)/,$(workbench-libs-freetype-module-genmodfiles_STUBTARGETS))
+endif
+endif
+
+workbench-libs-freetype-module-genmodfiles_TARGETS := $(workbench-libs-freetype-module-genmodfiles_GENTARGETS) $(workbench-libs-freetype-module-genmodfiles_STUBTARGETS)
+ifneq ($(workbench-libs-freetype-module-genmodfiles_TARGETDIRS),)
+$(workbench-libs-freetype-module-genmodfiles_TARGETS) : | $(workbench-libs-freetype-module-genmodfiles_TARGETDIRS)
+endif
+
+$(workbench-libs-freetype-module-genmodfiles_TARGETS) : $(workbench-libs-freetype-module-genmodfiles_DEPS) $(workbench-libs-freetype-module-genmodfiles_GENFILEFLAG)
+
+$(workbench-libs-freetype-module-genmodfiles_GENFILEFLAG) : OPTS := $(workbench-libs-freetype-module-genmodfiles_OPTS)
+$(workbench-libs-freetype-module-genmodfiles_GENFILEFLAG) : MODNAME := freetype2
+$(workbench-libs-freetype-module-genmodfiles_GENFILEFLAG) : MODTYPE := library
+$(workbench-libs-freetype-module-genmodfiles_GENFILEFLAG) : $(workbench-libs-freetype-module-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "freetype2.conf" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(workbench-libs-freetype-module-genmodfiles_GENFILEFLAG) : $(workbench-libs-freetype-module_DEFLIBDEFSINC) $(workbench-libs-freetype-module-makefile)
+
+
+ifneq ($(workbench-libs-freetype-module-genmodfiles_GENFILEFLAG),)
+$(workbench-libs-freetype-module-genmodfiles_GENFILEFLAG) : | $(workbench-libs-freetype-module_OBJDIR)/linklib
+else
+$(workbench-libs-freetype-module-genmodfiles_GENFILEFLAG) :: $(workbench-libs-freetype-module_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(workbench-libs-freetype-module_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+workbench-libs-freetype-module_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+workbench-libs-freetype-module_FDDIR            := /../$(AROS_DIR_FD)
+endif
+workbench-libs-freetype-module-fd : $(workbench-libs-freetype-module_FDDIR)/freetype2_lib.fd
+
+
+TMP_TARGET := freetype2_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (freetype2.conf,)
+    ifeq ($(dir freetype2.conf),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/freetype2.conf
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/freetype2.conf
+    else
+        TMP_OPTS += -c freetype2.conf
+        TMP_DEPS += freetype2.conf
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/freetype2.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/freetype2.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(workbench-libs-freetype-module_FDDIR),)
+    TMP_OPTS += -d $(workbench-libs-freetype-module_FDDIR)
+    TMP_TARGET := $(workbench-libs-freetype-module_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := freetype2
+$(TMP_TARGET) : MODTYPE := library
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(workbench-libs-freetype-module_FDDIR)/freetype2_lib.fd : | $(workbench-libs-freetype-module_FDDIR)
+
+
+ifneq (workbench-libs-freetype-module-fd-setup,)
+workbench-libs-freetype-module-fd-setup : | $(workbench-libs-freetype-module_FDDIR)
+else
+workbench-libs-freetype-module-fd-setup :: $(workbench-libs-freetype-module_FDDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-freetype-module_FDDIR)
+
+endif
+
+## Compilation
+##
+workbench-libs-freetype-module_FILES            := $(SHFILES) $(FT2FILES)
+workbench-libs-freetype-module_OBJCFILES        := 
+workbench-libs-freetype-module_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+workbench-libs-freetype-module_LIBFILES         := 
+workbench-libs-freetype-module_LIBS             := stdc
+
+workbench-libs-freetype-module_FDIRS            := $(sort $(dir $(workbench-libs-freetype-module_FILES)))
+
+workbench-libs-freetype-module_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+workbench-libs-freetype-module_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call workbench-libs-freetype-module_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+workbench-libs-freetype-module_FILTERARCH       = $(filter-out $(call workbench-libs-freetype-module_MATCHARCH,$(1),$(2)),$(2))
+workbench-libs-freetype-module_STARTFILES       := $(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$($(workbench-libs-freetype-module_DEFNAME)_STARTFILES))
+workbench-libs-freetype-module_ENDFILES         := $(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$($(workbench-libs-freetype-module_DEFNAME)_ENDFILES))
+
+workbench-libs-freetype-module_ARCHOBJS         := $(wildcard $(workbench-libs-freetype-module_OBJDIR)/arch/*.o)
+workbench-libs-freetype-module_LIBARCHOBJS      := $(wildcard $(workbench-libs-freetype-module_OBJDIR)/linklib/arch/*.o)
+workbench-libs-freetype-module_ARCHFILES        := $(basename $(notdir $(workbench-libs-freetype-module_ARCHOBJS)))
+workbench-libs-freetype-module_LIBARCHFILES     := $(basename $(notdir $(workbench-libs-freetype-module_LIBARCHOBJS)))
+workbench-libs-freetype-module_C_NARCHFILES     := $(call workbench-libs-freetype-module_FILTERARCH,$(workbench-libs-freetype-module_ARCHFILES),$(workbench-libs-freetype-module_FILES))
+workbench-libs-freetype-module_CXX_NARCHFILES   := $(call workbench-libs-freetype-module_FILTERARCH,$(workbench-libs-freetype-module_ARCHFILES),$(workbench-libs-freetype-module_CXXFILES))
+workbench-libs-freetype-module_OBJC_NARCHFILES  := $(call workbench-libs-freetype-module_FILTERARCH,$(workbench-libs-freetype-module_ARCHFILES),$(workbench-libs-freetype-module_OBJCFILES))
+workbench-libs-freetype-module_NLIBARCHFILES    := $(call workbench-libs-freetype-module_FILTERARCH,$(workbench-libs-freetype-module_LIBARCHFILES),$(workbench-libs-freetype-module_LIBFILES))
+workbench-libs-freetype-module_ARCHNLIBFILES    := $(call workbench-libs-freetype-module_FILTERARCH,$(workbench-libs-freetype-module_LIBFILES),$(workbench-libs-freetype-module_LIBARCHFILES))
+
+workbench-libs-freetype-module_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(workbench-libs-freetype-module_OBJDIR)/include -include $(workbench-libs-freetype-module_DEFLIBDEFSINC))
+ifneq (,)
+workbench-libs-freetype-module_CPPFLAGS         += -I
+endif
+workbench-libs-freetype-module_LINKLIBCPPFLAGS  := $(workbench-libs-freetype-module_CPPFLAGS)
+workbench-libs-freetype-module_CPPFLAGS         += $(strip $($(workbench-libs-freetype-module_DEFNAME)_CPPFLAGS))
+workbench-libs-freetype-module_LINKLIBCPPFLAGS  += $(strip $($(workbench-libs-freetype-module_DEFNAME)_LINKLIBCPPFLAGS))
+workbench-libs-freetype-module_CFLAGS           := $(strip $(CFLAGS) $($(workbench-libs-freetype-module_DEFNAME)_CFLAGS))
+workbench-libs-freetype-module_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(workbench-libs-freetype-module_DEFNAME)_LINKLIBCFLAGS))
+workbench-libs-freetype-module_CXXFLAGS         := $(strip $(CXXFLAGS) $($(workbench-libs-freetype-module_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+workbench-libs-freetype-module_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+workbench-libs-freetype-module_CFLAGS           := $(strip $(workbench-libs-freetype-module_LTOFLAGS) $(workbench-libs-freetype-module_CFLAGS))
+workbench-libs-freetype-module_LINKLIBCFLAGS    := $(strip $(workbench-libs-freetype-module_LTOFLAGS) $(workbench-libs-freetype-module_LINKLIBCFLAGS))
+workbench-libs-freetype-module_CXXFLAGS         := $(strip $(workbench-libs-freetype-module_LTOFLAGS) $(workbench-libs-freetype-module_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-libs-freetype-module_SUBSTNULL        :=
+workbench-libs-freetype-module_SUBSTSPACE       := $(workbench-libs-freetype-module_SUBSTNULL) #
+workbench-libs-freetype-module_SUBSTCOMMA       := ,
+workbench-libs-freetype-module_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(workbench-libs-freetype-module_SUBSTSPACE),$(workbench-libs-freetype-module_SUBSTCOMMA),$(strip $($(workbench-libs-freetype-module_DEFNAME)_STARTFILES))))
+workbench-libs-freetype-module_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-libs-freetype-module_CFLAGS           := $(strip $(workbench-libs-freetype-module_INSTRFUNCFLAGS) $(workbench-libs-freetype-module_CFLAGS))
+workbench-libs-freetype-module_CXXFLAGS         := $(strip $(workbench-libs-freetype-module_INSTRFUNCFLAGS) $(workbench-libs-freetype-module_CXXFLAGS))
+workbench-libs-freetype-module_LIBS             += $(workbench-libs-freetype-module_INSTRFUNCLIBS)
+endif
+endif
+workbench-libs-freetype-module_DFLAGS           := $(strip $(workbench-libs-freetype-module_DFLAGS) $($(workbench-libs-freetype-module_DEFNAME)_DFLAGS))
+workbench-libs-freetype-module_LINKLIBDFLAGS    := $(strip $(workbench-libs-freetype-module_DFLAGS) $($(workbench-libs-freetype-module_DEFNAME)_LINKLIBDFLAGS))
+workbench-libs-freetype-module_DXXFLAGS         := $(strip $(workbench-libs-freetype-module_DXXFLAGS) $($(workbench-libs-freetype-module_DEFNAME)_DXXFLAGS))
+
+ifeq (library,library)
+    workbench-libs-freetype-module_LIBSUFFIX    := 
+else
+    workbench-libs-freetype-module_LIBSUFFIX    := .library
+endif
+
+ifeq (,)
+workbench-libs-freetype-module_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+workbench-libs-freetype-module_LIBDIR           := 
+endif
+
+ifeq (M,M)
+workbench-libs-freetype-module_LINKLIBCFILES    := $(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$($(workbench-libs-freetype-module_DEFNAME)_LINKLIBFILES))
+workbench-libs-freetype-module_LINKLIBAFILES    := $(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$($(workbench-libs-freetype-module_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(workbench-libs-freetype-module_DEFNAME)_LINKLIBFILES) $($(workbench-libs-freetype-module_DEFNAME)_LINKLIBAFILES)  $(workbench-libs-freetype-module_ARCHNLIBFILES)),)
+    workbench-libs-freetype-module_LINKLIB      :=
+else
+    workbench-libs-freetype-module_LINKLIB      := $(workbench-libs-freetype-module_LIBDIR)/libfreetype2$(workbench-libs-freetype-module_LIBSUFFIX).a
+    ifneq (freetype2,$(workbench-libs-freetype-module_LINKLIBNAME))
+        workbench-libs-freetype-module_LINKLIB  += $(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_LINKLIBNAME)$(workbench-libs-freetype-module_LIBSUFFIX).a
+    endif
+endif
+workbench-libs-freetype-module_LINKLIBFILES     := $(workbench-libs-freetype-module_LINKLIBCFILES) $(workbench-libs-freetype-module_LINKLIBAFILES)
+
+workbench-libs-freetype-module_RELLINKLIBCFILES := $(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$($(workbench-libs-freetype-module_DEFNAME)_RELLINKLIBFILES))
+workbench-libs-freetype-module_RELLINKLIBAFILES := $(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$($(workbench-libs-freetype-module_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(workbench-libs-freetype-module_DEFNAME)_RELLINKLIBFILES) $($(workbench-libs-freetype-module_DEFNAME)_RELLINKLIBAFILES)  $(workbench-libs-freetype-module_ARCHNLIBFILES)),)
+    workbench-libs-freetype-module_RELLINKLIB   :=
+else
+    workbench-libs-freetype-module_RELLINKLIB   := $(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_DEFNAME)_rel$(workbench-libs-freetype-module_LIBSUFFIX).a
+    ifneq (freetype2,$(workbench-libs-freetype-module_LINKLIBNAME))
+        workbench-libs-freetype-module_RELLINKLIB += $(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_LINKLIBNAME)_rel$(workbench-libs-freetype-module_LIBSUFFIX).a
+    endif
+endif
+workbench-libs-freetype-module_RELLINKLIBFILES  := $(workbench-libs-freetype-module_RELLINKLIBCFILES) $(workbench-libs-freetype-module_RELLINKLIBAFILES)
+endif
+
+workbench-libs-freetype-module_ENDOBJS          := $(addsuffix .o,$(workbench-libs-freetype-module_ENDFILES))
+workbench-libs-freetype-module_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$(notdir $(workbench-libs-freetype-module_NLIBARCHFILES))) $(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/arch/,$(notdir $(workbench-libs-freetype-module_ARCHNLIBFILES))) $(workbench-libs-freetype-module_LINKLIBFILES)) \
+                 
+workbench-libs-freetype-module_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$(notdir $(workbench-libs-freetype-module_NLIBARCHFILES))) $(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/arch/,$(notdir $(workbench-libs-freetype-module_ARCHNLIBFILES))) $(workbench-libs-freetype-module_RELLINKLIBFILES)) \
+                 
+$(workbench-libs-freetype-module_LINKLIBFILES) $(workbench-libs-freetype-module_RELLINKLIBFILES) : | $(workbench-libs-freetype-module_OBJDIR)/linklib
+$(workbench-libs-freetype-module_LINKLIBOBJS) $(workbench-libs-freetype-module_RELLINKLIBOBJS) : | $(workbench-libs-freetype-module_OBJDIR)/linklib
+
+workbench-libs-freetype-module_CCFILES := $(workbench-libs-freetype-module_C_NARCHFILES)
+workbench-libs-freetype-module_TARGETCCFILES    := $(strip $(workbench-libs-freetype-module_STARTFILES) $(workbench-libs-freetype-module_ENDFILES))
+workbench-libs-freetype-module_LINKLIBCCFILES   := $(strip $(workbench-libs-freetype-module_NLIBARCHFILES) $(workbench-libs-freetype-module_LINKLIBCFILES) $(workbench-libs-freetype-module_RELLINKLIBCFILES))
+workbench-libs-freetype-module_LINKLIBCCGENFILES := $(strip $(workbench-libs-freetype-module_LINKLIBCFILES) $(workbench-libs-freetype-module_RELLINKLIBCFILES))
+
+
+workbench-libs-freetype-module_CXXABSBASENAMES := $(foreach workbench-libs-freetype-module_CXXBASE,$(workbench-libs-freetype-module_CXX_NARCHFILES),$(if $(filter /%,$(workbench-libs-freetype-module_CXXBASE)),$(workbench-libs-freetype-module_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-libs-freetype-module_CXXBASE))))
+
+ifneq ($(workbench-libs-freetype-module_CXXABSBASENAMES),)
+
+workbench-libs-freetype-module_CXXBASENAMES := $(basename $(workbench-libs-freetype-module_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-libs-freetype-module_MCXX_FILES  := $(strip $(foreach workbench-libs-freetype-module_CXXBASE,$(workbench-libs-freetype-module_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-libs-freetype-module_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-libs-freetype-module_EXT),$(workbench-libs-freetype-module_CXXBASE)))))))
+
+ifeq (,)
+workbench-libs-freetype-module_MCXX_SRCWILDCARD := %
+else
+workbench-libs-freetype-module_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-freetype-module_OBJDIR),)
+  workbench-libs-freetype-module_CXXTARGETS := $(notdir $(workbench-libs-freetype-module_CXXBASENAMES:=.o))
+  workbench-libs-freetype-module_CXXDTARGETS := $(notdir $(workbench-libs-freetype-module_CXXBASENAMES:=.d))
+  workbench-libs-freetype-module_MCXX_WILDCARD := %
+else
+  workbench-libs-freetype-module_CXXTARGETS := $(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(notdir $(workbench-libs-freetype-module_CXXBASENAMES:=.o)))
+  workbench-libs-freetype-module_CXXDTARGETS := $(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(notdir $(workbench-libs-freetype-module_CXXBASENAMES:=.d)))
+  workbench-libs-freetype-module_MCXX_WILDCARD := $(workbench-libs-freetype-module_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-libs-freetype-module_CXXTARGETS) $(workbench-libs-freetype-module_CXXDTARGETS) : | $(workbench-libs-freetype-module_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-libs-freetype-module_MCXX_CPPFLAGS := $(workbench-libs-freetype-module_CPPFLAGS)
+workbench-libs-freetype-module_CXXFLAGS := $(workbench-libs-freetype-module_CXXFLAGS)
+ifeq ($(workbench-libs-freetype-module_DXXFLAGS),)
+  workbench-libs-freetype-module_DXXFLAGS := $(workbench-libs-freetype-module_CXXFLAGS)
+else
+  workbench-libs-freetype-module_DXXFLAGS := $(workbench-libs-freetype-module_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-libs-freetype-module_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-libs-freetype-module_STRIP ?= $(HOST_STRIP)
+  workbench-libs-freetype-module_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-libs-freetype-module_CXXCMD:=$(HOST_CXX)
+  workbench-libs-freetype-module_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-libs-freetype-module_MCXX_CPPFLAGS) $(workbench-libs-freetype-module_MCXX_EXTRA_CPPFLAGS))
+  workbench-libs-freetype-module_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-libs-freetype-module_CXXFLAGS))
+  workbench-libs-freetype-module_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-libs-freetype-module_DXXFLAGS))
+  workbench-libs-freetype-module_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-libs-freetype-module_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-libs-freetype-module_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-libs-freetype-module_STRIP ?= $(TARGET_STRIP)
+  workbench-libs-freetype-module_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-libs-freetype-module_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-libs-freetype-module_MCXX_CPPFLAGS := $(strip $(workbench-libs-freetype-module_MCXX_CPPFLAGS) $(workbench-libs-freetype-module_MCXX_EXTRA_CPPFLAGS))
+  workbench-libs-freetype-module_CXXFLAGS := $(strip $(workbench-libs-freetype-module_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-libs-freetype-module_DXXFLAGS := $(workbench-libs-freetype-module_DXXFLAGS)
+  workbench-libs-freetype-module_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-libs-freetype-module_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-libs-freetype-module_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-libs-freetype-module_STRIP ?= $(ECHO) >/dev/null
+  workbench-libs-freetype-module_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-libs-freetype-module_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-libs-freetype-module_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-libs-freetype-module_MCXX_CPPFLAGS) $(workbench-libs-freetype-module_MCXX_EXTRA_CPPFLAGS))
+  workbench-libs-freetype-module_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-libs-freetype-module_CXXFLAGS))
+  workbench-libs-freetype-module_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-libs-freetype-module_DXXFLAGS))
+  workbench-libs-freetype-module_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-libs-freetype-module_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-libs-freetype-module_CXXCMD) $(workbench-libs-freetype-module_CXXIQUOTE) $(dir $(2)) $(workbench-libs-freetype-module_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_CXXIQUOTE) . $(workbench-libs-freetype-module_CXXIQUOTE_END) $(strip $(workbench-libs-freetype-module_CXXFLAGS) $(workbench-libs-freetype-module_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-libs-freetype-module_CXXCMD) $(workbench-libs-freetype-module_CXXIQUOTE) $(dir $(2)) $(workbench-libs-freetype-module_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_CXXIQUOTE) . $(workbench-libs-freetype-module_CXXIQUOTE_END) $(strip $(workbench-libs-freetype-module_CXXFLAGS) $(workbench-libs-freetype-module_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-libs-freetype-module_CXXCMD) $(workbench-libs-freetype-module_CXXIQUOTE) $(dir $(2)) $(workbench-libs-freetype-module_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_CXXIQUOTE) . $(workbench-libs-freetype-module_CXXIQUOTE_END) $(strip $(workbench-libs-freetype-module_CXXFLAGS) $(workbench-libs-freetype-module_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-libs-freetype-module_CXXCMD)" $(MKDEPEND) $(strip $(workbench-libs-freetype-module_DXXFLAGS) $(workbench-libs-freetype-module_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-libs-freetype-module_OBJDIR),)
+  $(foreach workbench-libs-freetype-module_CXXFILE,$(workbench-libs-freetype-module_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-libs-freetype-module_CXXFILE))),$(workbench-libs-freetype-module_CXXFILE))))
+else
+  $(foreach workbench-libs-freetype-module_CXXFILE,$(workbench-libs-freetype-module_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(notdir $(basename $(workbench-libs-freetype-module_CXXFILE)))),$(workbench-libs-freetype-module_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-libs-freetype-module_OBJC_NARCHFILES),)
+
+ifeq (,)
+workbench-libs-freetype-module_MOBJC_SRCWILDCARD := %
+else
+workbench-libs-freetype-module_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-freetype-module_OBJDIR),)
+  workbench-libs-freetype-module_MOBJC_TARGETS := $(addsuffix .o,$(workbench-libs-freetype-module_OBJC_NARCHFILES))
+  workbench-libs-freetype-module_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-libs-freetype-module_OBJC_NARCHFILES))
+  workbench-libs-freetype-module_MOBJC_WILDCARD := %
+else
+  workbench-libs-freetype-module_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(workbench-libs-freetype-module_OBJC_NARCHFILES)))
+  workbench-libs-freetype-module_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(workbench-libs-freetype-module_OBJC_NARCHFILES)))
+  workbench-libs-freetype-module_MOBJC_WILDCARD := $(workbench-libs-freetype-module_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-libs-freetype-module_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  workbench-libs-freetype-module_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-libs-freetype-module_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-freetype-module_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-libs-freetype-module_MOBJC_DIRS := $(foreach dir, $(workbench-libs-freetype-module_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-freetype-module_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-libs-freetype-module_MOBJC_DIRS),)
+    workbench-libs-freetype-module_MOBJC_DIRS := $(shell echo $(workbench-libs-freetype-module_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-libs-freetype-module_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-libs-freetype-module_CC := $(TARGET_CC)
+else
+  workbench-libs-freetype-module_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-libs-freetype-module_MOBJC_CPPFLAGS := $(workbench-libs-freetype-module_CPPFLAGS)
+workbench-libs-freetype-module_OBJCFLAGS := $(workbench-libs-freetype-module_CFLAGS)
+workbench-libs-freetype-module_OBJCFLAGS := $(workbench-libs-freetype-module_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-libs-freetype-module_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-libs-freetype-module_OBJCFLAGS)))
+ifeq ($(workbench-libs-freetype-module_DFLAGS),)
+  workbench-libs-freetype-module_OBJCDFLAGS := $(workbench-libs-freetype-module_CFLAGS)
+else
+  workbench-libs-freetype-module_OBJCDFLAGS := $(workbench-libs-freetype-module_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-libs-freetype-module_LINK ?= $(strip $(workbench-libs-freetype-module_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-libs-freetype-module_STRIP ?= $(TARGET_STRIP)
+  workbench-libs-freetype-module_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-libs-freetype-module_CC) $(TARGET_SYSROOT))
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : workbench-libs-freetype-module_MOBJC_CPPFLAGS:=$(strip $(workbench-libs-freetype-module_MOBJC_CPPFLAGS) $(workbench-libs-freetype-module_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : workbench-libs-freetype-module_OBJCFLAGS:=$(strip $(workbench-libs-freetype-module_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : workbench-libs-freetype-module_OBJCDFLAGS:=$(workbench-libs-freetype-module_OBJCDFLAGS)
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : workbench-libs-freetype-module_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : workbench-libs-freetype-module_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-libs-freetype-module_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-libs-freetype-module_STRIP ?= $(HOST_STRIP)
+  workbench-libs-freetype-module_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : workbench-libs-freetype-module_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-libs-freetype-module_MOBJC_CPPFLAGS) $(workbench-libs-freetype-module_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : workbench-libs-freetype-module_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-freetype-module_OBJCFLAGS))
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : workbench-libs-freetype-module_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-freetype-module_OBJCDFLAGS))
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : workbench-libs-freetype-module_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : workbench-libs-freetype-module_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-libs-freetype-module_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-libs-freetype-module_STRIP ?= $(ECHO) >/dev/null
+  workbench-libs-freetype-module_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : workbench-libs-freetype-module_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-libs-freetype-module_MOBJC_CPPFLAGS) $(workbench-libs-freetype-module_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : workbench-libs-freetype-module_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-freetype-module_OBJCFLAGS))
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : workbench-libs-freetype-module_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-freetype-module_OBJCDFLAGS))
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : workbench-libs-freetype-module_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-libs-freetype-module_MOBJC_TARGETS) $(workbench-libs-freetype-module_MOBJC_DTARGETS) : workbench-libs-freetype-module_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-freetype-module_MOBJC_TARGETS) : CPPFLAGS := $(workbench-libs-freetype-module_MOBJC_CPPFLAGS)
+$(workbench-libs-freetype-module_MOBJC_TARGETS) : CFLAGS := $(workbench-libs-freetype-module_OBJCFLAGS)
+$(workbench-libs-freetype-module_MOBJC_TARGETS) : $(workbench-libs-freetype-module_MOBJC_WILDCARD).o : $(workbench-libs-freetype-module_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-freetype-module_IQUOTE) $(dir $<) $(workbench-libs-freetype-module_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_IQUOTE) . $(workbench-libs-freetype-module_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-freetype-module_IQUOTE) $(dir $<) $(workbench-libs-freetype-module_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_IQUOTE) . $(workbench-libs-freetype-module_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-freetype-module_IQUOTE) $(dir $<) $(workbench-libs-freetype-module_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_IQUOTE) . $(workbench-libs-freetype-module_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-freetype-module_MOBJC_DTARGETS) : $(workbench-libs-freetype-module_MOBJC_WILDCARD).d : $(workbench-libs-freetype-module_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-freetype-module_OBJCDFLAGS) $(workbench-libs-freetype-module_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-libs-freetype-module_MC_SRCWILDCARD := %
+else
+workbench-libs-freetype-module_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-freetype-module_OBJDIR),)
+workbench-libs-freetype-module_MC_TARGETS := $(addsuffix .o,$(workbench-libs-freetype-module_CCFILES))
+workbench-libs-freetype-module_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-freetype-module_CCFILES))
+workbench-libs-freetype-module_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-freetype-module_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(notdir $(workbench-libs-freetype-module_CCFILES))))
+    workbench-libs-freetype-module_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(notdir $(workbench-libs-freetype-module_CCFILES))))
+else
+ifeq (,)
+    workbench-libs-freetype-module_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(workbench-libs-freetype-module_CCFILES)))
+    workbench-libs-freetype-module_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(workbench-libs-freetype-module_CCFILES)))
+else
+    workbench-libs-freetype-module_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-freetype-module_CCFILES))))
+    workbench-libs-freetype-module_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-freetype-module_CCFILES))))
+endif
+endif
+workbench-libs-freetype-module_MC_TGTWILDCARD := $(workbench-libs-freetype-module_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-freetype-module_CCFILES))
+
+# Be sure that all .c files are found
+workbench-libs-freetype-module_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-freetype-module_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-freetype-module_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-freetype-module_MC_DIRS := $(foreach dir, $(workbench-libs-freetype-module_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-freetype-module_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-freetype-module_MC_DIRS),)
+    workbench-libs-freetype-module_MC_DIRS := $(shell echo $(workbench-libs-freetype-module_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-freetype-module_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-freetype-module_MC_CPPFLAGS := $(workbench-libs-freetype-module_CPPFLAGS)
+workbench-libs-freetype-module_CFLAGS := $(workbench-libs-freetype-module_CFLAGS)
+ifeq ($(workbench-libs-freetype-module_DFLAGS),)
+  workbench-libs-freetype-module_DFLAGS := $(workbench-libs-freetype-module_CFLAGS)
+else
+  workbench-libs-freetype-module_DFLAGS := $(workbench-libs-freetype-module_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-freetype-module_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-freetype-module_STRIP ?= $(TARGET_STRIP)
+workbench-libs-freetype-module_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_MC_CPPFLAGS:=$(strip $(workbench-libs-freetype-module_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_CFLAGS:=$(strip $(workbench-libs-freetype-module_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_DFLAGS:=$(workbench-libs-freetype-module_DFLAGS)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-freetype-module_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-freetype-module_STRIP ?= $(HOST_STRIP)
+workbench-libs-freetype-module_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-freetype-module_CFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-freetype-module_DFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-freetype-module_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-freetype-module_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-freetype-module_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-freetype-module_CFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-freetype-module_DFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-freetype-module_MC_TARGETS) : CPPFLAGS := $(workbench-libs-freetype-module_MC_CPPFLAGS)
+$(workbench-libs-freetype-module_MC_TARGETS) : CFLAGS := $(workbench-libs-freetype-module_CFLAGS)
+$(workbench-libs-freetype-module_MC_TARGETS) : $(workbench-libs-freetype-module_MC_TGTWILDCARD).o : $(workbench-libs-freetype-module_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-freetype-module_IQUOTE) $(dir $<) $(workbench-libs-freetype-module_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_IQUOTE) . $(workbench-libs-freetype-module_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-freetype-module_IQUOTE) $(dir $<) $(workbench-libs-freetype-module_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_IQUOTE) . $(workbench-libs-freetype-module_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-freetype-module_IQUOTE) $(dir $<) $(workbench-libs-freetype-module_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_IQUOTE) . $(workbench-libs-freetype-module_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-freetype-module_MC_DTARGETS) : $(workbench-libs-freetype-module_MC_TGTWILDCARD).d : $(workbench-libs-freetype-module_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-freetype-module_DFLAGS) $(workbench-libs-freetype-module_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+workbench-libs-freetype-module_MC_SRCWILDCARD := %
+else
+workbench-libs-freetype-module_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-freetype-module_OBJDIR),)
+workbench-libs-freetype-module_MC_TARGETS := $(addsuffix .o,$(workbench-libs-freetype-module_TARGETCCFILES))
+workbench-libs-freetype-module_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-freetype-module_TARGETCCFILES))
+workbench-libs-freetype-module_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-freetype-module_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(notdir $(workbench-libs-freetype-module_TARGETCCFILES))))
+    workbench-libs-freetype-module_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(notdir $(workbench-libs-freetype-module_TARGETCCFILES))))
+else
+ifeq (,)
+    workbench-libs-freetype-module_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(workbench-libs-freetype-module_TARGETCCFILES)))
+    workbench-libs-freetype-module_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(workbench-libs-freetype-module_TARGETCCFILES)))
+else
+    workbench-libs-freetype-module_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-freetype-module_TARGETCCFILES))))
+    workbench-libs-freetype-module_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-freetype-module_TARGETCCFILES))))
+endif
+endif
+workbench-libs-freetype-module_MC_TGTWILDCARD := $(workbench-libs-freetype-module_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-freetype-module_TARGETCCFILES))
+
+# Be sure that all .c files are found
+workbench-libs-freetype-module_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-freetype-module_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-freetype-module_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-freetype-module_MC_DIRS := $(foreach dir, $(workbench-libs-freetype-module_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-freetype-module_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-freetype-module_MC_DIRS),)
+    workbench-libs-freetype-module_MC_DIRS := $(shell echo $(workbench-libs-freetype-module_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-freetype-module_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-freetype-module_MC_CPPFLAGS := $(workbench-libs-freetype-module_CPPFLAGS) -D__AROS__
+workbench-libs-freetype-module_CFLAGS := $(workbench-libs-freetype-module_CFLAGS)
+ifeq ($(workbench-libs-freetype-module_DFLAGS),)
+  workbench-libs-freetype-module_DFLAGS := $(workbench-libs-freetype-module_CFLAGS)
+else
+  workbench-libs-freetype-module_DFLAGS := $(workbench-libs-freetype-module_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-freetype-module_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-freetype-module_STRIP ?= $(TARGET_STRIP)
+workbench-libs-freetype-module_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_MC_CPPFLAGS:=$(strip $(workbench-libs-freetype-module_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_CFLAGS:=$(strip $(workbench-libs-freetype-module_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_DFLAGS:=$(workbench-libs-freetype-module_DFLAGS)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-freetype-module_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-freetype-module_STRIP ?= $(HOST_STRIP)
+workbench-libs-freetype-module_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-freetype-module_CFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-freetype-module_DFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-freetype-module_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-freetype-module_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-freetype-module_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-freetype-module_CFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-freetype-module_DFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-freetype-module_MC_TARGETS) : CPPFLAGS := $(workbench-libs-freetype-module_MC_CPPFLAGS)
+$(workbench-libs-freetype-module_MC_TARGETS) : CFLAGS := $(workbench-libs-freetype-module_CFLAGS)
+$(workbench-libs-freetype-module_MC_TARGETS) : $(workbench-libs-freetype-module_MC_TGTWILDCARD).o : $(workbench-libs-freetype-module_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-freetype-module_IQUOTE) $(dir $<) $(workbench-libs-freetype-module_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_IQUOTE) . $(workbench-libs-freetype-module_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-freetype-module_IQUOTE) $(dir $<) $(workbench-libs-freetype-module_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_IQUOTE) . $(workbench-libs-freetype-module_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-freetype-module_IQUOTE) $(dir $<) $(workbench-libs-freetype-module_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_IQUOTE) . $(workbench-libs-freetype-module_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-freetype-module_MC_DTARGETS) : $(workbench-libs-freetype-module_MC_TGTWILDCARD).d : $(workbench-libs-freetype-module_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-freetype-module_DFLAGS) $(workbench-libs-freetype-module_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+workbench-libs-freetype-module_MC_SRCWILDCARD := %
+else
+workbench-libs-freetype-module_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-freetype-module_OBJDIR)/linklib,)
+workbench-libs-freetype-module_MC_TARGETS := $(addsuffix .o,$(workbench-libs-freetype-module_NLIBARCHFILES))
+workbench-libs-freetype-module_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-freetype-module_NLIBARCHFILES))
+workbench-libs-freetype-module_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-freetype-module_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$(notdir $(workbench-libs-freetype-module_NLIBARCHFILES))))
+    workbench-libs-freetype-module_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$(notdir $(workbench-libs-freetype-module_NLIBARCHFILES))))
+else
+ifeq (,)
+    workbench-libs-freetype-module_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$(workbench-libs-freetype-module_NLIBARCHFILES)))
+    workbench-libs-freetype-module_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$(workbench-libs-freetype-module_NLIBARCHFILES)))
+else
+    workbench-libs-freetype-module_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$(patsubst /%,%,$(workbench-libs-freetype-module_NLIBARCHFILES))))
+    workbench-libs-freetype-module_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$(patsubst /%,%,$(workbench-libs-freetype-module_NLIBARCHFILES))))
+endif
+endif
+workbench-libs-freetype-module_MC_TGTWILDCARD := $(workbench-libs-freetype-module_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-freetype-module_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+workbench-libs-freetype-module_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-freetype-module_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-freetype-module_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-freetype-module_MC_DIRS := $(foreach dir, $(workbench-libs-freetype-module_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-freetype-module_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-freetype-module_MC_DIRS),)
+    workbench-libs-freetype-module_MC_DIRS := $(shell echo $(workbench-libs-freetype-module_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-freetype-module_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-freetype-module_MC_CPPFLAGS := $(workbench-libs-freetype-module_LINKLIBCPPFLAGS) -D__AROS__
+workbench-libs-freetype-module_CFLAGS := $(workbench-libs-freetype-module_LINKLIBCFLAGS)
+ifeq ($(workbench-libs-freetype-module_LINKLIBDFLAGS),)
+  workbench-libs-freetype-module_DFLAGS := $(workbench-libs-freetype-module_LINKLIBCFLAGS)
+else
+  workbench-libs-freetype-module_DFLAGS := $(workbench-libs-freetype-module_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-freetype-module_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-freetype-module_STRIP ?= $(TARGET_STRIP)
+workbench-libs-freetype-module_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_MC_CPPFLAGS:=$(strip $(workbench-libs-freetype-module_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_CFLAGS:=$(strip $(workbench-libs-freetype-module_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_DFLAGS:=$(workbench-libs-freetype-module_DFLAGS)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-freetype-module_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-freetype-module_STRIP ?= $(HOST_STRIP)
+workbench-libs-freetype-module_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-freetype-module_CFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-freetype-module_DFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-freetype-module_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-freetype-module_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-freetype-module_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-freetype-module_CFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-freetype-module_DFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-freetype-module_MC_TARGETS) : CPPFLAGS := $(workbench-libs-freetype-module_MC_CPPFLAGS)
+$(workbench-libs-freetype-module_MC_TARGETS) : CFLAGS := $(workbench-libs-freetype-module_CFLAGS)
+$(workbench-libs-freetype-module_MC_TARGETS) : $(workbench-libs-freetype-module_MC_TGTWILDCARD).o : $(workbench-libs-freetype-module_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-freetype-module_IQUOTE) $(dir $<) $(workbench-libs-freetype-module_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_IQUOTE) . $(workbench-libs-freetype-module_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-freetype-module_IQUOTE) $(dir $<) $(workbench-libs-freetype-module_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_IQUOTE) . $(workbench-libs-freetype-module_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-freetype-module_IQUOTE) $(dir $<) $(workbench-libs-freetype-module_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_IQUOTE) . $(workbench-libs-freetype-module_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-freetype-module_MC_DTARGETS) : $(workbench-libs-freetype-module_MC_TGTWILDCARD).d : $(workbench-libs-freetype-module_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-freetype-module_DFLAGS) $(workbench-libs-freetype-module_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-libs-freetype-module_OBJDIR)/linklib,)
+workbench-libs-freetype-module_MC_SRCWILDCARD := %
+else
+workbench-libs-freetype-module_MC_SRCWILDCARD := $(workbench-libs-freetype-module_OBJDIR)/linklib/%
+endif
+
+ifeq ($(workbench-libs-freetype-module_OBJDIR)/linklib,)
+workbench-libs-freetype-module_MC_TARGETS := $(addsuffix .o,$(workbench-libs-freetype-module_LINKLIBCCGENFILES))
+workbench-libs-freetype-module_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-freetype-module_LINKLIBCCGENFILES))
+workbench-libs-freetype-module_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-freetype-module_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$(notdir $(workbench-libs-freetype-module_LINKLIBCCGENFILES))))
+    workbench-libs-freetype-module_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$(notdir $(workbench-libs-freetype-module_LINKLIBCCGENFILES))))
+else
+ifeq ($(workbench-libs-freetype-module_OBJDIR)/linklib,)
+    workbench-libs-freetype-module_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$(workbench-libs-freetype-module_LINKLIBCCGENFILES)))
+    workbench-libs-freetype-module_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$(workbench-libs-freetype-module_LINKLIBCCGENFILES)))
+else
+    workbench-libs-freetype-module_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$(patsubst $(workbench-libs-freetype-module_OBJDIR)/linklib/%,%,$(workbench-libs-freetype-module_LINKLIBCCGENFILES))))
+    workbench-libs-freetype-module_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$(patsubst $(workbench-libs-freetype-module_OBJDIR)/linklib/%,%,$(workbench-libs-freetype-module_LINKLIBCCGENFILES))))
+endif
+endif
+workbench-libs-freetype-module_MC_TGTWILDCARD := $(workbench-libs-freetype-module_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-freetype-module_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+workbench-libs-freetype-module_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-freetype-module_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-freetype-module_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-freetype-module_MC_DIRS := $(foreach dir, $(workbench-libs-freetype-module_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-freetype-module_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-freetype-module_MC_DIRS),)
+    workbench-libs-freetype-module_MC_DIRS := $(shell echo $(workbench-libs-freetype-module_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-freetype-module_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-freetype-module_MC_CPPFLAGS := $(workbench-libs-freetype-module_LINKLIBCPPFLAGS) -D__AROS__
+workbench-libs-freetype-module_CFLAGS := $(workbench-libs-freetype-module_LINKLIBCFLAGS)
+ifeq ($(workbench-libs-freetype-module_LINKLIBDFLAGS),)
+  workbench-libs-freetype-module_DFLAGS := $(workbench-libs-freetype-module_LINKLIBCFLAGS)
+else
+  workbench-libs-freetype-module_DFLAGS := $(workbench-libs-freetype-module_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-freetype-module_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-freetype-module_STRIP ?= $(TARGET_STRIP)
+workbench-libs-freetype-module_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_MC_CPPFLAGS:=$(strip $(workbench-libs-freetype-module_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_CFLAGS:=$(strip $(workbench-libs-freetype-module_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_DFLAGS:=$(workbench-libs-freetype-module_DFLAGS)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-freetype-module_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-freetype-module_STRIP ?= $(HOST_STRIP)
+workbench-libs-freetype-module_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-freetype-module_CFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-freetype-module_DFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-freetype-module_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-freetype-module_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-freetype-module_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_CPPFLAGS) $(workbench-libs-freetype-module_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-freetype-module_CFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-freetype-module_DFLAGS))
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-freetype-module_MC_TARGETS) $(workbench-libs-freetype-module_MC_DTARGETS) : workbench-libs-freetype-module_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-freetype-module_MC_TARGETS) : CPPFLAGS := $(workbench-libs-freetype-module_MC_CPPFLAGS)
+$(workbench-libs-freetype-module_MC_TARGETS) : CFLAGS := $(workbench-libs-freetype-module_CFLAGS)
+$(workbench-libs-freetype-module_MC_TARGETS) : $(workbench-libs-freetype-module_MC_TGTWILDCARD).o : $(workbench-libs-freetype-module_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-freetype-module_IQUOTE) $(dir $<) $(workbench-libs-freetype-module_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_IQUOTE) . $(workbench-libs-freetype-module_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-freetype-module_IQUOTE) $(dir $<) $(workbench-libs-freetype-module_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_IQUOTE) . $(workbench-libs-freetype-module_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-freetype-module_IQUOTE) $(dir $<) $(workbench-libs-freetype-module_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-freetype-module_IQUOTE) . $(workbench-libs-freetype-module_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-freetype-module_MC_DTARGETS) : $(workbench-libs-freetype-module_MC_TGTWILDCARD).d : $(workbench-libs-freetype-module_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-freetype-module_DFLAGS) $(workbench-libs-freetype-module_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(workbench-libs-freetype-module_LINKLIBAFILES),)
+
+ifeq ($(workbench-libs-freetype-module_OBJDIR)/linklib,)
+workbench-libs-freetype-module-MA_TARGETS := $(addsuffix .o,$(workbench-libs-freetype-module_LINKLIBAFILES) $(workbench-libs-freetype-module_RELLINKLIBAFILES))
+workbench-libs-freetype-module-MA_WILDCARD := %
+else
+workbench-libs-freetype-module-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$(notdir $(workbench-libs-freetype-module_LINKLIBAFILES) $(workbench-libs-freetype-module_RELLINKLIBAFILES))))
+workbench-libs-freetype-module-MA_WILDCARD := $(workbench-libs-freetype-module_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(workbench-libs-freetype-module-MA_TARGETS) : | $(addsuffix .S,$(workbench-libs-freetype-module_LINKLIBAFILES) $(workbench-libs-freetype-module_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+workbench-libs-freetype-module-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-freetype-module-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-freetype-module_LINKLIBAFILES) $(workbench-libs-freetype-module_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-freetype-module-MA_DIRS := $(foreach dir, $(workbench-libs-freetype-module-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-freetype-module-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-freetype-module-MA_DIRS),)
+    workbench-libs-freetype-module-MA_DIRS := $(shell echo $(workbench-libs-freetype-module-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(workbench-libs-freetype-module-MA_DIRS)
+endif
+
+endif
+
+workbench-libs-freetype-module-MA_ASSEMBLER ?= $(workbench-libs-freetype-module_ASSEMBLER)
+
+$(workbench-libs-freetype-module-MA_TARGETS) : workbench-libs-freetype-module-MA_CMD:= $(workbench-libs-freetype-module-MA_ASSEMBLER)
+
+$(workbench-libs-freetype-module-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(workbench-libs-freetype-module-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(workbench-libs-freetype-module-MA_TARGETS) : $(workbench-libs-freetype-module-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-libs-freetype-module-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-libs-freetype-module-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-libs-freetype-module-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+workbench-libs-freetype-module_SUFFIX           := library
+else
+workbench-libs-freetype-module_SUFFIX           := 
+endif
+
+ifeq (target,target)
+workbench-libs-freetype-module_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-libs-freetype-module_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-libs-freetype-module_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(workbench-libs-freetype-module_SUFFIX),handler)
+workbench-libs-freetype-module_MODULE           := $(AROSDIR)/$(workbench-libs-freetype-module_MODDIR)/$(workbench-libs-freetype-module_DEFNAME)-$(workbench-libs-freetype-module_SUFFIX)
+else
+workbench-libs-freetype-module_MODULE           := $(AROSDIR)/$(workbench-libs-freetype-module_MODDIR)/$(workbench-libs-freetype-module_DEFNAME).$(workbench-libs-freetype-module_SUFFIX)
+endif
+workbench-libs-freetype-module_KOBJ             := $(KOBJSDIR)/$(workbench-libs-freetype-module_DEFNAME)_$(workbench-libs-freetype-module_SUFFIX).o
+else
+workbench-libs-freetype-module_MODULE           :=
+workbench-libs-freetype-module_KOBJ             :=
+endif
+
+workbench-libs-freetype-module-quick      : workbench-libs-freetype-module
+workbench-libs-freetype-module            : $(workbench-libs-freetype-module_MODULE) $(workbench-libs-freetype-module_LINKLIB) $(workbench-libs-freetype-module_RELLINKLIB)
+ifeq (M,M)
+workbench-libs-freetype-module-kobj       : $(workbench-libs-freetype-module_KOBJ) $(workbench-libs-freetype-module_LINKLIB) $(workbench-libs-freetype-module_RELLINKLIB)
+workbench-libs-freetype-module-kobj-quick : $(workbench-libs-freetype-module_KOBJ) $(workbench-libs-freetype-module_LINKLIB) $(workbench-libs-freetype-module_RELLINKLIB)
+endif
+ifeq (M,M)
+workbench-libs-freetype-module-linklib    : $(workbench-libs-freetype-module_LINKLIB) $(workbench-libs-freetype-module_RELLINKLIB)
+endif
+
+workbench-libs-freetype-module_OBJS := $(addsuffix .o,$(workbench-libs-freetype-module_STARTFILES)) $(workbench-libs-freetype-module_ARCHOBJS) \
+           $(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(notdir $(workbench-libs-freetype-module_C_NARCHFILES:=.o) $(workbench-libs-freetype-module_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (library,handler)
+workbench-libs-freetype-module_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (freetype2,con)
+    workbench-libs-freetype-module_ERR          := $(notdir $(workbench-libs-freetype-module_MODULE)).err
+else
+    workbench-libs-freetype-module_ERR          := freetype2.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(workbench-libs-freetype-module_DEFNAME)_LDFLAGS) $(workbench-libs-freetype-module_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-libs-freetype-module_LIBS) $($(workbench-libs-freetype-module_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(workbench-libs-freetype-module_MODULE) : LIB_NAMES := $(workbench-libs-freetype-module_LIBS) $($(workbench-libs-freetype-module_DEFNAME)_LIBS)
+$(workbench-libs-freetype-module_MODULE) : OBJS := $(workbench-libs-freetype-module_STARTOBJS) $(workbench-libs-freetype-module_OBJS) $(USER_OBJS)
+$(workbench-libs-freetype-module_MODULE) : ENDTAG := $(workbench-libs-freetype-module_ENDOBJS)
+$(workbench-libs-freetype-module_MODULE) : ERR := $(workbench-libs-freetype-module_ERR)
+$(workbench-libs-freetype-module_MODULE) : OBJDIR := $(workbench-libs-freetype-module_OBJDIR)
+$(workbench-libs-freetype-module_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(workbench-libs-freetype-module_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(workbench-libs-freetype-module_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(workbench-libs-freetype-module_MODULE) : $(workbench-libs-freetype-module_STARTOBJS) $(workbench-libs-freetype-module_OBJS) $(USER_OBJS) $(workbench-libs-freetype-module_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(workbench-libs-freetype-module_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(workbench-libs-freetype-module_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+workbench-libs-freetype-module_LC_LINKLIBNAME   := $(shell echo $(workbench-libs-freetype-module_LINKLIBNAME) | tr A-Z a-z)
+workbench-libs-freetype-module_LC_MODNAME       := $(shell echo freetype2 | tr A-Z a-z)
+ifneq ($(workbench-libs-freetype-module_LINKLIB),)
+
+ifeq (target,target)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_LINKLIBNAME)$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_AR:=$(AR)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_LINKLIBNAME)$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_LINKLIBNAME)$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_AR:=$(HOST_AR)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_LINKLIBNAME)$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_LINKLIBNAME)$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_AR:=$(KERNEL_AR)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_LINKLIBNAME)$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_LINKLIBNAME)$(workbench-libs-freetype-module_LIBSUFFIX).a : $(workbench-libs-freetype-module_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-libs-freetype-module_AR) $@ $^
+	$(Q)$(workbench-libs-freetype-module_RANLIB) $@
+ifneq ($(workbench-libs-freetype-module_LC_MODNAME),$(workbench-libs-freetype-module_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(workbench-libs-freetype-module_LIBDIR)/libfreetype2$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_AR:=$(AR)
+$(workbench-libs-freetype-module_LIBDIR)/libfreetype2$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-libs-freetype-module_LIBDIR)/libfreetype2$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_AR:=$(HOST_AR)
+$(workbench-libs-freetype-module_LIBDIR)/libfreetype2$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-libs-freetype-module_LIBDIR)/libfreetype2$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_AR:=$(KERNEL_AR)
+$(workbench-libs-freetype-module_LIBDIR)/libfreetype2$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-libs-freetype-module_LIBDIR)/libfreetype2$(workbench-libs-freetype-module_LIBSUFFIX).a : $(workbench-libs-freetype-module_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-libs-freetype-module_AR) $@ $^
+	$(Q)$(workbench-libs-freetype-module_RANLIB) $@
+endif
+
+
+ifneq ($(workbench-libs-freetype-module_LINKLIB),)
+$(workbench-libs-freetype-module_LINKLIB) : | $(workbench-libs-freetype-module_LIBDIR)
+else
+$(workbench-libs-freetype-module_LINKLIB) :: $(workbench-libs-freetype-module_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-freetype-module_LIBDIR)
+
+endif
+
+ifneq ($(workbench-libs-freetype-module_RELLINKLIB),)
+
+ifeq (target,target)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_LINKLIBNAME)_rel$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_AR:=$(AR)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_LINKLIBNAME)_rel$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_LINKLIBNAME)_rel$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_AR:=$(HOST_AR)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_LINKLIBNAME)_rel$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_LINKLIBNAME)_rel$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_AR:=$(KERNEL_AR)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_LINKLIBNAME)_rel$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_LINKLIBNAME)_rel$(workbench-libs-freetype-module_LIBSUFFIX).a : $(workbench-libs-freetype-module_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-libs-freetype-module_AR) $@ $^
+	$(Q)$(workbench-libs-freetype-module_RANLIB) $@
+ifneq ($(workbench-libs-freetype-module_LC_MODNAME),$(workbench-libs-freetype-module_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_DEFNAME)_rel$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_AR:=$(AR)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_DEFNAME)_rel$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_DEFNAME)_rel$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_AR:=$(HOST_AR)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_DEFNAME)_rel$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_DEFNAME)_rel$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_AR:=$(KERNEL_AR)
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_DEFNAME)_rel$(workbench-libs-freetype-module_LIBSUFFIX).a : workbench-libs-freetype-module_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-libs-freetype-module_LIBDIR)/lib$(workbench-libs-freetype-module_DEFNAME)_rel$(workbench-libs-freetype-module_LIBSUFFIX).a : $(workbench-libs-freetype-module_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-libs-freetype-module_AR) $@ $^
+	$(Q)$(workbench-libs-freetype-module_RANLIB) $@
+endif
+
+
+ifneq ($(workbench-libs-freetype-module_RELLINKLIB),)
+$(workbench-libs-freetype-module_RELLINKLIB) : | $(workbench-libs-freetype-module_LIBDIR)
+else
+$(workbench-libs-freetype-module_RELLINKLIB) :: $(workbench-libs-freetype-module_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-freetype-module_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+workbench-libs-freetype-module_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+workbench-libs-freetype-module_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+workbench-libs-freetype-module_SYMBOLS := $(workbench-libs-freetype-module_KBASE)
+
+workbench-libs-freetype-module_KLIB             := hiddstubs amiga arossupport autoinit libinit
+workbench-libs-freetype-module_KOBJ_LIBS        := $(filter-out $(workbench-libs-freetype-module_KLIB),$(workbench-libs-freetype-module_LIBS)) $(workbench-libs-freetype-module_KAUTOLIB)
+$(workbench-libs-freetype-module_KOBJ) : LINKLIBS:=$(workbench-libs-freetype-module_KOBJ_LIBS) $($(workbench-libs-freetype-module_DEFNAME)_LIBS)
+$(workbench-libs-freetype-module_KOBJ) : FILTBASES:=$(addprefix -L ,$(workbench-libs-freetype-module_SYMBOLS))
+$(workbench-libs-freetype-module_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(workbench-libs-freetype-module_KOBJ) : $(workbench-libs-freetype-module_OBJS) $(USER_OBJS) $(workbench-libs-freetype-module_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+workbench-libs-freetype-module_DEPS             := $(addprefix $(workbench-libs-freetype-module_OBJDIR)/,$(notdir $(workbench-libs-freetype-module_CCFILES:=.d) $(workbench-libs-freetype-module_TARGETCCFILES:=.d) $(workbench-libs-freetype-module_CXXFILES:=.d))) $(addprefix $(workbench-libs-freetype-module_OBJDIR)/linklib/,$(notdir $(workbench-libs-freetype-module_LINKLIBCCFILES:=.d)))
+
+ifneq ($(workbench-libs-freetype-module_DEPS),)
+  ifneq (workbench-libs-freetype-module workbench-libs-freetype-module-quick workbench-libs-freetype-module-kobj workbench-libs-freetype-module-kobj-quick,)
+    ifneq ($(findstring $(TARGET),workbench-libs-freetype-module workbench-libs-freetype-module-quick workbench-libs-freetype-module-kobj workbench-libs-freetype-module-kobj-quick),)
+      -include $(workbench-libs-freetype-module_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-libs-freetype-module_DEPS)
+    endif
+  endif
+endif
+
+$(workbench-libs-freetype-module_OBJS) $(workbench-libs-freetype-module_DEPS) : | $(workbench-libs-freetype-module_OBJDIR)/linklib
+
+ifneq ($(workbench-libs-freetype-module_OBJS) $(workbench-libs-freetype-module_DEPS) $(workbench-libs-freetype-module_MODULE) $(workbench-libs-freetype-module_KOBJ),)
+$(workbench-libs-freetype-module_OBJS) $(workbench-libs-freetype-module_DEPS) $(workbench-libs-freetype-module_MODULE) $(workbench-libs-freetype-module_KOBJ) : | $(workbench-libs-freetype-module_OBJDIR) $(AROSDIR)/$(workbench-libs-freetype-module_MODDIR) $(KOBJSDIR)
+else
+$(workbench-libs-freetype-module_OBJS) $(workbench-libs-freetype-module_DEPS) $(workbench-libs-freetype-module_MODULE) $(workbench-libs-freetype-module_KOBJ) :: $(workbench-libs-freetype-module_OBJDIR) $(AROSDIR)/$(workbench-libs-freetype-module_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-freetype-module_OBJDIR) $(AROSDIR)/$(workbench-libs-freetype-module_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),workbench-libs-freetype-module workbench-libs-freetype-module-includes workbench-libs-freetype-module-quick workbench-libs-freetype-module-kobj workbench-libs-freetype-module-kobj-quick),) # Only for this target these deps are wanted
+
+workbench-libs-freetype-module_DFILE_DEPS := $(workbench-libs-freetype-module_LIBDEFSINC) $(workbench-libs-freetype-module_DEFLIBDEFSINC) \
+    $(addprefix $(workbench-libs-freetype-module_INCDIR)/,$($(workbench-libs-freetype-module_DEFNAME)_INCLUDES))
+$(workbench-libs-freetype-module_DEPS) : $(workbench-libs-freetype-module_DFILE_DEPS)
+endif
+
+workbench-libs-freetype-module_TOCLEAN := $(workbench-libs-freetype-module_OBJS) $(workbench-libs-freetype-module_DEPS) \
+    $(workbench-libs-freetype-module_MODULE) $(workbench-libs-freetype-module_LINKLIB) $(workbench-libs-freetype-module_KOBJ) \
+    $(workbench-libs-freetype-module_OBJDIR)/Makefile.freetype2library \
+    $(addprefix $(workbench-libs-freetype-module_OBJDIR)/include/,$($(workbench-libs-freetype-module_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(workbench-libs-freetype-module_DEFNAME)_INCLUDES)) \
+    $(addprefix $(workbench-libs-freetype-module_INCDIR)/,$($(workbench-libs-freetype-module_DEFNAME)_INCLUDES)) \
+    $(workbench-libs-freetype-module_OBJDIR)/freetype2_geninc $(workbench-libs-freetype-module_OBJDIR)/freetype2_incs \
+    $(addsuffix .c,$(workbench-libs-freetype-module_LINKLIBFILES)) $(workbench-libs-freetype-module_LINKLIBOBJS) $(workbench-libs-freetype-module_LIBDEFSINC) \
+    $(workbench-libs-freetype-module_DEFLIBDEFSINC) $(addsuffix .c,$(workbench-libs-freetype-module_STARTFILES) $(workbench-libs-freetype-module_ENDFILES)) \
+    $(workbench-libs-freetype-module_ENDOBJS)
+workbench-libs-freetype-module-clean : FILES              := $(workbench-libs-freetype-module_TOCLEAN)
+workbench-libs-freetype-module-clean ::
+	$(Q)$(ECHO) "Cleaning up for module freetype2"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(workbench-libs-freetype-module_ALLTARGETS)
+
+
+#
+# Rules for generated files and Includes...
+#
+
+#MM
+workbench-libs-freetype-pkgconfig : $(AROS_LIB)/pkgconfig/freetype2.pc
+
+$(AROS_LIB)/pkgconfig/freetype2.pc : $(FT2SRCDIR)/builds/unix/freetype2.in
+	$(Q)$(IF) $(TEST) ! -d $(AROS_LIB)/pkgconfig ; then $(MKDIR) $(AROS_LIB)/pkgconfig ; else $(NOP) ; fi
+	@$(SED) -e 's|%FT2_EXTRA_LIBS%||' \
+	       -e 's|%LIBBZ2%||' \
+	       -e 's|%LIBZ%|-L $(AROS_LIB) -lz|' \
+	       -e 's|%exec_prefix%|$${prefix}|' \
+	       -e 's|%ft_version%|2.5.0|' \
+	       -e 's|%includedir%|$${prefix}/include|' \
+	       -e 's|%libdir%|$(AROS_LIB)|' \
+	       -e 's|%prefix%|/Developer|' \
+	       $< >$@
+
+FT2_INCLUDE_FILES := $(notdir $(call WILDCARD, $(FT2SRCDIR)/include/*.h))
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq ($(FT2SRCDIR)/include,)
+TMP_DIR                := $(FT2SRCDIR)/include
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst $(FT2SRCDIR)/include,$(GENINCDIR)/.,$(dir $(FT2_INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/./,$(notdir $(FT2_INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := $(FT2SRCDIR)/include/
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/$(FT2SRCDIR)/include/
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/./,$(FT2_INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/./% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq ($(FT2SRCDIR)/include,)
+BD_INCL_FILES2         := $(subst $(FT2SRCDIR)/include,$(AROS_INCLUDES)/.,$(dir $(FT2_INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/./,$(notdir $(FT2_INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/./,$(FT2_INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/./% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+FT2I_INCLUDE_FILES := $(notdir $(call WILDCARD, $(FT2SRCDIR)/include/freetype/*.h))
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq ($(FT2SRCDIR)/include/freetype,)
+TMP_DIR                := $(FT2SRCDIR)/include/freetype
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst $(FT2SRCDIR)/include/freetype,$(GENINCDIR)/freetype,$(dir $(FT2I_INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/freetype/,$(notdir $(FT2I_INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := $(FT2SRCDIR)/include/freetype/
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/$(FT2SRCDIR)/include/freetype/
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/freetype/,$(FT2I_INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/freetype/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq ($(FT2SRCDIR)/include/freetype,)
+BD_INCL_FILES2         := $(subst $(FT2SRCDIR)/include/freetype,$(AROS_INCLUDES)/freetype,$(dir $(FT2I_INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/freetype/,$(notdir $(FT2I_INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/freetype/,$(FT2I_INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/freetype/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+#MM- includes-copy : freetype2-fetch workbench-libs-freetype-genincludes
+
+FT2OPTIONFILE := ftoption.h
+FT2CONFIG_INCLUDE_FILES := $(filter-out $(FT2OPTIONFILE),$(notdir $(call WILDCARD, $(FT2SRCDIR)/include/freetype/config/*.h)))
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq ($(FT2SRCDIR)/include/freetype/config,)
+TMP_DIR                := $(FT2SRCDIR)/include/freetype/config
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst $(FT2SRCDIR)/include/freetype/config,$(GENINCDIR)/freetype/config,$(dir $(FT2CONFIG_INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/freetype/config/,$(notdir $(FT2CONFIG_INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := $(FT2SRCDIR)/include/freetype/config/
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/$(FT2SRCDIR)/include/freetype/config/
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/freetype/config/,$(FT2CONFIG_INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/freetype/config/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq ($(FT2SRCDIR)/include/freetype/config,)
+BD_INCL_FILES2         := $(subst $(FT2SRCDIR)/include/freetype/config,$(AROS_INCLUDES)/freetype/config,$(dir $(FT2CONFIG_INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/freetype/config/,$(notdir $(FT2CONFIG_INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/freetype/config/,$(FT2CONFIG_INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/freetype/config/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+$(AROS_INCLUDES)/freetype/config/$(FT2OPTIONFILE) : $(FT2SRCDIR)/include/freetype/config/$(FT2OPTIONFILE)
+	@$(ECHO) "Generating Freetype2 build options ..."
+	$(Q)$(IF) $(TEST) ! -d $(AROS_INCLUDES)/freetype/config ; then $(MKDIR) $(AROS_INCLUDES)/freetype/config ; else $(NOP) ; fi
+	@$(SED) "s|.*FT_CONFIG_OPTION_ENVIRONMENT_PROPERTIES.*|/*define FT_CONFIG_OPTION_ENVIRONMENT_PROPERTIES*/\\n|g" $< > $@
+
+#MM
+workbench-libs-freetype-genincludes : freetype2-fetch $(AROS_INCLUDES)/freetype/config/$(FT2OPTIONFILE)
+	$(NOP)
+
+FT2INT_INCLUDE_FILES := $(notdir $(call WILDCARD, $(FT2SRCDIR)/include/freetype/internal/*.h))
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq ($(FT2SRCDIR)/include/freetype/internal,)
+TMP_DIR                := $(FT2SRCDIR)/include/freetype/internal
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst $(FT2SRCDIR)/include/freetype/internal,$(GENINCDIR)/freetype/internal,$(dir $(FT2INT_INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/freetype/internal/,$(notdir $(FT2INT_INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := $(FT2SRCDIR)/include/freetype/internal/
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/$(FT2SRCDIR)/include/freetype/internal/
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/freetype/internal/,$(FT2INT_INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/freetype/internal/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq ($(FT2SRCDIR)/include/freetype/internal,)
+BD_INCL_FILES2         := $(subst $(FT2SRCDIR)/include/freetype/internal,$(AROS_INCLUDES)/freetype/internal,$(dir $(FT2INT_INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/freetype/internal/,$(notdir $(FT2INT_INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/freetype/internal/,$(FT2INT_INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/freetype/internal/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+FT2SVC_INCLUDE_FILES := $(notdir $(call WILDCARD, $(FT2SRCDIR)/include/freetype/internal/services/*.h))
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq ($(FT2SRCDIR)/include/freetype/internal/services,)
+TMP_DIR                := $(FT2SRCDIR)/include/freetype/internal/services
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst $(FT2SRCDIR)/include/freetype/internal/services,$(GENINCDIR)/freetype/internal/services,$(dir $(FT2SVC_INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/freetype/internal/services/,$(notdir $(FT2SVC_INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := $(FT2SRCDIR)/include/freetype/internal/services/
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/$(FT2SRCDIR)/include/freetype/internal/services/
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/freetype/internal/services/,$(FT2SVC_INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/freetype/internal/services/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq ($(FT2SRCDIR)/include/freetype/internal/services,)
+BD_INCL_FILES2         := $(subst $(FT2SRCDIR)/include/freetype/internal/services,$(AROS_INCLUDES)/freetype/internal/services,$(dir $(FT2SVC_INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/freetype/internal/services/,$(notdir $(FT2SVC_INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/freetype/internal/services/,$(FT2SVC_INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/freetype/internal/services/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

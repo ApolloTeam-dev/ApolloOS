@@ -1,0 +1,638 @@
+#   $Id$
+#
+#   Makefile to make Boot prefs program.
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := main args booteditor locale
+EXEDIR := $(AROSDIR)/Prefs
+
+#MM- workbench-prefs : \
+#MM workbench-prefs-boot-$(AROS_TARGET_ARCH)-$(AROS_TARGET_CPU)
+
+#MM- workbench-prefs-boot-pc-i386 : workbench-prefs-boot
+#MM- workbench-prefs-boot-pc-x86_64 : workbench-prefs-boot
+
+#MM workbench-prefs-boot : includes linklibs workbench-prefs-boot-catalogs
+
+
+.PHONY : workbench-prefs-boot
+
+workbench-prefs-boot_PROGNAME  := Boot
+workbench-prefs-boot_OBJDIR    := $(GENDIR)/$(CURDIR)
+workbench-prefs-boot_TARGETDIR := $(EXEDIR)
+workbench-prefs-boot_LINKER    := 
+workbench-prefs-boot_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(workbench-prefs-boot_LINKER),)
+    workbench-prefs-boot_LINKER := target
+endif
+
+ifneq ("$(strip $(FILES)   )","")
+    workbench-prefs-boot_FILES     := $(FILES)
+    workbench-prefs-boot_OBJCFILES := 
+    workbench-prefs-boot_ASMFILES  := 
+    workbench-prefs-boot_CXXFILES := 
+else
+    workbench-prefs-boot_FILES     := $(workbench-prefs-boot_PROGNAME)
+    workbench-prefs-boot_OBJCFILES :=
+    workbench-prefs-boot_ASMFILES  :=
+    workbench-prefs-boot_CXXFILES :=
+endif
+
+workbench-prefs-boot_ARCHOBJS   := $(wildcard $(workbench-prefs-boot_OBJDIR)/arch/*.o)
+workbench-prefs-boot_ARCHFILES  := $(basename $(notdir $(workbench-prefs-boot_ARCHOBJS)))
+workbench-prefs-boot_C_NARCHFILES := $(filter-out $(workbench-prefs-boot_ARCHFILES),$(workbench-prefs-boot_FILES))
+workbench-prefs-boot_CXX_NARCHFILES := $(filter-out $(workbench-prefs-boot_ARCHFILES),$(workbench-prefs-boot_CXXFILES))
+workbench-prefs-boot_OBJC_NARCHFILES := $(filter-out $(workbench-prefs-boot_ARCHFILES),$(workbench-prefs-boot_OBJCFILES))
+
+TMP_FILES := $(workbench-prefs-boot_C_NARCHFILES) $(workbench-prefs-boot_CXX_NARCHFILES) $(workbench-prefs-boot_ASMFILES) $(workbench-prefs-boot_OBJC_NARCHFILES)
+workbench-prefs-boot_OBJS := $(addsuffix .o,$(addprefix $(workbench-prefs-boot_OBJDIR)/,$(notdir $(TMP_FILES))))
+workbench-prefs-boot_DEPS := $(addsuffix .d,$(addprefix $(workbench-prefs-boot_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+workbench-prefs-boot_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+workbench-prefs-boot_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-prefs-boot_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+workbench-prefs-boot_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+workbench-prefs-boot_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+workbench-prefs-boot_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-prefs-boot_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+workbench-prefs-boot_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+workbench-prefs-boot_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+workbench-prefs-boot_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-prefs-boot_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+workbench-prefs-boot_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+workbench-prefs-boot_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+workbench-prefs-boot_LDFLAGS          := 
+endif
+
+workbench-prefs-boot_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+workbench-prefs-boot_COVERAGE := yes
+workbench-prefs-boot_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+workbench-prefs-boot_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+workbench-prefs-boot_CFLAGS    := $(strip $(workbench-prefs-boot_COVERAGEFLAGS) $(workbench-prefs-boot_CFLAGS))
+workbench-prefs-boot_CXXFLAGS := $(strip $(workbench-prefs-boot_COVERAGEFLAGS) $(workbench-prefs-boot_CXXFLAGS))
+workbench-prefs-boot_LIBS += $(workbench-prefs-boot_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-prefs-boot_FUNCINSTR := yes
+workbench-prefs-boot_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+workbench-prefs-boot_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-prefs-boot_CFLAGS    := $(strip $(workbench-prefs-boot_INSTRFUNCFLAGS) $(workbench-prefs-boot_CFLAGS))
+workbench-prefs-boot_CXXFLAGS := $(strip $(workbench-prefs-boot_INSTRFUNCFLAGS) $(workbench-prefs-boot_CXXFLAGS))
+workbench-prefs-boot_LIBS += $(workbench-prefs-boot_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+workbench-prefs-boot_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(workbench-prefs-boot_CFLAGS))
+workbench-prefs-boot_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(workbench-prefs-boot_CXXFLAGS))
+endif
+endif
+workbench-prefs-boot_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    workbench-prefs-boot_DFLAGS     := 
+else
+    workbench-prefs-boot_DFLAGS     := $(workbench-prefs-boot_CFLAGS)
+endif
+ifneq (,)
+    workbench-prefs-boot_DXXFLAGS     := 
+else
+    workbench-prefs-boot_DXXFLAGS     := $(workbench-prefs-boot_CXXFLAGS)
+endif
+ifeq (target,target)
+workbench-prefs-boot_LDFLAGS           := $(workbench-prefs-boot_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-prefs-boot_LDFLAGS           := $(workbench-prefs-boot_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-prefs-boot_LDFLAGS           := $(workbench-prefs-boot_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+workbench-prefs-boot_LDFLAGS   += -L
+endif
+
+#MM
+workbench-prefs-boot-quick : workbench-prefs-boot
+
+#MM workbench-prefs-boot : includes-generate-deps core-linklibs
+workbench-prefs-boot : $(workbench-prefs-boot_TARGETDIR)/$(workbench-prefs-boot_PROGNAME)
+
+ifneq ($(filter $(TARGET),workbench-prefs-boot workbench-prefs-boot-quick workbench-prefs-boot-gz-quick),)
+
+workbench-prefs-boot_CXXABSBASENAMES := $(foreach workbench-prefs-boot_CXXBASE,$(workbench-prefs-boot_CXX_NARCHFILES),$(if $(filter /%,$(workbench-prefs-boot_CXXBASE)),$(workbench-prefs-boot_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-prefs-boot_CXXBASE))))
+
+ifneq ($(workbench-prefs-boot_CXXABSBASENAMES),)
+
+workbench-prefs-boot_CXXBASENAMES := $(basename $(workbench-prefs-boot_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-prefs-boot_MCXX_FILES  := $(strip $(foreach workbench-prefs-boot_CXXBASE,$(workbench-prefs-boot_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-prefs-boot_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-prefs-boot_EXT),$(workbench-prefs-boot_CXXBASE)))))))
+
+ifeq (,)
+workbench-prefs-boot_MCXX_SRCWILDCARD := %
+else
+workbench-prefs-boot_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-prefs-boot_OBJDIR),)
+  workbench-prefs-boot_CXXTARGETS := $(notdir $(workbench-prefs-boot_CXXBASENAMES:=.o))
+  workbench-prefs-boot_CXXDTARGETS := $(notdir $(workbench-prefs-boot_CXXBASENAMES:=.d))
+  workbench-prefs-boot_MCXX_WILDCARD := %
+else
+  workbench-prefs-boot_CXXTARGETS := $(addprefix $(workbench-prefs-boot_OBJDIR)/,$(notdir $(workbench-prefs-boot_CXXBASENAMES:=.o)))
+  workbench-prefs-boot_CXXDTARGETS := $(addprefix $(workbench-prefs-boot_OBJDIR)/,$(notdir $(workbench-prefs-boot_CXXBASENAMES:=.d)))
+  workbench-prefs-boot_MCXX_WILDCARD := $(workbench-prefs-boot_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-prefs-boot_CXXTARGETS) $(workbench-prefs-boot_CXXDTARGETS) : | $(workbench-prefs-boot_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-prefs-boot_MCXX_CPPFLAGS := $(workbench-prefs-boot_CPPFLAGS)
+workbench-prefs-boot_CXXFLAGS := $(workbench-prefs-boot_CXXFLAGS)
+ifeq ($(workbench-prefs-boot_DXXFLAGS),)
+  workbench-prefs-boot_DXXFLAGS := $(workbench-prefs-boot_CXXFLAGS)
+else
+  workbench-prefs-boot_DXXFLAGS := $(workbench-prefs-boot_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-prefs-boot_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-prefs-boot_STRIP ?= $(HOST_STRIP)
+  workbench-prefs-boot_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-prefs-boot_CXXCMD:=$(HOST_CXX)
+  workbench-prefs-boot_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-prefs-boot_MCXX_CPPFLAGS) $(workbench-prefs-boot_MCXX_EXTRA_CPPFLAGS))
+  workbench-prefs-boot_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-prefs-boot_CXXFLAGS))
+  workbench-prefs-boot_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-prefs-boot_DXXFLAGS))
+  workbench-prefs-boot_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-prefs-boot_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-prefs-boot_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-prefs-boot_STRIP ?= $(TARGET_STRIP)
+  workbench-prefs-boot_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-prefs-boot_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-prefs-boot_MCXX_CPPFLAGS := $(strip $(workbench-prefs-boot_MCXX_CPPFLAGS) $(workbench-prefs-boot_MCXX_EXTRA_CPPFLAGS))
+  workbench-prefs-boot_CXXFLAGS := $(strip $(workbench-prefs-boot_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-prefs-boot_DXXFLAGS := $(workbench-prefs-boot_DXXFLAGS)
+  workbench-prefs-boot_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-prefs-boot_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-prefs-boot_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-prefs-boot_STRIP ?= $(ECHO) >/dev/null
+  workbench-prefs-boot_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-prefs-boot_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-prefs-boot_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-prefs-boot_MCXX_CPPFLAGS) $(workbench-prefs-boot_MCXX_EXTRA_CPPFLAGS))
+  workbench-prefs-boot_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-prefs-boot_CXXFLAGS))
+  workbench-prefs-boot_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-prefs-boot_DXXFLAGS))
+  workbench-prefs-boot_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-prefs-boot_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-prefs-boot_CXXCMD) $(workbench-prefs-boot_CXXIQUOTE) $(dir $(2)) $(workbench-prefs-boot_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-boot_CXXIQUOTE) . $(workbench-prefs-boot_CXXIQUOTE_END) $(strip $(workbench-prefs-boot_CXXFLAGS) $(workbench-prefs-boot_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-prefs-boot_CXXCMD) $(workbench-prefs-boot_CXXIQUOTE) $(dir $(2)) $(workbench-prefs-boot_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-boot_CXXIQUOTE) . $(workbench-prefs-boot_CXXIQUOTE_END) $(strip $(workbench-prefs-boot_CXXFLAGS) $(workbench-prefs-boot_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-prefs-boot_CXXCMD) $(workbench-prefs-boot_CXXIQUOTE) $(dir $(2)) $(workbench-prefs-boot_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-boot_CXXIQUOTE) . $(workbench-prefs-boot_CXXIQUOTE_END) $(strip $(workbench-prefs-boot_CXXFLAGS) $(workbench-prefs-boot_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-prefs-boot_CXXCMD)" $(MKDEPEND) $(strip $(workbench-prefs-boot_DXXFLAGS) $(workbench-prefs-boot_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-prefs-boot_OBJDIR),)
+  $(foreach workbench-prefs-boot_CXXFILE,$(workbench-prefs-boot_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-prefs-boot_CXXFILE))),$(workbench-prefs-boot_CXXFILE))))
+else
+  $(foreach workbench-prefs-boot_CXXFILE,$(workbench-prefs-boot_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-prefs-boot_OBJDIR)/,$(notdir $(basename $(workbench-prefs-boot_CXXFILE)))),$(workbench-prefs-boot_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-prefs-boot_OBJC_NARCHFILES),)
+
+ifeq (,)
+workbench-prefs-boot_MOBJC_SRCWILDCARD := %
+else
+workbench-prefs-boot_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-prefs-boot_OBJDIR),)
+  workbench-prefs-boot_MOBJC_TARGETS := $(addsuffix .o,$(workbench-prefs-boot_OBJC_NARCHFILES))
+  workbench-prefs-boot_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-prefs-boot_OBJC_NARCHFILES))
+  workbench-prefs-boot_MOBJC_WILDCARD := %
+else
+  workbench-prefs-boot_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-prefs-boot_OBJDIR)/,$(workbench-prefs-boot_OBJC_NARCHFILES)))
+  workbench-prefs-boot_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-prefs-boot_OBJDIR)/,$(workbench-prefs-boot_OBJC_NARCHFILES)))
+  workbench-prefs-boot_MOBJC_WILDCARD := $(workbench-prefs-boot_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-prefs-boot_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  workbench-prefs-boot_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-prefs-boot_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-prefs-boot_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-prefs-boot_MOBJC_DIRS := $(foreach dir, $(workbench-prefs-boot_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-prefs-boot_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-prefs-boot_MOBJC_DIRS),)
+    workbench-prefs-boot_MOBJC_DIRS := $(shell echo $(workbench-prefs-boot_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-prefs-boot_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-prefs-boot_CC := $(TARGET_CC)
+else
+  workbench-prefs-boot_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-prefs-boot_MOBJC_CPPFLAGS := $(workbench-prefs-boot_CPPFLAGS)
+workbench-prefs-boot_OBJCFLAGS := $(workbench-prefs-boot_CFLAGS)
+workbench-prefs-boot_OBJCFLAGS := $(workbench-prefs-boot_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-prefs-boot_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-prefs-boot_OBJCFLAGS)))
+ifeq ($(workbench-prefs-boot_DFLAGS),)
+  workbench-prefs-boot_OBJCDFLAGS := $(workbench-prefs-boot_CFLAGS)
+else
+  workbench-prefs-boot_OBJCDFLAGS := $(workbench-prefs-boot_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-prefs-boot_LINK ?= $(strip $(workbench-prefs-boot_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-prefs-boot_STRIP ?= $(TARGET_STRIP)
+  workbench-prefs-boot_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-prefs-boot_CC) $(TARGET_SYSROOT))
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : workbench-prefs-boot_MOBJC_CPPFLAGS:=$(strip $(workbench-prefs-boot_MOBJC_CPPFLAGS) $(workbench-prefs-boot_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : workbench-prefs-boot_OBJCFLAGS:=$(strip $(workbench-prefs-boot_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : workbench-prefs-boot_OBJCDFLAGS:=$(workbench-prefs-boot_OBJCDFLAGS)
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : workbench-prefs-boot_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : workbench-prefs-boot_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-prefs-boot_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-prefs-boot_STRIP ?= $(HOST_STRIP)
+  workbench-prefs-boot_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : workbench-prefs-boot_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-prefs-boot_MOBJC_CPPFLAGS) $(workbench-prefs-boot_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : workbench-prefs-boot_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-prefs-boot_OBJCFLAGS))
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : workbench-prefs-boot_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-prefs-boot_OBJCDFLAGS))
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : workbench-prefs-boot_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : workbench-prefs-boot_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-prefs-boot_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-prefs-boot_STRIP ?= $(ECHO) >/dev/null
+  workbench-prefs-boot_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : workbench-prefs-boot_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-prefs-boot_MOBJC_CPPFLAGS) $(workbench-prefs-boot_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : workbench-prefs-boot_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-prefs-boot_OBJCFLAGS))
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : workbench-prefs-boot_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-prefs-boot_OBJCDFLAGS))
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : workbench-prefs-boot_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-prefs-boot_MOBJC_TARGETS) $(workbench-prefs-boot_MOBJC_DTARGETS) : workbench-prefs-boot_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-prefs-boot_MOBJC_TARGETS) : CPPFLAGS := $(workbench-prefs-boot_MOBJC_CPPFLAGS)
+$(workbench-prefs-boot_MOBJC_TARGETS) : CFLAGS := $(workbench-prefs-boot_OBJCFLAGS)
+$(workbench-prefs-boot_MOBJC_TARGETS) : $(workbench-prefs-boot_MOBJC_WILDCARD).o : $(workbench-prefs-boot_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-prefs-boot_IQUOTE) $(dir $<) $(workbench-prefs-boot_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-boot_IQUOTE) . $(workbench-prefs-boot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-prefs-boot_IQUOTE) $(dir $<) $(workbench-prefs-boot_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-boot_IQUOTE) . $(workbench-prefs-boot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-prefs-boot_IQUOTE) $(dir $<) $(workbench-prefs-boot_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-boot_IQUOTE) . $(workbench-prefs-boot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-prefs-boot_MOBJC_DTARGETS) : $(workbench-prefs-boot_MOBJC_WILDCARD).d : $(workbench-prefs-boot_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-prefs-boot_OBJCDFLAGS) $(workbench-prefs-boot_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-prefs-boot_MC_SRCWILDCARD := %
+else
+workbench-prefs-boot_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-prefs-boot_OBJDIR),)
+workbench-prefs-boot_MC_TARGETS := $(addsuffix .o,$(workbench-prefs-boot_C_NARCHFILES))
+workbench-prefs-boot_MC_DTARGETS := $(addsuffix .d,$(workbench-prefs-boot_C_NARCHFILES))
+workbench-prefs-boot_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-prefs-boot_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-prefs-boot_OBJDIR)/,$(notdir $(workbench-prefs-boot_C_NARCHFILES))))
+    workbench-prefs-boot_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-prefs-boot_OBJDIR)/,$(notdir $(workbench-prefs-boot_C_NARCHFILES))))
+else
+ifeq (,)
+    workbench-prefs-boot_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-prefs-boot_OBJDIR)/,$(workbench-prefs-boot_C_NARCHFILES)))
+    workbench-prefs-boot_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-prefs-boot_OBJDIR)/,$(workbench-prefs-boot_C_NARCHFILES)))
+else
+    workbench-prefs-boot_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-prefs-boot_OBJDIR)/,$(patsubst /%,%,$(workbench-prefs-boot_C_NARCHFILES))))
+    workbench-prefs-boot_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-prefs-boot_OBJDIR)/,$(patsubst /%,%,$(workbench-prefs-boot_C_NARCHFILES))))
+endif
+endif
+workbench-prefs-boot_MC_TGTWILDCARD := $(workbench-prefs-boot_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : | $(addsuffix .c,$(workbench-prefs-boot_C_NARCHFILES))
+
+# Be sure that all .c files are found
+workbench-prefs-boot_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-prefs-boot_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-prefs-boot_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-prefs-boot_MC_DIRS := $(foreach dir, $(workbench-prefs-boot_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-prefs-boot_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-prefs-boot_MC_DIRS),)
+    workbench-prefs-boot_MC_DIRS := $(shell echo $(workbench-prefs-boot_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-prefs-boot_MC_DIRS)
+endif
+
+endif
+
+workbench-prefs-boot_MC_CPPFLAGS := $(workbench-prefs-boot_CPPFLAGS)
+workbench-prefs-boot_CFLAGS := $(workbench-prefs-boot_CFLAGS)
+ifeq ($(workbench-prefs-boot_DFLAGS),)
+  workbench-prefs-boot_DFLAGS := $(workbench-prefs-boot_CFLAGS)
+else
+  workbench-prefs-boot_DFLAGS := $(workbench-prefs-boot_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-prefs-boot_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-prefs-boot_STRIP ?= $(TARGET_STRIP)
+workbench-prefs-boot_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : workbench-prefs-boot_MC_CPPFLAGS:=$(strip $(workbench-prefs-boot_MC_CPPFLAGS) $(workbench-prefs-boot_MC_EXTRA_CPPFLAGS))
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : workbench-prefs-boot_CFLAGS:=$(strip $(workbench-prefs-boot_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : workbench-prefs-boot_DFLAGS:=$(workbench-prefs-boot_DFLAGS)
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : workbench-prefs-boot_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : workbench-prefs-boot_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-prefs-boot_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-prefs-boot_STRIP ?= $(HOST_STRIP)
+workbench-prefs-boot_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : workbench-prefs-boot_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-prefs-boot_MC_CPPFLAGS) $(workbench-prefs-boot_MC_EXTRA_CPPFLAGS))
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : workbench-prefs-boot_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-prefs-boot_CFLAGS))
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : workbench-prefs-boot_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-prefs-boot_DFLAGS))
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : workbench-prefs-boot_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : workbench-prefs-boot_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-prefs-boot_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-prefs-boot_STRIP ?= $(ECHO) >/dev/null
+workbench-prefs-boot_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : workbench-prefs-boot_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-prefs-boot_MC_CPPFLAGS) $(workbench-prefs-boot_MC_EXTRA_CPPFLAGS))
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : workbench-prefs-boot_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-prefs-boot_CFLAGS))
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : workbench-prefs-boot_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-prefs-boot_DFLAGS))
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : workbench-prefs-boot_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-prefs-boot_MC_TARGETS) $(workbench-prefs-boot_MC_DTARGETS) : workbench-prefs-boot_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-prefs-boot_MC_TARGETS) : CPPFLAGS := $(workbench-prefs-boot_MC_CPPFLAGS)
+$(workbench-prefs-boot_MC_TARGETS) : CFLAGS := $(workbench-prefs-boot_CFLAGS)
+$(workbench-prefs-boot_MC_TARGETS) : $(workbench-prefs-boot_MC_TGTWILDCARD).o : $(workbench-prefs-boot_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-prefs-boot_IQUOTE) $(dir $<) $(workbench-prefs-boot_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-boot_IQUOTE) . $(workbench-prefs-boot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-prefs-boot_IQUOTE) $(dir $<) $(workbench-prefs-boot_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-boot_IQUOTE) . $(workbench-prefs-boot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-prefs-boot_IQUOTE) $(dir $<) $(workbench-prefs-boot_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-boot_IQUOTE) . $(workbench-prefs-boot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-prefs-boot_MC_DTARGETS) : $(workbench-prefs-boot_MC_TGTWILDCARD).d : $(workbench-prefs-boot_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-prefs-boot_DFLAGS) $(workbench-prefs-boot_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-prefs-boot_OBJDIR),)
+workbench-prefs-boot-MA_TARGETS := $(addsuffix .o,$(workbench-prefs-boot_ASMFILES))
+workbench-prefs-boot-MA_WILDCARD := %
+else
+workbench-prefs-boot-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-prefs-boot_OBJDIR)/,$(notdir $(workbench-prefs-boot_ASMFILES))))
+workbench-prefs-boot-MA_WILDCARD := $(workbench-prefs-boot_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(workbench-prefs-boot-MA_TARGETS) : | $(addsuffix .s,$(workbench-prefs-boot_ASMFILES))
+
+# Be sure that all .c files are found
+workbench-prefs-boot-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-prefs-boot-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-prefs-boot_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-prefs-boot-MA_DIRS := $(foreach dir, $(workbench-prefs-boot-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-prefs-boot-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-prefs-boot-MA_DIRS),)
+    workbench-prefs-boot-MA_DIRS := $(shell echo $(workbench-prefs-boot-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(workbench-prefs-boot-MA_DIRS)
+endif
+
+endif
+
+workbench-prefs-boot-MA_ASSEMBLER ?= $(workbench-prefs-boot_ASSEMBLER)
+
+$(workbench-prefs-boot-MA_TARGETS) : workbench-prefs-boot-MA_CMD:= $(workbench-prefs-boot-MA_ASSEMBLER)
+
+$(workbench-prefs-boot-MA_TARGETS) : CPPFLAGS := $(workbench-prefs-boot_CPPFLAGS)
+$(workbench-prefs-boot-MA_TARGETS) : AFLAGS := $(workbench-prefs-boot_AFLAGS)
+$(workbench-prefs-boot-MA_TARGETS) : $(workbench-prefs-boot-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-prefs-boot-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-prefs-boot-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-prefs-boot-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+workbench-prefs-boot-link_EXTRA_LDFLAGS := 
+workbench-prefs-boot-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    workbench-prefs-boot-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    workbench-prefs-boot-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    workbench-prefs-boot-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+workbench-prefs-boot-link_DIRS := $(subst -L ,-L,$(strip $(workbench-prefs-boot_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+workbench-prefs-boot-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(workbench-prefs-boot-link_DIRS)))
+# Add trailing /
+workbench-prefs-boot-link_DIRS := $(subst //,/,$(addsuffix /,$(workbench-prefs-boot-link_DIRS)))
+# Add normal linklib path
+workbench-prefs-boot-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+workbench-prefs-boot-link_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-prefs-boot_LIBS) $(workbench-prefs-boot-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    workbench-prefs-boot-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    workbench-prefs-boot-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+workbench-prefs-boot-link_DEPLIBS := $(foreach lib,$(workbench-prefs-boot-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(workbench-prefs-boot-link_DIRS)))) \
+)
+
+$(workbench-prefs-boot_TARGETDIR)/$(workbench-prefs-boot_PROGNAME) : OBJDIR := $(workbench-prefs-boot_OBJDIR)
+$(workbench-prefs-boot_TARGETDIR)/$(workbench-prefs-boot_PROGNAME) : OBJS := $(workbench-prefs-boot_OBJS) $(workbench-prefs-boot_ARCHOBJS) $(USER_OBJS)
+$(workbench-prefs-boot_TARGETDIR)/$(workbench-prefs-boot_PROGNAME) : LDFLAGS := $(strip $(workbench-prefs-boot_LDFLAGS) $(workbench-prefs-boot-link_EXTRA_LDFLAGS))
+$(workbench-prefs-boot_TARGETDIR)/$(workbench-prefs-boot_PROGNAME) : LIBS := $(addprefix -l,$(workbench-prefs-boot_LIBS) $(workbench-prefs-boot-link_EXTRA_LIBS) )
+$(workbench-prefs-boot_TARGETDIR)/$(workbench-prefs-boot_PROGNAME) : $(workbench-prefs-boot_OBJS) $(workbench-prefs-boot_ARCHOBJS) $(USER_OBJS) $(workbench-prefs-boot-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(workbench-prefs-boot_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(workbench-prefs-boot_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(workbench-prefs-boot_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-prefs-boot_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(workbench-prefs-boot_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(workbench-prefs-boot_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-prefs-boot_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(workbench-prefs-boot_DEPS),)
+  ifneq (workbench-prefs-boot workbench-prefs-boot-quick,)
+    ifneq ($(findstring $(TARGET),workbench-prefs-boot workbench-prefs-boot-quick),)
+      -include $(workbench-prefs-boot_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-prefs-boot_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(workbench-prefs-boot_OBJS) $(workbench-prefs-boot_DEPS) $(workbench-prefs-boot_TARGETDIR)/$(workbench-prefs-boot_PROGNAME),)
+$(workbench-prefs-boot_OBJS) $(workbench-prefs-boot_DEPS) $(workbench-prefs-boot_TARGETDIR)/$(workbench-prefs-boot_PROGNAME) : | $(workbench-prefs-boot_OBJDIR) $(workbench-prefs-boot_TARGETDIR)
+else
+$(workbench-prefs-boot_OBJS) $(workbench-prefs-boot_DEPS) $(workbench-prefs-boot_TARGETDIR)/$(workbench-prefs-boot_PROGNAME) :: $(workbench-prefs-boot_OBJDIR) $(workbench-prefs-boot_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-prefs-boot_OBJDIR) $(workbench-prefs-boot_TARGETDIR)
+
+
+workbench-prefs-boot-clean : FILES := $(workbench-prefs-boot_OBJS) $(workbench-prefs-boot_TARGETDIR)/$(workbench-prefs-boot_PROGNAME) $(workbench-prefs-boot_DEPS)
+#MM
+workbench-prefs-boot-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-prefs-boot"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

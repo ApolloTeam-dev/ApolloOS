@@ -1,0 +1,630 @@
+#   $Id$
+#
+#   Makefile for the Workbench:Tools/Debug directory.
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- debug-tools : debug-tools-sasimi
+#MM debug-tools-sasimi : includes linklibs
+
+
+.PHONY : debug-tools-sasimi
+
+debug-tools-sasimi_PROGNAME  := sashimi
+debug-tools-sasimi_OBJDIR    := $(GENDIR)/$(CURDIR)
+debug-tools-sasimi_TARGETDIR := $(AROS_DEBUG)
+debug-tools-sasimi_LINKER    := 
+debug-tools-sasimi_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(debug-tools-sasimi_LINKER),)
+    debug-tools-sasimi_LINKER := target
+endif
+
+ifneq ("$(strip sashimi   )","")
+    debug-tools-sasimi_FILES     := sashimi
+    debug-tools-sasimi_OBJCFILES := 
+    debug-tools-sasimi_ASMFILES  := 
+    debug-tools-sasimi_CXXFILES := 
+else
+    debug-tools-sasimi_FILES     := $(debug-tools-sasimi_PROGNAME)
+    debug-tools-sasimi_OBJCFILES :=
+    debug-tools-sasimi_ASMFILES  :=
+    debug-tools-sasimi_CXXFILES :=
+endif
+
+debug-tools-sasimi_ARCHOBJS   := $(wildcard $(debug-tools-sasimi_OBJDIR)/arch/*.o)
+debug-tools-sasimi_ARCHFILES  := $(basename $(notdir $(debug-tools-sasimi_ARCHOBJS)))
+debug-tools-sasimi_C_NARCHFILES := $(filter-out $(debug-tools-sasimi_ARCHFILES),$(debug-tools-sasimi_FILES))
+debug-tools-sasimi_CXX_NARCHFILES := $(filter-out $(debug-tools-sasimi_ARCHFILES),$(debug-tools-sasimi_CXXFILES))
+debug-tools-sasimi_OBJC_NARCHFILES := $(filter-out $(debug-tools-sasimi_ARCHFILES),$(debug-tools-sasimi_OBJCFILES))
+
+TMP_FILES := $(debug-tools-sasimi_C_NARCHFILES) $(debug-tools-sasimi_CXX_NARCHFILES) $(debug-tools-sasimi_ASMFILES) $(debug-tools-sasimi_OBJC_NARCHFILES)
+debug-tools-sasimi_OBJS := $(addsuffix .o,$(addprefix $(debug-tools-sasimi_OBJDIR)/,$(notdir $(TMP_FILES))))
+debug-tools-sasimi_DEPS := $(addsuffix .d,$(addprefix $(debug-tools-sasimi_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+debug-tools-sasimi_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+debug-tools-sasimi_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+debug-tools-sasimi_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+debug-tools-sasimi_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+debug-tools-sasimi_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+debug-tools-sasimi_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+debug-tools-sasimi_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+debug-tools-sasimi_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+debug-tools-sasimi_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+debug-tools-sasimi_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+debug-tools-sasimi_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+debug-tools-sasimi_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+debug-tools-sasimi_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+debug-tools-sasimi_LDFLAGS          := 
+endif
+
+debug-tools-sasimi_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+debug-tools-sasimi_COVERAGE := yes
+debug-tools-sasimi_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+debug-tools-sasimi_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+debug-tools-sasimi_CFLAGS    := $(strip $(debug-tools-sasimi_COVERAGEFLAGS) $(debug-tools-sasimi_CFLAGS))
+debug-tools-sasimi_CXXFLAGS := $(strip $(debug-tools-sasimi_COVERAGEFLAGS) $(debug-tools-sasimi_CXXFLAGS))
+debug-tools-sasimi_LIBS += $(debug-tools-sasimi_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+debug-tools-sasimi_FUNCINSTR := yes
+debug-tools-sasimi_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+debug-tools-sasimi_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+debug-tools-sasimi_CFLAGS    := $(strip $(debug-tools-sasimi_INSTRFUNCFLAGS) $(debug-tools-sasimi_CFLAGS))
+debug-tools-sasimi_CXXFLAGS := $(strip $(debug-tools-sasimi_INSTRFUNCFLAGS) $(debug-tools-sasimi_CXXFLAGS))
+debug-tools-sasimi_LIBS += $(debug-tools-sasimi_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+debug-tools-sasimi_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(debug-tools-sasimi_CFLAGS))
+debug-tools-sasimi_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(debug-tools-sasimi_CXXFLAGS))
+endif
+endif
+debug-tools-sasimi_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    debug-tools-sasimi_DFLAGS     := 
+else
+    debug-tools-sasimi_DFLAGS     := $(debug-tools-sasimi_CFLAGS)
+endif
+ifneq (,)
+    debug-tools-sasimi_DXXFLAGS     := 
+else
+    debug-tools-sasimi_DXXFLAGS     := $(debug-tools-sasimi_CXXFLAGS)
+endif
+ifeq (target,target)
+debug-tools-sasimi_LDFLAGS           := $(debug-tools-sasimi_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+debug-tools-sasimi_LDFLAGS           := $(debug-tools-sasimi_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+debug-tools-sasimi_LDFLAGS           := $(debug-tools-sasimi_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+debug-tools-sasimi_LDFLAGS   += -L
+endif
+
+#MM
+debug-tools-sasimi-quick : debug-tools-sasimi
+
+#MM debug-tools-sasimi : includes-generate-deps core-linklibs
+debug-tools-sasimi : $(debug-tools-sasimi_TARGETDIR)/$(debug-tools-sasimi_PROGNAME)
+
+ifneq ($(filter $(TARGET),debug-tools-sasimi debug-tools-sasimi-quick debug-tools-sasimi-gz-quick),)
+
+debug-tools-sasimi_CXXABSBASENAMES := $(foreach debug-tools-sasimi_CXXBASE,$(debug-tools-sasimi_CXX_NARCHFILES),$(if $(filter /%,$(debug-tools-sasimi_CXXBASE)),$(debug-tools-sasimi_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(debug-tools-sasimi_CXXBASE))))
+
+ifneq ($(debug-tools-sasimi_CXXABSBASENAMES),)
+
+debug-tools-sasimi_CXXBASENAMES := $(basename $(debug-tools-sasimi_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+debug-tools-sasimi_MCXX_FILES  := $(strip $(foreach debug-tools-sasimi_CXXBASE,$(debug-tools-sasimi_CXXABSBASENAMES), $(firstword $(wildcard $(foreach debug-tools-sasimi_EXT, $(AROS_CXXEXTS),$(addsuffix .$(debug-tools-sasimi_EXT),$(debug-tools-sasimi_CXXBASE)))))))
+
+ifeq (,)
+debug-tools-sasimi_MCXX_SRCWILDCARD := %
+else
+debug-tools-sasimi_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(debug-tools-sasimi_OBJDIR),)
+  debug-tools-sasimi_CXXTARGETS := $(notdir $(debug-tools-sasimi_CXXBASENAMES:=.o))
+  debug-tools-sasimi_CXXDTARGETS := $(notdir $(debug-tools-sasimi_CXXBASENAMES:=.d))
+  debug-tools-sasimi_MCXX_WILDCARD := %
+else
+  debug-tools-sasimi_CXXTARGETS := $(addprefix $(debug-tools-sasimi_OBJDIR)/,$(notdir $(debug-tools-sasimi_CXXBASENAMES:=.o)))
+  debug-tools-sasimi_CXXDTARGETS := $(addprefix $(debug-tools-sasimi_OBJDIR)/,$(notdir $(debug-tools-sasimi_CXXBASENAMES:=.d)))
+  debug-tools-sasimi_MCXX_WILDCARD := $(debug-tools-sasimi_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(debug-tools-sasimi_CXXTARGETS) $(debug-tools-sasimi_CXXDTARGETS) : | $(debug-tools-sasimi_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+debug-tools-sasimi_MCXX_CPPFLAGS := $(debug-tools-sasimi_CPPFLAGS)
+debug-tools-sasimi_CXXFLAGS := $(debug-tools-sasimi_CXXFLAGS)
+ifeq ($(debug-tools-sasimi_DXXFLAGS),)
+  debug-tools-sasimi_DXXFLAGS := $(debug-tools-sasimi_CXXFLAGS)
+else
+  debug-tools-sasimi_DXXFLAGS := $(debug-tools-sasimi_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  debug-tools-sasimi_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  debug-tools-sasimi_STRIP ?= $(HOST_STRIP)
+  debug-tools-sasimi_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  debug-tools-sasimi_CXXCMD:=$(HOST_CXX)
+  debug-tools-sasimi_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(debug-tools-sasimi_MCXX_CPPFLAGS) $(debug-tools-sasimi_MCXX_EXTRA_CPPFLAGS))
+  debug-tools-sasimi_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(debug-tools-sasimi_CXXFLAGS))
+  debug-tools-sasimi_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(debug-tools-sasimi_DXXFLAGS))
+  debug-tools-sasimi_CXXIQUOTE:=$(HOST_IQUOTE)
+  debug-tools-sasimi_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  debug-tools-sasimi_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  debug-tools-sasimi_STRIP ?= $(TARGET_STRIP)
+  debug-tools-sasimi_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  debug-tools-sasimi_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  debug-tools-sasimi_MCXX_CPPFLAGS := $(strip $(debug-tools-sasimi_MCXX_CPPFLAGS) $(debug-tools-sasimi_MCXX_EXTRA_CPPFLAGS))
+  debug-tools-sasimi_CXXFLAGS := $(strip $(debug-tools-sasimi_CXXFLAGS) $(SAFETY_CFLAGS))
+  debug-tools-sasimi_DXXFLAGS := $(debug-tools-sasimi_DXXFLAGS)
+  debug-tools-sasimi_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  debug-tools-sasimi_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  debug-tools-sasimi_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  debug-tools-sasimi_STRIP ?= $(ECHO) >/dev/null
+  debug-tools-sasimi_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  debug-tools-sasimi_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  debug-tools-sasimi_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(debug-tools-sasimi_MCXX_CPPFLAGS) $(debug-tools-sasimi_MCXX_EXTRA_CPPFLAGS))
+  debug-tools-sasimi_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(debug-tools-sasimi_CXXFLAGS))
+  debug-tools-sasimi_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(debug-tools-sasimi_DXXFLAGS))
+  debug-tools-sasimi_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  debug-tools-sasimi_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(debug-tools-sasimi_CXXCMD) $(debug-tools-sasimi_CXXIQUOTE) $(dir $(2)) $(debug-tools-sasimi_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-sasimi_CXXIQUOTE) . $(debug-tools-sasimi_CXXIQUOTE_END) $(strip $(debug-tools-sasimi_CXXFLAGS) $(debug-tools-sasimi_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(debug-tools-sasimi_CXXCMD) $(debug-tools-sasimi_CXXIQUOTE) $(dir $(2)) $(debug-tools-sasimi_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-sasimi_CXXIQUOTE) . $(debug-tools-sasimi_CXXIQUOTE_END) $(strip $(debug-tools-sasimi_CXXFLAGS) $(debug-tools-sasimi_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(debug-tools-sasimi_CXXCMD) $(debug-tools-sasimi_CXXIQUOTE) $(dir $(2)) $(debug-tools-sasimi_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-sasimi_CXXIQUOTE) . $(debug-tools-sasimi_CXXIQUOTE_END) $(strip $(debug-tools-sasimi_CXXFLAGS) $(debug-tools-sasimi_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(debug-tools-sasimi_CXXCMD)" $(MKDEPEND) $(strip $(debug-tools-sasimi_DXXFLAGS) $(debug-tools-sasimi_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(debug-tools-sasimi_OBJDIR),)
+  $(foreach debug-tools-sasimi_CXXFILE,$(debug-tools-sasimi_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(debug-tools-sasimi_CXXFILE))),$(debug-tools-sasimi_CXXFILE))))
+else
+  $(foreach debug-tools-sasimi_CXXFILE,$(debug-tools-sasimi_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(debug-tools-sasimi_OBJDIR)/,$(notdir $(basename $(debug-tools-sasimi_CXXFILE)))),$(debug-tools-sasimi_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(debug-tools-sasimi_OBJC_NARCHFILES),)
+
+ifeq (,)
+debug-tools-sasimi_MOBJC_SRCWILDCARD := %
+else
+debug-tools-sasimi_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(debug-tools-sasimi_OBJDIR),)
+  debug-tools-sasimi_MOBJC_TARGETS := $(addsuffix .o,$(debug-tools-sasimi_OBJC_NARCHFILES))
+  debug-tools-sasimi_MOBJC_DTARGETS := $(addsuffix .d,$(debug-tools-sasimi_OBJC_NARCHFILES))
+  debug-tools-sasimi_MOBJC_WILDCARD := %
+else
+  debug-tools-sasimi_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-sasimi_OBJDIR)/,$(debug-tools-sasimi_OBJC_NARCHFILES)))
+  debug-tools-sasimi_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(debug-tools-sasimi_OBJDIR)/,$(debug-tools-sasimi_OBJC_NARCHFILES)))
+  debug-tools-sasimi_MOBJC_WILDCARD := $(debug-tools-sasimi_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : | $(addsuffix .m,$(debug-tools-sasimi_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  debug-tools-sasimi_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  debug-tools-sasimi_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(debug-tools-sasimi_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  debug-tools-sasimi_MOBJC_DIRS := $(foreach dir, $(debug-tools-sasimi_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(debug-tools-sasimi_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(debug-tools-sasimi_MOBJC_DIRS),)
+    debug-tools-sasimi_MOBJC_DIRS := $(shell echo $(debug-tools-sasimi_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(debug-tools-sasimi_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  debug-tools-sasimi_CC := $(TARGET_CC)
+else
+  debug-tools-sasimi_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+debug-tools-sasimi_MOBJC_CPPFLAGS := $(debug-tools-sasimi_CPPFLAGS)
+debug-tools-sasimi_OBJCFLAGS := $(debug-tools-sasimi_CFLAGS)
+debug-tools-sasimi_OBJCFLAGS := $(debug-tools-sasimi_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+debug-tools-sasimi_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(debug-tools-sasimi_OBJCFLAGS)))
+ifeq ($(debug-tools-sasimi_DFLAGS),)
+  debug-tools-sasimi_OBJCDFLAGS := $(debug-tools-sasimi_CFLAGS)
+else
+  debug-tools-sasimi_OBJCDFLAGS := $(debug-tools-sasimi_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  debug-tools-sasimi_LINK ?= $(strip $(debug-tools-sasimi_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  debug-tools-sasimi_STRIP ?= $(TARGET_STRIP)
+  debug-tools-sasimi_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : CMD:=$(strip $(debug-tools-sasimi_CC) $(TARGET_SYSROOT))
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : debug-tools-sasimi_MOBJC_CPPFLAGS:=$(strip $(debug-tools-sasimi_MOBJC_CPPFLAGS) $(debug-tools-sasimi_MOBJC_EXTRA_CPPFLAGS))
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : debug-tools-sasimi_OBJCFLAGS:=$(strip $(debug-tools-sasimi_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : debug-tools-sasimi_OBJCDFLAGS:=$(debug-tools-sasimi_OBJCDFLAGS)
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : debug-tools-sasimi_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : debug-tools-sasimi_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  debug-tools-sasimi_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  debug-tools-sasimi_STRIP ?= $(HOST_STRIP)
+  debug-tools-sasimi_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : debug-tools-sasimi_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(debug-tools-sasimi_MOBJC_CPPFLAGS) $(debug-tools-sasimi_MOBJC_EXTRA_CPPFLAGS))
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : debug-tools-sasimi_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(debug-tools-sasimi_OBJCFLAGS))
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : debug-tools-sasimi_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(debug-tools-sasimi_OBJCDFLAGS))
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : debug-tools-sasimi_IQUOTE:=$(HOST_IQUOTE)
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : debug-tools-sasimi_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  debug-tools-sasimi_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  debug-tools-sasimi_STRIP ?= $(ECHO) >/dev/null
+  debug-tools-sasimi_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : debug-tools-sasimi_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(debug-tools-sasimi_MOBJC_CPPFLAGS) $(debug-tools-sasimi_MOBJC_EXTRA_CPPFLAGS))
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : debug-tools-sasimi_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(debug-tools-sasimi_OBJCFLAGS))
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : debug-tools-sasimi_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(debug-tools-sasimi_OBJCDFLAGS))
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : debug-tools-sasimi_IQUOTE:=$(KERNEL_IQUOTE)
+  $(debug-tools-sasimi_MOBJC_TARGETS) $(debug-tools-sasimi_MOBJC_DTARGETS) : debug-tools-sasimi_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(debug-tools-sasimi_MOBJC_TARGETS) : CPPFLAGS := $(debug-tools-sasimi_MOBJC_CPPFLAGS)
+$(debug-tools-sasimi_MOBJC_TARGETS) : CFLAGS := $(debug-tools-sasimi_OBJCFLAGS)
+$(debug-tools-sasimi_MOBJC_TARGETS) : $(debug-tools-sasimi_MOBJC_WILDCARD).o : $(debug-tools-sasimi_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(debug-tools-sasimi_IQUOTE) $(dir $<) $(debug-tools-sasimi_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-sasimi_IQUOTE) . $(debug-tools-sasimi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(debug-tools-sasimi_IQUOTE) $(dir $<) $(debug-tools-sasimi_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-sasimi_IQUOTE) . $(debug-tools-sasimi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(debug-tools-sasimi_IQUOTE) $(dir $<) $(debug-tools-sasimi_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-sasimi_IQUOTE) . $(debug-tools-sasimi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(debug-tools-sasimi_MOBJC_DTARGETS) : $(debug-tools-sasimi_MOBJC_WILDCARD).d : $(debug-tools-sasimi_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(debug-tools-sasimi_OBJCDFLAGS) $(debug-tools-sasimi_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+debug-tools-sasimi_MC_SRCWILDCARD := %
+else
+debug-tools-sasimi_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(debug-tools-sasimi_OBJDIR),)
+debug-tools-sasimi_MC_TARGETS := $(addsuffix .o,$(debug-tools-sasimi_C_NARCHFILES))
+debug-tools-sasimi_MC_DTARGETS := $(addsuffix .d,$(debug-tools-sasimi_C_NARCHFILES))
+debug-tools-sasimi_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    debug-tools-sasimi_MC_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-sasimi_OBJDIR)/,$(notdir $(debug-tools-sasimi_C_NARCHFILES))))
+    debug-tools-sasimi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(debug-tools-sasimi_OBJDIR)/,$(notdir $(debug-tools-sasimi_C_NARCHFILES))))
+else
+ifeq (,)
+    debug-tools-sasimi_MC_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-sasimi_OBJDIR)/,$(debug-tools-sasimi_C_NARCHFILES)))
+    debug-tools-sasimi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(debug-tools-sasimi_OBJDIR)/,$(debug-tools-sasimi_C_NARCHFILES)))
+else
+    debug-tools-sasimi_MC_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-sasimi_OBJDIR)/,$(patsubst /%,%,$(debug-tools-sasimi_C_NARCHFILES))))
+    debug-tools-sasimi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(debug-tools-sasimi_OBJDIR)/,$(patsubst /%,%,$(debug-tools-sasimi_C_NARCHFILES))))
+endif
+endif
+debug-tools-sasimi_MC_TGTWILDCARD := $(debug-tools-sasimi_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : | $(addsuffix .c,$(debug-tools-sasimi_C_NARCHFILES))
+
+# Be sure that all .c files are found
+debug-tools-sasimi_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+debug-tools-sasimi_MC_BASEDIRS := $(shell echo $(sort $(dir $(debug-tools-sasimi_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+debug-tools-sasimi_MC_DIRS := $(foreach dir, $(debug-tools-sasimi_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(debug-tools-sasimi_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(debug-tools-sasimi_MC_DIRS),)
+    debug-tools-sasimi_MC_DIRS := $(shell echo $(debug-tools-sasimi_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(debug-tools-sasimi_MC_DIRS)
+endif
+
+endif
+
+debug-tools-sasimi_MC_CPPFLAGS := $(debug-tools-sasimi_CPPFLAGS)
+debug-tools-sasimi_CFLAGS := $(debug-tools-sasimi_CFLAGS)
+ifeq ($(debug-tools-sasimi_DFLAGS),)
+  debug-tools-sasimi_DFLAGS := $(debug-tools-sasimi_CFLAGS)
+else
+  debug-tools-sasimi_DFLAGS := $(debug-tools-sasimi_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+debug-tools-sasimi_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+debug-tools-sasimi_STRIP ?= $(TARGET_STRIP)
+debug-tools-sasimi_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : debug-tools-sasimi_MC_CPPFLAGS:=$(strip $(debug-tools-sasimi_MC_CPPFLAGS) $(debug-tools-sasimi_MC_EXTRA_CPPFLAGS))
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : debug-tools-sasimi_CFLAGS:=$(strip $(debug-tools-sasimi_CFLAGS) $(SAFETY_CFLAGS))
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : debug-tools-sasimi_DFLAGS:=$(debug-tools-sasimi_DFLAGS)
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : debug-tools-sasimi_IQUOTE:=$(CFLAGS_IQUOTE)
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : debug-tools-sasimi_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+debug-tools-sasimi_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+debug-tools-sasimi_STRIP ?= $(HOST_STRIP)
+debug-tools-sasimi_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : debug-tools-sasimi_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(debug-tools-sasimi_MC_CPPFLAGS) $(debug-tools-sasimi_MC_EXTRA_CPPFLAGS))
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : debug-tools-sasimi_CFLAGS:=$(strip $(HOST_CFLAGS) $(debug-tools-sasimi_CFLAGS))
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : debug-tools-sasimi_DFLAGS:=$(strip $(HOST_CFLAGS) $(debug-tools-sasimi_DFLAGS))
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : debug-tools-sasimi_IQUOTE:=$(HOST_IQUOTE)
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : debug-tools-sasimi_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+debug-tools-sasimi_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+debug-tools-sasimi_STRIP ?= $(ECHO) >/dev/null
+debug-tools-sasimi_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : debug-tools-sasimi_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(debug-tools-sasimi_MC_CPPFLAGS) $(debug-tools-sasimi_MC_EXTRA_CPPFLAGS))
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : debug-tools-sasimi_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(debug-tools-sasimi_CFLAGS))
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : debug-tools-sasimi_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(debug-tools-sasimi_DFLAGS))
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : debug-tools-sasimi_IQUOTE:=$(KERNEL_IQUOTE)
+$(debug-tools-sasimi_MC_TARGETS) $(debug-tools-sasimi_MC_DTARGETS) : debug-tools-sasimi_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(debug-tools-sasimi_MC_TARGETS) : CPPFLAGS := $(debug-tools-sasimi_MC_CPPFLAGS)
+$(debug-tools-sasimi_MC_TARGETS) : CFLAGS := $(debug-tools-sasimi_CFLAGS)
+$(debug-tools-sasimi_MC_TARGETS) : $(debug-tools-sasimi_MC_TGTWILDCARD).o : $(debug-tools-sasimi_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(debug-tools-sasimi_IQUOTE) $(dir $<) $(debug-tools-sasimi_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-sasimi_IQUOTE) . $(debug-tools-sasimi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(debug-tools-sasimi_IQUOTE) $(dir $<) $(debug-tools-sasimi_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-sasimi_IQUOTE) . $(debug-tools-sasimi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(debug-tools-sasimi_IQUOTE) $(dir $<) $(debug-tools-sasimi_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-sasimi_IQUOTE) . $(debug-tools-sasimi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(debug-tools-sasimi_MC_DTARGETS) : $(debug-tools-sasimi_MC_TGTWILDCARD).d : $(debug-tools-sasimi_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(debug-tools-sasimi_DFLAGS) $(debug-tools-sasimi_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(debug-tools-sasimi_OBJDIR),)
+debug-tools-sasimi-MA_TARGETS := $(addsuffix .o,$(debug-tools-sasimi_ASMFILES))
+debug-tools-sasimi-MA_WILDCARD := %
+else
+debug-tools-sasimi-MA_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-sasimi_OBJDIR)/,$(notdir $(debug-tools-sasimi_ASMFILES))))
+debug-tools-sasimi-MA_WILDCARD := $(debug-tools-sasimi_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(debug-tools-sasimi-MA_TARGETS) : | $(addsuffix .s,$(debug-tools-sasimi_ASMFILES))
+
+# Be sure that all .c files are found
+debug-tools-sasimi-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+debug-tools-sasimi-MA_BASEDIRS := $(shell echo $(sort $(dir $(debug-tools-sasimi_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+debug-tools-sasimi-MA_DIRS := $(foreach dir, $(debug-tools-sasimi-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(debug-tools-sasimi-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(debug-tools-sasimi-MA_DIRS),)
+    debug-tools-sasimi-MA_DIRS := $(shell echo $(debug-tools-sasimi-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(debug-tools-sasimi-MA_DIRS)
+endif
+
+endif
+
+debug-tools-sasimi-MA_ASSEMBLER ?= $(debug-tools-sasimi_ASSEMBLER)
+
+$(debug-tools-sasimi-MA_TARGETS) : debug-tools-sasimi-MA_CMD:= $(debug-tools-sasimi-MA_ASSEMBLER)
+
+$(debug-tools-sasimi-MA_TARGETS) : CPPFLAGS := $(debug-tools-sasimi_CPPFLAGS)
+$(debug-tools-sasimi-MA_TARGETS) : AFLAGS := $(debug-tools-sasimi_AFLAGS)
+$(debug-tools-sasimi-MA_TARGETS) : $(debug-tools-sasimi-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(debug-tools-sasimi-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(debug-tools-sasimi-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(debug-tools-sasimi-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+debug-tools-sasimi-link_EXTRA_LDFLAGS := 
+debug-tools-sasimi-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    debug-tools-sasimi-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    debug-tools-sasimi-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    debug-tools-sasimi-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+debug-tools-sasimi-link_DIRS := $(subst -L ,-L,$(strip $(debug-tools-sasimi_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+debug-tools-sasimi-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(debug-tools-sasimi-link_DIRS)))
+# Add trailing /
+debug-tools-sasimi-link_DIRS := $(subst //,/,$(addsuffix /,$(debug-tools-sasimi-link_DIRS)))
+# Add normal linklib path
+debug-tools-sasimi-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+debug-tools-sasimi-link_LIBS := $(addprefix lib,$(addsuffix .a,$(debug-tools-sasimi_LIBS) $(debug-tools-sasimi-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    debug-tools-sasimi-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    debug-tools-sasimi-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+debug-tools-sasimi-link_DEPLIBS := $(foreach lib,$(debug-tools-sasimi-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(debug-tools-sasimi-link_DIRS)))) \
+)
+
+$(debug-tools-sasimi_TARGETDIR)/$(debug-tools-sasimi_PROGNAME) : OBJDIR := $(debug-tools-sasimi_OBJDIR)
+$(debug-tools-sasimi_TARGETDIR)/$(debug-tools-sasimi_PROGNAME) : OBJS := $(debug-tools-sasimi_OBJS) $(debug-tools-sasimi_ARCHOBJS) $(USER_OBJS)
+$(debug-tools-sasimi_TARGETDIR)/$(debug-tools-sasimi_PROGNAME) : LDFLAGS := $(strip $(debug-tools-sasimi_LDFLAGS) $(debug-tools-sasimi-link_EXTRA_LDFLAGS))
+$(debug-tools-sasimi_TARGETDIR)/$(debug-tools-sasimi_PROGNAME) : LIBS := $(addprefix -l,$(debug-tools-sasimi_LIBS) $(debug-tools-sasimi-link_EXTRA_LIBS) )
+$(debug-tools-sasimi_TARGETDIR)/$(debug-tools-sasimi_PROGNAME) : $(debug-tools-sasimi_OBJS) $(debug-tools-sasimi_ARCHOBJS) $(USER_OBJS) $(debug-tools-sasimi-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(debug-tools-sasimi_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(debug-tools-sasimi_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(debug-tools-sasimi_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(debug-tools-sasimi_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(debug-tools-sasimi_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(debug-tools-sasimi_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(debug-tools-sasimi_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(debug-tools-sasimi_DEPS),)
+  ifneq (debug-tools-sasimi debug-tools-sasimi-quick,)
+    ifneq ($(findstring $(TARGET),debug-tools-sasimi debug-tools-sasimi-quick),)
+      -include $(debug-tools-sasimi_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(debug-tools-sasimi_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(debug-tools-sasimi_OBJS) $(debug-tools-sasimi_DEPS) $(debug-tools-sasimi_TARGETDIR)/$(debug-tools-sasimi_PROGNAME),)
+$(debug-tools-sasimi_OBJS) $(debug-tools-sasimi_DEPS) $(debug-tools-sasimi_TARGETDIR)/$(debug-tools-sasimi_PROGNAME) : | $(debug-tools-sasimi_OBJDIR) $(debug-tools-sasimi_TARGETDIR)
+else
+$(debug-tools-sasimi_OBJS) $(debug-tools-sasimi_DEPS) $(debug-tools-sasimi_TARGETDIR)/$(debug-tools-sasimi_PROGNAME) :: $(debug-tools-sasimi_OBJDIR) $(debug-tools-sasimi_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(debug-tools-sasimi_OBJDIR) $(debug-tools-sasimi_TARGETDIR)
+
+
+debug-tools-sasimi-clean : FILES := $(debug-tools-sasimi_OBJS) $(debug-tools-sasimi_TARGETDIR)/$(debug-tools-sasimi_PROGNAME) $(debug-tools-sasimi_DEPS)
+#MM
+debug-tools-sasimi-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget debug-tools-sasimi"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

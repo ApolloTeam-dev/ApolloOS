@@ -1,0 +1,56 @@
+# Copyright © 2004, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+ICONS := Amiga Linux Networked_Amiga Networked_Linux Networked_Windows Generic \
+         MacOS Networked_Generic Networked_MacOS Windows
+
+#MM- themes-GorillaSmall-icons-clean : themes-GorillaSmall-icons-computers-clean
+#MM- themes-GorillaSmall-icons : themes-GorillaSmall-icons-computers
+
+BD_OBJS := $(addprefix  $(AROS_CONTRIB)/Icons/Gorilla/Computers/, $(addsuffix .info,$(ICONS)))
+
+#MM
+themes-GorillaSmall-icons-computers : $(BD_OBJS)
+
+ifeq (,)
+
+$(AROS_CONTRIB)/Icons/Gorilla/Computers/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/%.png
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+else
+
+$(AROS_CONTRIB)/Icons/Gorilla/Computers/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+endif
+
+
+ifneq ($(BD_OBJS),)
+$(BD_OBJS) : | $(AROS_CONTRIB)/Icons/Gorilla/Computers
+else
+$(BD_OBJS) :: $(AROS_CONTRIB)/Icons/Gorilla/Computers
+endif
+
+GLOB_MKDIRS += $(AROS_CONTRIB)/Icons/Gorilla/Computers
+
+
+themes-GorillaSmall-icons-computers-clean : FILES := $(BD_OBJS)
+#MM
+themes-GorillaSmall-icons-computers-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: themes-GorillaSmall-icons-computers themes-GorillaSmall-icons-computers-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

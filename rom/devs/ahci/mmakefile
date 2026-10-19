@@ -1,0 +1,1800 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM kernel-ahci : kernel-timer-includes
+
+INCLUDE_FILES := $(call WILDCARD, include/devices/*.h)
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq (include/devices,)
+TMP_DIR                := include/devices
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst include/devices,$(GENINCDIR)/devices,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/devices/,$(notdir $(INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := include/devices/
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/include/devices/
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/devices/,$(INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/devices/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq (include/devices,)
+BD_INCL_FILES2         := $(subst include/devices,$(AROS_INCLUDES)/devices,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/devices/,$(notdir $(INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/devices/,$(INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/devices/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+INCLUDE_FILES := $(call WILDCARD, include/hidd/*.h)
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq (include/hidd,)
+TMP_DIR                := include/hidd
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst include/hidd,$(GENINCDIR)/hidd,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/hidd/,$(notdir $(INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := include/hidd/
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/include/hidd/
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/hidd/,$(INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/hidd/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq (include/hidd,)
+BD_INCL_FILES2         := $(subst include/hidd,$(AROS_INCLUDES)/hidd,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/hidd/,$(notdir $(INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/hidd/,$(INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/hidd/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+AHCIDEVICEFILES :=  \
+        ahci_init \
+        ahci_io \
+        ahci_scsi \
+        ahci_cam_aros \
+        ahci_aros \
+        ahci_aros_bus \
+        ahci \
+        ahci_attach \
+        ahci_pm \
+        bus_pci \
+        timer \
+        subr_prf
+
+AHCICLASSFILES :=  \
+        ahci_controllerclass \
+        ahci_busclass \
+        ahci_unitclass
+
+USER_CPPFLAGS := -D__OOP_NOMETHODBASES__ -D__OOP_NOATTRBASES__
+
+# Contains code from openbsd.org
+USER_CPPFLAGS += -D__BSD_VISIBLE
+# Enable coalescing
+#USER_CPPFLAGS += -DAHCI_COALESCE
+# Enable ACHI debugging
+#USER_CPPFLAGS += -DAHCI_DEBUG
+# Enable AROS debugging
+#USER_CPPFLAGS += -DDEBUG=1
+
+USER_LDFLAGS := -static
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-ahci
+#MM kernel-ahci-quick
+#MM kernel-ahci-makefile
+#MM kernel-ahci-clean
+
+# ABI targets:
+#MM- includes-all : kernel-ahci-includes
+#MM- linklibs-ahci: kernel-ahci-linklib
+#MM- linklibs-ahci_rel : kernel-ahci-linklib
+#MM- includes-ahci: kernel-ahci-includes
+#MM- includes-ahci_rel : kernel-ahci-includes
+#MM- kernel-ahci : kernel-ahci-includes core-linklibs linklibs-hiddstubs
+#MM kernel-ahci-linklib : kernel-ahci-includes includes-hiddstubs
+#MM- kernel-ahci-quick : kernel-ahci-includes-quick
+#MM kernel-ahci-includes : kernel-ahci-makefile kernel-ahci-includes-dirs \
+#MM     includes-generate-deps kernel-ahci-fd
+#MM kernel-ahci-includes-quick
+#MM kernel-ahci-includes-dirs
+#MM kernel-ahci-fd
+
+# Library targets
+#MM kernel-ahci-kobj : core-linklibs linklibs-hiddstubs
+#MM kernel-ahci-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-ahci-kobj : kernel-ahci-includes core-linklibs linklibs-hiddstubs
+#MM kernel-ahci-kobj-quick : kernel-ahci-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-ahci_ALLTARGETS       := kernel-ahci kernel-ahci-quick kernel-ahci-clean
+
+ifeq (M,M)
+kernel-ahci_ALLTARGETS       += kernel-ahci-kobj kernel-ahci-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-ahci_ALLTARGETS += kernel-ahci-includes \
+                 kernel-ahci-includes-quick kernel-ahci-includes-dirs  \
+                 kernel-ahci-linklib kernel-ahci-fd
+endif
+
+.PHONY : $(kernel-ahci_ALLTARGETS) kernel-ahci-makefile
+
+ifeq (ahci,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (device,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-ahci_DEFNAME      := ahci_
+else
+    kernel-ahci_DEFNAME      := ahci
+endif
+kernel-ahci_DEFLINKLIBNAME   := $(kernel-ahci_DEFNAME)
+ifneq (,)
+    kernel-ahci_LINKLIBNAME  := 
+else
+    kernel-ahci_LINKLIBNAME  = $(kernel-ahci_DEFLINKLIBNAME)
+endif
+kernel-ahci_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-ahci_DEFCPPFLAGS  += -I
+endif
+kernel-ahci_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-ahci_DFLAGS       := 
+else
+    kernel-ahci_DFLAGS       = $(kernel-ahci_DEFDFLAGS)
+endif
+kernel-ahci_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-ahci_DXXFLAGS     := 
+else
+    kernel-ahci_DXXFLAGS     = $(kernel-ahci_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-ahci_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-ahci_DEFDFLAGS))
+kernel-ahci_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-ahci_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-ahci_FUNCINSTR := yes
+kernel-ahci_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-ahci_DEFDFLAGS))
+kernel-ahci_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-ahci_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-ahci_OBJDIR                     := 
+else
+kernel-ahci_OBJDIR                     := $(OBJDIR)/$(kernel-ahci_DEFNAME)
+endif
+ifneq (,)
+kernel-ahci_OBJDIR           := $(kernel-ahci_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-ahci-makefile         := $(kernel-ahci_OBJDIR)/Makefile.$(kernel-ahci_DEFNAME)device
+kernel-ahci-genmakefile : $(kernel-ahci-makefile)
+
+
+kernel-ahci-genmakefile_OPTS := 
+ifneq (,)
+    kernel-ahci-genmakefile_OPTS += -f 
+    kernel-ahci-genmakefile_MODNAME := ahci_
+else
+    kernel-ahci-genmakefile_MODNAME := ahci
+endif
+kernel-ahci-genmakefile_TARGET := Makefile.$(kernel-ahci-genmakefile_MODNAME)device
+kernel-ahci-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-ahci-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-ahci-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-ahci-genmakefile_OPTS += -c 
+        kernel-ahci-genmakefile_DEPS += 
+    endif 
+else
+    kernel-ahci-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/ahci.conf
+    kernel-ahci-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/ahci.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-ahci-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-ahci-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-ahci-genmakefile_OPTS += -o 
+        kernel-ahci-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-ahci-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-ahci_OBJDIR),)
+    kernel-ahci-genmakefile_OPTS += -d $(kernel-ahci_OBJDIR)
+    kernel-ahci-genmakefile_TARGET := $(kernel-ahci_OBJDIR)/$(kernel-ahci-genmakefile_TARGET)
+endif
+
+$(kernel-ahci-genmakefile_TARGET) : OPTS := $(kernel-ahci-genmakefile_OPTS)
+$(kernel-ahci-genmakefile_TARGET) : MODNAME := ahci
+$(kernel-ahci-genmakefile_TARGET) : MODTYPE := device
+$(kernel-ahci-genmakefile_TARGET) : $(kernel-ahci-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-ahci-makefile),)
+$(kernel-ahci-makefile) : | $(kernel-ahci_OBJDIR)
+else
+$(kernel-ahci-makefile) :: $(kernel-ahci_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-ahci_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-ahci_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-ahci-makefile)
+
+kernel-ahci_DEFMODDIR        := $($(kernel-ahci_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-ahci_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-ahci_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-ahci_MODDIR       := 
+else
+    kernel-ahci_MODDIR       := $(kernel-ahci_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-ahci_INCDIR           := 
+else
+kernel-ahci_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-ahci_LIBDEFSINC       := $(kernel-ahci_OBJDIR)/include/$(kernel-ahci_DEFNAME)_libdefs.h
+kernel-ahci_DEFLIBDEFSINC    := $(kernel-ahci_OBJDIR)/include/$(kernel-ahci_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-ahci-includes-quick : kernel-ahci-includes
+kernel-ahci-includes : $(addprefix $(GENINCDIR)/,$($(kernel-ahci_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-ahci_INCDIR)/,$($(kernel-ahci_DEFNAME)_INCLUDES)) \
+    $(kernel-ahci_LIBDEFSINC) $(kernel-ahci_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-ahci_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-ahci-includes_MODNAME := ahci_
+else
+    kernel-ahci-includes_MODNAME := ahci
+endif
+
+ifneq ($($(kernel-ahci-includes_MODNAME)_INCLUDES),)
+
+kernel-ahci-includes_TARGETS := $($(kernel-ahci-includes_MODNAME)_INCLUDES)
+
+kernel-ahci-includes_DEPS := $(GENMODULE)
+kernel-ahci-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-ahci-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-ahci-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-ahci-includes_OPTS += -c 
+        kernel-ahci-includes_DEPS += 
+    endif 
+else
+    kernel-ahci-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/ahci.conf
+    kernel-ahci-includes_DEPS += $(SRCDIR)/$(CURDIR)/ahci.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-ahci-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-ahci-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-ahci-includes_OPTS += -o 
+        kernel-ahci-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-ahci-includes_OPTS += -s 
+endif
+ifneq ($(kernel-ahci_OBJDIR)/include,)
+    kernel-ahci-includes_OPTS += -d $(kernel-ahci_OBJDIR)/include
+    kernel-ahci-includes_TARGETS := $(addprefix $(kernel-ahci_OBJDIR)/include/,$(kernel-ahci-includes_TARGETS))
+    kernel-ahci-includes_GENINCFLAG=$(kernel-ahci_OBJDIR)/include/.ahci.device-includes
+else
+    kernel-ahci-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.ahci.device-includes
+endif
+
+$(kernel-ahci-includes_TARGETS) : $(kernel-ahci-includes_DEPS) $(kernel-ahci-includes_GENINCFLAG)
+
+$(kernel-ahci-includes_GENINCFLAG) : OPTS := $(kernel-ahci-includes_OPTS)
+$(kernel-ahci-includes_GENINCFLAG) : MODNAME := ahci
+$(kernel-ahci-includes_GENINCFLAG) : MODTYPE := device
+$(kernel-ahci-includes_GENINCFLAG) : $(kernel-ahci-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-ahci_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-ahci_DEFNAME)_INCLUDES)) : | $(kernel-ahci_OBJDIR)/ahci_geninc
+
+$(kernel-ahci_OBJDIR)/ahci_geninc : COPYSRCDIR := $(kernel-ahci_OBJDIR)/include
+$(kernel-ahci_OBJDIR)/ahci_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-ahci_OBJDIR)/ahci_geninc : FILES := $($(kernel-ahci_DEFNAME)_INCLUDES)
+$(kernel-ahci_OBJDIR)/ahci_geninc : $(addprefix $(kernel-ahci_OBJDIR)/include/,$($(kernel-ahci_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-ahci_OBJDIR)/include
+
+$(addprefix $(kernel-ahci_INCDIR)/,$($(kernel-ahci_DEFNAME)_INCLUDES)) : | $(kernel-ahci_OBJDIR)/ahci_incs
+
+$(kernel-ahci_OBJDIR)/ahci_incs : COPYSRCDIR := $(kernel-ahci_OBJDIR)/include
+$(kernel-ahci_OBJDIR)/ahci_incs : TGTDIR := $(kernel-ahci_INCDIR)
+$(kernel-ahci_OBJDIR)/ahci_incs : FILES := $($(kernel-ahci_DEFNAME)_INCLUDES)
+$(kernel-ahci_OBJDIR)/ahci_incs : $(addprefix $(kernel-ahci_OBJDIR)/include/,$($(kernel-ahci_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-ahci_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-ahci_DEFNAME)_INCLUDES))))
+
+TMPahci_INCDIRS := \
+    $(kernel-ahci_OBJDIR)/include $(addprefix $(kernel-ahci_OBJDIR)/include/,$(kernel-ahci_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-ahci_INCDIRS)) \
+    $(kernel-ahci_INCDIR) $(addprefix $(kernel-ahci_INCDIR)/,$(kernel-ahci_INCDIRS))
+
+ifneq (kernel-ahci-includes-dirs,)
+kernel-ahci-includes-dirs : | $(TMPahci_INCDIRS)
+else
+kernel-ahci-includes-dirs :: $(TMPahci_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPahci_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-ahci-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-ahci-genlibdefs_OPTS += -f 
+    kernel-ahci-genlibdefs_MODNAME := ahci_
+else
+    kernel-ahci-genlibdefs_MODNAME := ahci
+endif
+kernel-ahci-genlibdefs_TARGET := $(kernel-ahci-genlibdefs_MODNAME)_libdefs.h
+kernel-ahci-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-ahci-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-ahci-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-ahci-genlibdefs_OPTS += -c 
+        kernel-ahci-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-ahci-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/ahci.conf
+    kernel-ahci-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/ahci.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-ahci-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-ahci-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-ahci-genlibdefs_OPTS += -o 
+        kernel-ahci-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-ahci-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-ahci_OBJDIR)/include,)
+    kernel-ahci-genlibdefs_OPTS += -d $(kernel-ahci_OBJDIR)/include
+    kernel-ahci-genlibdefs_TARGET := $(kernel-ahci_OBJDIR)/include/$(kernel-ahci-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-ahci-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-ahci-genlibdefs_TARGET) : OPTS := $(kernel-ahci-genlibdefs_OPTS)
+$(kernel-ahci-genlibdefs_TARGET) : MODNAME := ahci
+$(kernel-ahci-genlibdefs_TARGET) : MODTYPE := device
+$(kernel-ahci-genlibdefs_TARGET) : $(kernel-ahci-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-ahci_DEFLIBDEFSINC) : FILENAME := $(kernel-ahci_LIBDEFSINC)
+$(kernel-ahci_DEFLIBDEFSINC) : $(kernel-ahci_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-ahci_LIBDEFSINC) $(kernel-ahci_DEFLIBDEFSINC) : | $(kernel-ahci_OBJDIR)/include
+
+ifneq (kernel-ahci-includes-dirs,)
+kernel-ahci-includes-dirs : | $(kernel-ahci_OBJDIR)/include
+else
+kernel-ahci-includes-dirs :: $(kernel-ahci_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-ahci_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-ahci-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-ahci-genmodfiles_OPTS += -f 
+    kernel-ahci-genmodfiles_MODNAME := ahci_
+else
+    kernel-ahci-genmodfiles_MODNAME := ahci
+endif
+kernel-ahci-genmodfiles_GENTARGETS := $($(kernel-ahci-genmodfiles_MODNAME)_STARTFILES) $($(kernel-ahci-genmodfiles_MODNAME)_ENDFILES)
+kernel-ahci-genmodfiles_STUBTARGETS := $($(kernel-ahci-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-ahci-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-ahci-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-ahci-genmodfiles_GENTARGETS))
+kernel-ahci-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-ahci-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-ahci-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-ahci-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-ahci-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-ahci-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-ahci-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-ahci-genmodfiles_OPTS += -c 
+        kernel-ahci-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-ahci-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/ahci.conf
+    kernel-ahci-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/ahci.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-ahci-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-ahci-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-ahci-genmodfiles_OPTS += -o 
+        kernel-ahci-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-ahci-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-ahci_OBJDIR),)
+    kernel-ahci-genmodfiles_OPTS += -d $(kernel-ahci_OBJDIR)
+    kernel-ahci-genmodfiles_TARGETDIR := $(shell echo $(kernel-ahci_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-ahci-genmodfiles_GENTARGETS := $(addprefix $(kernel-ahci-genmodfiles_TARGETDIR)/,$(kernel-ahci-genmodfiles_GENTARGETS))
+    kernel-ahci-genmodfiles_GENFILEFLAG=$(kernel-ahci-genmodfiles_TARGETDIR)/.ahci.device-genfiles
+else
+    kernel-ahci-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.ahci.device-genfiles
+endif
+ifneq ($(kernel-ahci_OBJDIR)/linklib,)
+    kernel-ahci-genmodfiles_OPTS += -l $(kernel-ahci_OBJDIR)/linklib
+    kernel-ahci-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-ahci_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-ahci-genmodfiles_STUBTARGETS := $(addprefix $(kernel-ahci-genmodfiles_STUBTARGETDIR)/,$(kernel-ahci-genmodfiles_STUBTARGETS))
+    kernel-ahci-genmodfiles_TARGETDIRS += $(kernel-ahci_OBJDIR)/linklib
+else
+ifneq ($(kernel-ahci_OBJDIR),)
+    kernel-ahci-genmodfiles_STUBTARGETS := $(addprefix $(kernel-ahci-genmodfiles_TARGETDIR)/,$(kernel-ahci-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-ahci-genmodfiles_TARGETS := $(kernel-ahci-genmodfiles_GENTARGETS) $(kernel-ahci-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-ahci-genmodfiles_TARGETDIRS),)
+$(kernel-ahci-genmodfiles_TARGETS) : | $(kernel-ahci-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-ahci-genmodfiles_TARGETS) : $(kernel-ahci-genmodfiles_DEPS) $(kernel-ahci-genmodfiles_GENFILEFLAG)
+
+$(kernel-ahci-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-ahci-genmodfiles_OPTS)
+$(kernel-ahci-genmodfiles_GENFILEFLAG) : MODNAME := ahci
+$(kernel-ahci-genmodfiles_GENFILEFLAG) : MODTYPE := device
+$(kernel-ahci-genmodfiles_GENFILEFLAG) : $(kernel-ahci-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-ahci-genmodfiles_GENFILEFLAG) : $(kernel-ahci_DEFLIBDEFSINC) $(kernel-ahci-makefile)
+
+
+ifneq ($(kernel-ahci-genmodfiles_GENFILEFLAG),)
+$(kernel-ahci-genmodfiles_GENFILEFLAG) : | $(kernel-ahci_OBJDIR)/linklib
+else
+$(kernel-ahci-genmodfiles_GENFILEFLAG) :: $(kernel-ahci_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-ahci_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-ahci_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-ahci_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-ahci-fd : $(kernel-ahci_FDDIR)/ahci_lib.fd
+
+
+TMP_TARGET := ahci_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/ahci.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/ahci.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-ahci_FDDIR),)
+    TMP_OPTS += -d $(kernel-ahci_FDDIR)
+    TMP_TARGET := $(kernel-ahci_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := ahci
+$(TMP_TARGET) : MODTYPE := device
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-ahci_FDDIR)/ahci_lib.fd : | $(kernel-ahci_FDDIR)
+
+
+ifneq (kernel-ahci-fd-setup,)
+kernel-ahci-fd-setup : | $(kernel-ahci_FDDIR)
+else
+kernel-ahci-fd-setup :: $(kernel-ahci_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-ahci_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-ahci_FILES            := $(AHCIDEVICEFILES) $(AHCICLASSFILES)
+kernel-ahci_OBJCFILES        := 
+kernel-ahci_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-ahci_LIBFILES         := 
+kernel-ahci_LIBS             := hiddstubs
+
+kernel-ahci_FDIRS            := $(sort $(dir $(kernel-ahci_FILES)))
+
+kernel-ahci_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-ahci_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-ahci_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-ahci_FILTERARCH       = $(filter-out $(call kernel-ahci_MATCHARCH,$(1),$(2)),$(2))
+kernel-ahci_STARTFILES       := $(addprefix $(kernel-ahci_OBJDIR)/,$($(kernel-ahci_DEFNAME)_STARTFILES))
+kernel-ahci_ENDFILES         := $(addprefix $(kernel-ahci_OBJDIR)/,$($(kernel-ahci_DEFNAME)_ENDFILES))
+
+kernel-ahci_ARCHOBJS         := $(wildcard $(kernel-ahci_OBJDIR)/arch/*.o)
+kernel-ahci_LIBARCHOBJS      := $(wildcard $(kernel-ahci_OBJDIR)/linklib/arch/*.o)
+kernel-ahci_ARCHFILES        := $(basename $(notdir $(kernel-ahci_ARCHOBJS)))
+kernel-ahci_LIBARCHFILES     := $(basename $(notdir $(kernel-ahci_LIBARCHOBJS)))
+kernel-ahci_C_NARCHFILES     := $(call kernel-ahci_FILTERARCH,$(kernel-ahci_ARCHFILES),$(kernel-ahci_FILES))
+kernel-ahci_CXX_NARCHFILES   := $(call kernel-ahci_FILTERARCH,$(kernel-ahci_ARCHFILES),$(kernel-ahci_CXXFILES))
+kernel-ahci_OBJC_NARCHFILES  := $(call kernel-ahci_FILTERARCH,$(kernel-ahci_ARCHFILES),$(kernel-ahci_OBJCFILES))
+kernel-ahci_NLIBARCHFILES    := $(call kernel-ahci_FILTERARCH,$(kernel-ahci_LIBARCHFILES),$(kernel-ahci_LIBFILES))
+kernel-ahci_ARCHNLIBFILES    := $(call kernel-ahci_FILTERARCH,$(kernel-ahci_LIBFILES),$(kernel-ahci_LIBARCHFILES))
+
+kernel-ahci_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-ahci_OBJDIR)/include -include $(kernel-ahci_DEFLIBDEFSINC))
+ifneq (,)
+kernel-ahci_CPPFLAGS         += -I
+endif
+kernel-ahci_LINKLIBCPPFLAGS  := $(kernel-ahci_CPPFLAGS)
+kernel-ahci_CPPFLAGS         += $(strip $($(kernel-ahci_DEFNAME)_CPPFLAGS))
+kernel-ahci_LINKLIBCPPFLAGS  += $(strip $($(kernel-ahci_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-ahci_CFLAGS           := $(strip $(CFLAGS) $($(kernel-ahci_DEFNAME)_CFLAGS))
+kernel-ahci_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-ahci_DEFNAME)_LINKLIBCFLAGS))
+kernel-ahci_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-ahci_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-ahci_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-ahci_CFLAGS           := $(strip $(kernel-ahci_LTOFLAGS) $(kernel-ahci_CFLAGS))
+kernel-ahci_LINKLIBCFLAGS    := $(strip $(kernel-ahci_LTOFLAGS) $(kernel-ahci_LINKLIBCFLAGS))
+kernel-ahci_CXXFLAGS         := $(strip $(kernel-ahci_LTOFLAGS) $(kernel-ahci_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-ahci_SUBSTNULL        :=
+kernel-ahci_SUBSTSPACE       := $(kernel-ahci_SUBSTNULL) #
+kernel-ahci_SUBSTCOMMA       := ,
+kernel-ahci_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-ahci_SUBSTSPACE),$(kernel-ahci_SUBSTCOMMA),$(strip $($(kernel-ahci_DEFNAME)_STARTFILES))))
+kernel-ahci_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-ahci_CFLAGS           := $(strip $(kernel-ahci_INSTRFUNCFLAGS) $(kernel-ahci_CFLAGS))
+kernel-ahci_CXXFLAGS         := $(strip $(kernel-ahci_INSTRFUNCFLAGS) $(kernel-ahci_CXXFLAGS))
+kernel-ahci_LIBS             += $(kernel-ahci_INSTRFUNCLIBS)
+endif
+endif
+kernel-ahci_DFLAGS           := $(strip $(kernel-ahci_DFLAGS) $($(kernel-ahci_DEFNAME)_DFLAGS))
+kernel-ahci_LINKLIBDFLAGS    := $(strip $(kernel-ahci_DFLAGS) $($(kernel-ahci_DEFNAME)_LINKLIBDFLAGS))
+kernel-ahci_DXXFLAGS         := $(strip $(kernel-ahci_DXXFLAGS) $($(kernel-ahci_DEFNAME)_DXXFLAGS))
+
+ifeq (device,library)
+    kernel-ahci_LIBSUFFIX    := 
+else
+    kernel-ahci_LIBSUFFIX    := .device
+endif
+
+ifeq (,)
+kernel-ahci_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-ahci_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-ahci_LINKLIBCFILES    := $(addprefix $(kernel-ahci_OBJDIR)/linklib/,$($(kernel-ahci_DEFNAME)_LINKLIBFILES))
+kernel-ahci_LINKLIBAFILES    := $(addprefix $(kernel-ahci_OBJDIR)/linklib/,$($(kernel-ahci_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-ahci_DEFNAME)_LINKLIBFILES) $($(kernel-ahci_DEFNAME)_LINKLIBAFILES)  $(kernel-ahci_ARCHNLIBFILES)),)
+    kernel-ahci_LINKLIB      :=
+else
+    kernel-ahci_LINKLIB      := $(kernel-ahci_LIBDIR)/libahci$(kernel-ahci_LIBSUFFIX).a
+    ifneq (ahci,$(kernel-ahci_LINKLIBNAME))
+        kernel-ahci_LINKLIB  += $(kernel-ahci_LIBDIR)/lib$(kernel-ahci_LINKLIBNAME)$(kernel-ahci_LIBSUFFIX).a
+    endif
+endif
+kernel-ahci_LINKLIBFILES     := $(kernel-ahci_LINKLIBCFILES) $(kernel-ahci_LINKLIBAFILES)
+
+kernel-ahci_RELLINKLIBCFILES := $(addprefix $(kernel-ahci_OBJDIR)/linklib/,$($(kernel-ahci_DEFNAME)_RELLINKLIBFILES))
+kernel-ahci_RELLINKLIBAFILES := $(addprefix $(kernel-ahci_OBJDIR)/linklib/,$($(kernel-ahci_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-ahci_DEFNAME)_RELLINKLIBFILES) $($(kernel-ahci_DEFNAME)_RELLINKLIBAFILES)  $(kernel-ahci_ARCHNLIBFILES)),)
+    kernel-ahci_RELLINKLIB   :=
+else
+    kernel-ahci_RELLINKLIB   := $(kernel-ahci_LIBDIR)/lib$(kernel-ahci_DEFNAME)_rel$(kernel-ahci_LIBSUFFIX).a
+    ifneq (ahci,$(kernel-ahci_LINKLIBNAME))
+        kernel-ahci_RELLINKLIB += $(kernel-ahci_LIBDIR)/lib$(kernel-ahci_LINKLIBNAME)_rel$(kernel-ahci_LIBSUFFIX).a
+    endif
+endif
+kernel-ahci_RELLINKLIBFILES  := $(kernel-ahci_RELLINKLIBCFILES) $(kernel-ahci_RELLINKLIBAFILES)
+endif
+
+kernel-ahci_ENDOBJS          := $(addsuffix .o,$(kernel-ahci_ENDFILES))
+kernel-ahci_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-ahci_OBJDIR)/linklib/,$(notdir $(kernel-ahci_NLIBARCHFILES))) $(addprefix $(kernel-ahci_OBJDIR)/linklib/arch/,$(notdir $(kernel-ahci_ARCHNLIBFILES))) $(kernel-ahci_LINKLIBFILES)) \
+                 
+kernel-ahci_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-ahci_OBJDIR)/linklib/,$(notdir $(kernel-ahci_NLIBARCHFILES))) $(addprefix $(kernel-ahci_OBJDIR)/linklib/arch/,$(notdir $(kernel-ahci_ARCHNLIBFILES))) $(kernel-ahci_RELLINKLIBFILES)) \
+                 
+$(kernel-ahci_LINKLIBFILES) $(kernel-ahci_RELLINKLIBFILES) : | $(kernel-ahci_OBJDIR)/linklib
+$(kernel-ahci_LINKLIBOBJS) $(kernel-ahci_RELLINKLIBOBJS) : | $(kernel-ahci_OBJDIR)/linklib
+
+kernel-ahci_CCFILES := $(kernel-ahci_C_NARCHFILES)
+kernel-ahci_TARGETCCFILES    := $(strip $(kernel-ahci_STARTFILES) $(kernel-ahci_ENDFILES))
+kernel-ahci_LINKLIBCCFILES   := $(strip $(kernel-ahci_NLIBARCHFILES) $(kernel-ahci_LINKLIBCFILES) $(kernel-ahci_RELLINKLIBCFILES))
+kernel-ahci_LINKLIBCCGENFILES := $(strip $(kernel-ahci_LINKLIBCFILES) $(kernel-ahci_RELLINKLIBCFILES))
+
+
+kernel-ahci_CXXABSBASENAMES := $(foreach kernel-ahci_CXXBASE,$(kernel-ahci_CXX_NARCHFILES),$(if $(filter /%,$(kernel-ahci_CXXBASE)),$(kernel-ahci_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-ahci_CXXBASE))))
+
+ifneq ($(kernel-ahci_CXXABSBASENAMES),)
+
+kernel-ahci_CXXBASENAMES := $(basename $(kernel-ahci_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-ahci_MCXX_FILES  := $(strip $(foreach kernel-ahci_CXXBASE,$(kernel-ahci_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-ahci_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-ahci_EXT),$(kernel-ahci_CXXBASE)))))))
+
+ifeq (,)
+kernel-ahci_MCXX_SRCWILDCARD := %
+else
+kernel-ahci_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-ahci_OBJDIR),)
+  kernel-ahci_CXXTARGETS := $(notdir $(kernel-ahci_CXXBASENAMES:=.o))
+  kernel-ahci_CXXDTARGETS := $(notdir $(kernel-ahci_CXXBASENAMES:=.d))
+  kernel-ahci_MCXX_WILDCARD := %
+else
+  kernel-ahci_CXXTARGETS := $(addprefix $(kernel-ahci_OBJDIR)/,$(notdir $(kernel-ahci_CXXBASENAMES:=.o)))
+  kernel-ahci_CXXDTARGETS := $(addprefix $(kernel-ahci_OBJDIR)/,$(notdir $(kernel-ahci_CXXBASENAMES:=.d)))
+  kernel-ahci_MCXX_WILDCARD := $(kernel-ahci_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-ahci_CXXTARGETS) $(kernel-ahci_CXXDTARGETS) : | $(kernel-ahci_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-ahci_MCXX_CPPFLAGS := $(kernel-ahci_CPPFLAGS)
+kernel-ahci_CXXFLAGS := $(kernel-ahci_CXXFLAGS)
+ifeq ($(kernel-ahci_DXXFLAGS),)
+  kernel-ahci_DXXFLAGS := $(kernel-ahci_CXXFLAGS)
+else
+  kernel-ahci_DXXFLAGS := $(kernel-ahci_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-ahci_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-ahci_STRIP ?= $(HOST_STRIP)
+  kernel-ahci_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-ahci_CXXCMD:=$(HOST_CXX)
+  kernel-ahci_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-ahci_MCXX_CPPFLAGS) $(kernel-ahci_MCXX_EXTRA_CPPFLAGS))
+  kernel-ahci_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-ahci_CXXFLAGS))
+  kernel-ahci_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-ahci_DXXFLAGS))
+  kernel-ahci_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-ahci_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-ahci_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-ahci_STRIP ?= $(TARGET_STRIP)
+  kernel-ahci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-ahci_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-ahci_MCXX_CPPFLAGS := $(strip $(kernel-ahci_MCXX_CPPFLAGS) $(kernel-ahci_MCXX_EXTRA_CPPFLAGS))
+  kernel-ahci_CXXFLAGS := $(strip $(kernel-ahci_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-ahci_DXXFLAGS := $(kernel-ahci_DXXFLAGS)
+  kernel-ahci_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-ahci_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-ahci_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-ahci_STRIP ?= $(ECHO) >/dev/null
+  kernel-ahci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-ahci_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-ahci_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-ahci_MCXX_CPPFLAGS) $(kernel-ahci_MCXX_EXTRA_CPPFLAGS))
+  kernel-ahci_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-ahci_CXXFLAGS))
+  kernel-ahci_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-ahci_DXXFLAGS))
+  kernel-ahci_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-ahci_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-ahci_CXXCMD) $(kernel-ahci_CXXIQUOTE) $(dir $(2)) $(kernel-ahci_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_CXXIQUOTE) . $(kernel-ahci_CXXIQUOTE_END) $(strip $(kernel-ahci_CXXFLAGS) $(kernel-ahci_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-ahci_CXXCMD) $(kernel-ahci_CXXIQUOTE) $(dir $(2)) $(kernel-ahci_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_CXXIQUOTE) . $(kernel-ahci_CXXIQUOTE_END) $(strip $(kernel-ahci_CXXFLAGS) $(kernel-ahci_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-ahci_CXXCMD) $(kernel-ahci_CXXIQUOTE) $(dir $(2)) $(kernel-ahci_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_CXXIQUOTE) . $(kernel-ahci_CXXIQUOTE_END) $(strip $(kernel-ahci_CXXFLAGS) $(kernel-ahci_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-ahci_CXXCMD)" $(MKDEPEND) $(strip $(kernel-ahci_DXXFLAGS) $(kernel-ahci_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-ahci_OBJDIR),)
+  $(foreach kernel-ahci_CXXFILE,$(kernel-ahci_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-ahci_CXXFILE))),$(kernel-ahci_CXXFILE))))
+else
+  $(foreach kernel-ahci_CXXFILE,$(kernel-ahci_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-ahci_OBJDIR)/,$(notdir $(basename $(kernel-ahci_CXXFILE)))),$(kernel-ahci_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-ahci_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-ahci_MOBJC_SRCWILDCARD := %
+else
+kernel-ahci_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-ahci_OBJDIR),)
+  kernel-ahci_MOBJC_TARGETS := $(addsuffix .o,$(kernel-ahci_OBJC_NARCHFILES))
+  kernel-ahci_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-ahci_OBJC_NARCHFILES))
+  kernel-ahci_MOBJC_WILDCARD := %
+else
+  kernel-ahci_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-ahci_OBJDIR)/,$(kernel-ahci_OBJC_NARCHFILES)))
+  kernel-ahci_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-ahci_OBJDIR)/,$(kernel-ahci_OBJC_NARCHFILES)))
+  kernel-ahci_MOBJC_WILDCARD := $(kernel-ahci_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-ahci_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-ahci_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-ahci_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-ahci_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-ahci_MOBJC_DIRS := $(foreach dir, $(kernel-ahci_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-ahci_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-ahci_MOBJC_DIRS),)
+    kernel-ahci_MOBJC_DIRS := $(shell echo $(kernel-ahci_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-ahci_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-ahci_CC := $(TARGET_CC)
+else
+  kernel-ahci_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-ahci_MOBJC_CPPFLAGS := $(kernel-ahci_CPPFLAGS)
+kernel-ahci_OBJCFLAGS := $(kernel-ahci_CFLAGS)
+kernel-ahci_OBJCFLAGS := $(kernel-ahci_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-ahci_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-ahci_OBJCFLAGS)))
+ifeq ($(kernel-ahci_DFLAGS),)
+  kernel-ahci_OBJCDFLAGS := $(kernel-ahci_CFLAGS)
+else
+  kernel-ahci_OBJCDFLAGS := $(kernel-ahci_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-ahci_LINK ?= $(strip $(kernel-ahci_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-ahci_STRIP ?= $(TARGET_STRIP)
+  kernel-ahci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-ahci_CC) $(TARGET_SYSROOT))
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : kernel-ahci_MOBJC_CPPFLAGS:=$(strip $(kernel-ahci_MOBJC_CPPFLAGS) $(kernel-ahci_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : kernel-ahci_OBJCFLAGS:=$(strip $(kernel-ahci_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : kernel-ahci_OBJCDFLAGS:=$(kernel-ahci_OBJCDFLAGS)
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : kernel-ahci_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : kernel-ahci_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-ahci_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-ahci_STRIP ?= $(HOST_STRIP)
+  kernel-ahci_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : kernel-ahci_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-ahci_MOBJC_CPPFLAGS) $(kernel-ahci_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : kernel-ahci_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-ahci_OBJCFLAGS))
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : kernel-ahci_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-ahci_OBJCDFLAGS))
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : kernel-ahci_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : kernel-ahci_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-ahci_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-ahci_STRIP ?= $(ECHO) >/dev/null
+  kernel-ahci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : kernel-ahci_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-ahci_MOBJC_CPPFLAGS) $(kernel-ahci_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : kernel-ahci_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-ahci_OBJCFLAGS))
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : kernel-ahci_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-ahci_OBJCDFLAGS))
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : kernel-ahci_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-ahci_MOBJC_TARGETS) $(kernel-ahci_MOBJC_DTARGETS) : kernel-ahci_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-ahci_MOBJC_TARGETS) : CPPFLAGS := $(kernel-ahci_MOBJC_CPPFLAGS)
+$(kernel-ahci_MOBJC_TARGETS) : CFLAGS := $(kernel-ahci_OBJCFLAGS)
+$(kernel-ahci_MOBJC_TARGETS) : $(kernel-ahci_MOBJC_WILDCARD).o : $(kernel-ahci_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-ahci_IQUOTE) $(dir $<) $(kernel-ahci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_IQUOTE) . $(kernel-ahci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-ahci_IQUOTE) $(dir $<) $(kernel-ahci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_IQUOTE) . $(kernel-ahci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-ahci_IQUOTE) $(dir $<) $(kernel-ahci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_IQUOTE) . $(kernel-ahci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-ahci_MOBJC_DTARGETS) : $(kernel-ahci_MOBJC_WILDCARD).d : $(kernel-ahci_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-ahci_OBJCDFLAGS) $(kernel-ahci_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-ahci_MC_SRCWILDCARD := %
+else
+kernel-ahci_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-ahci_OBJDIR),)
+kernel-ahci_MC_TARGETS := $(addsuffix .o,$(kernel-ahci_CCFILES))
+kernel-ahci_MC_DTARGETS := $(addsuffix .d,$(kernel-ahci_CCFILES))
+kernel-ahci_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-ahci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-ahci_OBJDIR)/,$(notdir $(kernel-ahci_CCFILES))))
+    kernel-ahci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-ahci_OBJDIR)/,$(notdir $(kernel-ahci_CCFILES))))
+else
+ifeq (,)
+    kernel-ahci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-ahci_OBJDIR)/,$(kernel-ahci_CCFILES)))
+    kernel-ahci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-ahci_OBJDIR)/,$(kernel-ahci_CCFILES)))
+else
+    kernel-ahci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-ahci_OBJDIR)/,$(patsubst /%,%,$(kernel-ahci_CCFILES))))
+    kernel-ahci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-ahci_OBJDIR)/,$(patsubst /%,%,$(kernel-ahci_CCFILES))))
+endif
+endif
+kernel-ahci_MC_TGTWILDCARD := $(kernel-ahci_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : | $(addsuffix .c,$(kernel-ahci_CCFILES))
+
+# Be sure that all .c files are found
+kernel-ahci_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-ahci_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-ahci_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-ahci_MC_DIRS := $(foreach dir, $(kernel-ahci_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-ahci_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-ahci_MC_DIRS),)
+    kernel-ahci_MC_DIRS := $(shell echo $(kernel-ahci_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-ahci_MC_DIRS)
+endif
+
+endif
+
+kernel-ahci_MC_CPPFLAGS := $(kernel-ahci_CPPFLAGS)
+kernel-ahci_CFLAGS := $(kernel-ahci_CFLAGS)
+ifeq ($(kernel-ahci_DFLAGS),)
+  kernel-ahci_DFLAGS := $(kernel-ahci_CFLAGS)
+else
+  kernel-ahci_DFLAGS := $(kernel-ahci_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-ahci_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-ahci_STRIP ?= $(TARGET_STRIP)
+kernel-ahci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_MC_CPPFLAGS:=$(strip $(kernel-ahci_MC_CPPFLAGS) $(kernel-ahci_MC_EXTRA_CPPFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_CFLAGS:=$(strip $(kernel-ahci_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_DFLAGS:=$(kernel-ahci_DFLAGS)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-ahci_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-ahci_STRIP ?= $(HOST_STRIP)
+kernel-ahci_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-ahci_MC_CPPFLAGS) $(kernel-ahci_MC_EXTRA_CPPFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-ahci_CFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-ahci_DFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-ahci_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-ahci_STRIP ?= $(ECHO) >/dev/null
+kernel-ahci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-ahci_MC_CPPFLAGS) $(kernel-ahci_MC_EXTRA_CPPFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-ahci_CFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-ahci_DFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-ahci_MC_TARGETS) : CPPFLAGS := $(kernel-ahci_MC_CPPFLAGS)
+$(kernel-ahci_MC_TARGETS) : CFLAGS := $(kernel-ahci_CFLAGS)
+$(kernel-ahci_MC_TARGETS) : $(kernel-ahci_MC_TGTWILDCARD).o : $(kernel-ahci_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-ahci_IQUOTE) $(dir $<) $(kernel-ahci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_IQUOTE) . $(kernel-ahci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-ahci_IQUOTE) $(dir $<) $(kernel-ahci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_IQUOTE) . $(kernel-ahci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-ahci_IQUOTE) $(dir $<) $(kernel-ahci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_IQUOTE) . $(kernel-ahci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-ahci_MC_DTARGETS) : $(kernel-ahci_MC_TGTWILDCARD).d : $(kernel-ahci_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-ahci_DFLAGS) $(kernel-ahci_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-ahci_MC_SRCWILDCARD := %
+else
+kernel-ahci_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-ahci_OBJDIR),)
+kernel-ahci_MC_TARGETS := $(addsuffix .o,$(kernel-ahci_TARGETCCFILES))
+kernel-ahci_MC_DTARGETS := $(addsuffix .d,$(kernel-ahci_TARGETCCFILES))
+kernel-ahci_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-ahci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-ahci_OBJDIR)/,$(notdir $(kernel-ahci_TARGETCCFILES))))
+    kernel-ahci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-ahci_OBJDIR)/,$(notdir $(kernel-ahci_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-ahci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-ahci_OBJDIR)/,$(kernel-ahci_TARGETCCFILES)))
+    kernel-ahci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-ahci_OBJDIR)/,$(kernel-ahci_TARGETCCFILES)))
+else
+    kernel-ahci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-ahci_OBJDIR)/,$(patsubst /%,%,$(kernel-ahci_TARGETCCFILES))))
+    kernel-ahci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-ahci_OBJDIR)/,$(patsubst /%,%,$(kernel-ahci_TARGETCCFILES))))
+endif
+endif
+kernel-ahci_MC_TGTWILDCARD := $(kernel-ahci_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : | $(addsuffix .c,$(kernel-ahci_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-ahci_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-ahci_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-ahci_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-ahci_MC_DIRS := $(foreach dir, $(kernel-ahci_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-ahci_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-ahci_MC_DIRS),)
+    kernel-ahci_MC_DIRS := $(shell echo $(kernel-ahci_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-ahci_MC_DIRS)
+endif
+
+endif
+
+kernel-ahci_MC_CPPFLAGS := $(kernel-ahci_CPPFLAGS) -D__AROS__
+kernel-ahci_CFLAGS := $(kernel-ahci_CFLAGS)
+ifeq ($(kernel-ahci_DFLAGS),)
+  kernel-ahci_DFLAGS := $(kernel-ahci_CFLAGS)
+else
+  kernel-ahci_DFLAGS := $(kernel-ahci_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-ahci_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-ahci_STRIP ?= $(TARGET_STRIP)
+kernel-ahci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_MC_CPPFLAGS:=$(strip $(kernel-ahci_MC_CPPFLAGS) $(kernel-ahci_MC_EXTRA_CPPFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_CFLAGS:=$(strip $(kernel-ahci_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_DFLAGS:=$(kernel-ahci_DFLAGS)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-ahci_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-ahci_STRIP ?= $(HOST_STRIP)
+kernel-ahci_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-ahci_MC_CPPFLAGS) $(kernel-ahci_MC_EXTRA_CPPFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-ahci_CFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-ahci_DFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-ahci_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-ahci_STRIP ?= $(ECHO) >/dev/null
+kernel-ahci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-ahci_MC_CPPFLAGS) $(kernel-ahci_MC_EXTRA_CPPFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-ahci_CFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-ahci_DFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-ahci_MC_TARGETS) : CPPFLAGS := $(kernel-ahci_MC_CPPFLAGS)
+$(kernel-ahci_MC_TARGETS) : CFLAGS := $(kernel-ahci_CFLAGS)
+$(kernel-ahci_MC_TARGETS) : $(kernel-ahci_MC_TGTWILDCARD).o : $(kernel-ahci_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-ahci_IQUOTE) $(dir $<) $(kernel-ahci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_IQUOTE) . $(kernel-ahci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-ahci_IQUOTE) $(dir $<) $(kernel-ahci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_IQUOTE) . $(kernel-ahci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-ahci_IQUOTE) $(dir $<) $(kernel-ahci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_IQUOTE) . $(kernel-ahci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-ahci_MC_DTARGETS) : $(kernel-ahci_MC_TGTWILDCARD).d : $(kernel-ahci_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-ahci_DFLAGS) $(kernel-ahci_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-ahci_MC_SRCWILDCARD := %
+else
+kernel-ahci_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-ahci_OBJDIR)/linklib,)
+kernel-ahci_MC_TARGETS := $(addsuffix .o,$(kernel-ahci_NLIBARCHFILES))
+kernel-ahci_MC_DTARGETS := $(addsuffix .d,$(kernel-ahci_NLIBARCHFILES))
+kernel-ahci_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-ahci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-ahci_OBJDIR)/linklib/,$(notdir $(kernel-ahci_NLIBARCHFILES))))
+    kernel-ahci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-ahci_OBJDIR)/linklib/,$(notdir $(kernel-ahci_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-ahci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-ahci_OBJDIR)/linklib/,$(kernel-ahci_NLIBARCHFILES)))
+    kernel-ahci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-ahci_OBJDIR)/linklib/,$(kernel-ahci_NLIBARCHFILES)))
+else
+    kernel-ahci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-ahci_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-ahci_NLIBARCHFILES))))
+    kernel-ahci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-ahci_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-ahci_NLIBARCHFILES))))
+endif
+endif
+kernel-ahci_MC_TGTWILDCARD := $(kernel-ahci_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : | $(addsuffix .c,$(kernel-ahci_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-ahci_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-ahci_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-ahci_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-ahci_MC_DIRS := $(foreach dir, $(kernel-ahci_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-ahci_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-ahci_MC_DIRS),)
+    kernel-ahci_MC_DIRS := $(shell echo $(kernel-ahci_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-ahci_MC_DIRS)
+endif
+
+endif
+
+kernel-ahci_MC_CPPFLAGS := $(kernel-ahci_LINKLIBCPPFLAGS) -D__AROS__
+kernel-ahci_CFLAGS := $(kernel-ahci_LINKLIBCFLAGS)
+ifeq ($(kernel-ahci_LINKLIBDFLAGS),)
+  kernel-ahci_DFLAGS := $(kernel-ahci_LINKLIBCFLAGS)
+else
+  kernel-ahci_DFLAGS := $(kernel-ahci_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-ahci_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-ahci_STRIP ?= $(TARGET_STRIP)
+kernel-ahci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_MC_CPPFLAGS:=$(strip $(kernel-ahci_MC_CPPFLAGS) $(kernel-ahci_MC_EXTRA_CPPFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_CFLAGS:=$(strip $(kernel-ahci_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_DFLAGS:=$(kernel-ahci_DFLAGS)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-ahci_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-ahci_STRIP ?= $(HOST_STRIP)
+kernel-ahci_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-ahci_MC_CPPFLAGS) $(kernel-ahci_MC_EXTRA_CPPFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-ahci_CFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-ahci_DFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-ahci_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-ahci_STRIP ?= $(ECHO) >/dev/null
+kernel-ahci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-ahci_MC_CPPFLAGS) $(kernel-ahci_MC_EXTRA_CPPFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-ahci_CFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-ahci_DFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-ahci_MC_TARGETS) : CPPFLAGS := $(kernel-ahci_MC_CPPFLAGS)
+$(kernel-ahci_MC_TARGETS) : CFLAGS := $(kernel-ahci_CFLAGS)
+$(kernel-ahci_MC_TARGETS) : $(kernel-ahci_MC_TGTWILDCARD).o : $(kernel-ahci_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-ahci_IQUOTE) $(dir $<) $(kernel-ahci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_IQUOTE) . $(kernel-ahci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-ahci_IQUOTE) $(dir $<) $(kernel-ahci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_IQUOTE) . $(kernel-ahci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-ahci_IQUOTE) $(dir $<) $(kernel-ahci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_IQUOTE) . $(kernel-ahci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-ahci_MC_DTARGETS) : $(kernel-ahci_MC_TGTWILDCARD).d : $(kernel-ahci_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-ahci_DFLAGS) $(kernel-ahci_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-ahci_OBJDIR)/linklib,)
+kernel-ahci_MC_SRCWILDCARD := %
+else
+kernel-ahci_MC_SRCWILDCARD := $(kernel-ahci_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-ahci_OBJDIR)/linklib,)
+kernel-ahci_MC_TARGETS := $(addsuffix .o,$(kernel-ahci_LINKLIBCCGENFILES))
+kernel-ahci_MC_DTARGETS := $(addsuffix .d,$(kernel-ahci_LINKLIBCCGENFILES))
+kernel-ahci_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-ahci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-ahci_OBJDIR)/linklib/,$(notdir $(kernel-ahci_LINKLIBCCGENFILES))))
+    kernel-ahci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-ahci_OBJDIR)/linklib/,$(notdir $(kernel-ahci_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-ahci_OBJDIR)/linklib,)
+    kernel-ahci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-ahci_OBJDIR)/linklib/,$(kernel-ahci_LINKLIBCCGENFILES)))
+    kernel-ahci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-ahci_OBJDIR)/linklib/,$(kernel-ahci_LINKLIBCCGENFILES)))
+else
+    kernel-ahci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-ahci_OBJDIR)/linklib/,$(patsubst $(kernel-ahci_OBJDIR)/linklib/%,%,$(kernel-ahci_LINKLIBCCGENFILES))))
+    kernel-ahci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-ahci_OBJDIR)/linklib/,$(patsubst $(kernel-ahci_OBJDIR)/linklib/%,%,$(kernel-ahci_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-ahci_MC_TGTWILDCARD := $(kernel-ahci_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : | $(addsuffix .c,$(kernel-ahci_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-ahci_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-ahci_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-ahci_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-ahci_MC_DIRS := $(foreach dir, $(kernel-ahci_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-ahci_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-ahci_MC_DIRS),)
+    kernel-ahci_MC_DIRS := $(shell echo $(kernel-ahci_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-ahci_MC_DIRS)
+endif
+
+endif
+
+kernel-ahci_MC_CPPFLAGS := $(kernel-ahci_LINKLIBCPPFLAGS) -D__AROS__
+kernel-ahci_CFLAGS := $(kernel-ahci_LINKLIBCFLAGS)
+ifeq ($(kernel-ahci_LINKLIBDFLAGS),)
+  kernel-ahci_DFLAGS := $(kernel-ahci_LINKLIBCFLAGS)
+else
+  kernel-ahci_DFLAGS := $(kernel-ahci_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-ahci_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-ahci_STRIP ?= $(TARGET_STRIP)
+kernel-ahci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_MC_CPPFLAGS:=$(strip $(kernel-ahci_MC_CPPFLAGS) $(kernel-ahci_MC_EXTRA_CPPFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_CFLAGS:=$(strip $(kernel-ahci_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_DFLAGS:=$(kernel-ahci_DFLAGS)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-ahci_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-ahci_STRIP ?= $(HOST_STRIP)
+kernel-ahci_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-ahci_MC_CPPFLAGS) $(kernel-ahci_MC_EXTRA_CPPFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-ahci_CFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-ahci_DFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-ahci_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-ahci_STRIP ?= $(ECHO) >/dev/null
+kernel-ahci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-ahci_MC_CPPFLAGS) $(kernel-ahci_MC_EXTRA_CPPFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-ahci_CFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-ahci_DFLAGS))
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-ahci_MC_TARGETS) $(kernel-ahci_MC_DTARGETS) : kernel-ahci_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-ahci_MC_TARGETS) : CPPFLAGS := $(kernel-ahci_MC_CPPFLAGS)
+$(kernel-ahci_MC_TARGETS) : CFLAGS := $(kernel-ahci_CFLAGS)
+$(kernel-ahci_MC_TARGETS) : $(kernel-ahci_MC_TGTWILDCARD).o : $(kernel-ahci_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-ahci_IQUOTE) $(dir $<) $(kernel-ahci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_IQUOTE) . $(kernel-ahci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-ahci_IQUOTE) $(dir $<) $(kernel-ahci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_IQUOTE) . $(kernel-ahci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-ahci_IQUOTE) $(dir $<) $(kernel-ahci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-ahci_IQUOTE) . $(kernel-ahci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-ahci_MC_DTARGETS) : $(kernel-ahci_MC_TGTWILDCARD).d : $(kernel-ahci_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-ahci_DFLAGS) $(kernel-ahci_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-ahci_LINKLIBAFILES),)
+
+ifeq ($(kernel-ahci_OBJDIR)/linklib,)
+kernel-ahci-MA_TARGETS := $(addsuffix .o,$(kernel-ahci_LINKLIBAFILES) $(kernel-ahci_RELLINKLIBAFILES))
+kernel-ahci-MA_WILDCARD := %
+else
+kernel-ahci-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-ahci_OBJDIR)/linklib/,$(notdir $(kernel-ahci_LINKLIBAFILES) $(kernel-ahci_RELLINKLIBAFILES))))
+kernel-ahci-MA_WILDCARD := $(kernel-ahci_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-ahci-MA_TARGETS) : | $(addsuffix .S,$(kernel-ahci_LINKLIBAFILES) $(kernel-ahci_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-ahci-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-ahci-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-ahci_LINKLIBAFILES) $(kernel-ahci_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-ahci-MA_DIRS := $(foreach dir, $(kernel-ahci-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-ahci-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-ahci-MA_DIRS),)
+    kernel-ahci-MA_DIRS := $(shell echo $(kernel-ahci-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-ahci-MA_DIRS)
+endif
+
+endif
+
+kernel-ahci-MA_ASSEMBLER ?= $(kernel-ahci_ASSEMBLER)
+
+$(kernel-ahci-MA_TARGETS) : kernel-ahci-MA_CMD:= $(kernel-ahci-MA_ASSEMBLER)
+
+$(kernel-ahci-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-ahci-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-ahci-MA_TARGETS) : $(kernel-ahci-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-ahci-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-ahci-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-ahci-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-ahci_SUFFIX           := device
+else
+kernel-ahci_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-ahci_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-ahci_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-ahci_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-ahci_SUFFIX),handler)
+kernel-ahci_MODULE           := $(AROSDIR)/$(kernel-ahci_MODDIR)/$(kernel-ahci_DEFNAME)-$(kernel-ahci_SUFFIX)
+else
+kernel-ahci_MODULE           := $(AROSDIR)/$(kernel-ahci_MODDIR)/$(kernel-ahci_DEFNAME).$(kernel-ahci_SUFFIX)
+endif
+kernel-ahci_KOBJ             := $(KOBJSDIR)/$(kernel-ahci_DEFNAME)_$(kernel-ahci_SUFFIX).o
+else
+kernel-ahci_MODULE           :=
+kernel-ahci_KOBJ             :=
+endif
+
+kernel-ahci-quick      : kernel-ahci
+kernel-ahci            : $(kernel-ahci_MODULE) $(kernel-ahci_LINKLIB) $(kernel-ahci_RELLINKLIB)
+ifeq (M,M)
+kernel-ahci-kobj       : $(kernel-ahci_KOBJ) $(kernel-ahci_LINKLIB) $(kernel-ahci_RELLINKLIB)
+kernel-ahci-kobj-quick : $(kernel-ahci_KOBJ) $(kernel-ahci_LINKLIB) $(kernel-ahci_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-ahci-linklib    : $(kernel-ahci_LINKLIB) $(kernel-ahci_RELLINKLIB)
+endif
+
+kernel-ahci_OBJS := $(addsuffix .o,$(kernel-ahci_STARTFILES)) $(kernel-ahci_ARCHOBJS) \
+           $(addprefix $(kernel-ahci_OBJDIR)/,$(notdir $(kernel-ahci_C_NARCHFILES:=.o) $(kernel-ahci_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (device,handler)
+kernel-ahci_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (ahci,con)
+    kernel-ahci_ERR          := $(notdir $(kernel-ahci_MODULE)).err
+else
+    kernel-ahci_ERR          := ahci.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-ahci_DEFNAME)_LDFLAGS) $(kernel-ahci_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-ahci_LIBS) $($(kernel-ahci_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-ahci_MODULE) : LIB_NAMES := $(kernel-ahci_LIBS) $($(kernel-ahci_DEFNAME)_LIBS)
+$(kernel-ahci_MODULE) : OBJS := $(kernel-ahci_STARTOBJS) $(kernel-ahci_OBJS) $(USER_OBJS)
+$(kernel-ahci_MODULE) : ENDTAG := $(kernel-ahci_ENDOBJS)
+$(kernel-ahci_MODULE) : ERR := $(kernel-ahci_ERR)
+$(kernel-ahci_MODULE) : OBJDIR := $(kernel-ahci_OBJDIR)
+$(kernel-ahci_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-ahci_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-ahci_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-ahci_MODULE) : $(kernel-ahci_STARTOBJS) $(kernel-ahci_OBJS) $(USER_OBJS) $(kernel-ahci_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-ahci_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-ahci_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-ahci_LC_LINKLIBNAME   := $(shell echo $(kernel-ahci_LINKLIBNAME) | tr A-Z a-z)
+kernel-ahci_LC_MODNAME       := $(shell echo ahci | tr A-Z a-z)
+ifneq ($(kernel-ahci_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_LINKLIBNAME)$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_AR:=$(AR)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_LINKLIBNAME)$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_LINKLIBNAME)$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_AR:=$(HOST_AR)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_LINKLIBNAME)$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_LINKLIBNAME)$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_AR:=$(KERNEL_AR)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_LINKLIBNAME)$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_LINKLIBNAME)$(kernel-ahci_LIBSUFFIX).a : $(kernel-ahci_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-ahci_AR) $@ $^
+	$(Q)$(kernel-ahci_RANLIB) $@
+ifneq ($(kernel-ahci_LC_MODNAME),$(kernel-ahci_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-ahci_LIBDIR)/libahci$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_AR:=$(AR)
+$(kernel-ahci_LIBDIR)/libahci$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-ahci_LIBDIR)/libahci$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_AR:=$(HOST_AR)
+$(kernel-ahci_LIBDIR)/libahci$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-ahci_LIBDIR)/libahci$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_AR:=$(KERNEL_AR)
+$(kernel-ahci_LIBDIR)/libahci$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-ahci_LIBDIR)/libahci$(kernel-ahci_LIBSUFFIX).a : $(kernel-ahci_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-ahci_AR) $@ $^
+	$(Q)$(kernel-ahci_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-ahci_LINKLIB),)
+$(kernel-ahci_LINKLIB) : | $(kernel-ahci_LIBDIR)
+else
+$(kernel-ahci_LINKLIB) :: $(kernel-ahci_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-ahci_LIBDIR)
+
+endif
+
+ifneq ($(kernel-ahci_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_LINKLIBNAME)_rel$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_AR:=$(AR)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_LINKLIBNAME)_rel$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_LINKLIBNAME)_rel$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_AR:=$(HOST_AR)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_LINKLIBNAME)_rel$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_LINKLIBNAME)_rel$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_AR:=$(KERNEL_AR)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_LINKLIBNAME)_rel$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_LINKLIBNAME)_rel$(kernel-ahci_LIBSUFFIX).a : $(kernel-ahci_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-ahci_AR) $@ $^
+	$(Q)$(kernel-ahci_RANLIB) $@
+ifneq ($(kernel-ahci_LC_MODNAME),$(kernel-ahci_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_DEFNAME)_rel$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_AR:=$(AR)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_DEFNAME)_rel$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_DEFNAME)_rel$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_AR:=$(HOST_AR)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_DEFNAME)_rel$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_DEFNAME)_rel$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_AR:=$(KERNEL_AR)
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_DEFNAME)_rel$(kernel-ahci_LIBSUFFIX).a : kernel-ahci_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-ahci_LIBDIR)/lib$(kernel-ahci_DEFNAME)_rel$(kernel-ahci_LIBSUFFIX).a : $(kernel-ahci_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-ahci_AR) $@ $^
+	$(Q)$(kernel-ahci_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-ahci_RELLINKLIB),)
+$(kernel-ahci_RELLINKLIB) : | $(kernel-ahci_LIBDIR)
+else
+$(kernel-ahci_RELLINKLIB) :: $(kernel-ahci_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-ahci_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-ahci_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-ahci_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-ahci_SYMBOLS := $(kernel-ahci_KBASE)
+
+kernel-ahci_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-ahci_KOBJ_LIBS        := $(filter-out $(kernel-ahci_KLIB),$(kernel-ahci_LIBS)) $(kernel-ahci_KAUTOLIB)
+$(kernel-ahci_KOBJ) : LINKLIBS:=$(kernel-ahci_KOBJ_LIBS) $($(kernel-ahci_DEFNAME)_LIBS)
+$(kernel-ahci_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-ahci_SYMBOLS))
+$(kernel-ahci_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-ahci_KOBJ) : $(kernel-ahci_OBJS) $(USER_OBJS) $(kernel-ahci_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-ahci_DEPS             := $(addprefix $(kernel-ahci_OBJDIR)/,$(notdir $(kernel-ahci_CCFILES:=.d) $(kernel-ahci_TARGETCCFILES:=.d) $(kernel-ahci_CXXFILES:=.d))) $(addprefix $(kernel-ahci_OBJDIR)/linklib/,$(notdir $(kernel-ahci_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-ahci_DEPS),)
+  ifneq (kernel-ahci kernel-ahci-quick kernel-ahci-kobj kernel-ahci-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-ahci kernel-ahci-quick kernel-ahci-kobj kernel-ahci-kobj-quick),)
+      -include $(kernel-ahci_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-ahci_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-ahci_OBJS) $(kernel-ahci_DEPS) : | $(kernel-ahci_OBJDIR)/linklib
+
+ifneq ($(kernel-ahci_OBJS) $(kernel-ahci_DEPS) $(kernel-ahci_MODULE) $(kernel-ahci_KOBJ),)
+$(kernel-ahci_OBJS) $(kernel-ahci_DEPS) $(kernel-ahci_MODULE) $(kernel-ahci_KOBJ) : | $(kernel-ahci_OBJDIR) $(AROSDIR)/$(kernel-ahci_MODDIR) $(KOBJSDIR)
+else
+$(kernel-ahci_OBJS) $(kernel-ahci_DEPS) $(kernel-ahci_MODULE) $(kernel-ahci_KOBJ) :: $(kernel-ahci_OBJDIR) $(AROSDIR)/$(kernel-ahci_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-ahci_OBJDIR) $(AROSDIR)/$(kernel-ahci_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-ahci kernel-ahci-includes kernel-ahci-quick kernel-ahci-kobj kernel-ahci-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-ahci_DFILE_DEPS := $(kernel-ahci_LIBDEFSINC) $(kernel-ahci_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-ahci_INCDIR)/,$($(kernel-ahci_DEFNAME)_INCLUDES))
+$(kernel-ahci_DEPS) : $(kernel-ahci_DFILE_DEPS)
+endif
+
+kernel-ahci_TOCLEAN := $(kernel-ahci_OBJS) $(kernel-ahci_DEPS) \
+    $(kernel-ahci_MODULE) $(kernel-ahci_LINKLIB) $(kernel-ahci_KOBJ) \
+    $(kernel-ahci_OBJDIR)/Makefile.ahcidevice \
+    $(addprefix $(kernel-ahci_OBJDIR)/include/,$($(kernel-ahci_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-ahci_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-ahci_INCDIR)/,$($(kernel-ahci_DEFNAME)_INCLUDES)) \
+    $(kernel-ahci_OBJDIR)/ahci_geninc $(kernel-ahci_OBJDIR)/ahci_incs \
+    $(addsuffix .c,$(kernel-ahci_LINKLIBFILES)) $(kernel-ahci_LINKLIBOBJS) $(kernel-ahci_LIBDEFSINC) \
+    $(kernel-ahci_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-ahci_STARTFILES) $(kernel-ahci_ENDFILES)) \
+    $(kernel-ahci_ENDOBJS)
+kernel-ahci-clean : FILES              := $(kernel-ahci_TOCLEAN)
+kernel-ahci-clean ::
+	$(Q)$(ECHO) "Cleaning up for module ahci"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-ahci_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

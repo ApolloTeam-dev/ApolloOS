@@ -1,0 +1,635 @@
+# Copyright © 2013, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES  := main appearanceeditor themepreview misc locale args
+
+EXEDIR := $(AROS_PREFS)
+
+USER_CFLAGS := $(PARANOIA_CFLAGS)
+
+#MM- workbench-prefs : workbench-prefs-appearance
+#MM workbench-prefs-appearance : includes linklibs workbench-prefs-appearance-catalogs
+
+
+.PHONY : workbench-prefs-appearance
+
+workbench-prefs-appearance_PROGNAME  := Appearance
+workbench-prefs-appearance_OBJDIR    := $(GENDIR)/$(CURDIR)
+workbench-prefs-appearance_TARGETDIR := $(EXEDIR)
+workbench-prefs-appearance_LINKER    := 
+workbench-prefs-appearance_LIBS := mui
+# If not supplied, linker is equal to compiler
+ifeq ($(workbench-prefs-appearance_LINKER),)
+    workbench-prefs-appearance_LINKER := target
+endif
+
+ifneq ("$(strip $(FILES)   )","")
+    workbench-prefs-appearance_FILES     := $(FILES)
+    workbench-prefs-appearance_OBJCFILES := 
+    workbench-prefs-appearance_ASMFILES  := 
+    workbench-prefs-appearance_CXXFILES := 
+else
+    workbench-prefs-appearance_FILES     := $(workbench-prefs-appearance_PROGNAME)
+    workbench-prefs-appearance_OBJCFILES :=
+    workbench-prefs-appearance_ASMFILES  :=
+    workbench-prefs-appearance_CXXFILES :=
+endif
+
+workbench-prefs-appearance_ARCHOBJS   := $(wildcard $(workbench-prefs-appearance_OBJDIR)/arch/*.o)
+workbench-prefs-appearance_ARCHFILES  := $(basename $(notdir $(workbench-prefs-appearance_ARCHOBJS)))
+workbench-prefs-appearance_C_NARCHFILES := $(filter-out $(workbench-prefs-appearance_ARCHFILES),$(workbench-prefs-appearance_FILES))
+workbench-prefs-appearance_CXX_NARCHFILES := $(filter-out $(workbench-prefs-appearance_ARCHFILES),$(workbench-prefs-appearance_CXXFILES))
+workbench-prefs-appearance_OBJC_NARCHFILES := $(filter-out $(workbench-prefs-appearance_ARCHFILES),$(workbench-prefs-appearance_OBJCFILES))
+
+TMP_FILES := $(workbench-prefs-appearance_C_NARCHFILES) $(workbench-prefs-appearance_CXX_NARCHFILES) $(workbench-prefs-appearance_ASMFILES) $(workbench-prefs-appearance_OBJC_NARCHFILES)
+workbench-prefs-appearance_OBJS := $(addsuffix .o,$(addprefix $(workbench-prefs-appearance_OBJDIR)/,$(notdir $(TMP_FILES))))
+workbench-prefs-appearance_DEPS := $(addsuffix .d,$(addprefix $(workbench-prefs-appearance_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+workbench-prefs-appearance_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+workbench-prefs-appearance_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-prefs-appearance_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+workbench-prefs-appearance_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+workbench-prefs-appearance_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+workbench-prefs-appearance_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-prefs-appearance_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+workbench-prefs-appearance_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+workbench-prefs-appearance_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+workbench-prefs-appearance_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-prefs-appearance_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+workbench-prefs-appearance_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+workbench-prefs-appearance_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+workbench-prefs-appearance_LDFLAGS          := 
+endif
+
+workbench-prefs-appearance_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+workbench-prefs-appearance_COVERAGE := yes
+workbench-prefs-appearance_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+workbench-prefs-appearance_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+workbench-prefs-appearance_CFLAGS    := $(strip $(workbench-prefs-appearance_COVERAGEFLAGS) $(workbench-prefs-appearance_CFLAGS))
+workbench-prefs-appearance_CXXFLAGS := $(strip $(workbench-prefs-appearance_COVERAGEFLAGS) $(workbench-prefs-appearance_CXXFLAGS))
+workbench-prefs-appearance_LIBS += $(workbench-prefs-appearance_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-prefs-appearance_FUNCINSTR := yes
+workbench-prefs-appearance_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+workbench-prefs-appearance_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-prefs-appearance_CFLAGS    := $(strip $(workbench-prefs-appearance_INSTRFUNCFLAGS) $(workbench-prefs-appearance_CFLAGS))
+workbench-prefs-appearance_CXXFLAGS := $(strip $(workbench-prefs-appearance_INSTRFUNCFLAGS) $(workbench-prefs-appearance_CXXFLAGS))
+workbench-prefs-appearance_LIBS += $(workbench-prefs-appearance_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+workbench-prefs-appearance_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(workbench-prefs-appearance_CFLAGS))
+workbench-prefs-appearance_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(workbench-prefs-appearance_CXXFLAGS))
+endif
+endif
+workbench-prefs-appearance_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    workbench-prefs-appearance_DFLAGS     := 
+else
+    workbench-prefs-appearance_DFLAGS     := $(workbench-prefs-appearance_CFLAGS)
+endif
+ifneq (,)
+    workbench-prefs-appearance_DXXFLAGS     := 
+else
+    workbench-prefs-appearance_DXXFLAGS     := $(workbench-prefs-appearance_CXXFLAGS)
+endif
+ifeq (target,target)
+workbench-prefs-appearance_LDFLAGS           := $(workbench-prefs-appearance_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-prefs-appearance_LDFLAGS           := $(workbench-prefs-appearance_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-prefs-appearance_LDFLAGS           := $(workbench-prefs-appearance_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+workbench-prefs-appearance_LDFLAGS   += -L
+endif
+
+#MM
+workbench-prefs-appearance-quick : workbench-prefs-appearance
+
+#MM workbench-prefs-appearance : includes-generate-deps core-linklibs
+workbench-prefs-appearance : $(workbench-prefs-appearance_TARGETDIR)/$(workbench-prefs-appearance_PROGNAME)
+
+ifneq ($(filter $(TARGET),workbench-prefs-appearance workbench-prefs-appearance-quick workbench-prefs-appearance-gz-quick),)
+
+workbench-prefs-appearance_CXXABSBASENAMES := $(foreach workbench-prefs-appearance_CXXBASE,$(workbench-prefs-appearance_CXX_NARCHFILES),$(if $(filter /%,$(workbench-prefs-appearance_CXXBASE)),$(workbench-prefs-appearance_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-prefs-appearance_CXXBASE))))
+
+ifneq ($(workbench-prefs-appearance_CXXABSBASENAMES),)
+
+workbench-prefs-appearance_CXXBASENAMES := $(basename $(workbench-prefs-appearance_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-prefs-appearance_MCXX_FILES  := $(strip $(foreach workbench-prefs-appearance_CXXBASE,$(workbench-prefs-appearance_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-prefs-appearance_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-prefs-appearance_EXT),$(workbench-prefs-appearance_CXXBASE)))))))
+
+ifeq (,)
+workbench-prefs-appearance_MCXX_SRCWILDCARD := %
+else
+workbench-prefs-appearance_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-prefs-appearance_OBJDIR),)
+  workbench-prefs-appearance_CXXTARGETS := $(notdir $(workbench-prefs-appearance_CXXBASENAMES:=.o))
+  workbench-prefs-appearance_CXXDTARGETS := $(notdir $(workbench-prefs-appearance_CXXBASENAMES:=.d))
+  workbench-prefs-appearance_MCXX_WILDCARD := %
+else
+  workbench-prefs-appearance_CXXTARGETS := $(addprefix $(workbench-prefs-appearance_OBJDIR)/,$(notdir $(workbench-prefs-appearance_CXXBASENAMES:=.o)))
+  workbench-prefs-appearance_CXXDTARGETS := $(addprefix $(workbench-prefs-appearance_OBJDIR)/,$(notdir $(workbench-prefs-appearance_CXXBASENAMES:=.d)))
+  workbench-prefs-appearance_MCXX_WILDCARD := $(workbench-prefs-appearance_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-prefs-appearance_CXXTARGETS) $(workbench-prefs-appearance_CXXDTARGETS) : | $(workbench-prefs-appearance_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-prefs-appearance_MCXX_CPPFLAGS := $(workbench-prefs-appearance_CPPFLAGS)
+workbench-prefs-appearance_CXXFLAGS := $(workbench-prefs-appearance_CXXFLAGS)
+ifeq ($(workbench-prefs-appearance_DXXFLAGS),)
+  workbench-prefs-appearance_DXXFLAGS := $(workbench-prefs-appearance_CXXFLAGS)
+else
+  workbench-prefs-appearance_DXXFLAGS := $(workbench-prefs-appearance_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-prefs-appearance_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-prefs-appearance_STRIP ?= $(HOST_STRIP)
+  workbench-prefs-appearance_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-prefs-appearance_CXXCMD:=$(HOST_CXX)
+  workbench-prefs-appearance_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-prefs-appearance_MCXX_CPPFLAGS) $(workbench-prefs-appearance_MCXX_EXTRA_CPPFLAGS))
+  workbench-prefs-appearance_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-prefs-appearance_CXXFLAGS))
+  workbench-prefs-appearance_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-prefs-appearance_DXXFLAGS))
+  workbench-prefs-appearance_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-prefs-appearance_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-prefs-appearance_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-prefs-appearance_STRIP ?= $(TARGET_STRIP)
+  workbench-prefs-appearance_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-prefs-appearance_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-prefs-appearance_MCXX_CPPFLAGS := $(strip $(workbench-prefs-appearance_MCXX_CPPFLAGS) $(workbench-prefs-appearance_MCXX_EXTRA_CPPFLAGS))
+  workbench-prefs-appearance_CXXFLAGS := $(strip $(workbench-prefs-appearance_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-prefs-appearance_DXXFLAGS := $(workbench-prefs-appearance_DXXFLAGS)
+  workbench-prefs-appearance_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-prefs-appearance_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-prefs-appearance_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-prefs-appearance_STRIP ?= $(ECHO) >/dev/null
+  workbench-prefs-appearance_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-prefs-appearance_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-prefs-appearance_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-prefs-appearance_MCXX_CPPFLAGS) $(workbench-prefs-appearance_MCXX_EXTRA_CPPFLAGS))
+  workbench-prefs-appearance_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-prefs-appearance_CXXFLAGS))
+  workbench-prefs-appearance_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-prefs-appearance_DXXFLAGS))
+  workbench-prefs-appearance_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-prefs-appearance_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-prefs-appearance_CXXCMD) $(workbench-prefs-appearance_CXXIQUOTE) $(dir $(2)) $(workbench-prefs-appearance_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-appearance_CXXIQUOTE) . $(workbench-prefs-appearance_CXXIQUOTE_END) $(strip $(workbench-prefs-appearance_CXXFLAGS) $(workbench-prefs-appearance_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-prefs-appearance_CXXCMD) $(workbench-prefs-appearance_CXXIQUOTE) $(dir $(2)) $(workbench-prefs-appearance_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-appearance_CXXIQUOTE) . $(workbench-prefs-appearance_CXXIQUOTE_END) $(strip $(workbench-prefs-appearance_CXXFLAGS) $(workbench-prefs-appearance_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-prefs-appearance_CXXCMD) $(workbench-prefs-appearance_CXXIQUOTE) $(dir $(2)) $(workbench-prefs-appearance_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-appearance_CXXIQUOTE) . $(workbench-prefs-appearance_CXXIQUOTE_END) $(strip $(workbench-prefs-appearance_CXXFLAGS) $(workbench-prefs-appearance_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-prefs-appearance_CXXCMD)" $(MKDEPEND) $(strip $(workbench-prefs-appearance_DXXFLAGS) $(workbench-prefs-appearance_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-prefs-appearance_OBJDIR),)
+  $(foreach workbench-prefs-appearance_CXXFILE,$(workbench-prefs-appearance_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-prefs-appearance_CXXFILE))),$(workbench-prefs-appearance_CXXFILE))))
+else
+  $(foreach workbench-prefs-appearance_CXXFILE,$(workbench-prefs-appearance_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-prefs-appearance_OBJDIR)/,$(notdir $(basename $(workbench-prefs-appearance_CXXFILE)))),$(workbench-prefs-appearance_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-prefs-appearance_OBJC_NARCHFILES),)
+
+ifeq (,)
+workbench-prefs-appearance_MOBJC_SRCWILDCARD := %
+else
+workbench-prefs-appearance_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-prefs-appearance_OBJDIR),)
+  workbench-prefs-appearance_MOBJC_TARGETS := $(addsuffix .o,$(workbench-prefs-appearance_OBJC_NARCHFILES))
+  workbench-prefs-appearance_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-prefs-appearance_OBJC_NARCHFILES))
+  workbench-prefs-appearance_MOBJC_WILDCARD := %
+else
+  workbench-prefs-appearance_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-prefs-appearance_OBJDIR)/,$(workbench-prefs-appearance_OBJC_NARCHFILES)))
+  workbench-prefs-appearance_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-prefs-appearance_OBJDIR)/,$(workbench-prefs-appearance_OBJC_NARCHFILES)))
+  workbench-prefs-appearance_MOBJC_WILDCARD := $(workbench-prefs-appearance_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-prefs-appearance_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  workbench-prefs-appearance_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-prefs-appearance_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-prefs-appearance_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-prefs-appearance_MOBJC_DIRS := $(foreach dir, $(workbench-prefs-appearance_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-prefs-appearance_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-prefs-appearance_MOBJC_DIRS),)
+    workbench-prefs-appearance_MOBJC_DIRS := $(shell echo $(workbench-prefs-appearance_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-prefs-appearance_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-prefs-appearance_CC := $(TARGET_CC)
+else
+  workbench-prefs-appearance_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-prefs-appearance_MOBJC_CPPFLAGS := $(workbench-prefs-appearance_CPPFLAGS)
+workbench-prefs-appearance_OBJCFLAGS := $(workbench-prefs-appearance_CFLAGS)
+workbench-prefs-appearance_OBJCFLAGS := $(workbench-prefs-appearance_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-prefs-appearance_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-prefs-appearance_OBJCFLAGS)))
+ifeq ($(workbench-prefs-appearance_DFLAGS),)
+  workbench-prefs-appearance_OBJCDFLAGS := $(workbench-prefs-appearance_CFLAGS)
+else
+  workbench-prefs-appearance_OBJCDFLAGS := $(workbench-prefs-appearance_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-prefs-appearance_LINK ?= $(strip $(workbench-prefs-appearance_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-prefs-appearance_STRIP ?= $(TARGET_STRIP)
+  workbench-prefs-appearance_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-prefs-appearance_CC) $(TARGET_SYSROOT))
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : workbench-prefs-appearance_MOBJC_CPPFLAGS:=$(strip $(workbench-prefs-appearance_MOBJC_CPPFLAGS) $(workbench-prefs-appearance_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : workbench-prefs-appearance_OBJCFLAGS:=$(strip $(workbench-prefs-appearance_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : workbench-prefs-appearance_OBJCDFLAGS:=$(workbench-prefs-appearance_OBJCDFLAGS)
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : workbench-prefs-appearance_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : workbench-prefs-appearance_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-prefs-appearance_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-prefs-appearance_STRIP ?= $(HOST_STRIP)
+  workbench-prefs-appearance_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : workbench-prefs-appearance_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-prefs-appearance_MOBJC_CPPFLAGS) $(workbench-prefs-appearance_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : workbench-prefs-appearance_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-prefs-appearance_OBJCFLAGS))
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : workbench-prefs-appearance_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-prefs-appearance_OBJCDFLAGS))
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : workbench-prefs-appearance_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : workbench-prefs-appearance_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-prefs-appearance_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-prefs-appearance_STRIP ?= $(ECHO) >/dev/null
+  workbench-prefs-appearance_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : workbench-prefs-appearance_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-prefs-appearance_MOBJC_CPPFLAGS) $(workbench-prefs-appearance_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : workbench-prefs-appearance_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-prefs-appearance_OBJCFLAGS))
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : workbench-prefs-appearance_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-prefs-appearance_OBJCDFLAGS))
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : workbench-prefs-appearance_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-prefs-appearance_MOBJC_TARGETS) $(workbench-prefs-appearance_MOBJC_DTARGETS) : workbench-prefs-appearance_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-prefs-appearance_MOBJC_TARGETS) : CPPFLAGS := $(workbench-prefs-appearance_MOBJC_CPPFLAGS)
+$(workbench-prefs-appearance_MOBJC_TARGETS) : CFLAGS := $(workbench-prefs-appearance_OBJCFLAGS)
+$(workbench-prefs-appearance_MOBJC_TARGETS) : $(workbench-prefs-appearance_MOBJC_WILDCARD).o : $(workbench-prefs-appearance_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-prefs-appearance_IQUOTE) $(dir $<) $(workbench-prefs-appearance_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-appearance_IQUOTE) . $(workbench-prefs-appearance_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-prefs-appearance_IQUOTE) $(dir $<) $(workbench-prefs-appearance_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-appearance_IQUOTE) . $(workbench-prefs-appearance_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-prefs-appearance_IQUOTE) $(dir $<) $(workbench-prefs-appearance_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-appearance_IQUOTE) . $(workbench-prefs-appearance_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-prefs-appearance_MOBJC_DTARGETS) : $(workbench-prefs-appearance_MOBJC_WILDCARD).d : $(workbench-prefs-appearance_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-prefs-appearance_OBJCDFLAGS) $(workbench-prefs-appearance_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-prefs-appearance_MC_SRCWILDCARD := %
+else
+workbench-prefs-appearance_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-prefs-appearance_OBJDIR),)
+workbench-prefs-appearance_MC_TARGETS := $(addsuffix .o,$(workbench-prefs-appearance_C_NARCHFILES))
+workbench-prefs-appearance_MC_DTARGETS := $(addsuffix .d,$(workbench-prefs-appearance_C_NARCHFILES))
+workbench-prefs-appearance_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-prefs-appearance_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-prefs-appearance_OBJDIR)/,$(notdir $(workbench-prefs-appearance_C_NARCHFILES))))
+    workbench-prefs-appearance_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-prefs-appearance_OBJDIR)/,$(notdir $(workbench-prefs-appearance_C_NARCHFILES))))
+else
+ifeq (,)
+    workbench-prefs-appearance_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-prefs-appearance_OBJDIR)/,$(workbench-prefs-appearance_C_NARCHFILES)))
+    workbench-prefs-appearance_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-prefs-appearance_OBJDIR)/,$(workbench-prefs-appearance_C_NARCHFILES)))
+else
+    workbench-prefs-appearance_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-prefs-appearance_OBJDIR)/,$(patsubst /%,%,$(workbench-prefs-appearance_C_NARCHFILES))))
+    workbench-prefs-appearance_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-prefs-appearance_OBJDIR)/,$(patsubst /%,%,$(workbench-prefs-appearance_C_NARCHFILES))))
+endif
+endif
+workbench-prefs-appearance_MC_TGTWILDCARD := $(workbench-prefs-appearance_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : | $(addsuffix .c,$(workbench-prefs-appearance_C_NARCHFILES))
+
+# Be sure that all .c files are found
+workbench-prefs-appearance_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-prefs-appearance_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-prefs-appearance_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-prefs-appearance_MC_DIRS := $(foreach dir, $(workbench-prefs-appearance_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-prefs-appearance_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-prefs-appearance_MC_DIRS),)
+    workbench-prefs-appearance_MC_DIRS := $(shell echo $(workbench-prefs-appearance_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-prefs-appearance_MC_DIRS)
+endif
+
+endif
+
+workbench-prefs-appearance_MC_CPPFLAGS := $(workbench-prefs-appearance_CPPFLAGS)
+workbench-prefs-appearance_CFLAGS := $(workbench-prefs-appearance_CFLAGS)
+ifeq ($(workbench-prefs-appearance_DFLAGS),)
+  workbench-prefs-appearance_DFLAGS := $(workbench-prefs-appearance_CFLAGS)
+else
+  workbench-prefs-appearance_DFLAGS := $(workbench-prefs-appearance_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-prefs-appearance_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-prefs-appearance_STRIP ?= $(TARGET_STRIP)
+workbench-prefs-appearance_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : workbench-prefs-appearance_MC_CPPFLAGS:=$(strip $(workbench-prefs-appearance_MC_CPPFLAGS) $(workbench-prefs-appearance_MC_EXTRA_CPPFLAGS))
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : workbench-prefs-appearance_CFLAGS:=$(strip $(workbench-prefs-appearance_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : workbench-prefs-appearance_DFLAGS:=$(workbench-prefs-appearance_DFLAGS)
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : workbench-prefs-appearance_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : workbench-prefs-appearance_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-prefs-appearance_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-prefs-appearance_STRIP ?= $(HOST_STRIP)
+workbench-prefs-appearance_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : workbench-prefs-appearance_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-prefs-appearance_MC_CPPFLAGS) $(workbench-prefs-appearance_MC_EXTRA_CPPFLAGS))
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : workbench-prefs-appearance_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-prefs-appearance_CFLAGS))
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : workbench-prefs-appearance_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-prefs-appearance_DFLAGS))
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : workbench-prefs-appearance_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : workbench-prefs-appearance_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-prefs-appearance_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-prefs-appearance_STRIP ?= $(ECHO) >/dev/null
+workbench-prefs-appearance_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : workbench-prefs-appearance_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-prefs-appearance_MC_CPPFLAGS) $(workbench-prefs-appearance_MC_EXTRA_CPPFLAGS))
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : workbench-prefs-appearance_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-prefs-appearance_CFLAGS))
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : workbench-prefs-appearance_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-prefs-appearance_DFLAGS))
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : workbench-prefs-appearance_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-prefs-appearance_MC_TARGETS) $(workbench-prefs-appearance_MC_DTARGETS) : workbench-prefs-appearance_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-prefs-appearance_MC_TARGETS) : CPPFLAGS := $(workbench-prefs-appearance_MC_CPPFLAGS)
+$(workbench-prefs-appearance_MC_TARGETS) : CFLAGS := $(workbench-prefs-appearance_CFLAGS)
+$(workbench-prefs-appearance_MC_TARGETS) : $(workbench-prefs-appearance_MC_TGTWILDCARD).o : $(workbench-prefs-appearance_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-prefs-appearance_IQUOTE) $(dir $<) $(workbench-prefs-appearance_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-appearance_IQUOTE) . $(workbench-prefs-appearance_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-prefs-appearance_IQUOTE) $(dir $<) $(workbench-prefs-appearance_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-appearance_IQUOTE) . $(workbench-prefs-appearance_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-prefs-appearance_IQUOTE) $(dir $<) $(workbench-prefs-appearance_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-appearance_IQUOTE) . $(workbench-prefs-appearance_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-prefs-appearance_MC_DTARGETS) : $(workbench-prefs-appearance_MC_TGTWILDCARD).d : $(workbench-prefs-appearance_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-prefs-appearance_DFLAGS) $(workbench-prefs-appearance_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-prefs-appearance_OBJDIR),)
+workbench-prefs-appearance-MA_TARGETS := $(addsuffix .o,$(workbench-prefs-appearance_ASMFILES))
+workbench-prefs-appearance-MA_WILDCARD := %
+else
+workbench-prefs-appearance-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-prefs-appearance_OBJDIR)/,$(notdir $(workbench-prefs-appearance_ASMFILES))))
+workbench-prefs-appearance-MA_WILDCARD := $(workbench-prefs-appearance_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(workbench-prefs-appearance-MA_TARGETS) : | $(addsuffix .s,$(workbench-prefs-appearance_ASMFILES))
+
+# Be sure that all .c files are found
+workbench-prefs-appearance-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-prefs-appearance-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-prefs-appearance_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-prefs-appearance-MA_DIRS := $(foreach dir, $(workbench-prefs-appearance-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-prefs-appearance-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-prefs-appearance-MA_DIRS),)
+    workbench-prefs-appearance-MA_DIRS := $(shell echo $(workbench-prefs-appearance-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(workbench-prefs-appearance-MA_DIRS)
+endif
+
+endif
+
+workbench-prefs-appearance-MA_ASSEMBLER ?= $(workbench-prefs-appearance_ASSEMBLER)
+
+$(workbench-prefs-appearance-MA_TARGETS) : workbench-prefs-appearance-MA_CMD:= $(workbench-prefs-appearance-MA_ASSEMBLER)
+
+$(workbench-prefs-appearance-MA_TARGETS) : CPPFLAGS := $(workbench-prefs-appearance_CPPFLAGS)
+$(workbench-prefs-appearance-MA_TARGETS) : AFLAGS := $(workbench-prefs-appearance_AFLAGS)
+$(workbench-prefs-appearance-MA_TARGETS) : $(workbench-prefs-appearance-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-prefs-appearance-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-prefs-appearance-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-prefs-appearance-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+workbench-prefs-appearance-link_EXTRA_LDFLAGS := 
+workbench-prefs-appearance-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    workbench-prefs-appearance-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    workbench-prefs-appearance-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    workbench-prefs-appearance-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+workbench-prefs-appearance-link_DIRS := $(subst -L ,-L,$(strip $(workbench-prefs-appearance_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+workbench-prefs-appearance-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(workbench-prefs-appearance-link_DIRS)))
+# Add trailing /
+workbench-prefs-appearance-link_DIRS := $(subst //,/,$(addsuffix /,$(workbench-prefs-appearance-link_DIRS)))
+# Add normal linklib path
+workbench-prefs-appearance-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+workbench-prefs-appearance-link_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-prefs-appearance_LIBS) $(workbench-prefs-appearance-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    workbench-prefs-appearance-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    workbench-prefs-appearance-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+workbench-prefs-appearance-link_DEPLIBS := $(foreach lib,$(workbench-prefs-appearance-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(workbench-prefs-appearance-link_DIRS)))) \
+)
+
+$(workbench-prefs-appearance_TARGETDIR)/$(workbench-prefs-appearance_PROGNAME) : OBJDIR := $(workbench-prefs-appearance_OBJDIR)
+$(workbench-prefs-appearance_TARGETDIR)/$(workbench-prefs-appearance_PROGNAME) : OBJS := $(workbench-prefs-appearance_OBJS) $(workbench-prefs-appearance_ARCHOBJS) $(USER_OBJS)
+$(workbench-prefs-appearance_TARGETDIR)/$(workbench-prefs-appearance_PROGNAME) : LDFLAGS := $(strip $(workbench-prefs-appearance_LDFLAGS) $(workbench-prefs-appearance-link_EXTRA_LDFLAGS))
+$(workbench-prefs-appearance_TARGETDIR)/$(workbench-prefs-appearance_PROGNAME) : LIBS := $(addprefix -l,$(workbench-prefs-appearance_LIBS) $(workbench-prefs-appearance-link_EXTRA_LIBS) )
+$(workbench-prefs-appearance_TARGETDIR)/$(workbench-prefs-appearance_PROGNAME) : $(workbench-prefs-appearance_OBJS) $(workbench-prefs-appearance_ARCHOBJS) $(USER_OBJS) $(workbench-prefs-appearance-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(workbench-prefs-appearance_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(workbench-prefs-appearance_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(workbench-prefs-appearance_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-prefs-appearance_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(workbench-prefs-appearance_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(workbench-prefs-appearance_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-prefs-appearance_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(workbench-prefs-appearance_DEPS),)
+  ifneq (workbench-prefs-appearance workbench-prefs-appearance-quick,)
+    ifneq ($(findstring $(TARGET),workbench-prefs-appearance workbench-prefs-appearance-quick),)
+      -include $(workbench-prefs-appearance_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-prefs-appearance_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(workbench-prefs-appearance_OBJS) $(workbench-prefs-appearance_DEPS) $(workbench-prefs-appearance_TARGETDIR)/$(workbench-prefs-appearance_PROGNAME),)
+$(workbench-prefs-appearance_OBJS) $(workbench-prefs-appearance_DEPS) $(workbench-prefs-appearance_TARGETDIR)/$(workbench-prefs-appearance_PROGNAME) : | $(workbench-prefs-appearance_OBJDIR) $(workbench-prefs-appearance_TARGETDIR)
+else
+$(workbench-prefs-appearance_OBJS) $(workbench-prefs-appearance_DEPS) $(workbench-prefs-appearance_TARGETDIR)/$(workbench-prefs-appearance_PROGNAME) :: $(workbench-prefs-appearance_OBJDIR) $(workbench-prefs-appearance_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-prefs-appearance_OBJDIR) $(workbench-prefs-appearance_TARGETDIR)
+
+
+workbench-prefs-appearance-clean : FILES := $(workbench-prefs-appearance_OBJS) $(workbench-prefs-appearance_TARGETDIR)/$(workbench-prefs-appearance_PROGNAME) $(workbench-prefs-appearance_DEPS)
+#MM
+workbench-prefs-appearance-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-prefs-appearance"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

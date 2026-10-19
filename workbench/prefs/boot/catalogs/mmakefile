@@ -1,0 +1,75 @@
+# Copyright © 2013-2019, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+CATALOGS:= czech italian polish norwegian
+
+
+ifeq (,)
+workbench-prefs-boot-catalogs_DESC := $(basename $(wildcard $(SRCDIR)/$(CURDIR)/*.cd))
+else
+workbench-prefs-boot-catalogs_DESC := 
+endif
+
+workbench-prefs-boot-catalogs_SRC := $(shell echo $(TOOLDIR)/C_h_aros | sed 's/^\(.\):\//\/\1\//')
+
+ifeq ($(CATALOGS),)
+workbench-prefs-boot-catalogs_LNGS := $(basename $(notdir $(call WILDCARD, $(SRCDIR)/$(CURDIR)/*.ct)))
+else
+workbench-prefs-boot-catalogs_LNGS := $(CATALOGS)
+endif
+
+workbench-prefs-boot-catalogs_OBJS := $(addsuffix /System/Prefs/Boot.catalog, $(addprefix $(AROS_CATALOGS)/, $(workbench-prefs-boot-catalogs_LNGS)))
+workbench-prefs-boot-catalogs_DIRS := $(addsuffix /System/Prefs, $(addprefix $(AROS_CATALOGS)/, $(workbench-prefs-boot-catalogs_LNGS))) $(dir ../strings.h)
+
+#MM- workbench-prefs-boot-catalogs-quick : workbench-prefs-boot-catalogs
+
+#MM
+workbench-prefs-boot-catalogs : $(workbench-prefs-boot-catalogs_OBJS) ../strings.h
+
+
+ifneq ($(workbench-prefs-boot-catalogs_OBJS),)
+$(workbench-prefs-boot-catalogs_OBJS) : | $(workbench-prefs-boot-catalogs_DIRS)
+else
+$(workbench-prefs-boot-catalogs_OBJS) :: $(workbench-prefs-boot-catalogs_DIRS)
+endif
+
+GLOB_MKDIRS += $(workbench-prefs-boot-catalogs_DIRS)
+
+
+$(AROS_CATALOGS)/%/System/Prefs/Boot.catalog : $(SRCDIR)/$(CURDIR)/%.ct $(workbench-prefs-boot-catalogs_DESC).cd
+	$(Q)$(ECHO) "Creating   Boot catalog for language $*."
+	$(Q)$(IF) $(TEST) "$*" = "polish"; then \
+	    $(FLEXCAT) iso88592toamigapl $(workbench-prefs-boot-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Prefs/Boot.catalog" || [ $$? -lt 10 ] ; \
+	elif $(TEST) "$*" = "russian"; then \
+	    $(FLEXCAT) win1251toamiga1251 $(workbench-prefs-boot-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Prefs/Boot.catalog" || [ $$? -lt 10 ] ; \
+	else \
+	    $(FLEXCAT) $(workbench-prefs-boot-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Prefs/Boot.catalog" || [ $$? -lt 10 ] ; \
+	fi
+
+ifneq (../strings.h,)
+../strings.h : workbench-prefs-boot-catalogs_DESC := $(workbench-prefs-boot-catalogs_DESC)
+../strings.h : workbench-prefs-boot-catalogs_SRC := $(workbench-prefs-boot-catalogs_SRC)
+../strings.h : $(workbench-prefs-boot-catalogs_DESC).cd $(workbench-prefs-boot-catalogs_SRC).sd | $(dir ../strings.h)
+	$(Q)$(ECHO) "Creating   Boot catalog source file $@"
+	$(Q)$(FLEXCAT) $(workbench-prefs-boot-catalogs_DESC).cd $@=$(workbench-prefs-boot-catalogs_SRC).sd
+endif
+
+workbench-prefs-boot-catalogs-clean : FILES := $(workbench-prefs-boot-catalogs_OBJS) ../strings.h
+#MM
+workbench-prefs-boot-catalogs-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-prefs-boot-catalogs"
+	$(Q)$(RM) $(FILES)
+
+.PHONY: workbench-prefs-boot-catalogs workbench-prefs-boot-catalogs-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

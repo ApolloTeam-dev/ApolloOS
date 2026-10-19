@@ -1,0 +1,303 @@
+#   $Id$
+
+#   AROS metamakefile for codesetslib
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- workbench-libs-codesets : workbench-libs-codesets-test
+
+#MM workbench-libs-codesets-test : linklibs includes workbench-libs-codesets-lib
+
+FILES  := b64d b64e DetectCodeset UTF8ToStrHook demo1 Convert autoopen
+
+EXEDIR := $(AROS_TESTS)/Codesetslib
+
+# We need to use -idirafter, so that we
+# *don't* pick up the project's local MUI headers.
+USER_CFLAGS = -idirafter $(SRCDIR)/$(CURDIR)/../include \
+	      -idirafter $(SRCDIR)/$(CURDIR)/../../include \
+	      -DAROS_ABI_V1
+
+
+.PHONY : workbench-libs-codesets-test
+
+workbench-libs-codesets-test_OBJDIR    := $(GENDIR)/$(CURDIR)
+workbench-libs-codesets-test_TARGETDIR := $(EXEDIR)
+workbench-libs-codesets-test_LIBS := 
+
+workbench-libs-codesets-test_FILES     := $(FILES)
+workbench-libs-codesets-test_OBJS      := $(addsuffix .o,$(addprefix $(workbench-libs-codesets-test_OBJDIR)/,$(workbench-libs-codesets-test_FILES)))
+workbench-libs-codesets-test_DEPS      := $(addsuffix .d,$(addprefix $(workbench-libs-codesets-test_OBJDIR)/,$(workbench-libs-codesets-test_FILES)))
+workbench-libs-codesets-test_EXES      := $(addprefix $(workbench-libs-codesets-test_TARGETDIR)/,$(workbench-libs-codesets-test_FILES))
+
+workbench-libs-codesets-test_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    workbench-libs-codesets-test_CPPFLAGS += -I
+endif
+workbench-libs-codesets-test_CFLAGS    := $(CFLAGS)
+workbench-libs-codesets-test_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+workbench-libs-codesets-test_COVERAGE := yes
+workbench-libs-codesets-test_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+workbench-libs-codesets-test_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+workbench-libs-codesets-test_CFLAGS    := $(strip $(workbench-libs-codesets-test_COVERAGEFLAGS) $(workbench-libs-codesets-test_CFLAGS))
+workbench-libs-codesets-test_LIBS += $(workbench-libs-codesets-test_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-libs-codesets-test_FUNCINSTR := yes
+workbench-libs-codesets-test_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+workbench-libs-codesets-test_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-libs-codesets-test_CFLAGS    := $(strip $(workbench-libs-codesets-test_INSTRFUNCFLAGS) $(workbench-libs-codesets-test_CFLAGS))
+workbench-libs-codesets-test_LIBS += $(workbench-libs-codesets-test_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+workbench-libs-codesets-test_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(workbench-libs-codesets-test_CFLAGS))
+endif
+endif
+ifneq (,)
+    workbench-libs-codesets-test_DFLAGS := 
+else
+    workbench-libs-codesets-test_DFLAGS := $(workbench-libs-codesets-test_CFLAGS)
+endif
+ifeq (target,target)
+workbench-libs-codesets-test_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-libs-codesets-test_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-libs-codesets-test_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    workbench-libs-codesets-test_LDFLAGS += -L
+endif
+
+#MM
+workbench-libs-codesets-test-quick : workbench-libs-codesets-test
+
+#MM workbench-libs-codesets-test : includes-generate-deps core-linklibs
+workbench-libs-codesets-test : $(workbench-libs-codesets-test_EXES)
+
+ifneq ($(filter $(TARGET),workbench-libs-codesets-test workbench-libs-codesets-test-quick),)
+
+ifeq (,)
+workbench-libs-codesets-test_MC_SRCWILDCARD := %
+else
+workbench-libs-codesets-test_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-codesets-test_OBJDIR),)
+workbench-libs-codesets-test_MC_TARGETS := $(addsuffix .o,$(workbench-libs-codesets-test_FILES))
+workbench-libs-codesets-test_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-codesets-test_FILES))
+workbench-libs-codesets-test_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-codesets-test_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-codesets-test_OBJDIR)/,$(notdir $(workbench-libs-codesets-test_FILES))))
+    workbench-libs-codesets-test_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-codesets-test_OBJDIR)/,$(notdir $(workbench-libs-codesets-test_FILES))))
+else
+ifeq (,)
+    workbench-libs-codesets-test_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-codesets-test_OBJDIR)/,$(workbench-libs-codesets-test_FILES)))
+    workbench-libs-codesets-test_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-codesets-test_OBJDIR)/,$(workbench-libs-codesets-test_FILES)))
+else
+    workbench-libs-codesets-test_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-codesets-test_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-codesets-test_FILES))))
+    workbench-libs-codesets-test_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-codesets-test_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-codesets-test_FILES))))
+endif
+endif
+workbench-libs-codesets-test_MC_TGTWILDCARD := $(workbench-libs-codesets-test_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-codesets-test_FILES))
+
+# Be sure that all .c files are found
+workbench-libs-codesets-test_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-codesets-test_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-codesets-test_FILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-codesets-test_MC_DIRS := $(foreach dir, $(workbench-libs-codesets-test_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-codesets-test_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-codesets-test_MC_DIRS),)
+    workbench-libs-codesets-test_MC_DIRS := $(shell echo $(workbench-libs-codesets-test_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-codesets-test_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-codesets-test_MC_CPPFLAGS := $(workbench-libs-codesets-test_CPPFLAGS)
+workbench-libs-codesets-test_CFLAGS := $(workbench-libs-codesets-test_CFLAGS)
+ifeq ($(workbench-libs-codesets-test_DFLAGS),)
+  workbench-libs-codesets-test_DFLAGS := $(workbench-libs-codesets-test_CFLAGS)
+else
+  workbench-libs-codesets-test_DFLAGS := $(workbench-libs-codesets-test_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-codesets-test_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-codesets-test_STRIP ?= $(TARGET_STRIP)
+workbench-libs-codesets-test_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : workbench-libs-codesets-test_MC_CPPFLAGS:=$(strip $(workbench-libs-codesets-test_MC_CPPFLAGS) $(workbench-libs-codesets-test_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : workbench-libs-codesets-test_CFLAGS:=$(strip $(workbench-libs-codesets-test_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : workbench-libs-codesets-test_DFLAGS:=$(workbench-libs-codesets-test_DFLAGS)
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : workbench-libs-codesets-test_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : workbench-libs-codesets-test_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-codesets-test_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-codesets-test_STRIP ?= $(HOST_STRIP)
+workbench-libs-codesets-test_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : workbench-libs-codesets-test_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-codesets-test_MC_CPPFLAGS) $(workbench-libs-codesets-test_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : workbench-libs-codesets-test_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-codesets-test_CFLAGS))
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : workbench-libs-codesets-test_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-codesets-test_DFLAGS))
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : workbench-libs-codesets-test_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : workbench-libs-codesets-test_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-codesets-test_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-codesets-test_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-codesets-test_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : workbench-libs-codesets-test_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-codesets-test_MC_CPPFLAGS) $(workbench-libs-codesets-test_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : workbench-libs-codesets-test_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-codesets-test_CFLAGS))
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : workbench-libs-codesets-test_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-codesets-test_DFLAGS))
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : workbench-libs-codesets-test_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-codesets-test_MC_TARGETS) $(workbench-libs-codesets-test_MC_DTARGETS) : workbench-libs-codesets-test_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-codesets-test_MC_TARGETS) : CPPFLAGS := $(workbench-libs-codesets-test_MC_CPPFLAGS)
+$(workbench-libs-codesets-test_MC_TARGETS) : CFLAGS := $(workbench-libs-codesets-test_CFLAGS)
+$(workbench-libs-codesets-test_MC_TARGETS) : $(workbench-libs-codesets-test_MC_TGTWILDCARD).o : $(workbench-libs-codesets-test_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-codesets-test_IQUOTE) $(dir $<) $(workbench-libs-codesets-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-codesets-test_IQUOTE) . $(workbench-libs-codesets-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-codesets-test_IQUOTE) $(dir $<) $(workbench-libs-codesets-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-codesets-test_IQUOTE) . $(workbench-libs-codesets-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-codesets-test_IQUOTE) $(dir $<) $(workbench-libs-codesets-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-codesets-test_IQUOTE) . $(workbench-libs-codesets-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-codesets-test_MC_DTARGETS) : $(workbench-libs-codesets-test_MC_TGTWILDCARD).d : $(workbench-libs-codesets-test_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-codesets-test_DFLAGS) $(workbench-libs-codesets-test_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+workbench-libs-codesets-test-link_EXTRA_LDFLAGS := 
+workbench-libs-codesets-test-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    workbench-libs-codesets-test-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    workbench-libs-codesets-test-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    workbench-libs-codesets-test-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+workbench-libs-codesets-test-link_DIRS := $(subst -L ,-L,$(strip $(workbench-libs-codesets-test_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+workbench-libs-codesets-test-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(workbench-libs-codesets-test-link_DIRS)))
+# Add trailing /
+workbench-libs-codesets-test-link_DIRS := $(subst //,/,$(addsuffix /,$(workbench-libs-codesets-test-link_DIRS)))
+# Add normal linklib path
+workbench-libs-codesets-test-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+workbench-libs-codesets-test-link_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-libs-codesets-test_LIBS) $(workbench-libs-codesets-test-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+workbench-libs-codesets-test-link_DEPLIBS := $(foreach lib,$(workbench-libs-codesets-test-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(workbench-libs-codesets-test-link_DIRS)))) \
+)
+workbench-libs-codesets-test-link_PROGS := $(addprefix $(workbench-libs-codesets-test_TARGETDIR)/,$(workbench-libs-codesets-test_FILES))
+
+$(workbench-libs-codesets-test-link_PROGS) : OBJDIR := $(workbench-libs-codesets-test_OBJDIR)
+$(workbench-libs-codesets-test-link_PROGS) : LDFLAGS := $(strip $(workbench-libs-codesets-test_LDFLAGS) $(workbench-libs-codesets-test-link_EXTRA_LDFLAGS))
+$(workbench-libs-codesets-test-link_PROGS) : LIBS := $(addprefix -l,$(workbench-libs-codesets-test_LIBS) $(workbench-libs-codesets-test-link_EXTRA_LIBS) )
+$(workbench-libs-codesets-test-link_PROGS) : $(workbench-libs-codesets-test_TARGETDIR)/% : $(workbench-libs-codesets-test_OBJDIR)/%.o $(workbench-libs-codesets-test-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(workbench-libs-codesets-test_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(workbench-libs-codesets-test_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(workbench-libs-codesets-test_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-libs-codesets-test_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(workbench-libs-codesets-test_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(workbench-libs-codesets-test_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-libs-codesets-test_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(workbench-libs-codesets-test_DEPS),)
+  ifneq (workbench-libs-codesets-test workbench-libs-codesets-test-quick,)
+    ifneq ($(findstring $(TARGET),workbench-libs-codesets-test workbench-libs-codesets-test-quick),)
+      -include $(workbench-libs-codesets-test_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-libs-codesets-test_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(workbench-libs-codesets-test_DEPS) $(workbench-libs-codesets-test_OBJS) $(addprefix $(workbench-libs-codesets-test_TARGETDIR)/,$(workbench-libs-codesets-test_FILES)),)
+$(workbench-libs-codesets-test_DEPS) $(workbench-libs-codesets-test_OBJS) $(addprefix $(workbench-libs-codesets-test_TARGETDIR)/,$(workbench-libs-codesets-test_FILES)) : | $(workbench-libs-codesets-test_TARGETDIR) $(workbench-libs-codesets-test_OBJDIR)
+else
+$(workbench-libs-codesets-test_DEPS) $(workbench-libs-codesets-test_OBJS) $(addprefix $(workbench-libs-codesets-test_TARGETDIR)/,$(workbench-libs-codesets-test_FILES)) :: $(workbench-libs-codesets-test_TARGETDIR) $(workbench-libs-codesets-test_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-codesets-test_TARGETDIR) $(workbench-libs-codesets-test_OBJDIR)
+
+
+workbench-libs-codesets-test-clean : FILES := $(workbench-libs-codesets-test_OBJS) $(workbench-libs-codesets-test_EXES) $(workbench-libs-codesets-test_DEPS)
+#MM
+workbench-libs-codesets-test-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-libs-codesets-test"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

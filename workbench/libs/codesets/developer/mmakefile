@@ -1,0 +1,45 @@
+include $(SRCDIR)/config/aros.cfg
+
+#MM- includes-copy: workbench-libs-codesets-includes workbench-libs-codesets-fd
+
+#MM workbench-libs-codesets-includes : \
+#MM     kernel-exec-includes \
+#MM     kernel-dos-includes \
+#MM     kernel-utility-includes
+
+
+.PHONY : workbench-libs-codesets-includes
+
+#MM
+workbench-libs-codesets-includes :
+	$(Q)cd $(SRCDIR)/$(CURDIR) && $(CPYDIRREC) -s $(SRCDIR)/$(CURDIR)/include -d $(AROS_INCLUDES)/ -e 
+
+
+
+workbench-libs-codesets-fd_SRC := $(shell echo fd | sed 's/^\(.\):\//\/\1\//')
+
+
+ifneq (setup,)
+setup : | $(AROS_SDK_FD)
+else
+setup :: $(AROS_SDK_FD)
+endif
+
+GLOB_MKDIRS += $(AROS_SDK_FD)
+
+
+.PHONY : workbench-libs-codesets-fd
+
+#MM
+workbench-libs-codesets-fd : | $(AROS_SDK_FD) 
+	$(foreach file, codesets_lib.fd, $(shell $(CP) $(addprefix $(if $(filter /%,$(workbench-libs-codesets-fd_SRC)),$(workbench-libs-codesets-fd_SRC),$(SRCDIR)/$(CURDIR)/$(workbench-libs-codesets-fd_SRC))/, $(file)) $(addprefix $(AROS_SDK_FD)/, $(file))))
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

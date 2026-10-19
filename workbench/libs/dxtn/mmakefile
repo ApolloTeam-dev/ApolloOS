@@ -1,0 +1,1657 @@
+#   $Id$
+#
+
+include $(SRCDIR)/config/aros.cfg
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM workbench-libs-dxtn
+#MM workbench-libs-dxtn-quick
+#MM workbench-libs-dxtn-makefile
+#MM workbench-libs-dxtn-clean
+
+# ABI targets:
+#MM- includes-all : workbench-libs-dxtn-includes
+#MM- linklibs-dxtn: workbench-libs-dxtn-linklib
+#MM- linklibs-dxtn_rel : workbench-libs-dxtn-linklib
+#MM- includes-dxtn: workbench-libs-dxtn-includes
+#MM- includes-dxtn_rel : workbench-libs-dxtn-includes
+#MM- workbench-libs-dxtn : workbench-libs-dxtn-includes core-linklibs linklibs-
+#MM workbench-libs-dxtn-linklib : workbench-libs-dxtn-includes includes-
+#MM- workbench-libs-dxtn-quick : workbench-libs-dxtn-includes-quick
+#MM workbench-libs-dxtn-includes : workbench-libs-dxtn-makefile workbench-libs-dxtn-includes-dirs \
+#MM     includes-generate-deps workbench-libs-dxtn-fd
+#MM workbench-libs-dxtn-includes-quick
+#MM workbench-libs-dxtn-includes-dirs
+#MM workbench-libs-dxtn-fd
+
+# Library targets
+#M workbench-libs-dxtn-kobj : core-linklibs linklibs-
+#M workbench-libs-dxtn-kobj-quick : 
+
+# Library with ABI targets:
+#M workbench-libs-dxtn-kobj : workbench-libs-dxtn-includes core-linklibs linklibs-
+#M workbench-libs-dxtn-kobj-quick : workbench-libs-dxtn-includes-quick
+
+# All MetaMake targets defined by this macro
+workbench-libs-dxtn_ALLTARGETS       := workbench-libs-dxtn workbench-libs-dxtn-quick workbench-libs-dxtn-clean
+
+ifeq (,M)
+workbench-libs-dxtn_ALLTARGETS       += workbench-libs-dxtn-kobj workbench-libs-dxtn-kobj-quick
+endif
+
+ifeq (M,M)
+workbench-libs-dxtn_ALLTARGETS += workbench-libs-dxtn-includes \
+                 workbench-libs-dxtn-includes-quick workbench-libs-dxtn-includes-dirs  \
+                 workbench-libs-dxtn-linklib workbench-libs-dxtn-fd
+endif
+
+.PHONY : $(workbench-libs-dxtn_ALLTARGETS) workbench-libs-dxtn-makefile
+
+ifeq (dxtn,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (library,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    workbench-libs-dxtn_DEFNAME      := dxtn_
+else
+    workbench-libs-dxtn_DEFNAME      := dxtn
+endif
+workbench-libs-dxtn_DEFLINKLIBNAME   := $(workbench-libs-dxtn_DEFNAME)
+ifneq (,)
+    workbench-libs-dxtn_LINKLIBNAME  := 
+else
+    workbench-libs-dxtn_LINKLIBNAME  = $(workbench-libs-dxtn_DEFLINKLIBNAME)
+endif
+workbench-libs-dxtn_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    workbench-libs-dxtn_DEFCPPFLAGS  += -I
+endif
+workbench-libs-dxtn_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    workbench-libs-dxtn_DFLAGS       := 
+else
+    workbench-libs-dxtn_DFLAGS       = $(workbench-libs-dxtn_DEFDFLAGS)
+endif
+workbench-libs-dxtn_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    workbench-libs-dxtn_DXXFLAGS     := 
+else
+    workbench-libs-dxtn_DXXFLAGS     = $(workbench-libs-dxtn_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq (%(lto),yes)
+workbench-libs-dxtn_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(workbench-libs-dxtn_DEFDFLAGS))
+workbench-libs-dxtn_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(workbench-libs-dxtn_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-libs-dxtn_FUNCINSTR := yes
+workbench-libs-dxtn_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(workbench-libs-dxtn_DEFDFLAGS))
+workbench-libs-dxtn_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(workbench-libs-dxtn_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+workbench-libs-dxtn_OBJDIR                     := 
+else
+workbench-libs-dxtn_OBJDIR                     := $(OBJDIR)/$(workbench-libs-dxtn_DEFNAME)
+endif
+ifneq (,)
+workbench-libs-dxtn_OBJDIR           := $(workbench-libs-dxtn_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+workbench-libs-dxtn-makefile         := $(workbench-libs-dxtn_OBJDIR)/Makefile.$(workbench-libs-dxtn_DEFNAME)library
+workbench-libs-dxtn-genmakefile : $(workbench-libs-dxtn-makefile)
+
+
+workbench-libs-dxtn-genmakefile_OPTS := 
+ifneq (,)
+    workbench-libs-dxtn-genmakefile_OPTS += -f 
+    workbench-libs-dxtn-genmakefile_MODNAME := dxtn_
+else
+    workbench-libs-dxtn-genmakefile_MODNAME := dxtn
+endif
+workbench-libs-dxtn-genmakefile_TARGET := Makefile.$(workbench-libs-dxtn-genmakefile_MODNAME)library
+workbench-libs-dxtn-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-dxtn-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-libs-dxtn-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-dxtn-genmakefile_OPTS += -c 
+        workbench-libs-dxtn-genmakefile_DEPS += 
+    endif 
+else
+    workbench-libs-dxtn-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/dxtn.conf
+    workbench-libs-dxtn-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/dxtn.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-dxtn-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-libs-dxtn-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-dxtn-genmakefile_OPTS += -o 
+        workbench-libs-dxtn-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-libs-dxtn-genmakefile_OPTS += -s 
+endif
+ifneq ($(workbench-libs-dxtn_OBJDIR),)
+    workbench-libs-dxtn-genmakefile_OPTS += -d $(workbench-libs-dxtn_OBJDIR)
+    workbench-libs-dxtn-genmakefile_TARGET := $(workbench-libs-dxtn_OBJDIR)/$(workbench-libs-dxtn-genmakefile_TARGET)
+endif
+
+$(workbench-libs-dxtn-genmakefile_TARGET) : OPTS := $(workbench-libs-dxtn-genmakefile_OPTS)
+$(workbench-libs-dxtn-genmakefile_TARGET) : MODNAME := dxtn
+$(workbench-libs-dxtn-genmakefile_TARGET) : MODTYPE := library
+$(workbench-libs-dxtn-genmakefile_TARGET) : $(workbench-libs-dxtn-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(workbench-libs-dxtn-makefile),)
+$(workbench-libs-dxtn-makefile) : | $(workbench-libs-dxtn_OBJDIR)
+else
+$(workbench-libs-dxtn-makefile) :: $(workbench-libs-dxtn_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-dxtn_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(workbench-libs-dxtn_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(workbench-libs-dxtn-makefile)
+
+workbench-libs-dxtn_DEFMODDIR        := $($(workbench-libs-dxtn_DEFNAME)_MODDIR)
+ifeq (no,yes)
+workbench-libs-dxtn_DEFMODDIR        := $(AROS_DIR_ARCH)/$(workbench-libs-dxtn_DEFMODDIR)
+endif
+ifneq (,)
+    workbench-libs-dxtn_MODDIR       := 
+else
+    workbench-libs-dxtn_MODDIR       := $(workbench-libs-dxtn_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+workbench-libs-dxtn_INCDIR           := 
+else
+workbench-libs-dxtn_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+workbench-libs-dxtn_LIBDEFSINC       := $(workbench-libs-dxtn_OBJDIR)/include/$(workbench-libs-dxtn_DEFNAME)_libdefs.h
+workbench-libs-dxtn_DEFLIBDEFSINC    := $(workbench-libs-dxtn_OBJDIR)/include/$(workbench-libs-dxtn_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+workbench-libs-dxtn-includes-quick : workbench-libs-dxtn-includes
+workbench-libs-dxtn-includes : $(addprefix $(GENINCDIR)/,$($(workbench-libs-dxtn_DEFNAME)_INCLUDES)) \
+    $(addprefix $(workbench-libs-dxtn_INCDIR)/,$($(workbench-libs-dxtn_DEFNAME)_INCLUDES)) \
+    $(workbench-libs-dxtn_LIBDEFSINC) $(workbench-libs-dxtn_DEFLIBDEFSINC)
+
+ifneq ($($(workbench-libs-dxtn_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    workbench-libs-dxtn-includes_MODNAME := dxtn_
+else
+    workbench-libs-dxtn-includes_MODNAME := dxtn
+endif
+
+ifneq ($($(workbench-libs-dxtn-includes_MODNAME)_INCLUDES),)
+
+workbench-libs-dxtn-includes_TARGETS := $($(workbench-libs-dxtn-includes_MODNAME)_INCLUDES)
+
+workbench-libs-dxtn-includes_DEPS := $(GENMODULE)
+workbench-libs-dxtn-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-dxtn-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-libs-dxtn-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-dxtn-includes_OPTS += -c 
+        workbench-libs-dxtn-includes_DEPS += 
+    endif 
+else
+    workbench-libs-dxtn-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/dxtn.conf
+    workbench-libs-dxtn-includes_DEPS += $(SRCDIR)/$(CURDIR)/dxtn.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-dxtn-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-libs-dxtn-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-dxtn-includes_OPTS += -o 
+        workbench-libs-dxtn-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-libs-dxtn-includes_OPTS += -s 
+endif
+ifneq ($(workbench-libs-dxtn_OBJDIR)/include,)
+    workbench-libs-dxtn-includes_OPTS += -d $(workbench-libs-dxtn_OBJDIR)/include
+    workbench-libs-dxtn-includes_TARGETS := $(addprefix $(workbench-libs-dxtn_OBJDIR)/include/,$(workbench-libs-dxtn-includes_TARGETS))
+    workbench-libs-dxtn-includes_GENINCFLAG=$(workbench-libs-dxtn_OBJDIR)/include/.dxtn.library-includes
+else
+    workbench-libs-dxtn-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.dxtn.library-includes
+endif
+
+$(workbench-libs-dxtn-includes_TARGETS) : $(workbench-libs-dxtn-includes_DEPS) $(workbench-libs-dxtn-includes_GENINCFLAG)
+
+$(workbench-libs-dxtn-includes_GENINCFLAG) : OPTS := $(workbench-libs-dxtn-includes_OPTS)
+$(workbench-libs-dxtn-includes_GENINCFLAG) : MODNAME := dxtn
+$(workbench-libs-dxtn-includes_GENINCFLAG) : MODTYPE := library
+$(workbench-libs-dxtn-includes_GENINCFLAG) : $(workbench-libs-dxtn-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(workbench-libs-dxtn_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(workbench-libs-dxtn_DEFNAME)_INCLUDES)) : | $(workbench-libs-dxtn_OBJDIR)/dxtn_geninc
+
+$(workbench-libs-dxtn_OBJDIR)/dxtn_geninc : COPYSRCDIR := $(workbench-libs-dxtn_OBJDIR)/include
+$(workbench-libs-dxtn_OBJDIR)/dxtn_geninc : TGTDIR := $(GENINCDIR)
+$(workbench-libs-dxtn_OBJDIR)/dxtn_geninc : FILES := $($(workbench-libs-dxtn_DEFNAME)_INCLUDES)
+$(workbench-libs-dxtn_OBJDIR)/dxtn_geninc : $(addprefix $(workbench-libs-dxtn_OBJDIR)/include/,$($(workbench-libs-dxtn_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(workbench-libs-dxtn_OBJDIR)/include
+
+$(addprefix $(workbench-libs-dxtn_INCDIR)/,$($(workbench-libs-dxtn_DEFNAME)_INCLUDES)) : | $(workbench-libs-dxtn_OBJDIR)/dxtn_incs
+
+$(workbench-libs-dxtn_OBJDIR)/dxtn_incs : COPYSRCDIR := $(workbench-libs-dxtn_OBJDIR)/include
+$(workbench-libs-dxtn_OBJDIR)/dxtn_incs : TGTDIR := $(workbench-libs-dxtn_INCDIR)
+$(workbench-libs-dxtn_OBJDIR)/dxtn_incs : FILES := $($(workbench-libs-dxtn_DEFNAME)_INCLUDES)
+$(workbench-libs-dxtn_OBJDIR)/dxtn_incs : $(addprefix $(workbench-libs-dxtn_OBJDIR)/include/,$($(workbench-libs-dxtn_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+workbench-libs-dxtn_INCDIRS := $(filter-out ./,$(sort $(dir $($(workbench-libs-dxtn_DEFNAME)_INCLUDES))))
+
+TMPdxtn_INCDIRS := \
+    $(workbench-libs-dxtn_OBJDIR)/include $(addprefix $(workbench-libs-dxtn_OBJDIR)/include/,$(workbench-libs-dxtn_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(workbench-libs-dxtn_INCDIRS)) \
+    $(workbench-libs-dxtn_INCDIR) $(addprefix $(workbench-libs-dxtn_INCDIR)/,$(workbench-libs-dxtn_INCDIRS))
+
+ifneq (workbench-libs-dxtn-includes-dirs,)
+workbench-libs-dxtn-includes-dirs : | $(TMPdxtn_INCDIRS)
+else
+workbench-libs-dxtn-includes-dirs :: $(TMPdxtn_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPdxtn_INCDIRS)
+
+
+endif
+
+endif
+
+
+workbench-libs-dxtn-genlibdefs_OPTS := 
+ifneq (,)
+    workbench-libs-dxtn-genlibdefs_OPTS += -f 
+    workbench-libs-dxtn-genlibdefs_MODNAME := dxtn_
+else
+    workbench-libs-dxtn-genlibdefs_MODNAME := dxtn
+endif
+workbench-libs-dxtn-genlibdefs_TARGET := $(workbench-libs-dxtn-genlibdefs_MODNAME)_libdefs.h
+workbench-libs-dxtn-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-dxtn-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-libs-dxtn-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-dxtn-genlibdefs_OPTS += -c 
+        workbench-libs-dxtn-genlibdefs_DEPS += 
+    endif 
+else
+    workbench-libs-dxtn-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/dxtn.conf
+    workbench-libs-dxtn-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/dxtn.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-dxtn-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-libs-dxtn-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-dxtn-genlibdefs_OPTS += -o 
+        workbench-libs-dxtn-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-libs-dxtn-genlibdefs_OPTS += -s 
+endif
+ifneq ($(workbench-libs-dxtn_OBJDIR)/include,)
+    workbench-libs-dxtn-genlibdefs_OPTS += -d $(workbench-libs-dxtn_OBJDIR)/include
+    workbench-libs-dxtn-genlibdefs_TARGET := $(workbench-libs-dxtn_OBJDIR)/include/$(workbench-libs-dxtn-genlibdefs_TARGET)
+endif
+ifneq (,)
+    workbench-libs-dxtn-genlibdefs_OPTS += -v 
+endif
+
+$(workbench-libs-dxtn-genlibdefs_TARGET) : OPTS := $(workbench-libs-dxtn-genlibdefs_OPTS)
+$(workbench-libs-dxtn-genlibdefs_TARGET) : MODNAME := dxtn
+$(workbench-libs-dxtn-genlibdefs_TARGET) : MODTYPE := library
+$(workbench-libs-dxtn-genlibdefs_TARGET) : $(workbench-libs-dxtn-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(workbench-libs-dxtn_DEFLIBDEFSINC) : FILENAME := $(workbench-libs-dxtn_LIBDEFSINC)
+$(workbench-libs-dxtn_DEFLIBDEFSINC) : $(workbench-libs-dxtn_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(workbench-libs-dxtn_LIBDEFSINC) $(workbench-libs-dxtn_DEFLIBDEFSINC) : | $(workbench-libs-dxtn_OBJDIR)/include
+
+ifneq (workbench-libs-dxtn-includes-dirs,)
+workbench-libs-dxtn-includes-dirs : | $(workbench-libs-dxtn_OBJDIR)/include
+else
+workbench-libs-dxtn-includes-dirs :: $(workbench-libs-dxtn_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(workbench-libs-dxtn_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+workbench-libs-dxtn-genmodfiles_OPTS :=
+ifneq (,)
+    workbench-libs-dxtn-genmodfiles_OPTS += -f 
+    workbench-libs-dxtn-genmodfiles_MODNAME := dxtn_
+else
+    workbench-libs-dxtn-genmodfiles_MODNAME := dxtn
+endif
+workbench-libs-dxtn-genmodfiles_GENTARGETS := $($(workbench-libs-dxtn-genmodfiles_MODNAME)_STARTFILES) $($(workbench-libs-dxtn-genmodfiles_MODNAME)_ENDFILES)
+workbench-libs-dxtn-genmodfiles_STUBTARGETS := $($(workbench-libs-dxtn-genmodfiles_MODNAME)_LINKLIBFILES) $($(workbench-libs-dxtn-genmodfiles_MODNAME)_RELLINKLIBFILES)
+workbench-libs-dxtn-genmodfiles_GENTARGETS := $(addsuffix .c,$(workbench-libs-dxtn-genmodfiles_GENTARGETS))
+workbench-libs-dxtn-genmodfiles_STUBTARGETS := $(addsuffix .c,$(workbench-libs-dxtn-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(workbench-libs-dxtn-genmodfiles_MODNAME)_LINKLIBAFILES) $($(workbench-libs-dxtn-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+workbench-libs-dxtn-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-dxtn-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-libs-dxtn-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-dxtn-genmodfiles_OPTS += -c 
+        workbench-libs-dxtn-genmodfiles_DEPS += 
+    endif 
+else
+    workbench-libs-dxtn-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/dxtn.conf
+    workbench-libs-dxtn-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/dxtn.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-dxtn-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-libs-dxtn-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-dxtn-genmodfiles_OPTS += -o 
+        workbench-libs-dxtn-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-libs-dxtn-genmodfiles_OPTS += -s 
+endif
+ifneq ($(workbench-libs-dxtn_OBJDIR),)
+    workbench-libs-dxtn-genmodfiles_OPTS += -d $(workbench-libs-dxtn_OBJDIR)
+    workbench-libs-dxtn-genmodfiles_TARGETDIR := $(shell echo $(workbench-libs-dxtn_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    workbench-libs-dxtn-genmodfiles_GENTARGETS := $(addprefix $(workbench-libs-dxtn-genmodfiles_TARGETDIR)/,$(workbench-libs-dxtn-genmodfiles_GENTARGETS))
+    workbench-libs-dxtn-genmodfiles_GENFILEFLAG=$(workbench-libs-dxtn-genmodfiles_TARGETDIR)/.dxtn.library-genfiles
+else
+    workbench-libs-dxtn-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.dxtn.library-genfiles
+endif
+ifneq ($(workbench-libs-dxtn_OBJDIR)/linklib,)
+    workbench-libs-dxtn-genmodfiles_OPTS += -l $(workbench-libs-dxtn_OBJDIR)/linklib
+    workbench-libs-dxtn-genmodfiles_STUBTARGETDIR := $(shell echo $(workbench-libs-dxtn_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    workbench-libs-dxtn-genmodfiles_STUBTARGETS := $(addprefix $(workbench-libs-dxtn-genmodfiles_STUBTARGETDIR)/,$(workbench-libs-dxtn-genmodfiles_STUBTARGETS))
+    workbench-libs-dxtn-genmodfiles_TARGETDIRS += $(workbench-libs-dxtn_OBJDIR)/linklib
+else
+ifneq ($(workbench-libs-dxtn_OBJDIR),)
+    workbench-libs-dxtn-genmodfiles_STUBTARGETS := $(addprefix $(workbench-libs-dxtn-genmodfiles_TARGETDIR)/,$(workbench-libs-dxtn-genmodfiles_STUBTARGETS))
+endif
+endif
+
+workbench-libs-dxtn-genmodfiles_TARGETS := $(workbench-libs-dxtn-genmodfiles_GENTARGETS) $(workbench-libs-dxtn-genmodfiles_STUBTARGETS)
+ifneq ($(workbench-libs-dxtn-genmodfiles_TARGETDIRS),)
+$(workbench-libs-dxtn-genmodfiles_TARGETS) : | $(workbench-libs-dxtn-genmodfiles_TARGETDIRS)
+endif
+
+$(workbench-libs-dxtn-genmodfiles_TARGETS) : $(workbench-libs-dxtn-genmodfiles_DEPS) $(workbench-libs-dxtn-genmodfiles_GENFILEFLAG)
+
+$(workbench-libs-dxtn-genmodfiles_GENFILEFLAG) : OPTS := $(workbench-libs-dxtn-genmodfiles_OPTS)
+$(workbench-libs-dxtn-genmodfiles_GENFILEFLAG) : MODNAME := dxtn
+$(workbench-libs-dxtn-genmodfiles_GENFILEFLAG) : MODTYPE := library
+$(workbench-libs-dxtn-genmodfiles_GENFILEFLAG) : $(workbench-libs-dxtn-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(workbench-libs-dxtn-genmodfiles_GENFILEFLAG) : $(workbench-libs-dxtn_DEFLIBDEFSINC) $(workbench-libs-dxtn-makefile)
+
+
+ifneq ($(workbench-libs-dxtn-genmodfiles_GENFILEFLAG),)
+$(workbench-libs-dxtn-genmodfiles_GENFILEFLAG) : | $(workbench-libs-dxtn_OBJDIR)/linklib
+else
+$(workbench-libs-dxtn-genmodfiles_GENFILEFLAG) :: $(workbench-libs-dxtn_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(workbench-libs-dxtn_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+workbench-libs-dxtn_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+workbench-libs-dxtn_FDDIR            := /../$(AROS_DIR_FD)
+endif
+workbench-libs-dxtn-fd : $(workbench-libs-dxtn_FDDIR)/dxtn_lib.fd
+
+
+TMP_TARGET := dxtn_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/dxtn.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/dxtn.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(workbench-libs-dxtn_FDDIR),)
+    TMP_OPTS += -d $(workbench-libs-dxtn_FDDIR)
+    TMP_TARGET := $(workbench-libs-dxtn_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := dxtn
+$(TMP_TARGET) : MODTYPE := library
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(workbench-libs-dxtn_FDDIR)/dxtn_lib.fd : | $(workbench-libs-dxtn_FDDIR)
+
+
+ifneq (workbench-libs-dxtn-fd-setup,)
+workbench-libs-dxtn-fd-setup : | $(workbench-libs-dxtn_FDDIR)
+else
+workbench-libs-dxtn-fd-setup :: $(workbench-libs-dxtn_FDDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-dxtn_FDDIR)
+
+endif
+
+## Compilation
+##
+workbench-libs-dxtn_FILES            := $(basename $(call WILDCARD, *.c))
+workbench-libs-dxtn_OBJCFILES        := 
+workbench-libs-dxtn_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+workbench-libs-dxtn_LIBFILES         := 
+workbench-libs-dxtn_LIBS             := 
+
+workbench-libs-dxtn_FDIRS            := $(sort $(dir $(workbench-libs-dxtn_FILES)))
+
+workbench-libs-dxtn_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+workbench-libs-dxtn_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call workbench-libs-dxtn_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+workbench-libs-dxtn_FILTERARCH       = $(filter-out $(call workbench-libs-dxtn_MATCHARCH,$(1),$(2)),$(2))
+workbench-libs-dxtn_STARTFILES       := $(addprefix $(workbench-libs-dxtn_OBJDIR)/,$($(workbench-libs-dxtn_DEFNAME)_STARTFILES))
+workbench-libs-dxtn_ENDFILES         := $(addprefix $(workbench-libs-dxtn_OBJDIR)/,$($(workbench-libs-dxtn_DEFNAME)_ENDFILES))
+
+workbench-libs-dxtn_ARCHOBJS         := $(wildcard $(workbench-libs-dxtn_OBJDIR)/arch/*.o)
+workbench-libs-dxtn_LIBARCHOBJS      := $(wildcard $(workbench-libs-dxtn_OBJDIR)/linklib/arch/*.o)
+workbench-libs-dxtn_ARCHFILES        := $(basename $(notdir $(workbench-libs-dxtn_ARCHOBJS)))
+workbench-libs-dxtn_LIBARCHFILES     := $(basename $(notdir $(workbench-libs-dxtn_LIBARCHOBJS)))
+workbench-libs-dxtn_C_NARCHFILES     := $(call workbench-libs-dxtn_FILTERARCH,$(workbench-libs-dxtn_ARCHFILES),$(workbench-libs-dxtn_FILES))
+workbench-libs-dxtn_CXX_NARCHFILES   := $(call workbench-libs-dxtn_FILTERARCH,$(workbench-libs-dxtn_ARCHFILES),$(workbench-libs-dxtn_CXXFILES))
+workbench-libs-dxtn_OBJC_NARCHFILES  := $(call workbench-libs-dxtn_FILTERARCH,$(workbench-libs-dxtn_ARCHFILES),$(workbench-libs-dxtn_OBJCFILES))
+workbench-libs-dxtn_NLIBARCHFILES    := $(call workbench-libs-dxtn_FILTERARCH,$(workbench-libs-dxtn_LIBARCHFILES),$(workbench-libs-dxtn_LIBFILES))
+workbench-libs-dxtn_ARCHNLIBFILES    := $(call workbench-libs-dxtn_FILTERARCH,$(workbench-libs-dxtn_LIBFILES),$(workbench-libs-dxtn_LIBARCHFILES))
+
+workbench-libs-dxtn_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(workbench-libs-dxtn_OBJDIR)/include -include $(workbench-libs-dxtn_DEFLIBDEFSINC))
+ifneq (,)
+workbench-libs-dxtn_CPPFLAGS         += -I
+endif
+workbench-libs-dxtn_LINKLIBCPPFLAGS  := $(workbench-libs-dxtn_CPPFLAGS)
+workbench-libs-dxtn_CPPFLAGS         += $(strip $($(workbench-libs-dxtn_DEFNAME)_CPPFLAGS))
+workbench-libs-dxtn_LINKLIBCPPFLAGS  += $(strip $($(workbench-libs-dxtn_DEFNAME)_LINKLIBCPPFLAGS))
+workbench-libs-dxtn_CFLAGS           := $(strip $(CFLAGS) $($(workbench-libs-dxtn_DEFNAME)_CFLAGS))
+workbench-libs-dxtn_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(workbench-libs-dxtn_DEFNAME)_LINKLIBCFLAGS))
+workbench-libs-dxtn_CXXFLAGS         := $(strip $(CXXFLAGS) $($(workbench-libs-dxtn_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq (%(lto),yes)
+workbench-libs-dxtn_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+workbench-libs-dxtn_CFLAGS           := $(strip $(workbench-libs-dxtn_LTOFLAGS) $(workbench-libs-dxtn_CFLAGS))
+workbench-libs-dxtn_LINKLIBCFLAGS    := $(strip $(workbench-libs-dxtn_LTOFLAGS) $(workbench-libs-dxtn_LINKLIBCFLAGS))
+workbench-libs-dxtn_CXXFLAGS         := $(strip $(workbench-libs-dxtn_LTOFLAGS) $(workbench-libs-dxtn_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-libs-dxtn_SUBSTNULL        :=
+workbench-libs-dxtn_SUBSTSPACE       := $(workbench-libs-dxtn_SUBSTNULL) #
+workbench-libs-dxtn_SUBSTCOMMA       := ,
+workbench-libs-dxtn_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(workbench-libs-dxtn_SUBSTSPACE),$(workbench-libs-dxtn_SUBSTCOMMA),$(strip $($(workbench-libs-dxtn_DEFNAME)_STARTFILES))))
+workbench-libs-dxtn_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-libs-dxtn_CFLAGS           := $(strip $(workbench-libs-dxtn_INSTRFUNCFLAGS) $(workbench-libs-dxtn_CFLAGS))
+workbench-libs-dxtn_CXXFLAGS         := $(strip $(workbench-libs-dxtn_INSTRFUNCFLAGS) $(workbench-libs-dxtn_CXXFLAGS))
+workbench-libs-dxtn_LIBS             += $(workbench-libs-dxtn_INSTRFUNCLIBS)
+endif
+endif
+workbench-libs-dxtn_DFLAGS           := $(strip $(workbench-libs-dxtn_DFLAGS) $($(workbench-libs-dxtn_DEFNAME)_DFLAGS))
+workbench-libs-dxtn_LINKLIBDFLAGS    := $(strip $(workbench-libs-dxtn_DFLAGS) $($(workbench-libs-dxtn_DEFNAME)_LINKLIBDFLAGS))
+workbench-libs-dxtn_DXXFLAGS         := $(strip $(workbench-libs-dxtn_DXXFLAGS) $($(workbench-libs-dxtn_DEFNAME)_DXXFLAGS))
+
+ifeq (library,library)
+    workbench-libs-dxtn_LIBSUFFIX    := 
+else
+    workbench-libs-dxtn_LIBSUFFIX    := .library
+endif
+
+ifeq (,)
+workbench-libs-dxtn_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+workbench-libs-dxtn_LIBDIR           := 
+endif
+
+ifeq (M,M)
+workbench-libs-dxtn_LINKLIBCFILES    := $(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$($(workbench-libs-dxtn_DEFNAME)_LINKLIBFILES))
+workbench-libs-dxtn_LINKLIBAFILES    := $(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$($(workbench-libs-dxtn_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(workbench-libs-dxtn_DEFNAME)_LINKLIBFILES) $($(workbench-libs-dxtn_DEFNAME)_LINKLIBAFILES)  $(workbench-libs-dxtn_ARCHNLIBFILES)),)
+    workbench-libs-dxtn_LINKLIB      :=
+else
+    workbench-libs-dxtn_LINKLIB      := $(workbench-libs-dxtn_LIBDIR)/libdxtn$(workbench-libs-dxtn_LIBSUFFIX).a
+    ifneq (dxtn,$(workbench-libs-dxtn_LINKLIBNAME))
+        workbench-libs-dxtn_LINKLIB  += $(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_LINKLIBNAME)$(workbench-libs-dxtn_LIBSUFFIX).a
+    endif
+endif
+workbench-libs-dxtn_LINKLIBFILES     := $(workbench-libs-dxtn_LINKLIBCFILES) $(workbench-libs-dxtn_LINKLIBAFILES)
+
+workbench-libs-dxtn_RELLINKLIBCFILES := $(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$($(workbench-libs-dxtn_DEFNAME)_RELLINKLIBFILES))
+workbench-libs-dxtn_RELLINKLIBAFILES := $(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$($(workbench-libs-dxtn_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(workbench-libs-dxtn_DEFNAME)_RELLINKLIBFILES) $($(workbench-libs-dxtn_DEFNAME)_RELLINKLIBAFILES)  $(workbench-libs-dxtn_ARCHNLIBFILES)),)
+    workbench-libs-dxtn_RELLINKLIB   :=
+else
+    workbench-libs-dxtn_RELLINKLIB   := $(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_DEFNAME)_rel$(workbench-libs-dxtn_LIBSUFFIX).a
+    ifneq (dxtn,$(workbench-libs-dxtn_LINKLIBNAME))
+        workbench-libs-dxtn_RELLINKLIB += $(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_LINKLIBNAME)_rel$(workbench-libs-dxtn_LIBSUFFIX).a
+    endif
+endif
+workbench-libs-dxtn_RELLINKLIBFILES  := $(workbench-libs-dxtn_RELLINKLIBCFILES) $(workbench-libs-dxtn_RELLINKLIBAFILES)
+endif
+
+workbench-libs-dxtn_ENDOBJS          := $(addsuffix .o,$(workbench-libs-dxtn_ENDFILES))
+workbench-libs-dxtn_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$(notdir $(workbench-libs-dxtn_NLIBARCHFILES))) $(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/arch/,$(notdir $(workbench-libs-dxtn_ARCHNLIBFILES))) $(workbench-libs-dxtn_LINKLIBFILES)) \
+                 
+workbench-libs-dxtn_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$(notdir $(workbench-libs-dxtn_NLIBARCHFILES))) $(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/arch/,$(notdir $(workbench-libs-dxtn_ARCHNLIBFILES))) $(workbench-libs-dxtn_RELLINKLIBFILES)) \
+                 
+$(workbench-libs-dxtn_LINKLIBFILES) $(workbench-libs-dxtn_RELLINKLIBFILES) : | $(workbench-libs-dxtn_OBJDIR)/linklib
+$(workbench-libs-dxtn_LINKLIBOBJS) $(workbench-libs-dxtn_RELLINKLIBOBJS) : | $(workbench-libs-dxtn_OBJDIR)/linklib
+
+workbench-libs-dxtn_CCFILES := $(workbench-libs-dxtn_C_NARCHFILES)
+workbench-libs-dxtn_TARGETCCFILES    := $(strip $(workbench-libs-dxtn_STARTFILES) $(workbench-libs-dxtn_ENDFILES))
+workbench-libs-dxtn_LINKLIBCCFILES   := $(strip $(workbench-libs-dxtn_NLIBARCHFILES) $(workbench-libs-dxtn_LINKLIBCFILES) $(workbench-libs-dxtn_RELLINKLIBCFILES))
+workbench-libs-dxtn_LINKLIBCCGENFILES := $(strip $(workbench-libs-dxtn_LINKLIBCFILES) $(workbench-libs-dxtn_RELLINKLIBCFILES))
+
+
+workbench-libs-dxtn_CXXABSBASENAMES := $(foreach workbench-libs-dxtn_CXXBASE,$(workbench-libs-dxtn_CXX_NARCHFILES),$(if $(filter /%,$(workbench-libs-dxtn_CXXBASE)),$(workbench-libs-dxtn_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-libs-dxtn_CXXBASE))))
+
+ifneq ($(workbench-libs-dxtn_CXXABSBASENAMES),)
+
+workbench-libs-dxtn_CXXBASENAMES := $(basename $(workbench-libs-dxtn_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-libs-dxtn_MCXX_FILES  := $(strip $(foreach workbench-libs-dxtn_CXXBASE,$(workbench-libs-dxtn_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-libs-dxtn_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-libs-dxtn_EXT),$(workbench-libs-dxtn_CXXBASE)))))))
+
+ifeq (,)
+workbench-libs-dxtn_MCXX_SRCWILDCARD := %
+else
+workbench-libs-dxtn_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-dxtn_OBJDIR),)
+  workbench-libs-dxtn_CXXTARGETS := $(notdir $(workbench-libs-dxtn_CXXBASENAMES:=.o))
+  workbench-libs-dxtn_CXXDTARGETS := $(notdir $(workbench-libs-dxtn_CXXBASENAMES:=.d))
+  workbench-libs-dxtn_MCXX_WILDCARD := %
+else
+  workbench-libs-dxtn_CXXTARGETS := $(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(notdir $(workbench-libs-dxtn_CXXBASENAMES:=.o)))
+  workbench-libs-dxtn_CXXDTARGETS := $(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(notdir $(workbench-libs-dxtn_CXXBASENAMES:=.d)))
+  workbench-libs-dxtn_MCXX_WILDCARD := $(workbench-libs-dxtn_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-libs-dxtn_CXXTARGETS) $(workbench-libs-dxtn_CXXDTARGETS) : | $(workbench-libs-dxtn_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-libs-dxtn_MCXX_CPPFLAGS := $(workbench-libs-dxtn_CPPFLAGS)
+workbench-libs-dxtn_CXXFLAGS := $(workbench-libs-dxtn_CXXFLAGS)
+ifeq ($(workbench-libs-dxtn_DXXFLAGS),)
+  workbench-libs-dxtn_DXXFLAGS := $(workbench-libs-dxtn_CXXFLAGS)
+else
+  workbench-libs-dxtn_DXXFLAGS := $(workbench-libs-dxtn_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-libs-dxtn_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-libs-dxtn_STRIP ?= $(HOST_STRIP)
+  workbench-libs-dxtn_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-libs-dxtn_CXXCMD:=$(HOST_CXX)
+  workbench-libs-dxtn_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-libs-dxtn_MCXX_CPPFLAGS) $(workbench-libs-dxtn_MCXX_EXTRA_CPPFLAGS))
+  workbench-libs-dxtn_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-libs-dxtn_CXXFLAGS))
+  workbench-libs-dxtn_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-libs-dxtn_DXXFLAGS))
+  workbench-libs-dxtn_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-libs-dxtn_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-libs-dxtn_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-libs-dxtn_STRIP ?= $(TARGET_STRIP)
+  workbench-libs-dxtn_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-libs-dxtn_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-libs-dxtn_MCXX_CPPFLAGS := $(strip $(workbench-libs-dxtn_MCXX_CPPFLAGS) $(workbench-libs-dxtn_MCXX_EXTRA_CPPFLAGS))
+  workbench-libs-dxtn_CXXFLAGS := $(strip $(workbench-libs-dxtn_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-libs-dxtn_DXXFLAGS := $(workbench-libs-dxtn_DXXFLAGS)
+  workbench-libs-dxtn_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-libs-dxtn_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-libs-dxtn_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-libs-dxtn_STRIP ?= $(ECHO) >/dev/null
+  workbench-libs-dxtn_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-libs-dxtn_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-libs-dxtn_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-libs-dxtn_MCXX_CPPFLAGS) $(workbench-libs-dxtn_MCXX_EXTRA_CPPFLAGS))
+  workbench-libs-dxtn_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-libs-dxtn_CXXFLAGS))
+  workbench-libs-dxtn_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-libs-dxtn_DXXFLAGS))
+  workbench-libs-dxtn_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-libs-dxtn_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-libs-dxtn_CXXCMD) $(workbench-libs-dxtn_CXXIQUOTE) $(dir $(2)) $(workbench-libs-dxtn_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_CXXIQUOTE) . $(workbench-libs-dxtn_CXXIQUOTE_END) $(strip $(workbench-libs-dxtn_CXXFLAGS) $(workbench-libs-dxtn_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-libs-dxtn_CXXCMD) $(workbench-libs-dxtn_CXXIQUOTE) $(dir $(2)) $(workbench-libs-dxtn_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_CXXIQUOTE) . $(workbench-libs-dxtn_CXXIQUOTE_END) $(strip $(workbench-libs-dxtn_CXXFLAGS) $(workbench-libs-dxtn_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-libs-dxtn_CXXCMD) $(workbench-libs-dxtn_CXXIQUOTE) $(dir $(2)) $(workbench-libs-dxtn_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_CXXIQUOTE) . $(workbench-libs-dxtn_CXXIQUOTE_END) $(strip $(workbench-libs-dxtn_CXXFLAGS) $(workbench-libs-dxtn_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-libs-dxtn_CXXCMD)" $(MKDEPEND) $(strip $(workbench-libs-dxtn_DXXFLAGS) $(workbench-libs-dxtn_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-libs-dxtn_OBJDIR),)
+  $(foreach workbench-libs-dxtn_CXXFILE,$(workbench-libs-dxtn_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-libs-dxtn_CXXFILE))),$(workbench-libs-dxtn_CXXFILE))))
+else
+  $(foreach workbench-libs-dxtn_CXXFILE,$(workbench-libs-dxtn_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(notdir $(basename $(workbench-libs-dxtn_CXXFILE)))),$(workbench-libs-dxtn_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-libs-dxtn_OBJC_NARCHFILES),)
+
+ifeq (,)
+workbench-libs-dxtn_MOBJC_SRCWILDCARD := %
+else
+workbench-libs-dxtn_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-dxtn_OBJDIR),)
+  workbench-libs-dxtn_MOBJC_TARGETS := $(addsuffix .o,$(workbench-libs-dxtn_OBJC_NARCHFILES))
+  workbench-libs-dxtn_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-libs-dxtn_OBJC_NARCHFILES))
+  workbench-libs-dxtn_MOBJC_WILDCARD := %
+else
+  workbench-libs-dxtn_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(workbench-libs-dxtn_OBJC_NARCHFILES)))
+  workbench-libs-dxtn_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(workbench-libs-dxtn_OBJC_NARCHFILES)))
+  workbench-libs-dxtn_MOBJC_WILDCARD := $(workbench-libs-dxtn_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-libs-dxtn_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  workbench-libs-dxtn_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-libs-dxtn_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-dxtn_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-libs-dxtn_MOBJC_DIRS := $(foreach dir, $(workbench-libs-dxtn_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-dxtn_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-libs-dxtn_MOBJC_DIRS),)
+    workbench-libs-dxtn_MOBJC_DIRS := $(shell echo $(workbench-libs-dxtn_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-libs-dxtn_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-libs-dxtn_CC := $(TARGET_CC)
+else
+  workbench-libs-dxtn_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-libs-dxtn_MOBJC_CPPFLAGS := $(workbench-libs-dxtn_CPPFLAGS)
+workbench-libs-dxtn_OBJCFLAGS := $(workbench-libs-dxtn_CFLAGS)
+workbench-libs-dxtn_OBJCFLAGS := $(workbench-libs-dxtn_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-libs-dxtn_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-libs-dxtn_OBJCFLAGS)))
+ifeq ($(workbench-libs-dxtn_DFLAGS),)
+  workbench-libs-dxtn_OBJCDFLAGS := $(workbench-libs-dxtn_CFLAGS)
+else
+  workbench-libs-dxtn_OBJCDFLAGS := $(workbench-libs-dxtn_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-libs-dxtn_LINK ?= $(strip $(workbench-libs-dxtn_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-libs-dxtn_STRIP ?= $(TARGET_STRIP)
+  workbench-libs-dxtn_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-libs-dxtn_CC) $(TARGET_SYSROOT))
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : workbench-libs-dxtn_MOBJC_CPPFLAGS:=$(strip $(workbench-libs-dxtn_MOBJC_CPPFLAGS) $(workbench-libs-dxtn_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : workbench-libs-dxtn_OBJCFLAGS:=$(strip $(workbench-libs-dxtn_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : workbench-libs-dxtn_OBJCDFLAGS:=$(workbench-libs-dxtn_OBJCDFLAGS)
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : workbench-libs-dxtn_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : workbench-libs-dxtn_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-libs-dxtn_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-libs-dxtn_STRIP ?= $(HOST_STRIP)
+  workbench-libs-dxtn_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : workbench-libs-dxtn_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-libs-dxtn_MOBJC_CPPFLAGS) $(workbench-libs-dxtn_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : workbench-libs-dxtn_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-dxtn_OBJCFLAGS))
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : workbench-libs-dxtn_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-dxtn_OBJCDFLAGS))
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : workbench-libs-dxtn_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : workbench-libs-dxtn_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-libs-dxtn_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-libs-dxtn_STRIP ?= $(ECHO) >/dev/null
+  workbench-libs-dxtn_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : workbench-libs-dxtn_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-libs-dxtn_MOBJC_CPPFLAGS) $(workbench-libs-dxtn_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : workbench-libs-dxtn_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-dxtn_OBJCFLAGS))
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : workbench-libs-dxtn_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-dxtn_OBJCDFLAGS))
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : workbench-libs-dxtn_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-libs-dxtn_MOBJC_TARGETS) $(workbench-libs-dxtn_MOBJC_DTARGETS) : workbench-libs-dxtn_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-dxtn_MOBJC_TARGETS) : CPPFLAGS := $(workbench-libs-dxtn_MOBJC_CPPFLAGS)
+$(workbench-libs-dxtn_MOBJC_TARGETS) : CFLAGS := $(workbench-libs-dxtn_OBJCFLAGS)
+$(workbench-libs-dxtn_MOBJC_TARGETS) : $(workbench-libs-dxtn_MOBJC_WILDCARD).o : $(workbench-libs-dxtn_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-dxtn_IQUOTE) $(dir $<) $(workbench-libs-dxtn_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_IQUOTE) . $(workbench-libs-dxtn_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-dxtn_IQUOTE) $(dir $<) $(workbench-libs-dxtn_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_IQUOTE) . $(workbench-libs-dxtn_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-dxtn_IQUOTE) $(dir $<) $(workbench-libs-dxtn_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_IQUOTE) . $(workbench-libs-dxtn_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-dxtn_MOBJC_DTARGETS) : $(workbench-libs-dxtn_MOBJC_WILDCARD).d : $(workbench-libs-dxtn_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-dxtn_OBJCDFLAGS) $(workbench-libs-dxtn_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-libs-dxtn_MC_SRCWILDCARD := %
+else
+workbench-libs-dxtn_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-dxtn_OBJDIR),)
+workbench-libs-dxtn_MC_TARGETS := $(addsuffix .o,$(workbench-libs-dxtn_CCFILES))
+workbench-libs-dxtn_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-dxtn_CCFILES))
+workbench-libs-dxtn_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-dxtn_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(notdir $(workbench-libs-dxtn_CCFILES))))
+    workbench-libs-dxtn_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(notdir $(workbench-libs-dxtn_CCFILES))))
+else
+ifeq (,)
+    workbench-libs-dxtn_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(workbench-libs-dxtn_CCFILES)))
+    workbench-libs-dxtn_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(workbench-libs-dxtn_CCFILES)))
+else
+    workbench-libs-dxtn_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-dxtn_CCFILES))))
+    workbench-libs-dxtn_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-dxtn_CCFILES))))
+endif
+endif
+workbench-libs-dxtn_MC_TGTWILDCARD := $(workbench-libs-dxtn_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-dxtn_CCFILES))
+
+# Be sure that all .c files are found
+workbench-libs-dxtn_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-dxtn_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-dxtn_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-dxtn_MC_DIRS := $(foreach dir, $(workbench-libs-dxtn_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-dxtn_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-dxtn_MC_DIRS),)
+    workbench-libs-dxtn_MC_DIRS := $(shell echo $(workbench-libs-dxtn_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-dxtn_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-dxtn_MC_CPPFLAGS := $(workbench-libs-dxtn_CPPFLAGS)
+workbench-libs-dxtn_CFLAGS := $(workbench-libs-dxtn_CFLAGS)
+ifeq ($(workbench-libs-dxtn_DFLAGS),)
+  workbench-libs-dxtn_DFLAGS := $(workbench-libs-dxtn_CFLAGS)
+else
+  workbench-libs-dxtn_DFLAGS := $(workbench-libs-dxtn_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-dxtn_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-dxtn_STRIP ?= $(TARGET_STRIP)
+workbench-libs-dxtn_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_MC_CPPFLAGS:=$(strip $(workbench-libs-dxtn_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_CFLAGS:=$(strip $(workbench-libs-dxtn_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_DFLAGS:=$(workbench-libs-dxtn_DFLAGS)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-dxtn_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-dxtn_STRIP ?= $(HOST_STRIP)
+workbench-libs-dxtn_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-dxtn_CFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-dxtn_DFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-dxtn_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-dxtn_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-dxtn_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-dxtn_CFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-dxtn_DFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-dxtn_MC_TARGETS) : CPPFLAGS := $(workbench-libs-dxtn_MC_CPPFLAGS)
+$(workbench-libs-dxtn_MC_TARGETS) : CFLAGS := $(workbench-libs-dxtn_CFLAGS)
+$(workbench-libs-dxtn_MC_TARGETS) : $(workbench-libs-dxtn_MC_TGTWILDCARD).o : $(workbench-libs-dxtn_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-dxtn_IQUOTE) $(dir $<) $(workbench-libs-dxtn_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_IQUOTE) . $(workbench-libs-dxtn_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-dxtn_IQUOTE) $(dir $<) $(workbench-libs-dxtn_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_IQUOTE) . $(workbench-libs-dxtn_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-dxtn_IQUOTE) $(dir $<) $(workbench-libs-dxtn_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_IQUOTE) . $(workbench-libs-dxtn_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-dxtn_MC_DTARGETS) : $(workbench-libs-dxtn_MC_TGTWILDCARD).d : $(workbench-libs-dxtn_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-dxtn_DFLAGS) $(workbench-libs-dxtn_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+workbench-libs-dxtn_MC_SRCWILDCARD := %
+else
+workbench-libs-dxtn_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-dxtn_OBJDIR),)
+workbench-libs-dxtn_MC_TARGETS := $(addsuffix .o,$(workbench-libs-dxtn_TARGETCCFILES))
+workbench-libs-dxtn_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-dxtn_TARGETCCFILES))
+workbench-libs-dxtn_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-dxtn_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(notdir $(workbench-libs-dxtn_TARGETCCFILES))))
+    workbench-libs-dxtn_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(notdir $(workbench-libs-dxtn_TARGETCCFILES))))
+else
+ifeq (,)
+    workbench-libs-dxtn_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(workbench-libs-dxtn_TARGETCCFILES)))
+    workbench-libs-dxtn_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(workbench-libs-dxtn_TARGETCCFILES)))
+else
+    workbench-libs-dxtn_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-dxtn_TARGETCCFILES))))
+    workbench-libs-dxtn_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-dxtn_TARGETCCFILES))))
+endif
+endif
+workbench-libs-dxtn_MC_TGTWILDCARD := $(workbench-libs-dxtn_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-dxtn_TARGETCCFILES))
+
+# Be sure that all .c files are found
+workbench-libs-dxtn_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-dxtn_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-dxtn_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-dxtn_MC_DIRS := $(foreach dir, $(workbench-libs-dxtn_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-dxtn_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-dxtn_MC_DIRS),)
+    workbench-libs-dxtn_MC_DIRS := $(shell echo $(workbench-libs-dxtn_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-dxtn_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-dxtn_MC_CPPFLAGS := $(workbench-libs-dxtn_CPPFLAGS) -D__AROS__
+workbench-libs-dxtn_CFLAGS := $(workbench-libs-dxtn_CFLAGS)
+ifeq ($(workbench-libs-dxtn_DFLAGS),)
+  workbench-libs-dxtn_DFLAGS := $(workbench-libs-dxtn_CFLAGS)
+else
+  workbench-libs-dxtn_DFLAGS := $(workbench-libs-dxtn_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-dxtn_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-dxtn_STRIP ?= $(TARGET_STRIP)
+workbench-libs-dxtn_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_MC_CPPFLAGS:=$(strip $(workbench-libs-dxtn_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_CFLAGS:=$(strip $(workbench-libs-dxtn_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_DFLAGS:=$(workbench-libs-dxtn_DFLAGS)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-dxtn_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-dxtn_STRIP ?= $(HOST_STRIP)
+workbench-libs-dxtn_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-dxtn_CFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-dxtn_DFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-dxtn_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-dxtn_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-dxtn_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-dxtn_CFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-dxtn_DFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-dxtn_MC_TARGETS) : CPPFLAGS := $(workbench-libs-dxtn_MC_CPPFLAGS)
+$(workbench-libs-dxtn_MC_TARGETS) : CFLAGS := $(workbench-libs-dxtn_CFLAGS)
+$(workbench-libs-dxtn_MC_TARGETS) : $(workbench-libs-dxtn_MC_TGTWILDCARD).o : $(workbench-libs-dxtn_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-dxtn_IQUOTE) $(dir $<) $(workbench-libs-dxtn_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_IQUOTE) . $(workbench-libs-dxtn_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-dxtn_IQUOTE) $(dir $<) $(workbench-libs-dxtn_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_IQUOTE) . $(workbench-libs-dxtn_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-dxtn_IQUOTE) $(dir $<) $(workbench-libs-dxtn_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_IQUOTE) . $(workbench-libs-dxtn_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-dxtn_MC_DTARGETS) : $(workbench-libs-dxtn_MC_TGTWILDCARD).d : $(workbench-libs-dxtn_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-dxtn_DFLAGS) $(workbench-libs-dxtn_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+workbench-libs-dxtn_MC_SRCWILDCARD := %
+else
+workbench-libs-dxtn_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-dxtn_OBJDIR)/linklib,)
+workbench-libs-dxtn_MC_TARGETS := $(addsuffix .o,$(workbench-libs-dxtn_NLIBARCHFILES))
+workbench-libs-dxtn_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-dxtn_NLIBARCHFILES))
+workbench-libs-dxtn_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-dxtn_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$(notdir $(workbench-libs-dxtn_NLIBARCHFILES))))
+    workbench-libs-dxtn_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$(notdir $(workbench-libs-dxtn_NLIBARCHFILES))))
+else
+ifeq (,)
+    workbench-libs-dxtn_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$(workbench-libs-dxtn_NLIBARCHFILES)))
+    workbench-libs-dxtn_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$(workbench-libs-dxtn_NLIBARCHFILES)))
+else
+    workbench-libs-dxtn_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$(patsubst /%,%,$(workbench-libs-dxtn_NLIBARCHFILES))))
+    workbench-libs-dxtn_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$(patsubst /%,%,$(workbench-libs-dxtn_NLIBARCHFILES))))
+endif
+endif
+workbench-libs-dxtn_MC_TGTWILDCARD := $(workbench-libs-dxtn_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-dxtn_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+workbench-libs-dxtn_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-dxtn_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-dxtn_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-dxtn_MC_DIRS := $(foreach dir, $(workbench-libs-dxtn_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-dxtn_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-dxtn_MC_DIRS),)
+    workbench-libs-dxtn_MC_DIRS := $(shell echo $(workbench-libs-dxtn_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-dxtn_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-dxtn_MC_CPPFLAGS := $(workbench-libs-dxtn_LINKLIBCPPFLAGS) -D__AROS__
+workbench-libs-dxtn_CFLAGS := $(workbench-libs-dxtn_LINKLIBCFLAGS)
+ifeq ($(workbench-libs-dxtn_LINKLIBDFLAGS),)
+  workbench-libs-dxtn_DFLAGS := $(workbench-libs-dxtn_LINKLIBCFLAGS)
+else
+  workbench-libs-dxtn_DFLAGS := $(workbench-libs-dxtn_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-dxtn_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-dxtn_STRIP ?= $(TARGET_STRIP)
+workbench-libs-dxtn_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_MC_CPPFLAGS:=$(strip $(workbench-libs-dxtn_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_CFLAGS:=$(strip $(workbench-libs-dxtn_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_DFLAGS:=$(workbench-libs-dxtn_DFLAGS)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-dxtn_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-dxtn_STRIP ?= $(HOST_STRIP)
+workbench-libs-dxtn_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-dxtn_CFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-dxtn_DFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-dxtn_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-dxtn_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-dxtn_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-dxtn_CFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-dxtn_DFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-dxtn_MC_TARGETS) : CPPFLAGS := $(workbench-libs-dxtn_MC_CPPFLAGS)
+$(workbench-libs-dxtn_MC_TARGETS) : CFLAGS := $(workbench-libs-dxtn_CFLAGS)
+$(workbench-libs-dxtn_MC_TARGETS) : $(workbench-libs-dxtn_MC_TGTWILDCARD).o : $(workbench-libs-dxtn_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-dxtn_IQUOTE) $(dir $<) $(workbench-libs-dxtn_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_IQUOTE) . $(workbench-libs-dxtn_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-dxtn_IQUOTE) $(dir $<) $(workbench-libs-dxtn_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_IQUOTE) . $(workbench-libs-dxtn_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-dxtn_IQUOTE) $(dir $<) $(workbench-libs-dxtn_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_IQUOTE) . $(workbench-libs-dxtn_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-dxtn_MC_DTARGETS) : $(workbench-libs-dxtn_MC_TGTWILDCARD).d : $(workbench-libs-dxtn_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-dxtn_DFLAGS) $(workbench-libs-dxtn_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-libs-dxtn_OBJDIR)/linklib,)
+workbench-libs-dxtn_MC_SRCWILDCARD := %
+else
+workbench-libs-dxtn_MC_SRCWILDCARD := $(workbench-libs-dxtn_OBJDIR)/linklib/%
+endif
+
+ifeq ($(workbench-libs-dxtn_OBJDIR)/linklib,)
+workbench-libs-dxtn_MC_TARGETS := $(addsuffix .o,$(workbench-libs-dxtn_LINKLIBCCGENFILES))
+workbench-libs-dxtn_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-dxtn_LINKLIBCCGENFILES))
+workbench-libs-dxtn_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-dxtn_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$(notdir $(workbench-libs-dxtn_LINKLIBCCGENFILES))))
+    workbench-libs-dxtn_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$(notdir $(workbench-libs-dxtn_LINKLIBCCGENFILES))))
+else
+ifeq ($(workbench-libs-dxtn_OBJDIR)/linklib,)
+    workbench-libs-dxtn_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$(workbench-libs-dxtn_LINKLIBCCGENFILES)))
+    workbench-libs-dxtn_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$(workbench-libs-dxtn_LINKLIBCCGENFILES)))
+else
+    workbench-libs-dxtn_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$(patsubst $(workbench-libs-dxtn_OBJDIR)/linklib/%,%,$(workbench-libs-dxtn_LINKLIBCCGENFILES))))
+    workbench-libs-dxtn_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$(patsubst $(workbench-libs-dxtn_OBJDIR)/linklib/%,%,$(workbench-libs-dxtn_LINKLIBCCGENFILES))))
+endif
+endif
+workbench-libs-dxtn_MC_TGTWILDCARD := $(workbench-libs-dxtn_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-dxtn_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+workbench-libs-dxtn_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-dxtn_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-dxtn_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-dxtn_MC_DIRS := $(foreach dir, $(workbench-libs-dxtn_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-dxtn_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-dxtn_MC_DIRS),)
+    workbench-libs-dxtn_MC_DIRS := $(shell echo $(workbench-libs-dxtn_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-dxtn_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-dxtn_MC_CPPFLAGS := $(workbench-libs-dxtn_LINKLIBCPPFLAGS) -D__AROS__
+workbench-libs-dxtn_CFLAGS := $(workbench-libs-dxtn_LINKLIBCFLAGS)
+ifeq ($(workbench-libs-dxtn_LINKLIBDFLAGS),)
+  workbench-libs-dxtn_DFLAGS := $(workbench-libs-dxtn_LINKLIBCFLAGS)
+else
+  workbench-libs-dxtn_DFLAGS := $(workbench-libs-dxtn_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-dxtn_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-dxtn_STRIP ?= $(TARGET_STRIP)
+workbench-libs-dxtn_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_MC_CPPFLAGS:=$(strip $(workbench-libs-dxtn_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_CFLAGS:=$(strip $(workbench-libs-dxtn_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_DFLAGS:=$(workbench-libs-dxtn_DFLAGS)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-dxtn_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-dxtn_STRIP ?= $(HOST_STRIP)
+workbench-libs-dxtn_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-dxtn_CFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-dxtn_DFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-dxtn_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-dxtn_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-dxtn_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_CPPFLAGS) $(workbench-libs-dxtn_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-dxtn_CFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-dxtn_DFLAGS))
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-dxtn_MC_TARGETS) $(workbench-libs-dxtn_MC_DTARGETS) : workbench-libs-dxtn_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-dxtn_MC_TARGETS) : CPPFLAGS := $(workbench-libs-dxtn_MC_CPPFLAGS)
+$(workbench-libs-dxtn_MC_TARGETS) : CFLAGS := $(workbench-libs-dxtn_CFLAGS)
+$(workbench-libs-dxtn_MC_TARGETS) : $(workbench-libs-dxtn_MC_TGTWILDCARD).o : $(workbench-libs-dxtn_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-dxtn_IQUOTE) $(dir $<) $(workbench-libs-dxtn_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_IQUOTE) . $(workbench-libs-dxtn_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-dxtn_IQUOTE) $(dir $<) $(workbench-libs-dxtn_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_IQUOTE) . $(workbench-libs-dxtn_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-dxtn_IQUOTE) $(dir $<) $(workbench-libs-dxtn_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-dxtn_IQUOTE) . $(workbench-libs-dxtn_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-dxtn_MC_DTARGETS) : $(workbench-libs-dxtn_MC_TGTWILDCARD).d : $(workbench-libs-dxtn_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-dxtn_DFLAGS) $(workbench-libs-dxtn_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(workbench-libs-dxtn_LINKLIBAFILES),)
+
+ifeq ($(workbench-libs-dxtn_OBJDIR)/linklib,)
+workbench-libs-dxtn-MA_TARGETS := $(addsuffix .o,$(workbench-libs-dxtn_LINKLIBAFILES) $(workbench-libs-dxtn_RELLINKLIBAFILES))
+workbench-libs-dxtn-MA_WILDCARD := %
+else
+workbench-libs-dxtn-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$(notdir $(workbench-libs-dxtn_LINKLIBAFILES) $(workbench-libs-dxtn_RELLINKLIBAFILES))))
+workbench-libs-dxtn-MA_WILDCARD := $(workbench-libs-dxtn_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(workbench-libs-dxtn-MA_TARGETS) : | $(addsuffix .S,$(workbench-libs-dxtn_LINKLIBAFILES) $(workbench-libs-dxtn_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+workbench-libs-dxtn-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-dxtn-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-dxtn_LINKLIBAFILES) $(workbench-libs-dxtn_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-dxtn-MA_DIRS := $(foreach dir, $(workbench-libs-dxtn-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-dxtn-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-dxtn-MA_DIRS),)
+    workbench-libs-dxtn-MA_DIRS := $(shell echo $(workbench-libs-dxtn-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(workbench-libs-dxtn-MA_DIRS)
+endif
+
+endif
+
+workbench-libs-dxtn-MA_ASSEMBLER ?= $(workbench-libs-dxtn_ASSEMBLER)
+
+$(workbench-libs-dxtn-MA_TARGETS) : workbench-libs-dxtn-MA_CMD:= $(workbench-libs-dxtn-MA_ASSEMBLER)
+
+$(workbench-libs-dxtn-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(workbench-libs-dxtn-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(workbench-libs-dxtn-MA_TARGETS) : $(workbench-libs-dxtn-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-libs-dxtn-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-libs-dxtn-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-libs-dxtn-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+workbench-libs-dxtn_SUFFIX           := library
+else
+workbench-libs-dxtn_SUFFIX           := 
+endif
+
+ifeq (target,target)
+workbench-libs-dxtn_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-libs-dxtn_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-libs-dxtn_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(workbench-libs-dxtn_SUFFIX),handler)
+workbench-libs-dxtn_MODULE           := $(AROSDIR)/$(workbench-libs-dxtn_MODDIR)/$(workbench-libs-dxtn_DEFNAME)-$(workbench-libs-dxtn_SUFFIX)
+else
+workbench-libs-dxtn_MODULE           := $(AROSDIR)/$(workbench-libs-dxtn_MODDIR)/$(workbench-libs-dxtn_DEFNAME).$(workbench-libs-dxtn_SUFFIX)
+endif
+workbench-libs-dxtn_KOBJ             := $(KOBJSDIR)/$(workbench-libs-dxtn_DEFNAME)_$(workbench-libs-dxtn_SUFFIX).o
+else
+workbench-libs-dxtn_MODULE           :=
+workbench-libs-dxtn_KOBJ             :=
+endif
+
+workbench-libs-dxtn-quick      : workbench-libs-dxtn
+workbench-libs-dxtn            : $(workbench-libs-dxtn_MODULE) $(workbench-libs-dxtn_LINKLIB) $(workbench-libs-dxtn_RELLINKLIB)
+ifeq (,M)
+workbench-libs-dxtn-kobj       : $(workbench-libs-dxtn_KOBJ) $(workbench-libs-dxtn_LINKLIB) $(workbench-libs-dxtn_RELLINKLIB)
+workbench-libs-dxtn-kobj-quick : $(workbench-libs-dxtn_KOBJ) $(workbench-libs-dxtn_LINKLIB) $(workbench-libs-dxtn_RELLINKLIB)
+endif
+ifeq (M,M)
+workbench-libs-dxtn-linklib    : $(workbench-libs-dxtn_LINKLIB) $(workbench-libs-dxtn_RELLINKLIB)
+endif
+
+workbench-libs-dxtn_OBJS := $(addsuffix .o,$(workbench-libs-dxtn_STARTFILES)) $(workbench-libs-dxtn_ARCHOBJS) \
+           $(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(notdir $(workbench-libs-dxtn_C_NARCHFILES:=.o) $(workbench-libs-dxtn_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (library,handler)
+workbench-libs-dxtn_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (dxtn,con)
+    workbench-libs-dxtn_ERR          := $(notdir $(workbench-libs-dxtn_MODULE)).err
+else
+    workbench-libs-dxtn_ERR          := dxtn.err
+endif
+
+ifeq (,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(workbench-libs-dxtn_DEFNAME)_LDFLAGS) $(workbench-libs-dxtn_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-libs-dxtn_LIBS) $($(workbench-libs-dxtn_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(workbench-libs-dxtn_MODULE) : LIB_NAMES := $(workbench-libs-dxtn_LIBS) $($(workbench-libs-dxtn_DEFNAME)_LIBS)
+$(workbench-libs-dxtn_MODULE) : OBJS := $(workbench-libs-dxtn_STARTOBJS) $(workbench-libs-dxtn_OBJS) $(USER_OBJS)
+$(workbench-libs-dxtn_MODULE) : ENDTAG := $(workbench-libs-dxtn_ENDOBJS)
+$(workbench-libs-dxtn_MODULE) : ERR := $(workbench-libs-dxtn_ERR)
+$(workbench-libs-dxtn_MODULE) : OBJDIR := $(workbench-libs-dxtn_OBJDIR)
+$(workbench-libs-dxtn_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(workbench-libs-dxtn_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(workbench-libs-dxtn_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(workbench-libs-dxtn_MODULE) : $(workbench-libs-dxtn_STARTOBJS) $(workbench-libs-dxtn_OBJS) $(USER_OBJS) $(workbench-libs-dxtn_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(workbench-libs-dxtn_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(workbench-libs-dxtn_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+workbench-libs-dxtn_LC_LINKLIBNAME   := $(shell echo $(workbench-libs-dxtn_LINKLIBNAME) | tr A-Z a-z)
+workbench-libs-dxtn_LC_MODNAME       := $(shell echo dxtn | tr A-Z a-z)
+ifneq ($(workbench-libs-dxtn_LINKLIB),)
+
+ifeq (target,target)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_LINKLIBNAME)$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_AR:=$(AR)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_LINKLIBNAME)$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_LINKLIBNAME)$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_AR:=$(HOST_AR)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_LINKLIBNAME)$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_LINKLIBNAME)$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_AR:=$(KERNEL_AR)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_LINKLIBNAME)$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_LINKLIBNAME)$(workbench-libs-dxtn_LIBSUFFIX).a : $(workbench-libs-dxtn_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-libs-dxtn_AR) $@ $^
+	$(Q)$(workbench-libs-dxtn_RANLIB) $@
+ifneq ($(workbench-libs-dxtn_LC_MODNAME),$(workbench-libs-dxtn_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(workbench-libs-dxtn_LIBDIR)/libdxtn$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_AR:=$(AR)
+$(workbench-libs-dxtn_LIBDIR)/libdxtn$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-libs-dxtn_LIBDIR)/libdxtn$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_AR:=$(HOST_AR)
+$(workbench-libs-dxtn_LIBDIR)/libdxtn$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-libs-dxtn_LIBDIR)/libdxtn$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_AR:=$(KERNEL_AR)
+$(workbench-libs-dxtn_LIBDIR)/libdxtn$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-libs-dxtn_LIBDIR)/libdxtn$(workbench-libs-dxtn_LIBSUFFIX).a : $(workbench-libs-dxtn_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-libs-dxtn_AR) $@ $^
+	$(Q)$(workbench-libs-dxtn_RANLIB) $@
+endif
+
+
+ifneq ($(workbench-libs-dxtn_LINKLIB),)
+$(workbench-libs-dxtn_LINKLIB) : | $(workbench-libs-dxtn_LIBDIR)
+else
+$(workbench-libs-dxtn_LINKLIB) :: $(workbench-libs-dxtn_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-dxtn_LIBDIR)
+
+endif
+
+ifneq ($(workbench-libs-dxtn_RELLINKLIB),)
+
+ifeq (target,target)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_LINKLIBNAME)_rel$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_AR:=$(AR)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_LINKLIBNAME)_rel$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_LINKLIBNAME)_rel$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_AR:=$(HOST_AR)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_LINKLIBNAME)_rel$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_LINKLIBNAME)_rel$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_AR:=$(KERNEL_AR)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_LINKLIBNAME)_rel$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_LINKLIBNAME)_rel$(workbench-libs-dxtn_LIBSUFFIX).a : $(workbench-libs-dxtn_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-libs-dxtn_AR) $@ $^
+	$(Q)$(workbench-libs-dxtn_RANLIB) $@
+ifneq ($(workbench-libs-dxtn_LC_MODNAME),$(workbench-libs-dxtn_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_DEFNAME)_rel$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_AR:=$(AR)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_DEFNAME)_rel$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_DEFNAME)_rel$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_AR:=$(HOST_AR)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_DEFNAME)_rel$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_DEFNAME)_rel$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_AR:=$(KERNEL_AR)
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_DEFNAME)_rel$(workbench-libs-dxtn_LIBSUFFIX).a : workbench-libs-dxtn_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-libs-dxtn_LIBDIR)/lib$(workbench-libs-dxtn_DEFNAME)_rel$(workbench-libs-dxtn_LIBSUFFIX).a : $(workbench-libs-dxtn_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-libs-dxtn_AR) $@ $^
+	$(Q)$(workbench-libs-dxtn_RANLIB) $@
+endif
+
+
+ifneq ($(workbench-libs-dxtn_RELLINKLIB),)
+$(workbench-libs-dxtn_RELLINKLIB) : | $(workbench-libs-dxtn_LIBDIR)
+else
+$(workbench-libs-dxtn_RELLINKLIB) :: $(workbench-libs-dxtn_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-dxtn_LIBDIR)
+
+endif
+endif
+
+ifeq (,M)
+# Link kernel object file
+workbench-libs-dxtn_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+workbench-libs-dxtn_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+workbench-libs-dxtn_SYMBOLS := $(workbench-libs-dxtn_KBASE)
+
+workbench-libs-dxtn_KLIB             := hiddstubs amiga arossupport autoinit libinit
+workbench-libs-dxtn_KOBJ_LIBS        := $(filter-out $(workbench-libs-dxtn_KLIB),$(workbench-libs-dxtn_LIBS)) $(workbench-libs-dxtn_KAUTOLIB)
+$(workbench-libs-dxtn_KOBJ) : LINKLIBS:=$(workbench-libs-dxtn_KOBJ_LIBS) $($(workbench-libs-dxtn_DEFNAME)_LIBS)
+$(workbench-libs-dxtn_KOBJ) : FILTBASES:=$(addprefix -L ,$(workbench-libs-dxtn_SYMBOLS))
+$(workbench-libs-dxtn_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(workbench-libs-dxtn_KOBJ) : $(workbench-libs-dxtn_OBJS) $(USER_OBJS) $(workbench-libs-dxtn_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+workbench-libs-dxtn_DEPS             := $(addprefix $(workbench-libs-dxtn_OBJDIR)/,$(notdir $(workbench-libs-dxtn_CCFILES:=.d) $(workbench-libs-dxtn_TARGETCCFILES:=.d) $(workbench-libs-dxtn_CXXFILES:=.d))) $(addprefix $(workbench-libs-dxtn_OBJDIR)/linklib/,$(notdir $(workbench-libs-dxtn_LINKLIBCCFILES:=.d)))
+
+ifneq ($(workbench-libs-dxtn_DEPS),)
+  ifneq (workbench-libs-dxtn workbench-libs-dxtn-quick workbench-libs-dxtn-kobj workbench-libs-dxtn-kobj-quick,)
+    ifneq ($(findstring $(TARGET),workbench-libs-dxtn workbench-libs-dxtn-quick workbench-libs-dxtn-kobj workbench-libs-dxtn-kobj-quick),)
+      -include $(workbench-libs-dxtn_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-libs-dxtn_DEPS)
+    endif
+  endif
+endif
+
+$(workbench-libs-dxtn_OBJS) $(workbench-libs-dxtn_DEPS) : | $(workbench-libs-dxtn_OBJDIR)/linklib
+
+ifneq ($(workbench-libs-dxtn_OBJS) $(workbench-libs-dxtn_DEPS) $(workbench-libs-dxtn_MODULE) $(workbench-libs-dxtn_KOBJ),)
+$(workbench-libs-dxtn_OBJS) $(workbench-libs-dxtn_DEPS) $(workbench-libs-dxtn_MODULE) $(workbench-libs-dxtn_KOBJ) : | $(workbench-libs-dxtn_OBJDIR) $(AROSDIR)/$(workbench-libs-dxtn_MODDIR) $(KOBJSDIR)
+else
+$(workbench-libs-dxtn_OBJS) $(workbench-libs-dxtn_DEPS) $(workbench-libs-dxtn_MODULE) $(workbench-libs-dxtn_KOBJ) :: $(workbench-libs-dxtn_OBJDIR) $(AROSDIR)/$(workbench-libs-dxtn_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-dxtn_OBJDIR) $(AROSDIR)/$(workbench-libs-dxtn_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),workbench-libs-dxtn workbench-libs-dxtn-includes workbench-libs-dxtn-quick workbench-libs-dxtn-kobj workbench-libs-dxtn-kobj-quick),) # Only for this target these deps are wanted
+
+workbench-libs-dxtn_DFILE_DEPS := $(workbench-libs-dxtn_LIBDEFSINC) $(workbench-libs-dxtn_DEFLIBDEFSINC) \
+    $(addprefix $(workbench-libs-dxtn_INCDIR)/,$($(workbench-libs-dxtn_DEFNAME)_INCLUDES))
+$(workbench-libs-dxtn_DEPS) : $(workbench-libs-dxtn_DFILE_DEPS)
+endif
+
+workbench-libs-dxtn_TOCLEAN := $(workbench-libs-dxtn_OBJS) $(workbench-libs-dxtn_DEPS) \
+    $(workbench-libs-dxtn_MODULE) $(workbench-libs-dxtn_LINKLIB) $(workbench-libs-dxtn_KOBJ) \
+    $(workbench-libs-dxtn_OBJDIR)/Makefile.dxtnlibrary \
+    $(addprefix $(workbench-libs-dxtn_OBJDIR)/include/,$($(workbench-libs-dxtn_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(workbench-libs-dxtn_DEFNAME)_INCLUDES)) \
+    $(addprefix $(workbench-libs-dxtn_INCDIR)/,$($(workbench-libs-dxtn_DEFNAME)_INCLUDES)) \
+    $(workbench-libs-dxtn_OBJDIR)/dxtn_geninc $(workbench-libs-dxtn_OBJDIR)/dxtn_incs \
+    $(addsuffix .c,$(workbench-libs-dxtn_LINKLIBFILES)) $(workbench-libs-dxtn_LINKLIBOBJS) $(workbench-libs-dxtn_LIBDEFSINC) \
+    $(workbench-libs-dxtn_DEFLIBDEFSINC) $(addsuffix .c,$(workbench-libs-dxtn_STARTFILES) $(workbench-libs-dxtn_ENDFILES)) \
+    $(workbench-libs-dxtn_ENDOBJS)
+workbench-libs-dxtn-clean : FILES              := $(workbench-libs-dxtn_TOCLEAN)
+workbench-libs-dxtn-clean ::
+	$(Q)$(ECHO) "Cleaning up for module dxtn"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(workbench-libs-dxtn_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

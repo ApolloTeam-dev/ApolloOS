@@ -1,0 +1,635 @@
+#   $Id$
+#
+#   Makefile to make test boot module.
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES  := testboot
+EXEDIR := $(AROS_TESTS)/boot
+
+USER_CFLAGS  := -isystem $(SRCDIR)/arch/all-native/bootconsole/include
+USER_LDFLAGS := -L $(GENDIR)/lib
+
+#MM test-boot : linklibs-bootconsole
+
+
+.PHONY : test-boot
+
+test-boot_PROGNAME  := testboot
+test-boot_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-boot_TARGETDIR := $(EXEDIR)
+test-boot_LINKER    := 
+test-boot_LIBS := bootconsole
+# If not supplied, linker is equal to compiler
+ifeq ($(test-boot_LINKER),)
+    test-boot_LINKER := target
+endif
+
+ifneq ("$(strip $(FILES)   )","")
+    test-boot_FILES     := $(FILES)
+    test-boot_OBJCFILES := 
+    test-boot_ASMFILES  := 
+    test-boot_CXXFILES := 
+else
+    test-boot_FILES     := $(test-boot_PROGNAME)
+    test-boot_OBJCFILES :=
+    test-boot_ASMFILES  :=
+    test-boot_CXXFILES :=
+endif
+
+test-boot_ARCHOBJS   := $(wildcard $(test-boot_OBJDIR)/arch/*.o)
+test-boot_ARCHFILES  := $(basename $(notdir $(test-boot_ARCHOBJS)))
+test-boot_C_NARCHFILES := $(filter-out $(test-boot_ARCHFILES),$(test-boot_FILES))
+test-boot_CXX_NARCHFILES := $(filter-out $(test-boot_ARCHFILES),$(test-boot_CXXFILES))
+test-boot_OBJC_NARCHFILES := $(filter-out $(test-boot_ARCHFILES),$(test-boot_OBJCFILES))
+
+TMP_FILES := $(test-boot_C_NARCHFILES) $(test-boot_CXX_NARCHFILES) $(test-boot_ASMFILES) $(test-boot_OBJC_NARCHFILES)
+test-boot_OBJS := $(addsuffix .o,$(addprefix $(test-boot_OBJDIR)/,$(notdir $(TMP_FILES))))
+test-boot_DEPS := $(addsuffix .d,$(addprefix $(test-boot_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+test-boot_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+test-boot_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-boot_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+test-boot_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+test-boot_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+test-boot_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-boot_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+test-boot_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+test-boot_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+test-boot_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-boot_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+test-boot_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+test-boot_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+test-boot_LDFLAGS          := 
+endif
+
+test-boot_COVERAGE := no
+ifeq (target,target)
+ifeq (no,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-boot_COVERAGE := yes
+test-boot_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-boot_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-boot_CFLAGS    := $(strip $(test-boot_COVERAGEFLAGS) $(test-boot_CFLAGS))
+test-boot_CXXFLAGS := $(strip $(test-boot_COVERAGEFLAGS) $(test-boot_CXXFLAGS))
+test-boot_LIBS += $(test-boot_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-boot_FUNCINSTR := yes
+test-boot_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-boot_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-boot_CFLAGS    := $(strip $(test-boot_INSTRFUNCFLAGS) $(test-boot_CFLAGS))
+test-boot_CXXFLAGS := $(strip $(test-boot_INSTRFUNCFLAGS) $(test-boot_CXXFLAGS))
+test-boot_LIBS += $(test-boot_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-boot_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-boot_CFLAGS))
+test-boot_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(test-boot_CXXFLAGS))
+endif
+endif
+test-boot_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    test-boot_DFLAGS     := 
+else
+    test-boot_DFLAGS     := $(test-boot_CFLAGS)
+endif
+ifneq (,)
+    test-boot_DXXFLAGS     := 
+else
+    test-boot_DXXFLAGS     := $(test-boot_CXXFLAGS)
+endif
+ifeq (target,target)
+test-boot_LDFLAGS           := $(test-boot_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-boot_LDFLAGS           := $(test-boot_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-boot_LDFLAGS           := $(test-boot_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+test-boot_LDFLAGS   += -L
+endif
+
+#MM
+test-boot-quick : test-boot
+
+#MM test-boot : includes-generate-deps core-linklibs
+test-boot : $(test-boot_TARGETDIR)/$(test-boot_PROGNAME)
+
+ifneq ($(filter $(TARGET),test-boot test-boot-quick test-boot-gz-quick),)
+
+test-boot_CXXABSBASENAMES := $(foreach test-boot_CXXBASE,$(test-boot_CXX_NARCHFILES),$(if $(filter /%,$(test-boot_CXXBASE)),$(test-boot_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(test-boot_CXXBASE))))
+
+ifneq ($(test-boot_CXXABSBASENAMES),)
+
+test-boot_CXXBASENAMES := $(basename $(test-boot_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+test-boot_MCXX_FILES  := $(strip $(foreach test-boot_CXXBASE,$(test-boot_CXXABSBASENAMES), $(firstword $(wildcard $(foreach test-boot_EXT, $(AROS_CXXEXTS),$(addsuffix .$(test-boot_EXT),$(test-boot_CXXBASE)))))))
+
+ifeq (,)
+test-boot_MCXX_SRCWILDCARD := %
+else
+test-boot_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-boot_OBJDIR),)
+  test-boot_CXXTARGETS := $(notdir $(test-boot_CXXBASENAMES:=.o))
+  test-boot_CXXDTARGETS := $(notdir $(test-boot_CXXBASENAMES:=.d))
+  test-boot_MCXX_WILDCARD := %
+else
+  test-boot_CXXTARGETS := $(addprefix $(test-boot_OBJDIR)/,$(notdir $(test-boot_CXXBASENAMES:=.o)))
+  test-boot_CXXDTARGETS := $(addprefix $(test-boot_OBJDIR)/,$(notdir $(test-boot_CXXBASENAMES:=.d)))
+  test-boot_MCXX_WILDCARD := $(test-boot_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(test-boot_CXXTARGETS) $(test-boot_CXXDTARGETS) : | $(test-boot_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+test-boot_MCXX_CPPFLAGS := $(test-boot_CPPFLAGS)
+test-boot_CXXFLAGS := $(test-boot_CXXFLAGS)
+ifeq ($(test-boot_DXXFLAGS),)
+  test-boot_DXXFLAGS := $(test-boot_CXXFLAGS)
+else
+  test-boot_DXXFLAGS := $(test-boot_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  test-boot_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  test-boot_STRIP ?= $(HOST_STRIP)
+  test-boot_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  test-boot_CXXCMD:=$(HOST_CXX)
+  test-boot_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(test-boot_MCXX_CPPFLAGS) $(test-boot_MCXX_EXTRA_CPPFLAGS))
+  test-boot_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-boot_CXXFLAGS))
+  test-boot_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-boot_DXXFLAGS))
+  test-boot_CXXIQUOTE:=$(HOST_IQUOTE)
+  test-boot_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  test-boot_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-boot_STRIP ?= $(TARGET_STRIP)
+  test-boot_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  test-boot_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  test-boot_MCXX_CPPFLAGS := $(strip $(test-boot_MCXX_CPPFLAGS) $(test-boot_MCXX_EXTRA_CPPFLAGS))
+  test-boot_CXXFLAGS := $(strip $(test-boot_CXXFLAGS) $(SAFETY_CFLAGS))
+  test-boot_DXXFLAGS := $(test-boot_DXXFLAGS)
+  test-boot_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  test-boot_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  test-boot_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-boot_STRIP ?= $(ECHO) >/dev/null
+  test-boot_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  test-boot_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  test-boot_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(test-boot_MCXX_CPPFLAGS) $(test-boot_MCXX_EXTRA_CPPFLAGS))
+  test-boot_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-boot_CXXFLAGS))
+  test-boot_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-boot_DXXFLAGS))
+  test-boot_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  test-boot_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(test-boot_CXXCMD) $(test-boot_CXXIQUOTE) $(dir $(2)) $(test-boot_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-boot_CXXIQUOTE) . $(test-boot_CXXIQUOTE_END) $(strip $(test-boot_CXXFLAGS) $(test-boot_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(test-boot_CXXCMD) $(test-boot_CXXIQUOTE) $(dir $(2)) $(test-boot_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-boot_CXXIQUOTE) . $(test-boot_CXXIQUOTE_END) $(strip $(test-boot_CXXFLAGS) $(test-boot_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(test-boot_CXXCMD) $(test-boot_CXXIQUOTE) $(dir $(2)) $(test-boot_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-boot_CXXIQUOTE) . $(test-boot_CXXIQUOTE_END) $(strip $(test-boot_CXXFLAGS) $(test-boot_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(test-boot_CXXCMD)" $(MKDEPEND) $(strip $(test-boot_DXXFLAGS) $(test-boot_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(test-boot_OBJDIR),)
+  $(foreach test-boot_CXXFILE,$(test-boot_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(test-boot_CXXFILE))),$(test-boot_CXXFILE))))
+else
+  $(foreach test-boot_CXXFILE,$(test-boot_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(test-boot_OBJDIR)/,$(notdir $(basename $(test-boot_CXXFILE)))),$(test-boot_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(test-boot_OBJC_NARCHFILES),)
+
+ifeq (,)
+test-boot_MOBJC_SRCWILDCARD := %
+else
+test-boot_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-boot_OBJDIR),)
+  test-boot_MOBJC_TARGETS := $(addsuffix .o,$(test-boot_OBJC_NARCHFILES))
+  test-boot_MOBJC_DTARGETS := $(addsuffix .d,$(test-boot_OBJC_NARCHFILES))
+  test-boot_MOBJC_WILDCARD := %
+else
+  test-boot_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(test-boot_OBJDIR)/,$(test-boot_OBJC_NARCHFILES)))
+  test-boot_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(test-boot_OBJDIR)/,$(test-boot_OBJC_NARCHFILES)))
+  test-boot_MOBJC_WILDCARD := $(test-boot_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : | $(addsuffix .m,$(test-boot_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  test-boot_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  test-boot_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(test-boot_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  test-boot_MOBJC_DIRS := $(foreach dir, $(test-boot_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-boot_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(test-boot_MOBJC_DIRS),)
+    test-boot_MOBJC_DIRS := $(shell echo $(test-boot_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(test-boot_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  test-boot_CC := $(TARGET_CC)
+else
+  test-boot_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+test-boot_MOBJC_CPPFLAGS := $(test-boot_CPPFLAGS)
+test-boot_OBJCFLAGS := $(test-boot_CFLAGS)
+test-boot_OBJCFLAGS := $(test-boot_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+test-boot_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(test-boot_OBJCFLAGS)))
+ifeq ($(test-boot_DFLAGS),)
+  test-boot_OBJCDFLAGS := $(test-boot_CFLAGS)
+else
+  test-boot_OBJCDFLAGS := $(test-boot_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  test-boot_LINK ?= $(strip $(test-boot_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-boot_STRIP ?= $(TARGET_STRIP)
+  test-boot_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : CMD:=$(strip $(test-boot_CC) $(TARGET_SYSROOT))
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : test-boot_MOBJC_CPPFLAGS:=$(strip $(test-boot_MOBJC_CPPFLAGS) $(test-boot_MOBJC_EXTRA_CPPFLAGS))
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : test-boot_OBJCFLAGS:=$(strip $(test-boot_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : test-boot_OBJCDFLAGS:=$(test-boot_OBJCDFLAGS)
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : test-boot_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : test-boot_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  test-boot_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  test-boot_STRIP ?= $(HOST_STRIP)
+  test-boot_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : test-boot_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(test-boot_MOBJC_CPPFLAGS) $(test-boot_MOBJC_EXTRA_CPPFLAGS))
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : test-boot_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(test-boot_OBJCFLAGS))
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : test-boot_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(test-boot_OBJCDFLAGS))
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : test-boot_IQUOTE:=$(HOST_IQUOTE)
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : test-boot_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  test-boot_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-boot_STRIP ?= $(ECHO) >/dev/null
+  test-boot_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : test-boot_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(test-boot_MOBJC_CPPFLAGS) $(test-boot_MOBJC_EXTRA_CPPFLAGS))
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : test-boot_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-boot_OBJCFLAGS))
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : test-boot_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-boot_OBJCDFLAGS))
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : test-boot_IQUOTE:=$(KERNEL_IQUOTE)
+  $(test-boot_MOBJC_TARGETS) $(test-boot_MOBJC_DTARGETS) : test-boot_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-boot_MOBJC_TARGETS) : CPPFLAGS := $(test-boot_MOBJC_CPPFLAGS)
+$(test-boot_MOBJC_TARGETS) : CFLAGS := $(test-boot_OBJCFLAGS)
+$(test-boot_MOBJC_TARGETS) : $(test-boot_MOBJC_WILDCARD).o : $(test-boot_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-boot_IQUOTE) $(dir $<) $(test-boot_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-boot_IQUOTE) . $(test-boot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-boot_IQUOTE) $(dir $<) $(test-boot_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-boot_IQUOTE) . $(test-boot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-boot_IQUOTE) $(dir $<) $(test-boot_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-boot_IQUOTE) . $(test-boot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-boot_MOBJC_DTARGETS) : $(test-boot_MOBJC_WILDCARD).d : $(test-boot_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-boot_OBJCDFLAGS) $(test-boot_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+test-boot_MC_SRCWILDCARD := %
+else
+test-boot_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-boot_OBJDIR),)
+test-boot_MC_TARGETS := $(addsuffix .o,$(test-boot_C_NARCHFILES))
+test-boot_MC_DTARGETS := $(addsuffix .d,$(test-boot_C_NARCHFILES))
+test-boot_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-boot_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-boot_OBJDIR)/,$(notdir $(test-boot_C_NARCHFILES))))
+    test-boot_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-boot_OBJDIR)/,$(notdir $(test-boot_C_NARCHFILES))))
+else
+ifeq (,)
+    test-boot_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-boot_OBJDIR)/,$(test-boot_C_NARCHFILES)))
+    test-boot_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-boot_OBJDIR)/,$(test-boot_C_NARCHFILES)))
+else
+    test-boot_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-boot_OBJDIR)/,$(patsubst /%,%,$(test-boot_C_NARCHFILES))))
+    test-boot_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-boot_OBJDIR)/,$(patsubst /%,%,$(test-boot_C_NARCHFILES))))
+endif
+endif
+test-boot_MC_TGTWILDCARD := $(test-boot_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : | $(addsuffix .c,$(test-boot_C_NARCHFILES))
+
+# Be sure that all .c files are found
+test-boot_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-boot_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-boot_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+test-boot_MC_DIRS := $(foreach dir, $(test-boot_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-boot_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-boot_MC_DIRS),)
+    test-boot_MC_DIRS := $(shell echo $(test-boot_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-boot_MC_DIRS)
+endif
+
+endif
+
+test-boot_MC_CPPFLAGS := $(test-boot_CPPFLAGS)
+test-boot_CFLAGS := $(test-boot_CFLAGS)
+ifeq ($(test-boot_DFLAGS),)
+  test-boot_DFLAGS := $(test-boot_CFLAGS)
+else
+  test-boot_DFLAGS := $(test-boot_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-boot_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-boot_STRIP ?= $(TARGET_STRIP)
+test-boot_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : test-boot_MC_CPPFLAGS:=$(strip $(test-boot_MC_CPPFLAGS) $(test-boot_MC_EXTRA_CPPFLAGS))
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : test-boot_CFLAGS:=$(strip $(test-boot_CFLAGS) $(SAFETY_CFLAGS))
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : test-boot_DFLAGS:=$(test-boot_DFLAGS)
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : test-boot_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : test-boot_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-boot_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-boot_STRIP ?= $(HOST_STRIP)
+test-boot_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : test-boot_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-boot_MC_CPPFLAGS) $(test-boot_MC_EXTRA_CPPFLAGS))
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : test-boot_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-boot_CFLAGS))
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : test-boot_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-boot_DFLAGS))
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : test-boot_IQUOTE:=$(HOST_IQUOTE)
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : test-boot_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-boot_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-boot_STRIP ?= $(ECHO) >/dev/null
+test-boot_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : test-boot_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-boot_MC_CPPFLAGS) $(test-boot_MC_EXTRA_CPPFLAGS))
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : test-boot_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-boot_CFLAGS))
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : test-boot_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-boot_DFLAGS))
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : test-boot_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-boot_MC_TARGETS) $(test-boot_MC_DTARGETS) : test-boot_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-boot_MC_TARGETS) : CPPFLAGS := $(test-boot_MC_CPPFLAGS)
+$(test-boot_MC_TARGETS) : CFLAGS := $(test-boot_CFLAGS)
+$(test-boot_MC_TARGETS) : $(test-boot_MC_TGTWILDCARD).o : $(test-boot_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-boot_IQUOTE) $(dir $<) $(test-boot_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-boot_IQUOTE) . $(test-boot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-boot_IQUOTE) $(dir $<) $(test-boot_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-boot_IQUOTE) . $(test-boot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-boot_IQUOTE) $(dir $<) $(test-boot_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-boot_IQUOTE) . $(test-boot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-boot_MC_DTARGETS) : $(test-boot_MC_TGTWILDCARD).d : $(test-boot_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-boot_DFLAGS) $(test-boot_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(test-boot_OBJDIR),)
+test-boot-MA_TARGETS := $(addsuffix .o,$(test-boot_ASMFILES))
+test-boot-MA_WILDCARD := %
+else
+test-boot-MA_TARGETS := $(addsuffix .o,$(addprefix $(test-boot_OBJDIR)/,$(notdir $(test-boot_ASMFILES))))
+test-boot-MA_WILDCARD := $(test-boot_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(test-boot-MA_TARGETS) : | $(addsuffix .s,$(test-boot_ASMFILES))
+
+# Be sure that all .c files are found
+test-boot-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-boot-MA_BASEDIRS := $(shell echo $(sort $(dir $(test-boot_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+test-boot-MA_DIRS := $(foreach dir, $(test-boot-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-boot-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-boot-MA_DIRS),)
+    test-boot-MA_DIRS := $(shell echo $(test-boot-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(test-boot-MA_DIRS)
+endif
+
+endif
+
+test-boot-MA_ASSEMBLER ?= $(test-boot_ASSEMBLER)
+
+$(test-boot-MA_TARGETS) : test-boot-MA_CMD:= $(test-boot-MA_ASSEMBLER)
+
+$(test-boot-MA_TARGETS) : CPPFLAGS := $(test-boot_CPPFLAGS)
+$(test-boot-MA_TARGETS) : AFLAGS := $(test-boot_AFLAGS)
+$(test-boot-MA_TARGETS) : $(test-boot-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(test-boot-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(test-boot-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(test-boot-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+test-boot-link_EXTRA_LDFLAGS := 
+test-boot-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-boot-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (no,no)
+    test-boot-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-boot-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+test-boot-link_DIRS := $(subst -L ,-L,$(strip $(test-boot_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-boot-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-boot-link_DIRS)))
+# Add trailing /
+test-boot-link_DIRS := $(subst //,/,$(addsuffix /,$(test-boot-link_DIRS)))
+# Add normal linklib path
+test-boot-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-boot-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-boot_LIBS) $(test-boot-link_EXTRA_LIBS)))
+ifeq (no,yes)
+    test-boot-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    test-boot-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+test-boot-link_DEPLIBS := $(foreach lib,$(test-boot-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-boot-link_DIRS)))) \
+)
+
+$(test-boot_TARGETDIR)/$(test-boot_PROGNAME) : OBJDIR := $(test-boot_OBJDIR)
+$(test-boot_TARGETDIR)/$(test-boot_PROGNAME) : OBJS := $(test-boot_OBJS) $(test-boot_ARCHOBJS) $(USER_OBJS)
+$(test-boot_TARGETDIR)/$(test-boot_PROGNAME) : LDFLAGS := $(strip $(test-boot_LDFLAGS) $(test-boot-link_EXTRA_LDFLAGS))
+$(test-boot_TARGETDIR)/$(test-boot_PROGNAME) : LIBS := $(addprefix -l,$(test-boot_LIBS) $(test-boot-link_EXTRA_LIBS) )
+$(test-boot_TARGETDIR)/$(test-boot_PROGNAME) : $(test-boot_OBJS) $(test-boot_ARCHOBJS) $(USER_OBJS) $(test-boot-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-boot_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-boot_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-boot_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-boot_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-boot_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-boot_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-boot_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-boot_DEPS),)
+  ifneq (test-boot test-boot-quick,)
+    ifneq ($(findstring $(TARGET),test-boot test-boot-quick),)
+      -include $(test-boot_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-boot_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-boot_OBJS) $(test-boot_DEPS) $(test-boot_TARGETDIR)/$(test-boot_PROGNAME),)
+$(test-boot_OBJS) $(test-boot_DEPS) $(test-boot_TARGETDIR)/$(test-boot_PROGNAME) : | $(test-boot_OBJDIR) $(test-boot_TARGETDIR)
+else
+$(test-boot_OBJS) $(test-boot_DEPS) $(test-boot_TARGETDIR)/$(test-boot_PROGNAME) :: $(test-boot_OBJDIR) $(test-boot_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(test-boot_OBJDIR) $(test-boot_TARGETDIR)
+
+
+test-boot-clean : FILES := $(test-boot_OBJS) $(test-boot_TARGETDIR)/$(test-boot_PROGNAME) $(test-boot_DEPS)
+#MM
+test-boot-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-boot"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

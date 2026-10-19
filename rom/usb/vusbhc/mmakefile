@@ -1,0 +1,1662 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := vusbhci_device vusbhci_commands vusbhci_bridge
+
+NOWARN_FLAGS := $(NOWARN_UNUSED_VARIABLE) $(NOWARN_MAYBE_UNINITIALIZED)
+USER_CFLAGS := $(NOWARN_FLAGS)
+USER_INCLUDES := -isystem $(GENINCDIR) $(KERNEL_INCLUDES)
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-usb-vusbhci
+#MM kernel-usb-vusbhci-quick
+#MM kernel-usb-vusbhci-makefile
+#MM kernel-usb-vusbhci-clean
+
+# ABI targets:
+#MM- includes-all : kernel-usb-vusbhci-includes
+#MM- linklibs-vusbhci: kernel-usb-vusbhci-linklib
+#MM- linklibs-vusbhci_rel : kernel-usb-vusbhci-linklib
+#MM- includes-vusbhci: kernel-usb-vusbhci-includes
+#MM- includes-vusbhci_rel : kernel-usb-vusbhci-includes
+#MM- kernel-usb-vusbhci : kernel-usb-vusbhci-includes core-linklibs linklibs-stdc.static
+#MM kernel-usb-vusbhci-linklib : kernel-usb-vusbhci-includes includes-stdc.static
+#MM- kernel-usb-vusbhci-quick : kernel-usb-vusbhci-includes-quick
+#MM kernel-usb-vusbhci-includes : kernel-usb-vusbhci-makefile kernel-usb-vusbhci-includes-dirs \
+#MM     includes-generate-deps kernel-usb-vusbhci-fd
+#MM kernel-usb-vusbhci-includes-quick
+#MM kernel-usb-vusbhci-includes-dirs
+#MM kernel-usb-vusbhci-fd
+
+# Library targets
+#MM kernel-usb-vusbhci-kobj : core-linklibs linklibs-stdc.static
+#MM kernel-usb-vusbhci-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-usb-vusbhci-kobj : kernel-usb-vusbhci-includes core-linklibs linklibs-stdc.static
+#MM kernel-usb-vusbhci-kobj-quick : kernel-usb-vusbhci-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-usb-vusbhci_ALLTARGETS       := kernel-usb-vusbhci kernel-usb-vusbhci-quick kernel-usb-vusbhci-clean
+
+ifeq (M,M)
+kernel-usb-vusbhci_ALLTARGETS       += kernel-usb-vusbhci-kobj kernel-usb-vusbhci-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-usb-vusbhci_ALLTARGETS += kernel-usb-vusbhci-includes \
+                 kernel-usb-vusbhci-includes-quick kernel-usb-vusbhci-includes-dirs  \
+                 kernel-usb-vusbhci-linklib kernel-usb-vusbhci-fd
+endif
+
+.PHONY : $(kernel-usb-vusbhci_ALLTARGETS) kernel-usb-vusbhci-makefile
+
+ifeq (vusbhci,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (device,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-usb-vusbhci_DEFNAME      := vusbhci_
+else
+    kernel-usb-vusbhci_DEFNAME      := vusbhci
+endif
+kernel-usb-vusbhci_DEFLINKLIBNAME   := $(kernel-usb-vusbhci_DEFNAME)
+ifneq (,)
+    kernel-usb-vusbhci_LINKLIBNAME  := 
+else
+    kernel-usb-vusbhci_LINKLIBNAME  = $(kernel-usb-vusbhci_DEFLINKLIBNAME)
+endif
+kernel-usb-vusbhci_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-usb-vusbhci_DEFCPPFLAGS  += -I
+endif
+kernel-usb-vusbhci_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-usb-vusbhci_DFLAGS       := 
+else
+    kernel-usb-vusbhci_DFLAGS       = $(kernel-usb-vusbhci_DEFDFLAGS)
+endif
+kernel-usb-vusbhci_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-usb-vusbhci_DXXFLAGS     := 
+else
+    kernel-usb-vusbhci_DXXFLAGS     = $(kernel-usb-vusbhci_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-usb-vusbhci_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-usb-vusbhci_DEFDFLAGS))
+kernel-usb-vusbhci_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-usb-vusbhci_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-usb-vusbhci_FUNCINSTR := yes
+kernel-usb-vusbhci_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-usb-vusbhci_DEFDFLAGS))
+kernel-usb-vusbhci_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-usb-vusbhci_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-usb-vusbhci_OBJDIR                     := 
+else
+kernel-usb-vusbhci_OBJDIR                     := $(OBJDIR)/$(kernel-usb-vusbhci_DEFNAME)
+endif
+ifneq (,)
+kernel-usb-vusbhci_OBJDIR           := $(kernel-usb-vusbhci_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-usb-vusbhci-makefile         := $(kernel-usb-vusbhci_OBJDIR)/Makefile.$(kernel-usb-vusbhci_DEFNAME)device
+kernel-usb-vusbhci-genmakefile : $(kernel-usb-vusbhci-makefile)
+
+
+kernel-usb-vusbhci-genmakefile_OPTS := 
+ifneq (,)
+    kernel-usb-vusbhci-genmakefile_OPTS += -f 
+    kernel-usb-vusbhci-genmakefile_MODNAME := vusbhci_
+else
+    kernel-usb-vusbhci-genmakefile_MODNAME := vusbhci
+endif
+kernel-usb-vusbhci-genmakefile_TARGET := Makefile.$(kernel-usb-vusbhci-genmakefile_MODNAME)device
+kernel-usb-vusbhci-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-usb-vusbhci-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-usb-vusbhci-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-usb-vusbhci-genmakefile_OPTS += -c 
+        kernel-usb-vusbhci-genmakefile_DEPS += 
+    endif 
+else
+    kernel-usb-vusbhci-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/vusbhci.conf
+    kernel-usb-vusbhci-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/vusbhci.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-usb-vusbhci-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-usb-vusbhci-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-usb-vusbhci-genmakefile_OPTS += -o 
+        kernel-usb-vusbhci-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-usb-vusbhci-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-usb-vusbhci_OBJDIR),)
+    kernel-usb-vusbhci-genmakefile_OPTS += -d $(kernel-usb-vusbhci_OBJDIR)
+    kernel-usb-vusbhci-genmakefile_TARGET := $(kernel-usb-vusbhci_OBJDIR)/$(kernel-usb-vusbhci-genmakefile_TARGET)
+endif
+
+$(kernel-usb-vusbhci-genmakefile_TARGET) : OPTS := $(kernel-usb-vusbhci-genmakefile_OPTS)
+$(kernel-usb-vusbhci-genmakefile_TARGET) : MODNAME := vusbhci
+$(kernel-usb-vusbhci-genmakefile_TARGET) : MODTYPE := device
+$(kernel-usb-vusbhci-genmakefile_TARGET) : $(kernel-usb-vusbhci-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-usb-vusbhci-makefile),)
+$(kernel-usb-vusbhci-makefile) : | $(kernel-usb-vusbhci_OBJDIR)
+else
+$(kernel-usb-vusbhci-makefile) :: $(kernel-usb-vusbhci_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-usb-vusbhci_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-usb-vusbhci_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-usb-vusbhci-makefile)
+
+kernel-usb-vusbhci_DEFMODDIR        := $($(kernel-usb-vusbhci_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-usb-vusbhci_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-usb-vusbhci_DEFMODDIR)
+endif
+ifneq (Devs/USBHardware,)
+    kernel-usb-vusbhci_MODDIR       := Devs/USBHardware
+else
+    kernel-usb-vusbhci_MODDIR       := $(kernel-usb-vusbhci_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-usb-vusbhci_INCDIR           := 
+else
+kernel-usb-vusbhci_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-usb-vusbhci_LIBDEFSINC       := $(kernel-usb-vusbhci_OBJDIR)/include/$(kernel-usb-vusbhci_DEFNAME)_libdefs.h
+kernel-usb-vusbhci_DEFLIBDEFSINC    := $(kernel-usb-vusbhci_OBJDIR)/include/$(kernel-usb-vusbhci_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-usb-vusbhci-includes-quick : kernel-usb-vusbhci-includes
+kernel-usb-vusbhci-includes : $(addprefix $(GENINCDIR)/,$($(kernel-usb-vusbhci_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-usb-vusbhci_INCDIR)/,$($(kernel-usb-vusbhci_DEFNAME)_INCLUDES)) \
+    $(kernel-usb-vusbhci_LIBDEFSINC) $(kernel-usb-vusbhci_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-usb-vusbhci_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-usb-vusbhci-includes_MODNAME := vusbhci_
+else
+    kernel-usb-vusbhci-includes_MODNAME := vusbhci
+endif
+
+ifneq ($($(kernel-usb-vusbhci-includes_MODNAME)_INCLUDES),)
+
+kernel-usb-vusbhci-includes_TARGETS := $($(kernel-usb-vusbhci-includes_MODNAME)_INCLUDES)
+
+kernel-usb-vusbhci-includes_DEPS := $(GENMODULE)
+kernel-usb-vusbhci-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-usb-vusbhci-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-usb-vusbhci-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-usb-vusbhci-includes_OPTS += -c 
+        kernel-usb-vusbhci-includes_DEPS += 
+    endif 
+else
+    kernel-usb-vusbhci-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/vusbhci.conf
+    kernel-usb-vusbhci-includes_DEPS += $(SRCDIR)/$(CURDIR)/vusbhci.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-usb-vusbhci-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-usb-vusbhci-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-usb-vusbhci-includes_OPTS += -o 
+        kernel-usb-vusbhci-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-usb-vusbhci-includes_OPTS += -s 
+endif
+ifneq ($(kernel-usb-vusbhci_OBJDIR)/include,)
+    kernel-usb-vusbhci-includes_OPTS += -d $(kernel-usb-vusbhci_OBJDIR)/include
+    kernel-usb-vusbhci-includes_TARGETS := $(addprefix $(kernel-usb-vusbhci_OBJDIR)/include/,$(kernel-usb-vusbhci-includes_TARGETS))
+    kernel-usb-vusbhci-includes_GENINCFLAG=$(kernel-usb-vusbhci_OBJDIR)/include/.vusbhci.device-includes
+else
+    kernel-usb-vusbhci-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.vusbhci.device-includes
+endif
+
+$(kernel-usb-vusbhci-includes_TARGETS) : $(kernel-usb-vusbhci-includes_DEPS) $(kernel-usb-vusbhci-includes_GENINCFLAG)
+
+$(kernel-usb-vusbhci-includes_GENINCFLAG) : OPTS := $(kernel-usb-vusbhci-includes_OPTS)
+$(kernel-usb-vusbhci-includes_GENINCFLAG) : MODNAME := vusbhci
+$(kernel-usb-vusbhci-includes_GENINCFLAG) : MODTYPE := device
+$(kernel-usb-vusbhci-includes_GENINCFLAG) : $(kernel-usb-vusbhci-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-usb-vusbhci_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-usb-vusbhci_DEFNAME)_INCLUDES)) : | $(kernel-usb-vusbhci_OBJDIR)/vusbhci_geninc
+
+$(kernel-usb-vusbhci_OBJDIR)/vusbhci_geninc : COPYSRCDIR := $(kernel-usb-vusbhci_OBJDIR)/include
+$(kernel-usb-vusbhci_OBJDIR)/vusbhci_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-usb-vusbhci_OBJDIR)/vusbhci_geninc : FILES := $($(kernel-usb-vusbhci_DEFNAME)_INCLUDES)
+$(kernel-usb-vusbhci_OBJDIR)/vusbhci_geninc : $(addprefix $(kernel-usb-vusbhci_OBJDIR)/include/,$($(kernel-usb-vusbhci_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-usb-vusbhci_OBJDIR)/include
+
+$(addprefix $(kernel-usb-vusbhci_INCDIR)/,$($(kernel-usb-vusbhci_DEFNAME)_INCLUDES)) : | $(kernel-usb-vusbhci_OBJDIR)/vusbhci_incs
+
+$(kernel-usb-vusbhci_OBJDIR)/vusbhci_incs : COPYSRCDIR := $(kernel-usb-vusbhci_OBJDIR)/include
+$(kernel-usb-vusbhci_OBJDIR)/vusbhci_incs : TGTDIR := $(kernel-usb-vusbhci_INCDIR)
+$(kernel-usb-vusbhci_OBJDIR)/vusbhci_incs : FILES := $($(kernel-usb-vusbhci_DEFNAME)_INCLUDES)
+$(kernel-usb-vusbhci_OBJDIR)/vusbhci_incs : $(addprefix $(kernel-usb-vusbhci_OBJDIR)/include/,$($(kernel-usb-vusbhci_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-usb-vusbhci_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-usb-vusbhci_DEFNAME)_INCLUDES))))
+
+TMPvusbhci_INCDIRS := \
+    $(kernel-usb-vusbhci_OBJDIR)/include $(addprefix $(kernel-usb-vusbhci_OBJDIR)/include/,$(kernel-usb-vusbhci_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-usb-vusbhci_INCDIRS)) \
+    $(kernel-usb-vusbhci_INCDIR) $(addprefix $(kernel-usb-vusbhci_INCDIR)/,$(kernel-usb-vusbhci_INCDIRS))
+
+ifneq (kernel-usb-vusbhci-includes-dirs,)
+kernel-usb-vusbhci-includes-dirs : | $(TMPvusbhci_INCDIRS)
+else
+kernel-usb-vusbhci-includes-dirs :: $(TMPvusbhci_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPvusbhci_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-usb-vusbhci-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-usb-vusbhci-genlibdefs_OPTS += -f 
+    kernel-usb-vusbhci-genlibdefs_MODNAME := vusbhci_
+else
+    kernel-usb-vusbhci-genlibdefs_MODNAME := vusbhci
+endif
+kernel-usb-vusbhci-genlibdefs_TARGET := $(kernel-usb-vusbhci-genlibdefs_MODNAME)_libdefs.h
+kernel-usb-vusbhci-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-usb-vusbhci-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-usb-vusbhci-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-usb-vusbhci-genlibdefs_OPTS += -c 
+        kernel-usb-vusbhci-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-usb-vusbhci-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/vusbhci.conf
+    kernel-usb-vusbhci-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/vusbhci.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-usb-vusbhci-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-usb-vusbhci-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-usb-vusbhci-genlibdefs_OPTS += -o 
+        kernel-usb-vusbhci-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-usb-vusbhci-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-usb-vusbhci_OBJDIR)/include,)
+    kernel-usb-vusbhci-genlibdefs_OPTS += -d $(kernel-usb-vusbhci_OBJDIR)/include
+    kernel-usb-vusbhci-genlibdefs_TARGET := $(kernel-usb-vusbhci_OBJDIR)/include/$(kernel-usb-vusbhci-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-usb-vusbhci-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-usb-vusbhci-genlibdefs_TARGET) : OPTS := $(kernel-usb-vusbhci-genlibdefs_OPTS)
+$(kernel-usb-vusbhci-genlibdefs_TARGET) : MODNAME := vusbhci
+$(kernel-usb-vusbhci-genlibdefs_TARGET) : MODTYPE := device
+$(kernel-usb-vusbhci-genlibdefs_TARGET) : $(kernel-usb-vusbhci-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-usb-vusbhci_DEFLIBDEFSINC) : FILENAME := $(kernel-usb-vusbhci_LIBDEFSINC)
+$(kernel-usb-vusbhci_DEFLIBDEFSINC) : $(kernel-usb-vusbhci_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-usb-vusbhci_LIBDEFSINC) $(kernel-usb-vusbhci_DEFLIBDEFSINC) : | $(kernel-usb-vusbhci_OBJDIR)/include
+
+ifneq (kernel-usb-vusbhci-includes-dirs,)
+kernel-usb-vusbhci-includes-dirs : | $(kernel-usb-vusbhci_OBJDIR)/include
+else
+kernel-usb-vusbhci-includes-dirs :: $(kernel-usb-vusbhci_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-usb-vusbhci_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-usb-vusbhci-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-usb-vusbhci-genmodfiles_OPTS += -f 
+    kernel-usb-vusbhci-genmodfiles_MODNAME := vusbhci_
+else
+    kernel-usb-vusbhci-genmodfiles_MODNAME := vusbhci
+endif
+kernel-usb-vusbhci-genmodfiles_GENTARGETS := $($(kernel-usb-vusbhci-genmodfiles_MODNAME)_STARTFILES) $($(kernel-usb-vusbhci-genmodfiles_MODNAME)_ENDFILES)
+kernel-usb-vusbhci-genmodfiles_STUBTARGETS := $($(kernel-usb-vusbhci-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-usb-vusbhci-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-usb-vusbhci-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-usb-vusbhci-genmodfiles_GENTARGETS))
+kernel-usb-vusbhci-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-usb-vusbhci-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-usb-vusbhci-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-usb-vusbhci-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-usb-vusbhci-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-usb-vusbhci-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-usb-vusbhci-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-usb-vusbhci-genmodfiles_OPTS += -c 
+        kernel-usb-vusbhci-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-usb-vusbhci-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/vusbhci.conf
+    kernel-usb-vusbhci-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/vusbhci.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-usb-vusbhci-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-usb-vusbhci-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-usb-vusbhci-genmodfiles_OPTS += -o 
+        kernel-usb-vusbhci-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-usb-vusbhci-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-usb-vusbhci_OBJDIR),)
+    kernel-usb-vusbhci-genmodfiles_OPTS += -d $(kernel-usb-vusbhci_OBJDIR)
+    kernel-usb-vusbhci-genmodfiles_TARGETDIR := $(shell echo $(kernel-usb-vusbhci_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-usb-vusbhci-genmodfiles_GENTARGETS := $(addprefix $(kernel-usb-vusbhci-genmodfiles_TARGETDIR)/,$(kernel-usb-vusbhci-genmodfiles_GENTARGETS))
+    kernel-usb-vusbhci-genmodfiles_GENFILEFLAG=$(kernel-usb-vusbhci-genmodfiles_TARGETDIR)/.vusbhci.device-genfiles
+else
+    kernel-usb-vusbhci-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.vusbhci.device-genfiles
+endif
+ifneq ($(kernel-usb-vusbhci_OBJDIR)/linklib,)
+    kernel-usb-vusbhci-genmodfiles_OPTS += -l $(kernel-usb-vusbhci_OBJDIR)/linklib
+    kernel-usb-vusbhci-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-usb-vusbhci_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-usb-vusbhci-genmodfiles_STUBTARGETS := $(addprefix $(kernel-usb-vusbhci-genmodfiles_STUBTARGETDIR)/,$(kernel-usb-vusbhci-genmodfiles_STUBTARGETS))
+    kernel-usb-vusbhci-genmodfiles_TARGETDIRS += $(kernel-usb-vusbhci_OBJDIR)/linklib
+else
+ifneq ($(kernel-usb-vusbhci_OBJDIR),)
+    kernel-usb-vusbhci-genmodfiles_STUBTARGETS := $(addprefix $(kernel-usb-vusbhci-genmodfiles_TARGETDIR)/,$(kernel-usb-vusbhci-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-usb-vusbhci-genmodfiles_TARGETS := $(kernel-usb-vusbhci-genmodfiles_GENTARGETS) $(kernel-usb-vusbhci-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-usb-vusbhci-genmodfiles_TARGETDIRS),)
+$(kernel-usb-vusbhci-genmodfiles_TARGETS) : | $(kernel-usb-vusbhci-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-usb-vusbhci-genmodfiles_TARGETS) : $(kernel-usb-vusbhci-genmodfiles_DEPS) $(kernel-usb-vusbhci-genmodfiles_GENFILEFLAG)
+
+$(kernel-usb-vusbhci-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-usb-vusbhci-genmodfiles_OPTS)
+$(kernel-usb-vusbhci-genmodfiles_GENFILEFLAG) : MODNAME := vusbhci
+$(kernel-usb-vusbhci-genmodfiles_GENFILEFLAG) : MODTYPE := device
+$(kernel-usb-vusbhci-genmodfiles_GENFILEFLAG) : $(kernel-usb-vusbhci-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-usb-vusbhci-genmodfiles_GENFILEFLAG) : $(kernel-usb-vusbhci_DEFLIBDEFSINC) $(kernel-usb-vusbhci-makefile)
+
+
+ifneq ($(kernel-usb-vusbhci-genmodfiles_GENFILEFLAG),)
+$(kernel-usb-vusbhci-genmodfiles_GENFILEFLAG) : | $(kernel-usb-vusbhci_OBJDIR)/linklib
+else
+$(kernel-usb-vusbhci-genmodfiles_GENFILEFLAG) :: $(kernel-usb-vusbhci_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-usb-vusbhci_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-usb-vusbhci_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-usb-vusbhci_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-usb-vusbhci-fd : $(kernel-usb-vusbhci_FDDIR)/vusbhci_lib.fd
+
+
+TMP_TARGET := vusbhci_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/vusbhci.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/vusbhci.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-usb-vusbhci_FDDIR),)
+    TMP_OPTS += -d $(kernel-usb-vusbhci_FDDIR)
+    TMP_TARGET := $(kernel-usb-vusbhci_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := vusbhci
+$(TMP_TARGET) : MODTYPE := device
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-usb-vusbhci_FDDIR)/vusbhci_lib.fd : | $(kernel-usb-vusbhci_FDDIR)
+
+
+ifneq (kernel-usb-vusbhci-fd-setup,)
+kernel-usb-vusbhci-fd-setup : | $(kernel-usb-vusbhci_FDDIR)
+else
+kernel-usb-vusbhci-fd-setup :: $(kernel-usb-vusbhci_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-usb-vusbhci_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-usb-vusbhci_FILES            := $(FILES)
+kernel-usb-vusbhci_OBJCFILES        := 
+kernel-usb-vusbhci_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-usb-vusbhci_LIBFILES         := 
+kernel-usb-vusbhci_LIBS             := stdc.static
+
+kernel-usb-vusbhci_FDIRS            := $(sort $(dir $(kernel-usb-vusbhci_FILES)))
+
+kernel-usb-vusbhci_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-usb-vusbhci_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-usb-vusbhci_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-usb-vusbhci_FILTERARCH       = $(filter-out $(call kernel-usb-vusbhci_MATCHARCH,$(1),$(2)),$(2))
+kernel-usb-vusbhci_STARTFILES       := $(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$($(kernel-usb-vusbhci_DEFNAME)_STARTFILES))
+kernel-usb-vusbhci_ENDFILES         := $(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$($(kernel-usb-vusbhci_DEFNAME)_ENDFILES))
+
+kernel-usb-vusbhci_ARCHOBJS         := $(wildcard $(kernel-usb-vusbhci_OBJDIR)/arch/*.o)
+kernel-usb-vusbhci_LIBARCHOBJS      := $(wildcard $(kernel-usb-vusbhci_OBJDIR)/linklib/arch/*.o)
+kernel-usb-vusbhci_ARCHFILES        := $(basename $(notdir $(kernel-usb-vusbhci_ARCHOBJS)))
+kernel-usb-vusbhci_LIBARCHFILES     := $(basename $(notdir $(kernel-usb-vusbhci_LIBARCHOBJS)))
+kernel-usb-vusbhci_C_NARCHFILES     := $(call kernel-usb-vusbhci_FILTERARCH,$(kernel-usb-vusbhci_ARCHFILES),$(kernel-usb-vusbhci_FILES))
+kernel-usb-vusbhci_CXX_NARCHFILES   := $(call kernel-usb-vusbhci_FILTERARCH,$(kernel-usb-vusbhci_ARCHFILES),$(kernel-usb-vusbhci_CXXFILES))
+kernel-usb-vusbhci_OBJC_NARCHFILES  := $(call kernel-usb-vusbhci_FILTERARCH,$(kernel-usb-vusbhci_ARCHFILES),$(kernel-usb-vusbhci_OBJCFILES))
+kernel-usb-vusbhci_NLIBARCHFILES    := $(call kernel-usb-vusbhci_FILTERARCH,$(kernel-usb-vusbhci_LIBARCHFILES),$(kernel-usb-vusbhci_LIBFILES))
+kernel-usb-vusbhci_ARCHNLIBFILES    := $(call kernel-usb-vusbhci_FILTERARCH,$(kernel-usb-vusbhci_LIBFILES),$(kernel-usb-vusbhci_LIBARCHFILES))
+
+kernel-usb-vusbhci_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-usb-vusbhci_OBJDIR)/include -include $(kernel-usb-vusbhci_DEFLIBDEFSINC))
+ifneq (,)
+kernel-usb-vusbhci_CPPFLAGS         += -I
+endif
+kernel-usb-vusbhci_LINKLIBCPPFLAGS  := $(kernel-usb-vusbhci_CPPFLAGS)
+kernel-usb-vusbhci_CPPFLAGS         += $(strip $($(kernel-usb-vusbhci_DEFNAME)_CPPFLAGS))
+kernel-usb-vusbhci_LINKLIBCPPFLAGS  += $(strip $($(kernel-usb-vusbhci_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-usb-vusbhci_CFLAGS           := $(strip $(CFLAGS) $($(kernel-usb-vusbhci_DEFNAME)_CFLAGS))
+kernel-usb-vusbhci_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-usb-vusbhci_DEFNAME)_LINKLIBCFLAGS))
+kernel-usb-vusbhci_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-usb-vusbhci_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-usb-vusbhci_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-usb-vusbhci_CFLAGS           := $(strip $(kernel-usb-vusbhci_LTOFLAGS) $(kernel-usb-vusbhci_CFLAGS))
+kernel-usb-vusbhci_LINKLIBCFLAGS    := $(strip $(kernel-usb-vusbhci_LTOFLAGS) $(kernel-usb-vusbhci_LINKLIBCFLAGS))
+kernel-usb-vusbhci_CXXFLAGS         := $(strip $(kernel-usb-vusbhci_LTOFLAGS) $(kernel-usb-vusbhci_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-usb-vusbhci_SUBSTNULL        :=
+kernel-usb-vusbhci_SUBSTSPACE       := $(kernel-usb-vusbhci_SUBSTNULL) #
+kernel-usb-vusbhci_SUBSTCOMMA       := ,
+kernel-usb-vusbhci_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-usb-vusbhci_SUBSTSPACE),$(kernel-usb-vusbhci_SUBSTCOMMA),$(strip $($(kernel-usb-vusbhci_DEFNAME)_STARTFILES))))
+kernel-usb-vusbhci_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-usb-vusbhci_CFLAGS           := $(strip $(kernel-usb-vusbhci_INSTRFUNCFLAGS) $(kernel-usb-vusbhci_CFLAGS))
+kernel-usb-vusbhci_CXXFLAGS         := $(strip $(kernel-usb-vusbhci_INSTRFUNCFLAGS) $(kernel-usb-vusbhci_CXXFLAGS))
+kernel-usb-vusbhci_LIBS             += $(kernel-usb-vusbhci_INSTRFUNCLIBS)
+endif
+endif
+kernel-usb-vusbhci_DFLAGS           := $(strip $(kernel-usb-vusbhci_DFLAGS) $($(kernel-usb-vusbhci_DEFNAME)_DFLAGS))
+kernel-usb-vusbhci_LINKLIBDFLAGS    := $(strip $(kernel-usb-vusbhci_DFLAGS) $($(kernel-usb-vusbhci_DEFNAME)_LINKLIBDFLAGS))
+kernel-usb-vusbhci_DXXFLAGS         := $(strip $(kernel-usb-vusbhci_DXXFLAGS) $($(kernel-usb-vusbhci_DEFNAME)_DXXFLAGS))
+
+ifeq (device,library)
+    kernel-usb-vusbhci_LIBSUFFIX    := 
+else
+    kernel-usb-vusbhci_LIBSUFFIX    := .device
+endif
+
+ifeq (,)
+kernel-usb-vusbhci_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-usb-vusbhci_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-usb-vusbhci_LINKLIBCFILES    := $(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$($(kernel-usb-vusbhci_DEFNAME)_LINKLIBFILES))
+kernel-usb-vusbhci_LINKLIBAFILES    := $(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$($(kernel-usb-vusbhci_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-usb-vusbhci_DEFNAME)_LINKLIBFILES) $($(kernel-usb-vusbhci_DEFNAME)_LINKLIBAFILES)  $(kernel-usb-vusbhci_ARCHNLIBFILES)),)
+    kernel-usb-vusbhci_LINKLIB      :=
+else
+    kernel-usb-vusbhci_LINKLIB      := $(kernel-usb-vusbhci_LIBDIR)/libvusbhci$(kernel-usb-vusbhci_LIBSUFFIX).a
+    ifneq (vusbhci,$(kernel-usb-vusbhci_LINKLIBNAME))
+        kernel-usb-vusbhci_LINKLIB  += $(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_LINKLIBNAME)$(kernel-usb-vusbhci_LIBSUFFIX).a
+    endif
+endif
+kernel-usb-vusbhci_LINKLIBFILES     := $(kernel-usb-vusbhci_LINKLIBCFILES) $(kernel-usb-vusbhci_LINKLIBAFILES)
+
+kernel-usb-vusbhci_RELLINKLIBCFILES := $(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$($(kernel-usb-vusbhci_DEFNAME)_RELLINKLIBFILES))
+kernel-usb-vusbhci_RELLINKLIBAFILES := $(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$($(kernel-usb-vusbhci_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-usb-vusbhci_DEFNAME)_RELLINKLIBFILES) $($(kernel-usb-vusbhci_DEFNAME)_RELLINKLIBAFILES)  $(kernel-usb-vusbhci_ARCHNLIBFILES)),)
+    kernel-usb-vusbhci_RELLINKLIB   :=
+else
+    kernel-usb-vusbhci_RELLINKLIB   := $(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_DEFNAME)_rel$(kernel-usb-vusbhci_LIBSUFFIX).a
+    ifneq (vusbhci,$(kernel-usb-vusbhci_LINKLIBNAME))
+        kernel-usb-vusbhci_RELLINKLIB += $(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_LINKLIBNAME)_rel$(kernel-usb-vusbhci_LIBSUFFIX).a
+    endif
+endif
+kernel-usb-vusbhci_RELLINKLIBFILES  := $(kernel-usb-vusbhci_RELLINKLIBCFILES) $(kernel-usb-vusbhci_RELLINKLIBAFILES)
+endif
+
+kernel-usb-vusbhci_ENDOBJS          := $(addsuffix .o,$(kernel-usb-vusbhci_ENDFILES))
+kernel-usb-vusbhci_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$(notdir $(kernel-usb-vusbhci_NLIBARCHFILES))) $(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/arch/,$(notdir $(kernel-usb-vusbhci_ARCHNLIBFILES))) $(kernel-usb-vusbhci_LINKLIBFILES)) \
+                 
+kernel-usb-vusbhci_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$(notdir $(kernel-usb-vusbhci_NLIBARCHFILES))) $(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/arch/,$(notdir $(kernel-usb-vusbhci_ARCHNLIBFILES))) $(kernel-usb-vusbhci_RELLINKLIBFILES)) \
+                 
+$(kernel-usb-vusbhci_LINKLIBFILES) $(kernel-usb-vusbhci_RELLINKLIBFILES) : | $(kernel-usb-vusbhci_OBJDIR)/linklib
+$(kernel-usb-vusbhci_LINKLIBOBJS) $(kernel-usb-vusbhci_RELLINKLIBOBJS) : | $(kernel-usb-vusbhci_OBJDIR)/linklib
+
+kernel-usb-vusbhci_CCFILES := $(kernel-usb-vusbhci_C_NARCHFILES)
+kernel-usb-vusbhci_TARGETCCFILES    := $(strip $(kernel-usb-vusbhci_STARTFILES) $(kernel-usb-vusbhci_ENDFILES))
+kernel-usb-vusbhci_LINKLIBCCFILES   := $(strip $(kernel-usb-vusbhci_NLIBARCHFILES) $(kernel-usb-vusbhci_LINKLIBCFILES) $(kernel-usb-vusbhci_RELLINKLIBCFILES))
+kernel-usb-vusbhci_LINKLIBCCGENFILES := $(strip $(kernel-usb-vusbhci_LINKLIBCFILES) $(kernel-usb-vusbhci_RELLINKLIBCFILES))
+
+
+kernel-usb-vusbhci_CXXABSBASENAMES := $(foreach kernel-usb-vusbhci_CXXBASE,$(kernel-usb-vusbhci_CXX_NARCHFILES),$(if $(filter /%,$(kernel-usb-vusbhci_CXXBASE)),$(kernel-usb-vusbhci_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-usb-vusbhci_CXXBASE))))
+
+ifneq ($(kernel-usb-vusbhci_CXXABSBASENAMES),)
+
+kernel-usb-vusbhci_CXXBASENAMES := $(basename $(kernel-usb-vusbhci_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-usb-vusbhci_MCXX_FILES  := $(strip $(foreach kernel-usb-vusbhci_CXXBASE,$(kernel-usb-vusbhci_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-usb-vusbhci_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-usb-vusbhci_EXT),$(kernel-usb-vusbhci_CXXBASE)))))))
+
+ifeq (,)
+kernel-usb-vusbhci_MCXX_SRCWILDCARD := %
+else
+kernel-usb-vusbhci_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-usb-vusbhci_OBJDIR),)
+  kernel-usb-vusbhci_CXXTARGETS := $(notdir $(kernel-usb-vusbhci_CXXBASENAMES:=.o))
+  kernel-usb-vusbhci_CXXDTARGETS := $(notdir $(kernel-usb-vusbhci_CXXBASENAMES:=.d))
+  kernel-usb-vusbhci_MCXX_WILDCARD := %
+else
+  kernel-usb-vusbhci_CXXTARGETS := $(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(notdir $(kernel-usb-vusbhci_CXXBASENAMES:=.o)))
+  kernel-usb-vusbhci_CXXDTARGETS := $(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(notdir $(kernel-usb-vusbhci_CXXBASENAMES:=.d)))
+  kernel-usb-vusbhci_MCXX_WILDCARD := $(kernel-usb-vusbhci_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-usb-vusbhci_CXXTARGETS) $(kernel-usb-vusbhci_CXXDTARGETS) : | $(kernel-usb-vusbhci_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-usb-vusbhci_MCXX_CPPFLAGS := $(kernel-usb-vusbhci_CPPFLAGS)
+kernel-usb-vusbhci_CXXFLAGS := $(kernel-usb-vusbhci_CXXFLAGS)
+ifeq ($(kernel-usb-vusbhci_DXXFLAGS),)
+  kernel-usb-vusbhci_DXXFLAGS := $(kernel-usb-vusbhci_CXXFLAGS)
+else
+  kernel-usb-vusbhci_DXXFLAGS := $(kernel-usb-vusbhci_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-usb-vusbhci_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-usb-vusbhci_STRIP ?= $(HOST_STRIP)
+  kernel-usb-vusbhci_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-usb-vusbhci_CXXCMD:=$(HOST_CXX)
+  kernel-usb-vusbhci_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-usb-vusbhci_MCXX_CPPFLAGS) $(kernel-usb-vusbhci_MCXX_EXTRA_CPPFLAGS))
+  kernel-usb-vusbhci_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-usb-vusbhci_CXXFLAGS))
+  kernel-usb-vusbhci_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-usb-vusbhci_DXXFLAGS))
+  kernel-usb-vusbhci_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-usb-vusbhci_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-usb-vusbhci_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-usb-vusbhci_STRIP ?= $(TARGET_STRIP)
+  kernel-usb-vusbhci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-usb-vusbhci_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-usb-vusbhci_MCXX_CPPFLAGS := $(strip $(kernel-usb-vusbhci_MCXX_CPPFLAGS) $(kernel-usb-vusbhci_MCXX_EXTRA_CPPFLAGS))
+  kernel-usb-vusbhci_CXXFLAGS := $(strip $(kernel-usb-vusbhci_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-usb-vusbhci_DXXFLAGS := $(kernel-usb-vusbhci_DXXFLAGS)
+  kernel-usb-vusbhci_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-usb-vusbhci_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-usb-vusbhci_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-usb-vusbhci_STRIP ?= $(ECHO) >/dev/null
+  kernel-usb-vusbhci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-usb-vusbhci_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-usb-vusbhci_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-usb-vusbhci_MCXX_CPPFLAGS) $(kernel-usb-vusbhci_MCXX_EXTRA_CPPFLAGS))
+  kernel-usb-vusbhci_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-usb-vusbhci_CXXFLAGS))
+  kernel-usb-vusbhci_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-usb-vusbhci_DXXFLAGS))
+  kernel-usb-vusbhci_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-usb-vusbhci_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-usb-vusbhci_CXXCMD) $(kernel-usb-vusbhci_CXXIQUOTE) $(dir $(2)) $(kernel-usb-vusbhci_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_CXXIQUOTE) . $(kernel-usb-vusbhci_CXXIQUOTE_END) $(strip $(kernel-usb-vusbhci_CXXFLAGS) $(kernel-usb-vusbhci_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-usb-vusbhci_CXXCMD) $(kernel-usb-vusbhci_CXXIQUOTE) $(dir $(2)) $(kernel-usb-vusbhci_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_CXXIQUOTE) . $(kernel-usb-vusbhci_CXXIQUOTE_END) $(strip $(kernel-usb-vusbhci_CXXFLAGS) $(kernel-usb-vusbhci_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-usb-vusbhci_CXXCMD) $(kernel-usb-vusbhci_CXXIQUOTE) $(dir $(2)) $(kernel-usb-vusbhci_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_CXXIQUOTE) . $(kernel-usb-vusbhci_CXXIQUOTE_END) $(strip $(kernel-usb-vusbhci_CXXFLAGS) $(kernel-usb-vusbhci_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-usb-vusbhci_CXXCMD)" $(MKDEPEND) $(strip $(kernel-usb-vusbhci_DXXFLAGS) $(kernel-usb-vusbhci_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-usb-vusbhci_OBJDIR),)
+  $(foreach kernel-usb-vusbhci_CXXFILE,$(kernel-usb-vusbhci_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-usb-vusbhci_CXXFILE))),$(kernel-usb-vusbhci_CXXFILE))))
+else
+  $(foreach kernel-usb-vusbhci_CXXFILE,$(kernel-usb-vusbhci_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(notdir $(basename $(kernel-usb-vusbhci_CXXFILE)))),$(kernel-usb-vusbhci_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-usb-vusbhci_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-usb-vusbhci_MOBJC_SRCWILDCARD := %
+else
+kernel-usb-vusbhci_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-usb-vusbhci_OBJDIR),)
+  kernel-usb-vusbhci_MOBJC_TARGETS := $(addsuffix .o,$(kernel-usb-vusbhci_OBJC_NARCHFILES))
+  kernel-usb-vusbhci_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-usb-vusbhci_OBJC_NARCHFILES))
+  kernel-usb-vusbhci_MOBJC_WILDCARD := %
+else
+  kernel-usb-vusbhci_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(kernel-usb-vusbhci_OBJC_NARCHFILES)))
+  kernel-usb-vusbhci_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(kernel-usb-vusbhci_OBJC_NARCHFILES)))
+  kernel-usb-vusbhci_MOBJC_WILDCARD := $(kernel-usb-vusbhci_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-usb-vusbhci_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-usb-vusbhci_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-usb-vusbhci_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-usb-vusbhci_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-usb-vusbhci_MOBJC_DIRS := $(foreach dir, $(kernel-usb-vusbhci_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-usb-vusbhci_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-usb-vusbhci_MOBJC_DIRS),)
+    kernel-usb-vusbhci_MOBJC_DIRS := $(shell echo $(kernel-usb-vusbhci_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-usb-vusbhci_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-usb-vusbhci_CC := $(TARGET_CC)
+else
+  kernel-usb-vusbhci_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-usb-vusbhci_MOBJC_CPPFLAGS := $(kernel-usb-vusbhci_CPPFLAGS)
+kernel-usb-vusbhci_OBJCFLAGS := $(kernel-usb-vusbhci_CFLAGS)
+kernel-usb-vusbhci_OBJCFLAGS := $(kernel-usb-vusbhci_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-usb-vusbhci_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-usb-vusbhci_OBJCFLAGS)))
+ifeq ($(kernel-usb-vusbhci_DFLAGS),)
+  kernel-usb-vusbhci_OBJCDFLAGS := $(kernel-usb-vusbhci_CFLAGS)
+else
+  kernel-usb-vusbhci_OBJCDFLAGS := $(kernel-usb-vusbhci_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-usb-vusbhci_LINK ?= $(strip $(kernel-usb-vusbhci_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-usb-vusbhci_STRIP ?= $(TARGET_STRIP)
+  kernel-usb-vusbhci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-usb-vusbhci_CC) $(TARGET_SYSROOT))
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : kernel-usb-vusbhci_MOBJC_CPPFLAGS:=$(strip $(kernel-usb-vusbhci_MOBJC_CPPFLAGS) $(kernel-usb-vusbhci_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : kernel-usb-vusbhci_OBJCFLAGS:=$(strip $(kernel-usb-vusbhci_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : kernel-usb-vusbhci_OBJCDFLAGS:=$(kernel-usb-vusbhci_OBJCDFLAGS)
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : kernel-usb-vusbhci_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : kernel-usb-vusbhci_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-usb-vusbhci_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-usb-vusbhci_STRIP ?= $(HOST_STRIP)
+  kernel-usb-vusbhci_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : kernel-usb-vusbhci_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-usb-vusbhci_MOBJC_CPPFLAGS) $(kernel-usb-vusbhci_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : kernel-usb-vusbhci_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-vusbhci_OBJCFLAGS))
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : kernel-usb-vusbhci_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-vusbhci_OBJCDFLAGS))
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : kernel-usb-vusbhci_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : kernel-usb-vusbhci_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-usb-vusbhci_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-usb-vusbhci_STRIP ?= $(ECHO) >/dev/null
+  kernel-usb-vusbhci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : kernel-usb-vusbhci_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-usb-vusbhci_MOBJC_CPPFLAGS) $(kernel-usb-vusbhci_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : kernel-usb-vusbhci_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-vusbhci_OBJCFLAGS))
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : kernel-usb-vusbhci_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-vusbhci_OBJCDFLAGS))
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : kernel-usb-vusbhci_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-usb-vusbhci_MOBJC_TARGETS) $(kernel-usb-vusbhci_MOBJC_DTARGETS) : kernel-usb-vusbhci_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-usb-vusbhci_MOBJC_TARGETS) : CPPFLAGS := $(kernel-usb-vusbhci_MOBJC_CPPFLAGS)
+$(kernel-usb-vusbhci_MOBJC_TARGETS) : CFLAGS := $(kernel-usb-vusbhci_OBJCFLAGS)
+$(kernel-usb-vusbhci_MOBJC_TARGETS) : $(kernel-usb-vusbhci_MOBJC_WILDCARD).o : $(kernel-usb-vusbhci_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-usb-vusbhci_IQUOTE) $(dir $<) $(kernel-usb-vusbhci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_IQUOTE) . $(kernel-usb-vusbhci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-usb-vusbhci_IQUOTE) $(dir $<) $(kernel-usb-vusbhci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_IQUOTE) . $(kernel-usb-vusbhci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-usb-vusbhci_IQUOTE) $(dir $<) $(kernel-usb-vusbhci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_IQUOTE) . $(kernel-usb-vusbhci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-usb-vusbhci_MOBJC_DTARGETS) : $(kernel-usb-vusbhci_MOBJC_WILDCARD).d : $(kernel-usb-vusbhci_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-usb-vusbhci_OBJCDFLAGS) $(kernel-usb-vusbhci_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-usb-vusbhci_MC_SRCWILDCARD := %
+else
+kernel-usb-vusbhci_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-usb-vusbhci_OBJDIR),)
+kernel-usb-vusbhci_MC_TARGETS := $(addsuffix .o,$(kernel-usb-vusbhci_CCFILES))
+kernel-usb-vusbhci_MC_DTARGETS := $(addsuffix .d,$(kernel-usb-vusbhci_CCFILES))
+kernel-usb-vusbhci_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-usb-vusbhci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(notdir $(kernel-usb-vusbhci_CCFILES))))
+    kernel-usb-vusbhci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(notdir $(kernel-usb-vusbhci_CCFILES))))
+else
+ifeq (,)
+    kernel-usb-vusbhci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(kernel-usb-vusbhci_CCFILES)))
+    kernel-usb-vusbhci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(kernel-usb-vusbhci_CCFILES)))
+else
+    kernel-usb-vusbhci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(patsubst /%,%,$(kernel-usb-vusbhci_CCFILES))))
+    kernel-usb-vusbhci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(patsubst /%,%,$(kernel-usb-vusbhci_CCFILES))))
+endif
+endif
+kernel-usb-vusbhci_MC_TGTWILDCARD := $(kernel-usb-vusbhci_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : | $(addsuffix .c,$(kernel-usb-vusbhci_CCFILES))
+
+# Be sure that all .c files are found
+kernel-usb-vusbhci_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-usb-vusbhci_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-usb-vusbhci_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-usb-vusbhci_MC_DIRS := $(foreach dir, $(kernel-usb-vusbhci_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-usb-vusbhci_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-usb-vusbhci_MC_DIRS),)
+    kernel-usb-vusbhci_MC_DIRS := $(shell echo $(kernel-usb-vusbhci_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-usb-vusbhci_MC_DIRS)
+endif
+
+endif
+
+kernel-usb-vusbhci_MC_CPPFLAGS := $(kernel-usb-vusbhci_CPPFLAGS)
+kernel-usb-vusbhci_CFLAGS := $(kernel-usb-vusbhci_CFLAGS)
+ifeq ($(kernel-usb-vusbhci_DFLAGS),)
+  kernel-usb-vusbhci_DFLAGS := $(kernel-usb-vusbhci_CFLAGS)
+else
+  kernel-usb-vusbhci_DFLAGS := $(kernel-usb-vusbhci_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-usb-vusbhci_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-usb-vusbhci_STRIP ?= $(TARGET_STRIP)
+kernel-usb-vusbhci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_MC_CPPFLAGS:=$(strip $(kernel-usb-vusbhci_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_CFLAGS:=$(strip $(kernel-usb-vusbhci_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_DFLAGS:=$(kernel-usb-vusbhci_DFLAGS)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-usb-vusbhci_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-usb-vusbhci_STRIP ?= $(HOST_STRIP)
+kernel-usb-vusbhci_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-vusbhci_CFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-vusbhci_DFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-usb-vusbhci_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-usb-vusbhci_STRIP ?= $(ECHO) >/dev/null
+kernel-usb-vusbhci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-vusbhci_CFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-vusbhci_DFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-usb-vusbhci_MC_TARGETS) : CPPFLAGS := $(kernel-usb-vusbhci_MC_CPPFLAGS)
+$(kernel-usb-vusbhci_MC_TARGETS) : CFLAGS := $(kernel-usb-vusbhci_CFLAGS)
+$(kernel-usb-vusbhci_MC_TARGETS) : $(kernel-usb-vusbhci_MC_TGTWILDCARD).o : $(kernel-usb-vusbhci_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-usb-vusbhci_IQUOTE) $(dir $<) $(kernel-usb-vusbhci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_IQUOTE) . $(kernel-usb-vusbhci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-usb-vusbhci_IQUOTE) $(dir $<) $(kernel-usb-vusbhci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_IQUOTE) . $(kernel-usb-vusbhci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-usb-vusbhci_IQUOTE) $(dir $<) $(kernel-usb-vusbhci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_IQUOTE) . $(kernel-usb-vusbhci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-usb-vusbhci_MC_DTARGETS) : $(kernel-usb-vusbhci_MC_TGTWILDCARD).d : $(kernel-usb-vusbhci_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-usb-vusbhci_DFLAGS) $(kernel-usb-vusbhci_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-usb-vusbhci_MC_SRCWILDCARD := %
+else
+kernel-usb-vusbhci_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-usb-vusbhci_OBJDIR),)
+kernel-usb-vusbhci_MC_TARGETS := $(addsuffix .o,$(kernel-usb-vusbhci_TARGETCCFILES))
+kernel-usb-vusbhci_MC_DTARGETS := $(addsuffix .d,$(kernel-usb-vusbhci_TARGETCCFILES))
+kernel-usb-vusbhci_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-usb-vusbhci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(notdir $(kernel-usb-vusbhci_TARGETCCFILES))))
+    kernel-usb-vusbhci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(notdir $(kernel-usb-vusbhci_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-usb-vusbhci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(kernel-usb-vusbhci_TARGETCCFILES)))
+    kernel-usb-vusbhci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(kernel-usb-vusbhci_TARGETCCFILES)))
+else
+    kernel-usb-vusbhci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(patsubst /%,%,$(kernel-usb-vusbhci_TARGETCCFILES))))
+    kernel-usb-vusbhci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(patsubst /%,%,$(kernel-usb-vusbhci_TARGETCCFILES))))
+endif
+endif
+kernel-usb-vusbhci_MC_TGTWILDCARD := $(kernel-usb-vusbhci_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : | $(addsuffix .c,$(kernel-usb-vusbhci_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-usb-vusbhci_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-usb-vusbhci_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-usb-vusbhci_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-usb-vusbhci_MC_DIRS := $(foreach dir, $(kernel-usb-vusbhci_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-usb-vusbhci_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-usb-vusbhci_MC_DIRS),)
+    kernel-usb-vusbhci_MC_DIRS := $(shell echo $(kernel-usb-vusbhci_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-usb-vusbhci_MC_DIRS)
+endif
+
+endif
+
+kernel-usb-vusbhci_MC_CPPFLAGS := $(kernel-usb-vusbhci_CPPFLAGS) -D__AROS__
+kernel-usb-vusbhci_CFLAGS := $(kernel-usb-vusbhci_CFLAGS)
+ifeq ($(kernel-usb-vusbhci_DFLAGS),)
+  kernel-usb-vusbhci_DFLAGS := $(kernel-usb-vusbhci_CFLAGS)
+else
+  kernel-usb-vusbhci_DFLAGS := $(kernel-usb-vusbhci_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-usb-vusbhci_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-usb-vusbhci_STRIP ?= $(TARGET_STRIP)
+kernel-usb-vusbhci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_MC_CPPFLAGS:=$(strip $(kernel-usb-vusbhci_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_CFLAGS:=$(strip $(kernel-usb-vusbhci_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_DFLAGS:=$(kernel-usb-vusbhci_DFLAGS)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-usb-vusbhci_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-usb-vusbhci_STRIP ?= $(HOST_STRIP)
+kernel-usb-vusbhci_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-vusbhci_CFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-vusbhci_DFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-usb-vusbhci_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-usb-vusbhci_STRIP ?= $(ECHO) >/dev/null
+kernel-usb-vusbhci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-vusbhci_CFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-vusbhci_DFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-usb-vusbhci_MC_TARGETS) : CPPFLAGS := $(kernel-usb-vusbhci_MC_CPPFLAGS)
+$(kernel-usb-vusbhci_MC_TARGETS) : CFLAGS := $(kernel-usb-vusbhci_CFLAGS)
+$(kernel-usb-vusbhci_MC_TARGETS) : $(kernel-usb-vusbhci_MC_TGTWILDCARD).o : $(kernel-usb-vusbhci_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-usb-vusbhci_IQUOTE) $(dir $<) $(kernel-usb-vusbhci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_IQUOTE) . $(kernel-usb-vusbhci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-usb-vusbhci_IQUOTE) $(dir $<) $(kernel-usb-vusbhci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_IQUOTE) . $(kernel-usb-vusbhci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-usb-vusbhci_IQUOTE) $(dir $<) $(kernel-usb-vusbhci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_IQUOTE) . $(kernel-usb-vusbhci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-usb-vusbhci_MC_DTARGETS) : $(kernel-usb-vusbhci_MC_TGTWILDCARD).d : $(kernel-usb-vusbhci_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-usb-vusbhci_DFLAGS) $(kernel-usb-vusbhci_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-usb-vusbhci_MC_SRCWILDCARD := %
+else
+kernel-usb-vusbhci_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-usb-vusbhci_OBJDIR)/linklib,)
+kernel-usb-vusbhci_MC_TARGETS := $(addsuffix .o,$(kernel-usb-vusbhci_NLIBARCHFILES))
+kernel-usb-vusbhci_MC_DTARGETS := $(addsuffix .d,$(kernel-usb-vusbhci_NLIBARCHFILES))
+kernel-usb-vusbhci_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-usb-vusbhci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$(notdir $(kernel-usb-vusbhci_NLIBARCHFILES))))
+    kernel-usb-vusbhci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$(notdir $(kernel-usb-vusbhci_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-usb-vusbhci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$(kernel-usb-vusbhci_NLIBARCHFILES)))
+    kernel-usb-vusbhci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$(kernel-usb-vusbhci_NLIBARCHFILES)))
+else
+    kernel-usb-vusbhci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-usb-vusbhci_NLIBARCHFILES))))
+    kernel-usb-vusbhci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-usb-vusbhci_NLIBARCHFILES))))
+endif
+endif
+kernel-usb-vusbhci_MC_TGTWILDCARD := $(kernel-usb-vusbhci_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : | $(addsuffix .c,$(kernel-usb-vusbhci_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-usb-vusbhci_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-usb-vusbhci_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-usb-vusbhci_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-usb-vusbhci_MC_DIRS := $(foreach dir, $(kernel-usb-vusbhci_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-usb-vusbhci_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-usb-vusbhci_MC_DIRS),)
+    kernel-usb-vusbhci_MC_DIRS := $(shell echo $(kernel-usb-vusbhci_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-usb-vusbhci_MC_DIRS)
+endif
+
+endif
+
+kernel-usb-vusbhci_MC_CPPFLAGS := $(kernel-usb-vusbhci_LINKLIBCPPFLAGS) -D__AROS__
+kernel-usb-vusbhci_CFLAGS := $(kernel-usb-vusbhci_LINKLIBCFLAGS)
+ifeq ($(kernel-usb-vusbhci_LINKLIBDFLAGS),)
+  kernel-usb-vusbhci_DFLAGS := $(kernel-usb-vusbhci_LINKLIBCFLAGS)
+else
+  kernel-usb-vusbhci_DFLAGS := $(kernel-usb-vusbhci_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-usb-vusbhci_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-usb-vusbhci_STRIP ?= $(TARGET_STRIP)
+kernel-usb-vusbhci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_MC_CPPFLAGS:=$(strip $(kernel-usb-vusbhci_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_CFLAGS:=$(strip $(kernel-usb-vusbhci_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_DFLAGS:=$(kernel-usb-vusbhci_DFLAGS)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-usb-vusbhci_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-usb-vusbhci_STRIP ?= $(HOST_STRIP)
+kernel-usb-vusbhci_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-vusbhci_CFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-vusbhci_DFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-usb-vusbhci_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-usb-vusbhci_STRIP ?= $(ECHO) >/dev/null
+kernel-usb-vusbhci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-vusbhci_CFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-vusbhci_DFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-usb-vusbhci_MC_TARGETS) : CPPFLAGS := $(kernel-usb-vusbhci_MC_CPPFLAGS)
+$(kernel-usb-vusbhci_MC_TARGETS) : CFLAGS := $(kernel-usb-vusbhci_CFLAGS)
+$(kernel-usb-vusbhci_MC_TARGETS) : $(kernel-usb-vusbhci_MC_TGTWILDCARD).o : $(kernel-usb-vusbhci_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-usb-vusbhci_IQUOTE) $(dir $<) $(kernel-usb-vusbhci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_IQUOTE) . $(kernel-usb-vusbhci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-usb-vusbhci_IQUOTE) $(dir $<) $(kernel-usb-vusbhci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_IQUOTE) . $(kernel-usb-vusbhci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-usb-vusbhci_IQUOTE) $(dir $<) $(kernel-usb-vusbhci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_IQUOTE) . $(kernel-usb-vusbhci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-usb-vusbhci_MC_DTARGETS) : $(kernel-usb-vusbhci_MC_TGTWILDCARD).d : $(kernel-usb-vusbhci_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-usb-vusbhci_DFLAGS) $(kernel-usb-vusbhci_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-usb-vusbhci_OBJDIR)/linklib,)
+kernel-usb-vusbhci_MC_SRCWILDCARD := %
+else
+kernel-usb-vusbhci_MC_SRCWILDCARD := $(kernel-usb-vusbhci_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-usb-vusbhci_OBJDIR)/linklib,)
+kernel-usb-vusbhci_MC_TARGETS := $(addsuffix .o,$(kernel-usb-vusbhci_LINKLIBCCGENFILES))
+kernel-usb-vusbhci_MC_DTARGETS := $(addsuffix .d,$(kernel-usb-vusbhci_LINKLIBCCGENFILES))
+kernel-usb-vusbhci_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-usb-vusbhci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$(notdir $(kernel-usb-vusbhci_LINKLIBCCGENFILES))))
+    kernel-usb-vusbhci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$(notdir $(kernel-usb-vusbhci_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-usb-vusbhci_OBJDIR)/linklib,)
+    kernel-usb-vusbhci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$(kernel-usb-vusbhci_LINKLIBCCGENFILES)))
+    kernel-usb-vusbhci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$(kernel-usb-vusbhci_LINKLIBCCGENFILES)))
+else
+    kernel-usb-vusbhci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$(patsubst $(kernel-usb-vusbhci_OBJDIR)/linklib/%,%,$(kernel-usb-vusbhci_LINKLIBCCGENFILES))))
+    kernel-usb-vusbhci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$(patsubst $(kernel-usb-vusbhci_OBJDIR)/linklib/%,%,$(kernel-usb-vusbhci_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-usb-vusbhci_MC_TGTWILDCARD := $(kernel-usb-vusbhci_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : | $(addsuffix .c,$(kernel-usb-vusbhci_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-usb-vusbhci_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-usb-vusbhci_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-usb-vusbhci_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-usb-vusbhci_MC_DIRS := $(foreach dir, $(kernel-usb-vusbhci_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-usb-vusbhci_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-usb-vusbhci_MC_DIRS),)
+    kernel-usb-vusbhci_MC_DIRS := $(shell echo $(kernel-usb-vusbhci_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-usb-vusbhci_MC_DIRS)
+endif
+
+endif
+
+kernel-usb-vusbhci_MC_CPPFLAGS := $(kernel-usb-vusbhci_LINKLIBCPPFLAGS) -D__AROS__
+kernel-usb-vusbhci_CFLAGS := $(kernel-usb-vusbhci_LINKLIBCFLAGS)
+ifeq ($(kernel-usb-vusbhci_LINKLIBDFLAGS),)
+  kernel-usb-vusbhci_DFLAGS := $(kernel-usb-vusbhci_LINKLIBCFLAGS)
+else
+  kernel-usb-vusbhci_DFLAGS := $(kernel-usb-vusbhci_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-usb-vusbhci_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-usb-vusbhci_STRIP ?= $(TARGET_STRIP)
+kernel-usb-vusbhci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_MC_CPPFLAGS:=$(strip $(kernel-usb-vusbhci_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_CFLAGS:=$(strip $(kernel-usb-vusbhci_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_DFLAGS:=$(kernel-usb-vusbhci_DFLAGS)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-usb-vusbhci_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-usb-vusbhci_STRIP ?= $(HOST_STRIP)
+kernel-usb-vusbhci_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-vusbhci_CFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-vusbhci_DFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-usb-vusbhci_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-usb-vusbhci_STRIP ?= $(ECHO) >/dev/null
+kernel-usb-vusbhci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_CPPFLAGS) $(kernel-usb-vusbhci_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-vusbhci_CFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-vusbhci_DFLAGS))
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-usb-vusbhci_MC_TARGETS) $(kernel-usb-vusbhci_MC_DTARGETS) : kernel-usb-vusbhci_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-usb-vusbhci_MC_TARGETS) : CPPFLAGS := $(kernel-usb-vusbhci_MC_CPPFLAGS)
+$(kernel-usb-vusbhci_MC_TARGETS) : CFLAGS := $(kernel-usb-vusbhci_CFLAGS)
+$(kernel-usb-vusbhci_MC_TARGETS) : $(kernel-usb-vusbhci_MC_TGTWILDCARD).o : $(kernel-usb-vusbhci_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-usb-vusbhci_IQUOTE) $(dir $<) $(kernel-usb-vusbhci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_IQUOTE) . $(kernel-usb-vusbhci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-usb-vusbhci_IQUOTE) $(dir $<) $(kernel-usb-vusbhci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_IQUOTE) . $(kernel-usb-vusbhci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-usb-vusbhci_IQUOTE) $(dir $<) $(kernel-usb-vusbhci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-vusbhci_IQUOTE) . $(kernel-usb-vusbhci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-usb-vusbhci_MC_DTARGETS) : $(kernel-usb-vusbhci_MC_TGTWILDCARD).d : $(kernel-usb-vusbhci_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-usb-vusbhci_DFLAGS) $(kernel-usb-vusbhci_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-usb-vusbhci_LINKLIBAFILES),)
+
+ifeq ($(kernel-usb-vusbhci_OBJDIR)/linklib,)
+kernel-usb-vusbhci-MA_TARGETS := $(addsuffix .o,$(kernel-usb-vusbhci_LINKLIBAFILES) $(kernel-usb-vusbhci_RELLINKLIBAFILES))
+kernel-usb-vusbhci-MA_WILDCARD := %
+else
+kernel-usb-vusbhci-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$(notdir $(kernel-usb-vusbhci_LINKLIBAFILES) $(kernel-usb-vusbhci_RELLINKLIBAFILES))))
+kernel-usb-vusbhci-MA_WILDCARD := $(kernel-usb-vusbhci_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-usb-vusbhci-MA_TARGETS) : | $(addsuffix .S,$(kernel-usb-vusbhci_LINKLIBAFILES) $(kernel-usb-vusbhci_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-usb-vusbhci-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-usb-vusbhci-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-usb-vusbhci_LINKLIBAFILES) $(kernel-usb-vusbhci_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-usb-vusbhci-MA_DIRS := $(foreach dir, $(kernel-usb-vusbhci-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-usb-vusbhci-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-usb-vusbhci-MA_DIRS),)
+    kernel-usb-vusbhci-MA_DIRS := $(shell echo $(kernel-usb-vusbhci-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-usb-vusbhci-MA_DIRS)
+endif
+
+endif
+
+kernel-usb-vusbhci-MA_ASSEMBLER ?= $(kernel-usb-vusbhci_ASSEMBLER)
+
+$(kernel-usb-vusbhci-MA_TARGETS) : kernel-usb-vusbhci-MA_CMD:= $(kernel-usb-vusbhci-MA_ASSEMBLER)
+
+$(kernel-usb-vusbhci-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-usb-vusbhci-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-usb-vusbhci-MA_TARGETS) : $(kernel-usb-vusbhci-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-usb-vusbhci-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-usb-vusbhci-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-usb-vusbhci-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-usb-vusbhci_SUFFIX           := device
+else
+kernel-usb-vusbhci_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-usb-vusbhci_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-usb-vusbhci_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-usb-vusbhci_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-usb-vusbhci_SUFFIX),handler)
+kernel-usb-vusbhci_MODULE           := $(AROSDIR)/$(kernel-usb-vusbhci_MODDIR)/$(kernel-usb-vusbhci_DEFNAME)-$(kernel-usb-vusbhci_SUFFIX)
+else
+kernel-usb-vusbhci_MODULE           := $(AROSDIR)/$(kernel-usb-vusbhci_MODDIR)/$(kernel-usb-vusbhci_DEFNAME).$(kernel-usb-vusbhci_SUFFIX)
+endif
+kernel-usb-vusbhci_KOBJ             := $(KOBJSDIR)/$(kernel-usb-vusbhci_DEFNAME)_$(kernel-usb-vusbhci_SUFFIX).o
+else
+kernel-usb-vusbhci_MODULE           :=
+kernel-usb-vusbhci_KOBJ             :=
+endif
+
+kernel-usb-vusbhci-quick      : kernel-usb-vusbhci
+kernel-usb-vusbhci            : $(kernel-usb-vusbhci_MODULE) $(kernel-usb-vusbhci_LINKLIB) $(kernel-usb-vusbhci_RELLINKLIB)
+ifeq (M,M)
+kernel-usb-vusbhci-kobj       : $(kernel-usb-vusbhci_KOBJ) $(kernel-usb-vusbhci_LINKLIB) $(kernel-usb-vusbhci_RELLINKLIB)
+kernel-usb-vusbhci-kobj-quick : $(kernel-usb-vusbhci_KOBJ) $(kernel-usb-vusbhci_LINKLIB) $(kernel-usb-vusbhci_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-usb-vusbhci-linklib    : $(kernel-usb-vusbhci_LINKLIB) $(kernel-usb-vusbhci_RELLINKLIB)
+endif
+
+kernel-usb-vusbhci_OBJS := $(addsuffix .o,$(kernel-usb-vusbhci_STARTFILES)) $(kernel-usb-vusbhci_ARCHOBJS) \
+           $(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(notdir $(kernel-usb-vusbhci_C_NARCHFILES:=.o) $(kernel-usb-vusbhci_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (device,handler)
+kernel-usb-vusbhci_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (vusbhci,con)
+    kernel-usb-vusbhci_ERR          := $(notdir $(kernel-usb-vusbhci_MODULE)).err
+else
+    kernel-usb-vusbhci_ERR          := vusbhci.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-usb-vusbhci_DEFNAME)_LDFLAGS) $(kernel-usb-vusbhci_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-usb-vusbhci_LIBS) $($(kernel-usb-vusbhci_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-usb-vusbhci_MODULE) : LIB_NAMES := $(kernel-usb-vusbhci_LIBS) $($(kernel-usb-vusbhci_DEFNAME)_LIBS)
+$(kernel-usb-vusbhci_MODULE) : OBJS := $(kernel-usb-vusbhci_STARTOBJS) $(kernel-usb-vusbhci_OBJS) $(USER_OBJS)
+$(kernel-usb-vusbhci_MODULE) : ENDTAG := $(kernel-usb-vusbhci_ENDOBJS)
+$(kernel-usb-vusbhci_MODULE) : ERR := $(kernel-usb-vusbhci_ERR)
+$(kernel-usb-vusbhci_MODULE) : OBJDIR := $(kernel-usb-vusbhci_OBJDIR)
+$(kernel-usb-vusbhci_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-usb-vusbhci_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-usb-vusbhci_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-usb-vusbhci_MODULE) : $(kernel-usb-vusbhci_STARTOBJS) $(kernel-usb-vusbhci_OBJS) $(USER_OBJS) $(kernel-usb-vusbhci_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-usb-vusbhci_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-usb-vusbhci_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-usb-vusbhci_LC_LINKLIBNAME   := $(shell echo $(kernel-usb-vusbhci_LINKLIBNAME) | tr A-Z a-z)
+kernel-usb-vusbhci_LC_MODNAME       := $(shell echo vusbhci | tr A-Z a-z)
+ifneq ($(kernel-usb-vusbhci_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_LINKLIBNAME)$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_AR:=$(AR)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_LINKLIBNAME)$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_LINKLIBNAME)$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_AR:=$(HOST_AR)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_LINKLIBNAME)$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_LINKLIBNAME)$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_AR:=$(KERNEL_AR)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_LINKLIBNAME)$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_LINKLIBNAME)$(kernel-usb-vusbhci_LIBSUFFIX).a : $(kernel-usb-vusbhci_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-usb-vusbhci_AR) $@ $^
+	$(Q)$(kernel-usb-vusbhci_RANLIB) $@
+ifneq ($(kernel-usb-vusbhci_LC_MODNAME),$(kernel-usb-vusbhci_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-usb-vusbhci_LIBDIR)/libvusbhci$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_AR:=$(AR)
+$(kernel-usb-vusbhci_LIBDIR)/libvusbhci$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-usb-vusbhci_LIBDIR)/libvusbhci$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_AR:=$(HOST_AR)
+$(kernel-usb-vusbhci_LIBDIR)/libvusbhci$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-usb-vusbhci_LIBDIR)/libvusbhci$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_AR:=$(KERNEL_AR)
+$(kernel-usb-vusbhci_LIBDIR)/libvusbhci$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-usb-vusbhci_LIBDIR)/libvusbhci$(kernel-usb-vusbhci_LIBSUFFIX).a : $(kernel-usb-vusbhci_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-usb-vusbhci_AR) $@ $^
+	$(Q)$(kernel-usb-vusbhci_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-usb-vusbhci_LINKLIB),)
+$(kernel-usb-vusbhci_LINKLIB) : | $(kernel-usb-vusbhci_LIBDIR)
+else
+$(kernel-usb-vusbhci_LINKLIB) :: $(kernel-usb-vusbhci_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-usb-vusbhci_LIBDIR)
+
+endif
+
+ifneq ($(kernel-usb-vusbhci_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_LINKLIBNAME)_rel$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_AR:=$(AR)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_LINKLIBNAME)_rel$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_LINKLIBNAME)_rel$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_AR:=$(HOST_AR)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_LINKLIBNAME)_rel$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_LINKLIBNAME)_rel$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_AR:=$(KERNEL_AR)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_LINKLIBNAME)_rel$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_LINKLIBNAME)_rel$(kernel-usb-vusbhci_LIBSUFFIX).a : $(kernel-usb-vusbhci_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-usb-vusbhci_AR) $@ $^
+	$(Q)$(kernel-usb-vusbhci_RANLIB) $@
+ifneq ($(kernel-usb-vusbhci_LC_MODNAME),$(kernel-usb-vusbhci_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_DEFNAME)_rel$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_AR:=$(AR)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_DEFNAME)_rel$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_DEFNAME)_rel$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_AR:=$(HOST_AR)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_DEFNAME)_rel$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_DEFNAME)_rel$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_AR:=$(KERNEL_AR)
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_DEFNAME)_rel$(kernel-usb-vusbhci_LIBSUFFIX).a : kernel-usb-vusbhci_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-usb-vusbhci_LIBDIR)/lib$(kernel-usb-vusbhci_DEFNAME)_rel$(kernel-usb-vusbhci_LIBSUFFIX).a : $(kernel-usb-vusbhci_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-usb-vusbhci_AR) $@ $^
+	$(Q)$(kernel-usb-vusbhci_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-usb-vusbhci_RELLINKLIB),)
+$(kernel-usb-vusbhci_RELLINKLIB) : | $(kernel-usb-vusbhci_LIBDIR)
+else
+$(kernel-usb-vusbhci_RELLINKLIB) :: $(kernel-usb-vusbhci_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-usb-vusbhci_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-usb-vusbhci_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-usb-vusbhci_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-usb-vusbhci_SYMBOLS := $(kernel-usb-vusbhci_KBASE)
+
+kernel-usb-vusbhci_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-usb-vusbhci_KOBJ_LIBS        := $(filter-out $(kernel-usb-vusbhci_KLIB),$(kernel-usb-vusbhci_LIBS)) $(kernel-usb-vusbhci_KAUTOLIB)
+$(kernel-usb-vusbhci_KOBJ) : LINKLIBS:=$(kernel-usb-vusbhci_KOBJ_LIBS) $($(kernel-usb-vusbhci_DEFNAME)_LIBS)
+$(kernel-usb-vusbhci_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-usb-vusbhci_SYMBOLS))
+$(kernel-usb-vusbhci_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-usb-vusbhci_KOBJ) : $(kernel-usb-vusbhci_OBJS) $(USER_OBJS) $(kernel-usb-vusbhci_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-usb-vusbhci_DEPS             := $(addprefix $(kernel-usb-vusbhci_OBJDIR)/,$(notdir $(kernel-usb-vusbhci_CCFILES:=.d) $(kernel-usb-vusbhci_TARGETCCFILES:=.d) $(kernel-usb-vusbhci_CXXFILES:=.d))) $(addprefix $(kernel-usb-vusbhci_OBJDIR)/linklib/,$(notdir $(kernel-usb-vusbhci_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-usb-vusbhci_DEPS),)
+  ifneq (kernel-usb-vusbhci kernel-usb-vusbhci-quick kernel-usb-vusbhci-kobj kernel-usb-vusbhci-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-usb-vusbhci kernel-usb-vusbhci-quick kernel-usb-vusbhci-kobj kernel-usb-vusbhci-kobj-quick),)
+      -include $(kernel-usb-vusbhci_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-usb-vusbhci_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-usb-vusbhci_OBJS) $(kernel-usb-vusbhci_DEPS) : | $(kernel-usb-vusbhci_OBJDIR)/linklib
+
+ifneq ($(kernel-usb-vusbhci_OBJS) $(kernel-usb-vusbhci_DEPS) $(kernel-usb-vusbhci_MODULE) $(kernel-usb-vusbhci_KOBJ),)
+$(kernel-usb-vusbhci_OBJS) $(kernel-usb-vusbhci_DEPS) $(kernel-usb-vusbhci_MODULE) $(kernel-usb-vusbhci_KOBJ) : | $(kernel-usb-vusbhci_OBJDIR) $(AROSDIR)/$(kernel-usb-vusbhci_MODDIR) $(KOBJSDIR)
+else
+$(kernel-usb-vusbhci_OBJS) $(kernel-usb-vusbhci_DEPS) $(kernel-usb-vusbhci_MODULE) $(kernel-usb-vusbhci_KOBJ) :: $(kernel-usb-vusbhci_OBJDIR) $(AROSDIR)/$(kernel-usb-vusbhci_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-usb-vusbhci_OBJDIR) $(AROSDIR)/$(kernel-usb-vusbhci_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-usb-vusbhci kernel-usb-vusbhci-includes kernel-usb-vusbhci-quick kernel-usb-vusbhci-kobj kernel-usb-vusbhci-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-usb-vusbhci_DFILE_DEPS := $(kernel-usb-vusbhci_LIBDEFSINC) $(kernel-usb-vusbhci_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-usb-vusbhci_INCDIR)/,$($(kernel-usb-vusbhci_DEFNAME)_INCLUDES))
+$(kernel-usb-vusbhci_DEPS) : $(kernel-usb-vusbhci_DFILE_DEPS)
+endif
+
+kernel-usb-vusbhci_TOCLEAN := $(kernel-usb-vusbhci_OBJS) $(kernel-usb-vusbhci_DEPS) \
+    $(kernel-usb-vusbhci_MODULE) $(kernel-usb-vusbhci_LINKLIB) $(kernel-usb-vusbhci_KOBJ) \
+    $(kernel-usb-vusbhci_OBJDIR)/Makefile.vusbhcidevice \
+    $(addprefix $(kernel-usb-vusbhci_OBJDIR)/include/,$($(kernel-usb-vusbhci_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-usb-vusbhci_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-usb-vusbhci_INCDIR)/,$($(kernel-usb-vusbhci_DEFNAME)_INCLUDES)) \
+    $(kernel-usb-vusbhci_OBJDIR)/vusbhci_geninc $(kernel-usb-vusbhci_OBJDIR)/vusbhci_incs \
+    $(addsuffix .c,$(kernel-usb-vusbhci_LINKLIBFILES)) $(kernel-usb-vusbhci_LINKLIBOBJS) $(kernel-usb-vusbhci_LIBDEFSINC) \
+    $(kernel-usb-vusbhci_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-usb-vusbhci_STARTFILES) $(kernel-usb-vusbhci_ENDFILES)) \
+    $(kernel-usb-vusbhci_ENDOBJS)
+kernel-usb-vusbhci-clean : FILES              := $(kernel-usb-vusbhci_TOCLEAN)
+kernel-usb-vusbhci-clean ::
+	$(Q)$(ECHO) "Cleaning up for module vusbhci"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-usb-vusbhci_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

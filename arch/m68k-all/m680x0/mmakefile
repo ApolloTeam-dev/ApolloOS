@@ -1,0 +1,1910 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- workbench-c-m68k : kernel-m680x0
+
+FILES := init
+AFILES := m68k_060sp
+
+USER_AFLAGS := -I$(GENINCDIR)
+USER_CPPFLAGS := -DDoRegisterCalls
+USER_INCLUDES := -I$(SRCDIR)/arch/$(CPU)-all/m680x0
+ISA_FLOAT_FLAGS:=
+TARGET_ISA_AFLAGS:=$(ISA_MC68020_FLAGS)
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-m680x0
+#MM kernel-m680x0-quick
+#MM kernel-m680x0-makefile
+#MM kernel-m680x0-clean
+
+# ABI targets:
+#MM- includes-all : kernel-m680x0-includes
+#MM- linklibs-680x0: kernel-m680x0-linklib
+#MM- linklibs-680x0_rel : kernel-m680x0-linklib
+#MM- includes-680x0: kernel-m680x0-includes
+#MM- includes-680x0_rel : kernel-m680x0-includes
+#MM- kernel-m680x0 : kernel-m680x0-includes core-linklibs linklibs-
+#MM kernel-m680x0-linklib : kernel-m680x0-includes includes-
+#MM- kernel-m680x0-quick : kernel-m680x0-includes-quick
+#MM kernel-m680x0-includes : kernel-m680x0-makefile kernel-m680x0-includes-dirs \
+#MM     includes-generate-deps kernel-m680x0-fd
+#MM kernel-m680x0-includes-quick
+#MM kernel-m680x0-includes-dirs
+#MM kernel-m680x0-fd
+
+# Library targets
+#MM kernel-m680x0-kobj : core-linklibs linklibs-
+#MM kernel-m680x0-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-m680x0-kobj : kernel-m680x0-includes core-linklibs linklibs-
+#MM kernel-m680x0-kobj-quick : kernel-m680x0-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-m680x0_ALLTARGETS       := kernel-m680x0 kernel-m680x0-quick kernel-m680x0-clean
+
+ifeq (M,M)
+kernel-m680x0_ALLTARGETS       += kernel-m680x0-kobj kernel-m680x0-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-m680x0_ALLTARGETS += kernel-m680x0-includes \
+                 kernel-m680x0-includes-quick kernel-m680x0-includes-dirs  \
+                 kernel-m680x0-linklib kernel-m680x0-fd
+endif
+
+.PHONY : $(kernel-m680x0_ALLTARGETS) kernel-m680x0-makefile
+
+ifeq (680x0,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (library,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-m680x0_DEFNAME      := 680x0_
+else
+    kernel-m680x0_DEFNAME      := 680x0
+endif
+kernel-m680x0_DEFLINKLIBNAME   := $(kernel-m680x0_DEFNAME)
+ifneq (,)
+    kernel-m680x0_LINKLIBNAME  := 
+else
+    kernel-m680x0_LINKLIBNAME  = $(kernel-m680x0_DEFLINKLIBNAME)
+endif
+kernel-m680x0_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-m680x0_DEFCPPFLAGS  += -I
+endif
+kernel-m680x0_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-m680x0_DFLAGS       := 
+else
+    kernel-m680x0_DFLAGS       = $(kernel-m680x0_DEFDFLAGS)
+endif
+kernel-m680x0_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-m680x0_DXXFLAGS     := 
+else
+    kernel-m680x0_DXXFLAGS     = $(kernel-m680x0_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-m680x0_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-m680x0_DEFDFLAGS))
+kernel-m680x0_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-m680x0_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-m680x0_FUNCINSTR := yes
+kernel-m680x0_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-m680x0_DEFDFLAGS))
+kernel-m680x0_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-m680x0_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-m680x0_OBJDIR                     := 
+else
+kernel-m680x0_OBJDIR                     := $(OBJDIR)/$(kernel-m680x0_DEFNAME)
+endif
+ifneq (,)
+kernel-m680x0_OBJDIR           := $(kernel-m680x0_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-m680x0-makefile         := $(kernel-m680x0_OBJDIR)/Makefile.$(kernel-m680x0_DEFNAME)library
+kernel-m680x0-genmakefile : $(kernel-m680x0-makefile)
+
+
+kernel-m680x0-genmakefile_OPTS := 
+ifneq (,)
+    kernel-m680x0-genmakefile_OPTS += -f 
+    kernel-m680x0-genmakefile_MODNAME := 680x0_
+else
+    kernel-m680x0-genmakefile_MODNAME := 680x0
+endif
+kernel-m680x0-genmakefile_TARGET := Makefile.$(kernel-m680x0-genmakefile_MODNAME)library
+kernel-m680x0-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-m680x0-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-m680x0-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-m680x0-genmakefile_OPTS += -c 
+        kernel-m680x0-genmakefile_DEPS += 
+    endif 
+else
+    kernel-m680x0-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/680x0.conf
+    kernel-m680x0-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/680x0.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-m680x0-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-m680x0-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-m680x0-genmakefile_OPTS += -o 
+        kernel-m680x0-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-m680x0-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-m680x0_OBJDIR),)
+    kernel-m680x0-genmakefile_OPTS += -d $(kernel-m680x0_OBJDIR)
+    kernel-m680x0-genmakefile_TARGET := $(kernel-m680x0_OBJDIR)/$(kernel-m680x0-genmakefile_TARGET)
+endif
+
+$(kernel-m680x0-genmakefile_TARGET) : OPTS := $(kernel-m680x0-genmakefile_OPTS)
+$(kernel-m680x0-genmakefile_TARGET) : MODNAME := 680x0
+$(kernel-m680x0-genmakefile_TARGET) : MODTYPE := library
+$(kernel-m680x0-genmakefile_TARGET) : $(kernel-m680x0-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-m680x0-makefile),)
+$(kernel-m680x0-makefile) : | $(kernel-m680x0_OBJDIR)
+else
+$(kernel-m680x0-makefile) :: $(kernel-m680x0_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-m680x0_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-m680x0_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-m680x0-makefile)
+
+kernel-m680x0_DEFMODDIR        := $($(kernel-m680x0_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-m680x0_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-m680x0_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-m680x0_MODDIR       := 
+else
+    kernel-m680x0_MODDIR       := $(kernel-m680x0_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-m680x0_INCDIR           := 
+else
+kernel-m680x0_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-m680x0_LIBDEFSINC       := $(kernel-m680x0_OBJDIR)/include/$(kernel-m680x0_DEFNAME)_libdefs.h
+kernel-m680x0_DEFLIBDEFSINC    := $(kernel-m680x0_OBJDIR)/include/$(kernel-m680x0_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-m680x0-includes-quick : kernel-m680x0-includes
+kernel-m680x0-includes : $(addprefix $(GENINCDIR)/,$($(kernel-m680x0_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-m680x0_INCDIR)/,$($(kernel-m680x0_DEFNAME)_INCLUDES)) \
+    $(kernel-m680x0_LIBDEFSINC) $(kernel-m680x0_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-m680x0_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-m680x0-includes_MODNAME := 680x0_
+else
+    kernel-m680x0-includes_MODNAME := 680x0
+endif
+
+ifneq ($($(kernel-m680x0-includes_MODNAME)_INCLUDES),)
+
+kernel-m680x0-includes_TARGETS := $($(kernel-m680x0-includes_MODNAME)_INCLUDES)
+
+kernel-m680x0-includes_DEPS := $(GENMODULE)
+kernel-m680x0-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-m680x0-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-m680x0-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-m680x0-includes_OPTS += -c 
+        kernel-m680x0-includes_DEPS += 
+    endif 
+else
+    kernel-m680x0-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/680x0.conf
+    kernel-m680x0-includes_DEPS += $(SRCDIR)/$(CURDIR)/680x0.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-m680x0-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-m680x0-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-m680x0-includes_OPTS += -o 
+        kernel-m680x0-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-m680x0-includes_OPTS += -s 
+endif
+ifneq ($(kernel-m680x0_OBJDIR)/include,)
+    kernel-m680x0-includes_OPTS += -d $(kernel-m680x0_OBJDIR)/include
+    kernel-m680x0-includes_TARGETS := $(addprefix $(kernel-m680x0_OBJDIR)/include/,$(kernel-m680x0-includes_TARGETS))
+    kernel-m680x0-includes_GENINCFLAG=$(kernel-m680x0_OBJDIR)/include/.680x0.library-includes
+else
+    kernel-m680x0-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.680x0.library-includes
+endif
+
+$(kernel-m680x0-includes_TARGETS) : $(kernel-m680x0-includes_DEPS) $(kernel-m680x0-includes_GENINCFLAG)
+
+$(kernel-m680x0-includes_GENINCFLAG) : OPTS := $(kernel-m680x0-includes_OPTS)
+$(kernel-m680x0-includes_GENINCFLAG) : MODNAME := 680x0
+$(kernel-m680x0-includes_GENINCFLAG) : MODTYPE := library
+$(kernel-m680x0-includes_GENINCFLAG) : $(kernel-m680x0-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-m680x0_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-m680x0_DEFNAME)_INCLUDES)) : | $(kernel-m680x0_OBJDIR)/680x0_geninc
+
+$(kernel-m680x0_OBJDIR)/680x0_geninc : COPYSRCDIR := $(kernel-m680x0_OBJDIR)/include
+$(kernel-m680x0_OBJDIR)/680x0_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-m680x0_OBJDIR)/680x0_geninc : FILES := $($(kernel-m680x0_DEFNAME)_INCLUDES)
+$(kernel-m680x0_OBJDIR)/680x0_geninc : $(addprefix $(kernel-m680x0_OBJDIR)/include/,$($(kernel-m680x0_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-m680x0_OBJDIR)/include
+
+$(addprefix $(kernel-m680x0_INCDIR)/,$($(kernel-m680x0_DEFNAME)_INCLUDES)) : | $(kernel-m680x0_OBJDIR)/680x0_incs
+
+$(kernel-m680x0_OBJDIR)/680x0_incs : COPYSRCDIR := $(kernel-m680x0_OBJDIR)/include
+$(kernel-m680x0_OBJDIR)/680x0_incs : TGTDIR := $(kernel-m680x0_INCDIR)
+$(kernel-m680x0_OBJDIR)/680x0_incs : FILES := $($(kernel-m680x0_DEFNAME)_INCLUDES)
+$(kernel-m680x0_OBJDIR)/680x0_incs : $(addprefix $(kernel-m680x0_OBJDIR)/include/,$($(kernel-m680x0_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-m680x0_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-m680x0_DEFNAME)_INCLUDES))))
+
+TMP680x0_INCDIRS := \
+    $(kernel-m680x0_OBJDIR)/include $(addprefix $(kernel-m680x0_OBJDIR)/include/,$(kernel-m680x0_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-m680x0_INCDIRS)) \
+    $(kernel-m680x0_INCDIR) $(addprefix $(kernel-m680x0_INCDIR)/,$(kernel-m680x0_INCDIRS))
+
+ifneq (kernel-m680x0-includes-dirs,)
+kernel-m680x0-includes-dirs : | $(TMP680x0_INCDIRS)
+else
+kernel-m680x0-includes-dirs :: $(TMP680x0_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMP680x0_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-m680x0-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-m680x0-genlibdefs_OPTS += -f 
+    kernel-m680x0-genlibdefs_MODNAME := 680x0_
+else
+    kernel-m680x0-genlibdefs_MODNAME := 680x0
+endif
+kernel-m680x0-genlibdefs_TARGET := $(kernel-m680x0-genlibdefs_MODNAME)_libdefs.h
+kernel-m680x0-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-m680x0-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-m680x0-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-m680x0-genlibdefs_OPTS += -c 
+        kernel-m680x0-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-m680x0-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/680x0.conf
+    kernel-m680x0-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/680x0.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-m680x0-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-m680x0-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-m680x0-genlibdefs_OPTS += -o 
+        kernel-m680x0-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-m680x0-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-m680x0_OBJDIR)/include,)
+    kernel-m680x0-genlibdefs_OPTS += -d $(kernel-m680x0_OBJDIR)/include
+    kernel-m680x0-genlibdefs_TARGET := $(kernel-m680x0_OBJDIR)/include/$(kernel-m680x0-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-m680x0-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-m680x0-genlibdefs_TARGET) : OPTS := $(kernel-m680x0-genlibdefs_OPTS)
+$(kernel-m680x0-genlibdefs_TARGET) : MODNAME := 680x0
+$(kernel-m680x0-genlibdefs_TARGET) : MODTYPE := library
+$(kernel-m680x0-genlibdefs_TARGET) : $(kernel-m680x0-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-m680x0_DEFLIBDEFSINC) : FILENAME := $(kernel-m680x0_LIBDEFSINC)
+$(kernel-m680x0_DEFLIBDEFSINC) : $(kernel-m680x0_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-m680x0_LIBDEFSINC) $(kernel-m680x0_DEFLIBDEFSINC) : | $(kernel-m680x0_OBJDIR)/include
+
+ifneq (kernel-m680x0-includes-dirs,)
+kernel-m680x0-includes-dirs : | $(kernel-m680x0_OBJDIR)/include
+else
+kernel-m680x0-includes-dirs :: $(kernel-m680x0_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-m680x0_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-m680x0-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-m680x0-genmodfiles_OPTS += -f 
+    kernel-m680x0-genmodfiles_MODNAME := 680x0_
+else
+    kernel-m680x0-genmodfiles_MODNAME := 680x0
+endif
+kernel-m680x0-genmodfiles_GENTARGETS := $($(kernel-m680x0-genmodfiles_MODNAME)_STARTFILES) $($(kernel-m680x0-genmodfiles_MODNAME)_ENDFILES)
+kernel-m680x0-genmodfiles_STUBTARGETS := $($(kernel-m680x0-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-m680x0-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-m680x0-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-m680x0-genmodfiles_GENTARGETS))
+kernel-m680x0-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-m680x0-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-m680x0-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-m680x0-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-m680x0-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-m680x0-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-m680x0-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-m680x0-genmodfiles_OPTS += -c 
+        kernel-m680x0-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-m680x0-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/680x0.conf
+    kernel-m680x0-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/680x0.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-m680x0-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-m680x0-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-m680x0-genmodfiles_OPTS += -o 
+        kernel-m680x0-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-m680x0-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-m680x0_OBJDIR),)
+    kernel-m680x0-genmodfiles_OPTS += -d $(kernel-m680x0_OBJDIR)
+    kernel-m680x0-genmodfiles_TARGETDIR := $(shell echo $(kernel-m680x0_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-m680x0-genmodfiles_GENTARGETS := $(addprefix $(kernel-m680x0-genmodfiles_TARGETDIR)/,$(kernel-m680x0-genmodfiles_GENTARGETS))
+    kernel-m680x0-genmodfiles_GENFILEFLAG=$(kernel-m680x0-genmodfiles_TARGETDIR)/.680x0.library-genfiles
+else
+    kernel-m680x0-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.680x0.library-genfiles
+endif
+ifneq ($(kernel-m680x0_OBJDIR)/linklib,)
+    kernel-m680x0-genmodfiles_OPTS += -l $(kernel-m680x0_OBJDIR)/linklib
+    kernel-m680x0-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-m680x0_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-m680x0-genmodfiles_STUBTARGETS := $(addprefix $(kernel-m680x0-genmodfiles_STUBTARGETDIR)/,$(kernel-m680x0-genmodfiles_STUBTARGETS))
+    kernel-m680x0-genmodfiles_TARGETDIRS += $(kernel-m680x0_OBJDIR)/linklib
+else
+ifneq ($(kernel-m680x0_OBJDIR),)
+    kernel-m680x0-genmodfiles_STUBTARGETS := $(addprefix $(kernel-m680x0-genmodfiles_TARGETDIR)/,$(kernel-m680x0-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-m680x0-genmodfiles_TARGETS := $(kernel-m680x0-genmodfiles_GENTARGETS) $(kernel-m680x0-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-m680x0-genmodfiles_TARGETDIRS),)
+$(kernel-m680x0-genmodfiles_TARGETS) : | $(kernel-m680x0-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-m680x0-genmodfiles_TARGETS) : $(kernel-m680x0-genmodfiles_DEPS) $(kernel-m680x0-genmodfiles_GENFILEFLAG)
+
+$(kernel-m680x0-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-m680x0-genmodfiles_OPTS)
+$(kernel-m680x0-genmodfiles_GENFILEFLAG) : MODNAME := 680x0
+$(kernel-m680x0-genmodfiles_GENFILEFLAG) : MODTYPE := library
+$(kernel-m680x0-genmodfiles_GENFILEFLAG) : $(kernel-m680x0-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-m680x0-genmodfiles_GENFILEFLAG) : $(kernel-m680x0_DEFLIBDEFSINC) $(kernel-m680x0-makefile)
+
+
+ifneq ($(kernel-m680x0-genmodfiles_GENFILEFLAG),)
+$(kernel-m680x0-genmodfiles_GENFILEFLAG) : | $(kernel-m680x0_OBJDIR)/linklib
+else
+$(kernel-m680x0-genmodfiles_GENFILEFLAG) :: $(kernel-m680x0_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-m680x0_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-m680x0_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-m680x0_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-m680x0-fd : $(kernel-m680x0_FDDIR)/680x0_lib.fd
+
+
+TMP_TARGET := 680x0_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/680x0.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/680x0.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-m680x0_FDDIR),)
+    TMP_OPTS += -d $(kernel-m680x0_FDDIR)
+    TMP_TARGET := $(kernel-m680x0_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := 680x0
+$(TMP_TARGET) : MODTYPE := library
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-m680x0_FDDIR)/680x0_lib.fd : | $(kernel-m680x0_FDDIR)
+
+
+ifneq (kernel-m680x0-fd-setup,)
+kernel-m680x0-fd-setup : | $(kernel-m680x0_FDDIR)
+else
+kernel-m680x0-fd-setup :: $(kernel-m680x0_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-m680x0_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-m680x0_FILES            := $(FILES)
+kernel-m680x0_OBJCFILES        := 
+kernel-m680x0_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-m680x0_LIBFILES         := 
+kernel-m680x0_LIBS             := 
+
+kernel-m680x0_FDIRS            := $(sort $(dir $(kernel-m680x0_FILES)))
+
+kernel-m680x0_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-m680x0_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-m680x0_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-m680x0_FILTERARCH       = $(filter-out $(call kernel-m680x0_MATCHARCH,$(1),$(2)),$(2))
+kernel-m680x0_STARTFILES       := $(addprefix $(kernel-m680x0_OBJDIR)/,$($(kernel-m680x0_DEFNAME)_STARTFILES))
+kernel-m680x0_ENDFILES         := $(addprefix $(kernel-m680x0_OBJDIR)/,$($(kernel-m680x0_DEFNAME)_ENDFILES))
+
+kernel-m680x0_ARCHOBJS         := $(wildcard $(kernel-m680x0_OBJDIR)/arch/*.o)
+kernel-m680x0_LIBARCHOBJS      := $(wildcard $(kernel-m680x0_OBJDIR)/linklib/arch/*.o)
+kernel-m680x0_ARCHFILES        := $(basename $(notdir $(kernel-m680x0_ARCHOBJS)))
+kernel-m680x0_LIBARCHFILES     := $(basename $(notdir $(kernel-m680x0_LIBARCHOBJS)))
+kernel-m680x0_C_NARCHFILES     := $(call kernel-m680x0_FILTERARCH,$(kernel-m680x0_ARCHFILES),$(kernel-m680x0_FILES))
+kernel-m680x0_CXX_NARCHFILES   := $(call kernel-m680x0_FILTERARCH,$(kernel-m680x0_ARCHFILES),$(kernel-m680x0_CXXFILES))
+kernel-m680x0_OBJC_NARCHFILES  := $(call kernel-m680x0_FILTERARCH,$(kernel-m680x0_ARCHFILES),$(kernel-m680x0_OBJCFILES))
+kernel-m680x0_NLIBARCHFILES    := $(call kernel-m680x0_FILTERARCH,$(kernel-m680x0_LIBARCHFILES),$(kernel-m680x0_LIBFILES))
+kernel-m680x0_ARCHNLIBFILES    := $(call kernel-m680x0_FILTERARCH,$(kernel-m680x0_LIBFILES),$(kernel-m680x0_LIBARCHFILES))
+
+kernel-m680x0_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-m680x0_OBJDIR)/include -include $(kernel-m680x0_DEFLIBDEFSINC))
+ifneq (,)
+kernel-m680x0_CPPFLAGS         += -I
+endif
+kernel-m680x0_LINKLIBCPPFLAGS  := $(kernel-m680x0_CPPFLAGS)
+kernel-m680x0_CPPFLAGS         += $(strip $($(kernel-m680x0_DEFNAME)_CPPFLAGS))
+kernel-m680x0_LINKLIBCPPFLAGS  += $(strip $($(kernel-m680x0_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-m680x0_CFLAGS           := $(strip $(CFLAGS) $($(kernel-m680x0_DEFNAME)_CFLAGS))
+kernel-m680x0_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-m680x0_DEFNAME)_LINKLIBCFLAGS))
+kernel-m680x0_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-m680x0_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-m680x0_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-m680x0_CFLAGS           := $(strip $(kernel-m680x0_LTOFLAGS) $(kernel-m680x0_CFLAGS))
+kernel-m680x0_LINKLIBCFLAGS    := $(strip $(kernel-m680x0_LTOFLAGS) $(kernel-m680x0_LINKLIBCFLAGS))
+kernel-m680x0_CXXFLAGS         := $(strip $(kernel-m680x0_LTOFLAGS) $(kernel-m680x0_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-m680x0_SUBSTNULL        :=
+kernel-m680x0_SUBSTSPACE       := $(kernel-m680x0_SUBSTNULL) #
+kernel-m680x0_SUBSTCOMMA       := ,
+kernel-m680x0_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-m680x0_SUBSTSPACE),$(kernel-m680x0_SUBSTCOMMA),$(strip $($(kernel-m680x0_DEFNAME)_STARTFILES))))
+kernel-m680x0_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-m680x0_CFLAGS           := $(strip $(kernel-m680x0_INSTRFUNCFLAGS) $(kernel-m680x0_CFLAGS))
+kernel-m680x0_CXXFLAGS         := $(strip $(kernel-m680x0_INSTRFUNCFLAGS) $(kernel-m680x0_CXXFLAGS))
+kernel-m680x0_LIBS             += $(kernel-m680x0_INSTRFUNCLIBS)
+endif
+endif
+kernel-m680x0_DFLAGS           := $(strip $(kernel-m680x0_DFLAGS) $($(kernel-m680x0_DEFNAME)_DFLAGS))
+kernel-m680x0_LINKLIBDFLAGS    := $(strip $(kernel-m680x0_DFLAGS) $($(kernel-m680x0_DEFNAME)_LINKLIBDFLAGS))
+kernel-m680x0_DXXFLAGS         := $(strip $(kernel-m680x0_DXXFLAGS) $($(kernel-m680x0_DEFNAME)_DXXFLAGS))
+
+ifeq (library,library)
+    kernel-m680x0_LIBSUFFIX    := 
+else
+    kernel-m680x0_LIBSUFFIX    := .library
+endif
+
+ifeq (,)
+kernel-m680x0_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-m680x0_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-m680x0_LINKLIBCFILES    := $(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$($(kernel-m680x0_DEFNAME)_LINKLIBFILES))
+kernel-m680x0_LINKLIBAFILES    := $(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$($(kernel-m680x0_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-m680x0_DEFNAME)_LINKLIBFILES) $($(kernel-m680x0_DEFNAME)_LINKLIBAFILES)  $(kernel-m680x0_ARCHNLIBFILES)),)
+    kernel-m680x0_LINKLIB      :=
+else
+    kernel-m680x0_LINKLIB      := $(kernel-m680x0_LIBDIR)/lib680x0$(kernel-m680x0_LIBSUFFIX).a
+    ifneq (680x0,$(kernel-m680x0_LINKLIBNAME))
+        kernel-m680x0_LINKLIB  += $(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_LINKLIBNAME)$(kernel-m680x0_LIBSUFFIX).a
+    endif
+endif
+kernel-m680x0_LINKLIBFILES     := $(kernel-m680x0_LINKLIBCFILES) $(kernel-m680x0_LINKLIBAFILES)
+
+kernel-m680x0_RELLINKLIBCFILES := $(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$($(kernel-m680x0_DEFNAME)_RELLINKLIBFILES))
+kernel-m680x0_RELLINKLIBAFILES := $(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$($(kernel-m680x0_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-m680x0_DEFNAME)_RELLINKLIBFILES) $($(kernel-m680x0_DEFNAME)_RELLINKLIBAFILES)  $(kernel-m680x0_ARCHNLIBFILES)),)
+    kernel-m680x0_RELLINKLIB   :=
+else
+    kernel-m680x0_RELLINKLIB   := $(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_DEFNAME)_rel$(kernel-m680x0_LIBSUFFIX).a
+    ifneq (680x0,$(kernel-m680x0_LINKLIBNAME))
+        kernel-m680x0_RELLINKLIB += $(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_LINKLIBNAME)_rel$(kernel-m680x0_LIBSUFFIX).a
+    endif
+endif
+kernel-m680x0_RELLINKLIBFILES  := $(kernel-m680x0_RELLINKLIBCFILES) $(kernel-m680x0_RELLINKLIBAFILES)
+endif
+
+kernel-m680x0_ENDOBJS          := $(addsuffix .o,$(kernel-m680x0_ENDFILES))
+kernel-m680x0_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$(notdir $(kernel-m680x0_NLIBARCHFILES))) $(addprefix $(kernel-m680x0_OBJDIR)/linklib/arch/,$(notdir $(kernel-m680x0_ARCHNLIBFILES))) $(kernel-m680x0_LINKLIBFILES)) \
+                 
+kernel-m680x0_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$(notdir $(kernel-m680x0_NLIBARCHFILES))) $(addprefix $(kernel-m680x0_OBJDIR)/linklib/arch/,$(notdir $(kernel-m680x0_ARCHNLIBFILES))) $(kernel-m680x0_RELLINKLIBFILES)) \
+                 
+$(kernel-m680x0_LINKLIBFILES) $(kernel-m680x0_RELLINKLIBFILES) : | $(kernel-m680x0_OBJDIR)/linklib
+$(kernel-m680x0_LINKLIBOBJS) $(kernel-m680x0_RELLINKLIBOBJS) : | $(kernel-m680x0_OBJDIR)/linklib
+
+kernel-m680x0_CCFILES := $(kernel-m680x0_C_NARCHFILES)
+kernel-m680x0_TARGETCCFILES    := $(strip $(kernel-m680x0_STARTFILES) $(kernel-m680x0_ENDFILES))
+kernel-m680x0_LINKLIBCCFILES   := $(strip $(kernel-m680x0_NLIBARCHFILES) $(kernel-m680x0_LINKLIBCFILES) $(kernel-m680x0_RELLINKLIBCFILES))
+kernel-m680x0_LINKLIBCCGENFILES := $(strip $(kernel-m680x0_LINKLIBCFILES) $(kernel-m680x0_RELLINKLIBCFILES))
+
+
+kernel-m680x0_CXXABSBASENAMES := $(foreach kernel-m680x0_CXXBASE,$(kernel-m680x0_CXX_NARCHFILES),$(if $(filter /%,$(kernel-m680x0_CXXBASE)),$(kernel-m680x0_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-m680x0_CXXBASE))))
+
+ifneq ($(kernel-m680x0_CXXABSBASENAMES),)
+
+kernel-m680x0_CXXBASENAMES := $(basename $(kernel-m680x0_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-m680x0_MCXX_FILES  := $(strip $(foreach kernel-m680x0_CXXBASE,$(kernel-m680x0_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-m680x0_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-m680x0_EXT),$(kernel-m680x0_CXXBASE)))))))
+
+ifeq (,)
+kernel-m680x0_MCXX_SRCWILDCARD := %
+else
+kernel-m680x0_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-m680x0_OBJDIR),)
+  kernel-m680x0_CXXTARGETS := $(notdir $(kernel-m680x0_CXXBASENAMES:=.o))
+  kernel-m680x0_CXXDTARGETS := $(notdir $(kernel-m680x0_CXXBASENAMES:=.d))
+  kernel-m680x0_MCXX_WILDCARD := %
+else
+  kernel-m680x0_CXXTARGETS := $(addprefix $(kernel-m680x0_OBJDIR)/,$(notdir $(kernel-m680x0_CXXBASENAMES:=.o)))
+  kernel-m680x0_CXXDTARGETS := $(addprefix $(kernel-m680x0_OBJDIR)/,$(notdir $(kernel-m680x0_CXXBASENAMES:=.d)))
+  kernel-m680x0_MCXX_WILDCARD := $(kernel-m680x0_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-m680x0_CXXTARGETS) $(kernel-m680x0_CXXDTARGETS) : | $(kernel-m680x0_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-m680x0_MCXX_CPPFLAGS := $(kernel-m680x0_CPPFLAGS)
+kernel-m680x0_CXXFLAGS := $(kernel-m680x0_CXXFLAGS)
+ifeq ($(kernel-m680x0_DXXFLAGS),)
+  kernel-m680x0_DXXFLAGS := $(kernel-m680x0_CXXFLAGS)
+else
+  kernel-m680x0_DXXFLAGS := $(kernel-m680x0_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-m680x0_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-m680x0_STRIP ?= $(HOST_STRIP)
+  kernel-m680x0_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-m680x0_CXXCMD:=$(HOST_CXX)
+  kernel-m680x0_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-m680x0_MCXX_CPPFLAGS) $(kernel-m680x0_MCXX_EXTRA_CPPFLAGS))
+  kernel-m680x0_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-m680x0_CXXFLAGS))
+  kernel-m680x0_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-m680x0_DXXFLAGS))
+  kernel-m680x0_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-m680x0_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-m680x0_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-m680x0_STRIP ?= $(TARGET_STRIP)
+  kernel-m680x0_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-m680x0_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-m680x0_MCXX_CPPFLAGS := $(strip $(kernel-m680x0_MCXX_CPPFLAGS) $(kernel-m680x0_MCXX_EXTRA_CPPFLAGS))
+  kernel-m680x0_CXXFLAGS := $(strip $(kernel-m680x0_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-m680x0_DXXFLAGS := $(kernel-m680x0_DXXFLAGS)
+  kernel-m680x0_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-m680x0_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-m680x0_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-m680x0_STRIP ?= $(ECHO) >/dev/null
+  kernel-m680x0_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-m680x0_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-m680x0_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-m680x0_MCXX_CPPFLAGS) $(kernel-m680x0_MCXX_EXTRA_CPPFLAGS))
+  kernel-m680x0_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-m680x0_CXXFLAGS))
+  kernel-m680x0_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-m680x0_DXXFLAGS))
+  kernel-m680x0_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-m680x0_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-m680x0_CXXCMD) $(kernel-m680x0_CXXIQUOTE) $(dir $(2)) $(kernel-m680x0_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_CXXIQUOTE) . $(kernel-m680x0_CXXIQUOTE_END) $(strip $(kernel-m680x0_CXXFLAGS) $(kernel-m680x0_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-m680x0_CXXCMD) $(kernel-m680x0_CXXIQUOTE) $(dir $(2)) $(kernel-m680x0_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_CXXIQUOTE) . $(kernel-m680x0_CXXIQUOTE_END) $(strip $(kernel-m680x0_CXXFLAGS) $(kernel-m680x0_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-m680x0_CXXCMD) $(kernel-m680x0_CXXIQUOTE) $(dir $(2)) $(kernel-m680x0_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_CXXIQUOTE) . $(kernel-m680x0_CXXIQUOTE_END) $(strip $(kernel-m680x0_CXXFLAGS) $(kernel-m680x0_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-m680x0_CXXCMD)" $(MKDEPEND) $(strip $(kernel-m680x0_DXXFLAGS) $(kernel-m680x0_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-m680x0_OBJDIR),)
+  $(foreach kernel-m680x0_CXXFILE,$(kernel-m680x0_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-m680x0_CXXFILE))),$(kernel-m680x0_CXXFILE))))
+else
+  $(foreach kernel-m680x0_CXXFILE,$(kernel-m680x0_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-m680x0_OBJDIR)/,$(notdir $(basename $(kernel-m680x0_CXXFILE)))),$(kernel-m680x0_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-m680x0_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-m680x0_MOBJC_SRCWILDCARD := %
+else
+kernel-m680x0_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-m680x0_OBJDIR),)
+  kernel-m680x0_MOBJC_TARGETS := $(addsuffix .o,$(kernel-m680x0_OBJC_NARCHFILES))
+  kernel-m680x0_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-m680x0_OBJC_NARCHFILES))
+  kernel-m680x0_MOBJC_WILDCARD := %
+else
+  kernel-m680x0_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-m680x0_OBJDIR)/,$(kernel-m680x0_OBJC_NARCHFILES)))
+  kernel-m680x0_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-m680x0_OBJDIR)/,$(kernel-m680x0_OBJC_NARCHFILES)))
+  kernel-m680x0_MOBJC_WILDCARD := $(kernel-m680x0_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-m680x0_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-m680x0_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-m680x0_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-m680x0_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-m680x0_MOBJC_DIRS := $(foreach dir, $(kernel-m680x0_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-m680x0_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-m680x0_MOBJC_DIRS),)
+    kernel-m680x0_MOBJC_DIRS := $(shell echo $(kernel-m680x0_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-m680x0_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-m680x0_CC := $(TARGET_CC)
+else
+  kernel-m680x0_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-m680x0_MOBJC_CPPFLAGS := $(kernel-m680x0_CPPFLAGS)
+kernel-m680x0_OBJCFLAGS := $(kernel-m680x0_CFLAGS)
+kernel-m680x0_OBJCFLAGS := $(kernel-m680x0_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-m680x0_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-m680x0_OBJCFLAGS)))
+ifeq ($(kernel-m680x0_DFLAGS),)
+  kernel-m680x0_OBJCDFLAGS := $(kernel-m680x0_CFLAGS)
+else
+  kernel-m680x0_OBJCDFLAGS := $(kernel-m680x0_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-m680x0_LINK ?= $(strip $(kernel-m680x0_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-m680x0_STRIP ?= $(TARGET_STRIP)
+  kernel-m680x0_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-m680x0_CC) $(TARGET_SYSROOT))
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : kernel-m680x0_MOBJC_CPPFLAGS:=$(strip $(kernel-m680x0_MOBJC_CPPFLAGS) $(kernel-m680x0_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : kernel-m680x0_OBJCFLAGS:=$(strip $(kernel-m680x0_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : kernel-m680x0_OBJCDFLAGS:=$(kernel-m680x0_OBJCDFLAGS)
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : kernel-m680x0_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : kernel-m680x0_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-m680x0_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-m680x0_STRIP ?= $(HOST_STRIP)
+  kernel-m680x0_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : kernel-m680x0_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-m680x0_MOBJC_CPPFLAGS) $(kernel-m680x0_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : kernel-m680x0_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-m680x0_OBJCFLAGS))
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : kernel-m680x0_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-m680x0_OBJCDFLAGS))
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : kernel-m680x0_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : kernel-m680x0_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-m680x0_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-m680x0_STRIP ?= $(ECHO) >/dev/null
+  kernel-m680x0_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : kernel-m680x0_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-m680x0_MOBJC_CPPFLAGS) $(kernel-m680x0_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : kernel-m680x0_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-m680x0_OBJCFLAGS))
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : kernel-m680x0_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-m680x0_OBJCDFLAGS))
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : kernel-m680x0_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-m680x0_MOBJC_TARGETS) $(kernel-m680x0_MOBJC_DTARGETS) : kernel-m680x0_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-m680x0_MOBJC_TARGETS) : CPPFLAGS := $(kernel-m680x0_MOBJC_CPPFLAGS)
+$(kernel-m680x0_MOBJC_TARGETS) : CFLAGS := $(kernel-m680x0_OBJCFLAGS)
+$(kernel-m680x0_MOBJC_TARGETS) : $(kernel-m680x0_MOBJC_WILDCARD).o : $(kernel-m680x0_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-m680x0_IQUOTE) $(dir $<) $(kernel-m680x0_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_IQUOTE) . $(kernel-m680x0_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-m680x0_IQUOTE) $(dir $<) $(kernel-m680x0_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_IQUOTE) . $(kernel-m680x0_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-m680x0_IQUOTE) $(dir $<) $(kernel-m680x0_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_IQUOTE) . $(kernel-m680x0_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-m680x0_MOBJC_DTARGETS) : $(kernel-m680x0_MOBJC_WILDCARD).d : $(kernel-m680x0_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-m680x0_OBJCDFLAGS) $(kernel-m680x0_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-m680x0_MC_SRCWILDCARD := %
+else
+kernel-m680x0_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-m680x0_OBJDIR),)
+kernel-m680x0_MC_TARGETS := $(addsuffix .o,$(kernel-m680x0_CCFILES))
+kernel-m680x0_MC_DTARGETS := $(addsuffix .d,$(kernel-m680x0_CCFILES))
+kernel-m680x0_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-m680x0_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-m680x0_OBJDIR)/,$(notdir $(kernel-m680x0_CCFILES))))
+    kernel-m680x0_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-m680x0_OBJDIR)/,$(notdir $(kernel-m680x0_CCFILES))))
+else
+ifeq (,)
+    kernel-m680x0_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-m680x0_OBJDIR)/,$(kernel-m680x0_CCFILES)))
+    kernel-m680x0_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-m680x0_OBJDIR)/,$(kernel-m680x0_CCFILES)))
+else
+    kernel-m680x0_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-m680x0_OBJDIR)/,$(patsubst /%,%,$(kernel-m680x0_CCFILES))))
+    kernel-m680x0_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-m680x0_OBJDIR)/,$(patsubst /%,%,$(kernel-m680x0_CCFILES))))
+endif
+endif
+kernel-m680x0_MC_TGTWILDCARD := $(kernel-m680x0_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : | $(addsuffix .c,$(kernel-m680x0_CCFILES))
+
+# Be sure that all .c files are found
+kernel-m680x0_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-m680x0_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-m680x0_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-m680x0_MC_DIRS := $(foreach dir, $(kernel-m680x0_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-m680x0_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-m680x0_MC_DIRS),)
+    kernel-m680x0_MC_DIRS := $(shell echo $(kernel-m680x0_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-m680x0_MC_DIRS)
+endif
+
+endif
+
+kernel-m680x0_MC_CPPFLAGS := $(kernel-m680x0_CPPFLAGS)
+kernel-m680x0_CFLAGS := $(kernel-m680x0_CFLAGS)
+ifeq ($(kernel-m680x0_DFLAGS),)
+  kernel-m680x0_DFLAGS := $(kernel-m680x0_CFLAGS)
+else
+  kernel-m680x0_DFLAGS := $(kernel-m680x0_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-m680x0_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-m680x0_STRIP ?= $(TARGET_STRIP)
+kernel-m680x0_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_MC_CPPFLAGS:=$(strip $(kernel-m680x0_MC_CPPFLAGS) $(kernel-m680x0_MC_EXTRA_CPPFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_CFLAGS:=$(strip $(kernel-m680x0_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_DFLAGS:=$(kernel-m680x0_DFLAGS)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-m680x0_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-m680x0_STRIP ?= $(HOST_STRIP)
+kernel-m680x0_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-m680x0_MC_CPPFLAGS) $(kernel-m680x0_MC_EXTRA_CPPFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-m680x0_CFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-m680x0_DFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-m680x0_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-m680x0_STRIP ?= $(ECHO) >/dev/null
+kernel-m680x0_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-m680x0_MC_CPPFLAGS) $(kernel-m680x0_MC_EXTRA_CPPFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-m680x0_CFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-m680x0_DFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-m680x0_MC_TARGETS) : CPPFLAGS := $(kernel-m680x0_MC_CPPFLAGS)
+$(kernel-m680x0_MC_TARGETS) : CFLAGS := $(kernel-m680x0_CFLAGS)
+$(kernel-m680x0_MC_TARGETS) : $(kernel-m680x0_MC_TGTWILDCARD).o : $(kernel-m680x0_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-m680x0_IQUOTE) $(dir $<) $(kernel-m680x0_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_IQUOTE) . $(kernel-m680x0_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-m680x0_IQUOTE) $(dir $<) $(kernel-m680x0_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_IQUOTE) . $(kernel-m680x0_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-m680x0_IQUOTE) $(dir $<) $(kernel-m680x0_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_IQUOTE) . $(kernel-m680x0_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-m680x0_MC_DTARGETS) : $(kernel-m680x0_MC_TGTWILDCARD).d : $(kernel-m680x0_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-m680x0_DFLAGS) $(kernel-m680x0_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-m680x0_MC_SRCWILDCARD := %
+else
+kernel-m680x0_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-m680x0_OBJDIR),)
+kernel-m680x0_MC_TARGETS := $(addsuffix .o,$(kernel-m680x0_TARGETCCFILES))
+kernel-m680x0_MC_DTARGETS := $(addsuffix .d,$(kernel-m680x0_TARGETCCFILES))
+kernel-m680x0_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-m680x0_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-m680x0_OBJDIR)/,$(notdir $(kernel-m680x0_TARGETCCFILES))))
+    kernel-m680x0_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-m680x0_OBJDIR)/,$(notdir $(kernel-m680x0_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-m680x0_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-m680x0_OBJDIR)/,$(kernel-m680x0_TARGETCCFILES)))
+    kernel-m680x0_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-m680x0_OBJDIR)/,$(kernel-m680x0_TARGETCCFILES)))
+else
+    kernel-m680x0_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-m680x0_OBJDIR)/,$(patsubst /%,%,$(kernel-m680x0_TARGETCCFILES))))
+    kernel-m680x0_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-m680x0_OBJDIR)/,$(patsubst /%,%,$(kernel-m680x0_TARGETCCFILES))))
+endif
+endif
+kernel-m680x0_MC_TGTWILDCARD := $(kernel-m680x0_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : | $(addsuffix .c,$(kernel-m680x0_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-m680x0_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-m680x0_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-m680x0_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-m680x0_MC_DIRS := $(foreach dir, $(kernel-m680x0_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-m680x0_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-m680x0_MC_DIRS),)
+    kernel-m680x0_MC_DIRS := $(shell echo $(kernel-m680x0_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-m680x0_MC_DIRS)
+endif
+
+endif
+
+kernel-m680x0_MC_CPPFLAGS := $(kernel-m680x0_CPPFLAGS) -D__AROS__
+kernel-m680x0_CFLAGS := $(kernel-m680x0_CFLAGS)
+ifeq ($(kernel-m680x0_DFLAGS),)
+  kernel-m680x0_DFLAGS := $(kernel-m680x0_CFLAGS)
+else
+  kernel-m680x0_DFLAGS := $(kernel-m680x0_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-m680x0_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-m680x0_STRIP ?= $(TARGET_STRIP)
+kernel-m680x0_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_MC_CPPFLAGS:=$(strip $(kernel-m680x0_MC_CPPFLAGS) $(kernel-m680x0_MC_EXTRA_CPPFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_CFLAGS:=$(strip $(kernel-m680x0_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_DFLAGS:=$(kernel-m680x0_DFLAGS)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-m680x0_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-m680x0_STRIP ?= $(HOST_STRIP)
+kernel-m680x0_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-m680x0_MC_CPPFLAGS) $(kernel-m680x0_MC_EXTRA_CPPFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-m680x0_CFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-m680x0_DFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-m680x0_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-m680x0_STRIP ?= $(ECHO) >/dev/null
+kernel-m680x0_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-m680x0_MC_CPPFLAGS) $(kernel-m680x0_MC_EXTRA_CPPFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-m680x0_CFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-m680x0_DFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-m680x0_MC_TARGETS) : CPPFLAGS := $(kernel-m680x0_MC_CPPFLAGS)
+$(kernel-m680x0_MC_TARGETS) : CFLAGS := $(kernel-m680x0_CFLAGS)
+$(kernel-m680x0_MC_TARGETS) : $(kernel-m680x0_MC_TGTWILDCARD).o : $(kernel-m680x0_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-m680x0_IQUOTE) $(dir $<) $(kernel-m680x0_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_IQUOTE) . $(kernel-m680x0_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-m680x0_IQUOTE) $(dir $<) $(kernel-m680x0_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_IQUOTE) . $(kernel-m680x0_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-m680x0_IQUOTE) $(dir $<) $(kernel-m680x0_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_IQUOTE) . $(kernel-m680x0_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-m680x0_MC_DTARGETS) : $(kernel-m680x0_MC_TGTWILDCARD).d : $(kernel-m680x0_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-m680x0_DFLAGS) $(kernel-m680x0_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-m680x0_MC_SRCWILDCARD := %
+else
+kernel-m680x0_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-m680x0_OBJDIR)/linklib,)
+kernel-m680x0_MC_TARGETS := $(addsuffix .o,$(kernel-m680x0_NLIBARCHFILES))
+kernel-m680x0_MC_DTARGETS := $(addsuffix .d,$(kernel-m680x0_NLIBARCHFILES))
+kernel-m680x0_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-m680x0_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$(notdir $(kernel-m680x0_NLIBARCHFILES))))
+    kernel-m680x0_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$(notdir $(kernel-m680x0_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-m680x0_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$(kernel-m680x0_NLIBARCHFILES)))
+    kernel-m680x0_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$(kernel-m680x0_NLIBARCHFILES)))
+else
+    kernel-m680x0_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-m680x0_NLIBARCHFILES))))
+    kernel-m680x0_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-m680x0_NLIBARCHFILES))))
+endif
+endif
+kernel-m680x0_MC_TGTWILDCARD := $(kernel-m680x0_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : | $(addsuffix .c,$(kernel-m680x0_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-m680x0_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-m680x0_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-m680x0_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-m680x0_MC_DIRS := $(foreach dir, $(kernel-m680x0_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-m680x0_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-m680x0_MC_DIRS),)
+    kernel-m680x0_MC_DIRS := $(shell echo $(kernel-m680x0_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-m680x0_MC_DIRS)
+endif
+
+endif
+
+kernel-m680x0_MC_CPPFLAGS := $(kernel-m680x0_LINKLIBCPPFLAGS) -D__AROS__
+kernel-m680x0_CFLAGS := $(kernel-m680x0_LINKLIBCFLAGS)
+ifeq ($(kernel-m680x0_LINKLIBDFLAGS),)
+  kernel-m680x0_DFLAGS := $(kernel-m680x0_LINKLIBCFLAGS)
+else
+  kernel-m680x0_DFLAGS := $(kernel-m680x0_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-m680x0_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-m680x0_STRIP ?= $(TARGET_STRIP)
+kernel-m680x0_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_MC_CPPFLAGS:=$(strip $(kernel-m680x0_MC_CPPFLAGS) $(kernel-m680x0_MC_EXTRA_CPPFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_CFLAGS:=$(strip $(kernel-m680x0_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_DFLAGS:=$(kernel-m680x0_DFLAGS)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-m680x0_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-m680x0_STRIP ?= $(HOST_STRIP)
+kernel-m680x0_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-m680x0_MC_CPPFLAGS) $(kernel-m680x0_MC_EXTRA_CPPFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-m680x0_CFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-m680x0_DFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-m680x0_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-m680x0_STRIP ?= $(ECHO) >/dev/null
+kernel-m680x0_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-m680x0_MC_CPPFLAGS) $(kernel-m680x0_MC_EXTRA_CPPFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-m680x0_CFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-m680x0_DFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-m680x0_MC_TARGETS) : CPPFLAGS := $(kernel-m680x0_MC_CPPFLAGS)
+$(kernel-m680x0_MC_TARGETS) : CFLAGS := $(kernel-m680x0_CFLAGS)
+$(kernel-m680x0_MC_TARGETS) : $(kernel-m680x0_MC_TGTWILDCARD).o : $(kernel-m680x0_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-m680x0_IQUOTE) $(dir $<) $(kernel-m680x0_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_IQUOTE) . $(kernel-m680x0_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-m680x0_IQUOTE) $(dir $<) $(kernel-m680x0_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_IQUOTE) . $(kernel-m680x0_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-m680x0_IQUOTE) $(dir $<) $(kernel-m680x0_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_IQUOTE) . $(kernel-m680x0_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-m680x0_MC_DTARGETS) : $(kernel-m680x0_MC_TGTWILDCARD).d : $(kernel-m680x0_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-m680x0_DFLAGS) $(kernel-m680x0_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-m680x0_OBJDIR)/linklib,)
+kernel-m680x0_MC_SRCWILDCARD := %
+else
+kernel-m680x0_MC_SRCWILDCARD := $(kernel-m680x0_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-m680x0_OBJDIR)/linklib,)
+kernel-m680x0_MC_TARGETS := $(addsuffix .o,$(kernel-m680x0_LINKLIBCCGENFILES))
+kernel-m680x0_MC_DTARGETS := $(addsuffix .d,$(kernel-m680x0_LINKLIBCCGENFILES))
+kernel-m680x0_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-m680x0_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$(notdir $(kernel-m680x0_LINKLIBCCGENFILES))))
+    kernel-m680x0_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$(notdir $(kernel-m680x0_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-m680x0_OBJDIR)/linklib,)
+    kernel-m680x0_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$(kernel-m680x0_LINKLIBCCGENFILES)))
+    kernel-m680x0_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$(kernel-m680x0_LINKLIBCCGENFILES)))
+else
+    kernel-m680x0_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$(patsubst $(kernel-m680x0_OBJDIR)/linklib/%,%,$(kernel-m680x0_LINKLIBCCGENFILES))))
+    kernel-m680x0_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$(patsubst $(kernel-m680x0_OBJDIR)/linklib/%,%,$(kernel-m680x0_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-m680x0_MC_TGTWILDCARD := $(kernel-m680x0_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : | $(addsuffix .c,$(kernel-m680x0_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-m680x0_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-m680x0_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-m680x0_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-m680x0_MC_DIRS := $(foreach dir, $(kernel-m680x0_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-m680x0_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-m680x0_MC_DIRS),)
+    kernel-m680x0_MC_DIRS := $(shell echo $(kernel-m680x0_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-m680x0_MC_DIRS)
+endif
+
+endif
+
+kernel-m680x0_MC_CPPFLAGS := $(kernel-m680x0_LINKLIBCPPFLAGS) -D__AROS__
+kernel-m680x0_CFLAGS := $(kernel-m680x0_LINKLIBCFLAGS)
+ifeq ($(kernel-m680x0_LINKLIBDFLAGS),)
+  kernel-m680x0_DFLAGS := $(kernel-m680x0_LINKLIBCFLAGS)
+else
+  kernel-m680x0_DFLAGS := $(kernel-m680x0_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-m680x0_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-m680x0_STRIP ?= $(TARGET_STRIP)
+kernel-m680x0_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_MC_CPPFLAGS:=$(strip $(kernel-m680x0_MC_CPPFLAGS) $(kernel-m680x0_MC_EXTRA_CPPFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_CFLAGS:=$(strip $(kernel-m680x0_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_DFLAGS:=$(kernel-m680x0_DFLAGS)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-m680x0_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-m680x0_STRIP ?= $(HOST_STRIP)
+kernel-m680x0_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-m680x0_MC_CPPFLAGS) $(kernel-m680x0_MC_EXTRA_CPPFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-m680x0_CFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-m680x0_DFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-m680x0_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-m680x0_STRIP ?= $(ECHO) >/dev/null
+kernel-m680x0_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-m680x0_MC_CPPFLAGS) $(kernel-m680x0_MC_EXTRA_CPPFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-m680x0_CFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-m680x0_DFLAGS))
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-m680x0_MC_TARGETS) $(kernel-m680x0_MC_DTARGETS) : kernel-m680x0_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-m680x0_MC_TARGETS) : CPPFLAGS := $(kernel-m680x0_MC_CPPFLAGS)
+$(kernel-m680x0_MC_TARGETS) : CFLAGS := $(kernel-m680x0_CFLAGS)
+$(kernel-m680x0_MC_TARGETS) : $(kernel-m680x0_MC_TGTWILDCARD).o : $(kernel-m680x0_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-m680x0_IQUOTE) $(dir $<) $(kernel-m680x0_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_IQUOTE) . $(kernel-m680x0_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-m680x0_IQUOTE) $(dir $<) $(kernel-m680x0_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_IQUOTE) . $(kernel-m680x0_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-m680x0_IQUOTE) $(dir $<) $(kernel-m680x0_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-m680x0_IQUOTE) . $(kernel-m680x0_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-m680x0_MC_DTARGETS) : $(kernel-m680x0_MC_TGTWILDCARD).d : $(kernel-m680x0_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-m680x0_DFLAGS) $(kernel-m680x0_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-m680x0_LINKLIBAFILES),)
+
+ifeq ($(kernel-m680x0_OBJDIR)/linklib,)
+kernel-m680x0-MA_TARGETS := $(addsuffix .o,$(kernel-m680x0_LINKLIBAFILES) $(kernel-m680x0_RELLINKLIBAFILES))
+kernel-m680x0-MA_WILDCARD := %
+else
+kernel-m680x0-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$(notdir $(kernel-m680x0_LINKLIBAFILES) $(kernel-m680x0_RELLINKLIBAFILES))))
+kernel-m680x0-MA_WILDCARD := $(kernel-m680x0_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-m680x0-MA_TARGETS) : | $(addsuffix .S,$(kernel-m680x0_LINKLIBAFILES) $(kernel-m680x0_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-m680x0-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-m680x0-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-m680x0_LINKLIBAFILES) $(kernel-m680x0_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-m680x0-MA_DIRS := $(foreach dir, $(kernel-m680x0-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-m680x0-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-m680x0-MA_DIRS),)
+    kernel-m680x0-MA_DIRS := $(shell echo $(kernel-m680x0-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-m680x0-MA_DIRS)
+endif
+
+endif
+
+kernel-m680x0-MA_ASSEMBLER ?= $(kernel-m680x0_ASSEMBLER)
+
+$(kernel-m680x0-MA_TARGETS) : kernel-m680x0-MA_CMD:= $(kernel-m680x0-MA_ASSEMBLER)
+
+$(kernel-m680x0-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-m680x0-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-m680x0-MA_TARGETS) : $(kernel-m680x0-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-m680x0-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-m680x0-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-m680x0-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-m680x0_SUFFIX           := library
+else
+kernel-m680x0_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-m680x0_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-m680x0_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-m680x0_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-m680x0_SUFFIX),handler)
+kernel-m680x0_MODULE           := $(AROSDIR)/$(kernel-m680x0_MODDIR)/$(kernel-m680x0_DEFNAME)-$(kernel-m680x0_SUFFIX)
+else
+kernel-m680x0_MODULE           := $(AROSDIR)/$(kernel-m680x0_MODDIR)/$(kernel-m680x0_DEFNAME).$(kernel-m680x0_SUFFIX)
+endif
+kernel-m680x0_KOBJ             := $(KOBJSDIR)/$(kernel-m680x0_DEFNAME)_$(kernel-m680x0_SUFFIX).o
+else
+kernel-m680x0_MODULE           :=
+kernel-m680x0_KOBJ             :=
+endif
+
+kernel-m680x0-quick      : kernel-m680x0
+kernel-m680x0            : $(kernel-m680x0_MODULE) $(kernel-m680x0_LINKLIB) $(kernel-m680x0_RELLINKLIB)
+ifeq (M,M)
+kernel-m680x0-kobj       : $(kernel-m680x0_KOBJ) $(kernel-m680x0_LINKLIB) $(kernel-m680x0_RELLINKLIB)
+kernel-m680x0-kobj-quick : $(kernel-m680x0_KOBJ) $(kernel-m680x0_LINKLIB) $(kernel-m680x0_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-m680x0-linklib    : $(kernel-m680x0_LINKLIB) $(kernel-m680x0_RELLINKLIB)
+endif
+
+kernel-m680x0_OBJS := $(addsuffix .o,$(kernel-m680x0_STARTFILES)) $(kernel-m680x0_ARCHOBJS) \
+           $(addprefix $(kernel-m680x0_OBJDIR)/,$(notdir $(kernel-m680x0_C_NARCHFILES:=.o) $(kernel-m680x0_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (library,handler)
+kernel-m680x0_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (680x0,con)
+    kernel-m680x0_ERR          := $(notdir $(kernel-m680x0_MODULE)).err
+else
+    kernel-m680x0_ERR          := 680x0.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-m680x0_DEFNAME)_LDFLAGS) $(kernel-m680x0_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-m680x0_LIBS) $($(kernel-m680x0_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-m680x0_MODULE) : LIB_NAMES := $(kernel-m680x0_LIBS) $($(kernel-m680x0_DEFNAME)_LIBS)
+$(kernel-m680x0_MODULE) : OBJS := $(kernel-m680x0_STARTOBJS) $(kernel-m680x0_OBJS) $(USER_OBJS)
+$(kernel-m680x0_MODULE) : ENDTAG := $(kernel-m680x0_ENDOBJS)
+$(kernel-m680x0_MODULE) : ERR := $(kernel-m680x0_ERR)
+$(kernel-m680x0_MODULE) : OBJDIR := $(kernel-m680x0_OBJDIR)
+$(kernel-m680x0_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-m680x0_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-m680x0_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-m680x0_MODULE) : $(kernel-m680x0_STARTOBJS) $(kernel-m680x0_OBJS) $(USER_OBJS) $(kernel-m680x0_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-m680x0_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-m680x0_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-m680x0_LC_LINKLIBNAME   := $(shell echo $(kernel-m680x0_LINKLIBNAME) | tr A-Z a-z)
+kernel-m680x0_LC_MODNAME       := $(shell echo 680x0 | tr A-Z a-z)
+ifneq ($(kernel-m680x0_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_LINKLIBNAME)$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_AR:=$(AR)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_LINKLIBNAME)$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_LINKLIBNAME)$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_AR:=$(HOST_AR)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_LINKLIBNAME)$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_LINKLIBNAME)$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_AR:=$(KERNEL_AR)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_LINKLIBNAME)$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_LINKLIBNAME)$(kernel-m680x0_LIBSUFFIX).a : $(kernel-m680x0_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-m680x0_AR) $@ $^
+	$(Q)$(kernel-m680x0_RANLIB) $@
+ifneq ($(kernel-m680x0_LC_MODNAME),$(kernel-m680x0_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-m680x0_LIBDIR)/lib680x0$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_AR:=$(AR)
+$(kernel-m680x0_LIBDIR)/lib680x0$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-m680x0_LIBDIR)/lib680x0$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_AR:=$(HOST_AR)
+$(kernel-m680x0_LIBDIR)/lib680x0$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-m680x0_LIBDIR)/lib680x0$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_AR:=$(KERNEL_AR)
+$(kernel-m680x0_LIBDIR)/lib680x0$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-m680x0_LIBDIR)/lib680x0$(kernel-m680x0_LIBSUFFIX).a : $(kernel-m680x0_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-m680x0_AR) $@ $^
+	$(Q)$(kernel-m680x0_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-m680x0_LINKLIB),)
+$(kernel-m680x0_LINKLIB) : | $(kernel-m680x0_LIBDIR)
+else
+$(kernel-m680x0_LINKLIB) :: $(kernel-m680x0_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-m680x0_LIBDIR)
+
+endif
+
+ifneq ($(kernel-m680x0_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_LINKLIBNAME)_rel$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_AR:=$(AR)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_LINKLIBNAME)_rel$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_LINKLIBNAME)_rel$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_AR:=$(HOST_AR)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_LINKLIBNAME)_rel$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_LINKLIBNAME)_rel$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_AR:=$(KERNEL_AR)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_LINKLIBNAME)_rel$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_LINKLIBNAME)_rel$(kernel-m680x0_LIBSUFFIX).a : $(kernel-m680x0_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-m680x0_AR) $@ $^
+	$(Q)$(kernel-m680x0_RANLIB) $@
+ifneq ($(kernel-m680x0_LC_MODNAME),$(kernel-m680x0_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_DEFNAME)_rel$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_AR:=$(AR)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_DEFNAME)_rel$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_DEFNAME)_rel$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_AR:=$(HOST_AR)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_DEFNAME)_rel$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_DEFNAME)_rel$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_AR:=$(KERNEL_AR)
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_DEFNAME)_rel$(kernel-m680x0_LIBSUFFIX).a : kernel-m680x0_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-m680x0_LIBDIR)/lib$(kernel-m680x0_DEFNAME)_rel$(kernel-m680x0_LIBSUFFIX).a : $(kernel-m680x0_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-m680x0_AR) $@ $^
+	$(Q)$(kernel-m680x0_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-m680x0_RELLINKLIB),)
+$(kernel-m680x0_RELLINKLIB) : | $(kernel-m680x0_LIBDIR)
+else
+$(kernel-m680x0_RELLINKLIB) :: $(kernel-m680x0_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-m680x0_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-m680x0_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-m680x0_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-m680x0_SYMBOLS := $(kernel-m680x0_KBASE)
+
+kernel-m680x0_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-m680x0_KOBJ_LIBS        := $(filter-out $(kernel-m680x0_KLIB),$(kernel-m680x0_LIBS)) $(kernel-m680x0_KAUTOLIB)
+$(kernel-m680x0_KOBJ) : LINKLIBS:=$(kernel-m680x0_KOBJ_LIBS) $($(kernel-m680x0_DEFNAME)_LIBS)
+$(kernel-m680x0_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-m680x0_SYMBOLS))
+$(kernel-m680x0_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-m680x0_KOBJ) : $(kernel-m680x0_OBJS) $(USER_OBJS) $(kernel-m680x0_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-m680x0_DEPS             := $(addprefix $(kernel-m680x0_OBJDIR)/,$(notdir $(kernel-m680x0_CCFILES:=.d) $(kernel-m680x0_TARGETCCFILES:=.d) $(kernel-m680x0_CXXFILES:=.d))) $(addprefix $(kernel-m680x0_OBJDIR)/linklib/,$(notdir $(kernel-m680x0_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-m680x0_DEPS),)
+  ifneq (kernel-m680x0 kernel-m680x0-quick kernel-m680x0-kobj kernel-m680x0-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-m680x0 kernel-m680x0-quick kernel-m680x0-kobj kernel-m680x0-kobj-quick),)
+      -include $(kernel-m680x0_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-m680x0_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-m680x0_OBJS) $(kernel-m680x0_DEPS) : | $(kernel-m680x0_OBJDIR)/linklib
+
+ifneq ($(kernel-m680x0_OBJS) $(kernel-m680x0_DEPS) $(kernel-m680x0_MODULE) $(kernel-m680x0_KOBJ),)
+$(kernel-m680x0_OBJS) $(kernel-m680x0_DEPS) $(kernel-m680x0_MODULE) $(kernel-m680x0_KOBJ) : | $(kernel-m680x0_OBJDIR) $(AROSDIR)/$(kernel-m680x0_MODDIR) $(KOBJSDIR)
+else
+$(kernel-m680x0_OBJS) $(kernel-m680x0_DEPS) $(kernel-m680x0_MODULE) $(kernel-m680x0_KOBJ) :: $(kernel-m680x0_OBJDIR) $(AROSDIR)/$(kernel-m680x0_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-m680x0_OBJDIR) $(AROSDIR)/$(kernel-m680x0_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-m680x0 kernel-m680x0-includes kernel-m680x0-quick kernel-m680x0-kobj kernel-m680x0-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-m680x0_DFILE_DEPS := $(kernel-m680x0_LIBDEFSINC) $(kernel-m680x0_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-m680x0_INCDIR)/,$($(kernel-m680x0_DEFNAME)_INCLUDES))
+$(kernel-m680x0_DEPS) : $(kernel-m680x0_DFILE_DEPS)
+endif
+
+kernel-m680x0_TOCLEAN := $(kernel-m680x0_OBJS) $(kernel-m680x0_DEPS) \
+    $(kernel-m680x0_MODULE) $(kernel-m680x0_LINKLIB) $(kernel-m680x0_KOBJ) \
+    $(kernel-m680x0_OBJDIR)/Makefile.680x0library \
+    $(addprefix $(kernel-m680x0_OBJDIR)/include/,$($(kernel-m680x0_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-m680x0_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-m680x0_INCDIR)/,$($(kernel-m680x0_DEFNAME)_INCLUDES)) \
+    $(kernel-m680x0_OBJDIR)/680x0_geninc $(kernel-m680x0_OBJDIR)/680x0_incs \
+    $(addsuffix .c,$(kernel-m680x0_LINKLIBFILES)) $(kernel-m680x0_LINKLIBOBJS) $(kernel-m680x0_LIBDEFSINC) \
+    $(kernel-m680x0_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-m680x0_STARTFILES) $(kernel-m680x0_ENDFILES)) \
+    $(kernel-m680x0_ENDOBJS)
+kernel-m680x0-clean : FILES              := $(kernel-m680x0_TOCLEAN)
+kernel-m680x0-clean ::
+	$(Q)$(ECHO) "Cleaning up for module 680x0"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-m680x0_ALLTARGETS)
+
+
+
+ifeq (   $(AFILES),)
+    $(error no files or asmfiles given)
+endif
+
+ifneq (,)
+    $(error cxx support is TODO)
+endif
+
+BDID := $(BDID)_
+ifneq ($(filter $(TARGET),kernel-m680x0-m68k),)
+    BDTARGETID := $(BDID)
+endif
+
+#MM- kernel-m680x0 : \
+#MM			    kernel-m680x0-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT) \
+#MM			    kernel-m680x0-$(ARCH)-$(CPU) \
+#MM			    kernel-m680x0-$(ARCH)-$(AROS_TARGET_VARIANT) \
+#MM			    kernel-m680x0-$(ARCH) \
+#MM			    kernel-m680x0-$(FAMILY) \
+#MM			    kernel-m680x0-$(CPU)
+#MM- kernel-m680x0-linklib : \
+#MM			    kernel-m680x0-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT) \
+#MM			    kernel-m680x0-$(ARCH)-$(CPU) \
+#MM			    kernel-m680x0-$(ARCH)-$(AROS_TARGET_VARIANT) \
+#MM			    kernel-m680x0-$(ARCH) \
+#MM			    kernel-m680x0-$(FAMILY) \
+#MM			    kernel-m680x0-$(CPU)
+#MM- kernel-m680x0-kobj : \
+#MM			    kernel-m680x0-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT) \
+#MM			    kernel-m680x0-$(ARCH)-$(CPU) \
+#MM			    kernel-m680x0-$(ARCH)-$(AROS_TARGET_VARIANT) \
+#MM			    kernel-m680x0-$(ARCH) \
+#MM			    kernel-m680x0-$(FAMILY) \
+#MM			    kernel-m680x0-$(CPU)
+#MM- kernel-m680x0-kobj-quick : \
+#MM			    kernel-m680x0-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT)-quick \
+#MM			    kernel-m680x0-$(ARCH)-$(CPU)-quick \
+#MM			    kernel-m680x0-$(ARCH)-$(AROS_TARGET_VARIANT)-quick \
+#MM			    kernel-m680x0-$(ARCH)-quick \
+#MM			    kernel-m680x0-$(FAMILY)-quick \
+#MM			    kernel-m680x0-$(CPU)-quick
+#MM- kernel-m680x0-quick : \
+#MM			    kernel-m680x0-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT)-quick \
+#MM			    kernel-m680x0-$(ARCH)-$(CPU)-quick \
+#MM			    kernel-m680x0-$(ARCH)-$(AROS_TARGET_VARIANT)-quick \
+#MM			    kernel-m680x0-$(ARCH)-quick \
+#MM			    kernel-m680x0-$(FAMILY)-quick \
+#MM			    kernel-m680x0-$(CPU)-quick
+
+#MM kernel-m680x0-m68k : kernel-m680x0-includes
+
+ifneq (,)
+    BD_OBJROOT$(BDID)  := 
+else
+ifneq (680x0,)
+    BD_OBJROOT$(BDID)  := $(GENDIR)/arch/m68k-all/m680x0/680x0
+else
+    BD_OBJROOT$(BDID)  := $(GENDIR)/arch/m68k-all/m680x0
+endif
+endif
+BD_OBJDIR$(BDID)  := $(BD_OBJROOT$(BDID))/arch
+BD_LIBOBJDIR$(BDID)  := $(BD_OBJROOT$(BDID))/linklib/arch
+BD_FILEOBJS$(BDID)   := $(addsuffix .o,$(addprefix $(BD_OBJDIR$(BDID))/,$(notdir ))) $(addsuffix .o,$(addprefix $(BD_OBJDIR$(BDID))/,$(notdir )))
+BD_LINKLIBOBJS$(BDID)   := $(addsuffix .o,$(addprefix $(BD_LIBOBJDIR$(BDID))/,$(notdir )))
+BD_LINKLIBARCHOBJS$(BDID)   := $(addprefix $(BD_LIBOBJDIR$(BDID))/,$(notdir ))
+BD_ASMOBJS$(BDID) := $(addsuffix .o,$(addprefix $(BD_OBJDIR$(BDID))/,$(notdir $(AFILES))))
+BD_OBJS$(BDID)    := $(BD_FILEOBJS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) $(BD_ASMOBJS$(BDID))
+BD_DEPS$(BDID)    := $(addsuffix .d,$(addprefix $(BD_OBJDIR$(BDID))/,$(notdir ))) $(addsuffix .d,$(addprefix $(BD_LIBOBJDIR$(BDID))/,$(notdir )))
+
+ifneq (680x0,)
+BD_DEFLIBDEFSINC$(BDID) := -include $(BD_OBJROOT$(BDID))/include/680x0_deflibdefs.h
+endif
+
+ifeq ($(TARGET),kernel-m680x0-m68k-quick)
+    BD_TARGET := kernel-m680x0-m68k-quick
+else
+    BD_TARGET := kernel-m680x0-m68k
+endif
+
+ifeq ($(TARGET),$(BD_TARGET))
+TMP_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+vpath %.c $(addprefix $(TMP_SRCDIR)/$(CURDIR)/,$(dir ))
+vpath %.c $(addprefix $(TMP_SRCDIR)/$(CURDIR)/,$(dir ))
+vpath %.s $(addprefix $(TMP_SRCDIR)/$(CURDIR)/,$(dir $(AFILES)))
+vpath %.S $(addprefix $(TMP_SRCDIR)/$(CURDIR)/,$(dir $(AFILES)))
+endif
+
+
+ifneq ($(BD_OBJS$(BDID)),)
+$(BD_OBJS$(BDID)) : | $(BD_OBJDIR$(BDID)) $(BD_LIBOBJDIR$(BDID))
+else
+$(BD_OBJS$(BDID)) :: $(BD_OBJDIR$(BDID)) $(BD_LIBOBJDIR$(BDID))
+endif
+
+GLOB_MKDIRS += $(BD_OBJDIR$(BDID)) $(BD_LIBOBJDIR$(BDID))
+
+
+#MM
+kernel-m680x0-m68k :: $(BD_OBJS$(BDID))
+
+#MM
+kernel-m680x0-m68k-quick :: $(BD_OBJS$(BDID))
+
+ifeq ($(findstring target,host kernel target),)
+    $(error unknown compiler target)
+endif
+
+ifneq (680x0,)
+$(BD_FILEOBJS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CPPFLAGS:=$(strip $(CPPFLAGS) -I$(BD_OBJROOT$(BDID)) $(BD_DEFLIBDEFSINC$(BDID)))
+else
+$(BD_FILEOBJS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CPPFLAGS:=$(CPPFLAGS)
+endif
+
+ifeq (target,target)
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CPPFLAGS:=$(TMP_CPPFLAGS)
+ifeq ("","")
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CFLAGS:=$(strip $(CFLAGS) $(SAFETY_CFLAGS))
+else
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CFLAGS:=$(strip  $(SAFETY_CFLAGS))
+endif
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_IQUOTE:=$(CFLAGS_IQUOTE)
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CMD:=$(HOST_CC)
+ifeq ("","")
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CFLAGS:=$(strip $(HOST_CFLAGS))
+else
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CFLAGS:=$(strip )
+endif
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_IQUOTE:=$(HOST_IQUOTE)
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CPPFLAGS:=$(strip $(KERNEL_CPPFLAGS) $(TMP_CPPFLAGS))
+ifeq ("","")
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+else
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CFLAGS:=$(strip )
+endif
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_IQUOTE:=$(KERNEL_IQUOTE)
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+ifeq ($(TARGET),$(BD_TARGET))
+$(BD_LIBOBJDIR$(BDID))/%.o : $(SRCDIR)/$(CURDIR)/%.c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(TMP_CMD) $(TMP_IQUOTE) $(dir $<) $(TMP_IQUOTE) $(SRCDIR)/$(CURDIR) $(TMP_IQUOTE) . $(TMP_IQUOTE_END) $(strip $(TMP_CFLAGS) $(TMP_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(TMP_CMD) $(TMP_IQUOTE) $(dir $<) $(TMP_IQUOTE) $(SRCDIR)/$(CURDIR) $(TMP_IQUOTE) . $(TMP_IQUOTE_END) $(strip $(TMP_CFLAGS) $(TMP_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(TMP_CMD) $(TMP_IQUOTE) $(dir $<) $(TMP_IQUOTE) $(SRCDIR)/$(CURDIR) $(TMP_IQUOTE) . $(TMP_IQUOTE_END) $(strip $(TMP_CFLAGS) $(TMP_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+$(BD_OBJDIR$(BDID))/%.o : $(SRCDIR)/$(CURDIR)/%.c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(TMP_CMD) $(TMP_IQUOTE) $(dir $<) $(TMP_IQUOTE) $(SRCDIR)/$(CURDIR) $(TMP_IQUOTE) . $(TMP_IQUOTE_END) $(strip $(TMP_CFLAGS) $(TMP_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(TMP_CMD) $(TMP_IQUOTE) $(dir $<) $(TMP_IQUOTE) $(SRCDIR)/$(CURDIR) $(TMP_IQUOTE) . $(TMP_IQUOTE_END) $(strip $(TMP_CFLAGS) $(TMP_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(TMP_CMD) $(TMP_IQUOTE) $(dir $<) $(TMP_IQUOTE) $(SRCDIR)/$(CURDIR) $(TMP_IQUOTE) . $(TMP_IQUOTE_END) $(strip $(TMP_CFLAGS) $(TMP_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+ifeq (,)
+$(BD_DEPS$(BDID)) : TMP_CPPFLAGS:=$(strip $(CPPFLAGS) $(BD_DEFLIBDEFSINC$(BDID)))
+$(BD_DEPS$(BDID)) : TMP_DFLAGS:=
+else
+$(BD_DEPS$(BDID)) : TMP_CPPFLAGS:=$(CPPFLAGS)
+$(BD_DEPS$(BDID)) : TMP_DFLAGS:=
+endif
+ifeq ($(TARGET),$(BD_TARGET))
+$(BD_LIBOBJDIR$(BDID))/%.d : $(SRCDIR)/$(CURDIR)/%.c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(TMP_CMD)" $(MKDEPEND) $(strip $(TMP_DFLAGS) $(TMP_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+$(BD_OBJDIR$(BDID))/%.d : $(SRCDIR)/$(CURDIR)/%.c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(TMP_CMD)" $(MKDEPEND) $(strip $(TMP_DFLAGS) $(TMP_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+endif
+
+$(BD_ASMOBJS$(BDID)) : CPPFLAGS:=$(CPPFLAGS)
+$(BD_ASMOBJS$(BDID)) : AFLAGS:=$(AFLAGS)
+
+ifeq ($(TARGET),$(BD_TARGET))
+$(BD_OBJDIR$(BDID))/%.o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(strip $(CC) $(TARGET_SYSROOT)) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(strip $(CC) $(TARGET_SYSROOT)) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(strip $(CC) $(TARGET_SYSROOT)) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+$(BD_OBJDIR$(BDID))/%.o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(strip $(CC) $(TARGET_SYSROOT)) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(strip $(CC) $(TARGET_SYSROOT)) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(strip $(CC) $(TARGET_SYSROOT)) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+ifneq ($(BD_DEPS$(BDID)),)
+  ifneq ($(BD_TARGET),)
+    ifneq ($(findstring $(TARGET),$(BD_TARGET)),)
+      -include $(BD_DEPS$(BDID))
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(BD_DEPS$(BDID))
+    endif
+  endif
+endif
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

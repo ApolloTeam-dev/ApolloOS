@@ -1,0 +1,37 @@
+# Copyright © 2020, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+##MM- fonts-truetype : fonts-truetype-architext
+##MM- fonts-truetype-quick : fonts-truetype-architext
+#MM- fonts-truetype-architext : fonts-truetype-architext-ttf
+
+
+fonts-truetype-architext-ttf_SRC := $(shell echo . | sed 's/^\(.\):\//\/\1\//')
+
+
+ifneq (setup,)
+setup : | $(AROSDIR)/Fonts/TrueType
+else
+setup :: $(AROSDIR)/Fonts/TrueType
+endif
+
+GLOB_MKDIRS += $(AROSDIR)/Fonts/TrueType
+
+
+.PHONY : fonts-truetype-architext-ttf
+
+#MM
+fonts-truetype-architext-ttf : | $(AROSDIR)/Fonts/TrueType 
+	$(foreach file, $(call WILDCARD, *.ttf), $(shell $(CP) $(addprefix $(if $(filter /%,$(fonts-truetype-architext-ttf_SRC)),$(fonts-truetype-architext-ttf_SRC),$(SRCDIR)/$(CURDIR)/$(fonts-truetype-architext-ttf_SRC))/, $(file)) $(addprefix $(AROSDIR)/Fonts/TrueType/, $(file))))
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

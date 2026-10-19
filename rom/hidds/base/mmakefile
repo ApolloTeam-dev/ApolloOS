@@ -1,0 +1,12 @@
+#$Id$
+
+#MM- kernel-hidd-base : kernel-hidd-storage kernel-hidd-system
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

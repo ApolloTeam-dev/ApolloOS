@@ -1,0 +1,318 @@
+# Copyright © 2016, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := \
+ localetest \
+ openlocale
+
+EXEDIR := $(AROS_TESTS)/locale
+
+#MM- test : test-locale
+#MM- test-quick : test-locale-quick
+#MM  test-locale : test-locale-miscfiles
+
+
+.PHONY : test-locale
+
+test-locale_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-locale_TARGETDIR := $(EXEDIR)
+test-locale_LIBS := 
+
+test-locale_FILES     := $(FILES)
+test-locale_OBJS      := $(addsuffix .o,$(addprefix $(test-locale_OBJDIR)/,$(test-locale_FILES)))
+test-locale_DEPS      := $(addsuffix .d,$(addprefix $(test-locale_OBJDIR)/,$(test-locale_FILES)))
+test-locale_EXES      := $(addprefix $(test-locale_TARGETDIR)/,$(test-locale_FILES))
+
+test-locale_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-locale_CPPFLAGS += -I
+endif
+test-locale_CFLAGS    := $(CFLAGS)
+test-locale_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-locale_COVERAGE := yes
+test-locale_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-locale_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-locale_CFLAGS    := $(strip $(test-locale_COVERAGEFLAGS) $(test-locale_CFLAGS))
+test-locale_LIBS += $(test-locale_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-locale_FUNCINSTR := yes
+test-locale_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-locale_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-locale_CFLAGS    := $(strip $(test-locale_INSTRFUNCFLAGS) $(test-locale_CFLAGS))
+test-locale_LIBS += $(test-locale_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-locale_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-locale_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-locale_DFLAGS := 
+else
+    test-locale_DFLAGS := $(test-locale_CFLAGS)
+endif
+ifeq (target,target)
+test-locale_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-locale_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-locale_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-locale_LDFLAGS += -L
+endif
+
+#MM
+test-locale-quick : test-locale
+
+#MM test-locale : includes-generate-deps core-linklibs
+test-locale : $(test-locale_EXES)
+
+ifneq ($(filter $(TARGET),test-locale test-locale-quick),)
+
+ifeq (,)
+test-locale_MC_SRCWILDCARD := %
+else
+test-locale_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-locale_OBJDIR),)
+test-locale_MC_TARGETS := $(addsuffix .o,$(test-locale_FILES))
+test-locale_MC_DTARGETS := $(addsuffix .d,$(test-locale_FILES))
+test-locale_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-locale_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-locale_OBJDIR)/,$(notdir $(test-locale_FILES))))
+    test-locale_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-locale_OBJDIR)/,$(notdir $(test-locale_FILES))))
+else
+ifeq (,)
+    test-locale_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-locale_OBJDIR)/,$(test-locale_FILES)))
+    test-locale_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-locale_OBJDIR)/,$(test-locale_FILES)))
+else
+    test-locale_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-locale_OBJDIR)/,$(patsubst /%,%,$(test-locale_FILES))))
+    test-locale_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-locale_OBJDIR)/,$(patsubst /%,%,$(test-locale_FILES))))
+endif
+endif
+test-locale_MC_TGTWILDCARD := $(test-locale_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : | $(addsuffix .c,$(test-locale_FILES))
+
+# Be sure that all .c files are found
+test-locale_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-locale_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-locale_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-locale_MC_DIRS := $(foreach dir, $(test-locale_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-locale_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-locale_MC_DIRS),)
+    test-locale_MC_DIRS := $(shell echo $(test-locale_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-locale_MC_DIRS)
+endif
+
+endif
+
+test-locale_MC_CPPFLAGS := $(test-locale_CPPFLAGS)
+test-locale_CFLAGS := $(test-locale_CFLAGS)
+ifeq ($(test-locale_DFLAGS),)
+  test-locale_DFLAGS := $(test-locale_CFLAGS)
+else
+  test-locale_DFLAGS := $(test-locale_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-locale_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-locale_STRIP ?= $(TARGET_STRIP)
+test-locale_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : test-locale_MC_CPPFLAGS:=$(strip $(test-locale_MC_CPPFLAGS) $(test-locale_MC_EXTRA_CPPFLAGS))
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : test-locale_CFLAGS:=$(strip $(test-locale_CFLAGS) $(SAFETY_CFLAGS))
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : test-locale_DFLAGS:=$(test-locale_DFLAGS)
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : test-locale_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : test-locale_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-locale_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-locale_STRIP ?= $(HOST_STRIP)
+test-locale_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : test-locale_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-locale_MC_CPPFLAGS) $(test-locale_MC_EXTRA_CPPFLAGS))
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : test-locale_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-locale_CFLAGS))
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : test-locale_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-locale_DFLAGS))
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : test-locale_IQUOTE:=$(HOST_IQUOTE)
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : test-locale_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-locale_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-locale_STRIP ?= $(ECHO) >/dev/null
+test-locale_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : test-locale_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-locale_MC_CPPFLAGS) $(test-locale_MC_EXTRA_CPPFLAGS))
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : test-locale_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-locale_CFLAGS))
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : test-locale_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-locale_DFLAGS))
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : test-locale_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-locale_MC_TARGETS) $(test-locale_MC_DTARGETS) : test-locale_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-locale_MC_TARGETS) : CPPFLAGS := $(test-locale_MC_CPPFLAGS)
+$(test-locale_MC_TARGETS) : CFLAGS := $(test-locale_CFLAGS)
+$(test-locale_MC_TARGETS) : $(test-locale_MC_TGTWILDCARD).o : $(test-locale_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-locale_IQUOTE) $(dir $<) $(test-locale_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-locale_IQUOTE) . $(test-locale_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-locale_IQUOTE) $(dir $<) $(test-locale_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-locale_IQUOTE) . $(test-locale_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-locale_IQUOTE) $(dir $<) $(test-locale_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-locale_IQUOTE) . $(test-locale_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-locale_MC_DTARGETS) : $(test-locale_MC_TGTWILDCARD).d : $(test-locale_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-locale_DFLAGS) $(test-locale_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-locale-link_EXTRA_LDFLAGS := 
+test-locale-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-locale-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-locale-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-locale-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-locale-link_DIRS := $(subst -L ,-L,$(strip $(test-locale_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-locale-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-locale-link_DIRS)))
+# Add trailing /
+test-locale-link_DIRS := $(subst //,/,$(addsuffix /,$(test-locale-link_DIRS)))
+# Add normal linklib path
+test-locale-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-locale-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-locale_LIBS) $(test-locale-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-locale-link_DEPLIBS := $(foreach lib,$(test-locale-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-locale-link_DIRS)))) \
+)
+test-locale-link_PROGS := $(addprefix $(test-locale_TARGETDIR)/,$(test-locale_FILES))
+
+$(test-locale-link_PROGS) : OBJDIR := $(test-locale_OBJDIR)
+$(test-locale-link_PROGS) : LDFLAGS := $(strip $(test-locale_LDFLAGS) $(test-locale-link_EXTRA_LDFLAGS))
+$(test-locale-link_PROGS) : LIBS := $(addprefix -l,$(test-locale_LIBS) $(test-locale-link_EXTRA_LIBS) )
+$(test-locale-link_PROGS) : $(test-locale_TARGETDIR)/% : $(test-locale_OBJDIR)/%.o $(test-locale-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-locale_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-locale_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-locale_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-locale_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-locale_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-locale_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-locale_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-locale_DEPS),)
+  ifneq (test-locale test-locale-quick,)
+    ifneq ($(findstring $(TARGET),test-locale test-locale-quick),)
+      -include $(test-locale_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-locale_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-locale_DEPS) $(test-locale_OBJS) $(addprefix $(test-locale_TARGETDIR)/,$(test-locale_FILES)),)
+$(test-locale_DEPS) $(test-locale_OBJS) $(addprefix $(test-locale_TARGETDIR)/,$(test-locale_FILES)) : | $(test-locale_TARGETDIR) $(test-locale_OBJDIR)
+else
+$(test-locale_DEPS) $(test-locale_OBJS) $(addprefix $(test-locale_TARGETDIR)/,$(test-locale_FILES)) :: $(test-locale_TARGETDIR) $(test-locale_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-locale_TARGETDIR) $(test-locale_OBJDIR)
+
+
+test-locale-clean : FILES := $(test-locale_OBJS) $(test-locale_EXES) $(test-locale_DEPS)
+#MM
+test-locale-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-locale"
+	$(Q)$(RM) $(FILES)
+
+
+
+test-locale-miscfiles_SRC := $(shell echo . | sed 's/^\(.\):\//\/\1\//')
+
+
+ifneq (setup,)
+setup : | $(EXEDIR)
+else
+setup :: $(EXEDIR)
+endif
+
+GLOB_MKDIRS += $(EXEDIR)
+
+
+.PHONY : test-locale-miscfiles
+
+#MM
+test-locale-miscfiles : | $(EXEDIR) 
+	$(foreach file, openlocale.prefs, $(shell $(CP) $(addprefix $(if $(filter /%,$(test-locale-miscfiles_SRC)),$(test-locale-miscfiles_SRC),$(SRCDIR)/$(CURDIR)/$(test-locale-miscfiles_SRC))/, $(file)) $(addprefix $(EXEDIR)/, $(file))))
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

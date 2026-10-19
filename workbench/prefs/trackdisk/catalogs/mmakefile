@@ -1,0 +1,75 @@
+# Copyright © 2004-2019, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+CATALOGS:=croatian czech danish french german italian polish portuguese russian spanish norwegian
+
+
+ifeq (,)
+workbench-prefs-trackdisk-catalogs_DESC := $(basename $(wildcard $(SRCDIR)/$(CURDIR)/*.cd))
+else
+workbench-prefs-trackdisk-catalogs_DESC := 
+endif
+
+workbench-prefs-trackdisk-catalogs_SRC := $(shell echo $(TOOLDIR)/C_h_aros | sed 's/^\(.\):\//\/\1\//')
+
+ifeq ($(CATALOGS),)
+workbench-prefs-trackdisk-catalogs_LNGS := $(basename $(notdir $(call WILDCARD, $(SRCDIR)/$(CURDIR)/*.ct)))
+else
+workbench-prefs-trackdisk-catalogs_LNGS := $(CATALOGS)
+endif
+
+workbench-prefs-trackdisk-catalogs_OBJS := $(addsuffix /System/Prefs/Trackdisk.catalog, $(addprefix $(AROS_CATALOGS)/, $(workbench-prefs-trackdisk-catalogs_LNGS)))
+workbench-prefs-trackdisk-catalogs_DIRS := $(addsuffix /System/Prefs, $(addprefix $(AROS_CATALOGS)/, $(workbench-prefs-trackdisk-catalogs_LNGS))) $(dir ../strings.h)
+
+#MM- workbench-prefs-trackdisk-catalogs-quick : workbench-prefs-trackdisk-catalogs
+
+#MM
+workbench-prefs-trackdisk-catalogs : $(workbench-prefs-trackdisk-catalogs_OBJS) ../strings.h
+
+
+ifneq ($(workbench-prefs-trackdisk-catalogs_OBJS),)
+$(workbench-prefs-trackdisk-catalogs_OBJS) : | $(workbench-prefs-trackdisk-catalogs_DIRS)
+else
+$(workbench-prefs-trackdisk-catalogs_OBJS) :: $(workbench-prefs-trackdisk-catalogs_DIRS)
+endif
+
+GLOB_MKDIRS += $(workbench-prefs-trackdisk-catalogs_DIRS)
+
+
+$(AROS_CATALOGS)/%/System/Prefs/Trackdisk.catalog : $(SRCDIR)/$(CURDIR)/%.ct $(workbench-prefs-trackdisk-catalogs_DESC).cd
+	$(Q)$(ECHO) "Creating   Trackdisk catalog for language $*."
+	$(Q)$(IF) $(TEST) "$*" = "polish"; then \
+	    $(FLEXCAT) iso88592toamigapl $(workbench-prefs-trackdisk-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Prefs/Trackdisk.catalog" || [ $$? -lt 10 ] ; \
+	elif $(TEST) "$*" = "russian"; then \
+	    $(FLEXCAT) win1251toamiga1251 $(workbench-prefs-trackdisk-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Prefs/Trackdisk.catalog" || [ $$? -lt 10 ] ; \
+	else \
+	    $(FLEXCAT) $(workbench-prefs-trackdisk-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Prefs/Trackdisk.catalog" || [ $$? -lt 10 ] ; \
+	fi
+
+ifneq (../strings.h,)
+../strings.h : workbench-prefs-trackdisk-catalogs_DESC := $(workbench-prefs-trackdisk-catalogs_DESC)
+../strings.h : workbench-prefs-trackdisk-catalogs_SRC := $(workbench-prefs-trackdisk-catalogs_SRC)
+../strings.h : $(workbench-prefs-trackdisk-catalogs_DESC).cd $(workbench-prefs-trackdisk-catalogs_SRC).sd | $(dir ../strings.h)
+	$(Q)$(ECHO) "Creating   Trackdisk catalog source file $@"
+	$(Q)$(FLEXCAT) $(workbench-prefs-trackdisk-catalogs_DESC).cd $@=$(workbench-prefs-trackdisk-catalogs_SRC).sd
+endif
+
+workbench-prefs-trackdisk-catalogs-clean : FILES := $(workbench-prefs-trackdisk-catalogs_OBJS) ../strings.h
+#MM
+workbench-prefs-trackdisk-catalogs-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-prefs-trackdisk-catalogs"
+	$(Q)$(RM) $(FILES)
+
+.PHONY: workbench-prefs-trackdisk-catalogs workbench-prefs-trackdisk-catalogs-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

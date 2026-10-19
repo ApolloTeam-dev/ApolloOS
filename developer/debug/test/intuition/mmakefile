@@ -1,0 +1,302 @@
+#   $Id$
+#
+#   Makefile for AROS intuition.library tests
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := \
+    customscreen \
+    displayalert \
+    drawinfoattr \
+    gamma \
+    monitorclass \
+    pubscreen \
+    screenclass \
+    screentest \
+    scrollerwin 
+
+EXEDIR := $(AROS_TESTS)/intuition
+
+
+.PHONY : test-intuition
+
+test-intuition_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-intuition_TARGETDIR := $(EXEDIR)
+test-intuition_LIBS := 
+
+test-intuition_FILES     := $(FILES)
+test-intuition_OBJS      := $(addsuffix .o,$(addprefix $(test-intuition_OBJDIR)/,$(test-intuition_FILES)))
+test-intuition_DEPS      := $(addsuffix .d,$(addprefix $(test-intuition_OBJDIR)/,$(test-intuition_FILES)))
+test-intuition_EXES      := $(addprefix $(test-intuition_TARGETDIR)/,$(test-intuition_FILES))
+
+test-intuition_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-intuition_CPPFLAGS += -I
+endif
+test-intuition_CFLAGS    := $(CFLAGS)
+test-intuition_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-intuition_COVERAGE := yes
+test-intuition_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-intuition_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-intuition_CFLAGS    := $(strip $(test-intuition_COVERAGEFLAGS) $(test-intuition_CFLAGS))
+test-intuition_LIBS += $(test-intuition_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-intuition_FUNCINSTR := yes
+test-intuition_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-intuition_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-intuition_CFLAGS    := $(strip $(test-intuition_INSTRFUNCFLAGS) $(test-intuition_CFLAGS))
+test-intuition_LIBS += $(test-intuition_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-intuition_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-intuition_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-intuition_DFLAGS := 
+else
+    test-intuition_DFLAGS := $(test-intuition_CFLAGS)
+endif
+ifeq (target,target)
+test-intuition_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-intuition_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-intuition_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-intuition_LDFLAGS += -L
+endif
+
+#MM
+test-intuition-quick : test-intuition
+
+#MM test-intuition : includes-generate-deps core-linklibs
+test-intuition : $(test-intuition_EXES)
+
+ifneq ($(filter $(TARGET),test-intuition test-intuition-quick),)
+
+ifeq (,)
+test-intuition_MC_SRCWILDCARD := %
+else
+test-intuition_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-intuition_OBJDIR),)
+test-intuition_MC_TARGETS := $(addsuffix .o,$(test-intuition_FILES))
+test-intuition_MC_DTARGETS := $(addsuffix .d,$(test-intuition_FILES))
+test-intuition_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-intuition_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-intuition_OBJDIR)/,$(notdir $(test-intuition_FILES))))
+    test-intuition_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-intuition_OBJDIR)/,$(notdir $(test-intuition_FILES))))
+else
+ifeq (,)
+    test-intuition_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-intuition_OBJDIR)/,$(test-intuition_FILES)))
+    test-intuition_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-intuition_OBJDIR)/,$(test-intuition_FILES)))
+else
+    test-intuition_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-intuition_OBJDIR)/,$(patsubst /%,%,$(test-intuition_FILES))))
+    test-intuition_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-intuition_OBJDIR)/,$(patsubst /%,%,$(test-intuition_FILES))))
+endif
+endif
+test-intuition_MC_TGTWILDCARD := $(test-intuition_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : | $(addsuffix .c,$(test-intuition_FILES))
+
+# Be sure that all .c files are found
+test-intuition_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-intuition_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-intuition_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-intuition_MC_DIRS := $(foreach dir, $(test-intuition_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-intuition_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-intuition_MC_DIRS),)
+    test-intuition_MC_DIRS := $(shell echo $(test-intuition_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-intuition_MC_DIRS)
+endif
+
+endif
+
+test-intuition_MC_CPPFLAGS := $(test-intuition_CPPFLAGS)
+test-intuition_CFLAGS := $(test-intuition_CFLAGS)
+ifeq ($(test-intuition_DFLAGS),)
+  test-intuition_DFLAGS := $(test-intuition_CFLAGS)
+else
+  test-intuition_DFLAGS := $(test-intuition_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-intuition_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-intuition_STRIP ?= $(TARGET_STRIP)
+test-intuition_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : test-intuition_MC_CPPFLAGS:=$(strip $(test-intuition_MC_CPPFLAGS) $(test-intuition_MC_EXTRA_CPPFLAGS))
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : test-intuition_CFLAGS:=$(strip $(test-intuition_CFLAGS) $(SAFETY_CFLAGS))
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : test-intuition_DFLAGS:=$(test-intuition_DFLAGS)
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : test-intuition_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : test-intuition_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-intuition_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-intuition_STRIP ?= $(HOST_STRIP)
+test-intuition_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : test-intuition_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-intuition_MC_CPPFLAGS) $(test-intuition_MC_EXTRA_CPPFLAGS))
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : test-intuition_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-intuition_CFLAGS))
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : test-intuition_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-intuition_DFLAGS))
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : test-intuition_IQUOTE:=$(HOST_IQUOTE)
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : test-intuition_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-intuition_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-intuition_STRIP ?= $(ECHO) >/dev/null
+test-intuition_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : test-intuition_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-intuition_MC_CPPFLAGS) $(test-intuition_MC_EXTRA_CPPFLAGS))
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : test-intuition_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-intuition_CFLAGS))
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : test-intuition_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-intuition_DFLAGS))
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : test-intuition_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-intuition_MC_TARGETS) $(test-intuition_MC_DTARGETS) : test-intuition_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-intuition_MC_TARGETS) : CPPFLAGS := $(test-intuition_MC_CPPFLAGS)
+$(test-intuition_MC_TARGETS) : CFLAGS := $(test-intuition_CFLAGS)
+$(test-intuition_MC_TARGETS) : $(test-intuition_MC_TGTWILDCARD).o : $(test-intuition_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-intuition_IQUOTE) $(dir $<) $(test-intuition_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-intuition_IQUOTE) . $(test-intuition_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-intuition_IQUOTE) $(dir $<) $(test-intuition_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-intuition_IQUOTE) . $(test-intuition_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-intuition_IQUOTE) $(dir $<) $(test-intuition_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-intuition_IQUOTE) . $(test-intuition_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-intuition_MC_DTARGETS) : $(test-intuition_MC_TGTWILDCARD).d : $(test-intuition_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-intuition_DFLAGS) $(test-intuition_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-intuition-link_EXTRA_LDFLAGS := 
+test-intuition-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-intuition-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-intuition-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-intuition-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-intuition-link_DIRS := $(subst -L ,-L,$(strip $(test-intuition_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-intuition-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-intuition-link_DIRS)))
+# Add trailing /
+test-intuition-link_DIRS := $(subst //,/,$(addsuffix /,$(test-intuition-link_DIRS)))
+# Add normal linklib path
+test-intuition-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-intuition-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-intuition_LIBS) $(test-intuition-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-intuition-link_DEPLIBS := $(foreach lib,$(test-intuition-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-intuition-link_DIRS)))) \
+)
+test-intuition-link_PROGS := $(addprefix $(test-intuition_TARGETDIR)/,$(test-intuition_FILES))
+
+$(test-intuition-link_PROGS) : OBJDIR := $(test-intuition_OBJDIR)
+$(test-intuition-link_PROGS) : LDFLAGS := $(strip $(test-intuition_LDFLAGS) $(test-intuition-link_EXTRA_LDFLAGS))
+$(test-intuition-link_PROGS) : LIBS := $(addprefix -l,$(test-intuition_LIBS) $(test-intuition-link_EXTRA_LIBS) )
+$(test-intuition-link_PROGS) : $(test-intuition_TARGETDIR)/% : $(test-intuition_OBJDIR)/%.o $(test-intuition-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-intuition_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-intuition_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-intuition_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-intuition_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-intuition_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-intuition_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-intuition_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-intuition_DEPS),)
+  ifneq (test-intuition test-intuition-quick,)
+    ifneq ($(findstring $(TARGET),test-intuition test-intuition-quick),)
+      -include $(test-intuition_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-intuition_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-intuition_DEPS) $(test-intuition_OBJS) $(addprefix $(test-intuition_TARGETDIR)/,$(test-intuition_FILES)),)
+$(test-intuition_DEPS) $(test-intuition_OBJS) $(addprefix $(test-intuition_TARGETDIR)/,$(test-intuition_FILES)) : | $(test-intuition_TARGETDIR) $(test-intuition_OBJDIR)
+else
+$(test-intuition_DEPS) $(test-intuition_OBJS) $(addprefix $(test-intuition_TARGETDIR)/,$(test-intuition_FILES)) :: $(test-intuition_TARGETDIR) $(test-intuition_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-intuition_TARGETDIR) $(test-intuition_OBJDIR)
+
+
+test-intuition-clean : FILES := $(test-intuition_OBJS) $(test-intuition_EXES) $(test-intuition_DEPS)
+#MM
+test-intuition-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-intuition"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,292 @@
+# Makefile for loaddesktop program
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES	:= loaddesktop
+EXEDIR := $(AROS_TESTS)/desktop
+
+#MM test-desktop : includes linklibs
+
+
+.PHONY : test-desktop
+
+test-desktop_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-desktop_TARGETDIR := $(EXEDIR)
+test-desktop_LIBS := 
+
+test-desktop_FILES     := $(FILES)
+test-desktop_OBJS      := $(addsuffix .o,$(addprefix $(test-desktop_OBJDIR)/,$(test-desktop_FILES)))
+test-desktop_DEPS      := $(addsuffix .d,$(addprefix $(test-desktop_OBJDIR)/,$(test-desktop_FILES)))
+test-desktop_EXES      := $(addprefix $(test-desktop_TARGETDIR)/,$(test-desktop_FILES))
+
+test-desktop_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-desktop_CPPFLAGS += -I
+endif
+test-desktop_CFLAGS    := $(CFLAGS)
+test-desktop_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-desktop_COVERAGE := yes
+test-desktop_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-desktop_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-desktop_CFLAGS    := $(strip $(test-desktop_COVERAGEFLAGS) $(test-desktop_CFLAGS))
+test-desktop_LIBS += $(test-desktop_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-desktop_FUNCINSTR := yes
+test-desktop_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-desktop_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-desktop_CFLAGS    := $(strip $(test-desktop_INSTRFUNCFLAGS) $(test-desktop_CFLAGS))
+test-desktop_LIBS += $(test-desktop_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-desktop_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-desktop_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-desktop_DFLAGS := 
+else
+    test-desktop_DFLAGS := $(test-desktop_CFLAGS)
+endif
+ifeq (target,target)
+test-desktop_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-desktop_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-desktop_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-desktop_LDFLAGS += -L
+endif
+
+#MM
+test-desktop-quick : test-desktop
+
+#MM test-desktop : includes-generate-deps core-linklibs
+test-desktop : $(test-desktop_EXES)
+
+ifneq ($(filter $(TARGET),test-desktop test-desktop-quick),)
+
+ifeq (,)
+test-desktop_MC_SRCWILDCARD := %
+else
+test-desktop_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-desktop_OBJDIR),)
+test-desktop_MC_TARGETS := $(addsuffix .o,$(test-desktop_FILES))
+test-desktop_MC_DTARGETS := $(addsuffix .d,$(test-desktop_FILES))
+test-desktop_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-desktop_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-desktop_OBJDIR)/,$(notdir $(test-desktop_FILES))))
+    test-desktop_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-desktop_OBJDIR)/,$(notdir $(test-desktop_FILES))))
+else
+ifeq (,)
+    test-desktop_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-desktop_OBJDIR)/,$(test-desktop_FILES)))
+    test-desktop_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-desktop_OBJDIR)/,$(test-desktop_FILES)))
+else
+    test-desktop_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-desktop_OBJDIR)/,$(patsubst /%,%,$(test-desktop_FILES))))
+    test-desktop_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-desktop_OBJDIR)/,$(patsubst /%,%,$(test-desktop_FILES))))
+endif
+endif
+test-desktop_MC_TGTWILDCARD := $(test-desktop_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : | $(addsuffix .c,$(test-desktop_FILES))
+
+# Be sure that all .c files are found
+test-desktop_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-desktop_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-desktop_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-desktop_MC_DIRS := $(foreach dir, $(test-desktop_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-desktop_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-desktop_MC_DIRS),)
+    test-desktop_MC_DIRS := $(shell echo $(test-desktop_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-desktop_MC_DIRS)
+endif
+
+endif
+
+test-desktop_MC_CPPFLAGS := $(test-desktop_CPPFLAGS)
+test-desktop_CFLAGS := $(test-desktop_CFLAGS)
+ifeq ($(test-desktop_DFLAGS),)
+  test-desktop_DFLAGS := $(test-desktop_CFLAGS)
+else
+  test-desktop_DFLAGS := $(test-desktop_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-desktop_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-desktop_STRIP ?= $(TARGET_STRIP)
+test-desktop_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : test-desktop_MC_CPPFLAGS:=$(strip $(test-desktop_MC_CPPFLAGS) $(test-desktop_MC_EXTRA_CPPFLAGS))
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : test-desktop_CFLAGS:=$(strip $(test-desktop_CFLAGS) $(SAFETY_CFLAGS))
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : test-desktop_DFLAGS:=$(test-desktop_DFLAGS)
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : test-desktop_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : test-desktop_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-desktop_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-desktop_STRIP ?= $(HOST_STRIP)
+test-desktop_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : test-desktop_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-desktop_MC_CPPFLAGS) $(test-desktop_MC_EXTRA_CPPFLAGS))
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : test-desktop_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-desktop_CFLAGS))
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : test-desktop_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-desktop_DFLAGS))
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : test-desktop_IQUOTE:=$(HOST_IQUOTE)
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : test-desktop_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-desktop_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-desktop_STRIP ?= $(ECHO) >/dev/null
+test-desktop_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : test-desktop_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-desktop_MC_CPPFLAGS) $(test-desktop_MC_EXTRA_CPPFLAGS))
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : test-desktop_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-desktop_CFLAGS))
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : test-desktop_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-desktop_DFLAGS))
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : test-desktop_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-desktop_MC_TARGETS) $(test-desktop_MC_DTARGETS) : test-desktop_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-desktop_MC_TARGETS) : CPPFLAGS := $(test-desktop_MC_CPPFLAGS)
+$(test-desktop_MC_TARGETS) : CFLAGS := $(test-desktop_CFLAGS)
+$(test-desktop_MC_TARGETS) : $(test-desktop_MC_TGTWILDCARD).o : $(test-desktop_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-desktop_IQUOTE) $(dir $<) $(test-desktop_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-desktop_IQUOTE) . $(test-desktop_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-desktop_IQUOTE) $(dir $<) $(test-desktop_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-desktop_IQUOTE) . $(test-desktop_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-desktop_IQUOTE) $(dir $<) $(test-desktop_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-desktop_IQUOTE) . $(test-desktop_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-desktop_MC_DTARGETS) : $(test-desktop_MC_TGTWILDCARD).d : $(test-desktop_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-desktop_DFLAGS) $(test-desktop_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-desktop-link_EXTRA_LDFLAGS := 
+test-desktop-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-desktop-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-desktop-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-desktop-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-desktop-link_DIRS := $(subst -L ,-L,$(strip $(test-desktop_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-desktop-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-desktop-link_DIRS)))
+# Add trailing /
+test-desktop-link_DIRS := $(subst //,/,$(addsuffix /,$(test-desktop-link_DIRS)))
+# Add normal linklib path
+test-desktop-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-desktop-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-desktop_LIBS) $(test-desktop-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-desktop-link_DEPLIBS := $(foreach lib,$(test-desktop-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-desktop-link_DIRS)))) \
+)
+test-desktop-link_PROGS := $(addprefix $(test-desktop_TARGETDIR)/,$(test-desktop_FILES))
+
+$(test-desktop-link_PROGS) : OBJDIR := $(test-desktop_OBJDIR)
+$(test-desktop-link_PROGS) : LDFLAGS := $(strip $(test-desktop_LDFLAGS) $(test-desktop-link_EXTRA_LDFLAGS))
+$(test-desktop-link_PROGS) : LIBS := $(addprefix -l,$(test-desktop_LIBS) $(test-desktop-link_EXTRA_LIBS) )
+$(test-desktop-link_PROGS) : $(test-desktop_TARGETDIR)/% : $(test-desktop_OBJDIR)/%.o $(test-desktop-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-desktop_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-desktop_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-desktop_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-desktop_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-desktop_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-desktop_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-desktop_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-desktop_DEPS),)
+  ifneq (test-desktop test-desktop-quick,)
+    ifneq ($(findstring $(TARGET),test-desktop test-desktop-quick),)
+      -include $(test-desktop_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-desktop_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-desktop_DEPS) $(test-desktop_OBJS) $(addprefix $(test-desktop_TARGETDIR)/,$(test-desktop_FILES)),)
+$(test-desktop_DEPS) $(test-desktop_OBJS) $(addprefix $(test-desktop_TARGETDIR)/,$(test-desktop_FILES)) : | $(test-desktop_TARGETDIR) $(test-desktop_OBJDIR)
+else
+$(test-desktop_DEPS) $(test-desktop_OBJS) $(addprefix $(test-desktop_TARGETDIR)/,$(test-desktop_FILES)) :: $(test-desktop_TARGETDIR) $(test-desktop_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-desktop_TARGETDIR) $(test-desktop_OBJDIR)
+
+
+test-desktop-clean : FILES := $(test-desktop_OBJS) $(test-desktop_EXES) $(test-desktop_DEPS)
+#MM
+test-desktop-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-desktop"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

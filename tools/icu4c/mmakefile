@@ -1,0 +1,554 @@
+include $(SRCDIR)/config/aros.cfg
+
+LN ?= ln
+
+ICU_VERSION := 4.2.1
+ICU_PKGNAME := icu4c
+ICU_PKGVERSION=$(subst .,_,$(ICU_VERSION))
+
+ICU_EXTRA_OPTS = \
+        --bindir=$(CROSSTOOLSDIR) \
+        --sbindir=$(CROSSTOOLSDIR) \
+        --enable-static \
+        --disable-strict \
+        --disable-dyload \
+        --disable-shared \
+        --disable-tests \
+        --disable-samples \
+        --disable-extras \
+        --with-data-packaging=static
+
+ICU_REPOSITORY := http://download.icu-project.org/files/$(ICU_PKGNAME)/$(ICU_VERSION)
+
+icu-installflag := $(CROSSTOOLSDIR)/.installflag-icu-$(ICU_VERSION)
+
+#MM
+tools-crosstools-icu :
+	@$(IF) ! $(TEST) -d $(CROSSTOOLSDIR) \
+	    || ! $(TEST) -f $(icu-installflag) ; then \
+	       $(RM) $(CROSSTOOLSDIR)/$(ICU_PKGNAME)/.files-touched \
+	    && $(MAKE) -f ./mmakefile crosstools-icu--fetch \
+	    && $(MAKE) -f ./mmakefile crosstools-icu--build_and_install-quick \
+	    && $(TOUCH) $(icu-installflag) ; \
+	fi
+
+HOST_CXXFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(HOST_CXXFLAGS)))
+
+# specify the gendir for icu to be in HOSTDIR so it ends up under CROSSTOOLSDIR, and can be reused
+
+#MM- crosstools-icu-quick : crosstools-icu--quick
+#MM- crosstools-icu--quick : crosstools-icu--fetch
+#MM- crosstools-icu-fetch : crosstools-icu--fetch
+#MM- crosstools-icu-create-patch : crosstools-icu--create-patch
+#MM- crosstools-icu-create-patch-quick : crosstools-icu--create-patch
+ 
+crosstools-icu-archbase                        := $(ICU_PKGNAME)-$(ICU_PKGVERSION)-src
+
+ifeq (host,host)
+    crosstools-icu-portdir                     := $(HOSTDIR)/Ports/host/$(ICU_PKGNAME)
+else
+    crosstools-icu-portdir                     := $(PORTSDIR)/$(ICU_PKGNAME)
+endif
+
+ifeq ($(CROSSTOOLSDIR),)
+    crosstools-icu-prefix                      := $(CONTRIB_DIR)/$(ICU_PKGNAME)
+else
+    crosstools-icu-prefix                      := $(CROSSTOOLSDIR)
+endif
+
+ifneq (,)
+    crosstools-icu--archbase      := $(ICU_PKGNAME)--$(ICU_PKGVERSION)-src
+else
+    crosstools-icu--archbase      := $(ICU_PKGNAME)-$(ICU_PKGVERSION)-src
+endif
+
+ifneq (icu,)
+    crosstools-icu--srcdir        := icu
+else
+    crosstools-icu--srcdir        := $(crosstools-icu-archbase)
+endif
+
+ifneq (source,)
+    crosstools-icu--builddir      := $(crosstools-icu--srcdir)/source
+else
+    crosstools-icu--builddir      := $(crosstools-icu--srcdir)
+endif
+
+ifeq (yes,yes)
+    crosstools-icu--patches_specs := $(crosstools-icu--archbase)-aros.diff:$(crosstools-icu--srcdir):-f,-p1
+else
+    crosstools-icu--patches_specs := ::
+endif
+
+
+.PHONY: crosstools-icu--fetch
+
+ifneq ($(TOOLDIR),)
+    crosstools-icu--fetch-tooldir := "$(TOOLDIR)/"
+else
+    crosstools-icu--fetch-tooldir := "$(TOOLDIR)/"
+endif
+
+ifneq ($(PORTSSOURCEDIR),)
+    crosstools-icu--fetch-location := $(PORTSSOURCEDIR)
+else
+    crosstools-icu--fetch-location := $(crosstools-icu-portdir)
+endif
+
+crosstools-icu--fetch-fetchedflag := $(crosstools-icu--fetch-location)/.$(crosstools-icu--archbase)-fetched
+
+#MM
+crosstools-icu--fetch :
+	$(Q)$(ECHO) "Fetching   $(crosstools-icu--archbase) ..."
+	$(Q)TOOLDIR="$(crosstools-icu--fetch-tooldir)" $(FETCH) -ao ". $(ICU_REPOSITORY)" -a $(crosstools-icu--archbase) -s "tgz" -l $(crosstools-icu--fetch-location) \
+	-d $(crosstools-icu-portdir) -po "$(SRCDIR)/$(CURDIR)" -p "$(crosstools-icu--patches_specs)"
+	$(Q)$(IF) ! $(TEST) -f $(crosstools-icu--fetch-fetchedflag) ; then \
+		 $(TOUCH) $(crosstools-icu--fetch-fetchedflag) ; \
+	fi
+
+#	$(Q)$(IF) ! $(TEST) -f $(crosstools-icu--fetch-fetchedflag) ; then \
+#		$(ECHO) "Fetching   $(crosstools-icu--archbase) ..." \
+#		&& $(FETCH) -ao ". $(ICU_REPOSITORY)" -a $(crosstools-icu--archbase) -s "tgz" -l $(crosstools-icu--fetch-location) \
+#		-d $(crosstools-icu-portdir) -po "$(SRCDIR)/$(CURDIR)" -p "$(crosstools-icu--patches_specs)" \
+#		&& $(TOUCH) $(crosstools-icu--fetch-fetchedflag) ; \
+#	fi
+
+
+.PHONY: crosstools-icu--create-patch
+
+ifneq (,)
+    crosstools-icu--create-patch-exclude := -X ./exclude.patterns
+endif
+
+ifneq ($(crosstools-icu--srcdir),)
+    crosstools-icu--create-patch-srcdir   := $(crosstools-icu--srcdir)
+else
+    crosstools-icu--create-patch-srcdir   := $(crosstools-icu--archbase)
+endif
+
+#MM- crosstools-icu--create-patch :  crosstools-icu--create-patch-diff 
+#MM- crosstools-icu--create-patch-quick :  crosstools-icu--create-patch-diff 
+
+#MM
+crosstools-icu--create-patch-diff:
+	$(Q)$(FETCH) -a $(crosstools-icu--archbase) -s "tgz" -l $(PORTSSOURCEDIR) -d $(crosstools-icu-portdir)/tmp ; \
+	$(MV) $(crosstools-icu-portdir)/$(crosstools-icu--create-patch-srcdir) $(crosstools-icu-portdir)/tmp/$(crosstools-icu--create-patch-srcdir).aros ; \
+	cd $(crosstools-icu-portdir)/tmp ; \
+	$(FOR) f in  ; do \
+	    $(ECHO) $$f >> ./exclude.patterns ; \
+	done ; \
+	$(ECHO) "Creating   \`$(crosstools-icu--archbase)-aros-new.diff'" ; \
+	diff -ruN $(crosstools-icu--create-patch-exclude) \
+	    $(crosstools-icu--create-patch-srcdir) \
+	    $(crosstools-icu--create-patch-srcdir).aros \
+	    >$(SRCDIR)/$(CURDIR)/$(crosstools-icu--archbase)-aros-new.diff ; \
+	$(MV) $(crosstools-icu-portdir)/tmp/$(crosstools-icu--create-patch-srcdir).aros $(crosstools-icu-portdir)/$(crosstools-icu--create-patch-srcdir) ; \
+	$(RM) $(crosstools-icu-portdir)/tmp
+
+#MM crosstools-icu : crosstools-icu-
+#MM
+crosstools-icu:
+	$(NOP)
+
+crosstools-icu--package-dir := $(crosstools-icu-portdir)/$(crosstools-icu--archbase)
+
+crosstools-icu--package-basename := \
+    $(DISTDIR)/Packages/$(crosstools-icu--archbase)-aros.$(AROS_TARGET_CPU)
+
+ifneq (no,no)
+    crosstools-icu--package := $(crosstools-icu--package-basename).tar.bz2
+endif
+
+
+ifneq ($(crosstools-icu-prefix),)
+    crosstools-icu--prefix := $(crosstools-icu-prefix)
+else
+    crosstools-icu--prefix := $(AROS_CONTRIB)
+endif
+
+ifneq (,)
+    crosstools-icu--aros_prefix := 
+else
+    crosstools-icu--aros_prefix := $(crosstools-icu--prefix)
+endif
+
+BD_NIXFLAG ?= -nix
+
+ifeq (no,yes)
+    crosstools-icu--nix    := $(BD_NIXFLAG)
+    crosstools-icu--volpfx := /
+    crosstools-icu--volsfx := /
+    
+    ifeq (,)
+        crosstools-icu--nix_dir_layout := yes
+    endif
+else
+    crosstools-icu--volsfx := :
+    
+    ifeq (,)
+        crosstools-icu--nix_dir_layout := no
+    endif
+endif
+
+crosstools-icu--volfunc = $(crosstools-icu--volpfx)$(notdir $1)$(crosstools-icu--volsfx)
+
+crosstools-icu--install_opts := prefix=$(crosstools-icu--prefix) \
+        exec_prefix=$(crosstools-icu--prefix) 
+
+# Check if chosen compiler is valid
+ifeq ($(findstring host,host target kernel),)
+  $(error unknown compiler host)
+endif
+
+# Set legacy 'host' variable based on chosen compiler
+ifeq (host,host)
+    host := yes
+    ifeq (,)
+        crosstools-icu--pkgbasedir := $(HOSTGENDIR)
+    else
+        crosstools-icu--pkgbasedir := $(HOSTGENDIR)/
+    endif
+else
+    host := no
+    ifeq (,)
+        crosstools-icu--pkgbasedir := $(GENDIR)
+    else
+        crosstools-icu--pkgbasedir := $(GENDIR)/
+    endif
+endif
+ifneq ($(CROSSTOOLSDIR),)
+    ifeq (,)
+        crosstools-icu--pkgbasedir := $(CROSSTOOLSDIR)
+    else
+        crosstools-icu--pkgbasedir := $(CROSSTOOLSDIR)/
+    endif
+endif
+
+ifeq ($(ICU_PKGNAME),)
+    crosstools-icu--pkgdir := $(crosstools-icu--pkgbasedir)
+else
+    crosstools-icu--pkgdir := $(crosstools-icu--pkgbasedir)/$(ICU_PKGNAME)
+endif
+
+crosstools-icu--configflag := $(crosstools-icu--pkgdir)/.configured
+crosstools-icu--installflag := $(crosstools-icu--pkgdir)/.installed
+
+ifeq ($(filter yes, $(crosstools-icu--nix_dir_layout) $(host)),yes)
+    crosstools-icu--PROGDIR      := $(crosstools-icu--aros_prefix)/bin
+    crosstools-icu--config_opts  := --prefix=$(crosstools-icu--aros_prefix)
+else
+    ifeq (no,yes)
+        crosstools-icu--config_opts := --prefix=/PROGDIR  --bindir=/PROGDIR --sbindir=/PROGDIR \
+        --libdir=/LIB --includedir=/INCLUDE --oldincludedir=/INCLUDE   
+    else
+        crosstools-icu--config_opts  := --prefix=$(crosstools-icu--aros_prefix)
+    endif
+
+    crosstools-icu--PROGDIR := $(crosstools-icu--aros_prefix)
+    
+    crosstools-icu--install_opts := bindir=$(crosstools-icu--prefix) \
+        sbindir=$(crosstools-icu--prefix) \
+        libdir=$(AROS_LIB) includedir=$(AROS_INCLUDES) \
+        oldincludedir=$(AROS_INCLUDES) 
+endif
+
+ifneq ($(DEBUG),yes)
+    crosstools-icu--s_flag = -s
+endif
+
+ifeq (yes,yes)
+    crosstools-icu--HOST_CFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CFLAGS)
+    crosstools-icu--KERNEL_CFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(crosstools-icu--s_flag)
+ifeq (no,yes)
+    crosstools-icu--TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(crosstools-icu--s_flag)
+else
+    crosstools-icu--TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(crosstools-icu--nix) $(crosstools-icu--s_flag)
+endif
+endif
+ifeq (yes,yes)
+    crosstools-icu--HOST_CXXFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CXXFLAGS)
+    crosstools-icu--KERNEL_CXXFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CXXFLAGS) $(crosstools-icu--s_flag)
+ifeq (no,yes)
+    crosstools-icu--TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(crosstools-icu--s_flag)
+else
+    crosstools-icu--TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(crosstools-icu--nix) $(crosstools-icu--s_flag)
+endif
+endif
+
+# Set up build environment, and options for configure script
+ifeq (host,host)
+    # NB: We need to pass in our crosstoolsdir, but cannot set CFLAGS since it
+    # confused configure scripts. We also cannot pass it via _FOR_BUILD
+    # since that won't get picked up during configure.
+    # We also cannot pass in the compiler including std flags so we need to use
+    # the "plain" host compiler.
+    crosstools-icu--cfg-env :=  \
+        CPP="$(HOST_CPP)" \
+        CXXCPP="$(HOST_CPP)" \
+        CC="$(strip $(HOST_DEF_CC) $(crosstools-icu--HOST_CFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        CXX="$(strip $(HOST_CXX) $(crosstools-icu--HOST_CXXFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        LDFLAGS="-L$(CROSSTOOLSDIR)/lib $(USER_LDFLAGS)"
+ifeq (yes,yes)
+    crosstools-icu--cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    crosstools-icu--cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(crosstools-icu--KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(crosstools-icu--KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(TARGET_AS)" \
+        OBJCOPY="$(OBJCOPY)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)" \
+        TARGET_OBJCOPY="$(TARGET_OBJCOPY)"
+endif
+ifeq (host,target)
+    crosstools-icu--cfg-env :=  \
+        PKG_CONFIG_LIBDIR="$(AROS_DEVELOPER)/lib/pkgconfig" \
+        PKG_CONFIG_SYSROOT_DIR="$(AROSDIR)"
+    crosstools-icu--cfg-env += CPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CXXCPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CC="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CXX="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        LD="$(strip $(TARGET_LD))"
+    crosstools-icu--cfg-env += CFLAGS="$(crosstools-icu--TARGET_CFLAGS) $(ICU_FLAGS)" \
+        CXXFLAGS="$(crosstools-icu--TARGET_CXXFLAGS) $(OPTIMIZATION_CFLAGS)"
+ifeq (yes,yes)
+    crosstools-icu--cfg-env += CPPFLAGS="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-icu--cfg-env += LDFLAGS="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-icu--nix) $(crosstools-icu--s_flag))"
+ifeq (yes,yes)
+    crosstools-icu--cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    crosstools-icu--cfg-env += CC_FOR_BUILD="$(strip $(HOST_DEF_CC))" \
+        CFLAGS_FOR_BUILD="$(strip $(crosstools-icu--HOST_CFLAGS))" \
+        CXX_FOR_BUILD="$(strip $(HOST_CXX))" \
+        CXXFLAGS_FOR_BUILD="$(strip $(crosstools-icu--HOST_CXXFLAGS))" \
+        LD_FOR_BUILD="$(strip $(HOST_LD))" \
+        LDFLAGS_FOR_BUILD="$(strip $(HOST_LDFLAGS) $(crosstools-icu--s_flag))"
+ifeq (yes,yes)
+    crosstools-icu--cfg-env += CPPFLAGS_FOR_HOST="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-icu--cfg-env += CC_FOR_HOST="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) -L$(AROS_DEVELOPER)/lib $(ICU_FLAGS) $(crosstools-icu--nix) $(crosstools-icu--s_flag))" \
+        CXX_FOR_HOST="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS) $(crosstools-icu--nix) $(crosstools-icu--s_flag))" \
+        LD_FOR_HOST="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_HOST="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-icu--nix) $(crosstools-icu--s_flag))"
+ifeq (yes,yes)
+    crosstools-icu--cfg-env += CPPFLAGS_FOR_TARGET="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-icu--cfg-env += CC_FOR_TARGET="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_TARGET="$(strip $(crosstools-icu--TARGET_CFLAGS) -L$(AROS_DEVELOPER)/lib $(ICU_FLAGS))" \
+        CXX_FOR_TARGET="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_TARGET="$(strip $(crosstools-icu--TARGET_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS))" \
+        LD_FOR_TARGET="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_TARGET="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-icu--nix) $(crosstools-icu--s_flag))" \
+        AR="$(strip $(AR_PLAIN))" \
+        AS="$(strip $(TARGET_AS))" \
+        OBJCOPY="$(strip $(OBJCOPY))" \
+        RANLIB="$(strip $(RANLIB))" \
+        STRIP="$(strip $(STRIP_PLAIN))"
+ifeq (yes,yes)
+    crosstools-icu--cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    crosstools-icu--cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(crosstools-icu--KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(crosstools-icu--KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(strip $(TARGET_AS))" \
+        TARGET_RANLIB="$(strip $(RANLIB))" \
+        TARGET_STRIP="$(strip $(STRIP_PLAIN))" \
+        TARGET_NM="$(strip $(NM_PLAIN))"
+ifeq (yes,yes)
+    crosstools-icu--config_opts += --target=$(AROS_TARGET_CPU)-aros
+    crosstools-icu--config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    crosstools-icu--config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    crosstools-icu--config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    crosstools-icu--config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    crosstools-icu--config_opts += --without-x
+endif
+endif
+endif
+ifeq (host,kernel)
+    crosstools-icu--cfg-env :=  \
+        CPP="$(KERNEL_CPP)" \
+        CXXCPP="$(KERNEL_CPP)"
+ifeq (yes,yes)
+    crosstools-icu--cfg-env += CPPFLAGS="$(strip $(KERNEL_CPPFLAGS) )"
+endif
+    crosstools-icu--cfg-env += CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        CFLAGS="$(strip $(crosstools-icu--KERNEL_CFLAGS) $(ICU_FLAGS))" \
+        CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        CXXFLAGS="$(strip $(crosstools-icu--KERNEL_CXXFLAGS) $(OPTIMIZATION_CFLAGS))" \
+        AS="$(KERNEL_AS)"
+ifeq (yes,yes)
+    crosstools-icu--cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    crosstools-icu--cfg-env += CC_FOR_BUILD="$(HOST_DEF_CC)" \
+        CFLAGS_FOR_BUILD="$(crosstools-icu--HOST_CFLAGS)" \
+        CXX_FOR_BUILD="$(HOST_CXX)" \
+        CXXFLAGS_FOR_BUILD="$(crosstools-icu--HOST_CXXFLAGS)" \
+        RANLIB="$(RANLIB)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)"
+ifeq (yes,yes)
+    crosstools-icu--config_opts += --target=$(AROS_TARGET_CPU)-aros
+    crosstools-icu--config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    crosstools-icu--config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    crosstools-icu--config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    crosstools-icu--config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    crosstools-icu--config_opts += --without-x
+endif
+
+endif
+endif
+
+ifeq (no,yes)
+    BUILD_ENV := $(crosstools-icu--cfg-env)
+endif
+
+crosstools-icu--touchfileflag ?= $(crosstools-icu--pkgdir)/.files-touched
+
+ifneq ("$(wildcard $(crosstools-icu-portdir)/$(crosstools-icu--builddir)/Makefile)","")
+# in an ideal world, we would depend on the files in the source directory,
+# so we could copy them when they change. unfortunately filenames with
+# spaces cause problems with this
+$(crosstools-icu--pkgdir)/.local-copy:
+	$(Q)$(FOR) dir in $(crosstools-icu--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Copying Local-Build Sources to  \`$(patsubst $(TOP)/%,%,$(abspath $(crosstools-icu--pkgdir)))'"
+	$(Q)$(CP) -Rf "$(crosstools-icu-portdir)/$(crosstools-icu--builddir)/." $(crosstools-icu--pkgdir)/ && $(TOUCH) $@
+
+$(crosstools-icu--touchfileflag) : $(crosstools-icu--pkgdir)/.local-copy
+
+    crosstools-icu--cfg-srcdir=$(crosstools-icu--pkgdir)
+else
+    crosstools-icu--cfg-srcdir=$(crosstools-icu-portdir)/$(crosstools-icu--builddir)
+endif
+crosstools-icu--make-env := -C $(crosstools-icu--pkgdir)
+
+.PHONY : crosstools-icu- crosstools-icu--clean crosstools-icu--build_and_install-quick
+
+# When building for the host, we don't need to build the
+# linklibs - this is especially true when building the
+# crosstool toolchain on 'foreign' architectures (such as
+# building PPC on x86)
+
+#MM- crosstools-icu--host : setup includes crosstools-icu--quick
+#MM- crosstools-icu--target : setup includes core-linklibs crosstools-icu--quick
+#MM- crosstools-icu-: crosstools-icu--host
+
+# Using -j1 in install_command may result in a warning but finally
+# it does its job. make install for gcc does not work reliably for -jN
+# where N > 1.
+ifneq (install,)
+    crosstools-icu--install_command = \
+        $(ECHO) "Installing from build in         $(subst $(TOP)/,,$(crosstools-icu--pkgdir))" && \
+        $(MAKE) PROGDIR="$(crosstools-icu--PROGDIR)/" $(crosstools-icu--install_opts) \
+        $(crosstools-icu--make-env) install -j1
+
+    crosstools-icu--uninstall_command = \
+    $(RM) $(crosstools-icu--installflag) && \
+    $(MAKE) PROGDIR="$(crosstools-icu--PROGDIR)/" \
+    $(crosstools-icu--install_opts) $(crosstools-icu--make-env) uninstall
+else
+    crosstools-icu--install_command   := true
+    crosstools-icu--uninstall_command := true
+endif
+
+#MM- crosstools-icu--quick :  crosstools-icu--configure  crosstools-icu--build_and_install-quick crosstools-icu--make-package
+
+#MM
+crosstools-icu--build_and_install-quick :  $(crosstools-icu--installflag)
+
+#
+# N.B.: the make test for the targets being up to date generates a benign Error 1.
+#
+$(crosstools-icu--installflag) : $(crosstools-icu--configflag)
+	$(Q)$(IF) ! $(BUILD_ENV) $(MAKE) PROGDIR="$(call crosstools-icu--volfunc, PROGDIR)" -q $(crosstools-icu--make-env); then \
+	    $(RM) $(crosstools-icu--installflag) && \
+	    $(ECHO) "Performing build in         $(subst $(TOP)/,,$(crosstools-icu--pkgdir))" && \
+	    $(BUILD_ENV) $(MAKE) PROGDIR="$(call crosstools-icu--volfunc, PROGDIR)" $(crosstools-icu--make-env) && \
+	    $(crosstools-icu--install_command) && \
+	    $(TOUCH) $@ -r $^; \
+	fi
+
+ifneq ($(crosstools-icu--touchfileflag),)
+$(crosstools-icu--touchfileflag):
+	$(Q)$(FOR) dir in $(crosstools-icu--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)find $(crosstools-icu-portdir)/$(crosstools-icu--builddir) -exec $(TOUCH) -c -r $(crosstools-icu--cfg-srcdir)/configure '{}' \; && \
+	$(TOUCH) $@
+endif
+
+#MM
+crosstools-icu--uninstall :
+	$(crosstools-icu--uninstall_command)
+
+#MM
+crosstools-icu--configure : $(crosstools-icu--configflag)
+
+$(crosstools-icu--configflag) : TMP_SRCDIR := $(shell echo $(crosstools-icu--cfg-srcdir) | sed 's/^\(.\):\//\/\1\//')
+$(crosstools-icu--configflag) : $(crosstools-icu--touchfileflag) $(TOP)/$(CURDIR)/mmakefile
+	$(Q)$(RM) $@
+	$(Q)$(FOR) dir in $(crosstools-icu--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Configuring build in         $(subst $(TOP)/,,$(crosstools-icu--pkgdir))"
+	$(Q)cd $(crosstools-icu--pkgdir) && \
+	find . -name config.cache -exec $(RM) '{}' \; && \
+	$(crosstools-icu--cfg-env) $(TMP_SRCDIR)/configure $(crosstools-icu--config_opts) $(ICU_EXTRA_OPTS) && \
+	$(TOUCH) $@
+
+#MM
+crosstools-icu--clean : crosstools-icu--uninstall
+	$(Q)$(RM) $(crosstools-icu--pkgdir)
+
+.PHONY : crosstools-icu--make-package crosstools-icu--create-patch
+#MM crosstools-icu--make-package : crosstools-icu--quick
+
+#MM
+crosstools-icu--make-package : $(crosstools-icu--package)
+ 
+#There seems to be a bug, either with my clock or with make, 'cause it may happen
+#that $^ and $@ have exactly the same mtime, and in that case make tries
+#to rebuild $@ again, which would fail because the directory where
+#the package got installed would not exist anymore. 
+#We work this around by using an if statement to manually check the mtimes.
+$(crosstools-icu--package-basename).tar.bz2 :
+	$(Q)$(IF) $(TEST) $(crosstools-icu-installflag) -nt $@ || ! $(TEST) -s $@; then \
+	    $(RM) $@ ; \
+	    $(ECHO) "Building   \`$(crosstools-icu--package-basename).tar.bz2'" ; \
+	    $(MKDIR) -p "$(DISTDIR)/Packages" ; \
+	    $(MKDIR) -p "$(crosstools-icu-prefix)" ; \
+	    cd $(crosstools-icu--package-dir) ; \
+	    tar -cvf $(crosstools-icu--package-basename).tar * ; \
+	    bzip2 -9 -f $(crosstools-icu--package-basename).tar ; \
+	fi
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

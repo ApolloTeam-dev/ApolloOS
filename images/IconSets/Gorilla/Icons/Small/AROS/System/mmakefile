@@ -1,0 +1,139 @@
+# Copyright © 2004-2017, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+BASEICONS := About FixFonts Format FTManager WorkBook Shell
+ADDITIONALICONS := SysMon Snoopy Find
+
+DISKIMAGESRCS := DiskImageGUI-1.png DiskImageGUI-2.png
+DISKIMAGEICON := DiskImageGUI
+
+#MM- iconset-GorillaSmall-wbench-icons-aros-clean : iconset-GorillaSmall-wbench-icons-aros-system-clean
+#MM- iconset-GorillaSmall-additional-icons-aros-clean : iconset-GorillaSmall-additional-icons-aros-system-clean
+#MM- iconset-GorillaSmall-wbench-icons-aros : iconset-GorillaSmall-wbench-icons-aros-system
+#MM- iconset-GorillaSmall-additional-icons-aros : iconset-GorillaSmall-additional-icons-aros-system
+#MM  iconset-GorillaSmall-additional-icons-aros-system : iconset-GorillaSmall-additional-icons-aros-system-diskimage
+
+
+BD_OBJS := $(addprefix  $(AROS_SYSTEM)/, $(addsuffix .info,$(BASEICONS)))
+
+#MM
+iconset-GorillaSmall-wbench-icons-aros-system : $(BD_OBJS)
+
+ifeq (,)
+
+$(AROS_SYSTEM)/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/%.png
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+else
+
+$(AROS_SYSTEM)/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+endif
+
+
+ifneq ($(BD_OBJS),)
+$(BD_OBJS) : | $(AROS_SYSTEM)
+else
+$(BD_OBJS) :: $(AROS_SYSTEM)
+endif
+
+GLOB_MKDIRS += $(AROS_SYSTEM)
+
+
+iconset-GorillaSmall-wbench-icons-aros-system-clean : FILES := $(BD_OBJS)
+#MM
+iconset-GorillaSmall-wbench-icons-aros-system-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: iconset-GorillaSmall-wbench-icons-aros-system iconset-GorillaSmall-wbench-icons-aros-system-clean
+
+
+
+BD_OBJS := $(addprefix  $(AROS_SYSTEM)/, $(addsuffix .info,$(ADDITIONALICONS)))
+
+#MM
+iconset-GorillaSmall-additional-icons-aros-system : $(BD_OBJS)
+
+ifeq (,)
+
+$(AROS_SYSTEM)/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/%.png
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+else
+
+$(AROS_SYSTEM)/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+endif
+
+
+ifneq ($(BD_OBJS),)
+$(BD_OBJS) : | $(AROS_SYSTEM)
+else
+$(BD_OBJS) :: $(AROS_SYSTEM)
+endif
+
+GLOB_MKDIRS += $(AROS_SYSTEM)
+
+
+iconset-GorillaSmall-additional-icons-aros-system-clean : FILES := $(BD_OBJS)
+#MM
+iconset-GorillaSmall-additional-icons-aros-system-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: iconset-GorillaSmall-additional-icons-aros-system iconset-GorillaSmall-additional-icons-aros-system-clean
+
+
+
+BD_OBJS := $(addprefix  $(AROS_SYSTEM)/, $(addsuffix .info,$(DISKIMAGEICON)))
+
+#MM
+iconset-GorillaSmall-additional-icons-aros-system-diskimage : $(BD_OBJS)
+
+ifeq ($(DISKIMAGESRCS),)
+
+$(AROS_SYSTEM)/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/%.png
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+else
+
+$(AROS_SYSTEM)/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/$(DISKIMAGESRCS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+endif
+
+
+ifneq ($(BD_OBJS),)
+$(BD_OBJS) : | $(AROS_SYSTEM)
+else
+$(BD_OBJS) :: $(AROS_SYSTEM)
+endif
+
+GLOB_MKDIRS += $(AROS_SYSTEM)
+
+
+iconset-GorillaSmall-additional-icons-aros-system-diskimage-clean : FILES := $(BD_OBJS)
+#MM
+iconset-GorillaSmall-additional-icons-aros-system-diskimage-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: iconset-GorillaSmall-additional-icons-aros-system-diskimage iconset-GorillaSmall-additional-icons-aros-system-diskimage-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

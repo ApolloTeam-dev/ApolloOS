@@ -1,0 +1,1912 @@
+include $(SRCDIR)/config/aros.cfg
+
+#MM- AROS : compiler-posixc
+
+POSIXC := \
+    __env \
+    __exec \
+    __fdesc \
+    __fopen \
+    __fseeko \
+    __ftello \
+    __posixc_assert \
+    __posixc_environ \
+    __posixc_init \
+    __posixc_nixmain \
+    __posixc_timer \
+    __stdio \
+    __get_default_file \
+    __rand48 \
+    __stat \
+    __usergrp \
+    __upath \
+    __vfork \
+    access \
+    alphasort \
+    alphasort64 \
+    basename \
+    cfgetispeed \
+    cfgetospeed \
+    cfsetispeed \
+    cfsetospeed \
+    chdir \
+    chmod \
+    chown \
+    clearerr \
+    clock_gettime \
+    close \
+    closedir \
+    creat \
+    creat64 \
+    dirfd \
+    dirname \
+    drand48 \
+    dup \
+    dup2 \
+    endgrent \
+    endpwent \
+    erand48 \
+    execl \
+    execlp \
+    execv \
+    execve \
+    execvp \
+    fchdir \
+    fchmod \
+    fchown \
+    fclose \
+    fcntl \
+    fdopen \
+    feof \
+    ferror \
+    fflush \
+    fgetc \
+    fgetpos \
+    fgetpos64 \
+    fgets \
+    fileno \
+    flock \
+    flockfile \
+    fopen \
+    fopen64 \
+    fprintf \
+    fputc \
+    fputs \
+    fread \
+    freopen \
+    fscanf \
+    fseek \
+    fseeko \
+    fseeko64 \
+    fsetpos \
+    fsetpos64 \
+    fstat \
+    fstat64 \
+    fsync \
+    ftell \
+    ftello \
+    ftello64 \
+    ftruncate \
+    funlockfile \
+    fwrite \
+    getc_unlocked \
+    getchar \
+    getcwd \
+    getegid \
+    geteuid \
+    getenv \
+    getfsstat \
+    getgid \
+    getgrent \
+    getgrgid \
+    getgrnam \
+    getgroups \
+    getloadavg \
+    getlogin \
+    getpass \
+    getpgid \
+    getpgrp \
+    getpid \
+    getppid \
+    getpwent \
+    getpwnam \
+    getpwuid \
+    getrlimit \
+    gets \
+    gettimeofday \
+    getuid \
+    ioctl \
+    isatty \
+    jrand48 \
+    kill \
+    lcong48 \
+    link \
+    lrand48 \
+    lseek \
+    lseek64 \
+    lstat \
+    lstat64 \
+    mkdir \
+    mknod \
+    mkstemp \
+    mktemp \
+    mrand48 \
+    nanosleep \
+    nrand48 \
+    open \
+    opendir \
+    pathconf \
+    pclose \
+    perror \
+    pipe \
+    popen \
+    posix_memalign \
+    printf \
+    putchar \
+    putenv \
+    puts \
+    random \
+    read \
+    readdir \
+    readdir64 \
+    readlink \
+    realpath \
+    regex/regerror \
+    regex/regexec \
+    regex/regcomp \
+    regex/regfree \
+    remove \
+    rename \
+    rewind \
+    rewinddir \
+    rmdir \
+    scandir \
+    scandir64 \
+    scanf \
+    seed48 \
+    seekdir \
+    setbuf \
+    setegid \
+    setenv \
+    seteuid \
+    setgid \
+    setgrent \
+    setpwent \
+    setrlimit \
+    setsid \
+    setuid \
+    setvbuf \
+    sigaction \
+    sigaddset \
+    sigdelset \
+    sigemptyset \
+    sigfillset \
+    sigismember \
+    siglongjmp \
+    sigpending \
+    sigprocmask \
+    sigsetjmp \
+    sigsuspend \
+    sleep \
+    srand48 \
+    stat \
+    stat64 \
+    statfs \
+    strerror \
+    strptime \
+    swab \
+    symlink \
+    sync \
+    sysconf \
+    system \
+    tcgetattr \
+    tcgetpgrp \
+    tcsetattr \
+    telldir \
+    tempnam \
+    times \
+    tmpfile \
+    tmpnam \
+    truncate \
+    ttyname \
+    umask \
+    uname \
+    ungetc \
+    unsetenv \
+    updatestdio \
+    usleep \
+    utime \
+    utimes \
+    vfprintf \
+    vfscanf \
+    vprintf \
+    vscanf \
+    wait \
+    waitpid \
+    write
+
+# The following files don't have source code here but have a CPU
+# specific version in arch directory hierarchy
+POSIXC_ARCH := \
+    vfork \
+    vfork_longjmp
+
+POSIXC_LINKLIB := \
+    ftime \
+    gcvt \
+    getopt \
+    getopt_long \
+    posixc_environ \
+    setlinebuf
+
+# Both in linklib and shared library
+POSIXC_COMMON := \
+    __posixc_stdstreams
+
+#MM- core-linklibs : linklibs-posixc
+
+NOWARN_FLAGS := $(NOWARN_NONNULL_COMPARE)
+USER_CFLAGS += $(NOWARN_FLAGS) $(CFLAGS_MERGE_CONSTANTS)
+
+USER_CPPFLAGS := \
+        -D__TIMER_NOLIBBASE__ \
+        -D_BSD_SOURCE \
+        -D_XOPEN_SOURCE=700 \
+        -D_LARGEFILE64_SOURCE
+
+USER_LDFLAGS := -noposixc
+
+POSIXC_LINKOBJS := $(addsuffix .o,$(addprefix $(GENDIR)/$(CURDIR)/posixc/,$(notdir $(POSIXC_COMMON))))
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM compiler-posixc
+#MM compiler-posixc-quick
+#MM compiler-posixc-makefile
+#MM compiler-posixc-clean
+
+# ABI targets:
+#MM- includes-all : compiler-posixc-includes
+#MM- linklibs-posixc: compiler-posixc-linklib
+#MM- linklibs-posixc_rel : compiler-posixc-linklib
+#MM- includes-posixc: compiler-posixc-includes
+#MM- includes-posixc_rel : compiler-posixc-includes
+#MM- compiler-posixc : compiler-posixc-includes core-linklibs linklibs-stdc_rel linklibs-stdcio_rel
+#MM compiler-posixc-linklib : compiler-posixc-includes includes-stdc_rel includes-stdcio_rel
+#MM- compiler-posixc-quick : compiler-posixc-includes-quick
+#MM compiler-posixc-includes : compiler-posixc-makefile compiler-posixc-includes-dirs \
+#MM     includes-generate-deps compiler-posixc-fd
+#MM compiler-posixc-includes-quick
+#MM compiler-posixc-includes-dirs
+#MM compiler-posixc-fd
+
+# Library targets
+#MM compiler-posixc-kobj : core-linklibs linklibs-stdc_rel linklibs-stdcio_rel
+#MM compiler-posixc-kobj-quick : 
+
+# Library with ABI targets:
+#MM compiler-posixc-kobj : compiler-posixc-includes core-linklibs linklibs-stdc_rel linklibs-stdcio_rel
+#MM compiler-posixc-kobj-quick : compiler-posixc-includes-quick
+
+# All MetaMake targets defined by this macro
+compiler-posixc_ALLTARGETS       := compiler-posixc compiler-posixc-quick compiler-posixc-clean
+
+ifeq (M,M)
+compiler-posixc_ALLTARGETS       += compiler-posixc-kobj compiler-posixc-kobj-quick
+endif
+
+ifeq (M,M)
+compiler-posixc_ALLTARGETS += compiler-posixc-includes \
+                 compiler-posixc-includes-quick compiler-posixc-includes-dirs  \
+                 compiler-posixc-linklib compiler-posixc-fd
+endif
+
+.PHONY : $(compiler-posixc_ALLTARGETS) compiler-posixc-makefile
+
+ifeq (posixc,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (library,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    compiler-posixc_DEFNAME      := posixc_
+else
+    compiler-posixc_DEFNAME      := posixc
+endif
+compiler-posixc_DEFLINKLIBNAME   := $(compiler-posixc_DEFNAME)
+ifneq (,)
+    compiler-posixc_LINKLIBNAME  := 
+else
+    compiler-posixc_LINKLIBNAME  = $(compiler-posixc_DEFLINKLIBNAME)
+endif
+compiler-posixc_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    compiler-posixc_DEFCPPFLAGS  += -I
+endif
+compiler-posixc_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    compiler-posixc_DFLAGS       := 
+else
+    compiler-posixc_DFLAGS       = $(compiler-posixc_DEFDFLAGS)
+endif
+compiler-posixc_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    compiler-posixc_DXXFLAGS     := 
+else
+    compiler-posixc_DXXFLAGS     = $(compiler-posixc_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+compiler-posixc_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(compiler-posixc_DEFDFLAGS))
+compiler-posixc_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(compiler-posixc_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+compiler-posixc_FUNCINSTR := yes
+compiler-posixc_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(compiler-posixc_DEFDFLAGS))
+compiler-posixc_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(compiler-posixc_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+compiler-posixc_OBJDIR                     := 
+else
+compiler-posixc_OBJDIR                     := $(OBJDIR)/$(compiler-posixc_DEFNAME)
+endif
+ifneq (,)
+compiler-posixc_OBJDIR           := $(compiler-posixc_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+compiler-posixc-makefile         := $(compiler-posixc_OBJDIR)/Makefile.$(compiler-posixc_DEFNAME)library
+compiler-posixc-genmakefile : $(compiler-posixc-makefile)
+
+
+compiler-posixc-genmakefile_OPTS := 
+ifneq (,)
+    compiler-posixc-genmakefile_OPTS += -f 
+    compiler-posixc-genmakefile_MODNAME := posixc_
+else
+    compiler-posixc-genmakefile_MODNAME := posixc
+endif
+compiler-posixc-genmakefile_TARGET := Makefile.$(compiler-posixc-genmakefile_MODNAME)library
+compiler-posixc-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        compiler-posixc-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        compiler-posixc-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        compiler-posixc-genmakefile_OPTS += -c 
+        compiler-posixc-genmakefile_DEPS += 
+    endif 
+else
+    compiler-posixc-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/posixc.conf
+    compiler-posixc-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/posixc.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        compiler-posixc-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        compiler-posixc-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        compiler-posixc-genmakefile_OPTS += -o 
+        compiler-posixc-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    compiler-posixc-genmakefile_OPTS += -s 
+endif
+ifneq ($(compiler-posixc_OBJDIR),)
+    compiler-posixc-genmakefile_OPTS += -d $(compiler-posixc_OBJDIR)
+    compiler-posixc-genmakefile_TARGET := $(compiler-posixc_OBJDIR)/$(compiler-posixc-genmakefile_TARGET)
+endif
+
+$(compiler-posixc-genmakefile_TARGET) : OPTS := $(compiler-posixc-genmakefile_OPTS)
+$(compiler-posixc-genmakefile_TARGET) : MODNAME := posixc
+$(compiler-posixc-genmakefile_TARGET) : MODTYPE := library
+$(compiler-posixc-genmakefile_TARGET) : $(compiler-posixc-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(compiler-posixc-makefile),)
+$(compiler-posixc-makefile) : | $(compiler-posixc_OBJDIR)
+else
+$(compiler-posixc-makefile) :: $(compiler-posixc_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(compiler-posixc_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(compiler-posixc_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(compiler-posixc-makefile)
+
+compiler-posixc_DEFMODDIR        := $($(compiler-posixc_DEFNAME)_MODDIR)
+ifeq (no,yes)
+compiler-posixc_DEFMODDIR        := $(AROS_DIR_ARCH)/$(compiler-posixc_DEFMODDIR)
+endif
+ifneq (,)
+    compiler-posixc_MODDIR       := 
+else
+    compiler-posixc_MODDIR       := $(compiler-posixc_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+compiler-posixc_INCDIR           := 
+else
+compiler-posixc_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+compiler-posixc_LIBDEFSINC       := $(compiler-posixc_OBJDIR)/include/$(compiler-posixc_DEFNAME)_libdefs.h
+compiler-posixc_DEFLIBDEFSINC    := $(compiler-posixc_OBJDIR)/include/$(compiler-posixc_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+compiler-posixc-includes-quick : compiler-posixc-includes
+compiler-posixc-includes : $(addprefix $(GENINCDIR)/,$($(compiler-posixc_DEFNAME)_INCLUDES)) \
+    $(addprefix $(compiler-posixc_INCDIR)/,$($(compiler-posixc_DEFNAME)_INCLUDES)) \
+    $(compiler-posixc_LIBDEFSINC) $(compiler-posixc_DEFLIBDEFSINC)
+
+ifneq ($($(compiler-posixc_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    compiler-posixc-includes_MODNAME := posixc_
+else
+    compiler-posixc-includes_MODNAME := posixc
+endif
+
+ifneq ($($(compiler-posixc-includes_MODNAME)_INCLUDES),)
+
+compiler-posixc-includes_TARGETS := $($(compiler-posixc-includes_MODNAME)_INCLUDES)
+
+compiler-posixc-includes_DEPS := $(GENMODULE)
+compiler-posixc-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        compiler-posixc-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        compiler-posixc-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        compiler-posixc-includes_OPTS += -c 
+        compiler-posixc-includes_DEPS += 
+    endif 
+else
+    compiler-posixc-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/posixc.conf
+    compiler-posixc-includes_DEPS += $(SRCDIR)/$(CURDIR)/posixc.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        compiler-posixc-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        compiler-posixc-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        compiler-posixc-includes_OPTS += -o 
+        compiler-posixc-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    compiler-posixc-includes_OPTS += -s 
+endif
+ifneq ($(compiler-posixc_OBJDIR)/include,)
+    compiler-posixc-includes_OPTS += -d $(compiler-posixc_OBJDIR)/include
+    compiler-posixc-includes_TARGETS := $(addprefix $(compiler-posixc_OBJDIR)/include/,$(compiler-posixc-includes_TARGETS))
+    compiler-posixc-includes_GENINCFLAG=$(compiler-posixc_OBJDIR)/include/.posixc.library-includes
+else
+    compiler-posixc-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.posixc.library-includes
+endif
+
+$(compiler-posixc-includes_TARGETS) : $(compiler-posixc-includes_DEPS) $(compiler-posixc-includes_GENINCFLAG)
+
+$(compiler-posixc-includes_GENINCFLAG) : OPTS := $(compiler-posixc-includes_OPTS)
+$(compiler-posixc-includes_GENINCFLAG) : MODNAME := posixc
+$(compiler-posixc-includes_GENINCFLAG) : MODTYPE := library
+$(compiler-posixc-includes_GENINCFLAG) : $(compiler-posixc-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(compiler-posixc_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(compiler-posixc_DEFNAME)_INCLUDES)) : | $(compiler-posixc_OBJDIR)/posixc_geninc
+
+$(compiler-posixc_OBJDIR)/posixc_geninc : COPYSRCDIR := $(compiler-posixc_OBJDIR)/include
+$(compiler-posixc_OBJDIR)/posixc_geninc : TGTDIR := $(GENINCDIR)
+$(compiler-posixc_OBJDIR)/posixc_geninc : FILES := $($(compiler-posixc_DEFNAME)_INCLUDES)
+$(compiler-posixc_OBJDIR)/posixc_geninc : $(addprefix $(compiler-posixc_OBJDIR)/include/,$($(compiler-posixc_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(compiler-posixc_OBJDIR)/include
+
+$(addprefix $(compiler-posixc_INCDIR)/,$($(compiler-posixc_DEFNAME)_INCLUDES)) : | $(compiler-posixc_OBJDIR)/posixc_incs
+
+$(compiler-posixc_OBJDIR)/posixc_incs : COPYSRCDIR := $(compiler-posixc_OBJDIR)/include
+$(compiler-posixc_OBJDIR)/posixc_incs : TGTDIR := $(compiler-posixc_INCDIR)
+$(compiler-posixc_OBJDIR)/posixc_incs : FILES := $($(compiler-posixc_DEFNAME)_INCLUDES)
+$(compiler-posixc_OBJDIR)/posixc_incs : $(addprefix $(compiler-posixc_OBJDIR)/include/,$($(compiler-posixc_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+compiler-posixc_INCDIRS := $(filter-out ./,$(sort $(dir $($(compiler-posixc_DEFNAME)_INCLUDES))))
+
+TMPposixc_INCDIRS := \
+    $(compiler-posixc_OBJDIR)/include $(addprefix $(compiler-posixc_OBJDIR)/include/,$(compiler-posixc_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(compiler-posixc_INCDIRS)) \
+    $(compiler-posixc_INCDIR) $(addprefix $(compiler-posixc_INCDIR)/,$(compiler-posixc_INCDIRS))
+
+ifneq (compiler-posixc-includes-dirs,)
+compiler-posixc-includes-dirs : | $(TMPposixc_INCDIRS)
+else
+compiler-posixc-includes-dirs :: $(TMPposixc_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPposixc_INCDIRS)
+
+
+endif
+
+endif
+
+
+compiler-posixc-genlibdefs_OPTS := 
+ifneq (,)
+    compiler-posixc-genlibdefs_OPTS += -f 
+    compiler-posixc-genlibdefs_MODNAME := posixc_
+else
+    compiler-posixc-genlibdefs_MODNAME := posixc
+endif
+compiler-posixc-genlibdefs_TARGET := $(compiler-posixc-genlibdefs_MODNAME)_libdefs.h
+compiler-posixc-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        compiler-posixc-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        compiler-posixc-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        compiler-posixc-genlibdefs_OPTS += -c 
+        compiler-posixc-genlibdefs_DEPS += 
+    endif 
+else
+    compiler-posixc-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/posixc.conf
+    compiler-posixc-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/posixc.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        compiler-posixc-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        compiler-posixc-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        compiler-posixc-genlibdefs_OPTS += -o 
+        compiler-posixc-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    compiler-posixc-genlibdefs_OPTS += -s 
+endif
+ifneq ($(compiler-posixc_OBJDIR)/include,)
+    compiler-posixc-genlibdefs_OPTS += -d $(compiler-posixc_OBJDIR)/include
+    compiler-posixc-genlibdefs_TARGET := $(compiler-posixc_OBJDIR)/include/$(compiler-posixc-genlibdefs_TARGET)
+endif
+ifneq (,)
+    compiler-posixc-genlibdefs_OPTS += -v 
+endif
+
+$(compiler-posixc-genlibdefs_TARGET) : OPTS := $(compiler-posixc-genlibdefs_OPTS)
+$(compiler-posixc-genlibdefs_TARGET) : MODNAME := posixc
+$(compiler-posixc-genlibdefs_TARGET) : MODTYPE := library
+$(compiler-posixc-genlibdefs_TARGET) : $(compiler-posixc-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(compiler-posixc_DEFLIBDEFSINC) : FILENAME := $(compiler-posixc_LIBDEFSINC)
+$(compiler-posixc_DEFLIBDEFSINC) : $(compiler-posixc_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(compiler-posixc_LIBDEFSINC) $(compiler-posixc_DEFLIBDEFSINC) : | $(compiler-posixc_OBJDIR)/include
+
+ifneq (compiler-posixc-includes-dirs,)
+compiler-posixc-includes-dirs : | $(compiler-posixc_OBJDIR)/include
+else
+compiler-posixc-includes-dirs :: $(compiler-posixc_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(compiler-posixc_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+compiler-posixc-genmodfiles_OPTS :=
+ifneq (,)
+    compiler-posixc-genmodfiles_OPTS += -f 
+    compiler-posixc-genmodfiles_MODNAME := posixc_
+else
+    compiler-posixc-genmodfiles_MODNAME := posixc
+endif
+compiler-posixc-genmodfiles_GENTARGETS := $($(compiler-posixc-genmodfiles_MODNAME)_STARTFILES) $($(compiler-posixc-genmodfiles_MODNAME)_ENDFILES)
+compiler-posixc-genmodfiles_STUBTARGETS := $($(compiler-posixc-genmodfiles_MODNAME)_LINKLIBFILES) $($(compiler-posixc-genmodfiles_MODNAME)_RELLINKLIBFILES)
+compiler-posixc-genmodfiles_GENTARGETS := $(addsuffix .c,$(compiler-posixc-genmodfiles_GENTARGETS))
+compiler-posixc-genmodfiles_STUBTARGETS := $(addsuffix .c,$(compiler-posixc-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(compiler-posixc-genmodfiles_MODNAME)_LINKLIBAFILES) $($(compiler-posixc-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+compiler-posixc-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        compiler-posixc-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        compiler-posixc-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        compiler-posixc-genmodfiles_OPTS += -c 
+        compiler-posixc-genmodfiles_DEPS += 
+    endif 
+else
+    compiler-posixc-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/posixc.conf
+    compiler-posixc-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/posixc.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        compiler-posixc-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        compiler-posixc-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        compiler-posixc-genmodfiles_OPTS += -o 
+        compiler-posixc-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    compiler-posixc-genmodfiles_OPTS += -s 
+endif
+ifneq ($(compiler-posixc_OBJDIR),)
+    compiler-posixc-genmodfiles_OPTS += -d $(compiler-posixc_OBJDIR)
+    compiler-posixc-genmodfiles_TARGETDIR := $(shell echo $(compiler-posixc_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    compiler-posixc-genmodfiles_GENTARGETS := $(addprefix $(compiler-posixc-genmodfiles_TARGETDIR)/,$(compiler-posixc-genmodfiles_GENTARGETS))
+    compiler-posixc-genmodfiles_GENFILEFLAG=$(compiler-posixc-genmodfiles_TARGETDIR)/.posixc.library-genfiles
+else
+    compiler-posixc-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.posixc.library-genfiles
+endif
+ifneq ($(compiler-posixc_OBJDIR)/linklib,)
+    compiler-posixc-genmodfiles_OPTS += -l $(compiler-posixc_OBJDIR)/linklib
+    compiler-posixc-genmodfiles_STUBTARGETDIR := $(shell echo $(compiler-posixc_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    compiler-posixc-genmodfiles_STUBTARGETS := $(addprefix $(compiler-posixc-genmodfiles_STUBTARGETDIR)/,$(compiler-posixc-genmodfiles_STUBTARGETS))
+    compiler-posixc-genmodfiles_TARGETDIRS += $(compiler-posixc_OBJDIR)/linklib
+else
+ifneq ($(compiler-posixc_OBJDIR),)
+    compiler-posixc-genmodfiles_STUBTARGETS := $(addprefix $(compiler-posixc-genmodfiles_TARGETDIR)/,$(compiler-posixc-genmodfiles_STUBTARGETS))
+endif
+endif
+
+compiler-posixc-genmodfiles_TARGETS := $(compiler-posixc-genmodfiles_GENTARGETS) $(compiler-posixc-genmodfiles_STUBTARGETS)
+ifneq ($(compiler-posixc-genmodfiles_TARGETDIRS),)
+$(compiler-posixc-genmodfiles_TARGETS) : | $(compiler-posixc-genmodfiles_TARGETDIRS)
+endif
+
+$(compiler-posixc-genmodfiles_TARGETS) : $(compiler-posixc-genmodfiles_DEPS) $(compiler-posixc-genmodfiles_GENFILEFLAG)
+
+$(compiler-posixc-genmodfiles_GENFILEFLAG) : OPTS := $(compiler-posixc-genmodfiles_OPTS)
+$(compiler-posixc-genmodfiles_GENFILEFLAG) : MODNAME := posixc
+$(compiler-posixc-genmodfiles_GENFILEFLAG) : MODTYPE := library
+$(compiler-posixc-genmodfiles_GENFILEFLAG) : $(compiler-posixc-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(compiler-posixc-genmodfiles_GENFILEFLAG) : $(compiler-posixc_DEFLIBDEFSINC) $(compiler-posixc-makefile)
+
+
+ifneq ($(compiler-posixc-genmodfiles_GENFILEFLAG),)
+$(compiler-posixc-genmodfiles_GENFILEFLAG) : | $(compiler-posixc_OBJDIR)/linklib
+else
+$(compiler-posixc-genmodfiles_GENFILEFLAG) :: $(compiler-posixc_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(compiler-posixc_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+compiler-posixc_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+compiler-posixc_FDDIR            := /../$(AROS_DIR_FD)
+endif
+compiler-posixc-fd : $(compiler-posixc_FDDIR)/posixc_lib.fd
+
+
+TMP_TARGET := posixc_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/posixc.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/posixc.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(compiler-posixc_FDDIR),)
+    TMP_OPTS += -d $(compiler-posixc_FDDIR)
+    TMP_TARGET := $(compiler-posixc_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := posixc
+$(TMP_TARGET) : MODTYPE := library
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(compiler-posixc_FDDIR)/posixc_lib.fd : | $(compiler-posixc_FDDIR)
+
+
+ifneq (compiler-posixc-fd-setup,)
+compiler-posixc-fd-setup : | $(compiler-posixc_FDDIR)
+else
+compiler-posixc-fd-setup :: $(compiler-posixc_FDDIR)
+endif
+
+GLOB_MKDIRS += $(compiler-posixc_FDDIR)
+
+endif
+
+## Compilation
+##
+compiler-posixc_FILES            := $(POSIXC) $(POSIXC_COMMON) $(POSIXC_ARCH)
+compiler-posixc_OBJCFILES        := 
+compiler-posixc_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+compiler-posixc_LIBFILES         := $(POSIXC_LINKLIB)
+compiler-posixc_LIBS             := stdc_rel stdcio_rel
+
+compiler-posixc_FDIRS            := $(sort $(dir $(compiler-posixc_FILES)))
+
+compiler-posixc_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+compiler-posixc_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call compiler-posixc_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+compiler-posixc_FILTERARCH       = $(filter-out $(call compiler-posixc_MATCHARCH,$(1),$(2)),$(2))
+compiler-posixc_STARTFILES       := $(addprefix $(compiler-posixc_OBJDIR)/,$($(compiler-posixc_DEFNAME)_STARTFILES))
+compiler-posixc_ENDFILES         := $(addprefix $(compiler-posixc_OBJDIR)/,$($(compiler-posixc_DEFNAME)_ENDFILES))
+
+compiler-posixc_ARCHOBJS         := $(wildcard $(compiler-posixc_OBJDIR)/arch/*.o)
+compiler-posixc_LIBARCHOBJS      := $(wildcard $(compiler-posixc_OBJDIR)/linklib/arch/*.o)
+compiler-posixc_ARCHFILES        := $(basename $(notdir $(compiler-posixc_ARCHOBJS)))
+compiler-posixc_LIBARCHFILES     := $(basename $(notdir $(compiler-posixc_LIBARCHOBJS)))
+compiler-posixc_C_NARCHFILES     := $(call compiler-posixc_FILTERARCH,$(compiler-posixc_ARCHFILES),$(compiler-posixc_FILES))
+compiler-posixc_CXX_NARCHFILES   := $(call compiler-posixc_FILTERARCH,$(compiler-posixc_ARCHFILES),$(compiler-posixc_CXXFILES))
+compiler-posixc_OBJC_NARCHFILES  := $(call compiler-posixc_FILTERARCH,$(compiler-posixc_ARCHFILES),$(compiler-posixc_OBJCFILES))
+compiler-posixc_NLIBARCHFILES    := $(call compiler-posixc_FILTERARCH,$(compiler-posixc_LIBARCHFILES),$(compiler-posixc_LIBFILES))
+compiler-posixc_ARCHNLIBFILES    := $(call compiler-posixc_FILTERARCH,$(compiler-posixc_LIBFILES),$(compiler-posixc_LIBARCHFILES))
+
+compiler-posixc_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(compiler-posixc_OBJDIR)/include -include $(compiler-posixc_DEFLIBDEFSINC))
+ifneq (,)
+compiler-posixc_CPPFLAGS         += -I
+endif
+compiler-posixc_LINKLIBCPPFLAGS  := $(compiler-posixc_CPPFLAGS)
+compiler-posixc_CPPFLAGS         += $(strip $($(compiler-posixc_DEFNAME)_CPPFLAGS))
+compiler-posixc_LINKLIBCPPFLAGS  += $(strip $($(compiler-posixc_DEFNAME)_LINKLIBCPPFLAGS))
+compiler-posixc_CFLAGS           := $(strip $(CFLAGS) $($(compiler-posixc_DEFNAME)_CFLAGS))
+compiler-posixc_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(compiler-posixc_DEFNAME)_LINKLIBCFLAGS))
+compiler-posixc_CXXFLAGS         := $(strip $(CXXFLAGS) $($(compiler-posixc_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+compiler-posixc_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+compiler-posixc_CFLAGS           := $(strip $(compiler-posixc_LTOFLAGS) $(compiler-posixc_CFLAGS))
+compiler-posixc_LINKLIBCFLAGS    := $(strip $(compiler-posixc_LTOFLAGS) $(compiler-posixc_LINKLIBCFLAGS))
+compiler-posixc_CXXFLAGS         := $(strip $(compiler-posixc_LTOFLAGS) $(compiler-posixc_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+compiler-posixc_SUBSTNULL        :=
+compiler-posixc_SUBSTSPACE       := $(compiler-posixc_SUBSTNULL) #
+compiler-posixc_SUBSTCOMMA       := ,
+compiler-posixc_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(compiler-posixc_SUBSTSPACE),$(compiler-posixc_SUBSTCOMMA),$(strip $($(compiler-posixc_DEFNAME)_STARTFILES))))
+compiler-posixc_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+compiler-posixc_CFLAGS           := $(strip $(compiler-posixc_INSTRFUNCFLAGS) $(compiler-posixc_CFLAGS))
+compiler-posixc_CXXFLAGS         := $(strip $(compiler-posixc_INSTRFUNCFLAGS) $(compiler-posixc_CXXFLAGS))
+compiler-posixc_LIBS             += $(compiler-posixc_INSTRFUNCLIBS)
+endif
+endif
+compiler-posixc_DFLAGS           := $(strip $(compiler-posixc_DFLAGS) $($(compiler-posixc_DEFNAME)_DFLAGS))
+compiler-posixc_LINKLIBDFLAGS    := $(strip $(compiler-posixc_DFLAGS) $($(compiler-posixc_DEFNAME)_LINKLIBDFLAGS))
+compiler-posixc_DXXFLAGS         := $(strip $(compiler-posixc_DXXFLAGS) $($(compiler-posixc_DEFNAME)_DXXFLAGS))
+
+ifeq (library,library)
+    compiler-posixc_LIBSUFFIX    := 
+else
+    compiler-posixc_LIBSUFFIX    := .library
+endif
+
+ifeq (,)
+compiler-posixc_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+compiler-posixc_LIBDIR           := 
+endif
+
+ifeq (M,M)
+compiler-posixc_LINKLIBCFILES    := $(addprefix $(compiler-posixc_OBJDIR)/linklib/,$($(compiler-posixc_DEFNAME)_LINKLIBFILES))
+compiler-posixc_LINKLIBAFILES    := $(addprefix $(compiler-posixc_OBJDIR)/linklib/,$($(compiler-posixc_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(compiler-posixc_DEFNAME)_LINKLIBFILES) $($(compiler-posixc_DEFNAME)_LINKLIBAFILES) $(POSIXC_LINKLIB) $(compiler-posixc_ARCHNLIBFILES)),)
+    compiler-posixc_LINKLIB      :=
+else
+    compiler-posixc_LINKLIB      := $(compiler-posixc_LIBDIR)/libposixc$(compiler-posixc_LIBSUFFIX).a
+    ifneq (posixc,$(compiler-posixc_LINKLIBNAME))
+        compiler-posixc_LINKLIB  += $(compiler-posixc_LIBDIR)/lib$(compiler-posixc_LINKLIBNAME)$(compiler-posixc_LIBSUFFIX).a
+    endif
+endif
+compiler-posixc_LINKLIBFILES     := $(compiler-posixc_LINKLIBCFILES) $(compiler-posixc_LINKLIBAFILES)
+
+compiler-posixc_RELLINKLIBCFILES := $(addprefix $(compiler-posixc_OBJDIR)/linklib/,$($(compiler-posixc_DEFNAME)_RELLINKLIBFILES))
+compiler-posixc_RELLINKLIBAFILES := $(addprefix $(compiler-posixc_OBJDIR)/linklib/,$($(compiler-posixc_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(compiler-posixc_DEFNAME)_RELLINKLIBFILES) $($(compiler-posixc_DEFNAME)_RELLINKLIBAFILES) $(POSIXC_LINKLIB) $(compiler-posixc_ARCHNLIBFILES)),)
+    compiler-posixc_RELLINKLIB   :=
+else
+    compiler-posixc_RELLINKLIB   := $(compiler-posixc_LIBDIR)/lib$(compiler-posixc_DEFNAME)_rel$(compiler-posixc_LIBSUFFIX).a
+    ifneq (posixc,$(compiler-posixc_LINKLIBNAME))
+        compiler-posixc_RELLINKLIB += $(compiler-posixc_LIBDIR)/lib$(compiler-posixc_LINKLIBNAME)_rel$(compiler-posixc_LIBSUFFIX).a
+    endif
+endif
+compiler-posixc_RELLINKLIBFILES  := $(compiler-posixc_RELLINKLIBCFILES) $(compiler-posixc_RELLINKLIBAFILES)
+endif
+
+compiler-posixc_ENDOBJS          := $(addsuffix .o,$(compiler-posixc_ENDFILES))
+compiler-posixc_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(compiler-posixc_OBJDIR)/linklib/,$(notdir $(compiler-posixc_NLIBARCHFILES))) $(addprefix $(compiler-posixc_OBJDIR)/linklib/arch/,$(notdir $(compiler-posixc_ARCHNLIBFILES))) $(compiler-posixc_LINKLIBFILES)) \
+                 $(POSIXC_LINKOBJS)
+compiler-posixc_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(compiler-posixc_OBJDIR)/linklib/,$(notdir $(compiler-posixc_NLIBARCHFILES))) $(addprefix $(compiler-posixc_OBJDIR)/linklib/arch/,$(notdir $(compiler-posixc_ARCHNLIBFILES))) $(compiler-posixc_RELLINKLIBFILES)) \
+                 $(POSIXC_LINKOBJS)
+$(compiler-posixc_LINKLIBFILES) $(compiler-posixc_RELLINKLIBFILES) : | $(compiler-posixc_OBJDIR)/linklib
+$(compiler-posixc_LINKLIBOBJS) $(compiler-posixc_RELLINKLIBOBJS) : | $(compiler-posixc_OBJDIR)/linklib
+
+compiler-posixc_CCFILES := $(compiler-posixc_C_NARCHFILES)
+compiler-posixc_TARGETCCFILES    := $(strip $(compiler-posixc_STARTFILES) $(compiler-posixc_ENDFILES))
+compiler-posixc_LINKLIBCCFILES   := $(strip $(compiler-posixc_NLIBARCHFILES) $(compiler-posixc_LINKLIBCFILES) $(compiler-posixc_RELLINKLIBCFILES))
+compiler-posixc_LINKLIBCCGENFILES := $(strip $(compiler-posixc_LINKLIBCFILES) $(compiler-posixc_RELLINKLIBCFILES))
+
+
+compiler-posixc_CXXABSBASENAMES := $(foreach compiler-posixc_CXXBASE,$(compiler-posixc_CXX_NARCHFILES),$(if $(filter /%,$(compiler-posixc_CXXBASE)),$(compiler-posixc_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(compiler-posixc_CXXBASE))))
+
+ifneq ($(compiler-posixc_CXXABSBASENAMES),)
+
+compiler-posixc_CXXBASENAMES := $(basename $(compiler-posixc_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+compiler-posixc_MCXX_FILES  := $(strip $(foreach compiler-posixc_CXXBASE,$(compiler-posixc_CXXABSBASENAMES), $(firstword $(wildcard $(foreach compiler-posixc_EXT, $(AROS_CXXEXTS),$(addsuffix .$(compiler-posixc_EXT),$(compiler-posixc_CXXBASE)))))))
+
+ifeq (,)
+compiler-posixc_MCXX_SRCWILDCARD := %
+else
+compiler-posixc_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(compiler-posixc_OBJDIR),)
+  compiler-posixc_CXXTARGETS := $(notdir $(compiler-posixc_CXXBASENAMES:=.o))
+  compiler-posixc_CXXDTARGETS := $(notdir $(compiler-posixc_CXXBASENAMES:=.d))
+  compiler-posixc_MCXX_WILDCARD := %
+else
+  compiler-posixc_CXXTARGETS := $(addprefix $(compiler-posixc_OBJDIR)/,$(notdir $(compiler-posixc_CXXBASENAMES:=.o)))
+  compiler-posixc_CXXDTARGETS := $(addprefix $(compiler-posixc_OBJDIR)/,$(notdir $(compiler-posixc_CXXBASENAMES:=.d)))
+  compiler-posixc_MCXX_WILDCARD := $(compiler-posixc_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(compiler-posixc_CXXTARGETS) $(compiler-posixc_CXXDTARGETS) : | $(compiler-posixc_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+compiler-posixc_MCXX_CPPFLAGS := $(compiler-posixc_CPPFLAGS)
+compiler-posixc_CXXFLAGS := $(compiler-posixc_CXXFLAGS)
+ifeq ($(compiler-posixc_DXXFLAGS),)
+  compiler-posixc_DXXFLAGS := $(compiler-posixc_CXXFLAGS)
+else
+  compiler-posixc_DXXFLAGS := $(compiler-posixc_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  compiler-posixc_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  compiler-posixc_STRIP ?= $(HOST_STRIP)
+  compiler-posixc_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  compiler-posixc_CXXCMD:=$(HOST_CXX)
+  compiler-posixc_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(compiler-posixc_MCXX_CPPFLAGS) $(compiler-posixc_MCXX_EXTRA_CPPFLAGS))
+  compiler-posixc_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(compiler-posixc_CXXFLAGS))
+  compiler-posixc_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(compiler-posixc_DXXFLAGS))
+  compiler-posixc_CXXIQUOTE:=$(HOST_IQUOTE)
+  compiler-posixc_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  compiler-posixc_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  compiler-posixc_STRIP ?= $(TARGET_STRIP)
+  compiler-posixc_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  compiler-posixc_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  compiler-posixc_MCXX_CPPFLAGS := $(strip $(compiler-posixc_MCXX_CPPFLAGS) $(compiler-posixc_MCXX_EXTRA_CPPFLAGS))
+  compiler-posixc_CXXFLAGS := $(strip $(compiler-posixc_CXXFLAGS) $(SAFETY_CFLAGS))
+  compiler-posixc_DXXFLAGS := $(compiler-posixc_DXXFLAGS)
+  compiler-posixc_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  compiler-posixc_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  compiler-posixc_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  compiler-posixc_STRIP ?= $(ECHO) >/dev/null
+  compiler-posixc_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  compiler-posixc_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  compiler-posixc_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(compiler-posixc_MCXX_CPPFLAGS) $(compiler-posixc_MCXX_EXTRA_CPPFLAGS))
+  compiler-posixc_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(compiler-posixc_CXXFLAGS))
+  compiler-posixc_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(compiler-posixc_DXXFLAGS))
+  compiler-posixc_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  compiler-posixc_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(compiler-posixc_CXXCMD) $(compiler-posixc_CXXIQUOTE) $(dir $(2)) $(compiler-posixc_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_CXXIQUOTE) . $(compiler-posixc_CXXIQUOTE_END) $(strip $(compiler-posixc_CXXFLAGS) $(compiler-posixc_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(compiler-posixc_CXXCMD) $(compiler-posixc_CXXIQUOTE) $(dir $(2)) $(compiler-posixc_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_CXXIQUOTE) . $(compiler-posixc_CXXIQUOTE_END) $(strip $(compiler-posixc_CXXFLAGS) $(compiler-posixc_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(compiler-posixc_CXXCMD) $(compiler-posixc_CXXIQUOTE) $(dir $(2)) $(compiler-posixc_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_CXXIQUOTE) . $(compiler-posixc_CXXIQUOTE_END) $(strip $(compiler-posixc_CXXFLAGS) $(compiler-posixc_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(compiler-posixc_CXXCMD)" $(MKDEPEND) $(strip $(compiler-posixc_DXXFLAGS) $(compiler-posixc_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(compiler-posixc_OBJDIR),)
+  $(foreach compiler-posixc_CXXFILE,$(compiler-posixc_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(compiler-posixc_CXXFILE))),$(compiler-posixc_CXXFILE))))
+else
+  $(foreach compiler-posixc_CXXFILE,$(compiler-posixc_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(compiler-posixc_OBJDIR)/,$(notdir $(basename $(compiler-posixc_CXXFILE)))),$(compiler-posixc_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(compiler-posixc_OBJC_NARCHFILES),)
+
+ifeq (,)
+compiler-posixc_MOBJC_SRCWILDCARD := %
+else
+compiler-posixc_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(compiler-posixc_OBJDIR),)
+  compiler-posixc_MOBJC_TARGETS := $(addsuffix .o,$(compiler-posixc_OBJC_NARCHFILES))
+  compiler-posixc_MOBJC_DTARGETS := $(addsuffix .d,$(compiler-posixc_OBJC_NARCHFILES))
+  compiler-posixc_MOBJC_WILDCARD := %
+else
+  compiler-posixc_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(compiler-posixc_OBJDIR)/,$(compiler-posixc_OBJC_NARCHFILES)))
+  compiler-posixc_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(compiler-posixc_OBJDIR)/,$(compiler-posixc_OBJC_NARCHFILES)))
+  compiler-posixc_MOBJC_WILDCARD := $(compiler-posixc_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : | $(addsuffix .m,$(compiler-posixc_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  compiler-posixc_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  compiler-posixc_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(compiler-posixc_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  compiler-posixc_MOBJC_DIRS := $(foreach dir, $(compiler-posixc_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(compiler-posixc_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(compiler-posixc_MOBJC_DIRS),)
+    compiler-posixc_MOBJC_DIRS := $(shell echo $(compiler-posixc_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(compiler-posixc_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  compiler-posixc_CC := $(TARGET_CC)
+else
+  compiler-posixc_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+compiler-posixc_MOBJC_CPPFLAGS := $(compiler-posixc_CPPFLAGS)
+compiler-posixc_OBJCFLAGS := $(compiler-posixc_CFLAGS)
+compiler-posixc_OBJCFLAGS := $(compiler-posixc_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+compiler-posixc_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(compiler-posixc_OBJCFLAGS)))
+ifeq ($(compiler-posixc_DFLAGS),)
+  compiler-posixc_OBJCDFLAGS := $(compiler-posixc_CFLAGS)
+else
+  compiler-posixc_OBJCDFLAGS := $(compiler-posixc_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  compiler-posixc_LINK ?= $(strip $(compiler-posixc_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  compiler-posixc_STRIP ?= $(TARGET_STRIP)
+  compiler-posixc_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : CMD:=$(strip $(compiler-posixc_CC) $(TARGET_SYSROOT))
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : compiler-posixc_MOBJC_CPPFLAGS:=$(strip $(compiler-posixc_MOBJC_CPPFLAGS) $(compiler-posixc_MOBJC_EXTRA_CPPFLAGS))
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : compiler-posixc_OBJCFLAGS:=$(strip $(compiler-posixc_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : compiler-posixc_OBJCDFLAGS:=$(compiler-posixc_OBJCDFLAGS)
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : compiler-posixc_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : compiler-posixc_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  compiler-posixc_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  compiler-posixc_STRIP ?= $(HOST_STRIP)
+  compiler-posixc_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : compiler-posixc_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(compiler-posixc_MOBJC_CPPFLAGS) $(compiler-posixc_MOBJC_EXTRA_CPPFLAGS))
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : compiler-posixc_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(compiler-posixc_OBJCFLAGS))
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : compiler-posixc_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(compiler-posixc_OBJCDFLAGS))
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : compiler-posixc_IQUOTE:=$(HOST_IQUOTE)
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : compiler-posixc_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  compiler-posixc_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  compiler-posixc_STRIP ?= $(ECHO) >/dev/null
+  compiler-posixc_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : compiler-posixc_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(compiler-posixc_MOBJC_CPPFLAGS) $(compiler-posixc_MOBJC_EXTRA_CPPFLAGS))
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : compiler-posixc_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(compiler-posixc_OBJCFLAGS))
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : compiler-posixc_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(compiler-posixc_OBJCDFLAGS))
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : compiler-posixc_IQUOTE:=$(KERNEL_IQUOTE)
+  $(compiler-posixc_MOBJC_TARGETS) $(compiler-posixc_MOBJC_DTARGETS) : compiler-posixc_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(compiler-posixc_MOBJC_TARGETS) : CPPFLAGS := $(compiler-posixc_MOBJC_CPPFLAGS)
+$(compiler-posixc_MOBJC_TARGETS) : CFLAGS := $(compiler-posixc_OBJCFLAGS)
+$(compiler-posixc_MOBJC_TARGETS) : $(compiler-posixc_MOBJC_WILDCARD).o : $(compiler-posixc_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(compiler-posixc_IQUOTE) $(dir $<) $(compiler-posixc_IQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_IQUOTE) . $(compiler-posixc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(compiler-posixc_IQUOTE) $(dir $<) $(compiler-posixc_IQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_IQUOTE) . $(compiler-posixc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(compiler-posixc_IQUOTE) $(dir $<) $(compiler-posixc_IQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_IQUOTE) . $(compiler-posixc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(compiler-posixc_MOBJC_DTARGETS) : $(compiler-posixc_MOBJC_WILDCARD).d : $(compiler-posixc_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(compiler-posixc_OBJCDFLAGS) $(compiler-posixc_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+compiler-posixc_MC_SRCWILDCARD := %
+else
+compiler-posixc_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(compiler-posixc_OBJDIR),)
+compiler-posixc_MC_TARGETS := $(addsuffix .o,$(compiler-posixc_CCFILES))
+compiler-posixc_MC_DTARGETS := $(addsuffix .d,$(compiler-posixc_CCFILES))
+compiler-posixc_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    compiler-posixc_MC_TARGETS := $(addsuffix .o,$(addprefix $(compiler-posixc_OBJDIR)/,$(notdir $(compiler-posixc_CCFILES))))
+    compiler-posixc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(compiler-posixc_OBJDIR)/,$(notdir $(compiler-posixc_CCFILES))))
+else
+ifeq (,)
+    compiler-posixc_MC_TARGETS := $(addsuffix .o,$(addprefix $(compiler-posixc_OBJDIR)/,$(compiler-posixc_CCFILES)))
+    compiler-posixc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(compiler-posixc_OBJDIR)/,$(compiler-posixc_CCFILES)))
+else
+    compiler-posixc_MC_TARGETS := $(addsuffix .o,$(addprefix $(compiler-posixc_OBJDIR)/,$(patsubst /%,%,$(compiler-posixc_CCFILES))))
+    compiler-posixc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(compiler-posixc_OBJDIR)/,$(patsubst /%,%,$(compiler-posixc_CCFILES))))
+endif
+endif
+compiler-posixc_MC_TGTWILDCARD := $(compiler-posixc_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : | $(addsuffix .c,$(compiler-posixc_CCFILES))
+
+# Be sure that all .c files are found
+compiler-posixc_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+compiler-posixc_MC_BASEDIRS := $(shell echo $(sort $(dir $(compiler-posixc_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+compiler-posixc_MC_DIRS := $(foreach dir, $(compiler-posixc_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(compiler-posixc_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(compiler-posixc_MC_DIRS),)
+    compiler-posixc_MC_DIRS := $(shell echo $(compiler-posixc_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(compiler-posixc_MC_DIRS)
+endif
+
+endif
+
+compiler-posixc_MC_CPPFLAGS := $(compiler-posixc_CPPFLAGS)
+compiler-posixc_CFLAGS := $(compiler-posixc_CFLAGS)
+ifeq ($(compiler-posixc_DFLAGS),)
+  compiler-posixc_DFLAGS := $(compiler-posixc_CFLAGS)
+else
+  compiler-posixc_DFLAGS := $(compiler-posixc_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+compiler-posixc_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+compiler-posixc_STRIP ?= $(TARGET_STRIP)
+compiler-posixc_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_MC_CPPFLAGS:=$(strip $(compiler-posixc_MC_CPPFLAGS) $(compiler-posixc_MC_EXTRA_CPPFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_CFLAGS:=$(strip $(compiler-posixc_CFLAGS) $(SAFETY_CFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_DFLAGS:=$(compiler-posixc_DFLAGS)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE:=$(CFLAGS_IQUOTE)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+compiler-posixc_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+compiler-posixc_STRIP ?= $(HOST_STRIP)
+compiler-posixc_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(compiler-posixc_MC_CPPFLAGS) $(compiler-posixc_MC_EXTRA_CPPFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_CFLAGS:=$(strip $(HOST_CFLAGS) $(compiler-posixc_CFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_DFLAGS:=$(strip $(HOST_CFLAGS) $(compiler-posixc_DFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE:=$(HOST_IQUOTE)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+compiler-posixc_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+compiler-posixc_STRIP ?= $(ECHO) >/dev/null
+compiler-posixc_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(compiler-posixc_MC_CPPFLAGS) $(compiler-posixc_MC_EXTRA_CPPFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(compiler-posixc_CFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(compiler-posixc_DFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE:=$(KERNEL_IQUOTE)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(compiler-posixc_MC_TARGETS) : CPPFLAGS := $(compiler-posixc_MC_CPPFLAGS)
+$(compiler-posixc_MC_TARGETS) : CFLAGS := $(compiler-posixc_CFLAGS)
+$(compiler-posixc_MC_TARGETS) : $(compiler-posixc_MC_TGTWILDCARD).o : $(compiler-posixc_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(compiler-posixc_IQUOTE) $(dir $<) $(compiler-posixc_IQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_IQUOTE) . $(compiler-posixc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(compiler-posixc_IQUOTE) $(dir $<) $(compiler-posixc_IQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_IQUOTE) . $(compiler-posixc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(compiler-posixc_IQUOTE) $(dir $<) $(compiler-posixc_IQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_IQUOTE) . $(compiler-posixc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(compiler-posixc_MC_DTARGETS) : $(compiler-posixc_MC_TGTWILDCARD).d : $(compiler-posixc_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(compiler-posixc_DFLAGS) $(compiler-posixc_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+compiler-posixc_MC_SRCWILDCARD := %
+else
+compiler-posixc_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(compiler-posixc_OBJDIR),)
+compiler-posixc_MC_TARGETS := $(addsuffix .o,$(compiler-posixc_TARGETCCFILES))
+compiler-posixc_MC_DTARGETS := $(addsuffix .d,$(compiler-posixc_TARGETCCFILES))
+compiler-posixc_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    compiler-posixc_MC_TARGETS := $(addsuffix .o,$(addprefix $(compiler-posixc_OBJDIR)/,$(notdir $(compiler-posixc_TARGETCCFILES))))
+    compiler-posixc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(compiler-posixc_OBJDIR)/,$(notdir $(compiler-posixc_TARGETCCFILES))))
+else
+ifeq (,)
+    compiler-posixc_MC_TARGETS := $(addsuffix .o,$(addprefix $(compiler-posixc_OBJDIR)/,$(compiler-posixc_TARGETCCFILES)))
+    compiler-posixc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(compiler-posixc_OBJDIR)/,$(compiler-posixc_TARGETCCFILES)))
+else
+    compiler-posixc_MC_TARGETS := $(addsuffix .o,$(addprefix $(compiler-posixc_OBJDIR)/,$(patsubst /%,%,$(compiler-posixc_TARGETCCFILES))))
+    compiler-posixc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(compiler-posixc_OBJDIR)/,$(patsubst /%,%,$(compiler-posixc_TARGETCCFILES))))
+endif
+endif
+compiler-posixc_MC_TGTWILDCARD := $(compiler-posixc_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : | $(addsuffix .c,$(compiler-posixc_TARGETCCFILES))
+
+# Be sure that all .c files are found
+compiler-posixc_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+compiler-posixc_MC_BASEDIRS := $(shell echo $(sort $(dir $(compiler-posixc_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+compiler-posixc_MC_DIRS := $(foreach dir, $(compiler-posixc_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(compiler-posixc_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(compiler-posixc_MC_DIRS),)
+    compiler-posixc_MC_DIRS := $(shell echo $(compiler-posixc_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(compiler-posixc_MC_DIRS)
+endif
+
+endif
+
+compiler-posixc_MC_CPPFLAGS := $(compiler-posixc_CPPFLAGS) -D__AROS__
+compiler-posixc_CFLAGS := $(compiler-posixc_CFLAGS)
+ifeq ($(compiler-posixc_DFLAGS),)
+  compiler-posixc_DFLAGS := $(compiler-posixc_CFLAGS)
+else
+  compiler-posixc_DFLAGS := $(compiler-posixc_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+compiler-posixc_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+compiler-posixc_STRIP ?= $(TARGET_STRIP)
+compiler-posixc_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_MC_CPPFLAGS:=$(strip $(compiler-posixc_MC_CPPFLAGS) $(compiler-posixc_MC_EXTRA_CPPFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_CFLAGS:=$(strip $(compiler-posixc_CFLAGS) $(SAFETY_CFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_DFLAGS:=$(compiler-posixc_DFLAGS)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE:=$(CFLAGS_IQUOTE)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+compiler-posixc_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+compiler-posixc_STRIP ?= $(HOST_STRIP)
+compiler-posixc_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(compiler-posixc_MC_CPPFLAGS) $(compiler-posixc_MC_EXTRA_CPPFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_CFLAGS:=$(strip $(HOST_CFLAGS) $(compiler-posixc_CFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_DFLAGS:=$(strip $(HOST_CFLAGS) $(compiler-posixc_DFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE:=$(HOST_IQUOTE)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+compiler-posixc_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+compiler-posixc_STRIP ?= $(ECHO) >/dev/null
+compiler-posixc_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(compiler-posixc_MC_CPPFLAGS) $(compiler-posixc_MC_EXTRA_CPPFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(compiler-posixc_CFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(compiler-posixc_DFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE:=$(KERNEL_IQUOTE)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(compiler-posixc_MC_TARGETS) : CPPFLAGS := $(compiler-posixc_MC_CPPFLAGS)
+$(compiler-posixc_MC_TARGETS) : CFLAGS := $(compiler-posixc_CFLAGS)
+$(compiler-posixc_MC_TARGETS) : $(compiler-posixc_MC_TGTWILDCARD).o : $(compiler-posixc_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(compiler-posixc_IQUOTE) $(dir $<) $(compiler-posixc_IQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_IQUOTE) . $(compiler-posixc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(compiler-posixc_IQUOTE) $(dir $<) $(compiler-posixc_IQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_IQUOTE) . $(compiler-posixc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(compiler-posixc_IQUOTE) $(dir $<) $(compiler-posixc_IQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_IQUOTE) . $(compiler-posixc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(compiler-posixc_MC_DTARGETS) : $(compiler-posixc_MC_TGTWILDCARD).d : $(compiler-posixc_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(compiler-posixc_DFLAGS) $(compiler-posixc_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+compiler-posixc_MC_SRCWILDCARD := %
+else
+compiler-posixc_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(compiler-posixc_OBJDIR)/linklib,)
+compiler-posixc_MC_TARGETS := $(addsuffix .o,$(compiler-posixc_NLIBARCHFILES))
+compiler-posixc_MC_DTARGETS := $(addsuffix .d,$(compiler-posixc_NLIBARCHFILES))
+compiler-posixc_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    compiler-posixc_MC_TARGETS := $(addsuffix .o,$(addprefix $(compiler-posixc_OBJDIR)/linklib/,$(notdir $(compiler-posixc_NLIBARCHFILES))))
+    compiler-posixc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(compiler-posixc_OBJDIR)/linklib/,$(notdir $(compiler-posixc_NLIBARCHFILES))))
+else
+ifeq (,)
+    compiler-posixc_MC_TARGETS := $(addsuffix .o,$(addprefix $(compiler-posixc_OBJDIR)/linklib/,$(compiler-posixc_NLIBARCHFILES)))
+    compiler-posixc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(compiler-posixc_OBJDIR)/linklib/,$(compiler-posixc_NLIBARCHFILES)))
+else
+    compiler-posixc_MC_TARGETS := $(addsuffix .o,$(addprefix $(compiler-posixc_OBJDIR)/linklib/,$(patsubst /%,%,$(compiler-posixc_NLIBARCHFILES))))
+    compiler-posixc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(compiler-posixc_OBJDIR)/linklib/,$(patsubst /%,%,$(compiler-posixc_NLIBARCHFILES))))
+endif
+endif
+compiler-posixc_MC_TGTWILDCARD := $(compiler-posixc_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : | $(addsuffix .c,$(compiler-posixc_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+compiler-posixc_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+compiler-posixc_MC_BASEDIRS := $(shell echo $(sort $(dir $(compiler-posixc_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+compiler-posixc_MC_DIRS := $(foreach dir, $(compiler-posixc_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(compiler-posixc_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(compiler-posixc_MC_DIRS),)
+    compiler-posixc_MC_DIRS := $(shell echo $(compiler-posixc_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(compiler-posixc_MC_DIRS)
+endif
+
+endif
+
+compiler-posixc_MC_CPPFLAGS := $(compiler-posixc_LINKLIBCPPFLAGS) -D__AROS__
+compiler-posixc_CFLAGS := $(compiler-posixc_LINKLIBCFLAGS)
+ifeq ($(compiler-posixc_LINKLIBDFLAGS),)
+  compiler-posixc_DFLAGS := $(compiler-posixc_LINKLIBCFLAGS)
+else
+  compiler-posixc_DFLAGS := $(compiler-posixc_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+compiler-posixc_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+compiler-posixc_STRIP ?= $(TARGET_STRIP)
+compiler-posixc_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_MC_CPPFLAGS:=$(strip $(compiler-posixc_MC_CPPFLAGS) $(compiler-posixc_MC_EXTRA_CPPFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_CFLAGS:=$(strip $(compiler-posixc_CFLAGS) $(SAFETY_CFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_DFLAGS:=$(compiler-posixc_DFLAGS)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE:=$(CFLAGS_IQUOTE)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+compiler-posixc_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+compiler-posixc_STRIP ?= $(HOST_STRIP)
+compiler-posixc_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(compiler-posixc_MC_CPPFLAGS) $(compiler-posixc_MC_EXTRA_CPPFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_CFLAGS:=$(strip $(HOST_CFLAGS) $(compiler-posixc_CFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_DFLAGS:=$(strip $(HOST_CFLAGS) $(compiler-posixc_DFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE:=$(HOST_IQUOTE)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+compiler-posixc_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+compiler-posixc_STRIP ?= $(ECHO) >/dev/null
+compiler-posixc_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(compiler-posixc_MC_CPPFLAGS) $(compiler-posixc_MC_EXTRA_CPPFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(compiler-posixc_CFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(compiler-posixc_DFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE:=$(KERNEL_IQUOTE)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(compiler-posixc_MC_TARGETS) : CPPFLAGS := $(compiler-posixc_MC_CPPFLAGS)
+$(compiler-posixc_MC_TARGETS) : CFLAGS := $(compiler-posixc_CFLAGS)
+$(compiler-posixc_MC_TARGETS) : $(compiler-posixc_MC_TGTWILDCARD).o : $(compiler-posixc_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(compiler-posixc_IQUOTE) $(dir $<) $(compiler-posixc_IQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_IQUOTE) . $(compiler-posixc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(compiler-posixc_IQUOTE) $(dir $<) $(compiler-posixc_IQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_IQUOTE) . $(compiler-posixc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(compiler-posixc_IQUOTE) $(dir $<) $(compiler-posixc_IQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_IQUOTE) . $(compiler-posixc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(compiler-posixc_MC_DTARGETS) : $(compiler-posixc_MC_TGTWILDCARD).d : $(compiler-posixc_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(compiler-posixc_DFLAGS) $(compiler-posixc_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(compiler-posixc_OBJDIR)/linklib,)
+compiler-posixc_MC_SRCWILDCARD := %
+else
+compiler-posixc_MC_SRCWILDCARD := $(compiler-posixc_OBJDIR)/linklib/%
+endif
+
+ifeq ($(compiler-posixc_OBJDIR)/linklib,)
+compiler-posixc_MC_TARGETS := $(addsuffix .o,$(compiler-posixc_LINKLIBCCGENFILES))
+compiler-posixc_MC_DTARGETS := $(addsuffix .d,$(compiler-posixc_LINKLIBCCGENFILES))
+compiler-posixc_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    compiler-posixc_MC_TARGETS := $(addsuffix .o,$(addprefix $(compiler-posixc_OBJDIR)/linklib/,$(notdir $(compiler-posixc_LINKLIBCCGENFILES))))
+    compiler-posixc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(compiler-posixc_OBJDIR)/linklib/,$(notdir $(compiler-posixc_LINKLIBCCGENFILES))))
+else
+ifeq ($(compiler-posixc_OBJDIR)/linklib,)
+    compiler-posixc_MC_TARGETS := $(addsuffix .o,$(addprefix $(compiler-posixc_OBJDIR)/linklib/,$(compiler-posixc_LINKLIBCCGENFILES)))
+    compiler-posixc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(compiler-posixc_OBJDIR)/linklib/,$(compiler-posixc_LINKLIBCCGENFILES)))
+else
+    compiler-posixc_MC_TARGETS := $(addsuffix .o,$(addprefix $(compiler-posixc_OBJDIR)/linklib/,$(patsubst $(compiler-posixc_OBJDIR)/linklib/%,%,$(compiler-posixc_LINKLIBCCGENFILES))))
+    compiler-posixc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(compiler-posixc_OBJDIR)/linklib/,$(patsubst $(compiler-posixc_OBJDIR)/linklib/%,%,$(compiler-posixc_LINKLIBCCGENFILES))))
+endif
+endif
+compiler-posixc_MC_TGTWILDCARD := $(compiler-posixc_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : | $(addsuffix .c,$(compiler-posixc_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+compiler-posixc_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+compiler-posixc_MC_BASEDIRS := $(shell echo $(sort $(dir $(compiler-posixc_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+compiler-posixc_MC_DIRS := $(foreach dir, $(compiler-posixc_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(compiler-posixc_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(compiler-posixc_MC_DIRS),)
+    compiler-posixc_MC_DIRS := $(shell echo $(compiler-posixc_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(compiler-posixc_MC_DIRS)
+endif
+
+endif
+
+compiler-posixc_MC_CPPFLAGS := $(compiler-posixc_LINKLIBCPPFLAGS) -D__AROS__
+compiler-posixc_CFLAGS := $(compiler-posixc_LINKLIBCFLAGS)
+ifeq ($(compiler-posixc_LINKLIBDFLAGS),)
+  compiler-posixc_DFLAGS := $(compiler-posixc_LINKLIBCFLAGS)
+else
+  compiler-posixc_DFLAGS := $(compiler-posixc_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+compiler-posixc_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+compiler-posixc_STRIP ?= $(TARGET_STRIP)
+compiler-posixc_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_MC_CPPFLAGS:=$(strip $(compiler-posixc_MC_CPPFLAGS) $(compiler-posixc_MC_EXTRA_CPPFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_CFLAGS:=$(strip $(compiler-posixc_CFLAGS) $(SAFETY_CFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_DFLAGS:=$(compiler-posixc_DFLAGS)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE:=$(CFLAGS_IQUOTE)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+compiler-posixc_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+compiler-posixc_STRIP ?= $(HOST_STRIP)
+compiler-posixc_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(compiler-posixc_MC_CPPFLAGS) $(compiler-posixc_MC_EXTRA_CPPFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_CFLAGS:=$(strip $(HOST_CFLAGS) $(compiler-posixc_CFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_DFLAGS:=$(strip $(HOST_CFLAGS) $(compiler-posixc_DFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE:=$(HOST_IQUOTE)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+compiler-posixc_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+compiler-posixc_STRIP ?= $(ECHO) >/dev/null
+compiler-posixc_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(compiler-posixc_MC_CPPFLAGS) $(compiler-posixc_MC_EXTRA_CPPFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(compiler-posixc_CFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(compiler-posixc_DFLAGS))
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE:=$(KERNEL_IQUOTE)
+$(compiler-posixc_MC_TARGETS) $(compiler-posixc_MC_DTARGETS) : compiler-posixc_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(compiler-posixc_MC_TARGETS) : CPPFLAGS := $(compiler-posixc_MC_CPPFLAGS)
+$(compiler-posixc_MC_TARGETS) : CFLAGS := $(compiler-posixc_CFLAGS)
+$(compiler-posixc_MC_TARGETS) : $(compiler-posixc_MC_TGTWILDCARD).o : $(compiler-posixc_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(compiler-posixc_IQUOTE) $(dir $<) $(compiler-posixc_IQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_IQUOTE) . $(compiler-posixc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(compiler-posixc_IQUOTE) $(dir $<) $(compiler-posixc_IQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_IQUOTE) . $(compiler-posixc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(compiler-posixc_IQUOTE) $(dir $<) $(compiler-posixc_IQUOTE) $(SRCDIR)/$(CURDIR) $(compiler-posixc_IQUOTE) . $(compiler-posixc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(compiler-posixc_MC_DTARGETS) : $(compiler-posixc_MC_TGTWILDCARD).d : $(compiler-posixc_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(compiler-posixc_DFLAGS) $(compiler-posixc_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(compiler-posixc_LINKLIBAFILES),)
+
+ifeq ($(compiler-posixc_OBJDIR)/linklib,)
+compiler-posixc-MA_TARGETS := $(addsuffix .o,$(compiler-posixc_LINKLIBAFILES) $(compiler-posixc_RELLINKLIBAFILES))
+compiler-posixc-MA_WILDCARD := %
+else
+compiler-posixc-MA_TARGETS := $(addsuffix .o,$(addprefix $(compiler-posixc_OBJDIR)/linklib/,$(notdir $(compiler-posixc_LINKLIBAFILES) $(compiler-posixc_RELLINKLIBAFILES))))
+compiler-posixc-MA_WILDCARD := $(compiler-posixc_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(compiler-posixc-MA_TARGETS) : | $(addsuffix .S,$(compiler-posixc_LINKLIBAFILES) $(compiler-posixc_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+compiler-posixc-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+compiler-posixc-MA_BASEDIRS := $(shell echo $(sort $(dir $(compiler-posixc_LINKLIBAFILES) $(compiler-posixc_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+compiler-posixc-MA_DIRS := $(foreach dir, $(compiler-posixc-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(compiler-posixc-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(compiler-posixc-MA_DIRS),)
+    compiler-posixc-MA_DIRS := $(shell echo $(compiler-posixc-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(compiler-posixc-MA_DIRS)
+endif
+
+endif
+
+compiler-posixc-MA_ASSEMBLER ?= $(compiler-posixc_ASSEMBLER)
+
+$(compiler-posixc-MA_TARGETS) : compiler-posixc-MA_CMD:= $(compiler-posixc-MA_ASSEMBLER)
+
+$(compiler-posixc-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(compiler-posixc-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(compiler-posixc-MA_TARGETS) : $(compiler-posixc-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(compiler-posixc-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(compiler-posixc-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(compiler-posixc-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+compiler-posixc_SUFFIX           := library
+else
+compiler-posixc_SUFFIX           := 
+endif
+
+ifeq (target,target)
+compiler-posixc_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+compiler-posixc_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+compiler-posixc_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(compiler-posixc_SUFFIX),handler)
+compiler-posixc_MODULE           := $(AROSDIR)/$(compiler-posixc_MODDIR)/$(compiler-posixc_DEFNAME)-$(compiler-posixc_SUFFIX)
+else
+compiler-posixc_MODULE           := $(AROSDIR)/$(compiler-posixc_MODDIR)/$(compiler-posixc_DEFNAME).$(compiler-posixc_SUFFIX)
+endif
+compiler-posixc_KOBJ             := $(KOBJSDIR)/$(compiler-posixc_DEFNAME)_$(compiler-posixc_SUFFIX).o
+else
+compiler-posixc_MODULE           :=
+compiler-posixc_KOBJ             :=
+endif
+
+compiler-posixc-quick      : compiler-posixc
+compiler-posixc            : $(compiler-posixc_MODULE) $(compiler-posixc_LINKLIB) $(compiler-posixc_RELLINKLIB)
+ifeq (M,M)
+compiler-posixc-kobj       : $(compiler-posixc_KOBJ) $(compiler-posixc_LINKLIB) $(compiler-posixc_RELLINKLIB)
+compiler-posixc-kobj-quick : $(compiler-posixc_KOBJ) $(compiler-posixc_LINKLIB) $(compiler-posixc_RELLINKLIB)
+endif
+ifeq (M,M)
+compiler-posixc-linklib    : $(compiler-posixc_LINKLIB) $(compiler-posixc_RELLINKLIB)
+endif
+
+compiler-posixc_OBJS := $(addsuffix .o,$(compiler-posixc_STARTFILES)) $(compiler-posixc_ARCHOBJS) \
+           $(addprefix $(compiler-posixc_OBJDIR)/,$(notdir $(compiler-posixc_C_NARCHFILES:=.o) $(compiler-posixc_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (library,handler)
+compiler-posixc_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (posixc,con)
+    compiler-posixc_ERR          := $(notdir $(compiler-posixc_MODULE)).err
+else
+    compiler-posixc_ERR          := posixc.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(compiler-posixc_DEFNAME)_LDFLAGS) $(compiler-posixc_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(compiler-posixc_LIBS) $($(compiler-posixc_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(compiler-posixc_MODULE) : LIB_NAMES := $(compiler-posixc_LIBS) $($(compiler-posixc_DEFNAME)_LIBS)
+$(compiler-posixc_MODULE) : OBJS := $(compiler-posixc_STARTOBJS) $(compiler-posixc_OBJS) $(USER_OBJS)
+$(compiler-posixc_MODULE) : ENDTAG := $(compiler-posixc_ENDOBJS)
+$(compiler-posixc_MODULE) : ERR := $(compiler-posixc_ERR)
+$(compiler-posixc_MODULE) : OBJDIR := $(compiler-posixc_OBJDIR)
+$(compiler-posixc_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(compiler-posixc_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(compiler-posixc_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(compiler-posixc_MODULE) : $(compiler-posixc_STARTOBJS) $(compiler-posixc_OBJS) $(USER_OBJS) $(compiler-posixc_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(compiler-posixc_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(compiler-posixc_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+compiler-posixc_LC_LINKLIBNAME   := $(shell echo $(compiler-posixc_LINKLIBNAME) | tr A-Z a-z)
+compiler-posixc_LC_MODNAME       := $(shell echo posixc | tr A-Z a-z)
+ifneq ($(compiler-posixc_LINKLIB),)
+
+ifeq (target,target)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_LINKLIBNAME)$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_AR:=$(AR)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_LINKLIBNAME)$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_LINKLIBNAME)$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_AR:=$(HOST_AR)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_LINKLIBNAME)$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_LINKLIBNAME)$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_AR:=$(KERNEL_AR)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_LINKLIBNAME)$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_LINKLIBNAME)$(compiler-posixc_LIBSUFFIX).a : $(compiler-posixc_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(compiler-posixc_AR) $@ $^
+	$(Q)$(compiler-posixc_RANLIB) $@
+ifneq ($(compiler-posixc_LC_MODNAME),$(compiler-posixc_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(compiler-posixc_LIBDIR)/libposixc$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_AR:=$(AR)
+$(compiler-posixc_LIBDIR)/libposixc$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(compiler-posixc_LIBDIR)/libposixc$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_AR:=$(HOST_AR)
+$(compiler-posixc_LIBDIR)/libposixc$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(compiler-posixc_LIBDIR)/libposixc$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_AR:=$(KERNEL_AR)
+$(compiler-posixc_LIBDIR)/libposixc$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(compiler-posixc_LIBDIR)/libposixc$(compiler-posixc_LIBSUFFIX).a : $(compiler-posixc_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(compiler-posixc_AR) $@ $^
+	$(Q)$(compiler-posixc_RANLIB) $@
+endif
+
+
+ifneq ($(compiler-posixc_LINKLIB),)
+$(compiler-posixc_LINKLIB) : | $(compiler-posixc_LIBDIR)
+else
+$(compiler-posixc_LINKLIB) :: $(compiler-posixc_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(compiler-posixc_LIBDIR)
+
+endif
+
+ifneq ($(compiler-posixc_RELLINKLIB),)
+
+ifeq (target,target)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_LINKLIBNAME)_rel$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_AR:=$(AR)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_LINKLIBNAME)_rel$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_LINKLIBNAME)_rel$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_AR:=$(HOST_AR)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_LINKLIBNAME)_rel$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_LINKLIBNAME)_rel$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_AR:=$(KERNEL_AR)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_LINKLIBNAME)_rel$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_LINKLIBNAME)_rel$(compiler-posixc_LIBSUFFIX).a : $(compiler-posixc_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(compiler-posixc_AR) $@ $^
+	$(Q)$(compiler-posixc_RANLIB) $@
+ifneq ($(compiler-posixc_LC_MODNAME),$(compiler-posixc_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_DEFNAME)_rel$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_AR:=$(AR)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_DEFNAME)_rel$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_DEFNAME)_rel$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_AR:=$(HOST_AR)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_DEFNAME)_rel$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_DEFNAME)_rel$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_AR:=$(KERNEL_AR)
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_DEFNAME)_rel$(compiler-posixc_LIBSUFFIX).a : compiler-posixc_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(compiler-posixc_LIBDIR)/lib$(compiler-posixc_DEFNAME)_rel$(compiler-posixc_LIBSUFFIX).a : $(compiler-posixc_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(compiler-posixc_AR) $@ $^
+	$(Q)$(compiler-posixc_RANLIB) $@
+endif
+
+
+ifneq ($(compiler-posixc_RELLINKLIB),)
+$(compiler-posixc_RELLINKLIB) : | $(compiler-posixc_LIBDIR)
+else
+$(compiler-posixc_RELLINKLIB) :: $(compiler-posixc_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(compiler-posixc_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+compiler-posixc_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+compiler-posixc_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+compiler-posixc_SYMBOLS := $(compiler-posixc_KBASE)
+
+compiler-posixc_KLIB             := hiddstubs amiga arossupport autoinit libinit
+compiler-posixc_KOBJ_LIBS        := $(filter-out $(compiler-posixc_KLIB),$(compiler-posixc_LIBS)) $(compiler-posixc_KAUTOLIB)
+$(compiler-posixc_KOBJ) : LINKLIBS:=$(compiler-posixc_KOBJ_LIBS) $($(compiler-posixc_DEFNAME)_LIBS)
+$(compiler-posixc_KOBJ) : FILTBASES:=$(addprefix -L ,$(compiler-posixc_SYMBOLS))
+$(compiler-posixc_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(compiler-posixc_KOBJ) : $(compiler-posixc_OBJS) $(USER_OBJS) $(compiler-posixc_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+compiler-posixc_DEPS             := $(addprefix $(compiler-posixc_OBJDIR)/,$(notdir $(compiler-posixc_CCFILES:=.d) $(compiler-posixc_TARGETCCFILES:=.d) $(compiler-posixc_CXXFILES:=.d))) $(addprefix $(compiler-posixc_OBJDIR)/linklib/,$(notdir $(compiler-posixc_LINKLIBCCFILES:=.d)))
+
+ifneq ($(compiler-posixc_DEPS),)
+  ifneq (compiler-posixc compiler-posixc-quick compiler-posixc-kobj compiler-posixc-kobj-quick,)
+    ifneq ($(findstring $(TARGET),compiler-posixc compiler-posixc-quick compiler-posixc-kobj compiler-posixc-kobj-quick),)
+      -include $(compiler-posixc_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(compiler-posixc_DEPS)
+    endif
+  endif
+endif
+
+$(compiler-posixc_OBJS) $(compiler-posixc_DEPS) : | $(compiler-posixc_OBJDIR)/linklib
+
+ifneq ($(compiler-posixc_OBJS) $(compiler-posixc_DEPS) $(compiler-posixc_MODULE) $(compiler-posixc_KOBJ),)
+$(compiler-posixc_OBJS) $(compiler-posixc_DEPS) $(compiler-posixc_MODULE) $(compiler-posixc_KOBJ) : | $(compiler-posixc_OBJDIR) $(AROSDIR)/$(compiler-posixc_MODDIR) $(KOBJSDIR)
+else
+$(compiler-posixc_OBJS) $(compiler-posixc_DEPS) $(compiler-posixc_MODULE) $(compiler-posixc_KOBJ) :: $(compiler-posixc_OBJDIR) $(AROSDIR)/$(compiler-posixc_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(compiler-posixc_OBJDIR) $(AROSDIR)/$(compiler-posixc_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),compiler-posixc compiler-posixc-includes compiler-posixc-quick compiler-posixc-kobj compiler-posixc-kobj-quick),) # Only for this target these deps are wanted
+
+compiler-posixc_DFILE_DEPS := $(compiler-posixc_LIBDEFSINC) $(compiler-posixc_DEFLIBDEFSINC) \
+    $(addprefix $(compiler-posixc_INCDIR)/,$($(compiler-posixc_DEFNAME)_INCLUDES))
+$(compiler-posixc_DEPS) : $(compiler-posixc_DFILE_DEPS)
+endif
+
+compiler-posixc_TOCLEAN := $(compiler-posixc_OBJS) $(compiler-posixc_DEPS) \
+    $(compiler-posixc_MODULE) $(compiler-posixc_LINKLIB) $(compiler-posixc_KOBJ) \
+    $(compiler-posixc_OBJDIR)/Makefile.posixclibrary \
+    $(addprefix $(compiler-posixc_OBJDIR)/include/,$($(compiler-posixc_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(compiler-posixc_DEFNAME)_INCLUDES)) \
+    $(addprefix $(compiler-posixc_INCDIR)/,$($(compiler-posixc_DEFNAME)_INCLUDES)) \
+    $(compiler-posixc_OBJDIR)/posixc_geninc $(compiler-posixc_OBJDIR)/posixc_incs \
+    $(addsuffix .c,$(compiler-posixc_LINKLIBFILES)) $(compiler-posixc_LINKLIBOBJS) $(compiler-posixc_LIBDEFSINC) \
+    $(compiler-posixc_DEFLIBDEFSINC) $(addsuffix .c,$(compiler-posixc_STARTFILES) $(compiler-posixc_ENDFILES)) \
+    $(compiler-posixc_ENDOBJS)
+compiler-posixc-clean : FILES              := $(compiler-posixc_TOCLEAN)
+compiler-posixc-clean ::
+	$(Q)$(ECHO) "Cleaning up for module posixc"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(compiler-posixc_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,643 @@
+# 
+#  Copyright (C) 2013, The AROS Development Team
+#  All right reserved.
+#  Author: Jason S. McMullan <jason.mcmullan@gmail.com>
+# 
+#  Licensed under the AROS PUBLIC LICENSE (APL) Version 1.1
+# 
+include $(SRCDIR)/config/aros.cfg
+
+EXEDIR := $(AROS_TESTS)/objc
+
+# gcc 4.6.2 can't build arm Objective C support without
+# a compiler error.
+#MM- test : test-$(OBJC_TARGET)-$(CPU)
+#MM- test-objc-i386 : test-objc
+#MM- test-objc-x86_64 : test-objc
+#MM- test-objc-ppc : test-objc
+##MM- test-quick : test-objc-quick
+
+#MM- test-objc: test-objc-hello
+#MM- test-objc-quick: test-objc-hello-quick
+
+
+.PHONY : test-objc-hello
+
+test-objc-hello_PROGNAME  := hello
+test-objc-hello_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-objc-hello_TARGETDIR := $(EXEDIR)
+test-objc-hello_LINKER    := 
+test-objc-hello_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(test-objc-hello_LINKER),)
+    test-objc-hello_LINKER := target
+endif
+
+ifneq ("$(strip   hello )","")
+    test-objc-hello_FILES     := 
+    test-objc-hello_OBJCFILES := hello
+    test-objc-hello_ASMFILES  := 
+    test-objc-hello_CXXFILES := 
+else
+    test-objc-hello_FILES     := $(test-objc-hello_PROGNAME)
+    test-objc-hello_OBJCFILES :=
+    test-objc-hello_ASMFILES  :=
+    test-objc-hello_CXXFILES :=
+endif
+
+test-objc-hello_ARCHOBJS   := $(wildcard $(test-objc-hello_OBJDIR)/arch/*.o)
+test-objc-hello_ARCHFILES  := $(basename $(notdir $(test-objc-hello_ARCHOBJS)))
+test-objc-hello_C_NARCHFILES := $(filter-out $(test-objc-hello_ARCHFILES),$(test-objc-hello_FILES))
+test-objc-hello_CXX_NARCHFILES := $(filter-out $(test-objc-hello_ARCHFILES),$(test-objc-hello_CXXFILES))
+test-objc-hello_OBJC_NARCHFILES := $(filter-out $(test-objc-hello_ARCHFILES),$(test-objc-hello_OBJCFILES))
+
+TMP_FILES := $(test-objc-hello_C_NARCHFILES) $(test-objc-hello_CXX_NARCHFILES) $(test-objc-hello_ASMFILES) $(test-objc-hello_OBJC_NARCHFILES)
+test-objc-hello_OBJS := $(addsuffix .o,$(addprefix $(test-objc-hello_OBJDIR)/,$(notdir $(TMP_FILES))))
+test-objc-hello_DEPS := $(addsuffix .d,$(addprefix $(test-objc-hello_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+test-objc-hello_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+test-objc-hello_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-objc-hello_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+test-objc-hello_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+test-objc-hello_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+test-objc-hello_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-objc-hello_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+test-objc-hello_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+test-objc-hello_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+test-objc-hello_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-objc-hello_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+test-objc-hello_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+test-objc-hello_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+test-objc-hello_LDFLAGS          := 
+endif
+
+test-objc-hello_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-objc-hello_COVERAGE := yes
+test-objc-hello_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-objc-hello_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-objc-hello_CFLAGS    := $(strip $(test-objc-hello_COVERAGEFLAGS) $(test-objc-hello_CFLAGS))
+test-objc-hello_CXXFLAGS := $(strip $(test-objc-hello_COVERAGEFLAGS) $(test-objc-hello_CXXFLAGS))
+test-objc-hello_LIBS += $(test-objc-hello_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-objc-hello_FUNCINSTR := yes
+test-objc-hello_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-objc-hello_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-objc-hello_CFLAGS    := $(strip $(test-objc-hello_INSTRFUNCFLAGS) $(test-objc-hello_CFLAGS))
+test-objc-hello_CXXFLAGS := $(strip $(test-objc-hello_INSTRFUNCFLAGS) $(test-objc-hello_CXXFLAGS))
+test-objc-hello_LIBS += $(test-objc-hello_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-objc-hello_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-objc-hello_CFLAGS))
+test-objc-hello_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(test-objc-hello_CXXFLAGS))
+endif
+endif
+test-objc-hello_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    test-objc-hello_DFLAGS     := 
+else
+    test-objc-hello_DFLAGS     := $(test-objc-hello_CFLAGS)
+endif
+ifneq (,)
+    test-objc-hello_DXXFLAGS     := 
+else
+    test-objc-hello_DXXFLAGS     := $(test-objc-hello_CXXFLAGS)
+endif
+ifeq (target,target)
+test-objc-hello_LDFLAGS           := $(test-objc-hello_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-objc-hello_LDFLAGS           := $(test-objc-hello_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-objc-hello_LDFLAGS           := $(test-objc-hello_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+test-objc-hello_LDFLAGS   += -L
+endif
+
+#MM
+test-objc-hello-quick : test-objc-hello
+
+#MM test-objc-hello : includes-generate-deps core-linklibs
+test-objc-hello : $(test-objc-hello_TARGETDIR)/$(test-objc-hello_PROGNAME)
+
+ifneq ($(filter $(TARGET),test-objc-hello test-objc-hello-quick test-objc-hello-gz-quick),)
+
+test-objc-hello_CXXABSBASENAMES := $(foreach test-objc-hello_CXXBASE,$(test-objc-hello_CXX_NARCHFILES),$(if $(filter /%,$(test-objc-hello_CXXBASE)),$(test-objc-hello_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(test-objc-hello_CXXBASE))))
+
+ifneq ($(test-objc-hello_CXXABSBASENAMES),)
+
+test-objc-hello_CXXBASENAMES := $(basename $(test-objc-hello_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+test-objc-hello_MCXX_FILES  := $(strip $(foreach test-objc-hello_CXXBASE,$(test-objc-hello_CXXABSBASENAMES), $(firstword $(wildcard $(foreach test-objc-hello_EXT, $(AROS_CXXEXTS),$(addsuffix .$(test-objc-hello_EXT),$(test-objc-hello_CXXBASE)))))))
+
+ifeq (,)
+test-objc-hello_MCXX_SRCWILDCARD := %
+else
+test-objc-hello_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-objc-hello_OBJDIR),)
+  test-objc-hello_CXXTARGETS := $(notdir $(test-objc-hello_CXXBASENAMES:=.o))
+  test-objc-hello_CXXDTARGETS := $(notdir $(test-objc-hello_CXXBASENAMES:=.d))
+  test-objc-hello_MCXX_WILDCARD := %
+else
+  test-objc-hello_CXXTARGETS := $(addprefix $(test-objc-hello_OBJDIR)/,$(notdir $(test-objc-hello_CXXBASENAMES:=.o)))
+  test-objc-hello_CXXDTARGETS := $(addprefix $(test-objc-hello_OBJDIR)/,$(notdir $(test-objc-hello_CXXBASENAMES:=.d)))
+  test-objc-hello_MCXX_WILDCARD := $(test-objc-hello_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(test-objc-hello_CXXTARGETS) $(test-objc-hello_CXXDTARGETS) : | $(test-objc-hello_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+test-objc-hello_MCXX_CPPFLAGS := $(test-objc-hello_CPPFLAGS)
+test-objc-hello_CXXFLAGS := $(test-objc-hello_CXXFLAGS)
+ifeq ($(test-objc-hello_DXXFLAGS),)
+  test-objc-hello_DXXFLAGS := $(test-objc-hello_CXXFLAGS)
+else
+  test-objc-hello_DXXFLAGS := $(test-objc-hello_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  test-objc-hello_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  test-objc-hello_STRIP ?= $(HOST_STRIP)
+  test-objc-hello_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  test-objc-hello_CXXCMD:=$(HOST_CXX)
+  test-objc-hello_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(test-objc-hello_MCXX_CPPFLAGS) $(test-objc-hello_MCXX_EXTRA_CPPFLAGS))
+  test-objc-hello_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-objc-hello_CXXFLAGS))
+  test-objc-hello_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-objc-hello_DXXFLAGS))
+  test-objc-hello_CXXIQUOTE:=$(HOST_IQUOTE)
+  test-objc-hello_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  test-objc-hello_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-objc-hello_STRIP ?= $(TARGET_STRIP)
+  test-objc-hello_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  test-objc-hello_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  test-objc-hello_MCXX_CPPFLAGS := $(strip $(test-objc-hello_MCXX_CPPFLAGS) $(test-objc-hello_MCXX_EXTRA_CPPFLAGS))
+  test-objc-hello_CXXFLAGS := $(strip $(test-objc-hello_CXXFLAGS) $(SAFETY_CFLAGS))
+  test-objc-hello_DXXFLAGS := $(test-objc-hello_DXXFLAGS)
+  test-objc-hello_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  test-objc-hello_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  test-objc-hello_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-objc-hello_STRIP ?= $(ECHO) >/dev/null
+  test-objc-hello_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  test-objc-hello_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  test-objc-hello_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(test-objc-hello_MCXX_CPPFLAGS) $(test-objc-hello_MCXX_EXTRA_CPPFLAGS))
+  test-objc-hello_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-objc-hello_CXXFLAGS))
+  test-objc-hello_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-objc-hello_DXXFLAGS))
+  test-objc-hello_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  test-objc-hello_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(test-objc-hello_CXXCMD) $(test-objc-hello_CXXIQUOTE) $(dir $(2)) $(test-objc-hello_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-objc-hello_CXXIQUOTE) . $(test-objc-hello_CXXIQUOTE_END) $(strip $(test-objc-hello_CXXFLAGS) $(test-objc-hello_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(test-objc-hello_CXXCMD) $(test-objc-hello_CXXIQUOTE) $(dir $(2)) $(test-objc-hello_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-objc-hello_CXXIQUOTE) . $(test-objc-hello_CXXIQUOTE_END) $(strip $(test-objc-hello_CXXFLAGS) $(test-objc-hello_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(test-objc-hello_CXXCMD) $(test-objc-hello_CXXIQUOTE) $(dir $(2)) $(test-objc-hello_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-objc-hello_CXXIQUOTE) . $(test-objc-hello_CXXIQUOTE_END) $(strip $(test-objc-hello_CXXFLAGS) $(test-objc-hello_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(test-objc-hello_CXXCMD)" $(MKDEPEND) $(strip $(test-objc-hello_DXXFLAGS) $(test-objc-hello_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(test-objc-hello_OBJDIR),)
+  $(foreach test-objc-hello_CXXFILE,$(test-objc-hello_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(test-objc-hello_CXXFILE))),$(test-objc-hello_CXXFILE))))
+else
+  $(foreach test-objc-hello_CXXFILE,$(test-objc-hello_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(test-objc-hello_OBJDIR)/,$(notdir $(basename $(test-objc-hello_CXXFILE)))),$(test-objc-hello_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(test-objc-hello_OBJC_NARCHFILES),)
+
+ifeq (,)
+test-objc-hello_MOBJC_SRCWILDCARD := %
+else
+test-objc-hello_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-objc-hello_OBJDIR),)
+  test-objc-hello_MOBJC_TARGETS := $(addsuffix .o,$(test-objc-hello_OBJC_NARCHFILES))
+  test-objc-hello_MOBJC_DTARGETS := $(addsuffix .d,$(test-objc-hello_OBJC_NARCHFILES))
+  test-objc-hello_MOBJC_WILDCARD := %
+else
+  test-objc-hello_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(test-objc-hello_OBJDIR)/,$(test-objc-hello_OBJC_NARCHFILES)))
+  test-objc-hello_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(test-objc-hello_OBJDIR)/,$(test-objc-hello_OBJC_NARCHFILES)))
+  test-objc-hello_MOBJC_WILDCARD := $(test-objc-hello_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : | $(addsuffix .m,$(test-objc-hello_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  test-objc-hello_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  test-objc-hello_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(test-objc-hello_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  test-objc-hello_MOBJC_DIRS := $(foreach dir, $(test-objc-hello_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-objc-hello_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(test-objc-hello_MOBJC_DIRS),)
+    test-objc-hello_MOBJC_DIRS := $(shell echo $(test-objc-hello_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(test-objc-hello_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  test-objc-hello_CC := $(TARGET_CC)
+else
+  test-objc-hello_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+test-objc-hello_MOBJC_CPPFLAGS := $(test-objc-hello_CPPFLAGS)
+test-objc-hello_OBJCFLAGS := $(test-objc-hello_CFLAGS)
+test-objc-hello_OBJCFLAGS := $(test-objc-hello_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+test-objc-hello_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(test-objc-hello_OBJCFLAGS)))
+ifeq ($(test-objc-hello_DFLAGS),)
+  test-objc-hello_OBJCDFLAGS := $(test-objc-hello_CFLAGS)
+else
+  test-objc-hello_OBJCDFLAGS := $(test-objc-hello_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  test-objc-hello_LINK ?= $(strip $(test-objc-hello_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-objc-hello_STRIP ?= $(TARGET_STRIP)
+  test-objc-hello_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : CMD:=$(strip $(test-objc-hello_CC) $(TARGET_SYSROOT))
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : test-objc-hello_MOBJC_CPPFLAGS:=$(strip $(test-objc-hello_MOBJC_CPPFLAGS) $(test-objc-hello_MOBJC_EXTRA_CPPFLAGS))
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : test-objc-hello_OBJCFLAGS:=$(strip $(test-objc-hello_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : test-objc-hello_OBJCDFLAGS:=$(test-objc-hello_OBJCDFLAGS)
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : test-objc-hello_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : test-objc-hello_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  test-objc-hello_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  test-objc-hello_STRIP ?= $(HOST_STRIP)
+  test-objc-hello_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : test-objc-hello_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(test-objc-hello_MOBJC_CPPFLAGS) $(test-objc-hello_MOBJC_EXTRA_CPPFLAGS))
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : test-objc-hello_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(test-objc-hello_OBJCFLAGS))
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : test-objc-hello_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(test-objc-hello_OBJCDFLAGS))
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : test-objc-hello_IQUOTE:=$(HOST_IQUOTE)
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : test-objc-hello_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  test-objc-hello_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-objc-hello_STRIP ?= $(ECHO) >/dev/null
+  test-objc-hello_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : test-objc-hello_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(test-objc-hello_MOBJC_CPPFLAGS) $(test-objc-hello_MOBJC_EXTRA_CPPFLAGS))
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : test-objc-hello_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-objc-hello_OBJCFLAGS))
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : test-objc-hello_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-objc-hello_OBJCDFLAGS))
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : test-objc-hello_IQUOTE:=$(KERNEL_IQUOTE)
+  $(test-objc-hello_MOBJC_TARGETS) $(test-objc-hello_MOBJC_DTARGETS) : test-objc-hello_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-objc-hello_MOBJC_TARGETS) : CPPFLAGS := $(test-objc-hello_MOBJC_CPPFLAGS)
+$(test-objc-hello_MOBJC_TARGETS) : CFLAGS := $(test-objc-hello_OBJCFLAGS)
+$(test-objc-hello_MOBJC_TARGETS) : $(test-objc-hello_MOBJC_WILDCARD).o : $(test-objc-hello_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-objc-hello_IQUOTE) $(dir $<) $(test-objc-hello_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-objc-hello_IQUOTE) . $(test-objc-hello_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-objc-hello_IQUOTE) $(dir $<) $(test-objc-hello_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-objc-hello_IQUOTE) . $(test-objc-hello_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-objc-hello_IQUOTE) $(dir $<) $(test-objc-hello_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-objc-hello_IQUOTE) . $(test-objc-hello_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-objc-hello_MOBJC_DTARGETS) : $(test-objc-hello_MOBJC_WILDCARD).d : $(test-objc-hello_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-objc-hello_OBJCDFLAGS) $(test-objc-hello_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+test-objc-hello_MC_SRCWILDCARD := %
+else
+test-objc-hello_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-objc-hello_OBJDIR),)
+test-objc-hello_MC_TARGETS := $(addsuffix .o,$(test-objc-hello_C_NARCHFILES))
+test-objc-hello_MC_DTARGETS := $(addsuffix .d,$(test-objc-hello_C_NARCHFILES))
+test-objc-hello_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-objc-hello_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-objc-hello_OBJDIR)/,$(notdir $(test-objc-hello_C_NARCHFILES))))
+    test-objc-hello_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-objc-hello_OBJDIR)/,$(notdir $(test-objc-hello_C_NARCHFILES))))
+else
+ifeq (,)
+    test-objc-hello_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-objc-hello_OBJDIR)/,$(test-objc-hello_C_NARCHFILES)))
+    test-objc-hello_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-objc-hello_OBJDIR)/,$(test-objc-hello_C_NARCHFILES)))
+else
+    test-objc-hello_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-objc-hello_OBJDIR)/,$(patsubst /%,%,$(test-objc-hello_C_NARCHFILES))))
+    test-objc-hello_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-objc-hello_OBJDIR)/,$(patsubst /%,%,$(test-objc-hello_C_NARCHFILES))))
+endif
+endif
+test-objc-hello_MC_TGTWILDCARD := $(test-objc-hello_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : | $(addsuffix .c,$(test-objc-hello_C_NARCHFILES))
+
+# Be sure that all .c files are found
+test-objc-hello_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-objc-hello_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-objc-hello_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+test-objc-hello_MC_DIRS := $(foreach dir, $(test-objc-hello_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-objc-hello_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-objc-hello_MC_DIRS),)
+    test-objc-hello_MC_DIRS := $(shell echo $(test-objc-hello_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-objc-hello_MC_DIRS)
+endif
+
+endif
+
+test-objc-hello_MC_CPPFLAGS := $(test-objc-hello_CPPFLAGS)
+test-objc-hello_CFLAGS := $(test-objc-hello_CFLAGS)
+ifeq ($(test-objc-hello_DFLAGS),)
+  test-objc-hello_DFLAGS := $(test-objc-hello_CFLAGS)
+else
+  test-objc-hello_DFLAGS := $(test-objc-hello_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-objc-hello_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-objc-hello_STRIP ?= $(TARGET_STRIP)
+test-objc-hello_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : test-objc-hello_MC_CPPFLAGS:=$(strip $(test-objc-hello_MC_CPPFLAGS) $(test-objc-hello_MC_EXTRA_CPPFLAGS))
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : test-objc-hello_CFLAGS:=$(strip $(test-objc-hello_CFLAGS) $(SAFETY_CFLAGS))
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : test-objc-hello_DFLAGS:=$(test-objc-hello_DFLAGS)
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : test-objc-hello_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : test-objc-hello_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-objc-hello_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-objc-hello_STRIP ?= $(HOST_STRIP)
+test-objc-hello_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : test-objc-hello_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-objc-hello_MC_CPPFLAGS) $(test-objc-hello_MC_EXTRA_CPPFLAGS))
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : test-objc-hello_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-objc-hello_CFLAGS))
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : test-objc-hello_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-objc-hello_DFLAGS))
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : test-objc-hello_IQUOTE:=$(HOST_IQUOTE)
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : test-objc-hello_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-objc-hello_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-objc-hello_STRIP ?= $(ECHO) >/dev/null
+test-objc-hello_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : test-objc-hello_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-objc-hello_MC_CPPFLAGS) $(test-objc-hello_MC_EXTRA_CPPFLAGS))
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : test-objc-hello_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-objc-hello_CFLAGS))
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : test-objc-hello_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-objc-hello_DFLAGS))
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : test-objc-hello_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-objc-hello_MC_TARGETS) $(test-objc-hello_MC_DTARGETS) : test-objc-hello_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-objc-hello_MC_TARGETS) : CPPFLAGS := $(test-objc-hello_MC_CPPFLAGS)
+$(test-objc-hello_MC_TARGETS) : CFLAGS := $(test-objc-hello_CFLAGS)
+$(test-objc-hello_MC_TARGETS) : $(test-objc-hello_MC_TGTWILDCARD).o : $(test-objc-hello_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-objc-hello_IQUOTE) $(dir $<) $(test-objc-hello_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-objc-hello_IQUOTE) . $(test-objc-hello_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-objc-hello_IQUOTE) $(dir $<) $(test-objc-hello_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-objc-hello_IQUOTE) . $(test-objc-hello_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-objc-hello_IQUOTE) $(dir $<) $(test-objc-hello_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-objc-hello_IQUOTE) . $(test-objc-hello_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-objc-hello_MC_DTARGETS) : $(test-objc-hello_MC_TGTWILDCARD).d : $(test-objc-hello_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-objc-hello_DFLAGS) $(test-objc-hello_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(test-objc-hello_OBJDIR),)
+test-objc-hello-MA_TARGETS := $(addsuffix .o,$(test-objc-hello_ASMFILES))
+test-objc-hello-MA_WILDCARD := %
+else
+test-objc-hello-MA_TARGETS := $(addsuffix .o,$(addprefix $(test-objc-hello_OBJDIR)/,$(notdir $(test-objc-hello_ASMFILES))))
+test-objc-hello-MA_WILDCARD := $(test-objc-hello_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(test-objc-hello-MA_TARGETS) : | $(addsuffix .s,$(test-objc-hello_ASMFILES))
+
+# Be sure that all .c files are found
+test-objc-hello-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-objc-hello-MA_BASEDIRS := $(shell echo $(sort $(dir $(test-objc-hello_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+test-objc-hello-MA_DIRS := $(foreach dir, $(test-objc-hello-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-objc-hello-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-objc-hello-MA_DIRS),)
+    test-objc-hello-MA_DIRS := $(shell echo $(test-objc-hello-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(test-objc-hello-MA_DIRS)
+endif
+
+endif
+
+test-objc-hello-MA_ASSEMBLER ?= $(test-objc-hello_ASSEMBLER)
+
+$(test-objc-hello-MA_TARGETS) : test-objc-hello-MA_CMD:= $(test-objc-hello-MA_ASSEMBLER)
+
+$(test-objc-hello-MA_TARGETS) : CPPFLAGS := $(test-objc-hello_CPPFLAGS)
+$(test-objc-hello-MA_TARGETS) : AFLAGS := $(test-objc-hello_AFLAGS)
+$(test-objc-hello-MA_TARGETS) : $(test-objc-hello-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(test-objc-hello-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(test-objc-hello-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(test-objc-hello-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+test-objc-hello-link_EXTRA_LDFLAGS := 
+test-objc-hello-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-objc-hello-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-objc-hello-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-objc-hello-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+test-objc-hello-link_DIRS := $(subst -L ,-L,$(strip $(test-objc-hello_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-objc-hello-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-objc-hello-link_DIRS)))
+# Add trailing /
+test-objc-hello-link_DIRS := $(subst //,/,$(addsuffix /,$(test-objc-hello-link_DIRS)))
+# Add normal linklib path
+test-objc-hello-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-objc-hello-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-objc-hello_LIBS) $(test-objc-hello-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    test-objc-hello-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    test-objc-hello-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+test-objc-hello-link_DEPLIBS := $(foreach lib,$(test-objc-hello-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-objc-hello-link_DIRS)))) \
+)
+
+$(test-objc-hello_TARGETDIR)/$(test-objc-hello_PROGNAME) : OBJDIR := $(test-objc-hello_OBJDIR)
+$(test-objc-hello_TARGETDIR)/$(test-objc-hello_PROGNAME) : OBJS := $(test-objc-hello_OBJS) $(test-objc-hello_ARCHOBJS) $(USER_OBJS)
+$(test-objc-hello_TARGETDIR)/$(test-objc-hello_PROGNAME) : LDFLAGS := $(strip $(test-objc-hello_LDFLAGS) $(test-objc-hello-link_EXTRA_LDFLAGS))
+$(test-objc-hello_TARGETDIR)/$(test-objc-hello_PROGNAME) : LIBS := $(addprefix -l,$(test-objc-hello_LIBS) $(test-objc-hello-link_EXTRA_LIBS) )
+$(test-objc-hello_TARGETDIR)/$(test-objc-hello_PROGNAME) : $(test-objc-hello_OBJS) $(test-objc-hello_ARCHOBJS) $(USER_OBJS) $(test-objc-hello-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-objc-hello_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-objc-hello_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-objc-hello_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-objc-hello_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-objc-hello_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-objc-hello_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-objc-hello_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-objc-hello_DEPS),)
+  ifneq (test-objc-hello test-objc-hello-quick,)
+    ifneq ($(findstring $(TARGET),test-objc-hello test-objc-hello-quick),)
+      -include $(test-objc-hello_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-objc-hello_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-objc-hello_OBJS) $(test-objc-hello_DEPS) $(test-objc-hello_TARGETDIR)/$(test-objc-hello_PROGNAME),)
+$(test-objc-hello_OBJS) $(test-objc-hello_DEPS) $(test-objc-hello_TARGETDIR)/$(test-objc-hello_PROGNAME) : | $(test-objc-hello_OBJDIR) $(test-objc-hello_TARGETDIR)
+else
+$(test-objc-hello_OBJS) $(test-objc-hello_DEPS) $(test-objc-hello_TARGETDIR)/$(test-objc-hello_PROGNAME) :: $(test-objc-hello_OBJDIR) $(test-objc-hello_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(test-objc-hello_OBJDIR) $(test-objc-hello_TARGETDIR)
+
+
+test-objc-hello-clean : FILES := $(test-objc-hello_OBJS) $(test-objc-hello_TARGETDIR)/$(test-objc-hello_PROGNAME) $(test-objc-hello_DEPS)
+#MM
+test-objc-hello-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-objc-hello"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

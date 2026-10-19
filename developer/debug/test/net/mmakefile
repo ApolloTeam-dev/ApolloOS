@@ -1,0 +1,295 @@
+# Copyright © 2003-2011, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES           := netlib
+EXEDIR          := $(AROS_TESTS)/net
+
+#MM- test : test-net
+#MM- test-quick : test-net-quick
+#MM- test-net : arostcp-linklibs-netlib
+
+
+.PHONY : test-net
+
+test-net_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-net_TARGETDIR := $(EXEDIR)
+test-net_LIBS := net
+
+test-net_FILES     := $(FILES)
+test-net_OBJS      := $(addsuffix .o,$(addprefix $(test-net_OBJDIR)/,$(test-net_FILES)))
+test-net_DEPS      := $(addsuffix .d,$(addprefix $(test-net_OBJDIR)/,$(test-net_FILES)))
+test-net_EXES      := $(addprefix $(test-net_TARGETDIR)/,$(test-net_FILES))
+
+test-net_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-net_CPPFLAGS += -I
+endif
+test-net_CFLAGS    := $(CFLAGS)
+test-net_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-net_COVERAGE := yes
+test-net_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-net_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-net_CFLAGS    := $(strip $(test-net_COVERAGEFLAGS) $(test-net_CFLAGS))
+test-net_LIBS += $(test-net_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-net_FUNCINSTR := yes
+test-net_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-net_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-net_CFLAGS    := $(strip $(test-net_INSTRFUNCFLAGS) $(test-net_CFLAGS))
+test-net_LIBS += $(test-net_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-net_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-net_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-net_DFLAGS := 
+else
+    test-net_DFLAGS := $(test-net_CFLAGS)
+endif
+ifeq (target,target)
+test-net_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-net_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-net_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-net_LDFLAGS += -L
+endif
+
+#MM
+test-net-quick : test-net
+
+#MM test-net : includes-generate-deps core-linklibs
+test-net : $(test-net_EXES)
+
+ifneq ($(filter $(TARGET),test-net test-net-quick),)
+
+ifeq (,)
+test-net_MC_SRCWILDCARD := %
+else
+test-net_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-net_OBJDIR),)
+test-net_MC_TARGETS := $(addsuffix .o,$(test-net_FILES))
+test-net_MC_DTARGETS := $(addsuffix .d,$(test-net_FILES))
+test-net_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-net_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-net_OBJDIR)/,$(notdir $(test-net_FILES))))
+    test-net_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-net_OBJDIR)/,$(notdir $(test-net_FILES))))
+else
+ifeq (,)
+    test-net_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-net_OBJDIR)/,$(test-net_FILES)))
+    test-net_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-net_OBJDIR)/,$(test-net_FILES)))
+else
+    test-net_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-net_OBJDIR)/,$(patsubst /%,%,$(test-net_FILES))))
+    test-net_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-net_OBJDIR)/,$(patsubst /%,%,$(test-net_FILES))))
+endif
+endif
+test-net_MC_TGTWILDCARD := $(test-net_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : | $(addsuffix .c,$(test-net_FILES))
+
+# Be sure that all .c files are found
+test-net_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-net_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-net_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-net_MC_DIRS := $(foreach dir, $(test-net_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-net_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-net_MC_DIRS),)
+    test-net_MC_DIRS := $(shell echo $(test-net_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-net_MC_DIRS)
+endif
+
+endif
+
+test-net_MC_CPPFLAGS := $(test-net_CPPFLAGS)
+test-net_CFLAGS := $(test-net_CFLAGS)
+ifeq ($(test-net_DFLAGS),)
+  test-net_DFLAGS := $(test-net_CFLAGS)
+else
+  test-net_DFLAGS := $(test-net_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-net_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-net_STRIP ?= $(TARGET_STRIP)
+test-net_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : test-net_MC_CPPFLAGS:=$(strip $(test-net_MC_CPPFLAGS) $(test-net_MC_EXTRA_CPPFLAGS))
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : test-net_CFLAGS:=$(strip $(test-net_CFLAGS) $(SAFETY_CFLAGS))
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : test-net_DFLAGS:=$(test-net_DFLAGS)
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : test-net_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : test-net_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-net_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-net_STRIP ?= $(HOST_STRIP)
+test-net_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : test-net_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-net_MC_CPPFLAGS) $(test-net_MC_EXTRA_CPPFLAGS))
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : test-net_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-net_CFLAGS))
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : test-net_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-net_DFLAGS))
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : test-net_IQUOTE:=$(HOST_IQUOTE)
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : test-net_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-net_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-net_STRIP ?= $(ECHO) >/dev/null
+test-net_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : test-net_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-net_MC_CPPFLAGS) $(test-net_MC_EXTRA_CPPFLAGS))
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : test-net_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-net_CFLAGS))
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : test-net_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-net_DFLAGS))
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : test-net_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-net_MC_TARGETS) $(test-net_MC_DTARGETS) : test-net_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-net_MC_TARGETS) : CPPFLAGS := $(test-net_MC_CPPFLAGS)
+$(test-net_MC_TARGETS) : CFLAGS := $(test-net_CFLAGS)
+$(test-net_MC_TARGETS) : $(test-net_MC_TGTWILDCARD).o : $(test-net_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-net_IQUOTE) $(dir $<) $(test-net_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-net_IQUOTE) . $(test-net_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-net_IQUOTE) $(dir $<) $(test-net_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-net_IQUOTE) . $(test-net_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-net_IQUOTE) $(dir $<) $(test-net_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-net_IQUOTE) . $(test-net_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-net_MC_DTARGETS) : $(test-net_MC_TGTWILDCARD).d : $(test-net_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-net_DFLAGS) $(test-net_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-net-link_EXTRA_LDFLAGS := 
+test-net-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-net-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-net-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-net-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-net-link_DIRS := $(subst -L ,-L,$(strip $(test-net_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-net-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-net-link_DIRS)))
+# Add trailing /
+test-net-link_DIRS := $(subst //,/,$(addsuffix /,$(test-net-link_DIRS)))
+# Add normal linklib path
+test-net-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-net-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-net_LIBS) $(test-net-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-net-link_DEPLIBS := $(foreach lib,$(test-net-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-net-link_DIRS)))) \
+)
+test-net-link_PROGS := $(addprefix $(test-net_TARGETDIR)/,$(test-net_FILES))
+
+$(test-net-link_PROGS) : OBJDIR := $(test-net_OBJDIR)
+$(test-net-link_PROGS) : LDFLAGS := $(strip $(test-net_LDFLAGS) $(test-net-link_EXTRA_LDFLAGS))
+$(test-net-link_PROGS) : LIBS := $(addprefix -l,$(test-net_LIBS) $(test-net-link_EXTRA_LIBS) )
+$(test-net-link_PROGS) : $(test-net_TARGETDIR)/% : $(test-net_OBJDIR)/%.o $(test-net-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-net_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-net_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-net_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-net_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-net_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-net_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-net_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-net_DEPS),)
+  ifneq (test-net test-net-quick,)
+    ifneq ($(findstring $(TARGET),test-net test-net-quick),)
+      -include $(test-net_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-net_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-net_DEPS) $(test-net_OBJS) $(addprefix $(test-net_TARGETDIR)/,$(test-net_FILES)),)
+$(test-net_DEPS) $(test-net_OBJS) $(addprefix $(test-net_TARGETDIR)/,$(test-net_FILES)) : | $(test-net_TARGETDIR) $(test-net_OBJDIR)
+else
+$(test-net_DEPS) $(test-net_OBJS) $(addprefix $(test-net_TARGETDIR)/,$(test-net_FILES)) :: $(test-net_TARGETDIR) $(test-net_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-net_TARGETDIR) $(test-net_OBJDIR)
+
+
+test-net-clean : FILES := $(test-net_OBJS) $(test-net_EXES) $(test-net_DEPS)
+#MM
+test-net-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-net"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,298 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := \
+    mui_layout1 \
+    mui_slider \
+    mui_pages \
+    mui_notify1 \
+    mui_notify2 \
+    mui_input1
+
+#MM workbench-demos-zune : includes linklibs  
+
+
+.PHONY : workbench-demos-zune
+
+workbench-demos-zune_OBJDIR    := $(GENDIR)/$(CURDIR)
+workbench-demos-zune_TARGETDIR := $(AROSDIR)/Demos/Zune
+workbench-demos-zune_LIBS := 
+
+workbench-demos-zune_FILES     := $(FILES)
+workbench-demos-zune_OBJS      := $(addsuffix .o,$(addprefix $(workbench-demos-zune_OBJDIR)/,$(workbench-demos-zune_FILES)))
+workbench-demos-zune_DEPS      := $(addsuffix .d,$(addprefix $(workbench-demos-zune_OBJDIR)/,$(workbench-demos-zune_FILES)))
+workbench-demos-zune_EXES      := $(addprefix $(workbench-demos-zune_TARGETDIR)/,$(workbench-demos-zune_FILES))
+
+workbench-demos-zune_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    workbench-demos-zune_CPPFLAGS += -I
+endif
+workbench-demos-zune_CFLAGS    := $(CFLAGS)
+workbench-demos-zune_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+workbench-demos-zune_COVERAGE := yes
+workbench-demos-zune_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+workbench-demos-zune_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+workbench-demos-zune_CFLAGS    := $(strip $(workbench-demos-zune_COVERAGEFLAGS) $(workbench-demos-zune_CFLAGS))
+workbench-demos-zune_LIBS += $(workbench-demos-zune_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-demos-zune_FUNCINSTR := yes
+workbench-demos-zune_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+workbench-demos-zune_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-demos-zune_CFLAGS    := $(strip $(workbench-demos-zune_INSTRFUNCFLAGS) $(workbench-demos-zune_CFLAGS))
+workbench-demos-zune_LIBS += $(workbench-demos-zune_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+workbench-demos-zune_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(workbench-demos-zune_CFLAGS))
+endif
+endif
+ifneq (,)
+    workbench-demos-zune_DFLAGS := 
+else
+    workbench-demos-zune_DFLAGS := $(workbench-demos-zune_CFLAGS)
+endif
+ifeq (target,target)
+workbench-demos-zune_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-demos-zune_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-demos-zune_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    workbench-demos-zune_LDFLAGS += -L
+endif
+
+#MM
+workbench-demos-zune-quick : workbench-demos-zune
+
+#MM workbench-demos-zune : includes-generate-deps core-linklibs
+workbench-demos-zune : $(workbench-demos-zune_EXES)
+
+ifneq ($(filter $(TARGET),workbench-demos-zune workbench-demos-zune-quick),)
+
+ifeq (,)
+workbench-demos-zune_MC_SRCWILDCARD := %
+else
+workbench-demos-zune_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-demos-zune_OBJDIR),)
+workbench-demos-zune_MC_TARGETS := $(addsuffix .o,$(workbench-demos-zune_FILES))
+workbench-demos-zune_MC_DTARGETS := $(addsuffix .d,$(workbench-demos-zune_FILES))
+workbench-demos-zune_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-demos-zune_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-demos-zune_OBJDIR)/,$(notdir $(workbench-demos-zune_FILES))))
+    workbench-demos-zune_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-demos-zune_OBJDIR)/,$(notdir $(workbench-demos-zune_FILES))))
+else
+ifeq (,)
+    workbench-demos-zune_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-demos-zune_OBJDIR)/,$(workbench-demos-zune_FILES)))
+    workbench-demos-zune_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-demos-zune_OBJDIR)/,$(workbench-demos-zune_FILES)))
+else
+    workbench-demos-zune_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-demos-zune_OBJDIR)/,$(patsubst /%,%,$(workbench-demos-zune_FILES))))
+    workbench-demos-zune_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-demos-zune_OBJDIR)/,$(patsubst /%,%,$(workbench-demos-zune_FILES))))
+endif
+endif
+workbench-demos-zune_MC_TGTWILDCARD := $(workbench-demos-zune_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : | $(addsuffix .c,$(workbench-demos-zune_FILES))
+
+# Be sure that all .c files are found
+workbench-demos-zune_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-demos-zune_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-demos-zune_FILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-demos-zune_MC_DIRS := $(foreach dir, $(workbench-demos-zune_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-demos-zune_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-demos-zune_MC_DIRS),)
+    workbench-demos-zune_MC_DIRS := $(shell echo $(workbench-demos-zune_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-demos-zune_MC_DIRS)
+endif
+
+endif
+
+workbench-demos-zune_MC_CPPFLAGS := $(workbench-demos-zune_CPPFLAGS)
+workbench-demos-zune_CFLAGS := $(workbench-demos-zune_CFLAGS)
+ifeq ($(workbench-demos-zune_DFLAGS),)
+  workbench-demos-zune_DFLAGS := $(workbench-demos-zune_CFLAGS)
+else
+  workbench-demos-zune_DFLAGS := $(workbench-demos-zune_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-demos-zune_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-demos-zune_STRIP ?= $(TARGET_STRIP)
+workbench-demos-zune_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : workbench-demos-zune_MC_CPPFLAGS:=$(strip $(workbench-demos-zune_MC_CPPFLAGS) $(workbench-demos-zune_MC_EXTRA_CPPFLAGS))
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : workbench-demos-zune_CFLAGS:=$(strip $(workbench-demos-zune_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : workbench-demos-zune_DFLAGS:=$(workbench-demos-zune_DFLAGS)
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : workbench-demos-zune_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : workbench-demos-zune_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-demos-zune_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-demos-zune_STRIP ?= $(HOST_STRIP)
+workbench-demos-zune_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : workbench-demos-zune_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-demos-zune_MC_CPPFLAGS) $(workbench-demos-zune_MC_EXTRA_CPPFLAGS))
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : workbench-demos-zune_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-demos-zune_CFLAGS))
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : workbench-demos-zune_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-demos-zune_DFLAGS))
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : workbench-demos-zune_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : workbench-demos-zune_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-demos-zune_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-demos-zune_STRIP ?= $(ECHO) >/dev/null
+workbench-demos-zune_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : workbench-demos-zune_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-demos-zune_MC_CPPFLAGS) $(workbench-demos-zune_MC_EXTRA_CPPFLAGS))
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : workbench-demos-zune_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-demos-zune_CFLAGS))
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : workbench-demos-zune_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-demos-zune_DFLAGS))
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : workbench-demos-zune_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-demos-zune_MC_TARGETS) $(workbench-demos-zune_MC_DTARGETS) : workbench-demos-zune_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-demos-zune_MC_TARGETS) : CPPFLAGS := $(workbench-demos-zune_MC_CPPFLAGS)
+$(workbench-demos-zune_MC_TARGETS) : CFLAGS := $(workbench-demos-zune_CFLAGS)
+$(workbench-demos-zune_MC_TARGETS) : $(workbench-demos-zune_MC_TGTWILDCARD).o : $(workbench-demos-zune_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-demos-zune_IQUOTE) $(dir $<) $(workbench-demos-zune_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-demos-zune_IQUOTE) . $(workbench-demos-zune_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-demos-zune_IQUOTE) $(dir $<) $(workbench-demos-zune_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-demos-zune_IQUOTE) . $(workbench-demos-zune_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-demos-zune_IQUOTE) $(dir $<) $(workbench-demos-zune_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-demos-zune_IQUOTE) . $(workbench-demos-zune_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-demos-zune_MC_DTARGETS) : $(workbench-demos-zune_MC_TGTWILDCARD).d : $(workbench-demos-zune_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-demos-zune_DFLAGS) $(workbench-demos-zune_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+workbench-demos-zune-link_EXTRA_LDFLAGS := 
+workbench-demos-zune-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    workbench-demos-zune-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    workbench-demos-zune-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    workbench-demos-zune-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+workbench-demos-zune-link_DIRS := $(subst -L ,-L,$(strip $(workbench-demos-zune_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+workbench-demos-zune-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(workbench-demos-zune-link_DIRS)))
+# Add trailing /
+workbench-demos-zune-link_DIRS := $(subst //,/,$(addsuffix /,$(workbench-demos-zune-link_DIRS)))
+# Add normal linklib path
+workbench-demos-zune-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+workbench-demos-zune-link_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-demos-zune_LIBS) $(workbench-demos-zune-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+workbench-demos-zune-link_DEPLIBS := $(foreach lib,$(workbench-demos-zune-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(workbench-demos-zune-link_DIRS)))) \
+)
+workbench-demos-zune-link_PROGS := $(addprefix $(workbench-demos-zune_TARGETDIR)/,$(workbench-demos-zune_FILES))
+
+$(workbench-demos-zune-link_PROGS) : OBJDIR := $(workbench-demos-zune_OBJDIR)
+$(workbench-demos-zune-link_PROGS) : LDFLAGS := $(strip $(workbench-demos-zune_LDFLAGS) $(workbench-demos-zune-link_EXTRA_LDFLAGS))
+$(workbench-demos-zune-link_PROGS) : LIBS := $(addprefix -l,$(workbench-demos-zune_LIBS) $(workbench-demos-zune-link_EXTRA_LIBS) )
+$(workbench-demos-zune-link_PROGS) : $(workbench-demos-zune_TARGETDIR)/% : $(workbench-demos-zune_OBJDIR)/%.o $(workbench-demos-zune-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(workbench-demos-zune_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(workbench-demos-zune_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(workbench-demos-zune_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-demos-zune_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(workbench-demos-zune_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(workbench-demos-zune_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-demos-zune_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(workbench-demos-zune_DEPS),)
+  ifneq (workbench-demos-zune workbench-demos-zune-quick,)
+    ifneq ($(findstring $(TARGET),workbench-demos-zune workbench-demos-zune-quick),)
+      -include $(workbench-demos-zune_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-demos-zune_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(workbench-demos-zune_DEPS) $(workbench-demos-zune_OBJS) $(addprefix $(workbench-demos-zune_TARGETDIR)/,$(workbench-demos-zune_FILES)),)
+$(workbench-demos-zune_DEPS) $(workbench-demos-zune_OBJS) $(addprefix $(workbench-demos-zune_TARGETDIR)/,$(workbench-demos-zune_FILES)) : | $(workbench-demos-zune_TARGETDIR) $(workbench-demos-zune_OBJDIR)
+else
+$(workbench-demos-zune_DEPS) $(workbench-demos-zune_OBJS) $(addprefix $(workbench-demos-zune_TARGETDIR)/,$(workbench-demos-zune_FILES)) :: $(workbench-demos-zune_TARGETDIR) $(workbench-demos-zune_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-demos-zune_TARGETDIR) $(workbench-demos-zune_OBJDIR)
+
+
+workbench-demos-zune-clean : FILES := $(workbench-demos-zune_OBJS) $(workbench-demos-zune_EXES) $(workbench-demos-zune_DEPS)
+#MM
+workbench-demos-zune-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-demos-zune"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)
+

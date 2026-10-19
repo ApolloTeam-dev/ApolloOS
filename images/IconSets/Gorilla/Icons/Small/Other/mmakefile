@@ -1,0 +1,55 @@
+# Copyright © 2004, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+ICONS := Mouse Pointer
+
+#MM- themes-GorillaSmall-icons-clean : themes-GorillaSmall-icons-other-clean
+#MM- themes-GorillaSmall-icons : themes-GorillaSmall-icons-other
+
+BD_OBJS := $(addprefix  $(AROS_CONTRIB)/Icons/Gorilla/Other/, $(addsuffix .info,$(ICONS)))
+
+#MM
+themes-GorillaSmall-icons-other : $(BD_OBJS)
+
+ifeq (,)
+
+$(AROS_CONTRIB)/Icons/Gorilla/Other/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/%.png
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+else
+
+$(AROS_CONTRIB)/Icons/Gorilla/Other/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+endif
+
+
+ifneq ($(BD_OBJS),)
+$(BD_OBJS) : | $(AROS_CONTRIB)/Icons/Gorilla/Other
+else
+$(BD_OBJS) :: $(AROS_CONTRIB)/Icons/Gorilla/Other
+endif
+
+GLOB_MKDIRS += $(AROS_CONTRIB)/Icons/Gorilla/Other
+
+
+themes-GorillaSmall-icons-other-clean : FILES := $(BD_OBJS)
+#MM
+themes-GorillaSmall-icons-other-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: themes-GorillaSmall-icons-other themes-GorillaSmall-icons-other-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

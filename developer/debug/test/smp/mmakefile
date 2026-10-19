@@ -1,0 +1,13 @@
+#   $Id$
+#
+#MM- test : test-smp
+#MM- test-quick : test-smp-quick
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

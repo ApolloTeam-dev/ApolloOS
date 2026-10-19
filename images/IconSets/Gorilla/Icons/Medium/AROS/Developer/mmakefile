@@ -1,0 +1,97 @@
+# Copyright © 2004-2017, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+BASEICONS := Debug
+ADDITIONALICONS := Include Lib
+
+#MM- iconset-Gorilla-wbench-icons-aros-clean : iconset-Gorilla-wbench-icons-aros-developer-clean
+#MM- iconset-Gorilla-additional-icons-aros-clean : iconset-Gorilla-additional-icons-aros-developer-clean
+#MM- iconset-Gorilla-wbench-icons-aros : iconset-Gorilla-wbench-icons-aros-developer
+#MM- iconset-Gorilla-additional-icons-aros : iconset-Gorilla-additional-icons-aros-developer
+
+
+BD_OBJS := $(addprefix  $(AROS_DEVELOPER)/, $(addsuffix .info,$(BASEICONS)))
+
+#MM
+iconset-Gorilla-wbench-icons-aros-developer : $(BD_OBJS)
+
+ifeq (,)
+
+$(AROS_DEVELOPER)/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/%.png
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+else
+
+$(AROS_DEVELOPER)/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+endif
+
+
+ifneq ($(BD_OBJS),)
+$(BD_OBJS) : | $(AROS_DEVELOPER)
+else
+$(BD_OBJS) :: $(AROS_DEVELOPER)
+endif
+
+GLOB_MKDIRS += $(AROS_DEVELOPER)
+
+
+iconset-Gorilla-wbench-icons-aros-developer-clean : FILES := $(BD_OBJS)
+#MM
+iconset-Gorilla-wbench-icons-aros-developer-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: iconset-Gorilla-wbench-icons-aros-developer iconset-Gorilla-wbench-icons-aros-developer-clean
+
+
+
+BD_OBJS := $(addprefix  $(AROS_DEVELOPER)/, $(addsuffix .info,$(ADDITIONALICONS)))
+
+#MM
+iconset-Gorilla-additional-icons-aros-developer : $(BD_OBJS)
+
+ifeq (,)
+
+$(AROS_DEVELOPER)/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/%.png
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+else
+
+$(AROS_DEVELOPER)/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+endif
+
+
+ifneq ($(BD_OBJS),)
+$(BD_OBJS) : | $(AROS_DEVELOPER)
+else
+$(BD_OBJS) :: $(AROS_DEVELOPER)
+endif
+
+GLOB_MKDIRS += $(AROS_DEVELOPER)
+
+
+iconset-Gorilla-additional-icons-aros-developer-clean : FILES := $(BD_OBJS)
+#MM
+iconset-Gorilla-additional-icons-aros-developer-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: iconset-Gorilla-additional-icons-aros-developer iconset-Gorilla-additional-icons-aros-developer-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,1659 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- kernel-amiga-m68k-trackdisk : includes kernel-disk-includes
+#MM- kernel-amiga-m68k-trackdisk-kobj : includes kernel-disk-includes
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-amiga-m68k-trackdisk
+#MM kernel-amiga-m68k-trackdisk-quick
+#MM kernel-amiga-m68k-trackdisk-makefile
+#MM kernel-amiga-m68k-trackdisk-clean
+
+# ABI targets:
+#MM- includes-all : kernel-amiga-m68k-trackdisk-includes
+#MM- linklibs-trackdisk: kernel-amiga-m68k-trackdisk-linklib
+#MM- linklibs-trackdisk_rel : kernel-amiga-m68k-trackdisk-linklib
+#MM- includes-trackdisk: kernel-amiga-m68k-trackdisk-includes
+#MM- includes-trackdisk_rel : kernel-amiga-m68k-trackdisk-includes
+#MM- kernel-amiga-m68k-trackdisk : kernel-amiga-m68k-trackdisk-includes core-linklibs linklibs-
+#MM kernel-amiga-m68k-trackdisk-linklib : kernel-amiga-m68k-trackdisk-includes includes-
+#MM- kernel-amiga-m68k-trackdisk-quick : kernel-amiga-m68k-trackdisk-includes-quick
+#MM kernel-amiga-m68k-trackdisk-includes : kernel-amiga-m68k-trackdisk-makefile kernel-amiga-m68k-trackdisk-includes-dirs \
+#MM     includes-generate-deps kernel-amiga-m68k-trackdisk-fd
+#MM kernel-amiga-m68k-trackdisk-includes-quick
+#MM kernel-amiga-m68k-trackdisk-includes-dirs
+#MM kernel-amiga-m68k-trackdisk-fd
+
+# Library targets
+#MM kernel-amiga-m68k-trackdisk-kobj : core-linklibs linklibs-
+#MM kernel-amiga-m68k-trackdisk-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-amiga-m68k-trackdisk-kobj : kernel-amiga-m68k-trackdisk-includes core-linklibs linklibs-
+#MM kernel-amiga-m68k-trackdisk-kobj-quick : kernel-amiga-m68k-trackdisk-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-amiga-m68k-trackdisk_ALLTARGETS       := kernel-amiga-m68k-trackdisk kernel-amiga-m68k-trackdisk-quick kernel-amiga-m68k-trackdisk-clean
+
+ifeq (M,M)
+kernel-amiga-m68k-trackdisk_ALLTARGETS       += kernel-amiga-m68k-trackdisk-kobj kernel-amiga-m68k-trackdisk-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-amiga-m68k-trackdisk_ALLTARGETS += kernel-amiga-m68k-trackdisk-includes \
+                 kernel-amiga-m68k-trackdisk-includes-quick kernel-amiga-m68k-trackdisk-includes-dirs  \
+                 kernel-amiga-m68k-trackdisk-linklib kernel-amiga-m68k-trackdisk-fd
+endif
+
+.PHONY : $(kernel-amiga-m68k-trackdisk_ALLTARGETS) kernel-amiga-m68k-trackdisk-makefile
+
+ifeq (trackdisk,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (device,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-amiga-m68k-trackdisk_DEFNAME      := trackdisk_
+else
+    kernel-amiga-m68k-trackdisk_DEFNAME      := trackdisk
+endif
+kernel-amiga-m68k-trackdisk_DEFLINKLIBNAME   := $(kernel-amiga-m68k-trackdisk_DEFNAME)
+ifneq (,)
+    kernel-amiga-m68k-trackdisk_LINKLIBNAME  := 
+else
+    kernel-amiga-m68k-trackdisk_LINKLIBNAME  = $(kernel-amiga-m68k-trackdisk_DEFLINKLIBNAME)
+endif
+kernel-amiga-m68k-trackdisk_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-amiga-m68k-trackdisk_DEFCPPFLAGS  += -I
+endif
+kernel-amiga-m68k-trackdisk_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-amiga-m68k-trackdisk_DFLAGS       := 
+else
+    kernel-amiga-m68k-trackdisk_DFLAGS       = $(kernel-amiga-m68k-trackdisk_DEFDFLAGS)
+endif
+kernel-amiga-m68k-trackdisk_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-amiga-m68k-trackdisk_DXXFLAGS     := 
+else
+    kernel-amiga-m68k-trackdisk_DXXFLAGS     = $(kernel-amiga-m68k-trackdisk_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-amiga-m68k-trackdisk_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-amiga-m68k-trackdisk_DEFDFLAGS))
+kernel-amiga-m68k-trackdisk_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-amiga-m68k-trackdisk_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-amiga-m68k-trackdisk_FUNCINSTR := yes
+kernel-amiga-m68k-trackdisk_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-amiga-m68k-trackdisk_DEFDFLAGS))
+kernel-amiga-m68k-trackdisk_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-amiga-m68k-trackdisk_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-amiga-m68k-trackdisk_OBJDIR                     := 
+else
+kernel-amiga-m68k-trackdisk_OBJDIR                     := $(OBJDIR)/$(kernel-amiga-m68k-trackdisk_DEFNAME)
+endif
+ifneq (,)
+kernel-amiga-m68k-trackdisk_OBJDIR           := $(kernel-amiga-m68k-trackdisk_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-amiga-m68k-trackdisk-makefile         := $(kernel-amiga-m68k-trackdisk_OBJDIR)/Makefile.$(kernel-amiga-m68k-trackdisk_DEFNAME)device
+kernel-amiga-m68k-trackdisk-genmakefile : $(kernel-amiga-m68k-trackdisk-makefile)
+
+
+kernel-amiga-m68k-trackdisk-genmakefile_OPTS := 
+ifneq (,)
+    kernel-amiga-m68k-trackdisk-genmakefile_OPTS += -f 
+    kernel-amiga-m68k-trackdisk-genmakefile_MODNAME := trackdisk_
+else
+    kernel-amiga-m68k-trackdisk-genmakefile_MODNAME := trackdisk
+endif
+kernel-amiga-m68k-trackdisk-genmakefile_TARGET := Makefile.$(kernel-amiga-m68k-trackdisk-genmakefile_MODNAME)device
+kernel-amiga-m68k-trackdisk-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-trackdisk-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-trackdisk-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-trackdisk-genmakefile_OPTS += -c 
+        kernel-amiga-m68k-trackdisk-genmakefile_DEPS += 
+    endif 
+else
+    kernel-amiga-m68k-trackdisk-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/trackdisk.conf
+    kernel-amiga-m68k-trackdisk-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/trackdisk.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-trackdisk-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-trackdisk-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-trackdisk-genmakefile_OPTS += -o 
+        kernel-amiga-m68k-trackdisk-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-amiga-m68k-trackdisk-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-amiga-m68k-trackdisk_OBJDIR),)
+    kernel-amiga-m68k-trackdisk-genmakefile_OPTS += -d $(kernel-amiga-m68k-trackdisk_OBJDIR)
+    kernel-amiga-m68k-trackdisk-genmakefile_TARGET := $(kernel-amiga-m68k-trackdisk_OBJDIR)/$(kernel-amiga-m68k-trackdisk-genmakefile_TARGET)
+endif
+
+$(kernel-amiga-m68k-trackdisk-genmakefile_TARGET) : OPTS := $(kernel-amiga-m68k-trackdisk-genmakefile_OPTS)
+$(kernel-amiga-m68k-trackdisk-genmakefile_TARGET) : MODNAME := trackdisk
+$(kernel-amiga-m68k-trackdisk-genmakefile_TARGET) : MODTYPE := device
+$(kernel-amiga-m68k-trackdisk-genmakefile_TARGET) : $(kernel-amiga-m68k-trackdisk-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-amiga-m68k-trackdisk-makefile),)
+$(kernel-amiga-m68k-trackdisk-makefile) : | $(kernel-amiga-m68k-trackdisk_OBJDIR)
+else
+$(kernel-amiga-m68k-trackdisk-makefile) :: $(kernel-amiga-m68k-trackdisk_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-trackdisk_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-amiga-m68k-trackdisk_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-amiga-m68k-trackdisk-makefile)
+
+kernel-amiga-m68k-trackdisk_DEFMODDIR        := $($(kernel-amiga-m68k-trackdisk_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-amiga-m68k-trackdisk_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-amiga-m68k-trackdisk_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-amiga-m68k-trackdisk_MODDIR       := 
+else
+    kernel-amiga-m68k-trackdisk_MODDIR       := $(kernel-amiga-m68k-trackdisk_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-amiga-m68k-trackdisk_INCDIR           := 
+else
+kernel-amiga-m68k-trackdisk_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-amiga-m68k-trackdisk_LIBDEFSINC       := $(kernel-amiga-m68k-trackdisk_OBJDIR)/include/$(kernel-amiga-m68k-trackdisk_DEFNAME)_libdefs.h
+kernel-amiga-m68k-trackdisk_DEFLIBDEFSINC    := $(kernel-amiga-m68k-trackdisk_OBJDIR)/include/$(kernel-amiga-m68k-trackdisk_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-amiga-m68k-trackdisk-includes-quick : kernel-amiga-m68k-trackdisk-includes
+kernel-amiga-m68k-trackdisk-includes : $(addprefix $(GENINCDIR)/,$($(kernel-amiga-m68k-trackdisk_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-amiga-m68k-trackdisk_INCDIR)/,$($(kernel-amiga-m68k-trackdisk_DEFNAME)_INCLUDES)) \
+    $(kernel-amiga-m68k-trackdisk_LIBDEFSINC) $(kernel-amiga-m68k-trackdisk_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-amiga-m68k-trackdisk_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-amiga-m68k-trackdisk-includes_MODNAME := trackdisk_
+else
+    kernel-amiga-m68k-trackdisk-includes_MODNAME := trackdisk
+endif
+
+ifneq ($($(kernel-amiga-m68k-trackdisk-includes_MODNAME)_INCLUDES),)
+
+kernel-amiga-m68k-trackdisk-includes_TARGETS := $($(kernel-amiga-m68k-trackdisk-includes_MODNAME)_INCLUDES)
+
+kernel-amiga-m68k-trackdisk-includes_DEPS := $(GENMODULE)
+kernel-amiga-m68k-trackdisk-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-trackdisk-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-trackdisk-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-trackdisk-includes_OPTS += -c 
+        kernel-amiga-m68k-trackdisk-includes_DEPS += 
+    endif 
+else
+    kernel-amiga-m68k-trackdisk-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/trackdisk.conf
+    kernel-amiga-m68k-trackdisk-includes_DEPS += $(SRCDIR)/$(CURDIR)/trackdisk.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-trackdisk-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-trackdisk-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-trackdisk-includes_OPTS += -o 
+        kernel-amiga-m68k-trackdisk-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-amiga-m68k-trackdisk-includes_OPTS += -s 
+endif
+ifneq ($(kernel-amiga-m68k-trackdisk_OBJDIR)/include,)
+    kernel-amiga-m68k-trackdisk-includes_OPTS += -d $(kernel-amiga-m68k-trackdisk_OBJDIR)/include
+    kernel-amiga-m68k-trackdisk-includes_TARGETS := $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/include/,$(kernel-amiga-m68k-trackdisk-includes_TARGETS))
+    kernel-amiga-m68k-trackdisk-includes_GENINCFLAG=$(kernel-amiga-m68k-trackdisk_OBJDIR)/include/.trackdisk.device-includes
+else
+    kernel-amiga-m68k-trackdisk-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.trackdisk.device-includes
+endif
+
+$(kernel-amiga-m68k-trackdisk-includes_TARGETS) : $(kernel-amiga-m68k-trackdisk-includes_DEPS) $(kernel-amiga-m68k-trackdisk-includes_GENINCFLAG)
+
+$(kernel-amiga-m68k-trackdisk-includes_GENINCFLAG) : OPTS := $(kernel-amiga-m68k-trackdisk-includes_OPTS)
+$(kernel-amiga-m68k-trackdisk-includes_GENINCFLAG) : MODNAME := trackdisk
+$(kernel-amiga-m68k-trackdisk-includes_GENINCFLAG) : MODTYPE := device
+$(kernel-amiga-m68k-trackdisk-includes_GENINCFLAG) : $(kernel-amiga-m68k-trackdisk-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-amiga-m68k-trackdisk_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-amiga-m68k-trackdisk_DEFNAME)_INCLUDES)) : | $(kernel-amiga-m68k-trackdisk_OBJDIR)/trackdisk_geninc
+
+$(kernel-amiga-m68k-trackdisk_OBJDIR)/trackdisk_geninc : COPYSRCDIR := $(kernel-amiga-m68k-trackdisk_OBJDIR)/include
+$(kernel-amiga-m68k-trackdisk_OBJDIR)/trackdisk_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-amiga-m68k-trackdisk_OBJDIR)/trackdisk_geninc : FILES := $($(kernel-amiga-m68k-trackdisk_DEFNAME)_INCLUDES)
+$(kernel-amiga-m68k-trackdisk_OBJDIR)/trackdisk_geninc : $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/include/,$($(kernel-amiga-m68k-trackdisk_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-amiga-m68k-trackdisk_OBJDIR)/include
+
+$(addprefix $(kernel-amiga-m68k-trackdisk_INCDIR)/,$($(kernel-amiga-m68k-trackdisk_DEFNAME)_INCLUDES)) : | $(kernel-amiga-m68k-trackdisk_OBJDIR)/trackdisk_incs
+
+$(kernel-amiga-m68k-trackdisk_OBJDIR)/trackdisk_incs : COPYSRCDIR := $(kernel-amiga-m68k-trackdisk_OBJDIR)/include
+$(kernel-amiga-m68k-trackdisk_OBJDIR)/trackdisk_incs : TGTDIR := $(kernel-amiga-m68k-trackdisk_INCDIR)
+$(kernel-amiga-m68k-trackdisk_OBJDIR)/trackdisk_incs : FILES := $($(kernel-amiga-m68k-trackdisk_DEFNAME)_INCLUDES)
+$(kernel-amiga-m68k-trackdisk_OBJDIR)/trackdisk_incs : $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/include/,$($(kernel-amiga-m68k-trackdisk_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-amiga-m68k-trackdisk_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-amiga-m68k-trackdisk_DEFNAME)_INCLUDES))))
+
+TMPtrackdisk_INCDIRS := \
+    $(kernel-amiga-m68k-trackdisk_OBJDIR)/include $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/include/,$(kernel-amiga-m68k-trackdisk_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-amiga-m68k-trackdisk_INCDIRS)) \
+    $(kernel-amiga-m68k-trackdisk_INCDIR) $(addprefix $(kernel-amiga-m68k-trackdisk_INCDIR)/,$(kernel-amiga-m68k-trackdisk_INCDIRS))
+
+ifneq (kernel-amiga-m68k-trackdisk-includes-dirs,)
+kernel-amiga-m68k-trackdisk-includes-dirs : | $(TMPtrackdisk_INCDIRS)
+else
+kernel-amiga-m68k-trackdisk-includes-dirs :: $(TMPtrackdisk_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPtrackdisk_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-amiga-m68k-trackdisk-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-amiga-m68k-trackdisk-genlibdefs_OPTS += -f 
+    kernel-amiga-m68k-trackdisk-genlibdefs_MODNAME := trackdisk_
+else
+    kernel-amiga-m68k-trackdisk-genlibdefs_MODNAME := trackdisk
+endif
+kernel-amiga-m68k-trackdisk-genlibdefs_TARGET := $(kernel-amiga-m68k-trackdisk-genlibdefs_MODNAME)_libdefs.h
+kernel-amiga-m68k-trackdisk-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-trackdisk-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-trackdisk-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-trackdisk-genlibdefs_OPTS += -c 
+        kernel-amiga-m68k-trackdisk-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-amiga-m68k-trackdisk-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/trackdisk.conf
+    kernel-amiga-m68k-trackdisk-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/trackdisk.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-trackdisk-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-trackdisk-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-trackdisk-genlibdefs_OPTS += -o 
+        kernel-amiga-m68k-trackdisk-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-amiga-m68k-trackdisk-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-amiga-m68k-trackdisk_OBJDIR)/include,)
+    kernel-amiga-m68k-trackdisk-genlibdefs_OPTS += -d $(kernel-amiga-m68k-trackdisk_OBJDIR)/include
+    kernel-amiga-m68k-trackdisk-genlibdefs_TARGET := $(kernel-amiga-m68k-trackdisk_OBJDIR)/include/$(kernel-amiga-m68k-trackdisk-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-amiga-m68k-trackdisk-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-amiga-m68k-trackdisk-genlibdefs_TARGET) : OPTS := $(kernel-amiga-m68k-trackdisk-genlibdefs_OPTS)
+$(kernel-amiga-m68k-trackdisk-genlibdefs_TARGET) : MODNAME := trackdisk
+$(kernel-amiga-m68k-trackdisk-genlibdefs_TARGET) : MODTYPE := device
+$(kernel-amiga-m68k-trackdisk-genlibdefs_TARGET) : $(kernel-amiga-m68k-trackdisk-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-amiga-m68k-trackdisk_DEFLIBDEFSINC) : FILENAME := $(kernel-amiga-m68k-trackdisk_LIBDEFSINC)
+$(kernel-amiga-m68k-trackdisk_DEFLIBDEFSINC) : $(kernel-amiga-m68k-trackdisk_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-amiga-m68k-trackdisk_LIBDEFSINC) $(kernel-amiga-m68k-trackdisk_DEFLIBDEFSINC) : | $(kernel-amiga-m68k-trackdisk_OBJDIR)/include
+
+ifneq (kernel-amiga-m68k-trackdisk-includes-dirs,)
+kernel-amiga-m68k-trackdisk-includes-dirs : | $(kernel-amiga-m68k-trackdisk_OBJDIR)/include
+else
+kernel-amiga-m68k-trackdisk-includes-dirs :: $(kernel-amiga-m68k-trackdisk_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-trackdisk_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-amiga-m68k-trackdisk-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-amiga-m68k-trackdisk-genmodfiles_OPTS += -f 
+    kernel-amiga-m68k-trackdisk-genmodfiles_MODNAME := trackdisk_
+else
+    kernel-amiga-m68k-trackdisk-genmodfiles_MODNAME := trackdisk
+endif
+kernel-amiga-m68k-trackdisk-genmodfiles_GENTARGETS := $($(kernel-amiga-m68k-trackdisk-genmodfiles_MODNAME)_STARTFILES) $($(kernel-amiga-m68k-trackdisk-genmodfiles_MODNAME)_ENDFILES)
+kernel-amiga-m68k-trackdisk-genmodfiles_STUBTARGETS := $($(kernel-amiga-m68k-trackdisk-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-amiga-m68k-trackdisk-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-amiga-m68k-trackdisk-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-amiga-m68k-trackdisk-genmodfiles_GENTARGETS))
+kernel-amiga-m68k-trackdisk-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-amiga-m68k-trackdisk-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-amiga-m68k-trackdisk-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-amiga-m68k-trackdisk-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-amiga-m68k-trackdisk-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-trackdisk-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-trackdisk-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-trackdisk-genmodfiles_OPTS += -c 
+        kernel-amiga-m68k-trackdisk-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-amiga-m68k-trackdisk-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/trackdisk.conf
+    kernel-amiga-m68k-trackdisk-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/trackdisk.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-trackdisk-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-trackdisk-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-trackdisk-genmodfiles_OPTS += -o 
+        kernel-amiga-m68k-trackdisk-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-amiga-m68k-trackdisk-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-amiga-m68k-trackdisk_OBJDIR),)
+    kernel-amiga-m68k-trackdisk-genmodfiles_OPTS += -d $(kernel-amiga-m68k-trackdisk_OBJDIR)
+    kernel-amiga-m68k-trackdisk-genmodfiles_TARGETDIR := $(shell echo $(kernel-amiga-m68k-trackdisk_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-amiga-m68k-trackdisk-genmodfiles_GENTARGETS := $(addprefix $(kernel-amiga-m68k-trackdisk-genmodfiles_TARGETDIR)/,$(kernel-amiga-m68k-trackdisk-genmodfiles_GENTARGETS))
+    kernel-amiga-m68k-trackdisk-genmodfiles_GENFILEFLAG=$(kernel-amiga-m68k-trackdisk-genmodfiles_TARGETDIR)/.trackdisk.device-genfiles
+else
+    kernel-amiga-m68k-trackdisk-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.trackdisk.device-genfiles
+endif
+ifneq ($(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib,)
+    kernel-amiga-m68k-trackdisk-genmodfiles_OPTS += -l $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib
+    kernel-amiga-m68k-trackdisk-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-amiga-m68k-trackdisk-genmodfiles_STUBTARGETS := $(addprefix $(kernel-amiga-m68k-trackdisk-genmodfiles_STUBTARGETDIR)/,$(kernel-amiga-m68k-trackdisk-genmodfiles_STUBTARGETS))
+    kernel-amiga-m68k-trackdisk-genmodfiles_TARGETDIRS += $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib
+else
+ifneq ($(kernel-amiga-m68k-trackdisk_OBJDIR),)
+    kernel-amiga-m68k-trackdisk-genmodfiles_STUBTARGETS := $(addprefix $(kernel-amiga-m68k-trackdisk-genmodfiles_TARGETDIR)/,$(kernel-amiga-m68k-trackdisk-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-amiga-m68k-trackdisk-genmodfiles_TARGETS := $(kernel-amiga-m68k-trackdisk-genmodfiles_GENTARGETS) $(kernel-amiga-m68k-trackdisk-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-amiga-m68k-trackdisk-genmodfiles_TARGETDIRS),)
+$(kernel-amiga-m68k-trackdisk-genmodfiles_TARGETS) : | $(kernel-amiga-m68k-trackdisk-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-amiga-m68k-trackdisk-genmodfiles_TARGETS) : $(kernel-amiga-m68k-trackdisk-genmodfiles_DEPS) $(kernel-amiga-m68k-trackdisk-genmodfiles_GENFILEFLAG)
+
+$(kernel-amiga-m68k-trackdisk-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-amiga-m68k-trackdisk-genmodfiles_OPTS)
+$(kernel-amiga-m68k-trackdisk-genmodfiles_GENFILEFLAG) : MODNAME := trackdisk
+$(kernel-amiga-m68k-trackdisk-genmodfiles_GENFILEFLAG) : MODTYPE := device
+$(kernel-amiga-m68k-trackdisk-genmodfiles_GENFILEFLAG) : $(kernel-amiga-m68k-trackdisk-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-amiga-m68k-trackdisk-genmodfiles_GENFILEFLAG) : $(kernel-amiga-m68k-trackdisk_DEFLIBDEFSINC) $(kernel-amiga-m68k-trackdisk-makefile)
+
+
+ifneq ($(kernel-amiga-m68k-trackdisk-genmodfiles_GENFILEFLAG),)
+$(kernel-amiga-m68k-trackdisk-genmodfiles_GENFILEFLAG) : | $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib
+else
+$(kernel-amiga-m68k-trackdisk-genmodfiles_GENFILEFLAG) :: $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-amiga-m68k-trackdisk_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-amiga-m68k-trackdisk_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-amiga-m68k-trackdisk-fd : $(kernel-amiga-m68k-trackdisk_FDDIR)/trackdisk_lib.fd
+
+
+TMP_TARGET := trackdisk_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/trackdisk.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/trackdisk.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-amiga-m68k-trackdisk_FDDIR),)
+    TMP_OPTS += -d $(kernel-amiga-m68k-trackdisk_FDDIR)
+    TMP_TARGET := $(kernel-amiga-m68k-trackdisk_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := trackdisk
+$(TMP_TARGET) : MODTYPE := device
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-amiga-m68k-trackdisk_FDDIR)/trackdisk_lib.fd : | $(kernel-amiga-m68k-trackdisk_FDDIR)
+
+
+ifneq (kernel-amiga-m68k-trackdisk-fd-setup,)
+kernel-amiga-m68k-trackdisk-fd-setup : | $(kernel-amiga-m68k-trackdisk_FDDIR)
+else
+kernel-amiga-m68k-trackdisk-fd-setup :: $(kernel-amiga-m68k-trackdisk_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-trackdisk_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-amiga-m68k-trackdisk_FILES            := trackdisk_device trackdisk_hw
+kernel-amiga-m68k-trackdisk_OBJCFILES        := 
+kernel-amiga-m68k-trackdisk_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-amiga-m68k-trackdisk_LIBFILES         := 
+kernel-amiga-m68k-trackdisk_LIBS             := 
+
+kernel-amiga-m68k-trackdisk_FDIRS            := $(sort $(dir $(kernel-amiga-m68k-trackdisk_FILES)))
+
+kernel-amiga-m68k-trackdisk_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-amiga-m68k-trackdisk_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-amiga-m68k-trackdisk_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-amiga-m68k-trackdisk_FILTERARCH       = $(filter-out $(call kernel-amiga-m68k-trackdisk_MATCHARCH,$(1),$(2)),$(2))
+kernel-amiga-m68k-trackdisk_STARTFILES       := $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$($(kernel-amiga-m68k-trackdisk_DEFNAME)_STARTFILES))
+kernel-amiga-m68k-trackdisk_ENDFILES         := $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$($(kernel-amiga-m68k-trackdisk_DEFNAME)_ENDFILES))
+
+kernel-amiga-m68k-trackdisk_ARCHOBJS         := $(wildcard $(kernel-amiga-m68k-trackdisk_OBJDIR)/arch/*.o)
+kernel-amiga-m68k-trackdisk_LIBARCHOBJS      := $(wildcard $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/arch/*.o)
+kernel-amiga-m68k-trackdisk_ARCHFILES        := $(basename $(notdir $(kernel-amiga-m68k-trackdisk_ARCHOBJS)))
+kernel-amiga-m68k-trackdisk_LIBARCHFILES     := $(basename $(notdir $(kernel-amiga-m68k-trackdisk_LIBARCHOBJS)))
+kernel-amiga-m68k-trackdisk_C_NARCHFILES     := $(call kernel-amiga-m68k-trackdisk_FILTERARCH,$(kernel-amiga-m68k-trackdisk_ARCHFILES),$(kernel-amiga-m68k-trackdisk_FILES))
+kernel-amiga-m68k-trackdisk_CXX_NARCHFILES   := $(call kernel-amiga-m68k-trackdisk_FILTERARCH,$(kernel-amiga-m68k-trackdisk_ARCHFILES),$(kernel-amiga-m68k-trackdisk_CXXFILES))
+kernel-amiga-m68k-trackdisk_OBJC_NARCHFILES  := $(call kernel-amiga-m68k-trackdisk_FILTERARCH,$(kernel-amiga-m68k-trackdisk_ARCHFILES),$(kernel-amiga-m68k-trackdisk_OBJCFILES))
+kernel-amiga-m68k-trackdisk_NLIBARCHFILES    := $(call kernel-amiga-m68k-trackdisk_FILTERARCH,$(kernel-amiga-m68k-trackdisk_LIBARCHFILES),$(kernel-amiga-m68k-trackdisk_LIBFILES))
+kernel-amiga-m68k-trackdisk_ARCHNLIBFILES    := $(call kernel-amiga-m68k-trackdisk_FILTERARCH,$(kernel-amiga-m68k-trackdisk_LIBFILES),$(kernel-amiga-m68k-trackdisk_LIBARCHFILES))
+
+kernel-amiga-m68k-trackdisk_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-amiga-m68k-trackdisk_OBJDIR)/include -include $(kernel-amiga-m68k-trackdisk_DEFLIBDEFSINC))
+ifneq (,)
+kernel-amiga-m68k-trackdisk_CPPFLAGS         += -I
+endif
+kernel-amiga-m68k-trackdisk_LINKLIBCPPFLAGS  := $(kernel-amiga-m68k-trackdisk_CPPFLAGS)
+kernel-amiga-m68k-trackdisk_CPPFLAGS         += $(strip $($(kernel-amiga-m68k-trackdisk_DEFNAME)_CPPFLAGS))
+kernel-amiga-m68k-trackdisk_LINKLIBCPPFLAGS  += $(strip $($(kernel-amiga-m68k-trackdisk_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-amiga-m68k-trackdisk_CFLAGS           := $(strip $(CFLAGS) $($(kernel-amiga-m68k-trackdisk_DEFNAME)_CFLAGS))
+kernel-amiga-m68k-trackdisk_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-amiga-m68k-trackdisk_DEFNAME)_LINKLIBCFLAGS))
+kernel-amiga-m68k-trackdisk_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-amiga-m68k-trackdisk_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-amiga-m68k-trackdisk_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-amiga-m68k-trackdisk_CFLAGS           := $(strip $(kernel-amiga-m68k-trackdisk_LTOFLAGS) $(kernel-amiga-m68k-trackdisk_CFLAGS))
+kernel-amiga-m68k-trackdisk_LINKLIBCFLAGS    := $(strip $(kernel-amiga-m68k-trackdisk_LTOFLAGS) $(kernel-amiga-m68k-trackdisk_LINKLIBCFLAGS))
+kernel-amiga-m68k-trackdisk_CXXFLAGS         := $(strip $(kernel-amiga-m68k-trackdisk_LTOFLAGS) $(kernel-amiga-m68k-trackdisk_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-amiga-m68k-trackdisk_SUBSTNULL        :=
+kernel-amiga-m68k-trackdisk_SUBSTSPACE       := $(kernel-amiga-m68k-trackdisk_SUBSTNULL) #
+kernel-amiga-m68k-trackdisk_SUBSTCOMMA       := ,
+kernel-amiga-m68k-trackdisk_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-amiga-m68k-trackdisk_SUBSTSPACE),$(kernel-amiga-m68k-trackdisk_SUBSTCOMMA),$(strip $($(kernel-amiga-m68k-trackdisk_DEFNAME)_STARTFILES))))
+kernel-amiga-m68k-trackdisk_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-amiga-m68k-trackdisk_CFLAGS           := $(strip $(kernel-amiga-m68k-trackdisk_INSTRFUNCFLAGS) $(kernel-amiga-m68k-trackdisk_CFLAGS))
+kernel-amiga-m68k-trackdisk_CXXFLAGS         := $(strip $(kernel-amiga-m68k-trackdisk_INSTRFUNCFLAGS) $(kernel-amiga-m68k-trackdisk_CXXFLAGS))
+kernel-amiga-m68k-trackdisk_LIBS             += $(kernel-amiga-m68k-trackdisk_INSTRFUNCLIBS)
+endif
+endif
+kernel-amiga-m68k-trackdisk_DFLAGS           := $(strip $(kernel-amiga-m68k-trackdisk_DFLAGS) $($(kernel-amiga-m68k-trackdisk_DEFNAME)_DFLAGS))
+kernel-amiga-m68k-trackdisk_LINKLIBDFLAGS    := $(strip $(kernel-amiga-m68k-trackdisk_DFLAGS) $($(kernel-amiga-m68k-trackdisk_DEFNAME)_LINKLIBDFLAGS))
+kernel-amiga-m68k-trackdisk_DXXFLAGS         := $(strip $(kernel-amiga-m68k-trackdisk_DXXFLAGS) $($(kernel-amiga-m68k-trackdisk_DEFNAME)_DXXFLAGS))
+
+ifeq (device,library)
+    kernel-amiga-m68k-trackdisk_LIBSUFFIX    := 
+else
+    kernel-amiga-m68k-trackdisk_LIBSUFFIX    := .device
+endif
+
+ifeq (,)
+kernel-amiga-m68k-trackdisk_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-amiga-m68k-trackdisk_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-amiga-m68k-trackdisk_LINKLIBCFILES    := $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$($(kernel-amiga-m68k-trackdisk_DEFNAME)_LINKLIBFILES))
+kernel-amiga-m68k-trackdisk_LINKLIBAFILES    := $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$($(kernel-amiga-m68k-trackdisk_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-amiga-m68k-trackdisk_DEFNAME)_LINKLIBFILES) $($(kernel-amiga-m68k-trackdisk_DEFNAME)_LINKLIBAFILES)  $(kernel-amiga-m68k-trackdisk_ARCHNLIBFILES)),)
+    kernel-amiga-m68k-trackdisk_LINKLIB      :=
+else
+    kernel-amiga-m68k-trackdisk_LINKLIB      := $(kernel-amiga-m68k-trackdisk_LIBDIR)/libtrackdisk$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a
+    ifneq (trackdisk,$(kernel-amiga-m68k-trackdisk_LINKLIBNAME))
+        kernel-amiga-m68k-trackdisk_LINKLIB  += $(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_LINKLIBNAME)$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a
+    endif
+endif
+kernel-amiga-m68k-trackdisk_LINKLIBFILES     := $(kernel-amiga-m68k-trackdisk_LINKLIBCFILES) $(kernel-amiga-m68k-trackdisk_LINKLIBAFILES)
+
+kernel-amiga-m68k-trackdisk_RELLINKLIBCFILES := $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$($(kernel-amiga-m68k-trackdisk_DEFNAME)_RELLINKLIBFILES))
+kernel-amiga-m68k-trackdisk_RELLINKLIBAFILES := $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$($(kernel-amiga-m68k-trackdisk_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-amiga-m68k-trackdisk_DEFNAME)_RELLINKLIBFILES) $($(kernel-amiga-m68k-trackdisk_DEFNAME)_RELLINKLIBAFILES)  $(kernel-amiga-m68k-trackdisk_ARCHNLIBFILES)),)
+    kernel-amiga-m68k-trackdisk_RELLINKLIB   :=
+else
+    kernel-amiga-m68k-trackdisk_RELLINKLIB   := $(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_DEFNAME)_rel$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a
+    ifneq (trackdisk,$(kernel-amiga-m68k-trackdisk_LINKLIBNAME))
+        kernel-amiga-m68k-trackdisk_RELLINKLIB += $(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_LINKLIBNAME)_rel$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a
+    endif
+endif
+kernel-amiga-m68k-trackdisk_RELLINKLIBFILES  := $(kernel-amiga-m68k-trackdisk_RELLINKLIBCFILES) $(kernel-amiga-m68k-trackdisk_RELLINKLIBAFILES)
+endif
+
+kernel-amiga-m68k-trackdisk_ENDOBJS          := $(addsuffix .o,$(kernel-amiga-m68k-trackdisk_ENDFILES))
+kernel-amiga-m68k-trackdisk_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-trackdisk_NLIBARCHFILES))) $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/arch/,$(notdir $(kernel-amiga-m68k-trackdisk_ARCHNLIBFILES))) $(kernel-amiga-m68k-trackdisk_LINKLIBFILES)) \
+                 
+kernel-amiga-m68k-trackdisk_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-trackdisk_NLIBARCHFILES))) $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/arch/,$(notdir $(kernel-amiga-m68k-trackdisk_ARCHNLIBFILES))) $(kernel-amiga-m68k-trackdisk_RELLINKLIBFILES)) \
+                 
+$(kernel-amiga-m68k-trackdisk_LINKLIBFILES) $(kernel-amiga-m68k-trackdisk_RELLINKLIBFILES) : | $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib
+$(kernel-amiga-m68k-trackdisk_LINKLIBOBJS) $(kernel-amiga-m68k-trackdisk_RELLINKLIBOBJS) : | $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib
+
+kernel-amiga-m68k-trackdisk_CCFILES := $(kernel-amiga-m68k-trackdisk_C_NARCHFILES)
+kernel-amiga-m68k-trackdisk_TARGETCCFILES    := $(strip $(kernel-amiga-m68k-trackdisk_STARTFILES) $(kernel-amiga-m68k-trackdisk_ENDFILES))
+kernel-amiga-m68k-trackdisk_LINKLIBCCFILES   := $(strip $(kernel-amiga-m68k-trackdisk_NLIBARCHFILES) $(kernel-amiga-m68k-trackdisk_LINKLIBCFILES) $(kernel-amiga-m68k-trackdisk_RELLINKLIBCFILES))
+kernel-amiga-m68k-trackdisk_LINKLIBCCGENFILES := $(strip $(kernel-amiga-m68k-trackdisk_LINKLIBCFILES) $(kernel-amiga-m68k-trackdisk_RELLINKLIBCFILES))
+
+
+kernel-amiga-m68k-trackdisk_CXXABSBASENAMES := $(foreach kernel-amiga-m68k-trackdisk_CXXBASE,$(kernel-amiga-m68k-trackdisk_CXX_NARCHFILES),$(if $(filter /%,$(kernel-amiga-m68k-trackdisk_CXXBASE)),$(kernel-amiga-m68k-trackdisk_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-amiga-m68k-trackdisk_CXXBASE))))
+
+ifneq ($(kernel-amiga-m68k-trackdisk_CXXABSBASENAMES),)
+
+kernel-amiga-m68k-trackdisk_CXXBASENAMES := $(basename $(kernel-amiga-m68k-trackdisk_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-amiga-m68k-trackdisk_MCXX_FILES  := $(strip $(foreach kernel-amiga-m68k-trackdisk_CXXBASE,$(kernel-amiga-m68k-trackdisk_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-amiga-m68k-trackdisk_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-amiga-m68k-trackdisk_EXT),$(kernel-amiga-m68k-trackdisk_CXXBASE)))))))
+
+ifeq (,)
+kernel-amiga-m68k-trackdisk_MCXX_SRCWILDCARD := %
+else
+kernel-amiga-m68k-trackdisk_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-amiga-m68k-trackdisk_OBJDIR),)
+  kernel-amiga-m68k-trackdisk_CXXTARGETS := $(notdir $(kernel-amiga-m68k-trackdisk_CXXBASENAMES:=.o))
+  kernel-amiga-m68k-trackdisk_CXXDTARGETS := $(notdir $(kernel-amiga-m68k-trackdisk_CXXBASENAMES:=.d))
+  kernel-amiga-m68k-trackdisk_MCXX_WILDCARD := %
+else
+  kernel-amiga-m68k-trackdisk_CXXTARGETS := $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(notdir $(kernel-amiga-m68k-trackdisk_CXXBASENAMES:=.o)))
+  kernel-amiga-m68k-trackdisk_CXXDTARGETS := $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(notdir $(kernel-amiga-m68k-trackdisk_CXXBASENAMES:=.d)))
+  kernel-amiga-m68k-trackdisk_MCXX_WILDCARD := $(kernel-amiga-m68k-trackdisk_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-amiga-m68k-trackdisk_CXXTARGETS) $(kernel-amiga-m68k-trackdisk_CXXDTARGETS) : | $(kernel-amiga-m68k-trackdisk_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-amiga-m68k-trackdisk_MCXX_CPPFLAGS := $(kernel-amiga-m68k-trackdisk_CPPFLAGS)
+kernel-amiga-m68k-trackdisk_CXXFLAGS := $(kernel-amiga-m68k-trackdisk_CXXFLAGS)
+ifeq ($(kernel-amiga-m68k-trackdisk_DXXFLAGS),)
+  kernel-amiga-m68k-trackdisk_DXXFLAGS := $(kernel-amiga-m68k-trackdisk_CXXFLAGS)
+else
+  kernel-amiga-m68k-trackdisk_DXXFLAGS := $(kernel-amiga-m68k-trackdisk_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-amiga-m68k-trackdisk_STRIP ?= $(HOST_STRIP)
+  kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-amiga-m68k-trackdisk_CXXCMD:=$(HOST_CXX)
+  kernel-amiga-m68k-trackdisk_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MCXX_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MCXX_EXTRA_CPPFLAGS))
+  kernel-amiga-m68k-trackdisk_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-amiga-m68k-trackdisk_CXXFLAGS))
+  kernel-amiga-m68k-trackdisk_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-amiga-m68k-trackdisk_DXXFLAGS))
+  kernel-amiga-m68k-trackdisk_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-amiga-m68k-trackdisk_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-amiga-m68k-trackdisk_STRIP ?= $(TARGET_STRIP)
+  kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-amiga-m68k-trackdisk_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-amiga-m68k-trackdisk_MCXX_CPPFLAGS := $(strip $(kernel-amiga-m68k-trackdisk_MCXX_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MCXX_EXTRA_CPPFLAGS))
+  kernel-amiga-m68k-trackdisk_CXXFLAGS := $(strip $(kernel-amiga-m68k-trackdisk_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-amiga-m68k-trackdisk_DXXFLAGS := $(kernel-amiga-m68k-trackdisk_DXXFLAGS)
+  kernel-amiga-m68k-trackdisk_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-amiga-m68k-trackdisk_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-amiga-m68k-trackdisk_STRIP ?= $(ECHO) >/dev/null
+  kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-amiga-m68k-trackdisk_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-amiga-m68k-trackdisk_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MCXX_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MCXX_EXTRA_CPPFLAGS))
+  kernel-amiga-m68k-trackdisk_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-amiga-m68k-trackdisk_CXXFLAGS))
+  kernel-amiga-m68k-trackdisk_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-amiga-m68k-trackdisk_DXXFLAGS))
+  kernel-amiga-m68k-trackdisk_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-amiga-m68k-trackdisk_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-amiga-m68k-trackdisk_CXXCMD) $(kernel-amiga-m68k-trackdisk_CXXIQUOTE) $(dir $(2)) $(kernel-amiga-m68k-trackdisk_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_CXXIQUOTE) . $(kernel-amiga-m68k-trackdisk_CXXIQUOTE_END) $(strip $(kernel-amiga-m68k-trackdisk_CXXFLAGS) $(kernel-amiga-m68k-trackdisk_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-amiga-m68k-trackdisk_CXXCMD) $(kernel-amiga-m68k-trackdisk_CXXIQUOTE) $(dir $(2)) $(kernel-amiga-m68k-trackdisk_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_CXXIQUOTE) . $(kernel-amiga-m68k-trackdisk_CXXIQUOTE_END) $(strip $(kernel-amiga-m68k-trackdisk_CXXFLAGS) $(kernel-amiga-m68k-trackdisk_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-amiga-m68k-trackdisk_CXXCMD) $(kernel-amiga-m68k-trackdisk_CXXIQUOTE) $(dir $(2)) $(kernel-amiga-m68k-trackdisk_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_CXXIQUOTE) . $(kernel-amiga-m68k-trackdisk_CXXIQUOTE_END) $(strip $(kernel-amiga-m68k-trackdisk_CXXFLAGS) $(kernel-amiga-m68k-trackdisk_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-amiga-m68k-trackdisk_CXXCMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-trackdisk_DXXFLAGS) $(kernel-amiga-m68k-trackdisk_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-amiga-m68k-trackdisk_OBJDIR),)
+  $(foreach kernel-amiga-m68k-trackdisk_CXXFILE,$(kernel-amiga-m68k-trackdisk_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-amiga-m68k-trackdisk_CXXFILE))),$(kernel-amiga-m68k-trackdisk_CXXFILE))))
+else
+  $(foreach kernel-amiga-m68k-trackdisk_CXXFILE,$(kernel-amiga-m68k-trackdisk_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(notdir $(basename $(kernel-amiga-m68k-trackdisk_CXXFILE)))),$(kernel-amiga-m68k-trackdisk_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-amiga-m68k-trackdisk_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-amiga-m68k-trackdisk_MOBJC_SRCWILDCARD := %
+else
+kernel-amiga-m68k-trackdisk_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-amiga-m68k-trackdisk_OBJDIR),)
+  kernel-amiga-m68k-trackdisk_MOBJC_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-trackdisk_OBJC_NARCHFILES))
+  kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-amiga-m68k-trackdisk_OBJC_NARCHFILES))
+  kernel-amiga-m68k-trackdisk_MOBJC_WILDCARD := %
+else
+  kernel-amiga-m68k-trackdisk_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(kernel-amiga-m68k-trackdisk_OBJC_NARCHFILES)))
+  kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(kernel-amiga-m68k-trackdisk_OBJC_NARCHFILES)))
+  kernel-amiga-m68k-trackdisk_MOBJC_WILDCARD := $(kernel-amiga-m68k-trackdisk_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-amiga-m68k-trackdisk_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-amiga-m68k-trackdisk_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-amiga-m68k-trackdisk_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-trackdisk_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-amiga-m68k-trackdisk_MOBJC_DIRS := $(foreach dir, $(kernel-amiga-m68k-trackdisk_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-trackdisk_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-amiga-m68k-trackdisk_MOBJC_DIRS),)
+    kernel-amiga-m68k-trackdisk_MOBJC_DIRS := $(shell echo $(kernel-amiga-m68k-trackdisk_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-amiga-m68k-trackdisk_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-amiga-m68k-trackdisk_CC := $(TARGET_CC)
+else
+  kernel-amiga-m68k-trackdisk_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-amiga-m68k-trackdisk_MOBJC_CPPFLAGS := $(kernel-amiga-m68k-trackdisk_CPPFLAGS)
+kernel-amiga-m68k-trackdisk_OBJCFLAGS := $(kernel-amiga-m68k-trackdisk_CFLAGS)
+kernel-amiga-m68k-trackdisk_OBJCFLAGS := $(kernel-amiga-m68k-trackdisk_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-amiga-m68k-trackdisk_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-amiga-m68k-trackdisk_OBJCFLAGS)))
+ifeq ($(kernel-amiga-m68k-trackdisk_DFLAGS),)
+  kernel-amiga-m68k-trackdisk_OBJCDFLAGS := $(kernel-amiga-m68k-trackdisk_CFLAGS)
+else
+  kernel-amiga-m68k-trackdisk_OBJCDFLAGS := $(kernel-amiga-m68k-trackdisk_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(kernel-amiga-m68k-trackdisk_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-amiga-m68k-trackdisk_STRIP ?= $(TARGET_STRIP)
+  kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-amiga-m68k-trackdisk_CC) $(TARGET_SYSROOT))
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : kernel-amiga-m68k-trackdisk_MOBJC_CPPFLAGS:=$(strip $(kernel-amiga-m68k-trackdisk_MOBJC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : kernel-amiga-m68k-trackdisk_OBJCFLAGS:=$(strip $(kernel-amiga-m68k-trackdisk_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : kernel-amiga-m68k-trackdisk_OBJCDFLAGS:=$(kernel-amiga-m68k-trackdisk_OBJCDFLAGS)
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-amiga-m68k-trackdisk_STRIP ?= $(HOST_STRIP)
+  kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : kernel-amiga-m68k-trackdisk_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MOBJC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : kernel-amiga-m68k-trackdisk_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-trackdisk_OBJCFLAGS))
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : kernel-amiga-m68k-trackdisk_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-trackdisk_OBJCDFLAGS))
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-amiga-m68k-trackdisk_STRIP ?= $(ECHO) >/dev/null
+  kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : kernel-amiga-m68k-trackdisk_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MOBJC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : kernel-amiga-m68k-trackdisk_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-trackdisk_OBJCFLAGS))
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : kernel-amiga-m68k-trackdisk_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-trackdisk_OBJCDFLAGS))
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) $(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) : CPPFLAGS := $(kernel-amiga-m68k-trackdisk_MOBJC_CPPFLAGS)
+$(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) : CFLAGS := $(kernel-amiga-m68k-trackdisk_OBJCFLAGS)
+$(kernel-amiga-m68k-trackdisk_MOBJC_TARGETS) : $(kernel-amiga-m68k-trackdisk_MOBJC_WILDCARD).o : $(kernel-amiga-m68k-trackdisk_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(dir $<) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_IQUOTE) . $(kernel-amiga-m68k-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(dir $<) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_IQUOTE) . $(kernel-amiga-m68k-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(dir $<) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_IQUOTE) . $(kernel-amiga-m68k-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-amiga-m68k-trackdisk_MOBJC_DTARGETS) : $(kernel-amiga-m68k-trackdisk_MOBJC_WILDCARD).d : $(kernel-amiga-m68k-trackdisk_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-trackdisk_OBJCDFLAGS) $(kernel-amiga-m68k-trackdisk_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-amiga-m68k-trackdisk_MC_SRCWILDCARD := %
+else
+kernel-amiga-m68k-trackdisk_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-amiga-m68k-trackdisk_OBJDIR),)
+kernel-amiga-m68k-trackdisk_MC_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-trackdisk_CCFILES))
+kernel-amiga-m68k-trackdisk_MC_DTARGETS := $(addsuffix .d,$(kernel-amiga-m68k-trackdisk_CCFILES))
+kernel-amiga-m68k-trackdisk_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-amiga-m68k-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(notdir $(kernel-amiga-m68k-trackdisk_CCFILES))))
+    kernel-amiga-m68k-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(notdir $(kernel-amiga-m68k-trackdisk_CCFILES))))
+else
+ifeq (,)
+    kernel-amiga-m68k-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(kernel-amiga-m68k-trackdisk_CCFILES)))
+    kernel-amiga-m68k-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(kernel-amiga-m68k-trackdisk_CCFILES)))
+else
+    kernel-amiga-m68k-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(patsubst /%,%,$(kernel-amiga-m68k-trackdisk_CCFILES))))
+    kernel-amiga-m68k-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(patsubst /%,%,$(kernel-amiga-m68k-trackdisk_CCFILES))))
+endif
+endif
+kernel-amiga-m68k-trackdisk_MC_TGTWILDCARD := $(kernel-amiga-m68k-trackdisk_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : | $(addsuffix .c,$(kernel-amiga-m68k-trackdisk_CCFILES))
+
+# Be sure that all .c files are found
+kernel-amiga-m68k-trackdisk_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-amiga-m68k-trackdisk_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-trackdisk_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-amiga-m68k-trackdisk_MC_DIRS := $(foreach dir, $(kernel-amiga-m68k-trackdisk_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-trackdisk_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-amiga-m68k-trackdisk_MC_DIRS),)
+    kernel-amiga-m68k-trackdisk_MC_DIRS := $(shell echo $(kernel-amiga-m68k-trackdisk_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-amiga-m68k-trackdisk_MC_DIRS)
+endif
+
+endif
+
+kernel-amiga-m68k-trackdisk_MC_CPPFLAGS := $(kernel-amiga-m68k-trackdisk_CPPFLAGS)
+kernel-amiga-m68k-trackdisk_CFLAGS := $(kernel-amiga-m68k-trackdisk_CFLAGS)
+ifeq ($(kernel-amiga-m68k-trackdisk_DFLAGS),)
+  kernel-amiga-m68k-trackdisk_DFLAGS := $(kernel-amiga-m68k-trackdisk_CFLAGS)
+else
+  kernel-amiga-m68k-trackdisk_DFLAGS := $(kernel-amiga-m68k-trackdisk_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-amiga-m68k-trackdisk_STRIP ?= $(TARGET_STRIP)
+kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_MC_CPPFLAGS:=$(strip $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_CFLAGS:=$(strip $(kernel-amiga-m68k-trackdisk_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_DFLAGS:=$(kernel-amiga-m68k-trackdisk_DFLAGS)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-amiga-m68k-trackdisk_STRIP ?= $(HOST_STRIP)
+kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-trackdisk_CFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-trackdisk_DFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-amiga-m68k-trackdisk_STRIP ?= $(ECHO) >/dev/null
+kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-trackdisk_CFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-trackdisk_DFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) : CPPFLAGS := $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) : CFLAGS := $(kernel-amiga-m68k-trackdisk_CFLAGS)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) : $(kernel-amiga-m68k-trackdisk_MC_TGTWILDCARD).o : $(kernel-amiga-m68k-trackdisk_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(dir $<) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_IQUOTE) . $(kernel-amiga-m68k-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(dir $<) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_IQUOTE) . $(kernel-amiga-m68k-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(dir $<) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_IQUOTE) . $(kernel-amiga-m68k-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : $(kernel-amiga-m68k-trackdisk_MC_TGTWILDCARD).d : $(kernel-amiga-m68k-trackdisk_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-trackdisk_DFLAGS) $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-amiga-m68k-trackdisk_MC_SRCWILDCARD := %
+else
+kernel-amiga-m68k-trackdisk_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-amiga-m68k-trackdisk_OBJDIR),)
+kernel-amiga-m68k-trackdisk_MC_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-trackdisk_TARGETCCFILES))
+kernel-amiga-m68k-trackdisk_MC_DTARGETS := $(addsuffix .d,$(kernel-amiga-m68k-trackdisk_TARGETCCFILES))
+kernel-amiga-m68k-trackdisk_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-amiga-m68k-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(notdir $(kernel-amiga-m68k-trackdisk_TARGETCCFILES))))
+    kernel-amiga-m68k-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(notdir $(kernel-amiga-m68k-trackdisk_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-amiga-m68k-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(kernel-amiga-m68k-trackdisk_TARGETCCFILES)))
+    kernel-amiga-m68k-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(kernel-amiga-m68k-trackdisk_TARGETCCFILES)))
+else
+    kernel-amiga-m68k-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(patsubst /%,%,$(kernel-amiga-m68k-trackdisk_TARGETCCFILES))))
+    kernel-amiga-m68k-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(patsubst /%,%,$(kernel-amiga-m68k-trackdisk_TARGETCCFILES))))
+endif
+endif
+kernel-amiga-m68k-trackdisk_MC_TGTWILDCARD := $(kernel-amiga-m68k-trackdisk_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : | $(addsuffix .c,$(kernel-amiga-m68k-trackdisk_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-amiga-m68k-trackdisk_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-amiga-m68k-trackdisk_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-trackdisk_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-amiga-m68k-trackdisk_MC_DIRS := $(foreach dir, $(kernel-amiga-m68k-trackdisk_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-trackdisk_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-amiga-m68k-trackdisk_MC_DIRS),)
+    kernel-amiga-m68k-trackdisk_MC_DIRS := $(shell echo $(kernel-amiga-m68k-trackdisk_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-amiga-m68k-trackdisk_MC_DIRS)
+endif
+
+endif
+
+kernel-amiga-m68k-trackdisk_MC_CPPFLAGS := $(kernel-amiga-m68k-trackdisk_CPPFLAGS) -D__AROS__
+kernel-amiga-m68k-trackdisk_CFLAGS := $(kernel-amiga-m68k-trackdisk_CFLAGS)
+ifeq ($(kernel-amiga-m68k-trackdisk_DFLAGS),)
+  kernel-amiga-m68k-trackdisk_DFLAGS := $(kernel-amiga-m68k-trackdisk_CFLAGS)
+else
+  kernel-amiga-m68k-trackdisk_DFLAGS := $(kernel-amiga-m68k-trackdisk_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-amiga-m68k-trackdisk_STRIP ?= $(TARGET_STRIP)
+kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_MC_CPPFLAGS:=$(strip $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_CFLAGS:=$(strip $(kernel-amiga-m68k-trackdisk_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_DFLAGS:=$(kernel-amiga-m68k-trackdisk_DFLAGS)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-amiga-m68k-trackdisk_STRIP ?= $(HOST_STRIP)
+kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-trackdisk_CFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-trackdisk_DFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-amiga-m68k-trackdisk_STRIP ?= $(ECHO) >/dev/null
+kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-trackdisk_CFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-trackdisk_DFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) : CPPFLAGS := $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) : CFLAGS := $(kernel-amiga-m68k-trackdisk_CFLAGS)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) : $(kernel-amiga-m68k-trackdisk_MC_TGTWILDCARD).o : $(kernel-amiga-m68k-trackdisk_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(dir $<) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_IQUOTE) . $(kernel-amiga-m68k-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(dir $<) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_IQUOTE) . $(kernel-amiga-m68k-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(dir $<) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_IQUOTE) . $(kernel-amiga-m68k-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : $(kernel-amiga-m68k-trackdisk_MC_TGTWILDCARD).d : $(kernel-amiga-m68k-trackdisk_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-trackdisk_DFLAGS) $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-amiga-m68k-trackdisk_MC_SRCWILDCARD := %
+else
+kernel-amiga-m68k-trackdisk_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib,)
+kernel-amiga-m68k-trackdisk_MC_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-trackdisk_NLIBARCHFILES))
+kernel-amiga-m68k-trackdisk_MC_DTARGETS := $(addsuffix .d,$(kernel-amiga-m68k-trackdisk_NLIBARCHFILES))
+kernel-amiga-m68k-trackdisk_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-amiga-m68k-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-trackdisk_NLIBARCHFILES))))
+    kernel-amiga-m68k-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-trackdisk_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-amiga-m68k-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$(kernel-amiga-m68k-trackdisk_NLIBARCHFILES)))
+    kernel-amiga-m68k-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$(kernel-amiga-m68k-trackdisk_NLIBARCHFILES)))
+else
+    kernel-amiga-m68k-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-amiga-m68k-trackdisk_NLIBARCHFILES))))
+    kernel-amiga-m68k-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-amiga-m68k-trackdisk_NLIBARCHFILES))))
+endif
+endif
+kernel-amiga-m68k-trackdisk_MC_TGTWILDCARD := $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : | $(addsuffix .c,$(kernel-amiga-m68k-trackdisk_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-amiga-m68k-trackdisk_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-amiga-m68k-trackdisk_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-trackdisk_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-amiga-m68k-trackdisk_MC_DIRS := $(foreach dir, $(kernel-amiga-m68k-trackdisk_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-trackdisk_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-amiga-m68k-trackdisk_MC_DIRS),)
+    kernel-amiga-m68k-trackdisk_MC_DIRS := $(shell echo $(kernel-amiga-m68k-trackdisk_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-amiga-m68k-trackdisk_MC_DIRS)
+endif
+
+endif
+
+kernel-amiga-m68k-trackdisk_MC_CPPFLAGS := $(kernel-amiga-m68k-trackdisk_LINKLIBCPPFLAGS) -D__AROS__
+kernel-amiga-m68k-trackdisk_CFLAGS := $(kernel-amiga-m68k-trackdisk_LINKLIBCFLAGS)
+ifeq ($(kernel-amiga-m68k-trackdisk_LINKLIBDFLAGS),)
+  kernel-amiga-m68k-trackdisk_DFLAGS := $(kernel-amiga-m68k-trackdisk_LINKLIBCFLAGS)
+else
+  kernel-amiga-m68k-trackdisk_DFLAGS := $(kernel-amiga-m68k-trackdisk_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-amiga-m68k-trackdisk_STRIP ?= $(TARGET_STRIP)
+kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_MC_CPPFLAGS:=$(strip $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_CFLAGS:=$(strip $(kernel-amiga-m68k-trackdisk_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_DFLAGS:=$(kernel-amiga-m68k-trackdisk_DFLAGS)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-amiga-m68k-trackdisk_STRIP ?= $(HOST_STRIP)
+kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-trackdisk_CFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-trackdisk_DFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-amiga-m68k-trackdisk_STRIP ?= $(ECHO) >/dev/null
+kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-trackdisk_CFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-trackdisk_DFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) : CPPFLAGS := $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) : CFLAGS := $(kernel-amiga-m68k-trackdisk_CFLAGS)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) : $(kernel-amiga-m68k-trackdisk_MC_TGTWILDCARD).o : $(kernel-amiga-m68k-trackdisk_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(dir $<) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_IQUOTE) . $(kernel-amiga-m68k-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(dir $<) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_IQUOTE) . $(kernel-amiga-m68k-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(dir $<) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_IQUOTE) . $(kernel-amiga-m68k-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : $(kernel-amiga-m68k-trackdisk_MC_TGTWILDCARD).d : $(kernel-amiga-m68k-trackdisk_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-trackdisk_DFLAGS) $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib,)
+kernel-amiga-m68k-trackdisk_MC_SRCWILDCARD := %
+else
+kernel-amiga-m68k-trackdisk_MC_SRCWILDCARD := $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib,)
+kernel-amiga-m68k-trackdisk_MC_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-trackdisk_LINKLIBCCGENFILES))
+kernel-amiga-m68k-trackdisk_MC_DTARGETS := $(addsuffix .d,$(kernel-amiga-m68k-trackdisk_LINKLIBCCGENFILES))
+kernel-amiga-m68k-trackdisk_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-amiga-m68k-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-trackdisk_LINKLIBCCGENFILES))))
+    kernel-amiga-m68k-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-trackdisk_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib,)
+    kernel-amiga-m68k-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$(kernel-amiga-m68k-trackdisk_LINKLIBCCGENFILES)))
+    kernel-amiga-m68k-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$(kernel-amiga-m68k-trackdisk_LINKLIBCCGENFILES)))
+else
+    kernel-amiga-m68k-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$(patsubst $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/%,%,$(kernel-amiga-m68k-trackdisk_LINKLIBCCGENFILES))))
+    kernel-amiga-m68k-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$(patsubst $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/%,%,$(kernel-amiga-m68k-trackdisk_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-amiga-m68k-trackdisk_MC_TGTWILDCARD := $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : | $(addsuffix .c,$(kernel-amiga-m68k-trackdisk_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-amiga-m68k-trackdisk_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-amiga-m68k-trackdisk_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-trackdisk_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-amiga-m68k-trackdisk_MC_DIRS := $(foreach dir, $(kernel-amiga-m68k-trackdisk_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-trackdisk_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-amiga-m68k-trackdisk_MC_DIRS),)
+    kernel-amiga-m68k-trackdisk_MC_DIRS := $(shell echo $(kernel-amiga-m68k-trackdisk_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-amiga-m68k-trackdisk_MC_DIRS)
+endif
+
+endif
+
+kernel-amiga-m68k-trackdisk_MC_CPPFLAGS := $(kernel-amiga-m68k-trackdisk_LINKLIBCPPFLAGS) -D__AROS__
+kernel-amiga-m68k-trackdisk_CFLAGS := $(kernel-amiga-m68k-trackdisk_LINKLIBCFLAGS)
+ifeq ($(kernel-amiga-m68k-trackdisk_LINKLIBDFLAGS),)
+  kernel-amiga-m68k-trackdisk_DFLAGS := $(kernel-amiga-m68k-trackdisk_LINKLIBCFLAGS)
+else
+  kernel-amiga-m68k-trackdisk_DFLAGS := $(kernel-amiga-m68k-trackdisk_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-amiga-m68k-trackdisk_STRIP ?= $(TARGET_STRIP)
+kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_MC_CPPFLAGS:=$(strip $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_CFLAGS:=$(strip $(kernel-amiga-m68k-trackdisk_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_DFLAGS:=$(kernel-amiga-m68k-trackdisk_DFLAGS)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-amiga-m68k-trackdisk_STRIP ?= $(HOST_STRIP)
+kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-trackdisk_CFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-trackdisk_DFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-amiga-m68k-trackdisk_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-amiga-m68k-trackdisk_STRIP ?= $(ECHO) >/dev/null
+kernel-amiga-m68k-trackdisk_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS) $(kernel-amiga-m68k-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-trackdisk_CFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-trackdisk_DFLAGS))
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) $(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : kernel-amiga-m68k-trackdisk_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) : CPPFLAGS := $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) : CFLAGS := $(kernel-amiga-m68k-trackdisk_CFLAGS)
+$(kernel-amiga-m68k-trackdisk_MC_TARGETS) : $(kernel-amiga-m68k-trackdisk_MC_TGTWILDCARD).o : $(kernel-amiga-m68k-trackdisk_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(dir $<) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_IQUOTE) . $(kernel-amiga-m68k-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(dir $<) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_IQUOTE) . $(kernel-amiga-m68k-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(dir $<) $(kernel-amiga-m68k-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-trackdisk_IQUOTE) . $(kernel-amiga-m68k-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-amiga-m68k-trackdisk_MC_DTARGETS) : $(kernel-amiga-m68k-trackdisk_MC_TGTWILDCARD).d : $(kernel-amiga-m68k-trackdisk_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-trackdisk_DFLAGS) $(kernel-amiga-m68k-trackdisk_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-amiga-m68k-trackdisk_LINKLIBAFILES),)
+
+ifeq ($(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib,)
+kernel-amiga-m68k-trackdisk-MA_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-trackdisk_LINKLIBAFILES) $(kernel-amiga-m68k-trackdisk_RELLINKLIBAFILES))
+kernel-amiga-m68k-trackdisk-MA_WILDCARD := %
+else
+kernel-amiga-m68k-trackdisk-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-trackdisk_LINKLIBAFILES) $(kernel-amiga-m68k-trackdisk_RELLINKLIBAFILES))))
+kernel-amiga-m68k-trackdisk-MA_WILDCARD := $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-amiga-m68k-trackdisk-MA_TARGETS) : | $(addsuffix .S,$(kernel-amiga-m68k-trackdisk_LINKLIBAFILES) $(kernel-amiga-m68k-trackdisk_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-amiga-m68k-trackdisk-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-amiga-m68k-trackdisk-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-trackdisk_LINKLIBAFILES) $(kernel-amiga-m68k-trackdisk_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-amiga-m68k-trackdisk-MA_DIRS := $(foreach dir, $(kernel-amiga-m68k-trackdisk-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-trackdisk-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-amiga-m68k-trackdisk-MA_DIRS),)
+    kernel-amiga-m68k-trackdisk-MA_DIRS := $(shell echo $(kernel-amiga-m68k-trackdisk-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-amiga-m68k-trackdisk-MA_DIRS)
+endif
+
+endif
+
+kernel-amiga-m68k-trackdisk-MA_ASSEMBLER ?= $(kernel-amiga-m68k-trackdisk_ASSEMBLER)
+
+$(kernel-amiga-m68k-trackdisk-MA_TARGETS) : kernel-amiga-m68k-trackdisk-MA_CMD:= $(kernel-amiga-m68k-trackdisk-MA_ASSEMBLER)
+
+$(kernel-amiga-m68k-trackdisk-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-amiga-m68k-trackdisk-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-amiga-m68k-trackdisk-MA_TARGETS) : $(kernel-amiga-m68k-trackdisk-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-amiga-m68k-trackdisk-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-amiga-m68k-trackdisk-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-amiga-m68k-trackdisk-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-amiga-m68k-trackdisk_SUFFIX           := device
+else
+kernel-amiga-m68k-trackdisk_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-amiga-m68k-trackdisk_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-amiga-m68k-trackdisk_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-amiga-m68k-trackdisk_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-amiga-m68k-trackdisk_SUFFIX),handler)
+kernel-amiga-m68k-trackdisk_MODULE           := $(AROSDIR)/$(kernel-amiga-m68k-trackdisk_MODDIR)/$(kernel-amiga-m68k-trackdisk_DEFNAME)-$(kernel-amiga-m68k-trackdisk_SUFFIX)
+else
+kernel-amiga-m68k-trackdisk_MODULE           := $(AROSDIR)/$(kernel-amiga-m68k-trackdisk_MODDIR)/$(kernel-amiga-m68k-trackdisk_DEFNAME).$(kernel-amiga-m68k-trackdisk_SUFFIX)
+endif
+kernel-amiga-m68k-trackdisk_KOBJ             := $(KOBJSDIR)/$(kernel-amiga-m68k-trackdisk_DEFNAME)_$(kernel-amiga-m68k-trackdisk_SUFFIX).o
+else
+kernel-amiga-m68k-trackdisk_MODULE           :=
+kernel-amiga-m68k-trackdisk_KOBJ             :=
+endif
+
+kernel-amiga-m68k-trackdisk-quick      : kernel-amiga-m68k-trackdisk
+kernel-amiga-m68k-trackdisk            : $(kernel-amiga-m68k-trackdisk_MODULE) $(kernel-amiga-m68k-trackdisk_LINKLIB) $(kernel-amiga-m68k-trackdisk_RELLINKLIB)
+ifeq (M,M)
+kernel-amiga-m68k-trackdisk-kobj       : $(kernel-amiga-m68k-trackdisk_KOBJ) $(kernel-amiga-m68k-trackdisk_LINKLIB) $(kernel-amiga-m68k-trackdisk_RELLINKLIB)
+kernel-amiga-m68k-trackdisk-kobj-quick : $(kernel-amiga-m68k-trackdisk_KOBJ) $(kernel-amiga-m68k-trackdisk_LINKLIB) $(kernel-amiga-m68k-trackdisk_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-amiga-m68k-trackdisk-linklib    : $(kernel-amiga-m68k-trackdisk_LINKLIB) $(kernel-amiga-m68k-trackdisk_RELLINKLIB)
+endif
+
+kernel-amiga-m68k-trackdisk_OBJS := $(addsuffix .o,$(kernel-amiga-m68k-trackdisk_STARTFILES)) $(kernel-amiga-m68k-trackdisk_ARCHOBJS) \
+           $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(notdir $(kernel-amiga-m68k-trackdisk_C_NARCHFILES:=.o) $(kernel-amiga-m68k-trackdisk_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (device,handler)
+kernel-amiga-m68k-trackdisk_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (trackdisk,con)
+    kernel-amiga-m68k-trackdisk_ERR          := $(notdir $(kernel-amiga-m68k-trackdisk_MODULE)).err
+else
+    kernel-amiga-m68k-trackdisk_ERR          := trackdisk.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-amiga-m68k-trackdisk_DEFNAME)_LDFLAGS) $(kernel-amiga-m68k-trackdisk_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-amiga-m68k-trackdisk_LIBS) $($(kernel-amiga-m68k-trackdisk_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-amiga-m68k-trackdisk_MODULE) : LIB_NAMES := $(kernel-amiga-m68k-trackdisk_LIBS) $($(kernel-amiga-m68k-trackdisk_DEFNAME)_LIBS)
+$(kernel-amiga-m68k-trackdisk_MODULE) : OBJS := $(kernel-amiga-m68k-trackdisk_STARTOBJS) $(kernel-amiga-m68k-trackdisk_OBJS) $(USER_OBJS)
+$(kernel-amiga-m68k-trackdisk_MODULE) : ENDTAG := $(kernel-amiga-m68k-trackdisk_ENDOBJS)
+$(kernel-amiga-m68k-trackdisk_MODULE) : ERR := $(kernel-amiga-m68k-trackdisk_ERR)
+$(kernel-amiga-m68k-trackdisk_MODULE) : OBJDIR := $(kernel-amiga-m68k-trackdisk_OBJDIR)
+$(kernel-amiga-m68k-trackdisk_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-amiga-m68k-trackdisk_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-amiga-m68k-trackdisk_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-amiga-m68k-trackdisk_MODULE) : $(kernel-amiga-m68k-trackdisk_STARTOBJS) $(kernel-amiga-m68k-trackdisk_OBJS) $(USER_OBJS) $(kernel-amiga-m68k-trackdisk_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-amiga-m68k-trackdisk_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-amiga-m68k-trackdisk_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-amiga-m68k-trackdisk_LC_LINKLIBNAME   := $(shell echo $(kernel-amiga-m68k-trackdisk_LINKLIBNAME) | tr A-Z a-z)
+kernel-amiga-m68k-trackdisk_LC_MODNAME       := $(shell echo trackdisk | tr A-Z a-z)
+ifneq ($(kernel-amiga-m68k-trackdisk_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_LINKLIBNAME)$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_AR:=$(AR)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_LINKLIBNAME)$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_LINKLIBNAME)$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_AR:=$(HOST_AR)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_LINKLIBNAME)$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_LINKLIBNAME)$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_AR:=$(KERNEL_AR)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_LINKLIBNAME)$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_LINKLIBNAME)$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : $(kernel-amiga-m68k-trackdisk_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-amiga-m68k-trackdisk_AR) $@ $^
+	$(Q)$(kernel-amiga-m68k-trackdisk_RANLIB) $@
+ifneq ($(kernel-amiga-m68k-trackdisk_LC_MODNAME),$(kernel-amiga-m68k-trackdisk_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/libtrackdisk$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_AR:=$(AR)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/libtrackdisk$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/libtrackdisk$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_AR:=$(HOST_AR)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/libtrackdisk$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/libtrackdisk$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_AR:=$(KERNEL_AR)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/libtrackdisk$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/libtrackdisk$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : $(kernel-amiga-m68k-trackdisk_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-amiga-m68k-trackdisk_AR) $@ $^
+	$(Q)$(kernel-amiga-m68k-trackdisk_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-amiga-m68k-trackdisk_LINKLIB),)
+$(kernel-amiga-m68k-trackdisk_LINKLIB) : | $(kernel-amiga-m68k-trackdisk_LIBDIR)
+else
+$(kernel-amiga-m68k-trackdisk_LINKLIB) :: $(kernel-amiga-m68k-trackdisk_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-trackdisk_LIBDIR)
+
+endif
+
+ifneq ($(kernel-amiga-m68k-trackdisk_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_LINKLIBNAME)_rel$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_AR:=$(AR)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_LINKLIBNAME)_rel$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_LINKLIBNAME)_rel$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_AR:=$(HOST_AR)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_LINKLIBNAME)_rel$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_LINKLIBNAME)_rel$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_AR:=$(KERNEL_AR)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_LINKLIBNAME)_rel$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_LINKLIBNAME)_rel$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : $(kernel-amiga-m68k-trackdisk_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-amiga-m68k-trackdisk_AR) $@ $^
+	$(Q)$(kernel-amiga-m68k-trackdisk_RANLIB) $@
+ifneq ($(kernel-amiga-m68k-trackdisk_LC_MODNAME),$(kernel-amiga-m68k-trackdisk_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_DEFNAME)_rel$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_AR:=$(AR)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_DEFNAME)_rel$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_DEFNAME)_rel$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_AR:=$(HOST_AR)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_DEFNAME)_rel$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_DEFNAME)_rel$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_AR:=$(KERNEL_AR)
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_DEFNAME)_rel$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : kernel-amiga-m68k-trackdisk_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-amiga-m68k-trackdisk_LIBDIR)/lib$(kernel-amiga-m68k-trackdisk_DEFNAME)_rel$(kernel-amiga-m68k-trackdisk_LIBSUFFIX).a : $(kernel-amiga-m68k-trackdisk_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-amiga-m68k-trackdisk_AR) $@ $^
+	$(Q)$(kernel-amiga-m68k-trackdisk_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-amiga-m68k-trackdisk_RELLINKLIB),)
+$(kernel-amiga-m68k-trackdisk_RELLINKLIB) : | $(kernel-amiga-m68k-trackdisk_LIBDIR)
+else
+$(kernel-amiga-m68k-trackdisk_RELLINKLIB) :: $(kernel-amiga-m68k-trackdisk_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-trackdisk_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-amiga-m68k-trackdisk_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-amiga-m68k-trackdisk_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-amiga-m68k-trackdisk_SYMBOLS := $(kernel-amiga-m68k-trackdisk_KBASE)
+
+kernel-amiga-m68k-trackdisk_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-amiga-m68k-trackdisk_KOBJ_LIBS        := $(filter-out $(kernel-amiga-m68k-trackdisk_KLIB),$(kernel-amiga-m68k-trackdisk_LIBS)) $(kernel-amiga-m68k-trackdisk_KAUTOLIB)
+$(kernel-amiga-m68k-trackdisk_KOBJ) : LINKLIBS:=$(kernel-amiga-m68k-trackdisk_KOBJ_LIBS) $($(kernel-amiga-m68k-trackdisk_DEFNAME)_LIBS)
+$(kernel-amiga-m68k-trackdisk_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-amiga-m68k-trackdisk_SYMBOLS))
+$(kernel-amiga-m68k-trackdisk_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-amiga-m68k-trackdisk_KOBJ) : $(kernel-amiga-m68k-trackdisk_OBJS) $(USER_OBJS) $(kernel-amiga-m68k-trackdisk_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-amiga-m68k-trackdisk_DEPS             := $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/,$(notdir $(kernel-amiga-m68k-trackdisk_CCFILES:=.d) $(kernel-amiga-m68k-trackdisk_TARGETCCFILES:=.d) $(kernel-amiga-m68k-trackdisk_CXXFILES:=.d))) $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-trackdisk_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-amiga-m68k-trackdisk_DEPS),)
+  ifneq (kernel-amiga-m68k-trackdisk kernel-amiga-m68k-trackdisk-quick kernel-amiga-m68k-trackdisk-kobj kernel-amiga-m68k-trackdisk-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-amiga-m68k-trackdisk kernel-amiga-m68k-trackdisk-quick kernel-amiga-m68k-trackdisk-kobj kernel-amiga-m68k-trackdisk-kobj-quick),)
+      -include $(kernel-amiga-m68k-trackdisk_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-amiga-m68k-trackdisk_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-amiga-m68k-trackdisk_OBJS) $(kernel-amiga-m68k-trackdisk_DEPS) : | $(kernel-amiga-m68k-trackdisk_OBJDIR)/linklib
+
+ifneq ($(kernel-amiga-m68k-trackdisk_OBJS) $(kernel-amiga-m68k-trackdisk_DEPS) $(kernel-amiga-m68k-trackdisk_MODULE) $(kernel-amiga-m68k-trackdisk_KOBJ),)
+$(kernel-amiga-m68k-trackdisk_OBJS) $(kernel-amiga-m68k-trackdisk_DEPS) $(kernel-amiga-m68k-trackdisk_MODULE) $(kernel-amiga-m68k-trackdisk_KOBJ) : | $(kernel-amiga-m68k-trackdisk_OBJDIR) $(AROSDIR)/$(kernel-amiga-m68k-trackdisk_MODDIR) $(KOBJSDIR)
+else
+$(kernel-amiga-m68k-trackdisk_OBJS) $(kernel-amiga-m68k-trackdisk_DEPS) $(kernel-amiga-m68k-trackdisk_MODULE) $(kernel-amiga-m68k-trackdisk_KOBJ) :: $(kernel-amiga-m68k-trackdisk_OBJDIR) $(AROSDIR)/$(kernel-amiga-m68k-trackdisk_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-trackdisk_OBJDIR) $(AROSDIR)/$(kernel-amiga-m68k-trackdisk_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-amiga-m68k-trackdisk kernel-amiga-m68k-trackdisk-includes kernel-amiga-m68k-trackdisk-quick kernel-amiga-m68k-trackdisk-kobj kernel-amiga-m68k-trackdisk-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-amiga-m68k-trackdisk_DFILE_DEPS := $(kernel-amiga-m68k-trackdisk_LIBDEFSINC) $(kernel-amiga-m68k-trackdisk_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-amiga-m68k-trackdisk_INCDIR)/,$($(kernel-amiga-m68k-trackdisk_DEFNAME)_INCLUDES))
+$(kernel-amiga-m68k-trackdisk_DEPS) : $(kernel-amiga-m68k-trackdisk_DFILE_DEPS)
+endif
+
+kernel-amiga-m68k-trackdisk_TOCLEAN := $(kernel-amiga-m68k-trackdisk_OBJS) $(kernel-amiga-m68k-trackdisk_DEPS) \
+    $(kernel-amiga-m68k-trackdisk_MODULE) $(kernel-amiga-m68k-trackdisk_LINKLIB) $(kernel-amiga-m68k-trackdisk_KOBJ) \
+    $(kernel-amiga-m68k-trackdisk_OBJDIR)/Makefile.trackdiskdevice \
+    $(addprefix $(kernel-amiga-m68k-trackdisk_OBJDIR)/include/,$($(kernel-amiga-m68k-trackdisk_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-amiga-m68k-trackdisk_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-amiga-m68k-trackdisk_INCDIR)/,$($(kernel-amiga-m68k-trackdisk_DEFNAME)_INCLUDES)) \
+    $(kernel-amiga-m68k-trackdisk_OBJDIR)/trackdisk_geninc $(kernel-amiga-m68k-trackdisk_OBJDIR)/trackdisk_incs \
+    $(addsuffix .c,$(kernel-amiga-m68k-trackdisk_LINKLIBFILES)) $(kernel-amiga-m68k-trackdisk_LINKLIBOBJS) $(kernel-amiga-m68k-trackdisk_LIBDEFSINC) \
+    $(kernel-amiga-m68k-trackdisk_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-amiga-m68k-trackdisk_STARTFILES) $(kernel-amiga-m68k-trackdisk_ENDFILES)) \
+    $(kernel-amiga-m68k-trackdisk_ENDOBJS)
+kernel-amiga-m68k-trackdisk-clean : FILES              := $(kernel-amiga-m68k-trackdisk_TOCLEAN)
+kernel-amiga-m68k-trackdisk-clean ::
+	$(Q)$(ECHO) "Cleaning up for module trackdisk"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-amiga-m68k-trackdisk_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

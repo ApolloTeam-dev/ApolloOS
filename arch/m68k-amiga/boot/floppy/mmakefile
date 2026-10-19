@@ -1,0 +1,132 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+.PHONY: $(DISTDIR)/system-amiga-m68k.adf $(GENDIR)/boot/system-amiga-m68k.adf
+
+#MM bootdisk-amiga-m68k-gen : \
+#MM           kernel-link-amiga-m68k \
+#MM           workbench-c \
+#MM           workbench-devs \
+#MM           workbench-libs-version \
+#MM           workbench-s
+
+#MM- bootdisk-amiga-m68k-quick : bootdisk-amiga-m68k
+#MM bootdisk-amiga-m68k : bootdisk-amiga-m68k-gen
+
+#QE2H ?= -v
+
+ELF2HUNK_FILES := \
+    $(AROS_DIR_ARCH)/AROSBootstrap \
+    C/Assign \
+    C/Avail \
+    C/Copy \
+    C/Date \
+    C/Delete \
+    C/Dir \
+    C/DiskChange \
+    C/Eval \
+    C/Filenote \
+    C/IconX \
+    C/Install \
+    C/Join \
+    C/List \
+    C/LoadWB \
+    C/MakeDir \
+    C/MakeLink \
+    C/Mount \
+    C/Protect \
+    C/Relabel \
+    C/Rename \
+    C/Shutdown \
+    C/Touch \
+    C/Type \
+    C/Version \
+    C/Wait \
+    C/Which \
+    Devs/DOSDrivers/PIPE \
+    Libs/version.library \
+    S/Shell-Startup
+
+OTHER_FILES := \
+    $(AROS_DIR_ARCH)/aros.elf.gz \
+    Disk.info \
+    README.txt \
+    README.txt.info \
+    S/Startup-Sequence
+
+BOOT_SRC_DIR  := $(AROSDIR)
+BOOT_DEST_DIR := $(AROSDIR)/Emergency-Boot
+
+ELF2HUNK_DEST_FILES := $(addprefix $(BOOT_DEST_DIR)/,$(ELF2HUNK_FILES))
+OTHER_DEST_FILES := $(addprefix $(BOOT_DEST_DIR)/,$(OTHER_FILES))
+BOOT_DEST_FILES := $(ELF2HUNK_DEST_FILES) $(OTHER_DEST_FILES)
+
+# Create directories
+BOOT_DEST_DIRS := $(dir $(BOOT_DEST_FILES))
+GLOB_MKDIRS += $(BOOT_DEST_DIRS) $(DISTDIR) $(GENDIR)/boot
+
+#MM
+bootdisk-amiga-m68k-clean:
+	$(RM) $(BOOT_DEST_DIR) $(DISTDIR)/bootdisk-amiga-m68k.adf $(GENDIR)/boot/bootdisk-amiga-m68k.adf
+
+#MM
+bootdisk-amiga-m68k: $(DISTDIR)/bootdisk-amiga-m68k.adf
+
+#MM
+bootdisk-amiga-m68k-gen: $(GENDIR)/boot/bootdisk-amiga-m68k.adf
+
+$(GENDIR)/boot/bootdisk-amiga-m68k.adf: \
+	    $(BOOT_DEST_FILES) $(BOOT_EXTRA_FILES) \
+	    $(BOOT_DEST_DIR).info \
+	    $(GENDIR)/$(CURDIR)/install-$(AROS_HOST_ARCH)-$(AROS_HOST_CPU) \
+	    | $(GENDIR)/boot
+	$(RM) $@
+##	$(COPYTOAFS) $@ --type OFS --name "AROS Kickstart" --size 1760 $(BOOT_DEST_DIR)
+	$(COPYTOAFS) $@ --type OFS --name "AROS Kickstart" --size 3520 $(BOOT_DEST_DIR)
+	$(GENDIR)/$(CURDIR)/install-$(AROS_HOST_ARCH)-$(AROS_HOST_CPU) $@
+
+$(DISTDIR)/bootdisk-amiga-m68k.adf: $(GENDIR)/boot/bootdisk-amiga-m68k.adf | $(DISTDIR)
+	@$(CP) $< $@
+
+$(BOOT_DEST_DIR)/S/Startup-Sequence: $(SRCDIR)/$(CURDIR)/Startup-Sequence.boot | $(BOOT_DEST_DIR)/S
+	@$(CP) $< $@
+	@$(CHMOD) +x $@
+
+$(ELF2HUNK_DEST_FILES) : $(BOOT_DEST_DIR)/% : $(BOOT_SRC_DIR)/% | $(BOOT_DEST_DIRS)
+	@$(ELF2HUNK) $(QE2H) $< $@
+
+$(BOOT_DEST_DIR)/Disk.info: $(SRCDIR)/$(CURDIR)/AROSBoot.info.src $(SRCDIR)/$(CURDIR)/AROSBoot.png | $(BOOT_DEST_DIR)
+	@$(ILBMTOICON) --no-iff $^ $@
+
+$(BOOT_DEST_DIR).info: $(SRCDIR)/$(CURDIR)/Emergency-Boot.info.src $(SRCDIR)/$(CURDIR)/AROSBoot.png
+	@$(ILBMTOICON) $^ $@
+
+##$(BOOT_DEST_DIR)/$(AROS_DIR_ARCH)/aros.hunk.gz : $(BOOT_SRC_DIR)/$(AROS_DIR_ARCH)/aros.elf | $(BOOT_DEST_DIR)/$(AROS_DIR_ARCH)
+##	@$(ELF2HUNK) $(QE2H) $< - | gzip -c -9 - >$@
+
+$(BOOT_DEST_DIR)/$(AROS_DIR_ARCH)/aros.elf.gz : $(BOOT_SRC_DIR)/$(AROS_DIR_ARCH)/aros.elf | $(BOOT_DEST_DIR)/$(AROS_DIR_ARCH)
+	@cat $< | gzip -c -9 - >$@
+
+$(GENDIR)/$(CURDIR)/install-$(AROS_HOST_ARCH)-$(AROS_HOST_CPU): $(SRCDIR)/$(CURDIR)/install.c
+	echo $(GENDIR)/$(CURDIR)
+	@$(MKDIR) -p $(GENDIR)/$(CURDIR)
+	@$(HOST_CC) $(HOST_CFLAGS) $(SRCDIR)/$(CURDIR)/install.c -o $(GENDIR)/$(CURDIR)/install-$(AROS_HOST_ARCH)-$(AROS_HOST_CPU)
+
+$(BOOT_DEST_DIR)/README.txt.info: README.txt.info.src \
+		            README.txt.png
+	@$(MKDIR) $(BOOT_DEST_DIR)
+	@$(ILBMTOICON) $^ $@
+
+$(BOOT_DEST_DIR)/README.txt: README.txt
+	@$(MKDIR) $(BOOT_DEST_DIR)
+	@$(CP) $^ $@
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

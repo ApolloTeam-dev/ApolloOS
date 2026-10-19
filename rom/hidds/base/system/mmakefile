@@ -1,0 +1,1737 @@
+#$Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- kernel-hidd-base-kobj : kernel-hidd-system-kobj
+
+FILES       := \
+                system_init \
+                system_class
+
+NOWARN_FLAGS := $(NOWARN_PARENTHESES)
+USER_CFLAGS      := $(NOWARN_FLAGS)
+USER_CPPFLAGS := \
+               -DUSE_EXEC_DEBUG \
+               -DAROS_USE_OOP \
+               -D__OOP_NOLIBBASE__ \
+               -D__OOP_NOMETHODBASES__ \
+               -D__OOP_NOATTRBASES__ \
+               -D__UTILITY_NOLIBBASE__
+#USER_CPPFLAGS += -DDEBUG
+USER_LDFLAGS := -static
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-hidd-system
+#MM kernel-hidd-system-quick
+#MM kernel-hidd-system-makefile
+#MM kernel-hidd-system-clean
+
+# ABI targets:
+#MM- includes-all : kernel-hidd-system-includes
+#MM- linklibs-system: kernel-hidd-system-linklib
+#MM- linklibs-system_rel : kernel-hidd-system-linklib
+#MM- includes-system: kernel-hidd-system-includes
+#MM- includes-system_rel : kernel-hidd-system-includes
+#MM- kernel-hidd-system : kernel-hidd-system-includes core-linklibs linklibs-
+#MM kernel-hidd-system-linklib : kernel-hidd-system-includes includes-
+#MM- kernel-hidd-system-quick : kernel-hidd-system-includes-quick
+#MM kernel-hidd-system-includes : kernel-hidd-system-makefile kernel-hidd-system-includes-dirs \
+#MM     includes-generate-deps kernel-hidd-system-fd
+#MM kernel-hidd-system-includes-quick
+#MM kernel-hidd-system-includes-dirs
+#MM kernel-hidd-system-fd
+
+# Library targets
+#MM kernel-hidd-system-kobj : core-linklibs linklibs-
+#MM kernel-hidd-system-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-hidd-system-kobj : kernel-hidd-system-includes core-linklibs linklibs-
+#MM kernel-hidd-system-kobj-quick : kernel-hidd-system-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-hidd-system_ALLTARGETS       := kernel-hidd-system kernel-hidd-system-quick kernel-hidd-system-clean
+
+ifeq (M,M)
+kernel-hidd-system_ALLTARGETS       += kernel-hidd-system-kobj kernel-hidd-system-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-hidd-system_ALLTARGETS += kernel-hidd-system-includes \
+                 kernel-hidd-system-includes-quick kernel-hidd-system-includes-dirs  \
+                 kernel-hidd-system-linklib kernel-hidd-system-fd
+endif
+
+.PHONY : $(kernel-hidd-system_ALLTARGETS) kernel-hidd-system-makefile
+
+ifeq (system,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (hidd,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-hidd-system_DEFNAME      := system_
+else
+    kernel-hidd-system_DEFNAME      := system
+endif
+kernel-hidd-system_DEFLINKLIBNAME   := $(kernel-hidd-system_DEFNAME)
+ifneq (,)
+    kernel-hidd-system_LINKLIBNAME  := 
+else
+    kernel-hidd-system_LINKLIBNAME  = $(kernel-hidd-system_DEFLINKLIBNAME)
+endif
+kernel-hidd-system_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-hidd-system_DEFCPPFLAGS  += -I
+endif
+kernel-hidd-system_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-hidd-system_DFLAGS       := 
+else
+    kernel-hidd-system_DFLAGS       = $(kernel-hidd-system_DEFDFLAGS)
+endif
+kernel-hidd-system_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-hidd-system_DXXFLAGS     := 
+else
+    kernel-hidd-system_DXXFLAGS     = $(kernel-hidd-system_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-system_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-system_DEFDFLAGS))
+kernel-hidd-system_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-system_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-system_FUNCINSTR := yes
+kernel-hidd-system_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-system_DEFDFLAGS))
+kernel-hidd-system_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-system_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-hidd-system_OBJDIR                     := 
+else
+kernel-hidd-system_OBJDIR                     := $(OBJDIR)/$(kernel-hidd-system_DEFNAME)
+endif
+ifneq (,)
+kernel-hidd-system_OBJDIR           := $(kernel-hidd-system_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-hidd-system-makefile         := $(kernel-hidd-system_OBJDIR)/Makefile.$(kernel-hidd-system_DEFNAME)hidd
+kernel-hidd-system-genmakefile : $(kernel-hidd-system-makefile)
+
+
+kernel-hidd-system-genmakefile_OPTS := 
+ifneq (,)
+    kernel-hidd-system-genmakefile_OPTS += -f 
+    kernel-hidd-system-genmakefile_MODNAME := system_
+else
+    kernel-hidd-system-genmakefile_MODNAME := system
+endif
+kernel-hidd-system-genmakefile_TARGET := Makefile.$(kernel-hidd-system-genmakefile_MODNAME)hidd
+kernel-hidd-system-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-system-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-system-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-system-genmakefile_OPTS += -c 
+        kernel-hidd-system-genmakefile_DEPS += 
+    endif 
+else
+    kernel-hidd-system-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/system.conf
+    kernel-hidd-system-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/system.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-system-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-system-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-system-genmakefile_OPTS += -o 
+        kernel-hidd-system-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-system-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-system_OBJDIR),)
+    kernel-hidd-system-genmakefile_OPTS += -d $(kernel-hidd-system_OBJDIR)
+    kernel-hidd-system-genmakefile_TARGET := $(kernel-hidd-system_OBJDIR)/$(kernel-hidd-system-genmakefile_TARGET)
+endif
+
+$(kernel-hidd-system-genmakefile_TARGET) : OPTS := $(kernel-hidd-system-genmakefile_OPTS)
+$(kernel-hidd-system-genmakefile_TARGET) : MODNAME := system
+$(kernel-hidd-system-genmakefile_TARGET) : MODTYPE := hidd
+$(kernel-hidd-system-genmakefile_TARGET) : $(kernel-hidd-system-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-hidd-system-makefile),)
+$(kernel-hidd-system-makefile) : | $(kernel-hidd-system_OBJDIR)
+else
+$(kernel-hidd-system-makefile) :: $(kernel-hidd-system_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-system_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-hidd-system_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-hidd-system-makefile)
+
+kernel-hidd-system_DEFMODDIR        := $($(kernel-hidd-system_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-hidd-system_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-hidd-system_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-hidd-system_MODDIR       := 
+else
+    kernel-hidd-system_MODDIR       := $(kernel-hidd-system_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-hidd-system_INCDIR           := 
+else
+kernel-hidd-system_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-hidd-system_LIBDEFSINC       := $(kernel-hidd-system_OBJDIR)/include/$(kernel-hidd-system_DEFNAME)_libdefs.h
+kernel-hidd-system_DEFLIBDEFSINC    := $(kernel-hidd-system_OBJDIR)/include/$(kernel-hidd-system_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-hidd-system-includes-quick : kernel-hidd-system-includes
+kernel-hidd-system-includes : $(addprefix $(GENINCDIR)/,$($(kernel-hidd-system_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-system_INCDIR)/,$($(kernel-hidd-system_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-system_LIBDEFSINC) $(kernel-hidd-system_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-hidd-system_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-hidd-system-includes_MODNAME := system_
+else
+    kernel-hidd-system-includes_MODNAME := system
+endif
+
+ifneq ($($(kernel-hidd-system-includes_MODNAME)_INCLUDES),)
+
+kernel-hidd-system-includes_TARGETS := $($(kernel-hidd-system-includes_MODNAME)_INCLUDES)
+
+kernel-hidd-system-includes_DEPS := $(GENMODULE)
+kernel-hidd-system-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-system-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-system-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-system-includes_OPTS += -c 
+        kernel-hidd-system-includes_DEPS += 
+    endif 
+else
+    kernel-hidd-system-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/system.conf
+    kernel-hidd-system-includes_DEPS += $(SRCDIR)/$(CURDIR)/system.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-system-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-system-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-system-includes_OPTS += -o 
+        kernel-hidd-system-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-system-includes_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-system_OBJDIR)/include,)
+    kernel-hidd-system-includes_OPTS += -d $(kernel-hidd-system_OBJDIR)/include
+    kernel-hidd-system-includes_TARGETS := $(addprefix $(kernel-hidd-system_OBJDIR)/include/,$(kernel-hidd-system-includes_TARGETS))
+    kernel-hidd-system-includes_GENINCFLAG=$(kernel-hidd-system_OBJDIR)/include/.system.hidd-includes
+else
+    kernel-hidd-system-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.system.hidd-includes
+endif
+
+$(kernel-hidd-system-includes_TARGETS) : $(kernel-hidd-system-includes_DEPS) $(kernel-hidd-system-includes_GENINCFLAG)
+
+$(kernel-hidd-system-includes_GENINCFLAG) : OPTS := $(kernel-hidd-system-includes_OPTS)
+$(kernel-hidd-system-includes_GENINCFLAG) : MODNAME := system
+$(kernel-hidd-system-includes_GENINCFLAG) : MODTYPE := hidd
+$(kernel-hidd-system-includes_GENINCFLAG) : $(kernel-hidd-system-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-hidd-system_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-hidd-system_DEFNAME)_INCLUDES)) : | $(kernel-hidd-system_OBJDIR)/system_geninc
+
+$(kernel-hidd-system_OBJDIR)/system_geninc : COPYSRCDIR := $(kernel-hidd-system_OBJDIR)/include
+$(kernel-hidd-system_OBJDIR)/system_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-hidd-system_OBJDIR)/system_geninc : FILES := $($(kernel-hidd-system_DEFNAME)_INCLUDES)
+$(kernel-hidd-system_OBJDIR)/system_geninc : $(addprefix $(kernel-hidd-system_OBJDIR)/include/,$($(kernel-hidd-system_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-hidd-system_OBJDIR)/include
+
+$(addprefix $(kernel-hidd-system_INCDIR)/,$($(kernel-hidd-system_DEFNAME)_INCLUDES)) : | $(kernel-hidd-system_OBJDIR)/system_incs
+
+$(kernel-hidd-system_OBJDIR)/system_incs : COPYSRCDIR := $(kernel-hidd-system_OBJDIR)/include
+$(kernel-hidd-system_OBJDIR)/system_incs : TGTDIR := $(kernel-hidd-system_INCDIR)
+$(kernel-hidd-system_OBJDIR)/system_incs : FILES := $($(kernel-hidd-system_DEFNAME)_INCLUDES)
+$(kernel-hidd-system_OBJDIR)/system_incs : $(addprefix $(kernel-hidd-system_OBJDIR)/include/,$($(kernel-hidd-system_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-hidd-system_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-hidd-system_DEFNAME)_INCLUDES))))
+
+TMPsystem_INCDIRS := \
+    $(kernel-hidd-system_OBJDIR)/include $(addprefix $(kernel-hidd-system_OBJDIR)/include/,$(kernel-hidd-system_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-hidd-system_INCDIRS)) \
+    $(kernel-hidd-system_INCDIR) $(addprefix $(kernel-hidd-system_INCDIR)/,$(kernel-hidd-system_INCDIRS))
+
+ifneq (kernel-hidd-system-includes-dirs,)
+kernel-hidd-system-includes-dirs : | $(TMPsystem_INCDIRS)
+else
+kernel-hidd-system-includes-dirs :: $(TMPsystem_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPsystem_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-hidd-system-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-hidd-system-genlibdefs_OPTS += -f 
+    kernel-hidd-system-genlibdefs_MODNAME := system_
+else
+    kernel-hidd-system-genlibdefs_MODNAME := system
+endif
+kernel-hidd-system-genlibdefs_TARGET := $(kernel-hidd-system-genlibdefs_MODNAME)_libdefs.h
+kernel-hidd-system-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-system-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-system-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-system-genlibdefs_OPTS += -c 
+        kernel-hidd-system-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-hidd-system-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/system.conf
+    kernel-hidd-system-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/system.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-system-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-system-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-system-genlibdefs_OPTS += -o 
+        kernel-hidd-system-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-system-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-system_OBJDIR)/include,)
+    kernel-hidd-system-genlibdefs_OPTS += -d $(kernel-hidd-system_OBJDIR)/include
+    kernel-hidd-system-genlibdefs_TARGET := $(kernel-hidd-system_OBJDIR)/include/$(kernel-hidd-system-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-hidd-system-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-hidd-system-genlibdefs_TARGET) : OPTS := $(kernel-hidd-system-genlibdefs_OPTS)
+$(kernel-hidd-system-genlibdefs_TARGET) : MODNAME := system
+$(kernel-hidd-system-genlibdefs_TARGET) : MODTYPE := hidd
+$(kernel-hidd-system-genlibdefs_TARGET) : $(kernel-hidd-system-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-system_DEFLIBDEFSINC) : FILENAME := $(kernel-hidd-system_LIBDEFSINC)
+$(kernel-hidd-system_DEFLIBDEFSINC) : $(kernel-hidd-system_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-hidd-system_LIBDEFSINC) $(kernel-hidd-system_DEFLIBDEFSINC) : | $(kernel-hidd-system_OBJDIR)/include
+
+ifneq (kernel-hidd-system-includes-dirs,)
+kernel-hidd-system-includes-dirs : | $(kernel-hidd-system_OBJDIR)/include
+else
+kernel-hidd-system-includes-dirs :: $(kernel-hidd-system_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-system_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-hidd-system-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-hidd-system-genmodfiles_OPTS += -f 
+    kernel-hidd-system-genmodfiles_MODNAME := system_
+else
+    kernel-hidd-system-genmodfiles_MODNAME := system
+endif
+kernel-hidd-system-genmodfiles_GENTARGETS := $($(kernel-hidd-system-genmodfiles_MODNAME)_STARTFILES) $($(kernel-hidd-system-genmodfiles_MODNAME)_ENDFILES)
+kernel-hidd-system-genmodfiles_STUBTARGETS := $($(kernel-hidd-system-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-hidd-system-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-hidd-system-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-hidd-system-genmodfiles_GENTARGETS))
+kernel-hidd-system-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-hidd-system-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-hidd-system-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-hidd-system-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-hidd-system-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-system-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-system-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-system-genmodfiles_OPTS += -c 
+        kernel-hidd-system-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-hidd-system-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/system.conf
+    kernel-hidd-system-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/system.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-system-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-system-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-system-genmodfiles_OPTS += -o 
+        kernel-hidd-system-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-system-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-system_OBJDIR),)
+    kernel-hidd-system-genmodfiles_OPTS += -d $(kernel-hidd-system_OBJDIR)
+    kernel-hidd-system-genmodfiles_TARGETDIR := $(shell echo $(kernel-hidd-system_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-system-genmodfiles_GENTARGETS := $(addprefix $(kernel-hidd-system-genmodfiles_TARGETDIR)/,$(kernel-hidd-system-genmodfiles_GENTARGETS))
+    kernel-hidd-system-genmodfiles_GENFILEFLAG=$(kernel-hidd-system-genmodfiles_TARGETDIR)/.system.hidd-genfiles
+else
+    kernel-hidd-system-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.system.hidd-genfiles
+endif
+ifneq ($(kernel-hidd-system_OBJDIR)/linklib,)
+    kernel-hidd-system-genmodfiles_OPTS += -l $(kernel-hidd-system_OBJDIR)/linklib
+    kernel-hidd-system-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-hidd-system_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-system-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-system-genmodfiles_STUBTARGETDIR)/,$(kernel-hidd-system-genmodfiles_STUBTARGETS))
+    kernel-hidd-system-genmodfiles_TARGETDIRS += $(kernel-hidd-system_OBJDIR)/linklib
+else
+ifneq ($(kernel-hidd-system_OBJDIR),)
+    kernel-hidd-system-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-system-genmodfiles_TARGETDIR)/,$(kernel-hidd-system-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-hidd-system-genmodfiles_TARGETS := $(kernel-hidd-system-genmodfiles_GENTARGETS) $(kernel-hidd-system-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-hidd-system-genmodfiles_TARGETDIRS),)
+$(kernel-hidd-system-genmodfiles_TARGETS) : | $(kernel-hidd-system-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-hidd-system-genmodfiles_TARGETS) : $(kernel-hidd-system-genmodfiles_DEPS) $(kernel-hidd-system-genmodfiles_GENFILEFLAG)
+
+$(kernel-hidd-system-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-hidd-system-genmodfiles_OPTS)
+$(kernel-hidd-system-genmodfiles_GENFILEFLAG) : MODNAME := system
+$(kernel-hidd-system-genmodfiles_GENFILEFLAG) : MODTYPE := hidd
+$(kernel-hidd-system-genmodfiles_GENFILEFLAG) : $(kernel-hidd-system-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-hidd-system-genmodfiles_GENFILEFLAG) : $(kernel-hidd-system_DEFLIBDEFSINC) $(kernel-hidd-system-makefile)
+
+
+ifneq ($(kernel-hidd-system-genmodfiles_GENFILEFLAG),)
+$(kernel-hidd-system-genmodfiles_GENFILEFLAG) : | $(kernel-hidd-system_OBJDIR)/linklib
+else
+$(kernel-hidd-system-genmodfiles_GENFILEFLAG) :: $(kernel-hidd-system_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-system_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-hidd-system_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-hidd-system_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-hidd-system-fd : $(kernel-hidd-system_FDDIR)/system_lib.fd
+
+
+TMP_TARGET := system_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/system.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/system.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-system_FDDIR),)
+    TMP_OPTS += -d $(kernel-hidd-system_FDDIR)
+    TMP_TARGET := $(kernel-hidd-system_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := system
+$(TMP_TARGET) : MODTYPE := hidd
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-system_FDDIR)/system_lib.fd : | $(kernel-hidd-system_FDDIR)
+
+
+ifneq (kernel-hidd-system-fd-setup,)
+kernel-hidd-system-fd-setup : | $(kernel-hidd-system_FDDIR)
+else
+kernel-hidd-system-fd-setup :: $(kernel-hidd-system_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-system_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-hidd-system_FILES            := $(FILES)
+kernel-hidd-system_OBJCFILES        := 
+kernel-hidd-system_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-hidd-system_LIBFILES         := 
+kernel-hidd-system_LIBS             := 
+
+kernel-hidd-system_FDIRS            := $(sort $(dir $(kernel-hidd-system_FILES)))
+
+kernel-hidd-system_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-hidd-system_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-hidd-system_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-hidd-system_FILTERARCH       = $(filter-out $(call kernel-hidd-system_MATCHARCH,$(1),$(2)),$(2))
+kernel-hidd-system_STARTFILES       := $(addprefix $(kernel-hidd-system_OBJDIR)/,$($(kernel-hidd-system_DEFNAME)_STARTFILES))
+kernel-hidd-system_ENDFILES         := $(addprefix $(kernel-hidd-system_OBJDIR)/,$($(kernel-hidd-system_DEFNAME)_ENDFILES))
+
+kernel-hidd-system_ARCHOBJS         := $(wildcard $(kernel-hidd-system_OBJDIR)/arch/*.o)
+kernel-hidd-system_LIBARCHOBJS      := $(wildcard $(kernel-hidd-system_OBJDIR)/linklib/arch/*.o)
+kernel-hidd-system_ARCHFILES        := $(basename $(notdir $(kernel-hidd-system_ARCHOBJS)))
+kernel-hidd-system_LIBARCHFILES     := $(basename $(notdir $(kernel-hidd-system_LIBARCHOBJS)))
+kernel-hidd-system_C_NARCHFILES     := $(call kernel-hidd-system_FILTERARCH,$(kernel-hidd-system_ARCHFILES),$(kernel-hidd-system_FILES))
+kernel-hidd-system_CXX_NARCHFILES   := $(call kernel-hidd-system_FILTERARCH,$(kernel-hidd-system_ARCHFILES),$(kernel-hidd-system_CXXFILES))
+kernel-hidd-system_OBJC_NARCHFILES  := $(call kernel-hidd-system_FILTERARCH,$(kernel-hidd-system_ARCHFILES),$(kernel-hidd-system_OBJCFILES))
+kernel-hidd-system_NLIBARCHFILES    := $(call kernel-hidd-system_FILTERARCH,$(kernel-hidd-system_LIBARCHFILES),$(kernel-hidd-system_LIBFILES))
+kernel-hidd-system_ARCHNLIBFILES    := $(call kernel-hidd-system_FILTERARCH,$(kernel-hidd-system_LIBFILES),$(kernel-hidd-system_LIBARCHFILES))
+
+kernel-hidd-system_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-hidd-system_OBJDIR)/include -include $(kernel-hidd-system_DEFLIBDEFSINC))
+ifneq (,)
+kernel-hidd-system_CPPFLAGS         += -I
+endif
+kernel-hidd-system_LINKLIBCPPFLAGS  := $(kernel-hidd-system_CPPFLAGS)
+kernel-hidd-system_CPPFLAGS         += $(strip $($(kernel-hidd-system_DEFNAME)_CPPFLAGS))
+kernel-hidd-system_LINKLIBCPPFLAGS  += $(strip $($(kernel-hidd-system_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-hidd-system_CFLAGS           := $(strip $(CFLAGS) $($(kernel-hidd-system_DEFNAME)_CFLAGS))
+kernel-hidd-system_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-hidd-system_DEFNAME)_LINKLIBCFLAGS))
+kernel-hidd-system_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-hidd-system_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-system_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-hidd-system_CFLAGS           := $(strip $(kernel-hidd-system_LTOFLAGS) $(kernel-hidd-system_CFLAGS))
+kernel-hidd-system_LINKLIBCFLAGS    := $(strip $(kernel-hidd-system_LTOFLAGS) $(kernel-hidd-system_LINKLIBCFLAGS))
+kernel-hidd-system_CXXFLAGS         := $(strip $(kernel-hidd-system_LTOFLAGS) $(kernel-hidd-system_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-system_SUBSTNULL        :=
+kernel-hidd-system_SUBSTSPACE       := $(kernel-hidd-system_SUBSTNULL) #
+kernel-hidd-system_SUBSTCOMMA       := ,
+kernel-hidd-system_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-hidd-system_SUBSTSPACE),$(kernel-hidd-system_SUBSTCOMMA),$(strip $($(kernel-hidd-system_DEFNAME)_STARTFILES))))
+kernel-hidd-system_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-hidd-system_CFLAGS           := $(strip $(kernel-hidd-system_INSTRFUNCFLAGS) $(kernel-hidd-system_CFLAGS))
+kernel-hidd-system_CXXFLAGS         := $(strip $(kernel-hidd-system_INSTRFUNCFLAGS) $(kernel-hidd-system_CXXFLAGS))
+kernel-hidd-system_LIBS             += $(kernel-hidd-system_INSTRFUNCLIBS)
+endif
+endif
+kernel-hidd-system_DFLAGS           := $(strip $(kernel-hidd-system_DFLAGS) $($(kernel-hidd-system_DEFNAME)_DFLAGS))
+kernel-hidd-system_LINKLIBDFLAGS    := $(strip $(kernel-hidd-system_DFLAGS) $($(kernel-hidd-system_DEFNAME)_LINKLIBDFLAGS))
+kernel-hidd-system_DXXFLAGS         := $(strip $(kernel-hidd-system_DXXFLAGS) $($(kernel-hidd-system_DEFNAME)_DXXFLAGS))
+
+ifeq (hidd,library)
+    kernel-hidd-system_LIBSUFFIX    := 
+else
+    kernel-hidd-system_LIBSUFFIX    := .hidd
+endif
+
+ifeq (,)
+kernel-hidd-system_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-hidd-system_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-hidd-system_LINKLIBCFILES    := $(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$($(kernel-hidd-system_DEFNAME)_LINKLIBFILES))
+kernel-hidd-system_LINKLIBAFILES    := $(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$($(kernel-hidd-system_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-system_DEFNAME)_LINKLIBFILES) $($(kernel-hidd-system_DEFNAME)_LINKLIBAFILES)  $(kernel-hidd-system_ARCHNLIBFILES)),)
+    kernel-hidd-system_LINKLIB      :=
+else
+    kernel-hidd-system_LINKLIB      := $(kernel-hidd-system_LIBDIR)/libsystem$(kernel-hidd-system_LIBSUFFIX).a
+    ifneq (system,$(kernel-hidd-system_LINKLIBNAME))
+        kernel-hidd-system_LINKLIB  += $(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_LINKLIBNAME)$(kernel-hidd-system_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-system_LINKLIBFILES     := $(kernel-hidd-system_LINKLIBCFILES) $(kernel-hidd-system_LINKLIBAFILES)
+
+kernel-hidd-system_RELLINKLIBCFILES := $(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$($(kernel-hidd-system_DEFNAME)_RELLINKLIBFILES))
+kernel-hidd-system_RELLINKLIBAFILES := $(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$($(kernel-hidd-system_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-system_DEFNAME)_RELLINKLIBFILES) $($(kernel-hidd-system_DEFNAME)_RELLINKLIBAFILES)  $(kernel-hidd-system_ARCHNLIBFILES)),)
+    kernel-hidd-system_RELLINKLIB   :=
+else
+    kernel-hidd-system_RELLINKLIB   := $(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_DEFNAME)_rel$(kernel-hidd-system_LIBSUFFIX).a
+    ifneq (system,$(kernel-hidd-system_LINKLIBNAME))
+        kernel-hidd-system_RELLINKLIB += $(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_LINKLIBNAME)_rel$(kernel-hidd-system_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-system_RELLINKLIBFILES  := $(kernel-hidd-system_RELLINKLIBCFILES) $(kernel-hidd-system_RELLINKLIBAFILES)
+endif
+
+kernel-hidd-system_ENDOBJS          := $(addsuffix .o,$(kernel-hidd-system_ENDFILES))
+kernel-hidd-system_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$(notdir $(kernel-hidd-system_NLIBARCHFILES))) $(addprefix $(kernel-hidd-system_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-system_ARCHNLIBFILES))) $(kernel-hidd-system_LINKLIBFILES)) \
+                 
+kernel-hidd-system_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$(notdir $(kernel-hidd-system_NLIBARCHFILES))) $(addprefix $(kernel-hidd-system_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-system_ARCHNLIBFILES))) $(kernel-hidd-system_RELLINKLIBFILES)) \
+                 
+$(kernel-hidd-system_LINKLIBFILES) $(kernel-hidd-system_RELLINKLIBFILES) : | $(kernel-hidd-system_OBJDIR)/linklib
+$(kernel-hidd-system_LINKLIBOBJS) $(kernel-hidd-system_RELLINKLIBOBJS) : | $(kernel-hidd-system_OBJDIR)/linklib
+
+kernel-hidd-system_CCFILES := $(kernel-hidd-system_C_NARCHFILES)
+kernel-hidd-system_TARGETCCFILES    := $(strip $(kernel-hidd-system_STARTFILES) $(kernel-hidd-system_ENDFILES))
+kernel-hidd-system_LINKLIBCCFILES   := $(strip $(kernel-hidd-system_NLIBARCHFILES) $(kernel-hidd-system_LINKLIBCFILES) $(kernel-hidd-system_RELLINKLIBCFILES))
+kernel-hidd-system_LINKLIBCCGENFILES := $(strip $(kernel-hidd-system_LINKLIBCFILES) $(kernel-hidd-system_RELLINKLIBCFILES))
+
+
+kernel-hidd-system_CXXABSBASENAMES := $(foreach kernel-hidd-system_CXXBASE,$(kernel-hidd-system_CXX_NARCHFILES),$(if $(filter /%,$(kernel-hidd-system_CXXBASE)),$(kernel-hidd-system_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-hidd-system_CXXBASE))))
+
+ifneq ($(kernel-hidd-system_CXXABSBASENAMES),)
+
+kernel-hidd-system_CXXBASENAMES := $(basename $(kernel-hidd-system_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-hidd-system_MCXX_FILES  := $(strip $(foreach kernel-hidd-system_CXXBASE,$(kernel-hidd-system_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-hidd-system_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-hidd-system_EXT),$(kernel-hidd-system_CXXBASE)))))))
+
+ifeq (,)
+kernel-hidd-system_MCXX_SRCWILDCARD := %
+else
+kernel-hidd-system_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-system_OBJDIR),)
+  kernel-hidd-system_CXXTARGETS := $(notdir $(kernel-hidd-system_CXXBASENAMES:=.o))
+  kernel-hidd-system_CXXDTARGETS := $(notdir $(kernel-hidd-system_CXXBASENAMES:=.d))
+  kernel-hidd-system_MCXX_WILDCARD := %
+else
+  kernel-hidd-system_CXXTARGETS := $(addprefix $(kernel-hidd-system_OBJDIR)/,$(notdir $(kernel-hidd-system_CXXBASENAMES:=.o)))
+  kernel-hidd-system_CXXDTARGETS := $(addprefix $(kernel-hidd-system_OBJDIR)/,$(notdir $(kernel-hidd-system_CXXBASENAMES:=.d)))
+  kernel-hidd-system_MCXX_WILDCARD := $(kernel-hidd-system_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-hidd-system_CXXTARGETS) $(kernel-hidd-system_CXXDTARGETS) : | $(kernel-hidd-system_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-hidd-system_MCXX_CPPFLAGS := $(kernel-hidd-system_CPPFLAGS)
+kernel-hidd-system_CXXFLAGS := $(kernel-hidd-system_CXXFLAGS)
+ifeq ($(kernel-hidd-system_DXXFLAGS),)
+  kernel-hidd-system_DXXFLAGS := $(kernel-hidd-system_CXXFLAGS)
+else
+  kernel-hidd-system_DXXFLAGS := $(kernel-hidd-system_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-hidd-system_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-hidd-system_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-system_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-hidd-system_CXXCMD:=$(HOST_CXX)
+  kernel-hidd-system_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-hidd-system_MCXX_CPPFLAGS) $(kernel-hidd-system_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-system_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-system_CXXFLAGS))
+  kernel-hidd-system_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-system_DXXFLAGS))
+  kernel-hidd-system_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-hidd-system_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-hidd-system_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-system_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-system_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-hidd-system_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-hidd-system_MCXX_CPPFLAGS := $(strip $(kernel-hidd-system_MCXX_CPPFLAGS) $(kernel-hidd-system_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-system_CXXFLAGS := $(strip $(kernel-hidd-system_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-hidd-system_DXXFLAGS := $(kernel-hidd-system_DXXFLAGS)
+  kernel-hidd-system_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-hidd-system_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-hidd-system_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-system_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-system_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-hidd-system_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-hidd-system_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-hidd-system_MCXX_CPPFLAGS) $(kernel-hidd-system_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-system_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-system_CXXFLAGS))
+  kernel-hidd-system_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-system_DXXFLAGS))
+  kernel-hidd-system_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-hidd-system_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-hidd-system_CXXCMD) $(kernel-hidd-system_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-system_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_CXXIQUOTE) . $(kernel-hidd-system_CXXIQUOTE_END) $(strip $(kernel-hidd-system_CXXFLAGS) $(kernel-hidd-system_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-hidd-system_CXXCMD) $(kernel-hidd-system_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-system_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_CXXIQUOTE) . $(kernel-hidd-system_CXXIQUOTE_END) $(strip $(kernel-hidd-system_CXXFLAGS) $(kernel-hidd-system_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-hidd-system_CXXCMD) $(kernel-hidd-system_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-system_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_CXXIQUOTE) . $(kernel-hidd-system_CXXIQUOTE_END) $(strip $(kernel-hidd-system_CXXFLAGS) $(kernel-hidd-system_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-hidd-system_CXXCMD)" $(MKDEPEND) $(strip $(kernel-hidd-system_DXXFLAGS) $(kernel-hidd-system_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-hidd-system_OBJDIR),)
+  $(foreach kernel-hidd-system_CXXFILE,$(kernel-hidd-system_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-hidd-system_CXXFILE))),$(kernel-hidd-system_CXXFILE))))
+else
+  $(foreach kernel-hidd-system_CXXFILE,$(kernel-hidd-system_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-hidd-system_OBJDIR)/,$(notdir $(basename $(kernel-hidd-system_CXXFILE)))),$(kernel-hidd-system_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-hidd-system_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-hidd-system_MOBJC_SRCWILDCARD := %
+else
+kernel-hidd-system_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-system_OBJDIR),)
+  kernel-hidd-system_MOBJC_TARGETS := $(addsuffix .o,$(kernel-hidd-system_OBJC_NARCHFILES))
+  kernel-hidd-system_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-hidd-system_OBJC_NARCHFILES))
+  kernel-hidd-system_MOBJC_WILDCARD := %
+else
+  kernel-hidd-system_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-system_OBJDIR)/,$(kernel-hidd-system_OBJC_NARCHFILES)))
+  kernel-hidd-system_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-system_OBJDIR)/,$(kernel-hidd-system_OBJC_NARCHFILES)))
+  kernel-hidd-system_MOBJC_WILDCARD := $(kernel-hidd-system_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-hidd-system_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-hidd-system_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-hidd-system_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-system_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-hidd-system_MOBJC_DIRS := $(foreach dir, $(kernel-hidd-system_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-system_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-hidd-system_MOBJC_DIRS),)
+    kernel-hidd-system_MOBJC_DIRS := $(shell echo $(kernel-hidd-system_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-hidd-system_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-hidd-system_CC := $(TARGET_CC)
+else
+  kernel-hidd-system_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-hidd-system_MOBJC_CPPFLAGS := $(kernel-hidd-system_CPPFLAGS)
+kernel-hidd-system_OBJCFLAGS := $(kernel-hidd-system_CFLAGS)
+kernel-hidd-system_OBJCFLAGS := $(kernel-hidd-system_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-hidd-system_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-hidd-system_OBJCFLAGS)))
+ifeq ($(kernel-hidd-system_DFLAGS),)
+  kernel-hidd-system_OBJCDFLAGS := $(kernel-hidd-system_CFLAGS)
+else
+  kernel-hidd-system_OBJCDFLAGS := $(kernel-hidd-system_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-hidd-system_LINK ?= $(strip $(kernel-hidd-system_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-system_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-system_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-hidd-system_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : kernel-hidd-system_MOBJC_CPPFLAGS:=$(strip $(kernel-hidd-system_MOBJC_CPPFLAGS) $(kernel-hidd-system_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : kernel-hidd-system_OBJCFLAGS:=$(strip $(kernel-hidd-system_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : kernel-hidd-system_OBJCDFLAGS:=$(kernel-hidd-system_OBJCDFLAGS)
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : kernel-hidd-system_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : kernel-hidd-system_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-hidd-system_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-hidd-system_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-system_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : kernel-hidd-system_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-hidd-system_MOBJC_CPPFLAGS) $(kernel-hidd-system_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : kernel-hidd-system_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-system_OBJCFLAGS))
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : kernel-hidd-system_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-system_OBJCDFLAGS))
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : kernel-hidd-system_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : kernel-hidd-system_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-hidd-system_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-system_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-system_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : kernel-hidd-system_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-hidd-system_MOBJC_CPPFLAGS) $(kernel-hidd-system_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : kernel-hidd-system_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-system_OBJCFLAGS))
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : kernel-hidd-system_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-system_OBJCDFLAGS))
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : kernel-hidd-system_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-hidd-system_MOBJC_TARGETS) $(kernel-hidd-system_MOBJC_DTARGETS) : kernel-hidd-system_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-system_MOBJC_TARGETS) : CPPFLAGS := $(kernel-hidd-system_MOBJC_CPPFLAGS)
+$(kernel-hidd-system_MOBJC_TARGETS) : CFLAGS := $(kernel-hidd-system_OBJCFLAGS)
+$(kernel-hidd-system_MOBJC_TARGETS) : $(kernel-hidd-system_MOBJC_WILDCARD).o : $(kernel-hidd-system_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-system_IQUOTE) $(dir $<) $(kernel-hidd-system_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_IQUOTE) . $(kernel-hidd-system_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-system_IQUOTE) $(dir $<) $(kernel-hidd-system_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_IQUOTE) . $(kernel-hidd-system_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-system_IQUOTE) $(dir $<) $(kernel-hidd-system_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_IQUOTE) . $(kernel-hidd-system_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-system_MOBJC_DTARGETS) : $(kernel-hidd-system_MOBJC_WILDCARD).d : $(kernel-hidd-system_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-system_OBJCDFLAGS) $(kernel-hidd-system_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-hidd-system_MC_SRCWILDCARD := %
+else
+kernel-hidd-system_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-system_OBJDIR),)
+kernel-hidd-system_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-system_CCFILES))
+kernel-hidd-system_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-system_CCFILES))
+kernel-hidd-system_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-system_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-system_OBJDIR)/,$(notdir $(kernel-hidd-system_CCFILES))))
+    kernel-hidd-system_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-system_OBJDIR)/,$(notdir $(kernel-hidd-system_CCFILES))))
+else
+ifeq (,)
+    kernel-hidd-system_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-system_OBJDIR)/,$(kernel-hidd-system_CCFILES)))
+    kernel-hidd-system_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-system_OBJDIR)/,$(kernel-hidd-system_CCFILES)))
+else
+    kernel-hidd-system_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-system_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-system_CCFILES))))
+    kernel-hidd-system_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-system_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-system_CCFILES))))
+endif
+endif
+kernel-hidd-system_MC_TGTWILDCARD := $(kernel-hidd-system_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-system_CCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-system_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-system_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-system_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-system_MC_DIRS := $(foreach dir, $(kernel-hidd-system_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-system_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-system_MC_DIRS),)
+    kernel-hidd-system_MC_DIRS := $(shell echo $(kernel-hidd-system_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-system_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-system_MC_CPPFLAGS := $(kernel-hidd-system_CPPFLAGS)
+kernel-hidd-system_CFLAGS := $(kernel-hidd-system_CFLAGS)
+ifeq ($(kernel-hidd-system_DFLAGS),)
+  kernel-hidd-system_DFLAGS := $(kernel-hidd-system_CFLAGS)
+else
+  kernel-hidd-system_DFLAGS := $(kernel-hidd-system_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-system_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-system_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-system_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_MC_CPPFLAGS:=$(strip $(kernel-hidd-system_MC_CPPFLAGS) $(kernel-hidd-system_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_CFLAGS:=$(strip $(kernel-hidd-system_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_DFLAGS:=$(kernel-hidd-system_DFLAGS)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-system_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-system_STRIP ?= $(HOST_STRIP)
+kernel-hidd-system_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-system_MC_CPPFLAGS) $(kernel-hidd-system_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-system_CFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-system_DFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-system_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-system_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-system_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-system_MC_CPPFLAGS) $(kernel-hidd-system_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-system_CFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-system_DFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-system_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-system_MC_CPPFLAGS)
+$(kernel-hidd-system_MC_TARGETS) : CFLAGS := $(kernel-hidd-system_CFLAGS)
+$(kernel-hidd-system_MC_TARGETS) : $(kernel-hidd-system_MC_TGTWILDCARD).o : $(kernel-hidd-system_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-system_IQUOTE) $(dir $<) $(kernel-hidd-system_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_IQUOTE) . $(kernel-hidd-system_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-system_IQUOTE) $(dir $<) $(kernel-hidd-system_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_IQUOTE) . $(kernel-hidd-system_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-system_IQUOTE) $(dir $<) $(kernel-hidd-system_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_IQUOTE) . $(kernel-hidd-system_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-system_MC_DTARGETS) : $(kernel-hidd-system_MC_TGTWILDCARD).d : $(kernel-hidd-system_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-system_DFLAGS) $(kernel-hidd-system_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-system_MC_SRCWILDCARD := %
+else
+kernel-hidd-system_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-system_OBJDIR),)
+kernel-hidd-system_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-system_TARGETCCFILES))
+kernel-hidd-system_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-system_TARGETCCFILES))
+kernel-hidd-system_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-system_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-system_OBJDIR)/,$(notdir $(kernel-hidd-system_TARGETCCFILES))))
+    kernel-hidd-system_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-system_OBJDIR)/,$(notdir $(kernel-hidd-system_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-hidd-system_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-system_OBJDIR)/,$(kernel-hidd-system_TARGETCCFILES)))
+    kernel-hidd-system_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-system_OBJDIR)/,$(kernel-hidd-system_TARGETCCFILES)))
+else
+    kernel-hidd-system_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-system_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-system_TARGETCCFILES))))
+    kernel-hidd-system_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-system_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-system_TARGETCCFILES))))
+endif
+endif
+kernel-hidd-system_MC_TGTWILDCARD := $(kernel-hidd-system_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-system_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-system_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-system_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-system_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-system_MC_DIRS := $(foreach dir, $(kernel-hidd-system_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-system_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-system_MC_DIRS),)
+    kernel-hidd-system_MC_DIRS := $(shell echo $(kernel-hidd-system_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-system_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-system_MC_CPPFLAGS := $(kernel-hidd-system_CPPFLAGS) -D__AROS__
+kernel-hidd-system_CFLAGS := $(kernel-hidd-system_CFLAGS)
+ifeq ($(kernel-hidd-system_DFLAGS),)
+  kernel-hidd-system_DFLAGS := $(kernel-hidd-system_CFLAGS)
+else
+  kernel-hidd-system_DFLAGS := $(kernel-hidd-system_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-system_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-system_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-system_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_MC_CPPFLAGS:=$(strip $(kernel-hidd-system_MC_CPPFLAGS) $(kernel-hidd-system_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_CFLAGS:=$(strip $(kernel-hidd-system_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_DFLAGS:=$(kernel-hidd-system_DFLAGS)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-system_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-system_STRIP ?= $(HOST_STRIP)
+kernel-hidd-system_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-system_MC_CPPFLAGS) $(kernel-hidd-system_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-system_CFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-system_DFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-system_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-system_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-system_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-system_MC_CPPFLAGS) $(kernel-hidd-system_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-system_CFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-system_DFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-system_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-system_MC_CPPFLAGS)
+$(kernel-hidd-system_MC_TARGETS) : CFLAGS := $(kernel-hidd-system_CFLAGS)
+$(kernel-hidd-system_MC_TARGETS) : $(kernel-hidd-system_MC_TGTWILDCARD).o : $(kernel-hidd-system_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-system_IQUOTE) $(dir $<) $(kernel-hidd-system_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_IQUOTE) . $(kernel-hidd-system_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-system_IQUOTE) $(dir $<) $(kernel-hidd-system_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_IQUOTE) . $(kernel-hidd-system_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-system_IQUOTE) $(dir $<) $(kernel-hidd-system_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_IQUOTE) . $(kernel-hidd-system_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-system_MC_DTARGETS) : $(kernel-hidd-system_MC_TGTWILDCARD).d : $(kernel-hidd-system_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-system_DFLAGS) $(kernel-hidd-system_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-system_MC_SRCWILDCARD := %
+else
+kernel-hidd-system_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-system_OBJDIR)/linklib,)
+kernel-hidd-system_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-system_NLIBARCHFILES))
+kernel-hidd-system_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-system_NLIBARCHFILES))
+kernel-hidd-system_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-system_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$(notdir $(kernel-hidd-system_NLIBARCHFILES))))
+    kernel-hidd-system_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$(notdir $(kernel-hidd-system_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-hidd-system_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$(kernel-hidd-system_NLIBARCHFILES)))
+    kernel-hidd-system_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$(kernel-hidd-system_NLIBARCHFILES)))
+else
+    kernel-hidd-system_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-system_NLIBARCHFILES))))
+    kernel-hidd-system_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-system_NLIBARCHFILES))))
+endif
+endif
+kernel-hidd-system_MC_TGTWILDCARD := $(kernel-hidd-system_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-system_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-system_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-system_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-system_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-system_MC_DIRS := $(foreach dir, $(kernel-hidd-system_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-system_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-system_MC_DIRS),)
+    kernel-hidd-system_MC_DIRS := $(shell echo $(kernel-hidd-system_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-system_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-system_MC_CPPFLAGS := $(kernel-hidd-system_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-system_CFLAGS := $(kernel-hidd-system_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-system_LINKLIBDFLAGS),)
+  kernel-hidd-system_DFLAGS := $(kernel-hidd-system_LINKLIBCFLAGS)
+else
+  kernel-hidd-system_DFLAGS := $(kernel-hidd-system_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-system_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-system_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-system_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_MC_CPPFLAGS:=$(strip $(kernel-hidd-system_MC_CPPFLAGS) $(kernel-hidd-system_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_CFLAGS:=$(strip $(kernel-hidd-system_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_DFLAGS:=$(kernel-hidd-system_DFLAGS)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-system_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-system_STRIP ?= $(HOST_STRIP)
+kernel-hidd-system_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-system_MC_CPPFLAGS) $(kernel-hidd-system_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-system_CFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-system_DFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-system_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-system_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-system_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-system_MC_CPPFLAGS) $(kernel-hidd-system_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-system_CFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-system_DFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-system_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-system_MC_CPPFLAGS)
+$(kernel-hidd-system_MC_TARGETS) : CFLAGS := $(kernel-hidd-system_CFLAGS)
+$(kernel-hidd-system_MC_TARGETS) : $(kernel-hidd-system_MC_TGTWILDCARD).o : $(kernel-hidd-system_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-system_IQUOTE) $(dir $<) $(kernel-hidd-system_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_IQUOTE) . $(kernel-hidd-system_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-system_IQUOTE) $(dir $<) $(kernel-hidd-system_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_IQUOTE) . $(kernel-hidd-system_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-system_IQUOTE) $(dir $<) $(kernel-hidd-system_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_IQUOTE) . $(kernel-hidd-system_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-system_MC_DTARGETS) : $(kernel-hidd-system_MC_TGTWILDCARD).d : $(kernel-hidd-system_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-system_DFLAGS) $(kernel-hidd-system_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-hidd-system_OBJDIR)/linklib,)
+kernel-hidd-system_MC_SRCWILDCARD := %
+else
+kernel-hidd-system_MC_SRCWILDCARD := $(kernel-hidd-system_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-hidd-system_OBJDIR)/linklib,)
+kernel-hidd-system_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-system_LINKLIBCCGENFILES))
+kernel-hidd-system_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-system_LINKLIBCCGENFILES))
+kernel-hidd-system_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-system_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$(notdir $(kernel-hidd-system_LINKLIBCCGENFILES))))
+    kernel-hidd-system_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$(notdir $(kernel-hidd-system_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-hidd-system_OBJDIR)/linklib,)
+    kernel-hidd-system_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$(kernel-hidd-system_LINKLIBCCGENFILES)))
+    kernel-hidd-system_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$(kernel-hidd-system_LINKLIBCCGENFILES)))
+else
+    kernel-hidd-system_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-system_OBJDIR)/linklib/%,%,$(kernel-hidd-system_LINKLIBCCGENFILES))))
+    kernel-hidd-system_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-system_OBJDIR)/linklib/%,%,$(kernel-hidd-system_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-hidd-system_MC_TGTWILDCARD := $(kernel-hidd-system_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-system_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-system_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-system_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-system_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-system_MC_DIRS := $(foreach dir, $(kernel-hidd-system_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-system_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-system_MC_DIRS),)
+    kernel-hidd-system_MC_DIRS := $(shell echo $(kernel-hidd-system_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-system_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-system_MC_CPPFLAGS := $(kernel-hidd-system_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-system_CFLAGS := $(kernel-hidd-system_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-system_LINKLIBDFLAGS),)
+  kernel-hidd-system_DFLAGS := $(kernel-hidd-system_LINKLIBCFLAGS)
+else
+  kernel-hidd-system_DFLAGS := $(kernel-hidd-system_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-system_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-system_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-system_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_MC_CPPFLAGS:=$(strip $(kernel-hidd-system_MC_CPPFLAGS) $(kernel-hidd-system_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_CFLAGS:=$(strip $(kernel-hidd-system_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_DFLAGS:=$(kernel-hidd-system_DFLAGS)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-system_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-system_STRIP ?= $(HOST_STRIP)
+kernel-hidd-system_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-system_MC_CPPFLAGS) $(kernel-hidd-system_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-system_CFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-system_DFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-system_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-system_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-system_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-system_MC_CPPFLAGS) $(kernel-hidd-system_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-system_CFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-system_DFLAGS))
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-system_MC_TARGETS) $(kernel-hidd-system_MC_DTARGETS) : kernel-hidd-system_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-system_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-system_MC_CPPFLAGS)
+$(kernel-hidd-system_MC_TARGETS) : CFLAGS := $(kernel-hidd-system_CFLAGS)
+$(kernel-hidd-system_MC_TARGETS) : $(kernel-hidd-system_MC_TGTWILDCARD).o : $(kernel-hidd-system_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-system_IQUOTE) $(dir $<) $(kernel-hidd-system_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_IQUOTE) . $(kernel-hidd-system_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-system_IQUOTE) $(dir $<) $(kernel-hidd-system_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_IQUOTE) . $(kernel-hidd-system_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-system_IQUOTE) $(dir $<) $(kernel-hidd-system_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-system_IQUOTE) . $(kernel-hidd-system_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-system_MC_DTARGETS) : $(kernel-hidd-system_MC_TGTWILDCARD).d : $(kernel-hidd-system_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-system_DFLAGS) $(kernel-hidd-system_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-hidd-system_LINKLIBAFILES),)
+
+ifeq ($(kernel-hidd-system_OBJDIR)/linklib,)
+kernel-hidd-system-MA_TARGETS := $(addsuffix .o,$(kernel-hidd-system_LINKLIBAFILES) $(kernel-hidd-system_RELLINKLIBAFILES))
+kernel-hidd-system-MA_WILDCARD := %
+else
+kernel-hidd-system-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$(notdir $(kernel-hidd-system_LINKLIBAFILES) $(kernel-hidd-system_RELLINKLIBAFILES))))
+kernel-hidd-system-MA_WILDCARD := $(kernel-hidd-system_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-hidd-system-MA_TARGETS) : | $(addsuffix .S,$(kernel-hidd-system_LINKLIBAFILES) $(kernel-hidd-system_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-system-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-system-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-system_LINKLIBAFILES) $(kernel-hidd-system_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-system-MA_DIRS := $(foreach dir, $(kernel-hidd-system-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-system-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-system-MA_DIRS),)
+    kernel-hidd-system-MA_DIRS := $(shell echo $(kernel-hidd-system-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-hidd-system-MA_DIRS)
+endif
+
+endif
+
+kernel-hidd-system-MA_ASSEMBLER ?= $(kernel-hidd-system_ASSEMBLER)
+
+$(kernel-hidd-system-MA_TARGETS) : kernel-hidd-system-MA_CMD:= $(kernel-hidd-system-MA_ASSEMBLER)
+
+$(kernel-hidd-system-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-hidd-system-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-hidd-system-MA_TARGETS) : $(kernel-hidd-system-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-hidd-system-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-hidd-system-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-hidd-system-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-hidd-system_SUFFIX           := hidd
+else
+kernel-hidd-system_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-hidd-system_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-hidd-system_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-hidd-system_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-hidd-system_SUFFIX),handler)
+kernel-hidd-system_MODULE           := $(AROSDIR)/$(kernel-hidd-system_MODDIR)/$(kernel-hidd-system_DEFNAME)-$(kernel-hidd-system_SUFFIX)
+else
+kernel-hidd-system_MODULE           := $(AROSDIR)/$(kernel-hidd-system_MODDIR)/$(kernel-hidd-system_DEFNAME).$(kernel-hidd-system_SUFFIX)
+endif
+kernel-hidd-system_KOBJ             := $(KOBJSDIR)/$(kernel-hidd-system_DEFNAME)_$(kernel-hidd-system_SUFFIX).o
+else
+kernel-hidd-system_MODULE           :=
+kernel-hidd-system_KOBJ             :=
+endif
+
+kernel-hidd-system-quick      : kernel-hidd-system
+kernel-hidd-system            : $(kernel-hidd-system_MODULE) $(kernel-hidd-system_LINKLIB) $(kernel-hidd-system_RELLINKLIB)
+ifeq (M,M)
+kernel-hidd-system-kobj       : $(kernel-hidd-system_KOBJ) $(kernel-hidd-system_LINKLIB) $(kernel-hidd-system_RELLINKLIB)
+kernel-hidd-system-kobj-quick : $(kernel-hidd-system_KOBJ) $(kernel-hidd-system_LINKLIB) $(kernel-hidd-system_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-hidd-system-linklib    : $(kernel-hidd-system_LINKLIB) $(kernel-hidd-system_RELLINKLIB)
+endif
+
+kernel-hidd-system_OBJS := $(addsuffix .o,$(kernel-hidd-system_STARTFILES)) $(kernel-hidd-system_ARCHOBJS) \
+           $(addprefix $(kernel-hidd-system_OBJDIR)/,$(notdir $(kernel-hidd-system_C_NARCHFILES:=.o) $(kernel-hidd-system_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (hidd,handler)
+kernel-hidd-system_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (system,con)
+    kernel-hidd-system_ERR          := $(notdir $(kernel-hidd-system_MODULE)).err
+else
+    kernel-hidd-system_ERR          := system.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-hidd-system_DEFNAME)_LDFLAGS) $(kernel-hidd-system_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-hidd-system_LIBS) $($(kernel-hidd-system_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-hidd-system_MODULE) : LIB_NAMES := $(kernel-hidd-system_LIBS) $($(kernel-hidd-system_DEFNAME)_LIBS)
+$(kernel-hidd-system_MODULE) : OBJS := $(kernel-hidd-system_STARTOBJS) $(kernel-hidd-system_OBJS) $(USER_OBJS)
+$(kernel-hidd-system_MODULE) : ENDTAG := $(kernel-hidd-system_ENDOBJS)
+$(kernel-hidd-system_MODULE) : ERR := $(kernel-hidd-system_ERR)
+$(kernel-hidd-system_MODULE) : OBJDIR := $(kernel-hidd-system_OBJDIR)
+$(kernel-hidd-system_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-hidd-system_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-hidd-system_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-hidd-system_MODULE) : $(kernel-hidd-system_STARTOBJS) $(kernel-hidd-system_OBJS) $(USER_OBJS) $(kernel-hidd-system_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-hidd-system_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-hidd-system_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-hidd-system_LC_LINKLIBNAME   := $(shell echo $(kernel-hidd-system_LINKLIBNAME) | tr A-Z a-z)
+kernel-hidd-system_LC_MODNAME       := $(shell echo system | tr A-Z a-z)
+ifneq ($(kernel-hidd-system_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_LINKLIBNAME)$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_AR:=$(AR)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_LINKLIBNAME)$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_LINKLIBNAME)$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_AR:=$(HOST_AR)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_LINKLIBNAME)$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_LINKLIBNAME)$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_AR:=$(KERNEL_AR)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_LINKLIBNAME)$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_LINKLIBNAME)$(kernel-hidd-system_LIBSUFFIX).a : $(kernel-hidd-system_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-system_AR) $@ $^
+	$(Q)$(kernel-hidd-system_RANLIB) $@
+ifneq ($(kernel-hidd-system_LC_MODNAME),$(kernel-hidd-system_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-system_LIBDIR)/libsystem$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_AR:=$(AR)
+$(kernel-hidd-system_LIBDIR)/libsystem$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-system_LIBDIR)/libsystem$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_AR:=$(HOST_AR)
+$(kernel-hidd-system_LIBDIR)/libsystem$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-system_LIBDIR)/libsystem$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_AR:=$(KERNEL_AR)
+$(kernel-hidd-system_LIBDIR)/libsystem$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-system_LIBDIR)/libsystem$(kernel-hidd-system_LIBSUFFIX).a : $(kernel-hidd-system_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-system_AR) $@ $^
+	$(Q)$(kernel-hidd-system_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-system_LINKLIB),)
+$(kernel-hidd-system_LINKLIB) : | $(kernel-hidd-system_LIBDIR)
+else
+$(kernel-hidd-system_LINKLIB) :: $(kernel-hidd-system_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-system_LIBDIR)
+
+endif
+
+ifneq ($(kernel-hidd-system_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_LINKLIBNAME)_rel$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_AR:=$(AR)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_LINKLIBNAME)_rel$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_LINKLIBNAME)_rel$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_AR:=$(HOST_AR)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_LINKLIBNAME)_rel$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_LINKLIBNAME)_rel$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_AR:=$(KERNEL_AR)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_LINKLIBNAME)_rel$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_LINKLIBNAME)_rel$(kernel-hidd-system_LIBSUFFIX).a : $(kernel-hidd-system_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-system_AR) $@ $^
+	$(Q)$(kernel-hidd-system_RANLIB) $@
+ifneq ($(kernel-hidd-system_LC_MODNAME),$(kernel-hidd-system_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_DEFNAME)_rel$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_AR:=$(AR)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_DEFNAME)_rel$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_DEFNAME)_rel$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_AR:=$(HOST_AR)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_DEFNAME)_rel$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_DEFNAME)_rel$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_AR:=$(KERNEL_AR)
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_DEFNAME)_rel$(kernel-hidd-system_LIBSUFFIX).a : kernel-hidd-system_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-system_LIBDIR)/lib$(kernel-hidd-system_DEFNAME)_rel$(kernel-hidd-system_LIBSUFFIX).a : $(kernel-hidd-system_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-system_AR) $@ $^
+	$(Q)$(kernel-hidd-system_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-system_RELLINKLIB),)
+$(kernel-hidd-system_RELLINKLIB) : | $(kernel-hidd-system_LIBDIR)
+else
+$(kernel-hidd-system_RELLINKLIB) :: $(kernel-hidd-system_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-system_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-hidd-system_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-hidd-system_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-hidd-system_SYMBOLS := $(kernel-hidd-system_KBASE)
+
+kernel-hidd-system_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-hidd-system_KOBJ_LIBS        := $(filter-out $(kernel-hidd-system_KLIB),$(kernel-hidd-system_LIBS)) $(kernel-hidd-system_KAUTOLIB)
+$(kernel-hidd-system_KOBJ) : LINKLIBS:=$(kernel-hidd-system_KOBJ_LIBS) $($(kernel-hidd-system_DEFNAME)_LIBS)
+$(kernel-hidd-system_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-hidd-system_SYMBOLS))
+$(kernel-hidd-system_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-hidd-system_KOBJ) : $(kernel-hidd-system_OBJS) $(USER_OBJS) $(kernel-hidd-system_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-hidd-system_DEPS             := $(addprefix $(kernel-hidd-system_OBJDIR)/,$(notdir $(kernel-hidd-system_CCFILES:=.d) $(kernel-hidd-system_TARGETCCFILES:=.d) $(kernel-hidd-system_CXXFILES:=.d))) $(addprefix $(kernel-hidd-system_OBJDIR)/linklib/,$(notdir $(kernel-hidd-system_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-hidd-system_DEPS),)
+  ifneq (kernel-hidd-system kernel-hidd-system-quick kernel-hidd-system-kobj kernel-hidd-system-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-hidd-system kernel-hidd-system-quick kernel-hidd-system-kobj kernel-hidd-system-kobj-quick),)
+      -include $(kernel-hidd-system_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-hidd-system_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-hidd-system_OBJS) $(kernel-hidd-system_DEPS) : | $(kernel-hidd-system_OBJDIR)/linklib
+
+ifneq ($(kernel-hidd-system_OBJS) $(kernel-hidd-system_DEPS) $(kernel-hidd-system_MODULE) $(kernel-hidd-system_KOBJ),)
+$(kernel-hidd-system_OBJS) $(kernel-hidd-system_DEPS) $(kernel-hidd-system_MODULE) $(kernel-hidd-system_KOBJ) : | $(kernel-hidd-system_OBJDIR) $(AROSDIR)/$(kernel-hidd-system_MODDIR) $(KOBJSDIR)
+else
+$(kernel-hidd-system_OBJS) $(kernel-hidd-system_DEPS) $(kernel-hidd-system_MODULE) $(kernel-hidd-system_KOBJ) :: $(kernel-hidd-system_OBJDIR) $(AROSDIR)/$(kernel-hidd-system_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-system_OBJDIR) $(AROSDIR)/$(kernel-hidd-system_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-hidd-system kernel-hidd-system-includes kernel-hidd-system-quick kernel-hidd-system-kobj kernel-hidd-system-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-hidd-system_DFILE_DEPS := $(kernel-hidd-system_LIBDEFSINC) $(kernel-hidd-system_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-hidd-system_INCDIR)/,$($(kernel-hidd-system_DEFNAME)_INCLUDES))
+$(kernel-hidd-system_DEPS) : $(kernel-hidd-system_DFILE_DEPS)
+endif
+
+kernel-hidd-system_TOCLEAN := $(kernel-hidd-system_OBJS) $(kernel-hidd-system_DEPS) \
+    $(kernel-hidd-system_MODULE) $(kernel-hidd-system_LINKLIB) $(kernel-hidd-system_KOBJ) \
+    $(kernel-hidd-system_OBJDIR)/Makefile.systemhidd \
+    $(addprefix $(kernel-hidd-system_OBJDIR)/include/,$($(kernel-hidd-system_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-hidd-system_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-system_INCDIR)/,$($(kernel-hidd-system_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-system_OBJDIR)/system_geninc $(kernel-hidd-system_OBJDIR)/system_incs \
+    $(addsuffix .c,$(kernel-hidd-system_LINKLIBFILES)) $(kernel-hidd-system_LINKLIBOBJS) $(kernel-hidd-system_LIBDEFSINC) \
+    $(kernel-hidd-system_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-hidd-system_STARTFILES) $(kernel-hidd-system_ENDFILES)) \
+    $(kernel-hidd-system_ENDOBJS)
+kernel-hidd-system-clean : FILES              := $(kernel-hidd-system_TOCLEAN)
+kernel-hidd-system-clean ::
+	$(Q)$(ECHO) "Cleaning up for module system"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-hidd-system_ALLTARGETS)
+
+
+LIBNAME     := system
+
+INCLUDE_FILES    := $(call WILDCARD, include/*.h)
+
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq (include,)
+TMP_DIR                := include
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst include,$(GENINCDIR)/hidd,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/hidd/,$(notdir $(INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := include/
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/include/
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/hidd/,$(INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/hidd/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq (include,)
+BD_INCL_FILES2         := $(subst include,$(AROS_INCLUDES)/hidd,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/hidd/,$(notdir $(INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/hidd/,$(INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/hidd/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+#MM
+clean ::
+	-$(RM) $(OBJDIR) *.err $(LIB) *.s
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

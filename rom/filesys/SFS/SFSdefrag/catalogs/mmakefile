@@ -1,0 +1,77 @@
+# Copyright © 2004-2016, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM workbench-devs-sfs-c-sfsdefrag-catalogs
+
+CATALOGS:=czech french german
+
+
+ifeq (,)
+workbench-devs-sfs-c-sfsdefrag-catalogs_DESC := $(basename $(wildcard $(SRCDIR)/$(CURDIR)/*.cd))
+else
+workbench-devs-sfs-c-sfsdefrag-catalogs_DESC := 
+endif
+
+workbench-devs-sfs-c-sfsdefrag-catalogs_SRC := $(shell echo $(TOOLDIR)/C_h_aros | sed 's/^\(.\):\//\/\1\//')
+
+ifeq ($(CATALOGS),)
+workbench-devs-sfs-c-sfsdefrag-catalogs_LNGS := $(basename $(notdir $(call WILDCARD, $(SRCDIR)/$(CURDIR)/*.ct)))
+else
+workbench-devs-sfs-c-sfsdefrag-catalogs_LNGS := $(CATALOGS)
+endif
+
+workbench-devs-sfs-c-sfsdefrag-catalogs_OBJS := $(addsuffix /System/Tools/SFSDefrag.catalog, $(addprefix $(AROS_CATALOGS)/, $(workbench-devs-sfs-c-sfsdefrag-catalogs_LNGS)))
+workbench-devs-sfs-c-sfsdefrag-catalogs_DIRS := $(addsuffix /System/Tools, $(addprefix $(AROS_CATALOGS)/, $(workbench-devs-sfs-c-sfsdefrag-catalogs_LNGS))) $(dir ../strings.h)
+
+#MM- workbench-devs-sfs-c-sfsdefrag-catalogs-quick : workbench-devs-sfs-c-sfsdefrag-catalogs
+
+#MM
+workbench-devs-sfs-c-sfsdefrag-catalogs : $(workbench-devs-sfs-c-sfsdefrag-catalogs_OBJS) ../strings.h
+
+
+ifneq ($(workbench-devs-sfs-c-sfsdefrag-catalogs_OBJS),)
+$(workbench-devs-sfs-c-sfsdefrag-catalogs_OBJS) : | $(workbench-devs-sfs-c-sfsdefrag-catalogs_DIRS)
+else
+$(workbench-devs-sfs-c-sfsdefrag-catalogs_OBJS) :: $(workbench-devs-sfs-c-sfsdefrag-catalogs_DIRS)
+endif
+
+GLOB_MKDIRS += $(workbench-devs-sfs-c-sfsdefrag-catalogs_DIRS)
+
+
+$(AROS_CATALOGS)/%/System/Tools/SFSDefrag.catalog : $(SRCDIR)/$(CURDIR)/%.ct $(workbench-devs-sfs-c-sfsdefrag-catalogs_DESC).cd
+	$(Q)$(ECHO) "Creating   SFSDefrag catalog for language $*."
+	$(Q)$(IF) $(TEST) "$*" = "polish"; then \
+	    $(FLEXCAT) iso88592toamigapl $(workbench-devs-sfs-c-sfsdefrag-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Tools/SFSDefrag.catalog" || [ $$? -lt 10 ] ; \
+	elif $(TEST) "$*" = "russian"; then \
+	    $(FLEXCAT) win1251toamiga1251 $(workbench-devs-sfs-c-sfsdefrag-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Tools/SFSDefrag.catalog" || [ $$? -lt 10 ] ; \
+	else \
+	    $(FLEXCAT) $(workbench-devs-sfs-c-sfsdefrag-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Tools/SFSDefrag.catalog" || [ $$? -lt 10 ] ; \
+	fi
+
+ifneq (../strings.h,)
+../strings.h : workbench-devs-sfs-c-sfsdefrag-catalogs_DESC := $(workbench-devs-sfs-c-sfsdefrag-catalogs_DESC)
+../strings.h : workbench-devs-sfs-c-sfsdefrag-catalogs_SRC := $(workbench-devs-sfs-c-sfsdefrag-catalogs_SRC)
+../strings.h : $(workbench-devs-sfs-c-sfsdefrag-catalogs_DESC).cd $(workbench-devs-sfs-c-sfsdefrag-catalogs_SRC).sd | $(dir ../strings.h)
+	$(Q)$(ECHO) "Creating   SFSDefrag catalog source file $@"
+	$(Q)$(FLEXCAT) $(workbench-devs-sfs-c-sfsdefrag-catalogs_DESC).cd $@=$(workbench-devs-sfs-c-sfsdefrag-catalogs_SRC).sd
+endif
+
+workbench-devs-sfs-c-sfsdefrag-catalogs-clean : FILES := $(workbench-devs-sfs-c-sfsdefrag-catalogs_OBJS) ../strings.h
+#MM
+workbench-devs-sfs-c-sfsdefrag-catalogs-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-devs-sfs-c-sfsdefrag-catalogs"
+	$(Q)$(RM) $(FILES)
+
+.PHONY: workbench-devs-sfs-c-sfsdefrag-catalogs workbench-devs-sfs-c-sfsdefrag-catalogs-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,1736 @@
+# Copyright © 2015-2020, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM kernel-task-kobj: includes
+#MM kernel-task: includes
+
+INCLUDE_FILES := task.h
+
+USER_CPPFLAGS := \
+               -DUSE_EXEC_DEBUG
+USER_LDFLAGS := -static
+USER_INCLUDES += $(PRIV_EXEC_INCLUDES)
+
+TASKRES_FUNCS :=		\
+	    LockTaskList        \
+	    UnLockTaskList      \
+	    NextTaskEntry       \
+	    QueryTaskTagList    \
+	    InitTaskHooks       \
+	    AddTaskHook         \
+	    RunTaskHooks
+
+TASKRES_FILES :=		\
+	    task_init		\
+	    task_execfuncs	\
+            task_support	\
+	    $(TASKRES_FUNCS)
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-task
+#MM kernel-task-quick
+#MM kernel-task-makefile
+#MM kernel-task-clean
+
+# ABI targets:
+#MM- includes-all : kernel-task-includes
+#MM- linklibs-task: kernel-task-linklib
+#MM- linklibs-task_rel : kernel-task-linklib
+#MM- includes-task: kernel-task-includes
+#MM- includes-task_rel : kernel-task-includes
+#MM- kernel-task : kernel-task-includes core-linklibs linklibs-
+#MM kernel-task-linklib : kernel-task-includes includes-
+#MM- kernel-task-quick : kernel-task-includes-quick
+#MM kernel-task-includes : kernel-task-makefile kernel-task-includes-dirs \
+#MM     includes-generate-deps kernel-task-fd
+#MM kernel-task-includes-quick
+#MM kernel-task-includes-dirs
+#MM kernel-task-fd
+
+# Library targets
+#MM kernel-task-kobj : core-linklibs linklibs-
+#MM kernel-task-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-task-kobj : kernel-task-includes core-linklibs linklibs-
+#MM kernel-task-kobj-quick : kernel-task-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-task_ALLTARGETS       := kernel-task kernel-task-quick kernel-task-clean
+
+ifeq (M,M)
+kernel-task_ALLTARGETS       += kernel-task-kobj kernel-task-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-task_ALLTARGETS += kernel-task-includes \
+                 kernel-task-includes-quick kernel-task-includes-dirs  \
+                 kernel-task-linklib kernel-task-fd
+endif
+
+.PHONY : $(kernel-task_ALLTARGETS) kernel-task-makefile
+
+ifeq (task,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (resource,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-task_DEFNAME      := task_
+else
+    kernel-task_DEFNAME      := task
+endif
+kernel-task_DEFLINKLIBNAME   := $(kernel-task_DEFNAME)
+ifneq (,)
+    kernel-task_LINKLIBNAME  := 
+else
+    kernel-task_LINKLIBNAME  = $(kernel-task_DEFLINKLIBNAME)
+endif
+kernel-task_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-task_DEFCPPFLAGS  += -I
+endif
+kernel-task_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-task_DFLAGS       := 
+else
+    kernel-task_DFLAGS       = $(kernel-task_DEFDFLAGS)
+endif
+kernel-task_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-task_DXXFLAGS     := 
+else
+    kernel-task_DXXFLAGS     = $(kernel-task_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-task_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-task_DEFDFLAGS))
+kernel-task_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-task_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-task_FUNCINSTR := yes
+kernel-task_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-task_DEFDFLAGS))
+kernel-task_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-task_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-task_OBJDIR                     := 
+else
+kernel-task_OBJDIR                     := $(OBJDIR)/$(kernel-task_DEFNAME)
+endif
+ifneq (,)
+kernel-task_OBJDIR           := $(kernel-task_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-task-makefile         := $(kernel-task_OBJDIR)/Makefile.$(kernel-task_DEFNAME)resource
+kernel-task-genmakefile : $(kernel-task-makefile)
+
+
+kernel-task-genmakefile_OPTS := 
+ifneq (,)
+    kernel-task-genmakefile_OPTS += -f 
+    kernel-task-genmakefile_MODNAME := task_
+else
+    kernel-task-genmakefile_MODNAME := task
+endif
+kernel-task-genmakefile_TARGET := Makefile.$(kernel-task-genmakefile_MODNAME)resource
+kernel-task-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-task-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-task-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-task-genmakefile_OPTS += -c 
+        kernel-task-genmakefile_DEPS += 
+    endif 
+else
+    kernel-task-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/task.conf
+    kernel-task-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/task.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-task-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-task-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-task-genmakefile_OPTS += -o 
+        kernel-task-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-task-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-task_OBJDIR),)
+    kernel-task-genmakefile_OPTS += -d $(kernel-task_OBJDIR)
+    kernel-task-genmakefile_TARGET := $(kernel-task_OBJDIR)/$(kernel-task-genmakefile_TARGET)
+endif
+
+$(kernel-task-genmakefile_TARGET) : OPTS := $(kernel-task-genmakefile_OPTS)
+$(kernel-task-genmakefile_TARGET) : MODNAME := task
+$(kernel-task-genmakefile_TARGET) : MODTYPE := resource
+$(kernel-task-genmakefile_TARGET) : $(kernel-task-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-task-makefile),)
+$(kernel-task-makefile) : | $(kernel-task_OBJDIR)
+else
+$(kernel-task-makefile) :: $(kernel-task_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-task_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-task_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-task-makefile)
+
+kernel-task_DEFMODDIR        := $($(kernel-task_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-task_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-task_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-task_MODDIR       := 
+else
+    kernel-task_MODDIR       := $(kernel-task_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-task_INCDIR           := 
+else
+kernel-task_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-task_LIBDEFSINC       := $(kernel-task_OBJDIR)/include/$(kernel-task_DEFNAME)_libdefs.h
+kernel-task_DEFLIBDEFSINC    := $(kernel-task_OBJDIR)/include/$(kernel-task_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-task-includes-quick : kernel-task-includes
+kernel-task-includes : $(addprefix $(GENINCDIR)/,$($(kernel-task_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-task_INCDIR)/,$($(kernel-task_DEFNAME)_INCLUDES)) \
+    $(kernel-task_LIBDEFSINC) $(kernel-task_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-task_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-task-includes_MODNAME := task_
+else
+    kernel-task-includes_MODNAME := task
+endif
+
+ifneq ($($(kernel-task-includes_MODNAME)_INCLUDES),)
+
+kernel-task-includes_TARGETS := $($(kernel-task-includes_MODNAME)_INCLUDES)
+
+kernel-task-includes_DEPS := $(GENMODULE)
+kernel-task-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-task-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-task-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-task-includes_OPTS += -c 
+        kernel-task-includes_DEPS += 
+    endif 
+else
+    kernel-task-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/task.conf
+    kernel-task-includes_DEPS += $(SRCDIR)/$(CURDIR)/task.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-task-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-task-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-task-includes_OPTS += -o 
+        kernel-task-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-task-includes_OPTS += -s 
+endif
+ifneq ($(kernel-task_OBJDIR)/include,)
+    kernel-task-includes_OPTS += -d $(kernel-task_OBJDIR)/include
+    kernel-task-includes_TARGETS := $(addprefix $(kernel-task_OBJDIR)/include/,$(kernel-task-includes_TARGETS))
+    kernel-task-includes_GENINCFLAG=$(kernel-task_OBJDIR)/include/.task.resource-includes
+else
+    kernel-task-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.task.resource-includes
+endif
+
+$(kernel-task-includes_TARGETS) : $(kernel-task-includes_DEPS) $(kernel-task-includes_GENINCFLAG)
+
+$(kernel-task-includes_GENINCFLAG) : OPTS := $(kernel-task-includes_OPTS)
+$(kernel-task-includes_GENINCFLAG) : MODNAME := task
+$(kernel-task-includes_GENINCFLAG) : MODTYPE := resource
+$(kernel-task-includes_GENINCFLAG) : $(kernel-task-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-task_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-task_DEFNAME)_INCLUDES)) : | $(kernel-task_OBJDIR)/task_geninc
+
+$(kernel-task_OBJDIR)/task_geninc : COPYSRCDIR := $(kernel-task_OBJDIR)/include
+$(kernel-task_OBJDIR)/task_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-task_OBJDIR)/task_geninc : FILES := $($(kernel-task_DEFNAME)_INCLUDES)
+$(kernel-task_OBJDIR)/task_geninc : $(addprefix $(kernel-task_OBJDIR)/include/,$($(kernel-task_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-task_OBJDIR)/include
+
+$(addprefix $(kernel-task_INCDIR)/,$($(kernel-task_DEFNAME)_INCLUDES)) : | $(kernel-task_OBJDIR)/task_incs
+
+$(kernel-task_OBJDIR)/task_incs : COPYSRCDIR := $(kernel-task_OBJDIR)/include
+$(kernel-task_OBJDIR)/task_incs : TGTDIR := $(kernel-task_INCDIR)
+$(kernel-task_OBJDIR)/task_incs : FILES := $($(kernel-task_DEFNAME)_INCLUDES)
+$(kernel-task_OBJDIR)/task_incs : $(addprefix $(kernel-task_OBJDIR)/include/,$($(kernel-task_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-task_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-task_DEFNAME)_INCLUDES))))
+
+TMPtask_INCDIRS := \
+    $(kernel-task_OBJDIR)/include $(addprefix $(kernel-task_OBJDIR)/include/,$(kernel-task_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-task_INCDIRS)) \
+    $(kernel-task_INCDIR) $(addprefix $(kernel-task_INCDIR)/,$(kernel-task_INCDIRS))
+
+ifneq (kernel-task-includes-dirs,)
+kernel-task-includes-dirs : | $(TMPtask_INCDIRS)
+else
+kernel-task-includes-dirs :: $(TMPtask_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPtask_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-task-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-task-genlibdefs_OPTS += -f 
+    kernel-task-genlibdefs_MODNAME := task_
+else
+    kernel-task-genlibdefs_MODNAME := task
+endif
+kernel-task-genlibdefs_TARGET := $(kernel-task-genlibdefs_MODNAME)_libdefs.h
+kernel-task-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-task-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-task-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-task-genlibdefs_OPTS += -c 
+        kernel-task-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-task-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/task.conf
+    kernel-task-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/task.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-task-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-task-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-task-genlibdefs_OPTS += -o 
+        kernel-task-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-task-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-task_OBJDIR)/include,)
+    kernel-task-genlibdefs_OPTS += -d $(kernel-task_OBJDIR)/include
+    kernel-task-genlibdefs_TARGET := $(kernel-task_OBJDIR)/include/$(kernel-task-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-task-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-task-genlibdefs_TARGET) : OPTS := $(kernel-task-genlibdefs_OPTS)
+$(kernel-task-genlibdefs_TARGET) : MODNAME := task
+$(kernel-task-genlibdefs_TARGET) : MODTYPE := resource
+$(kernel-task-genlibdefs_TARGET) : $(kernel-task-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-task_DEFLIBDEFSINC) : FILENAME := $(kernel-task_LIBDEFSINC)
+$(kernel-task_DEFLIBDEFSINC) : $(kernel-task_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-task_LIBDEFSINC) $(kernel-task_DEFLIBDEFSINC) : | $(kernel-task_OBJDIR)/include
+
+ifneq (kernel-task-includes-dirs,)
+kernel-task-includes-dirs : | $(kernel-task_OBJDIR)/include
+else
+kernel-task-includes-dirs :: $(kernel-task_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-task_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-task-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-task-genmodfiles_OPTS += -f 
+    kernel-task-genmodfiles_MODNAME := task_
+else
+    kernel-task-genmodfiles_MODNAME := task
+endif
+kernel-task-genmodfiles_GENTARGETS := $($(kernel-task-genmodfiles_MODNAME)_STARTFILES) $($(kernel-task-genmodfiles_MODNAME)_ENDFILES)
+kernel-task-genmodfiles_STUBTARGETS := $($(kernel-task-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-task-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-task-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-task-genmodfiles_GENTARGETS))
+kernel-task-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-task-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-task-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-task-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-task-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-task-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-task-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-task-genmodfiles_OPTS += -c 
+        kernel-task-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-task-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/task.conf
+    kernel-task-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/task.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-task-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-task-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-task-genmodfiles_OPTS += -o 
+        kernel-task-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-task-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-task_OBJDIR),)
+    kernel-task-genmodfiles_OPTS += -d $(kernel-task_OBJDIR)
+    kernel-task-genmodfiles_TARGETDIR := $(shell echo $(kernel-task_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-task-genmodfiles_GENTARGETS := $(addprefix $(kernel-task-genmodfiles_TARGETDIR)/,$(kernel-task-genmodfiles_GENTARGETS))
+    kernel-task-genmodfiles_GENFILEFLAG=$(kernel-task-genmodfiles_TARGETDIR)/.task.resource-genfiles
+else
+    kernel-task-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.task.resource-genfiles
+endif
+ifneq ($(kernel-task_OBJDIR)/linklib,)
+    kernel-task-genmodfiles_OPTS += -l $(kernel-task_OBJDIR)/linklib
+    kernel-task-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-task_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-task-genmodfiles_STUBTARGETS := $(addprefix $(kernel-task-genmodfiles_STUBTARGETDIR)/,$(kernel-task-genmodfiles_STUBTARGETS))
+    kernel-task-genmodfiles_TARGETDIRS += $(kernel-task_OBJDIR)/linklib
+else
+ifneq ($(kernel-task_OBJDIR),)
+    kernel-task-genmodfiles_STUBTARGETS := $(addprefix $(kernel-task-genmodfiles_TARGETDIR)/,$(kernel-task-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-task-genmodfiles_TARGETS := $(kernel-task-genmodfiles_GENTARGETS) $(kernel-task-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-task-genmodfiles_TARGETDIRS),)
+$(kernel-task-genmodfiles_TARGETS) : | $(kernel-task-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-task-genmodfiles_TARGETS) : $(kernel-task-genmodfiles_DEPS) $(kernel-task-genmodfiles_GENFILEFLAG)
+
+$(kernel-task-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-task-genmodfiles_OPTS)
+$(kernel-task-genmodfiles_GENFILEFLAG) : MODNAME := task
+$(kernel-task-genmodfiles_GENFILEFLAG) : MODTYPE := resource
+$(kernel-task-genmodfiles_GENFILEFLAG) : $(kernel-task-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-task-genmodfiles_GENFILEFLAG) : $(kernel-task_DEFLIBDEFSINC) $(kernel-task-makefile)
+
+
+ifneq ($(kernel-task-genmodfiles_GENFILEFLAG),)
+$(kernel-task-genmodfiles_GENFILEFLAG) : | $(kernel-task_OBJDIR)/linklib
+else
+$(kernel-task-genmodfiles_GENFILEFLAG) :: $(kernel-task_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-task_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-task_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-task_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-task-fd : $(kernel-task_FDDIR)/task_lib.fd
+
+
+TMP_TARGET := task_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/task.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/task.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-task_FDDIR),)
+    TMP_OPTS += -d $(kernel-task_FDDIR)
+    TMP_TARGET := $(kernel-task_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := task
+$(TMP_TARGET) : MODTYPE := resource
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-task_FDDIR)/task_lib.fd : | $(kernel-task_FDDIR)
+
+
+ifneq (kernel-task-fd-setup,)
+kernel-task-fd-setup : | $(kernel-task_FDDIR)
+else
+kernel-task-fd-setup :: $(kernel-task_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-task_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-task_FILES            := $(TASKRES_FILES)
+kernel-task_OBJCFILES        := 
+kernel-task_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-task_LIBFILES         := 
+kernel-task_LIBS             := 
+
+kernel-task_FDIRS            := $(sort $(dir $(kernel-task_FILES)))
+
+kernel-task_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-task_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-task_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-task_FILTERARCH       = $(filter-out $(call kernel-task_MATCHARCH,$(1),$(2)),$(2))
+kernel-task_STARTFILES       := $(addprefix $(kernel-task_OBJDIR)/,$($(kernel-task_DEFNAME)_STARTFILES))
+kernel-task_ENDFILES         := $(addprefix $(kernel-task_OBJDIR)/,$($(kernel-task_DEFNAME)_ENDFILES))
+
+kernel-task_ARCHOBJS         := $(wildcard $(kernel-task_OBJDIR)/arch/*.o)
+kernel-task_LIBARCHOBJS      := $(wildcard $(kernel-task_OBJDIR)/linklib/arch/*.o)
+kernel-task_ARCHFILES        := $(basename $(notdir $(kernel-task_ARCHOBJS)))
+kernel-task_LIBARCHFILES     := $(basename $(notdir $(kernel-task_LIBARCHOBJS)))
+kernel-task_C_NARCHFILES     := $(call kernel-task_FILTERARCH,$(kernel-task_ARCHFILES),$(kernel-task_FILES))
+kernel-task_CXX_NARCHFILES   := $(call kernel-task_FILTERARCH,$(kernel-task_ARCHFILES),$(kernel-task_CXXFILES))
+kernel-task_OBJC_NARCHFILES  := $(call kernel-task_FILTERARCH,$(kernel-task_ARCHFILES),$(kernel-task_OBJCFILES))
+kernel-task_NLIBARCHFILES    := $(call kernel-task_FILTERARCH,$(kernel-task_LIBARCHFILES),$(kernel-task_LIBFILES))
+kernel-task_ARCHNLIBFILES    := $(call kernel-task_FILTERARCH,$(kernel-task_LIBFILES),$(kernel-task_LIBARCHFILES))
+
+kernel-task_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-task_OBJDIR)/include -include $(kernel-task_DEFLIBDEFSINC))
+ifneq (,)
+kernel-task_CPPFLAGS         += -I
+endif
+kernel-task_LINKLIBCPPFLAGS  := $(kernel-task_CPPFLAGS)
+kernel-task_CPPFLAGS         += $(strip $($(kernel-task_DEFNAME)_CPPFLAGS))
+kernel-task_LINKLIBCPPFLAGS  += $(strip $($(kernel-task_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-task_CFLAGS           := $(strip $(CFLAGS) $($(kernel-task_DEFNAME)_CFLAGS))
+kernel-task_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-task_DEFNAME)_LINKLIBCFLAGS))
+kernel-task_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-task_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-task_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-task_CFLAGS           := $(strip $(kernel-task_LTOFLAGS) $(kernel-task_CFLAGS))
+kernel-task_LINKLIBCFLAGS    := $(strip $(kernel-task_LTOFLAGS) $(kernel-task_LINKLIBCFLAGS))
+kernel-task_CXXFLAGS         := $(strip $(kernel-task_LTOFLAGS) $(kernel-task_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-task_SUBSTNULL        :=
+kernel-task_SUBSTSPACE       := $(kernel-task_SUBSTNULL) #
+kernel-task_SUBSTCOMMA       := ,
+kernel-task_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-task_SUBSTSPACE),$(kernel-task_SUBSTCOMMA),$(strip $($(kernel-task_DEFNAME)_STARTFILES))))
+kernel-task_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-task_CFLAGS           := $(strip $(kernel-task_INSTRFUNCFLAGS) $(kernel-task_CFLAGS))
+kernel-task_CXXFLAGS         := $(strip $(kernel-task_INSTRFUNCFLAGS) $(kernel-task_CXXFLAGS))
+kernel-task_LIBS             += $(kernel-task_INSTRFUNCLIBS)
+endif
+endif
+kernel-task_DFLAGS           := $(strip $(kernel-task_DFLAGS) $($(kernel-task_DEFNAME)_DFLAGS))
+kernel-task_LINKLIBDFLAGS    := $(strip $(kernel-task_DFLAGS) $($(kernel-task_DEFNAME)_LINKLIBDFLAGS))
+kernel-task_DXXFLAGS         := $(strip $(kernel-task_DXXFLAGS) $($(kernel-task_DEFNAME)_DXXFLAGS))
+
+ifeq (resource,library)
+    kernel-task_LIBSUFFIX    := 
+else
+    kernel-task_LIBSUFFIX    := .resource
+endif
+
+ifeq (,)
+kernel-task_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-task_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-task_LINKLIBCFILES    := $(addprefix $(kernel-task_OBJDIR)/linklib/,$($(kernel-task_DEFNAME)_LINKLIBFILES))
+kernel-task_LINKLIBAFILES    := $(addprefix $(kernel-task_OBJDIR)/linklib/,$($(kernel-task_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-task_DEFNAME)_LINKLIBFILES) $($(kernel-task_DEFNAME)_LINKLIBAFILES)  $(kernel-task_ARCHNLIBFILES)),)
+    kernel-task_LINKLIB      :=
+else
+    kernel-task_LINKLIB      := $(kernel-task_LIBDIR)/libtask$(kernel-task_LIBSUFFIX).a
+    ifneq (task,$(kernel-task_LINKLIBNAME))
+        kernel-task_LINKLIB  += $(kernel-task_LIBDIR)/lib$(kernel-task_LINKLIBNAME)$(kernel-task_LIBSUFFIX).a
+    endif
+endif
+kernel-task_LINKLIBFILES     := $(kernel-task_LINKLIBCFILES) $(kernel-task_LINKLIBAFILES)
+
+kernel-task_RELLINKLIBCFILES := $(addprefix $(kernel-task_OBJDIR)/linklib/,$($(kernel-task_DEFNAME)_RELLINKLIBFILES))
+kernel-task_RELLINKLIBAFILES := $(addprefix $(kernel-task_OBJDIR)/linklib/,$($(kernel-task_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-task_DEFNAME)_RELLINKLIBFILES) $($(kernel-task_DEFNAME)_RELLINKLIBAFILES)  $(kernel-task_ARCHNLIBFILES)),)
+    kernel-task_RELLINKLIB   :=
+else
+    kernel-task_RELLINKLIB   := $(kernel-task_LIBDIR)/lib$(kernel-task_DEFNAME)_rel$(kernel-task_LIBSUFFIX).a
+    ifneq (task,$(kernel-task_LINKLIBNAME))
+        kernel-task_RELLINKLIB += $(kernel-task_LIBDIR)/lib$(kernel-task_LINKLIBNAME)_rel$(kernel-task_LIBSUFFIX).a
+    endif
+endif
+kernel-task_RELLINKLIBFILES  := $(kernel-task_RELLINKLIBCFILES) $(kernel-task_RELLINKLIBAFILES)
+endif
+
+kernel-task_ENDOBJS          := $(addsuffix .o,$(kernel-task_ENDFILES))
+kernel-task_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-task_OBJDIR)/linklib/,$(notdir $(kernel-task_NLIBARCHFILES))) $(addprefix $(kernel-task_OBJDIR)/linklib/arch/,$(notdir $(kernel-task_ARCHNLIBFILES))) $(kernel-task_LINKLIBFILES)) \
+                 
+kernel-task_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-task_OBJDIR)/linklib/,$(notdir $(kernel-task_NLIBARCHFILES))) $(addprefix $(kernel-task_OBJDIR)/linklib/arch/,$(notdir $(kernel-task_ARCHNLIBFILES))) $(kernel-task_RELLINKLIBFILES)) \
+                 
+$(kernel-task_LINKLIBFILES) $(kernel-task_RELLINKLIBFILES) : | $(kernel-task_OBJDIR)/linklib
+$(kernel-task_LINKLIBOBJS) $(kernel-task_RELLINKLIBOBJS) : | $(kernel-task_OBJDIR)/linklib
+
+kernel-task_CCFILES := $(kernel-task_C_NARCHFILES)
+kernel-task_TARGETCCFILES    := $(strip $(kernel-task_STARTFILES) $(kernel-task_ENDFILES))
+kernel-task_LINKLIBCCFILES   := $(strip $(kernel-task_NLIBARCHFILES) $(kernel-task_LINKLIBCFILES) $(kernel-task_RELLINKLIBCFILES))
+kernel-task_LINKLIBCCGENFILES := $(strip $(kernel-task_LINKLIBCFILES) $(kernel-task_RELLINKLIBCFILES))
+
+
+kernel-task_CXXABSBASENAMES := $(foreach kernel-task_CXXBASE,$(kernel-task_CXX_NARCHFILES),$(if $(filter /%,$(kernel-task_CXXBASE)),$(kernel-task_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-task_CXXBASE))))
+
+ifneq ($(kernel-task_CXXABSBASENAMES),)
+
+kernel-task_CXXBASENAMES := $(basename $(kernel-task_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-task_MCXX_FILES  := $(strip $(foreach kernel-task_CXXBASE,$(kernel-task_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-task_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-task_EXT),$(kernel-task_CXXBASE)))))))
+
+ifeq (,)
+kernel-task_MCXX_SRCWILDCARD := %
+else
+kernel-task_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-task_OBJDIR),)
+  kernel-task_CXXTARGETS := $(notdir $(kernel-task_CXXBASENAMES:=.o))
+  kernel-task_CXXDTARGETS := $(notdir $(kernel-task_CXXBASENAMES:=.d))
+  kernel-task_MCXX_WILDCARD := %
+else
+  kernel-task_CXXTARGETS := $(addprefix $(kernel-task_OBJDIR)/,$(notdir $(kernel-task_CXXBASENAMES:=.o)))
+  kernel-task_CXXDTARGETS := $(addprefix $(kernel-task_OBJDIR)/,$(notdir $(kernel-task_CXXBASENAMES:=.d)))
+  kernel-task_MCXX_WILDCARD := $(kernel-task_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-task_CXXTARGETS) $(kernel-task_CXXDTARGETS) : | $(kernel-task_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-task_MCXX_CPPFLAGS := $(kernel-task_CPPFLAGS)
+kernel-task_CXXFLAGS := $(kernel-task_CXXFLAGS)
+ifeq ($(kernel-task_DXXFLAGS),)
+  kernel-task_DXXFLAGS := $(kernel-task_CXXFLAGS)
+else
+  kernel-task_DXXFLAGS := $(kernel-task_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-task_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-task_STRIP ?= $(HOST_STRIP)
+  kernel-task_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-task_CXXCMD:=$(HOST_CXX)
+  kernel-task_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-task_MCXX_CPPFLAGS) $(kernel-task_MCXX_EXTRA_CPPFLAGS))
+  kernel-task_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-task_CXXFLAGS))
+  kernel-task_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-task_DXXFLAGS))
+  kernel-task_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-task_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-task_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-task_STRIP ?= $(TARGET_STRIP)
+  kernel-task_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-task_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-task_MCXX_CPPFLAGS := $(strip $(kernel-task_MCXX_CPPFLAGS) $(kernel-task_MCXX_EXTRA_CPPFLAGS))
+  kernel-task_CXXFLAGS := $(strip $(kernel-task_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-task_DXXFLAGS := $(kernel-task_DXXFLAGS)
+  kernel-task_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-task_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-task_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-task_STRIP ?= $(ECHO) >/dev/null
+  kernel-task_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-task_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-task_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-task_MCXX_CPPFLAGS) $(kernel-task_MCXX_EXTRA_CPPFLAGS))
+  kernel-task_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-task_CXXFLAGS))
+  kernel-task_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-task_DXXFLAGS))
+  kernel-task_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-task_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-task_CXXCMD) $(kernel-task_CXXIQUOTE) $(dir $(2)) $(kernel-task_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_CXXIQUOTE) . $(kernel-task_CXXIQUOTE_END) $(strip $(kernel-task_CXXFLAGS) $(kernel-task_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-task_CXXCMD) $(kernel-task_CXXIQUOTE) $(dir $(2)) $(kernel-task_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_CXXIQUOTE) . $(kernel-task_CXXIQUOTE_END) $(strip $(kernel-task_CXXFLAGS) $(kernel-task_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-task_CXXCMD) $(kernel-task_CXXIQUOTE) $(dir $(2)) $(kernel-task_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_CXXIQUOTE) . $(kernel-task_CXXIQUOTE_END) $(strip $(kernel-task_CXXFLAGS) $(kernel-task_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-task_CXXCMD)" $(MKDEPEND) $(strip $(kernel-task_DXXFLAGS) $(kernel-task_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-task_OBJDIR),)
+  $(foreach kernel-task_CXXFILE,$(kernel-task_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-task_CXXFILE))),$(kernel-task_CXXFILE))))
+else
+  $(foreach kernel-task_CXXFILE,$(kernel-task_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-task_OBJDIR)/,$(notdir $(basename $(kernel-task_CXXFILE)))),$(kernel-task_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-task_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-task_MOBJC_SRCWILDCARD := %
+else
+kernel-task_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-task_OBJDIR),)
+  kernel-task_MOBJC_TARGETS := $(addsuffix .o,$(kernel-task_OBJC_NARCHFILES))
+  kernel-task_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-task_OBJC_NARCHFILES))
+  kernel-task_MOBJC_WILDCARD := %
+else
+  kernel-task_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-task_OBJDIR)/,$(kernel-task_OBJC_NARCHFILES)))
+  kernel-task_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-task_OBJDIR)/,$(kernel-task_OBJC_NARCHFILES)))
+  kernel-task_MOBJC_WILDCARD := $(kernel-task_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-task_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-task_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-task_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-task_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-task_MOBJC_DIRS := $(foreach dir, $(kernel-task_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-task_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-task_MOBJC_DIRS),)
+    kernel-task_MOBJC_DIRS := $(shell echo $(kernel-task_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-task_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-task_CC := $(TARGET_CC)
+else
+  kernel-task_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-task_MOBJC_CPPFLAGS := $(kernel-task_CPPFLAGS)
+kernel-task_OBJCFLAGS := $(kernel-task_CFLAGS)
+kernel-task_OBJCFLAGS := $(kernel-task_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-task_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-task_OBJCFLAGS)))
+ifeq ($(kernel-task_DFLAGS),)
+  kernel-task_OBJCDFLAGS := $(kernel-task_CFLAGS)
+else
+  kernel-task_OBJCDFLAGS := $(kernel-task_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-task_LINK ?= $(strip $(kernel-task_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-task_STRIP ?= $(TARGET_STRIP)
+  kernel-task_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-task_CC) $(TARGET_SYSROOT))
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : kernel-task_MOBJC_CPPFLAGS:=$(strip $(kernel-task_MOBJC_CPPFLAGS) $(kernel-task_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : kernel-task_OBJCFLAGS:=$(strip $(kernel-task_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : kernel-task_OBJCDFLAGS:=$(kernel-task_OBJCDFLAGS)
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : kernel-task_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : kernel-task_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-task_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-task_STRIP ?= $(HOST_STRIP)
+  kernel-task_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : kernel-task_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-task_MOBJC_CPPFLAGS) $(kernel-task_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : kernel-task_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-task_OBJCFLAGS))
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : kernel-task_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-task_OBJCDFLAGS))
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : kernel-task_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : kernel-task_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-task_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-task_STRIP ?= $(ECHO) >/dev/null
+  kernel-task_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : kernel-task_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-task_MOBJC_CPPFLAGS) $(kernel-task_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : kernel-task_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-task_OBJCFLAGS))
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : kernel-task_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-task_OBJCDFLAGS))
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : kernel-task_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-task_MOBJC_TARGETS) $(kernel-task_MOBJC_DTARGETS) : kernel-task_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-task_MOBJC_TARGETS) : CPPFLAGS := $(kernel-task_MOBJC_CPPFLAGS)
+$(kernel-task_MOBJC_TARGETS) : CFLAGS := $(kernel-task_OBJCFLAGS)
+$(kernel-task_MOBJC_TARGETS) : $(kernel-task_MOBJC_WILDCARD).o : $(kernel-task_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-task_IQUOTE) $(dir $<) $(kernel-task_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_IQUOTE) . $(kernel-task_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-task_IQUOTE) $(dir $<) $(kernel-task_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_IQUOTE) . $(kernel-task_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-task_IQUOTE) $(dir $<) $(kernel-task_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_IQUOTE) . $(kernel-task_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-task_MOBJC_DTARGETS) : $(kernel-task_MOBJC_WILDCARD).d : $(kernel-task_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-task_OBJCDFLAGS) $(kernel-task_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-task_MC_SRCWILDCARD := %
+else
+kernel-task_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-task_OBJDIR),)
+kernel-task_MC_TARGETS := $(addsuffix .o,$(kernel-task_CCFILES))
+kernel-task_MC_DTARGETS := $(addsuffix .d,$(kernel-task_CCFILES))
+kernel-task_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-task_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-task_OBJDIR)/,$(notdir $(kernel-task_CCFILES))))
+    kernel-task_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-task_OBJDIR)/,$(notdir $(kernel-task_CCFILES))))
+else
+ifeq (,)
+    kernel-task_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-task_OBJDIR)/,$(kernel-task_CCFILES)))
+    kernel-task_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-task_OBJDIR)/,$(kernel-task_CCFILES)))
+else
+    kernel-task_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-task_OBJDIR)/,$(patsubst /%,%,$(kernel-task_CCFILES))))
+    kernel-task_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-task_OBJDIR)/,$(patsubst /%,%,$(kernel-task_CCFILES))))
+endif
+endif
+kernel-task_MC_TGTWILDCARD := $(kernel-task_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : | $(addsuffix .c,$(kernel-task_CCFILES))
+
+# Be sure that all .c files are found
+kernel-task_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-task_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-task_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-task_MC_DIRS := $(foreach dir, $(kernel-task_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-task_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-task_MC_DIRS),)
+    kernel-task_MC_DIRS := $(shell echo $(kernel-task_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-task_MC_DIRS)
+endif
+
+endif
+
+kernel-task_MC_CPPFLAGS := $(kernel-task_CPPFLAGS)
+kernel-task_CFLAGS := $(kernel-task_CFLAGS)
+ifeq ($(kernel-task_DFLAGS),)
+  kernel-task_DFLAGS := $(kernel-task_CFLAGS)
+else
+  kernel-task_DFLAGS := $(kernel-task_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-task_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-task_STRIP ?= $(TARGET_STRIP)
+kernel-task_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_MC_CPPFLAGS:=$(strip $(kernel-task_MC_CPPFLAGS) $(kernel-task_MC_EXTRA_CPPFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_CFLAGS:=$(strip $(kernel-task_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_DFLAGS:=$(kernel-task_DFLAGS)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-task_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-task_STRIP ?= $(HOST_STRIP)
+kernel-task_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-task_MC_CPPFLAGS) $(kernel-task_MC_EXTRA_CPPFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-task_CFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-task_DFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-task_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-task_STRIP ?= $(ECHO) >/dev/null
+kernel-task_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-task_MC_CPPFLAGS) $(kernel-task_MC_EXTRA_CPPFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-task_CFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-task_DFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-task_MC_TARGETS) : CPPFLAGS := $(kernel-task_MC_CPPFLAGS)
+$(kernel-task_MC_TARGETS) : CFLAGS := $(kernel-task_CFLAGS)
+$(kernel-task_MC_TARGETS) : $(kernel-task_MC_TGTWILDCARD).o : $(kernel-task_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-task_IQUOTE) $(dir $<) $(kernel-task_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_IQUOTE) . $(kernel-task_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-task_IQUOTE) $(dir $<) $(kernel-task_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_IQUOTE) . $(kernel-task_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-task_IQUOTE) $(dir $<) $(kernel-task_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_IQUOTE) . $(kernel-task_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-task_MC_DTARGETS) : $(kernel-task_MC_TGTWILDCARD).d : $(kernel-task_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-task_DFLAGS) $(kernel-task_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-task_MC_SRCWILDCARD := %
+else
+kernel-task_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-task_OBJDIR),)
+kernel-task_MC_TARGETS := $(addsuffix .o,$(kernel-task_TARGETCCFILES))
+kernel-task_MC_DTARGETS := $(addsuffix .d,$(kernel-task_TARGETCCFILES))
+kernel-task_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-task_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-task_OBJDIR)/,$(notdir $(kernel-task_TARGETCCFILES))))
+    kernel-task_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-task_OBJDIR)/,$(notdir $(kernel-task_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-task_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-task_OBJDIR)/,$(kernel-task_TARGETCCFILES)))
+    kernel-task_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-task_OBJDIR)/,$(kernel-task_TARGETCCFILES)))
+else
+    kernel-task_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-task_OBJDIR)/,$(patsubst /%,%,$(kernel-task_TARGETCCFILES))))
+    kernel-task_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-task_OBJDIR)/,$(patsubst /%,%,$(kernel-task_TARGETCCFILES))))
+endif
+endif
+kernel-task_MC_TGTWILDCARD := $(kernel-task_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : | $(addsuffix .c,$(kernel-task_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-task_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-task_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-task_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-task_MC_DIRS := $(foreach dir, $(kernel-task_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-task_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-task_MC_DIRS),)
+    kernel-task_MC_DIRS := $(shell echo $(kernel-task_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-task_MC_DIRS)
+endif
+
+endif
+
+kernel-task_MC_CPPFLAGS := $(kernel-task_CPPFLAGS) -D__AROS__
+kernel-task_CFLAGS := $(kernel-task_CFLAGS)
+ifeq ($(kernel-task_DFLAGS),)
+  kernel-task_DFLAGS := $(kernel-task_CFLAGS)
+else
+  kernel-task_DFLAGS := $(kernel-task_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-task_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-task_STRIP ?= $(TARGET_STRIP)
+kernel-task_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_MC_CPPFLAGS:=$(strip $(kernel-task_MC_CPPFLAGS) $(kernel-task_MC_EXTRA_CPPFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_CFLAGS:=$(strip $(kernel-task_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_DFLAGS:=$(kernel-task_DFLAGS)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-task_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-task_STRIP ?= $(HOST_STRIP)
+kernel-task_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-task_MC_CPPFLAGS) $(kernel-task_MC_EXTRA_CPPFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-task_CFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-task_DFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-task_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-task_STRIP ?= $(ECHO) >/dev/null
+kernel-task_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-task_MC_CPPFLAGS) $(kernel-task_MC_EXTRA_CPPFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-task_CFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-task_DFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-task_MC_TARGETS) : CPPFLAGS := $(kernel-task_MC_CPPFLAGS)
+$(kernel-task_MC_TARGETS) : CFLAGS := $(kernel-task_CFLAGS)
+$(kernel-task_MC_TARGETS) : $(kernel-task_MC_TGTWILDCARD).o : $(kernel-task_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-task_IQUOTE) $(dir $<) $(kernel-task_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_IQUOTE) . $(kernel-task_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-task_IQUOTE) $(dir $<) $(kernel-task_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_IQUOTE) . $(kernel-task_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-task_IQUOTE) $(dir $<) $(kernel-task_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_IQUOTE) . $(kernel-task_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-task_MC_DTARGETS) : $(kernel-task_MC_TGTWILDCARD).d : $(kernel-task_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-task_DFLAGS) $(kernel-task_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-task_MC_SRCWILDCARD := %
+else
+kernel-task_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-task_OBJDIR)/linklib,)
+kernel-task_MC_TARGETS := $(addsuffix .o,$(kernel-task_NLIBARCHFILES))
+kernel-task_MC_DTARGETS := $(addsuffix .d,$(kernel-task_NLIBARCHFILES))
+kernel-task_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-task_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-task_OBJDIR)/linklib/,$(notdir $(kernel-task_NLIBARCHFILES))))
+    kernel-task_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-task_OBJDIR)/linklib/,$(notdir $(kernel-task_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-task_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-task_OBJDIR)/linklib/,$(kernel-task_NLIBARCHFILES)))
+    kernel-task_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-task_OBJDIR)/linklib/,$(kernel-task_NLIBARCHFILES)))
+else
+    kernel-task_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-task_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-task_NLIBARCHFILES))))
+    kernel-task_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-task_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-task_NLIBARCHFILES))))
+endif
+endif
+kernel-task_MC_TGTWILDCARD := $(kernel-task_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : | $(addsuffix .c,$(kernel-task_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-task_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-task_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-task_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-task_MC_DIRS := $(foreach dir, $(kernel-task_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-task_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-task_MC_DIRS),)
+    kernel-task_MC_DIRS := $(shell echo $(kernel-task_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-task_MC_DIRS)
+endif
+
+endif
+
+kernel-task_MC_CPPFLAGS := $(kernel-task_LINKLIBCPPFLAGS) -D__AROS__
+kernel-task_CFLAGS := $(kernel-task_LINKLIBCFLAGS)
+ifeq ($(kernel-task_LINKLIBDFLAGS),)
+  kernel-task_DFLAGS := $(kernel-task_LINKLIBCFLAGS)
+else
+  kernel-task_DFLAGS := $(kernel-task_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-task_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-task_STRIP ?= $(TARGET_STRIP)
+kernel-task_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_MC_CPPFLAGS:=$(strip $(kernel-task_MC_CPPFLAGS) $(kernel-task_MC_EXTRA_CPPFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_CFLAGS:=$(strip $(kernel-task_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_DFLAGS:=$(kernel-task_DFLAGS)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-task_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-task_STRIP ?= $(HOST_STRIP)
+kernel-task_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-task_MC_CPPFLAGS) $(kernel-task_MC_EXTRA_CPPFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-task_CFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-task_DFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-task_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-task_STRIP ?= $(ECHO) >/dev/null
+kernel-task_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-task_MC_CPPFLAGS) $(kernel-task_MC_EXTRA_CPPFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-task_CFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-task_DFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-task_MC_TARGETS) : CPPFLAGS := $(kernel-task_MC_CPPFLAGS)
+$(kernel-task_MC_TARGETS) : CFLAGS := $(kernel-task_CFLAGS)
+$(kernel-task_MC_TARGETS) : $(kernel-task_MC_TGTWILDCARD).o : $(kernel-task_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-task_IQUOTE) $(dir $<) $(kernel-task_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_IQUOTE) . $(kernel-task_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-task_IQUOTE) $(dir $<) $(kernel-task_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_IQUOTE) . $(kernel-task_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-task_IQUOTE) $(dir $<) $(kernel-task_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_IQUOTE) . $(kernel-task_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-task_MC_DTARGETS) : $(kernel-task_MC_TGTWILDCARD).d : $(kernel-task_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-task_DFLAGS) $(kernel-task_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-task_OBJDIR)/linklib,)
+kernel-task_MC_SRCWILDCARD := %
+else
+kernel-task_MC_SRCWILDCARD := $(kernel-task_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-task_OBJDIR)/linklib,)
+kernel-task_MC_TARGETS := $(addsuffix .o,$(kernel-task_LINKLIBCCGENFILES))
+kernel-task_MC_DTARGETS := $(addsuffix .d,$(kernel-task_LINKLIBCCGENFILES))
+kernel-task_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-task_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-task_OBJDIR)/linklib/,$(notdir $(kernel-task_LINKLIBCCGENFILES))))
+    kernel-task_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-task_OBJDIR)/linklib/,$(notdir $(kernel-task_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-task_OBJDIR)/linklib,)
+    kernel-task_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-task_OBJDIR)/linklib/,$(kernel-task_LINKLIBCCGENFILES)))
+    kernel-task_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-task_OBJDIR)/linklib/,$(kernel-task_LINKLIBCCGENFILES)))
+else
+    kernel-task_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-task_OBJDIR)/linklib/,$(patsubst $(kernel-task_OBJDIR)/linklib/%,%,$(kernel-task_LINKLIBCCGENFILES))))
+    kernel-task_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-task_OBJDIR)/linklib/,$(patsubst $(kernel-task_OBJDIR)/linklib/%,%,$(kernel-task_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-task_MC_TGTWILDCARD := $(kernel-task_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : | $(addsuffix .c,$(kernel-task_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-task_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-task_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-task_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-task_MC_DIRS := $(foreach dir, $(kernel-task_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-task_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-task_MC_DIRS),)
+    kernel-task_MC_DIRS := $(shell echo $(kernel-task_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-task_MC_DIRS)
+endif
+
+endif
+
+kernel-task_MC_CPPFLAGS := $(kernel-task_LINKLIBCPPFLAGS) -D__AROS__
+kernel-task_CFLAGS := $(kernel-task_LINKLIBCFLAGS)
+ifeq ($(kernel-task_LINKLIBDFLAGS),)
+  kernel-task_DFLAGS := $(kernel-task_LINKLIBCFLAGS)
+else
+  kernel-task_DFLAGS := $(kernel-task_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-task_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-task_STRIP ?= $(TARGET_STRIP)
+kernel-task_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_MC_CPPFLAGS:=$(strip $(kernel-task_MC_CPPFLAGS) $(kernel-task_MC_EXTRA_CPPFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_CFLAGS:=$(strip $(kernel-task_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_DFLAGS:=$(kernel-task_DFLAGS)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-task_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-task_STRIP ?= $(HOST_STRIP)
+kernel-task_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-task_MC_CPPFLAGS) $(kernel-task_MC_EXTRA_CPPFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-task_CFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-task_DFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-task_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-task_STRIP ?= $(ECHO) >/dev/null
+kernel-task_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-task_MC_CPPFLAGS) $(kernel-task_MC_EXTRA_CPPFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-task_CFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-task_DFLAGS))
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-task_MC_TARGETS) $(kernel-task_MC_DTARGETS) : kernel-task_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-task_MC_TARGETS) : CPPFLAGS := $(kernel-task_MC_CPPFLAGS)
+$(kernel-task_MC_TARGETS) : CFLAGS := $(kernel-task_CFLAGS)
+$(kernel-task_MC_TARGETS) : $(kernel-task_MC_TGTWILDCARD).o : $(kernel-task_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-task_IQUOTE) $(dir $<) $(kernel-task_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_IQUOTE) . $(kernel-task_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-task_IQUOTE) $(dir $<) $(kernel-task_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_IQUOTE) . $(kernel-task_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-task_IQUOTE) $(dir $<) $(kernel-task_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-task_IQUOTE) . $(kernel-task_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-task_MC_DTARGETS) : $(kernel-task_MC_TGTWILDCARD).d : $(kernel-task_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-task_DFLAGS) $(kernel-task_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-task_LINKLIBAFILES),)
+
+ifeq ($(kernel-task_OBJDIR)/linklib,)
+kernel-task-MA_TARGETS := $(addsuffix .o,$(kernel-task_LINKLIBAFILES) $(kernel-task_RELLINKLIBAFILES))
+kernel-task-MA_WILDCARD := %
+else
+kernel-task-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-task_OBJDIR)/linklib/,$(notdir $(kernel-task_LINKLIBAFILES) $(kernel-task_RELLINKLIBAFILES))))
+kernel-task-MA_WILDCARD := $(kernel-task_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-task-MA_TARGETS) : | $(addsuffix .S,$(kernel-task_LINKLIBAFILES) $(kernel-task_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-task-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-task-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-task_LINKLIBAFILES) $(kernel-task_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-task-MA_DIRS := $(foreach dir, $(kernel-task-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-task-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-task-MA_DIRS),)
+    kernel-task-MA_DIRS := $(shell echo $(kernel-task-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-task-MA_DIRS)
+endif
+
+endif
+
+kernel-task-MA_ASSEMBLER ?= $(kernel-task_ASSEMBLER)
+
+$(kernel-task-MA_TARGETS) : kernel-task-MA_CMD:= $(kernel-task-MA_ASSEMBLER)
+
+$(kernel-task-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-task-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-task-MA_TARGETS) : $(kernel-task-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-task-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-task-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-task-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-task_SUFFIX           := resource
+else
+kernel-task_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-task_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-task_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-task_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-task_SUFFIX),handler)
+kernel-task_MODULE           := $(AROSDIR)/$(kernel-task_MODDIR)/$(kernel-task_DEFNAME)-$(kernel-task_SUFFIX)
+else
+kernel-task_MODULE           := $(AROSDIR)/$(kernel-task_MODDIR)/$(kernel-task_DEFNAME).$(kernel-task_SUFFIX)
+endif
+kernel-task_KOBJ             := $(KOBJSDIR)/$(kernel-task_DEFNAME)_$(kernel-task_SUFFIX).o
+else
+kernel-task_MODULE           :=
+kernel-task_KOBJ             :=
+endif
+
+kernel-task-quick      : kernel-task
+kernel-task            : $(kernel-task_MODULE) $(kernel-task_LINKLIB) $(kernel-task_RELLINKLIB)
+ifeq (M,M)
+kernel-task-kobj       : $(kernel-task_KOBJ) $(kernel-task_LINKLIB) $(kernel-task_RELLINKLIB)
+kernel-task-kobj-quick : $(kernel-task_KOBJ) $(kernel-task_LINKLIB) $(kernel-task_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-task-linklib    : $(kernel-task_LINKLIB) $(kernel-task_RELLINKLIB)
+endif
+
+kernel-task_OBJS := $(addsuffix .o,$(kernel-task_STARTFILES)) $(kernel-task_ARCHOBJS) \
+           $(addprefix $(kernel-task_OBJDIR)/,$(notdir $(kernel-task_C_NARCHFILES:=.o) $(kernel-task_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (resource,handler)
+kernel-task_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (task,con)
+    kernel-task_ERR          := $(notdir $(kernel-task_MODULE)).err
+else
+    kernel-task_ERR          := task.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-task_DEFNAME)_LDFLAGS) $(kernel-task_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-task_LIBS) $($(kernel-task_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-task_MODULE) : LIB_NAMES := $(kernel-task_LIBS) $($(kernel-task_DEFNAME)_LIBS)
+$(kernel-task_MODULE) : OBJS := $(kernel-task_STARTOBJS) $(kernel-task_OBJS) $(USER_OBJS)
+$(kernel-task_MODULE) : ENDTAG := $(kernel-task_ENDOBJS)
+$(kernel-task_MODULE) : ERR := $(kernel-task_ERR)
+$(kernel-task_MODULE) : OBJDIR := $(kernel-task_OBJDIR)
+$(kernel-task_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-task_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-task_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-task_MODULE) : $(kernel-task_STARTOBJS) $(kernel-task_OBJS) $(USER_OBJS) $(kernel-task_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-task_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-task_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-task_LC_LINKLIBNAME   := $(shell echo $(kernel-task_LINKLIBNAME) | tr A-Z a-z)
+kernel-task_LC_MODNAME       := $(shell echo task | tr A-Z a-z)
+ifneq ($(kernel-task_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-task_LIBDIR)/lib$(kernel-task_LINKLIBNAME)$(kernel-task_LIBSUFFIX).a : kernel-task_AR:=$(AR)
+$(kernel-task_LIBDIR)/lib$(kernel-task_LINKLIBNAME)$(kernel-task_LIBSUFFIX).a : kernel-task_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-task_LIBDIR)/lib$(kernel-task_LINKLIBNAME)$(kernel-task_LIBSUFFIX).a : kernel-task_AR:=$(HOST_AR)
+$(kernel-task_LIBDIR)/lib$(kernel-task_LINKLIBNAME)$(kernel-task_LIBSUFFIX).a : kernel-task_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-task_LIBDIR)/lib$(kernel-task_LINKLIBNAME)$(kernel-task_LIBSUFFIX).a : kernel-task_AR:=$(KERNEL_AR)
+$(kernel-task_LIBDIR)/lib$(kernel-task_LINKLIBNAME)$(kernel-task_LIBSUFFIX).a : kernel-task_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-task_LIBDIR)/lib$(kernel-task_LINKLIBNAME)$(kernel-task_LIBSUFFIX).a : $(kernel-task_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-task_AR) $@ $^
+	$(Q)$(kernel-task_RANLIB) $@
+ifneq ($(kernel-task_LC_MODNAME),$(kernel-task_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-task_LIBDIR)/libtask$(kernel-task_LIBSUFFIX).a : kernel-task_AR:=$(AR)
+$(kernel-task_LIBDIR)/libtask$(kernel-task_LIBSUFFIX).a : kernel-task_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-task_LIBDIR)/libtask$(kernel-task_LIBSUFFIX).a : kernel-task_AR:=$(HOST_AR)
+$(kernel-task_LIBDIR)/libtask$(kernel-task_LIBSUFFIX).a : kernel-task_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-task_LIBDIR)/libtask$(kernel-task_LIBSUFFIX).a : kernel-task_AR:=$(KERNEL_AR)
+$(kernel-task_LIBDIR)/libtask$(kernel-task_LIBSUFFIX).a : kernel-task_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-task_LIBDIR)/libtask$(kernel-task_LIBSUFFIX).a : $(kernel-task_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-task_AR) $@ $^
+	$(Q)$(kernel-task_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-task_LINKLIB),)
+$(kernel-task_LINKLIB) : | $(kernel-task_LIBDIR)
+else
+$(kernel-task_LINKLIB) :: $(kernel-task_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-task_LIBDIR)
+
+endif
+
+ifneq ($(kernel-task_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-task_LIBDIR)/lib$(kernel-task_LINKLIBNAME)_rel$(kernel-task_LIBSUFFIX).a : kernel-task_AR:=$(AR)
+$(kernel-task_LIBDIR)/lib$(kernel-task_LINKLIBNAME)_rel$(kernel-task_LIBSUFFIX).a : kernel-task_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-task_LIBDIR)/lib$(kernel-task_LINKLIBNAME)_rel$(kernel-task_LIBSUFFIX).a : kernel-task_AR:=$(HOST_AR)
+$(kernel-task_LIBDIR)/lib$(kernel-task_LINKLIBNAME)_rel$(kernel-task_LIBSUFFIX).a : kernel-task_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-task_LIBDIR)/lib$(kernel-task_LINKLIBNAME)_rel$(kernel-task_LIBSUFFIX).a : kernel-task_AR:=$(KERNEL_AR)
+$(kernel-task_LIBDIR)/lib$(kernel-task_LINKLIBNAME)_rel$(kernel-task_LIBSUFFIX).a : kernel-task_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-task_LIBDIR)/lib$(kernel-task_LINKLIBNAME)_rel$(kernel-task_LIBSUFFIX).a : $(kernel-task_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-task_AR) $@ $^
+	$(Q)$(kernel-task_RANLIB) $@
+ifneq ($(kernel-task_LC_MODNAME),$(kernel-task_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-task_LIBDIR)/lib$(kernel-task_DEFNAME)_rel$(kernel-task_LIBSUFFIX).a : kernel-task_AR:=$(AR)
+$(kernel-task_LIBDIR)/lib$(kernel-task_DEFNAME)_rel$(kernel-task_LIBSUFFIX).a : kernel-task_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-task_LIBDIR)/lib$(kernel-task_DEFNAME)_rel$(kernel-task_LIBSUFFIX).a : kernel-task_AR:=$(HOST_AR)
+$(kernel-task_LIBDIR)/lib$(kernel-task_DEFNAME)_rel$(kernel-task_LIBSUFFIX).a : kernel-task_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-task_LIBDIR)/lib$(kernel-task_DEFNAME)_rel$(kernel-task_LIBSUFFIX).a : kernel-task_AR:=$(KERNEL_AR)
+$(kernel-task_LIBDIR)/lib$(kernel-task_DEFNAME)_rel$(kernel-task_LIBSUFFIX).a : kernel-task_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-task_LIBDIR)/lib$(kernel-task_DEFNAME)_rel$(kernel-task_LIBSUFFIX).a : $(kernel-task_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-task_AR) $@ $^
+	$(Q)$(kernel-task_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-task_RELLINKLIB),)
+$(kernel-task_RELLINKLIB) : | $(kernel-task_LIBDIR)
+else
+$(kernel-task_RELLINKLIB) :: $(kernel-task_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-task_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-task_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-task_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-task_SYMBOLS := $(kernel-task_KBASE)
+
+kernel-task_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-task_KOBJ_LIBS        := $(filter-out $(kernel-task_KLIB),$(kernel-task_LIBS)) $(kernel-task_KAUTOLIB)
+$(kernel-task_KOBJ) : LINKLIBS:=$(kernel-task_KOBJ_LIBS) $($(kernel-task_DEFNAME)_LIBS)
+$(kernel-task_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-task_SYMBOLS))
+$(kernel-task_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-task_KOBJ) : $(kernel-task_OBJS) $(USER_OBJS) $(kernel-task_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-task_DEPS             := $(addprefix $(kernel-task_OBJDIR)/,$(notdir $(kernel-task_CCFILES:=.d) $(kernel-task_TARGETCCFILES:=.d) $(kernel-task_CXXFILES:=.d))) $(addprefix $(kernel-task_OBJDIR)/linklib/,$(notdir $(kernel-task_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-task_DEPS),)
+  ifneq (kernel-task kernel-task-quick kernel-task-kobj kernel-task-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-task kernel-task-quick kernel-task-kobj kernel-task-kobj-quick),)
+      -include $(kernel-task_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-task_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-task_OBJS) $(kernel-task_DEPS) : | $(kernel-task_OBJDIR)/linklib
+
+ifneq ($(kernel-task_OBJS) $(kernel-task_DEPS) $(kernel-task_MODULE) $(kernel-task_KOBJ),)
+$(kernel-task_OBJS) $(kernel-task_DEPS) $(kernel-task_MODULE) $(kernel-task_KOBJ) : | $(kernel-task_OBJDIR) $(AROSDIR)/$(kernel-task_MODDIR) $(KOBJSDIR)
+else
+$(kernel-task_OBJS) $(kernel-task_DEPS) $(kernel-task_MODULE) $(kernel-task_KOBJ) :: $(kernel-task_OBJDIR) $(AROSDIR)/$(kernel-task_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-task_OBJDIR) $(AROSDIR)/$(kernel-task_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-task kernel-task-includes kernel-task-quick kernel-task-kobj kernel-task-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-task_DFILE_DEPS := $(kernel-task_LIBDEFSINC) $(kernel-task_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-task_INCDIR)/,$($(kernel-task_DEFNAME)_INCLUDES))
+$(kernel-task_DEPS) : $(kernel-task_DFILE_DEPS)
+endif
+
+kernel-task_TOCLEAN := $(kernel-task_OBJS) $(kernel-task_DEPS) \
+    $(kernel-task_MODULE) $(kernel-task_LINKLIB) $(kernel-task_KOBJ) \
+    $(kernel-task_OBJDIR)/Makefile.taskresource \
+    $(addprefix $(kernel-task_OBJDIR)/include/,$($(kernel-task_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-task_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-task_INCDIR)/,$($(kernel-task_DEFNAME)_INCLUDES)) \
+    $(kernel-task_OBJDIR)/task_geninc $(kernel-task_OBJDIR)/task_incs \
+    $(addsuffix .c,$(kernel-task_LINKLIBFILES)) $(kernel-task_LINKLIBOBJS) $(kernel-task_LIBDEFSINC) \
+    $(kernel-task_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-task_STARTFILES) $(kernel-task_ENDFILES)) \
+    $(kernel-task_ENDOBJS)
+kernel-task-clean : FILES              := $(kernel-task_TOCLEAN)
+kernel-task-clean ::
+	$(Q)$(ECHO) "Cleaning up for module task"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-task_ALLTARGETS)
+
+
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq (,)
+TMP_DIR                := 
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst ,$(GENINCDIR)/resources,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/resources/,$(notdir $(INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := /
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)//
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/resources/,$(INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/resources/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq (,)
+BD_INCL_FILES2         := $(subst ,$(AROS_INCLUDES)/resources,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/resources/,$(notdir $(INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/resources/,$(INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/resources/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

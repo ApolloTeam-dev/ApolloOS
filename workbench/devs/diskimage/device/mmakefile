@@ -1,0 +1,1667 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM workbench-devs-diskimage-device : includes linklibs workbench-devs-diskimage-support \
+#MM workbench-devs-diskimage-prefs workbench-devs-diskimage-device-catalogs workbench-libs-expat
+
+CFILES := init_aros io unit scsicmd locale plugins tempfile progress password \
+	main_vectors plugin_vectors ../plugins/generic ../plugins/adf ../plugins/d64 ../plugins/iso
+
+USER_CPPFLAGS := -DABIV1 -DMIN_OS_VERSION=39 -DDEVICE -D__DOS_STDLIBBASE__ -D__INTUITION_STDLIBBASE__ -D__UTILITY_STDLIBBASE__
+USER_INCLUDES := -I$(AROS_INCLUDES)/SDI \
+                 -I$(SRCDIR)/$(CURDIR)/include \
+                 -I$(SRCDIR)/$(CURDIR)/../include 
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM workbench-devs-diskimage-device
+#MM workbench-devs-diskimage-device-quick
+#MM workbench-devs-diskimage-device-makefile
+#MM workbench-devs-diskimage-device-clean
+
+# ABI targets:
+#MM- includes-all : workbench-devs-diskimage-device-includes
+#MM- linklibs-diskimage: workbench-devs-diskimage-device-linklib
+#MM- linklibs-diskimage_rel : workbench-devs-diskimage-device-linklib
+#MM- includes-diskimage: workbench-devs-diskimage-device-includes
+#MM- includes-diskimage_rel : workbench-devs-diskimage-device-includes
+#MM- workbench-devs-diskimage-device : workbench-devs-diskimage-device-includes core-linklibs linklibs-diskimagesupport linklibs-diskimageprefs
+#MM workbench-devs-diskimage-device-linklib : workbench-devs-diskimage-device-includes includes-diskimagesupport includes-diskimageprefs
+#MM- workbench-devs-diskimage-device-quick : workbench-devs-diskimage-device-includes-quick
+#MM workbench-devs-diskimage-device-includes : workbench-devs-diskimage-device-makefile workbench-devs-diskimage-device-includes-dirs \
+#MM     includes-generate-deps workbench-devs-diskimage-device-fd
+#MM workbench-devs-diskimage-device-includes-quick
+#MM workbench-devs-diskimage-device-includes-dirs
+#MM workbench-devs-diskimage-device-fd
+
+# Library targets
+#MM workbench-devs-diskimage-device-kobj : core-linklibs linklibs-diskimagesupport linklibs-diskimageprefs
+#MM workbench-devs-diskimage-device-kobj-quick : 
+
+# Library with ABI targets:
+#MM workbench-devs-diskimage-device-kobj : workbench-devs-diskimage-device-includes core-linklibs linklibs-diskimagesupport linklibs-diskimageprefs
+#MM workbench-devs-diskimage-device-kobj-quick : workbench-devs-diskimage-device-includes-quick
+
+# All MetaMake targets defined by this macro
+workbench-devs-diskimage-device_ALLTARGETS       := workbench-devs-diskimage-device workbench-devs-diskimage-device-quick workbench-devs-diskimage-device-clean
+
+ifeq (M,M)
+workbench-devs-diskimage-device_ALLTARGETS       += workbench-devs-diskimage-device-kobj workbench-devs-diskimage-device-kobj-quick
+endif
+
+ifeq (M,M)
+workbench-devs-diskimage-device_ALLTARGETS += workbench-devs-diskimage-device-includes \
+                 workbench-devs-diskimage-device-includes-quick workbench-devs-diskimage-device-includes-dirs  \
+                 workbench-devs-diskimage-device-linklib workbench-devs-diskimage-device-fd
+endif
+
+.PHONY : $(workbench-devs-diskimage-device_ALLTARGETS) workbench-devs-diskimage-device-makefile
+
+ifeq (diskimage,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (device,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    workbench-devs-diskimage-device_DEFNAME      := diskimage_
+else
+    workbench-devs-diskimage-device_DEFNAME      := diskimage
+endif
+workbench-devs-diskimage-device_DEFLINKLIBNAME   := $(workbench-devs-diskimage-device_DEFNAME)
+ifneq (,)
+    workbench-devs-diskimage-device_LINKLIBNAME  := 
+else
+    workbench-devs-diskimage-device_LINKLIBNAME  = $(workbench-devs-diskimage-device_DEFLINKLIBNAME)
+endif
+workbench-devs-diskimage-device_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    workbench-devs-diskimage-device_DEFCPPFLAGS  += -I
+endif
+workbench-devs-diskimage-device_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    workbench-devs-diskimage-device_DFLAGS       := 
+else
+    workbench-devs-diskimage-device_DFLAGS       = $(workbench-devs-diskimage-device_DEFDFLAGS)
+endif
+workbench-devs-diskimage-device_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    workbench-devs-diskimage-device_DXXFLAGS     := 
+else
+    workbench-devs-diskimage-device_DXXFLAGS     = $(workbench-devs-diskimage-device_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+workbench-devs-diskimage-device_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(workbench-devs-diskimage-device_DEFDFLAGS))
+workbench-devs-diskimage-device_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(workbench-devs-diskimage-device_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-devs-diskimage-device_FUNCINSTR := yes
+workbench-devs-diskimage-device_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(workbench-devs-diskimage-device_DEFDFLAGS))
+workbench-devs-diskimage-device_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(workbench-devs-diskimage-device_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+workbench-devs-diskimage-device_OBJDIR                     := 
+else
+workbench-devs-diskimage-device_OBJDIR                     := $(OBJDIR)/$(workbench-devs-diskimage-device_DEFNAME)
+endif
+ifneq (,)
+workbench-devs-diskimage-device_OBJDIR           := $(workbench-devs-diskimage-device_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+workbench-devs-diskimage-device-makefile         := $(workbench-devs-diskimage-device_OBJDIR)/Makefile.$(workbench-devs-diskimage-device_DEFNAME)device
+workbench-devs-diskimage-device-genmakefile : $(workbench-devs-diskimage-device-makefile)
+
+
+workbench-devs-diskimage-device-genmakefile_OPTS := 
+ifneq (,)
+    workbench-devs-diskimage-device-genmakefile_OPTS += -f 
+    workbench-devs-diskimage-device-genmakefile_MODNAME := diskimage_
+else
+    workbench-devs-diskimage-device-genmakefile_MODNAME := diskimage
+endif
+workbench-devs-diskimage-device-genmakefile_TARGET := Makefile.$(workbench-devs-diskimage-device-genmakefile_MODNAME)device
+workbench-devs-diskimage-device-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-devs-diskimage-device-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-devs-diskimage-device-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-devs-diskimage-device-genmakefile_OPTS += -c 
+        workbench-devs-diskimage-device-genmakefile_DEPS += 
+    endif 
+else
+    workbench-devs-diskimage-device-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/diskimage.conf
+    workbench-devs-diskimage-device-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/diskimage.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-devs-diskimage-device-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-devs-diskimage-device-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-devs-diskimage-device-genmakefile_OPTS += -o 
+        workbench-devs-diskimage-device-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-devs-diskimage-device-genmakefile_OPTS += -s 
+endif
+ifneq ($(workbench-devs-diskimage-device_OBJDIR),)
+    workbench-devs-diskimage-device-genmakefile_OPTS += -d $(workbench-devs-diskimage-device_OBJDIR)
+    workbench-devs-diskimage-device-genmakefile_TARGET := $(workbench-devs-diskimage-device_OBJDIR)/$(workbench-devs-diskimage-device-genmakefile_TARGET)
+endif
+
+$(workbench-devs-diskimage-device-genmakefile_TARGET) : OPTS := $(workbench-devs-diskimage-device-genmakefile_OPTS)
+$(workbench-devs-diskimage-device-genmakefile_TARGET) : MODNAME := diskimage
+$(workbench-devs-diskimage-device-genmakefile_TARGET) : MODTYPE := device
+$(workbench-devs-diskimage-device-genmakefile_TARGET) : $(workbench-devs-diskimage-device-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(workbench-devs-diskimage-device-makefile),)
+$(workbench-devs-diskimage-device-makefile) : | $(workbench-devs-diskimage-device_OBJDIR)
+else
+$(workbench-devs-diskimage-device-makefile) :: $(workbench-devs-diskimage-device_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-devs-diskimage-device_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(workbench-devs-diskimage-device_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(workbench-devs-diskimage-device-makefile)
+
+workbench-devs-diskimage-device_DEFMODDIR        := $($(workbench-devs-diskimage-device_DEFNAME)_MODDIR)
+ifeq (no,yes)
+workbench-devs-diskimage-device_DEFMODDIR        := $(AROS_DIR_ARCH)/$(workbench-devs-diskimage-device_DEFMODDIR)
+endif
+ifneq (,)
+    workbench-devs-diskimage-device_MODDIR       := 
+else
+    workbench-devs-diskimage-device_MODDIR       := $(workbench-devs-diskimage-device_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+workbench-devs-diskimage-device_INCDIR           := 
+else
+workbench-devs-diskimage-device_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+workbench-devs-diskimage-device_LIBDEFSINC       := $(workbench-devs-diskimage-device_OBJDIR)/include/$(workbench-devs-diskimage-device_DEFNAME)_libdefs.h
+workbench-devs-diskimage-device_DEFLIBDEFSINC    := $(workbench-devs-diskimage-device_OBJDIR)/include/$(workbench-devs-diskimage-device_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+workbench-devs-diskimage-device-includes-quick : workbench-devs-diskimage-device-includes
+workbench-devs-diskimage-device-includes : $(addprefix $(GENINCDIR)/,$($(workbench-devs-diskimage-device_DEFNAME)_INCLUDES)) \
+    $(addprefix $(workbench-devs-diskimage-device_INCDIR)/,$($(workbench-devs-diskimage-device_DEFNAME)_INCLUDES)) \
+    $(workbench-devs-diskimage-device_LIBDEFSINC) $(workbench-devs-diskimage-device_DEFLIBDEFSINC)
+
+ifneq ($($(workbench-devs-diskimage-device_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    workbench-devs-diskimage-device-includes_MODNAME := diskimage_
+else
+    workbench-devs-diskimage-device-includes_MODNAME := diskimage
+endif
+
+ifneq ($($(workbench-devs-diskimage-device-includes_MODNAME)_INCLUDES),)
+
+workbench-devs-diskimage-device-includes_TARGETS := $($(workbench-devs-diskimage-device-includes_MODNAME)_INCLUDES)
+
+workbench-devs-diskimage-device-includes_DEPS := $(GENMODULE)
+workbench-devs-diskimage-device-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-devs-diskimage-device-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-devs-diskimage-device-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-devs-diskimage-device-includes_OPTS += -c 
+        workbench-devs-diskimage-device-includes_DEPS += 
+    endif 
+else
+    workbench-devs-diskimage-device-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/diskimage.conf
+    workbench-devs-diskimage-device-includes_DEPS += $(SRCDIR)/$(CURDIR)/diskimage.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-devs-diskimage-device-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-devs-diskimage-device-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-devs-diskimage-device-includes_OPTS += -o 
+        workbench-devs-diskimage-device-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-devs-diskimage-device-includes_OPTS += -s 
+endif
+ifneq ($(workbench-devs-diskimage-device_OBJDIR)/include,)
+    workbench-devs-diskimage-device-includes_OPTS += -d $(workbench-devs-diskimage-device_OBJDIR)/include
+    workbench-devs-diskimage-device-includes_TARGETS := $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/include/,$(workbench-devs-diskimage-device-includes_TARGETS))
+    workbench-devs-diskimage-device-includes_GENINCFLAG=$(workbench-devs-diskimage-device_OBJDIR)/include/.diskimage.device-includes
+else
+    workbench-devs-diskimage-device-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.diskimage.device-includes
+endif
+
+$(workbench-devs-diskimage-device-includes_TARGETS) : $(workbench-devs-diskimage-device-includes_DEPS) $(workbench-devs-diskimage-device-includes_GENINCFLAG)
+
+$(workbench-devs-diskimage-device-includes_GENINCFLAG) : OPTS := $(workbench-devs-diskimage-device-includes_OPTS)
+$(workbench-devs-diskimage-device-includes_GENINCFLAG) : MODNAME := diskimage
+$(workbench-devs-diskimage-device-includes_GENINCFLAG) : MODTYPE := device
+$(workbench-devs-diskimage-device-includes_GENINCFLAG) : $(workbench-devs-diskimage-device-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(workbench-devs-diskimage-device_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(workbench-devs-diskimage-device_DEFNAME)_INCLUDES)) : | $(workbench-devs-diskimage-device_OBJDIR)/diskimage_geninc
+
+$(workbench-devs-diskimage-device_OBJDIR)/diskimage_geninc : COPYSRCDIR := $(workbench-devs-diskimage-device_OBJDIR)/include
+$(workbench-devs-diskimage-device_OBJDIR)/diskimage_geninc : TGTDIR := $(GENINCDIR)
+$(workbench-devs-diskimage-device_OBJDIR)/diskimage_geninc : FILES := $($(workbench-devs-diskimage-device_DEFNAME)_INCLUDES)
+$(workbench-devs-diskimage-device_OBJDIR)/diskimage_geninc : $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/include/,$($(workbench-devs-diskimage-device_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(workbench-devs-diskimage-device_OBJDIR)/include
+
+$(addprefix $(workbench-devs-diskimage-device_INCDIR)/,$($(workbench-devs-diskimage-device_DEFNAME)_INCLUDES)) : | $(workbench-devs-diskimage-device_OBJDIR)/diskimage_incs
+
+$(workbench-devs-diskimage-device_OBJDIR)/diskimage_incs : COPYSRCDIR := $(workbench-devs-diskimage-device_OBJDIR)/include
+$(workbench-devs-diskimage-device_OBJDIR)/diskimage_incs : TGTDIR := $(workbench-devs-diskimage-device_INCDIR)
+$(workbench-devs-diskimage-device_OBJDIR)/diskimage_incs : FILES := $($(workbench-devs-diskimage-device_DEFNAME)_INCLUDES)
+$(workbench-devs-diskimage-device_OBJDIR)/diskimage_incs : $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/include/,$($(workbench-devs-diskimage-device_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+workbench-devs-diskimage-device_INCDIRS := $(filter-out ./,$(sort $(dir $($(workbench-devs-diskimage-device_DEFNAME)_INCLUDES))))
+
+TMPdiskimage_INCDIRS := \
+    $(workbench-devs-diskimage-device_OBJDIR)/include $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/include/,$(workbench-devs-diskimage-device_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(workbench-devs-diskimage-device_INCDIRS)) \
+    $(workbench-devs-diskimage-device_INCDIR) $(addprefix $(workbench-devs-diskimage-device_INCDIR)/,$(workbench-devs-diskimage-device_INCDIRS))
+
+ifneq (workbench-devs-diskimage-device-includes-dirs,)
+workbench-devs-diskimage-device-includes-dirs : | $(TMPdiskimage_INCDIRS)
+else
+workbench-devs-diskimage-device-includes-dirs :: $(TMPdiskimage_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPdiskimage_INCDIRS)
+
+
+endif
+
+endif
+
+
+workbench-devs-diskimage-device-genlibdefs_OPTS := 
+ifneq (,)
+    workbench-devs-diskimage-device-genlibdefs_OPTS += -f 
+    workbench-devs-diskimage-device-genlibdefs_MODNAME := diskimage_
+else
+    workbench-devs-diskimage-device-genlibdefs_MODNAME := diskimage
+endif
+workbench-devs-diskimage-device-genlibdefs_TARGET := $(workbench-devs-diskimage-device-genlibdefs_MODNAME)_libdefs.h
+workbench-devs-diskimage-device-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-devs-diskimage-device-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-devs-diskimage-device-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-devs-diskimage-device-genlibdefs_OPTS += -c 
+        workbench-devs-diskimage-device-genlibdefs_DEPS += 
+    endif 
+else
+    workbench-devs-diskimage-device-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/diskimage.conf
+    workbench-devs-diskimage-device-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/diskimage.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-devs-diskimage-device-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-devs-diskimage-device-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-devs-diskimage-device-genlibdefs_OPTS += -o 
+        workbench-devs-diskimage-device-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-devs-diskimage-device-genlibdefs_OPTS += -s 
+endif
+ifneq ($(workbench-devs-diskimage-device_OBJDIR)/include,)
+    workbench-devs-diskimage-device-genlibdefs_OPTS += -d $(workbench-devs-diskimage-device_OBJDIR)/include
+    workbench-devs-diskimage-device-genlibdefs_TARGET := $(workbench-devs-diskimage-device_OBJDIR)/include/$(workbench-devs-diskimage-device-genlibdefs_TARGET)
+endif
+ifneq (,)
+    workbench-devs-diskimage-device-genlibdefs_OPTS += -v 
+endif
+
+$(workbench-devs-diskimage-device-genlibdefs_TARGET) : OPTS := $(workbench-devs-diskimage-device-genlibdefs_OPTS)
+$(workbench-devs-diskimage-device-genlibdefs_TARGET) : MODNAME := diskimage
+$(workbench-devs-diskimage-device-genlibdefs_TARGET) : MODTYPE := device
+$(workbench-devs-diskimage-device-genlibdefs_TARGET) : $(workbench-devs-diskimage-device-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(workbench-devs-diskimage-device_DEFLIBDEFSINC) : FILENAME := $(workbench-devs-diskimage-device_LIBDEFSINC)
+$(workbench-devs-diskimage-device_DEFLIBDEFSINC) : $(workbench-devs-diskimage-device_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(workbench-devs-diskimage-device_LIBDEFSINC) $(workbench-devs-diskimage-device_DEFLIBDEFSINC) : | $(workbench-devs-diskimage-device_OBJDIR)/include
+
+ifneq (workbench-devs-diskimage-device-includes-dirs,)
+workbench-devs-diskimage-device-includes-dirs : | $(workbench-devs-diskimage-device_OBJDIR)/include
+else
+workbench-devs-diskimage-device-includes-dirs :: $(workbench-devs-diskimage-device_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(workbench-devs-diskimage-device_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+workbench-devs-diskimage-device-genmodfiles_OPTS :=
+ifneq (,)
+    workbench-devs-diskimage-device-genmodfiles_OPTS += -f 
+    workbench-devs-diskimage-device-genmodfiles_MODNAME := diskimage_
+else
+    workbench-devs-diskimage-device-genmodfiles_MODNAME := diskimage
+endif
+workbench-devs-diskimage-device-genmodfiles_GENTARGETS := $($(workbench-devs-diskimage-device-genmodfiles_MODNAME)_STARTFILES) $($(workbench-devs-diskimage-device-genmodfiles_MODNAME)_ENDFILES)
+workbench-devs-diskimage-device-genmodfiles_STUBTARGETS := $($(workbench-devs-diskimage-device-genmodfiles_MODNAME)_LINKLIBFILES) $($(workbench-devs-diskimage-device-genmodfiles_MODNAME)_RELLINKLIBFILES)
+workbench-devs-diskimage-device-genmodfiles_GENTARGETS := $(addsuffix .c,$(workbench-devs-diskimage-device-genmodfiles_GENTARGETS))
+workbench-devs-diskimage-device-genmodfiles_STUBTARGETS := $(addsuffix .c,$(workbench-devs-diskimage-device-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(workbench-devs-diskimage-device-genmodfiles_MODNAME)_LINKLIBAFILES) $($(workbench-devs-diskimage-device-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+workbench-devs-diskimage-device-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-devs-diskimage-device-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-devs-diskimage-device-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-devs-diskimage-device-genmodfiles_OPTS += -c 
+        workbench-devs-diskimage-device-genmodfiles_DEPS += 
+    endif 
+else
+    workbench-devs-diskimage-device-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/diskimage.conf
+    workbench-devs-diskimage-device-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/diskimage.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-devs-diskimage-device-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-devs-diskimage-device-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-devs-diskimage-device-genmodfiles_OPTS += -o 
+        workbench-devs-diskimage-device-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-devs-diskimage-device-genmodfiles_OPTS += -s 
+endif
+ifneq ($(workbench-devs-diskimage-device_OBJDIR),)
+    workbench-devs-diskimage-device-genmodfiles_OPTS += -d $(workbench-devs-diskimage-device_OBJDIR)
+    workbench-devs-diskimage-device-genmodfiles_TARGETDIR := $(shell echo $(workbench-devs-diskimage-device_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    workbench-devs-diskimage-device-genmodfiles_GENTARGETS := $(addprefix $(workbench-devs-diskimage-device-genmodfiles_TARGETDIR)/,$(workbench-devs-diskimage-device-genmodfiles_GENTARGETS))
+    workbench-devs-diskimage-device-genmodfiles_GENFILEFLAG=$(workbench-devs-diskimage-device-genmodfiles_TARGETDIR)/.diskimage.device-genfiles
+else
+    workbench-devs-diskimage-device-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.diskimage.device-genfiles
+endif
+ifneq ($(workbench-devs-diskimage-device_OBJDIR)/linklib,)
+    workbench-devs-diskimage-device-genmodfiles_OPTS += -l $(workbench-devs-diskimage-device_OBJDIR)/linklib
+    workbench-devs-diskimage-device-genmodfiles_STUBTARGETDIR := $(shell echo $(workbench-devs-diskimage-device_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    workbench-devs-diskimage-device-genmodfiles_STUBTARGETS := $(addprefix $(workbench-devs-diskimage-device-genmodfiles_STUBTARGETDIR)/,$(workbench-devs-diskimage-device-genmodfiles_STUBTARGETS))
+    workbench-devs-diskimage-device-genmodfiles_TARGETDIRS += $(workbench-devs-diskimage-device_OBJDIR)/linklib
+else
+ifneq ($(workbench-devs-diskimage-device_OBJDIR),)
+    workbench-devs-diskimage-device-genmodfiles_STUBTARGETS := $(addprefix $(workbench-devs-diskimage-device-genmodfiles_TARGETDIR)/,$(workbench-devs-diskimage-device-genmodfiles_STUBTARGETS))
+endif
+endif
+
+workbench-devs-diskimage-device-genmodfiles_TARGETS := $(workbench-devs-diskimage-device-genmodfiles_GENTARGETS) $(workbench-devs-diskimage-device-genmodfiles_STUBTARGETS)
+ifneq ($(workbench-devs-diskimage-device-genmodfiles_TARGETDIRS),)
+$(workbench-devs-diskimage-device-genmodfiles_TARGETS) : | $(workbench-devs-diskimage-device-genmodfiles_TARGETDIRS)
+endif
+
+$(workbench-devs-diskimage-device-genmodfiles_TARGETS) : $(workbench-devs-diskimage-device-genmodfiles_DEPS) $(workbench-devs-diskimage-device-genmodfiles_GENFILEFLAG)
+
+$(workbench-devs-diskimage-device-genmodfiles_GENFILEFLAG) : OPTS := $(workbench-devs-diskimage-device-genmodfiles_OPTS)
+$(workbench-devs-diskimage-device-genmodfiles_GENFILEFLAG) : MODNAME := diskimage
+$(workbench-devs-diskimage-device-genmodfiles_GENFILEFLAG) : MODTYPE := device
+$(workbench-devs-diskimage-device-genmodfiles_GENFILEFLAG) : $(workbench-devs-diskimage-device-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(workbench-devs-diskimage-device-genmodfiles_GENFILEFLAG) : $(workbench-devs-diskimage-device_DEFLIBDEFSINC) $(workbench-devs-diskimage-device-makefile)
+
+
+ifneq ($(workbench-devs-diskimage-device-genmodfiles_GENFILEFLAG),)
+$(workbench-devs-diskimage-device-genmodfiles_GENFILEFLAG) : | $(workbench-devs-diskimage-device_OBJDIR)/linklib
+else
+$(workbench-devs-diskimage-device-genmodfiles_GENFILEFLAG) :: $(workbench-devs-diskimage-device_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(workbench-devs-diskimage-device_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+workbench-devs-diskimage-device_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+workbench-devs-diskimage-device_FDDIR            := /../$(AROS_DIR_FD)
+endif
+workbench-devs-diskimage-device-fd : $(workbench-devs-diskimage-device_FDDIR)/diskimage_lib.fd
+
+
+TMP_TARGET := diskimage_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/diskimage.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/diskimage.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(workbench-devs-diskimage-device_FDDIR),)
+    TMP_OPTS += -d $(workbench-devs-diskimage-device_FDDIR)
+    TMP_TARGET := $(workbench-devs-diskimage-device_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := diskimage
+$(TMP_TARGET) : MODTYPE := device
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(workbench-devs-diskimage-device_FDDIR)/diskimage_lib.fd : | $(workbench-devs-diskimage-device_FDDIR)
+
+
+ifneq (workbench-devs-diskimage-device-fd-setup,)
+workbench-devs-diskimage-device-fd-setup : | $(workbench-devs-diskimage-device_FDDIR)
+else
+workbench-devs-diskimage-device-fd-setup :: $(workbench-devs-diskimage-device_FDDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-devs-diskimage-device_FDDIR)
+
+endif
+
+## Compilation
+##
+workbench-devs-diskimage-device_FILES            := $(CFILES)
+workbench-devs-diskimage-device_OBJCFILES        := 
+workbench-devs-diskimage-device_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+workbench-devs-diskimage-device_LIBFILES         := 
+workbench-devs-diskimage-device_LIBS             := diskimagesupport diskimageprefs
+
+workbench-devs-diskimage-device_FDIRS            := $(sort $(dir $(workbench-devs-diskimage-device_FILES)))
+
+workbench-devs-diskimage-device_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+workbench-devs-diskimage-device_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call workbench-devs-diskimage-device_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+workbench-devs-diskimage-device_FILTERARCH       = $(filter-out $(call workbench-devs-diskimage-device_MATCHARCH,$(1),$(2)),$(2))
+workbench-devs-diskimage-device_STARTFILES       := $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$($(workbench-devs-diskimage-device_DEFNAME)_STARTFILES))
+workbench-devs-diskimage-device_ENDFILES         := $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$($(workbench-devs-diskimage-device_DEFNAME)_ENDFILES))
+
+workbench-devs-diskimage-device_ARCHOBJS         := $(wildcard $(workbench-devs-diskimage-device_OBJDIR)/arch/*.o)
+workbench-devs-diskimage-device_LIBARCHOBJS      := $(wildcard $(workbench-devs-diskimage-device_OBJDIR)/linklib/arch/*.o)
+workbench-devs-diskimage-device_ARCHFILES        := $(basename $(notdir $(workbench-devs-diskimage-device_ARCHOBJS)))
+workbench-devs-diskimage-device_LIBARCHFILES     := $(basename $(notdir $(workbench-devs-diskimage-device_LIBARCHOBJS)))
+workbench-devs-diskimage-device_C_NARCHFILES     := $(call workbench-devs-diskimage-device_FILTERARCH,$(workbench-devs-diskimage-device_ARCHFILES),$(workbench-devs-diskimage-device_FILES))
+workbench-devs-diskimage-device_CXX_NARCHFILES   := $(call workbench-devs-diskimage-device_FILTERARCH,$(workbench-devs-diskimage-device_ARCHFILES),$(workbench-devs-diskimage-device_CXXFILES))
+workbench-devs-diskimage-device_OBJC_NARCHFILES  := $(call workbench-devs-diskimage-device_FILTERARCH,$(workbench-devs-diskimage-device_ARCHFILES),$(workbench-devs-diskimage-device_OBJCFILES))
+workbench-devs-diskimage-device_NLIBARCHFILES    := $(call workbench-devs-diskimage-device_FILTERARCH,$(workbench-devs-diskimage-device_LIBARCHFILES),$(workbench-devs-diskimage-device_LIBFILES))
+workbench-devs-diskimage-device_ARCHNLIBFILES    := $(call workbench-devs-diskimage-device_FILTERARCH,$(workbench-devs-diskimage-device_LIBFILES),$(workbench-devs-diskimage-device_LIBARCHFILES))
+
+workbench-devs-diskimage-device_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(workbench-devs-diskimage-device_OBJDIR)/include -include $(workbench-devs-diskimage-device_DEFLIBDEFSINC))
+ifneq (,)
+workbench-devs-diskimage-device_CPPFLAGS         += -I
+endif
+workbench-devs-diskimage-device_LINKLIBCPPFLAGS  := $(workbench-devs-diskimage-device_CPPFLAGS)
+workbench-devs-diskimage-device_CPPFLAGS         += $(strip $($(workbench-devs-diskimage-device_DEFNAME)_CPPFLAGS))
+workbench-devs-diskimage-device_LINKLIBCPPFLAGS  += $(strip $($(workbench-devs-diskimage-device_DEFNAME)_LINKLIBCPPFLAGS))
+workbench-devs-diskimage-device_CFLAGS           := $(strip $(CFLAGS) $($(workbench-devs-diskimage-device_DEFNAME)_CFLAGS))
+workbench-devs-diskimage-device_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(workbench-devs-diskimage-device_DEFNAME)_LINKLIBCFLAGS))
+workbench-devs-diskimage-device_CXXFLAGS         := $(strip $(CXXFLAGS) $($(workbench-devs-diskimage-device_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+workbench-devs-diskimage-device_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+workbench-devs-diskimage-device_CFLAGS           := $(strip $(workbench-devs-diskimage-device_LTOFLAGS) $(workbench-devs-diskimage-device_CFLAGS))
+workbench-devs-diskimage-device_LINKLIBCFLAGS    := $(strip $(workbench-devs-diskimage-device_LTOFLAGS) $(workbench-devs-diskimage-device_LINKLIBCFLAGS))
+workbench-devs-diskimage-device_CXXFLAGS         := $(strip $(workbench-devs-diskimage-device_LTOFLAGS) $(workbench-devs-diskimage-device_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-devs-diskimage-device_SUBSTNULL        :=
+workbench-devs-diskimage-device_SUBSTSPACE       := $(workbench-devs-diskimage-device_SUBSTNULL) #
+workbench-devs-diskimage-device_SUBSTCOMMA       := ,
+workbench-devs-diskimage-device_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(workbench-devs-diskimage-device_SUBSTSPACE),$(workbench-devs-diskimage-device_SUBSTCOMMA),$(strip $($(workbench-devs-diskimage-device_DEFNAME)_STARTFILES))))
+workbench-devs-diskimage-device_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-devs-diskimage-device_CFLAGS           := $(strip $(workbench-devs-diskimage-device_INSTRFUNCFLAGS) $(workbench-devs-diskimage-device_CFLAGS))
+workbench-devs-diskimage-device_CXXFLAGS         := $(strip $(workbench-devs-diskimage-device_INSTRFUNCFLAGS) $(workbench-devs-diskimage-device_CXXFLAGS))
+workbench-devs-diskimage-device_LIBS             += $(workbench-devs-diskimage-device_INSTRFUNCLIBS)
+endif
+endif
+workbench-devs-diskimage-device_DFLAGS           := $(strip $(workbench-devs-diskimage-device_DFLAGS) $($(workbench-devs-diskimage-device_DEFNAME)_DFLAGS))
+workbench-devs-diskimage-device_LINKLIBDFLAGS    := $(strip $(workbench-devs-diskimage-device_DFLAGS) $($(workbench-devs-diskimage-device_DEFNAME)_LINKLIBDFLAGS))
+workbench-devs-diskimage-device_DXXFLAGS         := $(strip $(workbench-devs-diskimage-device_DXXFLAGS) $($(workbench-devs-diskimage-device_DEFNAME)_DXXFLAGS))
+
+ifeq (device,library)
+    workbench-devs-diskimage-device_LIBSUFFIX    := 
+else
+    workbench-devs-diskimage-device_LIBSUFFIX    := .device
+endif
+
+ifeq (,)
+workbench-devs-diskimage-device_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+workbench-devs-diskimage-device_LIBDIR           := 
+endif
+
+ifeq (M,M)
+workbench-devs-diskimage-device_LINKLIBCFILES    := $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$($(workbench-devs-diskimage-device_DEFNAME)_LINKLIBFILES))
+workbench-devs-diskimage-device_LINKLIBAFILES    := $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$($(workbench-devs-diskimage-device_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(workbench-devs-diskimage-device_DEFNAME)_LINKLIBFILES) $($(workbench-devs-diskimage-device_DEFNAME)_LINKLIBAFILES)  $(workbench-devs-diskimage-device_ARCHNLIBFILES)),)
+    workbench-devs-diskimage-device_LINKLIB      :=
+else
+    workbench-devs-diskimage-device_LINKLIB      := $(workbench-devs-diskimage-device_LIBDIR)/libdiskimage$(workbench-devs-diskimage-device_LIBSUFFIX).a
+    ifneq (diskimage,$(workbench-devs-diskimage-device_LINKLIBNAME))
+        workbench-devs-diskimage-device_LINKLIB  += $(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_LINKLIBNAME)$(workbench-devs-diskimage-device_LIBSUFFIX).a
+    endif
+endif
+workbench-devs-diskimage-device_LINKLIBFILES     := $(workbench-devs-diskimage-device_LINKLIBCFILES) $(workbench-devs-diskimage-device_LINKLIBAFILES)
+
+workbench-devs-diskimage-device_RELLINKLIBCFILES := $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$($(workbench-devs-diskimage-device_DEFNAME)_RELLINKLIBFILES))
+workbench-devs-diskimage-device_RELLINKLIBAFILES := $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$($(workbench-devs-diskimage-device_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(workbench-devs-diskimage-device_DEFNAME)_RELLINKLIBFILES) $($(workbench-devs-diskimage-device_DEFNAME)_RELLINKLIBAFILES)  $(workbench-devs-diskimage-device_ARCHNLIBFILES)),)
+    workbench-devs-diskimage-device_RELLINKLIB   :=
+else
+    workbench-devs-diskimage-device_RELLINKLIB   := $(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_DEFNAME)_rel$(workbench-devs-diskimage-device_LIBSUFFIX).a
+    ifneq (diskimage,$(workbench-devs-diskimage-device_LINKLIBNAME))
+        workbench-devs-diskimage-device_RELLINKLIB += $(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_LINKLIBNAME)_rel$(workbench-devs-diskimage-device_LIBSUFFIX).a
+    endif
+endif
+workbench-devs-diskimage-device_RELLINKLIBFILES  := $(workbench-devs-diskimage-device_RELLINKLIBCFILES) $(workbench-devs-diskimage-device_RELLINKLIBAFILES)
+endif
+
+workbench-devs-diskimage-device_ENDOBJS          := $(addsuffix .o,$(workbench-devs-diskimage-device_ENDFILES))
+workbench-devs-diskimage-device_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$(notdir $(workbench-devs-diskimage-device_NLIBARCHFILES))) $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/arch/,$(notdir $(workbench-devs-diskimage-device_ARCHNLIBFILES))) $(workbench-devs-diskimage-device_LINKLIBFILES)) \
+                 
+workbench-devs-diskimage-device_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$(notdir $(workbench-devs-diskimage-device_NLIBARCHFILES))) $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/arch/,$(notdir $(workbench-devs-diskimage-device_ARCHNLIBFILES))) $(workbench-devs-diskimage-device_RELLINKLIBFILES)) \
+                 
+$(workbench-devs-diskimage-device_LINKLIBFILES) $(workbench-devs-diskimage-device_RELLINKLIBFILES) : | $(workbench-devs-diskimage-device_OBJDIR)/linklib
+$(workbench-devs-diskimage-device_LINKLIBOBJS) $(workbench-devs-diskimage-device_RELLINKLIBOBJS) : | $(workbench-devs-diskimage-device_OBJDIR)/linklib
+
+workbench-devs-diskimage-device_CCFILES := $(workbench-devs-diskimage-device_C_NARCHFILES)
+workbench-devs-diskimage-device_TARGETCCFILES    := $(strip $(workbench-devs-diskimage-device_STARTFILES) $(workbench-devs-diskimage-device_ENDFILES))
+workbench-devs-diskimage-device_LINKLIBCCFILES   := $(strip $(workbench-devs-diskimage-device_NLIBARCHFILES) $(workbench-devs-diskimage-device_LINKLIBCFILES) $(workbench-devs-diskimage-device_RELLINKLIBCFILES))
+workbench-devs-diskimage-device_LINKLIBCCGENFILES := $(strip $(workbench-devs-diskimage-device_LINKLIBCFILES) $(workbench-devs-diskimage-device_RELLINKLIBCFILES))
+
+
+workbench-devs-diskimage-device_CXXABSBASENAMES := $(foreach workbench-devs-diskimage-device_CXXBASE,$(workbench-devs-diskimage-device_CXX_NARCHFILES),$(if $(filter /%,$(workbench-devs-diskimage-device_CXXBASE)),$(workbench-devs-diskimage-device_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-devs-diskimage-device_CXXBASE))))
+
+ifneq ($(workbench-devs-diskimage-device_CXXABSBASENAMES),)
+
+workbench-devs-diskimage-device_CXXBASENAMES := $(basename $(workbench-devs-diskimage-device_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-devs-diskimage-device_MCXX_FILES  := $(strip $(foreach workbench-devs-diskimage-device_CXXBASE,$(workbench-devs-diskimage-device_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-devs-diskimage-device_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-devs-diskimage-device_EXT),$(workbench-devs-diskimage-device_CXXBASE)))))))
+
+ifeq (,)
+workbench-devs-diskimage-device_MCXX_SRCWILDCARD := %
+else
+workbench-devs-diskimage-device_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-devs-diskimage-device_OBJDIR),)
+  workbench-devs-diskimage-device_CXXTARGETS := $(notdir $(workbench-devs-diskimage-device_CXXBASENAMES:=.o))
+  workbench-devs-diskimage-device_CXXDTARGETS := $(notdir $(workbench-devs-diskimage-device_CXXBASENAMES:=.d))
+  workbench-devs-diskimage-device_MCXX_WILDCARD := %
+else
+  workbench-devs-diskimage-device_CXXTARGETS := $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(notdir $(workbench-devs-diskimage-device_CXXBASENAMES:=.o)))
+  workbench-devs-diskimage-device_CXXDTARGETS := $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(notdir $(workbench-devs-diskimage-device_CXXBASENAMES:=.d)))
+  workbench-devs-diskimage-device_MCXX_WILDCARD := $(workbench-devs-diskimage-device_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-devs-diskimage-device_CXXTARGETS) $(workbench-devs-diskimage-device_CXXDTARGETS) : | $(workbench-devs-diskimage-device_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-devs-diskimage-device_MCXX_CPPFLAGS := $(workbench-devs-diskimage-device_CPPFLAGS)
+workbench-devs-diskimage-device_CXXFLAGS := $(workbench-devs-diskimage-device_CXXFLAGS)
+ifeq ($(workbench-devs-diskimage-device_DXXFLAGS),)
+  workbench-devs-diskimage-device_DXXFLAGS := $(workbench-devs-diskimage-device_CXXFLAGS)
+else
+  workbench-devs-diskimage-device_DXXFLAGS := $(workbench-devs-diskimage-device_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-devs-diskimage-device_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-devs-diskimage-device_STRIP ?= $(HOST_STRIP)
+  workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-devs-diskimage-device_CXXCMD:=$(HOST_CXX)
+  workbench-devs-diskimage-device_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-devs-diskimage-device_MCXX_CPPFLAGS) $(workbench-devs-diskimage-device_MCXX_EXTRA_CPPFLAGS))
+  workbench-devs-diskimage-device_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-devs-diskimage-device_CXXFLAGS))
+  workbench-devs-diskimage-device_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-devs-diskimage-device_DXXFLAGS))
+  workbench-devs-diskimage-device_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-devs-diskimage-device_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-devs-diskimage-device_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-devs-diskimage-device_STRIP ?= $(TARGET_STRIP)
+  workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-devs-diskimage-device_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-devs-diskimage-device_MCXX_CPPFLAGS := $(strip $(workbench-devs-diskimage-device_MCXX_CPPFLAGS) $(workbench-devs-diskimage-device_MCXX_EXTRA_CPPFLAGS))
+  workbench-devs-diskimage-device_CXXFLAGS := $(strip $(workbench-devs-diskimage-device_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-devs-diskimage-device_DXXFLAGS := $(workbench-devs-diskimage-device_DXXFLAGS)
+  workbench-devs-diskimage-device_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-devs-diskimage-device_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-devs-diskimage-device_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-devs-diskimage-device_STRIP ?= $(ECHO) >/dev/null
+  workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-devs-diskimage-device_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-devs-diskimage-device_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-devs-diskimage-device_MCXX_CPPFLAGS) $(workbench-devs-diskimage-device_MCXX_EXTRA_CPPFLAGS))
+  workbench-devs-diskimage-device_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-devs-diskimage-device_CXXFLAGS))
+  workbench-devs-diskimage-device_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-devs-diskimage-device_DXXFLAGS))
+  workbench-devs-diskimage-device_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-devs-diskimage-device_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-devs-diskimage-device_CXXCMD) $(workbench-devs-diskimage-device_CXXIQUOTE) $(dir $(2)) $(workbench-devs-diskimage-device_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_CXXIQUOTE) . $(workbench-devs-diskimage-device_CXXIQUOTE_END) $(strip $(workbench-devs-diskimage-device_CXXFLAGS) $(workbench-devs-diskimage-device_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-devs-diskimage-device_CXXCMD) $(workbench-devs-diskimage-device_CXXIQUOTE) $(dir $(2)) $(workbench-devs-diskimage-device_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_CXXIQUOTE) . $(workbench-devs-diskimage-device_CXXIQUOTE_END) $(strip $(workbench-devs-diskimage-device_CXXFLAGS) $(workbench-devs-diskimage-device_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-devs-diskimage-device_CXXCMD) $(workbench-devs-diskimage-device_CXXIQUOTE) $(dir $(2)) $(workbench-devs-diskimage-device_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_CXXIQUOTE) . $(workbench-devs-diskimage-device_CXXIQUOTE_END) $(strip $(workbench-devs-diskimage-device_CXXFLAGS) $(workbench-devs-diskimage-device_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-devs-diskimage-device_CXXCMD)" $(MKDEPEND) $(strip $(workbench-devs-diskimage-device_DXXFLAGS) $(workbench-devs-diskimage-device_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-devs-diskimage-device_OBJDIR),)
+  $(foreach workbench-devs-diskimage-device_CXXFILE,$(workbench-devs-diskimage-device_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-devs-diskimage-device_CXXFILE))),$(workbench-devs-diskimage-device_CXXFILE))))
+else
+  $(foreach workbench-devs-diskimage-device_CXXFILE,$(workbench-devs-diskimage-device_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(notdir $(basename $(workbench-devs-diskimage-device_CXXFILE)))),$(workbench-devs-diskimage-device_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-devs-diskimage-device_OBJC_NARCHFILES),)
+
+ifeq (,)
+workbench-devs-diskimage-device_MOBJC_SRCWILDCARD := %
+else
+workbench-devs-diskimage-device_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-devs-diskimage-device_OBJDIR),)
+  workbench-devs-diskimage-device_MOBJC_TARGETS := $(addsuffix .o,$(workbench-devs-diskimage-device_OBJC_NARCHFILES))
+  workbench-devs-diskimage-device_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-devs-diskimage-device_OBJC_NARCHFILES))
+  workbench-devs-diskimage-device_MOBJC_WILDCARD := %
+else
+  workbench-devs-diskimage-device_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(workbench-devs-diskimage-device_OBJC_NARCHFILES)))
+  workbench-devs-diskimage-device_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(workbench-devs-diskimage-device_OBJC_NARCHFILES)))
+  workbench-devs-diskimage-device_MOBJC_WILDCARD := $(workbench-devs-diskimage-device_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-devs-diskimage-device_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  workbench-devs-diskimage-device_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-devs-diskimage-device_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-diskimage-device_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-devs-diskimage-device_MOBJC_DIRS := $(foreach dir, $(workbench-devs-diskimage-device_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-diskimage-device_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-devs-diskimage-device_MOBJC_DIRS),)
+    workbench-devs-diskimage-device_MOBJC_DIRS := $(shell echo $(workbench-devs-diskimage-device_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-devs-diskimage-device_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-devs-diskimage-device_CC := $(TARGET_CC)
+else
+  workbench-devs-diskimage-device_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-devs-diskimage-device_MOBJC_CPPFLAGS := $(workbench-devs-diskimage-device_CPPFLAGS)
+workbench-devs-diskimage-device_OBJCFLAGS := $(workbench-devs-diskimage-device_CFLAGS)
+workbench-devs-diskimage-device_OBJCFLAGS := $(workbench-devs-diskimage-device_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-devs-diskimage-device_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-devs-diskimage-device_OBJCFLAGS)))
+ifeq ($(workbench-devs-diskimage-device_DFLAGS),)
+  workbench-devs-diskimage-device_OBJCDFLAGS := $(workbench-devs-diskimage-device_CFLAGS)
+else
+  workbench-devs-diskimage-device_OBJCDFLAGS := $(workbench-devs-diskimage-device_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-devs-diskimage-device_LINK ?= $(strip $(workbench-devs-diskimage-device_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-devs-diskimage-device_STRIP ?= $(TARGET_STRIP)
+  workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-devs-diskimage-device_CC) $(TARGET_SYSROOT))
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : workbench-devs-diskimage-device_MOBJC_CPPFLAGS:=$(strip $(workbench-devs-diskimage-device_MOBJC_CPPFLAGS) $(workbench-devs-diskimage-device_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : workbench-devs-diskimage-device_OBJCFLAGS:=$(strip $(workbench-devs-diskimage-device_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : workbench-devs-diskimage-device_OBJCDFLAGS:=$(workbench-devs-diskimage-device_OBJCDFLAGS)
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-devs-diskimage-device_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-devs-diskimage-device_STRIP ?= $(HOST_STRIP)
+  workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : workbench-devs-diskimage-device_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-devs-diskimage-device_MOBJC_CPPFLAGS) $(workbench-devs-diskimage-device_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : workbench-devs-diskimage-device_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-device_OBJCFLAGS))
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : workbench-devs-diskimage-device_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-device_OBJCDFLAGS))
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-devs-diskimage-device_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-devs-diskimage-device_STRIP ?= $(ECHO) >/dev/null
+  workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : workbench-devs-diskimage-device_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-devs-diskimage-device_MOBJC_CPPFLAGS) $(workbench-devs-diskimage-device_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : workbench-devs-diskimage-device_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-device_OBJCFLAGS))
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : workbench-devs-diskimage-device_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-device_OBJCDFLAGS))
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-devs-diskimage-device_MOBJC_TARGETS) $(workbench-devs-diskimage-device_MOBJC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-devs-diskimage-device_MOBJC_TARGETS) : CPPFLAGS := $(workbench-devs-diskimage-device_MOBJC_CPPFLAGS)
+$(workbench-devs-diskimage-device_MOBJC_TARGETS) : CFLAGS := $(workbench-devs-diskimage-device_OBJCFLAGS)
+$(workbench-devs-diskimage-device_MOBJC_TARGETS) : $(workbench-devs-diskimage-device_MOBJC_WILDCARD).o : $(workbench-devs-diskimage-device_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-devs-diskimage-device_IQUOTE) $(dir $<) $(workbench-devs-diskimage-device_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_IQUOTE) . $(workbench-devs-diskimage-device_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-devs-diskimage-device_IQUOTE) $(dir $<) $(workbench-devs-diskimage-device_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_IQUOTE) . $(workbench-devs-diskimage-device_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-devs-diskimage-device_IQUOTE) $(dir $<) $(workbench-devs-diskimage-device_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_IQUOTE) . $(workbench-devs-diskimage-device_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-devs-diskimage-device_MOBJC_DTARGETS) : $(workbench-devs-diskimage-device_MOBJC_WILDCARD).d : $(workbench-devs-diskimage-device_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-devs-diskimage-device_OBJCDFLAGS) $(workbench-devs-diskimage-device_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-devs-diskimage-device_MC_SRCWILDCARD := %
+else
+workbench-devs-diskimage-device_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-devs-diskimage-device_OBJDIR),)
+workbench-devs-diskimage-device_MC_TARGETS := $(addsuffix .o,$(workbench-devs-diskimage-device_CCFILES))
+workbench-devs-diskimage-device_MC_DTARGETS := $(addsuffix .d,$(workbench-devs-diskimage-device_CCFILES))
+workbench-devs-diskimage-device_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-devs-diskimage-device_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(notdir $(workbench-devs-diskimage-device_CCFILES))))
+    workbench-devs-diskimage-device_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(notdir $(workbench-devs-diskimage-device_CCFILES))))
+else
+ifeq (,)
+    workbench-devs-diskimage-device_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(workbench-devs-diskimage-device_CCFILES)))
+    workbench-devs-diskimage-device_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(workbench-devs-diskimage-device_CCFILES)))
+else
+    workbench-devs-diskimage-device_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(patsubst /%,%,$(workbench-devs-diskimage-device_CCFILES))))
+    workbench-devs-diskimage-device_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(patsubst /%,%,$(workbench-devs-diskimage-device_CCFILES))))
+endif
+endif
+workbench-devs-diskimage-device_MC_TGTWILDCARD := $(workbench-devs-diskimage-device_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : | $(addsuffix .c,$(workbench-devs-diskimage-device_CCFILES))
+
+# Be sure that all .c files are found
+workbench-devs-diskimage-device_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-devs-diskimage-device_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-diskimage-device_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-devs-diskimage-device_MC_DIRS := $(foreach dir, $(workbench-devs-diskimage-device_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-diskimage-device_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-devs-diskimage-device_MC_DIRS),)
+    workbench-devs-diskimage-device_MC_DIRS := $(shell echo $(workbench-devs-diskimage-device_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-devs-diskimage-device_MC_DIRS)
+endif
+
+endif
+
+workbench-devs-diskimage-device_MC_CPPFLAGS := $(workbench-devs-diskimage-device_CPPFLAGS)
+workbench-devs-diskimage-device_CFLAGS := $(workbench-devs-diskimage-device_CFLAGS)
+ifeq ($(workbench-devs-diskimage-device_DFLAGS),)
+  workbench-devs-diskimage-device_DFLAGS := $(workbench-devs-diskimage-device_CFLAGS)
+else
+  workbench-devs-diskimage-device_DFLAGS := $(workbench-devs-diskimage-device_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-devs-diskimage-device_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-devs-diskimage-device_STRIP ?= $(TARGET_STRIP)
+workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_MC_CPPFLAGS:=$(strip $(workbench-devs-diskimage-device_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_CFLAGS:=$(strip $(workbench-devs-diskimage-device_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_DFLAGS:=$(workbench-devs-diskimage-device_DFLAGS)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-devs-diskimage-device_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-devs-diskimage-device_STRIP ?= $(HOST_STRIP)
+workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-device_CFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-device_DFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-devs-diskimage-device_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-devs-diskimage-device_STRIP ?= $(ECHO) >/dev/null
+workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-device_CFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-device_DFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-devs-diskimage-device_MC_TARGETS) : CPPFLAGS := $(workbench-devs-diskimage-device_MC_CPPFLAGS)
+$(workbench-devs-diskimage-device_MC_TARGETS) : CFLAGS := $(workbench-devs-diskimage-device_CFLAGS)
+$(workbench-devs-diskimage-device_MC_TARGETS) : $(workbench-devs-diskimage-device_MC_TGTWILDCARD).o : $(workbench-devs-diskimage-device_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-devs-diskimage-device_IQUOTE) $(dir $<) $(workbench-devs-diskimage-device_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_IQUOTE) . $(workbench-devs-diskimage-device_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-devs-diskimage-device_IQUOTE) $(dir $<) $(workbench-devs-diskimage-device_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_IQUOTE) . $(workbench-devs-diskimage-device_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-devs-diskimage-device_IQUOTE) $(dir $<) $(workbench-devs-diskimage-device_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_IQUOTE) . $(workbench-devs-diskimage-device_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-devs-diskimage-device_MC_DTARGETS) : $(workbench-devs-diskimage-device_MC_TGTWILDCARD).d : $(workbench-devs-diskimage-device_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-devs-diskimage-device_DFLAGS) $(workbench-devs-diskimage-device_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+workbench-devs-diskimage-device_MC_SRCWILDCARD := %
+else
+workbench-devs-diskimage-device_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-devs-diskimage-device_OBJDIR),)
+workbench-devs-diskimage-device_MC_TARGETS := $(addsuffix .o,$(workbench-devs-diskimage-device_TARGETCCFILES))
+workbench-devs-diskimage-device_MC_DTARGETS := $(addsuffix .d,$(workbench-devs-diskimage-device_TARGETCCFILES))
+workbench-devs-diskimage-device_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-devs-diskimage-device_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(notdir $(workbench-devs-diskimage-device_TARGETCCFILES))))
+    workbench-devs-diskimage-device_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(notdir $(workbench-devs-diskimage-device_TARGETCCFILES))))
+else
+ifeq (,)
+    workbench-devs-diskimage-device_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(workbench-devs-diskimage-device_TARGETCCFILES)))
+    workbench-devs-diskimage-device_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(workbench-devs-diskimage-device_TARGETCCFILES)))
+else
+    workbench-devs-diskimage-device_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(patsubst /%,%,$(workbench-devs-diskimage-device_TARGETCCFILES))))
+    workbench-devs-diskimage-device_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(patsubst /%,%,$(workbench-devs-diskimage-device_TARGETCCFILES))))
+endif
+endif
+workbench-devs-diskimage-device_MC_TGTWILDCARD := $(workbench-devs-diskimage-device_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : | $(addsuffix .c,$(workbench-devs-diskimage-device_TARGETCCFILES))
+
+# Be sure that all .c files are found
+workbench-devs-diskimage-device_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-devs-diskimage-device_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-diskimage-device_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-devs-diskimage-device_MC_DIRS := $(foreach dir, $(workbench-devs-diskimage-device_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-diskimage-device_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-devs-diskimage-device_MC_DIRS),)
+    workbench-devs-diskimage-device_MC_DIRS := $(shell echo $(workbench-devs-diskimage-device_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-devs-diskimage-device_MC_DIRS)
+endif
+
+endif
+
+workbench-devs-diskimage-device_MC_CPPFLAGS := $(workbench-devs-diskimage-device_CPPFLAGS) -D__AROS__
+workbench-devs-diskimage-device_CFLAGS := $(workbench-devs-diskimage-device_CFLAGS)
+ifeq ($(workbench-devs-diskimage-device_DFLAGS),)
+  workbench-devs-diskimage-device_DFLAGS := $(workbench-devs-diskimage-device_CFLAGS)
+else
+  workbench-devs-diskimage-device_DFLAGS := $(workbench-devs-diskimage-device_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-devs-diskimage-device_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-devs-diskimage-device_STRIP ?= $(TARGET_STRIP)
+workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_MC_CPPFLAGS:=$(strip $(workbench-devs-diskimage-device_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_CFLAGS:=$(strip $(workbench-devs-diskimage-device_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_DFLAGS:=$(workbench-devs-diskimage-device_DFLAGS)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-devs-diskimage-device_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-devs-diskimage-device_STRIP ?= $(HOST_STRIP)
+workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-device_CFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-device_DFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-devs-diskimage-device_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-devs-diskimage-device_STRIP ?= $(ECHO) >/dev/null
+workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-device_CFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-device_DFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-devs-diskimage-device_MC_TARGETS) : CPPFLAGS := $(workbench-devs-diskimage-device_MC_CPPFLAGS)
+$(workbench-devs-diskimage-device_MC_TARGETS) : CFLAGS := $(workbench-devs-diskimage-device_CFLAGS)
+$(workbench-devs-diskimage-device_MC_TARGETS) : $(workbench-devs-diskimage-device_MC_TGTWILDCARD).o : $(workbench-devs-diskimage-device_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-devs-diskimage-device_IQUOTE) $(dir $<) $(workbench-devs-diskimage-device_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_IQUOTE) . $(workbench-devs-diskimage-device_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-devs-diskimage-device_IQUOTE) $(dir $<) $(workbench-devs-diskimage-device_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_IQUOTE) . $(workbench-devs-diskimage-device_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-devs-diskimage-device_IQUOTE) $(dir $<) $(workbench-devs-diskimage-device_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_IQUOTE) . $(workbench-devs-diskimage-device_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-devs-diskimage-device_MC_DTARGETS) : $(workbench-devs-diskimage-device_MC_TGTWILDCARD).d : $(workbench-devs-diskimage-device_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-devs-diskimage-device_DFLAGS) $(workbench-devs-diskimage-device_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+workbench-devs-diskimage-device_MC_SRCWILDCARD := %
+else
+workbench-devs-diskimage-device_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-devs-diskimage-device_OBJDIR)/linklib,)
+workbench-devs-diskimage-device_MC_TARGETS := $(addsuffix .o,$(workbench-devs-diskimage-device_NLIBARCHFILES))
+workbench-devs-diskimage-device_MC_DTARGETS := $(addsuffix .d,$(workbench-devs-diskimage-device_NLIBARCHFILES))
+workbench-devs-diskimage-device_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-devs-diskimage-device_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$(notdir $(workbench-devs-diskimage-device_NLIBARCHFILES))))
+    workbench-devs-diskimage-device_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$(notdir $(workbench-devs-diskimage-device_NLIBARCHFILES))))
+else
+ifeq (,)
+    workbench-devs-diskimage-device_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$(workbench-devs-diskimage-device_NLIBARCHFILES)))
+    workbench-devs-diskimage-device_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$(workbench-devs-diskimage-device_NLIBARCHFILES)))
+else
+    workbench-devs-diskimage-device_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$(patsubst /%,%,$(workbench-devs-diskimage-device_NLIBARCHFILES))))
+    workbench-devs-diskimage-device_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$(patsubst /%,%,$(workbench-devs-diskimage-device_NLIBARCHFILES))))
+endif
+endif
+workbench-devs-diskimage-device_MC_TGTWILDCARD := $(workbench-devs-diskimage-device_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : | $(addsuffix .c,$(workbench-devs-diskimage-device_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+workbench-devs-diskimage-device_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-devs-diskimage-device_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-diskimage-device_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-devs-diskimage-device_MC_DIRS := $(foreach dir, $(workbench-devs-diskimage-device_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-diskimage-device_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-devs-diskimage-device_MC_DIRS),)
+    workbench-devs-diskimage-device_MC_DIRS := $(shell echo $(workbench-devs-diskimage-device_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-devs-diskimage-device_MC_DIRS)
+endif
+
+endif
+
+workbench-devs-diskimage-device_MC_CPPFLAGS := $(workbench-devs-diskimage-device_LINKLIBCPPFLAGS) -D__AROS__
+workbench-devs-diskimage-device_CFLAGS := $(workbench-devs-diskimage-device_LINKLIBCFLAGS)
+ifeq ($(workbench-devs-diskimage-device_LINKLIBDFLAGS),)
+  workbench-devs-diskimage-device_DFLAGS := $(workbench-devs-diskimage-device_LINKLIBCFLAGS)
+else
+  workbench-devs-diskimage-device_DFLAGS := $(workbench-devs-diskimage-device_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-devs-diskimage-device_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-devs-diskimage-device_STRIP ?= $(TARGET_STRIP)
+workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_MC_CPPFLAGS:=$(strip $(workbench-devs-diskimage-device_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_CFLAGS:=$(strip $(workbench-devs-diskimage-device_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_DFLAGS:=$(workbench-devs-diskimage-device_DFLAGS)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-devs-diskimage-device_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-devs-diskimage-device_STRIP ?= $(HOST_STRIP)
+workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-device_CFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-device_DFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-devs-diskimage-device_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-devs-diskimage-device_STRIP ?= $(ECHO) >/dev/null
+workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-device_CFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-device_DFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-devs-diskimage-device_MC_TARGETS) : CPPFLAGS := $(workbench-devs-diskimage-device_MC_CPPFLAGS)
+$(workbench-devs-diskimage-device_MC_TARGETS) : CFLAGS := $(workbench-devs-diskimage-device_CFLAGS)
+$(workbench-devs-diskimage-device_MC_TARGETS) : $(workbench-devs-diskimage-device_MC_TGTWILDCARD).o : $(workbench-devs-diskimage-device_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-devs-diskimage-device_IQUOTE) $(dir $<) $(workbench-devs-diskimage-device_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_IQUOTE) . $(workbench-devs-diskimage-device_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-devs-diskimage-device_IQUOTE) $(dir $<) $(workbench-devs-diskimage-device_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_IQUOTE) . $(workbench-devs-diskimage-device_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-devs-diskimage-device_IQUOTE) $(dir $<) $(workbench-devs-diskimage-device_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_IQUOTE) . $(workbench-devs-diskimage-device_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-devs-diskimage-device_MC_DTARGETS) : $(workbench-devs-diskimage-device_MC_TGTWILDCARD).d : $(workbench-devs-diskimage-device_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-devs-diskimage-device_DFLAGS) $(workbench-devs-diskimage-device_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-devs-diskimage-device_OBJDIR)/linklib,)
+workbench-devs-diskimage-device_MC_SRCWILDCARD := %
+else
+workbench-devs-diskimage-device_MC_SRCWILDCARD := $(workbench-devs-diskimage-device_OBJDIR)/linklib/%
+endif
+
+ifeq ($(workbench-devs-diskimage-device_OBJDIR)/linklib,)
+workbench-devs-diskimage-device_MC_TARGETS := $(addsuffix .o,$(workbench-devs-diskimage-device_LINKLIBCCGENFILES))
+workbench-devs-diskimage-device_MC_DTARGETS := $(addsuffix .d,$(workbench-devs-diskimage-device_LINKLIBCCGENFILES))
+workbench-devs-diskimage-device_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-devs-diskimage-device_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$(notdir $(workbench-devs-diskimage-device_LINKLIBCCGENFILES))))
+    workbench-devs-diskimage-device_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$(notdir $(workbench-devs-diskimage-device_LINKLIBCCGENFILES))))
+else
+ifeq ($(workbench-devs-diskimage-device_OBJDIR)/linklib,)
+    workbench-devs-diskimage-device_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$(workbench-devs-diskimage-device_LINKLIBCCGENFILES)))
+    workbench-devs-diskimage-device_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$(workbench-devs-diskimage-device_LINKLIBCCGENFILES)))
+else
+    workbench-devs-diskimage-device_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$(patsubst $(workbench-devs-diskimage-device_OBJDIR)/linklib/%,%,$(workbench-devs-diskimage-device_LINKLIBCCGENFILES))))
+    workbench-devs-diskimage-device_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$(patsubst $(workbench-devs-diskimage-device_OBJDIR)/linklib/%,%,$(workbench-devs-diskimage-device_LINKLIBCCGENFILES))))
+endif
+endif
+workbench-devs-diskimage-device_MC_TGTWILDCARD := $(workbench-devs-diskimage-device_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : | $(addsuffix .c,$(workbench-devs-diskimage-device_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+workbench-devs-diskimage-device_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-devs-diskimage-device_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-diskimage-device_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-devs-diskimage-device_MC_DIRS := $(foreach dir, $(workbench-devs-diskimage-device_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-diskimage-device_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-devs-diskimage-device_MC_DIRS),)
+    workbench-devs-diskimage-device_MC_DIRS := $(shell echo $(workbench-devs-diskimage-device_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-devs-diskimage-device_MC_DIRS)
+endif
+
+endif
+
+workbench-devs-diskimage-device_MC_CPPFLAGS := $(workbench-devs-diskimage-device_LINKLIBCPPFLAGS) -D__AROS__
+workbench-devs-diskimage-device_CFLAGS := $(workbench-devs-diskimage-device_LINKLIBCFLAGS)
+ifeq ($(workbench-devs-diskimage-device_LINKLIBDFLAGS),)
+  workbench-devs-diskimage-device_DFLAGS := $(workbench-devs-diskimage-device_LINKLIBCFLAGS)
+else
+  workbench-devs-diskimage-device_DFLAGS := $(workbench-devs-diskimage-device_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-devs-diskimage-device_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-devs-diskimage-device_STRIP ?= $(TARGET_STRIP)
+workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_MC_CPPFLAGS:=$(strip $(workbench-devs-diskimage-device_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_CFLAGS:=$(strip $(workbench-devs-diskimage-device_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_DFLAGS:=$(workbench-devs-diskimage-device_DFLAGS)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-devs-diskimage-device_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-devs-diskimage-device_STRIP ?= $(HOST_STRIP)
+workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-device_CFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-device_DFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-devs-diskimage-device_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-devs-diskimage-device_STRIP ?= $(ECHO) >/dev/null
+workbench-devs-diskimage-device_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_CPPFLAGS) $(workbench-devs-diskimage-device_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-device_CFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-device_DFLAGS))
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-devs-diskimage-device_MC_TARGETS) $(workbench-devs-diskimage-device_MC_DTARGETS) : workbench-devs-diskimage-device_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-devs-diskimage-device_MC_TARGETS) : CPPFLAGS := $(workbench-devs-diskimage-device_MC_CPPFLAGS)
+$(workbench-devs-diskimage-device_MC_TARGETS) : CFLAGS := $(workbench-devs-diskimage-device_CFLAGS)
+$(workbench-devs-diskimage-device_MC_TARGETS) : $(workbench-devs-diskimage-device_MC_TGTWILDCARD).o : $(workbench-devs-diskimage-device_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-devs-diskimage-device_IQUOTE) $(dir $<) $(workbench-devs-diskimage-device_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_IQUOTE) . $(workbench-devs-diskimage-device_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-devs-diskimage-device_IQUOTE) $(dir $<) $(workbench-devs-diskimage-device_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_IQUOTE) . $(workbench-devs-diskimage-device_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-devs-diskimage-device_IQUOTE) $(dir $<) $(workbench-devs-diskimage-device_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-device_IQUOTE) . $(workbench-devs-diskimage-device_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-devs-diskimage-device_MC_DTARGETS) : $(workbench-devs-diskimage-device_MC_TGTWILDCARD).d : $(workbench-devs-diskimage-device_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-devs-diskimage-device_DFLAGS) $(workbench-devs-diskimage-device_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(workbench-devs-diskimage-device_LINKLIBAFILES),)
+
+ifeq ($(workbench-devs-diskimage-device_OBJDIR)/linklib,)
+workbench-devs-diskimage-device-MA_TARGETS := $(addsuffix .o,$(workbench-devs-diskimage-device_LINKLIBAFILES) $(workbench-devs-diskimage-device_RELLINKLIBAFILES))
+workbench-devs-diskimage-device-MA_WILDCARD := %
+else
+workbench-devs-diskimage-device-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$(notdir $(workbench-devs-diskimage-device_LINKLIBAFILES) $(workbench-devs-diskimage-device_RELLINKLIBAFILES))))
+workbench-devs-diskimage-device-MA_WILDCARD := $(workbench-devs-diskimage-device_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(workbench-devs-diskimage-device-MA_TARGETS) : | $(addsuffix .S,$(workbench-devs-diskimage-device_LINKLIBAFILES) $(workbench-devs-diskimage-device_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+workbench-devs-diskimage-device-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-devs-diskimage-device-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-diskimage-device_LINKLIBAFILES) $(workbench-devs-diskimage-device_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-devs-diskimage-device-MA_DIRS := $(foreach dir, $(workbench-devs-diskimage-device-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-diskimage-device-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-devs-diskimage-device-MA_DIRS),)
+    workbench-devs-diskimage-device-MA_DIRS := $(shell echo $(workbench-devs-diskimage-device-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(workbench-devs-diskimage-device-MA_DIRS)
+endif
+
+endif
+
+workbench-devs-diskimage-device-MA_ASSEMBLER ?= $(workbench-devs-diskimage-device_ASSEMBLER)
+
+$(workbench-devs-diskimage-device-MA_TARGETS) : workbench-devs-diskimage-device-MA_CMD:= $(workbench-devs-diskimage-device-MA_ASSEMBLER)
+
+$(workbench-devs-diskimage-device-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(workbench-devs-diskimage-device-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(workbench-devs-diskimage-device-MA_TARGETS) : $(workbench-devs-diskimage-device-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-devs-diskimage-device-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-devs-diskimage-device-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-devs-diskimage-device-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+workbench-devs-diskimage-device_SUFFIX           := device
+else
+workbench-devs-diskimage-device_SUFFIX           := 
+endif
+
+ifeq (target,target)
+workbench-devs-diskimage-device_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-devs-diskimage-device_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-devs-diskimage-device_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(workbench-devs-diskimage-device_SUFFIX),handler)
+workbench-devs-diskimage-device_MODULE           := $(AROSDIR)/$(workbench-devs-diskimage-device_MODDIR)/$(workbench-devs-diskimage-device_DEFNAME)-$(workbench-devs-diskimage-device_SUFFIX)
+else
+workbench-devs-diskimage-device_MODULE           := $(AROSDIR)/$(workbench-devs-diskimage-device_MODDIR)/$(workbench-devs-diskimage-device_DEFNAME).$(workbench-devs-diskimage-device_SUFFIX)
+endif
+workbench-devs-diskimage-device_KOBJ             := $(KOBJSDIR)/$(workbench-devs-diskimage-device_DEFNAME)_$(workbench-devs-diskimage-device_SUFFIX).o
+else
+workbench-devs-diskimage-device_MODULE           :=
+workbench-devs-diskimage-device_KOBJ             :=
+endif
+
+workbench-devs-diskimage-device-quick      : workbench-devs-diskimage-device
+workbench-devs-diskimage-device            : $(workbench-devs-diskimage-device_MODULE) $(workbench-devs-diskimage-device_LINKLIB) $(workbench-devs-diskimage-device_RELLINKLIB)
+ifeq (M,M)
+workbench-devs-diskimage-device-kobj       : $(workbench-devs-diskimage-device_KOBJ) $(workbench-devs-diskimage-device_LINKLIB) $(workbench-devs-diskimage-device_RELLINKLIB)
+workbench-devs-diskimage-device-kobj-quick : $(workbench-devs-diskimage-device_KOBJ) $(workbench-devs-diskimage-device_LINKLIB) $(workbench-devs-diskimage-device_RELLINKLIB)
+endif
+ifeq (M,M)
+workbench-devs-diskimage-device-linklib    : $(workbench-devs-diskimage-device_LINKLIB) $(workbench-devs-diskimage-device_RELLINKLIB)
+endif
+
+workbench-devs-diskimage-device_OBJS := $(addsuffix .o,$(workbench-devs-diskimage-device_STARTFILES)) $(workbench-devs-diskimage-device_ARCHOBJS) \
+           $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(notdir $(workbench-devs-diskimage-device_C_NARCHFILES:=.o) $(workbench-devs-diskimage-device_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (device,handler)
+workbench-devs-diskimage-device_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (diskimage,con)
+    workbench-devs-diskimage-device_ERR          := $(notdir $(workbench-devs-diskimage-device_MODULE)).err
+else
+    workbench-devs-diskimage-device_ERR          := diskimage.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(workbench-devs-diskimage-device_DEFNAME)_LDFLAGS) $(workbench-devs-diskimage-device_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-devs-diskimage-device_LIBS) $($(workbench-devs-diskimage-device_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(workbench-devs-diskimage-device_MODULE) : LIB_NAMES := $(workbench-devs-diskimage-device_LIBS) $($(workbench-devs-diskimage-device_DEFNAME)_LIBS)
+$(workbench-devs-diskimage-device_MODULE) : OBJS := $(workbench-devs-diskimage-device_STARTOBJS) $(workbench-devs-diskimage-device_OBJS) $(USER_OBJS)
+$(workbench-devs-diskimage-device_MODULE) : ENDTAG := $(workbench-devs-diskimage-device_ENDOBJS)
+$(workbench-devs-diskimage-device_MODULE) : ERR := $(workbench-devs-diskimage-device_ERR)
+$(workbench-devs-diskimage-device_MODULE) : OBJDIR := $(workbench-devs-diskimage-device_OBJDIR)
+$(workbench-devs-diskimage-device_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(workbench-devs-diskimage-device_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(workbench-devs-diskimage-device_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(workbench-devs-diskimage-device_MODULE) : $(workbench-devs-diskimage-device_STARTOBJS) $(workbench-devs-diskimage-device_OBJS) $(USER_OBJS) $(workbench-devs-diskimage-device_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(workbench-devs-diskimage-device_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(workbench-devs-diskimage-device_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+workbench-devs-diskimage-device_LC_LINKLIBNAME   := $(shell echo $(workbench-devs-diskimage-device_LINKLIBNAME) | tr A-Z a-z)
+workbench-devs-diskimage-device_LC_MODNAME       := $(shell echo diskimage | tr A-Z a-z)
+ifneq ($(workbench-devs-diskimage-device_LINKLIB),)
+
+ifeq (target,target)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_LINKLIBNAME)$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_AR:=$(AR)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_LINKLIBNAME)$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_LINKLIBNAME)$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_AR:=$(HOST_AR)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_LINKLIBNAME)$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_LINKLIBNAME)$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_AR:=$(KERNEL_AR)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_LINKLIBNAME)$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_LINKLIBNAME)$(workbench-devs-diskimage-device_LIBSUFFIX).a : $(workbench-devs-diskimage-device_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-devs-diskimage-device_AR) $@ $^
+	$(Q)$(workbench-devs-diskimage-device_RANLIB) $@
+ifneq ($(workbench-devs-diskimage-device_LC_MODNAME),$(workbench-devs-diskimage-device_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(workbench-devs-diskimage-device_LIBDIR)/libdiskimage$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_AR:=$(AR)
+$(workbench-devs-diskimage-device_LIBDIR)/libdiskimage$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-devs-diskimage-device_LIBDIR)/libdiskimage$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_AR:=$(HOST_AR)
+$(workbench-devs-diskimage-device_LIBDIR)/libdiskimage$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-devs-diskimage-device_LIBDIR)/libdiskimage$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_AR:=$(KERNEL_AR)
+$(workbench-devs-diskimage-device_LIBDIR)/libdiskimage$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-devs-diskimage-device_LIBDIR)/libdiskimage$(workbench-devs-diskimage-device_LIBSUFFIX).a : $(workbench-devs-diskimage-device_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-devs-diskimage-device_AR) $@ $^
+	$(Q)$(workbench-devs-diskimage-device_RANLIB) $@
+endif
+
+
+ifneq ($(workbench-devs-diskimage-device_LINKLIB),)
+$(workbench-devs-diskimage-device_LINKLIB) : | $(workbench-devs-diskimage-device_LIBDIR)
+else
+$(workbench-devs-diskimage-device_LINKLIB) :: $(workbench-devs-diskimage-device_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-devs-diskimage-device_LIBDIR)
+
+endif
+
+ifneq ($(workbench-devs-diskimage-device_RELLINKLIB),)
+
+ifeq (target,target)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_LINKLIBNAME)_rel$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_AR:=$(AR)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_LINKLIBNAME)_rel$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_LINKLIBNAME)_rel$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_AR:=$(HOST_AR)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_LINKLIBNAME)_rel$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_LINKLIBNAME)_rel$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_AR:=$(KERNEL_AR)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_LINKLIBNAME)_rel$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_LINKLIBNAME)_rel$(workbench-devs-diskimage-device_LIBSUFFIX).a : $(workbench-devs-diskimage-device_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-devs-diskimage-device_AR) $@ $^
+	$(Q)$(workbench-devs-diskimage-device_RANLIB) $@
+ifneq ($(workbench-devs-diskimage-device_LC_MODNAME),$(workbench-devs-diskimage-device_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_DEFNAME)_rel$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_AR:=$(AR)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_DEFNAME)_rel$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_DEFNAME)_rel$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_AR:=$(HOST_AR)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_DEFNAME)_rel$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_DEFNAME)_rel$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_AR:=$(KERNEL_AR)
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_DEFNAME)_rel$(workbench-devs-diskimage-device_LIBSUFFIX).a : workbench-devs-diskimage-device_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-devs-diskimage-device_LIBDIR)/lib$(workbench-devs-diskimage-device_DEFNAME)_rel$(workbench-devs-diskimage-device_LIBSUFFIX).a : $(workbench-devs-diskimage-device_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-devs-diskimage-device_AR) $@ $^
+	$(Q)$(workbench-devs-diskimage-device_RANLIB) $@
+endif
+
+
+ifneq ($(workbench-devs-diskimage-device_RELLINKLIB),)
+$(workbench-devs-diskimage-device_RELLINKLIB) : | $(workbench-devs-diskimage-device_LIBDIR)
+else
+$(workbench-devs-diskimage-device_RELLINKLIB) :: $(workbench-devs-diskimage-device_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-devs-diskimage-device_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+workbench-devs-diskimage-device_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+workbench-devs-diskimage-device_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+workbench-devs-diskimage-device_SYMBOLS := $(workbench-devs-diskimage-device_KBASE)
+
+workbench-devs-diskimage-device_KLIB             := hiddstubs amiga arossupport autoinit libinit
+workbench-devs-diskimage-device_KOBJ_LIBS        := $(filter-out $(workbench-devs-diskimage-device_KLIB),$(workbench-devs-diskimage-device_LIBS)) $(workbench-devs-diskimage-device_KAUTOLIB)
+$(workbench-devs-diskimage-device_KOBJ) : LINKLIBS:=$(workbench-devs-diskimage-device_KOBJ_LIBS) $($(workbench-devs-diskimage-device_DEFNAME)_LIBS)
+$(workbench-devs-diskimage-device_KOBJ) : FILTBASES:=$(addprefix -L ,$(workbench-devs-diskimage-device_SYMBOLS))
+$(workbench-devs-diskimage-device_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(workbench-devs-diskimage-device_KOBJ) : $(workbench-devs-diskimage-device_OBJS) $(USER_OBJS) $(workbench-devs-diskimage-device_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+workbench-devs-diskimage-device_DEPS             := $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/,$(notdir $(workbench-devs-diskimage-device_CCFILES:=.d) $(workbench-devs-diskimage-device_TARGETCCFILES:=.d) $(workbench-devs-diskimage-device_CXXFILES:=.d))) $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/linklib/,$(notdir $(workbench-devs-diskimage-device_LINKLIBCCFILES:=.d)))
+
+ifneq ($(workbench-devs-diskimage-device_DEPS),)
+  ifneq (workbench-devs-diskimage-device workbench-devs-diskimage-device-quick workbench-devs-diskimage-device-kobj workbench-devs-diskimage-device-kobj-quick,)
+    ifneq ($(findstring $(TARGET),workbench-devs-diskimage-device workbench-devs-diskimage-device-quick workbench-devs-diskimage-device-kobj workbench-devs-diskimage-device-kobj-quick),)
+      -include $(workbench-devs-diskimage-device_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-devs-diskimage-device_DEPS)
+    endif
+  endif
+endif
+
+$(workbench-devs-diskimage-device_OBJS) $(workbench-devs-diskimage-device_DEPS) : | $(workbench-devs-diskimage-device_OBJDIR)/linklib
+
+ifneq ($(workbench-devs-diskimage-device_OBJS) $(workbench-devs-diskimage-device_DEPS) $(workbench-devs-diskimage-device_MODULE) $(workbench-devs-diskimage-device_KOBJ),)
+$(workbench-devs-diskimage-device_OBJS) $(workbench-devs-diskimage-device_DEPS) $(workbench-devs-diskimage-device_MODULE) $(workbench-devs-diskimage-device_KOBJ) : | $(workbench-devs-diskimage-device_OBJDIR) $(AROSDIR)/$(workbench-devs-diskimage-device_MODDIR) $(KOBJSDIR)
+else
+$(workbench-devs-diskimage-device_OBJS) $(workbench-devs-diskimage-device_DEPS) $(workbench-devs-diskimage-device_MODULE) $(workbench-devs-diskimage-device_KOBJ) :: $(workbench-devs-diskimage-device_OBJDIR) $(AROSDIR)/$(workbench-devs-diskimage-device_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-devs-diskimage-device_OBJDIR) $(AROSDIR)/$(workbench-devs-diskimage-device_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),workbench-devs-diskimage-device workbench-devs-diskimage-device-includes workbench-devs-diskimage-device-quick workbench-devs-diskimage-device-kobj workbench-devs-diskimage-device-kobj-quick),) # Only for this target these deps are wanted
+
+workbench-devs-diskimage-device_DFILE_DEPS := $(workbench-devs-diskimage-device_LIBDEFSINC) $(workbench-devs-diskimage-device_DEFLIBDEFSINC) \
+    $(addprefix $(workbench-devs-diskimage-device_INCDIR)/,$($(workbench-devs-diskimage-device_DEFNAME)_INCLUDES))
+$(workbench-devs-diskimage-device_DEPS) : $(workbench-devs-diskimage-device_DFILE_DEPS)
+endif
+
+workbench-devs-diskimage-device_TOCLEAN := $(workbench-devs-diskimage-device_OBJS) $(workbench-devs-diskimage-device_DEPS) \
+    $(workbench-devs-diskimage-device_MODULE) $(workbench-devs-diskimage-device_LINKLIB) $(workbench-devs-diskimage-device_KOBJ) \
+    $(workbench-devs-diskimage-device_OBJDIR)/Makefile.diskimagedevice \
+    $(addprefix $(workbench-devs-diskimage-device_OBJDIR)/include/,$($(workbench-devs-diskimage-device_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(workbench-devs-diskimage-device_DEFNAME)_INCLUDES)) \
+    $(addprefix $(workbench-devs-diskimage-device_INCDIR)/,$($(workbench-devs-diskimage-device_DEFNAME)_INCLUDES)) \
+    $(workbench-devs-diskimage-device_OBJDIR)/diskimage_geninc $(workbench-devs-diskimage-device_OBJDIR)/diskimage_incs \
+    $(addsuffix .c,$(workbench-devs-diskimage-device_LINKLIBFILES)) $(workbench-devs-diskimage-device_LINKLIBOBJS) $(workbench-devs-diskimage-device_LIBDEFSINC) \
+    $(workbench-devs-diskimage-device_DEFLIBDEFSINC) $(addsuffix .c,$(workbench-devs-diskimage-device_STARTFILES) $(workbench-devs-diskimage-device_ENDFILES)) \
+    $(workbench-devs-diskimage-device_ENDOBJS)
+workbench-devs-diskimage-device-clean : FILES              := $(workbench-devs-diskimage-device_TOCLEAN)
+workbench-devs-diskimage-device-clean ::
+	$(Q)$(ECHO) "Cleaning up for module diskimage"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(workbench-devs-diskimage-device_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

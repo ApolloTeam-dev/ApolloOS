@@ -1,0 +1,26 @@
+# $Id$
+#
+# Makefile to copy Prefs/Presets.
+
+include $(SRCDIR)/config/aros.cfg
+
+TARGETDIR := $(AROS_PREFS)/Presets
+
+#MM- workbench-prefs : workbench-prefs-presets
+
+
+.PHONY : workbench-prefs-presets
+
+#MM
+workbench-prefs-presets :
+	$(Q)cd $(SRCDIR)/$(CURDIR) && $(CPYDIRREC) -s . -d $(TARGETDIR) -e 
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

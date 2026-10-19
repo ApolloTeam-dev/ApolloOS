@@ -1,0 +1,2609 @@
+#   $Id$
+include $(SRCDIR)/config/aros.cfg
+
+
+#MM external-bz2-includes : \
+#MM     kernel-exec-includes includes-copy
+
+#MM- external-bz2 : external-bz2-lib external-bz2-bzip2
+
+###################################################################################
+
+#MM- external-bz2-lib : linklibs
+
+FILES := blocksort huffman crctable randtable  \
+         compress decompress bzlib
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM external-bz2-lib
+#MM external-bz2-lib-quick
+#MM external-bz2-lib-makefile
+#MM external-bz2-lib-clean
+
+# ABI targets:
+#MM- includes-all : external-bz2-lib-includes
+#MM- linklibs-bz2: external-bz2-lib-linklib
+#MM- linklibs-bz2_rel : external-bz2-lib-linklib
+#MM- includes-bz2: external-bz2-lib-includes
+#MM- includes-bz2_rel : external-bz2-lib-includes
+#MM- external-bz2-lib : external-bz2-lib-includes core-linklibs linklibs-
+#MM external-bz2-lib-linklib : external-bz2-lib-includes includes-
+#MM- external-bz2-lib-quick : external-bz2-lib-includes-quick
+#MM external-bz2-lib-includes : external-bz2-lib-makefile external-bz2-lib-includes-dirs \
+#MM     includes-generate-deps external-bz2-lib-fd
+#MM external-bz2-lib-includes-quick
+#MM external-bz2-lib-includes-dirs
+#MM external-bz2-lib-fd
+
+# Library targets
+#MM external-bz2-lib-kobj : core-linklibs linklibs-
+#MM external-bz2-lib-kobj-quick : 
+
+# Library with ABI targets:
+#MM external-bz2-lib-kobj : external-bz2-lib-includes core-linklibs linklibs-
+#MM external-bz2-lib-kobj-quick : external-bz2-lib-includes-quick
+
+# All MetaMake targets defined by this macro
+external-bz2-lib_ALLTARGETS       := external-bz2-lib external-bz2-lib-quick external-bz2-lib-clean
+
+ifeq (M,M)
+external-bz2-lib_ALLTARGETS       += external-bz2-lib-kobj external-bz2-lib-kobj-quick
+endif
+
+ifeq (M,M)
+external-bz2-lib_ALLTARGETS += external-bz2-lib-includes \
+                 external-bz2-lib-includes-quick external-bz2-lib-includes-dirs  \
+                 external-bz2-lib-linklib external-bz2-lib-fd
+endif
+
+.PHONY : $(external-bz2-lib_ALLTARGETS) external-bz2-lib-makefile
+
+ifeq (bz2,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (library,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    external-bz2-lib_DEFNAME      := bz2_
+else
+    external-bz2-lib_DEFNAME      := bz2
+endif
+external-bz2-lib_DEFLINKLIBNAME   := $(external-bz2-lib_DEFNAME)
+ifneq (,)
+    external-bz2-lib_LINKLIBNAME  := 
+else
+    external-bz2-lib_LINKLIBNAME  = $(external-bz2-lib_DEFLINKLIBNAME)
+endif
+external-bz2-lib_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    external-bz2-lib_DEFCPPFLAGS  += -I
+endif
+external-bz2-lib_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    external-bz2-lib_DFLAGS       := 
+else
+    external-bz2-lib_DFLAGS       = $(external-bz2-lib_DEFDFLAGS)
+endif
+external-bz2-lib_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    external-bz2-lib_DXXFLAGS     := 
+else
+    external-bz2-lib_DXXFLAGS     = $(external-bz2-lib_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+external-bz2-lib_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(external-bz2-lib_DEFDFLAGS))
+external-bz2-lib_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(external-bz2-lib_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+external-bz2-lib_FUNCINSTR := yes
+external-bz2-lib_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(external-bz2-lib_DEFDFLAGS))
+external-bz2-lib_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(external-bz2-lib_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+external-bz2-lib_OBJDIR                     := 
+else
+external-bz2-lib_OBJDIR                     := $(OBJDIR)/$(external-bz2-lib_DEFNAME)
+endif
+ifneq (,)
+external-bz2-lib_OBJDIR           := $(external-bz2-lib_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+external-bz2-lib-makefile         := $(external-bz2-lib_OBJDIR)/Makefile.$(external-bz2-lib_DEFNAME)library
+external-bz2-lib-genmakefile : $(external-bz2-lib-makefile)
+
+
+external-bz2-lib-genmakefile_OPTS := 
+ifneq (,)
+    external-bz2-lib-genmakefile_OPTS += -f 
+    external-bz2-lib-genmakefile_MODNAME := bz2_
+else
+    external-bz2-lib-genmakefile_MODNAME := bz2
+endif
+external-bz2-lib-genmakefile_TARGET := Makefile.$(external-bz2-lib-genmakefile_MODNAME)library
+external-bz2-lib-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        external-bz2-lib-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        external-bz2-lib-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        external-bz2-lib-genmakefile_OPTS += -c 
+        external-bz2-lib-genmakefile_DEPS += 
+    endif 
+else
+    external-bz2-lib-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/bz2.conf
+    external-bz2-lib-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/bz2.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        external-bz2-lib-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        external-bz2-lib-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        external-bz2-lib-genmakefile_OPTS += -o 
+        external-bz2-lib-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    external-bz2-lib-genmakefile_OPTS += -s 
+endif
+ifneq ($(external-bz2-lib_OBJDIR),)
+    external-bz2-lib-genmakefile_OPTS += -d $(external-bz2-lib_OBJDIR)
+    external-bz2-lib-genmakefile_TARGET := $(external-bz2-lib_OBJDIR)/$(external-bz2-lib-genmakefile_TARGET)
+endif
+
+$(external-bz2-lib-genmakefile_TARGET) : OPTS := $(external-bz2-lib-genmakefile_OPTS)
+$(external-bz2-lib-genmakefile_TARGET) : MODNAME := bz2
+$(external-bz2-lib-genmakefile_TARGET) : MODTYPE := library
+$(external-bz2-lib-genmakefile_TARGET) : $(external-bz2-lib-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(external-bz2-lib-makefile),)
+$(external-bz2-lib-makefile) : | $(external-bz2-lib_OBJDIR)
+else
+$(external-bz2-lib-makefile) :: $(external-bz2-lib_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(external-bz2-lib_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(external-bz2-lib_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(external-bz2-lib-makefile)
+
+external-bz2-lib_DEFMODDIR        := $($(external-bz2-lib_DEFNAME)_MODDIR)
+ifeq (no,yes)
+external-bz2-lib_DEFMODDIR        := $(AROS_DIR_ARCH)/$(external-bz2-lib_DEFMODDIR)
+endif
+ifneq (,)
+    external-bz2-lib_MODDIR       := 
+else
+    external-bz2-lib_MODDIR       := $(external-bz2-lib_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+external-bz2-lib_INCDIR           := 
+else
+external-bz2-lib_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+external-bz2-lib_LIBDEFSINC       := $(external-bz2-lib_OBJDIR)/include/$(external-bz2-lib_DEFNAME)_libdefs.h
+external-bz2-lib_DEFLIBDEFSINC    := $(external-bz2-lib_OBJDIR)/include/$(external-bz2-lib_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+external-bz2-lib-includes-quick : external-bz2-lib-includes
+external-bz2-lib-includes : $(addprefix $(GENINCDIR)/,$($(external-bz2-lib_DEFNAME)_INCLUDES)) \
+    $(addprefix $(external-bz2-lib_INCDIR)/,$($(external-bz2-lib_DEFNAME)_INCLUDES)) \
+    $(external-bz2-lib_LIBDEFSINC) $(external-bz2-lib_DEFLIBDEFSINC)
+
+ifneq ($($(external-bz2-lib_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    external-bz2-lib-includes_MODNAME := bz2_
+else
+    external-bz2-lib-includes_MODNAME := bz2
+endif
+
+ifneq ($($(external-bz2-lib-includes_MODNAME)_INCLUDES),)
+
+external-bz2-lib-includes_TARGETS := $($(external-bz2-lib-includes_MODNAME)_INCLUDES)
+
+external-bz2-lib-includes_DEPS := $(GENMODULE)
+external-bz2-lib-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        external-bz2-lib-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        external-bz2-lib-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        external-bz2-lib-includes_OPTS += -c 
+        external-bz2-lib-includes_DEPS += 
+    endif 
+else
+    external-bz2-lib-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/bz2.conf
+    external-bz2-lib-includes_DEPS += $(SRCDIR)/$(CURDIR)/bz2.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        external-bz2-lib-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        external-bz2-lib-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        external-bz2-lib-includes_OPTS += -o 
+        external-bz2-lib-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    external-bz2-lib-includes_OPTS += -s 
+endif
+ifneq ($(external-bz2-lib_OBJDIR)/include,)
+    external-bz2-lib-includes_OPTS += -d $(external-bz2-lib_OBJDIR)/include
+    external-bz2-lib-includes_TARGETS := $(addprefix $(external-bz2-lib_OBJDIR)/include/,$(external-bz2-lib-includes_TARGETS))
+    external-bz2-lib-includes_GENINCFLAG=$(external-bz2-lib_OBJDIR)/include/.bz2.library-includes
+else
+    external-bz2-lib-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.bz2.library-includes
+endif
+
+$(external-bz2-lib-includes_TARGETS) : $(external-bz2-lib-includes_DEPS) $(external-bz2-lib-includes_GENINCFLAG)
+
+$(external-bz2-lib-includes_GENINCFLAG) : OPTS := $(external-bz2-lib-includes_OPTS)
+$(external-bz2-lib-includes_GENINCFLAG) : MODNAME := bz2
+$(external-bz2-lib-includes_GENINCFLAG) : MODTYPE := library
+$(external-bz2-lib-includes_GENINCFLAG) : $(external-bz2-lib-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(external-bz2-lib_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(external-bz2-lib_DEFNAME)_INCLUDES)) : | $(external-bz2-lib_OBJDIR)/bz2_geninc
+
+$(external-bz2-lib_OBJDIR)/bz2_geninc : COPYSRCDIR := $(external-bz2-lib_OBJDIR)/include
+$(external-bz2-lib_OBJDIR)/bz2_geninc : TGTDIR := $(GENINCDIR)
+$(external-bz2-lib_OBJDIR)/bz2_geninc : FILES := $($(external-bz2-lib_DEFNAME)_INCLUDES)
+$(external-bz2-lib_OBJDIR)/bz2_geninc : $(addprefix $(external-bz2-lib_OBJDIR)/include/,$($(external-bz2-lib_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(external-bz2-lib_OBJDIR)/include
+
+$(addprefix $(external-bz2-lib_INCDIR)/,$($(external-bz2-lib_DEFNAME)_INCLUDES)) : | $(external-bz2-lib_OBJDIR)/bz2_incs
+
+$(external-bz2-lib_OBJDIR)/bz2_incs : COPYSRCDIR := $(external-bz2-lib_OBJDIR)/include
+$(external-bz2-lib_OBJDIR)/bz2_incs : TGTDIR := $(external-bz2-lib_INCDIR)
+$(external-bz2-lib_OBJDIR)/bz2_incs : FILES := $($(external-bz2-lib_DEFNAME)_INCLUDES)
+$(external-bz2-lib_OBJDIR)/bz2_incs : $(addprefix $(external-bz2-lib_OBJDIR)/include/,$($(external-bz2-lib_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+external-bz2-lib_INCDIRS := $(filter-out ./,$(sort $(dir $($(external-bz2-lib_DEFNAME)_INCLUDES))))
+
+TMPbz2_INCDIRS := \
+    $(external-bz2-lib_OBJDIR)/include $(addprefix $(external-bz2-lib_OBJDIR)/include/,$(external-bz2-lib_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(external-bz2-lib_INCDIRS)) \
+    $(external-bz2-lib_INCDIR) $(addprefix $(external-bz2-lib_INCDIR)/,$(external-bz2-lib_INCDIRS))
+
+ifneq (external-bz2-lib-includes-dirs,)
+external-bz2-lib-includes-dirs : | $(TMPbz2_INCDIRS)
+else
+external-bz2-lib-includes-dirs :: $(TMPbz2_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPbz2_INCDIRS)
+
+
+endif
+
+endif
+
+
+external-bz2-lib-genlibdefs_OPTS := 
+ifneq (,)
+    external-bz2-lib-genlibdefs_OPTS += -f 
+    external-bz2-lib-genlibdefs_MODNAME := bz2_
+else
+    external-bz2-lib-genlibdefs_MODNAME := bz2
+endif
+external-bz2-lib-genlibdefs_TARGET := $(external-bz2-lib-genlibdefs_MODNAME)_libdefs.h
+external-bz2-lib-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        external-bz2-lib-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        external-bz2-lib-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        external-bz2-lib-genlibdefs_OPTS += -c 
+        external-bz2-lib-genlibdefs_DEPS += 
+    endif 
+else
+    external-bz2-lib-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/bz2.conf
+    external-bz2-lib-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/bz2.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        external-bz2-lib-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        external-bz2-lib-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        external-bz2-lib-genlibdefs_OPTS += -o 
+        external-bz2-lib-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    external-bz2-lib-genlibdefs_OPTS += -s 
+endif
+ifneq ($(external-bz2-lib_OBJDIR)/include,)
+    external-bz2-lib-genlibdefs_OPTS += -d $(external-bz2-lib_OBJDIR)/include
+    external-bz2-lib-genlibdefs_TARGET := $(external-bz2-lib_OBJDIR)/include/$(external-bz2-lib-genlibdefs_TARGET)
+endif
+ifneq (,)
+    external-bz2-lib-genlibdefs_OPTS += -v 
+endif
+
+$(external-bz2-lib-genlibdefs_TARGET) : OPTS := $(external-bz2-lib-genlibdefs_OPTS)
+$(external-bz2-lib-genlibdefs_TARGET) : MODNAME := bz2
+$(external-bz2-lib-genlibdefs_TARGET) : MODTYPE := library
+$(external-bz2-lib-genlibdefs_TARGET) : $(external-bz2-lib-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(external-bz2-lib_DEFLIBDEFSINC) : FILENAME := $(external-bz2-lib_LIBDEFSINC)
+$(external-bz2-lib_DEFLIBDEFSINC) : $(external-bz2-lib_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(external-bz2-lib_LIBDEFSINC) $(external-bz2-lib_DEFLIBDEFSINC) : | $(external-bz2-lib_OBJDIR)/include
+
+ifneq (external-bz2-lib-includes-dirs,)
+external-bz2-lib-includes-dirs : | $(external-bz2-lib_OBJDIR)/include
+else
+external-bz2-lib-includes-dirs :: $(external-bz2-lib_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(external-bz2-lib_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+external-bz2-lib-genmodfiles_OPTS :=
+ifneq (,)
+    external-bz2-lib-genmodfiles_OPTS += -f 
+    external-bz2-lib-genmodfiles_MODNAME := bz2_
+else
+    external-bz2-lib-genmodfiles_MODNAME := bz2
+endif
+external-bz2-lib-genmodfiles_GENTARGETS := $($(external-bz2-lib-genmodfiles_MODNAME)_STARTFILES) $($(external-bz2-lib-genmodfiles_MODNAME)_ENDFILES)
+external-bz2-lib-genmodfiles_STUBTARGETS := $($(external-bz2-lib-genmodfiles_MODNAME)_LINKLIBFILES) $($(external-bz2-lib-genmodfiles_MODNAME)_RELLINKLIBFILES)
+external-bz2-lib-genmodfiles_GENTARGETS := $(addsuffix .c,$(external-bz2-lib-genmodfiles_GENTARGETS))
+external-bz2-lib-genmodfiles_STUBTARGETS := $(addsuffix .c,$(external-bz2-lib-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(external-bz2-lib-genmodfiles_MODNAME)_LINKLIBAFILES) $($(external-bz2-lib-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+external-bz2-lib-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        external-bz2-lib-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        external-bz2-lib-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        external-bz2-lib-genmodfiles_OPTS += -c 
+        external-bz2-lib-genmodfiles_DEPS += 
+    endif 
+else
+    external-bz2-lib-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/bz2.conf
+    external-bz2-lib-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/bz2.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        external-bz2-lib-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        external-bz2-lib-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        external-bz2-lib-genmodfiles_OPTS += -o 
+        external-bz2-lib-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    external-bz2-lib-genmodfiles_OPTS += -s 
+endif
+ifneq ($(external-bz2-lib_OBJDIR),)
+    external-bz2-lib-genmodfiles_OPTS += -d $(external-bz2-lib_OBJDIR)
+    external-bz2-lib-genmodfiles_TARGETDIR := $(shell echo $(external-bz2-lib_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    external-bz2-lib-genmodfiles_GENTARGETS := $(addprefix $(external-bz2-lib-genmodfiles_TARGETDIR)/,$(external-bz2-lib-genmodfiles_GENTARGETS))
+    external-bz2-lib-genmodfiles_GENFILEFLAG=$(external-bz2-lib-genmodfiles_TARGETDIR)/.bz2.library-genfiles
+else
+    external-bz2-lib-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.bz2.library-genfiles
+endif
+ifneq ($(external-bz2-lib_OBJDIR)/linklib,)
+    external-bz2-lib-genmodfiles_OPTS += -l $(external-bz2-lib_OBJDIR)/linklib
+    external-bz2-lib-genmodfiles_STUBTARGETDIR := $(shell echo $(external-bz2-lib_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    external-bz2-lib-genmodfiles_STUBTARGETS := $(addprefix $(external-bz2-lib-genmodfiles_STUBTARGETDIR)/,$(external-bz2-lib-genmodfiles_STUBTARGETS))
+    external-bz2-lib-genmodfiles_TARGETDIRS += $(external-bz2-lib_OBJDIR)/linklib
+else
+ifneq ($(external-bz2-lib_OBJDIR),)
+    external-bz2-lib-genmodfiles_STUBTARGETS := $(addprefix $(external-bz2-lib-genmodfiles_TARGETDIR)/,$(external-bz2-lib-genmodfiles_STUBTARGETS))
+endif
+endif
+
+external-bz2-lib-genmodfiles_TARGETS := $(external-bz2-lib-genmodfiles_GENTARGETS) $(external-bz2-lib-genmodfiles_STUBTARGETS)
+ifneq ($(external-bz2-lib-genmodfiles_TARGETDIRS),)
+$(external-bz2-lib-genmodfiles_TARGETS) : | $(external-bz2-lib-genmodfiles_TARGETDIRS)
+endif
+
+$(external-bz2-lib-genmodfiles_TARGETS) : $(external-bz2-lib-genmodfiles_DEPS) $(external-bz2-lib-genmodfiles_GENFILEFLAG)
+
+$(external-bz2-lib-genmodfiles_GENFILEFLAG) : OPTS := $(external-bz2-lib-genmodfiles_OPTS)
+$(external-bz2-lib-genmodfiles_GENFILEFLAG) : MODNAME := bz2
+$(external-bz2-lib-genmodfiles_GENFILEFLAG) : MODTYPE := library
+$(external-bz2-lib-genmodfiles_GENFILEFLAG) : $(external-bz2-lib-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(external-bz2-lib-genmodfiles_GENFILEFLAG) : $(external-bz2-lib_DEFLIBDEFSINC) $(external-bz2-lib-makefile)
+
+
+ifneq ($(external-bz2-lib-genmodfiles_GENFILEFLAG),)
+$(external-bz2-lib-genmodfiles_GENFILEFLAG) : | $(external-bz2-lib_OBJDIR)/linklib
+else
+$(external-bz2-lib-genmodfiles_GENFILEFLAG) :: $(external-bz2-lib_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(external-bz2-lib_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+external-bz2-lib_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+external-bz2-lib_FDDIR            := /../$(AROS_DIR_FD)
+endif
+external-bz2-lib-fd : $(external-bz2-lib_FDDIR)/bz2_lib.fd
+
+
+TMP_TARGET := bz2_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/bz2.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/bz2.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(external-bz2-lib_FDDIR),)
+    TMP_OPTS += -d $(external-bz2-lib_FDDIR)
+    TMP_TARGET := $(external-bz2-lib_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := bz2
+$(TMP_TARGET) : MODTYPE := library
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(external-bz2-lib_FDDIR)/bz2_lib.fd : | $(external-bz2-lib_FDDIR)
+
+
+ifneq (external-bz2-lib-fd-setup,)
+external-bz2-lib-fd-setup : | $(external-bz2-lib_FDDIR)
+else
+external-bz2-lib-fd-setup :: $(external-bz2-lib_FDDIR)
+endif
+
+GLOB_MKDIRS += $(external-bz2-lib_FDDIR)
+
+endif
+
+## Compilation
+##
+external-bz2-lib_FILES            := $(FILES)
+external-bz2-lib_OBJCFILES        := 
+external-bz2-lib_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+external-bz2-lib_LIBFILES         := 
+external-bz2-lib_LIBS             := 
+
+external-bz2-lib_FDIRS            := $(sort $(dir $(external-bz2-lib_FILES)))
+
+external-bz2-lib_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+external-bz2-lib_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call external-bz2-lib_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+external-bz2-lib_FILTERARCH       = $(filter-out $(call external-bz2-lib_MATCHARCH,$(1),$(2)),$(2))
+external-bz2-lib_STARTFILES       := $(addprefix $(external-bz2-lib_OBJDIR)/,$($(external-bz2-lib_DEFNAME)_STARTFILES))
+external-bz2-lib_ENDFILES         := $(addprefix $(external-bz2-lib_OBJDIR)/,$($(external-bz2-lib_DEFNAME)_ENDFILES))
+
+external-bz2-lib_ARCHOBJS         := $(wildcard $(external-bz2-lib_OBJDIR)/arch/*.o)
+external-bz2-lib_LIBARCHOBJS      := $(wildcard $(external-bz2-lib_OBJDIR)/linklib/arch/*.o)
+external-bz2-lib_ARCHFILES        := $(basename $(notdir $(external-bz2-lib_ARCHOBJS)))
+external-bz2-lib_LIBARCHFILES     := $(basename $(notdir $(external-bz2-lib_LIBARCHOBJS)))
+external-bz2-lib_C_NARCHFILES     := $(call external-bz2-lib_FILTERARCH,$(external-bz2-lib_ARCHFILES),$(external-bz2-lib_FILES))
+external-bz2-lib_CXX_NARCHFILES   := $(call external-bz2-lib_FILTERARCH,$(external-bz2-lib_ARCHFILES),$(external-bz2-lib_CXXFILES))
+external-bz2-lib_OBJC_NARCHFILES  := $(call external-bz2-lib_FILTERARCH,$(external-bz2-lib_ARCHFILES),$(external-bz2-lib_OBJCFILES))
+external-bz2-lib_NLIBARCHFILES    := $(call external-bz2-lib_FILTERARCH,$(external-bz2-lib_LIBARCHFILES),$(external-bz2-lib_LIBFILES))
+external-bz2-lib_ARCHNLIBFILES    := $(call external-bz2-lib_FILTERARCH,$(external-bz2-lib_LIBFILES),$(external-bz2-lib_LIBARCHFILES))
+
+external-bz2-lib_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(external-bz2-lib_OBJDIR)/include -include $(external-bz2-lib_DEFLIBDEFSINC))
+ifneq (,)
+external-bz2-lib_CPPFLAGS         += -I
+endif
+external-bz2-lib_LINKLIBCPPFLAGS  := $(external-bz2-lib_CPPFLAGS)
+external-bz2-lib_CPPFLAGS         += $(strip $($(external-bz2-lib_DEFNAME)_CPPFLAGS))
+external-bz2-lib_LINKLIBCPPFLAGS  += $(strip $($(external-bz2-lib_DEFNAME)_LINKLIBCPPFLAGS))
+external-bz2-lib_CFLAGS           := $(strip $(CFLAGS) $($(external-bz2-lib_DEFNAME)_CFLAGS))
+external-bz2-lib_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(external-bz2-lib_DEFNAME)_LINKLIBCFLAGS))
+external-bz2-lib_CXXFLAGS         := $(strip $(CXXFLAGS) $($(external-bz2-lib_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+external-bz2-lib_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+external-bz2-lib_CFLAGS           := $(strip $(external-bz2-lib_LTOFLAGS) $(external-bz2-lib_CFLAGS))
+external-bz2-lib_LINKLIBCFLAGS    := $(strip $(external-bz2-lib_LTOFLAGS) $(external-bz2-lib_LINKLIBCFLAGS))
+external-bz2-lib_CXXFLAGS         := $(strip $(external-bz2-lib_LTOFLAGS) $(external-bz2-lib_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+external-bz2-lib_SUBSTNULL        :=
+external-bz2-lib_SUBSTSPACE       := $(external-bz2-lib_SUBSTNULL) #
+external-bz2-lib_SUBSTCOMMA       := ,
+external-bz2-lib_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(external-bz2-lib_SUBSTSPACE),$(external-bz2-lib_SUBSTCOMMA),$(strip $($(external-bz2-lib_DEFNAME)_STARTFILES))))
+external-bz2-lib_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+external-bz2-lib_CFLAGS           := $(strip $(external-bz2-lib_INSTRFUNCFLAGS) $(external-bz2-lib_CFLAGS))
+external-bz2-lib_CXXFLAGS         := $(strip $(external-bz2-lib_INSTRFUNCFLAGS) $(external-bz2-lib_CXXFLAGS))
+external-bz2-lib_LIBS             += $(external-bz2-lib_INSTRFUNCLIBS)
+endif
+endif
+external-bz2-lib_DFLAGS           := $(strip $(external-bz2-lib_DFLAGS) $($(external-bz2-lib_DEFNAME)_DFLAGS))
+external-bz2-lib_LINKLIBDFLAGS    := $(strip $(external-bz2-lib_DFLAGS) $($(external-bz2-lib_DEFNAME)_LINKLIBDFLAGS))
+external-bz2-lib_DXXFLAGS         := $(strip $(external-bz2-lib_DXXFLAGS) $($(external-bz2-lib_DEFNAME)_DXXFLAGS))
+
+ifeq (library,library)
+    external-bz2-lib_LIBSUFFIX    := 
+else
+    external-bz2-lib_LIBSUFFIX    := .library
+endif
+
+ifeq (,)
+external-bz2-lib_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+external-bz2-lib_LIBDIR           := 
+endif
+
+ifeq (M,M)
+external-bz2-lib_LINKLIBCFILES    := $(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$($(external-bz2-lib_DEFNAME)_LINKLIBFILES))
+external-bz2-lib_LINKLIBAFILES    := $(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$($(external-bz2-lib_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(external-bz2-lib_DEFNAME)_LINKLIBFILES) $($(external-bz2-lib_DEFNAME)_LINKLIBAFILES)  $(external-bz2-lib_ARCHNLIBFILES)),)
+    external-bz2-lib_LINKLIB      :=
+else
+    external-bz2-lib_LINKLIB      := $(external-bz2-lib_LIBDIR)/libbz2$(external-bz2-lib_LIBSUFFIX).a
+    ifneq (bz2,$(external-bz2-lib_LINKLIBNAME))
+        external-bz2-lib_LINKLIB  += $(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_LINKLIBNAME)$(external-bz2-lib_LIBSUFFIX).a
+    endif
+endif
+external-bz2-lib_LINKLIBFILES     := $(external-bz2-lib_LINKLIBCFILES) $(external-bz2-lib_LINKLIBAFILES)
+
+external-bz2-lib_RELLINKLIBCFILES := $(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$($(external-bz2-lib_DEFNAME)_RELLINKLIBFILES))
+external-bz2-lib_RELLINKLIBAFILES := $(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$($(external-bz2-lib_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(external-bz2-lib_DEFNAME)_RELLINKLIBFILES) $($(external-bz2-lib_DEFNAME)_RELLINKLIBAFILES)  $(external-bz2-lib_ARCHNLIBFILES)),)
+    external-bz2-lib_RELLINKLIB   :=
+else
+    external-bz2-lib_RELLINKLIB   := $(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_DEFNAME)_rel$(external-bz2-lib_LIBSUFFIX).a
+    ifneq (bz2,$(external-bz2-lib_LINKLIBNAME))
+        external-bz2-lib_RELLINKLIB += $(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_LINKLIBNAME)_rel$(external-bz2-lib_LIBSUFFIX).a
+    endif
+endif
+external-bz2-lib_RELLINKLIBFILES  := $(external-bz2-lib_RELLINKLIBCFILES) $(external-bz2-lib_RELLINKLIBAFILES)
+endif
+
+external-bz2-lib_ENDOBJS          := $(addsuffix .o,$(external-bz2-lib_ENDFILES))
+external-bz2-lib_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$(notdir $(external-bz2-lib_NLIBARCHFILES))) $(addprefix $(external-bz2-lib_OBJDIR)/linklib/arch/,$(notdir $(external-bz2-lib_ARCHNLIBFILES))) $(external-bz2-lib_LINKLIBFILES)) \
+                 
+external-bz2-lib_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$(notdir $(external-bz2-lib_NLIBARCHFILES))) $(addprefix $(external-bz2-lib_OBJDIR)/linklib/arch/,$(notdir $(external-bz2-lib_ARCHNLIBFILES))) $(external-bz2-lib_RELLINKLIBFILES)) \
+                 
+$(external-bz2-lib_LINKLIBFILES) $(external-bz2-lib_RELLINKLIBFILES) : | $(external-bz2-lib_OBJDIR)/linklib
+$(external-bz2-lib_LINKLIBOBJS) $(external-bz2-lib_RELLINKLIBOBJS) : | $(external-bz2-lib_OBJDIR)/linklib
+
+external-bz2-lib_CCFILES := $(external-bz2-lib_C_NARCHFILES)
+external-bz2-lib_TARGETCCFILES    := $(strip $(external-bz2-lib_STARTFILES) $(external-bz2-lib_ENDFILES))
+external-bz2-lib_LINKLIBCCFILES   := $(strip $(external-bz2-lib_NLIBARCHFILES) $(external-bz2-lib_LINKLIBCFILES) $(external-bz2-lib_RELLINKLIBCFILES))
+external-bz2-lib_LINKLIBCCGENFILES := $(strip $(external-bz2-lib_LINKLIBCFILES) $(external-bz2-lib_RELLINKLIBCFILES))
+
+
+external-bz2-lib_CXXABSBASENAMES := $(foreach external-bz2-lib_CXXBASE,$(external-bz2-lib_CXX_NARCHFILES),$(if $(filter /%,$(external-bz2-lib_CXXBASE)),$(external-bz2-lib_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(external-bz2-lib_CXXBASE))))
+
+ifneq ($(external-bz2-lib_CXXABSBASENAMES),)
+
+external-bz2-lib_CXXBASENAMES := $(basename $(external-bz2-lib_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+external-bz2-lib_MCXX_FILES  := $(strip $(foreach external-bz2-lib_CXXBASE,$(external-bz2-lib_CXXABSBASENAMES), $(firstword $(wildcard $(foreach external-bz2-lib_EXT, $(AROS_CXXEXTS),$(addsuffix .$(external-bz2-lib_EXT),$(external-bz2-lib_CXXBASE)))))))
+
+ifeq (,)
+external-bz2-lib_MCXX_SRCWILDCARD := %
+else
+external-bz2-lib_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(external-bz2-lib_OBJDIR),)
+  external-bz2-lib_CXXTARGETS := $(notdir $(external-bz2-lib_CXXBASENAMES:=.o))
+  external-bz2-lib_CXXDTARGETS := $(notdir $(external-bz2-lib_CXXBASENAMES:=.d))
+  external-bz2-lib_MCXX_WILDCARD := %
+else
+  external-bz2-lib_CXXTARGETS := $(addprefix $(external-bz2-lib_OBJDIR)/,$(notdir $(external-bz2-lib_CXXBASENAMES:=.o)))
+  external-bz2-lib_CXXDTARGETS := $(addprefix $(external-bz2-lib_OBJDIR)/,$(notdir $(external-bz2-lib_CXXBASENAMES:=.d)))
+  external-bz2-lib_MCXX_WILDCARD := $(external-bz2-lib_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(external-bz2-lib_CXXTARGETS) $(external-bz2-lib_CXXDTARGETS) : | $(external-bz2-lib_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+external-bz2-lib_MCXX_CPPFLAGS := $(external-bz2-lib_CPPFLAGS)
+external-bz2-lib_CXXFLAGS := $(external-bz2-lib_CXXFLAGS)
+ifeq ($(external-bz2-lib_DXXFLAGS),)
+  external-bz2-lib_DXXFLAGS := $(external-bz2-lib_CXXFLAGS)
+else
+  external-bz2-lib_DXXFLAGS := $(external-bz2-lib_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  external-bz2-lib_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  external-bz2-lib_STRIP ?= $(HOST_STRIP)
+  external-bz2-lib_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  external-bz2-lib_CXXCMD:=$(HOST_CXX)
+  external-bz2-lib_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(external-bz2-lib_MCXX_CPPFLAGS) $(external-bz2-lib_MCXX_EXTRA_CPPFLAGS))
+  external-bz2-lib_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(external-bz2-lib_CXXFLAGS))
+  external-bz2-lib_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(external-bz2-lib_DXXFLAGS))
+  external-bz2-lib_CXXIQUOTE:=$(HOST_IQUOTE)
+  external-bz2-lib_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  external-bz2-lib_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  external-bz2-lib_STRIP ?= $(TARGET_STRIP)
+  external-bz2-lib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  external-bz2-lib_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  external-bz2-lib_MCXX_CPPFLAGS := $(strip $(external-bz2-lib_MCXX_CPPFLAGS) $(external-bz2-lib_MCXX_EXTRA_CPPFLAGS))
+  external-bz2-lib_CXXFLAGS := $(strip $(external-bz2-lib_CXXFLAGS) $(SAFETY_CFLAGS))
+  external-bz2-lib_DXXFLAGS := $(external-bz2-lib_DXXFLAGS)
+  external-bz2-lib_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  external-bz2-lib_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  external-bz2-lib_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  external-bz2-lib_STRIP ?= $(ECHO) >/dev/null
+  external-bz2-lib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  external-bz2-lib_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  external-bz2-lib_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(external-bz2-lib_MCXX_CPPFLAGS) $(external-bz2-lib_MCXX_EXTRA_CPPFLAGS))
+  external-bz2-lib_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(external-bz2-lib_CXXFLAGS))
+  external-bz2-lib_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(external-bz2-lib_DXXFLAGS))
+  external-bz2-lib_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  external-bz2-lib_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(external-bz2-lib_CXXCMD) $(external-bz2-lib_CXXIQUOTE) $(dir $(2)) $(external-bz2-lib_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_CXXIQUOTE) . $(external-bz2-lib_CXXIQUOTE_END) $(strip $(external-bz2-lib_CXXFLAGS) $(external-bz2-lib_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(external-bz2-lib_CXXCMD) $(external-bz2-lib_CXXIQUOTE) $(dir $(2)) $(external-bz2-lib_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_CXXIQUOTE) . $(external-bz2-lib_CXXIQUOTE_END) $(strip $(external-bz2-lib_CXXFLAGS) $(external-bz2-lib_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(external-bz2-lib_CXXCMD) $(external-bz2-lib_CXXIQUOTE) $(dir $(2)) $(external-bz2-lib_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_CXXIQUOTE) . $(external-bz2-lib_CXXIQUOTE_END) $(strip $(external-bz2-lib_CXXFLAGS) $(external-bz2-lib_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(external-bz2-lib_CXXCMD)" $(MKDEPEND) $(strip $(external-bz2-lib_DXXFLAGS) $(external-bz2-lib_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(external-bz2-lib_OBJDIR),)
+  $(foreach external-bz2-lib_CXXFILE,$(external-bz2-lib_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(external-bz2-lib_CXXFILE))),$(external-bz2-lib_CXXFILE))))
+else
+  $(foreach external-bz2-lib_CXXFILE,$(external-bz2-lib_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(external-bz2-lib_OBJDIR)/,$(notdir $(basename $(external-bz2-lib_CXXFILE)))),$(external-bz2-lib_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(external-bz2-lib_OBJC_NARCHFILES),)
+
+ifeq (,)
+external-bz2-lib_MOBJC_SRCWILDCARD := %
+else
+external-bz2-lib_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(external-bz2-lib_OBJDIR),)
+  external-bz2-lib_MOBJC_TARGETS := $(addsuffix .o,$(external-bz2-lib_OBJC_NARCHFILES))
+  external-bz2-lib_MOBJC_DTARGETS := $(addsuffix .d,$(external-bz2-lib_OBJC_NARCHFILES))
+  external-bz2-lib_MOBJC_WILDCARD := %
+else
+  external-bz2-lib_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(external-bz2-lib_OBJDIR)/,$(external-bz2-lib_OBJC_NARCHFILES)))
+  external-bz2-lib_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(external-bz2-lib_OBJDIR)/,$(external-bz2-lib_OBJC_NARCHFILES)))
+  external-bz2-lib_MOBJC_WILDCARD := $(external-bz2-lib_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : | $(addsuffix .m,$(external-bz2-lib_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  external-bz2-lib_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  external-bz2-lib_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(external-bz2-lib_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  external-bz2-lib_MOBJC_DIRS := $(foreach dir, $(external-bz2-lib_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(external-bz2-lib_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(external-bz2-lib_MOBJC_DIRS),)
+    external-bz2-lib_MOBJC_DIRS := $(shell echo $(external-bz2-lib_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(external-bz2-lib_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  external-bz2-lib_CC := $(TARGET_CC)
+else
+  external-bz2-lib_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+external-bz2-lib_MOBJC_CPPFLAGS := $(external-bz2-lib_CPPFLAGS)
+external-bz2-lib_OBJCFLAGS := $(external-bz2-lib_CFLAGS)
+external-bz2-lib_OBJCFLAGS := $(external-bz2-lib_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+external-bz2-lib_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(external-bz2-lib_OBJCFLAGS)))
+ifeq ($(external-bz2-lib_DFLAGS),)
+  external-bz2-lib_OBJCDFLAGS := $(external-bz2-lib_CFLAGS)
+else
+  external-bz2-lib_OBJCDFLAGS := $(external-bz2-lib_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  external-bz2-lib_LINK ?= $(strip $(external-bz2-lib_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  external-bz2-lib_STRIP ?= $(TARGET_STRIP)
+  external-bz2-lib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : CMD:=$(strip $(external-bz2-lib_CC) $(TARGET_SYSROOT))
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : external-bz2-lib_MOBJC_CPPFLAGS:=$(strip $(external-bz2-lib_MOBJC_CPPFLAGS) $(external-bz2-lib_MOBJC_EXTRA_CPPFLAGS))
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : external-bz2-lib_OBJCFLAGS:=$(strip $(external-bz2-lib_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : external-bz2-lib_OBJCDFLAGS:=$(external-bz2-lib_OBJCDFLAGS)
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : external-bz2-lib_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : external-bz2-lib_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  external-bz2-lib_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  external-bz2-lib_STRIP ?= $(HOST_STRIP)
+  external-bz2-lib_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : external-bz2-lib_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(external-bz2-lib_MOBJC_CPPFLAGS) $(external-bz2-lib_MOBJC_EXTRA_CPPFLAGS))
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : external-bz2-lib_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(external-bz2-lib_OBJCFLAGS))
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : external-bz2-lib_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(external-bz2-lib_OBJCDFLAGS))
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : external-bz2-lib_IQUOTE:=$(HOST_IQUOTE)
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : external-bz2-lib_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  external-bz2-lib_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  external-bz2-lib_STRIP ?= $(ECHO) >/dev/null
+  external-bz2-lib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : external-bz2-lib_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(external-bz2-lib_MOBJC_CPPFLAGS) $(external-bz2-lib_MOBJC_EXTRA_CPPFLAGS))
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : external-bz2-lib_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-bz2-lib_OBJCFLAGS))
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : external-bz2-lib_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-bz2-lib_OBJCDFLAGS))
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : external-bz2-lib_IQUOTE:=$(KERNEL_IQUOTE)
+  $(external-bz2-lib_MOBJC_TARGETS) $(external-bz2-lib_MOBJC_DTARGETS) : external-bz2-lib_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(external-bz2-lib_MOBJC_TARGETS) : CPPFLAGS := $(external-bz2-lib_MOBJC_CPPFLAGS)
+$(external-bz2-lib_MOBJC_TARGETS) : CFLAGS := $(external-bz2-lib_OBJCFLAGS)
+$(external-bz2-lib_MOBJC_TARGETS) : $(external-bz2-lib_MOBJC_WILDCARD).o : $(external-bz2-lib_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(external-bz2-lib_IQUOTE) $(dir $<) $(external-bz2-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_IQUOTE) . $(external-bz2-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(external-bz2-lib_IQUOTE) $(dir $<) $(external-bz2-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_IQUOTE) . $(external-bz2-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(external-bz2-lib_IQUOTE) $(dir $<) $(external-bz2-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_IQUOTE) . $(external-bz2-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(external-bz2-lib_MOBJC_DTARGETS) : $(external-bz2-lib_MOBJC_WILDCARD).d : $(external-bz2-lib_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(external-bz2-lib_OBJCDFLAGS) $(external-bz2-lib_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+external-bz2-lib_MC_SRCWILDCARD := %
+else
+external-bz2-lib_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(external-bz2-lib_OBJDIR),)
+external-bz2-lib_MC_TARGETS := $(addsuffix .o,$(external-bz2-lib_CCFILES))
+external-bz2-lib_MC_DTARGETS := $(addsuffix .d,$(external-bz2-lib_CCFILES))
+external-bz2-lib_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    external-bz2-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-bz2-lib_OBJDIR)/,$(notdir $(external-bz2-lib_CCFILES))))
+    external-bz2-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-bz2-lib_OBJDIR)/,$(notdir $(external-bz2-lib_CCFILES))))
+else
+ifeq (,)
+    external-bz2-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-bz2-lib_OBJDIR)/,$(external-bz2-lib_CCFILES)))
+    external-bz2-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-bz2-lib_OBJDIR)/,$(external-bz2-lib_CCFILES)))
+else
+    external-bz2-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-bz2-lib_OBJDIR)/,$(patsubst /%,%,$(external-bz2-lib_CCFILES))))
+    external-bz2-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-bz2-lib_OBJDIR)/,$(patsubst /%,%,$(external-bz2-lib_CCFILES))))
+endif
+endif
+external-bz2-lib_MC_TGTWILDCARD := $(external-bz2-lib_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : | $(addsuffix .c,$(external-bz2-lib_CCFILES))
+
+# Be sure that all .c files are found
+external-bz2-lib_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+external-bz2-lib_MC_BASEDIRS := $(shell echo $(sort $(dir $(external-bz2-lib_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+external-bz2-lib_MC_DIRS := $(foreach dir, $(external-bz2-lib_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(external-bz2-lib_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(external-bz2-lib_MC_DIRS),)
+    external-bz2-lib_MC_DIRS := $(shell echo $(external-bz2-lib_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(external-bz2-lib_MC_DIRS)
+endif
+
+endif
+
+external-bz2-lib_MC_CPPFLAGS := $(external-bz2-lib_CPPFLAGS)
+external-bz2-lib_CFLAGS := $(external-bz2-lib_CFLAGS)
+ifeq ($(external-bz2-lib_DFLAGS),)
+  external-bz2-lib_DFLAGS := $(external-bz2-lib_CFLAGS)
+else
+  external-bz2-lib_DFLAGS := $(external-bz2-lib_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+external-bz2-lib_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+external-bz2-lib_STRIP ?= $(TARGET_STRIP)
+external-bz2-lib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_MC_CPPFLAGS:=$(strip $(external-bz2-lib_MC_CPPFLAGS) $(external-bz2-lib_MC_EXTRA_CPPFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_CFLAGS:=$(strip $(external-bz2-lib_CFLAGS) $(SAFETY_CFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_DFLAGS:=$(external-bz2-lib_DFLAGS)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE:=$(CFLAGS_IQUOTE)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+external-bz2-lib_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+external-bz2-lib_STRIP ?= $(HOST_STRIP)
+external-bz2-lib_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(external-bz2-lib_MC_CPPFLAGS) $(external-bz2-lib_MC_EXTRA_CPPFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_CFLAGS:=$(strip $(HOST_CFLAGS) $(external-bz2-lib_CFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_DFLAGS:=$(strip $(HOST_CFLAGS) $(external-bz2-lib_DFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE:=$(HOST_IQUOTE)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+external-bz2-lib_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+external-bz2-lib_STRIP ?= $(ECHO) >/dev/null
+external-bz2-lib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(external-bz2-lib_MC_CPPFLAGS) $(external-bz2-lib_MC_EXTRA_CPPFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-bz2-lib_CFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-bz2-lib_DFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE:=$(KERNEL_IQUOTE)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(external-bz2-lib_MC_TARGETS) : CPPFLAGS := $(external-bz2-lib_MC_CPPFLAGS)
+$(external-bz2-lib_MC_TARGETS) : CFLAGS := $(external-bz2-lib_CFLAGS)
+$(external-bz2-lib_MC_TARGETS) : $(external-bz2-lib_MC_TGTWILDCARD).o : $(external-bz2-lib_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(external-bz2-lib_IQUOTE) $(dir $<) $(external-bz2-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_IQUOTE) . $(external-bz2-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(external-bz2-lib_IQUOTE) $(dir $<) $(external-bz2-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_IQUOTE) . $(external-bz2-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(external-bz2-lib_IQUOTE) $(dir $<) $(external-bz2-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_IQUOTE) . $(external-bz2-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(external-bz2-lib_MC_DTARGETS) : $(external-bz2-lib_MC_TGTWILDCARD).d : $(external-bz2-lib_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(external-bz2-lib_DFLAGS) $(external-bz2-lib_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+external-bz2-lib_MC_SRCWILDCARD := %
+else
+external-bz2-lib_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(external-bz2-lib_OBJDIR),)
+external-bz2-lib_MC_TARGETS := $(addsuffix .o,$(external-bz2-lib_TARGETCCFILES))
+external-bz2-lib_MC_DTARGETS := $(addsuffix .d,$(external-bz2-lib_TARGETCCFILES))
+external-bz2-lib_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    external-bz2-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-bz2-lib_OBJDIR)/,$(notdir $(external-bz2-lib_TARGETCCFILES))))
+    external-bz2-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-bz2-lib_OBJDIR)/,$(notdir $(external-bz2-lib_TARGETCCFILES))))
+else
+ifeq (,)
+    external-bz2-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-bz2-lib_OBJDIR)/,$(external-bz2-lib_TARGETCCFILES)))
+    external-bz2-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-bz2-lib_OBJDIR)/,$(external-bz2-lib_TARGETCCFILES)))
+else
+    external-bz2-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-bz2-lib_OBJDIR)/,$(patsubst /%,%,$(external-bz2-lib_TARGETCCFILES))))
+    external-bz2-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-bz2-lib_OBJDIR)/,$(patsubst /%,%,$(external-bz2-lib_TARGETCCFILES))))
+endif
+endif
+external-bz2-lib_MC_TGTWILDCARD := $(external-bz2-lib_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : | $(addsuffix .c,$(external-bz2-lib_TARGETCCFILES))
+
+# Be sure that all .c files are found
+external-bz2-lib_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+external-bz2-lib_MC_BASEDIRS := $(shell echo $(sort $(dir $(external-bz2-lib_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+external-bz2-lib_MC_DIRS := $(foreach dir, $(external-bz2-lib_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(external-bz2-lib_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(external-bz2-lib_MC_DIRS),)
+    external-bz2-lib_MC_DIRS := $(shell echo $(external-bz2-lib_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(external-bz2-lib_MC_DIRS)
+endif
+
+endif
+
+external-bz2-lib_MC_CPPFLAGS := $(external-bz2-lib_CPPFLAGS) -D__AROS__
+external-bz2-lib_CFLAGS := $(external-bz2-lib_CFLAGS)
+ifeq ($(external-bz2-lib_DFLAGS),)
+  external-bz2-lib_DFLAGS := $(external-bz2-lib_CFLAGS)
+else
+  external-bz2-lib_DFLAGS := $(external-bz2-lib_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+external-bz2-lib_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+external-bz2-lib_STRIP ?= $(TARGET_STRIP)
+external-bz2-lib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_MC_CPPFLAGS:=$(strip $(external-bz2-lib_MC_CPPFLAGS) $(external-bz2-lib_MC_EXTRA_CPPFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_CFLAGS:=$(strip $(external-bz2-lib_CFLAGS) $(SAFETY_CFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_DFLAGS:=$(external-bz2-lib_DFLAGS)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE:=$(CFLAGS_IQUOTE)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+external-bz2-lib_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+external-bz2-lib_STRIP ?= $(HOST_STRIP)
+external-bz2-lib_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(external-bz2-lib_MC_CPPFLAGS) $(external-bz2-lib_MC_EXTRA_CPPFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_CFLAGS:=$(strip $(HOST_CFLAGS) $(external-bz2-lib_CFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_DFLAGS:=$(strip $(HOST_CFLAGS) $(external-bz2-lib_DFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE:=$(HOST_IQUOTE)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+external-bz2-lib_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+external-bz2-lib_STRIP ?= $(ECHO) >/dev/null
+external-bz2-lib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(external-bz2-lib_MC_CPPFLAGS) $(external-bz2-lib_MC_EXTRA_CPPFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-bz2-lib_CFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-bz2-lib_DFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE:=$(KERNEL_IQUOTE)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(external-bz2-lib_MC_TARGETS) : CPPFLAGS := $(external-bz2-lib_MC_CPPFLAGS)
+$(external-bz2-lib_MC_TARGETS) : CFLAGS := $(external-bz2-lib_CFLAGS)
+$(external-bz2-lib_MC_TARGETS) : $(external-bz2-lib_MC_TGTWILDCARD).o : $(external-bz2-lib_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(external-bz2-lib_IQUOTE) $(dir $<) $(external-bz2-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_IQUOTE) . $(external-bz2-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(external-bz2-lib_IQUOTE) $(dir $<) $(external-bz2-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_IQUOTE) . $(external-bz2-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(external-bz2-lib_IQUOTE) $(dir $<) $(external-bz2-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_IQUOTE) . $(external-bz2-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(external-bz2-lib_MC_DTARGETS) : $(external-bz2-lib_MC_TGTWILDCARD).d : $(external-bz2-lib_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(external-bz2-lib_DFLAGS) $(external-bz2-lib_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+external-bz2-lib_MC_SRCWILDCARD := %
+else
+external-bz2-lib_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(external-bz2-lib_OBJDIR)/linklib,)
+external-bz2-lib_MC_TARGETS := $(addsuffix .o,$(external-bz2-lib_NLIBARCHFILES))
+external-bz2-lib_MC_DTARGETS := $(addsuffix .d,$(external-bz2-lib_NLIBARCHFILES))
+external-bz2-lib_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    external-bz2-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$(notdir $(external-bz2-lib_NLIBARCHFILES))))
+    external-bz2-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$(notdir $(external-bz2-lib_NLIBARCHFILES))))
+else
+ifeq (,)
+    external-bz2-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$(external-bz2-lib_NLIBARCHFILES)))
+    external-bz2-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$(external-bz2-lib_NLIBARCHFILES)))
+else
+    external-bz2-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$(patsubst /%,%,$(external-bz2-lib_NLIBARCHFILES))))
+    external-bz2-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$(patsubst /%,%,$(external-bz2-lib_NLIBARCHFILES))))
+endif
+endif
+external-bz2-lib_MC_TGTWILDCARD := $(external-bz2-lib_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : | $(addsuffix .c,$(external-bz2-lib_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+external-bz2-lib_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+external-bz2-lib_MC_BASEDIRS := $(shell echo $(sort $(dir $(external-bz2-lib_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+external-bz2-lib_MC_DIRS := $(foreach dir, $(external-bz2-lib_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(external-bz2-lib_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(external-bz2-lib_MC_DIRS),)
+    external-bz2-lib_MC_DIRS := $(shell echo $(external-bz2-lib_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(external-bz2-lib_MC_DIRS)
+endif
+
+endif
+
+external-bz2-lib_MC_CPPFLAGS := $(external-bz2-lib_LINKLIBCPPFLAGS) -D__AROS__
+external-bz2-lib_CFLAGS := $(external-bz2-lib_LINKLIBCFLAGS)
+ifeq ($(external-bz2-lib_LINKLIBDFLAGS),)
+  external-bz2-lib_DFLAGS := $(external-bz2-lib_LINKLIBCFLAGS)
+else
+  external-bz2-lib_DFLAGS := $(external-bz2-lib_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+external-bz2-lib_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+external-bz2-lib_STRIP ?= $(TARGET_STRIP)
+external-bz2-lib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_MC_CPPFLAGS:=$(strip $(external-bz2-lib_MC_CPPFLAGS) $(external-bz2-lib_MC_EXTRA_CPPFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_CFLAGS:=$(strip $(external-bz2-lib_CFLAGS) $(SAFETY_CFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_DFLAGS:=$(external-bz2-lib_DFLAGS)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE:=$(CFLAGS_IQUOTE)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+external-bz2-lib_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+external-bz2-lib_STRIP ?= $(HOST_STRIP)
+external-bz2-lib_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(external-bz2-lib_MC_CPPFLAGS) $(external-bz2-lib_MC_EXTRA_CPPFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_CFLAGS:=$(strip $(HOST_CFLAGS) $(external-bz2-lib_CFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_DFLAGS:=$(strip $(HOST_CFLAGS) $(external-bz2-lib_DFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE:=$(HOST_IQUOTE)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+external-bz2-lib_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+external-bz2-lib_STRIP ?= $(ECHO) >/dev/null
+external-bz2-lib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(external-bz2-lib_MC_CPPFLAGS) $(external-bz2-lib_MC_EXTRA_CPPFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-bz2-lib_CFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-bz2-lib_DFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE:=$(KERNEL_IQUOTE)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(external-bz2-lib_MC_TARGETS) : CPPFLAGS := $(external-bz2-lib_MC_CPPFLAGS)
+$(external-bz2-lib_MC_TARGETS) : CFLAGS := $(external-bz2-lib_CFLAGS)
+$(external-bz2-lib_MC_TARGETS) : $(external-bz2-lib_MC_TGTWILDCARD).o : $(external-bz2-lib_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(external-bz2-lib_IQUOTE) $(dir $<) $(external-bz2-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_IQUOTE) . $(external-bz2-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(external-bz2-lib_IQUOTE) $(dir $<) $(external-bz2-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_IQUOTE) . $(external-bz2-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(external-bz2-lib_IQUOTE) $(dir $<) $(external-bz2-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_IQUOTE) . $(external-bz2-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(external-bz2-lib_MC_DTARGETS) : $(external-bz2-lib_MC_TGTWILDCARD).d : $(external-bz2-lib_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(external-bz2-lib_DFLAGS) $(external-bz2-lib_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(external-bz2-lib_OBJDIR)/linklib,)
+external-bz2-lib_MC_SRCWILDCARD := %
+else
+external-bz2-lib_MC_SRCWILDCARD := $(external-bz2-lib_OBJDIR)/linklib/%
+endif
+
+ifeq ($(external-bz2-lib_OBJDIR)/linklib,)
+external-bz2-lib_MC_TARGETS := $(addsuffix .o,$(external-bz2-lib_LINKLIBCCGENFILES))
+external-bz2-lib_MC_DTARGETS := $(addsuffix .d,$(external-bz2-lib_LINKLIBCCGENFILES))
+external-bz2-lib_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    external-bz2-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$(notdir $(external-bz2-lib_LINKLIBCCGENFILES))))
+    external-bz2-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$(notdir $(external-bz2-lib_LINKLIBCCGENFILES))))
+else
+ifeq ($(external-bz2-lib_OBJDIR)/linklib,)
+    external-bz2-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$(external-bz2-lib_LINKLIBCCGENFILES)))
+    external-bz2-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$(external-bz2-lib_LINKLIBCCGENFILES)))
+else
+    external-bz2-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$(patsubst $(external-bz2-lib_OBJDIR)/linklib/%,%,$(external-bz2-lib_LINKLIBCCGENFILES))))
+    external-bz2-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$(patsubst $(external-bz2-lib_OBJDIR)/linklib/%,%,$(external-bz2-lib_LINKLIBCCGENFILES))))
+endif
+endif
+external-bz2-lib_MC_TGTWILDCARD := $(external-bz2-lib_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : | $(addsuffix .c,$(external-bz2-lib_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+external-bz2-lib_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+external-bz2-lib_MC_BASEDIRS := $(shell echo $(sort $(dir $(external-bz2-lib_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+external-bz2-lib_MC_DIRS := $(foreach dir, $(external-bz2-lib_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(external-bz2-lib_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(external-bz2-lib_MC_DIRS),)
+    external-bz2-lib_MC_DIRS := $(shell echo $(external-bz2-lib_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(external-bz2-lib_MC_DIRS)
+endif
+
+endif
+
+external-bz2-lib_MC_CPPFLAGS := $(external-bz2-lib_LINKLIBCPPFLAGS) -D__AROS__
+external-bz2-lib_CFLAGS := $(external-bz2-lib_LINKLIBCFLAGS)
+ifeq ($(external-bz2-lib_LINKLIBDFLAGS),)
+  external-bz2-lib_DFLAGS := $(external-bz2-lib_LINKLIBCFLAGS)
+else
+  external-bz2-lib_DFLAGS := $(external-bz2-lib_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+external-bz2-lib_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+external-bz2-lib_STRIP ?= $(TARGET_STRIP)
+external-bz2-lib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_MC_CPPFLAGS:=$(strip $(external-bz2-lib_MC_CPPFLAGS) $(external-bz2-lib_MC_EXTRA_CPPFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_CFLAGS:=$(strip $(external-bz2-lib_CFLAGS) $(SAFETY_CFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_DFLAGS:=$(external-bz2-lib_DFLAGS)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE:=$(CFLAGS_IQUOTE)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+external-bz2-lib_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+external-bz2-lib_STRIP ?= $(HOST_STRIP)
+external-bz2-lib_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(external-bz2-lib_MC_CPPFLAGS) $(external-bz2-lib_MC_EXTRA_CPPFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_CFLAGS:=$(strip $(HOST_CFLAGS) $(external-bz2-lib_CFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_DFLAGS:=$(strip $(HOST_CFLAGS) $(external-bz2-lib_DFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE:=$(HOST_IQUOTE)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+external-bz2-lib_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+external-bz2-lib_STRIP ?= $(ECHO) >/dev/null
+external-bz2-lib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(external-bz2-lib_MC_CPPFLAGS) $(external-bz2-lib_MC_EXTRA_CPPFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-bz2-lib_CFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-bz2-lib_DFLAGS))
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE:=$(KERNEL_IQUOTE)
+$(external-bz2-lib_MC_TARGETS) $(external-bz2-lib_MC_DTARGETS) : external-bz2-lib_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(external-bz2-lib_MC_TARGETS) : CPPFLAGS := $(external-bz2-lib_MC_CPPFLAGS)
+$(external-bz2-lib_MC_TARGETS) : CFLAGS := $(external-bz2-lib_CFLAGS)
+$(external-bz2-lib_MC_TARGETS) : $(external-bz2-lib_MC_TGTWILDCARD).o : $(external-bz2-lib_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(external-bz2-lib_IQUOTE) $(dir $<) $(external-bz2-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_IQUOTE) . $(external-bz2-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(external-bz2-lib_IQUOTE) $(dir $<) $(external-bz2-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_IQUOTE) . $(external-bz2-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(external-bz2-lib_IQUOTE) $(dir $<) $(external-bz2-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-lib_IQUOTE) . $(external-bz2-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(external-bz2-lib_MC_DTARGETS) : $(external-bz2-lib_MC_TGTWILDCARD).d : $(external-bz2-lib_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(external-bz2-lib_DFLAGS) $(external-bz2-lib_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(external-bz2-lib_LINKLIBAFILES),)
+
+ifeq ($(external-bz2-lib_OBJDIR)/linklib,)
+external-bz2-lib-MA_TARGETS := $(addsuffix .o,$(external-bz2-lib_LINKLIBAFILES) $(external-bz2-lib_RELLINKLIBAFILES))
+external-bz2-lib-MA_WILDCARD := %
+else
+external-bz2-lib-MA_TARGETS := $(addsuffix .o,$(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$(notdir $(external-bz2-lib_LINKLIBAFILES) $(external-bz2-lib_RELLINKLIBAFILES))))
+external-bz2-lib-MA_WILDCARD := $(external-bz2-lib_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(external-bz2-lib-MA_TARGETS) : | $(addsuffix .S,$(external-bz2-lib_LINKLIBAFILES) $(external-bz2-lib_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+external-bz2-lib-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+external-bz2-lib-MA_BASEDIRS := $(shell echo $(sort $(dir $(external-bz2-lib_LINKLIBAFILES) $(external-bz2-lib_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+external-bz2-lib-MA_DIRS := $(foreach dir, $(external-bz2-lib-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(external-bz2-lib-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(external-bz2-lib-MA_DIRS),)
+    external-bz2-lib-MA_DIRS := $(shell echo $(external-bz2-lib-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(external-bz2-lib-MA_DIRS)
+endif
+
+endif
+
+external-bz2-lib-MA_ASSEMBLER ?= $(external-bz2-lib_ASSEMBLER)
+
+$(external-bz2-lib-MA_TARGETS) : external-bz2-lib-MA_CMD:= $(external-bz2-lib-MA_ASSEMBLER)
+
+$(external-bz2-lib-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(external-bz2-lib-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(external-bz2-lib-MA_TARGETS) : $(external-bz2-lib-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(external-bz2-lib-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(external-bz2-lib-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(external-bz2-lib-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+external-bz2-lib_SUFFIX           := library
+else
+external-bz2-lib_SUFFIX           := 
+endif
+
+ifeq (target,target)
+external-bz2-lib_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+external-bz2-lib_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+external-bz2-lib_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(external-bz2-lib_SUFFIX),handler)
+external-bz2-lib_MODULE           := $(AROSDIR)/$(external-bz2-lib_MODDIR)/$(external-bz2-lib_DEFNAME)-$(external-bz2-lib_SUFFIX)
+else
+external-bz2-lib_MODULE           := $(AROSDIR)/$(external-bz2-lib_MODDIR)/$(external-bz2-lib_DEFNAME).$(external-bz2-lib_SUFFIX)
+endif
+external-bz2-lib_KOBJ             := $(KOBJSDIR)/$(external-bz2-lib_DEFNAME)_$(external-bz2-lib_SUFFIX).o
+else
+external-bz2-lib_MODULE           :=
+external-bz2-lib_KOBJ             :=
+endif
+
+external-bz2-lib-quick      : external-bz2-lib
+external-bz2-lib            : $(external-bz2-lib_MODULE) $(external-bz2-lib_LINKLIB) $(external-bz2-lib_RELLINKLIB)
+ifeq (M,M)
+external-bz2-lib-kobj       : $(external-bz2-lib_KOBJ) $(external-bz2-lib_LINKLIB) $(external-bz2-lib_RELLINKLIB)
+external-bz2-lib-kobj-quick : $(external-bz2-lib_KOBJ) $(external-bz2-lib_LINKLIB) $(external-bz2-lib_RELLINKLIB)
+endif
+ifeq (M,M)
+external-bz2-lib-linklib    : $(external-bz2-lib_LINKLIB) $(external-bz2-lib_RELLINKLIB)
+endif
+
+external-bz2-lib_OBJS := $(addsuffix .o,$(external-bz2-lib_STARTFILES)) $(external-bz2-lib_ARCHOBJS) \
+           $(addprefix $(external-bz2-lib_OBJDIR)/,$(notdir $(external-bz2-lib_C_NARCHFILES:=.o) $(external-bz2-lib_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (library,handler)
+external-bz2-lib_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (bz2,con)
+    external-bz2-lib_ERR          := $(notdir $(external-bz2-lib_MODULE)).err
+else
+    external-bz2-lib_ERR          := bz2.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(external-bz2-lib_DEFNAME)_LDFLAGS) $(external-bz2-lib_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(external-bz2-lib_LIBS) $($(external-bz2-lib_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(external-bz2-lib_MODULE) : LIB_NAMES := $(external-bz2-lib_LIBS) $($(external-bz2-lib_DEFNAME)_LIBS)
+$(external-bz2-lib_MODULE) : OBJS := $(external-bz2-lib_STARTOBJS) $(external-bz2-lib_OBJS) $(USER_OBJS)
+$(external-bz2-lib_MODULE) : ENDTAG := $(external-bz2-lib_ENDOBJS)
+$(external-bz2-lib_MODULE) : ERR := $(external-bz2-lib_ERR)
+$(external-bz2-lib_MODULE) : OBJDIR := $(external-bz2-lib_OBJDIR)
+$(external-bz2-lib_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(external-bz2-lib_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(external-bz2-lib_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(external-bz2-lib_MODULE) : $(external-bz2-lib_STARTOBJS) $(external-bz2-lib_OBJS) $(USER_OBJS) $(external-bz2-lib_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(external-bz2-lib_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(external-bz2-lib_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+external-bz2-lib_LC_LINKLIBNAME   := $(shell echo $(external-bz2-lib_LINKLIBNAME) | tr A-Z a-z)
+external-bz2-lib_LC_MODNAME       := $(shell echo bz2 | tr A-Z a-z)
+ifneq ($(external-bz2-lib_LINKLIB),)
+
+ifeq (target,target)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_LINKLIBNAME)$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_AR:=$(AR)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_LINKLIBNAME)$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_LINKLIBNAME)$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_AR:=$(HOST_AR)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_LINKLIBNAME)$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_LINKLIBNAME)$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_AR:=$(KERNEL_AR)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_LINKLIBNAME)$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_LINKLIBNAME)$(external-bz2-lib_LIBSUFFIX).a : $(external-bz2-lib_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(external-bz2-lib_AR) $@ $^
+	$(Q)$(external-bz2-lib_RANLIB) $@
+ifneq ($(external-bz2-lib_LC_MODNAME),$(external-bz2-lib_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(external-bz2-lib_LIBDIR)/libbz2$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_AR:=$(AR)
+$(external-bz2-lib_LIBDIR)/libbz2$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(external-bz2-lib_LIBDIR)/libbz2$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_AR:=$(HOST_AR)
+$(external-bz2-lib_LIBDIR)/libbz2$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(external-bz2-lib_LIBDIR)/libbz2$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_AR:=$(KERNEL_AR)
+$(external-bz2-lib_LIBDIR)/libbz2$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(external-bz2-lib_LIBDIR)/libbz2$(external-bz2-lib_LIBSUFFIX).a : $(external-bz2-lib_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(external-bz2-lib_AR) $@ $^
+	$(Q)$(external-bz2-lib_RANLIB) $@
+endif
+
+
+ifneq ($(external-bz2-lib_LINKLIB),)
+$(external-bz2-lib_LINKLIB) : | $(external-bz2-lib_LIBDIR)
+else
+$(external-bz2-lib_LINKLIB) :: $(external-bz2-lib_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(external-bz2-lib_LIBDIR)
+
+endif
+
+ifneq ($(external-bz2-lib_RELLINKLIB),)
+
+ifeq (target,target)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_LINKLIBNAME)_rel$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_AR:=$(AR)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_LINKLIBNAME)_rel$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_LINKLIBNAME)_rel$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_AR:=$(HOST_AR)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_LINKLIBNAME)_rel$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_LINKLIBNAME)_rel$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_AR:=$(KERNEL_AR)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_LINKLIBNAME)_rel$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_LINKLIBNAME)_rel$(external-bz2-lib_LIBSUFFIX).a : $(external-bz2-lib_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(external-bz2-lib_AR) $@ $^
+	$(Q)$(external-bz2-lib_RANLIB) $@
+ifneq ($(external-bz2-lib_LC_MODNAME),$(external-bz2-lib_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_DEFNAME)_rel$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_AR:=$(AR)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_DEFNAME)_rel$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_DEFNAME)_rel$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_AR:=$(HOST_AR)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_DEFNAME)_rel$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_DEFNAME)_rel$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_AR:=$(KERNEL_AR)
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_DEFNAME)_rel$(external-bz2-lib_LIBSUFFIX).a : external-bz2-lib_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(external-bz2-lib_LIBDIR)/lib$(external-bz2-lib_DEFNAME)_rel$(external-bz2-lib_LIBSUFFIX).a : $(external-bz2-lib_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(external-bz2-lib_AR) $@ $^
+	$(Q)$(external-bz2-lib_RANLIB) $@
+endif
+
+
+ifneq ($(external-bz2-lib_RELLINKLIB),)
+$(external-bz2-lib_RELLINKLIB) : | $(external-bz2-lib_LIBDIR)
+else
+$(external-bz2-lib_RELLINKLIB) :: $(external-bz2-lib_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(external-bz2-lib_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+external-bz2-lib_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+external-bz2-lib_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+external-bz2-lib_SYMBOLS := $(external-bz2-lib_KBASE)
+
+external-bz2-lib_KLIB             := hiddstubs amiga arossupport autoinit libinit
+external-bz2-lib_KOBJ_LIBS        := $(filter-out $(external-bz2-lib_KLIB),$(external-bz2-lib_LIBS)) $(external-bz2-lib_KAUTOLIB)
+$(external-bz2-lib_KOBJ) : LINKLIBS:=$(external-bz2-lib_KOBJ_LIBS) $($(external-bz2-lib_DEFNAME)_LIBS)
+$(external-bz2-lib_KOBJ) : FILTBASES:=$(addprefix -L ,$(external-bz2-lib_SYMBOLS))
+$(external-bz2-lib_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(external-bz2-lib_KOBJ) : $(external-bz2-lib_OBJS) $(USER_OBJS) $(external-bz2-lib_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+external-bz2-lib_DEPS             := $(addprefix $(external-bz2-lib_OBJDIR)/,$(notdir $(external-bz2-lib_CCFILES:=.d) $(external-bz2-lib_TARGETCCFILES:=.d) $(external-bz2-lib_CXXFILES:=.d))) $(addprefix $(external-bz2-lib_OBJDIR)/linklib/,$(notdir $(external-bz2-lib_LINKLIBCCFILES:=.d)))
+
+ifneq ($(external-bz2-lib_DEPS),)
+  ifneq (external-bz2-lib external-bz2-lib-quick external-bz2-lib-kobj external-bz2-lib-kobj-quick,)
+    ifneq ($(findstring $(TARGET),external-bz2-lib external-bz2-lib-quick external-bz2-lib-kobj external-bz2-lib-kobj-quick),)
+      -include $(external-bz2-lib_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(external-bz2-lib_DEPS)
+    endif
+  endif
+endif
+
+$(external-bz2-lib_OBJS) $(external-bz2-lib_DEPS) : | $(external-bz2-lib_OBJDIR)/linklib
+
+ifneq ($(external-bz2-lib_OBJS) $(external-bz2-lib_DEPS) $(external-bz2-lib_MODULE) $(external-bz2-lib_KOBJ),)
+$(external-bz2-lib_OBJS) $(external-bz2-lib_DEPS) $(external-bz2-lib_MODULE) $(external-bz2-lib_KOBJ) : | $(external-bz2-lib_OBJDIR) $(AROSDIR)/$(external-bz2-lib_MODDIR) $(KOBJSDIR)
+else
+$(external-bz2-lib_OBJS) $(external-bz2-lib_DEPS) $(external-bz2-lib_MODULE) $(external-bz2-lib_KOBJ) :: $(external-bz2-lib_OBJDIR) $(AROSDIR)/$(external-bz2-lib_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(external-bz2-lib_OBJDIR) $(AROSDIR)/$(external-bz2-lib_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),external-bz2-lib external-bz2-lib-includes external-bz2-lib-quick external-bz2-lib-kobj external-bz2-lib-kobj-quick),) # Only for this target these deps are wanted
+
+external-bz2-lib_DFILE_DEPS := $(external-bz2-lib_LIBDEFSINC) $(external-bz2-lib_DEFLIBDEFSINC) \
+    $(addprefix $(external-bz2-lib_INCDIR)/,$($(external-bz2-lib_DEFNAME)_INCLUDES))
+$(external-bz2-lib_DEPS) : $(external-bz2-lib_DFILE_DEPS)
+endif
+
+external-bz2-lib_TOCLEAN := $(external-bz2-lib_OBJS) $(external-bz2-lib_DEPS) \
+    $(external-bz2-lib_MODULE) $(external-bz2-lib_LINKLIB) $(external-bz2-lib_KOBJ) \
+    $(external-bz2-lib_OBJDIR)/Makefile.bz2library \
+    $(addprefix $(external-bz2-lib_OBJDIR)/include/,$($(external-bz2-lib_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(external-bz2-lib_DEFNAME)_INCLUDES)) \
+    $(addprefix $(external-bz2-lib_INCDIR)/,$($(external-bz2-lib_DEFNAME)_INCLUDES)) \
+    $(external-bz2-lib_OBJDIR)/bz2_geninc $(external-bz2-lib_OBJDIR)/bz2_incs \
+    $(addsuffix .c,$(external-bz2-lib_LINKLIBFILES)) $(external-bz2-lib_LINKLIBOBJS) $(external-bz2-lib_LIBDEFSINC) \
+    $(external-bz2-lib_DEFLIBDEFSINC) $(addsuffix .c,$(external-bz2-lib_STARTFILES) $(external-bz2-lib_ENDFILES)) \
+    $(external-bz2-lib_ENDOBJS)
+external-bz2-lib-clean : FILES              := $(external-bz2-lib_TOCLEAN)
+external-bz2-lib-clean ::
+	$(Q)$(ECHO) "Cleaning up for module bz2"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(external-bz2-lib_ALLTARGETS)
+
+
+###################################################################################
+
+#MM- linklibs: linklibs-bz2-nostdio
+
+NOWARN_FLAGS := $(NOWARN_UNUSED_BUT_SET_VARIABLE)
+USER_CFLAGS := $(NOWARN_FLAGS) -DBZ_NO_STDIO
+
+
+# assign and generate the local variables used in this macro
+linklibs-bz2-nostdio_LIBNAME           := bz2_nostdio
+linklibs-bz2-nostdio_LINKLIB           := $(AROS_LIB)/libbz2_nostdio.a
+
+linklibs-bz2-nostdio_FILES             ?= $(FILES)
+linklibs-bz2-nostdio_ASMFILES          := 
+linklibs-bz2-nostdio_OBJCFILES         := 
+linklibs-bz2-nostdio_CXXFILES          := 
+
+linklibs-bz2-nostdio_OBJDIR            ?= $(OBJDIR)/nostdio
+linklibs-bz2-nostdio_ARCHOBJS          := $(wildcard $(linklibs-bz2-nostdio_OBJDIR)/arch/*.o)
+ifeq (no,no)
+    linklibs-bz2-nostdio_ARCHFILES     := $(basename $(notdir $(linklibs-bz2-nostdio_ARCHOBJS)))
+else
+    linklibs-bz2-nostdio_ARCHFILES     := $(basename $(patsubst $(linklibs-bz2-nostdio_OBJDIR)/%,%,$(linklibs-bz2-nostdio_ARCHOBJS)))
+endif
+linklibs-bz2-nostdio_C_NARCHFILES      := $(filter-out $(linklibs-bz2-nostdio_ARCHFILES),$(linklibs-bz2-nostdio_FILES))
+linklibs-bz2-nostdio_C_FILES           ?= $(linklibs-bz2-nostdio_C_NARCHFILES)
+linklibs-bz2-nostdio_CXX_NARCHFILES    := $(filter-out $(linklibs-bz2-nostdio_ARCHFILES),$(linklibs-bz2-nostdio_CXXFILES))
+linklibs-bz2-nostdio_CXX_FILES         ?= $(linklibs-bz2-nostdio_CXX_NARCHFILES)
+linklibs-bz2-nostdio_OBJC_NARCHFILES   := $(filter-out $(linklibs-bz2-nostdio_ARCHFILES),$(linklibs-bz2-nostdio_OBJCFILES))
+linklibs-bz2-nostdio_OBJC_FILES        ?= $(linklibs-bz2-nostdio_OBJC_NARCHFILES)
+
+ifeq (no,no)
+    linklibs-bz2-nostdio_OBJ_FILES     ?= $(addprefix $(linklibs-bz2-nostdio_OBJDIR)/,$(notdir $(linklibs-bz2-nostdio_C_NARCHFILES:=.o) $(linklibs-bz2-nostdio_CXX_NARCHFILES:=.o) $(linklibs-bz2-nostdio_ASMFILES:=.o) $(linklibs-bz2-nostdio_OBJC_NARCHFILES:=.o)))
+else
+    linklibs-bz2-nostdio_OBJ_FILES     ?= $(addprefix $(linklibs-bz2-nostdio_OBJDIR)/,$(linklibs-bz2-nostdio_C_NARCHFILES:=.o) $(linklibs-bz2-nostdio_CXX_NARCHFILES:=.o) $(linklibs-bz2-nostdio_ASMFILES:=.o) $(linklibs-bz2-nostdio_OBJC_NARCHFILES:=.o))
+endif
+linklibs-bz2-nostdio_OBJS              ?= $(linklibs-bz2-nostdio_ARCHOBJS) $(linklibs-bz2-nostdio_OBJ_FILES) 
+linklibs-bz2-nostdio_DEPS              := $(patsubst %.o,%.d,$(linklibs-bz2-nostdio_OBJS))
+
+linklibs-bz2-nostdio_CPPFLAGS          := $(CPPFLAGS)
+ifneq (,)
+    linklibs-bz2-nostdio_CPPFLAGS      += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+linklibs-bz2-nostdio_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+linklibs-bz2-nostdio_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+linklibs-bz2-nostdio_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+linklibs-bz2-nostdio_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+linklibs-bz2-nostdio_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+linklibs-bz2-nostdio_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+linklibs-bz2-nostdio_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+linklibs-bz2-nostdio_CXXFLAGS          := 
+endif
+
+ifeq ($(TARGET_LTO),yes)
+ifeq (target,target)
+        linklibs-bz2-nostdio_CFLAGS    := $(strip $(LTO_CFLAGS) $(linklibs-bz2-nostdio_CFLAGS))
+        linklibs-bz2-nostdio_CXXFLAGS  := $(strip $(LTO_CFLAGS) $(linklibs-bz2-nostdio_CXXFLAGS))
+endif
+endif
+linklibs-bz2-nostdio_AFLAGS            := $(AFLAGS)
+linklibs-bz2-nostdio_DFLAGS            := 
+ifneq (,)
+    linklibs-bz2-nostdio_DFLAGS        := 
+else
+    linklibs-bz2-nostdio_DFLAGS        := $(linklibs-bz2-nostdio_CFLAGS)
+endif
+linklibs-bz2-nostdio_DXXFLAGS          := 
+ifneq (,)
+    linklibs-bz2-nostdio_DXXFLAGS      := 
+else
+    linklibs-bz2-nostdio_DXXFLAGS      := $(linklibs-bz2-nostdio_CXXFLAGS)
+endif
+
+.PHONY : linklibs-bz2-nostdio linklibs-bz2-nostdio-clean linklibs-bz2-nostdio-quick
+
+#MM
+linklibs-bz2-nostdio-quick : linklibs-bz2-nostdio
+
+#MM linklibs-bz2-nostdio : includes-generate-deps
+linklibs-bz2-nostdio : $(linklibs-bz2-nostdio_LINKLIB)
+
+ifneq ($(filter $(TARGET),linklibs-bz2-nostdio linklibs-bz2-nostdio-quick),)
+
+
+linklibs-bz2-nostdio_CXXABSBASENAMES := $(foreach linklibs-bz2-nostdio_CXXBASE,$(linklibs-bz2-nostdio_CXX_FILES),$(if $(filter /%,$(linklibs-bz2-nostdio_CXXBASE)),$(linklibs-bz2-nostdio_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(linklibs-bz2-nostdio_CXXBASE))))
+
+ifneq ($(linklibs-bz2-nostdio_CXXABSBASENAMES),)
+
+linklibs-bz2-nostdio_CXXBASENAMES := $(basename $(linklibs-bz2-nostdio_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+linklibs-bz2-nostdio_MCXX_FILES  := $(strip $(foreach linklibs-bz2-nostdio_CXXBASE,$(linklibs-bz2-nostdio_CXXABSBASENAMES), $(firstword $(wildcard $(foreach linklibs-bz2-nostdio_EXT, $(AROS_CXXEXTS),$(addsuffix .$(linklibs-bz2-nostdio_EXT),$(linklibs-bz2-nostdio_CXXBASE)))))))
+
+ifeq (,)
+linklibs-bz2-nostdio_MCXX_SRCWILDCARD := %
+else
+linklibs-bz2-nostdio_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(linklibs-bz2-nostdio_OBJDIR),)
+  linklibs-bz2-nostdio_CXXTARGETS := $(notdir $(linklibs-bz2-nostdio_CXXBASENAMES:=.o))
+  linklibs-bz2-nostdio_CXXDTARGETS := $(notdir $(linklibs-bz2-nostdio_CXXBASENAMES:=.d))
+  linklibs-bz2-nostdio_MCXX_WILDCARD := %
+else
+  linklibs-bz2-nostdio_CXXTARGETS := $(addprefix $(linklibs-bz2-nostdio_OBJDIR)/,$(notdir $(linklibs-bz2-nostdio_CXXBASENAMES:=.o)))
+  linklibs-bz2-nostdio_CXXDTARGETS := $(addprefix $(linklibs-bz2-nostdio_OBJDIR)/,$(notdir $(linklibs-bz2-nostdio_CXXBASENAMES:=.d)))
+  linklibs-bz2-nostdio_MCXX_WILDCARD := $(linklibs-bz2-nostdio_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(linklibs-bz2-nostdio_CXXTARGETS) $(linklibs-bz2-nostdio_CXXDTARGETS) : | $(linklibs-bz2-nostdio_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+linklibs-bz2-nostdio_MCXX_CPPFLAGS := $(linklibs-bz2-nostdio_CPPFLAGS)
+linklibs-bz2-nostdio_CXXFLAGS := $(linklibs-bz2-nostdio_CXXFLAGS)
+ifeq ($(linklibs-bz2-nostdio_DXXFLAGS),)
+  linklibs-bz2-nostdio_DXXFLAGS := $(linklibs-bz2-nostdio_CXXFLAGS)
+else
+  linklibs-bz2-nostdio_DXXFLAGS := $(linklibs-bz2-nostdio_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  linklibs-bz2-nostdio_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  linklibs-bz2-nostdio_STRIP ?= $(HOST_STRIP)
+  linklibs-bz2-nostdio_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  linklibs-bz2-nostdio_CXXCMD:=$(HOST_CXX)
+  linklibs-bz2-nostdio_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(linklibs-bz2-nostdio_MCXX_CPPFLAGS) $(linklibs-bz2-nostdio_MCXX_EXTRA_CPPFLAGS))
+  linklibs-bz2-nostdio_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(linklibs-bz2-nostdio_CXXFLAGS))
+  linklibs-bz2-nostdio_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(linklibs-bz2-nostdio_DXXFLAGS))
+  linklibs-bz2-nostdio_CXXIQUOTE:=$(HOST_IQUOTE)
+  linklibs-bz2-nostdio_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  linklibs-bz2-nostdio_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  linklibs-bz2-nostdio_STRIP ?= $(TARGET_STRIP)
+  linklibs-bz2-nostdio_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  linklibs-bz2-nostdio_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  linklibs-bz2-nostdio_MCXX_CPPFLAGS := $(strip $(linklibs-bz2-nostdio_MCXX_CPPFLAGS) $(linklibs-bz2-nostdio_MCXX_EXTRA_CPPFLAGS))
+  linklibs-bz2-nostdio_CXXFLAGS := $(strip $(linklibs-bz2-nostdio_CXXFLAGS) $(SAFETY_CFLAGS))
+  linklibs-bz2-nostdio_DXXFLAGS := $(linklibs-bz2-nostdio_DXXFLAGS)
+  linklibs-bz2-nostdio_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  linklibs-bz2-nostdio_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  linklibs-bz2-nostdio_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  linklibs-bz2-nostdio_STRIP ?= $(ECHO) >/dev/null
+  linklibs-bz2-nostdio_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  linklibs-bz2-nostdio_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  linklibs-bz2-nostdio_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(linklibs-bz2-nostdio_MCXX_CPPFLAGS) $(linklibs-bz2-nostdio_MCXX_EXTRA_CPPFLAGS))
+  linklibs-bz2-nostdio_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(linklibs-bz2-nostdio_CXXFLAGS))
+  linklibs-bz2-nostdio_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(linklibs-bz2-nostdio_DXXFLAGS))
+  linklibs-bz2-nostdio_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  linklibs-bz2-nostdio_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(linklibs-bz2-nostdio_CXXCMD) $(linklibs-bz2-nostdio_CXXIQUOTE) $(dir $(2)) $(linklibs-bz2-nostdio_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-bz2-nostdio_CXXIQUOTE) . $(linklibs-bz2-nostdio_CXXIQUOTE_END) $(strip $(linklibs-bz2-nostdio_CXXFLAGS) $(linklibs-bz2-nostdio_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(linklibs-bz2-nostdio_CXXCMD) $(linklibs-bz2-nostdio_CXXIQUOTE) $(dir $(2)) $(linklibs-bz2-nostdio_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-bz2-nostdio_CXXIQUOTE) . $(linklibs-bz2-nostdio_CXXIQUOTE_END) $(strip $(linklibs-bz2-nostdio_CXXFLAGS) $(linklibs-bz2-nostdio_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(linklibs-bz2-nostdio_CXXCMD) $(linklibs-bz2-nostdio_CXXIQUOTE) $(dir $(2)) $(linklibs-bz2-nostdio_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-bz2-nostdio_CXXIQUOTE) . $(linklibs-bz2-nostdio_CXXIQUOTE_END) $(strip $(linklibs-bz2-nostdio_CXXFLAGS) $(linklibs-bz2-nostdio_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(linklibs-bz2-nostdio_CXXCMD)" $(MKDEPEND) $(strip $(linklibs-bz2-nostdio_DXXFLAGS) $(linklibs-bz2-nostdio_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(linklibs-bz2-nostdio_OBJDIR),)
+  $(foreach linklibs-bz2-nostdio_CXXFILE,$(linklibs-bz2-nostdio_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(linklibs-bz2-nostdio_CXXFILE))),$(linklibs-bz2-nostdio_CXXFILE))))
+else
+  $(foreach linklibs-bz2-nostdio_CXXFILE,$(linklibs-bz2-nostdio_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(linklibs-bz2-nostdio_OBJDIR)/,$(notdir $(basename $(linklibs-bz2-nostdio_CXXFILE)))),$(linklibs-bz2-nostdio_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(linklibs-bz2-nostdio_OBJC_FILES),)
+
+ifeq (,)
+linklibs-bz2-nostdio_MOBJC_SRCWILDCARD := %
+else
+linklibs-bz2-nostdio_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(linklibs-bz2-nostdio_OBJDIR),)
+  linklibs-bz2-nostdio_MOBJC_TARGETS := $(addsuffix .o,$(linklibs-bz2-nostdio_OBJC_FILES))
+  linklibs-bz2-nostdio_MOBJC_DTARGETS := $(addsuffix .d,$(linklibs-bz2-nostdio_OBJC_FILES))
+  linklibs-bz2-nostdio_MOBJC_WILDCARD := %
+else
+  linklibs-bz2-nostdio_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(linklibs-bz2-nostdio_OBJDIR)/,$(linklibs-bz2-nostdio_OBJC_FILES)))
+  linklibs-bz2-nostdio_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(linklibs-bz2-nostdio_OBJDIR)/,$(linklibs-bz2-nostdio_OBJC_FILES)))
+  linklibs-bz2-nostdio_MOBJC_WILDCARD := $(linklibs-bz2-nostdio_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : | $(addsuffix .m,$(linklibs-bz2-nostdio_OBJC_FILES))
+
+  # Be sure that all .m files are found
+  linklibs-bz2-nostdio_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  linklibs-bz2-nostdio_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(linklibs-bz2-nostdio_OBJC_FILES))) | sed 's/\(.\):\//\/\1\//g')
+  linklibs-bz2-nostdio_MOBJC_DIRS := $(foreach dir, $(linklibs-bz2-nostdio_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(linklibs-bz2-nostdio_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(linklibs-bz2-nostdio_MOBJC_DIRS),)
+    linklibs-bz2-nostdio_MOBJC_DIRS := $(shell echo $(linklibs-bz2-nostdio_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(linklibs-bz2-nostdio_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  linklibs-bz2-nostdio_CC := $(TARGET_CC)
+else
+  linklibs-bz2-nostdio_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+linklibs-bz2-nostdio_MOBJC_CPPFLAGS := $(linklibs-bz2-nostdio_CPPFLAGS)
+linklibs-bz2-nostdio_OBJCFLAGS := $(linklibs-bz2-nostdio_CFLAGS)
+linklibs-bz2-nostdio_OBJCFLAGS := $(linklibs-bz2-nostdio_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+linklibs-bz2-nostdio_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(linklibs-bz2-nostdio_OBJCFLAGS)))
+ifeq ($(linklibs-bz2-nostdio_DFLAGS),)
+  linklibs-bz2-nostdio_OBJCDFLAGS := $(linklibs-bz2-nostdio_CFLAGS)
+else
+  linklibs-bz2-nostdio_OBJCDFLAGS := $(linklibs-bz2-nostdio_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  linklibs-bz2-nostdio_LINK ?= $(strip $(linklibs-bz2-nostdio_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  linklibs-bz2-nostdio_STRIP ?= $(TARGET_STRIP)
+  linklibs-bz2-nostdio_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : CMD:=$(strip $(linklibs-bz2-nostdio_CC) $(TARGET_SYSROOT))
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : linklibs-bz2-nostdio_MOBJC_CPPFLAGS:=$(strip $(linklibs-bz2-nostdio_MOBJC_CPPFLAGS) $(linklibs-bz2-nostdio_MOBJC_EXTRA_CPPFLAGS))
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : linklibs-bz2-nostdio_OBJCFLAGS:=$(strip $(linklibs-bz2-nostdio_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : linklibs-bz2-nostdio_OBJCDFLAGS:=$(linklibs-bz2-nostdio_OBJCDFLAGS)
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : linklibs-bz2-nostdio_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : linklibs-bz2-nostdio_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  linklibs-bz2-nostdio_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  linklibs-bz2-nostdio_STRIP ?= $(HOST_STRIP)
+  linklibs-bz2-nostdio_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : linklibs-bz2-nostdio_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(linklibs-bz2-nostdio_MOBJC_CPPFLAGS) $(linklibs-bz2-nostdio_MOBJC_EXTRA_CPPFLAGS))
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : linklibs-bz2-nostdio_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(linklibs-bz2-nostdio_OBJCFLAGS))
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : linklibs-bz2-nostdio_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(linklibs-bz2-nostdio_OBJCDFLAGS))
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : linklibs-bz2-nostdio_IQUOTE:=$(HOST_IQUOTE)
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : linklibs-bz2-nostdio_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  linklibs-bz2-nostdio_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  linklibs-bz2-nostdio_STRIP ?= $(ECHO) >/dev/null
+  linklibs-bz2-nostdio_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : linklibs-bz2-nostdio_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(linklibs-bz2-nostdio_MOBJC_CPPFLAGS) $(linklibs-bz2-nostdio_MOBJC_EXTRA_CPPFLAGS))
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : linklibs-bz2-nostdio_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(linklibs-bz2-nostdio_OBJCFLAGS))
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : linklibs-bz2-nostdio_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(linklibs-bz2-nostdio_OBJCDFLAGS))
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : linklibs-bz2-nostdio_IQUOTE:=$(KERNEL_IQUOTE)
+  $(linklibs-bz2-nostdio_MOBJC_TARGETS) $(linklibs-bz2-nostdio_MOBJC_DTARGETS) : linklibs-bz2-nostdio_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(linklibs-bz2-nostdio_MOBJC_TARGETS) : CPPFLAGS := $(linklibs-bz2-nostdio_MOBJC_CPPFLAGS)
+$(linklibs-bz2-nostdio_MOBJC_TARGETS) : CFLAGS := $(linklibs-bz2-nostdio_OBJCFLAGS)
+$(linklibs-bz2-nostdio_MOBJC_TARGETS) : $(linklibs-bz2-nostdio_MOBJC_WILDCARD).o : $(linklibs-bz2-nostdio_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(linklibs-bz2-nostdio_IQUOTE) $(dir $<) $(linklibs-bz2-nostdio_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-bz2-nostdio_IQUOTE) . $(linklibs-bz2-nostdio_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(linklibs-bz2-nostdio_IQUOTE) $(dir $<) $(linklibs-bz2-nostdio_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-bz2-nostdio_IQUOTE) . $(linklibs-bz2-nostdio_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(linklibs-bz2-nostdio_IQUOTE) $(dir $<) $(linklibs-bz2-nostdio_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-bz2-nostdio_IQUOTE) . $(linklibs-bz2-nostdio_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(linklibs-bz2-nostdio_MOBJC_DTARGETS) : $(linklibs-bz2-nostdio_MOBJC_WILDCARD).d : $(linklibs-bz2-nostdio_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(linklibs-bz2-nostdio_OBJCDFLAGS) $(linklibs-bz2-nostdio_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+linklibs-bz2-nostdio_MC_SRCWILDCARD := %
+else
+linklibs-bz2-nostdio_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(linklibs-bz2-nostdio_OBJDIR),)
+linklibs-bz2-nostdio_MC_TARGETS := $(addsuffix .o,$(linklibs-bz2-nostdio_C_FILES))
+linklibs-bz2-nostdio_MC_DTARGETS := $(addsuffix .d,$(linklibs-bz2-nostdio_C_FILES))
+linklibs-bz2-nostdio_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    linklibs-bz2-nostdio_MC_TARGETS := $(addsuffix .o,$(addprefix $(linklibs-bz2-nostdio_OBJDIR)/,$(notdir $(linklibs-bz2-nostdio_C_FILES))))
+    linklibs-bz2-nostdio_MC_DTARGETS := $(addsuffix .d,$(addprefix $(linklibs-bz2-nostdio_OBJDIR)/,$(notdir $(linklibs-bz2-nostdio_C_FILES))))
+else
+ifeq (,)
+    linklibs-bz2-nostdio_MC_TARGETS := $(addsuffix .o,$(addprefix $(linklibs-bz2-nostdio_OBJDIR)/,$(linklibs-bz2-nostdio_C_FILES)))
+    linklibs-bz2-nostdio_MC_DTARGETS := $(addsuffix .d,$(addprefix $(linklibs-bz2-nostdio_OBJDIR)/,$(linklibs-bz2-nostdio_C_FILES)))
+else
+    linklibs-bz2-nostdio_MC_TARGETS := $(addsuffix .o,$(addprefix $(linklibs-bz2-nostdio_OBJDIR)/,$(patsubst /%,%,$(linklibs-bz2-nostdio_C_FILES))))
+    linklibs-bz2-nostdio_MC_DTARGETS := $(addsuffix .d,$(addprefix $(linklibs-bz2-nostdio_OBJDIR)/,$(patsubst /%,%,$(linklibs-bz2-nostdio_C_FILES))))
+endif
+endif
+linklibs-bz2-nostdio_MC_TGTWILDCARD := $(linklibs-bz2-nostdio_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : | $(addsuffix .c,$(linklibs-bz2-nostdio_C_FILES))
+
+# Be sure that all .c files are found
+linklibs-bz2-nostdio_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+linklibs-bz2-nostdio_MC_BASEDIRS := $(shell echo $(sort $(dir $(linklibs-bz2-nostdio_C_FILES))) | sed 's/\(.\):\//\/\1\//g')
+linklibs-bz2-nostdio_MC_DIRS := $(foreach dir, $(linklibs-bz2-nostdio_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(linklibs-bz2-nostdio_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(linklibs-bz2-nostdio_MC_DIRS),)
+    linklibs-bz2-nostdio_MC_DIRS := $(shell echo $(linklibs-bz2-nostdio_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(linklibs-bz2-nostdio_MC_DIRS)
+endif
+
+endif
+
+linklibs-bz2-nostdio_MC_CPPFLAGS := $(linklibs-bz2-nostdio_CPPFLAGS)
+linklibs-bz2-nostdio_CFLAGS := $(linklibs-bz2-nostdio_CFLAGS)
+ifeq ($(linklibs-bz2-nostdio_DFLAGS),)
+  linklibs-bz2-nostdio_DFLAGS := $(linklibs-bz2-nostdio_CFLAGS)
+else
+  linklibs-bz2-nostdio_DFLAGS := $(linklibs-bz2-nostdio_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+linklibs-bz2-nostdio_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+linklibs-bz2-nostdio_STRIP ?= $(TARGET_STRIP)
+linklibs-bz2-nostdio_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : linklibs-bz2-nostdio_MC_CPPFLAGS:=$(strip $(linklibs-bz2-nostdio_MC_CPPFLAGS) $(linklibs-bz2-nostdio_MC_EXTRA_CPPFLAGS))
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : linklibs-bz2-nostdio_CFLAGS:=$(strip $(linklibs-bz2-nostdio_CFLAGS) $(SAFETY_CFLAGS))
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : linklibs-bz2-nostdio_DFLAGS:=$(linklibs-bz2-nostdio_DFLAGS)
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : linklibs-bz2-nostdio_IQUOTE:=$(CFLAGS_IQUOTE)
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : linklibs-bz2-nostdio_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+linklibs-bz2-nostdio_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+linklibs-bz2-nostdio_STRIP ?= $(HOST_STRIP)
+linklibs-bz2-nostdio_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : linklibs-bz2-nostdio_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(linklibs-bz2-nostdio_MC_CPPFLAGS) $(linklibs-bz2-nostdio_MC_EXTRA_CPPFLAGS))
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : linklibs-bz2-nostdio_CFLAGS:=$(strip $(HOST_CFLAGS) $(linklibs-bz2-nostdio_CFLAGS))
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : linklibs-bz2-nostdio_DFLAGS:=$(strip $(HOST_CFLAGS) $(linklibs-bz2-nostdio_DFLAGS))
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : linklibs-bz2-nostdio_IQUOTE:=$(HOST_IQUOTE)
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : linklibs-bz2-nostdio_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+linklibs-bz2-nostdio_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+linklibs-bz2-nostdio_STRIP ?= $(ECHO) >/dev/null
+linklibs-bz2-nostdio_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : linklibs-bz2-nostdio_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(linklibs-bz2-nostdio_MC_CPPFLAGS) $(linklibs-bz2-nostdio_MC_EXTRA_CPPFLAGS))
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : linklibs-bz2-nostdio_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(linklibs-bz2-nostdio_CFLAGS))
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : linklibs-bz2-nostdio_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(linklibs-bz2-nostdio_DFLAGS))
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : linklibs-bz2-nostdio_IQUOTE:=$(KERNEL_IQUOTE)
+$(linklibs-bz2-nostdio_MC_TARGETS) $(linklibs-bz2-nostdio_MC_DTARGETS) : linklibs-bz2-nostdio_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(linklibs-bz2-nostdio_MC_TARGETS) : CPPFLAGS := $(linklibs-bz2-nostdio_MC_CPPFLAGS)
+$(linklibs-bz2-nostdio_MC_TARGETS) : CFLAGS := $(linklibs-bz2-nostdio_CFLAGS)
+$(linklibs-bz2-nostdio_MC_TARGETS) : $(linklibs-bz2-nostdio_MC_TGTWILDCARD).o : $(linklibs-bz2-nostdio_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(linklibs-bz2-nostdio_IQUOTE) $(dir $<) $(linklibs-bz2-nostdio_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-bz2-nostdio_IQUOTE) . $(linklibs-bz2-nostdio_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(linklibs-bz2-nostdio_IQUOTE) $(dir $<) $(linklibs-bz2-nostdio_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-bz2-nostdio_IQUOTE) . $(linklibs-bz2-nostdio_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(linklibs-bz2-nostdio_IQUOTE) $(dir $<) $(linklibs-bz2-nostdio_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-bz2-nostdio_IQUOTE) . $(linklibs-bz2-nostdio_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(linklibs-bz2-nostdio_MC_DTARGETS) : $(linklibs-bz2-nostdio_MC_TGTWILDCARD).d : $(linklibs-bz2-nostdio_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(linklibs-bz2-nostdio_DFLAGS) $(linklibs-bz2-nostdio_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(linklibs-bz2-nostdio_OBJDIR),)
+linklibs-bz2-nostdio-MA_TARGETS := $(addsuffix .o,$(linklibs-bz2-nostdio_ASMFILES))
+linklibs-bz2-nostdio-MA_WILDCARD := %
+else
+linklibs-bz2-nostdio-MA_TARGETS := $(addsuffix .o,$(addprefix $(linklibs-bz2-nostdio_OBJDIR)/,$(notdir $(linklibs-bz2-nostdio_ASMFILES))))
+linklibs-bz2-nostdio-MA_WILDCARD := $(linklibs-bz2-nostdio_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(linklibs-bz2-nostdio-MA_TARGETS) : | $(addsuffix .s,$(linklibs-bz2-nostdio_ASMFILES))
+
+# Be sure that all .c files are found
+linklibs-bz2-nostdio-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+linklibs-bz2-nostdio-MA_BASEDIRS := $(shell echo $(sort $(dir $(linklibs-bz2-nostdio_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+linklibs-bz2-nostdio-MA_DIRS := $(foreach dir, $(linklibs-bz2-nostdio-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(linklibs-bz2-nostdio-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(linklibs-bz2-nostdio-MA_DIRS),)
+    linklibs-bz2-nostdio-MA_DIRS := $(shell echo $(linklibs-bz2-nostdio-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(linklibs-bz2-nostdio-MA_DIRS)
+endif
+
+endif
+
+linklibs-bz2-nostdio-MA_ASSEMBLER ?= $(linklibs-bz2-nostdio_ASSEMBLER)
+
+$(linklibs-bz2-nostdio-MA_TARGETS) : linklibs-bz2-nostdio-MA_CMD:= $(linklibs-bz2-nostdio-MA_ASSEMBLER)
+
+$(linklibs-bz2-nostdio-MA_TARGETS) : CPPFLAGS := $(linklibs-bz2-nostdio_CPPFLAGS)
+$(linklibs-bz2-nostdio-MA_TARGETS) : AFLAGS := $(linklibs-bz2-nostdio_AFLAGS)
+$(linklibs-bz2-nostdio-MA_TARGETS) : $(linklibs-bz2-nostdio-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(linklibs-bz2-nostdio-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(linklibs-bz2-nostdio-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(linklibs-bz2-nostdio-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+ifeq (target,target)
+$(AROS_LIB)/libbz2_nostdio.a : linklibs-bz2-nostdio_AR:=$(AR)
+$(AROS_LIB)/libbz2_nostdio.a : linklibs-bz2-nostdio_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(AROS_LIB)/libbz2_nostdio.a : linklibs-bz2-nostdio_AR:=$(HOST_AR)
+$(AROS_LIB)/libbz2_nostdio.a : linklibs-bz2-nostdio_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(AROS_LIB)/libbz2_nostdio.a : linklibs-bz2-nostdio_AR:=$(KERNEL_AR)
+$(AROS_LIB)/libbz2_nostdio.a : linklibs-bz2-nostdio_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(AROS_LIB)/libbz2_nostdio.a : $(linklibs-bz2-nostdio_OBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(linklibs-bz2-nostdio_AR) $@ $^
+	$(Q)$(linklibs-bz2-nostdio_RANLIB) $@
+endif
+
+ifneq ($(linklibs-bz2-nostdio_DEPS),)
+  ifneq (linklibs-bz2-nostdio linklibs-bz2-nostdio-quick,)
+    ifneq ($(findstring $(TARGET),linklibs-bz2-nostdio linklibs-bz2-nostdio-quick),)
+      -include $(linklibs-bz2-nostdio_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(linklibs-bz2-nostdio_DEPS)
+    endif
+  endif
+endif
+
+
+
+ifneq ($(linklibs-bz2-nostdio_OBJS) $(linklibs-bz2-nostdio_DEPS) $(linklibs-bz2-nostdio_LINKLIB),)
+$(linklibs-bz2-nostdio_OBJS) $(linklibs-bz2-nostdio_DEPS) $(linklibs-bz2-nostdio_LINKLIB) : | $(linklibs-bz2-nostdio_OBJDIR) $(AROS_LIB)
+else
+$(linklibs-bz2-nostdio_OBJS) $(linklibs-bz2-nostdio_DEPS) $(linklibs-bz2-nostdio_LINKLIB) :: $(linklibs-bz2-nostdio_OBJDIR) $(AROS_LIB)
+endif
+
+GLOB_MKDIRS += $(linklibs-bz2-nostdio_OBJDIR) $(AROS_LIB)
+
+
+linklibs-bz2-nostdio-clean : FILES := $(linklibs-bz2-nostdio_OBJS) $(linklibs-bz2-nostdio_LINKLIB) $(linklibs-bz2-nostdio_DEPS)
+#MM
+linklibs-bz2-nostdio-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget linklibs-bz2-nostdio"
+	$(Q)$(RM) $(FILES)
+
+
+
+INCLUDE_FILES := bzlib.h
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq (,)
+TMP_DIR                := 
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst ,$(GENINCDIR)/.,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/./,$(notdir $(INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := /
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)//
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/./,$(INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/./% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq (,)
+BD_INCL_FILES2         := $(subst ,$(AROS_INCLUDES)/.,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/./,$(notdir $(INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/./,$(INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/./% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+###################################################################################
+
+FILES     := bzip2recover bzip2
+SH_FILES  := bzdiff bzgrep bzmore
+MAN_FILES := bzdiff.1 bzgrep.1 bzip2.1 bzmore.1
+
+USER_CFLAGS  := -Winline
+USER_CFLAGS += $(NOWARN_FLAGS)
+
+BIN_DIR := $(AROS_DEVELOPER)/bin
+MAN_DIR := $(AROS_DEVELOPER)/man/man1
+
+#MM- external-bz2-bzip2 : \
+#MM     external-bz2-bzip2-bin \
+#MM     external-bz2-bzip2-install-sh \
+#MM     external-bz2-bzip2-install-aliases \
+#MM     external-bz2-bzip2-install-man \
+#MM     external-bz2-bzip2-install-man-cpy
+
+#MM  external-bz2-bzip2-bin : external-bz2-lib
+
+#MM  external-bz2-bzip2-install-man-cpy : external-bz2-bzip2-install-man
+
+
+.PHONY : external-bz2-bzip2-bin
+
+external-bz2-bzip2-bin_OBJDIR    := $(GENDIR)/$(CURDIR)
+external-bz2-bzip2-bin_TARGETDIR := $(BIN_DIR)
+external-bz2-bzip2-bin_LIBS := bz2
+
+external-bz2-bzip2-bin_FILES     := $(FILES)
+external-bz2-bzip2-bin_OBJS      := $(addsuffix .o,$(addprefix $(external-bz2-bzip2-bin_OBJDIR)/,$(external-bz2-bzip2-bin_FILES)))
+external-bz2-bzip2-bin_DEPS      := $(addsuffix .d,$(addprefix $(external-bz2-bzip2-bin_OBJDIR)/,$(external-bz2-bzip2-bin_FILES)))
+external-bz2-bzip2-bin_EXES      := $(addprefix $(external-bz2-bzip2-bin_TARGETDIR)/,$(external-bz2-bzip2-bin_FILES))
+
+external-bz2-bzip2-bin_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    external-bz2-bzip2-bin_CPPFLAGS += -I
+endif
+external-bz2-bzip2-bin_CFLAGS    := $(CFLAGS)
+external-bz2-bzip2-bin_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+external-bz2-bzip2-bin_COVERAGE := yes
+external-bz2-bzip2-bin_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+external-bz2-bzip2-bin_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+external-bz2-bzip2-bin_CFLAGS    := $(strip $(external-bz2-bzip2-bin_COVERAGEFLAGS) $(external-bz2-bzip2-bin_CFLAGS))
+external-bz2-bzip2-bin_LIBS += $(external-bz2-bzip2-bin_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+external-bz2-bzip2-bin_FUNCINSTR := yes
+external-bz2-bzip2-bin_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+external-bz2-bzip2-bin_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+external-bz2-bzip2-bin_CFLAGS    := $(strip $(external-bz2-bzip2-bin_INSTRFUNCFLAGS) $(external-bz2-bzip2-bin_CFLAGS))
+external-bz2-bzip2-bin_LIBS += $(external-bz2-bzip2-bin_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+external-bz2-bzip2-bin_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(external-bz2-bzip2-bin_CFLAGS))
+endif
+endif
+ifneq (,)
+    external-bz2-bzip2-bin_DFLAGS := 
+else
+    external-bz2-bzip2-bin_DFLAGS := $(external-bz2-bzip2-bin_CFLAGS)
+endif
+ifeq (target,target)
+external-bz2-bzip2-bin_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+external-bz2-bzip2-bin_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+external-bz2-bzip2-bin_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    external-bz2-bzip2-bin_LDFLAGS += -L
+endif
+
+#MM
+external-bz2-bzip2-bin-quick : external-bz2-bzip2-bin
+
+#MM external-bz2-bzip2-bin : includes-generate-deps core-linklibs
+external-bz2-bzip2-bin : $(external-bz2-bzip2-bin_EXES)
+
+ifneq ($(filter $(TARGET),external-bz2-bzip2-bin external-bz2-bzip2-bin-quick),)
+
+ifeq (,)
+external-bz2-bzip2-bin_MC_SRCWILDCARD := %
+else
+external-bz2-bzip2-bin_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(external-bz2-bzip2-bin_OBJDIR),)
+external-bz2-bzip2-bin_MC_TARGETS := $(addsuffix .o,$(external-bz2-bzip2-bin_FILES))
+external-bz2-bzip2-bin_MC_DTARGETS := $(addsuffix .d,$(external-bz2-bzip2-bin_FILES))
+external-bz2-bzip2-bin_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    external-bz2-bzip2-bin_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-bz2-bzip2-bin_OBJDIR)/,$(notdir $(external-bz2-bzip2-bin_FILES))))
+    external-bz2-bzip2-bin_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-bz2-bzip2-bin_OBJDIR)/,$(notdir $(external-bz2-bzip2-bin_FILES))))
+else
+ifeq (,)
+    external-bz2-bzip2-bin_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-bz2-bzip2-bin_OBJDIR)/,$(external-bz2-bzip2-bin_FILES)))
+    external-bz2-bzip2-bin_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-bz2-bzip2-bin_OBJDIR)/,$(external-bz2-bzip2-bin_FILES)))
+else
+    external-bz2-bzip2-bin_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-bz2-bzip2-bin_OBJDIR)/,$(patsubst /%,%,$(external-bz2-bzip2-bin_FILES))))
+    external-bz2-bzip2-bin_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-bz2-bzip2-bin_OBJDIR)/,$(patsubst /%,%,$(external-bz2-bzip2-bin_FILES))))
+endif
+endif
+external-bz2-bzip2-bin_MC_TGTWILDCARD := $(external-bz2-bzip2-bin_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : | $(addsuffix .c,$(external-bz2-bzip2-bin_FILES))
+
+# Be sure that all .c files are found
+external-bz2-bzip2-bin_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+external-bz2-bzip2-bin_MC_BASEDIRS := $(shell echo $(sort $(dir $(external-bz2-bzip2-bin_FILES))) | sed 's/\(.\):\//\/\1\//g')
+external-bz2-bzip2-bin_MC_DIRS := $(foreach dir, $(external-bz2-bzip2-bin_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(external-bz2-bzip2-bin_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(external-bz2-bzip2-bin_MC_DIRS),)
+    external-bz2-bzip2-bin_MC_DIRS := $(shell echo $(external-bz2-bzip2-bin_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(external-bz2-bzip2-bin_MC_DIRS)
+endif
+
+endif
+
+external-bz2-bzip2-bin_MC_CPPFLAGS := $(external-bz2-bzip2-bin_CPPFLAGS)
+external-bz2-bzip2-bin_CFLAGS := $(external-bz2-bzip2-bin_CFLAGS)
+ifeq ($(external-bz2-bzip2-bin_DFLAGS),)
+  external-bz2-bzip2-bin_DFLAGS := $(external-bz2-bzip2-bin_CFLAGS)
+else
+  external-bz2-bzip2-bin_DFLAGS := $(external-bz2-bzip2-bin_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+external-bz2-bzip2-bin_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+external-bz2-bzip2-bin_STRIP ?= $(TARGET_STRIP)
+external-bz2-bzip2-bin_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : external-bz2-bzip2-bin_MC_CPPFLAGS:=$(strip $(external-bz2-bzip2-bin_MC_CPPFLAGS) $(external-bz2-bzip2-bin_MC_EXTRA_CPPFLAGS))
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : external-bz2-bzip2-bin_CFLAGS:=$(strip $(external-bz2-bzip2-bin_CFLAGS) $(SAFETY_CFLAGS))
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : external-bz2-bzip2-bin_DFLAGS:=$(external-bz2-bzip2-bin_DFLAGS)
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : external-bz2-bzip2-bin_IQUOTE:=$(CFLAGS_IQUOTE)
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : external-bz2-bzip2-bin_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+external-bz2-bzip2-bin_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+external-bz2-bzip2-bin_STRIP ?= $(HOST_STRIP)
+external-bz2-bzip2-bin_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : external-bz2-bzip2-bin_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(external-bz2-bzip2-bin_MC_CPPFLAGS) $(external-bz2-bzip2-bin_MC_EXTRA_CPPFLAGS))
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : external-bz2-bzip2-bin_CFLAGS:=$(strip $(HOST_CFLAGS) $(external-bz2-bzip2-bin_CFLAGS))
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : external-bz2-bzip2-bin_DFLAGS:=$(strip $(HOST_CFLAGS) $(external-bz2-bzip2-bin_DFLAGS))
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : external-bz2-bzip2-bin_IQUOTE:=$(HOST_IQUOTE)
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : external-bz2-bzip2-bin_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+external-bz2-bzip2-bin_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+external-bz2-bzip2-bin_STRIP ?= $(ECHO) >/dev/null
+external-bz2-bzip2-bin_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : external-bz2-bzip2-bin_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(external-bz2-bzip2-bin_MC_CPPFLAGS) $(external-bz2-bzip2-bin_MC_EXTRA_CPPFLAGS))
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : external-bz2-bzip2-bin_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-bz2-bzip2-bin_CFLAGS))
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : external-bz2-bzip2-bin_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-bz2-bzip2-bin_DFLAGS))
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : external-bz2-bzip2-bin_IQUOTE:=$(KERNEL_IQUOTE)
+$(external-bz2-bzip2-bin_MC_TARGETS) $(external-bz2-bzip2-bin_MC_DTARGETS) : external-bz2-bzip2-bin_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(external-bz2-bzip2-bin_MC_TARGETS) : CPPFLAGS := $(external-bz2-bzip2-bin_MC_CPPFLAGS)
+$(external-bz2-bzip2-bin_MC_TARGETS) : CFLAGS := $(external-bz2-bzip2-bin_CFLAGS)
+$(external-bz2-bzip2-bin_MC_TARGETS) : $(external-bz2-bzip2-bin_MC_TGTWILDCARD).o : $(external-bz2-bzip2-bin_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(external-bz2-bzip2-bin_IQUOTE) $(dir $<) $(external-bz2-bzip2-bin_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-bzip2-bin_IQUOTE) . $(external-bz2-bzip2-bin_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(external-bz2-bzip2-bin_IQUOTE) $(dir $<) $(external-bz2-bzip2-bin_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-bzip2-bin_IQUOTE) . $(external-bz2-bzip2-bin_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(external-bz2-bzip2-bin_IQUOTE) $(dir $<) $(external-bz2-bzip2-bin_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-bz2-bzip2-bin_IQUOTE) . $(external-bz2-bzip2-bin_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(external-bz2-bzip2-bin_MC_DTARGETS) : $(external-bz2-bzip2-bin_MC_TGTWILDCARD).d : $(external-bz2-bzip2-bin_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(external-bz2-bzip2-bin_DFLAGS) $(external-bz2-bzip2-bin_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+external-bz2-bzip2-bin-link_EXTRA_LDFLAGS := 
+external-bz2-bzip2-bin-link_EXTRA_LIBS :=
+ifeq (yes,yes)
+    external-bz2-bzip2-bin-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    external-bz2-bzip2-bin-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    external-bz2-bzip2-bin-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+external-bz2-bzip2-bin-link_DIRS := $(subst -L ,-L,$(strip $(external-bz2-bzip2-bin_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+external-bz2-bzip2-bin-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(external-bz2-bzip2-bin-link_DIRS)))
+# Add trailing /
+external-bz2-bzip2-bin-link_DIRS := $(subst //,/,$(addsuffix /,$(external-bz2-bzip2-bin-link_DIRS)))
+# Add normal linklib path
+external-bz2-bzip2-bin-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+external-bz2-bzip2-bin-link_LIBS := $(addprefix lib,$(addsuffix .a,$(external-bz2-bzip2-bin_LIBS) $(external-bz2-bzip2-bin-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+external-bz2-bzip2-bin-link_DEPLIBS := $(foreach lib,$(external-bz2-bzip2-bin-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(external-bz2-bzip2-bin-link_DIRS)))) \
+)
+external-bz2-bzip2-bin-link_PROGS := $(addprefix $(external-bz2-bzip2-bin_TARGETDIR)/,$(external-bz2-bzip2-bin_FILES))
+
+$(external-bz2-bzip2-bin-link_PROGS) : OBJDIR := $(external-bz2-bzip2-bin_OBJDIR)
+$(external-bz2-bzip2-bin-link_PROGS) : LDFLAGS := $(strip $(external-bz2-bzip2-bin_LDFLAGS) $(external-bz2-bzip2-bin-link_EXTRA_LDFLAGS))
+$(external-bz2-bzip2-bin-link_PROGS) : LIBS := $(addprefix -l,$(external-bz2-bzip2-bin_LIBS) $(external-bz2-bzip2-bin-link_EXTRA_LIBS) )
+$(external-bz2-bzip2-bin-link_PROGS) : $(external-bz2-bzip2-bin_TARGETDIR)/% : $(external-bz2-bzip2-bin_OBJDIR)/%.o $(external-bz2-bzip2-bin-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(external-bz2-bzip2-bin_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(external-bz2-bzip2-bin_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(external-bz2-bzip2-bin_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(external-bz2-bzip2-bin_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(external-bz2-bzip2-bin_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(external-bz2-bzip2-bin_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(external-bz2-bzip2-bin_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(external-bz2-bzip2-bin_DEPS),)
+  ifneq (external-bz2-bzip2-bin external-bz2-bzip2-bin-quick,)
+    ifneq ($(findstring $(TARGET),external-bz2-bzip2-bin external-bz2-bzip2-bin-quick),)
+      -include $(external-bz2-bzip2-bin_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(external-bz2-bzip2-bin_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(external-bz2-bzip2-bin_DEPS) $(external-bz2-bzip2-bin_OBJS) $(addprefix $(external-bz2-bzip2-bin_TARGETDIR)/,$(external-bz2-bzip2-bin_FILES)),)
+$(external-bz2-bzip2-bin_DEPS) $(external-bz2-bzip2-bin_OBJS) $(addprefix $(external-bz2-bzip2-bin_TARGETDIR)/,$(external-bz2-bzip2-bin_FILES)) : | $(external-bz2-bzip2-bin_TARGETDIR) $(external-bz2-bzip2-bin_OBJDIR)
+else
+$(external-bz2-bzip2-bin_DEPS) $(external-bz2-bzip2-bin_OBJS) $(addprefix $(external-bz2-bzip2-bin_TARGETDIR)/,$(external-bz2-bzip2-bin_FILES)) :: $(external-bz2-bzip2-bin_TARGETDIR) $(external-bz2-bzip2-bin_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(external-bz2-bzip2-bin_TARGETDIR) $(external-bz2-bzip2-bin_OBJDIR)
+
+
+external-bz2-bzip2-bin-clean : FILES := $(external-bz2-bzip2-bin_OBJS) $(external-bz2-bzip2-bin_EXES) $(external-bz2-bzip2-bin_DEPS)
+#MM
+external-bz2-bzip2-bin-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget external-bz2-bzip2-bin"
+	$(Q)$(RM) $(FILES)
+
+
+
+external-bz2-bzip2-install-sh_SRC := $(shell echo . | sed 's/^\(.\):\//\/\1\//')
+
+
+ifneq (setup,)
+setup : | $(BIN_DIR)
+else
+setup :: $(BIN_DIR)
+endif
+
+GLOB_MKDIRS += $(BIN_DIR)
+
+
+.PHONY : external-bz2-bzip2-install-sh
+
+#MM
+external-bz2-bzip2-install-sh : | $(BIN_DIR) 
+	$(foreach file, $(SH_FILES), $(shell $(CP) $(addprefix $(if $(filter /%,$(external-bz2-bzip2-install-sh_SRC)),$(external-bz2-bzip2-install-sh_SRC),$(SRCDIR)/$(CURDIR)/$(external-bz2-bzip2-install-sh_SRC))/, $(file)) $(addprefix $(BIN_DIR)/, $(file))))
+
+
+#MM
+external-bz2-bzip2-install-aliases : \
+        $(BIN_DIR)/bzcat \
+        $(BIN_DIR)/bunzip \
+        $(BIN_DIR)/bzegrep \
+        $(BIN_DIR)/bzfgrep \
+        $(BIN_DIR)/bzless \
+        $(BIN_DIR)/bzcmp
+
+$(BIN_DIR)/bzcat : $(BIN_DIR)/bzip2
+	$(Q)$(CP) $< $@
+$(BIN_DIR)/bunzip : $(BIN_DIR)/bzip2
+	$(Q)$(CP) $< $@
+$(BIN_DIR)/bzegrep : $(BIN_DIR)/bzgrep
+	$(Q)$(CP) $< $@
+$(BIN_DIR)/bzfgrep : $(BIN_DIR)/bzgrep
+	$(Q)$(CP) $< $@
+$(BIN_DIR)/bzless : $(BIN_DIR)/bzmore
+	$(Q)$(CP) $< $@
+$(BIN_DIR)/bzcmp : $(BIN_DIR)/bzdiff
+	$(Q)$(CP) $< $@
+
+#MM
+external-bz2-bzip2-install-man :
+	@$(IF) $(TEST) ! -d $(MAN_DIR) ; then $(MKDIR) $(MAN_DIR) ; else $(NOP) ; fi
+	echo ".so man1/bzgrep.1" > $(MAN_DIR)/bzegrep.1
+	echo ".so man1/bzgrep.1" > $(MAN_DIR)/bzfgrep.1
+	echo ".so man1/bzmore.1" > $(MAN_DIR)/bzless.1
+	echo ".so man1/bzdiff.1" > $(MAN_DIR)/bzcmp.1
+
+
+external-bz2-bzip2-install-man-cpy_SRC := $(shell echo . | sed 's/^\(.\):\//\/\1\//')
+
+
+ifneq (setup,)
+setup : | $(MAN_DIR)
+else
+setup :: $(MAN_DIR)
+endif
+
+GLOB_MKDIRS += $(MAN_DIR)
+
+
+.PHONY : external-bz2-bzip2-install-man-cpy
+
+#MM
+external-bz2-bzip2-install-man-cpy : | $(MAN_DIR) 
+	$(foreach file, $(MAN_FILES), $(shell $(CP) $(addprefix $(if $(filter /%,$(external-bz2-bzip2-install-man-cpy_SRC)),$(external-bz2-bzip2-install-man-cpy_SRC),$(SRCDIR)/$(CURDIR)/$(external-bz2-bzip2-install-man-cpy_SRC))/, $(file)) $(addprefix $(MAN_DIR)/, $(file))))
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

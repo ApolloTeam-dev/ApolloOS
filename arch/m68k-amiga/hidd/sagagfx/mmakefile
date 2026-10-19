@@ -1,0 +1,1670 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM hidd-m68k-sagagfx : kernel-hidd-gfx-includes devs-monitors-wrapper
+
+USER_LDFLAGS := -static
+
+SAGA_HIDD_SOURCES := \
+        sagagfx_init \
+        sagagfx_hw \
+        sagagfx_hw_v4 \
+        sagagfx_hw_v2 \
+        sagagfx_hiddclass \
+        sagagfx_onbitmap
+
+# USER_CFLAGS += -m68020
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM hidd-m68k-sagagfx
+#MM hidd-m68k-sagagfx-quick
+#MM hidd-m68k-sagagfx-makefile
+#MM hidd-m68k-sagagfx-clean
+
+# ABI targets:
+#MM- includes-all : hidd-m68k-sagagfx-includes
+#MM- linklibs-sagagfx: hidd-m68k-sagagfx-linklib
+#MM- linklibs-sagagfx_rel : hidd-m68k-sagagfx-linklib
+#MM- includes-sagagfx: hidd-m68k-sagagfx-includes
+#MM- includes-sagagfx_rel : hidd-m68k-sagagfx-includes
+#MM- hidd-m68k-sagagfx : hidd-m68k-sagagfx-includes core-linklibs linklibs-
+#MM hidd-m68k-sagagfx-linklib : hidd-m68k-sagagfx-includes includes-
+#MM- hidd-m68k-sagagfx-quick : hidd-m68k-sagagfx-includes-quick
+#MM hidd-m68k-sagagfx-includes : hidd-m68k-sagagfx-makefile hidd-m68k-sagagfx-includes-dirs \
+#MM     includes-generate-deps hidd-m68k-sagagfx-fd
+#MM hidd-m68k-sagagfx-includes-quick
+#MM hidd-m68k-sagagfx-includes-dirs
+#MM hidd-m68k-sagagfx-fd
+
+# Library targets
+#MM hidd-m68k-sagagfx-kobj : core-linklibs linklibs-
+#MM hidd-m68k-sagagfx-kobj-quick : 
+
+# Library with ABI targets:
+#MM hidd-m68k-sagagfx-kobj : hidd-m68k-sagagfx-includes core-linklibs linklibs-
+#MM hidd-m68k-sagagfx-kobj-quick : hidd-m68k-sagagfx-includes-quick
+
+# All MetaMake targets defined by this macro
+hidd-m68k-sagagfx_ALLTARGETS       := hidd-m68k-sagagfx hidd-m68k-sagagfx-quick hidd-m68k-sagagfx-clean
+
+ifeq (M,M)
+hidd-m68k-sagagfx_ALLTARGETS       += hidd-m68k-sagagfx-kobj hidd-m68k-sagagfx-kobj-quick
+endif
+
+ifeq (M,M)
+hidd-m68k-sagagfx_ALLTARGETS += hidd-m68k-sagagfx-includes \
+                 hidd-m68k-sagagfx-includes-quick hidd-m68k-sagagfx-includes-dirs  \
+                 hidd-m68k-sagagfx-linklib hidd-m68k-sagagfx-fd
+endif
+
+.PHONY : $(hidd-m68k-sagagfx_ALLTARGETS) hidd-m68k-sagagfx-makefile
+
+ifeq (sagagfx,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (hidd,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    hidd-m68k-sagagfx_DEFNAME      := sagagfx_
+else
+    hidd-m68k-sagagfx_DEFNAME      := sagagfx
+endif
+hidd-m68k-sagagfx_DEFLINKLIBNAME   := $(hidd-m68k-sagagfx_DEFNAME)
+ifneq (,)
+    hidd-m68k-sagagfx_LINKLIBNAME  := 
+else
+    hidd-m68k-sagagfx_LINKLIBNAME  = $(hidd-m68k-sagagfx_DEFLINKLIBNAME)
+endif
+hidd-m68k-sagagfx_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    hidd-m68k-sagagfx_DEFCPPFLAGS  += -I
+endif
+hidd-m68k-sagagfx_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    hidd-m68k-sagagfx_DFLAGS       := 
+else
+    hidd-m68k-sagagfx_DFLAGS       = $(hidd-m68k-sagagfx_DEFDFLAGS)
+endif
+hidd-m68k-sagagfx_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    hidd-m68k-sagagfx_DXXFLAGS     := 
+else
+    hidd-m68k-sagagfx_DXXFLAGS     = $(hidd-m68k-sagagfx_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+hidd-m68k-sagagfx_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(hidd-m68k-sagagfx_DEFDFLAGS))
+hidd-m68k-sagagfx_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(hidd-m68k-sagagfx_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+hidd-m68k-sagagfx_FUNCINSTR := yes
+hidd-m68k-sagagfx_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(hidd-m68k-sagagfx_DEFDFLAGS))
+hidd-m68k-sagagfx_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(hidd-m68k-sagagfx_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+hidd-m68k-sagagfx_OBJDIR                     := 
+else
+hidd-m68k-sagagfx_OBJDIR                     := $(OBJDIR)/$(hidd-m68k-sagagfx_DEFNAME)
+endif
+ifneq (,)
+hidd-m68k-sagagfx_OBJDIR           := $(hidd-m68k-sagagfx_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+hidd-m68k-sagagfx-makefile         := $(hidd-m68k-sagagfx_OBJDIR)/Makefile.$(hidd-m68k-sagagfx_DEFNAME)hidd
+hidd-m68k-sagagfx-genmakefile : $(hidd-m68k-sagagfx-makefile)
+
+
+hidd-m68k-sagagfx-genmakefile_OPTS := 
+ifneq (,)
+    hidd-m68k-sagagfx-genmakefile_OPTS += -f 
+    hidd-m68k-sagagfx-genmakefile_MODNAME := sagagfx_
+else
+    hidd-m68k-sagagfx-genmakefile_MODNAME := sagagfx
+endif
+hidd-m68k-sagagfx-genmakefile_TARGET := Makefile.$(hidd-m68k-sagagfx-genmakefile_MODNAME)hidd
+hidd-m68k-sagagfx-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        hidd-m68k-sagagfx-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        hidd-m68k-sagagfx-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        hidd-m68k-sagagfx-genmakefile_OPTS += -c 
+        hidd-m68k-sagagfx-genmakefile_DEPS += 
+    endif 
+else
+    hidd-m68k-sagagfx-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/sagagfx.conf
+    hidd-m68k-sagagfx-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/sagagfx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        hidd-m68k-sagagfx-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        hidd-m68k-sagagfx-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        hidd-m68k-sagagfx-genmakefile_OPTS += -o 
+        hidd-m68k-sagagfx-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    hidd-m68k-sagagfx-genmakefile_OPTS += -s 
+endif
+ifneq ($(hidd-m68k-sagagfx_OBJDIR),)
+    hidd-m68k-sagagfx-genmakefile_OPTS += -d $(hidd-m68k-sagagfx_OBJDIR)
+    hidd-m68k-sagagfx-genmakefile_TARGET := $(hidd-m68k-sagagfx_OBJDIR)/$(hidd-m68k-sagagfx-genmakefile_TARGET)
+endif
+
+$(hidd-m68k-sagagfx-genmakefile_TARGET) : OPTS := $(hidd-m68k-sagagfx-genmakefile_OPTS)
+$(hidd-m68k-sagagfx-genmakefile_TARGET) : MODNAME := sagagfx
+$(hidd-m68k-sagagfx-genmakefile_TARGET) : MODTYPE := hidd
+$(hidd-m68k-sagagfx-genmakefile_TARGET) : $(hidd-m68k-sagagfx-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(hidd-m68k-sagagfx-makefile),)
+$(hidd-m68k-sagagfx-makefile) : | $(hidd-m68k-sagagfx_OBJDIR)
+else
+$(hidd-m68k-sagagfx-makefile) :: $(hidd-m68k-sagagfx_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(hidd-m68k-sagagfx_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(hidd-m68k-sagagfx_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(hidd-m68k-sagagfx-makefile)
+
+hidd-m68k-sagagfx_DEFMODDIR        := $($(hidd-m68k-sagagfx_DEFNAME)_MODDIR)
+ifeq (no,yes)
+hidd-m68k-sagagfx_DEFMODDIR        := $(AROS_DIR_ARCH)/$(hidd-m68k-sagagfx_DEFMODDIR)
+endif
+ifneq (,)
+    hidd-m68k-sagagfx_MODDIR       := 
+else
+    hidd-m68k-sagagfx_MODDIR       := $(hidd-m68k-sagagfx_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+hidd-m68k-sagagfx_INCDIR           := 
+else
+hidd-m68k-sagagfx_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+hidd-m68k-sagagfx_LIBDEFSINC       := $(hidd-m68k-sagagfx_OBJDIR)/include/$(hidd-m68k-sagagfx_DEFNAME)_libdefs.h
+hidd-m68k-sagagfx_DEFLIBDEFSINC    := $(hidd-m68k-sagagfx_OBJDIR)/include/$(hidd-m68k-sagagfx_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+hidd-m68k-sagagfx-includes-quick : hidd-m68k-sagagfx-includes
+hidd-m68k-sagagfx-includes : $(addprefix $(GENINCDIR)/,$($(hidd-m68k-sagagfx_DEFNAME)_INCLUDES)) \
+    $(addprefix $(hidd-m68k-sagagfx_INCDIR)/,$($(hidd-m68k-sagagfx_DEFNAME)_INCLUDES)) \
+    $(hidd-m68k-sagagfx_LIBDEFSINC) $(hidd-m68k-sagagfx_DEFLIBDEFSINC)
+
+ifneq ($($(hidd-m68k-sagagfx_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    hidd-m68k-sagagfx-includes_MODNAME := sagagfx_
+else
+    hidd-m68k-sagagfx-includes_MODNAME := sagagfx
+endif
+
+ifneq ($($(hidd-m68k-sagagfx-includes_MODNAME)_INCLUDES),)
+
+hidd-m68k-sagagfx-includes_TARGETS := $($(hidd-m68k-sagagfx-includes_MODNAME)_INCLUDES)
+
+hidd-m68k-sagagfx-includes_DEPS := $(GENMODULE)
+hidd-m68k-sagagfx-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        hidd-m68k-sagagfx-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        hidd-m68k-sagagfx-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        hidd-m68k-sagagfx-includes_OPTS += -c 
+        hidd-m68k-sagagfx-includes_DEPS += 
+    endif 
+else
+    hidd-m68k-sagagfx-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/sagagfx.conf
+    hidd-m68k-sagagfx-includes_DEPS += $(SRCDIR)/$(CURDIR)/sagagfx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        hidd-m68k-sagagfx-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        hidd-m68k-sagagfx-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        hidd-m68k-sagagfx-includes_OPTS += -o 
+        hidd-m68k-sagagfx-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    hidd-m68k-sagagfx-includes_OPTS += -s 
+endif
+ifneq ($(hidd-m68k-sagagfx_OBJDIR)/include,)
+    hidd-m68k-sagagfx-includes_OPTS += -d $(hidd-m68k-sagagfx_OBJDIR)/include
+    hidd-m68k-sagagfx-includes_TARGETS := $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/include/,$(hidd-m68k-sagagfx-includes_TARGETS))
+    hidd-m68k-sagagfx-includes_GENINCFLAG=$(hidd-m68k-sagagfx_OBJDIR)/include/.sagagfx.hidd-includes
+else
+    hidd-m68k-sagagfx-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.sagagfx.hidd-includes
+endif
+
+$(hidd-m68k-sagagfx-includes_TARGETS) : $(hidd-m68k-sagagfx-includes_DEPS) $(hidd-m68k-sagagfx-includes_GENINCFLAG)
+
+$(hidd-m68k-sagagfx-includes_GENINCFLAG) : OPTS := $(hidd-m68k-sagagfx-includes_OPTS)
+$(hidd-m68k-sagagfx-includes_GENINCFLAG) : MODNAME := sagagfx
+$(hidd-m68k-sagagfx-includes_GENINCFLAG) : MODTYPE := hidd
+$(hidd-m68k-sagagfx-includes_GENINCFLAG) : $(hidd-m68k-sagagfx-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(hidd-m68k-sagagfx_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(hidd-m68k-sagagfx_DEFNAME)_INCLUDES)) : | $(hidd-m68k-sagagfx_OBJDIR)/sagagfx_geninc
+
+$(hidd-m68k-sagagfx_OBJDIR)/sagagfx_geninc : COPYSRCDIR := $(hidd-m68k-sagagfx_OBJDIR)/include
+$(hidd-m68k-sagagfx_OBJDIR)/sagagfx_geninc : TGTDIR := $(GENINCDIR)
+$(hidd-m68k-sagagfx_OBJDIR)/sagagfx_geninc : FILES := $($(hidd-m68k-sagagfx_DEFNAME)_INCLUDES)
+$(hidd-m68k-sagagfx_OBJDIR)/sagagfx_geninc : $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/include/,$($(hidd-m68k-sagagfx_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(hidd-m68k-sagagfx_OBJDIR)/include
+
+$(addprefix $(hidd-m68k-sagagfx_INCDIR)/,$($(hidd-m68k-sagagfx_DEFNAME)_INCLUDES)) : | $(hidd-m68k-sagagfx_OBJDIR)/sagagfx_incs
+
+$(hidd-m68k-sagagfx_OBJDIR)/sagagfx_incs : COPYSRCDIR := $(hidd-m68k-sagagfx_OBJDIR)/include
+$(hidd-m68k-sagagfx_OBJDIR)/sagagfx_incs : TGTDIR := $(hidd-m68k-sagagfx_INCDIR)
+$(hidd-m68k-sagagfx_OBJDIR)/sagagfx_incs : FILES := $($(hidd-m68k-sagagfx_DEFNAME)_INCLUDES)
+$(hidd-m68k-sagagfx_OBJDIR)/sagagfx_incs : $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/include/,$($(hidd-m68k-sagagfx_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+hidd-m68k-sagagfx_INCDIRS := $(filter-out ./,$(sort $(dir $($(hidd-m68k-sagagfx_DEFNAME)_INCLUDES))))
+
+TMPsagagfx_INCDIRS := \
+    $(hidd-m68k-sagagfx_OBJDIR)/include $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/include/,$(hidd-m68k-sagagfx_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(hidd-m68k-sagagfx_INCDIRS)) \
+    $(hidd-m68k-sagagfx_INCDIR) $(addprefix $(hidd-m68k-sagagfx_INCDIR)/,$(hidd-m68k-sagagfx_INCDIRS))
+
+ifneq (hidd-m68k-sagagfx-includes-dirs,)
+hidd-m68k-sagagfx-includes-dirs : | $(TMPsagagfx_INCDIRS)
+else
+hidd-m68k-sagagfx-includes-dirs :: $(TMPsagagfx_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPsagagfx_INCDIRS)
+
+
+endif
+
+endif
+
+
+hidd-m68k-sagagfx-genlibdefs_OPTS := 
+ifneq (,)
+    hidd-m68k-sagagfx-genlibdefs_OPTS += -f 
+    hidd-m68k-sagagfx-genlibdefs_MODNAME := sagagfx_
+else
+    hidd-m68k-sagagfx-genlibdefs_MODNAME := sagagfx
+endif
+hidd-m68k-sagagfx-genlibdefs_TARGET := $(hidd-m68k-sagagfx-genlibdefs_MODNAME)_libdefs.h
+hidd-m68k-sagagfx-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        hidd-m68k-sagagfx-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        hidd-m68k-sagagfx-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        hidd-m68k-sagagfx-genlibdefs_OPTS += -c 
+        hidd-m68k-sagagfx-genlibdefs_DEPS += 
+    endif 
+else
+    hidd-m68k-sagagfx-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/sagagfx.conf
+    hidd-m68k-sagagfx-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/sagagfx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        hidd-m68k-sagagfx-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        hidd-m68k-sagagfx-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        hidd-m68k-sagagfx-genlibdefs_OPTS += -o 
+        hidd-m68k-sagagfx-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    hidd-m68k-sagagfx-genlibdefs_OPTS += -s 
+endif
+ifneq ($(hidd-m68k-sagagfx_OBJDIR)/include,)
+    hidd-m68k-sagagfx-genlibdefs_OPTS += -d $(hidd-m68k-sagagfx_OBJDIR)/include
+    hidd-m68k-sagagfx-genlibdefs_TARGET := $(hidd-m68k-sagagfx_OBJDIR)/include/$(hidd-m68k-sagagfx-genlibdefs_TARGET)
+endif
+ifneq (,)
+    hidd-m68k-sagagfx-genlibdefs_OPTS += -v 
+endif
+
+$(hidd-m68k-sagagfx-genlibdefs_TARGET) : OPTS := $(hidd-m68k-sagagfx-genlibdefs_OPTS)
+$(hidd-m68k-sagagfx-genlibdefs_TARGET) : MODNAME := sagagfx
+$(hidd-m68k-sagagfx-genlibdefs_TARGET) : MODTYPE := hidd
+$(hidd-m68k-sagagfx-genlibdefs_TARGET) : $(hidd-m68k-sagagfx-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(hidd-m68k-sagagfx_DEFLIBDEFSINC) : FILENAME := $(hidd-m68k-sagagfx_LIBDEFSINC)
+$(hidd-m68k-sagagfx_DEFLIBDEFSINC) : $(hidd-m68k-sagagfx_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(hidd-m68k-sagagfx_LIBDEFSINC) $(hidd-m68k-sagagfx_DEFLIBDEFSINC) : | $(hidd-m68k-sagagfx_OBJDIR)/include
+
+ifneq (hidd-m68k-sagagfx-includes-dirs,)
+hidd-m68k-sagagfx-includes-dirs : | $(hidd-m68k-sagagfx_OBJDIR)/include
+else
+hidd-m68k-sagagfx-includes-dirs :: $(hidd-m68k-sagagfx_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(hidd-m68k-sagagfx_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+hidd-m68k-sagagfx-genmodfiles_OPTS :=
+ifneq (,)
+    hidd-m68k-sagagfx-genmodfiles_OPTS += -f 
+    hidd-m68k-sagagfx-genmodfiles_MODNAME := sagagfx_
+else
+    hidd-m68k-sagagfx-genmodfiles_MODNAME := sagagfx
+endif
+hidd-m68k-sagagfx-genmodfiles_GENTARGETS := $($(hidd-m68k-sagagfx-genmodfiles_MODNAME)_STARTFILES) $($(hidd-m68k-sagagfx-genmodfiles_MODNAME)_ENDFILES)
+hidd-m68k-sagagfx-genmodfiles_STUBTARGETS := $($(hidd-m68k-sagagfx-genmodfiles_MODNAME)_LINKLIBFILES) $($(hidd-m68k-sagagfx-genmodfiles_MODNAME)_RELLINKLIBFILES)
+hidd-m68k-sagagfx-genmodfiles_GENTARGETS := $(addsuffix .c,$(hidd-m68k-sagagfx-genmodfiles_GENTARGETS))
+hidd-m68k-sagagfx-genmodfiles_STUBTARGETS := $(addsuffix .c,$(hidd-m68k-sagagfx-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(hidd-m68k-sagagfx-genmodfiles_MODNAME)_LINKLIBAFILES) $($(hidd-m68k-sagagfx-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+hidd-m68k-sagagfx-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        hidd-m68k-sagagfx-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        hidd-m68k-sagagfx-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        hidd-m68k-sagagfx-genmodfiles_OPTS += -c 
+        hidd-m68k-sagagfx-genmodfiles_DEPS += 
+    endif 
+else
+    hidd-m68k-sagagfx-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/sagagfx.conf
+    hidd-m68k-sagagfx-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/sagagfx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        hidd-m68k-sagagfx-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        hidd-m68k-sagagfx-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        hidd-m68k-sagagfx-genmodfiles_OPTS += -o 
+        hidd-m68k-sagagfx-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    hidd-m68k-sagagfx-genmodfiles_OPTS += -s 
+endif
+ifneq ($(hidd-m68k-sagagfx_OBJDIR),)
+    hidd-m68k-sagagfx-genmodfiles_OPTS += -d $(hidd-m68k-sagagfx_OBJDIR)
+    hidd-m68k-sagagfx-genmodfiles_TARGETDIR := $(shell echo $(hidd-m68k-sagagfx_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    hidd-m68k-sagagfx-genmodfiles_GENTARGETS := $(addprefix $(hidd-m68k-sagagfx-genmodfiles_TARGETDIR)/,$(hidd-m68k-sagagfx-genmodfiles_GENTARGETS))
+    hidd-m68k-sagagfx-genmodfiles_GENFILEFLAG=$(hidd-m68k-sagagfx-genmodfiles_TARGETDIR)/.sagagfx.hidd-genfiles
+else
+    hidd-m68k-sagagfx-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.sagagfx.hidd-genfiles
+endif
+ifneq ($(hidd-m68k-sagagfx_OBJDIR)/linklib,)
+    hidd-m68k-sagagfx-genmodfiles_OPTS += -l $(hidd-m68k-sagagfx_OBJDIR)/linklib
+    hidd-m68k-sagagfx-genmodfiles_STUBTARGETDIR := $(shell echo $(hidd-m68k-sagagfx_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    hidd-m68k-sagagfx-genmodfiles_STUBTARGETS := $(addprefix $(hidd-m68k-sagagfx-genmodfiles_STUBTARGETDIR)/,$(hidd-m68k-sagagfx-genmodfiles_STUBTARGETS))
+    hidd-m68k-sagagfx-genmodfiles_TARGETDIRS += $(hidd-m68k-sagagfx_OBJDIR)/linklib
+else
+ifneq ($(hidd-m68k-sagagfx_OBJDIR),)
+    hidd-m68k-sagagfx-genmodfiles_STUBTARGETS := $(addprefix $(hidd-m68k-sagagfx-genmodfiles_TARGETDIR)/,$(hidd-m68k-sagagfx-genmodfiles_STUBTARGETS))
+endif
+endif
+
+hidd-m68k-sagagfx-genmodfiles_TARGETS := $(hidd-m68k-sagagfx-genmodfiles_GENTARGETS) $(hidd-m68k-sagagfx-genmodfiles_STUBTARGETS)
+ifneq ($(hidd-m68k-sagagfx-genmodfiles_TARGETDIRS),)
+$(hidd-m68k-sagagfx-genmodfiles_TARGETS) : | $(hidd-m68k-sagagfx-genmodfiles_TARGETDIRS)
+endif
+
+$(hidd-m68k-sagagfx-genmodfiles_TARGETS) : $(hidd-m68k-sagagfx-genmodfiles_DEPS) $(hidd-m68k-sagagfx-genmodfiles_GENFILEFLAG)
+
+$(hidd-m68k-sagagfx-genmodfiles_GENFILEFLAG) : OPTS := $(hidd-m68k-sagagfx-genmodfiles_OPTS)
+$(hidd-m68k-sagagfx-genmodfiles_GENFILEFLAG) : MODNAME := sagagfx
+$(hidd-m68k-sagagfx-genmodfiles_GENFILEFLAG) : MODTYPE := hidd
+$(hidd-m68k-sagagfx-genmodfiles_GENFILEFLAG) : $(hidd-m68k-sagagfx-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(hidd-m68k-sagagfx-genmodfiles_GENFILEFLAG) : $(hidd-m68k-sagagfx_DEFLIBDEFSINC) $(hidd-m68k-sagagfx-makefile)
+
+
+ifneq ($(hidd-m68k-sagagfx-genmodfiles_GENFILEFLAG),)
+$(hidd-m68k-sagagfx-genmodfiles_GENFILEFLAG) : | $(hidd-m68k-sagagfx_OBJDIR)/linklib
+else
+$(hidd-m68k-sagagfx-genmodfiles_GENFILEFLAG) :: $(hidd-m68k-sagagfx_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(hidd-m68k-sagagfx_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+hidd-m68k-sagagfx_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+hidd-m68k-sagagfx_FDDIR            := /../$(AROS_DIR_FD)
+endif
+hidd-m68k-sagagfx-fd : $(hidd-m68k-sagagfx_FDDIR)/sagagfx_lib.fd
+
+
+TMP_TARGET := sagagfx_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/sagagfx.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/sagagfx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(hidd-m68k-sagagfx_FDDIR),)
+    TMP_OPTS += -d $(hidd-m68k-sagagfx_FDDIR)
+    TMP_TARGET := $(hidd-m68k-sagagfx_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := sagagfx
+$(TMP_TARGET) : MODTYPE := hidd
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(hidd-m68k-sagagfx_FDDIR)/sagagfx_lib.fd : | $(hidd-m68k-sagagfx_FDDIR)
+
+
+ifneq (hidd-m68k-sagagfx-fd-setup,)
+hidd-m68k-sagagfx-fd-setup : | $(hidd-m68k-sagagfx_FDDIR)
+else
+hidd-m68k-sagagfx-fd-setup :: $(hidd-m68k-sagagfx_FDDIR)
+endif
+
+GLOB_MKDIRS += $(hidd-m68k-sagagfx_FDDIR)
+
+endif
+
+## Compilation
+##
+hidd-m68k-sagagfx_FILES            := $(SAGA_HIDD_SOURCES)
+hidd-m68k-sagagfx_OBJCFILES        := 
+hidd-m68k-sagagfx_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+hidd-m68k-sagagfx_LIBFILES         := 
+hidd-m68k-sagagfx_LIBS             := 
+
+hidd-m68k-sagagfx_FDIRS            := $(sort $(dir $(hidd-m68k-sagagfx_FILES)))
+
+hidd-m68k-sagagfx_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+hidd-m68k-sagagfx_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call hidd-m68k-sagagfx_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+hidd-m68k-sagagfx_FILTERARCH       = $(filter-out $(call hidd-m68k-sagagfx_MATCHARCH,$(1),$(2)),$(2))
+hidd-m68k-sagagfx_STARTFILES       := $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$($(hidd-m68k-sagagfx_DEFNAME)_STARTFILES))
+hidd-m68k-sagagfx_ENDFILES         := $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$($(hidd-m68k-sagagfx_DEFNAME)_ENDFILES))
+
+hidd-m68k-sagagfx_ARCHOBJS         := $(wildcard $(hidd-m68k-sagagfx_OBJDIR)/arch/*.o)
+hidd-m68k-sagagfx_LIBARCHOBJS      := $(wildcard $(hidd-m68k-sagagfx_OBJDIR)/linklib/arch/*.o)
+hidd-m68k-sagagfx_ARCHFILES        := $(basename $(notdir $(hidd-m68k-sagagfx_ARCHOBJS)))
+hidd-m68k-sagagfx_LIBARCHFILES     := $(basename $(notdir $(hidd-m68k-sagagfx_LIBARCHOBJS)))
+hidd-m68k-sagagfx_C_NARCHFILES     := $(call hidd-m68k-sagagfx_FILTERARCH,$(hidd-m68k-sagagfx_ARCHFILES),$(hidd-m68k-sagagfx_FILES))
+hidd-m68k-sagagfx_CXX_NARCHFILES   := $(call hidd-m68k-sagagfx_FILTERARCH,$(hidd-m68k-sagagfx_ARCHFILES),$(hidd-m68k-sagagfx_CXXFILES))
+hidd-m68k-sagagfx_OBJC_NARCHFILES  := $(call hidd-m68k-sagagfx_FILTERARCH,$(hidd-m68k-sagagfx_ARCHFILES),$(hidd-m68k-sagagfx_OBJCFILES))
+hidd-m68k-sagagfx_NLIBARCHFILES    := $(call hidd-m68k-sagagfx_FILTERARCH,$(hidd-m68k-sagagfx_LIBARCHFILES),$(hidd-m68k-sagagfx_LIBFILES))
+hidd-m68k-sagagfx_ARCHNLIBFILES    := $(call hidd-m68k-sagagfx_FILTERARCH,$(hidd-m68k-sagagfx_LIBFILES),$(hidd-m68k-sagagfx_LIBARCHFILES))
+
+hidd-m68k-sagagfx_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(hidd-m68k-sagagfx_OBJDIR)/include -include $(hidd-m68k-sagagfx_DEFLIBDEFSINC))
+ifneq (,)
+hidd-m68k-sagagfx_CPPFLAGS         += -I
+endif
+hidd-m68k-sagagfx_LINKLIBCPPFLAGS  := $(hidd-m68k-sagagfx_CPPFLAGS)
+hidd-m68k-sagagfx_CPPFLAGS         += $(strip $($(hidd-m68k-sagagfx_DEFNAME)_CPPFLAGS))
+hidd-m68k-sagagfx_LINKLIBCPPFLAGS  += $(strip $($(hidd-m68k-sagagfx_DEFNAME)_LINKLIBCPPFLAGS))
+hidd-m68k-sagagfx_CFLAGS           := $(strip $(CFLAGS) $($(hidd-m68k-sagagfx_DEFNAME)_CFLAGS))
+hidd-m68k-sagagfx_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(hidd-m68k-sagagfx_DEFNAME)_LINKLIBCFLAGS))
+hidd-m68k-sagagfx_CXXFLAGS         := $(strip $(CXXFLAGS) $($(hidd-m68k-sagagfx_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+hidd-m68k-sagagfx_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+hidd-m68k-sagagfx_CFLAGS           := $(strip $(hidd-m68k-sagagfx_LTOFLAGS) $(hidd-m68k-sagagfx_CFLAGS))
+hidd-m68k-sagagfx_LINKLIBCFLAGS    := $(strip $(hidd-m68k-sagagfx_LTOFLAGS) $(hidd-m68k-sagagfx_LINKLIBCFLAGS))
+hidd-m68k-sagagfx_CXXFLAGS         := $(strip $(hidd-m68k-sagagfx_LTOFLAGS) $(hidd-m68k-sagagfx_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+hidd-m68k-sagagfx_SUBSTNULL        :=
+hidd-m68k-sagagfx_SUBSTSPACE       := $(hidd-m68k-sagagfx_SUBSTNULL) #
+hidd-m68k-sagagfx_SUBSTCOMMA       := ,
+hidd-m68k-sagagfx_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(hidd-m68k-sagagfx_SUBSTSPACE),$(hidd-m68k-sagagfx_SUBSTCOMMA),$(strip $($(hidd-m68k-sagagfx_DEFNAME)_STARTFILES))))
+hidd-m68k-sagagfx_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+hidd-m68k-sagagfx_CFLAGS           := $(strip $(hidd-m68k-sagagfx_INSTRFUNCFLAGS) $(hidd-m68k-sagagfx_CFLAGS))
+hidd-m68k-sagagfx_CXXFLAGS         := $(strip $(hidd-m68k-sagagfx_INSTRFUNCFLAGS) $(hidd-m68k-sagagfx_CXXFLAGS))
+hidd-m68k-sagagfx_LIBS             += $(hidd-m68k-sagagfx_INSTRFUNCLIBS)
+endif
+endif
+hidd-m68k-sagagfx_DFLAGS           := $(strip $(hidd-m68k-sagagfx_DFLAGS) $($(hidd-m68k-sagagfx_DEFNAME)_DFLAGS))
+hidd-m68k-sagagfx_LINKLIBDFLAGS    := $(strip $(hidd-m68k-sagagfx_DFLAGS) $($(hidd-m68k-sagagfx_DEFNAME)_LINKLIBDFLAGS))
+hidd-m68k-sagagfx_DXXFLAGS         := $(strip $(hidd-m68k-sagagfx_DXXFLAGS) $($(hidd-m68k-sagagfx_DEFNAME)_DXXFLAGS))
+
+ifeq (hidd,library)
+    hidd-m68k-sagagfx_LIBSUFFIX    := 
+else
+    hidd-m68k-sagagfx_LIBSUFFIX    := .hidd
+endif
+
+ifeq (,)
+hidd-m68k-sagagfx_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+hidd-m68k-sagagfx_LIBDIR           := 
+endif
+
+ifeq (M,M)
+hidd-m68k-sagagfx_LINKLIBCFILES    := $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$($(hidd-m68k-sagagfx_DEFNAME)_LINKLIBFILES))
+hidd-m68k-sagagfx_LINKLIBAFILES    := $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$($(hidd-m68k-sagagfx_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(hidd-m68k-sagagfx_DEFNAME)_LINKLIBFILES) $($(hidd-m68k-sagagfx_DEFNAME)_LINKLIBAFILES)  $(hidd-m68k-sagagfx_ARCHNLIBFILES)),)
+    hidd-m68k-sagagfx_LINKLIB      :=
+else
+    hidd-m68k-sagagfx_LINKLIB      := $(hidd-m68k-sagagfx_LIBDIR)/libsagagfx$(hidd-m68k-sagagfx_LIBSUFFIX).a
+    ifneq (sagagfx,$(hidd-m68k-sagagfx_LINKLIBNAME))
+        hidd-m68k-sagagfx_LINKLIB  += $(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_LINKLIBNAME)$(hidd-m68k-sagagfx_LIBSUFFIX).a
+    endif
+endif
+hidd-m68k-sagagfx_LINKLIBFILES     := $(hidd-m68k-sagagfx_LINKLIBCFILES) $(hidd-m68k-sagagfx_LINKLIBAFILES)
+
+hidd-m68k-sagagfx_RELLINKLIBCFILES := $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$($(hidd-m68k-sagagfx_DEFNAME)_RELLINKLIBFILES))
+hidd-m68k-sagagfx_RELLINKLIBAFILES := $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$($(hidd-m68k-sagagfx_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(hidd-m68k-sagagfx_DEFNAME)_RELLINKLIBFILES) $($(hidd-m68k-sagagfx_DEFNAME)_RELLINKLIBAFILES)  $(hidd-m68k-sagagfx_ARCHNLIBFILES)),)
+    hidd-m68k-sagagfx_RELLINKLIB   :=
+else
+    hidd-m68k-sagagfx_RELLINKLIB   := $(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_DEFNAME)_rel$(hidd-m68k-sagagfx_LIBSUFFIX).a
+    ifneq (sagagfx,$(hidd-m68k-sagagfx_LINKLIBNAME))
+        hidd-m68k-sagagfx_RELLINKLIB += $(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_LINKLIBNAME)_rel$(hidd-m68k-sagagfx_LIBSUFFIX).a
+    endif
+endif
+hidd-m68k-sagagfx_RELLINKLIBFILES  := $(hidd-m68k-sagagfx_RELLINKLIBCFILES) $(hidd-m68k-sagagfx_RELLINKLIBAFILES)
+endif
+
+hidd-m68k-sagagfx_ENDOBJS          := $(addsuffix .o,$(hidd-m68k-sagagfx_ENDFILES))
+hidd-m68k-sagagfx_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$(notdir $(hidd-m68k-sagagfx_NLIBARCHFILES))) $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/arch/,$(notdir $(hidd-m68k-sagagfx_ARCHNLIBFILES))) $(hidd-m68k-sagagfx_LINKLIBFILES)) \
+                 
+hidd-m68k-sagagfx_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$(notdir $(hidd-m68k-sagagfx_NLIBARCHFILES))) $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/arch/,$(notdir $(hidd-m68k-sagagfx_ARCHNLIBFILES))) $(hidd-m68k-sagagfx_RELLINKLIBFILES)) \
+                 
+$(hidd-m68k-sagagfx_LINKLIBFILES) $(hidd-m68k-sagagfx_RELLINKLIBFILES) : | $(hidd-m68k-sagagfx_OBJDIR)/linklib
+$(hidd-m68k-sagagfx_LINKLIBOBJS) $(hidd-m68k-sagagfx_RELLINKLIBOBJS) : | $(hidd-m68k-sagagfx_OBJDIR)/linklib
+
+hidd-m68k-sagagfx_CCFILES := $(hidd-m68k-sagagfx_C_NARCHFILES)
+hidd-m68k-sagagfx_TARGETCCFILES    := $(strip $(hidd-m68k-sagagfx_STARTFILES) $(hidd-m68k-sagagfx_ENDFILES))
+hidd-m68k-sagagfx_LINKLIBCCFILES   := $(strip $(hidd-m68k-sagagfx_NLIBARCHFILES) $(hidd-m68k-sagagfx_LINKLIBCFILES) $(hidd-m68k-sagagfx_RELLINKLIBCFILES))
+hidd-m68k-sagagfx_LINKLIBCCGENFILES := $(strip $(hidd-m68k-sagagfx_LINKLIBCFILES) $(hidd-m68k-sagagfx_RELLINKLIBCFILES))
+
+
+hidd-m68k-sagagfx_CXXABSBASENAMES := $(foreach hidd-m68k-sagagfx_CXXBASE,$(hidd-m68k-sagagfx_CXX_NARCHFILES),$(if $(filter /%,$(hidd-m68k-sagagfx_CXXBASE)),$(hidd-m68k-sagagfx_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(hidd-m68k-sagagfx_CXXBASE))))
+
+ifneq ($(hidd-m68k-sagagfx_CXXABSBASENAMES),)
+
+hidd-m68k-sagagfx_CXXBASENAMES := $(basename $(hidd-m68k-sagagfx_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+hidd-m68k-sagagfx_MCXX_FILES  := $(strip $(foreach hidd-m68k-sagagfx_CXXBASE,$(hidd-m68k-sagagfx_CXXABSBASENAMES), $(firstword $(wildcard $(foreach hidd-m68k-sagagfx_EXT, $(AROS_CXXEXTS),$(addsuffix .$(hidd-m68k-sagagfx_EXT),$(hidd-m68k-sagagfx_CXXBASE)))))))
+
+ifeq (,)
+hidd-m68k-sagagfx_MCXX_SRCWILDCARD := %
+else
+hidd-m68k-sagagfx_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(hidd-m68k-sagagfx_OBJDIR),)
+  hidd-m68k-sagagfx_CXXTARGETS := $(notdir $(hidd-m68k-sagagfx_CXXBASENAMES:=.o))
+  hidd-m68k-sagagfx_CXXDTARGETS := $(notdir $(hidd-m68k-sagagfx_CXXBASENAMES:=.d))
+  hidd-m68k-sagagfx_MCXX_WILDCARD := %
+else
+  hidd-m68k-sagagfx_CXXTARGETS := $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(notdir $(hidd-m68k-sagagfx_CXXBASENAMES:=.o)))
+  hidd-m68k-sagagfx_CXXDTARGETS := $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(notdir $(hidd-m68k-sagagfx_CXXBASENAMES:=.d)))
+  hidd-m68k-sagagfx_MCXX_WILDCARD := $(hidd-m68k-sagagfx_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(hidd-m68k-sagagfx_CXXTARGETS) $(hidd-m68k-sagagfx_CXXDTARGETS) : | $(hidd-m68k-sagagfx_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+hidd-m68k-sagagfx_MCXX_CPPFLAGS := $(hidd-m68k-sagagfx_CPPFLAGS)
+hidd-m68k-sagagfx_CXXFLAGS := $(hidd-m68k-sagagfx_CXXFLAGS)
+ifeq ($(hidd-m68k-sagagfx_DXXFLAGS),)
+  hidd-m68k-sagagfx_DXXFLAGS := $(hidd-m68k-sagagfx_CXXFLAGS)
+else
+  hidd-m68k-sagagfx_DXXFLAGS := $(hidd-m68k-sagagfx_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  hidd-m68k-sagagfx_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  hidd-m68k-sagagfx_STRIP ?= $(HOST_STRIP)
+  hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  hidd-m68k-sagagfx_CXXCMD:=$(HOST_CXX)
+  hidd-m68k-sagagfx_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(hidd-m68k-sagagfx_MCXX_CPPFLAGS) $(hidd-m68k-sagagfx_MCXX_EXTRA_CPPFLAGS))
+  hidd-m68k-sagagfx_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(hidd-m68k-sagagfx_CXXFLAGS))
+  hidd-m68k-sagagfx_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(hidd-m68k-sagagfx_DXXFLAGS))
+  hidd-m68k-sagagfx_CXXIQUOTE:=$(HOST_IQUOTE)
+  hidd-m68k-sagagfx_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  hidd-m68k-sagagfx_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  hidd-m68k-sagagfx_STRIP ?= $(TARGET_STRIP)
+  hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  hidd-m68k-sagagfx_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  hidd-m68k-sagagfx_MCXX_CPPFLAGS := $(strip $(hidd-m68k-sagagfx_MCXX_CPPFLAGS) $(hidd-m68k-sagagfx_MCXX_EXTRA_CPPFLAGS))
+  hidd-m68k-sagagfx_CXXFLAGS := $(strip $(hidd-m68k-sagagfx_CXXFLAGS) $(SAFETY_CFLAGS))
+  hidd-m68k-sagagfx_DXXFLAGS := $(hidd-m68k-sagagfx_DXXFLAGS)
+  hidd-m68k-sagagfx_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  hidd-m68k-sagagfx_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  hidd-m68k-sagagfx_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  hidd-m68k-sagagfx_STRIP ?= $(ECHO) >/dev/null
+  hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  hidd-m68k-sagagfx_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  hidd-m68k-sagagfx_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(hidd-m68k-sagagfx_MCXX_CPPFLAGS) $(hidd-m68k-sagagfx_MCXX_EXTRA_CPPFLAGS))
+  hidd-m68k-sagagfx_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(hidd-m68k-sagagfx_CXXFLAGS))
+  hidd-m68k-sagagfx_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(hidd-m68k-sagagfx_DXXFLAGS))
+  hidd-m68k-sagagfx_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  hidd-m68k-sagagfx_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(hidd-m68k-sagagfx_CXXCMD) $(hidd-m68k-sagagfx_CXXIQUOTE) $(dir $(2)) $(hidd-m68k-sagagfx_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_CXXIQUOTE) . $(hidd-m68k-sagagfx_CXXIQUOTE_END) $(strip $(hidd-m68k-sagagfx_CXXFLAGS) $(hidd-m68k-sagagfx_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(hidd-m68k-sagagfx_CXXCMD) $(hidd-m68k-sagagfx_CXXIQUOTE) $(dir $(2)) $(hidd-m68k-sagagfx_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_CXXIQUOTE) . $(hidd-m68k-sagagfx_CXXIQUOTE_END) $(strip $(hidd-m68k-sagagfx_CXXFLAGS) $(hidd-m68k-sagagfx_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(hidd-m68k-sagagfx_CXXCMD) $(hidd-m68k-sagagfx_CXXIQUOTE) $(dir $(2)) $(hidd-m68k-sagagfx_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_CXXIQUOTE) . $(hidd-m68k-sagagfx_CXXIQUOTE_END) $(strip $(hidd-m68k-sagagfx_CXXFLAGS) $(hidd-m68k-sagagfx_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(hidd-m68k-sagagfx_CXXCMD)" $(MKDEPEND) $(strip $(hidd-m68k-sagagfx_DXXFLAGS) $(hidd-m68k-sagagfx_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(hidd-m68k-sagagfx_OBJDIR),)
+  $(foreach hidd-m68k-sagagfx_CXXFILE,$(hidd-m68k-sagagfx_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(hidd-m68k-sagagfx_CXXFILE))),$(hidd-m68k-sagagfx_CXXFILE))))
+else
+  $(foreach hidd-m68k-sagagfx_CXXFILE,$(hidd-m68k-sagagfx_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(notdir $(basename $(hidd-m68k-sagagfx_CXXFILE)))),$(hidd-m68k-sagagfx_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(hidd-m68k-sagagfx_OBJC_NARCHFILES),)
+
+ifeq (,)
+hidd-m68k-sagagfx_MOBJC_SRCWILDCARD := %
+else
+hidd-m68k-sagagfx_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(hidd-m68k-sagagfx_OBJDIR),)
+  hidd-m68k-sagagfx_MOBJC_TARGETS := $(addsuffix .o,$(hidd-m68k-sagagfx_OBJC_NARCHFILES))
+  hidd-m68k-sagagfx_MOBJC_DTARGETS := $(addsuffix .d,$(hidd-m68k-sagagfx_OBJC_NARCHFILES))
+  hidd-m68k-sagagfx_MOBJC_WILDCARD := %
+else
+  hidd-m68k-sagagfx_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(hidd-m68k-sagagfx_OBJC_NARCHFILES)))
+  hidd-m68k-sagagfx_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(hidd-m68k-sagagfx_OBJC_NARCHFILES)))
+  hidd-m68k-sagagfx_MOBJC_WILDCARD := $(hidd-m68k-sagagfx_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : | $(addsuffix .m,$(hidd-m68k-sagagfx_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  hidd-m68k-sagagfx_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  hidd-m68k-sagagfx_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(hidd-m68k-sagagfx_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  hidd-m68k-sagagfx_MOBJC_DIRS := $(foreach dir, $(hidd-m68k-sagagfx_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(hidd-m68k-sagagfx_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(hidd-m68k-sagagfx_MOBJC_DIRS),)
+    hidd-m68k-sagagfx_MOBJC_DIRS := $(shell echo $(hidd-m68k-sagagfx_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(hidd-m68k-sagagfx_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  hidd-m68k-sagagfx_CC := $(TARGET_CC)
+else
+  hidd-m68k-sagagfx_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+hidd-m68k-sagagfx_MOBJC_CPPFLAGS := $(hidd-m68k-sagagfx_CPPFLAGS)
+hidd-m68k-sagagfx_OBJCFLAGS := $(hidd-m68k-sagagfx_CFLAGS)
+hidd-m68k-sagagfx_OBJCFLAGS := $(hidd-m68k-sagagfx_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+hidd-m68k-sagagfx_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(hidd-m68k-sagagfx_OBJCFLAGS)))
+ifeq ($(hidd-m68k-sagagfx_DFLAGS),)
+  hidd-m68k-sagagfx_OBJCDFLAGS := $(hidd-m68k-sagagfx_CFLAGS)
+else
+  hidd-m68k-sagagfx_OBJCDFLAGS := $(hidd-m68k-sagagfx_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  hidd-m68k-sagagfx_LINK ?= $(strip $(hidd-m68k-sagagfx_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  hidd-m68k-sagagfx_STRIP ?= $(TARGET_STRIP)
+  hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : CMD:=$(strip $(hidd-m68k-sagagfx_CC) $(TARGET_SYSROOT))
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : hidd-m68k-sagagfx_MOBJC_CPPFLAGS:=$(strip $(hidd-m68k-sagagfx_MOBJC_CPPFLAGS) $(hidd-m68k-sagagfx_MOBJC_EXTRA_CPPFLAGS))
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : hidd-m68k-sagagfx_OBJCFLAGS:=$(strip $(hidd-m68k-sagagfx_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : hidd-m68k-sagagfx_OBJCDFLAGS:=$(hidd-m68k-sagagfx_OBJCDFLAGS)
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  hidd-m68k-sagagfx_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  hidd-m68k-sagagfx_STRIP ?= $(HOST_STRIP)
+  hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : hidd-m68k-sagagfx_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(hidd-m68k-sagagfx_MOBJC_CPPFLAGS) $(hidd-m68k-sagagfx_MOBJC_EXTRA_CPPFLAGS))
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : hidd-m68k-sagagfx_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-m68k-sagagfx_OBJCFLAGS))
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : hidd-m68k-sagagfx_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-m68k-sagagfx_OBJCDFLAGS))
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE:=$(HOST_IQUOTE)
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  hidd-m68k-sagagfx_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  hidd-m68k-sagagfx_STRIP ?= $(ECHO) >/dev/null
+  hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : hidd-m68k-sagagfx_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(hidd-m68k-sagagfx_MOBJC_CPPFLAGS) $(hidd-m68k-sagagfx_MOBJC_EXTRA_CPPFLAGS))
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : hidd-m68k-sagagfx_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-m68k-sagagfx_OBJCFLAGS))
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : hidd-m68k-sagagfx_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-m68k-sagagfx_OBJCDFLAGS))
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE:=$(KERNEL_IQUOTE)
+  $(hidd-m68k-sagagfx_MOBJC_TARGETS) $(hidd-m68k-sagagfx_MOBJC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(hidd-m68k-sagagfx_MOBJC_TARGETS) : CPPFLAGS := $(hidd-m68k-sagagfx_MOBJC_CPPFLAGS)
+$(hidd-m68k-sagagfx_MOBJC_TARGETS) : CFLAGS := $(hidd-m68k-sagagfx_OBJCFLAGS)
+$(hidd-m68k-sagagfx_MOBJC_TARGETS) : $(hidd-m68k-sagagfx_MOBJC_WILDCARD).o : $(hidd-m68k-sagagfx_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(hidd-m68k-sagagfx_IQUOTE) $(dir $<) $(hidd-m68k-sagagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_IQUOTE) . $(hidd-m68k-sagagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(hidd-m68k-sagagfx_IQUOTE) $(dir $<) $(hidd-m68k-sagagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_IQUOTE) . $(hidd-m68k-sagagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(hidd-m68k-sagagfx_IQUOTE) $(dir $<) $(hidd-m68k-sagagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_IQUOTE) . $(hidd-m68k-sagagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(hidd-m68k-sagagfx_MOBJC_DTARGETS) : $(hidd-m68k-sagagfx_MOBJC_WILDCARD).d : $(hidd-m68k-sagagfx_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(hidd-m68k-sagagfx_OBJCDFLAGS) $(hidd-m68k-sagagfx_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+hidd-m68k-sagagfx_MC_SRCWILDCARD := %
+else
+hidd-m68k-sagagfx_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(hidd-m68k-sagagfx_OBJDIR),)
+hidd-m68k-sagagfx_MC_TARGETS := $(addsuffix .o,$(hidd-m68k-sagagfx_CCFILES))
+hidd-m68k-sagagfx_MC_DTARGETS := $(addsuffix .d,$(hidd-m68k-sagagfx_CCFILES))
+hidd-m68k-sagagfx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    hidd-m68k-sagagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(notdir $(hidd-m68k-sagagfx_CCFILES))))
+    hidd-m68k-sagagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(notdir $(hidd-m68k-sagagfx_CCFILES))))
+else
+ifeq (,)
+    hidd-m68k-sagagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(hidd-m68k-sagagfx_CCFILES)))
+    hidd-m68k-sagagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(hidd-m68k-sagagfx_CCFILES)))
+else
+    hidd-m68k-sagagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(patsubst /%,%,$(hidd-m68k-sagagfx_CCFILES))))
+    hidd-m68k-sagagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(patsubst /%,%,$(hidd-m68k-sagagfx_CCFILES))))
+endif
+endif
+hidd-m68k-sagagfx_MC_TGTWILDCARD := $(hidd-m68k-sagagfx_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : | $(addsuffix .c,$(hidd-m68k-sagagfx_CCFILES))
+
+# Be sure that all .c files are found
+hidd-m68k-sagagfx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+hidd-m68k-sagagfx_MC_BASEDIRS := $(shell echo $(sort $(dir $(hidd-m68k-sagagfx_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+hidd-m68k-sagagfx_MC_DIRS := $(foreach dir, $(hidd-m68k-sagagfx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(hidd-m68k-sagagfx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(hidd-m68k-sagagfx_MC_DIRS),)
+    hidd-m68k-sagagfx_MC_DIRS := $(shell echo $(hidd-m68k-sagagfx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(hidd-m68k-sagagfx_MC_DIRS)
+endif
+
+endif
+
+hidd-m68k-sagagfx_MC_CPPFLAGS := $(hidd-m68k-sagagfx_CPPFLAGS)
+hidd-m68k-sagagfx_CFLAGS := $(hidd-m68k-sagagfx_CFLAGS)
+ifeq ($(hidd-m68k-sagagfx_DFLAGS),)
+  hidd-m68k-sagagfx_DFLAGS := $(hidd-m68k-sagagfx_CFLAGS)
+else
+  hidd-m68k-sagagfx_DFLAGS := $(hidd-m68k-sagagfx_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+hidd-m68k-sagagfx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+hidd-m68k-sagagfx_STRIP ?= $(TARGET_STRIP)
+hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_MC_CPPFLAGS:=$(strip $(hidd-m68k-sagagfx_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_EXTRA_CPPFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_CFLAGS:=$(strip $(hidd-m68k-sagagfx_CFLAGS) $(SAFETY_CFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_DFLAGS:=$(hidd-m68k-sagagfx_DFLAGS)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+hidd-m68k-sagagfx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+hidd-m68k-sagagfx_STRIP ?= $(HOST_STRIP)
+hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_EXTRA_CPPFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_CFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-m68k-sagagfx_CFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_DFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-m68k-sagagfx_DFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE:=$(HOST_IQUOTE)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+hidd-m68k-sagagfx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+hidd-m68k-sagagfx_STRIP ?= $(ECHO) >/dev/null
+hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_EXTRA_CPPFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-m68k-sagagfx_CFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-m68k-sagagfx_DFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE:=$(KERNEL_IQUOTE)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(hidd-m68k-sagagfx_MC_TARGETS) : CPPFLAGS := $(hidd-m68k-sagagfx_MC_CPPFLAGS)
+$(hidd-m68k-sagagfx_MC_TARGETS) : CFLAGS := $(hidd-m68k-sagagfx_CFLAGS)
+$(hidd-m68k-sagagfx_MC_TARGETS) : $(hidd-m68k-sagagfx_MC_TGTWILDCARD).o : $(hidd-m68k-sagagfx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(hidd-m68k-sagagfx_IQUOTE) $(dir $<) $(hidd-m68k-sagagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_IQUOTE) . $(hidd-m68k-sagagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(hidd-m68k-sagagfx_IQUOTE) $(dir $<) $(hidd-m68k-sagagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_IQUOTE) . $(hidd-m68k-sagagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(hidd-m68k-sagagfx_IQUOTE) $(dir $<) $(hidd-m68k-sagagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_IQUOTE) . $(hidd-m68k-sagagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(hidd-m68k-sagagfx_MC_DTARGETS) : $(hidd-m68k-sagagfx_MC_TGTWILDCARD).d : $(hidd-m68k-sagagfx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(hidd-m68k-sagagfx_DFLAGS) $(hidd-m68k-sagagfx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+hidd-m68k-sagagfx_MC_SRCWILDCARD := %
+else
+hidd-m68k-sagagfx_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(hidd-m68k-sagagfx_OBJDIR),)
+hidd-m68k-sagagfx_MC_TARGETS := $(addsuffix .o,$(hidd-m68k-sagagfx_TARGETCCFILES))
+hidd-m68k-sagagfx_MC_DTARGETS := $(addsuffix .d,$(hidd-m68k-sagagfx_TARGETCCFILES))
+hidd-m68k-sagagfx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    hidd-m68k-sagagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(notdir $(hidd-m68k-sagagfx_TARGETCCFILES))))
+    hidd-m68k-sagagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(notdir $(hidd-m68k-sagagfx_TARGETCCFILES))))
+else
+ifeq (,)
+    hidd-m68k-sagagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(hidd-m68k-sagagfx_TARGETCCFILES)))
+    hidd-m68k-sagagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(hidd-m68k-sagagfx_TARGETCCFILES)))
+else
+    hidd-m68k-sagagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(patsubst /%,%,$(hidd-m68k-sagagfx_TARGETCCFILES))))
+    hidd-m68k-sagagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(patsubst /%,%,$(hidd-m68k-sagagfx_TARGETCCFILES))))
+endif
+endif
+hidd-m68k-sagagfx_MC_TGTWILDCARD := $(hidd-m68k-sagagfx_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : | $(addsuffix .c,$(hidd-m68k-sagagfx_TARGETCCFILES))
+
+# Be sure that all .c files are found
+hidd-m68k-sagagfx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+hidd-m68k-sagagfx_MC_BASEDIRS := $(shell echo $(sort $(dir $(hidd-m68k-sagagfx_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+hidd-m68k-sagagfx_MC_DIRS := $(foreach dir, $(hidd-m68k-sagagfx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(hidd-m68k-sagagfx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(hidd-m68k-sagagfx_MC_DIRS),)
+    hidd-m68k-sagagfx_MC_DIRS := $(shell echo $(hidd-m68k-sagagfx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(hidd-m68k-sagagfx_MC_DIRS)
+endif
+
+endif
+
+hidd-m68k-sagagfx_MC_CPPFLAGS := $(hidd-m68k-sagagfx_CPPFLAGS) -D__AROS__
+hidd-m68k-sagagfx_CFLAGS := $(hidd-m68k-sagagfx_CFLAGS)
+ifeq ($(hidd-m68k-sagagfx_DFLAGS),)
+  hidd-m68k-sagagfx_DFLAGS := $(hidd-m68k-sagagfx_CFLAGS)
+else
+  hidd-m68k-sagagfx_DFLAGS := $(hidd-m68k-sagagfx_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+hidd-m68k-sagagfx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+hidd-m68k-sagagfx_STRIP ?= $(TARGET_STRIP)
+hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_MC_CPPFLAGS:=$(strip $(hidd-m68k-sagagfx_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_EXTRA_CPPFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_CFLAGS:=$(strip $(hidd-m68k-sagagfx_CFLAGS) $(SAFETY_CFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_DFLAGS:=$(hidd-m68k-sagagfx_DFLAGS)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+hidd-m68k-sagagfx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+hidd-m68k-sagagfx_STRIP ?= $(HOST_STRIP)
+hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_EXTRA_CPPFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_CFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-m68k-sagagfx_CFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_DFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-m68k-sagagfx_DFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE:=$(HOST_IQUOTE)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+hidd-m68k-sagagfx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+hidd-m68k-sagagfx_STRIP ?= $(ECHO) >/dev/null
+hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_EXTRA_CPPFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-m68k-sagagfx_CFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-m68k-sagagfx_DFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE:=$(KERNEL_IQUOTE)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(hidd-m68k-sagagfx_MC_TARGETS) : CPPFLAGS := $(hidd-m68k-sagagfx_MC_CPPFLAGS)
+$(hidd-m68k-sagagfx_MC_TARGETS) : CFLAGS := $(hidd-m68k-sagagfx_CFLAGS)
+$(hidd-m68k-sagagfx_MC_TARGETS) : $(hidd-m68k-sagagfx_MC_TGTWILDCARD).o : $(hidd-m68k-sagagfx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(hidd-m68k-sagagfx_IQUOTE) $(dir $<) $(hidd-m68k-sagagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_IQUOTE) . $(hidd-m68k-sagagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(hidd-m68k-sagagfx_IQUOTE) $(dir $<) $(hidd-m68k-sagagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_IQUOTE) . $(hidd-m68k-sagagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(hidd-m68k-sagagfx_IQUOTE) $(dir $<) $(hidd-m68k-sagagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_IQUOTE) . $(hidd-m68k-sagagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(hidd-m68k-sagagfx_MC_DTARGETS) : $(hidd-m68k-sagagfx_MC_TGTWILDCARD).d : $(hidd-m68k-sagagfx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(hidd-m68k-sagagfx_DFLAGS) $(hidd-m68k-sagagfx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+hidd-m68k-sagagfx_MC_SRCWILDCARD := %
+else
+hidd-m68k-sagagfx_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(hidd-m68k-sagagfx_OBJDIR)/linklib,)
+hidd-m68k-sagagfx_MC_TARGETS := $(addsuffix .o,$(hidd-m68k-sagagfx_NLIBARCHFILES))
+hidd-m68k-sagagfx_MC_DTARGETS := $(addsuffix .d,$(hidd-m68k-sagagfx_NLIBARCHFILES))
+hidd-m68k-sagagfx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    hidd-m68k-sagagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$(notdir $(hidd-m68k-sagagfx_NLIBARCHFILES))))
+    hidd-m68k-sagagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$(notdir $(hidd-m68k-sagagfx_NLIBARCHFILES))))
+else
+ifeq (,)
+    hidd-m68k-sagagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$(hidd-m68k-sagagfx_NLIBARCHFILES)))
+    hidd-m68k-sagagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$(hidd-m68k-sagagfx_NLIBARCHFILES)))
+else
+    hidd-m68k-sagagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$(patsubst /%,%,$(hidd-m68k-sagagfx_NLIBARCHFILES))))
+    hidd-m68k-sagagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$(patsubst /%,%,$(hidd-m68k-sagagfx_NLIBARCHFILES))))
+endif
+endif
+hidd-m68k-sagagfx_MC_TGTWILDCARD := $(hidd-m68k-sagagfx_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : | $(addsuffix .c,$(hidd-m68k-sagagfx_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+hidd-m68k-sagagfx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+hidd-m68k-sagagfx_MC_BASEDIRS := $(shell echo $(sort $(dir $(hidd-m68k-sagagfx_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+hidd-m68k-sagagfx_MC_DIRS := $(foreach dir, $(hidd-m68k-sagagfx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(hidd-m68k-sagagfx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(hidd-m68k-sagagfx_MC_DIRS),)
+    hidd-m68k-sagagfx_MC_DIRS := $(shell echo $(hidd-m68k-sagagfx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(hidd-m68k-sagagfx_MC_DIRS)
+endif
+
+endif
+
+hidd-m68k-sagagfx_MC_CPPFLAGS := $(hidd-m68k-sagagfx_LINKLIBCPPFLAGS) -D__AROS__
+hidd-m68k-sagagfx_CFLAGS := $(hidd-m68k-sagagfx_LINKLIBCFLAGS)
+ifeq ($(hidd-m68k-sagagfx_LINKLIBDFLAGS),)
+  hidd-m68k-sagagfx_DFLAGS := $(hidd-m68k-sagagfx_LINKLIBCFLAGS)
+else
+  hidd-m68k-sagagfx_DFLAGS := $(hidd-m68k-sagagfx_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+hidd-m68k-sagagfx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+hidd-m68k-sagagfx_STRIP ?= $(TARGET_STRIP)
+hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_MC_CPPFLAGS:=$(strip $(hidd-m68k-sagagfx_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_EXTRA_CPPFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_CFLAGS:=$(strip $(hidd-m68k-sagagfx_CFLAGS) $(SAFETY_CFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_DFLAGS:=$(hidd-m68k-sagagfx_DFLAGS)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+hidd-m68k-sagagfx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+hidd-m68k-sagagfx_STRIP ?= $(HOST_STRIP)
+hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_EXTRA_CPPFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_CFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-m68k-sagagfx_CFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_DFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-m68k-sagagfx_DFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE:=$(HOST_IQUOTE)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+hidd-m68k-sagagfx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+hidd-m68k-sagagfx_STRIP ?= $(ECHO) >/dev/null
+hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_EXTRA_CPPFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-m68k-sagagfx_CFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-m68k-sagagfx_DFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE:=$(KERNEL_IQUOTE)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(hidd-m68k-sagagfx_MC_TARGETS) : CPPFLAGS := $(hidd-m68k-sagagfx_MC_CPPFLAGS)
+$(hidd-m68k-sagagfx_MC_TARGETS) : CFLAGS := $(hidd-m68k-sagagfx_CFLAGS)
+$(hidd-m68k-sagagfx_MC_TARGETS) : $(hidd-m68k-sagagfx_MC_TGTWILDCARD).o : $(hidd-m68k-sagagfx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(hidd-m68k-sagagfx_IQUOTE) $(dir $<) $(hidd-m68k-sagagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_IQUOTE) . $(hidd-m68k-sagagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(hidd-m68k-sagagfx_IQUOTE) $(dir $<) $(hidd-m68k-sagagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_IQUOTE) . $(hidd-m68k-sagagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(hidd-m68k-sagagfx_IQUOTE) $(dir $<) $(hidd-m68k-sagagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_IQUOTE) . $(hidd-m68k-sagagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(hidd-m68k-sagagfx_MC_DTARGETS) : $(hidd-m68k-sagagfx_MC_TGTWILDCARD).d : $(hidd-m68k-sagagfx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(hidd-m68k-sagagfx_DFLAGS) $(hidd-m68k-sagagfx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(hidd-m68k-sagagfx_OBJDIR)/linklib,)
+hidd-m68k-sagagfx_MC_SRCWILDCARD := %
+else
+hidd-m68k-sagagfx_MC_SRCWILDCARD := $(hidd-m68k-sagagfx_OBJDIR)/linklib/%
+endif
+
+ifeq ($(hidd-m68k-sagagfx_OBJDIR)/linklib,)
+hidd-m68k-sagagfx_MC_TARGETS := $(addsuffix .o,$(hidd-m68k-sagagfx_LINKLIBCCGENFILES))
+hidd-m68k-sagagfx_MC_DTARGETS := $(addsuffix .d,$(hidd-m68k-sagagfx_LINKLIBCCGENFILES))
+hidd-m68k-sagagfx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    hidd-m68k-sagagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$(notdir $(hidd-m68k-sagagfx_LINKLIBCCGENFILES))))
+    hidd-m68k-sagagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$(notdir $(hidd-m68k-sagagfx_LINKLIBCCGENFILES))))
+else
+ifeq ($(hidd-m68k-sagagfx_OBJDIR)/linklib,)
+    hidd-m68k-sagagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$(hidd-m68k-sagagfx_LINKLIBCCGENFILES)))
+    hidd-m68k-sagagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$(hidd-m68k-sagagfx_LINKLIBCCGENFILES)))
+else
+    hidd-m68k-sagagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$(patsubst $(hidd-m68k-sagagfx_OBJDIR)/linklib/%,%,$(hidd-m68k-sagagfx_LINKLIBCCGENFILES))))
+    hidd-m68k-sagagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$(patsubst $(hidd-m68k-sagagfx_OBJDIR)/linklib/%,%,$(hidd-m68k-sagagfx_LINKLIBCCGENFILES))))
+endif
+endif
+hidd-m68k-sagagfx_MC_TGTWILDCARD := $(hidd-m68k-sagagfx_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : | $(addsuffix .c,$(hidd-m68k-sagagfx_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+hidd-m68k-sagagfx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+hidd-m68k-sagagfx_MC_BASEDIRS := $(shell echo $(sort $(dir $(hidd-m68k-sagagfx_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+hidd-m68k-sagagfx_MC_DIRS := $(foreach dir, $(hidd-m68k-sagagfx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(hidd-m68k-sagagfx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(hidd-m68k-sagagfx_MC_DIRS),)
+    hidd-m68k-sagagfx_MC_DIRS := $(shell echo $(hidd-m68k-sagagfx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(hidd-m68k-sagagfx_MC_DIRS)
+endif
+
+endif
+
+hidd-m68k-sagagfx_MC_CPPFLAGS := $(hidd-m68k-sagagfx_LINKLIBCPPFLAGS) -D__AROS__
+hidd-m68k-sagagfx_CFLAGS := $(hidd-m68k-sagagfx_LINKLIBCFLAGS)
+ifeq ($(hidd-m68k-sagagfx_LINKLIBDFLAGS),)
+  hidd-m68k-sagagfx_DFLAGS := $(hidd-m68k-sagagfx_LINKLIBCFLAGS)
+else
+  hidd-m68k-sagagfx_DFLAGS := $(hidd-m68k-sagagfx_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+hidd-m68k-sagagfx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+hidd-m68k-sagagfx_STRIP ?= $(TARGET_STRIP)
+hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_MC_CPPFLAGS:=$(strip $(hidd-m68k-sagagfx_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_EXTRA_CPPFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_CFLAGS:=$(strip $(hidd-m68k-sagagfx_CFLAGS) $(SAFETY_CFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_DFLAGS:=$(hidd-m68k-sagagfx_DFLAGS)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+hidd-m68k-sagagfx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+hidd-m68k-sagagfx_STRIP ?= $(HOST_STRIP)
+hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_EXTRA_CPPFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_CFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-m68k-sagagfx_CFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_DFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-m68k-sagagfx_DFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE:=$(HOST_IQUOTE)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+hidd-m68k-sagagfx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+hidd-m68k-sagagfx_STRIP ?= $(ECHO) >/dev/null
+hidd-m68k-sagagfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_CPPFLAGS) $(hidd-m68k-sagagfx_MC_EXTRA_CPPFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-m68k-sagagfx_CFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-m68k-sagagfx_DFLAGS))
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE:=$(KERNEL_IQUOTE)
+$(hidd-m68k-sagagfx_MC_TARGETS) $(hidd-m68k-sagagfx_MC_DTARGETS) : hidd-m68k-sagagfx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(hidd-m68k-sagagfx_MC_TARGETS) : CPPFLAGS := $(hidd-m68k-sagagfx_MC_CPPFLAGS)
+$(hidd-m68k-sagagfx_MC_TARGETS) : CFLAGS := $(hidd-m68k-sagagfx_CFLAGS)
+$(hidd-m68k-sagagfx_MC_TARGETS) : $(hidd-m68k-sagagfx_MC_TGTWILDCARD).o : $(hidd-m68k-sagagfx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(hidd-m68k-sagagfx_IQUOTE) $(dir $<) $(hidd-m68k-sagagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_IQUOTE) . $(hidd-m68k-sagagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(hidd-m68k-sagagfx_IQUOTE) $(dir $<) $(hidd-m68k-sagagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_IQUOTE) . $(hidd-m68k-sagagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(hidd-m68k-sagagfx_IQUOTE) $(dir $<) $(hidd-m68k-sagagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-m68k-sagagfx_IQUOTE) . $(hidd-m68k-sagagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(hidd-m68k-sagagfx_MC_DTARGETS) : $(hidd-m68k-sagagfx_MC_TGTWILDCARD).d : $(hidd-m68k-sagagfx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(hidd-m68k-sagagfx_DFLAGS) $(hidd-m68k-sagagfx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(hidd-m68k-sagagfx_LINKLIBAFILES),)
+
+ifeq ($(hidd-m68k-sagagfx_OBJDIR)/linklib,)
+hidd-m68k-sagagfx-MA_TARGETS := $(addsuffix .o,$(hidd-m68k-sagagfx_LINKLIBAFILES) $(hidd-m68k-sagagfx_RELLINKLIBAFILES))
+hidd-m68k-sagagfx-MA_WILDCARD := %
+else
+hidd-m68k-sagagfx-MA_TARGETS := $(addsuffix .o,$(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$(notdir $(hidd-m68k-sagagfx_LINKLIBAFILES) $(hidd-m68k-sagagfx_RELLINKLIBAFILES))))
+hidd-m68k-sagagfx-MA_WILDCARD := $(hidd-m68k-sagagfx_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(hidd-m68k-sagagfx-MA_TARGETS) : | $(addsuffix .S,$(hidd-m68k-sagagfx_LINKLIBAFILES) $(hidd-m68k-sagagfx_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+hidd-m68k-sagagfx-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+hidd-m68k-sagagfx-MA_BASEDIRS := $(shell echo $(sort $(dir $(hidd-m68k-sagagfx_LINKLIBAFILES) $(hidd-m68k-sagagfx_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+hidd-m68k-sagagfx-MA_DIRS := $(foreach dir, $(hidd-m68k-sagagfx-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(hidd-m68k-sagagfx-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(hidd-m68k-sagagfx-MA_DIRS),)
+    hidd-m68k-sagagfx-MA_DIRS := $(shell echo $(hidd-m68k-sagagfx-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(hidd-m68k-sagagfx-MA_DIRS)
+endif
+
+endif
+
+hidd-m68k-sagagfx-MA_ASSEMBLER ?= $(hidd-m68k-sagagfx_ASSEMBLER)
+
+$(hidd-m68k-sagagfx-MA_TARGETS) : hidd-m68k-sagagfx-MA_CMD:= $(hidd-m68k-sagagfx-MA_ASSEMBLER)
+
+$(hidd-m68k-sagagfx-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(hidd-m68k-sagagfx-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(hidd-m68k-sagagfx-MA_TARGETS) : $(hidd-m68k-sagagfx-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(hidd-m68k-sagagfx-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(hidd-m68k-sagagfx-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(hidd-m68k-sagagfx-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+hidd-m68k-sagagfx_SUFFIX           := hidd
+else
+hidd-m68k-sagagfx_SUFFIX           := 
+endif
+
+ifeq (target,target)
+hidd-m68k-sagagfx_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+hidd-m68k-sagagfx_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+hidd-m68k-sagagfx_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(hidd-m68k-sagagfx_SUFFIX),handler)
+hidd-m68k-sagagfx_MODULE           := $(AROSDIR)/$(hidd-m68k-sagagfx_MODDIR)/$(hidd-m68k-sagagfx_DEFNAME)-$(hidd-m68k-sagagfx_SUFFIX)
+else
+hidd-m68k-sagagfx_MODULE           := $(AROSDIR)/$(hidd-m68k-sagagfx_MODDIR)/$(hidd-m68k-sagagfx_DEFNAME).$(hidd-m68k-sagagfx_SUFFIX)
+endif
+hidd-m68k-sagagfx_KOBJ             := $(KOBJSDIR)/$(hidd-m68k-sagagfx_DEFNAME)_$(hidd-m68k-sagagfx_SUFFIX).o
+else
+hidd-m68k-sagagfx_MODULE           :=
+hidd-m68k-sagagfx_KOBJ             :=
+endif
+
+hidd-m68k-sagagfx-quick      : hidd-m68k-sagagfx
+hidd-m68k-sagagfx            : $(hidd-m68k-sagagfx_MODULE) $(hidd-m68k-sagagfx_LINKLIB) $(hidd-m68k-sagagfx_RELLINKLIB)
+ifeq (M,M)
+hidd-m68k-sagagfx-kobj       : $(hidd-m68k-sagagfx_KOBJ) $(hidd-m68k-sagagfx_LINKLIB) $(hidd-m68k-sagagfx_RELLINKLIB)
+hidd-m68k-sagagfx-kobj-quick : $(hidd-m68k-sagagfx_KOBJ) $(hidd-m68k-sagagfx_LINKLIB) $(hidd-m68k-sagagfx_RELLINKLIB)
+endif
+ifeq (M,M)
+hidd-m68k-sagagfx-linklib    : $(hidd-m68k-sagagfx_LINKLIB) $(hidd-m68k-sagagfx_RELLINKLIB)
+endif
+
+hidd-m68k-sagagfx_OBJS := $(addsuffix .o,$(hidd-m68k-sagagfx_STARTFILES)) $(hidd-m68k-sagagfx_ARCHOBJS) \
+           $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(notdir $(hidd-m68k-sagagfx_C_NARCHFILES:=.o) $(hidd-m68k-sagagfx_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (hidd,handler)
+hidd-m68k-sagagfx_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (sagagfx,con)
+    hidd-m68k-sagagfx_ERR          := $(notdir $(hidd-m68k-sagagfx_MODULE)).err
+else
+    hidd-m68k-sagagfx_ERR          := sagagfx.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(hidd-m68k-sagagfx_DEFNAME)_LDFLAGS) $(hidd-m68k-sagagfx_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(hidd-m68k-sagagfx_LIBS) $($(hidd-m68k-sagagfx_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(hidd-m68k-sagagfx_MODULE) : LIB_NAMES := $(hidd-m68k-sagagfx_LIBS) $($(hidd-m68k-sagagfx_DEFNAME)_LIBS)
+$(hidd-m68k-sagagfx_MODULE) : OBJS := $(hidd-m68k-sagagfx_STARTOBJS) $(hidd-m68k-sagagfx_OBJS) $(USER_OBJS)
+$(hidd-m68k-sagagfx_MODULE) : ENDTAG := $(hidd-m68k-sagagfx_ENDOBJS)
+$(hidd-m68k-sagagfx_MODULE) : ERR := $(hidd-m68k-sagagfx_ERR)
+$(hidd-m68k-sagagfx_MODULE) : OBJDIR := $(hidd-m68k-sagagfx_OBJDIR)
+$(hidd-m68k-sagagfx_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(hidd-m68k-sagagfx_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(hidd-m68k-sagagfx_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(hidd-m68k-sagagfx_MODULE) : $(hidd-m68k-sagagfx_STARTOBJS) $(hidd-m68k-sagagfx_OBJS) $(USER_OBJS) $(hidd-m68k-sagagfx_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(hidd-m68k-sagagfx_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(hidd-m68k-sagagfx_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+hidd-m68k-sagagfx_LC_LINKLIBNAME   := $(shell echo $(hidd-m68k-sagagfx_LINKLIBNAME) | tr A-Z a-z)
+hidd-m68k-sagagfx_LC_MODNAME       := $(shell echo sagagfx | tr A-Z a-z)
+ifneq ($(hidd-m68k-sagagfx_LINKLIB),)
+
+ifeq (target,target)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_LINKLIBNAME)$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_AR:=$(AR)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_LINKLIBNAME)$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_LINKLIBNAME)$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_AR:=$(HOST_AR)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_LINKLIBNAME)$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_LINKLIBNAME)$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_AR:=$(KERNEL_AR)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_LINKLIBNAME)$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_LINKLIBNAME)$(hidd-m68k-sagagfx_LIBSUFFIX).a : $(hidd-m68k-sagagfx_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(hidd-m68k-sagagfx_AR) $@ $^
+	$(Q)$(hidd-m68k-sagagfx_RANLIB) $@
+ifneq ($(hidd-m68k-sagagfx_LC_MODNAME),$(hidd-m68k-sagagfx_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(hidd-m68k-sagagfx_LIBDIR)/libsagagfx$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_AR:=$(AR)
+$(hidd-m68k-sagagfx_LIBDIR)/libsagagfx$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(hidd-m68k-sagagfx_LIBDIR)/libsagagfx$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_AR:=$(HOST_AR)
+$(hidd-m68k-sagagfx_LIBDIR)/libsagagfx$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(hidd-m68k-sagagfx_LIBDIR)/libsagagfx$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_AR:=$(KERNEL_AR)
+$(hidd-m68k-sagagfx_LIBDIR)/libsagagfx$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(hidd-m68k-sagagfx_LIBDIR)/libsagagfx$(hidd-m68k-sagagfx_LIBSUFFIX).a : $(hidd-m68k-sagagfx_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(hidd-m68k-sagagfx_AR) $@ $^
+	$(Q)$(hidd-m68k-sagagfx_RANLIB) $@
+endif
+
+
+ifneq ($(hidd-m68k-sagagfx_LINKLIB),)
+$(hidd-m68k-sagagfx_LINKLIB) : | $(hidd-m68k-sagagfx_LIBDIR)
+else
+$(hidd-m68k-sagagfx_LINKLIB) :: $(hidd-m68k-sagagfx_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(hidd-m68k-sagagfx_LIBDIR)
+
+endif
+
+ifneq ($(hidd-m68k-sagagfx_RELLINKLIB),)
+
+ifeq (target,target)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_LINKLIBNAME)_rel$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_AR:=$(AR)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_LINKLIBNAME)_rel$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_LINKLIBNAME)_rel$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_AR:=$(HOST_AR)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_LINKLIBNAME)_rel$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_LINKLIBNAME)_rel$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_AR:=$(KERNEL_AR)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_LINKLIBNAME)_rel$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_LINKLIBNAME)_rel$(hidd-m68k-sagagfx_LIBSUFFIX).a : $(hidd-m68k-sagagfx_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(hidd-m68k-sagagfx_AR) $@ $^
+	$(Q)$(hidd-m68k-sagagfx_RANLIB) $@
+ifneq ($(hidd-m68k-sagagfx_LC_MODNAME),$(hidd-m68k-sagagfx_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_DEFNAME)_rel$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_AR:=$(AR)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_DEFNAME)_rel$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_DEFNAME)_rel$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_AR:=$(HOST_AR)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_DEFNAME)_rel$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_DEFNAME)_rel$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_AR:=$(KERNEL_AR)
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_DEFNAME)_rel$(hidd-m68k-sagagfx_LIBSUFFIX).a : hidd-m68k-sagagfx_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(hidd-m68k-sagagfx_LIBDIR)/lib$(hidd-m68k-sagagfx_DEFNAME)_rel$(hidd-m68k-sagagfx_LIBSUFFIX).a : $(hidd-m68k-sagagfx_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(hidd-m68k-sagagfx_AR) $@ $^
+	$(Q)$(hidd-m68k-sagagfx_RANLIB) $@
+endif
+
+
+ifneq ($(hidd-m68k-sagagfx_RELLINKLIB),)
+$(hidd-m68k-sagagfx_RELLINKLIB) : | $(hidd-m68k-sagagfx_LIBDIR)
+else
+$(hidd-m68k-sagagfx_RELLINKLIB) :: $(hidd-m68k-sagagfx_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(hidd-m68k-sagagfx_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+hidd-m68k-sagagfx_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+hidd-m68k-sagagfx_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+hidd-m68k-sagagfx_SYMBOLS := $(hidd-m68k-sagagfx_KBASE)
+
+hidd-m68k-sagagfx_KLIB             := hiddstubs amiga arossupport autoinit libinit
+hidd-m68k-sagagfx_KOBJ_LIBS        := $(filter-out $(hidd-m68k-sagagfx_KLIB),$(hidd-m68k-sagagfx_LIBS)) $(hidd-m68k-sagagfx_KAUTOLIB)
+$(hidd-m68k-sagagfx_KOBJ) : LINKLIBS:=$(hidd-m68k-sagagfx_KOBJ_LIBS) $($(hidd-m68k-sagagfx_DEFNAME)_LIBS)
+$(hidd-m68k-sagagfx_KOBJ) : FILTBASES:=$(addprefix -L ,$(hidd-m68k-sagagfx_SYMBOLS))
+$(hidd-m68k-sagagfx_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(hidd-m68k-sagagfx_KOBJ) : $(hidd-m68k-sagagfx_OBJS) $(USER_OBJS) $(hidd-m68k-sagagfx_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+hidd-m68k-sagagfx_DEPS             := $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/,$(notdir $(hidd-m68k-sagagfx_CCFILES:=.d) $(hidd-m68k-sagagfx_TARGETCCFILES:=.d) $(hidd-m68k-sagagfx_CXXFILES:=.d))) $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/linklib/,$(notdir $(hidd-m68k-sagagfx_LINKLIBCCFILES:=.d)))
+
+ifneq ($(hidd-m68k-sagagfx_DEPS),)
+  ifneq (hidd-m68k-sagagfx hidd-m68k-sagagfx-quick hidd-m68k-sagagfx-kobj hidd-m68k-sagagfx-kobj-quick,)
+    ifneq ($(findstring $(TARGET),hidd-m68k-sagagfx hidd-m68k-sagagfx-quick hidd-m68k-sagagfx-kobj hidd-m68k-sagagfx-kobj-quick),)
+      -include $(hidd-m68k-sagagfx_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(hidd-m68k-sagagfx_DEPS)
+    endif
+  endif
+endif
+
+$(hidd-m68k-sagagfx_OBJS) $(hidd-m68k-sagagfx_DEPS) : | $(hidd-m68k-sagagfx_OBJDIR)/linklib
+
+ifneq ($(hidd-m68k-sagagfx_OBJS) $(hidd-m68k-sagagfx_DEPS) $(hidd-m68k-sagagfx_MODULE) $(hidd-m68k-sagagfx_KOBJ),)
+$(hidd-m68k-sagagfx_OBJS) $(hidd-m68k-sagagfx_DEPS) $(hidd-m68k-sagagfx_MODULE) $(hidd-m68k-sagagfx_KOBJ) : | $(hidd-m68k-sagagfx_OBJDIR) $(AROSDIR)/$(hidd-m68k-sagagfx_MODDIR) $(KOBJSDIR)
+else
+$(hidd-m68k-sagagfx_OBJS) $(hidd-m68k-sagagfx_DEPS) $(hidd-m68k-sagagfx_MODULE) $(hidd-m68k-sagagfx_KOBJ) :: $(hidd-m68k-sagagfx_OBJDIR) $(AROSDIR)/$(hidd-m68k-sagagfx_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(hidd-m68k-sagagfx_OBJDIR) $(AROSDIR)/$(hidd-m68k-sagagfx_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),hidd-m68k-sagagfx hidd-m68k-sagagfx-includes hidd-m68k-sagagfx-quick hidd-m68k-sagagfx-kobj hidd-m68k-sagagfx-kobj-quick),) # Only for this target these deps are wanted
+
+hidd-m68k-sagagfx_DFILE_DEPS := $(hidd-m68k-sagagfx_LIBDEFSINC) $(hidd-m68k-sagagfx_DEFLIBDEFSINC) \
+    $(addprefix $(hidd-m68k-sagagfx_INCDIR)/,$($(hidd-m68k-sagagfx_DEFNAME)_INCLUDES))
+$(hidd-m68k-sagagfx_DEPS) : $(hidd-m68k-sagagfx_DFILE_DEPS)
+endif
+
+hidd-m68k-sagagfx_TOCLEAN := $(hidd-m68k-sagagfx_OBJS) $(hidd-m68k-sagagfx_DEPS) \
+    $(hidd-m68k-sagagfx_MODULE) $(hidd-m68k-sagagfx_LINKLIB) $(hidd-m68k-sagagfx_KOBJ) \
+    $(hidd-m68k-sagagfx_OBJDIR)/Makefile.sagagfxhidd \
+    $(addprefix $(hidd-m68k-sagagfx_OBJDIR)/include/,$($(hidd-m68k-sagagfx_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(hidd-m68k-sagagfx_DEFNAME)_INCLUDES)) \
+    $(addprefix $(hidd-m68k-sagagfx_INCDIR)/,$($(hidd-m68k-sagagfx_DEFNAME)_INCLUDES)) \
+    $(hidd-m68k-sagagfx_OBJDIR)/sagagfx_geninc $(hidd-m68k-sagagfx_OBJDIR)/sagagfx_incs \
+    $(addsuffix .c,$(hidd-m68k-sagagfx_LINKLIBFILES)) $(hidd-m68k-sagagfx_LINKLIBOBJS) $(hidd-m68k-sagagfx_LIBDEFSINC) \
+    $(hidd-m68k-sagagfx_DEFLIBDEFSINC) $(addsuffix .c,$(hidd-m68k-sagagfx_STARTFILES) $(hidd-m68k-sagagfx_ENDFILES)) \
+    $(hidd-m68k-sagagfx_ENDOBJS)
+hidd-m68k-sagagfx-clean : FILES              := $(hidd-m68k-sagagfx_TOCLEAN)
+hidd-m68k-sagagfx-clean ::
+	$(Q)$(ECHO) "Cleaning up for module sagagfx"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(hidd-m68k-sagagfx_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

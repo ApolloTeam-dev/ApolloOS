@@ -1,0 +1,294 @@
+# Copyright © 2016, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES           := availfonts fontinfo opendiskfont
+EXEDIR          := $(AROS_TESTS)/diskfont
+
+#MM- test : test-diskfont
+#MM- test-quick : test-diskfont-quick
+
+
+.PHONY : test-diskfont
+
+test-diskfont_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-diskfont_TARGETDIR := $(EXEDIR)
+test-diskfont_LIBS := 
+
+test-diskfont_FILES     := $(FILES)
+test-diskfont_OBJS      := $(addsuffix .o,$(addprefix $(test-diskfont_OBJDIR)/,$(test-diskfont_FILES)))
+test-diskfont_DEPS      := $(addsuffix .d,$(addprefix $(test-diskfont_OBJDIR)/,$(test-diskfont_FILES)))
+test-diskfont_EXES      := $(addprefix $(test-diskfont_TARGETDIR)/,$(test-diskfont_FILES))
+
+test-diskfont_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-diskfont_CPPFLAGS += -I
+endif
+test-diskfont_CFLAGS    := $(CFLAGS)
+test-diskfont_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-diskfont_COVERAGE := yes
+test-diskfont_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-diskfont_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-diskfont_CFLAGS    := $(strip $(test-diskfont_COVERAGEFLAGS) $(test-diskfont_CFLAGS))
+test-diskfont_LIBS += $(test-diskfont_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-diskfont_FUNCINSTR := yes
+test-diskfont_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-diskfont_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-diskfont_CFLAGS    := $(strip $(test-diskfont_INSTRFUNCFLAGS) $(test-diskfont_CFLAGS))
+test-diskfont_LIBS += $(test-diskfont_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-diskfont_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-diskfont_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-diskfont_DFLAGS := 
+else
+    test-diskfont_DFLAGS := $(test-diskfont_CFLAGS)
+endif
+ifeq (target,target)
+test-diskfont_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-diskfont_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-diskfont_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-diskfont_LDFLAGS += -L
+endif
+
+#MM
+test-diskfont-quick : test-diskfont
+
+#MM test-diskfont : includes-generate-deps core-linklibs
+test-diskfont : $(test-diskfont_EXES)
+
+ifneq ($(filter $(TARGET),test-diskfont test-diskfont-quick),)
+
+ifeq (,)
+test-diskfont_MC_SRCWILDCARD := %
+else
+test-diskfont_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-diskfont_OBJDIR),)
+test-diskfont_MC_TARGETS := $(addsuffix .o,$(test-diskfont_FILES))
+test-diskfont_MC_DTARGETS := $(addsuffix .d,$(test-diskfont_FILES))
+test-diskfont_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-diskfont_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-diskfont_OBJDIR)/,$(notdir $(test-diskfont_FILES))))
+    test-diskfont_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-diskfont_OBJDIR)/,$(notdir $(test-diskfont_FILES))))
+else
+ifeq (,)
+    test-diskfont_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-diskfont_OBJDIR)/,$(test-diskfont_FILES)))
+    test-diskfont_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-diskfont_OBJDIR)/,$(test-diskfont_FILES)))
+else
+    test-diskfont_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-diskfont_OBJDIR)/,$(patsubst /%,%,$(test-diskfont_FILES))))
+    test-diskfont_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-diskfont_OBJDIR)/,$(patsubst /%,%,$(test-diskfont_FILES))))
+endif
+endif
+test-diskfont_MC_TGTWILDCARD := $(test-diskfont_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : | $(addsuffix .c,$(test-diskfont_FILES))
+
+# Be sure that all .c files are found
+test-diskfont_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-diskfont_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-diskfont_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-diskfont_MC_DIRS := $(foreach dir, $(test-diskfont_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-diskfont_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-diskfont_MC_DIRS),)
+    test-diskfont_MC_DIRS := $(shell echo $(test-diskfont_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-diskfont_MC_DIRS)
+endif
+
+endif
+
+test-diskfont_MC_CPPFLAGS := $(test-diskfont_CPPFLAGS)
+test-diskfont_CFLAGS := $(test-diskfont_CFLAGS)
+ifeq ($(test-diskfont_DFLAGS),)
+  test-diskfont_DFLAGS := $(test-diskfont_CFLAGS)
+else
+  test-diskfont_DFLAGS := $(test-diskfont_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-diskfont_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-diskfont_STRIP ?= $(TARGET_STRIP)
+test-diskfont_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : test-diskfont_MC_CPPFLAGS:=$(strip $(test-diskfont_MC_CPPFLAGS) $(test-diskfont_MC_EXTRA_CPPFLAGS))
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : test-diskfont_CFLAGS:=$(strip $(test-diskfont_CFLAGS) $(SAFETY_CFLAGS))
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : test-diskfont_DFLAGS:=$(test-diskfont_DFLAGS)
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : test-diskfont_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : test-diskfont_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-diskfont_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-diskfont_STRIP ?= $(HOST_STRIP)
+test-diskfont_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : test-diskfont_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-diskfont_MC_CPPFLAGS) $(test-diskfont_MC_EXTRA_CPPFLAGS))
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : test-diskfont_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-diskfont_CFLAGS))
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : test-diskfont_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-diskfont_DFLAGS))
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : test-diskfont_IQUOTE:=$(HOST_IQUOTE)
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : test-diskfont_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-diskfont_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-diskfont_STRIP ?= $(ECHO) >/dev/null
+test-diskfont_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : test-diskfont_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-diskfont_MC_CPPFLAGS) $(test-diskfont_MC_EXTRA_CPPFLAGS))
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : test-diskfont_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-diskfont_CFLAGS))
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : test-diskfont_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-diskfont_DFLAGS))
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : test-diskfont_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-diskfont_MC_TARGETS) $(test-diskfont_MC_DTARGETS) : test-diskfont_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-diskfont_MC_TARGETS) : CPPFLAGS := $(test-diskfont_MC_CPPFLAGS)
+$(test-diskfont_MC_TARGETS) : CFLAGS := $(test-diskfont_CFLAGS)
+$(test-diskfont_MC_TARGETS) : $(test-diskfont_MC_TGTWILDCARD).o : $(test-diskfont_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-diskfont_IQUOTE) $(dir $<) $(test-diskfont_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-diskfont_IQUOTE) . $(test-diskfont_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-diskfont_IQUOTE) $(dir $<) $(test-diskfont_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-diskfont_IQUOTE) . $(test-diskfont_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-diskfont_IQUOTE) $(dir $<) $(test-diskfont_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-diskfont_IQUOTE) . $(test-diskfont_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-diskfont_MC_DTARGETS) : $(test-diskfont_MC_TGTWILDCARD).d : $(test-diskfont_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-diskfont_DFLAGS) $(test-diskfont_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-diskfont-link_EXTRA_LDFLAGS := 
+test-diskfont-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-diskfont-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-diskfont-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-diskfont-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-diskfont-link_DIRS := $(subst -L ,-L,$(strip $(test-diskfont_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-diskfont-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-diskfont-link_DIRS)))
+# Add trailing /
+test-diskfont-link_DIRS := $(subst //,/,$(addsuffix /,$(test-diskfont-link_DIRS)))
+# Add normal linklib path
+test-diskfont-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-diskfont-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-diskfont_LIBS) $(test-diskfont-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-diskfont-link_DEPLIBS := $(foreach lib,$(test-diskfont-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-diskfont-link_DIRS)))) \
+)
+test-diskfont-link_PROGS := $(addprefix $(test-diskfont_TARGETDIR)/,$(test-diskfont_FILES))
+
+$(test-diskfont-link_PROGS) : OBJDIR := $(test-diskfont_OBJDIR)
+$(test-diskfont-link_PROGS) : LDFLAGS := $(strip $(test-diskfont_LDFLAGS) $(test-diskfont-link_EXTRA_LDFLAGS))
+$(test-diskfont-link_PROGS) : LIBS := $(addprefix -l,$(test-diskfont_LIBS) $(test-diskfont-link_EXTRA_LIBS) )
+$(test-diskfont-link_PROGS) : $(test-diskfont_TARGETDIR)/% : $(test-diskfont_OBJDIR)/%.o $(test-diskfont-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-diskfont_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-diskfont_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-diskfont_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-diskfont_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-diskfont_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-diskfont_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-diskfont_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-diskfont_DEPS),)
+  ifneq (test-diskfont test-diskfont-quick,)
+    ifneq ($(findstring $(TARGET),test-diskfont test-diskfont-quick),)
+      -include $(test-diskfont_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-diskfont_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-diskfont_DEPS) $(test-diskfont_OBJS) $(addprefix $(test-diskfont_TARGETDIR)/,$(test-diskfont_FILES)),)
+$(test-diskfont_DEPS) $(test-diskfont_OBJS) $(addprefix $(test-diskfont_TARGETDIR)/,$(test-diskfont_FILES)) : | $(test-diskfont_TARGETDIR) $(test-diskfont_OBJDIR)
+else
+$(test-diskfont_DEPS) $(test-diskfont_OBJS) $(addprefix $(test-diskfont_TARGETDIR)/,$(test-diskfont_FILES)) :: $(test-diskfont_TARGETDIR) $(test-diskfont_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-diskfont_TARGETDIR) $(test-diskfont_OBJDIR)
+
+
+test-diskfont-clean : FILES := $(test-diskfont_OBJS) $(test-diskfont_EXES) $(test-diskfont_DEPS)
+#MM
+test-diskfont-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-diskfont"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

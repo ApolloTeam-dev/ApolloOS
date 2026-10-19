@@ -1,0 +1,300 @@
+#   $Id$
+#
+#   Makefile for AROS C Standard Library Tests
+
+include $(SRCDIR)/config/aros.cfg
+
+CRTTESTFILES := \
+        all-tests \
+
+EXEDIR := $(AROS_TESTS)/crt
+
+#MM test-crt : test-crt-$(AROS_TARGET_CPU)
+#MM- test-crt-quick : test-crt-$(AROS_TARGET_CPU)-quick
+
+#MM test-crt : includes includes-copy linklibs kernel
+
+USER_CFLAGS = -ffloat-store
+
+.PHONY : test-crt
+
+test-crt_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-crt_TARGETDIR := $(EXEDIR)
+test-crt_LIBS := 
+
+test-crt_FILES     := $(CRTTESTFILES)
+test-crt_OBJS      := $(addsuffix .o,$(addprefix $(test-crt_OBJDIR)/,$(test-crt_FILES)))
+test-crt_DEPS      := $(addsuffix .d,$(addprefix $(test-crt_OBJDIR)/,$(test-crt_FILES)))
+test-crt_EXES      := $(addprefix $(test-crt_TARGETDIR)/,$(test-crt_FILES))
+
+test-crt_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-crt_CPPFLAGS += -I
+endif
+test-crt_CFLAGS    := $(CFLAGS)
+test-crt_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-crt_COVERAGE := yes
+test-crt_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-crt_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-crt_CFLAGS    := $(strip $(test-crt_COVERAGEFLAGS) $(test-crt_CFLAGS))
+test-crt_LIBS += $(test-crt_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-crt_FUNCINSTR := yes
+test-crt_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-crt_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-crt_CFLAGS    := $(strip $(test-crt_INSTRFUNCFLAGS) $(test-crt_CFLAGS))
+test-crt_LIBS += $(test-crt_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-crt_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-crt_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-crt_DFLAGS := 
+else
+    test-crt_DFLAGS := $(test-crt_CFLAGS)
+endif
+ifeq (target,target)
+test-crt_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-crt_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-crt_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-crt_LDFLAGS += -L
+endif
+
+#MM
+test-crt-quick : test-crt
+
+#MM test-crt : includes-generate-deps core-linklibs
+test-crt : $(test-crt_EXES)
+
+ifneq ($(filter $(TARGET),test-crt test-crt-quick),)
+
+ifeq (,)
+test-crt_MC_SRCWILDCARD := %
+else
+test-crt_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-crt_OBJDIR),)
+test-crt_MC_TARGETS := $(addsuffix .o,$(test-crt_FILES))
+test-crt_MC_DTARGETS := $(addsuffix .d,$(test-crt_FILES))
+test-crt_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-crt_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-crt_OBJDIR)/,$(notdir $(test-crt_FILES))))
+    test-crt_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-crt_OBJDIR)/,$(notdir $(test-crt_FILES))))
+else
+ifeq (,)
+    test-crt_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-crt_OBJDIR)/,$(test-crt_FILES)))
+    test-crt_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-crt_OBJDIR)/,$(test-crt_FILES)))
+else
+    test-crt_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-crt_OBJDIR)/,$(patsubst /%,%,$(test-crt_FILES))))
+    test-crt_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-crt_OBJDIR)/,$(patsubst /%,%,$(test-crt_FILES))))
+endif
+endif
+test-crt_MC_TGTWILDCARD := $(test-crt_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : | $(addsuffix .c,$(test-crt_FILES))
+
+# Be sure that all .c files are found
+test-crt_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-crt_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-crt_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-crt_MC_DIRS := $(foreach dir, $(test-crt_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-crt_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-crt_MC_DIRS),)
+    test-crt_MC_DIRS := $(shell echo $(test-crt_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-crt_MC_DIRS)
+endif
+
+endif
+
+test-crt_MC_CPPFLAGS := $(test-crt_CPPFLAGS)
+test-crt_CFLAGS := $(test-crt_CFLAGS)
+ifeq ($(test-crt_DFLAGS),)
+  test-crt_DFLAGS := $(test-crt_CFLAGS)
+else
+  test-crt_DFLAGS := $(test-crt_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-crt_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-crt_STRIP ?= $(TARGET_STRIP)
+test-crt_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : test-crt_MC_CPPFLAGS:=$(strip $(test-crt_MC_CPPFLAGS) $(test-crt_MC_EXTRA_CPPFLAGS))
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : test-crt_CFLAGS:=$(strip $(test-crt_CFLAGS) $(SAFETY_CFLAGS))
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : test-crt_DFLAGS:=$(test-crt_DFLAGS)
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : test-crt_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : test-crt_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-crt_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-crt_STRIP ?= $(HOST_STRIP)
+test-crt_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : test-crt_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-crt_MC_CPPFLAGS) $(test-crt_MC_EXTRA_CPPFLAGS))
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : test-crt_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-crt_CFLAGS))
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : test-crt_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-crt_DFLAGS))
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : test-crt_IQUOTE:=$(HOST_IQUOTE)
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : test-crt_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-crt_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-crt_STRIP ?= $(ECHO) >/dev/null
+test-crt_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : test-crt_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-crt_MC_CPPFLAGS) $(test-crt_MC_EXTRA_CPPFLAGS))
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : test-crt_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-crt_CFLAGS))
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : test-crt_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-crt_DFLAGS))
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : test-crt_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-crt_MC_TARGETS) $(test-crt_MC_DTARGETS) : test-crt_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-crt_MC_TARGETS) : CPPFLAGS := $(test-crt_MC_CPPFLAGS)
+$(test-crt_MC_TARGETS) : CFLAGS := $(test-crt_CFLAGS)
+$(test-crt_MC_TARGETS) : $(test-crt_MC_TGTWILDCARD).o : $(test-crt_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-crt_IQUOTE) $(dir $<) $(test-crt_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-crt_IQUOTE) . $(test-crt_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-crt_IQUOTE) $(dir $<) $(test-crt_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-crt_IQUOTE) . $(test-crt_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-crt_IQUOTE) $(dir $<) $(test-crt_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-crt_IQUOTE) . $(test-crt_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-crt_MC_DTARGETS) : $(test-crt_MC_TGTWILDCARD).d : $(test-crt_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-crt_DFLAGS) $(test-crt_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-crt-link_EXTRA_LDFLAGS := 
+test-crt-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-crt-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-crt-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-crt-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-crt-link_DIRS := $(subst -L ,-L,$(strip $(test-crt_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-crt-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-crt-link_DIRS)))
+# Add trailing /
+test-crt-link_DIRS := $(subst //,/,$(addsuffix /,$(test-crt-link_DIRS)))
+# Add normal linklib path
+test-crt-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-crt-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-crt_LIBS) $(test-crt-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-crt-link_DEPLIBS := $(foreach lib,$(test-crt-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-crt-link_DIRS)))) \
+)
+test-crt-link_PROGS := $(addprefix $(test-crt_TARGETDIR)/,$(test-crt_FILES))
+
+$(test-crt-link_PROGS) : OBJDIR := $(test-crt_OBJDIR)
+$(test-crt-link_PROGS) : LDFLAGS := $(strip $(test-crt_LDFLAGS) $(test-crt-link_EXTRA_LDFLAGS))
+$(test-crt-link_PROGS) : LIBS := $(addprefix -l,$(test-crt_LIBS) $(test-crt-link_EXTRA_LIBS) )
+$(test-crt-link_PROGS) : $(test-crt_TARGETDIR)/% : $(test-crt_OBJDIR)/%.o $(test-crt-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-crt_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-crt_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-crt_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-crt_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-crt_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-crt_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-crt_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-crt_DEPS),)
+  ifneq (test-crt test-crt-quick,)
+    ifneq ($(findstring $(TARGET),test-crt test-crt-quick),)
+      -include $(test-crt_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-crt_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-crt_DEPS) $(test-crt_OBJS) $(addprefix $(test-crt_TARGETDIR)/,$(test-crt_FILES)),)
+$(test-crt_DEPS) $(test-crt_OBJS) $(addprefix $(test-crt_TARGETDIR)/,$(test-crt_FILES)) : | $(test-crt_TARGETDIR) $(test-crt_OBJDIR)
+else
+$(test-crt_DEPS) $(test-crt_OBJS) $(addprefix $(test-crt_TARGETDIR)/,$(test-crt_FILES)) :: $(test-crt_TARGETDIR) $(test-crt_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-crt_TARGETDIR) $(test-crt_OBJDIR)
+
+
+test-crt-clean : FILES := $(test-crt_OBJS) $(test-crt_EXES) $(test-crt_DEPS)
+#MM
+test-crt-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-crt"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

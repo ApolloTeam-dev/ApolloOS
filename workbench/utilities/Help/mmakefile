@@ -1,0 +1,635 @@
+# Copyright © 2013, The AROS Development Team. All rights reserved.
+# $Id$
+#
+# Makefile to make Help.
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := main
+
+EXEDIR := $(AROSDIR)/Utilities
+
+#MM- workbench-utilities : workbench-utilities-help
+#MM workbench-utilities-help : includes linklibs
+
+
+.PHONY : workbench-utilities-help
+
+workbench-utilities-help_PROGNAME  := Help
+workbench-utilities-help_OBJDIR    := $(GENDIR)/$(CURDIR)
+workbench-utilities-help_TARGETDIR := $(EXEDIR)
+workbench-utilities-help_LINKER    := 
+workbench-utilities-help_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(workbench-utilities-help_LINKER),)
+    workbench-utilities-help_LINKER := target
+endif
+
+ifneq ("$(strip $(FILES)   )","")
+    workbench-utilities-help_FILES     := $(FILES)
+    workbench-utilities-help_OBJCFILES := 
+    workbench-utilities-help_ASMFILES  := 
+    workbench-utilities-help_CXXFILES := 
+else
+    workbench-utilities-help_FILES     := $(workbench-utilities-help_PROGNAME)
+    workbench-utilities-help_OBJCFILES :=
+    workbench-utilities-help_ASMFILES  :=
+    workbench-utilities-help_CXXFILES :=
+endif
+
+workbench-utilities-help_ARCHOBJS   := $(wildcard $(workbench-utilities-help_OBJDIR)/arch/*.o)
+workbench-utilities-help_ARCHFILES  := $(basename $(notdir $(workbench-utilities-help_ARCHOBJS)))
+workbench-utilities-help_C_NARCHFILES := $(filter-out $(workbench-utilities-help_ARCHFILES),$(workbench-utilities-help_FILES))
+workbench-utilities-help_CXX_NARCHFILES := $(filter-out $(workbench-utilities-help_ARCHFILES),$(workbench-utilities-help_CXXFILES))
+workbench-utilities-help_OBJC_NARCHFILES := $(filter-out $(workbench-utilities-help_ARCHFILES),$(workbench-utilities-help_OBJCFILES))
+
+TMP_FILES := $(workbench-utilities-help_C_NARCHFILES) $(workbench-utilities-help_CXX_NARCHFILES) $(workbench-utilities-help_ASMFILES) $(workbench-utilities-help_OBJC_NARCHFILES)
+workbench-utilities-help_OBJS := $(addsuffix .o,$(addprefix $(workbench-utilities-help_OBJDIR)/,$(notdir $(TMP_FILES))))
+workbench-utilities-help_DEPS := $(addsuffix .d,$(addprefix $(workbench-utilities-help_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+workbench-utilities-help_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+workbench-utilities-help_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-utilities-help_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+workbench-utilities-help_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+workbench-utilities-help_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+workbench-utilities-help_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-utilities-help_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+workbench-utilities-help_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+workbench-utilities-help_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+workbench-utilities-help_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-utilities-help_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+workbench-utilities-help_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+workbench-utilities-help_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+workbench-utilities-help_LDFLAGS          := 
+endif
+
+workbench-utilities-help_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+workbench-utilities-help_COVERAGE := yes
+workbench-utilities-help_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+workbench-utilities-help_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+workbench-utilities-help_CFLAGS    := $(strip $(workbench-utilities-help_COVERAGEFLAGS) $(workbench-utilities-help_CFLAGS))
+workbench-utilities-help_CXXFLAGS := $(strip $(workbench-utilities-help_COVERAGEFLAGS) $(workbench-utilities-help_CXXFLAGS))
+workbench-utilities-help_LIBS += $(workbench-utilities-help_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-utilities-help_FUNCINSTR := yes
+workbench-utilities-help_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+workbench-utilities-help_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-utilities-help_CFLAGS    := $(strip $(workbench-utilities-help_INSTRFUNCFLAGS) $(workbench-utilities-help_CFLAGS))
+workbench-utilities-help_CXXFLAGS := $(strip $(workbench-utilities-help_INSTRFUNCFLAGS) $(workbench-utilities-help_CXXFLAGS))
+workbench-utilities-help_LIBS += $(workbench-utilities-help_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+workbench-utilities-help_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(workbench-utilities-help_CFLAGS))
+workbench-utilities-help_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(workbench-utilities-help_CXXFLAGS))
+endif
+endif
+workbench-utilities-help_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    workbench-utilities-help_DFLAGS     := 
+else
+    workbench-utilities-help_DFLAGS     := $(workbench-utilities-help_CFLAGS)
+endif
+ifneq (,)
+    workbench-utilities-help_DXXFLAGS     := 
+else
+    workbench-utilities-help_DXXFLAGS     := $(workbench-utilities-help_CXXFLAGS)
+endif
+ifeq (target,target)
+workbench-utilities-help_LDFLAGS           := $(workbench-utilities-help_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-utilities-help_LDFLAGS           := $(workbench-utilities-help_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-utilities-help_LDFLAGS           := $(workbench-utilities-help_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+workbench-utilities-help_LDFLAGS   += -L
+endif
+
+#MM
+workbench-utilities-help-quick : workbench-utilities-help
+
+#MM workbench-utilities-help : includes-generate-deps core-linklibs
+workbench-utilities-help : $(workbench-utilities-help_TARGETDIR)/$(workbench-utilities-help_PROGNAME)
+
+ifneq ($(filter $(TARGET),workbench-utilities-help workbench-utilities-help-quick workbench-utilities-help-gz-quick),)
+
+workbench-utilities-help_CXXABSBASENAMES := $(foreach workbench-utilities-help_CXXBASE,$(workbench-utilities-help_CXX_NARCHFILES),$(if $(filter /%,$(workbench-utilities-help_CXXBASE)),$(workbench-utilities-help_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-utilities-help_CXXBASE))))
+
+ifneq ($(workbench-utilities-help_CXXABSBASENAMES),)
+
+workbench-utilities-help_CXXBASENAMES := $(basename $(workbench-utilities-help_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-utilities-help_MCXX_FILES  := $(strip $(foreach workbench-utilities-help_CXXBASE,$(workbench-utilities-help_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-utilities-help_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-utilities-help_EXT),$(workbench-utilities-help_CXXBASE)))))))
+
+ifeq (,)
+workbench-utilities-help_MCXX_SRCWILDCARD := %
+else
+workbench-utilities-help_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-utilities-help_OBJDIR),)
+  workbench-utilities-help_CXXTARGETS := $(notdir $(workbench-utilities-help_CXXBASENAMES:=.o))
+  workbench-utilities-help_CXXDTARGETS := $(notdir $(workbench-utilities-help_CXXBASENAMES:=.d))
+  workbench-utilities-help_MCXX_WILDCARD := %
+else
+  workbench-utilities-help_CXXTARGETS := $(addprefix $(workbench-utilities-help_OBJDIR)/,$(notdir $(workbench-utilities-help_CXXBASENAMES:=.o)))
+  workbench-utilities-help_CXXDTARGETS := $(addprefix $(workbench-utilities-help_OBJDIR)/,$(notdir $(workbench-utilities-help_CXXBASENAMES:=.d)))
+  workbench-utilities-help_MCXX_WILDCARD := $(workbench-utilities-help_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-utilities-help_CXXTARGETS) $(workbench-utilities-help_CXXDTARGETS) : | $(workbench-utilities-help_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-utilities-help_MCXX_CPPFLAGS := $(workbench-utilities-help_CPPFLAGS)
+workbench-utilities-help_CXXFLAGS := $(workbench-utilities-help_CXXFLAGS)
+ifeq ($(workbench-utilities-help_DXXFLAGS),)
+  workbench-utilities-help_DXXFLAGS := $(workbench-utilities-help_CXXFLAGS)
+else
+  workbench-utilities-help_DXXFLAGS := $(workbench-utilities-help_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-utilities-help_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-utilities-help_STRIP ?= $(HOST_STRIP)
+  workbench-utilities-help_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-utilities-help_CXXCMD:=$(HOST_CXX)
+  workbench-utilities-help_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-utilities-help_MCXX_CPPFLAGS) $(workbench-utilities-help_MCXX_EXTRA_CPPFLAGS))
+  workbench-utilities-help_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-utilities-help_CXXFLAGS))
+  workbench-utilities-help_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-utilities-help_DXXFLAGS))
+  workbench-utilities-help_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-utilities-help_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-utilities-help_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-utilities-help_STRIP ?= $(TARGET_STRIP)
+  workbench-utilities-help_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-utilities-help_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-utilities-help_MCXX_CPPFLAGS := $(strip $(workbench-utilities-help_MCXX_CPPFLAGS) $(workbench-utilities-help_MCXX_EXTRA_CPPFLAGS))
+  workbench-utilities-help_CXXFLAGS := $(strip $(workbench-utilities-help_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-utilities-help_DXXFLAGS := $(workbench-utilities-help_DXXFLAGS)
+  workbench-utilities-help_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-utilities-help_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-utilities-help_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-utilities-help_STRIP ?= $(ECHO) >/dev/null
+  workbench-utilities-help_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-utilities-help_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-utilities-help_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-utilities-help_MCXX_CPPFLAGS) $(workbench-utilities-help_MCXX_EXTRA_CPPFLAGS))
+  workbench-utilities-help_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-utilities-help_CXXFLAGS))
+  workbench-utilities-help_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-utilities-help_DXXFLAGS))
+  workbench-utilities-help_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-utilities-help_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-utilities-help_CXXCMD) $(workbench-utilities-help_CXXIQUOTE) $(dir $(2)) $(workbench-utilities-help_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-utilities-help_CXXIQUOTE) . $(workbench-utilities-help_CXXIQUOTE_END) $(strip $(workbench-utilities-help_CXXFLAGS) $(workbench-utilities-help_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-utilities-help_CXXCMD) $(workbench-utilities-help_CXXIQUOTE) $(dir $(2)) $(workbench-utilities-help_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-utilities-help_CXXIQUOTE) . $(workbench-utilities-help_CXXIQUOTE_END) $(strip $(workbench-utilities-help_CXXFLAGS) $(workbench-utilities-help_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-utilities-help_CXXCMD) $(workbench-utilities-help_CXXIQUOTE) $(dir $(2)) $(workbench-utilities-help_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-utilities-help_CXXIQUOTE) . $(workbench-utilities-help_CXXIQUOTE_END) $(strip $(workbench-utilities-help_CXXFLAGS) $(workbench-utilities-help_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-utilities-help_CXXCMD)" $(MKDEPEND) $(strip $(workbench-utilities-help_DXXFLAGS) $(workbench-utilities-help_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-utilities-help_OBJDIR),)
+  $(foreach workbench-utilities-help_CXXFILE,$(workbench-utilities-help_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-utilities-help_CXXFILE))),$(workbench-utilities-help_CXXFILE))))
+else
+  $(foreach workbench-utilities-help_CXXFILE,$(workbench-utilities-help_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-utilities-help_OBJDIR)/,$(notdir $(basename $(workbench-utilities-help_CXXFILE)))),$(workbench-utilities-help_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-utilities-help_OBJC_NARCHFILES),)
+
+ifeq (,)
+workbench-utilities-help_MOBJC_SRCWILDCARD := %
+else
+workbench-utilities-help_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-utilities-help_OBJDIR),)
+  workbench-utilities-help_MOBJC_TARGETS := $(addsuffix .o,$(workbench-utilities-help_OBJC_NARCHFILES))
+  workbench-utilities-help_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-utilities-help_OBJC_NARCHFILES))
+  workbench-utilities-help_MOBJC_WILDCARD := %
+else
+  workbench-utilities-help_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-utilities-help_OBJDIR)/,$(workbench-utilities-help_OBJC_NARCHFILES)))
+  workbench-utilities-help_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-utilities-help_OBJDIR)/,$(workbench-utilities-help_OBJC_NARCHFILES)))
+  workbench-utilities-help_MOBJC_WILDCARD := $(workbench-utilities-help_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-utilities-help_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  workbench-utilities-help_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-utilities-help_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-utilities-help_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-utilities-help_MOBJC_DIRS := $(foreach dir, $(workbench-utilities-help_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-utilities-help_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-utilities-help_MOBJC_DIRS),)
+    workbench-utilities-help_MOBJC_DIRS := $(shell echo $(workbench-utilities-help_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-utilities-help_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-utilities-help_CC := $(TARGET_CC)
+else
+  workbench-utilities-help_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-utilities-help_MOBJC_CPPFLAGS := $(workbench-utilities-help_CPPFLAGS)
+workbench-utilities-help_OBJCFLAGS := $(workbench-utilities-help_CFLAGS)
+workbench-utilities-help_OBJCFLAGS := $(workbench-utilities-help_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-utilities-help_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-utilities-help_OBJCFLAGS)))
+ifeq ($(workbench-utilities-help_DFLAGS),)
+  workbench-utilities-help_OBJCDFLAGS := $(workbench-utilities-help_CFLAGS)
+else
+  workbench-utilities-help_OBJCDFLAGS := $(workbench-utilities-help_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-utilities-help_LINK ?= $(strip $(workbench-utilities-help_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-utilities-help_STRIP ?= $(TARGET_STRIP)
+  workbench-utilities-help_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-utilities-help_CC) $(TARGET_SYSROOT))
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : workbench-utilities-help_MOBJC_CPPFLAGS:=$(strip $(workbench-utilities-help_MOBJC_CPPFLAGS) $(workbench-utilities-help_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : workbench-utilities-help_OBJCFLAGS:=$(strip $(workbench-utilities-help_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : workbench-utilities-help_OBJCDFLAGS:=$(workbench-utilities-help_OBJCDFLAGS)
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : workbench-utilities-help_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : workbench-utilities-help_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-utilities-help_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-utilities-help_STRIP ?= $(HOST_STRIP)
+  workbench-utilities-help_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : workbench-utilities-help_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-utilities-help_MOBJC_CPPFLAGS) $(workbench-utilities-help_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : workbench-utilities-help_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-utilities-help_OBJCFLAGS))
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : workbench-utilities-help_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-utilities-help_OBJCDFLAGS))
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : workbench-utilities-help_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : workbench-utilities-help_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-utilities-help_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-utilities-help_STRIP ?= $(ECHO) >/dev/null
+  workbench-utilities-help_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : workbench-utilities-help_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-utilities-help_MOBJC_CPPFLAGS) $(workbench-utilities-help_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : workbench-utilities-help_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-utilities-help_OBJCFLAGS))
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : workbench-utilities-help_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-utilities-help_OBJCDFLAGS))
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : workbench-utilities-help_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-utilities-help_MOBJC_TARGETS) $(workbench-utilities-help_MOBJC_DTARGETS) : workbench-utilities-help_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-utilities-help_MOBJC_TARGETS) : CPPFLAGS := $(workbench-utilities-help_MOBJC_CPPFLAGS)
+$(workbench-utilities-help_MOBJC_TARGETS) : CFLAGS := $(workbench-utilities-help_OBJCFLAGS)
+$(workbench-utilities-help_MOBJC_TARGETS) : $(workbench-utilities-help_MOBJC_WILDCARD).o : $(workbench-utilities-help_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-utilities-help_IQUOTE) $(dir $<) $(workbench-utilities-help_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-utilities-help_IQUOTE) . $(workbench-utilities-help_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-utilities-help_IQUOTE) $(dir $<) $(workbench-utilities-help_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-utilities-help_IQUOTE) . $(workbench-utilities-help_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-utilities-help_IQUOTE) $(dir $<) $(workbench-utilities-help_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-utilities-help_IQUOTE) . $(workbench-utilities-help_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-utilities-help_MOBJC_DTARGETS) : $(workbench-utilities-help_MOBJC_WILDCARD).d : $(workbench-utilities-help_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-utilities-help_OBJCDFLAGS) $(workbench-utilities-help_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-utilities-help_MC_SRCWILDCARD := %
+else
+workbench-utilities-help_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-utilities-help_OBJDIR),)
+workbench-utilities-help_MC_TARGETS := $(addsuffix .o,$(workbench-utilities-help_C_NARCHFILES))
+workbench-utilities-help_MC_DTARGETS := $(addsuffix .d,$(workbench-utilities-help_C_NARCHFILES))
+workbench-utilities-help_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-utilities-help_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-utilities-help_OBJDIR)/,$(notdir $(workbench-utilities-help_C_NARCHFILES))))
+    workbench-utilities-help_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-utilities-help_OBJDIR)/,$(notdir $(workbench-utilities-help_C_NARCHFILES))))
+else
+ifeq (,)
+    workbench-utilities-help_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-utilities-help_OBJDIR)/,$(workbench-utilities-help_C_NARCHFILES)))
+    workbench-utilities-help_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-utilities-help_OBJDIR)/,$(workbench-utilities-help_C_NARCHFILES)))
+else
+    workbench-utilities-help_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-utilities-help_OBJDIR)/,$(patsubst /%,%,$(workbench-utilities-help_C_NARCHFILES))))
+    workbench-utilities-help_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-utilities-help_OBJDIR)/,$(patsubst /%,%,$(workbench-utilities-help_C_NARCHFILES))))
+endif
+endif
+workbench-utilities-help_MC_TGTWILDCARD := $(workbench-utilities-help_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : | $(addsuffix .c,$(workbench-utilities-help_C_NARCHFILES))
+
+# Be sure that all .c files are found
+workbench-utilities-help_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-utilities-help_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-utilities-help_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-utilities-help_MC_DIRS := $(foreach dir, $(workbench-utilities-help_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-utilities-help_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-utilities-help_MC_DIRS),)
+    workbench-utilities-help_MC_DIRS := $(shell echo $(workbench-utilities-help_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-utilities-help_MC_DIRS)
+endif
+
+endif
+
+workbench-utilities-help_MC_CPPFLAGS := $(workbench-utilities-help_CPPFLAGS)
+workbench-utilities-help_CFLAGS := $(workbench-utilities-help_CFLAGS)
+ifeq ($(workbench-utilities-help_DFLAGS),)
+  workbench-utilities-help_DFLAGS := $(workbench-utilities-help_CFLAGS)
+else
+  workbench-utilities-help_DFLAGS := $(workbench-utilities-help_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-utilities-help_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-utilities-help_STRIP ?= $(TARGET_STRIP)
+workbench-utilities-help_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : workbench-utilities-help_MC_CPPFLAGS:=$(strip $(workbench-utilities-help_MC_CPPFLAGS) $(workbench-utilities-help_MC_EXTRA_CPPFLAGS))
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : workbench-utilities-help_CFLAGS:=$(strip $(workbench-utilities-help_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : workbench-utilities-help_DFLAGS:=$(workbench-utilities-help_DFLAGS)
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : workbench-utilities-help_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : workbench-utilities-help_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-utilities-help_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-utilities-help_STRIP ?= $(HOST_STRIP)
+workbench-utilities-help_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : workbench-utilities-help_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-utilities-help_MC_CPPFLAGS) $(workbench-utilities-help_MC_EXTRA_CPPFLAGS))
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : workbench-utilities-help_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-utilities-help_CFLAGS))
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : workbench-utilities-help_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-utilities-help_DFLAGS))
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : workbench-utilities-help_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : workbench-utilities-help_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-utilities-help_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-utilities-help_STRIP ?= $(ECHO) >/dev/null
+workbench-utilities-help_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : workbench-utilities-help_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-utilities-help_MC_CPPFLAGS) $(workbench-utilities-help_MC_EXTRA_CPPFLAGS))
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : workbench-utilities-help_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-utilities-help_CFLAGS))
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : workbench-utilities-help_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-utilities-help_DFLAGS))
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : workbench-utilities-help_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-utilities-help_MC_TARGETS) $(workbench-utilities-help_MC_DTARGETS) : workbench-utilities-help_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-utilities-help_MC_TARGETS) : CPPFLAGS := $(workbench-utilities-help_MC_CPPFLAGS)
+$(workbench-utilities-help_MC_TARGETS) : CFLAGS := $(workbench-utilities-help_CFLAGS)
+$(workbench-utilities-help_MC_TARGETS) : $(workbench-utilities-help_MC_TGTWILDCARD).o : $(workbench-utilities-help_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-utilities-help_IQUOTE) $(dir $<) $(workbench-utilities-help_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-utilities-help_IQUOTE) . $(workbench-utilities-help_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-utilities-help_IQUOTE) $(dir $<) $(workbench-utilities-help_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-utilities-help_IQUOTE) . $(workbench-utilities-help_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-utilities-help_IQUOTE) $(dir $<) $(workbench-utilities-help_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-utilities-help_IQUOTE) . $(workbench-utilities-help_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-utilities-help_MC_DTARGETS) : $(workbench-utilities-help_MC_TGTWILDCARD).d : $(workbench-utilities-help_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-utilities-help_DFLAGS) $(workbench-utilities-help_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-utilities-help_OBJDIR),)
+workbench-utilities-help-MA_TARGETS := $(addsuffix .o,$(workbench-utilities-help_ASMFILES))
+workbench-utilities-help-MA_WILDCARD := %
+else
+workbench-utilities-help-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-utilities-help_OBJDIR)/,$(notdir $(workbench-utilities-help_ASMFILES))))
+workbench-utilities-help-MA_WILDCARD := $(workbench-utilities-help_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(workbench-utilities-help-MA_TARGETS) : | $(addsuffix .s,$(workbench-utilities-help_ASMFILES))
+
+# Be sure that all .c files are found
+workbench-utilities-help-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-utilities-help-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-utilities-help_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-utilities-help-MA_DIRS := $(foreach dir, $(workbench-utilities-help-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-utilities-help-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-utilities-help-MA_DIRS),)
+    workbench-utilities-help-MA_DIRS := $(shell echo $(workbench-utilities-help-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(workbench-utilities-help-MA_DIRS)
+endif
+
+endif
+
+workbench-utilities-help-MA_ASSEMBLER ?= $(workbench-utilities-help_ASSEMBLER)
+
+$(workbench-utilities-help-MA_TARGETS) : workbench-utilities-help-MA_CMD:= $(workbench-utilities-help-MA_ASSEMBLER)
+
+$(workbench-utilities-help-MA_TARGETS) : CPPFLAGS := $(workbench-utilities-help_CPPFLAGS)
+$(workbench-utilities-help-MA_TARGETS) : AFLAGS := $(workbench-utilities-help_AFLAGS)
+$(workbench-utilities-help-MA_TARGETS) : $(workbench-utilities-help-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-utilities-help-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-utilities-help-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-utilities-help-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+workbench-utilities-help-link_EXTRA_LDFLAGS := 
+workbench-utilities-help-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    workbench-utilities-help-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    workbench-utilities-help-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    workbench-utilities-help-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+workbench-utilities-help-link_DIRS := $(subst -L ,-L,$(strip $(workbench-utilities-help_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+workbench-utilities-help-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(workbench-utilities-help-link_DIRS)))
+# Add trailing /
+workbench-utilities-help-link_DIRS := $(subst //,/,$(addsuffix /,$(workbench-utilities-help-link_DIRS)))
+# Add normal linklib path
+workbench-utilities-help-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+workbench-utilities-help-link_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-utilities-help_LIBS) $(workbench-utilities-help-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    workbench-utilities-help-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    workbench-utilities-help-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+workbench-utilities-help-link_DEPLIBS := $(foreach lib,$(workbench-utilities-help-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(workbench-utilities-help-link_DIRS)))) \
+)
+
+$(workbench-utilities-help_TARGETDIR)/$(workbench-utilities-help_PROGNAME) : OBJDIR := $(workbench-utilities-help_OBJDIR)
+$(workbench-utilities-help_TARGETDIR)/$(workbench-utilities-help_PROGNAME) : OBJS := $(workbench-utilities-help_OBJS) $(workbench-utilities-help_ARCHOBJS) $(USER_OBJS)
+$(workbench-utilities-help_TARGETDIR)/$(workbench-utilities-help_PROGNAME) : LDFLAGS := $(strip $(workbench-utilities-help_LDFLAGS) $(workbench-utilities-help-link_EXTRA_LDFLAGS))
+$(workbench-utilities-help_TARGETDIR)/$(workbench-utilities-help_PROGNAME) : LIBS := $(addprefix -l,$(workbench-utilities-help_LIBS) $(workbench-utilities-help-link_EXTRA_LIBS) )
+$(workbench-utilities-help_TARGETDIR)/$(workbench-utilities-help_PROGNAME) : $(workbench-utilities-help_OBJS) $(workbench-utilities-help_ARCHOBJS) $(USER_OBJS) $(workbench-utilities-help-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(workbench-utilities-help_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(workbench-utilities-help_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(workbench-utilities-help_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-utilities-help_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(workbench-utilities-help_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(workbench-utilities-help_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-utilities-help_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(workbench-utilities-help_DEPS),)
+  ifneq (workbench-utilities-help workbench-utilities-help-quick,)
+    ifneq ($(findstring $(TARGET),workbench-utilities-help workbench-utilities-help-quick),)
+      -include $(workbench-utilities-help_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-utilities-help_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(workbench-utilities-help_OBJS) $(workbench-utilities-help_DEPS) $(workbench-utilities-help_TARGETDIR)/$(workbench-utilities-help_PROGNAME),)
+$(workbench-utilities-help_OBJS) $(workbench-utilities-help_DEPS) $(workbench-utilities-help_TARGETDIR)/$(workbench-utilities-help_PROGNAME) : | $(workbench-utilities-help_OBJDIR) $(workbench-utilities-help_TARGETDIR)
+else
+$(workbench-utilities-help_OBJS) $(workbench-utilities-help_DEPS) $(workbench-utilities-help_TARGETDIR)/$(workbench-utilities-help_PROGNAME) :: $(workbench-utilities-help_OBJDIR) $(workbench-utilities-help_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-utilities-help_OBJDIR) $(workbench-utilities-help_TARGETDIR)
+
+
+workbench-utilities-help-clean : FILES := $(workbench-utilities-help_OBJS) $(workbench-utilities-help_TARGETDIR)/$(workbench-utilities-help_PROGNAME) $(workbench-utilities-help_DEPS)
+#MM
+workbench-utilities-help-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-utilities-help"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

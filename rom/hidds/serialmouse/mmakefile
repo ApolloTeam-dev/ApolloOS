@@ -1,0 +1,1660 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := startup mouseclass drv_serial
+
+USER_LDFLAGS := -static
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-hidd-serialmouse
+#MM kernel-hidd-serialmouse-quick
+#MM kernel-hidd-serialmouse-makefile
+#MM kernel-hidd-serialmouse-clean
+
+# ABI targets:
+#MM- includes-all : kernel-hidd-serialmouse-includes
+#MM- linklibs-serialmouse: kernel-hidd-serialmouse-linklib
+#MM- linklibs-serialmouse_rel : kernel-hidd-serialmouse-linklib
+#MM- includes-serialmouse: kernel-hidd-serialmouse-includes
+#MM- includes-serialmouse_rel : kernel-hidd-serialmouse-includes
+#MM- kernel-hidd-serialmouse : kernel-hidd-serialmouse-includes core-linklibs linklibs-hiddstubs
+#MM kernel-hidd-serialmouse-linklib : kernel-hidd-serialmouse-includes includes-hiddstubs
+#MM- kernel-hidd-serialmouse-quick : kernel-hidd-serialmouse-includes-quick
+#MM kernel-hidd-serialmouse-includes : kernel-hidd-serialmouse-makefile kernel-hidd-serialmouse-includes-dirs \
+#MM     includes-generate-deps kernel-hidd-serialmouse-fd
+#MM kernel-hidd-serialmouse-includes-quick
+#MM kernel-hidd-serialmouse-includes-dirs
+#MM kernel-hidd-serialmouse-fd
+
+# Library targets
+#MM kernel-hidd-serialmouse-kobj : core-linklibs linklibs-hiddstubs
+#MM kernel-hidd-serialmouse-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-hidd-serialmouse-kobj : kernel-hidd-serialmouse-includes core-linklibs linklibs-hiddstubs
+#MM kernel-hidd-serialmouse-kobj-quick : kernel-hidd-serialmouse-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-hidd-serialmouse_ALLTARGETS       := kernel-hidd-serialmouse kernel-hidd-serialmouse-quick kernel-hidd-serialmouse-clean
+
+ifeq (M,M)
+kernel-hidd-serialmouse_ALLTARGETS       += kernel-hidd-serialmouse-kobj kernel-hidd-serialmouse-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-hidd-serialmouse_ALLTARGETS += kernel-hidd-serialmouse-includes \
+                 kernel-hidd-serialmouse-includes-quick kernel-hidd-serialmouse-includes-dirs  \
+                 kernel-hidd-serialmouse-linklib kernel-hidd-serialmouse-fd
+endif
+
+.PHONY : $(kernel-hidd-serialmouse_ALLTARGETS) kernel-hidd-serialmouse-makefile
+
+ifeq (serialmouse,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (hidd,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-hidd-serialmouse_DEFNAME      := serialmouse_
+else
+    kernel-hidd-serialmouse_DEFNAME      := serialmouse
+endif
+kernel-hidd-serialmouse_DEFLINKLIBNAME   := $(kernel-hidd-serialmouse_DEFNAME)
+ifneq (,)
+    kernel-hidd-serialmouse_LINKLIBNAME  := 
+else
+    kernel-hidd-serialmouse_LINKLIBNAME  = $(kernel-hidd-serialmouse_DEFLINKLIBNAME)
+endif
+kernel-hidd-serialmouse_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-hidd-serialmouse_DEFCPPFLAGS  += -I
+endif
+kernel-hidd-serialmouse_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-hidd-serialmouse_DFLAGS       := 
+else
+    kernel-hidd-serialmouse_DFLAGS       = $(kernel-hidd-serialmouse_DEFDFLAGS)
+endif
+kernel-hidd-serialmouse_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-hidd-serialmouse_DXXFLAGS     := 
+else
+    kernel-hidd-serialmouse_DXXFLAGS     = $(kernel-hidd-serialmouse_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-serialmouse_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-serialmouse_DEFDFLAGS))
+kernel-hidd-serialmouse_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-serialmouse_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-serialmouse_FUNCINSTR := yes
+kernel-hidd-serialmouse_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-serialmouse_DEFDFLAGS))
+kernel-hidd-serialmouse_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-serialmouse_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-hidd-serialmouse_OBJDIR                     := 
+else
+kernel-hidd-serialmouse_OBJDIR                     := $(OBJDIR)/$(kernel-hidd-serialmouse_DEFNAME)
+endif
+ifneq (,)
+kernel-hidd-serialmouse_OBJDIR           := $(kernel-hidd-serialmouse_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-hidd-serialmouse-makefile         := $(kernel-hidd-serialmouse_OBJDIR)/Makefile.$(kernel-hidd-serialmouse_DEFNAME)hidd
+kernel-hidd-serialmouse-genmakefile : $(kernel-hidd-serialmouse-makefile)
+
+
+kernel-hidd-serialmouse-genmakefile_OPTS := 
+ifneq (,)
+    kernel-hidd-serialmouse-genmakefile_OPTS += -f 
+    kernel-hidd-serialmouse-genmakefile_MODNAME := serialmouse_
+else
+    kernel-hidd-serialmouse-genmakefile_MODNAME := serialmouse
+endif
+kernel-hidd-serialmouse-genmakefile_TARGET := Makefile.$(kernel-hidd-serialmouse-genmakefile_MODNAME)hidd
+kernel-hidd-serialmouse-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-serialmouse-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-serialmouse-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-serialmouse-genmakefile_OPTS += -c 
+        kernel-hidd-serialmouse-genmakefile_DEPS += 
+    endif 
+else
+    kernel-hidd-serialmouse-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/serialmouse.conf
+    kernel-hidd-serialmouse-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/serialmouse.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-serialmouse-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-serialmouse-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-serialmouse-genmakefile_OPTS += -o 
+        kernel-hidd-serialmouse-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-serialmouse-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-serialmouse_OBJDIR),)
+    kernel-hidd-serialmouse-genmakefile_OPTS += -d $(kernel-hidd-serialmouse_OBJDIR)
+    kernel-hidd-serialmouse-genmakefile_TARGET := $(kernel-hidd-serialmouse_OBJDIR)/$(kernel-hidd-serialmouse-genmakefile_TARGET)
+endif
+
+$(kernel-hidd-serialmouse-genmakefile_TARGET) : OPTS := $(kernel-hidd-serialmouse-genmakefile_OPTS)
+$(kernel-hidd-serialmouse-genmakefile_TARGET) : MODNAME := serialmouse
+$(kernel-hidd-serialmouse-genmakefile_TARGET) : MODTYPE := hidd
+$(kernel-hidd-serialmouse-genmakefile_TARGET) : $(kernel-hidd-serialmouse-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-hidd-serialmouse-makefile),)
+$(kernel-hidd-serialmouse-makefile) : | $(kernel-hidd-serialmouse_OBJDIR)
+else
+$(kernel-hidd-serialmouse-makefile) :: $(kernel-hidd-serialmouse_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-serialmouse_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-hidd-serialmouse_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-hidd-serialmouse-makefile)
+
+kernel-hidd-serialmouse_DEFMODDIR        := $($(kernel-hidd-serialmouse_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-hidd-serialmouse_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-hidd-serialmouse_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-hidd-serialmouse_MODDIR       := 
+else
+    kernel-hidd-serialmouse_MODDIR       := $(kernel-hidd-serialmouse_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-hidd-serialmouse_INCDIR           := 
+else
+kernel-hidd-serialmouse_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-hidd-serialmouse_LIBDEFSINC       := $(kernel-hidd-serialmouse_OBJDIR)/include/$(kernel-hidd-serialmouse_DEFNAME)_libdefs.h
+kernel-hidd-serialmouse_DEFLIBDEFSINC    := $(kernel-hidd-serialmouse_OBJDIR)/include/$(kernel-hidd-serialmouse_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-hidd-serialmouse-includes-quick : kernel-hidd-serialmouse-includes
+kernel-hidd-serialmouse-includes : $(addprefix $(GENINCDIR)/,$($(kernel-hidd-serialmouse_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-serialmouse_INCDIR)/,$($(kernel-hidd-serialmouse_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-serialmouse_LIBDEFSINC) $(kernel-hidd-serialmouse_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-hidd-serialmouse_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-hidd-serialmouse-includes_MODNAME := serialmouse_
+else
+    kernel-hidd-serialmouse-includes_MODNAME := serialmouse
+endif
+
+ifneq ($($(kernel-hidd-serialmouse-includes_MODNAME)_INCLUDES),)
+
+kernel-hidd-serialmouse-includes_TARGETS := $($(kernel-hidd-serialmouse-includes_MODNAME)_INCLUDES)
+
+kernel-hidd-serialmouse-includes_DEPS := $(GENMODULE)
+kernel-hidd-serialmouse-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-serialmouse-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-serialmouse-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-serialmouse-includes_OPTS += -c 
+        kernel-hidd-serialmouse-includes_DEPS += 
+    endif 
+else
+    kernel-hidd-serialmouse-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/serialmouse.conf
+    kernel-hidd-serialmouse-includes_DEPS += $(SRCDIR)/$(CURDIR)/serialmouse.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-serialmouse-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-serialmouse-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-serialmouse-includes_OPTS += -o 
+        kernel-hidd-serialmouse-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-serialmouse-includes_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-serialmouse_OBJDIR)/include,)
+    kernel-hidd-serialmouse-includes_OPTS += -d $(kernel-hidd-serialmouse_OBJDIR)/include
+    kernel-hidd-serialmouse-includes_TARGETS := $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/include/,$(kernel-hidd-serialmouse-includes_TARGETS))
+    kernel-hidd-serialmouse-includes_GENINCFLAG=$(kernel-hidd-serialmouse_OBJDIR)/include/.serialmouse.hidd-includes
+else
+    kernel-hidd-serialmouse-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.serialmouse.hidd-includes
+endif
+
+$(kernel-hidd-serialmouse-includes_TARGETS) : $(kernel-hidd-serialmouse-includes_DEPS) $(kernel-hidd-serialmouse-includes_GENINCFLAG)
+
+$(kernel-hidd-serialmouse-includes_GENINCFLAG) : OPTS := $(kernel-hidd-serialmouse-includes_OPTS)
+$(kernel-hidd-serialmouse-includes_GENINCFLAG) : MODNAME := serialmouse
+$(kernel-hidd-serialmouse-includes_GENINCFLAG) : MODTYPE := hidd
+$(kernel-hidd-serialmouse-includes_GENINCFLAG) : $(kernel-hidd-serialmouse-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-hidd-serialmouse_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-hidd-serialmouse_DEFNAME)_INCLUDES)) : | $(kernel-hidd-serialmouse_OBJDIR)/serialmouse_geninc
+
+$(kernel-hidd-serialmouse_OBJDIR)/serialmouse_geninc : COPYSRCDIR := $(kernel-hidd-serialmouse_OBJDIR)/include
+$(kernel-hidd-serialmouse_OBJDIR)/serialmouse_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-hidd-serialmouse_OBJDIR)/serialmouse_geninc : FILES := $($(kernel-hidd-serialmouse_DEFNAME)_INCLUDES)
+$(kernel-hidd-serialmouse_OBJDIR)/serialmouse_geninc : $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/include/,$($(kernel-hidd-serialmouse_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-hidd-serialmouse_OBJDIR)/include
+
+$(addprefix $(kernel-hidd-serialmouse_INCDIR)/,$($(kernel-hidd-serialmouse_DEFNAME)_INCLUDES)) : | $(kernel-hidd-serialmouse_OBJDIR)/serialmouse_incs
+
+$(kernel-hidd-serialmouse_OBJDIR)/serialmouse_incs : COPYSRCDIR := $(kernel-hidd-serialmouse_OBJDIR)/include
+$(kernel-hidd-serialmouse_OBJDIR)/serialmouse_incs : TGTDIR := $(kernel-hidd-serialmouse_INCDIR)
+$(kernel-hidd-serialmouse_OBJDIR)/serialmouse_incs : FILES := $($(kernel-hidd-serialmouse_DEFNAME)_INCLUDES)
+$(kernel-hidd-serialmouse_OBJDIR)/serialmouse_incs : $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/include/,$($(kernel-hidd-serialmouse_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-hidd-serialmouse_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-hidd-serialmouse_DEFNAME)_INCLUDES))))
+
+TMPserialmouse_INCDIRS := \
+    $(kernel-hidd-serialmouse_OBJDIR)/include $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/include/,$(kernel-hidd-serialmouse_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-hidd-serialmouse_INCDIRS)) \
+    $(kernel-hidd-serialmouse_INCDIR) $(addprefix $(kernel-hidd-serialmouse_INCDIR)/,$(kernel-hidd-serialmouse_INCDIRS))
+
+ifneq (kernel-hidd-serialmouse-includes-dirs,)
+kernel-hidd-serialmouse-includes-dirs : | $(TMPserialmouse_INCDIRS)
+else
+kernel-hidd-serialmouse-includes-dirs :: $(TMPserialmouse_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPserialmouse_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-hidd-serialmouse-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-hidd-serialmouse-genlibdefs_OPTS += -f 
+    kernel-hidd-serialmouse-genlibdefs_MODNAME := serialmouse_
+else
+    kernel-hidd-serialmouse-genlibdefs_MODNAME := serialmouse
+endif
+kernel-hidd-serialmouse-genlibdefs_TARGET := $(kernel-hidd-serialmouse-genlibdefs_MODNAME)_libdefs.h
+kernel-hidd-serialmouse-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-serialmouse-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-serialmouse-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-serialmouse-genlibdefs_OPTS += -c 
+        kernel-hidd-serialmouse-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-hidd-serialmouse-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/serialmouse.conf
+    kernel-hidd-serialmouse-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/serialmouse.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-serialmouse-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-serialmouse-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-serialmouse-genlibdefs_OPTS += -o 
+        kernel-hidd-serialmouse-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-serialmouse-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-serialmouse_OBJDIR)/include,)
+    kernel-hidd-serialmouse-genlibdefs_OPTS += -d $(kernel-hidd-serialmouse_OBJDIR)/include
+    kernel-hidd-serialmouse-genlibdefs_TARGET := $(kernel-hidd-serialmouse_OBJDIR)/include/$(kernel-hidd-serialmouse-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-hidd-serialmouse-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-hidd-serialmouse-genlibdefs_TARGET) : OPTS := $(kernel-hidd-serialmouse-genlibdefs_OPTS)
+$(kernel-hidd-serialmouse-genlibdefs_TARGET) : MODNAME := serialmouse
+$(kernel-hidd-serialmouse-genlibdefs_TARGET) : MODTYPE := hidd
+$(kernel-hidd-serialmouse-genlibdefs_TARGET) : $(kernel-hidd-serialmouse-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-serialmouse_DEFLIBDEFSINC) : FILENAME := $(kernel-hidd-serialmouse_LIBDEFSINC)
+$(kernel-hidd-serialmouse_DEFLIBDEFSINC) : $(kernel-hidd-serialmouse_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-hidd-serialmouse_LIBDEFSINC) $(kernel-hidd-serialmouse_DEFLIBDEFSINC) : | $(kernel-hidd-serialmouse_OBJDIR)/include
+
+ifneq (kernel-hidd-serialmouse-includes-dirs,)
+kernel-hidd-serialmouse-includes-dirs : | $(kernel-hidd-serialmouse_OBJDIR)/include
+else
+kernel-hidd-serialmouse-includes-dirs :: $(kernel-hidd-serialmouse_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-serialmouse_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-hidd-serialmouse-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-hidd-serialmouse-genmodfiles_OPTS += -f 
+    kernel-hidd-serialmouse-genmodfiles_MODNAME := serialmouse_
+else
+    kernel-hidd-serialmouse-genmodfiles_MODNAME := serialmouse
+endif
+kernel-hidd-serialmouse-genmodfiles_GENTARGETS := $($(kernel-hidd-serialmouse-genmodfiles_MODNAME)_STARTFILES) $($(kernel-hidd-serialmouse-genmodfiles_MODNAME)_ENDFILES)
+kernel-hidd-serialmouse-genmodfiles_STUBTARGETS := $($(kernel-hidd-serialmouse-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-hidd-serialmouse-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-hidd-serialmouse-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-hidd-serialmouse-genmodfiles_GENTARGETS))
+kernel-hidd-serialmouse-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-hidd-serialmouse-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-hidd-serialmouse-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-hidd-serialmouse-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-hidd-serialmouse-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-serialmouse-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-serialmouse-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-serialmouse-genmodfiles_OPTS += -c 
+        kernel-hidd-serialmouse-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-hidd-serialmouse-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/serialmouse.conf
+    kernel-hidd-serialmouse-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/serialmouse.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-serialmouse-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-serialmouse-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-serialmouse-genmodfiles_OPTS += -o 
+        kernel-hidd-serialmouse-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-serialmouse-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-serialmouse_OBJDIR),)
+    kernel-hidd-serialmouse-genmodfiles_OPTS += -d $(kernel-hidd-serialmouse_OBJDIR)
+    kernel-hidd-serialmouse-genmodfiles_TARGETDIR := $(shell echo $(kernel-hidd-serialmouse_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-serialmouse-genmodfiles_GENTARGETS := $(addprefix $(kernel-hidd-serialmouse-genmodfiles_TARGETDIR)/,$(kernel-hidd-serialmouse-genmodfiles_GENTARGETS))
+    kernel-hidd-serialmouse-genmodfiles_GENFILEFLAG=$(kernel-hidd-serialmouse-genmodfiles_TARGETDIR)/.serialmouse.hidd-genfiles
+else
+    kernel-hidd-serialmouse-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.serialmouse.hidd-genfiles
+endif
+ifneq ($(kernel-hidd-serialmouse_OBJDIR)/linklib,)
+    kernel-hidd-serialmouse-genmodfiles_OPTS += -l $(kernel-hidd-serialmouse_OBJDIR)/linklib
+    kernel-hidd-serialmouse-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-hidd-serialmouse_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-serialmouse-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-serialmouse-genmodfiles_STUBTARGETDIR)/,$(kernel-hidd-serialmouse-genmodfiles_STUBTARGETS))
+    kernel-hidd-serialmouse-genmodfiles_TARGETDIRS += $(kernel-hidd-serialmouse_OBJDIR)/linklib
+else
+ifneq ($(kernel-hidd-serialmouse_OBJDIR),)
+    kernel-hidd-serialmouse-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-serialmouse-genmodfiles_TARGETDIR)/,$(kernel-hidd-serialmouse-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-hidd-serialmouse-genmodfiles_TARGETS := $(kernel-hidd-serialmouse-genmodfiles_GENTARGETS) $(kernel-hidd-serialmouse-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-hidd-serialmouse-genmodfiles_TARGETDIRS),)
+$(kernel-hidd-serialmouse-genmodfiles_TARGETS) : | $(kernel-hidd-serialmouse-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-hidd-serialmouse-genmodfiles_TARGETS) : $(kernel-hidd-serialmouse-genmodfiles_DEPS) $(kernel-hidd-serialmouse-genmodfiles_GENFILEFLAG)
+
+$(kernel-hidd-serialmouse-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-hidd-serialmouse-genmodfiles_OPTS)
+$(kernel-hidd-serialmouse-genmodfiles_GENFILEFLAG) : MODNAME := serialmouse
+$(kernel-hidd-serialmouse-genmodfiles_GENFILEFLAG) : MODTYPE := hidd
+$(kernel-hidd-serialmouse-genmodfiles_GENFILEFLAG) : $(kernel-hidd-serialmouse-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-hidd-serialmouse-genmodfiles_GENFILEFLAG) : $(kernel-hidd-serialmouse_DEFLIBDEFSINC) $(kernel-hidd-serialmouse-makefile)
+
+
+ifneq ($(kernel-hidd-serialmouse-genmodfiles_GENFILEFLAG),)
+$(kernel-hidd-serialmouse-genmodfiles_GENFILEFLAG) : | $(kernel-hidd-serialmouse_OBJDIR)/linklib
+else
+$(kernel-hidd-serialmouse-genmodfiles_GENFILEFLAG) :: $(kernel-hidd-serialmouse_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-serialmouse_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-hidd-serialmouse_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-hidd-serialmouse_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-hidd-serialmouse-fd : $(kernel-hidd-serialmouse_FDDIR)/serialmouse_lib.fd
+
+
+TMP_TARGET := serialmouse_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/serialmouse.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/serialmouse.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-serialmouse_FDDIR),)
+    TMP_OPTS += -d $(kernel-hidd-serialmouse_FDDIR)
+    TMP_TARGET := $(kernel-hidd-serialmouse_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := serialmouse
+$(TMP_TARGET) : MODTYPE := hidd
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-serialmouse_FDDIR)/serialmouse_lib.fd : | $(kernel-hidd-serialmouse_FDDIR)
+
+
+ifneq (kernel-hidd-serialmouse-fd-setup,)
+kernel-hidd-serialmouse-fd-setup : | $(kernel-hidd-serialmouse_FDDIR)
+else
+kernel-hidd-serialmouse-fd-setup :: $(kernel-hidd-serialmouse_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-serialmouse_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-hidd-serialmouse_FILES            := $(FILES)
+kernel-hidd-serialmouse_OBJCFILES        := 
+kernel-hidd-serialmouse_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-hidd-serialmouse_LIBFILES         := 
+kernel-hidd-serialmouse_LIBS             := hiddstubs
+
+kernel-hidd-serialmouse_FDIRS            := $(sort $(dir $(kernel-hidd-serialmouse_FILES)))
+
+kernel-hidd-serialmouse_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-hidd-serialmouse_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-hidd-serialmouse_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-hidd-serialmouse_FILTERARCH       = $(filter-out $(call kernel-hidd-serialmouse_MATCHARCH,$(1),$(2)),$(2))
+kernel-hidd-serialmouse_STARTFILES       := $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$($(kernel-hidd-serialmouse_DEFNAME)_STARTFILES))
+kernel-hidd-serialmouse_ENDFILES         := $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$($(kernel-hidd-serialmouse_DEFNAME)_ENDFILES))
+
+kernel-hidd-serialmouse_ARCHOBJS         := $(wildcard $(kernel-hidd-serialmouse_OBJDIR)/arch/*.o)
+kernel-hidd-serialmouse_LIBARCHOBJS      := $(wildcard $(kernel-hidd-serialmouse_OBJDIR)/linklib/arch/*.o)
+kernel-hidd-serialmouse_ARCHFILES        := $(basename $(notdir $(kernel-hidd-serialmouse_ARCHOBJS)))
+kernel-hidd-serialmouse_LIBARCHFILES     := $(basename $(notdir $(kernel-hidd-serialmouse_LIBARCHOBJS)))
+kernel-hidd-serialmouse_C_NARCHFILES     := $(call kernel-hidd-serialmouse_FILTERARCH,$(kernel-hidd-serialmouse_ARCHFILES),$(kernel-hidd-serialmouse_FILES))
+kernel-hidd-serialmouse_CXX_NARCHFILES   := $(call kernel-hidd-serialmouse_FILTERARCH,$(kernel-hidd-serialmouse_ARCHFILES),$(kernel-hidd-serialmouse_CXXFILES))
+kernel-hidd-serialmouse_OBJC_NARCHFILES  := $(call kernel-hidd-serialmouse_FILTERARCH,$(kernel-hidd-serialmouse_ARCHFILES),$(kernel-hidd-serialmouse_OBJCFILES))
+kernel-hidd-serialmouse_NLIBARCHFILES    := $(call kernel-hidd-serialmouse_FILTERARCH,$(kernel-hidd-serialmouse_LIBARCHFILES),$(kernel-hidd-serialmouse_LIBFILES))
+kernel-hidd-serialmouse_ARCHNLIBFILES    := $(call kernel-hidd-serialmouse_FILTERARCH,$(kernel-hidd-serialmouse_LIBFILES),$(kernel-hidd-serialmouse_LIBARCHFILES))
+
+kernel-hidd-serialmouse_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-hidd-serialmouse_OBJDIR)/include -include $(kernel-hidd-serialmouse_DEFLIBDEFSINC))
+ifneq (,)
+kernel-hidd-serialmouse_CPPFLAGS         += -I
+endif
+kernel-hidd-serialmouse_LINKLIBCPPFLAGS  := $(kernel-hidd-serialmouse_CPPFLAGS)
+kernel-hidd-serialmouse_CPPFLAGS         += $(strip $($(kernel-hidd-serialmouse_DEFNAME)_CPPFLAGS))
+kernel-hidd-serialmouse_LINKLIBCPPFLAGS  += $(strip $($(kernel-hidd-serialmouse_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-hidd-serialmouse_CFLAGS           := $(strip $(CFLAGS) $($(kernel-hidd-serialmouse_DEFNAME)_CFLAGS))
+kernel-hidd-serialmouse_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-hidd-serialmouse_DEFNAME)_LINKLIBCFLAGS))
+kernel-hidd-serialmouse_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-hidd-serialmouse_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-serialmouse_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-hidd-serialmouse_CFLAGS           := $(strip $(kernel-hidd-serialmouse_LTOFLAGS) $(kernel-hidd-serialmouse_CFLAGS))
+kernel-hidd-serialmouse_LINKLIBCFLAGS    := $(strip $(kernel-hidd-serialmouse_LTOFLAGS) $(kernel-hidd-serialmouse_LINKLIBCFLAGS))
+kernel-hidd-serialmouse_CXXFLAGS         := $(strip $(kernel-hidd-serialmouse_LTOFLAGS) $(kernel-hidd-serialmouse_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-serialmouse_SUBSTNULL        :=
+kernel-hidd-serialmouse_SUBSTSPACE       := $(kernel-hidd-serialmouse_SUBSTNULL) #
+kernel-hidd-serialmouse_SUBSTCOMMA       := ,
+kernel-hidd-serialmouse_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-hidd-serialmouse_SUBSTSPACE),$(kernel-hidd-serialmouse_SUBSTCOMMA),$(strip $($(kernel-hidd-serialmouse_DEFNAME)_STARTFILES))))
+kernel-hidd-serialmouse_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-hidd-serialmouse_CFLAGS           := $(strip $(kernel-hidd-serialmouse_INSTRFUNCFLAGS) $(kernel-hidd-serialmouse_CFLAGS))
+kernel-hidd-serialmouse_CXXFLAGS         := $(strip $(kernel-hidd-serialmouse_INSTRFUNCFLAGS) $(kernel-hidd-serialmouse_CXXFLAGS))
+kernel-hidd-serialmouse_LIBS             += $(kernel-hidd-serialmouse_INSTRFUNCLIBS)
+endif
+endif
+kernel-hidd-serialmouse_DFLAGS           := $(strip $(kernel-hidd-serialmouse_DFLAGS) $($(kernel-hidd-serialmouse_DEFNAME)_DFLAGS))
+kernel-hidd-serialmouse_LINKLIBDFLAGS    := $(strip $(kernel-hidd-serialmouse_DFLAGS) $($(kernel-hidd-serialmouse_DEFNAME)_LINKLIBDFLAGS))
+kernel-hidd-serialmouse_DXXFLAGS         := $(strip $(kernel-hidd-serialmouse_DXXFLAGS) $($(kernel-hidd-serialmouse_DEFNAME)_DXXFLAGS))
+
+ifeq (hidd,library)
+    kernel-hidd-serialmouse_LIBSUFFIX    := 
+else
+    kernel-hidd-serialmouse_LIBSUFFIX    := .hidd
+endif
+
+ifeq (,)
+kernel-hidd-serialmouse_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-hidd-serialmouse_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-hidd-serialmouse_LINKLIBCFILES    := $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$($(kernel-hidd-serialmouse_DEFNAME)_LINKLIBFILES))
+kernel-hidd-serialmouse_LINKLIBAFILES    := $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$($(kernel-hidd-serialmouse_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-serialmouse_DEFNAME)_LINKLIBFILES) $($(kernel-hidd-serialmouse_DEFNAME)_LINKLIBAFILES)  $(kernel-hidd-serialmouse_ARCHNLIBFILES)),)
+    kernel-hidd-serialmouse_LINKLIB      :=
+else
+    kernel-hidd-serialmouse_LINKLIB      := $(kernel-hidd-serialmouse_LIBDIR)/libserialmouse$(kernel-hidd-serialmouse_LIBSUFFIX).a
+    ifneq (serialmouse,$(kernel-hidd-serialmouse_LINKLIBNAME))
+        kernel-hidd-serialmouse_LINKLIB  += $(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_LINKLIBNAME)$(kernel-hidd-serialmouse_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-serialmouse_LINKLIBFILES     := $(kernel-hidd-serialmouse_LINKLIBCFILES) $(kernel-hidd-serialmouse_LINKLIBAFILES)
+
+kernel-hidd-serialmouse_RELLINKLIBCFILES := $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$($(kernel-hidd-serialmouse_DEFNAME)_RELLINKLIBFILES))
+kernel-hidd-serialmouse_RELLINKLIBAFILES := $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$($(kernel-hidd-serialmouse_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-serialmouse_DEFNAME)_RELLINKLIBFILES) $($(kernel-hidd-serialmouse_DEFNAME)_RELLINKLIBAFILES)  $(kernel-hidd-serialmouse_ARCHNLIBFILES)),)
+    kernel-hidd-serialmouse_RELLINKLIB   :=
+else
+    kernel-hidd-serialmouse_RELLINKLIB   := $(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_DEFNAME)_rel$(kernel-hidd-serialmouse_LIBSUFFIX).a
+    ifneq (serialmouse,$(kernel-hidd-serialmouse_LINKLIBNAME))
+        kernel-hidd-serialmouse_RELLINKLIB += $(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_LINKLIBNAME)_rel$(kernel-hidd-serialmouse_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-serialmouse_RELLINKLIBFILES  := $(kernel-hidd-serialmouse_RELLINKLIBCFILES) $(kernel-hidd-serialmouse_RELLINKLIBAFILES)
+endif
+
+kernel-hidd-serialmouse_ENDOBJS          := $(addsuffix .o,$(kernel-hidd-serialmouse_ENDFILES))
+kernel-hidd-serialmouse_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$(notdir $(kernel-hidd-serialmouse_NLIBARCHFILES))) $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-serialmouse_ARCHNLIBFILES))) $(kernel-hidd-serialmouse_LINKLIBFILES)) \
+                 
+kernel-hidd-serialmouse_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$(notdir $(kernel-hidd-serialmouse_NLIBARCHFILES))) $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-serialmouse_ARCHNLIBFILES))) $(kernel-hidd-serialmouse_RELLINKLIBFILES)) \
+                 
+$(kernel-hidd-serialmouse_LINKLIBFILES) $(kernel-hidd-serialmouse_RELLINKLIBFILES) : | $(kernel-hidd-serialmouse_OBJDIR)/linklib
+$(kernel-hidd-serialmouse_LINKLIBOBJS) $(kernel-hidd-serialmouse_RELLINKLIBOBJS) : | $(kernel-hidd-serialmouse_OBJDIR)/linklib
+
+kernel-hidd-serialmouse_CCFILES := $(kernel-hidd-serialmouse_C_NARCHFILES)
+kernel-hidd-serialmouse_TARGETCCFILES    := $(strip $(kernel-hidd-serialmouse_STARTFILES) $(kernel-hidd-serialmouse_ENDFILES))
+kernel-hidd-serialmouse_LINKLIBCCFILES   := $(strip $(kernel-hidd-serialmouse_NLIBARCHFILES) $(kernel-hidd-serialmouse_LINKLIBCFILES) $(kernel-hidd-serialmouse_RELLINKLIBCFILES))
+kernel-hidd-serialmouse_LINKLIBCCGENFILES := $(strip $(kernel-hidd-serialmouse_LINKLIBCFILES) $(kernel-hidd-serialmouse_RELLINKLIBCFILES))
+
+
+kernel-hidd-serialmouse_CXXABSBASENAMES := $(foreach kernel-hidd-serialmouse_CXXBASE,$(kernel-hidd-serialmouse_CXX_NARCHFILES),$(if $(filter /%,$(kernel-hidd-serialmouse_CXXBASE)),$(kernel-hidd-serialmouse_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-hidd-serialmouse_CXXBASE))))
+
+ifneq ($(kernel-hidd-serialmouse_CXXABSBASENAMES),)
+
+kernel-hidd-serialmouse_CXXBASENAMES := $(basename $(kernel-hidd-serialmouse_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-hidd-serialmouse_MCXX_FILES  := $(strip $(foreach kernel-hidd-serialmouse_CXXBASE,$(kernel-hidd-serialmouse_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-hidd-serialmouse_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-hidd-serialmouse_EXT),$(kernel-hidd-serialmouse_CXXBASE)))))))
+
+ifeq (,)
+kernel-hidd-serialmouse_MCXX_SRCWILDCARD := %
+else
+kernel-hidd-serialmouse_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-serialmouse_OBJDIR),)
+  kernel-hidd-serialmouse_CXXTARGETS := $(notdir $(kernel-hidd-serialmouse_CXXBASENAMES:=.o))
+  kernel-hidd-serialmouse_CXXDTARGETS := $(notdir $(kernel-hidd-serialmouse_CXXBASENAMES:=.d))
+  kernel-hidd-serialmouse_MCXX_WILDCARD := %
+else
+  kernel-hidd-serialmouse_CXXTARGETS := $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(notdir $(kernel-hidd-serialmouse_CXXBASENAMES:=.o)))
+  kernel-hidd-serialmouse_CXXDTARGETS := $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(notdir $(kernel-hidd-serialmouse_CXXBASENAMES:=.d)))
+  kernel-hidd-serialmouse_MCXX_WILDCARD := $(kernel-hidd-serialmouse_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-hidd-serialmouse_CXXTARGETS) $(kernel-hidd-serialmouse_CXXDTARGETS) : | $(kernel-hidd-serialmouse_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-hidd-serialmouse_MCXX_CPPFLAGS := $(kernel-hidd-serialmouse_CPPFLAGS)
+kernel-hidd-serialmouse_CXXFLAGS := $(kernel-hidd-serialmouse_CXXFLAGS)
+ifeq ($(kernel-hidd-serialmouse_DXXFLAGS),)
+  kernel-hidd-serialmouse_DXXFLAGS := $(kernel-hidd-serialmouse_CXXFLAGS)
+else
+  kernel-hidd-serialmouse_DXXFLAGS := $(kernel-hidd-serialmouse_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-hidd-serialmouse_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-hidd-serialmouse_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-hidd-serialmouse_CXXCMD:=$(HOST_CXX)
+  kernel-hidd-serialmouse_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-hidd-serialmouse_MCXX_CPPFLAGS) $(kernel-hidd-serialmouse_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-serialmouse_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-serialmouse_CXXFLAGS))
+  kernel-hidd-serialmouse_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-serialmouse_DXXFLAGS))
+  kernel-hidd-serialmouse_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-hidd-serialmouse_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-hidd-serialmouse_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-serialmouse_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-hidd-serialmouse_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-hidd-serialmouse_MCXX_CPPFLAGS := $(strip $(kernel-hidd-serialmouse_MCXX_CPPFLAGS) $(kernel-hidd-serialmouse_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-serialmouse_CXXFLAGS := $(strip $(kernel-hidd-serialmouse_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-hidd-serialmouse_DXXFLAGS := $(kernel-hidd-serialmouse_DXXFLAGS)
+  kernel-hidd-serialmouse_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-hidd-serialmouse_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-hidd-serialmouse_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-serialmouse_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-hidd-serialmouse_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-hidd-serialmouse_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-hidd-serialmouse_MCXX_CPPFLAGS) $(kernel-hidd-serialmouse_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-serialmouse_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-serialmouse_CXXFLAGS))
+  kernel-hidd-serialmouse_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-serialmouse_DXXFLAGS))
+  kernel-hidd-serialmouse_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-hidd-serialmouse_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-hidd-serialmouse_CXXCMD) $(kernel-hidd-serialmouse_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-serialmouse_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_CXXIQUOTE) . $(kernel-hidd-serialmouse_CXXIQUOTE_END) $(strip $(kernel-hidd-serialmouse_CXXFLAGS) $(kernel-hidd-serialmouse_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-hidd-serialmouse_CXXCMD) $(kernel-hidd-serialmouse_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-serialmouse_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_CXXIQUOTE) . $(kernel-hidd-serialmouse_CXXIQUOTE_END) $(strip $(kernel-hidd-serialmouse_CXXFLAGS) $(kernel-hidd-serialmouse_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-hidd-serialmouse_CXXCMD) $(kernel-hidd-serialmouse_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-serialmouse_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_CXXIQUOTE) . $(kernel-hidd-serialmouse_CXXIQUOTE_END) $(strip $(kernel-hidd-serialmouse_CXXFLAGS) $(kernel-hidd-serialmouse_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-hidd-serialmouse_CXXCMD)" $(MKDEPEND) $(strip $(kernel-hidd-serialmouse_DXXFLAGS) $(kernel-hidd-serialmouse_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-hidd-serialmouse_OBJDIR),)
+  $(foreach kernel-hidd-serialmouse_CXXFILE,$(kernel-hidd-serialmouse_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-hidd-serialmouse_CXXFILE))),$(kernel-hidd-serialmouse_CXXFILE))))
+else
+  $(foreach kernel-hidd-serialmouse_CXXFILE,$(kernel-hidd-serialmouse_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(notdir $(basename $(kernel-hidd-serialmouse_CXXFILE)))),$(kernel-hidd-serialmouse_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-hidd-serialmouse_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-hidd-serialmouse_MOBJC_SRCWILDCARD := %
+else
+kernel-hidd-serialmouse_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-serialmouse_OBJDIR),)
+  kernel-hidd-serialmouse_MOBJC_TARGETS := $(addsuffix .o,$(kernel-hidd-serialmouse_OBJC_NARCHFILES))
+  kernel-hidd-serialmouse_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-hidd-serialmouse_OBJC_NARCHFILES))
+  kernel-hidd-serialmouse_MOBJC_WILDCARD := %
+else
+  kernel-hidd-serialmouse_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(kernel-hidd-serialmouse_OBJC_NARCHFILES)))
+  kernel-hidd-serialmouse_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(kernel-hidd-serialmouse_OBJC_NARCHFILES)))
+  kernel-hidd-serialmouse_MOBJC_WILDCARD := $(kernel-hidd-serialmouse_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-hidd-serialmouse_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-hidd-serialmouse_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-hidd-serialmouse_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-serialmouse_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-hidd-serialmouse_MOBJC_DIRS := $(foreach dir, $(kernel-hidd-serialmouse_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-serialmouse_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-hidd-serialmouse_MOBJC_DIRS),)
+    kernel-hidd-serialmouse_MOBJC_DIRS := $(shell echo $(kernel-hidd-serialmouse_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-hidd-serialmouse_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-hidd-serialmouse_CC := $(TARGET_CC)
+else
+  kernel-hidd-serialmouse_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-hidd-serialmouse_MOBJC_CPPFLAGS := $(kernel-hidd-serialmouse_CPPFLAGS)
+kernel-hidd-serialmouse_OBJCFLAGS := $(kernel-hidd-serialmouse_CFLAGS)
+kernel-hidd-serialmouse_OBJCFLAGS := $(kernel-hidd-serialmouse_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-hidd-serialmouse_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-hidd-serialmouse_OBJCFLAGS)))
+ifeq ($(kernel-hidd-serialmouse_DFLAGS),)
+  kernel-hidd-serialmouse_OBJCDFLAGS := $(kernel-hidd-serialmouse_CFLAGS)
+else
+  kernel-hidd-serialmouse_OBJCDFLAGS := $(kernel-hidd-serialmouse_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-hidd-serialmouse_LINK ?= $(strip $(kernel-hidd-serialmouse_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-serialmouse_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-hidd-serialmouse_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : kernel-hidd-serialmouse_MOBJC_CPPFLAGS:=$(strip $(kernel-hidd-serialmouse_MOBJC_CPPFLAGS) $(kernel-hidd-serialmouse_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : kernel-hidd-serialmouse_OBJCFLAGS:=$(strip $(kernel-hidd-serialmouse_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : kernel-hidd-serialmouse_OBJCDFLAGS:=$(kernel-hidd-serialmouse_OBJCDFLAGS)
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-hidd-serialmouse_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-hidd-serialmouse_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : kernel-hidd-serialmouse_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-hidd-serialmouse_MOBJC_CPPFLAGS) $(kernel-hidd-serialmouse_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : kernel-hidd-serialmouse_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-serialmouse_OBJCFLAGS))
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : kernel-hidd-serialmouse_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-serialmouse_OBJCDFLAGS))
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-hidd-serialmouse_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-serialmouse_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : kernel-hidd-serialmouse_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-hidd-serialmouse_MOBJC_CPPFLAGS) $(kernel-hidd-serialmouse_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : kernel-hidd-serialmouse_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-serialmouse_OBJCFLAGS))
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : kernel-hidd-serialmouse_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-serialmouse_OBJCDFLAGS))
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-hidd-serialmouse_MOBJC_TARGETS) $(kernel-hidd-serialmouse_MOBJC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-serialmouse_MOBJC_TARGETS) : CPPFLAGS := $(kernel-hidd-serialmouse_MOBJC_CPPFLAGS)
+$(kernel-hidd-serialmouse_MOBJC_TARGETS) : CFLAGS := $(kernel-hidd-serialmouse_OBJCFLAGS)
+$(kernel-hidd-serialmouse_MOBJC_TARGETS) : $(kernel-hidd-serialmouse_MOBJC_WILDCARD).o : $(kernel-hidd-serialmouse_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-serialmouse_IQUOTE) $(dir $<) $(kernel-hidd-serialmouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_IQUOTE) . $(kernel-hidd-serialmouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-serialmouse_IQUOTE) $(dir $<) $(kernel-hidd-serialmouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_IQUOTE) . $(kernel-hidd-serialmouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-serialmouse_IQUOTE) $(dir $<) $(kernel-hidd-serialmouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_IQUOTE) . $(kernel-hidd-serialmouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-serialmouse_MOBJC_DTARGETS) : $(kernel-hidd-serialmouse_MOBJC_WILDCARD).d : $(kernel-hidd-serialmouse_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-serialmouse_OBJCDFLAGS) $(kernel-hidd-serialmouse_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-hidd-serialmouse_MC_SRCWILDCARD := %
+else
+kernel-hidd-serialmouse_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-serialmouse_OBJDIR),)
+kernel-hidd-serialmouse_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-serialmouse_CCFILES))
+kernel-hidd-serialmouse_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-serialmouse_CCFILES))
+kernel-hidd-serialmouse_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-serialmouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(notdir $(kernel-hidd-serialmouse_CCFILES))))
+    kernel-hidd-serialmouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(notdir $(kernel-hidd-serialmouse_CCFILES))))
+else
+ifeq (,)
+    kernel-hidd-serialmouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(kernel-hidd-serialmouse_CCFILES)))
+    kernel-hidd-serialmouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(kernel-hidd-serialmouse_CCFILES)))
+else
+    kernel-hidd-serialmouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-serialmouse_CCFILES))))
+    kernel-hidd-serialmouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-serialmouse_CCFILES))))
+endif
+endif
+kernel-hidd-serialmouse_MC_TGTWILDCARD := $(kernel-hidd-serialmouse_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-serialmouse_CCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-serialmouse_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-serialmouse_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-serialmouse_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-serialmouse_MC_DIRS := $(foreach dir, $(kernel-hidd-serialmouse_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-serialmouse_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-serialmouse_MC_DIRS),)
+    kernel-hidd-serialmouse_MC_DIRS := $(shell echo $(kernel-hidd-serialmouse_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-serialmouse_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-serialmouse_MC_CPPFLAGS := $(kernel-hidd-serialmouse_CPPFLAGS)
+kernel-hidd-serialmouse_CFLAGS := $(kernel-hidd-serialmouse_CFLAGS)
+ifeq ($(kernel-hidd-serialmouse_DFLAGS),)
+  kernel-hidd-serialmouse_DFLAGS := $(kernel-hidd-serialmouse_CFLAGS)
+else
+  kernel-hidd-serialmouse_DFLAGS := $(kernel-hidd-serialmouse_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-serialmouse_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-serialmouse_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_MC_CPPFLAGS:=$(strip $(kernel-hidd-serialmouse_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_CFLAGS:=$(strip $(kernel-hidd-serialmouse_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_DFLAGS:=$(kernel-hidd-serialmouse_DFLAGS)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-serialmouse_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-serialmouse_STRIP ?= $(HOST_STRIP)
+kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-serialmouse_CFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-serialmouse_DFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-serialmouse_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-serialmouse_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-serialmouse_CFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-serialmouse_DFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-serialmouse_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-serialmouse_MC_CPPFLAGS)
+$(kernel-hidd-serialmouse_MC_TARGETS) : CFLAGS := $(kernel-hidd-serialmouse_CFLAGS)
+$(kernel-hidd-serialmouse_MC_TARGETS) : $(kernel-hidd-serialmouse_MC_TGTWILDCARD).o : $(kernel-hidd-serialmouse_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-serialmouse_IQUOTE) $(dir $<) $(kernel-hidd-serialmouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_IQUOTE) . $(kernel-hidd-serialmouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-serialmouse_IQUOTE) $(dir $<) $(kernel-hidd-serialmouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_IQUOTE) . $(kernel-hidd-serialmouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-serialmouse_IQUOTE) $(dir $<) $(kernel-hidd-serialmouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_IQUOTE) . $(kernel-hidd-serialmouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-serialmouse_MC_DTARGETS) : $(kernel-hidd-serialmouse_MC_TGTWILDCARD).d : $(kernel-hidd-serialmouse_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-serialmouse_DFLAGS) $(kernel-hidd-serialmouse_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-serialmouse_MC_SRCWILDCARD := %
+else
+kernel-hidd-serialmouse_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-serialmouse_OBJDIR),)
+kernel-hidd-serialmouse_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-serialmouse_TARGETCCFILES))
+kernel-hidd-serialmouse_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-serialmouse_TARGETCCFILES))
+kernel-hidd-serialmouse_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-serialmouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(notdir $(kernel-hidd-serialmouse_TARGETCCFILES))))
+    kernel-hidd-serialmouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(notdir $(kernel-hidd-serialmouse_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-hidd-serialmouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(kernel-hidd-serialmouse_TARGETCCFILES)))
+    kernel-hidd-serialmouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(kernel-hidd-serialmouse_TARGETCCFILES)))
+else
+    kernel-hidd-serialmouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-serialmouse_TARGETCCFILES))))
+    kernel-hidd-serialmouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-serialmouse_TARGETCCFILES))))
+endif
+endif
+kernel-hidd-serialmouse_MC_TGTWILDCARD := $(kernel-hidd-serialmouse_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-serialmouse_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-serialmouse_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-serialmouse_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-serialmouse_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-serialmouse_MC_DIRS := $(foreach dir, $(kernel-hidd-serialmouse_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-serialmouse_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-serialmouse_MC_DIRS),)
+    kernel-hidd-serialmouse_MC_DIRS := $(shell echo $(kernel-hidd-serialmouse_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-serialmouse_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-serialmouse_MC_CPPFLAGS := $(kernel-hidd-serialmouse_CPPFLAGS) -D__AROS__
+kernel-hidd-serialmouse_CFLAGS := $(kernel-hidd-serialmouse_CFLAGS)
+ifeq ($(kernel-hidd-serialmouse_DFLAGS),)
+  kernel-hidd-serialmouse_DFLAGS := $(kernel-hidd-serialmouse_CFLAGS)
+else
+  kernel-hidd-serialmouse_DFLAGS := $(kernel-hidd-serialmouse_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-serialmouse_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-serialmouse_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_MC_CPPFLAGS:=$(strip $(kernel-hidd-serialmouse_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_CFLAGS:=$(strip $(kernel-hidd-serialmouse_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_DFLAGS:=$(kernel-hidd-serialmouse_DFLAGS)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-serialmouse_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-serialmouse_STRIP ?= $(HOST_STRIP)
+kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-serialmouse_CFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-serialmouse_DFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-serialmouse_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-serialmouse_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-serialmouse_CFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-serialmouse_DFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-serialmouse_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-serialmouse_MC_CPPFLAGS)
+$(kernel-hidd-serialmouse_MC_TARGETS) : CFLAGS := $(kernel-hidd-serialmouse_CFLAGS)
+$(kernel-hidd-serialmouse_MC_TARGETS) : $(kernel-hidd-serialmouse_MC_TGTWILDCARD).o : $(kernel-hidd-serialmouse_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-serialmouse_IQUOTE) $(dir $<) $(kernel-hidd-serialmouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_IQUOTE) . $(kernel-hidd-serialmouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-serialmouse_IQUOTE) $(dir $<) $(kernel-hidd-serialmouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_IQUOTE) . $(kernel-hidd-serialmouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-serialmouse_IQUOTE) $(dir $<) $(kernel-hidd-serialmouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_IQUOTE) . $(kernel-hidd-serialmouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-serialmouse_MC_DTARGETS) : $(kernel-hidd-serialmouse_MC_TGTWILDCARD).d : $(kernel-hidd-serialmouse_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-serialmouse_DFLAGS) $(kernel-hidd-serialmouse_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-serialmouse_MC_SRCWILDCARD := %
+else
+kernel-hidd-serialmouse_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-serialmouse_OBJDIR)/linklib,)
+kernel-hidd-serialmouse_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-serialmouse_NLIBARCHFILES))
+kernel-hidd-serialmouse_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-serialmouse_NLIBARCHFILES))
+kernel-hidd-serialmouse_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-serialmouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$(notdir $(kernel-hidd-serialmouse_NLIBARCHFILES))))
+    kernel-hidd-serialmouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$(notdir $(kernel-hidd-serialmouse_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-hidd-serialmouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$(kernel-hidd-serialmouse_NLIBARCHFILES)))
+    kernel-hidd-serialmouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$(kernel-hidd-serialmouse_NLIBARCHFILES)))
+else
+    kernel-hidd-serialmouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-serialmouse_NLIBARCHFILES))))
+    kernel-hidd-serialmouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-serialmouse_NLIBARCHFILES))))
+endif
+endif
+kernel-hidd-serialmouse_MC_TGTWILDCARD := $(kernel-hidd-serialmouse_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-serialmouse_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-serialmouse_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-serialmouse_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-serialmouse_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-serialmouse_MC_DIRS := $(foreach dir, $(kernel-hidd-serialmouse_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-serialmouse_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-serialmouse_MC_DIRS),)
+    kernel-hidd-serialmouse_MC_DIRS := $(shell echo $(kernel-hidd-serialmouse_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-serialmouse_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-serialmouse_MC_CPPFLAGS := $(kernel-hidd-serialmouse_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-serialmouse_CFLAGS := $(kernel-hidd-serialmouse_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-serialmouse_LINKLIBDFLAGS),)
+  kernel-hidd-serialmouse_DFLAGS := $(kernel-hidd-serialmouse_LINKLIBCFLAGS)
+else
+  kernel-hidd-serialmouse_DFLAGS := $(kernel-hidd-serialmouse_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-serialmouse_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-serialmouse_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_MC_CPPFLAGS:=$(strip $(kernel-hidd-serialmouse_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_CFLAGS:=$(strip $(kernel-hidd-serialmouse_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_DFLAGS:=$(kernel-hidd-serialmouse_DFLAGS)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-serialmouse_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-serialmouse_STRIP ?= $(HOST_STRIP)
+kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-serialmouse_CFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-serialmouse_DFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-serialmouse_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-serialmouse_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-serialmouse_CFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-serialmouse_DFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-serialmouse_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-serialmouse_MC_CPPFLAGS)
+$(kernel-hidd-serialmouse_MC_TARGETS) : CFLAGS := $(kernel-hidd-serialmouse_CFLAGS)
+$(kernel-hidd-serialmouse_MC_TARGETS) : $(kernel-hidd-serialmouse_MC_TGTWILDCARD).o : $(kernel-hidd-serialmouse_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-serialmouse_IQUOTE) $(dir $<) $(kernel-hidd-serialmouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_IQUOTE) . $(kernel-hidd-serialmouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-serialmouse_IQUOTE) $(dir $<) $(kernel-hidd-serialmouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_IQUOTE) . $(kernel-hidd-serialmouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-serialmouse_IQUOTE) $(dir $<) $(kernel-hidd-serialmouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_IQUOTE) . $(kernel-hidd-serialmouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-serialmouse_MC_DTARGETS) : $(kernel-hidd-serialmouse_MC_TGTWILDCARD).d : $(kernel-hidd-serialmouse_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-serialmouse_DFLAGS) $(kernel-hidd-serialmouse_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-hidd-serialmouse_OBJDIR)/linklib,)
+kernel-hidd-serialmouse_MC_SRCWILDCARD := %
+else
+kernel-hidd-serialmouse_MC_SRCWILDCARD := $(kernel-hidd-serialmouse_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-hidd-serialmouse_OBJDIR)/linklib,)
+kernel-hidd-serialmouse_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-serialmouse_LINKLIBCCGENFILES))
+kernel-hidd-serialmouse_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-serialmouse_LINKLIBCCGENFILES))
+kernel-hidd-serialmouse_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-serialmouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$(notdir $(kernel-hidd-serialmouse_LINKLIBCCGENFILES))))
+    kernel-hidd-serialmouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$(notdir $(kernel-hidd-serialmouse_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-hidd-serialmouse_OBJDIR)/linklib,)
+    kernel-hidd-serialmouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$(kernel-hidd-serialmouse_LINKLIBCCGENFILES)))
+    kernel-hidd-serialmouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$(kernel-hidd-serialmouse_LINKLIBCCGENFILES)))
+else
+    kernel-hidd-serialmouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-serialmouse_OBJDIR)/linklib/%,%,$(kernel-hidd-serialmouse_LINKLIBCCGENFILES))))
+    kernel-hidd-serialmouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-serialmouse_OBJDIR)/linklib/%,%,$(kernel-hidd-serialmouse_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-hidd-serialmouse_MC_TGTWILDCARD := $(kernel-hidd-serialmouse_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-serialmouse_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-serialmouse_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-serialmouse_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-serialmouse_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-serialmouse_MC_DIRS := $(foreach dir, $(kernel-hidd-serialmouse_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-serialmouse_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-serialmouse_MC_DIRS),)
+    kernel-hidd-serialmouse_MC_DIRS := $(shell echo $(kernel-hidd-serialmouse_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-serialmouse_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-serialmouse_MC_CPPFLAGS := $(kernel-hidd-serialmouse_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-serialmouse_CFLAGS := $(kernel-hidd-serialmouse_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-serialmouse_LINKLIBDFLAGS),)
+  kernel-hidd-serialmouse_DFLAGS := $(kernel-hidd-serialmouse_LINKLIBCFLAGS)
+else
+  kernel-hidd-serialmouse_DFLAGS := $(kernel-hidd-serialmouse_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-serialmouse_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-serialmouse_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_MC_CPPFLAGS:=$(strip $(kernel-hidd-serialmouse_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_CFLAGS:=$(strip $(kernel-hidd-serialmouse_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_DFLAGS:=$(kernel-hidd-serialmouse_DFLAGS)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-serialmouse_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-serialmouse_STRIP ?= $(HOST_STRIP)
+kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-serialmouse_CFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-serialmouse_DFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-serialmouse_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-serialmouse_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-serialmouse_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_CPPFLAGS) $(kernel-hidd-serialmouse_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-serialmouse_CFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-serialmouse_DFLAGS))
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-serialmouse_MC_TARGETS) $(kernel-hidd-serialmouse_MC_DTARGETS) : kernel-hidd-serialmouse_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-serialmouse_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-serialmouse_MC_CPPFLAGS)
+$(kernel-hidd-serialmouse_MC_TARGETS) : CFLAGS := $(kernel-hidd-serialmouse_CFLAGS)
+$(kernel-hidd-serialmouse_MC_TARGETS) : $(kernel-hidd-serialmouse_MC_TGTWILDCARD).o : $(kernel-hidd-serialmouse_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-serialmouse_IQUOTE) $(dir $<) $(kernel-hidd-serialmouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_IQUOTE) . $(kernel-hidd-serialmouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-serialmouse_IQUOTE) $(dir $<) $(kernel-hidd-serialmouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_IQUOTE) . $(kernel-hidd-serialmouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-serialmouse_IQUOTE) $(dir $<) $(kernel-hidd-serialmouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-serialmouse_IQUOTE) . $(kernel-hidd-serialmouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-serialmouse_MC_DTARGETS) : $(kernel-hidd-serialmouse_MC_TGTWILDCARD).d : $(kernel-hidd-serialmouse_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-serialmouse_DFLAGS) $(kernel-hidd-serialmouse_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-hidd-serialmouse_LINKLIBAFILES),)
+
+ifeq ($(kernel-hidd-serialmouse_OBJDIR)/linklib,)
+kernel-hidd-serialmouse-MA_TARGETS := $(addsuffix .o,$(kernel-hidd-serialmouse_LINKLIBAFILES) $(kernel-hidd-serialmouse_RELLINKLIBAFILES))
+kernel-hidd-serialmouse-MA_WILDCARD := %
+else
+kernel-hidd-serialmouse-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$(notdir $(kernel-hidd-serialmouse_LINKLIBAFILES) $(kernel-hidd-serialmouse_RELLINKLIBAFILES))))
+kernel-hidd-serialmouse-MA_WILDCARD := $(kernel-hidd-serialmouse_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-hidd-serialmouse-MA_TARGETS) : | $(addsuffix .S,$(kernel-hidd-serialmouse_LINKLIBAFILES) $(kernel-hidd-serialmouse_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-serialmouse-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-serialmouse-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-serialmouse_LINKLIBAFILES) $(kernel-hidd-serialmouse_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-serialmouse-MA_DIRS := $(foreach dir, $(kernel-hidd-serialmouse-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-serialmouse-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-serialmouse-MA_DIRS),)
+    kernel-hidd-serialmouse-MA_DIRS := $(shell echo $(kernel-hidd-serialmouse-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-hidd-serialmouse-MA_DIRS)
+endif
+
+endif
+
+kernel-hidd-serialmouse-MA_ASSEMBLER ?= $(kernel-hidd-serialmouse_ASSEMBLER)
+
+$(kernel-hidd-serialmouse-MA_TARGETS) : kernel-hidd-serialmouse-MA_CMD:= $(kernel-hidd-serialmouse-MA_ASSEMBLER)
+
+$(kernel-hidd-serialmouse-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-hidd-serialmouse-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-hidd-serialmouse-MA_TARGETS) : $(kernel-hidd-serialmouse-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-hidd-serialmouse-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-hidd-serialmouse-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-hidd-serialmouse-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-hidd-serialmouse_SUFFIX           := hidd
+else
+kernel-hidd-serialmouse_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-hidd-serialmouse_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-hidd-serialmouse_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-hidd-serialmouse_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-hidd-serialmouse_SUFFIX),handler)
+kernel-hidd-serialmouse_MODULE           := $(AROSDIR)/$(kernel-hidd-serialmouse_MODDIR)/$(kernel-hidd-serialmouse_DEFNAME)-$(kernel-hidd-serialmouse_SUFFIX)
+else
+kernel-hidd-serialmouse_MODULE           := $(AROSDIR)/$(kernel-hidd-serialmouse_MODDIR)/$(kernel-hidd-serialmouse_DEFNAME).$(kernel-hidd-serialmouse_SUFFIX)
+endif
+kernel-hidd-serialmouse_KOBJ             := $(KOBJSDIR)/$(kernel-hidd-serialmouse_DEFNAME)_$(kernel-hidd-serialmouse_SUFFIX).o
+else
+kernel-hidd-serialmouse_MODULE           :=
+kernel-hidd-serialmouse_KOBJ             :=
+endif
+
+kernel-hidd-serialmouse-quick      : kernel-hidd-serialmouse
+kernel-hidd-serialmouse            : $(kernel-hidd-serialmouse_MODULE) $(kernel-hidd-serialmouse_LINKLIB) $(kernel-hidd-serialmouse_RELLINKLIB)
+ifeq (M,M)
+kernel-hidd-serialmouse-kobj       : $(kernel-hidd-serialmouse_KOBJ) $(kernel-hidd-serialmouse_LINKLIB) $(kernel-hidd-serialmouse_RELLINKLIB)
+kernel-hidd-serialmouse-kobj-quick : $(kernel-hidd-serialmouse_KOBJ) $(kernel-hidd-serialmouse_LINKLIB) $(kernel-hidd-serialmouse_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-hidd-serialmouse-linklib    : $(kernel-hidd-serialmouse_LINKLIB) $(kernel-hidd-serialmouse_RELLINKLIB)
+endif
+
+kernel-hidd-serialmouse_OBJS := $(addsuffix .o,$(kernel-hidd-serialmouse_STARTFILES)) $(kernel-hidd-serialmouse_ARCHOBJS) \
+           $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(notdir $(kernel-hidd-serialmouse_C_NARCHFILES:=.o) $(kernel-hidd-serialmouse_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (hidd,handler)
+kernel-hidd-serialmouse_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (serialmouse,con)
+    kernel-hidd-serialmouse_ERR          := $(notdir $(kernel-hidd-serialmouse_MODULE)).err
+else
+    kernel-hidd-serialmouse_ERR          := serialmouse.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-hidd-serialmouse_DEFNAME)_LDFLAGS) $(kernel-hidd-serialmouse_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-hidd-serialmouse_LIBS) $($(kernel-hidd-serialmouse_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-hidd-serialmouse_MODULE) : LIB_NAMES := $(kernel-hidd-serialmouse_LIBS) $($(kernel-hidd-serialmouse_DEFNAME)_LIBS)
+$(kernel-hidd-serialmouse_MODULE) : OBJS := $(kernel-hidd-serialmouse_STARTOBJS) $(kernel-hidd-serialmouse_OBJS) $(USER_OBJS)
+$(kernel-hidd-serialmouse_MODULE) : ENDTAG := $(kernel-hidd-serialmouse_ENDOBJS)
+$(kernel-hidd-serialmouse_MODULE) : ERR := $(kernel-hidd-serialmouse_ERR)
+$(kernel-hidd-serialmouse_MODULE) : OBJDIR := $(kernel-hidd-serialmouse_OBJDIR)
+$(kernel-hidd-serialmouse_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-hidd-serialmouse_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-hidd-serialmouse_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-hidd-serialmouse_MODULE) : $(kernel-hidd-serialmouse_STARTOBJS) $(kernel-hidd-serialmouse_OBJS) $(USER_OBJS) $(kernel-hidd-serialmouse_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-hidd-serialmouse_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-hidd-serialmouse_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-hidd-serialmouse_LC_LINKLIBNAME   := $(shell echo $(kernel-hidd-serialmouse_LINKLIBNAME) | tr A-Z a-z)
+kernel-hidd-serialmouse_LC_MODNAME       := $(shell echo serialmouse | tr A-Z a-z)
+ifneq ($(kernel-hidd-serialmouse_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_LINKLIBNAME)$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_AR:=$(AR)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_LINKLIBNAME)$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_LINKLIBNAME)$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_AR:=$(HOST_AR)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_LINKLIBNAME)$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_LINKLIBNAME)$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_AR:=$(KERNEL_AR)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_LINKLIBNAME)$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_LINKLIBNAME)$(kernel-hidd-serialmouse_LIBSUFFIX).a : $(kernel-hidd-serialmouse_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-serialmouse_AR) $@ $^
+	$(Q)$(kernel-hidd-serialmouse_RANLIB) $@
+ifneq ($(kernel-hidd-serialmouse_LC_MODNAME),$(kernel-hidd-serialmouse_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-serialmouse_LIBDIR)/libserialmouse$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_AR:=$(AR)
+$(kernel-hidd-serialmouse_LIBDIR)/libserialmouse$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-serialmouse_LIBDIR)/libserialmouse$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_AR:=$(HOST_AR)
+$(kernel-hidd-serialmouse_LIBDIR)/libserialmouse$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-serialmouse_LIBDIR)/libserialmouse$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_AR:=$(KERNEL_AR)
+$(kernel-hidd-serialmouse_LIBDIR)/libserialmouse$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-serialmouse_LIBDIR)/libserialmouse$(kernel-hidd-serialmouse_LIBSUFFIX).a : $(kernel-hidd-serialmouse_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-serialmouse_AR) $@ $^
+	$(Q)$(kernel-hidd-serialmouse_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-serialmouse_LINKLIB),)
+$(kernel-hidd-serialmouse_LINKLIB) : | $(kernel-hidd-serialmouse_LIBDIR)
+else
+$(kernel-hidd-serialmouse_LINKLIB) :: $(kernel-hidd-serialmouse_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-serialmouse_LIBDIR)
+
+endif
+
+ifneq ($(kernel-hidd-serialmouse_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_LINKLIBNAME)_rel$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_AR:=$(AR)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_LINKLIBNAME)_rel$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_LINKLIBNAME)_rel$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_AR:=$(HOST_AR)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_LINKLIBNAME)_rel$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_LINKLIBNAME)_rel$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_AR:=$(KERNEL_AR)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_LINKLIBNAME)_rel$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_LINKLIBNAME)_rel$(kernel-hidd-serialmouse_LIBSUFFIX).a : $(kernel-hidd-serialmouse_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-serialmouse_AR) $@ $^
+	$(Q)$(kernel-hidd-serialmouse_RANLIB) $@
+ifneq ($(kernel-hidd-serialmouse_LC_MODNAME),$(kernel-hidd-serialmouse_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_DEFNAME)_rel$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_AR:=$(AR)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_DEFNAME)_rel$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_DEFNAME)_rel$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_AR:=$(HOST_AR)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_DEFNAME)_rel$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_DEFNAME)_rel$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_AR:=$(KERNEL_AR)
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_DEFNAME)_rel$(kernel-hidd-serialmouse_LIBSUFFIX).a : kernel-hidd-serialmouse_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-serialmouse_LIBDIR)/lib$(kernel-hidd-serialmouse_DEFNAME)_rel$(kernel-hidd-serialmouse_LIBSUFFIX).a : $(kernel-hidd-serialmouse_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-serialmouse_AR) $@ $^
+	$(Q)$(kernel-hidd-serialmouse_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-serialmouse_RELLINKLIB),)
+$(kernel-hidd-serialmouse_RELLINKLIB) : | $(kernel-hidd-serialmouse_LIBDIR)
+else
+$(kernel-hidd-serialmouse_RELLINKLIB) :: $(kernel-hidd-serialmouse_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-serialmouse_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-hidd-serialmouse_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-hidd-serialmouse_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-hidd-serialmouse_SYMBOLS := $(kernel-hidd-serialmouse_KBASE)
+
+kernel-hidd-serialmouse_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-hidd-serialmouse_KOBJ_LIBS        := $(filter-out $(kernel-hidd-serialmouse_KLIB),$(kernel-hidd-serialmouse_LIBS)) $(kernel-hidd-serialmouse_KAUTOLIB)
+$(kernel-hidd-serialmouse_KOBJ) : LINKLIBS:=$(kernel-hidd-serialmouse_KOBJ_LIBS) $($(kernel-hidd-serialmouse_DEFNAME)_LIBS)
+$(kernel-hidd-serialmouse_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-hidd-serialmouse_SYMBOLS))
+$(kernel-hidd-serialmouse_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-hidd-serialmouse_KOBJ) : $(kernel-hidd-serialmouse_OBJS) $(USER_OBJS) $(kernel-hidd-serialmouse_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-hidd-serialmouse_DEPS             := $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/,$(notdir $(kernel-hidd-serialmouse_CCFILES:=.d) $(kernel-hidd-serialmouse_TARGETCCFILES:=.d) $(kernel-hidd-serialmouse_CXXFILES:=.d))) $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/linklib/,$(notdir $(kernel-hidd-serialmouse_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-hidd-serialmouse_DEPS),)
+  ifneq (kernel-hidd-serialmouse kernel-hidd-serialmouse-quick kernel-hidd-serialmouse-kobj kernel-hidd-serialmouse-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-hidd-serialmouse kernel-hidd-serialmouse-quick kernel-hidd-serialmouse-kobj kernel-hidd-serialmouse-kobj-quick),)
+      -include $(kernel-hidd-serialmouse_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-hidd-serialmouse_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-hidd-serialmouse_OBJS) $(kernel-hidd-serialmouse_DEPS) : | $(kernel-hidd-serialmouse_OBJDIR)/linklib
+
+ifneq ($(kernel-hidd-serialmouse_OBJS) $(kernel-hidd-serialmouse_DEPS) $(kernel-hidd-serialmouse_MODULE) $(kernel-hidd-serialmouse_KOBJ),)
+$(kernel-hidd-serialmouse_OBJS) $(kernel-hidd-serialmouse_DEPS) $(kernel-hidd-serialmouse_MODULE) $(kernel-hidd-serialmouse_KOBJ) : | $(kernel-hidd-serialmouse_OBJDIR) $(AROSDIR)/$(kernel-hidd-serialmouse_MODDIR) $(KOBJSDIR)
+else
+$(kernel-hidd-serialmouse_OBJS) $(kernel-hidd-serialmouse_DEPS) $(kernel-hidd-serialmouse_MODULE) $(kernel-hidd-serialmouse_KOBJ) :: $(kernel-hidd-serialmouse_OBJDIR) $(AROSDIR)/$(kernel-hidd-serialmouse_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-serialmouse_OBJDIR) $(AROSDIR)/$(kernel-hidd-serialmouse_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-hidd-serialmouse kernel-hidd-serialmouse-includes kernel-hidd-serialmouse-quick kernel-hidd-serialmouse-kobj kernel-hidd-serialmouse-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-hidd-serialmouse_DFILE_DEPS := $(kernel-hidd-serialmouse_LIBDEFSINC) $(kernel-hidd-serialmouse_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-hidd-serialmouse_INCDIR)/,$($(kernel-hidd-serialmouse_DEFNAME)_INCLUDES))
+$(kernel-hidd-serialmouse_DEPS) : $(kernel-hidd-serialmouse_DFILE_DEPS)
+endif
+
+kernel-hidd-serialmouse_TOCLEAN := $(kernel-hidd-serialmouse_OBJS) $(kernel-hidd-serialmouse_DEPS) \
+    $(kernel-hidd-serialmouse_MODULE) $(kernel-hidd-serialmouse_LINKLIB) $(kernel-hidd-serialmouse_KOBJ) \
+    $(kernel-hidd-serialmouse_OBJDIR)/Makefile.serialmousehidd \
+    $(addprefix $(kernel-hidd-serialmouse_OBJDIR)/include/,$($(kernel-hidd-serialmouse_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-hidd-serialmouse_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-serialmouse_INCDIR)/,$($(kernel-hidd-serialmouse_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-serialmouse_OBJDIR)/serialmouse_geninc $(kernel-hidd-serialmouse_OBJDIR)/serialmouse_incs \
+    $(addsuffix .c,$(kernel-hidd-serialmouse_LINKLIBFILES)) $(kernel-hidd-serialmouse_LINKLIBOBJS) $(kernel-hidd-serialmouse_LIBDEFSINC) \
+    $(kernel-hidd-serialmouse_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-hidd-serialmouse_STARTFILES) $(kernel-hidd-serialmouse_ENDFILES)) \
+    $(kernel-hidd-serialmouse_ENDOBJS)
+kernel-hidd-serialmouse-clean : FILES              := $(kernel-hidd-serialmouse_TOCLEAN)
+kernel-hidd-serialmouse-clean ::
+	$(Q)$(ECHO) "Cleaning up for module serialmouse"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-hidd-serialmouse_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

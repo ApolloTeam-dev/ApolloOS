@@ -1,0 +1,295 @@
+#   $Id$
+#
+#   Makefile for AROS m68k Test
+
+include $(SRCDIR)/config/aros.cfg
+
+EXEDIR := $(AROS_TESTS)
+
+FILES=bcpl_strings
+
+USER_LDFLAGS := -static
+
+
+.PHONY : test-m68k-bcpl
+
+test-m68k-bcpl_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-m68k-bcpl_TARGETDIR := $(EXEDIR)
+test-m68k-bcpl_LIBS := autoinit
+
+test-m68k-bcpl_FILES     := $(FILES)
+test-m68k-bcpl_OBJS      := $(addsuffix .o,$(addprefix $(test-m68k-bcpl_OBJDIR)/,$(test-m68k-bcpl_FILES)))
+test-m68k-bcpl_DEPS      := $(addsuffix .d,$(addprefix $(test-m68k-bcpl_OBJDIR)/,$(test-m68k-bcpl_FILES)))
+test-m68k-bcpl_EXES      := $(addprefix $(test-m68k-bcpl_TARGETDIR)/,$(test-m68k-bcpl_FILES))
+
+test-m68k-bcpl_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-m68k-bcpl_CPPFLAGS += -I
+endif
+test-m68k-bcpl_CFLAGS    := $(CFLAGS)
+test-m68k-bcpl_COVERAGE := no
+ifeq (target,target)
+ifeq (no,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-m68k-bcpl_COVERAGE := yes
+test-m68k-bcpl_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-m68k-bcpl_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-m68k-bcpl_CFLAGS    := $(strip $(test-m68k-bcpl_COVERAGEFLAGS) $(test-m68k-bcpl_CFLAGS))
+test-m68k-bcpl_LIBS += $(test-m68k-bcpl_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-m68k-bcpl_FUNCINSTR := yes
+test-m68k-bcpl_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-m68k-bcpl_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-m68k-bcpl_CFLAGS    := $(strip $(test-m68k-bcpl_INSTRFUNCFLAGS) $(test-m68k-bcpl_CFLAGS))
+test-m68k-bcpl_LIBS += $(test-m68k-bcpl_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-m68k-bcpl_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-m68k-bcpl_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-m68k-bcpl_DFLAGS := 
+else
+    test-m68k-bcpl_DFLAGS := $(test-m68k-bcpl_CFLAGS)
+endif
+ifeq (target,target)
+test-m68k-bcpl_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-m68k-bcpl_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-m68k-bcpl_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-m68k-bcpl_LDFLAGS += -L
+endif
+
+#MM
+test-m68k-bcpl-quick : test-m68k-bcpl
+
+#MM test-m68k-bcpl : includes-generate-deps core-linklibs
+test-m68k-bcpl : $(test-m68k-bcpl_EXES)
+
+ifneq ($(filter $(TARGET),test-m68k-bcpl test-m68k-bcpl-quick),)
+
+ifeq (,)
+test-m68k-bcpl_MC_SRCWILDCARD := %
+else
+test-m68k-bcpl_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-m68k-bcpl_OBJDIR),)
+test-m68k-bcpl_MC_TARGETS := $(addsuffix .o,$(test-m68k-bcpl_FILES))
+test-m68k-bcpl_MC_DTARGETS := $(addsuffix .d,$(test-m68k-bcpl_FILES))
+test-m68k-bcpl_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-m68k-bcpl_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-m68k-bcpl_OBJDIR)/,$(notdir $(test-m68k-bcpl_FILES))))
+    test-m68k-bcpl_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-m68k-bcpl_OBJDIR)/,$(notdir $(test-m68k-bcpl_FILES))))
+else
+ifeq (,)
+    test-m68k-bcpl_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-m68k-bcpl_OBJDIR)/,$(test-m68k-bcpl_FILES)))
+    test-m68k-bcpl_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-m68k-bcpl_OBJDIR)/,$(test-m68k-bcpl_FILES)))
+else
+    test-m68k-bcpl_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-m68k-bcpl_OBJDIR)/,$(patsubst /%,%,$(test-m68k-bcpl_FILES))))
+    test-m68k-bcpl_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-m68k-bcpl_OBJDIR)/,$(patsubst /%,%,$(test-m68k-bcpl_FILES))))
+endif
+endif
+test-m68k-bcpl_MC_TGTWILDCARD := $(test-m68k-bcpl_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : | $(addsuffix .c,$(test-m68k-bcpl_FILES))
+
+# Be sure that all .c files are found
+test-m68k-bcpl_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-m68k-bcpl_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-m68k-bcpl_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-m68k-bcpl_MC_DIRS := $(foreach dir, $(test-m68k-bcpl_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-m68k-bcpl_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-m68k-bcpl_MC_DIRS),)
+    test-m68k-bcpl_MC_DIRS := $(shell echo $(test-m68k-bcpl_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-m68k-bcpl_MC_DIRS)
+endif
+
+endif
+
+test-m68k-bcpl_MC_CPPFLAGS := $(test-m68k-bcpl_CPPFLAGS)
+test-m68k-bcpl_CFLAGS := $(test-m68k-bcpl_CFLAGS)
+ifeq ($(test-m68k-bcpl_DFLAGS),)
+  test-m68k-bcpl_DFLAGS := $(test-m68k-bcpl_CFLAGS)
+else
+  test-m68k-bcpl_DFLAGS := $(test-m68k-bcpl_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-m68k-bcpl_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-m68k-bcpl_STRIP ?= $(TARGET_STRIP)
+test-m68k-bcpl_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : test-m68k-bcpl_MC_CPPFLAGS:=$(strip $(test-m68k-bcpl_MC_CPPFLAGS) $(test-m68k-bcpl_MC_EXTRA_CPPFLAGS))
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : test-m68k-bcpl_CFLAGS:=$(strip $(test-m68k-bcpl_CFLAGS) $(SAFETY_CFLAGS))
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : test-m68k-bcpl_DFLAGS:=$(test-m68k-bcpl_DFLAGS)
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : test-m68k-bcpl_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : test-m68k-bcpl_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-m68k-bcpl_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-m68k-bcpl_STRIP ?= $(HOST_STRIP)
+test-m68k-bcpl_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : test-m68k-bcpl_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-m68k-bcpl_MC_CPPFLAGS) $(test-m68k-bcpl_MC_EXTRA_CPPFLAGS))
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : test-m68k-bcpl_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-m68k-bcpl_CFLAGS))
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : test-m68k-bcpl_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-m68k-bcpl_DFLAGS))
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : test-m68k-bcpl_IQUOTE:=$(HOST_IQUOTE)
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : test-m68k-bcpl_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-m68k-bcpl_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-m68k-bcpl_STRIP ?= $(ECHO) >/dev/null
+test-m68k-bcpl_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : test-m68k-bcpl_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-m68k-bcpl_MC_CPPFLAGS) $(test-m68k-bcpl_MC_EXTRA_CPPFLAGS))
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : test-m68k-bcpl_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-m68k-bcpl_CFLAGS))
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : test-m68k-bcpl_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-m68k-bcpl_DFLAGS))
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : test-m68k-bcpl_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-m68k-bcpl_MC_TARGETS) $(test-m68k-bcpl_MC_DTARGETS) : test-m68k-bcpl_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-m68k-bcpl_MC_TARGETS) : CPPFLAGS := $(test-m68k-bcpl_MC_CPPFLAGS)
+$(test-m68k-bcpl_MC_TARGETS) : CFLAGS := $(test-m68k-bcpl_CFLAGS)
+$(test-m68k-bcpl_MC_TARGETS) : $(test-m68k-bcpl_MC_TGTWILDCARD).o : $(test-m68k-bcpl_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-m68k-bcpl_IQUOTE) $(dir $<) $(test-m68k-bcpl_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-m68k-bcpl_IQUOTE) . $(test-m68k-bcpl_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-m68k-bcpl_IQUOTE) $(dir $<) $(test-m68k-bcpl_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-m68k-bcpl_IQUOTE) . $(test-m68k-bcpl_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-m68k-bcpl_IQUOTE) $(dir $<) $(test-m68k-bcpl_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-m68k-bcpl_IQUOTE) . $(test-m68k-bcpl_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-m68k-bcpl_MC_DTARGETS) : $(test-m68k-bcpl_MC_TGTWILDCARD).d : $(test-m68k-bcpl_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-m68k-bcpl_DFLAGS) $(test-m68k-bcpl_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-m68k-bcpl-link_EXTRA_LDFLAGS := 
+test-m68k-bcpl-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-m68k-bcpl-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (no,no)
+    test-m68k-bcpl-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-m68k-bcpl-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-m68k-bcpl-link_DIRS := $(subst -L ,-L,$(strip $(test-m68k-bcpl_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-m68k-bcpl-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-m68k-bcpl-link_DIRS)))
+# Add trailing /
+test-m68k-bcpl-link_DIRS := $(subst //,/,$(addsuffix /,$(test-m68k-bcpl-link_DIRS)))
+# Add normal linklib path
+test-m68k-bcpl-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-m68k-bcpl-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-m68k-bcpl_LIBS) $(test-m68k-bcpl-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-m68k-bcpl-link_DEPLIBS := $(foreach lib,$(test-m68k-bcpl-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-m68k-bcpl-link_DIRS)))) \
+)
+test-m68k-bcpl-link_PROGS := $(addprefix $(test-m68k-bcpl_TARGETDIR)/,$(test-m68k-bcpl_FILES))
+
+$(test-m68k-bcpl-link_PROGS) : OBJDIR := $(test-m68k-bcpl_OBJDIR)
+$(test-m68k-bcpl-link_PROGS) : LDFLAGS := $(strip $(test-m68k-bcpl_LDFLAGS) $(test-m68k-bcpl-link_EXTRA_LDFLAGS))
+$(test-m68k-bcpl-link_PROGS) : LIBS := $(addprefix -l,$(test-m68k-bcpl_LIBS) $(test-m68k-bcpl-link_EXTRA_LIBS) )
+$(test-m68k-bcpl-link_PROGS) : $(test-m68k-bcpl_TARGETDIR)/% : $(test-m68k-bcpl_OBJDIR)/%.o $(test-m68k-bcpl-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-m68k-bcpl_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-m68k-bcpl_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-m68k-bcpl_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-m68k-bcpl_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-m68k-bcpl_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-m68k-bcpl_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-m68k-bcpl_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-m68k-bcpl_DEPS),)
+  ifneq (test-m68k-bcpl test-m68k-bcpl-quick,)
+    ifneq ($(findstring $(TARGET),test-m68k-bcpl test-m68k-bcpl-quick),)
+      -include $(test-m68k-bcpl_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-m68k-bcpl_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-m68k-bcpl_DEPS) $(test-m68k-bcpl_OBJS) $(addprefix $(test-m68k-bcpl_TARGETDIR)/,$(test-m68k-bcpl_FILES)),)
+$(test-m68k-bcpl_DEPS) $(test-m68k-bcpl_OBJS) $(addprefix $(test-m68k-bcpl_TARGETDIR)/,$(test-m68k-bcpl_FILES)) : | $(test-m68k-bcpl_TARGETDIR) $(test-m68k-bcpl_OBJDIR)
+else
+$(test-m68k-bcpl_DEPS) $(test-m68k-bcpl_OBJS) $(addprefix $(test-m68k-bcpl_TARGETDIR)/,$(test-m68k-bcpl_FILES)) :: $(test-m68k-bcpl_TARGETDIR) $(test-m68k-bcpl_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-m68k-bcpl_TARGETDIR) $(test-m68k-bcpl_OBJDIR)
+
+
+test-m68k-bcpl-clean : FILES := $(test-m68k-bcpl_OBJS) $(test-m68k-bcpl_EXES) $(test-m68k-bcpl_DEPS)
+#MM
+test-m68k-bcpl-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-m68k-bcpl"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

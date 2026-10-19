@@ -1,0 +1,26 @@
+#   $Id$
+#
+#   Makefile for the OpenURL catalogs of openurl.library
+
+include $(SRCDIR)/config/aros.cfg
+
+TARGETDIR := $(AROS_CATALOGS)
+LANGUAGES := $(basename $(notdir $(call WILDCARD,$(SRCDIR)/$(CURDIR)/*.po)))
+CATALOGS  := $(addprefix $(TARGETDIR)/,$(addsuffix /OpenURL.catalog,$(LANGUAGES)))
+
+#MM
+external-openurl-catalogs : $(CATALOGS)
+
+$(TARGETDIR)/%/OpenURL.catalog: $(SRCDIR)/$(CURDIR)/%.po
+	$(ECHO) "Building catalog $@"
+	$(MKDIR) $(dir $@)
+	$(FLEXCAT) POFILE $< CATALOG $@
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,297 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES           := example_miscuse
+EXEDIR          := $(AROS_TESTS)/sdi
+USER_INCLUDES   := -I$(SRCDIR)/$(CURDIR)/../..
+#USER_CFLAGS     := -D__UTILITY_STDLIBBASE__
+
+#MM- test : test-sdi-misc
+#MM- test-quick : test-sdi-misc-quick
+
+#MM test-sdi-misc : includes linklibs
+
+
+.PHONY : test-sdi-misc
+
+test-sdi-misc_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-sdi-misc_TARGETDIR := $(EXEDIR)
+test-sdi-misc_LIBS := 
+
+test-sdi-misc_FILES     := $(FILES)
+test-sdi-misc_OBJS      := $(addsuffix .o,$(addprefix $(test-sdi-misc_OBJDIR)/,$(test-sdi-misc_FILES)))
+test-sdi-misc_DEPS      := $(addsuffix .d,$(addprefix $(test-sdi-misc_OBJDIR)/,$(test-sdi-misc_FILES)))
+test-sdi-misc_EXES      := $(addprefix $(test-sdi-misc_TARGETDIR)/,$(test-sdi-misc_FILES))
+
+test-sdi-misc_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-sdi-misc_CPPFLAGS += -I
+endif
+test-sdi-misc_CFLAGS    := $(CFLAGS)
+test-sdi-misc_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-sdi-misc_COVERAGE := yes
+test-sdi-misc_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-sdi-misc_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-sdi-misc_CFLAGS    := $(strip $(test-sdi-misc_COVERAGEFLAGS) $(test-sdi-misc_CFLAGS))
+test-sdi-misc_LIBS += $(test-sdi-misc_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-sdi-misc_FUNCINSTR := yes
+test-sdi-misc_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-sdi-misc_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-sdi-misc_CFLAGS    := $(strip $(test-sdi-misc_INSTRFUNCFLAGS) $(test-sdi-misc_CFLAGS))
+test-sdi-misc_LIBS += $(test-sdi-misc_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-sdi-misc_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-sdi-misc_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-sdi-misc_DFLAGS := 
+else
+    test-sdi-misc_DFLAGS := $(test-sdi-misc_CFLAGS)
+endif
+ifeq (target,target)
+test-sdi-misc_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-sdi-misc_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-sdi-misc_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-sdi-misc_LDFLAGS += -L
+endif
+
+#MM
+test-sdi-misc-quick : test-sdi-misc
+
+#MM test-sdi-misc : includes-generate-deps core-linklibs
+test-sdi-misc : $(test-sdi-misc_EXES)
+
+ifneq ($(filter $(TARGET),test-sdi-misc test-sdi-misc-quick),)
+
+ifeq (,)
+test-sdi-misc_MC_SRCWILDCARD := %
+else
+test-sdi-misc_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-sdi-misc_OBJDIR),)
+test-sdi-misc_MC_TARGETS := $(addsuffix .o,$(test-sdi-misc_FILES))
+test-sdi-misc_MC_DTARGETS := $(addsuffix .d,$(test-sdi-misc_FILES))
+test-sdi-misc_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-sdi-misc_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-sdi-misc_OBJDIR)/,$(notdir $(test-sdi-misc_FILES))))
+    test-sdi-misc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-sdi-misc_OBJDIR)/,$(notdir $(test-sdi-misc_FILES))))
+else
+ifeq (,)
+    test-sdi-misc_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-sdi-misc_OBJDIR)/,$(test-sdi-misc_FILES)))
+    test-sdi-misc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-sdi-misc_OBJDIR)/,$(test-sdi-misc_FILES)))
+else
+    test-sdi-misc_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-sdi-misc_OBJDIR)/,$(patsubst /%,%,$(test-sdi-misc_FILES))))
+    test-sdi-misc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-sdi-misc_OBJDIR)/,$(patsubst /%,%,$(test-sdi-misc_FILES))))
+endif
+endif
+test-sdi-misc_MC_TGTWILDCARD := $(test-sdi-misc_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : | $(addsuffix .c,$(test-sdi-misc_FILES))
+
+# Be sure that all .c files are found
+test-sdi-misc_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-sdi-misc_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-sdi-misc_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-sdi-misc_MC_DIRS := $(foreach dir, $(test-sdi-misc_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-sdi-misc_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-sdi-misc_MC_DIRS),)
+    test-sdi-misc_MC_DIRS := $(shell echo $(test-sdi-misc_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-sdi-misc_MC_DIRS)
+endif
+
+endif
+
+test-sdi-misc_MC_CPPFLAGS := $(test-sdi-misc_CPPFLAGS)
+test-sdi-misc_CFLAGS := $(test-sdi-misc_CFLAGS)
+ifeq ($(test-sdi-misc_DFLAGS),)
+  test-sdi-misc_DFLAGS := $(test-sdi-misc_CFLAGS)
+else
+  test-sdi-misc_DFLAGS := $(test-sdi-misc_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-sdi-misc_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-sdi-misc_STRIP ?= $(TARGET_STRIP)
+test-sdi-misc_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : test-sdi-misc_MC_CPPFLAGS:=$(strip $(test-sdi-misc_MC_CPPFLAGS) $(test-sdi-misc_MC_EXTRA_CPPFLAGS))
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : test-sdi-misc_CFLAGS:=$(strip $(test-sdi-misc_CFLAGS) $(SAFETY_CFLAGS))
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : test-sdi-misc_DFLAGS:=$(test-sdi-misc_DFLAGS)
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : test-sdi-misc_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : test-sdi-misc_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-sdi-misc_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-sdi-misc_STRIP ?= $(HOST_STRIP)
+test-sdi-misc_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : test-sdi-misc_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-sdi-misc_MC_CPPFLAGS) $(test-sdi-misc_MC_EXTRA_CPPFLAGS))
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : test-sdi-misc_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-sdi-misc_CFLAGS))
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : test-sdi-misc_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-sdi-misc_DFLAGS))
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : test-sdi-misc_IQUOTE:=$(HOST_IQUOTE)
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : test-sdi-misc_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-sdi-misc_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-sdi-misc_STRIP ?= $(ECHO) >/dev/null
+test-sdi-misc_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : test-sdi-misc_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-sdi-misc_MC_CPPFLAGS) $(test-sdi-misc_MC_EXTRA_CPPFLAGS))
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : test-sdi-misc_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-sdi-misc_CFLAGS))
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : test-sdi-misc_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-sdi-misc_DFLAGS))
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : test-sdi-misc_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-sdi-misc_MC_TARGETS) $(test-sdi-misc_MC_DTARGETS) : test-sdi-misc_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-sdi-misc_MC_TARGETS) : CPPFLAGS := $(test-sdi-misc_MC_CPPFLAGS)
+$(test-sdi-misc_MC_TARGETS) : CFLAGS := $(test-sdi-misc_CFLAGS)
+$(test-sdi-misc_MC_TARGETS) : $(test-sdi-misc_MC_TGTWILDCARD).o : $(test-sdi-misc_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-sdi-misc_IQUOTE) $(dir $<) $(test-sdi-misc_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-misc_IQUOTE) . $(test-sdi-misc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-sdi-misc_IQUOTE) $(dir $<) $(test-sdi-misc_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-misc_IQUOTE) . $(test-sdi-misc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-sdi-misc_IQUOTE) $(dir $<) $(test-sdi-misc_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-misc_IQUOTE) . $(test-sdi-misc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-sdi-misc_MC_DTARGETS) : $(test-sdi-misc_MC_TGTWILDCARD).d : $(test-sdi-misc_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-sdi-misc_DFLAGS) $(test-sdi-misc_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-sdi-misc-link_EXTRA_LDFLAGS := 
+test-sdi-misc-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-sdi-misc-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-sdi-misc-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-sdi-misc-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-sdi-misc-link_DIRS := $(subst -L ,-L,$(strip $(test-sdi-misc_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-sdi-misc-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-sdi-misc-link_DIRS)))
+# Add trailing /
+test-sdi-misc-link_DIRS := $(subst //,/,$(addsuffix /,$(test-sdi-misc-link_DIRS)))
+# Add normal linklib path
+test-sdi-misc-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-sdi-misc-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-sdi-misc_LIBS) $(test-sdi-misc-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-sdi-misc-link_DEPLIBS := $(foreach lib,$(test-sdi-misc-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-sdi-misc-link_DIRS)))) \
+)
+test-sdi-misc-link_PROGS := $(addprefix $(test-sdi-misc_TARGETDIR)/,$(test-sdi-misc_FILES))
+
+$(test-sdi-misc-link_PROGS) : OBJDIR := $(test-sdi-misc_OBJDIR)
+$(test-sdi-misc-link_PROGS) : LDFLAGS := $(strip $(test-sdi-misc_LDFLAGS) $(test-sdi-misc-link_EXTRA_LDFLAGS))
+$(test-sdi-misc-link_PROGS) : LIBS := $(addprefix -l,$(test-sdi-misc_LIBS) $(test-sdi-misc-link_EXTRA_LIBS) )
+$(test-sdi-misc-link_PROGS) : $(test-sdi-misc_TARGETDIR)/% : $(test-sdi-misc_OBJDIR)/%.o $(test-sdi-misc-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-sdi-misc_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-sdi-misc_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-sdi-misc_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-sdi-misc_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-sdi-misc_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-sdi-misc_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-sdi-misc_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-sdi-misc_DEPS),)
+  ifneq (test-sdi-misc test-sdi-misc-quick,)
+    ifneq ($(findstring $(TARGET),test-sdi-misc test-sdi-misc-quick),)
+      -include $(test-sdi-misc_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-sdi-misc_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-sdi-misc_DEPS) $(test-sdi-misc_OBJS) $(addprefix $(test-sdi-misc_TARGETDIR)/,$(test-sdi-misc_FILES)),)
+$(test-sdi-misc_DEPS) $(test-sdi-misc_OBJS) $(addprefix $(test-sdi-misc_TARGETDIR)/,$(test-sdi-misc_FILES)) : | $(test-sdi-misc_TARGETDIR) $(test-sdi-misc_OBJDIR)
+else
+$(test-sdi-misc_DEPS) $(test-sdi-misc_OBJS) $(addprefix $(test-sdi-misc_TARGETDIR)/,$(test-sdi-misc_FILES)) :: $(test-sdi-misc_TARGETDIR) $(test-sdi-misc_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-sdi-misc_TARGETDIR) $(test-sdi-misc_OBJDIR)
+
+
+test-sdi-misc-clean : FILES := $(test-sdi-misc_OBJS) $(test-sdi-misc_EXES) $(test-sdi-misc_DEPS)
+#MM
+test-sdi-misc-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-sdi-misc"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

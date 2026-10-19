@@ -1,0 +1,653 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- contrib-development : tools-setrev
+#MM tools-setrev : includes linklibs
+
+FILES  := setrev
+EXEDIR := $(AROS_CONTRIB)/$(AROS_DIR_DEVELOPER)/Build
+USER_CFLAGS :=
+
+
+.PHONY : tools-setrev
+
+tools-setrev_PROGNAME  := setrev
+tools-setrev_OBJDIR    := $(GENDIR)/$(CURDIR)
+tools-setrev_TARGETDIR := $(EXEDIR)
+tools-setrev_LINKER    := 
+tools-setrev_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(tools-setrev_LINKER),)
+    tools-setrev_LINKER := target
+endif
+
+ifneq ("$(strip $(FILES)   )","")
+    tools-setrev_FILES     := $(FILES)
+    tools-setrev_OBJCFILES := 
+    tools-setrev_ASMFILES  := 
+    tools-setrev_CXXFILES := 
+else
+    tools-setrev_FILES     := $(tools-setrev_PROGNAME)
+    tools-setrev_OBJCFILES :=
+    tools-setrev_ASMFILES  :=
+    tools-setrev_CXXFILES :=
+endif
+
+tools-setrev_ARCHOBJS   := $(wildcard $(tools-setrev_OBJDIR)/arch/*.o)
+tools-setrev_ARCHFILES  := $(basename $(notdir $(tools-setrev_ARCHOBJS)))
+tools-setrev_C_NARCHFILES := $(filter-out $(tools-setrev_ARCHFILES),$(tools-setrev_FILES))
+tools-setrev_CXX_NARCHFILES := $(filter-out $(tools-setrev_ARCHFILES),$(tools-setrev_CXXFILES))
+tools-setrev_OBJC_NARCHFILES := $(filter-out $(tools-setrev_ARCHFILES),$(tools-setrev_OBJCFILES))
+
+TMP_FILES := $(tools-setrev_C_NARCHFILES) $(tools-setrev_CXX_NARCHFILES) $(tools-setrev_ASMFILES) $(tools-setrev_OBJC_NARCHFILES)
+tools-setrev_OBJS := $(addsuffix .o,$(addprefix $(tools-setrev_OBJDIR)/,$(notdir $(TMP_FILES))))
+tools-setrev_DEPS := $(addsuffix .d,$(addprefix $(tools-setrev_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+tools-setrev_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+tools-setrev_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+tools-setrev_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+tools-setrev_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+tools-setrev_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+tools-setrev_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+tools-setrev_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+tools-setrev_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+tools-setrev_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+tools-setrev_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+tools-setrev_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+tools-setrev_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+tools-setrev_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+tools-setrev_LDFLAGS          := 
+endif
+
+tools-setrev_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+tools-setrev_COVERAGE := yes
+tools-setrev_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+tools-setrev_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+tools-setrev_CFLAGS    := $(strip $(tools-setrev_COVERAGEFLAGS) $(tools-setrev_CFLAGS))
+tools-setrev_CXXFLAGS := $(strip $(tools-setrev_COVERAGEFLAGS) $(tools-setrev_CXXFLAGS))
+tools-setrev_LIBS += $(tools-setrev_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+tools-setrev_FUNCINSTR := yes
+tools-setrev_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+tools-setrev_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+tools-setrev_CFLAGS    := $(strip $(tools-setrev_INSTRFUNCFLAGS) $(tools-setrev_CFLAGS))
+tools-setrev_CXXFLAGS := $(strip $(tools-setrev_INSTRFUNCFLAGS) $(tools-setrev_CXXFLAGS))
+tools-setrev_LIBS += $(tools-setrev_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+tools-setrev_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(tools-setrev_CFLAGS))
+tools-setrev_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(tools-setrev_CXXFLAGS))
+endif
+endif
+tools-setrev_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    tools-setrev_DFLAGS     := 
+else
+    tools-setrev_DFLAGS     := $(tools-setrev_CFLAGS)
+endif
+ifneq (,)
+    tools-setrev_DXXFLAGS     := 
+else
+    tools-setrev_DXXFLAGS     := $(tools-setrev_CXXFLAGS)
+endif
+ifeq (target,target)
+tools-setrev_LDFLAGS           := $(tools-setrev_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+tools-setrev_LDFLAGS           := $(tools-setrev_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+tools-setrev_LDFLAGS           := $(tools-setrev_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+tools-setrev_LDFLAGS   += -L
+endif
+
+#MM
+tools-setrev-quick : tools-setrev
+
+#MM tools-setrev : includes-generate-deps core-linklibs
+tools-setrev : $(tools-setrev_TARGETDIR)/$(tools-setrev_PROGNAME)
+
+ifneq ($(filter $(TARGET),tools-setrev tools-setrev-quick tools-setrev-gz-quick),)
+
+tools-setrev_CXXABSBASENAMES := $(foreach tools-setrev_CXXBASE,$(tools-setrev_CXX_NARCHFILES),$(if $(filter /%,$(tools-setrev_CXXBASE)),$(tools-setrev_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(tools-setrev_CXXBASE))))
+
+ifneq ($(tools-setrev_CXXABSBASENAMES),)
+
+tools-setrev_CXXBASENAMES := $(basename $(tools-setrev_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+tools-setrev_MCXX_FILES  := $(strip $(foreach tools-setrev_CXXBASE,$(tools-setrev_CXXABSBASENAMES), $(firstword $(wildcard $(foreach tools-setrev_EXT, $(AROS_CXXEXTS),$(addsuffix .$(tools-setrev_EXT),$(tools-setrev_CXXBASE)))))))
+
+ifeq (,)
+tools-setrev_MCXX_SRCWILDCARD := %
+else
+tools-setrev_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(tools-setrev_OBJDIR),)
+  tools-setrev_CXXTARGETS := $(notdir $(tools-setrev_CXXBASENAMES:=.o))
+  tools-setrev_CXXDTARGETS := $(notdir $(tools-setrev_CXXBASENAMES:=.d))
+  tools-setrev_MCXX_WILDCARD := %
+else
+  tools-setrev_CXXTARGETS := $(addprefix $(tools-setrev_OBJDIR)/,$(notdir $(tools-setrev_CXXBASENAMES:=.o)))
+  tools-setrev_CXXDTARGETS := $(addprefix $(tools-setrev_OBJDIR)/,$(notdir $(tools-setrev_CXXBASENAMES:=.d)))
+  tools-setrev_MCXX_WILDCARD := $(tools-setrev_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(tools-setrev_CXXTARGETS) $(tools-setrev_CXXDTARGETS) : | $(tools-setrev_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+tools-setrev_MCXX_CPPFLAGS := $(tools-setrev_CPPFLAGS)
+tools-setrev_CXXFLAGS := $(tools-setrev_CXXFLAGS)
+ifeq ($(tools-setrev_DXXFLAGS),)
+  tools-setrev_DXXFLAGS := $(tools-setrev_CXXFLAGS)
+else
+  tools-setrev_DXXFLAGS := $(tools-setrev_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  tools-setrev_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  tools-setrev_STRIP ?= $(HOST_STRIP)
+  tools-setrev_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  tools-setrev_CXXCMD:=$(HOST_CXX)
+  tools-setrev_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(tools-setrev_MCXX_CPPFLAGS) $(tools-setrev_MCXX_EXTRA_CPPFLAGS))
+  tools-setrev_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(tools-setrev_CXXFLAGS))
+  tools-setrev_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(tools-setrev_DXXFLAGS))
+  tools-setrev_CXXIQUOTE:=$(HOST_IQUOTE)
+  tools-setrev_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  tools-setrev_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  tools-setrev_STRIP ?= $(TARGET_STRIP)
+  tools-setrev_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  tools-setrev_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  tools-setrev_MCXX_CPPFLAGS := $(strip $(tools-setrev_MCXX_CPPFLAGS) $(tools-setrev_MCXX_EXTRA_CPPFLAGS))
+  tools-setrev_CXXFLAGS := $(strip $(tools-setrev_CXXFLAGS) $(SAFETY_CFLAGS))
+  tools-setrev_DXXFLAGS := $(tools-setrev_DXXFLAGS)
+  tools-setrev_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  tools-setrev_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  tools-setrev_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  tools-setrev_STRIP ?= $(ECHO) >/dev/null
+  tools-setrev_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  tools-setrev_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  tools-setrev_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(tools-setrev_MCXX_CPPFLAGS) $(tools-setrev_MCXX_EXTRA_CPPFLAGS))
+  tools-setrev_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(tools-setrev_CXXFLAGS))
+  tools-setrev_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(tools-setrev_DXXFLAGS))
+  tools-setrev_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  tools-setrev_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(tools-setrev_CXXCMD) $(tools-setrev_CXXIQUOTE) $(dir $(2)) $(tools-setrev_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(tools-setrev_CXXIQUOTE) . $(tools-setrev_CXXIQUOTE_END) $(strip $(tools-setrev_CXXFLAGS) $(tools-setrev_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(tools-setrev_CXXCMD) $(tools-setrev_CXXIQUOTE) $(dir $(2)) $(tools-setrev_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(tools-setrev_CXXIQUOTE) . $(tools-setrev_CXXIQUOTE_END) $(strip $(tools-setrev_CXXFLAGS) $(tools-setrev_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(tools-setrev_CXXCMD) $(tools-setrev_CXXIQUOTE) $(dir $(2)) $(tools-setrev_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(tools-setrev_CXXIQUOTE) . $(tools-setrev_CXXIQUOTE_END) $(strip $(tools-setrev_CXXFLAGS) $(tools-setrev_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(tools-setrev_CXXCMD)" $(MKDEPEND) $(strip $(tools-setrev_DXXFLAGS) $(tools-setrev_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(tools-setrev_OBJDIR),)
+  $(foreach tools-setrev_CXXFILE,$(tools-setrev_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(tools-setrev_CXXFILE))),$(tools-setrev_CXXFILE))))
+else
+  $(foreach tools-setrev_CXXFILE,$(tools-setrev_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(tools-setrev_OBJDIR)/,$(notdir $(basename $(tools-setrev_CXXFILE)))),$(tools-setrev_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(tools-setrev_OBJC_NARCHFILES),)
+
+ifeq (,)
+tools-setrev_MOBJC_SRCWILDCARD := %
+else
+tools-setrev_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(tools-setrev_OBJDIR),)
+  tools-setrev_MOBJC_TARGETS := $(addsuffix .o,$(tools-setrev_OBJC_NARCHFILES))
+  tools-setrev_MOBJC_DTARGETS := $(addsuffix .d,$(tools-setrev_OBJC_NARCHFILES))
+  tools-setrev_MOBJC_WILDCARD := %
+else
+  tools-setrev_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(tools-setrev_OBJDIR)/,$(tools-setrev_OBJC_NARCHFILES)))
+  tools-setrev_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(tools-setrev_OBJDIR)/,$(tools-setrev_OBJC_NARCHFILES)))
+  tools-setrev_MOBJC_WILDCARD := $(tools-setrev_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : | $(addsuffix .m,$(tools-setrev_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  tools-setrev_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  tools-setrev_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(tools-setrev_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  tools-setrev_MOBJC_DIRS := $(foreach dir, $(tools-setrev_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(tools-setrev_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(tools-setrev_MOBJC_DIRS),)
+    tools-setrev_MOBJC_DIRS := $(shell echo $(tools-setrev_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(tools-setrev_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  tools-setrev_CC := $(TARGET_CC)
+else
+  tools-setrev_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+tools-setrev_MOBJC_CPPFLAGS := $(tools-setrev_CPPFLAGS)
+tools-setrev_OBJCFLAGS := $(tools-setrev_CFLAGS)
+tools-setrev_OBJCFLAGS := $(tools-setrev_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+tools-setrev_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(tools-setrev_OBJCFLAGS)))
+ifeq ($(tools-setrev_DFLAGS),)
+  tools-setrev_OBJCDFLAGS := $(tools-setrev_CFLAGS)
+else
+  tools-setrev_OBJCDFLAGS := $(tools-setrev_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  tools-setrev_LINK ?= $(strip $(tools-setrev_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  tools-setrev_STRIP ?= $(TARGET_STRIP)
+  tools-setrev_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : CMD:=$(strip $(tools-setrev_CC) $(TARGET_SYSROOT))
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : tools-setrev_MOBJC_CPPFLAGS:=$(strip $(tools-setrev_MOBJC_CPPFLAGS) $(tools-setrev_MOBJC_EXTRA_CPPFLAGS))
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : tools-setrev_OBJCFLAGS:=$(strip $(tools-setrev_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : tools-setrev_OBJCDFLAGS:=$(tools-setrev_OBJCDFLAGS)
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : tools-setrev_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : tools-setrev_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  tools-setrev_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  tools-setrev_STRIP ?= $(HOST_STRIP)
+  tools-setrev_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : tools-setrev_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(tools-setrev_MOBJC_CPPFLAGS) $(tools-setrev_MOBJC_EXTRA_CPPFLAGS))
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : tools-setrev_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(tools-setrev_OBJCFLAGS))
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : tools-setrev_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(tools-setrev_OBJCDFLAGS))
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : tools-setrev_IQUOTE:=$(HOST_IQUOTE)
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : tools-setrev_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  tools-setrev_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  tools-setrev_STRIP ?= $(ECHO) >/dev/null
+  tools-setrev_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : tools-setrev_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(tools-setrev_MOBJC_CPPFLAGS) $(tools-setrev_MOBJC_EXTRA_CPPFLAGS))
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : tools-setrev_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(tools-setrev_OBJCFLAGS))
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : tools-setrev_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(tools-setrev_OBJCDFLAGS))
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : tools-setrev_IQUOTE:=$(KERNEL_IQUOTE)
+  $(tools-setrev_MOBJC_TARGETS) $(tools-setrev_MOBJC_DTARGETS) : tools-setrev_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(tools-setrev_MOBJC_TARGETS) : CPPFLAGS := $(tools-setrev_MOBJC_CPPFLAGS)
+$(tools-setrev_MOBJC_TARGETS) : CFLAGS := $(tools-setrev_OBJCFLAGS)
+$(tools-setrev_MOBJC_TARGETS) : $(tools-setrev_MOBJC_WILDCARD).o : $(tools-setrev_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(tools-setrev_IQUOTE) $(dir $<) $(tools-setrev_IQUOTE) $(SRCDIR)/$(CURDIR) $(tools-setrev_IQUOTE) . $(tools-setrev_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(tools-setrev_IQUOTE) $(dir $<) $(tools-setrev_IQUOTE) $(SRCDIR)/$(CURDIR) $(tools-setrev_IQUOTE) . $(tools-setrev_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(tools-setrev_IQUOTE) $(dir $<) $(tools-setrev_IQUOTE) $(SRCDIR)/$(CURDIR) $(tools-setrev_IQUOTE) . $(tools-setrev_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(tools-setrev_MOBJC_DTARGETS) : $(tools-setrev_MOBJC_WILDCARD).d : $(tools-setrev_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(tools-setrev_OBJCDFLAGS) $(tools-setrev_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+tools-setrev_MC_SRCWILDCARD := %
+else
+tools-setrev_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(tools-setrev_OBJDIR),)
+tools-setrev_MC_TARGETS := $(addsuffix .o,$(tools-setrev_C_NARCHFILES))
+tools-setrev_MC_DTARGETS := $(addsuffix .d,$(tools-setrev_C_NARCHFILES))
+tools-setrev_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    tools-setrev_MC_TARGETS := $(addsuffix .o,$(addprefix $(tools-setrev_OBJDIR)/,$(notdir $(tools-setrev_C_NARCHFILES))))
+    tools-setrev_MC_DTARGETS := $(addsuffix .d,$(addprefix $(tools-setrev_OBJDIR)/,$(notdir $(tools-setrev_C_NARCHFILES))))
+else
+ifeq (,)
+    tools-setrev_MC_TARGETS := $(addsuffix .o,$(addprefix $(tools-setrev_OBJDIR)/,$(tools-setrev_C_NARCHFILES)))
+    tools-setrev_MC_DTARGETS := $(addsuffix .d,$(addprefix $(tools-setrev_OBJDIR)/,$(tools-setrev_C_NARCHFILES)))
+else
+    tools-setrev_MC_TARGETS := $(addsuffix .o,$(addprefix $(tools-setrev_OBJDIR)/,$(patsubst /%,%,$(tools-setrev_C_NARCHFILES))))
+    tools-setrev_MC_DTARGETS := $(addsuffix .d,$(addprefix $(tools-setrev_OBJDIR)/,$(patsubst /%,%,$(tools-setrev_C_NARCHFILES))))
+endif
+endif
+tools-setrev_MC_TGTWILDCARD := $(tools-setrev_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : | $(addsuffix .c,$(tools-setrev_C_NARCHFILES))
+
+# Be sure that all .c files are found
+tools-setrev_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+tools-setrev_MC_BASEDIRS := $(shell echo $(sort $(dir $(tools-setrev_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+tools-setrev_MC_DIRS := $(foreach dir, $(tools-setrev_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(tools-setrev_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(tools-setrev_MC_DIRS),)
+    tools-setrev_MC_DIRS := $(shell echo $(tools-setrev_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(tools-setrev_MC_DIRS)
+endif
+
+endif
+
+tools-setrev_MC_CPPFLAGS := $(tools-setrev_CPPFLAGS)
+tools-setrev_CFLAGS := $(tools-setrev_CFLAGS)
+ifeq ($(tools-setrev_DFLAGS),)
+  tools-setrev_DFLAGS := $(tools-setrev_CFLAGS)
+else
+  tools-setrev_DFLAGS := $(tools-setrev_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+tools-setrev_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+tools-setrev_STRIP ?= $(TARGET_STRIP)
+tools-setrev_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : tools-setrev_MC_CPPFLAGS:=$(strip $(tools-setrev_MC_CPPFLAGS) $(tools-setrev_MC_EXTRA_CPPFLAGS))
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : tools-setrev_CFLAGS:=$(strip $(tools-setrev_CFLAGS) $(SAFETY_CFLAGS))
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : tools-setrev_DFLAGS:=$(tools-setrev_DFLAGS)
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : tools-setrev_IQUOTE:=$(CFLAGS_IQUOTE)
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : tools-setrev_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+tools-setrev_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+tools-setrev_STRIP ?= $(HOST_STRIP)
+tools-setrev_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : tools-setrev_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(tools-setrev_MC_CPPFLAGS) $(tools-setrev_MC_EXTRA_CPPFLAGS))
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : tools-setrev_CFLAGS:=$(strip $(HOST_CFLAGS) $(tools-setrev_CFLAGS))
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : tools-setrev_DFLAGS:=$(strip $(HOST_CFLAGS) $(tools-setrev_DFLAGS))
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : tools-setrev_IQUOTE:=$(HOST_IQUOTE)
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : tools-setrev_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+tools-setrev_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+tools-setrev_STRIP ?= $(ECHO) >/dev/null
+tools-setrev_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : tools-setrev_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(tools-setrev_MC_CPPFLAGS) $(tools-setrev_MC_EXTRA_CPPFLAGS))
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : tools-setrev_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(tools-setrev_CFLAGS))
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : tools-setrev_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(tools-setrev_DFLAGS))
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : tools-setrev_IQUOTE:=$(KERNEL_IQUOTE)
+$(tools-setrev_MC_TARGETS) $(tools-setrev_MC_DTARGETS) : tools-setrev_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(tools-setrev_MC_TARGETS) : CPPFLAGS := $(tools-setrev_MC_CPPFLAGS)
+$(tools-setrev_MC_TARGETS) : CFLAGS := $(tools-setrev_CFLAGS)
+$(tools-setrev_MC_TARGETS) : $(tools-setrev_MC_TGTWILDCARD).o : $(tools-setrev_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(tools-setrev_IQUOTE) $(dir $<) $(tools-setrev_IQUOTE) $(SRCDIR)/$(CURDIR) $(tools-setrev_IQUOTE) . $(tools-setrev_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(tools-setrev_IQUOTE) $(dir $<) $(tools-setrev_IQUOTE) $(SRCDIR)/$(CURDIR) $(tools-setrev_IQUOTE) . $(tools-setrev_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(tools-setrev_IQUOTE) $(dir $<) $(tools-setrev_IQUOTE) $(SRCDIR)/$(CURDIR) $(tools-setrev_IQUOTE) . $(tools-setrev_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(tools-setrev_MC_DTARGETS) : $(tools-setrev_MC_TGTWILDCARD).d : $(tools-setrev_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(tools-setrev_DFLAGS) $(tools-setrev_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(tools-setrev_OBJDIR),)
+tools-setrev-MA_TARGETS := $(addsuffix .o,$(tools-setrev_ASMFILES))
+tools-setrev-MA_WILDCARD := %
+else
+tools-setrev-MA_TARGETS := $(addsuffix .o,$(addprefix $(tools-setrev_OBJDIR)/,$(notdir $(tools-setrev_ASMFILES))))
+tools-setrev-MA_WILDCARD := $(tools-setrev_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(tools-setrev-MA_TARGETS) : | $(addsuffix .s,$(tools-setrev_ASMFILES))
+
+# Be sure that all .c files are found
+tools-setrev-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+tools-setrev-MA_BASEDIRS := $(shell echo $(sort $(dir $(tools-setrev_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+tools-setrev-MA_DIRS := $(foreach dir, $(tools-setrev-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(tools-setrev-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(tools-setrev-MA_DIRS),)
+    tools-setrev-MA_DIRS := $(shell echo $(tools-setrev-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(tools-setrev-MA_DIRS)
+endif
+
+endif
+
+tools-setrev-MA_ASSEMBLER ?= $(tools-setrev_ASSEMBLER)
+
+$(tools-setrev-MA_TARGETS) : tools-setrev-MA_CMD:= $(tools-setrev-MA_ASSEMBLER)
+
+$(tools-setrev-MA_TARGETS) : CPPFLAGS := $(tools-setrev_CPPFLAGS)
+$(tools-setrev-MA_TARGETS) : AFLAGS := $(tools-setrev_AFLAGS)
+$(tools-setrev-MA_TARGETS) : $(tools-setrev-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(tools-setrev-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(tools-setrev-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(tools-setrev-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+tools-setrev-link_EXTRA_LDFLAGS := 
+tools-setrev-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    tools-setrev-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    tools-setrev-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    tools-setrev-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+tools-setrev-link_DIRS := $(subst -L ,-L,$(strip $(tools-setrev_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+tools-setrev-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(tools-setrev-link_DIRS)))
+# Add trailing /
+tools-setrev-link_DIRS := $(subst //,/,$(addsuffix /,$(tools-setrev-link_DIRS)))
+# Add normal linklib path
+tools-setrev-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+tools-setrev-link_LIBS := $(addprefix lib,$(addsuffix .a,$(tools-setrev_LIBS) $(tools-setrev-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    tools-setrev-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    tools-setrev-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+tools-setrev-link_DEPLIBS := $(foreach lib,$(tools-setrev-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(tools-setrev-link_DIRS)))) \
+)
+
+$(tools-setrev_TARGETDIR)/$(tools-setrev_PROGNAME) : OBJDIR := $(tools-setrev_OBJDIR)
+$(tools-setrev_TARGETDIR)/$(tools-setrev_PROGNAME) : OBJS := $(tools-setrev_OBJS) $(tools-setrev_ARCHOBJS) $(USER_OBJS)
+$(tools-setrev_TARGETDIR)/$(tools-setrev_PROGNAME) : LDFLAGS := $(strip $(tools-setrev_LDFLAGS) $(tools-setrev-link_EXTRA_LDFLAGS))
+$(tools-setrev_TARGETDIR)/$(tools-setrev_PROGNAME) : LIBS := $(addprefix -l,$(tools-setrev_LIBS) $(tools-setrev-link_EXTRA_LIBS) )
+$(tools-setrev_TARGETDIR)/$(tools-setrev_PROGNAME) : $(tools-setrev_OBJS) $(tools-setrev_ARCHOBJS) $(USER_OBJS) $(tools-setrev-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(tools-setrev_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(tools-setrev_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(tools-setrev_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(tools-setrev_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(tools-setrev_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(tools-setrev_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(tools-setrev_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(tools-setrev_DEPS),)
+  ifneq (tools-setrev tools-setrev-quick,)
+    ifneq ($(findstring $(TARGET),tools-setrev tools-setrev-quick),)
+      -include $(tools-setrev_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(tools-setrev_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(tools-setrev_OBJS) $(tools-setrev_DEPS) $(tools-setrev_TARGETDIR)/$(tools-setrev_PROGNAME),)
+$(tools-setrev_OBJS) $(tools-setrev_DEPS) $(tools-setrev_TARGETDIR)/$(tools-setrev_PROGNAME) : | $(tools-setrev_OBJDIR) $(tools-setrev_TARGETDIR)
+else
+$(tools-setrev_OBJS) $(tools-setrev_DEPS) $(tools-setrev_TARGETDIR)/$(tools-setrev_PROGNAME) :: $(tools-setrev_OBJDIR) $(tools-setrev_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(tools-setrev_OBJDIR) $(tools-setrev_TARGETDIR)
+
+
+tools-setrev-clean : FILES := $(tools-setrev_OBJS) $(tools-setrev_TARGETDIR)/$(tools-setrev_PROGNAME) $(tools-setrev_DEPS)
+#MM
+tools-setrev-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget tools-setrev"
+	$(Q)$(RM) $(FILES)
+
+
+FILES := setrev.readme
+
+tools-setrev_SRC := $(shell echo . | sed 's/^\(.\):\//\/\1\//')
+
+
+ifneq (setup,)
+setup : | $(EXEDIR)/Docs
+else
+setup :: $(EXEDIR)/Docs
+endif
+
+GLOB_MKDIRS += $(EXEDIR)/Docs
+
+
+.PHONY : tools-setrev
+
+#MM
+tools-setrev : | $(EXEDIR)/Docs 
+	$(foreach file, $(FILES), $(shell $(CP) $(addprefix $(if $(filter /%,$(tools-setrev_SRC)),$(tools-setrev_SRC),$(SRCDIR)/$(CURDIR)/$(tools-setrev_SRC))/, $(file)) $(addprefix $(EXEDIR)/Docs/, $(file))))
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

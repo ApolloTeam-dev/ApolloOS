@@ -1,0 +1,534 @@
+#   $Id$
+#
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := \
+	profile_func_enter \
+	profile_func_exit
+
+#MM- core-linklibs : linklibs-instrfunc
+#MM- linklibs: linklibs-instrfunc
+#MM linklibs-instrfunc : includes includes-copy
+
+NOWARN_FLAGS := $(NOWARN_FRAME_ADDRESS)
+USER_CFLAGS := $(NOWARN_FLAGS)
+
+
+# assign and generate the local variables used in this macro
+linklibs-instrfunc_LIBNAME           := instrfunc
+linklibs-instrfunc_LINKLIB           := $(AROS_LIB)/libinstrfunc.a
+
+linklibs-instrfunc_FILES             ?= $(FILES)
+linklibs-instrfunc_ASMFILES          := 
+linklibs-instrfunc_OBJCFILES         := 
+linklibs-instrfunc_CXXFILES          := 
+
+linklibs-instrfunc_OBJDIR            ?= $(GENDIR)/$(CURDIR)
+linklibs-instrfunc_ARCHOBJS          := $(wildcard $(linklibs-instrfunc_OBJDIR)/arch/*.o)
+ifeq (no,no)
+    linklibs-instrfunc_ARCHFILES     := $(basename $(notdir $(linklibs-instrfunc_ARCHOBJS)))
+else
+    linklibs-instrfunc_ARCHFILES     := $(basename $(patsubst $(linklibs-instrfunc_OBJDIR)/%,%,$(linklibs-instrfunc_ARCHOBJS)))
+endif
+linklibs-instrfunc_C_NARCHFILES      := $(filter-out $(linklibs-instrfunc_ARCHFILES),$(linklibs-instrfunc_FILES))
+linklibs-instrfunc_C_FILES           ?= $(linklibs-instrfunc_C_NARCHFILES)
+linklibs-instrfunc_CXX_NARCHFILES    := $(filter-out $(linklibs-instrfunc_ARCHFILES),$(linklibs-instrfunc_CXXFILES))
+linklibs-instrfunc_CXX_FILES         ?= $(linklibs-instrfunc_CXX_NARCHFILES)
+linklibs-instrfunc_OBJC_NARCHFILES   := $(filter-out $(linklibs-instrfunc_ARCHFILES),$(linklibs-instrfunc_OBJCFILES))
+linklibs-instrfunc_OBJC_FILES        ?= $(linklibs-instrfunc_OBJC_NARCHFILES)
+
+ifeq (no,no)
+    linklibs-instrfunc_OBJ_FILES     ?= $(addprefix $(linklibs-instrfunc_OBJDIR)/,$(notdir $(linklibs-instrfunc_C_NARCHFILES:=.o) $(linklibs-instrfunc_CXX_NARCHFILES:=.o) $(linklibs-instrfunc_ASMFILES:=.o) $(linklibs-instrfunc_OBJC_NARCHFILES:=.o)))
+else
+    linklibs-instrfunc_OBJ_FILES     ?= $(addprefix $(linklibs-instrfunc_OBJDIR)/,$(linklibs-instrfunc_C_NARCHFILES:=.o) $(linklibs-instrfunc_CXX_NARCHFILES:=.o) $(linklibs-instrfunc_ASMFILES:=.o) $(linklibs-instrfunc_OBJC_NARCHFILES:=.o))
+endif
+linklibs-instrfunc_OBJS              ?= $(linklibs-instrfunc_ARCHOBJS) $(linklibs-instrfunc_OBJ_FILES) 
+linklibs-instrfunc_DEPS              := $(patsubst %.o,%.d,$(linklibs-instrfunc_OBJS))
+
+linklibs-instrfunc_CPPFLAGS          := $(CPPFLAGS)
+ifneq (,)
+    linklibs-instrfunc_CPPFLAGS      += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+linklibs-instrfunc_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+linklibs-instrfunc_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+linklibs-instrfunc_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+linklibs-instrfunc_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+linklibs-instrfunc_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+linklibs-instrfunc_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+linklibs-instrfunc_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+linklibs-instrfunc_CXXFLAGS          := 
+endif
+
+ifeq ($(TARGET_LTO),yes)
+ifeq (target,target)
+        linklibs-instrfunc_CFLAGS    := $(strip $(LTO_CFLAGS) $(linklibs-instrfunc_CFLAGS))
+        linklibs-instrfunc_CXXFLAGS  := $(strip $(LTO_CFLAGS) $(linklibs-instrfunc_CXXFLAGS))
+endif
+endif
+linklibs-instrfunc_AFLAGS            := $(AFLAGS)
+linklibs-instrfunc_DFLAGS            := 
+ifneq (,)
+    linklibs-instrfunc_DFLAGS        := 
+else
+    linklibs-instrfunc_DFLAGS        := $(linklibs-instrfunc_CFLAGS)
+endif
+linklibs-instrfunc_DXXFLAGS          := 
+ifneq (,)
+    linklibs-instrfunc_DXXFLAGS      := 
+else
+    linklibs-instrfunc_DXXFLAGS      := $(linklibs-instrfunc_CXXFLAGS)
+endif
+
+.PHONY : linklibs-instrfunc linklibs-instrfunc-clean linklibs-instrfunc-quick
+
+#MM
+linklibs-instrfunc-quick : linklibs-instrfunc
+
+#MM linklibs-instrfunc : includes-generate-deps
+linklibs-instrfunc : $(linklibs-instrfunc_LINKLIB)
+
+ifneq ($(filter $(TARGET),linklibs-instrfunc linklibs-instrfunc-quick),)
+
+
+linklibs-instrfunc_CXXABSBASENAMES := $(foreach linklibs-instrfunc_CXXBASE,$(linklibs-instrfunc_CXX_FILES),$(if $(filter /%,$(linklibs-instrfunc_CXXBASE)),$(linklibs-instrfunc_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(linklibs-instrfunc_CXXBASE))))
+
+ifneq ($(linklibs-instrfunc_CXXABSBASENAMES),)
+
+linklibs-instrfunc_CXXBASENAMES := $(basename $(linklibs-instrfunc_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+linklibs-instrfunc_MCXX_FILES  := $(strip $(foreach linklibs-instrfunc_CXXBASE,$(linklibs-instrfunc_CXXABSBASENAMES), $(firstword $(wildcard $(foreach linklibs-instrfunc_EXT, $(AROS_CXXEXTS),$(addsuffix .$(linklibs-instrfunc_EXT),$(linklibs-instrfunc_CXXBASE)))))))
+
+ifeq (,)
+linklibs-instrfunc_MCXX_SRCWILDCARD := %
+else
+linklibs-instrfunc_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(linklibs-instrfunc_OBJDIR),)
+  linklibs-instrfunc_CXXTARGETS := $(notdir $(linklibs-instrfunc_CXXBASENAMES:=.o))
+  linklibs-instrfunc_CXXDTARGETS := $(notdir $(linklibs-instrfunc_CXXBASENAMES:=.d))
+  linklibs-instrfunc_MCXX_WILDCARD := %
+else
+  linklibs-instrfunc_CXXTARGETS := $(addprefix $(linklibs-instrfunc_OBJDIR)/,$(notdir $(linklibs-instrfunc_CXXBASENAMES:=.o)))
+  linklibs-instrfunc_CXXDTARGETS := $(addprefix $(linklibs-instrfunc_OBJDIR)/,$(notdir $(linklibs-instrfunc_CXXBASENAMES:=.d)))
+  linklibs-instrfunc_MCXX_WILDCARD := $(linklibs-instrfunc_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(linklibs-instrfunc_CXXTARGETS) $(linklibs-instrfunc_CXXDTARGETS) : | $(linklibs-instrfunc_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+linklibs-instrfunc_MCXX_CPPFLAGS := $(linklibs-instrfunc_CPPFLAGS)
+linklibs-instrfunc_CXXFLAGS := $(linklibs-instrfunc_CXXFLAGS)
+ifeq ($(linklibs-instrfunc_DXXFLAGS),)
+  linklibs-instrfunc_DXXFLAGS := $(linklibs-instrfunc_CXXFLAGS)
+else
+  linklibs-instrfunc_DXXFLAGS := $(linklibs-instrfunc_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  linklibs-instrfunc_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  linklibs-instrfunc_STRIP ?= $(HOST_STRIP)
+  linklibs-instrfunc_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  linklibs-instrfunc_CXXCMD:=$(HOST_CXX)
+  linklibs-instrfunc_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(linklibs-instrfunc_MCXX_CPPFLAGS) $(linklibs-instrfunc_MCXX_EXTRA_CPPFLAGS))
+  linklibs-instrfunc_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(linklibs-instrfunc_CXXFLAGS))
+  linklibs-instrfunc_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(linklibs-instrfunc_DXXFLAGS))
+  linklibs-instrfunc_CXXIQUOTE:=$(HOST_IQUOTE)
+  linklibs-instrfunc_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  linklibs-instrfunc_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  linklibs-instrfunc_STRIP ?= $(TARGET_STRIP)
+  linklibs-instrfunc_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  linklibs-instrfunc_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  linklibs-instrfunc_MCXX_CPPFLAGS := $(strip $(linklibs-instrfunc_MCXX_CPPFLAGS) $(linklibs-instrfunc_MCXX_EXTRA_CPPFLAGS))
+  linklibs-instrfunc_CXXFLAGS := $(strip $(linklibs-instrfunc_CXXFLAGS) $(SAFETY_CFLAGS))
+  linklibs-instrfunc_DXXFLAGS := $(linklibs-instrfunc_DXXFLAGS)
+  linklibs-instrfunc_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  linklibs-instrfunc_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  linklibs-instrfunc_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  linklibs-instrfunc_STRIP ?= $(ECHO) >/dev/null
+  linklibs-instrfunc_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  linklibs-instrfunc_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  linklibs-instrfunc_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(linklibs-instrfunc_MCXX_CPPFLAGS) $(linklibs-instrfunc_MCXX_EXTRA_CPPFLAGS))
+  linklibs-instrfunc_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(linklibs-instrfunc_CXXFLAGS))
+  linklibs-instrfunc_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(linklibs-instrfunc_DXXFLAGS))
+  linklibs-instrfunc_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  linklibs-instrfunc_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(linklibs-instrfunc_CXXCMD) $(linklibs-instrfunc_CXXIQUOTE) $(dir $(2)) $(linklibs-instrfunc_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-instrfunc_CXXIQUOTE) . $(linklibs-instrfunc_CXXIQUOTE_END) $(strip $(linklibs-instrfunc_CXXFLAGS) $(linklibs-instrfunc_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(linklibs-instrfunc_CXXCMD) $(linklibs-instrfunc_CXXIQUOTE) $(dir $(2)) $(linklibs-instrfunc_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-instrfunc_CXXIQUOTE) . $(linklibs-instrfunc_CXXIQUOTE_END) $(strip $(linklibs-instrfunc_CXXFLAGS) $(linklibs-instrfunc_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(linklibs-instrfunc_CXXCMD) $(linklibs-instrfunc_CXXIQUOTE) $(dir $(2)) $(linklibs-instrfunc_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-instrfunc_CXXIQUOTE) . $(linklibs-instrfunc_CXXIQUOTE_END) $(strip $(linklibs-instrfunc_CXXFLAGS) $(linklibs-instrfunc_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(linklibs-instrfunc_CXXCMD)" $(MKDEPEND) $(strip $(linklibs-instrfunc_DXXFLAGS) $(linklibs-instrfunc_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(linklibs-instrfunc_OBJDIR),)
+  $(foreach linklibs-instrfunc_CXXFILE,$(linklibs-instrfunc_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(linklibs-instrfunc_CXXFILE))),$(linklibs-instrfunc_CXXFILE))))
+else
+  $(foreach linklibs-instrfunc_CXXFILE,$(linklibs-instrfunc_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(linklibs-instrfunc_OBJDIR)/,$(notdir $(basename $(linklibs-instrfunc_CXXFILE)))),$(linklibs-instrfunc_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(linklibs-instrfunc_OBJC_FILES),)
+
+ifeq (,)
+linklibs-instrfunc_MOBJC_SRCWILDCARD := %
+else
+linklibs-instrfunc_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(linklibs-instrfunc_OBJDIR),)
+  linklibs-instrfunc_MOBJC_TARGETS := $(addsuffix .o,$(linklibs-instrfunc_OBJC_FILES))
+  linklibs-instrfunc_MOBJC_DTARGETS := $(addsuffix .d,$(linklibs-instrfunc_OBJC_FILES))
+  linklibs-instrfunc_MOBJC_WILDCARD := %
+else
+  linklibs-instrfunc_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(linklibs-instrfunc_OBJDIR)/,$(linklibs-instrfunc_OBJC_FILES)))
+  linklibs-instrfunc_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(linklibs-instrfunc_OBJDIR)/,$(linklibs-instrfunc_OBJC_FILES)))
+  linklibs-instrfunc_MOBJC_WILDCARD := $(linklibs-instrfunc_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : | $(addsuffix .m,$(linklibs-instrfunc_OBJC_FILES))
+
+  # Be sure that all .m files are found
+  linklibs-instrfunc_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  linklibs-instrfunc_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(linklibs-instrfunc_OBJC_FILES))) | sed 's/\(.\):\//\/\1\//g')
+  linklibs-instrfunc_MOBJC_DIRS := $(foreach dir, $(linklibs-instrfunc_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(linklibs-instrfunc_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(linklibs-instrfunc_MOBJC_DIRS),)
+    linklibs-instrfunc_MOBJC_DIRS := $(shell echo $(linklibs-instrfunc_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(linklibs-instrfunc_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  linklibs-instrfunc_CC := $(TARGET_CC)
+else
+  linklibs-instrfunc_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+linklibs-instrfunc_MOBJC_CPPFLAGS := $(linklibs-instrfunc_CPPFLAGS)
+linklibs-instrfunc_OBJCFLAGS := $(linklibs-instrfunc_CFLAGS)
+linklibs-instrfunc_OBJCFLAGS := $(linklibs-instrfunc_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+linklibs-instrfunc_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(linklibs-instrfunc_OBJCFLAGS)))
+ifeq ($(linklibs-instrfunc_DFLAGS),)
+  linklibs-instrfunc_OBJCDFLAGS := $(linklibs-instrfunc_CFLAGS)
+else
+  linklibs-instrfunc_OBJCDFLAGS := $(linklibs-instrfunc_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  linklibs-instrfunc_LINK ?= $(strip $(linklibs-instrfunc_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  linklibs-instrfunc_STRIP ?= $(TARGET_STRIP)
+  linklibs-instrfunc_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : CMD:=$(strip $(linklibs-instrfunc_CC) $(TARGET_SYSROOT))
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : linklibs-instrfunc_MOBJC_CPPFLAGS:=$(strip $(linklibs-instrfunc_MOBJC_CPPFLAGS) $(linklibs-instrfunc_MOBJC_EXTRA_CPPFLAGS))
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : linklibs-instrfunc_OBJCFLAGS:=$(strip $(linklibs-instrfunc_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : linklibs-instrfunc_OBJCDFLAGS:=$(linklibs-instrfunc_OBJCDFLAGS)
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : linklibs-instrfunc_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : linklibs-instrfunc_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  linklibs-instrfunc_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  linklibs-instrfunc_STRIP ?= $(HOST_STRIP)
+  linklibs-instrfunc_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : linklibs-instrfunc_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(linklibs-instrfunc_MOBJC_CPPFLAGS) $(linklibs-instrfunc_MOBJC_EXTRA_CPPFLAGS))
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : linklibs-instrfunc_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(linklibs-instrfunc_OBJCFLAGS))
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : linklibs-instrfunc_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(linklibs-instrfunc_OBJCDFLAGS))
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : linklibs-instrfunc_IQUOTE:=$(HOST_IQUOTE)
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : linklibs-instrfunc_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  linklibs-instrfunc_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  linklibs-instrfunc_STRIP ?= $(ECHO) >/dev/null
+  linklibs-instrfunc_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : linklibs-instrfunc_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(linklibs-instrfunc_MOBJC_CPPFLAGS) $(linklibs-instrfunc_MOBJC_EXTRA_CPPFLAGS))
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : linklibs-instrfunc_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(linklibs-instrfunc_OBJCFLAGS))
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : linklibs-instrfunc_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(linklibs-instrfunc_OBJCDFLAGS))
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : linklibs-instrfunc_IQUOTE:=$(KERNEL_IQUOTE)
+  $(linklibs-instrfunc_MOBJC_TARGETS) $(linklibs-instrfunc_MOBJC_DTARGETS) : linklibs-instrfunc_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(linklibs-instrfunc_MOBJC_TARGETS) : CPPFLAGS := $(linklibs-instrfunc_MOBJC_CPPFLAGS)
+$(linklibs-instrfunc_MOBJC_TARGETS) : CFLAGS := $(linklibs-instrfunc_OBJCFLAGS)
+$(linklibs-instrfunc_MOBJC_TARGETS) : $(linklibs-instrfunc_MOBJC_WILDCARD).o : $(linklibs-instrfunc_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(linklibs-instrfunc_IQUOTE) $(dir $<) $(linklibs-instrfunc_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-instrfunc_IQUOTE) . $(linklibs-instrfunc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(linklibs-instrfunc_IQUOTE) $(dir $<) $(linklibs-instrfunc_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-instrfunc_IQUOTE) . $(linklibs-instrfunc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(linklibs-instrfunc_IQUOTE) $(dir $<) $(linklibs-instrfunc_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-instrfunc_IQUOTE) . $(linklibs-instrfunc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(linklibs-instrfunc_MOBJC_DTARGETS) : $(linklibs-instrfunc_MOBJC_WILDCARD).d : $(linklibs-instrfunc_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(linklibs-instrfunc_OBJCDFLAGS) $(linklibs-instrfunc_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+linklibs-instrfunc_MC_SRCWILDCARD := %
+else
+linklibs-instrfunc_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(linklibs-instrfunc_OBJDIR),)
+linklibs-instrfunc_MC_TARGETS := $(addsuffix .o,$(linklibs-instrfunc_C_FILES))
+linklibs-instrfunc_MC_DTARGETS := $(addsuffix .d,$(linklibs-instrfunc_C_FILES))
+linklibs-instrfunc_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    linklibs-instrfunc_MC_TARGETS := $(addsuffix .o,$(addprefix $(linklibs-instrfunc_OBJDIR)/,$(notdir $(linklibs-instrfunc_C_FILES))))
+    linklibs-instrfunc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(linklibs-instrfunc_OBJDIR)/,$(notdir $(linklibs-instrfunc_C_FILES))))
+else
+ifeq (,)
+    linklibs-instrfunc_MC_TARGETS := $(addsuffix .o,$(addprefix $(linklibs-instrfunc_OBJDIR)/,$(linklibs-instrfunc_C_FILES)))
+    linklibs-instrfunc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(linklibs-instrfunc_OBJDIR)/,$(linklibs-instrfunc_C_FILES)))
+else
+    linklibs-instrfunc_MC_TARGETS := $(addsuffix .o,$(addprefix $(linklibs-instrfunc_OBJDIR)/,$(patsubst /%,%,$(linklibs-instrfunc_C_FILES))))
+    linklibs-instrfunc_MC_DTARGETS := $(addsuffix .d,$(addprefix $(linklibs-instrfunc_OBJDIR)/,$(patsubst /%,%,$(linklibs-instrfunc_C_FILES))))
+endif
+endif
+linklibs-instrfunc_MC_TGTWILDCARD := $(linklibs-instrfunc_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : | $(addsuffix .c,$(linklibs-instrfunc_C_FILES))
+
+# Be sure that all .c files are found
+linklibs-instrfunc_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+linklibs-instrfunc_MC_BASEDIRS := $(shell echo $(sort $(dir $(linklibs-instrfunc_C_FILES))) | sed 's/\(.\):\//\/\1\//g')
+linklibs-instrfunc_MC_DIRS := $(foreach dir, $(linklibs-instrfunc_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(linklibs-instrfunc_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(linklibs-instrfunc_MC_DIRS),)
+    linklibs-instrfunc_MC_DIRS := $(shell echo $(linklibs-instrfunc_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(linklibs-instrfunc_MC_DIRS)
+endif
+
+endif
+
+linklibs-instrfunc_MC_CPPFLAGS := $(linklibs-instrfunc_CPPFLAGS)
+linklibs-instrfunc_CFLAGS := $(linklibs-instrfunc_CFLAGS)
+ifeq ($(linklibs-instrfunc_DFLAGS),)
+  linklibs-instrfunc_DFLAGS := $(linklibs-instrfunc_CFLAGS)
+else
+  linklibs-instrfunc_DFLAGS := $(linklibs-instrfunc_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+linklibs-instrfunc_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+linklibs-instrfunc_STRIP ?= $(TARGET_STRIP)
+linklibs-instrfunc_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : linklibs-instrfunc_MC_CPPFLAGS:=$(strip $(linklibs-instrfunc_MC_CPPFLAGS) $(linklibs-instrfunc_MC_EXTRA_CPPFLAGS))
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : linklibs-instrfunc_CFLAGS:=$(strip $(linklibs-instrfunc_CFLAGS) $(SAFETY_CFLAGS))
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : linklibs-instrfunc_DFLAGS:=$(linklibs-instrfunc_DFLAGS)
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : linklibs-instrfunc_IQUOTE:=$(CFLAGS_IQUOTE)
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : linklibs-instrfunc_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+linklibs-instrfunc_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+linklibs-instrfunc_STRIP ?= $(HOST_STRIP)
+linklibs-instrfunc_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : linklibs-instrfunc_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(linklibs-instrfunc_MC_CPPFLAGS) $(linklibs-instrfunc_MC_EXTRA_CPPFLAGS))
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : linklibs-instrfunc_CFLAGS:=$(strip $(HOST_CFLAGS) $(linklibs-instrfunc_CFLAGS))
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : linklibs-instrfunc_DFLAGS:=$(strip $(HOST_CFLAGS) $(linklibs-instrfunc_DFLAGS))
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : linklibs-instrfunc_IQUOTE:=$(HOST_IQUOTE)
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : linklibs-instrfunc_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+linklibs-instrfunc_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+linklibs-instrfunc_STRIP ?= $(ECHO) >/dev/null
+linklibs-instrfunc_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : linklibs-instrfunc_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(linklibs-instrfunc_MC_CPPFLAGS) $(linklibs-instrfunc_MC_EXTRA_CPPFLAGS))
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : linklibs-instrfunc_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(linklibs-instrfunc_CFLAGS))
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : linklibs-instrfunc_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(linklibs-instrfunc_DFLAGS))
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : linklibs-instrfunc_IQUOTE:=$(KERNEL_IQUOTE)
+$(linklibs-instrfunc_MC_TARGETS) $(linklibs-instrfunc_MC_DTARGETS) : linklibs-instrfunc_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(linklibs-instrfunc_MC_TARGETS) : CPPFLAGS := $(linklibs-instrfunc_MC_CPPFLAGS)
+$(linklibs-instrfunc_MC_TARGETS) : CFLAGS := $(linklibs-instrfunc_CFLAGS)
+$(linklibs-instrfunc_MC_TARGETS) : $(linklibs-instrfunc_MC_TGTWILDCARD).o : $(linklibs-instrfunc_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(linklibs-instrfunc_IQUOTE) $(dir $<) $(linklibs-instrfunc_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-instrfunc_IQUOTE) . $(linklibs-instrfunc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(linklibs-instrfunc_IQUOTE) $(dir $<) $(linklibs-instrfunc_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-instrfunc_IQUOTE) . $(linklibs-instrfunc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(linklibs-instrfunc_IQUOTE) $(dir $<) $(linklibs-instrfunc_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-instrfunc_IQUOTE) . $(linklibs-instrfunc_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(linklibs-instrfunc_MC_DTARGETS) : $(linklibs-instrfunc_MC_TGTWILDCARD).d : $(linklibs-instrfunc_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(linklibs-instrfunc_DFLAGS) $(linklibs-instrfunc_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(linklibs-instrfunc_OBJDIR),)
+linklibs-instrfunc-MA_TARGETS := $(addsuffix .o,$(linklibs-instrfunc_ASMFILES))
+linklibs-instrfunc-MA_WILDCARD := %
+else
+linklibs-instrfunc-MA_TARGETS := $(addsuffix .o,$(addprefix $(linklibs-instrfunc_OBJDIR)/,$(notdir $(linklibs-instrfunc_ASMFILES))))
+linklibs-instrfunc-MA_WILDCARD := $(linklibs-instrfunc_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(linklibs-instrfunc-MA_TARGETS) : | $(addsuffix .s,$(linklibs-instrfunc_ASMFILES))
+
+# Be sure that all .c files are found
+linklibs-instrfunc-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+linklibs-instrfunc-MA_BASEDIRS := $(shell echo $(sort $(dir $(linklibs-instrfunc_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+linklibs-instrfunc-MA_DIRS := $(foreach dir, $(linklibs-instrfunc-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(linklibs-instrfunc-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(linklibs-instrfunc-MA_DIRS),)
+    linklibs-instrfunc-MA_DIRS := $(shell echo $(linklibs-instrfunc-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(linklibs-instrfunc-MA_DIRS)
+endif
+
+endif
+
+linklibs-instrfunc-MA_ASSEMBLER ?= $(linklibs-instrfunc_ASSEMBLER)
+
+$(linklibs-instrfunc-MA_TARGETS) : linklibs-instrfunc-MA_CMD:= $(linklibs-instrfunc-MA_ASSEMBLER)
+
+$(linklibs-instrfunc-MA_TARGETS) : CPPFLAGS := $(linklibs-instrfunc_CPPFLAGS)
+$(linklibs-instrfunc-MA_TARGETS) : AFLAGS := $(linklibs-instrfunc_AFLAGS)
+$(linklibs-instrfunc-MA_TARGETS) : $(linklibs-instrfunc-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(linklibs-instrfunc-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(linklibs-instrfunc-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(linklibs-instrfunc-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+ifeq (target,target)
+$(AROS_LIB)/libinstrfunc.a : linklibs-instrfunc_AR:=$(AR)
+$(AROS_LIB)/libinstrfunc.a : linklibs-instrfunc_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(AROS_LIB)/libinstrfunc.a : linklibs-instrfunc_AR:=$(HOST_AR)
+$(AROS_LIB)/libinstrfunc.a : linklibs-instrfunc_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(AROS_LIB)/libinstrfunc.a : linklibs-instrfunc_AR:=$(KERNEL_AR)
+$(AROS_LIB)/libinstrfunc.a : linklibs-instrfunc_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(AROS_LIB)/libinstrfunc.a : $(linklibs-instrfunc_OBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(linklibs-instrfunc_AR) $@ $^
+	$(Q)$(linklibs-instrfunc_RANLIB) $@
+endif
+
+ifneq ($(linklibs-instrfunc_DEPS),)
+  ifneq (linklibs-instrfunc linklibs-instrfunc-quick,)
+    ifneq ($(findstring $(TARGET),linklibs-instrfunc linklibs-instrfunc-quick),)
+      -include $(linklibs-instrfunc_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(linklibs-instrfunc_DEPS)
+    endif
+  endif
+endif
+
+
+
+ifneq ($(linklibs-instrfunc_OBJS) $(linklibs-instrfunc_DEPS) $(linklibs-instrfunc_LINKLIB),)
+$(linklibs-instrfunc_OBJS) $(linklibs-instrfunc_DEPS) $(linklibs-instrfunc_LINKLIB) : | $(linklibs-instrfunc_OBJDIR) $(AROS_LIB)
+else
+$(linklibs-instrfunc_OBJS) $(linklibs-instrfunc_DEPS) $(linklibs-instrfunc_LINKLIB) :: $(linklibs-instrfunc_OBJDIR) $(AROS_LIB)
+endif
+
+GLOB_MKDIRS += $(linklibs-instrfunc_OBJDIR) $(AROS_LIB)
+
+
+linklibs-instrfunc-clean : FILES := $(linklibs-instrfunc_OBJS) $(linklibs-instrfunc_LINKLIB) $(linklibs-instrfunc_DEPS)
+#MM
+linklibs-instrfunc-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget linklibs-instrfunc"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

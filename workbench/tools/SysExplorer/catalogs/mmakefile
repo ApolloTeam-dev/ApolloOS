@@ -1,0 +1,75 @@
+# Copyright @ 2003, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+CATALOGS:=czech french polish norwegian german
+
+
+ifeq (,)
+workbench-tools-sysexplorer-catalogs_DESC := $(basename $(wildcard $(SRCDIR)/$(CURDIR)/*.cd))
+else
+workbench-tools-sysexplorer-catalogs_DESC := 
+endif
+
+workbench-tools-sysexplorer-catalogs_SRC := $(shell echo $(TOOLDIR)/C_h_aros | sed 's/^\(.\):\//\/\1\//')
+
+ifeq ($(CATALOGS),)
+workbench-tools-sysexplorer-catalogs_LNGS := $(basename $(notdir $(call WILDCARD, $(SRCDIR)/$(CURDIR)/*.ct)))
+else
+workbench-tools-sysexplorer-catalogs_LNGS := $(CATALOGS)
+endif
+
+workbench-tools-sysexplorer-catalogs_OBJS := $(addsuffix /System/Tools//SysExplorer.catalog, $(addprefix $(AROS_CATALOGS)/, $(workbench-tools-sysexplorer-catalogs_LNGS)))
+workbench-tools-sysexplorer-catalogs_DIRS := $(addsuffix /System/Tools/, $(addprefix $(AROS_CATALOGS)/, $(workbench-tools-sysexplorer-catalogs_LNGS))) $(dir ../strings.h)
+
+#MM- workbench-tools-sysexplorer-catalogs-quick : workbench-tools-sysexplorer-catalogs
+
+#MM
+workbench-tools-sysexplorer-catalogs : $(workbench-tools-sysexplorer-catalogs_OBJS) ../strings.h
+
+
+ifneq ($(workbench-tools-sysexplorer-catalogs_OBJS),)
+$(workbench-tools-sysexplorer-catalogs_OBJS) : | $(workbench-tools-sysexplorer-catalogs_DIRS)
+else
+$(workbench-tools-sysexplorer-catalogs_OBJS) :: $(workbench-tools-sysexplorer-catalogs_DIRS)
+endif
+
+GLOB_MKDIRS += $(workbench-tools-sysexplorer-catalogs_DIRS)
+
+
+$(AROS_CATALOGS)/%/System/Tools//SysExplorer.catalog : $(SRCDIR)/$(CURDIR)/%.ct $(workbench-tools-sysexplorer-catalogs_DESC).cd
+	$(Q)$(ECHO) "Creating   SysExplorer catalog for language $*."
+	$(Q)$(IF) $(TEST) "$*" = "polish"; then \
+	    $(FLEXCAT) iso88592toamigapl $(workbench-tools-sysexplorer-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Tools//SysExplorer.catalog" || [ $$? -lt 10 ] ; \
+	elif $(TEST) "$*" = "russian"; then \
+	    $(FLEXCAT) win1251toamiga1251 $(workbench-tools-sysexplorer-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Tools//SysExplorer.catalog" || [ $$? -lt 10 ] ; \
+	else \
+	    $(FLEXCAT) $(workbench-tools-sysexplorer-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Tools//SysExplorer.catalog" || [ $$? -lt 10 ] ; \
+	fi
+
+ifneq (../strings.h,)
+../strings.h : workbench-tools-sysexplorer-catalogs_DESC := $(workbench-tools-sysexplorer-catalogs_DESC)
+../strings.h : workbench-tools-sysexplorer-catalogs_SRC := $(workbench-tools-sysexplorer-catalogs_SRC)
+../strings.h : $(workbench-tools-sysexplorer-catalogs_DESC).cd $(workbench-tools-sysexplorer-catalogs_SRC).sd | $(dir ../strings.h)
+	$(Q)$(ECHO) "Creating   SysExplorer catalog source file $@"
+	$(Q)$(FLEXCAT) $(workbench-tools-sysexplorer-catalogs_DESC).cd $@=$(workbench-tools-sysexplorer-catalogs_SRC).sd
+endif
+
+workbench-tools-sysexplorer-catalogs-clean : FILES := $(workbench-tools-sysexplorer-catalogs_OBJS) ../strings.h
+#MM
+workbench-tools-sysexplorer-catalogs-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-tools-sysexplorer-catalogs"
+	$(Q)$(RM) $(FILES)
+
+.PHONY: workbench-tools-sysexplorer-catalogs workbench-tools-sysexplorer-catalogs-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,26 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- contrib-development : tools-flexcat
+#MM- tools-flexcat : tools-flexcat-doc tools-flexcat-cpy
+
+FILES := AUTHORS ChangeLog COPYING README TODO
+EXEDIR := $(AROS_CONTRIB)/$(AROS_DIR_DEVELOPER)/FlexCat
+
+
+.PHONY : tools-flexcat-doc
+
+#MM
+tools-flexcat-doc :
+	$(Q)cd $(SRCDIR)/$(CURDIR) && $(CPYDIRREC) -s doc -d $(EXEDIR)/Docs -e 
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

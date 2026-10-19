@@ -1,0 +1,74 @@
+# Copyright © 2019, The AROS Development Team. All rights reserved.
+# $Id: mmakefile.src
+
+include $(SRCDIR)/config/aros.cfg
+
+CATALOGS:=french german czech polish italian norwegian
+
+ifeq (,)
+workbench-tools-iconbar-catalogs_DESC := $(basename $(wildcard $(SRCDIR)/$(CURDIR)/*.cd))
+else
+workbench-tools-iconbar-catalogs_DESC := 
+endif
+
+workbench-tools-iconbar-catalogs_SRC := $(shell echo $(TOOLDIR)/C_h_aros | sed 's/^\(.\):\//\/\1\//')
+
+ifeq ($(CATALOGS),)
+workbench-tools-iconbar-catalogs_LNGS := $(basename $(notdir $(call WILDCARD, $(SRCDIR)/$(CURDIR)/*.ct)))
+else
+workbench-tools-iconbar-catalogs_LNGS := $(CATALOGS)
+endif
+
+workbench-tools-iconbar-catalogs_OBJS := $(addsuffix /System/Tools/BoingIconBar.catalog, $(addprefix $(AROS_CATALOGS)/, $(workbench-tools-iconbar-catalogs_LNGS)))
+workbench-tools-iconbar-catalogs_DIRS := $(addsuffix /System/Tools, $(addprefix $(AROS_CATALOGS)/, $(workbench-tools-iconbar-catalogs_LNGS))) $(dir ../strings.h)
+
+#MM- workbench-tools-iconbar-catalogs-quick : workbench-tools-iconbar-catalogs
+
+#MM
+workbench-tools-iconbar-catalogs : $(workbench-tools-iconbar-catalogs_OBJS) ../strings.h
+
+
+ifneq ($(workbench-tools-iconbar-catalogs_OBJS),)
+$(workbench-tools-iconbar-catalogs_OBJS) : | $(workbench-tools-iconbar-catalogs_DIRS)
+else
+$(workbench-tools-iconbar-catalogs_OBJS) :: $(workbench-tools-iconbar-catalogs_DIRS)
+endif
+
+GLOB_MKDIRS += $(workbench-tools-iconbar-catalogs_DIRS)
+
+
+$(AROS_CATALOGS)/%/System/Tools/BoingIconBar.catalog : $(SRCDIR)/$(CURDIR)/%.ct $(workbench-tools-iconbar-catalogs_DESC).cd
+	$(Q)$(ECHO) "Creating   BoingIconBar catalog for language $*."
+	$(Q)$(IF) $(TEST) "$*" = "polish"; then \
+	    $(FLEXCAT) iso88592toamigapl $(workbench-tools-iconbar-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Tools/BoingIconBar.catalog" || [ $$? -lt 10 ] ; \
+	elif $(TEST) "$*" = "russian"; then \
+	    $(FLEXCAT) win1251toamiga1251 $(workbench-tools-iconbar-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Tools/BoingIconBar.catalog" || [ $$? -lt 10 ] ; \
+	else \
+	    $(FLEXCAT) $(workbench-tools-iconbar-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Tools/BoingIconBar.catalog" || [ $$? -lt 10 ] ; \
+	fi
+
+ifneq (../strings.h,)
+../strings.h : workbench-tools-iconbar-catalogs_DESC := $(workbench-tools-iconbar-catalogs_DESC)
+../strings.h : workbench-tools-iconbar-catalogs_SRC := $(workbench-tools-iconbar-catalogs_SRC)
+../strings.h : $(workbench-tools-iconbar-catalogs_DESC).cd $(workbench-tools-iconbar-catalogs_SRC).sd | $(dir ../strings.h)
+	$(Q)$(ECHO) "Creating   BoingIconBar catalog source file $@"
+	$(Q)$(FLEXCAT) $(workbench-tools-iconbar-catalogs_DESC).cd $@=$(workbench-tools-iconbar-catalogs_SRC).sd
+endif
+
+workbench-tools-iconbar-catalogs-clean : FILES := $(workbench-tools-iconbar-catalogs_OBJS) ../strings.h
+#MM
+workbench-tools-iconbar-catalogs-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-tools-iconbar-catalogs"
+	$(Q)$(RM) $(FILES)
+
+.PHONY: workbench-tools-iconbar-catalogs workbench-tools-iconbar-catalogs-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

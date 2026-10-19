@@ -1,0 +1,298 @@
+#   $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+NOWARN_FLAGS := $(NOWARN_UNINITIALIZED) $(NOWARN_PARENTHESES)
+USER_CFLAGS := $(NOWARN_FLAGS)
+USER_CPPFLAGS := -D_XOPEN_SOURCE=600 -D__BSD_VISIBLE=1
+
+#MM- workbench-network-common : workbench-network-common-c
+
+#MM- workbench-network-common-c: network-includes
+
+
+.PHONY : workbench-network-common-c
+
+workbench-network-common-c_OBJDIR    := $(GENDIR)/$(CURDIR)
+workbench-network-common-c_TARGETDIR := $(AROS_C)
+workbench-network-common-c_LIBS := 
+
+workbench-network-common-c_FILES     := ifconfig route ping resolve arp logger hostname
+workbench-network-common-c_OBJS      := $(addsuffix .o,$(addprefix $(workbench-network-common-c_OBJDIR)/,$(workbench-network-common-c_FILES)))
+workbench-network-common-c_DEPS      := $(addsuffix .d,$(addprefix $(workbench-network-common-c_OBJDIR)/,$(workbench-network-common-c_FILES)))
+workbench-network-common-c_EXES      := $(addprefix $(workbench-network-common-c_TARGETDIR)/,$(workbench-network-common-c_FILES))
+
+workbench-network-common-c_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    workbench-network-common-c_CPPFLAGS += -I
+endif
+workbench-network-common-c_CFLAGS    := $(CFLAGS)
+workbench-network-common-c_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+workbench-network-common-c_COVERAGE := yes
+workbench-network-common-c_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+workbench-network-common-c_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+workbench-network-common-c_CFLAGS    := $(strip $(workbench-network-common-c_COVERAGEFLAGS) $(workbench-network-common-c_CFLAGS))
+workbench-network-common-c_LIBS += $(workbench-network-common-c_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-network-common-c_FUNCINSTR := yes
+workbench-network-common-c_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+workbench-network-common-c_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-network-common-c_CFLAGS    := $(strip $(workbench-network-common-c_INSTRFUNCFLAGS) $(workbench-network-common-c_CFLAGS))
+workbench-network-common-c_LIBS += $(workbench-network-common-c_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+workbench-network-common-c_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(workbench-network-common-c_CFLAGS))
+endif
+endif
+ifneq (,)
+    workbench-network-common-c_DFLAGS := 
+else
+    workbench-network-common-c_DFLAGS := $(workbench-network-common-c_CFLAGS)
+endif
+ifeq (target,target)
+workbench-network-common-c_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-network-common-c_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-network-common-c_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    workbench-network-common-c_LDFLAGS += -L
+endif
+
+#MM
+workbench-network-common-c-quick : workbench-network-common-c
+
+#MM workbench-network-common-c : includes-generate-deps core-linklibs
+workbench-network-common-c : $(workbench-network-common-c_EXES)
+
+ifneq ($(filter $(TARGET),workbench-network-common-c workbench-network-common-c-quick),)
+
+ifeq (,)
+workbench-network-common-c_MC_SRCWILDCARD := %
+else
+workbench-network-common-c_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-network-common-c_OBJDIR),)
+workbench-network-common-c_MC_TARGETS := $(addsuffix .o,$(workbench-network-common-c_FILES))
+workbench-network-common-c_MC_DTARGETS := $(addsuffix .d,$(workbench-network-common-c_FILES))
+workbench-network-common-c_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-network-common-c_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-network-common-c_OBJDIR)/,$(notdir $(workbench-network-common-c_FILES))))
+    workbench-network-common-c_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-network-common-c_OBJDIR)/,$(notdir $(workbench-network-common-c_FILES))))
+else
+ifeq (,)
+    workbench-network-common-c_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-network-common-c_OBJDIR)/,$(workbench-network-common-c_FILES)))
+    workbench-network-common-c_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-network-common-c_OBJDIR)/,$(workbench-network-common-c_FILES)))
+else
+    workbench-network-common-c_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-network-common-c_OBJDIR)/,$(patsubst /%,%,$(workbench-network-common-c_FILES))))
+    workbench-network-common-c_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-network-common-c_OBJDIR)/,$(patsubst /%,%,$(workbench-network-common-c_FILES))))
+endif
+endif
+workbench-network-common-c_MC_TGTWILDCARD := $(workbench-network-common-c_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : | $(addsuffix .c,$(workbench-network-common-c_FILES))
+
+# Be sure that all .c files are found
+workbench-network-common-c_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-network-common-c_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-network-common-c_FILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-network-common-c_MC_DIRS := $(foreach dir, $(workbench-network-common-c_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-network-common-c_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-network-common-c_MC_DIRS),)
+    workbench-network-common-c_MC_DIRS := $(shell echo $(workbench-network-common-c_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-network-common-c_MC_DIRS)
+endif
+
+endif
+
+workbench-network-common-c_MC_CPPFLAGS := $(workbench-network-common-c_CPPFLAGS)
+workbench-network-common-c_CFLAGS := $(workbench-network-common-c_CFLAGS)
+ifeq ($(workbench-network-common-c_DFLAGS),)
+  workbench-network-common-c_DFLAGS := $(workbench-network-common-c_CFLAGS)
+else
+  workbench-network-common-c_DFLAGS := $(workbench-network-common-c_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-network-common-c_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-network-common-c_STRIP ?= $(TARGET_STRIP)
+workbench-network-common-c_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : workbench-network-common-c_MC_CPPFLAGS:=$(strip $(workbench-network-common-c_MC_CPPFLAGS) $(workbench-network-common-c_MC_EXTRA_CPPFLAGS))
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : workbench-network-common-c_CFLAGS:=$(strip $(workbench-network-common-c_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : workbench-network-common-c_DFLAGS:=$(workbench-network-common-c_DFLAGS)
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : workbench-network-common-c_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : workbench-network-common-c_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-network-common-c_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-network-common-c_STRIP ?= $(HOST_STRIP)
+workbench-network-common-c_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : workbench-network-common-c_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-network-common-c_MC_CPPFLAGS) $(workbench-network-common-c_MC_EXTRA_CPPFLAGS))
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : workbench-network-common-c_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-network-common-c_CFLAGS))
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : workbench-network-common-c_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-network-common-c_DFLAGS))
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : workbench-network-common-c_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : workbench-network-common-c_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-network-common-c_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-network-common-c_STRIP ?= $(ECHO) >/dev/null
+workbench-network-common-c_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : workbench-network-common-c_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-network-common-c_MC_CPPFLAGS) $(workbench-network-common-c_MC_EXTRA_CPPFLAGS))
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : workbench-network-common-c_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-network-common-c_CFLAGS))
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : workbench-network-common-c_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-network-common-c_DFLAGS))
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : workbench-network-common-c_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-network-common-c_MC_TARGETS) $(workbench-network-common-c_MC_DTARGETS) : workbench-network-common-c_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-network-common-c_MC_TARGETS) : CPPFLAGS := $(workbench-network-common-c_MC_CPPFLAGS)
+$(workbench-network-common-c_MC_TARGETS) : CFLAGS := $(workbench-network-common-c_CFLAGS)
+$(workbench-network-common-c_MC_TARGETS) : $(workbench-network-common-c_MC_TGTWILDCARD).o : $(workbench-network-common-c_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-network-common-c_IQUOTE) $(dir $<) $(workbench-network-common-c_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-network-common-c_IQUOTE) . $(workbench-network-common-c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-network-common-c_IQUOTE) $(dir $<) $(workbench-network-common-c_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-network-common-c_IQUOTE) . $(workbench-network-common-c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-network-common-c_IQUOTE) $(dir $<) $(workbench-network-common-c_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-network-common-c_IQUOTE) . $(workbench-network-common-c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-network-common-c_MC_DTARGETS) : $(workbench-network-common-c_MC_TGTWILDCARD).d : $(workbench-network-common-c_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-network-common-c_DFLAGS) $(workbench-network-common-c_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+workbench-network-common-c-link_EXTRA_LDFLAGS := 
+workbench-network-common-c-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    workbench-network-common-c-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    workbench-network-common-c-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    workbench-network-common-c-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+workbench-network-common-c-link_DIRS := $(subst -L ,-L,$(strip $(workbench-network-common-c_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+workbench-network-common-c-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(workbench-network-common-c-link_DIRS)))
+# Add trailing /
+workbench-network-common-c-link_DIRS := $(subst //,/,$(addsuffix /,$(workbench-network-common-c-link_DIRS)))
+# Add normal linklib path
+workbench-network-common-c-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+workbench-network-common-c-link_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-network-common-c_LIBS) $(workbench-network-common-c-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+workbench-network-common-c-link_DEPLIBS := $(foreach lib,$(workbench-network-common-c-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(workbench-network-common-c-link_DIRS)))) \
+)
+workbench-network-common-c-link_PROGS := $(addprefix $(workbench-network-common-c_TARGETDIR)/,$(workbench-network-common-c_FILES))
+
+$(workbench-network-common-c-link_PROGS) : OBJDIR := $(workbench-network-common-c_OBJDIR)
+$(workbench-network-common-c-link_PROGS) : LDFLAGS := $(strip $(workbench-network-common-c_LDFLAGS) $(workbench-network-common-c-link_EXTRA_LDFLAGS))
+$(workbench-network-common-c-link_PROGS) : LIBS := $(addprefix -l,$(workbench-network-common-c_LIBS) $(workbench-network-common-c-link_EXTRA_LIBS) )
+$(workbench-network-common-c-link_PROGS) : $(workbench-network-common-c_TARGETDIR)/% : $(workbench-network-common-c_OBJDIR)/%.o $(workbench-network-common-c-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(workbench-network-common-c_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(workbench-network-common-c_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(workbench-network-common-c_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-network-common-c_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(workbench-network-common-c_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(workbench-network-common-c_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-network-common-c_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(workbench-network-common-c_DEPS),)
+  ifneq (workbench-network-common-c workbench-network-common-c-quick,)
+    ifneq ($(findstring $(TARGET),workbench-network-common-c workbench-network-common-c-quick),)
+      -include $(workbench-network-common-c_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-network-common-c_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(workbench-network-common-c_DEPS) $(workbench-network-common-c_OBJS) $(addprefix $(workbench-network-common-c_TARGETDIR)/,$(workbench-network-common-c_FILES)),)
+$(workbench-network-common-c_DEPS) $(workbench-network-common-c_OBJS) $(addprefix $(workbench-network-common-c_TARGETDIR)/,$(workbench-network-common-c_FILES)) : | $(workbench-network-common-c_TARGETDIR) $(workbench-network-common-c_OBJDIR)
+else
+$(workbench-network-common-c_DEPS) $(workbench-network-common-c_OBJS) $(addprefix $(workbench-network-common-c_TARGETDIR)/,$(workbench-network-common-c_FILES)) :: $(workbench-network-common-c_TARGETDIR) $(workbench-network-common-c_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-network-common-c_TARGETDIR) $(workbench-network-common-c_OBJDIR)
+
+
+workbench-network-common-c-clean : FILES := $(workbench-network-common-c_OBJS) $(workbench-network-common-c_EXES) $(workbench-network-common-c_DEPS)
+#MM
+workbench-network-common-c-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-network-common-c"
+	$(Q)$(RM) $(FILES)
+
+
+#%common
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

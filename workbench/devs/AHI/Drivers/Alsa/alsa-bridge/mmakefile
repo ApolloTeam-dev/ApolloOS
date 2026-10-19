@@ -1,0 +1,533 @@
+# Copyright © 2015, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- AHI-alsa-bridge-linux : AHI-linklibs-alsa-bridge
+
+USER_CFLAGS = -isystem $(GENINCDIR) $(KERNEL_INCLUDES)
+
+ALSA_BRIDGE_FILES = \
+    alsa \
+    alsa_hostlib
+
+
+# assign and generate the local variables used in this macro
+AHI-linklibs-alsa-bridge_LIBNAME           := alsa-bridge
+AHI-linklibs-alsa-bridge_LINKLIB           := $(AROS_LIB)/libalsa-bridge.a
+
+AHI-linklibs-alsa-bridge_FILES             ?= $(ALSA_BRIDGE_FILES)
+AHI-linklibs-alsa-bridge_ASMFILES          := 
+AHI-linklibs-alsa-bridge_OBJCFILES         := 
+AHI-linklibs-alsa-bridge_CXXFILES          := 
+
+AHI-linklibs-alsa-bridge_OBJDIR            ?= $(GENDIR)/$(CURDIR)
+AHI-linklibs-alsa-bridge_ARCHOBJS          := $(wildcard $(AHI-linklibs-alsa-bridge_OBJDIR)/arch/*.o)
+ifeq (no,no)
+    AHI-linklibs-alsa-bridge_ARCHFILES     := $(basename $(notdir $(AHI-linklibs-alsa-bridge_ARCHOBJS)))
+else
+    AHI-linklibs-alsa-bridge_ARCHFILES     := $(basename $(patsubst $(AHI-linklibs-alsa-bridge_OBJDIR)/%,%,$(AHI-linklibs-alsa-bridge_ARCHOBJS)))
+endif
+AHI-linklibs-alsa-bridge_C_NARCHFILES      := $(filter-out $(AHI-linklibs-alsa-bridge_ARCHFILES),$(AHI-linklibs-alsa-bridge_FILES))
+AHI-linklibs-alsa-bridge_C_FILES           ?= $(AHI-linklibs-alsa-bridge_C_NARCHFILES)
+AHI-linklibs-alsa-bridge_CXX_NARCHFILES    := $(filter-out $(AHI-linklibs-alsa-bridge_ARCHFILES),$(AHI-linklibs-alsa-bridge_CXXFILES))
+AHI-linklibs-alsa-bridge_CXX_FILES         ?= $(AHI-linklibs-alsa-bridge_CXX_NARCHFILES)
+AHI-linklibs-alsa-bridge_OBJC_NARCHFILES   := $(filter-out $(AHI-linklibs-alsa-bridge_ARCHFILES),$(AHI-linklibs-alsa-bridge_OBJCFILES))
+AHI-linklibs-alsa-bridge_OBJC_FILES        ?= $(AHI-linklibs-alsa-bridge_OBJC_NARCHFILES)
+
+ifeq (no,no)
+    AHI-linklibs-alsa-bridge_OBJ_FILES     ?= $(addprefix $(AHI-linklibs-alsa-bridge_OBJDIR)/,$(notdir $(AHI-linklibs-alsa-bridge_C_NARCHFILES:=.o) $(AHI-linklibs-alsa-bridge_CXX_NARCHFILES:=.o) $(AHI-linklibs-alsa-bridge_ASMFILES:=.o) $(AHI-linklibs-alsa-bridge_OBJC_NARCHFILES:=.o)))
+else
+    AHI-linklibs-alsa-bridge_OBJ_FILES     ?= $(addprefix $(AHI-linklibs-alsa-bridge_OBJDIR)/,$(AHI-linklibs-alsa-bridge_C_NARCHFILES:=.o) $(AHI-linklibs-alsa-bridge_CXX_NARCHFILES:=.o) $(AHI-linklibs-alsa-bridge_ASMFILES:=.o) $(AHI-linklibs-alsa-bridge_OBJC_NARCHFILES:=.o))
+endif
+AHI-linklibs-alsa-bridge_OBJS              ?= $(AHI-linklibs-alsa-bridge_ARCHOBJS) $(AHI-linklibs-alsa-bridge_OBJ_FILES) 
+AHI-linklibs-alsa-bridge_DEPS              := $(patsubst %.o,%.d,$(AHI-linklibs-alsa-bridge_OBJS))
+
+AHI-linklibs-alsa-bridge_CPPFLAGS          := $(CPPFLAGS)
+ifneq (,)
+    AHI-linklibs-alsa-bridge_CPPFLAGS      += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+AHI-linklibs-alsa-bridge_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+AHI-linklibs-alsa-bridge_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+AHI-linklibs-alsa-bridge_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+AHI-linklibs-alsa-bridge_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+AHI-linklibs-alsa-bridge_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+AHI-linklibs-alsa-bridge_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+AHI-linklibs-alsa-bridge_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+AHI-linklibs-alsa-bridge_CXXFLAGS          := 
+endif
+
+ifeq ($(TARGET_LTO),yes)
+ifeq (target,target)
+        AHI-linklibs-alsa-bridge_CFLAGS    := $(strip $(LTO_CFLAGS) $(AHI-linklibs-alsa-bridge_CFLAGS))
+        AHI-linklibs-alsa-bridge_CXXFLAGS  := $(strip $(LTO_CFLAGS) $(AHI-linklibs-alsa-bridge_CXXFLAGS))
+endif
+endif
+AHI-linklibs-alsa-bridge_AFLAGS            := $(AFLAGS)
+AHI-linklibs-alsa-bridge_DFLAGS            := 
+ifneq (,)
+    AHI-linklibs-alsa-bridge_DFLAGS        := 
+else
+    AHI-linklibs-alsa-bridge_DFLAGS        := $(AHI-linklibs-alsa-bridge_CFLAGS)
+endif
+AHI-linklibs-alsa-bridge_DXXFLAGS          := 
+ifneq (,)
+    AHI-linklibs-alsa-bridge_DXXFLAGS      := 
+else
+    AHI-linklibs-alsa-bridge_DXXFLAGS      := $(AHI-linklibs-alsa-bridge_CXXFLAGS)
+endif
+
+.PHONY : AHI-linklibs-alsa-bridge AHI-linklibs-alsa-bridge-clean AHI-linklibs-alsa-bridge-quick
+
+#MM
+AHI-linklibs-alsa-bridge-quick : AHI-linklibs-alsa-bridge
+
+#MM AHI-linklibs-alsa-bridge : includes-generate-deps
+AHI-linklibs-alsa-bridge : $(AHI-linklibs-alsa-bridge_LINKLIB)
+
+ifneq ($(filter $(TARGET),AHI-linklibs-alsa-bridge AHI-linklibs-alsa-bridge-quick),)
+
+
+AHI-linklibs-alsa-bridge_CXXABSBASENAMES := $(foreach AHI-linklibs-alsa-bridge_CXXBASE,$(AHI-linklibs-alsa-bridge_CXX_FILES),$(if $(filter /%,$(AHI-linklibs-alsa-bridge_CXXBASE)),$(AHI-linklibs-alsa-bridge_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(AHI-linklibs-alsa-bridge_CXXBASE))))
+
+ifneq ($(AHI-linklibs-alsa-bridge_CXXABSBASENAMES),)
+
+AHI-linklibs-alsa-bridge_CXXBASENAMES := $(basename $(AHI-linklibs-alsa-bridge_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+AHI-linklibs-alsa-bridge_MCXX_FILES  := $(strip $(foreach AHI-linklibs-alsa-bridge_CXXBASE,$(AHI-linklibs-alsa-bridge_CXXABSBASENAMES), $(firstword $(wildcard $(foreach AHI-linklibs-alsa-bridge_EXT, $(AROS_CXXEXTS),$(addsuffix .$(AHI-linklibs-alsa-bridge_EXT),$(AHI-linklibs-alsa-bridge_CXXBASE)))))))
+
+ifeq (,)
+AHI-linklibs-alsa-bridge_MCXX_SRCWILDCARD := %
+else
+AHI-linklibs-alsa-bridge_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(AHI-linklibs-alsa-bridge_OBJDIR),)
+  AHI-linklibs-alsa-bridge_CXXTARGETS := $(notdir $(AHI-linklibs-alsa-bridge_CXXBASENAMES:=.o))
+  AHI-linklibs-alsa-bridge_CXXDTARGETS := $(notdir $(AHI-linklibs-alsa-bridge_CXXBASENAMES:=.d))
+  AHI-linklibs-alsa-bridge_MCXX_WILDCARD := %
+else
+  AHI-linklibs-alsa-bridge_CXXTARGETS := $(addprefix $(AHI-linklibs-alsa-bridge_OBJDIR)/,$(notdir $(AHI-linklibs-alsa-bridge_CXXBASENAMES:=.o)))
+  AHI-linklibs-alsa-bridge_CXXDTARGETS := $(addprefix $(AHI-linklibs-alsa-bridge_OBJDIR)/,$(notdir $(AHI-linklibs-alsa-bridge_CXXBASENAMES:=.d)))
+  AHI-linklibs-alsa-bridge_MCXX_WILDCARD := $(AHI-linklibs-alsa-bridge_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(AHI-linklibs-alsa-bridge_CXXTARGETS) $(AHI-linklibs-alsa-bridge_CXXDTARGETS) : | $(AHI-linklibs-alsa-bridge_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+AHI-linklibs-alsa-bridge_MCXX_CPPFLAGS := $(AHI-linklibs-alsa-bridge_CPPFLAGS)
+AHI-linklibs-alsa-bridge_CXXFLAGS := $(AHI-linklibs-alsa-bridge_CXXFLAGS)
+ifeq ($(AHI-linklibs-alsa-bridge_DXXFLAGS),)
+  AHI-linklibs-alsa-bridge_DXXFLAGS := $(AHI-linklibs-alsa-bridge_CXXFLAGS)
+else
+  AHI-linklibs-alsa-bridge_DXXFLAGS := $(AHI-linklibs-alsa-bridge_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  AHI-linklibs-alsa-bridge_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  AHI-linklibs-alsa-bridge_STRIP ?= $(HOST_STRIP)
+  AHI-linklibs-alsa-bridge_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  AHI-linklibs-alsa-bridge_CXXCMD:=$(HOST_CXX)
+  AHI-linklibs-alsa-bridge_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(AHI-linklibs-alsa-bridge_MCXX_CPPFLAGS) $(AHI-linklibs-alsa-bridge_MCXX_EXTRA_CPPFLAGS))
+  AHI-linklibs-alsa-bridge_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(AHI-linklibs-alsa-bridge_CXXFLAGS))
+  AHI-linklibs-alsa-bridge_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(AHI-linklibs-alsa-bridge_DXXFLAGS))
+  AHI-linklibs-alsa-bridge_CXXIQUOTE:=$(HOST_IQUOTE)
+  AHI-linklibs-alsa-bridge_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  AHI-linklibs-alsa-bridge_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  AHI-linklibs-alsa-bridge_STRIP ?= $(TARGET_STRIP)
+  AHI-linklibs-alsa-bridge_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  AHI-linklibs-alsa-bridge_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  AHI-linklibs-alsa-bridge_MCXX_CPPFLAGS := $(strip $(AHI-linklibs-alsa-bridge_MCXX_CPPFLAGS) $(AHI-linklibs-alsa-bridge_MCXX_EXTRA_CPPFLAGS))
+  AHI-linklibs-alsa-bridge_CXXFLAGS := $(strip $(AHI-linklibs-alsa-bridge_CXXFLAGS) $(SAFETY_CFLAGS))
+  AHI-linklibs-alsa-bridge_DXXFLAGS := $(AHI-linklibs-alsa-bridge_DXXFLAGS)
+  AHI-linklibs-alsa-bridge_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  AHI-linklibs-alsa-bridge_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  AHI-linklibs-alsa-bridge_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  AHI-linklibs-alsa-bridge_STRIP ?= $(ECHO) >/dev/null
+  AHI-linklibs-alsa-bridge_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  AHI-linklibs-alsa-bridge_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  AHI-linklibs-alsa-bridge_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(AHI-linklibs-alsa-bridge_MCXX_CPPFLAGS) $(AHI-linklibs-alsa-bridge_MCXX_EXTRA_CPPFLAGS))
+  AHI-linklibs-alsa-bridge_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(AHI-linklibs-alsa-bridge_CXXFLAGS))
+  AHI-linklibs-alsa-bridge_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(AHI-linklibs-alsa-bridge_DXXFLAGS))
+  AHI-linklibs-alsa-bridge_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  AHI-linklibs-alsa-bridge_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(AHI-linklibs-alsa-bridge_CXXCMD) $(AHI-linklibs-alsa-bridge_CXXIQUOTE) $(dir $(2)) $(AHI-linklibs-alsa-bridge_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(AHI-linklibs-alsa-bridge_CXXIQUOTE) . $(AHI-linklibs-alsa-bridge_CXXIQUOTE_END) $(strip $(AHI-linklibs-alsa-bridge_CXXFLAGS) $(AHI-linklibs-alsa-bridge_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(AHI-linklibs-alsa-bridge_CXXCMD) $(AHI-linklibs-alsa-bridge_CXXIQUOTE) $(dir $(2)) $(AHI-linklibs-alsa-bridge_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(AHI-linklibs-alsa-bridge_CXXIQUOTE) . $(AHI-linklibs-alsa-bridge_CXXIQUOTE_END) $(strip $(AHI-linklibs-alsa-bridge_CXXFLAGS) $(AHI-linklibs-alsa-bridge_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(AHI-linklibs-alsa-bridge_CXXCMD) $(AHI-linklibs-alsa-bridge_CXXIQUOTE) $(dir $(2)) $(AHI-linklibs-alsa-bridge_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(AHI-linklibs-alsa-bridge_CXXIQUOTE) . $(AHI-linklibs-alsa-bridge_CXXIQUOTE_END) $(strip $(AHI-linklibs-alsa-bridge_CXXFLAGS) $(AHI-linklibs-alsa-bridge_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(AHI-linklibs-alsa-bridge_CXXCMD)" $(MKDEPEND) $(strip $(AHI-linklibs-alsa-bridge_DXXFLAGS) $(AHI-linklibs-alsa-bridge_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(AHI-linklibs-alsa-bridge_OBJDIR),)
+  $(foreach AHI-linklibs-alsa-bridge_CXXFILE,$(AHI-linklibs-alsa-bridge_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(AHI-linklibs-alsa-bridge_CXXFILE))),$(AHI-linklibs-alsa-bridge_CXXFILE))))
+else
+  $(foreach AHI-linklibs-alsa-bridge_CXXFILE,$(AHI-linklibs-alsa-bridge_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(AHI-linklibs-alsa-bridge_OBJDIR)/,$(notdir $(basename $(AHI-linklibs-alsa-bridge_CXXFILE)))),$(AHI-linklibs-alsa-bridge_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(AHI-linklibs-alsa-bridge_OBJC_FILES),)
+
+ifeq (,)
+AHI-linklibs-alsa-bridge_MOBJC_SRCWILDCARD := %
+else
+AHI-linklibs-alsa-bridge_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(AHI-linklibs-alsa-bridge_OBJDIR),)
+  AHI-linklibs-alsa-bridge_MOBJC_TARGETS := $(addsuffix .o,$(AHI-linklibs-alsa-bridge_OBJC_FILES))
+  AHI-linklibs-alsa-bridge_MOBJC_DTARGETS := $(addsuffix .d,$(AHI-linklibs-alsa-bridge_OBJC_FILES))
+  AHI-linklibs-alsa-bridge_MOBJC_WILDCARD := %
+else
+  AHI-linklibs-alsa-bridge_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(AHI-linklibs-alsa-bridge_OBJDIR)/,$(AHI-linklibs-alsa-bridge_OBJC_FILES)))
+  AHI-linklibs-alsa-bridge_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(AHI-linklibs-alsa-bridge_OBJDIR)/,$(AHI-linklibs-alsa-bridge_OBJC_FILES)))
+  AHI-linklibs-alsa-bridge_MOBJC_WILDCARD := $(AHI-linklibs-alsa-bridge_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : | $(addsuffix .m,$(AHI-linklibs-alsa-bridge_OBJC_FILES))
+
+  # Be sure that all .m files are found
+  AHI-linklibs-alsa-bridge_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  AHI-linklibs-alsa-bridge_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(AHI-linklibs-alsa-bridge_OBJC_FILES))) | sed 's/\(.\):\//\/\1\//g')
+  AHI-linklibs-alsa-bridge_MOBJC_DIRS := $(foreach dir, $(AHI-linklibs-alsa-bridge_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(AHI-linklibs-alsa-bridge_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(AHI-linklibs-alsa-bridge_MOBJC_DIRS),)
+    AHI-linklibs-alsa-bridge_MOBJC_DIRS := $(shell echo $(AHI-linklibs-alsa-bridge_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(AHI-linklibs-alsa-bridge_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  AHI-linklibs-alsa-bridge_CC := $(TARGET_CC)
+else
+  AHI-linklibs-alsa-bridge_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+AHI-linklibs-alsa-bridge_MOBJC_CPPFLAGS := $(AHI-linklibs-alsa-bridge_CPPFLAGS)
+AHI-linklibs-alsa-bridge_OBJCFLAGS := $(AHI-linklibs-alsa-bridge_CFLAGS)
+AHI-linklibs-alsa-bridge_OBJCFLAGS := $(AHI-linklibs-alsa-bridge_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+AHI-linklibs-alsa-bridge_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(AHI-linklibs-alsa-bridge_OBJCFLAGS)))
+ifeq ($(AHI-linklibs-alsa-bridge_DFLAGS),)
+  AHI-linklibs-alsa-bridge_OBJCDFLAGS := $(AHI-linklibs-alsa-bridge_CFLAGS)
+else
+  AHI-linklibs-alsa-bridge_OBJCDFLAGS := $(AHI-linklibs-alsa-bridge_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  AHI-linklibs-alsa-bridge_LINK ?= $(strip $(AHI-linklibs-alsa-bridge_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  AHI-linklibs-alsa-bridge_STRIP ?= $(TARGET_STRIP)
+  AHI-linklibs-alsa-bridge_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : CMD:=$(strip $(AHI-linklibs-alsa-bridge_CC) $(TARGET_SYSROOT))
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : AHI-linklibs-alsa-bridge_MOBJC_CPPFLAGS:=$(strip $(AHI-linklibs-alsa-bridge_MOBJC_CPPFLAGS) $(AHI-linklibs-alsa-bridge_MOBJC_EXTRA_CPPFLAGS))
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : AHI-linklibs-alsa-bridge_OBJCFLAGS:=$(strip $(AHI-linklibs-alsa-bridge_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : AHI-linklibs-alsa-bridge_OBJCDFLAGS:=$(AHI-linklibs-alsa-bridge_OBJCDFLAGS)
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : AHI-linklibs-alsa-bridge_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : AHI-linklibs-alsa-bridge_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  AHI-linklibs-alsa-bridge_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  AHI-linklibs-alsa-bridge_STRIP ?= $(HOST_STRIP)
+  AHI-linklibs-alsa-bridge_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : AHI-linklibs-alsa-bridge_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(AHI-linklibs-alsa-bridge_MOBJC_CPPFLAGS) $(AHI-linklibs-alsa-bridge_MOBJC_EXTRA_CPPFLAGS))
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : AHI-linklibs-alsa-bridge_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(AHI-linklibs-alsa-bridge_OBJCFLAGS))
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : AHI-linklibs-alsa-bridge_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(AHI-linklibs-alsa-bridge_OBJCDFLAGS))
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : AHI-linklibs-alsa-bridge_IQUOTE:=$(HOST_IQUOTE)
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : AHI-linklibs-alsa-bridge_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  AHI-linklibs-alsa-bridge_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  AHI-linklibs-alsa-bridge_STRIP ?= $(ECHO) >/dev/null
+  AHI-linklibs-alsa-bridge_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : AHI-linklibs-alsa-bridge_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(AHI-linklibs-alsa-bridge_MOBJC_CPPFLAGS) $(AHI-linklibs-alsa-bridge_MOBJC_EXTRA_CPPFLAGS))
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : AHI-linklibs-alsa-bridge_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(AHI-linklibs-alsa-bridge_OBJCFLAGS))
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : AHI-linklibs-alsa-bridge_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(AHI-linklibs-alsa-bridge_OBJCDFLAGS))
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : AHI-linklibs-alsa-bridge_IQUOTE:=$(KERNEL_IQUOTE)
+  $(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) $(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : AHI-linklibs-alsa-bridge_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) : CPPFLAGS := $(AHI-linklibs-alsa-bridge_MOBJC_CPPFLAGS)
+$(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) : CFLAGS := $(AHI-linklibs-alsa-bridge_OBJCFLAGS)
+$(AHI-linklibs-alsa-bridge_MOBJC_TARGETS) : $(AHI-linklibs-alsa-bridge_MOBJC_WILDCARD).o : $(AHI-linklibs-alsa-bridge_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(AHI-linklibs-alsa-bridge_IQUOTE) $(dir $<) $(AHI-linklibs-alsa-bridge_IQUOTE) $(SRCDIR)/$(CURDIR) $(AHI-linklibs-alsa-bridge_IQUOTE) . $(AHI-linklibs-alsa-bridge_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(AHI-linklibs-alsa-bridge_IQUOTE) $(dir $<) $(AHI-linklibs-alsa-bridge_IQUOTE) $(SRCDIR)/$(CURDIR) $(AHI-linklibs-alsa-bridge_IQUOTE) . $(AHI-linklibs-alsa-bridge_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(AHI-linklibs-alsa-bridge_IQUOTE) $(dir $<) $(AHI-linklibs-alsa-bridge_IQUOTE) $(SRCDIR)/$(CURDIR) $(AHI-linklibs-alsa-bridge_IQUOTE) . $(AHI-linklibs-alsa-bridge_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(AHI-linklibs-alsa-bridge_MOBJC_DTARGETS) : $(AHI-linklibs-alsa-bridge_MOBJC_WILDCARD).d : $(AHI-linklibs-alsa-bridge_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(AHI-linklibs-alsa-bridge_OBJCDFLAGS) $(AHI-linklibs-alsa-bridge_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+AHI-linklibs-alsa-bridge_MC_SRCWILDCARD := %
+else
+AHI-linklibs-alsa-bridge_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(AHI-linklibs-alsa-bridge_OBJDIR),)
+AHI-linklibs-alsa-bridge_MC_TARGETS := $(addsuffix .o,$(AHI-linklibs-alsa-bridge_C_FILES))
+AHI-linklibs-alsa-bridge_MC_DTARGETS := $(addsuffix .d,$(AHI-linklibs-alsa-bridge_C_FILES))
+AHI-linklibs-alsa-bridge_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    AHI-linklibs-alsa-bridge_MC_TARGETS := $(addsuffix .o,$(addprefix $(AHI-linklibs-alsa-bridge_OBJDIR)/,$(notdir $(AHI-linklibs-alsa-bridge_C_FILES))))
+    AHI-linklibs-alsa-bridge_MC_DTARGETS := $(addsuffix .d,$(addprefix $(AHI-linklibs-alsa-bridge_OBJDIR)/,$(notdir $(AHI-linklibs-alsa-bridge_C_FILES))))
+else
+ifeq (,)
+    AHI-linklibs-alsa-bridge_MC_TARGETS := $(addsuffix .o,$(addprefix $(AHI-linklibs-alsa-bridge_OBJDIR)/,$(AHI-linklibs-alsa-bridge_C_FILES)))
+    AHI-linklibs-alsa-bridge_MC_DTARGETS := $(addsuffix .d,$(addprefix $(AHI-linklibs-alsa-bridge_OBJDIR)/,$(AHI-linklibs-alsa-bridge_C_FILES)))
+else
+    AHI-linklibs-alsa-bridge_MC_TARGETS := $(addsuffix .o,$(addprefix $(AHI-linklibs-alsa-bridge_OBJDIR)/,$(patsubst /%,%,$(AHI-linklibs-alsa-bridge_C_FILES))))
+    AHI-linklibs-alsa-bridge_MC_DTARGETS := $(addsuffix .d,$(addprefix $(AHI-linklibs-alsa-bridge_OBJDIR)/,$(patsubst /%,%,$(AHI-linklibs-alsa-bridge_C_FILES))))
+endif
+endif
+AHI-linklibs-alsa-bridge_MC_TGTWILDCARD := $(AHI-linklibs-alsa-bridge_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : | $(addsuffix .c,$(AHI-linklibs-alsa-bridge_C_FILES))
+
+# Be sure that all .c files are found
+AHI-linklibs-alsa-bridge_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+AHI-linklibs-alsa-bridge_MC_BASEDIRS := $(shell echo $(sort $(dir $(AHI-linklibs-alsa-bridge_C_FILES))) | sed 's/\(.\):\//\/\1\//g')
+AHI-linklibs-alsa-bridge_MC_DIRS := $(foreach dir, $(AHI-linklibs-alsa-bridge_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(AHI-linklibs-alsa-bridge_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(AHI-linklibs-alsa-bridge_MC_DIRS),)
+    AHI-linklibs-alsa-bridge_MC_DIRS := $(shell echo $(AHI-linklibs-alsa-bridge_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(AHI-linklibs-alsa-bridge_MC_DIRS)
+endif
+
+endif
+
+AHI-linklibs-alsa-bridge_MC_CPPFLAGS := $(AHI-linklibs-alsa-bridge_CPPFLAGS)
+AHI-linklibs-alsa-bridge_CFLAGS := $(AHI-linklibs-alsa-bridge_CFLAGS)
+ifeq ($(AHI-linklibs-alsa-bridge_DFLAGS),)
+  AHI-linklibs-alsa-bridge_DFLAGS := $(AHI-linklibs-alsa-bridge_CFLAGS)
+else
+  AHI-linklibs-alsa-bridge_DFLAGS := $(AHI-linklibs-alsa-bridge_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+AHI-linklibs-alsa-bridge_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+AHI-linklibs-alsa-bridge_STRIP ?= $(TARGET_STRIP)
+AHI-linklibs-alsa-bridge_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : AHI-linklibs-alsa-bridge_MC_CPPFLAGS:=$(strip $(AHI-linklibs-alsa-bridge_MC_CPPFLAGS) $(AHI-linklibs-alsa-bridge_MC_EXTRA_CPPFLAGS))
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : AHI-linklibs-alsa-bridge_CFLAGS:=$(strip $(AHI-linklibs-alsa-bridge_CFLAGS) $(SAFETY_CFLAGS))
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : AHI-linklibs-alsa-bridge_DFLAGS:=$(AHI-linklibs-alsa-bridge_DFLAGS)
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : AHI-linklibs-alsa-bridge_IQUOTE:=$(CFLAGS_IQUOTE)
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : AHI-linklibs-alsa-bridge_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+AHI-linklibs-alsa-bridge_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+AHI-linklibs-alsa-bridge_STRIP ?= $(HOST_STRIP)
+AHI-linklibs-alsa-bridge_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : AHI-linklibs-alsa-bridge_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(AHI-linklibs-alsa-bridge_MC_CPPFLAGS) $(AHI-linklibs-alsa-bridge_MC_EXTRA_CPPFLAGS))
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : AHI-linklibs-alsa-bridge_CFLAGS:=$(strip $(HOST_CFLAGS) $(AHI-linklibs-alsa-bridge_CFLAGS))
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : AHI-linklibs-alsa-bridge_DFLAGS:=$(strip $(HOST_CFLAGS) $(AHI-linklibs-alsa-bridge_DFLAGS))
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : AHI-linklibs-alsa-bridge_IQUOTE:=$(HOST_IQUOTE)
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : AHI-linklibs-alsa-bridge_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+AHI-linklibs-alsa-bridge_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+AHI-linklibs-alsa-bridge_STRIP ?= $(ECHO) >/dev/null
+AHI-linklibs-alsa-bridge_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : AHI-linklibs-alsa-bridge_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(AHI-linklibs-alsa-bridge_MC_CPPFLAGS) $(AHI-linklibs-alsa-bridge_MC_EXTRA_CPPFLAGS))
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : AHI-linklibs-alsa-bridge_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(AHI-linklibs-alsa-bridge_CFLAGS))
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : AHI-linklibs-alsa-bridge_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(AHI-linklibs-alsa-bridge_DFLAGS))
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : AHI-linklibs-alsa-bridge_IQUOTE:=$(KERNEL_IQUOTE)
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) $(AHI-linklibs-alsa-bridge_MC_DTARGETS) : AHI-linklibs-alsa-bridge_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) : CPPFLAGS := $(AHI-linklibs-alsa-bridge_MC_CPPFLAGS)
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) : CFLAGS := $(AHI-linklibs-alsa-bridge_CFLAGS)
+$(AHI-linklibs-alsa-bridge_MC_TARGETS) : $(AHI-linklibs-alsa-bridge_MC_TGTWILDCARD).o : $(AHI-linklibs-alsa-bridge_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(AHI-linklibs-alsa-bridge_IQUOTE) $(dir $<) $(AHI-linklibs-alsa-bridge_IQUOTE) $(SRCDIR)/$(CURDIR) $(AHI-linklibs-alsa-bridge_IQUOTE) . $(AHI-linklibs-alsa-bridge_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(AHI-linklibs-alsa-bridge_IQUOTE) $(dir $<) $(AHI-linklibs-alsa-bridge_IQUOTE) $(SRCDIR)/$(CURDIR) $(AHI-linklibs-alsa-bridge_IQUOTE) . $(AHI-linklibs-alsa-bridge_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(AHI-linklibs-alsa-bridge_IQUOTE) $(dir $<) $(AHI-linklibs-alsa-bridge_IQUOTE) $(SRCDIR)/$(CURDIR) $(AHI-linklibs-alsa-bridge_IQUOTE) . $(AHI-linklibs-alsa-bridge_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(AHI-linklibs-alsa-bridge_MC_DTARGETS) : $(AHI-linklibs-alsa-bridge_MC_TGTWILDCARD).d : $(AHI-linklibs-alsa-bridge_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(AHI-linklibs-alsa-bridge_DFLAGS) $(AHI-linklibs-alsa-bridge_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(AHI-linklibs-alsa-bridge_OBJDIR),)
+AHI-linklibs-alsa-bridge-MA_TARGETS := $(addsuffix .o,$(AHI-linklibs-alsa-bridge_ASMFILES))
+AHI-linklibs-alsa-bridge-MA_WILDCARD := %
+else
+AHI-linklibs-alsa-bridge-MA_TARGETS := $(addsuffix .o,$(addprefix $(AHI-linklibs-alsa-bridge_OBJDIR)/,$(notdir $(AHI-linklibs-alsa-bridge_ASMFILES))))
+AHI-linklibs-alsa-bridge-MA_WILDCARD := $(AHI-linklibs-alsa-bridge_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(AHI-linklibs-alsa-bridge-MA_TARGETS) : | $(addsuffix .s,$(AHI-linklibs-alsa-bridge_ASMFILES))
+
+# Be sure that all .c files are found
+AHI-linklibs-alsa-bridge-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+AHI-linklibs-alsa-bridge-MA_BASEDIRS := $(shell echo $(sort $(dir $(AHI-linklibs-alsa-bridge_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+AHI-linklibs-alsa-bridge-MA_DIRS := $(foreach dir, $(AHI-linklibs-alsa-bridge-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(AHI-linklibs-alsa-bridge-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(AHI-linklibs-alsa-bridge-MA_DIRS),)
+    AHI-linklibs-alsa-bridge-MA_DIRS := $(shell echo $(AHI-linklibs-alsa-bridge-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(AHI-linklibs-alsa-bridge-MA_DIRS)
+endif
+
+endif
+
+AHI-linklibs-alsa-bridge-MA_ASSEMBLER ?= $(AHI-linklibs-alsa-bridge_ASSEMBLER)
+
+$(AHI-linklibs-alsa-bridge-MA_TARGETS) : AHI-linklibs-alsa-bridge-MA_CMD:= $(AHI-linklibs-alsa-bridge-MA_ASSEMBLER)
+
+$(AHI-linklibs-alsa-bridge-MA_TARGETS) : CPPFLAGS := $(AHI-linklibs-alsa-bridge_CPPFLAGS)
+$(AHI-linklibs-alsa-bridge-MA_TARGETS) : AFLAGS := $(AHI-linklibs-alsa-bridge_AFLAGS)
+$(AHI-linklibs-alsa-bridge-MA_TARGETS) : $(AHI-linklibs-alsa-bridge-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(AHI-linklibs-alsa-bridge-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(AHI-linklibs-alsa-bridge-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(AHI-linklibs-alsa-bridge-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+ifeq (target,target)
+$(AROS_LIB)/libalsa-bridge.a : AHI-linklibs-alsa-bridge_AR:=$(AR)
+$(AROS_LIB)/libalsa-bridge.a : AHI-linklibs-alsa-bridge_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(AROS_LIB)/libalsa-bridge.a : AHI-linklibs-alsa-bridge_AR:=$(HOST_AR)
+$(AROS_LIB)/libalsa-bridge.a : AHI-linklibs-alsa-bridge_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(AROS_LIB)/libalsa-bridge.a : AHI-linklibs-alsa-bridge_AR:=$(KERNEL_AR)
+$(AROS_LIB)/libalsa-bridge.a : AHI-linklibs-alsa-bridge_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(AROS_LIB)/libalsa-bridge.a : $(AHI-linklibs-alsa-bridge_OBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(AHI-linklibs-alsa-bridge_AR) $@ $^
+	$(Q)$(AHI-linklibs-alsa-bridge_RANLIB) $@
+endif
+
+ifneq ($(AHI-linklibs-alsa-bridge_DEPS),)
+  ifneq (AHI-linklibs-alsa-bridge AHI-linklibs-alsa-bridge-quick,)
+    ifneq ($(findstring $(TARGET),AHI-linklibs-alsa-bridge AHI-linklibs-alsa-bridge-quick),)
+      -include $(AHI-linklibs-alsa-bridge_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(AHI-linklibs-alsa-bridge_DEPS)
+    endif
+  endif
+endif
+
+
+
+ifneq ($(AHI-linklibs-alsa-bridge_OBJS) $(AHI-linklibs-alsa-bridge_DEPS) $(AHI-linklibs-alsa-bridge_LINKLIB),)
+$(AHI-linklibs-alsa-bridge_OBJS) $(AHI-linklibs-alsa-bridge_DEPS) $(AHI-linklibs-alsa-bridge_LINKLIB) : | $(AHI-linklibs-alsa-bridge_OBJDIR) $(AROS_LIB)
+else
+$(AHI-linklibs-alsa-bridge_OBJS) $(AHI-linklibs-alsa-bridge_DEPS) $(AHI-linklibs-alsa-bridge_LINKLIB) :: $(AHI-linklibs-alsa-bridge_OBJDIR) $(AROS_LIB)
+endif
+
+GLOB_MKDIRS += $(AHI-linklibs-alsa-bridge_OBJDIR) $(AROS_LIB)
+
+
+AHI-linklibs-alsa-bridge-clean : FILES := $(AHI-linklibs-alsa-bridge_OBJS) $(AHI-linklibs-alsa-bridge_LINKLIB) $(AHI-linklibs-alsa-bridge_DEPS)
+#MM
+AHI-linklibs-alsa-bridge-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget AHI-linklibs-alsa-bridge"
+	$(Q)$(RM) $(FILES)
+
+
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

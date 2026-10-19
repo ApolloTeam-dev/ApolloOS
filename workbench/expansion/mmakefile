@@ -1,0 +1,20 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- workbench-expansion-complete : workbench-expansion
+
+#MM- workbench-expansion : includes linklibs \
+#MM    workbench-expansion-$(AROS_TARGET_ARCH)-$(AROS_TARGET_CPU)
+
+#MM- workbench-expansion-quick : \
+#MM    workbench-expansion-$(AROS_TARGET_ARCH)-$(AROS_TARGET_CPU)-quick
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

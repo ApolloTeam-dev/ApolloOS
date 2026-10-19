@@ -1,0 +1,76 @@
+# Copyright © 2003-2016, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+CATALOGS:=german
+# other catalogs need update to version 2
+
+
+ifeq (,)
+debug-tools-pcitool-catalogs_DESC := $(basename $(wildcard $(SRCDIR)/$(CURDIR)/*.cd))
+else
+debug-tools-pcitool-catalogs_DESC := 
+endif
+
+debug-tools-pcitool-catalogs_SRC := $(shell echo $(TOOLDIR)/C_h_aros | sed 's/^\(.\):\//\/\1\//')
+
+ifeq ($(CATALOGS),)
+debug-tools-pcitool-catalogs_LNGS := $(basename $(notdir $(call WILDCARD, $(SRCDIR)/$(CURDIR)/*.ct)))
+else
+debug-tools-pcitool-catalogs_LNGS := $(CATALOGS)
+endif
+
+debug-tools-pcitool-catalogs_OBJS := $(addsuffix /System/Tools//PCITool.catalog, $(addprefix $(AROS_CATALOGS)/, $(debug-tools-pcitool-catalogs_LNGS)))
+debug-tools-pcitool-catalogs_DIRS := $(addsuffix /System/Tools/, $(addprefix $(AROS_CATALOGS)/, $(debug-tools-pcitool-catalogs_LNGS))) $(dir ../strings.h)
+
+#MM- debug-tools-pcitool-catalogs-quick : debug-tools-pcitool-catalogs
+
+#MM
+debug-tools-pcitool-catalogs : $(debug-tools-pcitool-catalogs_OBJS) ../strings.h
+
+
+ifneq ($(debug-tools-pcitool-catalogs_OBJS),)
+$(debug-tools-pcitool-catalogs_OBJS) : | $(debug-tools-pcitool-catalogs_DIRS)
+else
+$(debug-tools-pcitool-catalogs_OBJS) :: $(debug-tools-pcitool-catalogs_DIRS)
+endif
+
+GLOB_MKDIRS += $(debug-tools-pcitool-catalogs_DIRS)
+
+
+$(AROS_CATALOGS)/%/System/Tools//PCITool.catalog : $(SRCDIR)/$(CURDIR)/%.ct $(debug-tools-pcitool-catalogs_DESC).cd
+	$(Q)$(ECHO) "Creating   PCITool catalog for language $*."
+	$(Q)$(IF) $(TEST) "$*" = "polish"; then \
+	    $(FLEXCAT) iso88592toamigapl $(debug-tools-pcitool-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Tools//PCITool.catalog" || [ $$? -lt 10 ] ; \
+	elif $(TEST) "$*" = "russian"; then \
+	    $(FLEXCAT) win1251toamiga1251 $(debug-tools-pcitool-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Tools//PCITool.catalog" || [ $$? -lt 10 ] ; \
+	else \
+	    $(FLEXCAT) $(debug-tools-pcitool-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Tools//PCITool.catalog" || [ $$? -lt 10 ] ; \
+	fi
+
+ifneq (../strings.h,)
+../strings.h : debug-tools-pcitool-catalogs_DESC := $(debug-tools-pcitool-catalogs_DESC)
+../strings.h : debug-tools-pcitool-catalogs_SRC := $(debug-tools-pcitool-catalogs_SRC)
+../strings.h : $(debug-tools-pcitool-catalogs_DESC).cd $(debug-tools-pcitool-catalogs_SRC).sd | $(dir ../strings.h)
+	$(Q)$(ECHO) "Creating   PCITool catalog source file $@"
+	$(Q)$(FLEXCAT) $(debug-tools-pcitool-catalogs_DESC).cd $@=$(debug-tools-pcitool-catalogs_SRC).sd
+endif
+
+debug-tools-pcitool-catalogs-clean : FILES := $(debug-tools-pcitool-catalogs_OBJS) ../strings.h
+#MM
+debug-tools-pcitool-catalogs-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget debug-tools-pcitool-catalogs"
+	$(Q)$(RM) $(FILES)
+
+.PHONY: debug-tools-pcitool-catalogs debug-tools-pcitool-catalogs-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

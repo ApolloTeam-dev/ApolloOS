@@ -1,0 +1,302 @@
+#   $Id$
+#
+#   Makefile for AROS Test
+
+include $(SRCDIR)/config/aros.cfg
+
+
+TESTFILES := \
+    printerinfo \
+    printertxt
+
+EXEDIR := $(AROS_TESTS)/printer
+USER_CFLAGS += -DADATE="\"$(shell date '+%d.%m.%Y')\""
+
+#MM- test: test-printer
+
+#MM test-printer : includes includes-copy
+
+
+.PHONY : test-printer
+
+test-printer_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-printer_TARGETDIR := $(EXEDIR)
+test-printer_LIBS := 
+
+test-printer_FILES     := $(TESTFILES)
+test-printer_OBJS      := $(addsuffix .o,$(addprefix $(test-printer_OBJDIR)/,$(test-printer_FILES)))
+test-printer_DEPS      := $(addsuffix .d,$(addprefix $(test-printer_OBJDIR)/,$(test-printer_FILES)))
+test-printer_EXES      := $(addprefix $(test-printer_TARGETDIR)/,$(test-printer_FILES))
+
+test-printer_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-printer_CPPFLAGS += -I
+endif
+test-printer_CFLAGS    := $(CFLAGS)
+test-printer_COVERAGE := no
+ifeq (target,target)
+ifeq (no,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-printer_COVERAGE := yes
+test-printer_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-printer_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-printer_CFLAGS    := $(strip $(test-printer_COVERAGEFLAGS) $(test-printer_CFLAGS))
+test-printer_LIBS += $(test-printer_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-printer_FUNCINSTR := yes
+test-printer_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-printer_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-printer_CFLAGS    := $(strip $(test-printer_INSTRFUNCFLAGS) $(test-printer_CFLAGS))
+test-printer_LIBS += $(test-printer_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-printer_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-printer_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-printer_DFLAGS := 
+else
+    test-printer_DFLAGS := $(test-printer_CFLAGS)
+endif
+ifeq (target,target)
+test-printer_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-printer_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-printer_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-printer_LDFLAGS += -L
+endif
+
+#MM
+test-printer-quick : test-printer
+
+#MM test-printer : includes-generate-deps core-linklibs
+test-printer : $(test-printer_EXES)
+
+ifneq ($(filter $(TARGET),test-printer test-printer-quick),)
+
+ifeq (,)
+test-printer_MC_SRCWILDCARD := %
+else
+test-printer_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-printer_OBJDIR),)
+test-printer_MC_TARGETS := $(addsuffix .o,$(test-printer_FILES))
+test-printer_MC_DTARGETS := $(addsuffix .d,$(test-printer_FILES))
+test-printer_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-printer_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-printer_OBJDIR)/,$(notdir $(test-printer_FILES))))
+    test-printer_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-printer_OBJDIR)/,$(notdir $(test-printer_FILES))))
+else
+ifeq (,)
+    test-printer_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-printer_OBJDIR)/,$(test-printer_FILES)))
+    test-printer_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-printer_OBJDIR)/,$(test-printer_FILES)))
+else
+    test-printer_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-printer_OBJDIR)/,$(patsubst /%,%,$(test-printer_FILES))))
+    test-printer_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-printer_OBJDIR)/,$(patsubst /%,%,$(test-printer_FILES))))
+endif
+endif
+test-printer_MC_TGTWILDCARD := $(test-printer_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : | $(addsuffix .c,$(test-printer_FILES))
+
+# Be sure that all .c files are found
+test-printer_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-printer_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-printer_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-printer_MC_DIRS := $(foreach dir, $(test-printer_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-printer_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-printer_MC_DIRS),)
+    test-printer_MC_DIRS := $(shell echo $(test-printer_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-printer_MC_DIRS)
+endif
+
+endif
+
+test-printer_MC_CPPFLAGS := $(test-printer_CPPFLAGS)
+test-printer_CFLAGS := $(test-printer_CFLAGS)
+ifeq ($(test-printer_DFLAGS),)
+  test-printer_DFLAGS := $(test-printer_CFLAGS)
+else
+  test-printer_DFLAGS := $(test-printer_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-printer_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-printer_STRIP ?= $(TARGET_STRIP)
+test-printer_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : test-printer_MC_CPPFLAGS:=$(strip $(test-printer_MC_CPPFLAGS) $(test-printer_MC_EXTRA_CPPFLAGS))
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : test-printer_CFLAGS:=$(strip $(test-printer_CFLAGS) $(SAFETY_CFLAGS))
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : test-printer_DFLAGS:=$(test-printer_DFLAGS)
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : test-printer_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : test-printer_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-printer_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-printer_STRIP ?= $(HOST_STRIP)
+test-printer_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : test-printer_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-printer_MC_CPPFLAGS) $(test-printer_MC_EXTRA_CPPFLAGS))
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : test-printer_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-printer_CFLAGS))
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : test-printer_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-printer_DFLAGS))
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : test-printer_IQUOTE:=$(HOST_IQUOTE)
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : test-printer_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-printer_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-printer_STRIP ?= $(ECHO) >/dev/null
+test-printer_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : test-printer_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-printer_MC_CPPFLAGS) $(test-printer_MC_EXTRA_CPPFLAGS))
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : test-printer_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-printer_CFLAGS))
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : test-printer_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-printer_DFLAGS))
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : test-printer_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-printer_MC_TARGETS) $(test-printer_MC_DTARGETS) : test-printer_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-printer_MC_TARGETS) : CPPFLAGS := $(test-printer_MC_CPPFLAGS)
+$(test-printer_MC_TARGETS) : CFLAGS := $(test-printer_CFLAGS)
+$(test-printer_MC_TARGETS) : $(test-printer_MC_TGTWILDCARD).o : $(test-printer_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-printer_IQUOTE) $(dir $<) $(test-printer_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-printer_IQUOTE) . $(test-printer_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-printer_IQUOTE) $(dir $<) $(test-printer_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-printer_IQUOTE) . $(test-printer_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-printer_IQUOTE) $(dir $<) $(test-printer_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-printer_IQUOTE) . $(test-printer_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-printer_MC_DTARGETS) : $(test-printer_MC_TGTWILDCARD).d : $(test-printer_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-printer_DFLAGS) $(test-printer_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-printer-link_EXTRA_LDFLAGS := 
+test-printer-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-printer-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (no,no)
+    test-printer-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-printer-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-printer-link_DIRS := $(subst -L ,-L,$(strip $(test-printer_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-printer-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-printer-link_DIRS)))
+# Add trailing /
+test-printer-link_DIRS := $(subst //,/,$(addsuffix /,$(test-printer-link_DIRS)))
+# Add normal linklib path
+test-printer-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-printer-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-printer_LIBS) $(test-printer-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-printer-link_DEPLIBS := $(foreach lib,$(test-printer-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-printer-link_DIRS)))) \
+)
+test-printer-link_PROGS := $(addprefix $(test-printer_TARGETDIR)/,$(test-printer_FILES))
+
+$(test-printer-link_PROGS) : OBJDIR := $(test-printer_OBJDIR)
+$(test-printer-link_PROGS) : LDFLAGS := $(strip $(test-printer_LDFLAGS) $(test-printer-link_EXTRA_LDFLAGS))
+$(test-printer-link_PROGS) : LIBS := $(addprefix -l,$(test-printer_LIBS) $(test-printer-link_EXTRA_LIBS) )
+$(test-printer-link_PROGS) : $(test-printer_TARGETDIR)/% : $(test-printer_OBJDIR)/%.o $(test-printer-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-printer_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-printer_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-printer_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-printer_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-printer_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-printer_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-printer_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-printer_DEPS),)
+  ifneq (test-printer test-printer-quick,)
+    ifneq ($(findstring $(TARGET),test-printer test-printer-quick),)
+      -include $(test-printer_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-printer_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-printer_DEPS) $(test-printer_OBJS) $(addprefix $(test-printer_TARGETDIR)/,$(test-printer_FILES)),)
+$(test-printer_DEPS) $(test-printer_OBJS) $(addprefix $(test-printer_TARGETDIR)/,$(test-printer_FILES)) : | $(test-printer_TARGETDIR) $(test-printer_OBJDIR)
+else
+$(test-printer_DEPS) $(test-printer_OBJS) $(addprefix $(test-printer_TARGETDIR)/,$(test-printer_FILES)) :: $(test-printer_TARGETDIR) $(test-printer_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-printer_TARGETDIR) $(test-printer_OBJDIR)
+
+
+test-printer-clean : FILES := $(test-printer_OBJS) $(test-printer_EXES) $(test-printer_DEPS)
+#MM
+test-printer-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-printer"
+	$(Q)$(RM) $(FILES)
+
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

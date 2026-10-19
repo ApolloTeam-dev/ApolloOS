@@ -1,0 +1,1264 @@
+#   $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM classes-zune-nbitmap-class : includes linklibs
+#MM classes-zune-nbitmap-test : includes linklibs classes-zune-nbitmap-test-cpy
+
+USER_INCLUDES := -idirafter $(SRCDIR)/$(CURDIR)/../include
+USER_CPPFLAGS := -DNO_INLINE_STDARG -DAROS_ABI_V1
+USER_CFLAGS += $(PARANOIA_CFLAGS)
+USER_LDFLAGS := -static
+
+FILES := dispatcher Chunky2Bitmap DitherImage NBitmap Debug
+
+
+# Define metamake targets and their dependencies
+#MM classes-zune-nbitmap-class : core-linklibs includes-generate-deps
+#MM classes-zune-nbitmap-class-kobj : core-linklibs includes-generate-deps
+#MM classes-zune-nbitmap-class-kobj-quick
+#MM classes-zune-nbitmap-class-quick
+#MM classes-zune-nbitmap-class-clean
+
+classes-zune-nbitmap-class_ALLTARGETS := classes-zune-nbitmap-class classes-zune-nbitmap-class-clean classes-zune-nbitmap-class-quick classes-zune-nbitmap-class-kobj
+
+.PHONY : $(classes-zune-nbitmap-class_ALLTARGETS)
+
+ifeq (NBitmap,)
+$(error using %build_module_simple: modname may not be empty)
+endif
+ifeq (mcc,)
+$(error using %build_module_simple: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+classes-zune-nbitmap-class_DEFLINKLIBNAME := NBitmap
+classes-zune-nbitmap-class_CFLAGS := $(CFLAGS)
+classes-zune-nbitmap-class_CXXFLAGS := $(CXXFLAGS)
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+classes-zune-nbitmap-class_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(classes-zune-nbitmap-class_CFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+classes-zune-nbitmap-class_FUNCINSTR := yes
+classes-zune-nbitmap-class_CFLAGS    := $(strip $(FUNCINSTR_FLAGS) $(classes-zune-nbitmap-class_CFLAGS))
+endif
+endif
+ifneq (,)
+    classes-zune-nbitmap-class_DFLAGS := 
+else
+    classes-zune-nbitmap-class_DFLAGS := $(classes-zune-nbitmap-class_CFLAGS)
+endif
+classes-zune-nbitmap-class_DEFDXXFLAGS := 
+OBJDIR ?= $(GENDIR)/$(CURDIR)
+classes-zune-nbitmap-class_MODDIR := 
+ifeq ($(classes-zune-nbitmap-class_MODDIR),)
+  ifeq (mcc,library)
+    classes-zune-nbitmap-class_MODDIR  := $(AROS_LIBRARIES)
+  endif
+  ifeq (mcc,gadget)
+    classes-zune-nbitmap-class_MODDIR  := $(AROS_GADGETS)
+  endif
+  ifeq (mcc,datatype)
+    classes-zune-nbitmap-class_MODDIR  := $(AROS_DATATYPES)
+  endif
+  ifeq (mcc,handler)
+    classes-zune-nbitmap-class_MODDIR  := $(AROS_FS)
+  endif
+  ifeq (mcc,device)
+    classes-zune-nbitmap-class_MODDIR  := $(AROS_DEVS)
+  endif
+  ifeq (mcc,resource)
+    classes-zune-nbitmap-class_MODDIR  := $(AROS_RESOURCES)
+  endif
+  ifeq (mcc,hook)
+    classes-zune-nbitmap-class_MODDIR  := $(AROS_RESOURCES)
+  endif
+  ifeq (mcc,mui)
+    classes-zune-nbitmap-class_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (mcc,mcc)
+    classes-zune-nbitmap-class_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (mcc,mcp)
+    classes-zune-nbitmap-class_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (mcc,usbclass)
+    classes-zune-nbitmap-class_MODDIR  := $(AROS_CLASSES)/USB
+  endif
+  ifeq (mcc,hidd)
+    classes-zune-nbitmap-class_MODDIR  := $(AROS_DRIVERS)
+  endif
+  ifeq (mcc,printer)
+    classes-zune-nbitmap-class_MODDIR  := $(AROS_PRINTERS)
+  endif
+endif
+ifeq ($(classes-zune-nbitmap-class_MODDIR),)
+  $(error Don't know where to put the file for modtype mcc. Specify moduledir=)
+endif
+
+classes-zune-nbitmap-class_ARCHOBJS   := $(wildcard $(OBJDIR)/arch/*.o)
+classes-zune-nbitmap-class_ARCHFILES  := $(basename $(notdir $(classes-zune-nbitmap-class_ARCHOBJS)))
+classes-zune-nbitmap-class_C_NARCHFILES := $(filter-out $(classes-zune-nbitmap-class_ARCHFILES),library $(FILES))
+classes-zune-nbitmap-class_CXX_NARCHFILES := $(filter-out $(classes-zune-nbitmap-class_ARCHFILES),$(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT)))))
+classes-zune-nbitmap-class_OBJC_NARCHFILES := $(filter-out $(classes-zune-nbitmap-class_ARCHFILES),)
+
+
+classes-zune-nbitmap-class_CXXABSBASENAMES := $(foreach classes-zune-nbitmap-class_CXXBASE,$(classes-zune-nbitmap-class_CXX_NARCHFILES),$(if $(filter /%,$(classes-zune-nbitmap-class_CXXBASE)),$(classes-zune-nbitmap-class_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(classes-zune-nbitmap-class_CXXBASE))))
+
+ifneq ($(classes-zune-nbitmap-class_CXXABSBASENAMES),)
+
+classes-zune-nbitmap-class_CXXBASENAMES := $(basename $(classes-zune-nbitmap-class_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+classes-zune-nbitmap-class_MCXX_FILES  := $(strip $(foreach classes-zune-nbitmap-class_CXXBASE,$(classes-zune-nbitmap-class_CXXABSBASENAMES), $(firstword $(wildcard $(foreach classes-zune-nbitmap-class_EXT, $(AROS_CXXEXTS),$(addsuffix .$(classes-zune-nbitmap-class_EXT),$(classes-zune-nbitmap-class_CXXBASE)))))))
+
+ifeq (,)
+classes-zune-nbitmap-class_MCXX_SRCWILDCARD := %
+else
+classes-zune-nbitmap-class_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+  classes-zune-nbitmap-class_CXXTARGETS := $(notdir $(classes-zune-nbitmap-class_CXXBASENAMES:=.o))
+  classes-zune-nbitmap-class_CXXDTARGETS := $(notdir $(classes-zune-nbitmap-class_CXXBASENAMES:=.d))
+  classes-zune-nbitmap-class_MCXX_WILDCARD := %
+else
+  classes-zune-nbitmap-class_CXXTARGETS := $(addprefix $(OBJDIR)/,$(notdir $(classes-zune-nbitmap-class_CXXBASENAMES:=.o)))
+  classes-zune-nbitmap-class_CXXDTARGETS := $(addprefix $(OBJDIR)/,$(notdir $(classes-zune-nbitmap-class_CXXBASENAMES:=.d)))
+  classes-zune-nbitmap-class_MCXX_WILDCARD := $(OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(classes-zune-nbitmap-class_CXXTARGETS) $(classes-zune-nbitmap-class_CXXDTARGETS) : | $(classes-zune-nbitmap-class_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+classes-zune-nbitmap-class_MCXX_CPPFLAGS := $(CPPFLAGS)
+classes-zune-nbitmap-class_CXXFLAGS := $(classes-zune-nbitmap-class_CXXFLAGS)
+ifeq ($(classes-zune-nbitmap-class_DXXFLAGS),)
+  classes-zune-nbitmap-class_DXXFLAGS := $(classes-zune-nbitmap-class_CXXFLAGS)
+else
+  classes-zune-nbitmap-class_DXXFLAGS := $(classes-zune-nbitmap-class_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  classes-zune-nbitmap-class_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  classes-zune-nbitmap-class_STRIP ?= $(HOST_STRIP)
+  classes-zune-nbitmap-class_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  classes-zune-nbitmap-class_CXXCMD:=$(HOST_CXX)
+  classes-zune-nbitmap-class_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(classes-zune-nbitmap-class_MCXX_CPPFLAGS) $(classes-zune-nbitmap-class_MCXX_EXTRA_CPPFLAGS))
+  classes-zune-nbitmap-class_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(classes-zune-nbitmap-class_CXXFLAGS))
+  classes-zune-nbitmap-class_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(classes-zune-nbitmap-class_DXXFLAGS))
+  classes-zune-nbitmap-class_CXXIQUOTE:=$(HOST_IQUOTE)
+  classes-zune-nbitmap-class_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  classes-zune-nbitmap-class_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  classes-zune-nbitmap-class_STRIP ?= $(TARGET_STRIP)
+  classes-zune-nbitmap-class_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  classes-zune-nbitmap-class_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  classes-zune-nbitmap-class_MCXX_CPPFLAGS := $(strip $(classes-zune-nbitmap-class_MCXX_CPPFLAGS) $(classes-zune-nbitmap-class_MCXX_EXTRA_CPPFLAGS))
+  classes-zune-nbitmap-class_CXXFLAGS := $(strip $(classes-zune-nbitmap-class_CXXFLAGS) $(SAFETY_CFLAGS))
+  classes-zune-nbitmap-class_DXXFLAGS := $(classes-zune-nbitmap-class_DXXFLAGS)
+  classes-zune-nbitmap-class_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  classes-zune-nbitmap-class_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  classes-zune-nbitmap-class_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  classes-zune-nbitmap-class_STRIP ?= $(ECHO) >/dev/null
+  classes-zune-nbitmap-class_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  classes-zune-nbitmap-class_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  classes-zune-nbitmap-class_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(classes-zune-nbitmap-class_MCXX_CPPFLAGS) $(classes-zune-nbitmap-class_MCXX_EXTRA_CPPFLAGS))
+  classes-zune-nbitmap-class_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(classes-zune-nbitmap-class_CXXFLAGS))
+  classes-zune-nbitmap-class_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(classes-zune-nbitmap-class_DXXFLAGS))
+  classes-zune-nbitmap-class_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  classes-zune-nbitmap-class_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(classes-zune-nbitmap-class_CXXCMD) $(classes-zune-nbitmap-class_CXXIQUOTE) $(dir $(2)) $(classes-zune-nbitmap-class_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-class_CXXIQUOTE) . $(classes-zune-nbitmap-class_CXXIQUOTE_END) $(strip $(classes-zune-nbitmap-class_CXXFLAGS) $(classes-zune-nbitmap-class_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(classes-zune-nbitmap-class_CXXCMD) $(classes-zune-nbitmap-class_CXXIQUOTE) $(dir $(2)) $(classes-zune-nbitmap-class_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-class_CXXIQUOTE) . $(classes-zune-nbitmap-class_CXXIQUOTE_END) $(strip $(classes-zune-nbitmap-class_CXXFLAGS) $(classes-zune-nbitmap-class_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(classes-zune-nbitmap-class_CXXCMD) $(classes-zune-nbitmap-class_CXXIQUOTE) $(dir $(2)) $(classes-zune-nbitmap-class_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-class_CXXIQUOTE) . $(classes-zune-nbitmap-class_CXXIQUOTE_END) $(strip $(classes-zune-nbitmap-class_CXXFLAGS) $(classes-zune-nbitmap-class_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(classes-zune-nbitmap-class_CXXCMD)" $(MKDEPEND) $(strip $(classes-zune-nbitmap-class_DXXFLAGS) $(classes-zune-nbitmap-class_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(OBJDIR),)
+  $(foreach classes-zune-nbitmap-class_CXXFILE,$(classes-zune-nbitmap-class_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(classes-zune-nbitmap-class_CXXFILE))),$(classes-zune-nbitmap-class_CXXFILE))))
+else
+  $(foreach classes-zune-nbitmap-class_CXXFILE,$(classes-zune-nbitmap-class_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(OBJDIR)/,$(notdir $(basename $(classes-zune-nbitmap-class_CXXFILE)))),$(classes-zune-nbitmap-class_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(classes-zune-nbitmap-class_OBJC_NARCHFILES),)
+
+ifeq (,)
+classes-zune-nbitmap-class_MOBJC_SRCWILDCARD := %
+else
+classes-zune-nbitmap-class_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+  classes-zune-nbitmap-class_MOBJC_TARGETS := $(addsuffix .o,$(classes-zune-nbitmap-class_OBJC_NARCHFILES))
+  classes-zune-nbitmap-class_MOBJC_DTARGETS := $(addsuffix .d,$(classes-zune-nbitmap-class_OBJC_NARCHFILES))
+  classes-zune-nbitmap-class_MOBJC_WILDCARD := %
+else
+  classes-zune-nbitmap-class_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(classes-zune-nbitmap-class_OBJC_NARCHFILES)))
+  classes-zune-nbitmap-class_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(classes-zune-nbitmap-class_OBJC_NARCHFILES)))
+  classes-zune-nbitmap-class_MOBJC_WILDCARD := $(OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : | $(addsuffix .m,$(classes-zune-nbitmap-class_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  classes-zune-nbitmap-class_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  classes-zune-nbitmap-class_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(classes-zune-nbitmap-class_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  classes-zune-nbitmap-class_MOBJC_DIRS := $(foreach dir, $(classes-zune-nbitmap-class_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(classes-zune-nbitmap-class_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(classes-zune-nbitmap-class_MOBJC_DIRS),)
+    classes-zune-nbitmap-class_MOBJC_DIRS := $(shell echo $(classes-zune-nbitmap-class_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(classes-zune-nbitmap-class_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  classes-zune-nbitmap-class_CC := $(TARGET_CC)
+else
+  classes-zune-nbitmap-class_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+classes-zune-nbitmap-class_MOBJC_CPPFLAGS := $(CPPFLAGS)
+classes-zune-nbitmap-class_OBJCFLAGS := $(classes-zune-nbitmap-class_CFLAGS)
+classes-zune-nbitmap-class_OBJCFLAGS := $(classes-zune-nbitmap-class_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+classes-zune-nbitmap-class_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(classes-zune-nbitmap-class_OBJCFLAGS)))
+ifeq ($(classes-zune-nbitmap-class_DFLAGS),)
+  classes-zune-nbitmap-class_OBJCDFLAGS := $(classes-zune-nbitmap-class_CFLAGS)
+else
+  classes-zune-nbitmap-class_OBJCDFLAGS := $(classes-zune-nbitmap-class_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  classes-zune-nbitmap-class_LINK ?= $(strip $(classes-zune-nbitmap-class_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  classes-zune-nbitmap-class_STRIP ?= $(TARGET_STRIP)
+  classes-zune-nbitmap-class_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : CMD:=$(strip $(classes-zune-nbitmap-class_CC) $(TARGET_SYSROOT))
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : classes-zune-nbitmap-class_MOBJC_CPPFLAGS:=$(strip $(classes-zune-nbitmap-class_MOBJC_CPPFLAGS) $(classes-zune-nbitmap-class_MOBJC_EXTRA_CPPFLAGS))
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : classes-zune-nbitmap-class_OBJCFLAGS:=$(strip $(classes-zune-nbitmap-class_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : classes-zune-nbitmap-class_OBJCDFLAGS:=$(classes-zune-nbitmap-class_OBJCDFLAGS)
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : classes-zune-nbitmap-class_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : classes-zune-nbitmap-class_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  classes-zune-nbitmap-class_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  classes-zune-nbitmap-class_STRIP ?= $(HOST_STRIP)
+  classes-zune-nbitmap-class_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : classes-zune-nbitmap-class_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(classes-zune-nbitmap-class_MOBJC_CPPFLAGS) $(classes-zune-nbitmap-class_MOBJC_EXTRA_CPPFLAGS))
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : classes-zune-nbitmap-class_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(classes-zune-nbitmap-class_OBJCFLAGS))
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : classes-zune-nbitmap-class_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(classes-zune-nbitmap-class_OBJCDFLAGS))
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : classes-zune-nbitmap-class_IQUOTE:=$(HOST_IQUOTE)
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : classes-zune-nbitmap-class_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  classes-zune-nbitmap-class_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  classes-zune-nbitmap-class_STRIP ?= $(ECHO) >/dev/null
+  classes-zune-nbitmap-class_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : classes-zune-nbitmap-class_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(classes-zune-nbitmap-class_MOBJC_CPPFLAGS) $(classes-zune-nbitmap-class_MOBJC_EXTRA_CPPFLAGS))
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : classes-zune-nbitmap-class_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(classes-zune-nbitmap-class_OBJCFLAGS))
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : classes-zune-nbitmap-class_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(classes-zune-nbitmap-class_OBJCDFLAGS))
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : classes-zune-nbitmap-class_IQUOTE:=$(KERNEL_IQUOTE)
+  $(classes-zune-nbitmap-class_MOBJC_TARGETS) $(classes-zune-nbitmap-class_MOBJC_DTARGETS) : classes-zune-nbitmap-class_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(classes-zune-nbitmap-class_MOBJC_TARGETS) : CPPFLAGS := $(classes-zune-nbitmap-class_MOBJC_CPPFLAGS)
+$(classes-zune-nbitmap-class_MOBJC_TARGETS) : CFLAGS := $(classes-zune-nbitmap-class_OBJCFLAGS)
+$(classes-zune-nbitmap-class_MOBJC_TARGETS) : $(classes-zune-nbitmap-class_MOBJC_WILDCARD).o : $(classes-zune-nbitmap-class_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(classes-zune-nbitmap-class_IQUOTE) $(dir $<) $(classes-zune-nbitmap-class_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-class_IQUOTE) . $(classes-zune-nbitmap-class_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(classes-zune-nbitmap-class_IQUOTE) $(dir $<) $(classes-zune-nbitmap-class_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-class_IQUOTE) . $(classes-zune-nbitmap-class_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(classes-zune-nbitmap-class_IQUOTE) $(dir $<) $(classes-zune-nbitmap-class_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-class_IQUOTE) . $(classes-zune-nbitmap-class_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(classes-zune-nbitmap-class_MOBJC_DTARGETS) : $(classes-zune-nbitmap-class_MOBJC_WILDCARD).d : $(classes-zune-nbitmap-class_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(classes-zune-nbitmap-class_OBJCDFLAGS) $(classes-zune-nbitmap-class_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+classes-zune-nbitmap-class_MC_SRCWILDCARD := %
+else
+classes-zune-nbitmap-class_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+classes-zune-nbitmap-class_MC_TARGETS := $(addsuffix .o,$(classes-zune-nbitmap-class_C_NARCHFILES))
+classes-zune-nbitmap-class_MC_DTARGETS := $(addsuffix .d,$(classes-zune-nbitmap-class_C_NARCHFILES))
+classes-zune-nbitmap-class_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    classes-zune-nbitmap-class_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(notdir $(classes-zune-nbitmap-class_C_NARCHFILES))))
+    classes-zune-nbitmap-class_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(notdir $(classes-zune-nbitmap-class_C_NARCHFILES))))
+else
+ifeq (,)
+    classes-zune-nbitmap-class_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(classes-zune-nbitmap-class_C_NARCHFILES)))
+    classes-zune-nbitmap-class_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(classes-zune-nbitmap-class_C_NARCHFILES)))
+else
+    classes-zune-nbitmap-class_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(patsubst /%,%,$(classes-zune-nbitmap-class_C_NARCHFILES))))
+    classes-zune-nbitmap-class_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(patsubst /%,%,$(classes-zune-nbitmap-class_C_NARCHFILES))))
+endif
+endif
+classes-zune-nbitmap-class_MC_TGTWILDCARD := $(OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : | $(addsuffix .c,$(classes-zune-nbitmap-class_C_NARCHFILES))
+
+# Be sure that all .c files are found
+classes-zune-nbitmap-class_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+classes-zune-nbitmap-class_MC_BASEDIRS := $(shell echo $(sort $(dir $(classes-zune-nbitmap-class_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+classes-zune-nbitmap-class_MC_DIRS := $(foreach dir, $(classes-zune-nbitmap-class_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(classes-zune-nbitmap-class_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(classes-zune-nbitmap-class_MC_DIRS),)
+    classes-zune-nbitmap-class_MC_DIRS := $(shell echo $(classes-zune-nbitmap-class_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(classes-zune-nbitmap-class_MC_DIRS)
+endif
+
+endif
+
+classes-zune-nbitmap-class_MC_CPPFLAGS := $(CPPFLAGS)
+classes-zune-nbitmap-class_CFLAGS := $(classes-zune-nbitmap-class_CFLAGS)
+ifeq ($(classes-zune-nbitmap-class_DFLAGS),)
+  classes-zune-nbitmap-class_DFLAGS := $(classes-zune-nbitmap-class_CFLAGS)
+else
+  classes-zune-nbitmap-class_DFLAGS := $(classes-zune-nbitmap-class_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+classes-zune-nbitmap-class_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+classes-zune-nbitmap-class_STRIP ?= $(TARGET_STRIP)
+classes-zune-nbitmap-class_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : classes-zune-nbitmap-class_MC_CPPFLAGS:=$(strip $(classes-zune-nbitmap-class_MC_CPPFLAGS) $(classes-zune-nbitmap-class_MC_EXTRA_CPPFLAGS))
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : classes-zune-nbitmap-class_CFLAGS:=$(strip $(classes-zune-nbitmap-class_CFLAGS) $(SAFETY_CFLAGS))
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : classes-zune-nbitmap-class_DFLAGS:=$(classes-zune-nbitmap-class_DFLAGS)
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : classes-zune-nbitmap-class_IQUOTE:=$(CFLAGS_IQUOTE)
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : classes-zune-nbitmap-class_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+classes-zune-nbitmap-class_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+classes-zune-nbitmap-class_STRIP ?= $(HOST_STRIP)
+classes-zune-nbitmap-class_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : classes-zune-nbitmap-class_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(classes-zune-nbitmap-class_MC_CPPFLAGS) $(classes-zune-nbitmap-class_MC_EXTRA_CPPFLAGS))
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : classes-zune-nbitmap-class_CFLAGS:=$(strip $(HOST_CFLAGS) $(classes-zune-nbitmap-class_CFLAGS))
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : classes-zune-nbitmap-class_DFLAGS:=$(strip $(HOST_CFLAGS) $(classes-zune-nbitmap-class_DFLAGS))
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : classes-zune-nbitmap-class_IQUOTE:=$(HOST_IQUOTE)
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : classes-zune-nbitmap-class_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+classes-zune-nbitmap-class_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+classes-zune-nbitmap-class_STRIP ?= $(ECHO) >/dev/null
+classes-zune-nbitmap-class_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : classes-zune-nbitmap-class_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(classes-zune-nbitmap-class_MC_CPPFLAGS) $(classes-zune-nbitmap-class_MC_EXTRA_CPPFLAGS))
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : classes-zune-nbitmap-class_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(classes-zune-nbitmap-class_CFLAGS))
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : classes-zune-nbitmap-class_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(classes-zune-nbitmap-class_DFLAGS))
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : classes-zune-nbitmap-class_IQUOTE:=$(KERNEL_IQUOTE)
+$(classes-zune-nbitmap-class_MC_TARGETS) $(classes-zune-nbitmap-class_MC_DTARGETS) : classes-zune-nbitmap-class_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(classes-zune-nbitmap-class_MC_TARGETS) : CPPFLAGS := $(classes-zune-nbitmap-class_MC_CPPFLAGS)
+$(classes-zune-nbitmap-class_MC_TARGETS) : CFLAGS := $(classes-zune-nbitmap-class_CFLAGS)
+$(classes-zune-nbitmap-class_MC_TARGETS) : $(classes-zune-nbitmap-class_MC_TGTWILDCARD).o : $(classes-zune-nbitmap-class_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(classes-zune-nbitmap-class_IQUOTE) $(dir $<) $(classes-zune-nbitmap-class_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-class_IQUOTE) . $(classes-zune-nbitmap-class_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(classes-zune-nbitmap-class_IQUOTE) $(dir $<) $(classes-zune-nbitmap-class_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-class_IQUOTE) . $(classes-zune-nbitmap-class_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(classes-zune-nbitmap-class_IQUOTE) $(dir $<) $(classes-zune-nbitmap-class_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-class_IQUOTE) . $(classes-zune-nbitmap-class_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(classes-zune-nbitmap-class_MC_DTARGETS) : $(classes-zune-nbitmap-class_MC_TGTWILDCARD).d : $(classes-zune-nbitmap-class_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(classes-zune-nbitmap-class_DFLAGS) $(classes-zune-nbitmap-class_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+# Handlers use dash instead of dot in their names
+ifeq (mcc,handler)
+classes-zune-nbitmap-class_MODULE := $(classes-zune-nbitmap-class_MODDIR)/NBitmap-mcc
+else
+ifeq (mcc,printer)
+classes-zune-nbitmap-class_MODULE := $(classes-zune-nbitmap-class_MODDIR)/NBitmap
+else
+classes-zune-nbitmap-class_MODULE := $(classes-zune-nbitmap-class_MODDIR)/NBitmap.mcc
+endif
+endif
+classes-zune-nbitmap-class_KOBJ   := $(KOBJSDIR)/NBitmap_mcc.o
+
+classes-zune-nbitmap-class-quick : classes-zune-nbitmap-class
+classes-zune-nbitmap-class-kobj-quick : $(classes-zune-nbitmap-class_KOBJ)
+classes-zune-nbitmap-class       : $(classes-zune-nbitmap-class_MODULE)
+classes-zune-nbitmap-class-kobj  : $(classes-zune-nbitmap-class_KOBJ)
+
+# The module is linked from all the compiled .o files
+classes-zune-nbitmap-class_OBJS       := $(classes-zune-nbitmap-class_ARCHOBJS) $(addprefix $(OBJDIR)/, $(addsuffix .o,$(notdir $(classes-zune-nbitmap-class_C_NARCHFILES))))
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (NBitmap,con)
+    classes-zune-nbitmap-class_ERR := $(notdir $(classes-zune-nbitmap-class_MODULE)).err
+else
+    classes-zune-nbitmap-class_ERR := NBitmap.err
+endif
+
+
+TMP_LDFLAGS  := $(strip $(LDFLAGS) $(NBitmap_LDFLAGS))
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(NBitmap_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(classes-zune-nbitmap-class_MODULE) : LIB_NAMES := $(NBitmap_LIBS)
+$(classes-zune-nbitmap-class_MODULE) : OBJS := $(classes-zune-nbitmap-class_OBJS)
+$(classes-zune-nbitmap-class_MODULE) : ENDTAG := 
+$(classes-zune-nbitmap-class_MODULE) : ERR := $(classes-zune-nbitmap-class_ERR)
+$(classes-zune-nbitmap-class_MODULE) : OBJDIR := $(OBJDIR)
+$(classes-zune-nbitmap-class_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(classes-zune-nbitmap-class_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(classes-zune-nbitmap-class_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(classes-zune-nbitmap-class_MODULE) : $(classes-zune-nbitmap-class_OBJS)  $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(strip $(AROS_CC) $(TARGET_SYSROOT)) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(strip $(AROS_CC) $(TARGET_SYSROOT)) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+
+# Link kernel object file
+classes-zune-nbitmap-class_KAUTOLIB := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+classes-zune-nbitmap-class_KBASE := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+    UtilityBase ExpansionBase KeymapBase KernelBase
+
+classes-zune-nbitmap-class_SYMBOLS := $(classes-zune-nbitmap-class_KBASE)
+
+classes-zune-nbitmap-class_KLIB := hiddstubs amiga arossupport autoinit libinit
+classes-zune-nbitmap-class_KOBJ_LIBS := $(filter-out $(classes-zune-nbitmap-class_KLIB),) $(classes-zune-nbitmap-class_KAUTOLIB)
+$(classes-zune-nbitmap-class_KOBJ) : LINKLIBS:=$(classes-zune-nbitmap-class_KOBJ_LIBS)
+$(classes-zune-nbitmap-class_KOBJ) : FILTBASES:=$(addprefix -L ,$(classes-zune-nbitmap-class_SYMBOLS))
+$(classes-zune-nbitmap-class_KOBJ) : USER_LDFLAGS := $(USER_LDFLAGS)
+$(classes-zune-nbitmap-class_KOBJ) : $(classes-zune-nbitmap-class_OBJS) $(classes-zune-nbitmap-class_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+
+
+## Dependency fine-tuning
+##
+classes-zune-nbitmap-class_DEPS       := $(addprefix $(OBJDIR)/, $(addsuffix .d,library $(FILES)))
+ifneq ($(classes-zune-nbitmap-class_DEPS),)
+  ifneq (classes-zune-nbitmap-class classes-zune-nbitmap-class-quick classes-zune-nbitmap-class-kobj,)
+    ifneq ($(findstring $(TARGET),classes-zune-nbitmap-class classes-zune-nbitmap-class-quick classes-zune-nbitmap-class-kobj),)
+      -include $(classes-zune-nbitmap-class_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(classes-zune-nbitmap-class_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(classes-zune-nbitmap-class_OBJS) $(classes-zune-nbitmap-class_DEPS) $(classes-zune-nbitmap-class_MODULE) $(classes-zune-nbitmap-class_KOBJ),)
+$(classes-zune-nbitmap-class_OBJS) $(classes-zune-nbitmap-class_DEPS) $(classes-zune-nbitmap-class_MODULE) $(classes-zune-nbitmap-class_KOBJ) : | $(OBJDIR) $(classes-zune-nbitmap-class_MODDIR) $(KOBJSDIR)
+else
+$(classes-zune-nbitmap-class_OBJS) $(classes-zune-nbitmap-class_DEPS) $(classes-zune-nbitmap-class_MODULE) $(classes-zune-nbitmap-class_KOBJ) :: $(OBJDIR) $(classes-zune-nbitmap-class_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(OBJDIR) $(classes-zune-nbitmap-class_MODDIR) $(KOBJSDIR)
+
+
+classes-zune-nbitmap-class-clean : FILES := $(classes-zune-nbitmap-class_OBJS) $(classes-zune-nbitmap-class_MODULE) $(classes-zune-nbitmap-class_KOBJ) $(classes-zune-nbitmap-class_DEPS)
+classes-zune-nbitmap-class-clean ::
+	$(Q)$(ECHO) "Cleaning up for module NBitmap"
+	$(Q)$(RM) $(FILES)
+
+
+
+.PHONY : classes-zune-nbitmap-test
+
+classes-zune-nbitmap-test_PROGNAME  := NBitmap-Test
+classes-zune-nbitmap-test_OBJDIR    := $(GENDIR)/$(CURDIR)
+classes-zune-nbitmap-test_TARGETDIR := $(AROS_TESTS)/NList
+classes-zune-nbitmap-test_LINKER    := 
+classes-zune-nbitmap-test_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(classes-zune-nbitmap-test_LINKER),)
+    classes-zune-nbitmap-test_LINKER := target
+endif
+
+ifneq ("$(strip NBitmap-Test $(FILES)   )","")
+    classes-zune-nbitmap-test_FILES     := NBitmap-Test $(FILES)
+    classes-zune-nbitmap-test_OBJCFILES := 
+    classes-zune-nbitmap-test_ASMFILES  := 
+    classes-zune-nbitmap-test_CXXFILES := 
+else
+    classes-zune-nbitmap-test_FILES     := $(classes-zune-nbitmap-test_PROGNAME)
+    classes-zune-nbitmap-test_OBJCFILES :=
+    classes-zune-nbitmap-test_ASMFILES  :=
+    classes-zune-nbitmap-test_CXXFILES :=
+endif
+
+classes-zune-nbitmap-test_ARCHOBJS   := $(wildcard $(classes-zune-nbitmap-test_OBJDIR)/arch/*.o)
+classes-zune-nbitmap-test_ARCHFILES  := $(basename $(notdir $(classes-zune-nbitmap-test_ARCHOBJS)))
+classes-zune-nbitmap-test_C_NARCHFILES := $(filter-out $(classes-zune-nbitmap-test_ARCHFILES),$(classes-zune-nbitmap-test_FILES))
+classes-zune-nbitmap-test_CXX_NARCHFILES := $(filter-out $(classes-zune-nbitmap-test_ARCHFILES),$(classes-zune-nbitmap-test_CXXFILES))
+classes-zune-nbitmap-test_OBJC_NARCHFILES := $(filter-out $(classes-zune-nbitmap-test_ARCHFILES),$(classes-zune-nbitmap-test_OBJCFILES))
+
+TMP_FILES := $(classes-zune-nbitmap-test_C_NARCHFILES) $(classes-zune-nbitmap-test_CXX_NARCHFILES) $(classes-zune-nbitmap-test_ASMFILES) $(classes-zune-nbitmap-test_OBJC_NARCHFILES)
+classes-zune-nbitmap-test_OBJS := $(addsuffix .o,$(addprefix $(classes-zune-nbitmap-test_OBJDIR)/,$(notdir $(TMP_FILES))))
+classes-zune-nbitmap-test_DEPS := $(addsuffix .d,$(addprefix $(classes-zune-nbitmap-test_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+classes-zune-nbitmap-test_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+classes-zune-nbitmap-test_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+classes-zune-nbitmap-test_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+classes-zune-nbitmap-test_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+classes-zune-nbitmap-test_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+classes-zune-nbitmap-test_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+classes-zune-nbitmap-test_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+classes-zune-nbitmap-test_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+classes-zune-nbitmap-test_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+classes-zune-nbitmap-test_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+classes-zune-nbitmap-test_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+classes-zune-nbitmap-test_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+classes-zune-nbitmap-test_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+classes-zune-nbitmap-test_LDFLAGS          := 
+endif
+
+classes-zune-nbitmap-test_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+classes-zune-nbitmap-test_COVERAGE := yes
+classes-zune-nbitmap-test_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+classes-zune-nbitmap-test_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+classes-zune-nbitmap-test_CFLAGS    := $(strip $(classes-zune-nbitmap-test_COVERAGEFLAGS) $(classes-zune-nbitmap-test_CFLAGS))
+classes-zune-nbitmap-test_CXXFLAGS := $(strip $(classes-zune-nbitmap-test_COVERAGEFLAGS) $(classes-zune-nbitmap-test_CXXFLAGS))
+classes-zune-nbitmap-test_LIBS += $(classes-zune-nbitmap-test_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+classes-zune-nbitmap-test_FUNCINSTR := yes
+classes-zune-nbitmap-test_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+classes-zune-nbitmap-test_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+classes-zune-nbitmap-test_CFLAGS    := $(strip $(classes-zune-nbitmap-test_INSTRFUNCFLAGS) $(classes-zune-nbitmap-test_CFLAGS))
+classes-zune-nbitmap-test_CXXFLAGS := $(strip $(classes-zune-nbitmap-test_INSTRFUNCFLAGS) $(classes-zune-nbitmap-test_CXXFLAGS))
+classes-zune-nbitmap-test_LIBS += $(classes-zune-nbitmap-test_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+classes-zune-nbitmap-test_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(classes-zune-nbitmap-test_CFLAGS))
+classes-zune-nbitmap-test_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(classes-zune-nbitmap-test_CXXFLAGS))
+endif
+endif
+classes-zune-nbitmap-test_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    classes-zune-nbitmap-test_DFLAGS     := 
+else
+    classes-zune-nbitmap-test_DFLAGS     := $(classes-zune-nbitmap-test_CFLAGS)
+endif
+ifneq (,)
+    classes-zune-nbitmap-test_DXXFLAGS     := 
+else
+    classes-zune-nbitmap-test_DXXFLAGS     := $(classes-zune-nbitmap-test_CXXFLAGS)
+endif
+ifeq (target,target)
+classes-zune-nbitmap-test_LDFLAGS           := $(classes-zune-nbitmap-test_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+classes-zune-nbitmap-test_LDFLAGS           := $(classes-zune-nbitmap-test_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+classes-zune-nbitmap-test_LDFLAGS           := $(classes-zune-nbitmap-test_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+classes-zune-nbitmap-test_LDFLAGS   += -L
+endif
+
+#MM
+classes-zune-nbitmap-test-quick : classes-zune-nbitmap-test
+
+#MM classes-zune-nbitmap-test : includes-generate-deps core-linklibs
+classes-zune-nbitmap-test : $(classes-zune-nbitmap-test_TARGETDIR)/$(classes-zune-nbitmap-test_PROGNAME)
+
+ifneq ($(filter $(TARGET),classes-zune-nbitmap-test classes-zune-nbitmap-test-quick classes-zune-nbitmap-test-gz-quick),)
+
+classes-zune-nbitmap-test_CXXABSBASENAMES := $(foreach classes-zune-nbitmap-test_CXXBASE,$(classes-zune-nbitmap-test_CXX_NARCHFILES),$(if $(filter /%,$(classes-zune-nbitmap-test_CXXBASE)),$(classes-zune-nbitmap-test_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(classes-zune-nbitmap-test_CXXBASE))))
+
+ifneq ($(classes-zune-nbitmap-test_CXXABSBASENAMES),)
+
+classes-zune-nbitmap-test_CXXBASENAMES := $(basename $(classes-zune-nbitmap-test_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+classes-zune-nbitmap-test_MCXX_FILES  := $(strip $(foreach classes-zune-nbitmap-test_CXXBASE,$(classes-zune-nbitmap-test_CXXABSBASENAMES), $(firstword $(wildcard $(foreach classes-zune-nbitmap-test_EXT, $(AROS_CXXEXTS),$(addsuffix .$(classes-zune-nbitmap-test_EXT),$(classes-zune-nbitmap-test_CXXBASE)))))))
+
+ifeq (,)
+classes-zune-nbitmap-test_MCXX_SRCWILDCARD := %
+else
+classes-zune-nbitmap-test_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(classes-zune-nbitmap-test_OBJDIR),)
+  classes-zune-nbitmap-test_CXXTARGETS := $(notdir $(classes-zune-nbitmap-test_CXXBASENAMES:=.o))
+  classes-zune-nbitmap-test_CXXDTARGETS := $(notdir $(classes-zune-nbitmap-test_CXXBASENAMES:=.d))
+  classes-zune-nbitmap-test_MCXX_WILDCARD := %
+else
+  classes-zune-nbitmap-test_CXXTARGETS := $(addprefix $(classes-zune-nbitmap-test_OBJDIR)/,$(notdir $(classes-zune-nbitmap-test_CXXBASENAMES:=.o)))
+  classes-zune-nbitmap-test_CXXDTARGETS := $(addprefix $(classes-zune-nbitmap-test_OBJDIR)/,$(notdir $(classes-zune-nbitmap-test_CXXBASENAMES:=.d)))
+  classes-zune-nbitmap-test_MCXX_WILDCARD := $(classes-zune-nbitmap-test_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(classes-zune-nbitmap-test_CXXTARGETS) $(classes-zune-nbitmap-test_CXXDTARGETS) : | $(classes-zune-nbitmap-test_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+classes-zune-nbitmap-test_MCXX_CPPFLAGS := $(classes-zune-nbitmap-test_CPPFLAGS)
+classes-zune-nbitmap-test_CXXFLAGS := $(classes-zune-nbitmap-test_CXXFLAGS)
+ifeq ($(classes-zune-nbitmap-test_DXXFLAGS),)
+  classes-zune-nbitmap-test_DXXFLAGS := $(classes-zune-nbitmap-test_CXXFLAGS)
+else
+  classes-zune-nbitmap-test_DXXFLAGS := $(classes-zune-nbitmap-test_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  classes-zune-nbitmap-test_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  classes-zune-nbitmap-test_STRIP ?= $(HOST_STRIP)
+  classes-zune-nbitmap-test_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  classes-zune-nbitmap-test_CXXCMD:=$(HOST_CXX)
+  classes-zune-nbitmap-test_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(classes-zune-nbitmap-test_MCXX_CPPFLAGS) $(classes-zune-nbitmap-test_MCXX_EXTRA_CPPFLAGS))
+  classes-zune-nbitmap-test_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(classes-zune-nbitmap-test_CXXFLAGS))
+  classes-zune-nbitmap-test_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(classes-zune-nbitmap-test_DXXFLAGS))
+  classes-zune-nbitmap-test_CXXIQUOTE:=$(HOST_IQUOTE)
+  classes-zune-nbitmap-test_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  classes-zune-nbitmap-test_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  classes-zune-nbitmap-test_STRIP ?= $(TARGET_STRIP)
+  classes-zune-nbitmap-test_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  classes-zune-nbitmap-test_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  classes-zune-nbitmap-test_MCXX_CPPFLAGS := $(strip $(classes-zune-nbitmap-test_MCXX_CPPFLAGS) $(classes-zune-nbitmap-test_MCXX_EXTRA_CPPFLAGS))
+  classes-zune-nbitmap-test_CXXFLAGS := $(strip $(classes-zune-nbitmap-test_CXXFLAGS) $(SAFETY_CFLAGS))
+  classes-zune-nbitmap-test_DXXFLAGS := $(classes-zune-nbitmap-test_DXXFLAGS)
+  classes-zune-nbitmap-test_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  classes-zune-nbitmap-test_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  classes-zune-nbitmap-test_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  classes-zune-nbitmap-test_STRIP ?= $(ECHO) >/dev/null
+  classes-zune-nbitmap-test_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  classes-zune-nbitmap-test_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  classes-zune-nbitmap-test_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(classes-zune-nbitmap-test_MCXX_CPPFLAGS) $(classes-zune-nbitmap-test_MCXX_EXTRA_CPPFLAGS))
+  classes-zune-nbitmap-test_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(classes-zune-nbitmap-test_CXXFLAGS))
+  classes-zune-nbitmap-test_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(classes-zune-nbitmap-test_DXXFLAGS))
+  classes-zune-nbitmap-test_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  classes-zune-nbitmap-test_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(classes-zune-nbitmap-test_CXXCMD) $(classes-zune-nbitmap-test_CXXIQUOTE) $(dir $(2)) $(classes-zune-nbitmap-test_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-test_CXXIQUOTE) . $(classes-zune-nbitmap-test_CXXIQUOTE_END) $(strip $(classes-zune-nbitmap-test_CXXFLAGS) $(classes-zune-nbitmap-test_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(classes-zune-nbitmap-test_CXXCMD) $(classes-zune-nbitmap-test_CXXIQUOTE) $(dir $(2)) $(classes-zune-nbitmap-test_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-test_CXXIQUOTE) . $(classes-zune-nbitmap-test_CXXIQUOTE_END) $(strip $(classes-zune-nbitmap-test_CXXFLAGS) $(classes-zune-nbitmap-test_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(classes-zune-nbitmap-test_CXXCMD) $(classes-zune-nbitmap-test_CXXIQUOTE) $(dir $(2)) $(classes-zune-nbitmap-test_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-test_CXXIQUOTE) . $(classes-zune-nbitmap-test_CXXIQUOTE_END) $(strip $(classes-zune-nbitmap-test_CXXFLAGS) $(classes-zune-nbitmap-test_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(classes-zune-nbitmap-test_CXXCMD)" $(MKDEPEND) $(strip $(classes-zune-nbitmap-test_DXXFLAGS) $(classes-zune-nbitmap-test_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(classes-zune-nbitmap-test_OBJDIR),)
+  $(foreach classes-zune-nbitmap-test_CXXFILE,$(classes-zune-nbitmap-test_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(classes-zune-nbitmap-test_CXXFILE))),$(classes-zune-nbitmap-test_CXXFILE))))
+else
+  $(foreach classes-zune-nbitmap-test_CXXFILE,$(classes-zune-nbitmap-test_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(classes-zune-nbitmap-test_OBJDIR)/,$(notdir $(basename $(classes-zune-nbitmap-test_CXXFILE)))),$(classes-zune-nbitmap-test_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(classes-zune-nbitmap-test_OBJC_NARCHFILES),)
+
+ifeq (,)
+classes-zune-nbitmap-test_MOBJC_SRCWILDCARD := %
+else
+classes-zune-nbitmap-test_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(classes-zune-nbitmap-test_OBJDIR),)
+  classes-zune-nbitmap-test_MOBJC_TARGETS := $(addsuffix .o,$(classes-zune-nbitmap-test_OBJC_NARCHFILES))
+  classes-zune-nbitmap-test_MOBJC_DTARGETS := $(addsuffix .d,$(classes-zune-nbitmap-test_OBJC_NARCHFILES))
+  classes-zune-nbitmap-test_MOBJC_WILDCARD := %
+else
+  classes-zune-nbitmap-test_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(classes-zune-nbitmap-test_OBJDIR)/,$(classes-zune-nbitmap-test_OBJC_NARCHFILES)))
+  classes-zune-nbitmap-test_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(classes-zune-nbitmap-test_OBJDIR)/,$(classes-zune-nbitmap-test_OBJC_NARCHFILES)))
+  classes-zune-nbitmap-test_MOBJC_WILDCARD := $(classes-zune-nbitmap-test_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : | $(addsuffix .m,$(classes-zune-nbitmap-test_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  classes-zune-nbitmap-test_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  classes-zune-nbitmap-test_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(classes-zune-nbitmap-test_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  classes-zune-nbitmap-test_MOBJC_DIRS := $(foreach dir, $(classes-zune-nbitmap-test_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(classes-zune-nbitmap-test_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(classes-zune-nbitmap-test_MOBJC_DIRS),)
+    classes-zune-nbitmap-test_MOBJC_DIRS := $(shell echo $(classes-zune-nbitmap-test_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(classes-zune-nbitmap-test_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  classes-zune-nbitmap-test_CC := $(TARGET_CC)
+else
+  classes-zune-nbitmap-test_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+classes-zune-nbitmap-test_MOBJC_CPPFLAGS := $(classes-zune-nbitmap-test_CPPFLAGS)
+classes-zune-nbitmap-test_OBJCFLAGS := $(classes-zune-nbitmap-test_CFLAGS)
+classes-zune-nbitmap-test_OBJCFLAGS := $(classes-zune-nbitmap-test_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+classes-zune-nbitmap-test_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(classes-zune-nbitmap-test_OBJCFLAGS)))
+ifeq ($(classes-zune-nbitmap-test_DFLAGS),)
+  classes-zune-nbitmap-test_OBJCDFLAGS := $(classes-zune-nbitmap-test_CFLAGS)
+else
+  classes-zune-nbitmap-test_OBJCDFLAGS := $(classes-zune-nbitmap-test_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  classes-zune-nbitmap-test_LINK ?= $(strip $(classes-zune-nbitmap-test_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  classes-zune-nbitmap-test_STRIP ?= $(TARGET_STRIP)
+  classes-zune-nbitmap-test_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : CMD:=$(strip $(classes-zune-nbitmap-test_CC) $(TARGET_SYSROOT))
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : classes-zune-nbitmap-test_MOBJC_CPPFLAGS:=$(strip $(classes-zune-nbitmap-test_MOBJC_CPPFLAGS) $(classes-zune-nbitmap-test_MOBJC_EXTRA_CPPFLAGS))
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : classes-zune-nbitmap-test_OBJCFLAGS:=$(strip $(classes-zune-nbitmap-test_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : classes-zune-nbitmap-test_OBJCDFLAGS:=$(classes-zune-nbitmap-test_OBJCDFLAGS)
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : classes-zune-nbitmap-test_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : classes-zune-nbitmap-test_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  classes-zune-nbitmap-test_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  classes-zune-nbitmap-test_STRIP ?= $(HOST_STRIP)
+  classes-zune-nbitmap-test_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : classes-zune-nbitmap-test_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(classes-zune-nbitmap-test_MOBJC_CPPFLAGS) $(classes-zune-nbitmap-test_MOBJC_EXTRA_CPPFLAGS))
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : classes-zune-nbitmap-test_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(classes-zune-nbitmap-test_OBJCFLAGS))
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : classes-zune-nbitmap-test_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(classes-zune-nbitmap-test_OBJCDFLAGS))
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : classes-zune-nbitmap-test_IQUOTE:=$(HOST_IQUOTE)
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : classes-zune-nbitmap-test_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  classes-zune-nbitmap-test_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  classes-zune-nbitmap-test_STRIP ?= $(ECHO) >/dev/null
+  classes-zune-nbitmap-test_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : classes-zune-nbitmap-test_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(classes-zune-nbitmap-test_MOBJC_CPPFLAGS) $(classes-zune-nbitmap-test_MOBJC_EXTRA_CPPFLAGS))
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : classes-zune-nbitmap-test_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(classes-zune-nbitmap-test_OBJCFLAGS))
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : classes-zune-nbitmap-test_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(classes-zune-nbitmap-test_OBJCDFLAGS))
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : classes-zune-nbitmap-test_IQUOTE:=$(KERNEL_IQUOTE)
+  $(classes-zune-nbitmap-test_MOBJC_TARGETS) $(classes-zune-nbitmap-test_MOBJC_DTARGETS) : classes-zune-nbitmap-test_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(classes-zune-nbitmap-test_MOBJC_TARGETS) : CPPFLAGS := $(classes-zune-nbitmap-test_MOBJC_CPPFLAGS)
+$(classes-zune-nbitmap-test_MOBJC_TARGETS) : CFLAGS := $(classes-zune-nbitmap-test_OBJCFLAGS)
+$(classes-zune-nbitmap-test_MOBJC_TARGETS) : $(classes-zune-nbitmap-test_MOBJC_WILDCARD).o : $(classes-zune-nbitmap-test_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(classes-zune-nbitmap-test_IQUOTE) $(dir $<) $(classes-zune-nbitmap-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-test_IQUOTE) . $(classes-zune-nbitmap-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(classes-zune-nbitmap-test_IQUOTE) $(dir $<) $(classes-zune-nbitmap-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-test_IQUOTE) . $(classes-zune-nbitmap-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(classes-zune-nbitmap-test_IQUOTE) $(dir $<) $(classes-zune-nbitmap-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-test_IQUOTE) . $(classes-zune-nbitmap-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(classes-zune-nbitmap-test_MOBJC_DTARGETS) : $(classes-zune-nbitmap-test_MOBJC_WILDCARD).d : $(classes-zune-nbitmap-test_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(classes-zune-nbitmap-test_OBJCDFLAGS) $(classes-zune-nbitmap-test_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+classes-zune-nbitmap-test_MC_SRCWILDCARD := %
+else
+classes-zune-nbitmap-test_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(classes-zune-nbitmap-test_OBJDIR),)
+classes-zune-nbitmap-test_MC_TARGETS := $(addsuffix .o,$(classes-zune-nbitmap-test_C_NARCHFILES))
+classes-zune-nbitmap-test_MC_DTARGETS := $(addsuffix .d,$(classes-zune-nbitmap-test_C_NARCHFILES))
+classes-zune-nbitmap-test_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    classes-zune-nbitmap-test_MC_TARGETS := $(addsuffix .o,$(addprefix $(classes-zune-nbitmap-test_OBJDIR)/,$(notdir $(classes-zune-nbitmap-test_C_NARCHFILES))))
+    classes-zune-nbitmap-test_MC_DTARGETS := $(addsuffix .d,$(addprefix $(classes-zune-nbitmap-test_OBJDIR)/,$(notdir $(classes-zune-nbitmap-test_C_NARCHFILES))))
+else
+ifeq (,)
+    classes-zune-nbitmap-test_MC_TARGETS := $(addsuffix .o,$(addprefix $(classes-zune-nbitmap-test_OBJDIR)/,$(classes-zune-nbitmap-test_C_NARCHFILES)))
+    classes-zune-nbitmap-test_MC_DTARGETS := $(addsuffix .d,$(addprefix $(classes-zune-nbitmap-test_OBJDIR)/,$(classes-zune-nbitmap-test_C_NARCHFILES)))
+else
+    classes-zune-nbitmap-test_MC_TARGETS := $(addsuffix .o,$(addprefix $(classes-zune-nbitmap-test_OBJDIR)/,$(patsubst /%,%,$(classes-zune-nbitmap-test_C_NARCHFILES))))
+    classes-zune-nbitmap-test_MC_DTARGETS := $(addsuffix .d,$(addprefix $(classes-zune-nbitmap-test_OBJDIR)/,$(patsubst /%,%,$(classes-zune-nbitmap-test_C_NARCHFILES))))
+endif
+endif
+classes-zune-nbitmap-test_MC_TGTWILDCARD := $(classes-zune-nbitmap-test_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : | $(addsuffix .c,$(classes-zune-nbitmap-test_C_NARCHFILES))
+
+# Be sure that all .c files are found
+classes-zune-nbitmap-test_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+classes-zune-nbitmap-test_MC_BASEDIRS := $(shell echo $(sort $(dir $(classes-zune-nbitmap-test_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+classes-zune-nbitmap-test_MC_DIRS := $(foreach dir, $(classes-zune-nbitmap-test_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(classes-zune-nbitmap-test_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(classes-zune-nbitmap-test_MC_DIRS),)
+    classes-zune-nbitmap-test_MC_DIRS := $(shell echo $(classes-zune-nbitmap-test_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(classes-zune-nbitmap-test_MC_DIRS)
+endif
+
+endif
+
+classes-zune-nbitmap-test_MC_CPPFLAGS := $(classes-zune-nbitmap-test_CPPFLAGS)
+classes-zune-nbitmap-test_CFLAGS := $(classes-zune-nbitmap-test_CFLAGS)
+ifeq ($(classes-zune-nbitmap-test_DFLAGS),)
+  classes-zune-nbitmap-test_DFLAGS := $(classes-zune-nbitmap-test_CFLAGS)
+else
+  classes-zune-nbitmap-test_DFLAGS := $(classes-zune-nbitmap-test_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+classes-zune-nbitmap-test_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+classes-zune-nbitmap-test_STRIP ?= $(TARGET_STRIP)
+classes-zune-nbitmap-test_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : classes-zune-nbitmap-test_MC_CPPFLAGS:=$(strip $(classes-zune-nbitmap-test_MC_CPPFLAGS) $(classes-zune-nbitmap-test_MC_EXTRA_CPPFLAGS))
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : classes-zune-nbitmap-test_CFLAGS:=$(strip $(classes-zune-nbitmap-test_CFLAGS) $(SAFETY_CFLAGS))
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : classes-zune-nbitmap-test_DFLAGS:=$(classes-zune-nbitmap-test_DFLAGS)
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : classes-zune-nbitmap-test_IQUOTE:=$(CFLAGS_IQUOTE)
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : classes-zune-nbitmap-test_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+classes-zune-nbitmap-test_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+classes-zune-nbitmap-test_STRIP ?= $(HOST_STRIP)
+classes-zune-nbitmap-test_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : classes-zune-nbitmap-test_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(classes-zune-nbitmap-test_MC_CPPFLAGS) $(classes-zune-nbitmap-test_MC_EXTRA_CPPFLAGS))
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : classes-zune-nbitmap-test_CFLAGS:=$(strip $(HOST_CFLAGS) $(classes-zune-nbitmap-test_CFLAGS))
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : classes-zune-nbitmap-test_DFLAGS:=$(strip $(HOST_CFLAGS) $(classes-zune-nbitmap-test_DFLAGS))
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : classes-zune-nbitmap-test_IQUOTE:=$(HOST_IQUOTE)
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : classes-zune-nbitmap-test_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+classes-zune-nbitmap-test_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+classes-zune-nbitmap-test_STRIP ?= $(ECHO) >/dev/null
+classes-zune-nbitmap-test_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : classes-zune-nbitmap-test_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(classes-zune-nbitmap-test_MC_CPPFLAGS) $(classes-zune-nbitmap-test_MC_EXTRA_CPPFLAGS))
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : classes-zune-nbitmap-test_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(classes-zune-nbitmap-test_CFLAGS))
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : classes-zune-nbitmap-test_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(classes-zune-nbitmap-test_DFLAGS))
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : classes-zune-nbitmap-test_IQUOTE:=$(KERNEL_IQUOTE)
+$(classes-zune-nbitmap-test_MC_TARGETS) $(classes-zune-nbitmap-test_MC_DTARGETS) : classes-zune-nbitmap-test_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(classes-zune-nbitmap-test_MC_TARGETS) : CPPFLAGS := $(classes-zune-nbitmap-test_MC_CPPFLAGS)
+$(classes-zune-nbitmap-test_MC_TARGETS) : CFLAGS := $(classes-zune-nbitmap-test_CFLAGS)
+$(classes-zune-nbitmap-test_MC_TARGETS) : $(classes-zune-nbitmap-test_MC_TGTWILDCARD).o : $(classes-zune-nbitmap-test_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(classes-zune-nbitmap-test_IQUOTE) $(dir $<) $(classes-zune-nbitmap-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-test_IQUOTE) . $(classes-zune-nbitmap-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(classes-zune-nbitmap-test_IQUOTE) $(dir $<) $(classes-zune-nbitmap-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-test_IQUOTE) . $(classes-zune-nbitmap-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(classes-zune-nbitmap-test_IQUOTE) $(dir $<) $(classes-zune-nbitmap-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nbitmap-test_IQUOTE) . $(classes-zune-nbitmap-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(classes-zune-nbitmap-test_MC_DTARGETS) : $(classes-zune-nbitmap-test_MC_TGTWILDCARD).d : $(classes-zune-nbitmap-test_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(classes-zune-nbitmap-test_DFLAGS) $(classes-zune-nbitmap-test_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(classes-zune-nbitmap-test_OBJDIR),)
+classes-zune-nbitmap-test-MA_TARGETS := $(addsuffix .o,$(classes-zune-nbitmap-test_ASMFILES))
+classes-zune-nbitmap-test-MA_WILDCARD := %
+else
+classes-zune-nbitmap-test-MA_TARGETS := $(addsuffix .o,$(addprefix $(classes-zune-nbitmap-test_OBJDIR)/,$(notdir $(classes-zune-nbitmap-test_ASMFILES))))
+classes-zune-nbitmap-test-MA_WILDCARD := $(classes-zune-nbitmap-test_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(classes-zune-nbitmap-test-MA_TARGETS) : | $(addsuffix .s,$(classes-zune-nbitmap-test_ASMFILES))
+
+# Be sure that all .c files are found
+classes-zune-nbitmap-test-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+classes-zune-nbitmap-test-MA_BASEDIRS := $(shell echo $(sort $(dir $(classes-zune-nbitmap-test_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+classes-zune-nbitmap-test-MA_DIRS := $(foreach dir, $(classes-zune-nbitmap-test-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(classes-zune-nbitmap-test-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(classes-zune-nbitmap-test-MA_DIRS),)
+    classes-zune-nbitmap-test-MA_DIRS := $(shell echo $(classes-zune-nbitmap-test-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(classes-zune-nbitmap-test-MA_DIRS)
+endif
+
+endif
+
+classes-zune-nbitmap-test-MA_ASSEMBLER ?= $(classes-zune-nbitmap-test_ASSEMBLER)
+
+$(classes-zune-nbitmap-test-MA_TARGETS) : classes-zune-nbitmap-test-MA_CMD:= $(classes-zune-nbitmap-test-MA_ASSEMBLER)
+
+$(classes-zune-nbitmap-test-MA_TARGETS) : CPPFLAGS := $(classes-zune-nbitmap-test_CPPFLAGS)
+$(classes-zune-nbitmap-test-MA_TARGETS) : AFLAGS := $(classes-zune-nbitmap-test_AFLAGS)
+$(classes-zune-nbitmap-test-MA_TARGETS) : $(classes-zune-nbitmap-test-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(classes-zune-nbitmap-test-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(classes-zune-nbitmap-test-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(classes-zune-nbitmap-test-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+classes-zune-nbitmap-test-link_EXTRA_LDFLAGS := 
+classes-zune-nbitmap-test-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    classes-zune-nbitmap-test-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    classes-zune-nbitmap-test-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    classes-zune-nbitmap-test-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+classes-zune-nbitmap-test-link_DIRS := $(subst -L ,-L,$(strip $(classes-zune-nbitmap-test_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+classes-zune-nbitmap-test-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(classes-zune-nbitmap-test-link_DIRS)))
+# Add trailing /
+classes-zune-nbitmap-test-link_DIRS := $(subst //,/,$(addsuffix /,$(classes-zune-nbitmap-test-link_DIRS)))
+# Add normal linklib path
+classes-zune-nbitmap-test-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+classes-zune-nbitmap-test-link_LIBS := $(addprefix lib,$(addsuffix .a,$(classes-zune-nbitmap-test_LIBS) $(classes-zune-nbitmap-test-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    classes-zune-nbitmap-test-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    classes-zune-nbitmap-test-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+classes-zune-nbitmap-test-link_DEPLIBS := $(foreach lib,$(classes-zune-nbitmap-test-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(classes-zune-nbitmap-test-link_DIRS)))) \
+)
+
+$(classes-zune-nbitmap-test_TARGETDIR)/$(classes-zune-nbitmap-test_PROGNAME) : OBJDIR := $(classes-zune-nbitmap-test_OBJDIR)
+$(classes-zune-nbitmap-test_TARGETDIR)/$(classes-zune-nbitmap-test_PROGNAME) : OBJS := $(classes-zune-nbitmap-test_OBJS) $(classes-zune-nbitmap-test_ARCHOBJS) $(USER_OBJS)
+$(classes-zune-nbitmap-test_TARGETDIR)/$(classes-zune-nbitmap-test_PROGNAME) : LDFLAGS := $(strip $(classes-zune-nbitmap-test_LDFLAGS) $(classes-zune-nbitmap-test-link_EXTRA_LDFLAGS))
+$(classes-zune-nbitmap-test_TARGETDIR)/$(classes-zune-nbitmap-test_PROGNAME) : LIBS := $(addprefix -l,$(classes-zune-nbitmap-test_LIBS) $(classes-zune-nbitmap-test-link_EXTRA_LIBS) )
+$(classes-zune-nbitmap-test_TARGETDIR)/$(classes-zune-nbitmap-test_PROGNAME) : $(classes-zune-nbitmap-test_OBJS) $(classes-zune-nbitmap-test_ARCHOBJS) $(USER_OBJS) $(classes-zune-nbitmap-test-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(classes-zune-nbitmap-test_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(classes-zune-nbitmap-test_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(classes-zune-nbitmap-test_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(classes-zune-nbitmap-test_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(classes-zune-nbitmap-test_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(classes-zune-nbitmap-test_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(classes-zune-nbitmap-test_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(classes-zune-nbitmap-test_DEPS),)
+  ifneq (classes-zune-nbitmap-test classes-zune-nbitmap-test-quick,)
+    ifneq ($(findstring $(TARGET),classes-zune-nbitmap-test classes-zune-nbitmap-test-quick),)
+      -include $(classes-zune-nbitmap-test_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(classes-zune-nbitmap-test_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(classes-zune-nbitmap-test_OBJS) $(classes-zune-nbitmap-test_DEPS) $(classes-zune-nbitmap-test_TARGETDIR)/$(classes-zune-nbitmap-test_PROGNAME),)
+$(classes-zune-nbitmap-test_OBJS) $(classes-zune-nbitmap-test_DEPS) $(classes-zune-nbitmap-test_TARGETDIR)/$(classes-zune-nbitmap-test_PROGNAME) : | $(classes-zune-nbitmap-test_OBJDIR) $(classes-zune-nbitmap-test_TARGETDIR)
+else
+$(classes-zune-nbitmap-test_OBJS) $(classes-zune-nbitmap-test_DEPS) $(classes-zune-nbitmap-test_TARGETDIR)/$(classes-zune-nbitmap-test_PROGNAME) :: $(classes-zune-nbitmap-test_OBJDIR) $(classes-zune-nbitmap-test_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(classes-zune-nbitmap-test_OBJDIR) $(classes-zune-nbitmap-test_TARGETDIR)
+
+
+classes-zune-nbitmap-test-clean : FILES := $(classes-zune-nbitmap-test_OBJS) $(classes-zune-nbitmap-test_TARGETDIR)/$(classes-zune-nbitmap-test_PROGNAME) $(classes-zune-nbitmap-test_DEPS)
+#MM
+classes-zune-nbitmap-test-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget classes-zune-nbitmap-test"
+	$(Q)$(RM) $(FILES)
+
+
+
+INCLUDE_FILES := ../include/mui/NBitmap_mcc.h
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq (../include/mui,)
+TMP_DIR                := ../include/mui
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst ../include/mui,$(GENINCDIR)/mui,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/mui/,$(notdir $(INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := ../include/mui/
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/../include/mui/
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/mui/,$(INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/mui/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq (../include/mui,)
+BD_INCL_FILES2         := $(subst ../include/mui,$(AROS_INCLUDES)/mui,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/mui/,$(notdir $(INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/mui/,$(INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/mui/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+
+
+classes-zune-nbitmap-test-cpy_SRC := $(shell echo . | sed 's/^\(.\):\//\/\1\//')
+
+
+ifneq (setup,)
+setup : | $(AROS_TESTS)/NList
+else
+setup :: $(AROS_TESTS)/NList
+endif
+
+GLOB_MKDIRS += $(AROS_TESTS)/NList
+
+
+.PHONY : classes-zune-nbitmap-test-cpy
+
+#MM
+classes-zune-nbitmap-test-cpy : | $(AROS_TESTS)/NList 
+	$(foreach file, icon.png, $(shell $(CP) $(addprefix $(if $(filter /%,$(classes-zune-nbitmap-test-cpy_SRC)),$(classes-zune-nbitmap-test-cpy_SRC),$(SRCDIR)/$(CURDIR)/$(classes-zune-nbitmap-test-cpy_SRC))/, $(file)) $(addprefix $(AROS_TESTS)/NList/, $(file))))
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)
