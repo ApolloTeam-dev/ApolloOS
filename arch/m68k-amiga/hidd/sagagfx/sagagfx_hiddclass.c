@@ -224,6 +224,7 @@ OOP_Object *METHOD(SAGAGfx, Root, New)
         { aHidd_Gfx_PixFmtTags,       (IPTR)pftags_32bpp         },
         { aHidd_Gfx_PixFmtTags,       (IPTR)pftags_24bpp         },
         { aHidd_Gfx_PixFmtTags,       (IPTR)pftags_16bpp         },
+        { aHidd_Gfx_PixFmtTags,       (IPTR)pftags_15bpp         },
         { aHidd_Gfx_PixFmtTags,       (IPTR)pftags_8bpp          },
 
         { TAG_MORE,                   (IPTR)syncs                },
