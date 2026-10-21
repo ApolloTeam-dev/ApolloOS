@@ -1,0 +1,630 @@
+#   $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := ps3eye AROS640_pure AROS320_pure
+
+NOWARN_FLAGS := $(NOWARN_UNUSED_VARIABLE) $(NOWARN_MAYBE_UNINITIALIZED)
+USER_CFLAGS := $(NOWARN_FLAGS)
+
+
+.PHONY : ps3eye
+
+ps3eye_PROGNAME  := ps3eye
+ps3eye_OBJDIR    := $(GENDIR)/$(CURDIR)
+ps3eye_TARGETDIR := $(AROS_TESTS)
+ps3eye_LINKER    := 
+ps3eye_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(ps3eye_LINKER),)
+    ps3eye_LINKER := target
+endif
+
+ifneq ("$(strip $(FILES)   )","")
+    ps3eye_FILES     := $(FILES)
+    ps3eye_OBJCFILES := 
+    ps3eye_ASMFILES  := 
+    ps3eye_CXXFILES := 
+else
+    ps3eye_FILES     := $(ps3eye_PROGNAME)
+    ps3eye_OBJCFILES :=
+    ps3eye_ASMFILES  :=
+    ps3eye_CXXFILES :=
+endif
+
+ps3eye_ARCHOBJS   := $(wildcard $(ps3eye_OBJDIR)/arch/*.o)
+ps3eye_ARCHFILES  := $(basename $(notdir $(ps3eye_ARCHOBJS)))
+ps3eye_C_NARCHFILES := $(filter-out $(ps3eye_ARCHFILES),$(ps3eye_FILES))
+ps3eye_CXX_NARCHFILES := $(filter-out $(ps3eye_ARCHFILES),$(ps3eye_CXXFILES))
+ps3eye_OBJC_NARCHFILES := $(filter-out $(ps3eye_ARCHFILES),$(ps3eye_OBJCFILES))
+
+TMP_FILES := $(ps3eye_C_NARCHFILES) $(ps3eye_CXX_NARCHFILES) $(ps3eye_ASMFILES) $(ps3eye_OBJC_NARCHFILES)
+ps3eye_OBJS := $(addsuffix .o,$(addprefix $(ps3eye_OBJDIR)/,$(notdir $(TMP_FILES))))
+ps3eye_DEPS := $(addsuffix .d,$(addprefix $(ps3eye_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+ps3eye_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+ps3eye_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+ps3eye_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+ps3eye_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+ps3eye_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+ps3eye_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+ps3eye_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+ps3eye_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+ps3eye_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+ps3eye_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+ps3eye_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+ps3eye_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+ps3eye_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+ps3eye_LDFLAGS          := 
+endif
+
+ps3eye_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+ps3eye_COVERAGE := yes
+ps3eye_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+ps3eye_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+ps3eye_CFLAGS    := $(strip $(ps3eye_COVERAGEFLAGS) $(ps3eye_CFLAGS))
+ps3eye_CXXFLAGS := $(strip $(ps3eye_COVERAGEFLAGS) $(ps3eye_CXXFLAGS))
+ps3eye_LIBS += $(ps3eye_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+ps3eye_FUNCINSTR := yes
+ps3eye_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+ps3eye_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+ps3eye_CFLAGS    := $(strip $(ps3eye_INSTRFUNCFLAGS) $(ps3eye_CFLAGS))
+ps3eye_CXXFLAGS := $(strip $(ps3eye_INSTRFUNCFLAGS) $(ps3eye_CXXFLAGS))
+ps3eye_LIBS += $(ps3eye_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+ps3eye_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(ps3eye_CFLAGS))
+ps3eye_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(ps3eye_CXXFLAGS))
+endif
+endif
+ps3eye_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    ps3eye_DFLAGS     := 
+else
+    ps3eye_DFLAGS     := $(ps3eye_CFLAGS)
+endif
+ifneq (,)
+    ps3eye_DXXFLAGS     := 
+else
+    ps3eye_DXXFLAGS     := $(ps3eye_CXXFLAGS)
+endif
+ifeq (target,target)
+ps3eye_LDFLAGS           := $(ps3eye_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+ps3eye_LDFLAGS           := $(ps3eye_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+ps3eye_LDFLAGS           := $(ps3eye_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+ps3eye_LDFLAGS   += -L
+endif
+
+#MM
+ps3eye-quick : ps3eye
+
+#MM ps3eye : includes-generate-deps core-linklibs
+ps3eye : $(ps3eye_TARGETDIR)/$(ps3eye_PROGNAME)
+
+ifneq ($(filter $(TARGET),ps3eye ps3eye-quick ps3eye-gz-quick),)
+
+ps3eye_CXXABSBASENAMES := $(foreach ps3eye_CXXBASE,$(ps3eye_CXX_NARCHFILES),$(if $(filter /%,$(ps3eye_CXXBASE)),$(ps3eye_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(ps3eye_CXXBASE))))
+
+ifneq ($(ps3eye_CXXABSBASENAMES),)
+
+ps3eye_CXXBASENAMES := $(basename $(ps3eye_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+ps3eye_MCXX_FILES  := $(strip $(foreach ps3eye_CXXBASE,$(ps3eye_CXXABSBASENAMES), $(firstword $(wildcard $(foreach ps3eye_EXT, $(AROS_CXXEXTS),$(addsuffix .$(ps3eye_EXT),$(ps3eye_CXXBASE)))))))
+
+ifeq (,)
+ps3eye_MCXX_SRCWILDCARD := %
+else
+ps3eye_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(ps3eye_OBJDIR),)
+  ps3eye_CXXTARGETS := $(notdir $(ps3eye_CXXBASENAMES:=.o))
+  ps3eye_CXXDTARGETS := $(notdir $(ps3eye_CXXBASENAMES:=.d))
+  ps3eye_MCXX_WILDCARD := %
+else
+  ps3eye_CXXTARGETS := $(addprefix $(ps3eye_OBJDIR)/,$(notdir $(ps3eye_CXXBASENAMES:=.o)))
+  ps3eye_CXXDTARGETS := $(addprefix $(ps3eye_OBJDIR)/,$(notdir $(ps3eye_CXXBASENAMES:=.d)))
+  ps3eye_MCXX_WILDCARD := $(ps3eye_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(ps3eye_CXXTARGETS) $(ps3eye_CXXDTARGETS) : | $(ps3eye_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+ps3eye_MCXX_CPPFLAGS := $(ps3eye_CPPFLAGS)
+ps3eye_CXXFLAGS := $(ps3eye_CXXFLAGS)
+ifeq ($(ps3eye_DXXFLAGS),)
+  ps3eye_DXXFLAGS := $(ps3eye_CXXFLAGS)
+else
+  ps3eye_DXXFLAGS := $(ps3eye_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  ps3eye_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  ps3eye_STRIP ?= $(HOST_STRIP)
+  ps3eye_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  ps3eye_CXXCMD:=$(HOST_CXX)
+  ps3eye_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(ps3eye_MCXX_CPPFLAGS) $(ps3eye_MCXX_EXTRA_CPPFLAGS))
+  ps3eye_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(ps3eye_CXXFLAGS))
+  ps3eye_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(ps3eye_DXXFLAGS))
+  ps3eye_CXXIQUOTE:=$(HOST_IQUOTE)
+  ps3eye_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  ps3eye_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  ps3eye_STRIP ?= $(TARGET_STRIP)
+  ps3eye_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  ps3eye_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  ps3eye_MCXX_CPPFLAGS := $(strip $(ps3eye_MCXX_CPPFLAGS) $(ps3eye_MCXX_EXTRA_CPPFLAGS))
+  ps3eye_CXXFLAGS := $(strip $(ps3eye_CXXFLAGS) $(SAFETY_CFLAGS))
+  ps3eye_DXXFLAGS := $(ps3eye_DXXFLAGS)
+  ps3eye_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  ps3eye_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  ps3eye_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  ps3eye_STRIP ?= $(ECHO) >/dev/null
+  ps3eye_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  ps3eye_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  ps3eye_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(ps3eye_MCXX_CPPFLAGS) $(ps3eye_MCXX_EXTRA_CPPFLAGS))
+  ps3eye_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(ps3eye_CXXFLAGS))
+  ps3eye_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(ps3eye_DXXFLAGS))
+  ps3eye_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  ps3eye_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(ps3eye_CXXCMD) $(ps3eye_CXXIQUOTE) $(dir $(2)) $(ps3eye_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(ps3eye_CXXIQUOTE) . $(ps3eye_CXXIQUOTE_END) $(strip $(ps3eye_CXXFLAGS) $(ps3eye_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(ps3eye_CXXCMD) $(ps3eye_CXXIQUOTE) $(dir $(2)) $(ps3eye_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(ps3eye_CXXIQUOTE) . $(ps3eye_CXXIQUOTE_END) $(strip $(ps3eye_CXXFLAGS) $(ps3eye_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(ps3eye_CXXCMD) $(ps3eye_CXXIQUOTE) $(dir $(2)) $(ps3eye_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(ps3eye_CXXIQUOTE) . $(ps3eye_CXXIQUOTE_END) $(strip $(ps3eye_CXXFLAGS) $(ps3eye_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(ps3eye_CXXCMD)" $(MKDEPEND) $(strip $(ps3eye_DXXFLAGS) $(ps3eye_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(ps3eye_OBJDIR),)
+  $(foreach ps3eye_CXXFILE,$(ps3eye_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(ps3eye_CXXFILE))),$(ps3eye_CXXFILE))))
+else
+  $(foreach ps3eye_CXXFILE,$(ps3eye_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(ps3eye_OBJDIR)/,$(notdir $(basename $(ps3eye_CXXFILE)))),$(ps3eye_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(ps3eye_OBJC_NARCHFILES),)
+
+ifeq (,)
+ps3eye_MOBJC_SRCWILDCARD := %
+else
+ps3eye_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(ps3eye_OBJDIR),)
+  ps3eye_MOBJC_TARGETS := $(addsuffix .o,$(ps3eye_OBJC_NARCHFILES))
+  ps3eye_MOBJC_DTARGETS := $(addsuffix .d,$(ps3eye_OBJC_NARCHFILES))
+  ps3eye_MOBJC_WILDCARD := %
+else
+  ps3eye_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(ps3eye_OBJDIR)/,$(ps3eye_OBJC_NARCHFILES)))
+  ps3eye_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(ps3eye_OBJDIR)/,$(ps3eye_OBJC_NARCHFILES)))
+  ps3eye_MOBJC_WILDCARD := $(ps3eye_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : | $(addsuffix .m,$(ps3eye_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  ps3eye_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  ps3eye_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(ps3eye_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  ps3eye_MOBJC_DIRS := $(foreach dir, $(ps3eye_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(ps3eye_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(ps3eye_MOBJC_DIRS),)
+    ps3eye_MOBJC_DIRS := $(shell echo $(ps3eye_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(ps3eye_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  ps3eye_CC := $(TARGET_CC)
+else
+  ps3eye_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+ps3eye_MOBJC_CPPFLAGS := $(ps3eye_CPPFLAGS)
+ps3eye_OBJCFLAGS := $(ps3eye_CFLAGS)
+ps3eye_OBJCFLAGS := $(ps3eye_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+ps3eye_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(ps3eye_OBJCFLAGS)))
+ifeq ($(ps3eye_DFLAGS),)
+  ps3eye_OBJCDFLAGS := $(ps3eye_CFLAGS)
+else
+  ps3eye_OBJCDFLAGS := $(ps3eye_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  ps3eye_LINK ?= $(strip $(ps3eye_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  ps3eye_STRIP ?= $(TARGET_STRIP)
+  ps3eye_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : CMD:=$(strip $(ps3eye_CC) $(TARGET_SYSROOT))
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : ps3eye_MOBJC_CPPFLAGS:=$(strip $(ps3eye_MOBJC_CPPFLAGS) $(ps3eye_MOBJC_EXTRA_CPPFLAGS))
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : ps3eye_OBJCFLAGS:=$(strip $(ps3eye_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : ps3eye_OBJCDFLAGS:=$(ps3eye_OBJCDFLAGS)
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : ps3eye_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : ps3eye_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  ps3eye_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  ps3eye_STRIP ?= $(HOST_STRIP)
+  ps3eye_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : ps3eye_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(ps3eye_MOBJC_CPPFLAGS) $(ps3eye_MOBJC_EXTRA_CPPFLAGS))
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : ps3eye_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(ps3eye_OBJCFLAGS))
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : ps3eye_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(ps3eye_OBJCDFLAGS))
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : ps3eye_IQUOTE:=$(HOST_IQUOTE)
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : ps3eye_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  ps3eye_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  ps3eye_STRIP ?= $(ECHO) >/dev/null
+  ps3eye_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : ps3eye_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(ps3eye_MOBJC_CPPFLAGS) $(ps3eye_MOBJC_EXTRA_CPPFLAGS))
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : ps3eye_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(ps3eye_OBJCFLAGS))
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : ps3eye_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(ps3eye_OBJCDFLAGS))
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : ps3eye_IQUOTE:=$(KERNEL_IQUOTE)
+  $(ps3eye_MOBJC_TARGETS) $(ps3eye_MOBJC_DTARGETS) : ps3eye_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(ps3eye_MOBJC_TARGETS) : CPPFLAGS := $(ps3eye_MOBJC_CPPFLAGS)
+$(ps3eye_MOBJC_TARGETS) : CFLAGS := $(ps3eye_OBJCFLAGS)
+$(ps3eye_MOBJC_TARGETS) : $(ps3eye_MOBJC_WILDCARD).o : $(ps3eye_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(ps3eye_IQUOTE) $(dir $<) $(ps3eye_IQUOTE) $(SRCDIR)/$(CURDIR) $(ps3eye_IQUOTE) . $(ps3eye_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(ps3eye_IQUOTE) $(dir $<) $(ps3eye_IQUOTE) $(SRCDIR)/$(CURDIR) $(ps3eye_IQUOTE) . $(ps3eye_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(ps3eye_IQUOTE) $(dir $<) $(ps3eye_IQUOTE) $(SRCDIR)/$(CURDIR) $(ps3eye_IQUOTE) . $(ps3eye_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(ps3eye_MOBJC_DTARGETS) : $(ps3eye_MOBJC_WILDCARD).d : $(ps3eye_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(ps3eye_OBJCDFLAGS) $(ps3eye_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+ps3eye_MC_SRCWILDCARD := %
+else
+ps3eye_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(ps3eye_OBJDIR),)
+ps3eye_MC_TARGETS := $(addsuffix .o,$(ps3eye_C_NARCHFILES))
+ps3eye_MC_DTARGETS := $(addsuffix .d,$(ps3eye_C_NARCHFILES))
+ps3eye_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    ps3eye_MC_TARGETS := $(addsuffix .o,$(addprefix $(ps3eye_OBJDIR)/,$(notdir $(ps3eye_C_NARCHFILES))))
+    ps3eye_MC_DTARGETS := $(addsuffix .d,$(addprefix $(ps3eye_OBJDIR)/,$(notdir $(ps3eye_C_NARCHFILES))))
+else
+ifeq (,)
+    ps3eye_MC_TARGETS := $(addsuffix .o,$(addprefix $(ps3eye_OBJDIR)/,$(ps3eye_C_NARCHFILES)))
+    ps3eye_MC_DTARGETS := $(addsuffix .d,$(addprefix $(ps3eye_OBJDIR)/,$(ps3eye_C_NARCHFILES)))
+else
+    ps3eye_MC_TARGETS := $(addsuffix .o,$(addprefix $(ps3eye_OBJDIR)/,$(patsubst /%,%,$(ps3eye_C_NARCHFILES))))
+    ps3eye_MC_DTARGETS := $(addsuffix .d,$(addprefix $(ps3eye_OBJDIR)/,$(patsubst /%,%,$(ps3eye_C_NARCHFILES))))
+endif
+endif
+ps3eye_MC_TGTWILDCARD := $(ps3eye_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : | $(addsuffix .c,$(ps3eye_C_NARCHFILES))
+
+# Be sure that all .c files are found
+ps3eye_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+ps3eye_MC_BASEDIRS := $(shell echo $(sort $(dir $(ps3eye_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+ps3eye_MC_DIRS := $(foreach dir, $(ps3eye_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(ps3eye_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(ps3eye_MC_DIRS),)
+    ps3eye_MC_DIRS := $(shell echo $(ps3eye_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(ps3eye_MC_DIRS)
+endif
+
+endif
+
+ps3eye_MC_CPPFLAGS := $(ps3eye_CPPFLAGS)
+ps3eye_CFLAGS := $(ps3eye_CFLAGS)
+ifeq ($(ps3eye_DFLAGS),)
+  ps3eye_DFLAGS := $(ps3eye_CFLAGS)
+else
+  ps3eye_DFLAGS := $(ps3eye_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+ps3eye_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+ps3eye_STRIP ?= $(TARGET_STRIP)
+ps3eye_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : ps3eye_MC_CPPFLAGS:=$(strip $(ps3eye_MC_CPPFLAGS) $(ps3eye_MC_EXTRA_CPPFLAGS))
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : ps3eye_CFLAGS:=$(strip $(ps3eye_CFLAGS) $(SAFETY_CFLAGS))
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : ps3eye_DFLAGS:=$(ps3eye_DFLAGS)
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : ps3eye_IQUOTE:=$(CFLAGS_IQUOTE)
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : ps3eye_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+ps3eye_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+ps3eye_STRIP ?= $(HOST_STRIP)
+ps3eye_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : ps3eye_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(ps3eye_MC_CPPFLAGS) $(ps3eye_MC_EXTRA_CPPFLAGS))
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : ps3eye_CFLAGS:=$(strip $(HOST_CFLAGS) $(ps3eye_CFLAGS))
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : ps3eye_DFLAGS:=$(strip $(HOST_CFLAGS) $(ps3eye_DFLAGS))
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : ps3eye_IQUOTE:=$(HOST_IQUOTE)
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : ps3eye_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+ps3eye_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+ps3eye_STRIP ?= $(ECHO) >/dev/null
+ps3eye_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : ps3eye_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(ps3eye_MC_CPPFLAGS) $(ps3eye_MC_EXTRA_CPPFLAGS))
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : ps3eye_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(ps3eye_CFLAGS))
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : ps3eye_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(ps3eye_DFLAGS))
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : ps3eye_IQUOTE:=$(KERNEL_IQUOTE)
+$(ps3eye_MC_TARGETS) $(ps3eye_MC_DTARGETS) : ps3eye_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(ps3eye_MC_TARGETS) : CPPFLAGS := $(ps3eye_MC_CPPFLAGS)
+$(ps3eye_MC_TARGETS) : CFLAGS := $(ps3eye_CFLAGS)
+$(ps3eye_MC_TARGETS) : $(ps3eye_MC_TGTWILDCARD).o : $(ps3eye_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(ps3eye_IQUOTE) $(dir $<) $(ps3eye_IQUOTE) $(SRCDIR)/$(CURDIR) $(ps3eye_IQUOTE) . $(ps3eye_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(ps3eye_IQUOTE) $(dir $<) $(ps3eye_IQUOTE) $(SRCDIR)/$(CURDIR) $(ps3eye_IQUOTE) . $(ps3eye_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(ps3eye_IQUOTE) $(dir $<) $(ps3eye_IQUOTE) $(SRCDIR)/$(CURDIR) $(ps3eye_IQUOTE) . $(ps3eye_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(ps3eye_MC_DTARGETS) : $(ps3eye_MC_TGTWILDCARD).d : $(ps3eye_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(ps3eye_DFLAGS) $(ps3eye_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(ps3eye_OBJDIR),)
+ps3eye-MA_TARGETS := $(addsuffix .o,$(ps3eye_ASMFILES))
+ps3eye-MA_WILDCARD := %
+else
+ps3eye-MA_TARGETS := $(addsuffix .o,$(addprefix $(ps3eye_OBJDIR)/,$(notdir $(ps3eye_ASMFILES))))
+ps3eye-MA_WILDCARD := $(ps3eye_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(ps3eye-MA_TARGETS) : | $(addsuffix .s,$(ps3eye_ASMFILES))
+
+# Be sure that all .c files are found
+ps3eye-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+ps3eye-MA_BASEDIRS := $(shell echo $(sort $(dir $(ps3eye_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+ps3eye-MA_DIRS := $(foreach dir, $(ps3eye-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(ps3eye-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(ps3eye-MA_DIRS),)
+    ps3eye-MA_DIRS := $(shell echo $(ps3eye-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(ps3eye-MA_DIRS)
+endif
+
+endif
+
+ps3eye-MA_ASSEMBLER ?= $(ps3eye_ASSEMBLER)
+
+$(ps3eye-MA_TARGETS) : ps3eye-MA_CMD:= $(ps3eye-MA_ASSEMBLER)
+
+$(ps3eye-MA_TARGETS) : CPPFLAGS := $(ps3eye_CPPFLAGS)
+$(ps3eye-MA_TARGETS) : AFLAGS := $(ps3eye_AFLAGS)
+$(ps3eye-MA_TARGETS) : $(ps3eye-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(ps3eye-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(ps3eye-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(ps3eye-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+ps3eye-link_EXTRA_LDFLAGS := 
+ps3eye-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    ps3eye-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    ps3eye-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    ps3eye-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+ps3eye-link_DIRS := $(subst -L ,-L,$(strip $(ps3eye_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+ps3eye-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(ps3eye-link_DIRS)))
+# Add trailing /
+ps3eye-link_DIRS := $(subst //,/,$(addsuffix /,$(ps3eye-link_DIRS)))
+# Add normal linklib path
+ps3eye-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+ps3eye-link_LIBS := $(addprefix lib,$(addsuffix .a,$(ps3eye_LIBS) $(ps3eye-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    ps3eye-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    ps3eye-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+ps3eye-link_DEPLIBS := $(foreach lib,$(ps3eye-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(ps3eye-link_DIRS)))) \
+)
+
+$(ps3eye_TARGETDIR)/$(ps3eye_PROGNAME) : OBJDIR := $(ps3eye_OBJDIR)
+$(ps3eye_TARGETDIR)/$(ps3eye_PROGNAME) : OBJS := $(ps3eye_OBJS) $(ps3eye_ARCHOBJS) $(USER_OBJS)
+$(ps3eye_TARGETDIR)/$(ps3eye_PROGNAME) : LDFLAGS := $(strip $(ps3eye_LDFLAGS) $(ps3eye-link_EXTRA_LDFLAGS))
+$(ps3eye_TARGETDIR)/$(ps3eye_PROGNAME) : LIBS := $(addprefix -l,$(ps3eye_LIBS) $(ps3eye-link_EXTRA_LIBS) )
+$(ps3eye_TARGETDIR)/$(ps3eye_PROGNAME) : $(ps3eye_OBJS) $(ps3eye_ARCHOBJS) $(USER_OBJS) $(ps3eye-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(ps3eye_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(ps3eye_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(ps3eye_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(ps3eye_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(ps3eye_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(ps3eye_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(ps3eye_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(ps3eye_DEPS),)
+  ifneq (ps3eye ps3eye-quick,)
+    ifneq ($(findstring $(TARGET),ps3eye ps3eye-quick),)
+      -include $(ps3eye_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(ps3eye_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(ps3eye_OBJS) $(ps3eye_DEPS) $(ps3eye_TARGETDIR)/$(ps3eye_PROGNAME),)
+$(ps3eye_OBJS) $(ps3eye_DEPS) $(ps3eye_TARGETDIR)/$(ps3eye_PROGNAME) : | $(ps3eye_OBJDIR) $(ps3eye_TARGETDIR)
+else
+$(ps3eye_OBJS) $(ps3eye_DEPS) $(ps3eye_TARGETDIR)/$(ps3eye_PROGNAME) :: $(ps3eye_OBJDIR) $(ps3eye_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(ps3eye_OBJDIR) $(ps3eye_TARGETDIR)
+
+
+ps3eye-clean : FILES := $(ps3eye_OBJS) $(ps3eye_TARGETDIR)/$(ps3eye_PROGNAME) $(ps3eye_DEPS)
+#MM
+ps3eye-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget ps3eye"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

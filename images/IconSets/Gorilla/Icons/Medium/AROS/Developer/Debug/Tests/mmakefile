@@ -1,0 +1,57 @@
+# Copyright © 2008, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+ICONS := DualPNG
+
+#MM- iconset-Gorilla-wbench-icons-aros-clean : iconset-Gorilla-wbench-icons-aros-debug-tests-clean
+
+#MM- iconset-Gorilla-wbench-icons-aros : iconset-Gorilla-wbench-icons-aros-debug-tests
+
+
+BD_OBJS := $(addprefix  $(AROS_TESTS)/Icon/, $(addsuffix .info,$(ICONS)))
+
+#MM
+iconset-Gorilla-wbench-icons-aros-debug-tests : $(BD_OBJS)
+
+ifeq (,)
+
+$(AROS_TESTS)/Icon/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/%.png
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+else
+
+$(AROS_TESTS)/Icon/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+endif
+
+
+ifneq ($(BD_OBJS),)
+$(BD_OBJS) : | $(AROS_TESTS)/Icon
+else
+$(BD_OBJS) :: $(AROS_TESTS)/Icon
+endif
+
+GLOB_MKDIRS += $(AROS_TESTS)/Icon
+
+
+iconset-Gorilla-wbench-icons-aros-debug-tests-clean : FILES := $(BD_OBJS)
+#MM
+iconset-Gorilla-wbench-icons-aros-debug-tests-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: iconset-Gorilla-wbench-icons-aros-debug-tests iconset-Gorilla-wbench-icons-aros-debug-tests-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,73 @@
+# Copyright © 2003, The AROS Development Team. All rights reserved.
+# $Id: mmakefile.src
+
+include $(SRCDIR)/config/aros.cfg
+
+
+ifeq (,)
+workbench-devs-diskimage-gui-catalogs_DESC := $(basename $(wildcard $(SRCDIR)/$(CURDIR)/*.cd))
+else
+workbench-devs-diskimage-gui-catalogs_DESC := 
+endif
+
+workbench-devs-diskimage-gui-catalogs_SRC := $(shell echo $(TOOLDIR)/C_h_aros | sed 's/^\(.\):\//\/\1\//')
+
+ifeq (,)
+workbench-devs-diskimage-gui-catalogs_LNGS := $(basename $(notdir $(call WILDCARD, $(SRCDIR)/$(CURDIR)/*.ct)))
+else
+workbench-devs-diskimage-gui-catalogs_LNGS := 
+endif
+
+workbench-devs-diskimage-gui-catalogs_OBJS := $(addsuffix /System/System/DiskImageGUI.catalog, $(addprefix $(AROS_CATALOGS)/, $(workbench-devs-diskimage-gui-catalogs_LNGS)))
+workbench-devs-diskimage-gui-catalogs_DIRS := $(addsuffix /System/System, $(addprefix $(AROS_CATALOGS)/, $(workbench-devs-diskimage-gui-catalogs_LNGS))) $(dir ../strings.h)
+
+#MM- workbench-devs-diskimage-gui-catalogs-quick : workbench-devs-diskimage-gui-catalogs
+
+#MM
+workbench-devs-diskimage-gui-catalogs : $(workbench-devs-diskimage-gui-catalogs_OBJS) ../strings.h
+
+
+ifneq ($(workbench-devs-diskimage-gui-catalogs_OBJS),)
+$(workbench-devs-diskimage-gui-catalogs_OBJS) : | $(workbench-devs-diskimage-gui-catalogs_DIRS)
+else
+$(workbench-devs-diskimage-gui-catalogs_OBJS) :: $(workbench-devs-diskimage-gui-catalogs_DIRS)
+endif
+
+GLOB_MKDIRS += $(workbench-devs-diskimage-gui-catalogs_DIRS)
+
+
+$(AROS_CATALOGS)/%/System/System/DiskImageGUI.catalog : $(SRCDIR)/$(CURDIR)/%.ct $(workbench-devs-diskimage-gui-catalogs_DESC).cd
+	$(Q)$(ECHO) "Creating   DiskImageGUI catalog for language $*."
+	$(Q)$(IF) $(TEST) "$*" = "polish"; then \
+	    $(FLEXCAT) iso88592toamigapl $(workbench-devs-diskimage-gui-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/System/DiskImageGUI.catalog" || [ $$? -lt 10 ] ; \
+	elif $(TEST) "$*" = "russian"; then \
+	    $(FLEXCAT) win1251toamiga1251 $(workbench-devs-diskimage-gui-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/System/DiskImageGUI.catalog" || [ $$? -lt 10 ] ; \
+	else \
+	    $(FLEXCAT) $(workbench-devs-diskimage-gui-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/System/DiskImageGUI.catalog" || [ $$? -lt 10 ] ; \
+	fi
+
+ifneq (../strings.h,)
+../strings.h : workbench-devs-diskimage-gui-catalogs_DESC := $(workbench-devs-diskimage-gui-catalogs_DESC)
+../strings.h : workbench-devs-diskimage-gui-catalogs_SRC := $(workbench-devs-diskimage-gui-catalogs_SRC)
+../strings.h : $(workbench-devs-diskimage-gui-catalogs_DESC).cd $(workbench-devs-diskimage-gui-catalogs_SRC).sd | $(dir ../strings.h)
+	$(Q)$(ECHO) "Creating   DiskImageGUI catalog source file $@"
+	$(Q)$(FLEXCAT) $(workbench-devs-diskimage-gui-catalogs_DESC).cd $@=$(workbench-devs-diskimage-gui-catalogs_SRC).sd
+endif
+
+workbench-devs-diskimage-gui-catalogs-clean : FILES := $(workbench-devs-diskimage-gui-catalogs_OBJS) ../strings.h
+#MM
+workbench-devs-diskimage-gui-catalogs-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-devs-diskimage-gui-catalogs"
+	$(Q)$(RM) $(FILES)
+
+.PHONY: workbench-devs-diskimage-gui-catalogs workbench-devs-diskimage-gui-catalogs-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

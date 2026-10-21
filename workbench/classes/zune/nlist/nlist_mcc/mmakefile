@@ -1,0 +1,1268 @@
+#   $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM classes-zune-nlist-class  : includes linklibs
+
+#MM classes-zune-nlist-test  : includes linklibs
+
+FILES := \
+        NList_mcc    \
+        NList_mcc0   \
+        NList_mcc1   \
+        NList_mcc2   \
+        NList_mcc3   \
+        NList_mcc4   \
+        NList_mcc5   \
+        NList_mcc6   \
+        move         \
+        NList_func   \
+        NList_func2  \
+        NList_func3  \
+        NList_func4  \
+        NList_grp    \
+        NList_img    \
+        NList_img2   \
+        ClipboardServer \
+        Pointer      \
+        Debug
+
+USER_INCLUDES := -idirafter $(SRCDIR)/$(CURDIR)/../include -I$(SRCDIR)/$(CURDIR)/../nlistviews_mcp \
+    -idirafter $(SRCDIR)/$(CURDIR)/../include/mui
+
+USER_CPPFLAGS := -DAROS_ABI_V1
+USER_CFLAGS += $(PARANOIA_CFLAGS)
+USER_LDFLAGS := -static
+
+
+# Define metamake targets and their dependencies
+#MM classes-zune-nlist-class : core-linklibs includes-generate-deps
+#MM classes-zune-nlist-class-kobj : core-linklibs includes-generate-deps
+#MM classes-zune-nlist-class-kobj-quick
+#MM classes-zune-nlist-class-quick
+#MM classes-zune-nlist-class-clean
+
+classes-zune-nlist-class_ALLTARGETS := classes-zune-nlist-class classes-zune-nlist-class-clean classes-zune-nlist-class-quick classes-zune-nlist-class-kobj
+
+.PHONY : $(classes-zune-nlist-class_ALLTARGETS)
+
+ifeq (NList,)
+$(error using %build_module_simple: modname may not be empty)
+endif
+ifeq (mcc,)
+$(error using %build_module_simple: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+classes-zune-nlist-class_DEFLINKLIBNAME := NList
+classes-zune-nlist-class_CFLAGS := $(CFLAGS)
+classes-zune-nlist-class_CXXFLAGS := $(CXXFLAGS)
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+classes-zune-nlist-class_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(classes-zune-nlist-class_CFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+classes-zune-nlist-class_FUNCINSTR := yes
+classes-zune-nlist-class_CFLAGS    := $(strip $(FUNCINSTR_FLAGS) $(classes-zune-nlist-class_CFLAGS))
+endif
+endif
+ifneq (,)
+    classes-zune-nlist-class_DFLAGS := 
+else
+    classes-zune-nlist-class_DFLAGS := $(classes-zune-nlist-class_CFLAGS)
+endif
+classes-zune-nlist-class_DEFDXXFLAGS := 
+OBJDIR ?= $(GENDIR)/$(CURDIR)
+classes-zune-nlist-class_MODDIR := 
+ifeq ($(classes-zune-nlist-class_MODDIR),)
+  ifeq (mcc,library)
+    classes-zune-nlist-class_MODDIR  := $(AROS_LIBRARIES)
+  endif
+  ifeq (mcc,gadget)
+    classes-zune-nlist-class_MODDIR  := $(AROS_GADGETS)
+  endif
+  ifeq (mcc,datatype)
+    classes-zune-nlist-class_MODDIR  := $(AROS_DATATYPES)
+  endif
+  ifeq (mcc,handler)
+    classes-zune-nlist-class_MODDIR  := $(AROS_FS)
+  endif
+  ifeq (mcc,device)
+    classes-zune-nlist-class_MODDIR  := $(AROS_DEVS)
+  endif
+  ifeq (mcc,resource)
+    classes-zune-nlist-class_MODDIR  := $(AROS_RESOURCES)
+  endif
+  ifeq (mcc,hook)
+    classes-zune-nlist-class_MODDIR  := $(AROS_RESOURCES)
+  endif
+  ifeq (mcc,mui)
+    classes-zune-nlist-class_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (mcc,mcc)
+    classes-zune-nlist-class_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (mcc,mcp)
+    classes-zune-nlist-class_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (mcc,usbclass)
+    classes-zune-nlist-class_MODDIR  := $(AROS_CLASSES)/USB
+  endif
+  ifeq (mcc,hidd)
+    classes-zune-nlist-class_MODDIR  := $(AROS_DRIVERS)
+  endif
+  ifeq (mcc,printer)
+    classes-zune-nlist-class_MODDIR  := $(AROS_PRINTERS)
+  endif
+endif
+ifeq ($(classes-zune-nlist-class_MODDIR),)
+  $(error Don't know where to put the file for modtype mcc. Specify moduledir=)
+endif
+
+classes-zune-nlist-class_ARCHOBJS   := $(wildcard $(OBJDIR)/arch/*.o)
+classes-zune-nlist-class_ARCHFILES  := $(basename $(notdir $(classes-zune-nlist-class_ARCHOBJS)))
+classes-zune-nlist-class_C_NARCHFILES := $(filter-out $(classes-zune-nlist-class_ARCHFILES),library $(FILES))
+classes-zune-nlist-class_CXX_NARCHFILES := $(filter-out $(classes-zune-nlist-class_ARCHFILES),$(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT)))))
+classes-zune-nlist-class_OBJC_NARCHFILES := $(filter-out $(classes-zune-nlist-class_ARCHFILES),)
+
+
+classes-zune-nlist-class_CXXABSBASENAMES := $(foreach classes-zune-nlist-class_CXXBASE,$(classes-zune-nlist-class_CXX_NARCHFILES),$(if $(filter /%,$(classes-zune-nlist-class_CXXBASE)),$(classes-zune-nlist-class_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(classes-zune-nlist-class_CXXBASE))))
+
+ifneq ($(classes-zune-nlist-class_CXXABSBASENAMES),)
+
+classes-zune-nlist-class_CXXBASENAMES := $(basename $(classes-zune-nlist-class_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+classes-zune-nlist-class_MCXX_FILES  := $(strip $(foreach classes-zune-nlist-class_CXXBASE,$(classes-zune-nlist-class_CXXABSBASENAMES), $(firstword $(wildcard $(foreach classes-zune-nlist-class_EXT, $(AROS_CXXEXTS),$(addsuffix .$(classes-zune-nlist-class_EXT),$(classes-zune-nlist-class_CXXBASE)))))))
+
+ifeq (,)
+classes-zune-nlist-class_MCXX_SRCWILDCARD := %
+else
+classes-zune-nlist-class_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+  classes-zune-nlist-class_CXXTARGETS := $(notdir $(classes-zune-nlist-class_CXXBASENAMES:=.o))
+  classes-zune-nlist-class_CXXDTARGETS := $(notdir $(classes-zune-nlist-class_CXXBASENAMES:=.d))
+  classes-zune-nlist-class_MCXX_WILDCARD := %
+else
+  classes-zune-nlist-class_CXXTARGETS := $(addprefix $(OBJDIR)/,$(notdir $(classes-zune-nlist-class_CXXBASENAMES:=.o)))
+  classes-zune-nlist-class_CXXDTARGETS := $(addprefix $(OBJDIR)/,$(notdir $(classes-zune-nlist-class_CXXBASENAMES:=.d)))
+  classes-zune-nlist-class_MCXX_WILDCARD := $(OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(classes-zune-nlist-class_CXXTARGETS) $(classes-zune-nlist-class_CXXDTARGETS) : | $(classes-zune-nlist-class_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+classes-zune-nlist-class_MCXX_CPPFLAGS := $(CPPFLAGS)
+classes-zune-nlist-class_CXXFLAGS := $(classes-zune-nlist-class_CXXFLAGS)
+ifeq ($(classes-zune-nlist-class_DXXFLAGS),)
+  classes-zune-nlist-class_DXXFLAGS := $(classes-zune-nlist-class_CXXFLAGS)
+else
+  classes-zune-nlist-class_DXXFLAGS := $(classes-zune-nlist-class_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  classes-zune-nlist-class_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  classes-zune-nlist-class_STRIP ?= $(HOST_STRIP)
+  classes-zune-nlist-class_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  classes-zune-nlist-class_CXXCMD:=$(HOST_CXX)
+  classes-zune-nlist-class_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(classes-zune-nlist-class_MCXX_CPPFLAGS) $(classes-zune-nlist-class_MCXX_EXTRA_CPPFLAGS))
+  classes-zune-nlist-class_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(classes-zune-nlist-class_CXXFLAGS))
+  classes-zune-nlist-class_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(classes-zune-nlist-class_DXXFLAGS))
+  classes-zune-nlist-class_CXXIQUOTE:=$(HOST_IQUOTE)
+  classes-zune-nlist-class_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  classes-zune-nlist-class_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  classes-zune-nlist-class_STRIP ?= $(TARGET_STRIP)
+  classes-zune-nlist-class_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  classes-zune-nlist-class_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  classes-zune-nlist-class_MCXX_CPPFLAGS := $(strip $(classes-zune-nlist-class_MCXX_CPPFLAGS) $(classes-zune-nlist-class_MCXX_EXTRA_CPPFLAGS))
+  classes-zune-nlist-class_CXXFLAGS := $(strip $(classes-zune-nlist-class_CXXFLAGS) $(SAFETY_CFLAGS))
+  classes-zune-nlist-class_DXXFLAGS := $(classes-zune-nlist-class_DXXFLAGS)
+  classes-zune-nlist-class_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  classes-zune-nlist-class_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  classes-zune-nlist-class_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  classes-zune-nlist-class_STRIP ?= $(ECHO) >/dev/null
+  classes-zune-nlist-class_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  classes-zune-nlist-class_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  classes-zune-nlist-class_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(classes-zune-nlist-class_MCXX_CPPFLAGS) $(classes-zune-nlist-class_MCXX_EXTRA_CPPFLAGS))
+  classes-zune-nlist-class_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(classes-zune-nlist-class_CXXFLAGS))
+  classes-zune-nlist-class_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(classes-zune-nlist-class_DXXFLAGS))
+  classes-zune-nlist-class_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  classes-zune-nlist-class_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(classes-zune-nlist-class_CXXCMD) $(classes-zune-nlist-class_CXXIQUOTE) $(dir $(2)) $(classes-zune-nlist-class_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-class_CXXIQUOTE) . $(classes-zune-nlist-class_CXXIQUOTE_END) $(strip $(classes-zune-nlist-class_CXXFLAGS) $(classes-zune-nlist-class_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(classes-zune-nlist-class_CXXCMD) $(classes-zune-nlist-class_CXXIQUOTE) $(dir $(2)) $(classes-zune-nlist-class_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-class_CXXIQUOTE) . $(classes-zune-nlist-class_CXXIQUOTE_END) $(strip $(classes-zune-nlist-class_CXXFLAGS) $(classes-zune-nlist-class_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(classes-zune-nlist-class_CXXCMD) $(classes-zune-nlist-class_CXXIQUOTE) $(dir $(2)) $(classes-zune-nlist-class_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-class_CXXIQUOTE) . $(classes-zune-nlist-class_CXXIQUOTE_END) $(strip $(classes-zune-nlist-class_CXXFLAGS) $(classes-zune-nlist-class_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(classes-zune-nlist-class_CXXCMD)" $(MKDEPEND) $(strip $(classes-zune-nlist-class_DXXFLAGS) $(classes-zune-nlist-class_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(OBJDIR),)
+  $(foreach classes-zune-nlist-class_CXXFILE,$(classes-zune-nlist-class_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(classes-zune-nlist-class_CXXFILE))),$(classes-zune-nlist-class_CXXFILE))))
+else
+  $(foreach classes-zune-nlist-class_CXXFILE,$(classes-zune-nlist-class_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(OBJDIR)/,$(notdir $(basename $(classes-zune-nlist-class_CXXFILE)))),$(classes-zune-nlist-class_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(classes-zune-nlist-class_OBJC_NARCHFILES),)
+
+ifeq (,)
+classes-zune-nlist-class_MOBJC_SRCWILDCARD := %
+else
+classes-zune-nlist-class_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+  classes-zune-nlist-class_MOBJC_TARGETS := $(addsuffix .o,$(classes-zune-nlist-class_OBJC_NARCHFILES))
+  classes-zune-nlist-class_MOBJC_DTARGETS := $(addsuffix .d,$(classes-zune-nlist-class_OBJC_NARCHFILES))
+  classes-zune-nlist-class_MOBJC_WILDCARD := %
+else
+  classes-zune-nlist-class_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(classes-zune-nlist-class_OBJC_NARCHFILES)))
+  classes-zune-nlist-class_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(classes-zune-nlist-class_OBJC_NARCHFILES)))
+  classes-zune-nlist-class_MOBJC_WILDCARD := $(OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : | $(addsuffix .m,$(classes-zune-nlist-class_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  classes-zune-nlist-class_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  classes-zune-nlist-class_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(classes-zune-nlist-class_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  classes-zune-nlist-class_MOBJC_DIRS := $(foreach dir, $(classes-zune-nlist-class_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(classes-zune-nlist-class_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(classes-zune-nlist-class_MOBJC_DIRS),)
+    classes-zune-nlist-class_MOBJC_DIRS := $(shell echo $(classes-zune-nlist-class_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(classes-zune-nlist-class_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  classes-zune-nlist-class_CC := $(TARGET_CC)
+else
+  classes-zune-nlist-class_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+classes-zune-nlist-class_MOBJC_CPPFLAGS := $(CPPFLAGS)
+classes-zune-nlist-class_OBJCFLAGS := $(classes-zune-nlist-class_CFLAGS)
+classes-zune-nlist-class_OBJCFLAGS := $(classes-zune-nlist-class_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+classes-zune-nlist-class_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(classes-zune-nlist-class_OBJCFLAGS)))
+ifeq ($(classes-zune-nlist-class_DFLAGS),)
+  classes-zune-nlist-class_OBJCDFLAGS := $(classes-zune-nlist-class_CFLAGS)
+else
+  classes-zune-nlist-class_OBJCDFLAGS := $(classes-zune-nlist-class_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  classes-zune-nlist-class_LINK ?= $(strip $(classes-zune-nlist-class_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  classes-zune-nlist-class_STRIP ?= $(TARGET_STRIP)
+  classes-zune-nlist-class_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : CMD:=$(strip $(classes-zune-nlist-class_CC) $(TARGET_SYSROOT))
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : classes-zune-nlist-class_MOBJC_CPPFLAGS:=$(strip $(classes-zune-nlist-class_MOBJC_CPPFLAGS) $(classes-zune-nlist-class_MOBJC_EXTRA_CPPFLAGS))
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : classes-zune-nlist-class_OBJCFLAGS:=$(strip $(classes-zune-nlist-class_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : classes-zune-nlist-class_OBJCDFLAGS:=$(classes-zune-nlist-class_OBJCDFLAGS)
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : classes-zune-nlist-class_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : classes-zune-nlist-class_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  classes-zune-nlist-class_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  classes-zune-nlist-class_STRIP ?= $(HOST_STRIP)
+  classes-zune-nlist-class_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : classes-zune-nlist-class_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(classes-zune-nlist-class_MOBJC_CPPFLAGS) $(classes-zune-nlist-class_MOBJC_EXTRA_CPPFLAGS))
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : classes-zune-nlist-class_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(classes-zune-nlist-class_OBJCFLAGS))
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : classes-zune-nlist-class_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(classes-zune-nlist-class_OBJCDFLAGS))
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : classes-zune-nlist-class_IQUOTE:=$(HOST_IQUOTE)
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : classes-zune-nlist-class_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  classes-zune-nlist-class_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  classes-zune-nlist-class_STRIP ?= $(ECHO) >/dev/null
+  classes-zune-nlist-class_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : classes-zune-nlist-class_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(classes-zune-nlist-class_MOBJC_CPPFLAGS) $(classes-zune-nlist-class_MOBJC_EXTRA_CPPFLAGS))
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : classes-zune-nlist-class_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(classes-zune-nlist-class_OBJCFLAGS))
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : classes-zune-nlist-class_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(classes-zune-nlist-class_OBJCDFLAGS))
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : classes-zune-nlist-class_IQUOTE:=$(KERNEL_IQUOTE)
+  $(classes-zune-nlist-class_MOBJC_TARGETS) $(classes-zune-nlist-class_MOBJC_DTARGETS) : classes-zune-nlist-class_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(classes-zune-nlist-class_MOBJC_TARGETS) : CPPFLAGS := $(classes-zune-nlist-class_MOBJC_CPPFLAGS)
+$(classes-zune-nlist-class_MOBJC_TARGETS) : CFLAGS := $(classes-zune-nlist-class_OBJCFLAGS)
+$(classes-zune-nlist-class_MOBJC_TARGETS) : $(classes-zune-nlist-class_MOBJC_WILDCARD).o : $(classes-zune-nlist-class_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(classes-zune-nlist-class_IQUOTE) $(dir $<) $(classes-zune-nlist-class_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-class_IQUOTE) . $(classes-zune-nlist-class_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(classes-zune-nlist-class_IQUOTE) $(dir $<) $(classes-zune-nlist-class_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-class_IQUOTE) . $(classes-zune-nlist-class_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(classes-zune-nlist-class_IQUOTE) $(dir $<) $(classes-zune-nlist-class_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-class_IQUOTE) . $(classes-zune-nlist-class_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(classes-zune-nlist-class_MOBJC_DTARGETS) : $(classes-zune-nlist-class_MOBJC_WILDCARD).d : $(classes-zune-nlist-class_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(classes-zune-nlist-class_OBJCDFLAGS) $(classes-zune-nlist-class_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+classes-zune-nlist-class_MC_SRCWILDCARD := %
+else
+classes-zune-nlist-class_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+classes-zune-nlist-class_MC_TARGETS := $(addsuffix .o,$(classes-zune-nlist-class_C_NARCHFILES))
+classes-zune-nlist-class_MC_DTARGETS := $(addsuffix .d,$(classes-zune-nlist-class_C_NARCHFILES))
+classes-zune-nlist-class_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    classes-zune-nlist-class_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(notdir $(classes-zune-nlist-class_C_NARCHFILES))))
+    classes-zune-nlist-class_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(notdir $(classes-zune-nlist-class_C_NARCHFILES))))
+else
+ifeq (,)
+    classes-zune-nlist-class_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(classes-zune-nlist-class_C_NARCHFILES)))
+    classes-zune-nlist-class_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(classes-zune-nlist-class_C_NARCHFILES)))
+else
+    classes-zune-nlist-class_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(patsubst /%,%,$(classes-zune-nlist-class_C_NARCHFILES))))
+    classes-zune-nlist-class_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(patsubst /%,%,$(classes-zune-nlist-class_C_NARCHFILES))))
+endif
+endif
+classes-zune-nlist-class_MC_TGTWILDCARD := $(OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : | $(addsuffix .c,$(classes-zune-nlist-class_C_NARCHFILES))
+
+# Be sure that all .c files are found
+classes-zune-nlist-class_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+classes-zune-nlist-class_MC_BASEDIRS := $(shell echo $(sort $(dir $(classes-zune-nlist-class_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+classes-zune-nlist-class_MC_DIRS := $(foreach dir, $(classes-zune-nlist-class_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(classes-zune-nlist-class_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(classes-zune-nlist-class_MC_DIRS),)
+    classes-zune-nlist-class_MC_DIRS := $(shell echo $(classes-zune-nlist-class_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(classes-zune-nlist-class_MC_DIRS)
+endif
+
+endif
+
+classes-zune-nlist-class_MC_CPPFLAGS := $(CPPFLAGS)
+classes-zune-nlist-class_CFLAGS := $(classes-zune-nlist-class_CFLAGS)
+ifeq ($(classes-zune-nlist-class_DFLAGS),)
+  classes-zune-nlist-class_DFLAGS := $(classes-zune-nlist-class_CFLAGS)
+else
+  classes-zune-nlist-class_DFLAGS := $(classes-zune-nlist-class_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+classes-zune-nlist-class_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+classes-zune-nlist-class_STRIP ?= $(TARGET_STRIP)
+classes-zune-nlist-class_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : classes-zune-nlist-class_MC_CPPFLAGS:=$(strip $(classes-zune-nlist-class_MC_CPPFLAGS) $(classes-zune-nlist-class_MC_EXTRA_CPPFLAGS))
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : classes-zune-nlist-class_CFLAGS:=$(strip $(classes-zune-nlist-class_CFLAGS) $(SAFETY_CFLAGS))
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : classes-zune-nlist-class_DFLAGS:=$(classes-zune-nlist-class_DFLAGS)
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : classes-zune-nlist-class_IQUOTE:=$(CFLAGS_IQUOTE)
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : classes-zune-nlist-class_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+classes-zune-nlist-class_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+classes-zune-nlist-class_STRIP ?= $(HOST_STRIP)
+classes-zune-nlist-class_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : classes-zune-nlist-class_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(classes-zune-nlist-class_MC_CPPFLAGS) $(classes-zune-nlist-class_MC_EXTRA_CPPFLAGS))
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : classes-zune-nlist-class_CFLAGS:=$(strip $(HOST_CFLAGS) $(classes-zune-nlist-class_CFLAGS))
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : classes-zune-nlist-class_DFLAGS:=$(strip $(HOST_CFLAGS) $(classes-zune-nlist-class_DFLAGS))
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : classes-zune-nlist-class_IQUOTE:=$(HOST_IQUOTE)
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : classes-zune-nlist-class_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+classes-zune-nlist-class_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+classes-zune-nlist-class_STRIP ?= $(ECHO) >/dev/null
+classes-zune-nlist-class_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : classes-zune-nlist-class_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(classes-zune-nlist-class_MC_CPPFLAGS) $(classes-zune-nlist-class_MC_EXTRA_CPPFLAGS))
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : classes-zune-nlist-class_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(classes-zune-nlist-class_CFLAGS))
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : classes-zune-nlist-class_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(classes-zune-nlist-class_DFLAGS))
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : classes-zune-nlist-class_IQUOTE:=$(KERNEL_IQUOTE)
+$(classes-zune-nlist-class_MC_TARGETS) $(classes-zune-nlist-class_MC_DTARGETS) : classes-zune-nlist-class_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(classes-zune-nlist-class_MC_TARGETS) : CPPFLAGS := $(classes-zune-nlist-class_MC_CPPFLAGS)
+$(classes-zune-nlist-class_MC_TARGETS) : CFLAGS := $(classes-zune-nlist-class_CFLAGS)
+$(classes-zune-nlist-class_MC_TARGETS) : $(classes-zune-nlist-class_MC_TGTWILDCARD).o : $(classes-zune-nlist-class_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(classes-zune-nlist-class_IQUOTE) $(dir $<) $(classes-zune-nlist-class_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-class_IQUOTE) . $(classes-zune-nlist-class_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(classes-zune-nlist-class_IQUOTE) $(dir $<) $(classes-zune-nlist-class_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-class_IQUOTE) . $(classes-zune-nlist-class_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(classes-zune-nlist-class_IQUOTE) $(dir $<) $(classes-zune-nlist-class_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-class_IQUOTE) . $(classes-zune-nlist-class_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(classes-zune-nlist-class_MC_DTARGETS) : $(classes-zune-nlist-class_MC_TGTWILDCARD).d : $(classes-zune-nlist-class_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(classes-zune-nlist-class_DFLAGS) $(classes-zune-nlist-class_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+# Handlers use dash instead of dot in their names
+ifeq (mcc,handler)
+classes-zune-nlist-class_MODULE := $(classes-zune-nlist-class_MODDIR)/NList-mcc
+else
+ifeq (mcc,printer)
+classes-zune-nlist-class_MODULE := $(classes-zune-nlist-class_MODDIR)/NList
+else
+classes-zune-nlist-class_MODULE := $(classes-zune-nlist-class_MODDIR)/NList.mcc
+endif
+endif
+classes-zune-nlist-class_KOBJ   := $(KOBJSDIR)/NList_mcc.o
+
+classes-zune-nlist-class-quick : classes-zune-nlist-class
+classes-zune-nlist-class-kobj-quick : $(classes-zune-nlist-class_KOBJ)
+classes-zune-nlist-class       : $(classes-zune-nlist-class_MODULE)
+classes-zune-nlist-class-kobj  : $(classes-zune-nlist-class_KOBJ)
+
+# The module is linked from all the compiled .o files
+classes-zune-nlist-class_OBJS       := $(classes-zune-nlist-class_ARCHOBJS) $(addprefix $(OBJDIR)/, $(addsuffix .o,$(notdir $(classes-zune-nlist-class_C_NARCHFILES))))
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (NList,con)
+    classes-zune-nlist-class_ERR := $(notdir $(classes-zune-nlist-class_MODULE)).err
+else
+    classes-zune-nlist-class_ERR := NList.err
+endif
+
+
+TMP_LDFLAGS  := $(strip $(LDFLAGS) $(NList_LDFLAGS))
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(NList_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(classes-zune-nlist-class_MODULE) : LIB_NAMES := $(NList_LIBS)
+$(classes-zune-nlist-class_MODULE) : OBJS := $(classes-zune-nlist-class_OBJS)
+$(classes-zune-nlist-class_MODULE) : ENDTAG := 
+$(classes-zune-nlist-class_MODULE) : ERR := $(classes-zune-nlist-class_ERR)
+$(classes-zune-nlist-class_MODULE) : OBJDIR := $(OBJDIR)
+$(classes-zune-nlist-class_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(classes-zune-nlist-class_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(classes-zune-nlist-class_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(classes-zune-nlist-class_MODULE) : $(classes-zune-nlist-class_OBJS)  $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(strip $(AROS_CC) $(TARGET_SYSROOT)) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(strip $(AROS_CC) $(TARGET_SYSROOT)) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+
+# Link kernel object file
+classes-zune-nlist-class_KAUTOLIB := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+classes-zune-nlist-class_KBASE := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+    UtilityBase ExpansionBase KeymapBase KernelBase
+
+classes-zune-nlist-class_SYMBOLS := $(classes-zune-nlist-class_KBASE)
+
+classes-zune-nlist-class_KLIB := hiddstubs amiga arossupport autoinit libinit
+classes-zune-nlist-class_KOBJ_LIBS := $(filter-out $(classes-zune-nlist-class_KLIB),) $(classes-zune-nlist-class_KAUTOLIB)
+$(classes-zune-nlist-class_KOBJ) : LINKLIBS:=$(classes-zune-nlist-class_KOBJ_LIBS)
+$(classes-zune-nlist-class_KOBJ) : FILTBASES:=$(addprefix -L ,$(classes-zune-nlist-class_SYMBOLS))
+$(classes-zune-nlist-class_KOBJ) : USER_LDFLAGS := $(USER_LDFLAGS)
+$(classes-zune-nlist-class_KOBJ) : $(classes-zune-nlist-class_OBJS) $(classes-zune-nlist-class_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+
+
+## Dependency fine-tuning
+##
+classes-zune-nlist-class_DEPS       := $(addprefix $(OBJDIR)/, $(addsuffix .d,library $(FILES)))
+ifneq ($(classes-zune-nlist-class_DEPS),)
+  ifneq (classes-zune-nlist-class classes-zune-nlist-class-quick classes-zune-nlist-class-kobj,)
+    ifneq ($(findstring $(TARGET),classes-zune-nlist-class classes-zune-nlist-class-quick classes-zune-nlist-class-kobj),)
+      -include $(classes-zune-nlist-class_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(classes-zune-nlist-class_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(classes-zune-nlist-class_OBJS) $(classes-zune-nlist-class_DEPS) $(classes-zune-nlist-class_MODULE) $(classes-zune-nlist-class_KOBJ),)
+$(classes-zune-nlist-class_OBJS) $(classes-zune-nlist-class_DEPS) $(classes-zune-nlist-class_MODULE) $(classes-zune-nlist-class_KOBJ) : | $(OBJDIR) $(classes-zune-nlist-class_MODDIR) $(KOBJSDIR)
+else
+$(classes-zune-nlist-class_OBJS) $(classes-zune-nlist-class_DEPS) $(classes-zune-nlist-class_MODULE) $(classes-zune-nlist-class_KOBJ) :: $(OBJDIR) $(classes-zune-nlist-class_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(OBJDIR) $(classes-zune-nlist-class_MODDIR) $(KOBJSDIR)
+
+
+classes-zune-nlist-class-clean : FILES := $(classes-zune-nlist-class_OBJS) $(classes-zune-nlist-class_MODULE) $(classes-zune-nlist-class_KOBJ) $(classes-zune-nlist-class_DEPS)
+classes-zune-nlist-class-clean ::
+	$(Q)$(ECHO) "Cleaning up for module NList"
+	$(Q)$(RM) $(FILES)
+
+
+
+
+.PHONY : classes-zune-nlist-test
+
+classes-zune-nlist-test_PROGNAME  := NList-Test
+classes-zune-nlist-test_OBJDIR    := $(GENDIR)/$(CURDIR)
+classes-zune-nlist-test_TARGETDIR := $(AROS_TESTS)/NList
+classes-zune-nlist-test_LINKER    := 
+classes-zune-nlist-test_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(classes-zune-nlist-test_LINKER),)
+    classes-zune-nlist-test_LINKER := target
+endif
+
+ifneq ("$(strip NList-Test $(FILES)   )","")
+    classes-zune-nlist-test_FILES     := NList-Test $(FILES)
+    classes-zune-nlist-test_OBJCFILES := 
+    classes-zune-nlist-test_ASMFILES  := 
+    classes-zune-nlist-test_CXXFILES := 
+else
+    classes-zune-nlist-test_FILES     := $(classes-zune-nlist-test_PROGNAME)
+    classes-zune-nlist-test_OBJCFILES :=
+    classes-zune-nlist-test_ASMFILES  :=
+    classes-zune-nlist-test_CXXFILES :=
+endif
+
+classes-zune-nlist-test_ARCHOBJS   := $(wildcard $(classes-zune-nlist-test_OBJDIR)/arch/*.o)
+classes-zune-nlist-test_ARCHFILES  := $(basename $(notdir $(classes-zune-nlist-test_ARCHOBJS)))
+classes-zune-nlist-test_C_NARCHFILES := $(filter-out $(classes-zune-nlist-test_ARCHFILES),$(classes-zune-nlist-test_FILES))
+classes-zune-nlist-test_CXX_NARCHFILES := $(filter-out $(classes-zune-nlist-test_ARCHFILES),$(classes-zune-nlist-test_CXXFILES))
+classes-zune-nlist-test_OBJC_NARCHFILES := $(filter-out $(classes-zune-nlist-test_ARCHFILES),$(classes-zune-nlist-test_OBJCFILES))
+
+TMP_FILES := $(classes-zune-nlist-test_C_NARCHFILES) $(classes-zune-nlist-test_CXX_NARCHFILES) $(classes-zune-nlist-test_ASMFILES) $(classes-zune-nlist-test_OBJC_NARCHFILES)
+classes-zune-nlist-test_OBJS := $(addsuffix .o,$(addprefix $(classes-zune-nlist-test_OBJDIR)/,$(notdir $(TMP_FILES))))
+classes-zune-nlist-test_DEPS := $(addsuffix .d,$(addprefix $(classes-zune-nlist-test_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+classes-zune-nlist-test_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+classes-zune-nlist-test_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+classes-zune-nlist-test_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+classes-zune-nlist-test_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+classes-zune-nlist-test_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+classes-zune-nlist-test_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+classes-zune-nlist-test_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+classes-zune-nlist-test_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+classes-zune-nlist-test_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+classes-zune-nlist-test_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+classes-zune-nlist-test_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+classes-zune-nlist-test_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+classes-zune-nlist-test_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+classes-zune-nlist-test_LDFLAGS          := 
+endif
+
+classes-zune-nlist-test_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+classes-zune-nlist-test_COVERAGE := yes
+classes-zune-nlist-test_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+classes-zune-nlist-test_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+classes-zune-nlist-test_CFLAGS    := $(strip $(classes-zune-nlist-test_COVERAGEFLAGS) $(classes-zune-nlist-test_CFLAGS))
+classes-zune-nlist-test_CXXFLAGS := $(strip $(classes-zune-nlist-test_COVERAGEFLAGS) $(classes-zune-nlist-test_CXXFLAGS))
+classes-zune-nlist-test_LIBS += $(classes-zune-nlist-test_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+classes-zune-nlist-test_FUNCINSTR := yes
+classes-zune-nlist-test_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+classes-zune-nlist-test_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+classes-zune-nlist-test_CFLAGS    := $(strip $(classes-zune-nlist-test_INSTRFUNCFLAGS) $(classes-zune-nlist-test_CFLAGS))
+classes-zune-nlist-test_CXXFLAGS := $(strip $(classes-zune-nlist-test_INSTRFUNCFLAGS) $(classes-zune-nlist-test_CXXFLAGS))
+classes-zune-nlist-test_LIBS += $(classes-zune-nlist-test_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+classes-zune-nlist-test_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(classes-zune-nlist-test_CFLAGS))
+classes-zune-nlist-test_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(classes-zune-nlist-test_CXXFLAGS))
+endif
+endif
+classes-zune-nlist-test_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    classes-zune-nlist-test_DFLAGS     := 
+else
+    classes-zune-nlist-test_DFLAGS     := $(classes-zune-nlist-test_CFLAGS)
+endif
+ifneq (,)
+    classes-zune-nlist-test_DXXFLAGS     := 
+else
+    classes-zune-nlist-test_DXXFLAGS     := $(classes-zune-nlist-test_CXXFLAGS)
+endif
+ifeq (target,target)
+classes-zune-nlist-test_LDFLAGS           := $(classes-zune-nlist-test_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+classes-zune-nlist-test_LDFLAGS           := $(classes-zune-nlist-test_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+classes-zune-nlist-test_LDFLAGS           := $(classes-zune-nlist-test_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+classes-zune-nlist-test_LDFLAGS   += -L
+endif
+
+#MM
+classes-zune-nlist-test-quick : classes-zune-nlist-test
+
+#MM classes-zune-nlist-test : includes-generate-deps core-linklibs
+classes-zune-nlist-test : $(classes-zune-nlist-test_TARGETDIR)/$(classes-zune-nlist-test_PROGNAME)
+
+ifneq ($(filter $(TARGET),classes-zune-nlist-test classes-zune-nlist-test-quick classes-zune-nlist-test-gz-quick),)
+
+classes-zune-nlist-test_CXXABSBASENAMES := $(foreach classes-zune-nlist-test_CXXBASE,$(classes-zune-nlist-test_CXX_NARCHFILES),$(if $(filter /%,$(classes-zune-nlist-test_CXXBASE)),$(classes-zune-nlist-test_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(classes-zune-nlist-test_CXXBASE))))
+
+ifneq ($(classes-zune-nlist-test_CXXABSBASENAMES),)
+
+classes-zune-nlist-test_CXXBASENAMES := $(basename $(classes-zune-nlist-test_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+classes-zune-nlist-test_MCXX_FILES  := $(strip $(foreach classes-zune-nlist-test_CXXBASE,$(classes-zune-nlist-test_CXXABSBASENAMES), $(firstword $(wildcard $(foreach classes-zune-nlist-test_EXT, $(AROS_CXXEXTS),$(addsuffix .$(classes-zune-nlist-test_EXT),$(classes-zune-nlist-test_CXXBASE)))))))
+
+ifeq (,)
+classes-zune-nlist-test_MCXX_SRCWILDCARD := %
+else
+classes-zune-nlist-test_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(classes-zune-nlist-test_OBJDIR),)
+  classes-zune-nlist-test_CXXTARGETS := $(notdir $(classes-zune-nlist-test_CXXBASENAMES:=.o))
+  classes-zune-nlist-test_CXXDTARGETS := $(notdir $(classes-zune-nlist-test_CXXBASENAMES:=.d))
+  classes-zune-nlist-test_MCXX_WILDCARD := %
+else
+  classes-zune-nlist-test_CXXTARGETS := $(addprefix $(classes-zune-nlist-test_OBJDIR)/,$(notdir $(classes-zune-nlist-test_CXXBASENAMES:=.o)))
+  classes-zune-nlist-test_CXXDTARGETS := $(addprefix $(classes-zune-nlist-test_OBJDIR)/,$(notdir $(classes-zune-nlist-test_CXXBASENAMES:=.d)))
+  classes-zune-nlist-test_MCXX_WILDCARD := $(classes-zune-nlist-test_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(classes-zune-nlist-test_CXXTARGETS) $(classes-zune-nlist-test_CXXDTARGETS) : | $(classes-zune-nlist-test_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+classes-zune-nlist-test_MCXX_CPPFLAGS := $(classes-zune-nlist-test_CPPFLAGS)
+classes-zune-nlist-test_CXXFLAGS := $(classes-zune-nlist-test_CXXFLAGS)
+ifeq ($(classes-zune-nlist-test_DXXFLAGS),)
+  classes-zune-nlist-test_DXXFLAGS := $(classes-zune-nlist-test_CXXFLAGS)
+else
+  classes-zune-nlist-test_DXXFLAGS := $(classes-zune-nlist-test_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  classes-zune-nlist-test_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  classes-zune-nlist-test_STRIP ?= $(HOST_STRIP)
+  classes-zune-nlist-test_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  classes-zune-nlist-test_CXXCMD:=$(HOST_CXX)
+  classes-zune-nlist-test_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(classes-zune-nlist-test_MCXX_CPPFLAGS) $(classes-zune-nlist-test_MCXX_EXTRA_CPPFLAGS))
+  classes-zune-nlist-test_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(classes-zune-nlist-test_CXXFLAGS))
+  classes-zune-nlist-test_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(classes-zune-nlist-test_DXXFLAGS))
+  classes-zune-nlist-test_CXXIQUOTE:=$(HOST_IQUOTE)
+  classes-zune-nlist-test_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  classes-zune-nlist-test_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  classes-zune-nlist-test_STRIP ?= $(TARGET_STRIP)
+  classes-zune-nlist-test_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  classes-zune-nlist-test_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  classes-zune-nlist-test_MCXX_CPPFLAGS := $(strip $(classes-zune-nlist-test_MCXX_CPPFLAGS) $(classes-zune-nlist-test_MCXX_EXTRA_CPPFLAGS))
+  classes-zune-nlist-test_CXXFLAGS := $(strip $(classes-zune-nlist-test_CXXFLAGS) $(SAFETY_CFLAGS))
+  classes-zune-nlist-test_DXXFLAGS := $(classes-zune-nlist-test_DXXFLAGS)
+  classes-zune-nlist-test_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  classes-zune-nlist-test_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  classes-zune-nlist-test_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  classes-zune-nlist-test_STRIP ?= $(ECHO) >/dev/null
+  classes-zune-nlist-test_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  classes-zune-nlist-test_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  classes-zune-nlist-test_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(classes-zune-nlist-test_MCXX_CPPFLAGS) $(classes-zune-nlist-test_MCXX_EXTRA_CPPFLAGS))
+  classes-zune-nlist-test_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(classes-zune-nlist-test_CXXFLAGS))
+  classes-zune-nlist-test_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(classes-zune-nlist-test_DXXFLAGS))
+  classes-zune-nlist-test_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  classes-zune-nlist-test_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(classes-zune-nlist-test_CXXCMD) $(classes-zune-nlist-test_CXXIQUOTE) $(dir $(2)) $(classes-zune-nlist-test_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-test_CXXIQUOTE) . $(classes-zune-nlist-test_CXXIQUOTE_END) $(strip $(classes-zune-nlist-test_CXXFLAGS) $(classes-zune-nlist-test_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(classes-zune-nlist-test_CXXCMD) $(classes-zune-nlist-test_CXXIQUOTE) $(dir $(2)) $(classes-zune-nlist-test_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-test_CXXIQUOTE) . $(classes-zune-nlist-test_CXXIQUOTE_END) $(strip $(classes-zune-nlist-test_CXXFLAGS) $(classes-zune-nlist-test_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(classes-zune-nlist-test_CXXCMD) $(classes-zune-nlist-test_CXXIQUOTE) $(dir $(2)) $(classes-zune-nlist-test_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-test_CXXIQUOTE) . $(classes-zune-nlist-test_CXXIQUOTE_END) $(strip $(classes-zune-nlist-test_CXXFLAGS) $(classes-zune-nlist-test_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(classes-zune-nlist-test_CXXCMD)" $(MKDEPEND) $(strip $(classes-zune-nlist-test_DXXFLAGS) $(classes-zune-nlist-test_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(classes-zune-nlist-test_OBJDIR),)
+  $(foreach classes-zune-nlist-test_CXXFILE,$(classes-zune-nlist-test_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(classes-zune-nlist-test_CXXFILE))),$(classes-zune-nlist-test_CXXFILE))))
+else
+  $(foreach classes-zune-nlist-test_CXXFILE,$(classes-zune-nlist-test_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(classes-zune-nlist-test_OBJDIR)/,$(notdir $(basename $(classes-zune-nlist-test_CXXFILE)))),$(classes-zune-nlist-test_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(classes-zune-nlist-test_OBJC_NARCHFILES),)
+
+ifeq (,)
+classes-zune-nlist-test_MOBJC_SRCWILDCARD := %
+else
+classes-zune-nlist-test_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(classes-zune-nlist-test_OBJDIR),)
+  classes-zune-nlist-test_MOBJC_TARGETS := $(addsuffix .o,$(classes-zune-nlist-test_OBJC_NARCHFILES))
+  classes-zune-nlist-test_MOBJC_DTARGETS := $(addsuffix .d,$(classes-zune-nlist-test_OBJC_NARCHFILES))
+  classes-zune-nlist-test_MOBJC_WILDCARD := %
+else
+  classes-zune-nlist-test_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(classes-zune-nlist-test_OBJDIR)/,$(classes-zune-nlist-test_OBJC_NARCHFILES)))
+  classes-zune-nlist-test_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(classes-zune-nlist-test_OBJDIR)/,$(classes-zune-nlist-test_OBJC_NARCHFILES)))
+  classes-zune-nlist-test_MOBJC_WILDCARD := $(classes-zune-nlist-test_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : | $(addsuffix .m,$(classes-zune-nlist-test_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  classes-zune-nlist-test_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  classes-zune-nlist-test_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(classes-zune-nlist-test_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  classes-zune-nlist-test_MOBJC_DIRS := $(foreach dir, $(classes-zune-nlist-test_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(classes-zune-nlist-test_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(classes-zune-nlist-test_MOBJC_DIRS),)
+    classes-zune-nlist-test_MOBJC_DIRS := $(shell echo $(classes-zune-nlist-test_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(classes-zune-nlist-test_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  classes-zune-nlist-test_CC := $(TARGET_CC)
+else
+  classes-zune-nlist-test_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+classes-zune-nlist-test_MOBJC_CPPFLAGS := $(classes-zune-nlist-test_CPPFLAGS)
+classes-zune-nlist-test_OBJCFLAGS := $(classes-zune-nlist-test_CFLAGS)
+classes-zune-nlist-test_OBJCFLAGS := $(classes-zune-nlist-test_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+classes-zune-nlist-test_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(classes-zune-nlist-test_OBJCFLAGS)))
+ifeq ($(classes-zune-nlist-test_DFLAGS),)
+  classes-zune-nlist-test_OBJCDFLAGS := $(classes-zune-nlist-test_CFLAGS)
+else
+  classes-zune-nlist-test_OBJCDFLAGS := $(classes-zune-nlist-test_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  classes-zune-nlist-test_LINK ?= $(strip $(classes-zune-nlist-test_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  classes-zune-nlist-test_STRIP ?= $(TARGET_STRIP)
+  classes-zune-nlist-test_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : CMD:=$(strip $(classes-zune-nlist-test_CC) $(TARGET_SYSROOT))
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : classes-zune-nlist-test_MOBJC_CPPFLAGS:=$(strip $(classes-zune-nlist-test_MOBJC_CPPFLAGS) $(classes-zune-nlist-test_MOBJC_EXTRA_CPPFLAGS))
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : classes-zune-nlist-test_OBJCFLAGS:=$(strip $(classes-zune-nlist-test_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : classes-zune-nlist-test_OBJCDFLAGS:=$(classes-zune-nlist-test_OBJCDFLAGS)
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : classes-zune-nlist-test_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : classes-zune-nlist-test_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  classes-zune-nlist-test_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  classes-zune-nlist-test_STRIP ?= $(HOST_STRIP)
+  classes-zune-nlist-test_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : classes-zune-nlist-test_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(classes-zune-nlist-test_MOBJC_CPPFLAGS) $(classes-zune-nlist-test_MOBJC_EXTRA_CPPFLAGS))
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : classes-zune-nlist-test_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(classes-zune-nlist-test_OBJCFLAGS))
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : classes-zune-nlist-test_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(classes-zune-nlist-test_OBJCDFLAGS))
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : classes-zune-nlist-test_IQUOTE:=$(HOST_IQUOTE)
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : classes-zune-nlist-test_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  classes-zune-nlist-test_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  classes-zune-nlist-test_STRIP ?= $(ECHO) >/dev/null
+  classes-zune-nlist-test_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : classes-zune-nlist-test_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(classes-zune-nlist-test_MOBJC_CPPFLAGS) $(classes-zune-nlist-test_MOBJC_EXTRA_CPPFLAGS))
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : classes-zune-nlist-test_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(classes-zune-nlist-test_OBJCFLAGS))
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : classes-zune-nlist-test_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(classes-zune-nlist-test_OBJCDFLAGS))
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : classes-zune-nlist-test_IQUOTE:=$(KERNEL_IQUOTE)
+  $(classes-zune-nlist-test_MOBJC_TARGETS) $(classes-zune-nlist-test_MOBJC_DTARGETS) : classes-zune-nlist-test_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(classes-zune-nlist-test_MOBJC_TARGETS) : CPPFLAGS := $(classes-zune-nlist-test_MOBJC_CPPFLAGS)
+$(classes-zune-nlist-test_MOBJC_TARGETS) : CFLAGS := $(classes-zune-nlist-test_OBJCFLAGS)
+$(classes-zune-nlist-test_MOBJC_TARGETS) : $(classes-zune-nlist-test_MOBJC_WILDCARD).o : $(classes-zune-nlist-test_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(classes-zune-nlist-test_IQUOTE) $(dir $<) $(classes-zune-nlist-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-test_IQUOTE) . $(classes-zune-nlist-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(classes-zune-nlist-test_IQUOTE) $(dir $<) $(classes-zune-nlist-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-test_IQUOTE) . $(classes-zune-nlist-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(classes-zune-nlist-test_IQUOTE) $(dir $<) $(classes-zune-nlist-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-test_IQUOTE) . $(classes-zune-nlist-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(classes-zune-nlist-test_MOBJC_DTARGETS) : $(classes-zune-nlist-test_MOBJC_WILDCARD).d : $(classes-zune-nlist-test_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(classes-zune-nlist-test_OBJCDFLAGS) $(classes-zune-nlist-test_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+classes-zune-nlist-test_MC_SRCWILDCARD := %
+else
+classes-zune-nlist-test_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(classes-zune-nlist-test_OBJDIR),)
+classes-zune-nlist-test_MC_TARGETS := $(addsuffix .o,$(classes-zune-nlist-test_C_NARCHFILES))
+classes-zune-nlist-test_MC_DTARGETS := $(addsuffix .d,$(classes-zune-nlist-test_C_NARCHFILES))
+classes-zune-nlist-test_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    classes-zune-nlist-test_MC_TARGETS := $(addsuffix .o,$(addprefix $(classes-zune-nlist-test_OBJDIR)/,$(notdir $(classes-zune-nlist-test_C_NARCHFILES))))
+    classes-zune-nlist-test_MC_DTARGETS := $(addsuffix .d,$(addprefix $(classes-zune-nlist-test_OBJDIR)/,$(notdir $(classes-zune-nlist-test_C_NARCHFILES))))
+else
+ifeq (,)
+    classes-zune-nlist-test_MC_TARGETS := $(addsuffix .o,$(addprefix $(classes-zune-nlist-test_OBJDIR)/,$(classes-zune-nlist-test_C_NARCHFILES)))
+    classes-zune-nlist-test_MC_DTARGETS := $(addsuffix .d,$(addprefix $(classes-zune-nlist-test_OBJDIR)/,$(classes-zune-nlist-test_C_NARCHFILES)))
+else
+    classes-zune-nlist-test_MC_TARGETS := $(addsuffix .o,$(addprefix $(classes-zune-nlist-test_OBJDIR)/,$(patsubst /%,%,$(classes-zune-nlist-test_C_NARCHFILES))))
+    classes-zune-nlist-test_MC_DTARGETS := $(addsuffix .d,$(addprefix $(classes-zune-nlist-test_OBJDIR)/,$(patsubst /%,%,$(classes-zune-nlist-test_C_NARCHFILES))))
+endif
+endif
+classes-zune-nlist-test_MC_TGTWILDCARD := $(classes-zune-nlist-test_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : | $(addsuffix .c,$(classes-zune-nlist-test_C_NARCHFILES))
+
+# Be sure that all .c files are found
+classes-zune-nlist-test_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+classes-zune-nlist-test_MC_BASEDIRS := $(shell echo $(sort $(dir $(classes-zune-nlist-test_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+classes-zune-nlist-test_MC_DIRS := $(foreach dir, $(classes-zune-nlist-test_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(classes-zune-nlist-test_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(classes-zune-nlist-test_MC_DIRS),)
+    classes-zune-nlist-test_MC_DIRS := $(shell echo $(classes-zune-nlist-test_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(classes-zune-nlist-test_MC_DIRS)
+endif
+
+endif
+
+classes-zune-nlist-test_MC_CPPFLAGS := $(classes-zune-nlist-test_CPPFLAGS)
+classes-zune-nlist-test_CFLAGS := $(classes-zune-nlist-test_CFLAGS)
+ifeq ($(classes-zune-nlist-test_DFLAGS),)
+  classes-zune-nlist-test_DFLAGS := $(classes-zune-nlist-test_CFLAGS)
+else
+  classes-zune-nlist-test_DFLAGS := $(classes-zune-nlist-test_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+classes-zune-nlist-test_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+classes-zune-nlist-test_STRIP ?= $(TARGET_STRIP)
+classes-zune-nlist-test_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : classes-zune-nlist-test_MC_CPPFLAGS:=$(strip $(classes-zune-nlist-test_MC_CPPFLAGS) $(classes-zune-nlist-test_MC_EXTRA_CPPFLAGS))
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : classes-zune-nlist-test_CFLAGS:=$(strip $(classes-zune-nlist-test_CFLAGS) $(SAFETY_CFLAGS))
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : classes-zune-nlist-test_DFLAGS:=$(classes-zune-nlist-test_DFLAGS)
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : classes-zune-nlist-test_IQUOTE:=$(CFLAGS_IQUOTE)
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : classes-zune-nlist-test_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+classes-zune-nlist-test_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+classes-zune-nlist-test_STRIP ?= $(HOST_STRIP)
+classes-zune-nlist-test_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : classes-zune-nlist-test_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(classes-zune-nlist-test_MC_CPPFLAGS) $(classes-zune-nlist-test_MC_EXTRA_CPPFLAGS))
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : classes-zune-nlist-test_CFLAGS:=$(strip $(HOST_CFLAGS) $(classes-zune-nlist-test_CFLAGS))
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : classes-zune-nlist-test_DFLAGS:=$(strip $(HOST_CFLAGS) $(classes-zune-nlist-test_DFLAGS))
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : classes-zune-nlist-test_IQUOTE:=$(HOST_IQUOTE)
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : classes-zune-nlist-test_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+classes-zune-nlist-test_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+classes-zune-nlist-test_STRIP ?= $(ECHO) >/dev/null
+classes-zune-nlist-test_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : classes-zune-nlist-test_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(classes-zune-nlist-test_MC_CPPFLAGS) $(classes-zune-nlist-test_MC_EXTRA_CPPFLAGS))
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : classes-zune-nlist-test_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(classes-zune-nlist-test_CFLAGS))
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : classes-zune-nlist-test_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(classes-zune-nlist-test_DFLAGS))
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : classes-zune-nlist-test_IQUOTE:=$(KERNEL_IQUOTE)
+$(classes-zune-nlist-test_MC_TARGETS) $(classes-zune-nlist-test_MC_DTARGETS) : classes-zune-nlist-test_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(classes-zune-nlist-test_MC_TARGETS) : CPPFLAGS := $(classes-zune-nlist-test_MC_CPPFLAGS)
+$(classes-zune-nlist-test_MC_TARGETS) : CFLAGS := $(classes-zune-nlist-test_CFLAGS)
+$(classes-zune-nlist-test_MC_TARGETS) : $(classes-zune-nlist-test_MC_TGTWILDCARD).o : $(classes-zune-nlist-test_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(classes-zune-nlist-test_IQUOTE) $(dir $<) $(classes-zune-nlist-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-test_IQUOTE) . $(classes-zune-nlist-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(classes-zune-nlist-test_IQUOTE) $(dir $<) $(classes-zune-nlist-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-test_IQUOTE) . $(classes-zune-nlist-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(classes-zune-nlist-test_IQUOTE) $(dir $<) $(classes-zune-nlist-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(classes-zune-nlist-test_IQUOTE) . $(classes-zune-nlist-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(classes-zune-nlist-test_MC_DTARGETS) : $(classes-zune-nlist-test_MC_TGTWILDCARD).d : $(classes-zune-nlist-test_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(classes-zune-nlist-test_DFLAGS) $(classes-zune-nlist-test_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(classes-zune-nlist-test_OBJDIR),)
+classes-zune-nlist-test-MA_TARGETS := $(addsuffix .o,$(classes-zune-nlist-test_ASMFILES))
+classes-zune-nlist-test-MA_WILDCARD := %
+else
+classes-zune-nlist-test-MA_TARGETS := $(addsuffix .o,$(addprefix $(classes-zune-nlist-test_OBJDIR)/,$(notdir $(classes-zune-nlist-test_ASMFILES))))
+classes-zune-nlist-test-MA_WILDCARD := $(classes-zune-nlist-test_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(classes-zune-nlist-test-MA_TARGETS) : | $(addsuffix .s,$(classes-zune-nlist-test_ASMFILES))
+
+# Be sure that all .c files are found
+classes-zune-nlist-test-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+classes-zune-nlist-test-MA_BASEDIRS := $(shell echo $(sort $(dir $(classes-zune-nlist-test_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+classes-zune-nlist-test-MA_DIRS := $(foreach dir, $(classes-zune-nlist-test-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(classes-zune-nlist-test-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(classes-zune-nlist-test-MA_DIRS),)
+    classes-zune-nlist-test-MA_DIRS := $(shell echo $(classes-zune-nlist-test-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(classes-zune-nlist-test-MA_DIRS)
+endif
+
+endif
+
+classes-zune-nlist-test-MA_ASSEMBLER ?= $(classes-zune-nlist-test_ASSEMBLER)
+
+$(classes-zune-nlist-test-MA_TARGETS) : classes-zune-nlist-test-MA_CMD:= $(classes-zune-nlist-test-MA_ASSEMBLER)
+
+$(classes-zune-nlist-test-MA_TARGETS) : CPPFLAGS := $(classes-zune-nlist-test_CPPFLAGS)
+$(classes-zune-nlist-test-MA_TARGETS) : AFLAGS := $(classes-zune-nlist-test_AFLAGS)
+$(classes-zune-nlist-test-MA_TARGETS) : $(classes-zune-nlist-test-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(classes-zune-nlist-test-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(classes-zune-nlist-test-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(classes-zune-nlist-test-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+classes-zune-nlist-test-link_EXTRA_LDFLAGS := 
+classes-zune-nlist-test-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    classes-zune-nlist-test-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    classes-zune-nlist-test-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    classes-zune-nlist-test-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+classes-zune-nlist-test-link_DIRS := $(subst -L ,-L,$(strip $(classes-zune-nlist-test_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+classes-zune-nlist-test-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(classes-zune-nlist-test-link_DIRS)))
+# Add trailing /
+classes-zune-nlist-test-link_DIRS := $(subst //,/,$(addsuffix /,$(classes-zune-nlist-test-link_DIRS)))
+# Add normal linklib path
+classes-zune-nlist-test-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+classes-zune-nlist-test-link_LIBS := $(addprefix lib,$(addsuffix .a,$(classes-zune-nlist-test_LIBS) $(classes-zune-nlist-test-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    classes-zune-nlist-test-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    classes-zune-nlist-test-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+classes-zune-nlist-test-link_DEPLIBS := $(foreach lib,$(classes-zune-nlist-test-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(classes-zune-nlist-test-link_DIRS)))) \
+)
+
+$(classes-zune-nlist-test_TARGETDIR)/$(classes-zune-nlist-test_PROGNAME) : OBJDIR := $(classes-zune-nlist-test_OBJDIR)
+$(classes-zune-nlist-test_TARGETDIR)/$(classes-zune-nlist-test_PROGNAME) : OBJS := $(classes-zune-nlist-test_OBJS) $(classes-zune-nlist-test_ARCHOBJS) $(USER_OBJS)
+$(classes-zune-nlist-test_TARGETDIR)/$(classes-zune-nlist-test_PROGNAME) : LDFLAGS := $(strip $(classes-zune-nlist-test_LDFLAGS) $(classes-zune-nlist-test-link_EXTRA_LDFLAGS))
+$(classes-zune-nlist-test_TARGETDIR)/$(classes-zune-nlist-test_PROGNAME) : LIBS := $(addprefix -l,$(classes-zune-nlist-test_LIBS) $(classes-zune-nlist-test-link_EXTRA_LIBS) )
+$(classes-zune-nlist-test_TARGETDIR)/$(classes-zune-nlist-test_PROGNAME) : $(classes-zune-nlist-test_OBJS) $(classes-zune-nlist-test_ARCHOBJS) $(USER_OBJS) $(classes-zune-nlist-test-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(classes-zune-nlist-test_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(classes-zune-nlist-test_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(classes-zune-nlist-test_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(classes-zune-nlist-test_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(classes-zune-nlist-test_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(classes-zune-nlist-test_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(classes-zune-nlist-test_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(classes-zune-nlist-test_DEPS),)
+  ifneq (classes-zune-nlist-test classes-zune-nlist-test-quick,)
+    ifneq ($(findstring $(TARGET),classes-zune-nlist-test classes-zune-nlist-test-quick),)
+      -include $(classes-zune-nlist-test_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(classes-zune-nlist-test_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(classes-zune-nlist-test_OBJS) $(classes-zune-nlist-test_DEPS) $(classes-zune-nlist-test_TARGETDIR)/$(classes-zune-nlist-test_PROGNAME),)
+$(classes-zune-nlist-test_OBJS) $(classes-zune-nlist-test_DEPS) $(classes-zune-nlist-test_TARGETDIR)/$(classes-zune-nlist-test_PROGNAME) : | $(classes-zune-nlist-test_OBJDIR) $(classes-zune-nlist-test_TARGETDIR)
+else
+$(classes-zune-nlist-test_OBJS) $(classes-zune-nlist-test_DEPS) $(classes-zune-nlist-test_TARGETDIR)/$(classes-zune-nlist-test_PROGNAME) :: $(classes-zune-nlist-test_OBJDIR) $(classes-zune-nlist-test_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(classes-zune-nlist-test_OBJDIR) $(classes-zune-nlist-test_TARGETDIR)
+
+
+classes-zune-nlist-test-clean : FILES := $(classes-zune-nlist-test_OBJS) $(classes-zune-nlist-test_TARGETDIR)/$(classes-zune-nlist-test_PROGNAME) $(classes-zune-nlist-test_DEPS)
+#MM
+classes-zune-nlist-test-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget classes-zune-nlist-test"
+	$(Q)$(RM) $(FILES)
+
+
+
+#MM includes-copy
+
+INCLUDE_FILES := ../include/mui/NList_mcc.h
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq (../include/mui,)
+TMP_DIR                := ../include/mui
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst ../include/mui,$(GENINCDIR)/mui,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/mui/,$(notdir $(INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := ../include/mui/
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/../include/mui/
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/mui/,$(INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/mui/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq (../include/mui,)
+BD_INCL_FILES2         := $(subst ../include/mui,$(AROS_INCLUDES)/mui,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/mui/,$(notdir $(INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/mui/,$(INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/mui/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

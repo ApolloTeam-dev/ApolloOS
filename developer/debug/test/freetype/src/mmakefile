@@ -1,0 +1,1266 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- test : test-freetype
+#MM- test-freetype : \
+#MM      test-freetype-ftstring \
+#MM      test-freetype-ftview
+
+#MM- test-quick : test-freetype-quick
+#MM- test-freetype-quick : \
+#MM      test-freetype-ftstring-quick \
+#MM      test-freetype-ftview-quick
+
+#MM test-freetype-ftstring : includes linklibs \
+#MM     workbench-libs-freetype-linklib test-freetype-lib-graph
+#MM test-freetype-ftview : includes linklibs \
+#MM     workbench-libs-freetype-linklib test-freetype-lib-graph
+
+USER_INCLUDES		:= -I$(SRCDIR)/$(CURDIR)/../graph
+EXEDIR := $(AROS_TESTS)/freetype
+
+# Unfortunately, this code is not yet gcc 4.6.1 paranoia clean
+NOWARN_FLAGS := $(NOWARN_SWITCH) $(NOWARN_STRINGOP_OVERFLOW) -Wno-error
+USER_CFLAGS += $(NOWARN_FLAGS)
+
+FREETYPETEST_COMMON := \
+    common \
+    ftcommon
+
+
+.PHONY : test-freetype-ftstring
+
+test-freetype-ftstring_PROGNAME  := ftstring
+test-freetype-ftstring_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-freetype-ftstring_TARGETDIR := $(EXEDIR)
+test-freetype-ftstring_LINKER    := 
+test-freetype-ftstring_LIBS := freetype2.static graph
+# If not supplied, linker is equal to compiler
+ifeq ($(test-freetype-ftstring_LINKER),)
+    test-freetype-ftstring_LINKER := target
+endif
+
+ifneq ("$(strip ftstring $(FREETYPETEST_COMMON)   )","")
+    test-freetype-ftstring_FILES     := ftstring $(FREETYPETEST_COMMON)
+    test-freetype-ftstring_OBJCFILES := 
+    test-freetype-ftstring_ASMFILES  := 
+    test-freetype-ftstring_CXXFILES := 
+else
+    test-freetype-ftstring_FILES     := $(test-freetype-ftstring_PROGNAME)
+    test-freetype-ftstring_OBJCFILES :=
+    test-freetype-ftstring_ASMFILES  :=
+    test-freetype-ftstring_CXXFILES :=
+endif
+
+test-freetype-ftstring_ARCHOBJS   := $(wildcard $(test-freetype-ftstring_OBJDIR)/arch/*.o)
+test-freetype-ftstring_ARCHFILES  := $(basename $(notdir $(test-freetype-ftstring_ARCHOBJS)))
+test-freetype-ftstring_C_NARCHFILES := $(filter-out $(test-freetype-ftstring_ARCHFILES),$(test-freetype-ftstring_FILES))
+test-freetype-ftstring_CXX_NARCHFILES := $(filter-out $(test-freetype-ftstring_ARCHFILES),$(test-freetype-ftstring_CXXFILES))
+test-freetype-ftstring_OBJC_NARCHFILES := $(filter-out $(test-freetype-ftstring_ARCHFILES),$(test-freetype-ftstring_OBJCFILES))
+
+TMP_FILES := $(test-freetype-ftstring_C_NARCHFILES) $(test-freetype-ftstring_CXX_NARCHFILES) $(test-freetype-ftstring_ASMFILES) $(test-freetype-ftstring_OBJC_NARCHFILES)
+test-freetype-ftstring_OBJS := $(addsuffix .o,$(addprefix $(test-freetype-ftstring_OBJDIR)/,$(notdir $(TMP_FILES))))
+test-freetype-ftstring_DEPS := $(addsuffix .d,$(addprefix $(test-freetype-ftstring_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+test-freetype-ftstring_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+test-freetype-ftstring_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-freetype-ftstring_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+test-freetype-ftstring_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+test-freetype-ftstring_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+test-freetype-ftstring_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-freetype-ftstring_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+test-freetype-ftstring_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+test-freetype-ftstring_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+test-freetype-ftstring_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-freetype-ftstring_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+test-freetype-ftstring_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+test-freetype-ftstring_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+test-freetype-ftstring_LDFLAGS          := 
+endif
+
+test-freetype-ftstring_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-freetype-ftstring_COVERAGE := yes
+test-freetype-ftstring_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-freetype-ftstring_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-freetype-ftstring_CFLAGS    := $(strip $(test-freetype-ftstring_COVERAGEFLAGS) $(test-freetype-ftstring_CFLAGS))
+test-freetype-ftstring_CXXFLAGS := $(strip $(test-freetype-ftstring_COVERAGEFLAGS) $(test-freetype-ftstring_CXXFLAGS))
+test-freetype-ftstring_LIBS += $(test-freetype-ftstring_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-freetype-ftstring_FUNCINSTR := yes
+test-freetype-ftstring_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-freetype-ftstring_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-freetype-ftstring_CFLAGS    := $(strip $(test-freetype-ftstring_INSTRFUNCFLAGS) $(test-freetype-ftstring_CFLAGS))
+test-freetype-ftstring_CXXFLAGS := $(strip $(test-freetype-ftstring_INSTRFUNCFLAGS) $(test-freetype-ftstring_CXXFLAGS))
+test-freetype-ftstring_LIBS += $(test-freetype-ftstring_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-freetype-ftstring_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-freetype-ftstring_CFLAGS))
+test-freetype-ftstring_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(test-freetype-ftstring_CXXFLAGS))
+endif
+endif
+test-freetype-ftstring_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    test-freetype-ftstring_DFLAGS     := 
+else
+    test-freetype-ftstring_DFLAGS     := $(test-freetype-ftstring_CFLAGS)
+endif
+ifneq (,)
+    test-freetype-ftstring_DXXFLAGS     := 
+else
+    test-freetype-ftstring_DXXFLAGS     := $(test-freetype-ftstring_CXXFLAGS)
+endif
+ifeq (target,target)
+test-freetype-ftstring_LDFLAGS           := $(test-freetype-ftstring_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-freetype-ftstring_LDFLAGS           := $(test-freetype-ftstring_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-freetype-ftstring_LDFLAGS           := $(test-freetype-ftstring_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+test-freetype-ftstring_LDFLAGS   += -L
+endif
+
+#MM
+test-freetype-ftstring-quick : test-freetype-ftstring
+
+#MM test-freetype-ftstring : includes-generate-deps core-linklibs
+test-freetype-ftstring : $(test-freetype-ftstring_TARGETDIR)/$(test-freetype-ftstring_PROGNAME)
+
+ifneq ($(filter $(TARGET),test-freetype-ftstring test-freetype-ftstring-quick test-freetype-ftstring-gz-quick),)
+
+test-freetype-ftstring_CXXABSBASENAMES := $(foreach test-freetype-ftstring_CXXBASE,$(test-freetype-ftstring_CXX_NARCHFILES),$(if $(filter /%,$(test-freetype-ftstring_CXXBASE)),$(test-freetype-ftstring_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(test-freetype-ftstring_CXXBASE))))
+
+ifneq ($(test-freetype-ftstring_CXXABSBASENAMES),)
+
+test-freetype-ftstring_CXXBASENAMES := $(basename $(test-freetype-ftstring_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+test-freetype-ftstring_MCXX_FILES  := $(strip $(foreach test-freetype-ftstring_CXXBASE,$(test-freetype-ftstring_CXXABSBASENAMES), $(firstword $(wildcard $(foreach test-freetype-ftstring_EXT, $(AROS_CXXEXTS),$(addsuffix .$(test-freetype-ftstring_EXT),$(test-freetype-ftstring_CXXBASE)))))))
+
+ifeq (,)
+test-freetype-ftstring_MCXX_SRCWILDCARD := %
+else
+test-freetype-ftstring_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-freetype-ftstring_OBJDIR),)
+  test-freetype-ftstring_CXXTARGETS := $(notdir $(test-freetype-ftstring_CXXBASENAMES:=.o))
+  test-freetype-ftstring_CXXDTARGETS := $(notdir $(test-freetype-ftstring_CXXBASENAMES:=.d))
+  test-freetype-ftstring_MCXX_WILDCARD := %
+else
+  test-freetype-ftstring_CXXTARGETS := $(addprefix $(test-freetype-ftstring_OBJDIR)/,$(notdir $(test-freetype-ftstring_CXXBASENAMES:=.o)))
+  test-freetype-ftstring_CXXDTARGETS := $(addprefix $(test-freetype-ftstring_OBJDIR)/,$(notdir $(test-freetype-ftstring_CXXBASENAMES:=.d)))
+  test-freetype-ftstring_MCXX_WILDCARD := $(test-freetype-ftstring_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(test-freetype-ftstring_CXXTARGETS) $(test-freetype-ftstring_CXXDTARGETS) : | $(test-freetype-ftstring_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+test-freetype-ftstring_MCXX_CPPFLAGS := $(test-freetype-ftstring_CPPFLAGS)
+test-freetype-ftstring_CXXFLAGS := $(test-freetype-ftstring_CXXFLAGS)
+ifeq ($(test-freetype-ftstring_DXXFLAGS),)
+  test-freetype-ftstring_DXXFLAGS := $(test-freetype-ftstring_CXXFLAGS)
+else
+  test-freetype-ftstring_DXXFLAGS := $(test-freetype-ftstring_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  test-freetype-ftstring_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  test-freetype-ftstring_STRIP ?= $(HOST_STRIP)
+  test-freetype-ftstring_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  test-freetype-ftstring_CXXCMD:=$(HOST_CXX)
+  test-freetype-ftstring_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(test-freetype-ftstring_MCXX_CPPFLAGS) $(test-freetype-ftstring_MCXX_EXTRA_CPPFLAGS))
+  test-freetype-ftstring_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-freetype-ftstring_CXXFLAGS))
+  test-freetype-ftstring_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-freetype-ftstring_DXXFLAGS))
+  test-freetype-ftstring_CXXIQUOTE:=$(HOST_IQUOTE)
+  test-freetype-ftstring_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  test-freetype-ftstring_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-freetype-ftstring_STRIP ?= $(TARGET_STRIP)
+  test-freetype-ftstring_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  test-freetype-ftstring_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  test-freetype-ftstring_MCXX_CPPFLAGS := $(strip $(test-freetype-ftstring_MCXX_CPPFLAGS) $(test-freetype-ftstring_MCXX_EXTRA_CPPFLAGS))
+  test-freetype-ftstring_CXXFLAGS := $(strip $(test-freetype-ftstring_CXXFLAGS) $(SAFETY_CFLAGS))
+  test-freetype-ftstring_DXXFLAGS := $(test-freetype-ftstring_DXXFLAGS)
+  test-freetype-ftstring_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  test-freetype-ftstring_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  test-freetype-ftstring_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-freetype-ftstring_STRIP ?= $(ECHO) >/dev/null
+  test-freetype-ftstring_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  test-freetype-ftstring_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  test-freetype-ftstring_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(test-freetype-ftstring_MCXX_CPPFLAGS) $(test-freetype-ftstring_MCXX_EXTRA_CPPFLAGS))
+  test-freetype-ftstring_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-freetype-ftstring_CXXFLAGS))
+  test-freetype-ftstring_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-freetype-ftstring_DXXFLAGS))
+  test-freetype-ftstring_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  test-freetype-ftstring_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(test-freetype-ftstring_CXXCMD) $(test-freetype-ftstring_CXXIQUOTE) $(dir $(2)) $(test-freetype-ftstring_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftstring_CXXIQUOTE) . $(test-freetype-ftstring_CXXIQUOTE_END) $(strip $(test-freetype-ftstring_CXXFLAGS) $(test-freetype-ftstring_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(test-freetype-ftstring_CXXCMD) $(test-freetype-ftstring_CXXIQUOTE) $(dir $(2)) $(test-freetype-ftstring_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftstring_CXXIQUOTE) . $(test-freetype-ftstring_CXXIQUOTE_END) $(strip $(test-freetype-ftstring_CXXFLAGS) $(test-freetype-ftstring_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(test-freetype-ftstring_CXXCMD) $(test-freetype-ftstring_CXXIQUOTE) $(dir $(2)) $(test-freetype-ftstring_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftstring_CXXIQUOTE) . $(test-freetype-ftstring_CXXIQUOTE_END) $(strip $(test-freetype-ftstring_CXXFLAGS) $(test-freetype-ftstring_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(test-freetype-ftstring_CXXCMD)" $(MKDEPEND) $(strip $(test-freetype-ftstring_DXXFLAGS) $(test-freetype-ftstring_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(test-freetype-ftstring_OBJDIR),)
+  $(foreach test-freetype-ftstring_CXXFILE,$(test-freetype-ftstring_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(test-freetype-ftstring_CXXFILE))),$(test-freetype-ftstring_CXXFILE))))
+else
+  $(foreach test-freetype-ftstring_CXXFILE,$(test-freetype-ftstring_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(test-freetype-ftstring_OBJDIR)/,$(notdir $(basename $(test-freetype-ftstring_CXXFILE)))),$(test-freetype-ftstring_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(test-freetype-ftstring_OBJC_NARCHFILES),)
+
+ifeq (,)
+test-freetype-ftstring_MOBJC_SRCWILDCARD := %
+else
+test-freetype-ftstring_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-freetype-ftstring_OBJDIR),)
+  test-freetype-ftstring_MOBJC_TARGETS := $(addsuffix .o,$(test-freetype-ftstring_OBJC_NARCHFILES))
+  test-freetype-ftstring_MOBJC_DTARGETS := $(addsuffix .d,$(test-freetype-ftstring_OBJC_NARCHFILES))
+  test-freetype-ftstring_MOBJC_WILDCARD := %
+else
+  test-freetype-ftstring_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(test-freetype-ftstring_OBJDIR)/,$(test-freetype-ftstring_OBJC_NARCHFILES)))
+  test-freetype-ftstring_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(test-freetype-ftstring_OBJDIR)/,$(test-freetype-ftstring_OBJC_NARCHFILES)))
+  test-freetype-ftstring_MOBJC_WILDCARD := $(test-freetype-ftstring_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : | $(addsuffix .m,$(test-freetype-ftstring_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  test-freetype-ftstring_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  test-freetype-ftstring_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(test-freetype-ftstring_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  test-freetype-ftstring_MOBJC_DIRS := $(foreach dir, $(test-freetype-ftstring_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-freetype-ftstring_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(test-freetype-ftstring_MOBJC_DIRS),)
+    test-freetype-ftstring_MOBJC_DIRS := $(shell echo $(test-freetype-ftstring_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(test-freetype-ftstring_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  test-freetype-ftstring_CC := $(TARGET_CC)
+else
+  test-freetype-ftstring_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+test-freetype-ftstring_MOBJC_CPPFLAGS := $(test-freetype-ftstring_CPPFLAGS)
+test-freetype-ftstring_OBJCFLAGS := $(test-freetype-ftstring_CFLAGS)
+test-freetype-ftstring_OBJCFLAGS := $(test-freetype-ftstring_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+test-freetype-ftstring_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(test-freetype-ftstring_OBJCFLAGS)))
+ifeq ($(test-freetype-ftstring_DFLAGS),)
+  test-freetype-ftstring_OBJCDFLAGS := $(test-freetype-ftstring_CFLAGS)
+else
+  test-freetype-ftstring_OBJCDFLAGS := $(test-freetype-ftstring_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  test-freetype-ftstring_LINK ?= $(strip $(test-freetype-ftstring_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-freetype-ftstring_STRIP ?= $(TARGET_STRIP)
+  test-freetype-ftstring_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : CMD:=$(strip $(test-freetype-ftstring_CC) $(TARGET_SYSROOT))
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : test-freetype-ftstring_MOBJC_CPPFLAGS:=$(strip $(test-freetype-ftstring_MOBJC_CPPFLAGS) $(test-freetype-ftstring_MOBJC_EXTRA_CPPFLAGS))
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : test-freetype-ftstring_OBJCFLAGS:=$(strip $(test-freetype-ftstring_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : test-freetype-ftstring_OBJCDFLAGS:=$(test-freetype-ftstring_OBJCDFLAGS)
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : test-freetype-ftstring_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : test-freetype-ftstring_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  test-freetype-ftstring_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  test-freetype-ftstring_STRIP ?= $(HOST_STRIP)
+  test-freetype-ftstring_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : test-freetype-ftstring_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(test-freetype-ftstring_MOBJC_CPPFLAGS) $(test-freetype-ftstring_MOBJC_EXTRA_CPPFLAGS))
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : test-freetype-ftstring_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(test-freetype-ftstring_OBJCFLAGS))
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : test-freetype-ftstring_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(test-freetype-ftstring_OBJCDFLAGS))
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : test-freetype-ftstring_IQUOTE:=$(HOST_IQUOTE)
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : test-freetype-ftstring_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  test-freetype-ftstring_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-freetype-ftstring_STRIP ?= $(ECHO) >/dev/null
+  test-freetype-ftstring_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : test-freetype-ftstring_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(test-freetype-ftstring_MOBJC_CPPFLAGS) $(test-freetype-ftstring_MOBJC_EXTRA_CPPFLAGS))
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : test-freetype-ftstring_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-freetype-ftstring_OBJCFLAGS))
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : test-freetype-ftstring_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-freetype-ftstring_OBJCDFLAGS))
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : test-freetype-ftstring_IQUOTE:=$(KERNEL_IQUOTE)
+  $(test-freetype-ftstring_MOBJC_TARGETS) $(test-freetype-ftstring_MOBJC_DTARGETS) : test-freetype-ftstring_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-freetype-ftstring_MOBJC_TARGETS) : CPPFLAGS := $(test-freetype-ftstring_MOBJC_CPPFLAGS)
+$(test-freetype-ftstring_MOBJC_TARGETS) : CFLAGS := $(test-freetype-ftstring_OBJCFLAGS)
+$(test-freetype-ftstring_MOBJC_TARGETS) : $(test-freetype-ftstring_MOBJC_WILDCARD).o : $(test-freetype-ftstring_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-freetype-ftstring_IQUOTE) $(dir $<) $(test-freetype-ftstring_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftstring_IQUOTE) . $(test-freetype-ftstring_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-freetype-ftstring_IQUOTE) $(dir $<) $(test-freetype-ftstring_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftstring_IQUOTE) . $(test-freetype-ftstring_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-freetype-ftstring_IQUOTE) $(dir $<) $(test-freetype-ftstring_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftstring_IQUOTE) . $(test-freetype-ftstring_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-freetype-ftstring_MOBJC_DTARGETS) : $(test-freetype-ftstring_MOBJC_WILDCARD).d : $(test-freetype-ftstring_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-freetype-ftstring_OBJCDFLAGS) $(test-freetype-ftstring_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+test-freetype-ftstring_MC_SRCWILDCARD := %
+else
+test-freetype-ftstring_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-freetype-ftstring_OBJDIR),)
+test-freetype-ftstring_MC_TARGETS := $(addsuffix .o,$(test-freetype-ftstring_C_NARCHFILES))
+test-freetype-ftstring_MC_DTARGETS := $(addsuffix .d,$(test-freetype-ftstring_C_NARCHFILES))
+test-freetype-ftstring_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-freetype-ftstring_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-freetype-ftstring_OBJDIR)/,$(notdir $(test-freetype-ftstring_C_NARCHFILES))))
+    test-freetype-ftstring_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-freetype-ftstring_OBJDIR)/,$(notdir $(test-freetype-ftstring_C_NARCHFILES))))
+else
+ifeq (,)
+    test-freetype-ftstring_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-freetype-ftstring_OBJDIR)/,$(test-freetype-ftstring_C_NARCHFILES)))
+    test-freetype-ftstring_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-freetype-ftstring_OBJDIR)/,$(test-freetype-ftstring_C_NARCHFILES)))
+else
+    test-freetype-ftstring_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-freetype-ftstring_OBJDIR)/,$(patsubst /%,%,$(test-freetype-ftstring_C_NARCHFILES))))
+    test-freetype-ftstring_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-freetype-ftstring_OBJDIR)/,$(patsubst /%,%,$(test-freetype-ftstring_C_NARCHFILES))))
+endif
+endif
+test-freetype-ftstring_MC_TGTWILDCARD := $(test-freetype-ftstring_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : | $(addsuffix .c,$(test-freetype-ftstring_C_NARCHFILES))
+
+# Be sure that all .c files are found
+test-freetype-ftstring_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-freetype-ftstring_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-freetype-ftstring_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+test-freetype-ftstring_MC_DIRS := $(foreach dir, $(test-freetype-ftstring_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-freetype-ftstring_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-freetype-ftstring_MC_DIRS),)
+    test-freetype-ftstring_MC_DIRS := $(shell echo $(test-freetype-ftstring_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-freetype-ftstring_MC_DIRS)
+endif
+
+endif
+
+test-freetype-ftstring_MC_CPPFLAGS := $(test-freetype-ftstring_CPPFLAGS)
+test-freetype-ftstring_CFLAGS := $(test-freetype-ftstring_CFLAGS)
+ifeq ($(test-freetype-ftstring_DFLAGS),)
+  test-freetype-ftstring_DFLAGS := $(test-freetype-ftstring_CFLAGS)
+else
+  test-freetype-ftstring_DFLAGS := $(test-freetype-ftstring_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-freetype-ftstring_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-freetype-ftstring_STRIP ?= $(TARGET_STRIP)
+test-freetype-ftstring_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : test-freetype-ftstring_MC_CPPFLAGS:=$(strip $(test-freetype-ftstring_MC_CPPFLAGS) $(test-freetype-ftstring_MC_EXTRA_CPPFLAGS))
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : test-freetype-ftstring_CFLAGS:=$(strip $(test-freetype-ftstring_CFLAGS) $(SAFETY_CFLAGS))
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : test-freetype-ftstring_DFLAGS:=$(test-freetype-ftstring_DFLAGS)
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : test-freetype-ftstring_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : test-freetype-ftstring_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-freetype-ftstring_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-freetype-ftstring_STRIP ?= $(HOST_STRIP)
+test-freetype-ftstring_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : test-freetype-ftstring_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-freetype-ftstring_MC_CPPFLAGS) $(test-freetype-ftstring_MC_EXTRA_CPPFLAGS))
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : test-freetype-ftstring_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-freetype-ftstring_CFLAGS))
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : test-freetype-ftstring_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-freetype-ftstring_DFLAGS))
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : test-freetype-ftstring_IQUOTE:=$(HOST_IQUOTE)
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : test-freetype-ftstring_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-freetype-ftstring_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-freetype-ftstring_STRIP ?= $(ECHO) >/dev/null
+test-freetype-ftstring_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : test-freetype-ftstring_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-freetype-ftstring_MC_CPPFLAGS) $(test-freetype-ftstring_MC_EXTRA_CPPFLAGS))
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : test-freetype-ftstring_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-freetype-ftstring_CFLAGS))
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : test-freetype-ftstring_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-freetype-ftstring_DFLAGS))
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : test-freetype-ftstring_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-freetype-ftstring_MC_TARGETS) $(test-freetype-ftstring_MC_DTARGETS) : test-freetype-ftstring_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-freetype-ftstring_MC_TARGETS) : CPPFLAGS := $(test-freetype-ftstring_MC_CPPFLAGS)
+$(test-freetype-ftstring_MC_TARGETS) : CFLAGS := $(test-freetype-ftstring_CFLAGS)
+$(test-freetype-ftstring_MC_TARGETS) : $(test-freetype-ftstring_MC_TGTWILDCARD).o : $(test-freetype-ftstring_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-freetype-ftstring_IQUOTE) $(dir $<) $(test-freetype-ftstring_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftstring_IQUOTE) . $(test-freetype-ftstring_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-freetype-ftstring_IQUOTE) $(dir $<) $(test-freetype-ftstring_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftstring_IQUOTE) . $(test-freetype-ftstring_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-freetype-ftstring_IQUOTE) $(dir $<) $(test-freetype-ftstring_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftstring_IQUOTE) . $(test-freetype-ftstring_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-freetype-ftstring_MC_DTARGETS) : $(test-freetype-ftstring_MC_TGTWILDCARD).d : $(test-freetype-ftstring_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-freetype-ftstring_DFLAGS) $(test-freetype-ftstring_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(test-freetype-ftstring_OBJDIR),)
+test-freetype-ftstring-MA_TARGETS := $(addsuffix .o,$(test-freetype-ftstring_ASMFILES))
+test-freetype-ftstring-MA_WILDCARD := %
+else
+test-freetype-ftstring-MA_TARGETS := $(addsuffix .o,$(addprefix $(test-freetype-ftstring_OBJDIR)/,$(notdir $(test-freetype-ftstring_ASMFILES))))
+test-freetype-ftstring-MA_WILDCARD := $(test-freetype-ftstring_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(test-freetype-ftstring-MA_TARGETS) : | $(addsuffix .s,$(test-freetype-ftstring_ASMFILES))
+
+# Be sure that all .c files are found
+test-freetype-ftstring-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-freetype-ftstring-MA_BASEDIRS := $(shell echo $(sort $(dir $(test-freetype-ftstring_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+test-freetype-ftstring-MA_DIRS := $(foreach dir, $(test-freetype-ftstring-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-freetype-ftstring-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-freetype-ftstring-MA_DIRS),)
+    test-freetype-ftstring-MA_DIRS := $(shell echo $(test-freetype-ftstring-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(test-freetype-ftstring-MA_DIRS)
+endif
+
+endif
+
+test-freetype-ftstring-MA_ASSEMBLER ?= $(test-freetype-ftstring_ASSEMBLER)
+
+$(test-freetype-ftstring-MA_TARGETS) : test-freetype-ftstring-MA_CMD:= $(test-freetype-ftstring-MA_ASSEMBLER)
+
+$(test-freetype-ftstring-MA_TARGETS) : CPPFLAGS := $(test-freetype-ftstring_CPPFLAGS)
+$(test-freetype-ftstring-MA_TARGETS) : AFLAGS := $(test-freetype-ftstring_AFLAGS)
+$(test-freetype-ftstring-MA_TARGETS) : $(test-freetype-ftstring-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(test-freetype-ftstring-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(test-freetype-ftstring-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(test-freetype-ftstring-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+test-freetype-ftstring-link_EXTRA_LDFLAGS := 
+test-freetype-ftstring-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-freetype-ftstring-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-freetype-ftstring-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-freetype-ftstring-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+test-freetype-ftstring-link_DIRS := $(subst -L ,-L,$(strip $(test-freetype-ftstring_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-freetype-ftstring-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-freetype-ftstring-link_DIRS)))
+# Add trailing /
+test-freetype-ftstring-link_DIRS := $(subst //,/,$(addsuffix /,$(test-freetype-ftstring-link_DIRS)))
+# Add normal linklib path
+test-freetype-ftstring-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-freetype-ftstring-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-freetype-ftstring_LIBS) $(test-freetype-ftstring-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    test-freetype-ftstring-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    test-freetype-ftstring-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+test-freetype-ftstring-link_DEPLIBS := $(foreach lib,$(test-freetype-ftstring-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-freetype-ftstring-link_DIRS)))) \
+)
+
+$(test-freetype-ftstring_TARGETDIR)/$(test-freetype-ftstring_PROGNAME) : OBJDIR := $(test-freetype-ftstring_OBJDIR)
+$(test-freetype-ftstring_TARGETDIR)/$(test-freetype-ftstring_PROGNAME) : OBJS := $(test-freetype-ftstring_OBJS) $(test-freetype-ftstring_ARCHOBJS) $(USER_OBJS)
+$(test-freetype-ftstring_TARGETDIR)/$(test-freetype-ftstring_PROGNAME) : LDFLAGS := $(strip $(test-freetype-ftstring_LDFLAGS) $(test-freetype-ftstring-link_EXTRA_LDFLAGS))
+$(test-freetype-ftstring_TARGETDIR)/$(test-freetype-ftstring_PROGNAME) : LIBS := $(addprefix -l,$(test-freetype-ftstring_LIBS) $(test-freetype-ftstring-link_EXTRA_LIBS) )
+$(test-freetype-ftstring_TARGETDIR)/$(test-freetype-ftstring_PROGNAME) : $(test-freetype-ftstring_OBJS) $(test-freetype-ftstring_ARCHOBJS) $(USER_OBJS) $(test-freetype-ftstring-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-freetype-ftstring_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-freetype-ftstring_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-freetype-ftstring_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-freetype-ftstring_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-freetype-ftstring_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-freetype-ftstring_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-freetype-ftstring_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-freetype-ftstring_DEPS),)
+  ifneq (test-freetype-ftstring test-freetype-ftstring-quick,)
+    ifneq ($(findstring $(TARGET),test-freetype-ftstring test-freetype-ftstring-quick),)
+      -include $(test-freetype-ftstring_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-freetype-ftstring_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-freetype-ftstring_OBJS) $(test-freetype-ftstring_DEPS) $(test-freetype-ftstring_TARGETDIR)/$(test-freetype-ftstring_PROGNAME),)
+$(test-freetype-ftstring_OBJS) $(test-freetype-ftstring_DEPS) $(test-freetype-ftstring_TARGETDIR)/$(test-freetype-ftstring_PROGNAME) : | $(test-freetype-ftstring_OBJDIR) $(test-freetype-ftstring_TARGETDIR)
+else
+$(test-freetype-ftstring_OBJS) $(test-freetype-ftstring_DEPS) $(test-freetype-ftstring_TARGETDIR)/$(test-freetype-ftstring_PROGNAME) :: $(test-freetype-ftstring_OBJDIR) $(test-freetype-ftstring_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(test-freetype-ftstring_OBJDIR) $(test-freetype-ftstring_TARGETDIR)
+
+
+test-freetype-ftstring-clean : FILES := $(test-freetype-ftstring_OBJS) $(test-freetype-ftstring_TARGETDIR)/$(test-freetype-ftstring_PROGNAME) $(test-freetype-ftstring_DEPS)
+#MM
+test-freetype-ftstring-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-freetype-ftstring"
+	$(Q)$(RM) $(FILES)
+
+
+USER_CPPFLAGS += -DFT2_BUILD_LIBRARY
+
+
+.PHONY : test-freetype-ftview
+
+test-freetype-ftview_PROGNAME  := ftview
+test-freetype-ftview_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-freetype-ftview_TARGETDIR := $(EXEDIR)
+test-freetype-ftview_LINKER    := 
+test-freetype-ftview_LIBS := freetype2.static graph
+# If not supplied, linker is equal to compiler
+ifeq ($(test-freetype-ftview_LINKER),)
+    test-freetype-ftview_LINKER := target
+endif
+
+ifneq ("$(strip ftview $(FREETYPETEST_COMMON)   )","")
+    test-freetype-ftview_FILES     := ftview $(FREETYPETEST_COMMON)
+    test-freetype-ftview_OBJCFILES := 
+    test-freetype-ftview_ASMFILES  := 
+    test-freetype-ftview_CXXFILES := 
+else
+    test-freetype-ftview_FILES     := $(test-freetype-ftview_PROGNAME)
+    test-freetype-ftview_OBJCFILES :=
+    test-freetype-ftview_ASMFILES  :=
+    test-freetype-ftview_CXXFILES :=
+endif
+
+test-freetype-ftview_ARCHOBJS   := $(wildcard $(test-freetype-ftview_OBJDIR)/arch/*.o)
+test-freetype-ftview_ARCHFILES  := $(basename $(notdir $(test-freetype-ftview_ARCHOBJS)))
+test-freetype-ftview_C_NARCHFILES := $(filter-out $(test-freetype-ftview_ARCHFILES),$(test-freetype-ftview_FILES))
+test-freetype-ftview_CXX_NARCHFILES := $(filter-out $(test-freetype-ftview_ARCHFILES),$(test-freetype-ftview_CXXFILES))
+test-freetype-ftview_OBJC_NARCHFILES := $(filter-out $(test-freetype-ftview_ARCHFILES),$(test-freetype-ftview_OBJCFILES))
+
+TMP_FILES := $(test-freetype-ftview_C_NARCHFILES) $(test-freetype-ftview_CXX_NARCHFILES) $(test-freetype-ftview_ASMFILES) $(test-freetype-ftview_OBJC_NARCHFILES)
+test-freetype-ftview_OBJS := $(addsuffix .o,$(addprefix $(test-freetype-ftview_OBJDIR)/,$(notdir $(TMP_FILES))))
+test-freetype-ftview_DEPS := $(addsuffix .d,$(addprefix $(test-freetype-ftview_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+test-freetype-ftview_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+test-freetype-ftview_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-freetype-ftview_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+test-freetype-ftview_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+test-freetype-ftview_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+test-freetype-ftview_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-freetype-ftview_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+test-freetype-ftview_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+test-freetype-ftview_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+test-freetype-ftview_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-freetype-ftview_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+test-freetype-ftview_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+test-freetype-ftview_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+test-freetype-ftview_LDFLAGS          := 
+endif
+
+test-freetype-ftview_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-freetype-ftview_COVERAGE := yes
+test-freetype-ftview_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-freetype-ftview_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-freetype-ftview_CFLAGS    := $(strip $(test-freetype-ftview_COVERAGEFLAGS) $(test-freetype-ftview_CFLAGS))
+test-freetype-ftview_CXXFLAGS := $(strip $(test-freetype-ftview_COVERAGEFLAGS) $(test-freetype-ftview_CXXFLAGS))
+test-freetype-ftview_LIBS += $(test-freetype-ftview_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-freetype-ftview_FUNCINSTR := yes
+test-freetype-ftview_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-freetype-ftview_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-freetype-ftview_CFLAGS    := $(strip $(test-freetype-ftview_INSTRFUNCFLAGS) $(test-freetype-ftview_CFLAGS))
+test-freetype-ftview_CXXFLAGS := $(strip $(test-freetype-ftview_INSTRFUNCFLAGS) $(test-freetype-ftview_CXXFLAGS))
+test-freetype-ftview_LIBS += $(test-freetype-ftview_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-freetype-ftview_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-freetype-ftview_CFLAGS))
+test-freetype-ftview_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(test-freetype-ftview_CXXFLAGS))
+endif
+endif
+test-freetype-ftview_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    test-freetype-ftview_DFLAGS     := 
+else
+    test-freetype-ftview_DFLAGS     := $(test-freetype-ftview_CFLAGS)
+endif
+ifneq (,)
+    test-freetype-ftview_DXXFLAGS     := 
+else
+    test-freetype-ftview_DXXFLAGS     := $(test-freetype-ftview_CXXFLAGS)
+endif
+ifeq (target,target)
+test-freetype-ftview_LDFLAGS           := $(test-freetype-ftview_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-freetype-ftview_LDFLAGS           := $(test-freetype-ftview_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-freetype-ftview_LDFLAGS           := $(test-freetype-ftview_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+test-freetype-ftview_LDFLAGS   += -L
+endif
+
+#MM
+test-freetype-ftview-quick : test-freetype-ftview
+
+#MM test-freetype-ftview : includes-generate-deps core-linklibs
+test-freetype-ftview : $(test-freetype-ftview_TARGETDIR)/$(test-freetype-ftview_PROGNAME)
+
+ifneq ($(filter $(TARGET),test-freetype-ftview test-freetype-ftview-quick test-freetype-ftview-gz-quick),)
+
+test-freetype-ftview_CXXABSBASENAMES := $(foreach test-freetype-ftview_CXXBASE,$(test-freetype-ftview_CXX_NARCHFILES),$(if $(filter /%,$(test-freetype-ftview_CXXBASE)),$(test-freetype-ftview_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(test-freetype-ftview_CXXBASE))))
+
+ifneq ($(test-freetype-ftview_CXXABSBASENAMES),)
+
+test-freetype-ftview_CXXBASENAMES := $(basename $(test-freetype-ftview_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+test-freetype-ftview_MCXX_FILES  := $(strip $(foreach test-freetype-ftview_CXXBASE,$(test-freetype-ftview_CXXABSBASENAMES), $(firstword $(wildcard $(foreach test-freetype-ftview_EXT, $(AROS_CXXEXTS),$(addsuffix .$(test-freetype-ftview_EXT),$(test-freetype-ftview_CXXBASE)))))))
+
+ifeq (,)
+test-freetype-ftview_MCXX_SRCWILDCARD := %
+else
+test-freetype-ftview_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-freetype-ftview_OBJDIR),)
+  test-freetype-ftview_CXXTARGETS := $(notdir $(test-freetype-ftview_CXXBASENAMES:=.o))
+  test-freetype-ftview_CXXDTARGETS := $(notdir $(test-freetype-ftview_CXXBASENAMES:=.d))
+  test-freetype-ftview_MCXX_WILDCARD := %
+else
+  test-freetype-ftview_CXXTARGETS := $(addprefix $(test-freetype-ftview_OBJDIR)/,$(notdir $(test-freetype-ftview_CXXBASENAMES:=.o)))
+  test-freetype-ftview_CXXDTARGETS := $(addprefix $(test-freetype-ftview_OBJDIR)/,$(notdir $(test-freetype-ftview_CXXBASENAMES:=.d)))
+  test-freetype-ftview_MCXX_WILDCARD := $(test-freetype-ftview_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(test-freetype-ftview_CXXTARGETS) $(test-freetype-ftview_CXXDTARGETS) : | $(test-freetype-ftview_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+test-freetype-ftview_MCXX_CPPFLAGS := $(test-freetype-ftview_CPPFLAGS)
+test-freetype-ftview_CXXFLAGS := $(test-freetype-ftview_CXXFLAGS)
+ifeq ($(test-freetype-ftview_DXXFLAGS),)
+  test-freetype-ftview_DXXFLAGS := $(test-freetype-ftview_CXXFLAGS)
+else
+  test-freetype-ftview_DXXFLAGS := $(test-freetype-ftview_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  test-freetype-ftview_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  test-freetype-ftview_STRIP ?= $(HOST_STRIP)
+  test-freetype-ftview_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  test-freetype-ftview_CXXCMD:=$(HOST_CXX)
+  test-freetype-ftview_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(test-freetype-ftview_MCXX_CPPFLAGS) $(test-freetype-ftview_MCXX_EXTRA_CPPFLAGS))
+  test-freetype-ftview_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-freetype-ftview_CXXFLAGS))
+  test-freetype-ftview_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-freetype-ftview_DXXFLAGS))
+  test-freetype-ftview_CXXIQUOTE:=$(HOST_IQUOTE)
+  test-freetype-ftview_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  test-freetype-ftview_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-freetype-ftview_STRIP ?= $(TARGET_STRIP)
+  test-freetype-ftview_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  test-freetype-ftview_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  test-freetype-ftview_MCXX_CPPFLAGS := $(strip $(test-freetype-ftview_MCXX_CPPFLAGS) $(test-freetype-ftview_MCXX_EXTRA_CPPFLAGS))
+  test-freetype-ftview_CXXFLAGS := $(strip $(test-freetype-ftview_CXXFLAGS) $(SAFETY_CFLAGS))
+  test-freetype-ftview_DXXFLAGS := $(test-freetype-ftview_DXXFLAGS)
+  test-freetype-ftview_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  test-freetype-ftview_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  test-freetype-ftview_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-freetype-ftview_STRIP ?= $(ECHO) >/dev/null
+  test-freetype-ftview_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  test-freetype-ftview_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  test-freetype-ftview_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(test-freetype-ftview_MCXX_CPPFLAGS) $(test-freetype-ftview_MCXX_EXTRA_CPPFLAGS))
+  test-freetype-ftview_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-freetype-ftview_CXXFLAGS))
+  test-freetype-ftview_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-freetype-ftview_DXXFLAGS))
+  test-freetype-ftview_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  test-freetype-ftview_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(test-freetype-ftview_CXXCMD) $(test-freetype-ftview_CXXIQUOTE) $(dir $(2)) $(test-freetype-ftview_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftview_CXXIQUOTE) . $(test-freetype-ftview_CXXIQUOTE_END) $(strip $(test-freetype-ftview_CXXFLAGS) $(test-freetype-ftview_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(test-freetype-ftview_CXXCMD) $(test-freetype-ftview_CXXIQUOTE) $(dir $(2)) $(test-freetype-ftview_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftview_CXXIQUOTE) . $(test-freetype-ftview_CXXIQUOTE_END) $(strip $(test-freetype-ftview_CXXFLAGS) $(test-freetype-ftview_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(test-freetype-ftview_CXXCMD) $(test-freetype-ftview_CXXIQUOTE) $(dir $(2)) $(test-freetype-ftview_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftview_CXXIQUOTE) . $(test-freetype-ftview_CXXIQUOTE_END) $(strip $(test-freetype-ftview_CXXFLAGS) $(test-freetype-ftview_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(test-freetype-ftview_CXXCMD)" $(MKDEPEND) $(strip $(test-freetype-ftview_DXXFLAGS) $(test-freetype-ftview_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(test-freetype-ftview_OBJDIR),)
+  $(foreach test-freetype-ftview_CXXFILE,$(test-freetype-ftview_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(test-freetype-ftview_CXXFILE))),$(test-freetype-ftview_CXXFILE))))
+else
+  $(foreach test-freetype-ftview_CXXFILE,$(test-freetype-ftview_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(test-freetype-ftview_OBJDIR)/,$(notdir $(basename $(test-freetype-ftview_CXXFILE)))),$(test-freetype-ftview_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(test-freetype-ftview_OBJC_NARCHFILES),)
+
+ifeq (,)
+test-freetype-ftview_MOBJC_SRCWILDCARD := %
+else
+test-freetype-ftview_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-freetype-ftview_OBJDIR),)
+  test-freetype-ftview_MOBJC_TARGETS := $(addsuffix .o,$(test-freetype-ftview_OBJC_NARCHFILES))
+  test-freetype-ftview_MOBJC_DTARGETS := $(addsuffix .d,$(test-freetype-ftview_OBJC_NARCHFILES))
+  test-freetype-ftview_MOBJC_WILDCARD := %
+else
+  test-freetype-ftview_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(test-freetype-ftview_OBJDIR)/,$(test-freetype-ftview_OBJC_NARCHFILES)))
+  test-freetype-ftview_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(test-freetype-ftview_OBJDIR)/,$(test-freetype-ftview_OBJC_NARCHFILES)))
+  test-freetype-ftview_MOBJC_WILDCARD := $(test-freetype-ftview_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : | $(addsuffix .m,$(test-freetype-ftview_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  test-freetype-ftview_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  test-freetype-ftview_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(test-freetype-ftview_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  test-freetype-ftview_MOBJC_DIRS := $(foreach dir, $(test-freetype-ftview_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-freetype-ftview_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(test-freetype-ftview_MOBJC_DIRS),)
+    test-freetype-ftview_MOBJC_DIRS := $(shell echo $(test-freetype-ftview_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(test-freetype-ftview_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  test-freetype-ftview_CC := $(TARGET_CC)
+else
+  test-freetype-ftview_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+test-freetype-ftview_MOBJC_CPPFLAGS := $(test-freetype-ftview_CPPFLAGS)
+test-freetype-ftview_OBJCFLAGS := $(test-freetype-ftview_CFLAGS)
+test-freetype-ftview_OBJCFLAGS := $(test-freetype-ftview_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+test-freetype-ftview_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(test-freetype-ftview_OBJCFLAGS)))
+ifeq ($(test-freetype-ftview_DFLAGS),)
+  test-freetype-ftview_OBJCDFLAGS := $(test-freetype-ftview_CFLAGS)
+else
+  test-freetype-ftview_OBJCDFLAGS := $(test-freetype-ftview_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  test-freetype-ftview_LINK ?= $(strip $(test-freetype-ftview_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-freetype-ftview_STRIP ?= $(TARGET_STRIP)
+  test-freetype-ftview_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : CMD:=$(strip $(test-freetype-ftview_CC) $(TARGET_SYSROOT))
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : test-freetype-ftview_MOBJC_CPPFLAGS:=$(strip $(test-freetype-ftview_MOBJC_CPPFLAGS) $(test-freetype-ftview_MOBJC_EXTRA_CPPFLAGS))
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : test-freetype-ftview_OBJCFLAGS:=$(strip $(test-freetype-ftview_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : test-freetype-ftview_OBJCDFLAGS:=$(test-freetype-ftview_OBJCDFLAGS)
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : test-freetype-ftview_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : test-freetype-ftview_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  test-freetype-ftview_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  test-freetype-ftview_STRIP ?= $(HOST_STRIP)
+  test-freetype-ftview_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : test-freetype-ftview_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(test-freetype-ftview_MOBJC_CPPFLAGS) $(test-freetype-ftview_MOBJC_EXTRA_CPPFLAGS))
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : test-freetype-ftview_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(test-freetype-ftview_OBJCFLAGS))
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : test-freetype-ftview_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(test-freetype-ftview_OBJCDFLAGS))
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : test-freetype-ftview_IQUOTE:=$(HOST_IQUOTE)
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : test-freetype-ftview_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  test-freetype-ftview_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-freetype-ftview_STRIP ?= $(ECHO) >/dev/null
+  test-freetype-ftview_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : test-freetype-ftview_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(test-freetype-ftview_MOBJC_CPPFLAGS) $(test-freetype-ftview_MOBJC_EXTRA_CPPFLAGS))
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : test-freetype-ftview_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-freetype-ftview_OBJCFLAGS))
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : test-freetype-ftview_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-freetype-ftview_OBJCDFLAGS))
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : test-freetype-ftview_IQUOTE:=$(KERNEL_IQUOTE)
+  $(test-freetype-ftview_MOBJC_TARGETS) $(test-freetype-ftview_MOBJC_DTARGETS) : test-freetype-ftview_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-freetype-ftview_MOBJC_TARGETS) : CPPFLAGS := $(test-freetype-ftview_MOBJC_CPPFLAGS)
+$(test-freetype-ftview_MOBJC_TARGETS) : CFLAGS := $(test-freetype-ftview_OBJCFLAGS)
+$(test-freetype-ftview_MOBJC_TARGETS) : $(test-freetype-ftview_MOBJC_WILDCARD).o : $(test-freetype-ftview_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-freetype-ftview_IQUOTE) $(dir $<) $(test-freetype-ftview_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftview_IQUOTE) . $(test-freetype-ftview_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-freetype-ftview_IQUOTE) $(dir $<) $(test-freetype-ftview_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftview_IQUOTE) . $(test-freetype-ftview_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-freetype-ftview_IQUOTE) $(dir $<) $(test-freetype-ftview_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftview_IQUOTE) . $(test-freetype-ftview_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-freetype-ftview_MOBJC_DTARGETS) : $(test-freetype-ftview_MOBJC_WILDCARD).d : $(test-freetype-ftview_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-freetype-ftview_OBJCDFLAGS) $(test-freetype-ftview_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+test-freetype-ftview_MC_SRCWILDCARD := %
+else
+test-freetype-ftview_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-freetype-ftview_OBJDIR),)
+test-freetype-ftview_MC_TARGETS := $(addsuffix .o,$(test-freetype-ftview_C_NARCHFILES))
+test-freetype-ftview_MC_DTARGETS := $(addsuffix .d,$(test-freetype-ftview_C_NARCHFILES))
+test-freetype-ftview_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-freetype-ftview_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-freetype-ftview_OBJDIR)/,$(notdir $(test-freetype-ftview_C_NARCHFILES))))
+    test-freetype-ftview_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-freetype-ftview_OBJDIR)/,$(notdir $(test-freetype-ftview_C_NARCHFILES))))
+else
+ifeq (,)
+    test-freetype-ftview_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-freetype-ftview_OBJDIR)/,$(test-freetype-ftview_C_NARCHFILES)))
+    test-freetype-ftview_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-freetype-ftview_OBJDIR)/,$(test-freetype-ftview_C_NARCHFILES)))
+else
+    test-freetype-ftview_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-freetype-ftview_OBJDIR)/,$(patsubst /%,%,$(test-freetype-ftview_C_NARCHFILES))))
+    test-freetype-ftview_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-freetype-ftview_OBJDIR)/,$(patsubst /%,%,$(test-freetype-ftview_C_NARCHFILES))))
+endif
+endif
+test-freetype-ftview_MC_TGTWILDCARD := $(test-freetype-ftview_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : | $(addsuffix .c,$(test-freetype-ftview_C_NARCHFILES))
+
+# Be sure that all .c files are found
+test-freetype-ftview_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-freetype-ftview_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-freetype-ftview_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+test-freetype-ftview_MC_DIRS := $(foreach dir, $(test-freetype-ftview_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-freetype-ftview_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-freetype-ftview_MC_DIRS),)
+    test-freetype-ftview_MC_DIRS := $(shell echo $(test-freetype-ftview_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-freetype-ftview_MC_DIRS)
+endif
+
+endif
+
+test-freetype-ftview_MC_CPPFLAGS := $(test-freetype-ftview_CPPFLAGS)
+test-freetype-ftview_CFLAGS := $(test-freetype-ftview_CFLAGS)
+ifeq ($(test-freetype-ftview_DFLAGS),)
+  test-freetype-ftview_DFLAGS := $(test-freetype-ftview_CFLAGS)
+else
+  test-freetype-ftview_DFLAGS := $(test-freetype-ftview_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-freetype-ftview_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-freetype-ftview_STRIP ?= $(TARGET_STRIP)
+test-freetype-ftview_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : test-freetype-ftview_MC_CPPFLAGS:=$(strip $(test-freetype-ftview_MC_CPPFLAGS) $(test-freetype-ftview_MC_EXTRA_CPPFLAGS))
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : test-freetype-ftview_CFLAGS:=$(strip $(test-freetype-ftview_CFLAGS) $(SAFETY_CFLAGS))
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : test-freetype-ftview_DFLAGS:=$(test-freetype-ftview_DFLAGS)
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : test-freetype-ftview_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : test-freetype-ftview_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-freetype-ftview_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-freetype-ftview_STRIP ?= $(HOST_STRIP)
+test-freetype-ftview_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : test-freetype-ftview_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-freetype-ftview_MC_CPPFLAGS) $(test-freetype-ftview_MC_EXTRA_CPPFLAGS))
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : test-freetype-ftview_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-freetype-ftview_CFLAGS))
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : test-freetype-ftview_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-freetype-ftview_DFLAGS))
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : test-freetype-ftview_IQUOTE:=$(HOST_IQUOTE)
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : test-freetype-ftview_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-freetype-ftview_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-freetype-ftview_STRIP ?= $(ECHO) >/dev/null
+test-freetype-ftview_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : test-freetype-ftview_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-freetype-ftview_MC_CPPFLAGS) $(test-freetype-ftview_MC_EXTRA_CPPFLAGS))
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : test-freetype-ftview_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-freetype-ftview_CFLAGS))
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : test-freetype-ftview_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-freetype-ftview_DFLAGS))
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : test-freetype-ftview_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-freetype-ftview_MC_TARGETS) $(test-freetype-ftview_MC_DTARGETS) : test-freetype-ftview_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-freetype-ftview_MC_TARGETS) : CPPFLAGS := $(test-freetype-ftview_MC_CPPFLAGS)
+$(test-freetype-ftview_MC_TARGETS) : CFLAGS := $(test-freetype-ftview_CFLAGS)
+$(test-freetype-ftview_MC_TARGETS) : $(test-freetype-ftview_MC_TGTWILDCARD).o : $(test-freetype-ftview_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-freetype-ftview_IQUOTE) $(dir $<) $(test-freetype-ftview_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftview_IQUOTE) . $(test-freetype-ftview_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-freetype-ftview_IQUOTE) $(dir $<) $(test-freetype-ftview_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftview_IQUOTE) . $(test-freetype-ftview_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-freetype-ftview_IQUOTE) $(dir $<) $(test-freetype-ftview_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-ftview_IQUOTE) . $(test-freetype-ftview_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-freetype-ftview_MC_DTARGETS) : $(test-freetype-ftview_MC_TGTWILDCARD).d : $(test-freetype-ftview_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-freetype-ftview_DFLAGS) $(test-freetype-ftview_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(test-freetype-ftview_OBJDIR),)
+test-freetype-ftview-MA_TARGETS := $(addsuffix .o,$(test-freetype-ftview_ASMFILES))
+test-freetype-ftview-MA_WILDCARD := %
+else
+test-freetype-ftview-MA_TARGETS := $(addsuffix .o,$(addprefix $(test-freetype-ftview_OBJDIR)/,$(notdir $(test-freetype-ftview_ASMFILES))))
+test-freetype-ftview-MA_WILDCARD := $(test-freetype-ftview_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(test-freetype-ftview-MA_TARGETS) : | $(addsuffix .s,$(test-freetype-ftview_ASMFILES))
+
+# Be sure that all .c files are found
+test-freetype-ftview-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-freetype-ftview-MA_BASEDIRS := $(shell echo $(sort $(dir $(test-freetype-ftview_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+test-freetype-ftview-MA_DIRS := $(foreach dir, $(test-freetype-ftview-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-freetype-ftview-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-freetype-ftview-MA_DIRS),)
+    test-freetype-ftview-MA_DIRS := $(shell echo $(test-freetype-ftview-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(test-freetype-ftview-MA_DIRS)
+endif
+
+endif
+
+test-freetype-ftview-MA_ASSEMBLER ?= $(test-freetype-ftview_ASSEMBLER)
+
+$(test-freetype-ftview-MA_TARGETS) : test-freetype-ftview-MA_CMD:= $(test-freetype-ftview-MA_ASSEMBLER)
+
+$(test-freetype-ftview-MA_TARGETS) : CPPFLAGS := $(test-freetype-ftview_CPPFLAGS)
+$(test-freetype-ftview-MA_TARGETS) : AFLAGS := $(test-freetype-ftview_AFLAGS)
+$(test-freetype-ftview-MA_TARGETS) : $(test-freetype-ftview-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(test-freetype-ftview-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(test-freetype-ftview-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(test-freetype-ftview-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+test-freetype-ftview-link_EXTRA_LDFLAGS := 
+test-freetype-ftview-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-freetype-ftview-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-freetype-ftview-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-freetype-ftview-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+test-freetype-ftview-link_DIRS := $(subst -L ,-L,$(strip $(test-freetype-ftview_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-freetype-ftview-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-freetype-ftview-link_DIRS)))
+# Add trailing /
+test-freetype-ftview-link_DIRS := $(subst //,/,$(addsuffix /,$(test-freetype-ftview-link_DIRS)))
+# Add normal linklib path
+test-freetype-ftview-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-freetype-ftview-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-freetype-ftview_LIBS) $(test-freetype-ftview-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    test-freetype-ftview-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    test-freetype-ftview-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+test-freetype-ftview-link_DEPLIBS := $(foreach lib,$(test-freetype-ftview-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-freetype-ftview-link_DIRS)))) \
+)
+
+$(test-freetype-ftview_TARGETDIR)/$(test-freetype-ftview_PROGNAME) : OBJDIR := $(test-freetype-ftview_OBJDIR)
+$(test-freetype-ftview_TARGETDIR)/$(test-freetype-ftview_PROGNAME) : OBJS := $(test-freetype-ftview_OBJS) $(test-freetype-ftview_ARCHOBJS) $(USER_OBJS)
+$(test-freetype-ftview_TARGETDIR)/$(test-freetype-ftview_PROGNAME) : LDFLAGS := $(strip $(test-freetype-ftview_LDFLAGS) $(test-freetype-ftview-link_EXTRA_LDFLAGS))
+$(test-freetype-ftview_TARGETDIR)/$(test-freetype-ftview_PROGNAME) : LIBS := $(addprefix -l,$(test-freetype-ftview_LIBS) $(test-freetype-ftview-link_EXTRA_LIBS) )
+$(test-freetype-ftview_TARGETDIR)/$(test-freetype-ftview_PROGNAME) : $(test-freetype-ftview_OBJS) $(test-freetype-ftview_ARCHOBJS) $(USER_OBJS) $(test-freetype-ftview-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-freetype-ftview_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-freetype-ftview_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-freetype-ftview_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-freetype-ftview_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-freetype-ftview_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-freetype-ftview_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-freetype-ftview_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-freetype-ftview_DEPS),)
+  ifneq (test-freetype-ftview test-freetype-ftview-quick,)
+    ifneq ($(findstring $(TARGET),test-freetype-ftview test-freetype-ftview-quick),)
+      -include $(test-freetype-ftview_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-freetype-ftview_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-freetype-ftview_OBJS) $(test-freetype-ftview_DEPS) $(test-freetype-ftview_TARGETDIR)/$(test-freetype-ftview_PROGNAME),)
+$(test-freetype-ftview_OBJS) $(test-freetype-ftview_DEPS) $(test-freetype-ftview_TARGETDIR)/$(test-freetype-ftview_PROGNAME) : | $(test-freetype-ftview_OBJDIR) $(test-freetype-ftview_TARGETDIR)
+else
+$(test-freetype-ftview_OBJS) $(test-freetype-ftview_DEPS) $(test-freetype-ftview_TARGETDIR)/$(test-freetype-ftview_PROGNAME) :: $(test-freetype-ftview_OBJDIR) $(test-freetype-ftview_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(test-freetype-ftview_OBJDIR) $(test-freetype-ftview_TARGETDIR)
+
+
+test-freetype-ftview-clean : FILES := $(test-freetype-ftview_OBJS) $(test-freetype-ftview_TARGETDIR)/$(test-freetype-ftview_PROGNAME) $(test-freetype-ftview_DEPS)
+#MM
+test-freetype-ftview-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-freetype-ftview"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

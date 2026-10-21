@@ -1,0 +1,295 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM workbench-libs-expat-examples : \
+#MM     workbench-libs-expat-lib \
+#MM     includes \
+#MM     linklibs
+
+FILES   := elements outline
+EXEDIR  := $(AROS_TESTS)/expat
+
+
+.PHONY : workbench-libs-expat-examples
+
+workbench-libs-expat-examples_OBJDIR    := $(GENDIR)/$(CURDIR)
+workbench-libs-expat-examples_TARGETDIR := $(EXEDIR)
+workbench-libs-expat-examples_LIBS := expat
+
+workbench-libs-expat-examples_FILES     := $(FILES)
+workbench-libs-expat-examples_OBJS      := $(addsuffix .o,$(addprefix $(workbench-libs-expat-examples_OBJDIR)/,$(workbench-libs-expat-examples_FILES)))
+workbench-libs-expat-examples_DEPS      := $(addsuffix .d,$(addprefix $(workbench-libs-expat-examples_OBJDIR)/,$(workbench-libs-expat-examples_FILES)))
+workbench-libs-expat-examples_EXES      := $(addprefix $(workbench-libs-expat-examples_TARGETDIR)/,$(workbench-libs-expat-examples_FILES))
+
+workbench-libs-expat-examples_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    workbench-libs-expat-examples_CPPFLAGS += -I
+endif
+workbench-libs-expat-examples_CFLAGS    := $(CFLAGS)
+workbench-libs-expat-examples_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+workbench-libs-expat-examples_COVERAGE := yes
+workbench-libs-expat-examples_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+workbench-libs-expat-examples_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+workbench-libs-expat-examples_CFLAGS    := $(strip $(workbench-libs-expat-examples_COVERAGEFLAGS) $(workbench-libs-expat-examples_CFLAGS))
+workbench-libs-expat-examples_LIBS += $(workbench-libs-expat-examples_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-libs-expat-examples_FUNCINSTR := yes
+workbench-libs-expat-examples_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+workbench-libs-expat-examples_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-libs-expat-examples_CFLAGS    := $(strip $(workbench-libs-expat-examples_INSTRFUNCFLAGS) $(workbench-libs-expat-examples_CFLAGS))
+workbench-libs-expat-examples_LIBS += $(workbench-libs-expat-examples_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+workbench-libs-expat-examples_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(workbench-libs-expat-examples_CFLAGS))
+endif
+endif
+ifneq (,)
+    workbench-libs-expat-examples_DFLAGS := 
+else
+    workbench-libs-expat-examples_DFLAGS := $(workbench-libs-expat-examples_CFLAGS)
+endif
+ifeq (target,target)
+workbench-libs-expat-examples_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-libs-expat-examples_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-libs-expat-examples_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    workbench-libs-expat-examples_LDFLAGS += -L
+endif
+
+#MM
+workbench-libs-expat-examples-quick : workbench-libs-expat-examples
+
+#MM workbench-libs-expat-examples : includes-generate-deps core-linklibs
+workbench-libs-expat-examples : $(workbench-libs-expat-examples_EXES)
+
+ifneq ($(filter $(TARGET),workbench-libs-expat-examples workbench-libs-expat-examples-quick),)
+
+ifeq (,)
+workbench-libs-expat-examples_MC_SRCWILDCARD := %
+else
+workbench-libs-expat-examples_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-expat-examples_OBJDIR),)
+workbench-libs-expat-examples_MC_TARGETS := $(addsuffix .o,$(workbench-libs-expat-examples_FILES))
+workbench-libs-expat-examples_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-expat-examples_FILES))
+workbench-libs-expat-examples_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-expat-examples_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-expat-examples_OBJDIR)/,$(notdir $(workbench-libs-expat-examples_FILES))))
+    workbench-libs-expat-examples_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-expat-examples_OBJDIR)/,$(notdir $(workbench-libs-expat-examples_FILES))))
+else
+ifeq (,)
+    workbench-libs-expat-examples_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-expat-examples_OBJDIR)/,$(workbench-libs-expat-examples_FILES)))
+    workbench-libs-expat-examples_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-expat-examples_OBJDIR)/,$(workbench-libs-expat-examples_FILES)))
+else
+    workbench-libs-expat-examples_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-expat-examples_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-expat-examples_FILES))))
+    workbench-libs-expat-examples_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-expat-examples_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-expat-examples_FILES))))
+endif
+endif
+workbench-libs-expat-examples_MC_TGTWILDCARD := $(workbench-libs-expat-examples_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-expat-examples_FILES))
+
+# Be sure that all .c files are found
+workbench-libs-expat-examples_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-expat-examples_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-expat-examples_FILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-expat-examples_MC_DIRS := $(foreach dir, $(workbench-libs-expat-examples_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-expat-examples_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-expat-examples_MC_DIRS),)
+    workbench-libs-expat-examples_MC_DIRS := $(shell echo $(workbench-libs-expat-examples_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-expat-examples_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-expat-examples_MC_CPPFLAGS := $(workbench-libs-expat-examples_CPPFLAGS)
+workbench-libs-expat-examples_CFLAGS := $(workbench-libs-expat-examples_CFLAGS)
+ifeq ($(workbench-libs-expat-examples_DFLAGS),)
+  workbench-libs-expat-examples_DFLAGS := $(workbench-libs-expat-examples_CFLAGS)
+else
+  workbench-libs-expat-examples_DFLAGS := $(workbench-libs-expat-examples_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-expat-examples_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-expat-examples_STRIP ?= $(TARGET_STRIP)
+workbench-libs-expat-examples_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : workbench-libs-expat-examples_MC_CPPFLAGS:=$(strip $(workbench-libs-expat-examples_MC_CPPFLAGS) $(workbench-libs-expat-examples_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : workbench-libs-expat-examples_CFLAGS:=$(strip $(workbench-libs-expat-examples_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : workbench-libs-expat-examples_DFLAGS:=$(workbench-libs-expat-examples_DFLAGS)
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : workbench-libs-expat-examples_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : workbench-libs-expat-examples_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-expat-examples_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-expat-examples_STRIP ?= $(HOST_STRIP)
+workbench-libs-expat-examples_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : workbench-libs-expat-examples_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-expat-examples_MC_CPPFLAGS) $(workbench-libs-expat-examples_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : workbench-libs-expat-examples_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-expat-examples_CFLAGS))
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : workbench-libs-expat-examples_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-expat-examples_DFLAGS))
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : workbench-libs-expat-examples_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : workbench-libs-expat-examples_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-expat-examples_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-expat-examples_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-expat-examples_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : workbench-libs-expat-examples_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-expat-examples_MC_CPPFLAGS) $(workbench-libs-expat-examples_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : workbench-libs-expat-examples_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-expat-examples_CFLAGS))
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : workbench-libs-expat-examples_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-expat-examples_DFLAGS))
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : workbench-libs-expat-examples_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-expat-examples_MC_TARGETS) $(workbench-libs-expat-examples_MC_DTARGETS) : workbench-libs-expat-examples_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-expat-examples_MC_TARGETS) : CPPFLAGS := $(workbench-libs-expat-examples_MC_CPPFLAGS)
+$(workbench-libs-expat-examples_MC_TARGETS) : CFLAGS := $(workbench-libs-expat-examples_CFLAGS)
+$(workbench-libs-expat-examples_MC_TARGETS) : $(workbench-libs-expat-examples_MC_TGTWILDCARD).o : $(workbench-libs-expat-examples_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-expat-examples_IQUOTE) $(dir $<) $(workbench-libs-expat-examples_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-examples_IQUOTE) . $(workbench-libs-expat-examples_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-expat-examples_IQUOTE) $(dir $<) $(workbench-libs-expat-examples_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-examples_IQUOTE) . $(workbench-libs-expat-examples_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-expat-examples_IQUOTE) $(dir $<) $(workbench-libs-expat-examples_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-examples_IQUOTE) . $(workbench-libs-expat-examples_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-expat-examples_MC_DTARGETS) : $(workbench-libs-expat-examples_MC_TGTWILDCARD).d : $(workbench-libs-expat-examples_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-expat-examples_DFLAGS) $(workbench-libs-expat-examples_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+workbench-libs-expat-examples-link_EXTRA_LDFLAGS := 
+workbench-libs-expat-examples-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    workbench-libs-expat-examples-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    workbench-libs-expat-examples-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    workbench-libs-expat-examples-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+workbench-libs-expat-examples-link_DIRS := $(subst -L ,-L,$(strip $(workbench-libs-expat-examples_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+workbench-libs-expat-examples-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(workbench-libs-expat-examples-link_DIRS)))
+# Add trailing /
+workbench-libs-expat-examples-link_DIRS := $(subst //,/,$(addsuffix /,$(workbench-libs-expat-examples-link_DIRS)))
+# Add normal linklib path
+workbench-libs-expat-examples-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+workbench-libs-expat-examples-link_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-libs-expat-examples_LIBS) $(workbench-libs-expat-examples-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+workbench-libs-expat-examples-link_DEPLIBS := $(foreach lib,$(workbench-libs-expat-examples-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(workbench-libs-expat-examples-link_DIRS)))) \
+)
+workbench-libs-expat-examples-link_PROGS := $(addprefix $(workbench-libs-expat-examples_TARGETDIR)/,$(workbench-libs-expat-examples_FILES))
+
+$(workbench-libs-expat-examples-link_PROGS) : OBJDIR := $(workbench-libs-expat-examples_OBJDIR)
+$(workbench-libs-expat-examples-link_PROGS) : LDFLAGS := $(strip $(workbench-libs-expat-examples_LDFLAGS) $(workbench-libs-expat-examples-link_EXTRA_LDFLAGS))
+$(workbench-libs-expat-examples-link_PROGS) : LIBS := $(addprefix -l,$(workbench-libs-expat-examples_LIBS) $(workbench-libs-expat-examples-link_EXTRA_LIBS) )
+$(workbench-libs-expat-examples-link_PROGS) : $(workbench-libs-expat-examples_TARGETDIR)/% : $(workbench-libs-expat-examples_OBJDIR)/%.o $(workbench-libs-expat-examples-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(workbench-libs-expat-examples_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(workbench-libs-expat-examples_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(workbench-libs-expat-examples_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-libs-expat-examples_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(workbench-libs-expat-examples_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(workbench-libs-expat-examples_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-libs-expat-examples_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(workbench-libs-expat-examples_DEPS),)
+  ifneq (workbench-libs-expat-examples workbench-libs-expat-examples-quick,)
+    ifneq ($(findstring $(TARGET),workbench-libs-expat-examples workbench-libs-expat-examples-quick),)
+      -include $(workbench-libs-expat-examples_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-libs-expat-examples_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(workbench-libs-expat-examples_DEPS) $(workbench-libs-expat-examples_OBJS) $(addprefix $(workbench-libs-expat-examples_TARGETDIR)/,$(workbench-libs-expat-examples_FILES)),)
+$(workbench-libs-expat-examples_DEPS) $(workbench-libs-expat-examples_OBJS) $(addprefix $(workbench-libs-expat-examples_TARGETDIR)/,$(workbench-libs-expat-examples_FILES)) : | $(workbench-libs-expat-examples_TARGETDIR) $(workbench-libs-expat-examples_OBJDIR)
+else
+$(workbench-libs-expat-examples_DEPS) $(workbench-libs-expat-examples_OBJS) $(addprefix $(workbench-libs-expat-examples_TARGETDIR)/,$(workbench-libs-expat-examples_FILES)) :: $(workbench-libs-expat-examples_TARGETDIR) $(workbench-libs-expat-examples_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-expat-examples_TARGETDIR) $(workbench-libs-expat-examples_OBJDIR)
+
+
+workbench-libs-expat-examples-clean : FILES := $(workbench-libs-expat-examples_OBJS) $(workbench-libs-expat-examples_EXES) $(workbench-libs-expat-examples_DEPS)
+#MM
+workbench-libs-expat-examples-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-libs-expat-examples"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

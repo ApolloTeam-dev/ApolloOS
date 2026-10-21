@@ -1,0 +1,636 @@
+#   $Id$
+#
+#   Makefile for the OpenURL command of openurl.library
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM external-openurl-cmd : includes linklibs external-openurl-lib
+
+EXE    := OpenURL
+EXEDIR := $(AROS_C)
+FILES  := OpenURL SmartReadArgs debug
+
+USER_INCLUDES := -I$(SRCDIR)/$(CURDIR)/../include
+USER_CFLAGS := -DNO_INLINE_STDARG
+
+
+.PHONY : external-openurl-cmd
+
+external-openurl-cmd_PROGNAME  := $(EXE)
+external-openurl-cmd_OBJDIR    := $(GENDIR)/$(CURDIR)
+external-openurl-cmd_TARGETDIR := $(EXEDIR)
+external-openurl-cmd_LINKER    := 
+external-openurl-cmd_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(external-openurl-cmd_LINKER),)
+    external-openurl-cmd_LINKER := target
+endif
+
+ifneq ("$(strip $(FILES)   )","")
+    external-openurl-cmd_FILES     := $(FILES)
+    external-openurl-cmd_OBJCFILES := 
+    external-openurl-cmd_ASMFILES  := 
+    external-openurl-cmd_CXXFILES := 
+else
+    external-openurl-cmd_FILES     := $(external-openurl-cmd_PROGNAME)
+    external-openurl-cmd_OBJCFILES :=
+    external-openurl-cmd_ASMFILES  :=
+    external-openurl-cmd_CXXFILES :=
+endif
+
+external-openurl-cmd_ARCHOBJS   := $(wildcard $(external-openurl-cmd_OBJDIR)/arch/*.o)
+external-openurl-cmd_ARCHFILES  := $(basename $(notdir $(external-openurl-cmd_ARCHOBJS)))
+external-openurl-cmd_C_NARCHFILES := $(filter-out $(external-openurl-cmd_ARCHFILES),$(external-openurl-cmd_FILES))
+external-openurl-cmd_CXX_NARCHFILES := $(filter-out $(external-openurl-cmd_ARCHFILES),$(external-openurl-cmd_CXXFILES))
+external-openurl-cmd_OBJC_NARCHFILES := $(filter-out $(external-openurl-cmd_ARCHFILES),$(external-openurl-cmd_OBJCFILES))
+
+TMP_FILES := $(external-openurl-cmd_C_NARCHFILES) $(external-openurl-cmd_CXX_NARCHFILES) $(external-openurl-cmd_ASMFILES) $(external-openurl-cmd_OBJC_NARCHFILES)
+external-openurl-cmd_OBJS := $(addsuffix .o,$(addprefix $(external-openurl-cmd_OBJDIR)/,$(notdir $(TMP_FILES))))
+external-openurl-cmd_DEPS := $(addsuffix .d,$(addprefix $(external-openurl-cmd_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+external-openurl-cmd_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+external-openurl-cmd_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+external-openurl-cmd_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+external-openurl-cmd_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+external-openurl-cmd_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+external-openurl-cmd_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+external-openurl-cmd_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+external-openurl-cmd_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+external-openurl-cmd_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+external-openurl-cmd_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+external-openurl-cmd_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+external-openurl-cmd_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+external-openurl-cmd_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+external-openurl-cmd_LDFLAGS          := 
+endif
+
+external-openurl-cmd_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+external-openurl-cmd_COVERAGE := yes
+external-openurl-cmd_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+external-openurl-cmd_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+external-openurl-cmd_CFLAGS    := $(strip $(external-openurl-cmd_COVERAGEFLAGS) $(external-openurl-cmd_CFLAGS))
+external-openurl-cmd_CXXFLAGS := $(strip $(external-openurl-cmd_COVERAGEFLAGS) $(external-openurl-cmd_CXXFLAGS))
+external-openurl-cmd_LIBS += $(external-openurl-cmd_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+external-openurl-cmd_FUNCINSTR := yes
+external-openurl-cmd_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+external-openurl-cmd_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+external-openurl-cmd_CFLAGS    := $(strip $(external-openurl-cmd_INSTRFUNCFLAGS) $(external-openurl-cmd_CFLAGS))
+external-openurl-cmd_CXXFLAGS := $(strip $(external-openurl-cmd_INSTRFUNCFLAGS) $(external-openurl-cmd_CXXFLAGS))
+external-openurl-cmd_LIBS += $(external-openurl-cmd_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+external-openurl-cmd_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(external-openurl-cmd_CFLAGS))
+external-openurl-cmd_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(external-openurl-cmd_CXXFLAGS))
+endif
+endif
+external-openurl-cmd_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    external-openurl-cmd_DFLAGS     := 
+else
+    external-openurl-cmd_DFLAGS     := $(external-openurl-cmd_CFLAGS)
+endif
+ifneq (,)
+    external-openurl-cmd_DXXFLAGS     := 
+else
+    external-openurl-cmd_DXXFLAGS     := $(external-openurl-cmd_CXXFLAGS)
+endif
+ifeq (target,target)
+external-openurl-cmd_LDFLAGS           := $(external-openurl-cmd_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+external-openurl-cmd_LDFLAGS           := $(external-openurl-cmd_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+external-openurl-cmd_LDFLAGS           := $(external-openurl-cmd_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+external-openurl-cmd_LDFLAGS   += -L
+endif
+
+#MM
+external-openurl-cmd-quick : external-openurl-cmd
+
+#MM external-openurl-cmd : includes-generate-deps core-linklibs
+external-openurl-cmd : $(external-openurl-cmd_TARGETDIR)/$(external-openurl-cmd_PROGNAME)
+
+ifneq ($(filter $(TARGET),external-openurl-cmd external-openurl-cmd-quick external-openurl-cmd-gz-quick),)
+
+external-openurl-cmd_CXXABSBASENAMES := $(foreach external-openurl-cmd_CXXBASE,$(external-openurl-cmd_CXX_NARCHFILES),$(if $(filter /%,$(external-openurl-cmd_CXXBASE)),$(external-openurl-cmd_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(external-openurl-cmd_CXXBASE))))
+
+ifneq ($(external-openurl-cmd_CXXABSBASENAMES),)
+
+external-openurl-cmd_CXXBASENAMES := $(basename $(external-openurl-cmd_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+external-openurl-cmd_MCXX_FILES  := $(strip $(foreach external-openurl-cmd_CXXBASE,$(external-openurl-cmd_CXXABSBASENAMES), $(firstword $(wildcard $(foreach external-openurl-cmd_EXT, $(AROS_CXXEXTS),$(addsuffix .$(external-openurl-cmd_EXT),$(external-openurl-cmd_CXXBASE)))))))
+
+ifeq (,)
+external-openurl-cmd_MCXX_SRCWILDCARD := %
+else
+external-openurl-cmd_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(external-openurl-cmd_OBJDIR),)
+  external-openurl-cmd_CXXTARGETS := $(notdir $(external-openurl-cmd_CXXBASENAMES:=.o))
+  external-openurl-cmd_CXXDTARGETS := $(notdir $(external-openurl-cmd_CXXBASENAMES:=.d))
+  external-openurl-cmd_MCXX_WILDCARD := %
+else
+  external-openurl-cmd_CXXTARGETS := $(addprefix $(external-openurl-cmd_OBJDIR)/,$(notdir $(external-openurl-cmd_CXXBASENAMES:=.o)))
+  external-openurl-cmd_CXXDTARGETS := $(addprefix $(external-openurl-cmd_OBJDIR)/,$(notdir $(external-openurl-cmd_CXXBASENAMES:=.d)))
+  external-openurl-cmd_MCXX_WILDCARD := $(external-openurl-cmd_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(external-openurl-cmd_CXXTARGETS) $(external-openurl-cmd_CXXDTARGETS) : | $(external-openurl-cmd_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+external-openurl-cmd_MCXX_CPPFLAGS := $(external-openurl-cmd_CPPFLAGS)
+external-openurl-cmd_CXXFLAGS := $(external-openurl-cmd_CXXFLAGS)
+ifeq ($(external-openurl-cmd_DXXFLAGS),)
+  external-openurl-cmd_DXXFLAGS := $(external-openurl-cmd_CXXFLAGS)
+else
+  external-openurl-cmd_DXXFLAGS := $(external-openurl-cmd_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  external-openurl-cmd_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  external-openurl-cmd_STRIP ?= $(HOST_STRIP)
+  external-openurl-cmd_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  external-openurl-cmd_CXXCMD:=$(HOST_CXX)
+  external-openurl-cmd_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(external-openurl-cmd_MCXX_CPPFLAGS) $(external-openurl-cmd_MCXX_EXTRA_CPPFLAGS))
+  external-openurl-cmd_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(external-openurl-cmd_CXXFLAGS))
+  external-openurl-cmd_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(external-openurl-cmd_DXXFLAGS))
+  external-openurl-cmd_CXXIQUOTE:=$(HOST_IQUOTE)
+  external-openurl-cmd_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  external-openurl-cmd_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  external-openurl-cmd_STRIP ?= $(TARGET_STRIP)
+  external-openurl-cmd_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  external-openurl-cmd_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  external-openurl-cmd_MCXX_CPPFLAGS := $(strip $(external-openurl-cmd_MCXX_CPPFLAGS) $(external-openurl-cmd_MCXX_EXTRA_CPPFLAGS))
+  external-openurl-cmd_CXXFLAGS := $(strip $(external-openurl-cmd_CXXFLAGS) $(SAFETY_CFLAGS))
+  external-openurl-cmd_DXXFLAGS := $(external-openurl-cmd_DXXFLAGS)
+  external-openurl-cmd_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  external-openurl-cmd_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  external-openurl-cmd_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  external-openurl-cmd_STRIP ?= $(ECHO) >/dev/null
+  external-openurl-cmd_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  external-openurl-cmd_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  external-openurl-cmd_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(external-openurl-cmd_MCXX_CPPFLAGS) $(external-openurl-cmd_MCXX_EXTRA_CPPFLAGS))
+  external-openurl-cmd_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(external-openurl-cmd_CXXFLAGS))
+  external-openurl-cmd_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(external-openurl-cmd_DXXFLAGS))
+  external-openurl-cmd_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  external-openurl-cmd_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(external-openurl-cmd_CXXCMD) $(external-openurl-cmd_CXXIQUOTE) $(dir $(2)) $(external-openurl-cmd_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-cmd_CXXIQUOTE) . $(external-openurl-cmd_CXXIQUOTE_END) $(strip $(external-openurl-cmd_CXXFLAGS) $(external-openurl-cmd_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(external-openurl-cmd_CXXCMD) $(external-openurl-cmd_CXXIQUOTE) $(dir $(2)) $(external-openurl-cmd_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-cmd_CXXIQUOTE) . $(external-openurl-cmd_CXXIQUOTE_END) $(strip $(external-openurl-cmd_CXXFLAGS) $(external-openurl-cmd_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(external-openurl-cmd_CXXCMD) $(external-openurl-cmd_CXXIQUOTE) $(dir $(2)) $(external-openurl-cmd_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-cmd_CXXIQUOTE) . $(external-openurl-cmd_CXXIQUOTE_END) $(strip $(external-openurl-cmd_CXXFLAGS) $(external-openurl-cmd_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(external-openurl-cmd_CXXCMD)" $(MKDEPEND) $(strip $(external-openurl-cmd_DXXFLAGS) $(external-openurl-cmd_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(external-openurl-cmd_OBJDIR),)
+  $(foreach external-openurl-cmd_CXXFILE,$(external-openurl-cmd_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(external-openurl-cmd_CXXFILE))),$(external-openurl-cmd_CXXFILE))))
+else
+  $(foreach external-openurl-cmd_CXXFILE,$(external-openurl-cmd_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(external-openurl-cmd_OBJDIR)/,$(notdir $(basename $(external-openurl-cmd_CXXFILE)))),$(external-openurl-cmd_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(external-openurl-cmd_OBJC_NARCHFILES),)
+
+ifeq (,)
+external-openurl-cmd_MOBJC_SRCWILDCARD := %
+else
+external-openurl-cmd_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(external-openurl-cmd_OBJDIR),)
+  external-openurl-cmd_MOBJC_TARGETS := $(addsuffix .o,$(external-openurl-cmd_OBJC_NARCHFILES))
+  external-openurl-cmd_MOBJC_DTARGETS := $(addsuffix .d,$(external-openurl-cmd_OBJC_NARCHFILES))
+  external-openurl-cmd_MOBJC_WILDCARD := %
+else
+  external-openurl-cmd_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(external-openurl-cmd_OBJDIR)/,$(external-openurl-cmd_OBJC_NARCHFILES)))
+  external-openurl-cmd_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(external-openurl-cmd_OBJDIR)/,$(external-openurl-cmd_OBJC_NARCHFILES)))
+  external-openurl-cmd_MOBJC_WILDCARD := $(external-openurl-cmd_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : | $(addsuffix .m,$(external-openurl-cmd_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  external-openurl-cmd_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  external-openurl-cmd_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(external-openurl-cmd_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  external-openurl-cmd_MOBJC_DIRS := $(foreach dir, $(external-openurl-cmd_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(external-openurl-cmd_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(external-openurl-cmd_MOBJC_DIRS),)
+    external-openurl-cmd_MOBJC_DIRS := $(shell echo $(external-openurl-cmd_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(external-openurl-cmd_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  external-openurl-cmd_CC := $(TARGET_CC)
+else
+  external-openurl-cmd_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+external-openurl-cmd_MOBJC_CPPFLAGS := $(external-openurl-cmd_CPPFLAGS)
+external-openurl-cmd_OBJCFLAGS := $(external-openurl-cmd_CFLAGS)
+external-openurl-cmd_OBJCFLAGS := $(external-openurl-cmd_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+external-openurl-cmd_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(external-openurl-cmd_OBJCFLAGS)))
+ifeq ($(external-openurl-cmd_DFLAGS),)
+  external-openurl-cmd_OBJCDFLAGS := $(external-openurl-cmd_CFLAGS)
+else
+  external-openurl-cmd_OBJCDFLAGS := $(external-openurl-cmd_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  external-openurl-cmd_LINK ?= $(strip $(external-openurl-cmd_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  external-openurl-cmd_STRIP ?= $(TARGET_STRIP)
+  external-openurl-cmd_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : CMD:=$(strip $(external-openurl-cmd_CC) $(TARGET_SYSROOT))
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : external-openurl-cmd_MOBJC_CPPFLAGS:=$(strip $(external-openurl-cmd_MOBJC_CPPFLAGS) $(external-openurl-cmd_MOBJC_EXTRA_CPPFLAGS))
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : external-openurl-cmd_OBJCFLAGS:=$(strip $(external-openurl-cmd_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : external-openurl-cmd_OBJCDFLAGS:=$(external-openurl-cmd_OBJCDFLAGS)
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : external-openurl-cmd_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : external-openurl-cmd_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  external-openurl-cmd_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  external-openurl-cmd_STRIP ?= $(HOST_STRIP)
+  external-openurl-cmd_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : external-openurl-cmd_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(external-openurl-cmd_MOBJC_CPPFLAGS) $(external-openurl-cmd_MOBJC_EXTRA_CPPFLAGS))
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : external-openurl-cmd_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(external-openurl-cmd_OBJCFLAGS))
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : external-openurl-cmd_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(external-openurl-cmd_OBJCDFLAGS))
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : external-openurl-cmd_IQUOTE:=$(HOST_IQUOTE)
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : external-openurl-cmd_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  external-openurl-cmd_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  external-openurl-cmd_STRIP ?= $(ECHO) >/dev/null
+  external-openurl-cmd_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : external-openurl-cmd_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(external-openurl-cmd_MOBJC_CPPFLAGS) $(external-openurl-cmd_MOBJC_EXTRA_CPPFLAGS))
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : external-openurl-cmd_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-openurl-cmd_OBJCFLAGS))
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : external-openurl-cmd_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-openurl-cmd_OBJCDFLAGS))
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : external-openurl-cmd_IQUOTE:=$(KERNEL_IQUOTE)
+  $(external-openurl-cmd_MOBJC_TARGETS) $(external-openurl-cmd_MOBJC_DTARGETS) : external-openurl-cmd_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(external-openurl-cmd_MOBJC_TARGETS) : CPPFLAGS := $(external-openurl-cmd_MOBJC_CPPFLAGS)
+$(external-openurl-cmd_MOBJC_TARGETS) : CFLAGS := $(external-openurl-cmd_OBJCFLAGS)
+$(external-openurl-cmd_MOBJC_TARGETS) : $(external-openurl-cmd_MOBJC_WILDCARD).o : $(external-openurl-cmd_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(external-openurl-cmd_IQUOTE) $(dir $<) $(external-openurl-cmd_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-cmd_IQUOTE) . $(external-openurl-cmd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(external-openurl-cmd_IQUOTE) $(dir $<) $(external-openurl-cmd_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-cmd_IQUOTE) . $(external-openurl-cmd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(external-openurl-cmd_IQUOTE) $(dir $<) $(external-openurl-cmd_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-cmd_IQUOTE) . $(external-openurl-cmd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(external-openurl-cmd_MOBJC_DTARGETS) : $(external-openurl-cmd_MOBJC_WILDCARD).d : $(external-openurl-cmd_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(external-openurl-cmd_OBJCDFLAGS) $(external-openurl-cmd_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+external-openurl-cmd_MC_SRCWILDCARD := %
+else
+external-openurl-cmd_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(external-openurl-cmd_OBJDIR),)
+external-openurl-cmd_MC_TARGETS := $(addsuffix .o,$(external-openurl-cmd_C_NARCHFILES))
+external-openurl-cmd_MC_DTARGETS := $(addsuffix .d,$(external-openurl-cmd_C_NARCHFILES))
+external-openurl-cmd_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    external-openurl-cmd_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-openurl-cmd_OBJDIR)/,$(notdir $(external-openurl-cmd_C_NARCHFILES))))
+    external-openurl-cmd_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-openurl-cmd_OBJDIR)/,$(notdir $(external-openurl-cmd_C_NARCHFILES))))
+else
+ifeq (,)
+    external-openurl-cmd_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-openurl-cmd_OBJDIR)/,$(external-openurl-cmd_C_NARCHFILES)))
+    external-openurl-cmd_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-openurl-cmd_OBJDIR)/,$(external-openurl-cmd_C_NARCHFILES)))
+else
+    external-openurl-cmd_MC_TARGETS := $(addsuffix .o,$(addprefix $(external-openurl-cmd_OBJDIR)/,$(patsubst /%,%,$(external-openurl-cmd_C_NARCHFILES))))
+    external-openurl-cmd_MC_DTARGETS := $(addsuffix .d,$(addprefix $(external-openurl-cmd_OBJDIR)/,$(patsubst /%,%,$(external-openurl-cmd_C_NARCHFILES))))
+endif
+endif
+external-openurl-cmd_MC_TGTWILDCARD := $(external-openurl-cmd_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : | $(addsuffix .c,$(external-openurl-cmd_C_NARCHFILES))
+
+# Be sure that all .c files are found
+external-openurl-cmd_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+external-openurl-cmd_MC_BASEDIRS := $(shell echo $(sort $(dir $(external-openurl-cmd_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+external-openurl-cmd_MC_DIRS := $(foreach dir, $(external-openurl-cmd_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(external-openurl-cmd_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(external-openurl-cmd_MC_DIRS),)
+    external-openurl-cmd_MC_DIRS := $(shell echo $(external-openurl-cmd_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(external-openurl-cmd_MC_DIRS)
+endif
+
+endif
+
+external-openurl-cmd_MC_CPPFLAGS := $(external-openurl-cmd_CPPFLAGS)
+external-openurl-cmd_CFLAGS := $(external-openurl-cmd_CFLAGS)
+ifeq ($(external-openurl-cmd_DFLAGS),)
+  external-openurl-cmd_DFLAGS := $(external-openurl-cmd_CFLAGS)
+else
+  external-openurl-cmd_DFLAGS := $(external-openurl-cmd_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+external-openurl-cmd_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+external-openurl-cmd_STRIP ?= $(TARGET_STRIP)
+external-openurl-cmd_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : external-openurl-cmd_MC_CPPFLAGS:=$(strip $(external-openurl-cmd_MC_CPPFLAGS) $(external-openurl-cmd_MC_EXTRA_CPPFLAGS))
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : external-openurl-cmd_CFLAGS:=$(strip $(external-openurl-cmd_CFLAGS) $(SAFETY_CFLAGS))
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : external-openurl-cmd_DFLAGS:=$(external-openurl-cmd_DFLAGS)
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : external-openurl-cmd_IQUOTE:=$(CFLAGS_IQUOTE)
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : external-openurl-cmd_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+external-openurl-cmd_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+external-openurl-cmd_STRIP ?= $(HOST_STRIP)
+external-openurl-cmd_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : external-openurl-cmd_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(external-openurl-cmd_MC_CPPFLAGS) $(external-openurl-cmd_MC_EXTRA_CPPFLAGS))
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : external-openurl-cmd_CFLAGS:=$(strip $(HOST_CFLAGS) $(external-openurl-cmd_CFLAGS))
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : external-openurl-cmd_DFLAGS:=$(strip $(HOST_CFLAGS) $(external-openurl-cmd_DFLAGS))
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : external-openurl-cmd_IQUOTE:=$(HOST_IQUOTE)
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : external-openurl-cmd_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+external-openurl-cmd_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+external-openurl-cmd_STRIP ?= $(ECHO) >/dev/null
+external-openurl-cmd_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : external-openurl-cmd_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(external-openurl-cmd_MC_CPPFLAGS) $(external-openurl-cmd_MC_EXTRA_CPPFLAGS))
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : external-openurl-cmd_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-openurl-cmd_CFLAGS))
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : external-openurl-cmd_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-openurl-cmd_DFLAGS))
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : external-openurl-cmd_IQUOTE:=$(KERNEL_IQUOTE)
+$(external-openurl-cmd_MC_TARGETS) $(external-openurl-cmd_MC_DTARGETS) : external-openurl-cmd_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(external-openurl-cmd_MC_TARGETS) : CPPFLAGS := $(external-openurl-cmd_MC_CPPFLAGS)
+$(external-openurl-cmd_MC_TARGETS) : CFLAGS := $(external-openurl-cmd_CFLAGS)
+$(external-openurl-cmd_MC_TARGETS) : $(external-openurl-cmd_MC_TGTWILDCARD).o : $(external-openurl-cmd_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(external-openurl-cmd_IQUOTE) $(dir $<) $(external-openurl-cmd_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-cmd_IQUOTE) . $(external-openurl-cmd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(external-openurl-cmd_IQUOTE) $(dir $<) $(external-openurl-cmd_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-cmd_IQUOTE) . $(external-openurl-cmd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(external-openurl-cmd_IQUOTE) $(dir $<) $(external-openurl-cmd_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-cmd_IQUOTE) . $(external-openurl-cmd_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(external-openurl-cmd_MC_DTARGETS) : $(external-openurl-cmd_MC_TGTWILDCARD).d : $(external-openurl-cmd_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(external-openurl-cmd_DFLAGS) $(external-openurl-cmd_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(external-openurl-cmd_OBJDIR),)
+external-openurl-cmd-MA_TARGETS := $(addsuffix .o,$(external-openurl-cmd_ASMFILES))
+external-openurl-cmd-MA_WILDCARD := %
+else
+external-openurl-cmd-MA_TARGETS := $(addsuffix .o,$(addprefix $(external-openurl-cmd_OBJDIR)/,$(notdir $(external-openurl-cmd_ASMFILES))))
+external-openurl-cmd-MA_WILDCARD := $(external-openurl-cmd_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(external-openurl-cmd-MA_TARGETS) : | $(addsuffix .s,$(external-openurl-cmd_ASMFILES))
+
+# Be sure that all .c files are found
+external-openurl-cmd-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+external-openurl-cmd-MA_BASEDIRS := $(shell echo $(sort $(dir $(external-openurl-cmd_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+external-openurl-cmd-MA_DIRS := $(foreach dir, $(external-openurl-cmd-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(external-openurl-cmd-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(external-openurl-cmd-MA_DIRS),)
+    external-openurl-cmd-MA_DIRS := $(shell echo $(external-openurl-cmd-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(external-openurl-cmd-MA_DIRS)
+endif
+
+endif
+
+external-openurl-cmd-MA_ASSEMBLER ?= $(external-openurl-cmd_ASSEMBLER)
+
+$(external-openurl-cmd-MA_TARGETS) : external-openurl-cmd-MA_CMD:= $(external-openurl-cmd-MA_ASSEMBLER)
+
+$(external-openurl-cmd-MA_TARGETS) : CPPFLAGS := $(external-openurl-cmd_CPPFLAGS)
+$(external-openurl-cmd-MA_TARGETS) : AFLAGS := $(external-openurl-cmd_AFLAGS)
+$(external-openurl-cmd-MA_TARGETS) : $(external-openurl-cmd-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(external-openurl-cmd-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(external-openurl-cmd-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(external-openurl-cmd-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+external-openurl-cmd-link_EXTRA_LDFLAGS := 
+external-openurl-cmd-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    external-openurl-cmd-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    external-openurl-cmd-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    external-openurl-cmd-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+external-openurl-cmd-link_DIRS := $(subst -L ,-L,$(strip $(external-openurl-cmd_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+external-openurl-cmd-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(external-openurl-cmd-link_DIRS)))
+# Add trailing /
+external-openurl-cmd-link_DIRS := $(subst //,/,$(addsuffix /,$(external-openurl-cmd-link_DIRS)))
+# Add normal linklib path
+external-openurl-cmd-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+external-openurl-cmd-link_LIBS := $(addprefix lib,$(addsuffix .a,$(external-openurl-cmd_LIBS) $(external-openurl-cmd-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    external-openurl-cmd-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    external-openurl-cmd-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+external-openurl-cmd-link_DEPLIBS := $(foreach lib,$(external-openurl-cmd-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(external-openurl-cmd-link_DIRS)))) \
+)
+
+$(external-openurl-cmd_TARGETDIR)/$(external-openurl-cmd_PROGNAME) : OBJDIR := $(external-openurl-cmd_OBJDIR)
+$(external-openurl-cmd_TARGETDIR)/$(external-openurl-cmd_PROGNAME) : OBJS := $(external-openurl-cmd_OBJS) $(external-openurl-cmd_ARCHOBJS) $(USER_OBJS)
+$(external-openurl-cmd_TARGETDIR)/$(external-openurl-cmd_PROGNAME) : LDFLAGS := $(strip $(external-openurl-cmd_LDFLAGS) $(external-openurl-cmd-link_EXTRA_LDFLAGS))
+$(external-openurl-cmd_TARGETDIR)/$(external-openurl-cmd_PROGNAME) : LIBS := $(addprefix -l,$(external-openurl-cmd_LIBS) $(external-openurl-cmd-link_EXTRA_LIBS) )
+$(external-openurl-cmd_TARGETDIR)/$(external-openurl-cmd_PROGNAME) : $(external-openurl-cmd_OBJS) $(external-openurl-cmd_ARCHOBJS) $(USER_OBJS) $(external-openurl-cmd-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(external-openurl-cmd_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(external-openurl-cmd_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(external-openurl-cmd_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(external-openurl-cmd_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(external-openurl-cmd_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(external-openurl-cmd_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(external-openurl-cmd_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(external-openurl-cmd_DEPS),)
+  ifneq (external-openurl-cmd external-openurl-cmd-quick,)
+    ifneq ($(findstring $(TARGET),external-openurl-cmd external-openurl-cmd-quick),)
+      -include $(external-openurl-cmd_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(external-openurl-cmd_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(external-openurl-cmd_OBJS) $(external-openurl-cmd_DEPS) $(external-openurl-cmd_TARGETDIR)/$(external-openurl-cmd_PROGNAME),)
+$(external-openurl-cmd_OBJS) $(external-openurl-cmd_DEPS) $(external-openurl-cmd_TARGETDIR)/$(external-openurl-cmd_PROGNAME) : | $(external-openurl-cmd_OBJDIR) $(external-openurl-cmd_TARGETDIR)
+else
+$(external-openurl-cmd_OBJS) $(external-openurl-cmd_DEPS) $(external-openurl-cmd_TARGETDIR)/$(external-openurl-cmd_PROGNAME) :: $(external-openurl-cmd_OBJDIR) $(external-openurl-cmd_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(external-openurl-cmd_OBJDIR) $(external-openurl-cmd_TARGETDIR)
+
+
+external-openurl-cmd-clean : FILES := $(external-openurl-cmd_OBJS) $(external-openurl-cmd_TARGETDIR)/$(external-openurl-cmd_PROGNAME) $(external-openurl-cmd_DEPS)
+#MM
+external-openurl-cmd-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget external-openurl-cmd"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

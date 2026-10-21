@@ -1,0 +1,1660 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM kernel-potgo : includes kernel-potgo-$(ARCH)-$(CPU)
+
+FUNCTIONS := allocpotbits freepotbits writepotgo
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-potgo
+#MM kernel-potgo-quick
+#MM kernel-potgo-makefile
+#MM kernel-potgo-clean
+
+# ABI targets:
+#MM- includes-all : kernel-potgo-includes
+#MM- linklibs-potgo: kernel-potgo-linklib
+#MM- linklibs-potgo_rel : kernel-potgo-linklib
+#MM- includes-potgo: kernel-potgo-includes
+#MM- includes-potgo_rel : kernel-potgo-includes
+#MM- kernel-potgo : kernel-potgo-includes core-linklibs linklibs-
+#MM kernel-potgo-linklib : kernel-potgo-includes includes-
+#MM- kernel-potgo-quick : kernel-potgo-includes-quick
+#MM kernel-potgo-includes : kernel-potgo-makefile kernel-potgo-includes-dirs \
+#MM     includes-generate-deps kernel-potgo-fd
+#MM kernel-potgo-includes-quick
+#MM kernel-potgo-includes-dirs
+#MM kernel-potgo-fd
+
+# Library targets
+#MM kernel-potgo-kobj : core-linklibs linklibs-
+#MM kernel-potgo-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-potgo-kobj : kernel-potgo-includes core-linklibs linklibs-
+#MM kernel-potgo-kobj-quick : kernel-potgo-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-potgo_ALLTARGETS       := kernel-potgo kernel-potgo-quick kernel-potgo-clean
+
+ifeq (M,M)
+kernel-potgo_ALLTARGETS       += kernel-potgo-kobj kernel-potgo-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-potgo_ALLTARGETS += kernel-potgo-includes \
+                 kernel-potgo-includes-quick kernel-potgo-includes-dirs  \
+                 kernel-potgo-linklib kernel-potgo-fd
+endif
+
+.PHONY : $(kernel-potgo_ALLTARGETS) kernel-potgo-makefile
+
+ifeq (potgo,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (resource,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-potgo_DEFNAME      := potgo_
+else
+    kernel-potgo_DEFNAME      := potgo
+endif
+kernel-potgo_DEFLINKLIBNAME   := $(kernel-potgo_DEFNAME)
+ifneq (,)
+    kernel-potgo_LINKLIBNAME  := 
+else
+    kernel-potgo_LINKLIBNAME  = $(kernel-potgo_DEFLINKLIBNAME)
+endif
+kernel-potgo_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-potgo_DEFCPPFLAGS  += -I
+endif
+kernel-potgo_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-potgo_DFLAGS       := 
+else
+    kernel-potgo_DFLAGS       = $(kernel-potgo_DEFDFLAGS)
+endif
+kernel-potgo_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-potgo_DXXFLAGS     := 
+else
+    kernel-potgo_DXXFLAGS     = $(kernel-potgo_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-potgo_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-potgo_DEFDFLAGS))
+kernel-potgo_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-potgo_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-potgo_FUNCINSTR := yes
+kernel-potgo_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-potgo_DEFDFLAGS))
+kernel-potgo_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-potgo_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-potgo_OBJDIR                     := 
+else
+kernel-potgo_OBJDIR                     := $(OBJDIR)/$(kernel-potgo_DEFNAME)
+endif
+ifneq (,)
+kernel-potgo_OBJDIR           := $(kernel-potgo_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-potgo-makefile         := $(kernel-potgo_OBJDIR)/Makefile.$(kernel-potgo_DEFNAME)resource
+kernel-potgo-genmakefile : $(kernel-potgo-makefile)
+
+
+kernel-potgo-genmakefile_OPTS := 
+ifneq (,)
+    kernel-potgo-genmakefile_OPTS += -f 
+    kernel-potgo-genmakefile_MODNAME := potgo_
+else
+    kernel-potgo-genmakefile_MODNAME := potgo
+endif
+kernel-potgo-genmakefile_TARGET := Makefile.$(kernel-potgo-genmakefile_MODNAME)resource
+kernel-potgo-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-potgo-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-potgo-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-potgo-genmakefile_OPTS += -c 
+        kernel-potgo-genmakefile_DEPS += 
+    endif 
+else
+    kernel-potgo-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/potgo.conf
+    kernel-potgo-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/potgo.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-potgo-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-potgo-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-potgo-genmakefile_OPTS += -o 
+        kernel-potgo-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-potgo-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-potgo_OBJDIR),)
+    kernel-potgo-genmakefile_OPTS += -d $(kernel-potgo_OBJDIR)
+    kernel-potgo-genmakefile_TARGET := $(kernel-potgo_OBJDIR)/$(kernel-potgo-genmakefile_TARGET)
+endif
+
+$(kernel-potgo-genmakefile_TARGET) : OPTS := $(kernel-potgo-genmakefile_OPTS)
+$(kernel-potgo-genmakefile_TARGET) : MODNAME := potgo
+$(kernel-potgo-genmakefile_TARGET) : MODTYPE := resource
+$(kernel-potgo-genmakefile_TARGET) : $(kernel-potgo-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-potgo-makefile),)
+$(kernel-potgo-makefile) : | $(kernel-potgo_OBJDIR)
+else
+$(kernel-potgo-makefile) :: $(kernel-potgo_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-potgo_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-potgo_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-potgo-makefile)
+
+kernel-potgo_DEFMODDIR        := $($(kernel-potgo_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-potgo_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-potgo_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-potgo_MODDIR       := 
+else
+    kernel-potgo_MODDIR       := $(kernel-potgo_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-potgo_INCDIR           := 
+else
+kernel-potgo_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-potgo_LIBDEFSINC       := $(kernel-potgo_OBJDIR)/include/$(kernel-potgo_DEFNAME)_libdefs.h
+kernel-potgo_DEFLIBDEFSINC    := $(kernel-potgo_OBJDIR)/include/$(kernel-potgo_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-potgo-includes-quick : kernel-potgo-includes
+kernel-potgo-includes : $(addprefix $(GENINCDIR)/,$($(kernel-potgo_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-potgo_INCDIR)/,$($(kernel-potgo_DEFNAME)_INCLUDES)) \
+    $(kernel-potgo_LIBDEFSINC) $(kernel-potgo_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-potgo_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-potgo-includes_MODNAME := potgo_
+else
+    kernel-potgo-includes_MODNAME := potgo
+endif
+
+ifneq ($($(kernel-potgo-includes_MODNAME)_INCLUDES),)
+
+kernel-potgo-includes_TARGETS := $($(kernel-potgo-includes_MODNAME)_INCLUDES)
+
+kernel-potgo-includes_DEPS := $(GENMODULE)
+kernel-potgo-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-potgo-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-potgo-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-potgo-includes_OPTS += -c 
+        kernel-potgo-includes_DEPS += 
+    endif 
+else
+    kernel-potgo-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/potgo.conf
+    kernel-potgo-includes_DEPS += $(SRCDIR)/$(CURDIR)/potgo.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-potgo-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-potgo-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-potgo-includes_OPTS += -o 
+        kernel-potgo-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-potgo-includes_OPTS += -s 
+endif
+ifneq ($(kernel-potgo_OBJDIR)/include,)
+    kernel-potgo-includes_OPTS += -d $(kernel-potgo_OBJDIR)/include
+    kernel-potgo-includes_TARGETS := $(addprefix $(kernel-potgo_OBJDIR)/include/,$(kernel-potgo-includes_TARGETS))
+    kernel-potgo-includes_GENINCFLAG=$(kernel-potgo_OBJDIR)/include/.potgo.resource-includes
+else
+    kernel-potgo-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.potgo.resource-includes
+endif
+
+$(kernel-potgo-includes_TARGETS) : $(kernel-potgo-includes_DEPS) $(kernel-potgo-includes_GENINCFLAG)
+
+$(kernel-potgo-includes_GENINCFLAG) : OPTS := $(kernel-potgo-includes_OPTS)
+$(kernel-potgo-includes_GENINCFLAG) : MODNAME := potgo
+$(kernel-potgo-includes_GENINCFLAG) : MODTYPE := resource
+$(kernel-potgo-includes_GENINCFLAG) : $(kernel-potgo-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-potgo_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-potgo_DEFNAME)_INCLUDES)) : | $(kernel-potgo_OBJDIR)/potgo_geninc
+
+$(kernel-potgo_OBJDIR)/potgo_geninc : COPYSRCDIR := $(kernel-potgo_OBJDIR)/include
+$(kernel-potgo_OBJDIR)/potgo_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-potgo_OBJDIR)/potgo_geninc : FILES := $($(kernel-potgo_DEFNAME)_INCLUDES)
+$(kernel-potgo_OBJDIR)/potgo_geninc : $(addprefix $(kernel-potgo_OBJDIR)/include/,$($(kernel-potgo_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-potgo_OBJDIR)/include
+
+$(addprefix $(kernel-potgo_INCDIR)/,$($(kernel-potgo_DEFNAME)_INCLUDES)) : | $(kernel-potgo_OBJDIR)/potgo_incs
+
+$(kernel-potgo_OBJDIR)/potgo_incs : COPYSRCDIR := $(kernel-potgo_OBJDIR)/include
+$(kernel-potgo_OBJDIR)/potgo_incs : TGTDIR := $(kernel-potgo_INCDIR)
+$(kernel-potgo_OBJDIR)/potgo_incs : FILES := $($(kernel-potgo_DEFNAME)_INCLUDES)
+$(kernel-potgo_OBJDIR)/potgo_incs : $(addprefix $(kernel-potgo_OBJDIR)/include/,$($(kernel-potgo_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-potgo_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-potgo_DEFNAME)_INCLUDES))))
+
+TMPpotgo_INCDIRS := \
+    $(kernel-potgo_OBJDIR)/include $(addprefix $(kernel-potgo_OBJDIR)/include/,$(kernel-potgo_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-potgo_INCDIRS)) \
+    $(kernel-potgo_INCDIR) $(addprefix $(kernel-potgo_INCDIR)/,$(kernel-potgo_INCDIRS))
+
+ifneq (kernel-potgo-includes-dirs,)
+kernel-potgo-includes-dirs : | $(TMPpotgo_INCDIRS)
+else
+kernel-potgo-includes-dirs :: $(TMPpotgo_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPpotgo_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-potgo-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-potgo-genlibdefs_OPTS += -f 
+    kernel-potgo-genlibdefs_MODNAME := potgo_
+else
+    kernel-potgo-genlibdefs_MODNAME := potgo
+endif
+kernel-potgo-genlibdefs_TARGET := $(kernel-potgo-genlibdefs_MODNAME)_libdefs.h
+kernel-potgo-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-potgo-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-potgo-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-potgo-genlibdefs_OPTS += -c 
+        kernel-potgo-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-potgo-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/potgo.conf
+    kernel-potgo-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/potgo.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-potgo-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-potgo-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-potgo-genlibdefs_OPTS += -o 
+        kernel-potgo-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-potgo-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-potgo_OBJDIR)/include,)
+    kernel-potgo-genlibdefs_OPTS += -d $(kernel-potgo_OBJDIR)/include
+    kernel-potgo-genlibdefs_TARGET := $(kernel-potgo_OBJDIR)/include/$(kernel-potgo-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-potgo-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-potgo-genlibdefs_TARGET) : OPTS := $(kernel-potgo-genlibdefs_OPTS)
+$(kernel-potgo-genlibdefs_TARGET) : MODNAME := potgo
+$(kernel-potgo-genlibdefs_TARGET) : MODTYPE := resource
+$(kernel-potgo-genlibdefs_TARGET) : $(kernel-potgo-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-potgo_DEFLIBDEFSINC) : FILENAME := $(kernel-potgo_LIBDEFSINC)
+$(kernel-potgo_DEFLIBDEFSINC) : $(kernel-potgo_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-potgo_LIBDEFSINC) $(kernel-potgo_DEFLIBDEFSINC) : | $(kernel-potgo_OBJDIR)/include
+
+ifneq (kernel-potgo-includes-dirs,)
+kernel-potgo-includes-dirs : | $(kernel-potgo_OBJDIR)/include
+else
+kernel-potgo-includes-dirs :: $(kernel-potgo_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-potgo_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-potgo-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-potgo-genmodfiles_OPTS += -f 
+    kernel-potgo-genmodfiles_MODNAME := potgo_
+else
+    kernel-potgo-genmodfiles_MODNAME := potgo
+endif
+kernel-potgo-genmodfiles_GENTARGETS := $($(kernel-potgo-genmodfiles_MODNAME)_STARTFILES) $($(kernel-potgo-genmodfiles_MODNAME)_ENDFILES)
+kernel-potgo-genmodfiles_STUBTARGETS := $($(kernel-potgo-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-potgo-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-potgo-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-potgo-genmodfiles_GENTARGETS))
+kernel-potgo-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-potgo-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-potgo-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-potgo-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-potgo-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-potgo-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-potgo-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-potgo-genmodfiles_OPTS += -c 
+        kernel-potgo-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-potgo-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/potgo.conf
+    kernel-potgo-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/potgo.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-potgo-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-potgo-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-potgo-genmodfiles_OPTS += -o 
+        kernel-potgo-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-potgo-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-potgo_OBJDIR),)
+    kernel-potgo-genmodfiles_OPTS += -d $(kernel-potgo_OBJDIR)
+    kernel-potgo-genmodfiles_TARGETDIR := $(shell echo $(kernel-potgo_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-potgo-genmodfiles_GENTARGETS := $(addprefix $(kernel-potgo-genmodfiles_TARGETDIR)/,$(kernel-potgo-genmodfiles_GENTARGETS))
+    kernel-potgo-genmodfiles_GENFILEFLAG=$(kernel-potgo-genmodfiles_TARGETDIR)/.potgo.resource-genfiles
+else
+    kernel-potgo-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.potgo.resource-genfiles
+endif
+ifneq ($(kernel-potgo_OBJDIR)/linklib,)
+    kernel-potgo-genmodfiles_OPTS += -l $(kernel-potgo_OBJDIR)/linklib
+    kernel-potgo-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-potgo_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-potgo-genmodfiles_STUBTARGETS := $(addprefix $(kernel-potgo-genmodfiles_STUBTARGETDIR)/,$(kernel-potgo-genmodfiles_STUBTARGETS))
+    kernel-potgo-genmodfiles_TARGETDIRS += $(kernel-potgo_OBJDIR)/linklib
+else
+ifneq ($(kernel-potgo_OBJDIR),)
+    kernel-potgo-genmodfiles_STUBTARGETS := $(addprefix $(kernel-potgo-genmodfiles_TARGETDIR)/,$(kernel-potgo-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-potgo-genmodfiles_TARGETS := $(kernel-potgo-genmodfiles_GENTARGETS) $(kernel-potgo-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-potgo-genmodfiles_TARGETDIRS),)
+$(kernel-potgo-genmodfiles_TARGETS) : | $(kernel-potgo-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-potgo-genmodfiles_TARGETS) : $(kernel-potgo-genmodfiles_DEPS) $(kernel-potgo-genmodfiles_GENFILEFLAG)
+
+$(kernel-potgo-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-potgo-genmodfiles_OPTS)
+$(kernel-potgo-genmodfiles_GENFILEFLAG) : MODNAME := potgo
+$(kernel-potgo-genmodfiles_GENFILEFLAG) : MODTYPE := resource
+$(kernel-potgo-genmodfiles_GENFILEFLAG) : $(kernel-potgo-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-potgo-genmodfiles_GENFILEFLAG) : $(kernel-potgo_DEFLIBDEFSINC) $(kernel-potgo-makefile)
+
+
+ifneq ($(kernel-potgo-genmodfiles_GENFILEFLAG),)
+$(kernel-potgo-genmodfiles_GENFILEFLAG) : | $(kernel-potgo_OBJDIR)/linklib
+else
+$(kernel-potgo-genmodfiles_GENFILEFLAG) :: $(kernel-potgo_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-potgo_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-potgo_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-potgo_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-potgo-fd : $(kernel-potgo_FDDIR)/potgo_lib.fd
+
+
+TMP_TARGET := potgo_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/potgo.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/potgo.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-potgo_FDDIR),)
+    TMP_OPTS += -d $(kernel-potgo_FDDIR)
+    TMP_TARGET := $(kernel-potgo_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := potgo
+$(TMP_TARGET) : MODTYPE := resource
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-potgo_FDDIR)/potgo_lib.fd : | $(kernel-potgo_FDDIR)
+
+
+ifneq (kernel-potgo-fd-setup,)
+kernel-potgo-fd-setup : | $(kernel-potgo_FDDIR)
+else
+kernel-potgo-fd-setup :: $(kernel-potgo_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-potgo_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-potgo_FILES            := $(FUNCTIONS)
+kernel-potgo_OBJCFILES        := 
+kernel-potgo_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-potgo_LIBFILES         := 
+kernel-potgo_LIBS             := 
+
+kernel-potgo_FDIRS            := $(sort $(dir $(kernel-potgo_FILES)))
+
+kernel-potgo_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-potgo_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-potgo_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-potgo_FILTERARCH       = $(filter-out $(call kernel-potgo_MATCHARCH,$(1),$(2)),$(2))
+kernel-potgo_STARTFILES       := $(addprefix $(kernel-potgo_OBJDIR)/,$($(kernel-potgo_DEFNAME)_STARTFILES))
+kernel-potgo_ENDFILES         := $(addprefix $(kernel-potgo_OBJDIR)/,$($(kernel-potgo_DEFNAME)_ENDFILES))
+
+kernel-potgo_ARCHOBJS         := $(wildcard $(kernel-potgo_OBJDIR)/arch/*.o)
+kernel-potgo_LIBARCHOBJS      := $(wildcard $(kernel-potgo_OBJDIR)/linklib/arch/*.o)
+kernel-potgo_ARCHFILES        := $(basename $(notdir $(kernel-potgo_ARCHOBJS)))
+kernel-potgo_LIBARCHFILES     := $(basename $(notdir $(kernel-potgo_LIBARCHOBJS)))
+kernel-potgo_C_NARCHFILES     := $(call kernel-potgo_FILTERARCH,$(kernel-potgo_ARCHFILES),$(kernel-potgo_FILES))
+kernel-potgo_CXX_NARCHFILES   := $(call kernel-potgo_FILTERARCH,$(kernel-potgo_ARCHFILES),$(kernel-potgo_CXXFILES))
+kernel-potgo_OBJC_NARCHFILES  := $(call kernel-potgo_FILTERARCH,$(kernel-potgo_ARCHFILES),$(kernel-potgo_OBJCFILES))
+kernel-potgo_NLIBARCHFILES    := $(call kernel-potgo_FILTERARCH,$(kernel-potgo_LIBARCHFILES),$(kernel-potgo_LIBFILES))
+kernel-potgo_ARCHNLIBFILES    := $(call kernel-potgo_FILTERARCH,$(kernel-potgo_LIBFILES),$(kernel-potgo_LIBARCHFILES))
+
+kernel-potgo_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-potgo_OBJDIR)/include -include $(kernel-potgo_DEFLIBDEFSINC))
+ifneq (,)
+kernel-potgo_CPPFLAGS         += -I
+endif
+kernel-potgo_LINKLIBCPPFLAGS  := $(kernel-potgo_CPPFLAGS)
+kernel-potgo_CPPFLAGS         += $(strip $($(kernel-potgo_DEFNAME)_CPPFLAGS))
+kernel-potgo_LINKLIBCPPFLAGS  += $(strip $($(kernel-potgo_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-potgo_CFLAGS           := $(strip $(CFLAGS) $($(kernel-potgo_DEFNAME)_CFLAGS))
+kernel-potgo_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-potgo_DEFNAME)_LINKLIBCFLAGS))
+kernel-potgo_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-potgo_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-potgo_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-potgo_CFLAGS           := $(strip $(kernel-potgo_LTOFLAGS) $(kernel-potgo_CFLAGS))
+kernel-potgo_LINKLIBCFLAGS    := $(strip $(kernel-potgo_LTOFLAGS) $(kernel-potgo_LINKLIBCFLAGS))
+kernel-potgo_CXXFLAGS         := $(strip $(kernel-potgo_LTOFLAGS) $(kernel-potgo_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-potgo_SUBSTNULL        :=
+kernel-potgo_SUBSTSPACE       := $(kernel-potgo_SUBSTNULL) #
+kernel-potgo_SUBSTCOMMA       := ,
+kernel-potgo_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-potgo_SUBSTSPACE),$(kernel-potgo_SUBSTCOMMA),$(strip $($(kernel-potgo_DEFNAME)_STARTFILES))))
+kernel-potgo_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-potgo_CFLAGS           := $(strip $(kernel-potgo_INSTRFUNCFLAGS) $(kernel-potgo_CFLAGS))
+kernel-potgo_CXXFLAGS         := $(strip $(kernel-potgo_INSTRFUNCFLAGS) $(kernel-potgo_CXXFLAGS))
+kernel-potgo_LIBS             += $(kernel-potgo_INSTRFUNCLIBS)
+endif
+endif
+kernel-potgo_DFLAGS           := $(strip $(kernel-potgo_DFLAGS) $($(kernel-potgo_DEFNAME)_DFLAGS))
+kernel-potgo_LINKLIBDFLAGS    := $(strip $(kernel-potgo_DFLAGS) $($(kernel-potgo_DEFNAME)_LINKLIBDFLAGS))
+kernel-potgo_DXXFLAGS         := $(strip $(kernel-potgo_DXXFLAGS) $($(kernel-potgo_DEFNAME)_DXXFLAGS))
+
+ifeq (resource,library)
+    kernel-potgo_LIBSUFFIX    := 
+else
+    kernel-potgo_LIBSUFFIX    := .resource
+endif
+
+ifeq (,)
+kernel-potgo_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-potgo_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-potgo_LINKLIBCFILES    := $(addprefix $(kernel-potgo_OBJDIR)/linklib/,$($(kernel-potgo_DEFNAME)_LINKLIBFILES))
+kernel-potgo_LINKLIBAFILES    := $(addprefix $(kernel-potgo_OBJDIR)/linklib/,$($(kernel-potgo_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-potgo_DEFNAME)_LINKLIBFILES) $($(kernel-potgo_DEFNAME)_LINKLIBAFILES)  $(kernel-potgo_ARCHNLIBFILES)),)
+    kernel-potgo_LINKLIB      :=
+else
+    kernel-potgo_LINKLIB      := $(kernel-potgo_LIBDIR)/libpotgo$(kernel-potgo_LIBSUFFIX).a
+    ifneq (potgo,$(kernel-potgo_LINKLIBNAME))
+        kernel-potgo_LINKLIB  += $(kernel-potgo_LIBDIR)/lib$(kernel-potgo_LINKLIBNAME)$(kernel-potgo_LIBSUFFIX).a
+    endif
+endif
+kernel-potgo_LINKLIBFILES     := $(kernel-potgo_LINKLIBCFILES) $(kernel-potgo_LINKLIBAFILES)
+
+kernel-potgo_RELLINKLIBCFILES := $(addprefix $(kernel-potgo_OBJDIR)/linklib/,$($(kernel-potgo_DEFNAME)_RELLINKLIBFILES))
+kernel-potgo_RELLINKLIBAFILES := $(addprefix $(kernel-potgo_OBJDIR)/linklib/,$($(kernel-potgo_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-potgo_DEFNAME)_RELLINKLIBFILES) $($(kernel-potgo_DEFNAME)_RELLINKLIBAFILES)  $(kernel-potgo_ARCHNLIBFILES)),)
+    kernel-potgo_RELLINKLIB   :=
+else
+    kernel-potgo_RELLINKLIB   := $(kernel-potgo_LIBDIR)/lib$(kernel-potgo_DEFNAME)_rel$(kernel-potgo_LIBSUFFIX).a
+    ifneq (potgo,$(kernel-potgo_LINKLIBNAME))
+        kernel-potgo_RELLINKLIB += $(kernel-potgo_LIBDIR)/lib$(kernel-potgo_LINKLIBNAME)_rel$(kernel-potgo_LIBSUFFIX).a
+    endif
+endif
+kernel-potgo_RELLINKLIBFILES  := $(kernel-potgo_RELLINKLIBCFILES) $(kernel-potgo_RELLINKLIBAFILES)
+endif
+
+kernel-potgo_ENDOBJS          := $(addsuffix .o,$(kernel-potgo_ENDFILES))
+kernel-potgo_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-potgo_OBJDIR)/linklib/,$(notdir $(kernel-potgo_NLIBARCHFILES))) $(addprefix $(kernel-potgo_OBJDIR)/linklib/arch/,$(notdir $(kernel-potgo_ARCHNLIBFILES))) $(kernel-potgo_LINKLIBFILES)) \
+                 
+kernel-potgo_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-potgo_OBJDIR)/linklib/,$(notdir $(kernel-potgo_NLIBARCHFILES))) $(addprefix $(kernel-potgo_OBJDIR)/linklib/arch/,$(notdir $(kernel-potgo_ARCHNLIBFILES))) $(kernel-potgo_RELLINKLIBFILES)) \
+                 
+$(kernel-potgo_LINKLIBFILES) $(kernel-potgo_RELLINKLIBFILES) : | $(kernel-potgo_OBJDIR)/linklib
+$(kernel-potgo_LINKLIBOBJS) $(kernel-potgo_RELLINKLIBOBJS) : | $(kernel-potgo_OBJDIR)/linklib
+
+kernel-potgo_CCFILES := $(kernel-potgo_C_NARCHFILES)
+kernel-potgo_TARGETCCFILES    := $(strip $(kernel-potgo_STARTFILES) $(kernel-potgo_ENDFILES))
+kernel-potgo_LINKLIBCCFILES   := $(strip $(kernel-potgo_NLIBARCHFILES) $(kernel-potgo_LINKLIBCFILES) $(kernel-potgo_RELLINKLIBCFILES))
+kernel-potgo_LINKLIBCCGENFILES := $(strip $(kernel-potgo_LINKLIBCFILES) $(kernel-potgo_RELLINKLIBCFILES))
+
+
+kernel-potgo_CXXABSBASENAMES := $(foreach kernel-potgo_CXXBASE,$(kernel-potgo_CXX_NARCHFILES),$(if $(filter /%,$(kernel-potgo_CXXBASE)),$(kernel-potgo_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-potgo_CXXBASE))))
+
+ifneq ($(kernel-potgo_CXXABSBASENAMES),)
+
+kernel-potgo_CXXBASENAMES := $(basename $(kernel-potgo_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-potgo_MCXX_FILES  := $(strip $(foreach kernel-potgo_CXXBASE,$(kernel-potgo_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-potgo_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-potgo_EXT),$(kernel-potgo_CXXBASE)))))))
+
+ifeq (,)
+kernel-potgo_MCXX_SRCWILDCARD := %
+else
+kernel-potgo_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-potgo_OBJDIR),)
+  kernel-potgo_CXXTARGETS := $(notdir $(kernel-potgo_CXXBASENAMES:=.o))
+  kernel-potgo_CXXDTARGETS := $(notdir $(kernel-potgo_CXXBASENAMES:=.d))
+  kernel-potgo_MCXX_WILDCARD := %
+else
+  kernel-potgo_CXXTARGETS := $(addprefix $(kernel-potgo_OBJDIR)/,$(notdir $(kernel-potgo_CXXBASENAMES:=.o)))
+  kernel-potgo_CXXDTARGETS := $(addprefix $(kernel-potgo_OBJDIR)/,$(notdir $(kernel-potgo_CXXBASENAMES:=.d)))
+  kernel-potgo_MCXX_WILDCARD := $(kernel-potgo_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-potgo_CXXTARGETS) $(kernel-potgo_CXXDTARGETS) : | $(kernel-potgo_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-potgo_MCXX_CPPFLAGS := $(kernel-potgo_CPPFLAGS)
+kernel-potgo_CXXFLAGS := $(kernel-potgo_CXXFLAGS)
+ifeq ($(kernel-potgo_DXXFLAGS),)
+  kernel-potgo_DXXFLAGS := $(kernel-potgo_CXXFLAGS)
+else
+  kernel-potgo_DXXFLAGS := $(kernel-potgo_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-potgo_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-potgo_STRIP ?= $(HOST_STRIP)
+  kernel-potgo_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-potgo_CXXCMD:=$(HOST_CXX)
+  kernel-potgo_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-potgo_MCXX_CPPFLAGS) $(kernel-potgo_MCXX_EXTRA_CPPFLAGS))
+  kernel-potgo_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-potgo_CXXFLAGS))
+  kernel-potgo_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-potgo_DXXFLAGS))
+  kernel-potgo_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-potgo_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-potgo_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-potgo_STRIP ?= $(TARGET_STRIP)
+  kernel-potgo_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-potgo_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-potgo_MCXX_CPPFLAGS := $(strip $(kernel-potgo_MCXX_CPPFLAGS) $(kernel-potgo_MCXX_EXTRA_CPPFLAGS))
+  kernel-potgo_CXXFLAGS := $(strip $(kernel-potgo_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-potgo_DXXFLAGS := $(kernel-potgo_DXXFLAGS)
+  kernel-potgo_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-potgo_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-potgo_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-potgo_STRIP ?= $(ECHO) >/dev/null
+  kernel-potgo_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-potgo_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-potgo_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-potgo_MCXX_CPPFLAGS) $(kernel-potgo_MCXX_EXTRA_CPPFLAGS))
+  kernel-potgo_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-potgo_CXXFLAGS))
+  kernel-potgo_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-potgo_DXXFLAGS))
+  kernel-potgo_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-potgo_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-potgo_CXXCMD) $(kernel-potgo_CXXIQUOTE) $(dir $(2)) $(kernel-potgo_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_CXXIQUOTE) . $(kernel-potgo_CXXIQUOTE_END) $(strip $(kernel-potgo_CXXFLAGS) $(kernel-potgo_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-potgo_CXXCMD) $(kernel-potgo_CXXIQUOTE) $(dir $(2)) $(kernel-potgo_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_CXXIQUOTE) . $(kernel-potgo_CXXIQUOTE_END) $(strip $(kernel-potgo_CXXFLAGS) $(kernel-potgo_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-potgo_CXXCMD) $(kernel-potgo_CXXIQUOTE) $(dir $(2)) $(kernel-potgo_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_CXXIQUOTE) . $(kernel-potgo_CXXIQUOTE_END) $(strip $(kernel-potgo_CXXFLAGS) $(kernel-potgo_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-potgo_CXXCMD)" $(MKDEPEND) $(strip $(kernel-potgo_DXXFLAGS) $(kernel-potgo_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-potgo_OBJDIR),)
+  $(foreach kernel-potgo_CXXFILE,$(kernel-potgo_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-potgo_CXXFILE))),$(kernel-potgo_CXXFILE))))
+else
+  $(foreach kernel-potgo_CXXFILE,$(kernel-potgo_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-potgo_OBJDIR)/,$(notdir $(basename $(kernel-potgo_CXXFILE)))),$(kernel-potgo_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-potgo_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-potgo_MOBJC_SRCWILDCARD := %
+else
+kernel-potgo_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-potgo_OBJDIR),)
+  kernel-potgo_MOBJC_TARGETS := $(addsuffix .o,$(kernel-potgo_OBJC_NARCHFILES))
+  kernel-potgo_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-potgo_OBJC_NARCHFILES))
+  kernel-potgo_MOBJC_WILDCARD := %
+else
+  kernel-potgo_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-potgo_OBJDIR)/,$(kernel-potgo_OBJC_NARCHFILES)))
+  kernel-potgo_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-potgo_OBJDIR)/,$(kernel-potgo_OBJC_NARCHFILES)))
+  kernel-potgo_MOBJC_WILDCARD := $(kernel-potgo_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-potgo_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-potgo_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-potgo_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-potgo_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-potgo_MOBJC_DIRS := $(foreach dir, $(kernel-potgo_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-potgo_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-potgo_MOBJC_DIRS),)
+    kernel-potgo_MOBJC_DIRS := $(shell echo $(kernel-potgo_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-potgo_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-potgo_CC := $(TARGET_CC)
+else
+  kernel-potgo_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-potgo_MOBJC_CPPFLAGS := $(kernel-potgo_CPPFLAGS)
+kernel-potgo_OBJCFLAGS := $(kernel-potgo_CFLAGS)
+kernel-potgo_OBJCFLAGS := $(kernel-potgo_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-potgo_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-potgo_OBJCFLAGS)))
+ifeq ($(kernel-potgo_DFLAGS),)
+  kernel-potgo_OBJCDFLAGS := $(kernel-potgo_CFLAGS)
+else
+  kernel-potgo_OBJCDFLAGS := $(kernel-potgo_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-potgo_LINK ?= $(strip $(kernel-potgo_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-potgo_STRIP ?= $(TARGET_STRIP)
+  kernel-potgo_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-potgo_CC) $(TARGET_SYSROOT))
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : kernel-potgo_MOBJC_CPPFLAGS:=$(strip $(kernel-potgo_MOBJC_CPPFLAGS) $(kernel-potgo_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : kernel-potgo_OBJCFLAGS:=$(strip $(kernel-potgo_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : kernel-potgo_OBJCDFLAGS:=$(kernel-potgo_OBJCDFLAGS)
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : kernel-potgo_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : kernel-potgo_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-potgo_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-potgo_STRIP ?= $(HOST_STRIP)
+  kernel-potgo_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : kernel-potgo_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-potgo_MOBJC_CPPFLAGS) $(kernel-potgo_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : kernel-potgo_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-potgo_OBJCFLAGS))
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : kernel-potgo_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-potgo_OBJCDFLAGS))
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : kernel-potgo_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : kernel-potgo_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-potgo_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-potgo_STRIP ?= $(ECHO) >/dev/null
+  kernel-potgo_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : kernel-potgo_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-potgo_MOBJC_CPPFLAGS) $(kernel-potgo_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : kernel-potgo_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-potgo_OBJCFLAGS))
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : kernel-potgo_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-potgo_OBJCDFLAGS))
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : kernel-potgo_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-potgo_MOBJC_TARGETS) $(kernel-potgo_MOBJC_DTARGETS) : kernel-potgo_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-potgo_MOBJC_TARGETS) : CPPFLAGS := $(kernel-potgo_MOBJC_CPPFLAGS)
+$(kernel-potgo_MOBJC_TARGETS) : CFLAGS := $(kernel-potgo_OBJCFLAGS)
+$(kernel-potgo_MOBJC_TARGETS) : $(kernel-potgo_MOBJC_WILDCARD).o : $(kernel-potgo_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-potgo_IQUOTE) $(dir $<) $(kernel-potgo_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_IQUOTE) . $(kernel-potgo_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-potgo_IQUOTE) $(dir $<) $(kernel-potgo_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_IQUOTE) . $(kernel-potgo_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-potgo_IQUOTE) $(dir $<) $(kernel-potgo_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_IQUOTE) . $(kernel-potgo_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-potgo_MOBJC_DTARGETS) : $(kernel-potgo_MOBJC_WILDCARD).d : $(kernel-potgo_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-potgo_OBJCDFLAGS) $(kernel-potgo_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-potgo_MC_SRCWILDCARD := %
+else
+kernel-potgo_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-potgo_OBJDIR),)
+kernel-potgo_MC_TARGETS := $(addsuffix .o,$(kernel-potgo_CCFILES))
+kernel-potgo_MC_DTARGETS := $(addsuffix .d,$(kernel-potgo_CCFILES))
+kernel-potgo_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-potgo_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-potgo_OBJDIR)/,$(notdir $(kernel-potgo_CCFILES))))
+    kernel-potgo_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-potgo_OBJDIR)/,$(notdir $(kernel-potgo_CCFILES))))
+else
+ifeq (,)
+    kernel-potgo_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-potgo_OBJDIR)/,$(kernel-potgo_CCFILES)))
+    kernel-potgo_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-potgo_OBJDIR)/,$(kernel-potgo_CCFILES)))
+else
+    kernel-potgo_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-potgo_OBJDIR)/,$(patsubst /%,%,$(kernel-potgo_CCFILES))))
+    kernel-potgo_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-potgo_OBJDIR)/,$(patsubst /%,%,$(kernel-potgo_CCFILES))))
+endif
+endif
+kernel-potgo_MC_TGTWILDCARD := $(kernel-potgo_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : | $(addsuffix .c,$(kernel-potgo_CCFILES))
+
+# Be sure that all .c files are found
+kernel-potgo_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-potgo_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-potgo_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-potgo_MC_DIRS := $(foreach dir, $(kernel-potgo_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-potgo_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-potgo_MC_DIRS),)
+    kernel-potgo_MC_DIRS := $(shell echo $(kernel-potgo_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-potgo_MC_DIRS)
+endif
+
+endif
+
+kernel-potgo_MC_CPPFLAGS := $(kernel-potgo_CPPFLAGS)
+kernel-potgo_CFLAGS := $(kernel-potgo_CFLAGS)
+ifeq ($(kernel-potgo_DFLAGS),)
+  kernel-potgo_DFLAGS := $(kernel-potgo_CFLAGS)
+else
+  kernel-potgo_DFLAGS := $(kernel-potgo_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-potgo_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-potgo_STRIP ?= $(TARGET_STRIP)
+kernel-potgo_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_MC_CPPFLAGS:=$(strip $(kernel-potgo_MC_CPPFLAGS) $(kernel-potgo_MC_EXTRA_CPPFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_CFLAGS:=$(strip $(kernel-potgo_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_DFLAGS:=$(kernel-potgo_DFLAGS)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-potgo_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-potgo_STRIP ?= $(HOST_STRIP)
+kernel-potgo_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-potgo_MC_CPPFLAGS) $(kernel-potgo_MC_EXTRA_CPPFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-potgo_CFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-potgo_DFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-potgo_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-potgo_STRIP ?= $(ECHO) >/dev/null
+kernel-potgo_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-potgo_MC_CPPFLAGS) $(kernel-potgo_MC_EXTRA_CPPFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-potgo_CFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-potgo_DFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-potgo_MC_TARGETS) : CPPFLAGS := $(kernel-potgo_MC_CPPFLAGS)
+$(kernel-potgo_MC_TARGETS) : CFLAGS := $(kernel-potgo_CFLAGS)
+$(kernel-potgo_MC_TARGETS) : $(kernel-potgo_MC_TGTWILDCARD).o : $(kernel-potgo_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-potgo_IQUOTE) $(dir $<) $(kernel-potgo_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_IQUOTE) . $(kernel-potgo_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-potgo_IQUOTE) $(dir $<) $(kernel-potgo_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_IQUOTE) . $(kernel-potgo_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-potgo_IQUOTE) $(dir $<) $(kernel-potgo_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_IQUOTE) . $(kernel-potgo_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-potgo_MC_DTARGETS) : $(kernel-potgo_MC_TGTWILDCARD).d : $(kernel-potgo_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-potgo_DFLAGS) $(kernel-potgo_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-potgo_MC_SRCWILDCARD := %
+else
+kernel-potgo_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-potgo_OBJDIR),)
+kernel-potgo_MC_TARGETS := $(addsuffix .o,$(kernel-potgo_TARGETCCFILES))
+kernel-potgo_MC_DTARGETS := $(addsuffix .d,$(kernel-potgo_TARGETCCFILES))
+kernel-potgo_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-potgo_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-potgo_OBJDIR)/,$(notdir $(kernel-potgo_TARGETCCFILES))))
+    kernel-potgo_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-potgo_OBJDIR)/,$(notdir $(kernel-potgo_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-potgo_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-potgo_OBJDIR)/,$(kernel-potgo_TARGETCCFILES)))
+    kernel-potgo_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-potgo_OBJDIR)/,$(kernel-potgo_TARGETCCFILES)))
+else
+    kernel-potgo_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-potgo_OBJDIR)/,$(patsubst /%,%,$(kernel-potgo_TARGETCCFILES))))
+    kernel-potgo_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-potgo_OBJDIR)/,$(patsubst /%,%,$(kernel-potgo_TARGETCCFILES))))
+endif
+endif
+kernel-potgo_MC_TGTWILDCARD := $(kernel-potgo_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : | $(addsuffix .c,$(kernel-potgo_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-potgo_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-potgo_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-potgo_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-potgo_MC_DIRS := $(foreach dir, $(kernel-potgo_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-potgo_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-potgo_MC_DIRS),)
+    kernel-potgo_MC_DIRS := $(shell echo $(kernel-potgo_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-potgo_MC_DIRS)
+endif
+
+endif
+
+kernel-potgo_MC_CPPFLAGS := $(kernel-potgo_CPPFLAGS) -D__AROS__
+kernel-potgo_CFLAGS := $(kernel-potgo_CFLAGS)
+ifeq ($(kernel-potgo_DFLAGS),)
+  kernel-potgo_DFLAGS := $(kernel-potgo_CFLAGS)
+else
+  kernel-potgo_DFLAGS := $(kernel-potgo_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-potgo_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-potgo_STRIP ?= $(TARGET_STRIP)
+kernel-potgo_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_MC_CPPFLAGS:=$(strip $(kernel-potgo_MC_CPPFLAGS) $(kernel-potgo_MC_EXTRA_CPPFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_CFLAGS:=$(strip $(kernel-potgo_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_DFLAGS:=$(kernel-potgo_DFLAGS)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-potgo_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-potgo_STRIP ?= $(HOST_STRIP)
+kernel-potgo_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-potgo_MC_CPPFLAGS) $(kernel-potgo_MC_EXTRA_CPPFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-potgo_CFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-potgo_DFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-potgo_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-potgo_STRIP ?= $(ECHO) >/dev/null
+kernel-potgo_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-potgo_MC_CPPFLAGS) $(kernel-potgo_MC_EXTRA_CPPFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-potgo_CFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-potgo_DFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-potgo_MC_TARGETS) : CPPFLAGS := $(kernel-potgo_MC_CPPFLAGS)
+$(kernel-potgo_MC_TARGETS) : CFLAGS := $(kernel-potgo_CFLAGS)
+$(kernel-potgo_MC_TARGETS) : $(kernel-potgo_MC_TGTWILDCARD).o : $(kernel-potgo_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-potgo_IQUOTE) $(dir $<) $(kernel-potgo_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_IQUOTE) . $(kernel-potgo_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-potgo_IQUOTE) $(dir $<) $(kernel-potgo_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_IQUOTE) . $(kernel-potgo_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-potgo_IQUOTE) $(dir $<) $(kernel-potgo_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_IQUOTE) . $(kernel-potgo_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-potgo_MC_DTARGETS) : $(kernel-potgo_MC_TGTWILDCARD).d : $(kernel-potgo_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-potgo_DFLAGS) $(kernel-potgo_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-potgo_MC_SRCWILDCARD := %
+else
+kernel-potgo_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-potgo_OBJDIR)/linklib,)
+kernel-potgo_MC_TARGETS := $(addsuffix .o,$(kernel-potgo_NLIBARCHFILES))
+kernel-potgo_MC_DTARGETS := $(addsuffix .d,$(kernel-potgo_NLIBARCHFILES))
+kernel-potgo_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-potgo_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-potgo_OBJDIR)/linklib/,$(notdir $(kernel-potgo_NLIBARCHFILES))))
+    kernel-potgo_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-potgo_OBJDIR)/linklib/,$(notdir $(kernel-potgo_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-potgo_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-potgo_OBJDIR)/linklib/,$(kernel-potgo_NLIBARCHFILES)))
+    kernel-potgo_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-potgo_OBJDIR)/linklib/,$(kernel-potgo_NLIBARCHFILES)))
+else
+    kernel-potgo_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-potgo_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-potgo_NLIBARCHFILES))))
+    kernel-potgo_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-potgo_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-potgo_NLIBARCHFILES))))
+endif
+endif
+kernel-potgo_MC_TGTWILDCARD := $(kernel-potgo_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : | $(addsuffix .c,$(kernel-potgo_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-potgo_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-potgo_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-potgo_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-potgo_MC_DIRS := $(foreach dir, $(kernel-potgo_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-potgo_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-potgo_MC_DIRS),)
+    kernel-potgo_MC_DIRS := $(shell echo $(kernel-potgo_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-potgo_MC_DIRS)
+endif
+
+endif
+
+kernel-potgo_MC_CPPFLAGS := $(kernel-potgo_LINKLIBCPPFLAGS) -D__AROS__
+kernel-potgo_CFLAGS := $(kernel-potgo_LINKLIBCFLAGS)
+ifeq ($(kernel-potgo_LINKLIBDFLAGS),)
+  kernel-potgo_DFLAGS := $(kernel-potgo_LINKLIBCFLAGS)
+else
+  kernel-potgo_DFLAGS := $(kernel-potgo_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-potgo_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-potgo_STRIP ?= $(TARGET_STRIP)
+kernel-potgo_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_MC_CPPFLAGS:=$(strip $(kernel-potgo_MC_CPPFLAGS) $(kernel-potgo_MC_EXTRA_CPPFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_CFLAGS:=$(strip $(kernel-potgo_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_DFLAGS:=$(kernel-potgo_DFLAGS)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-potgo_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-potgo_STRIP ?= $(HOST_STRIP)
+kernel-potgo_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-potgo_MC_CPPFLAGS) $(kernel-potgo_MC_EXTRA_CPPFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-potgo_CFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-potgo_DFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-potgo_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-potgo_STRIP ?= $(ECHO) >/dev/null
+kernel-potgo_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-potgo_MC_CPPFLAGS) $(kernel-potgo_MC_EXTRA_CPPFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-potgo_CFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-potgo_DFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-potgo_MC_TARGETS) : CPPFLAGS := $(kernel-potgo_MC_CPPFLAGS)
+$(kernel-potgo_MC_TARGETS) : CFLAGS := $(kernel-potgo_CFLAGS)
+$(kernel-potgo_MC_TARGETS) : $(kernel-potgo_MC_TGTWILDCARD).o : $(kernel-potgo_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-potgo_IQUOTE) $(dir $<) $(kernel-potgo_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_IQUOTE) . $(kernel-potgo_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-potgo_IQUOTE) $(dir $<) $(kernel-potgo_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_IQUOTE) . $(kernel-potgo_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-potgo_IQUOTE) $(dir $<) $(kernel-potgo_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_IQUOTE) . $(kernel-potgo_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-potgo_MC_DTARGETS) : $(kernel-potgo_MC_TGTWILDCARD).d : $(kernel-potgo_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-potgo_DFLAGS) $(kernel-potgo_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-potgo_OBJDIR)/linklib,)
+kernel-potgo_MC_SRCWILDCARD := %
+else
+kernel-potgo_MC_SRCWILDCARD := $(kernel-potgo_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-potgo_OBJDIR)/linklib,)
+kernel-potgo_MC_TARGETS := $(addsuffix .o,$(kernel-potgo_LINKLIBCCGENFILES))
+kernel-potgo_MC_DTARGETS := $(addsuffix .d,$(kernel-potgo_LINKLIBCCGENFILES))
+kernel-potgo_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-potgo_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-potgo_OBJDIR)/linklib/,$(notdir $(kernel-potgo_LINKLIBCCGENFILES))))
+    kernel-potgo_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-potgo_OBJDIR)/linklib/,$(notdir $(kernel-potgo_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-potgo_OBJDIR)/linklib,)
+    kernel-potgo_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-potgo_OBJDIR)/linklib/,$(kernel-potgo_LINKLIBCCGENFILES)))
+    kernel-potgo_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-potgo_OBJDIR)/linklib/,$(kernel-potgo_LINKLIBCCGENFILES)))
+else
+    kernel-potgo_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-potgo_OBJDIR)/linklib/,$(patsubst $(kernel-potgo_OBJDIR)/linklib/%,%,$(kernel-potgo_LINKLIBCCGENFILES))))
+    kernel-potgo_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-potgo_OBJDIR)/linklib/,$(patsubst $(kernel-potgo_OBJDIR)/linklib/%,%,$(kernel-potgo_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-potgo_MC_TGTWILDCARD := $(kernel-potgo_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : | $(addsuffix .c,$(kernel-potgo_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-potgo_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-potgo_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-potgo_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-potgo_MC_DIRS := $(foreach dir, $(kernel-potgo_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-potgo_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-potgo_MC_DIRS),)
+    kernel-potgo_MC_DIRS := $(shell echo $(kernel-potgo_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-potgo_MC_DIRS)
+endif
+
+endif
+
+kernel-potgo_MC_CPPFLAGS := $(kernel-potgo_LINKLIBCPPFLAGS) -D__AROS__
+kernel-potgo_CFLAGS := $(kernel-potgo_LINKLIBCFLAGS)
+ifeq ($(kernel-potgo_LINKLIBDFLAGS),)
+  kernel-potgo_DFLAGS := $(kernel-potgo_LINKLIBCFLAGS)
+else
+  kernel-potgo_DFLAGS := $(kernel-potgo_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-potgo_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-potgo_STRIP ?= $(TARGET_STRIP)
+kernel-potgo_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_MC_CPPFLAGS:=$(strip $(kernel-potgo_MC_CPPFLAGS) $(kernel-potgo_MC_EXTRA_CPPFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_CFLAGS:=$(strip $(kernel-potgo_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_DFLAGS:=$(kernel-potgo_DFLAGS)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-potgo_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-potgo_STRIP ?= $(HOST_STRIP)
+kernel-potgo_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-potgo_MC_CPPFLAGS) $(kernel-potgo_MC_EXTRA_CPPFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-potgo_CFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-potgo_DFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-potgo_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-potgo_STRIP ?= $(ECHO) >/dev/null
+kernel-potgo_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-potgo_MC_CPPFLAGS) $(kernel-potgo_MC_EXTRA_CPPFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-potgo_CFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-potgo_DFLAGS))
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-potgo_MC_TARGETS) $(kernel-potgo_MC_DTARGETS) : kernel-potgo_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-potgo_MC_TARGETS) : CPPFLAGS := $(kernel-potgo_MC_CPPFLAGS)
+$(kernel-potgo_MC_TARGETS) : CFLAGS := $(kernel-potgo_CFLAGS)
+$(kernel-potgo_MC_TARGETS) : $(kernel-potgo_MC_TGTWILDCARD).o : $(kernel-potgo_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-potgo_IQUOTE) $(dir $<) $(kernel-potgo_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_IQUOTE) . $(kernel-potgo_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-potgo_IQUOTE) $(dir $<) $(kernel-potgo_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_IQUOTE) . $(kernel-potgo_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-potgo_IQUOTE) $(dir $<) $(kernel-potgo_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-potgo_IQUOTE) . $(kernel-potgo_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-potgo_MC_DTARGETS) : $(kernel-potgo_MC_TGTWILDCARD).d : $(kernel-potgo_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-potgo_DFLAGS) $(kernel-potgo_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-potgo_LINKLIBAFILES),)
+
+ifeq ($(kernel-potgo_OBJDIR)/linklib,)
+kernel-potgo-MA_TARGETS := $(addsuffix .o,$(kernel-potgo_LINKLIBAFILES) $(kernel-potgo_RELLINKLIBAFILES))
+kernel-potgo-MA_WILDCARD := %
+else
+kernel-potgo-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-potgo_OBJDIR)/linklib/,$(notdir $(kernel-potgo_LINKLIBAFILES) $(kernel-potgo_RELLINKLIBAFILES))))
+kernel-potgo-MA_WILDCARD := $(kernel-potgo_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-potgo-MA_TARGETS) : | $(addsuffix .S,$(kernel-potgo_LINKLIBAFILES) $(kernel-potgo_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-potgo-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-potgo-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-potgo_LINKLIBAFILES) $(kernel-potgo_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-potgo-MA_DIRS := $(foreach dir, $(kernel-potgo-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-potgo-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-potgo-MA_DIRS),)
+    kernel-potgo-MA_DIRS := $(shell echo $(kernel-potgo-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-potgo-MA_DIRS)
+endif
+
+endif
+
+kernel-potgo-MA_ASSEMBLER ?= $(kernel-potgo_ASSEMBLER)
+
+$(kernel-potgo-MA_TARGETS) : kernel-potgo-MA_CMD:= $(kernel-potgo-MA_ASSEMBLER)
+
+$(kernel-potgo-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-potgo-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-potgo-MA_TARGETS) : $(kernel-potgo-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-potgo-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-potgo-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-potgo-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-potgo_SUFFIX           := resource
+else
+kernel-potgo_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-potgo_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-potgo_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-potgo_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-potgo_SUFFIX),handler)
+kernel-potgo_MODULE           := $(AROSDIR)/$(kernel-potgo_MODDIR)/$(kernel-potgo_DEFNAME)-$(kernel-potgo_SUFFIX)
+else
+kernel-potgo_MODULE           := $(AROSDIR)/$(kernel-potgo_MODDIR)/$(kernel-potgo_DEFNAME).$(kernel-potgo_SUFFIX)
+endif
+kernel-potgo_KOBJ             := $(KOBJSDIR)/$(kernel-potgo_DEFNAME)_$(kernel-potgo_SUFFIX).o
+else
+kernel-potgo_MODULE           :=
+kernel-potgo_KOBJ             :=
+endif
+
+kernel-potgo-quick      : kernel-potgo
+kernel-potgo            : $(kernel-potgo_MODULE) $(kernel-potgo_LINKLIB) $(kernel-potgo_RELLINKLIB)
+ifeq (M,M)
+kernel-potgo-kobj       : $(kernel-potgo_KOBJ) $(kernel-potgo_LINKLIB) $(kernel-potgo_RELLINKLIB)
+kernel-potgo-kobj-quick : $(kernel-potgo_KOBJ) $(kernel-potgo_LINKLIB) $(kernel-potgo_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-potgo-linklib    : $(kernel-potgo_LINKLIB) $(kernel-potgo_RELLINKLIB)
+endif
+
+kernel-potgo_OBJS := $(addsuffix .o,$(kernel-potgo_STARTFILES)) $(kernel-potgo_ARCHOBJS) \
+           $(addprefix $(kernel-potgo_OBJDIR)/,$(notdir $(kernel-potgo_C_NARCHFILES:=.o) $(kernel-potgo_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (resource,handler)
+kernel-potgo_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (potgo,con)
+    kernel-potgo_ERR          := $(notdir $(kernel-potgo_MODULE)).err
+else
+    kernel-potgo_ERR          := potgo.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-potgo_DEFNAME)_LDFLAGS) $(kernel-potgo_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-potgo_LIBS) $($(kernel-potgo_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-potgo_MODULE) : LIB_NAMES := $(kernel-potgo_LIBS) $($(kernel-potgo_DEFNAME)_LIBS)
+$(kernel-potgo_MODULE) : OBJS := $(kernel-potgo_STARTOBJS) $(kernel-potgo_OBJS) $(USER_OBJS)
+$(kernel-potgo_MODULE) : ENDTAG := $(kernel-potgo_ENDOBJS)
+$(kernel-potgo_MODULE) : ERR := $(kernel-potgo_ERR)
+$(kernel-potgo_MODULE) : OBJDIR := $(kernel-potgo_OBJDIR)
+$(kernel-potgo_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-potgo_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-potgo_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-potgo_MODULE) : $(kernel-potgo_STARTOBJS) $(kernel-potgo_OBJS) $(USER_OBJS) $(kernel-potgo_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-potgo_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-potgo_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-potgo_LC_LINKLIBNAME   := $(shell echo $(kernel-potgo_LINKLIBNAME) | tr A-Z a-z)
+kernel-potgo_LC_MODNAME       := $(shell echo potgo | tr A-Z a-z)
+ifneq ($(kernel-potgo_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_LINKLIBNAME)$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_AR:=$(AR)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_LINKLIBNAME)$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_LINKLIBNAME)$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_AR:=$(HOST_AR)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_LINKLIBNAME)$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_LINKLIBNAME)$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_AR:=$(KERNEL_AR)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_LINKLIBNAME)$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_LINKLIBNAME)$(kernel-potgo_LIBSUFFIX).a : $(kernel-potgo_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-potgo_AR) $@ $^
+	$(Q)$(kernel-potgo_RANLIB) $@
+ifneq ($(kernel-potgo_LC_MODNAME),$(kernel-potgo_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-potgo_LIBDIR)/libpotgo$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_AR:=$(AR)
+$(kernel-potgo_LIBDIR)/libpotgo$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-potgo_LIBDIR)/libpotgo$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_AR:=$(HOST_AR)
+$(kernel-potgo_LIBDIR)/libpotgo$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-potgo_LIBDIR)/libpotgo$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_AR:=$(KERNEL_AR)
+$(kernel-potgo_LIBDIR)/libpotgo$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-potgo_LIBDIR)/libpotgo$(kernel-potgo_LIBSUFFIX).a : $(kernel-potgo_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-potgo_AR) $@ $^
+	$(Q)$(kernel-potgo_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-potgo_LINKLIB),)
+$(kernel-potgo_LINKLIB) : | $(kernel-potgo_LIBDIR)
+else
+$(kernel-potgo_LINKLIB) :: $(kernel-potgo_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-potgo_LIBDIR)
+
+endif
+
+ifneq ($(kernel-potgo_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_LINKLIBNAME)_rel$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_AR:=$(AR)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_LINKLIBNAME)_rel$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_LINKLIBNAME)_rel$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_AR:=$(HOST_AR)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_LINKLIBNAME)_rel$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_LINKLIBNAME)_rel$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_AR:=$(KERNEL_AR)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_LINKLIBNAME)_rel$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_LINKLIBNAME)_rel$(kernel-potgo_LIBSUFFIX).a : $(kernel-potgo_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-potgo_AR) $@ $^
+	$(Q)$(kernel-potgo_RANLIB) $@
+ifneq ($(kernel-potgo_LC_MODNAME),$(kernel-potgo_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_DEFNAME)_rel$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_AR:=$(AR)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_DEFNAME)_rel$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_DEFNAME)_rel$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_AR:=$(HOST_AR)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_DEFNAME)_rel$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_DEFNAME)_rel$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_AR:=$(KERNEL_AR)
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_DEFNAME)_rel$(kernel-potgo_LIBSUFFIX).a : kernel-potgo_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-potgo_LIBDIR)/lib$(kernel-potgo_DEFNAME)_rel$(kernel-potgo_LIBSUFFIX).a : $(kernel-potgo_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-potgo_AR) $@ $^
+	$(Q)$(kernel-potgo_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-potgo_RELLINKLIB),)
+$(kernel-potgo_RELLINKLIB) : | $(kernel-potgo_LIBDIR)
+else
+$(kernel-potgo_RELLINKLIB) :: $(kernel-potgo_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-potgo_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-potgo_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-potgo_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-potgo_SYMBOLS := $(kernel-potgo_KBASE)
+
+kernel-potgo_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-potgo_KOBJ_LIBS        := $(filter-out $(kernel-potgo_KLIB),$(kernel-potgo_LIBS)) $(kernel-potgo_KAUTOLIB)
+$(kernel-potgo_KOBJ) : LINKLIBS:=$(kernel-potgo_KOBJ_LIBS) $($(kernel-potgo_DEFNAME)_LIBS)
+$(kernel-potgo_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-potgo_SYMBOLS))
+$(kernel-potgo_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-potgo_KOBJ) : $(kernel-potgo_OBJS) $(USER_OBJS) $(kernel-potgo_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-potgo_DEPS             := $(addprefix $(kernel-potgo_OBJDIR)/,$(notdir $(kernel-potgo_CCFILES:=.d) $(kernel-potgo_TARGETCCFILES:=.d) $(kernel-potgo_CXXFILES:=.d))) $(addprefix $(kernel-potgo_OBJDIR)/linklib/,$(notdir $(kernel-potgo_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-potgo_DEPS),)
+  ifneq (kernel-potgo kernel-potgo-quick kernel-potgo-kobj kernel-potgo-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-potgo kernel-potgo-quick kernel-potgo-kobj kernel-potgo-kobj-quick),)
+      -include $(kernel-potgo_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-potgo_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-potgo_OBJS) $(kernel-potgo_DEPS) : | $(kernel-potgo_OBJDIR)/linklib
+
+ifneq ($(kernel-potgo_OBJS) $(kernel-potgo_DEPS) $(kernel-potgo_MODULE) $(kernel-potgo_KOBJ),)
+$(kernel-potgo_OBJS) $(kernel-potgo_DEPS) $(kernel-potgo_MODULE) $(kernel-potgo_KOBJ) : | $(kernel-potgo_OBJDIR) $(AROSDIR)/$(kernel-potgo_MODDIR) $(KOBJSDIR)
+else
+$(kernel-potgo_OBJS) $(kernel-potgo_DEPS) $(kernel-potgo_MODULE) $(kernel-potgo_KOBJ) :: $(kernel-potgo_OBJDIR) $(AROSDIR)/$(kernel-potgo_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-potgo_OBJDIR) $(AROSDIR)/$(kernel-potgo_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-potgo kernel-potgo-includes kernel-potgo-quick kernel-potgo-kobj kernel-potgo-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-potgo_DFILE_DEPS := $(kernel-potgo_LIBDEFSINC) $(kernel-potgo_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-potgo_INCDIR)/,$($(kernel-potgo_DEFNAME)_INCLUDES))
+$(kernel-potgo_DEPS) : $(kernel-potgo_DFILE_DEPS)
+endif
+
+kernel-potgo_TOCLEAN := $(kernel-potgo_OBJS) $(kernel-potgo_DEPS) \
+    $(kernel-potgo_MODULE) $(kernel-potgo_LINKLIB) $(kernel-potgo_KOBJ) \
+    $(kernel-potgo_OBJDIR)/Makefile.potgoresource \
+    $(addprefix $(kernel-potgo_OBJDIR)/include/,$($(kernel-potgo_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-potgo_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-potgo_INCDIR)/,$($(kernel-potgo_DEFNAME)_INCLUDES)) \
+    $(kernel-potgo_OBJDIR)/potgo_geninc $(kernel-potgo_OBJDIR)/potgo_incs \
+    $(addsuffix .c,$(kernel-potgo_LINKLIBFILES)) $(kernel-potgo_LINKLIBOBJS) $(kernel-potgo_LIBDEFSINC) \
+    $(kernel-potgo_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-potgo_STARTFILES) $(kernel-potgo_ENDFILES)) \
+    $(kernel-potgo_ENDOBJS)
+kernel-potgo-clean : FILES              := $(kernel-potgo_TOCLEAN)
+kernel-potgo-clean ::
+	$(Q)$(ECHO) "Cleaning up for module potgo"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-potgo_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

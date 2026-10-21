@@ -1,0 +1,630 @@
+#   $Id$
+#
+#   Makefile for Bifteck.
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- debug-tools : debug-tools-bifteck
+#MM debug-tools-bifteck : includes linklibs
+
+
+.PHONY : debug-tools-bifteck
+
+debug-tools-bifteck_PROGNAME  := Bifteck
+debug-tools-bifteck_OBJDIR    := $(GENDIR)/$(CURDIR)
+debug-tools-bifteck_TARGETDIR := $(AROS_DEBUG)
+debug-tools-bifteck_LINKER    := 
+debug-tools-bifteck_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(debug-tools-bifteck_LINKER),)
+    debug-tools-bifteck_LINKER := target
+endif
+
+ifneq ("$(strip Bifteck   )","")
+    debug-tools-bifteck_FILES     := Bifteck
+    debug-tools-bifteck_OBJCFILES := 
+    debug-tools-bifteck_ASMFILES  := 
+    debug-tools-bifteck_CXXFILES := 
+else
+    debug-tools-bifteck_FILES     := $(debug-tools-bifteck_PROGNAME)
+    debug-tools-bifteck_OBJCFILES :=
+    debug-tools-bifteck_ASMFILES  :=
+    debug-tools-bifteck_CXXFILES :=
+endif
+
+debug-tools-bifteck_ARCHOBJS   := $(wildcard $(debug-tools-bifteck_OBJDIR)/arch/*.o)
+debug-tools-bifteck_ARCHFILES  := $(basename $(notdir $(debug-tools-bifteck_ARCHOBJS)))
+debug-tools-bifteck_C_NARCHFILES := $(filter-out $(debug-tools-bifteck_ARCHFILES),$(debug-tools-bifteck_FILES))
+debug-tools-bifteck_CXX_NARCHFILES := $(filter-out $(debug-tools-bifteck_ARCHFILES),$(debug-tools-bifteck_CXXFILES))
+debug-tools-bifteck_OBJC_NARCHFILES := $(filter-out $(debug-tools-bifteck_ARCHFILES),$(debug-tools-bifteck_OBJCFILES))
+
+TMP_FILES := $(debug-tools-bifteck_C_NARCHFILES) $(debug-tools-bifteck_CXX_NARCHFILES) $(debug-tools-bifteck_ASMFILES) $(debug-tools-bifteck_OBJC_NARCHFILES)
+debug-tools-bifteck_OBJS := $(addsuffix .o,$(addprefix $(debug-tools-bifteck_OBJDIR)/,$(notdir $(TMP_FILES))))
+debug-tools-bifteck_DEPS := $(addsuffix .d,$(addprefix $(debug-tools-bifteck_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+debug-tools-bifteck_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+debug-tools-bifteck_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+debug-tools-bifteck_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+debug-tools-bifteck_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+debug-tools-bifteck_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+debug-tools-bifteck_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+debug-tools-bifteck_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+debug-tools-bifteck_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+debug-tools-bifteck_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+debug-tools-bifteck_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+debug-tools-bifteck_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+debug-tools-bifteck_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+debug-tools-bifteck_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+debug-tools-bifteck_LDFLAGS          := 
+endif
+
+debug-tools-bifteck_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+debug-tools-bifteck_COVERAGE := yes
+debug-tools-bifteck_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+debug-tools-bifteck_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+debug-tools-bifteck_CFLAGS    := $(strip $(debug-tools-bifteck_COVERAGEFLAGS) $(debug-tools-bifteck_CFLAGS))
+debug-tools-bifteck_CXXFLAGS := $(strip $(debug-tools-bifteck_COVERAGEFLAGS) $(debug-tools-bifteck_CXXFLAGS))
+debug-tools-bifteck_LIBS += $(debug-tools-bifteck_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+debug-tools-bifteck_FUNCINSTR := yes
+debug-tools-bifteck_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+debug-tools-bifteck_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+debug-tools-bifteck_CFLAGS    := $(strip $(debug-tools-bifteck_INSTRFUNCFLAGS) $(debug-tools-bifteck_CFLAGS))
+debug-tools-bifteck_CXXFLAGS := $(strip $(debug-tools-bifteck_INSTRFUNCFLAGS) $(debug-tools-bifteck_CXXFLAGS))
+debug-tools-bifteck_LIBS += $(debug-tools-bifteck_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+debug-tools-bifteck_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(debug-tools-bifteck_CFLAGS))
+debug-tools-bifteck_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(debug-tools-bifteck_CXXFLAGS))
+endif
+endif
+debug-tools-bifteck_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    debug-tools-bifteck_DFLAGS     := 
+else
+    debug-tools-bifteck_DFLAGS     := $(debug-tools-bifteck_CFLAGS)
+endif
+ifneq (,)
+    debug-tools-bifteck_DXXFLAGS     := 
+else
+    debug-tools-bifteck_DXXFLAGS     := $(debug-tools-bifteck_CXXFLAGS)
+endif
+ifeq (target,target)
+debug-tools-bifteck_LDFLAGS           := $(debug-tools-bifteck_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+debug-tools-bifteck_LDFLAGS           := $(debug-tools-bifteck_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+debug-tools-bifteck_LDFLAGS           := $(debug-tools-bifteck_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+debug-tools-bifteck_LDFLAGS   += -L
+endif
+
+#MM
+debug-tools-bifteck-quick : debug-tools-bifteck
+
+#MM debug-tools-bifteck : includes-generate-deps core-linklibs
+debug-tools-bifteck : $(debug-tools-bifteck_TARGETDIR)/$(debug-tools-bifteck_PROGNAME)
+
+ifneq ($(filter $(TARGET),debug-tools-bifteck debug-tools-bifteck-quick debug-tools-bifteck-gz-quick),)
+
+debug-tools-bifteck_CXXABSBASENAMES := $(foreach debug-tools-bifteck_CXXBASE,$(debug-tools-bifteck_CXX_NARCHFILES),$(if $(filter /%,$(debug-tools-bifteck_CXXBASE)),$(debug-tools-bifteck_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(debug-tools-bifteck_CXXBASE))))
+
+ifneq ($(debug-tools-bifteck_CXXABSBASENAMES),)
+
+debug-tools-bifteck_CXXBASENAMES := $(basename $(debug-tools-bifteck_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+debug-tools-bifteck_MCXX_FILES  := $(strip $(foreach debug-tools-bifteck_CXXBASE,$(debug-tools-bifteck_CXXABSBASENAMES), $(firstword $(wildcard $(foreach debug-tools-bifteck_EXT, $(AROS_CXXEXTS),$(addsuffix .$(debug-tools-bifteck_EXT),$(debug-tools-bifteck_CXXBASE)))))))
+
+ifeq (,)
+debug-tools-bifteck_MCXX_SRCWILDCARD := %
+else
+debug-tools-bifteck_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(debug-tools-bifteck_OBJDIR),)
+  debug-tools-bifteck_CXXTARGETS := $(notdir $(debug-tools-bifteck_CXXBASENAMES:=.o))
+  debug-tools-bifteck_CXXDTARGETS := $(notdir $(debug-tools-bifteck_CXXBASENAMES:=.d))
+  debug-tools-bifteck_MCXX_WILDCARD := %
+else
+  debug-tools-bifteck_CXXTARGETS := $(addprefix $(debug-tools-bifteck_OBJDIR)/,$(notdir $(debug-tools-bifteck_CXXBASENAMES:=.o)))
+  debug-tools-bifteck_CXXDTARGETS := $(addprefix $(debug-tools-bifteck_OBJDIR)/,$(notdir $(debug-tools-bifteck_CXXBASENAMES:=.d)))
+  debug-tools-bifteck_MCXX_WILDCARD := $(debug-tools-bifteck_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(debug-tools-bifteck_CXXTARGETS) $(debug-tools-bifteck_CXXDTARGETS) : | $(debug-tools-bifteck_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+debug-tools-bifteck_MCXX_CPPFLAGS := $(debug-tools-bifteck_CPPFLAGS)
+debug-tools-bifteck_CXXFLAGS := $(debug-tools-bifteck_CXXFLAGS)
+ifeq ($(debug-tools-bifteck_DXXFLAGS),)
+  debug-tools-bifteck_DXXFLAGS := $(debug-tools-bifteck_CXXFLAGS)
+else
+  debug-tools-bifteck_DXXFLAGS := $(debug-tools-bifteck_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  debug-tools-bifteck_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  debug-tools-bifteck_STRIP ?= $(HOST_STRIP)
+  debug-tools-bifteck_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  debug-tools-bifteck_CXXCMD:=$(HOST_CXX)
+  debug-tools-bifteck_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(debug-tools-bifteck_MCXX_CPPFLAGS) $(debug-tools-bifteck_MCXX_EXTRA_CPPFLAGS))
+  debug-tools-bifteck_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(debug-tools-bifteck_CXXFLAGS))
+  debug-tools-bifteck_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(debug-tools-bifteck_DXXFLAGS))
+  debug-tools-bifteck_CXXIQUOTE:=$(HOST_IQUOTE)
+  debug-tools-bifteck_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  debug-tools-bifteck_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  debug-tools-bifteck_STRIP ?= $(TARGET_STRIP)
+  debug-tools-bifteck_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  debug-tools-bifteck_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  debug-tools-bifteck_MCXX_CPPFLAGS := $(strip $(debug-tools-bifteck_MCXX_CPPFLAGS) $(debug-tools-bifteck_MCXX_EXTRA_CPPFLAGS))
+  debug-tools-bifteck_CXXFLAGS := $(strip $(debug-tools-bifteck_CXXFLAGS) $(SAFETY_CFLAGS))
+  debug-tools-bifteck_DXXFLAGS := $(debug-tools-bifteck_DXXFLAGS)
+  debug-tools-bifteck_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  debug-tools-bifteck_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  debug-tools-bifteck_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  debug-tools-bifteck_STRIP ?= $(ECHO) >/dev/null
+  debug-tools-bifteck_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  debug-tools-bifteck_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  debug-tools-bifteck_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(debug-tools-bifteck_MCXX_CPPFLAGS) $(debug-tools-bifteck_MCXX_EXTRA_CPPFLAGS))
+  debug-tools-bifteck_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(debug-tools-bifteck_CXXFLAGS))
+  debug-tools-bifteck_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(debug-tools-bifteck_DXXFLAGS))
+  debug-tools-bifteck_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  debug-tools-bifteck_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(debug-tools-bifteck_CXXCMD) $(debug-tools-bifteck_CXXIQUOTE) $(dir $(2)) $(debug-tools-bifteck_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-bifteck_CXXIQUOTE) . $(debug-tools-bifteck_CXXIQUOTE_END) $(strip $(debug-tools-bifteck_CXXFLAGS) $(debug-tools-bifteck_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(debug-tools-bifteck_CXXCMD) $(debug-tools-bifteck_CXXIQUOTE) $(dir $(2)) $(debug-tools-bifteck_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-bifteck_CXXIQUOTE) . $(debug-tools-bifteck_CXXIQUOTE_END) $(strip $(debug-tools-bifteck_CXXFLAGS) $(debug-tools-bifteck_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(debug-tools-bifteck_CXXCMD) $(debug-tools-bifteck_CXXIQUOTE) $(dir $(2)) $(debug-tools-bifteck_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-bifteck_CXXIQUOTE) . $(debug-tools-bifteck_CXXIQUOTE_END) $(strip $(debug-tools-bifteck_CXXFLAGS) $(debug-tools-bifteck_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(debug-tools-bifteck_CXXCMD)" $(MKDEPEND) $(strip $(debug-tools-bifteck_DXXFLAGS) $(debug-tools-bifteck_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(debug-tools-bifteck_OBJDIR),)
+  $(foreach debug-tools-bifteck_CXXFILE,$(debug-tools-bifteck_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(debug-tools-bifteck_CXXFILE))),$(debug-tools-bifteck_CXXFILE))))
+else
+  $(foreach debug-tools-bifteck_CXXFILE,$(debug-tools-bifteck_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(debug-tools-bifteck_OBJDIR)/,$(notdir $(basename $(debug-tools-bifteck_CXXFILE)))),$(debug-tools-bifteck_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(debug-tools-bifteck_OBJC_NARCHFILES),)
+
+ifeq (,)
+debug-tools-bifteck_MOBJC_SRCWILDCARD := %
+else
+debug-tools-bifteck_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(debug-tools-bifteck_OBJDIR),)
+  debug-tools-bifteck_MOBJC_TARGETS := $(addsuffix .o,$(debug-tools-bifteck_OBJC_NARCHFILES))
+  debug-tools-bifteck_MOBJC_DTARGETS := $(addsuffix .d,$(debug-tools-bifteck_OBJC_NARCHFILES))
+  debug-tools-bifteck_MOBJC_WILDCARD := %
+else
+  debug-tools-bifteck_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-bifteck_OBJDIR)/,$(debug-tools-bifteck_OBJC_NARCHFILES)))
+  debug-tools-bifteck_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(debug-tools-bifteck_OBJDIR)/,$(debug-tools-bifteck_OBJC_NARCHFILES)))
+  debug-tools-bifteck_MOBJC_WILDCARD := $(debug-tools-bifteck_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : | $(addsuffix .m,$(debug-tools-bifteck_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  debug-tools-bifteck_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  debug-tools-bifteck_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(debug-tools-bifteck_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  debug-tools-bifteck_MOBJC_DIRS := $(foreach dir, $(debug-tools-bifteck_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(debug-tools-bifteck_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(debug-tools-bifteck_MOBJC_DIRS),)
+    debug-tools-bifteck_MOBJC_DIRS := $(shell echo $(debug-tools-bifteck_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(debug-tools-bifteck_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  debug-tools-bifteck_CC := $(TARGET_CC)
+else
+  debug-tools-bifteck_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+debug-tools-bifteck_MOBJC_CPPFLAGS := $(debug-tools-bifteck_CPPFLAGS)
+debug-tools-bifteck_OBJCFLAGS := $(debug-tools-bifteck_CFLAGS)
+debug-tools-bifteck_OBJCFLAGS := $(debug-tools-bifteck_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+debug-tools-bifteck_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(debug-tools-bifteck_OBJCFLAGS)))
+ifeq ($(debug-tools-bifteck_DFLAGS),)
+  debug-tools-bifteck_OBJCDFLAGS := $(debug-tools-bifteck_CFLAGS)
+else
+  debug-tools-bifteck_OBJCDFLAGS := $(debug-tools-bifteck_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  debug-tools-bifteck_LINK ?= $(strip $(debug-tools-bifteck_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  debug-tools-bifteck_STRIP ?= $(TARGET_STRIP)
+  debug-tools-bifteck_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : CMD:=$(strip $(debug-tools-bifteck_CC) $(TARGET_SYSROOT))
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : debug-tools-bifteck_MOBJC_CPPFLAGS:=$(strip $(debug-tools-bifteck_MOBJC_CPPFLAGS) $(debug-tools-bifteck_MOBJC_EXTRA_CPPFLAGS))
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : debug-tools-bifteck_OBJCFLAGS:=$(strip $(debug-tools-bifteck_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : debug-tools-bifteck_OBJCDFLAGS:=$(debug-tools-bifteck_OBJCDFLAGS)
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : debug-tools-bifteck_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : debug-tools-bifteck_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  debug-tools-bifteck_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  debug-tools-bifteck_STRIP ?= $(HOST_STRIP)
+  debug-tools-bifteck_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : debug-tools-bifteck_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(debug-tools-bifteck_MOBJC_CPPFLAGS) $(debug-tools-bifteck_MOBJC_EXTRA_CPPFLAGS))
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : debug-tools-bifteck_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(debug-tools-bifteck_OBJCFLAGS))
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : debug-tools-bifteck_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(debug-tools-bifteck_OBJCDFLAGS))
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : debug-tools-bifteck_IQUOTE:=$(HOST_IQUOTE)
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : debug-tools-bifteck_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  debug-tools-bifteck_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  debug-tools-bifteck_STRIP ?= $(ECHO) >/dev/null
+  debug-tools-bifteck_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : debug-tools-bifteck_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(debug-tools-bifteck_MOBJC_CPPFLAGS) $(debug-tools-bifteck_MOBJC_EXTRA_CPPFLAGS))
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : debug-tools-bifteck_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(debug-tools-bifteck_OBJCFLAGS))
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : debug-tools-bifteck_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(debug-tools-bifteck_OBJCDFLAGS))
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : debug-tools-bifteck_IQUOTE:=$(KERNEL_IQUOTE)
+  $(debug-tools-bifteck_MOBJC_TARGETS) $(debug-tools-bifteck_MOBJC_DTARGETS) : debug-tools-bifteck_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(debug-tools-bifteck_MOBJC_TARGETS) : CPPFLAGS := $(debug-tools-bifteck_MOBJC_CPPFLAGS)
+$(debug-tools-bifteck_MOBJC_TARGETS) : CFLAGS := $(debug-tools-bifteck_OBJCFLAGS)
+$(debug-tools-bifteck_MOBJC_TARGETS) : $(debug-tools-bifteck_MOBJC_WILDCARD).o : $(debug-tools-bifteck_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(debug-tools-bifteck_IQUOTE) $(dir $<) $(debug-tools-bifteck_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-bifteck_IQUOTE) . $(debug-tools-bifteck_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(debug-tools-bifteck_IQUOTE) $(dir $<) $(debug-tools-bifteck_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-bifteck_IQUOTE) . $(debug-tools-bifteck_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(debug-tools-bifteck_IQUOTE) $(dir $<) $(debug-tools-bifteck_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-bifteck_IQUOTE) . $(debug-tools-bifteck_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(debug-tools-bifteck_MOBJC_DTARGETS) : $(debug-tools-bifteck_MOBJC_WILDCARD).d : $(debug-tools-bifteck_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(debug-tools-bifteck_OBJCDFLAGS) $(debug-tools-bifteck_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+debug-tools-bifteck_MC_SRCWILDCARD := %
+else
+debug-tools-bifteck_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(debug-tools-bifteck_OBJDIR),)
+debug-tools-bifteck_MC_TARGETS := $(addsuffix .o,$(debug-tools-bifteck_C_NARCHFILES))
+debug-tools-bifteck_MC_DTARGETS := $(addsuffix .d,$(debug-tools-bifteck_C_NARCHFILES))
+debug-tools-bifteck_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    debug-tools-bifteck_MC_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-bifteck_OBJDIR)/,$(notdir $(debug-tools-bifteck_C_NARCHFILES))))
+    debug-tools-bifteck_MC_DTARGETS := $(addsuffix .d,$(addprefix $(debug-tools-bifteck_OBJDIR)/,$(notdir $(debug-tools-bifteck_C_NARCHFILES))))
+else
+ifeq (,)
+    debug-tools-bifteck_MC_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-bifteck_OBJDIR)/,$(debug-tools-bifteck_C_NARCHFILES)))
+    debug-tools-bifteck_MC_DTARGETS := $(addsuffix .d,$(addprefix $(debug-tools-bifteck_OBJDIR)/,$(debug-tools-bifteck_C_NARCHFILES)))
+else
+    debug-tools-bifteck_MC_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-bifteck_OBJDIR)/,$(patsubst /%,%,$(debug-tools-bifteck_C_NARCHFILES))))
+    debug-tools-bifteck_MC_DTARGETS := $(addsuffix .d,$(addprefix $(debug-tools-bifteck_OBJDIR)/,$(patsubst /%,%,$(debug-tools-bifteck_C_NARCHFILES))))
+endif
+endif
+debug-tools-bifteck_MC_TGTWILDCARD := $(debug-tools-bifteck_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : | $(addsuffix .c,$(debug-tools-bifteck_C_NARCHFILES))
+
+# Be sure that all .c files are found
+debug-tools-bifteck_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+debug-tools-bifteck_MC_BASEDIRS := $(shell echo $(sort $(dir $(debug-tools-bifteck_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+debug-tools-bifteck_MC_DIRS := $(foreach dir, $(debug-tools-bifteck_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(debug-tools-bifteck_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(debug-tools-bifteck_MC_DIRS),)
+    debug-tools-bifteck_MC_DIRS := $(shell echo $(debug-tools-bifteck_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(debug-tools-bifteck_MC_DIRS)
+endif
+
+endif
+
+debug-tools-bifteck_MC_CPPFLAGS := $(debug-tools-bifteck_CPPFLAGS)
+debug-tools-bifteck_CFLAGS := $(debug-tools-bifteck_CFLAGS)
+ifeq ($(debug-tools-bifteck_DFLAGS),)
+  debug-tools-bifteck_DFLAGS := $(debug-tools-bifteck_CFLAGS)
+else
+  debug-tools-bifteck_DFLAGS := $(debug-tools-bifteck_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+debug-tools-bifteck_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+debug-tools-bifteck_STRIP ?= $(TARGET_STRIP)
+debug-tools-bifteck_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : debug-tools-bifteck_MC_CPPFLAGS:=$(strip $(debug-tools-bifteck_MC_CPPFLAGS) $(debug-tools-bifteck_MC_EXTRA_CPPFLAGS))
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : debug-tools-bifteck_CFLAGS:=$(strip $(debug-tools-bifteck_CFLAGS) $(SAFETY_CFLAGS))
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : debug-tools-bifteck_DFLAGS:=$(debug-tools-bifteck_DFLAGS)
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : debug-tools-bifteck_IQUOTE:=$(CFLAGS_IQUOTE)
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : debug-tools-bifteck_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+debug-tools-bifteck_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+debug-tools-bifteck_STRIP ?= $(HOST_STRIP)
+debug-tools-bifteck_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : debug-tools-bifteck_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(debug-tools-bifteck_MC_CPPFLAGS) $(debug-tools-bifteck_MC_EXTRA_CPPFLAGS))
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : debug-tools-bifteck_CFLAGS:=$(strip $(HOST_CFLAGS) $(debug-tools-bifteck_CFLAGS))
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : debug-tools-bifteck_DFLAGS:=$(strip $(HOST_CFLAGS) $(debug-tools-bifteck_DFLAGS))
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : debug-tools-bifteck_IQUOTE:=$(HOST_IQUOTE)
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : debug-tools-bifteck_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+debug-tools-bifteck_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+debug-tools-bifteck_STRIP ?= $(ECHO) >/dev/null
+debug-tools-bifteck_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : debug-tools-bifteck_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(debug-tools-bifteck_MC_CPPFLAGS) $(debug-tools-bifteck_MC_EXTRA_CPPFLAGS))
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : debug-tools-bifteck_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(debug-tools-bifteck_CFLAGS))
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : debug-tools-bifteck_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(debug-tools-bifteck_DFLAGS))
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : debug-tools-bifteck_IQUOTE:=$(KERNEL_IQUOTE)
+$(debug-tools-bifteck_MC_TARGETS) $(debug-tools-bifteck_MC_DTARGETS) : debug-tools-bifteck_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(debug-tools-bifteck_MC_TARGETS) : CPPFLAGS := $(debug-tools-bifteck_MC_CPPFLAGS)
+$(debug-tools-bifteck_MC_TARGETS) : CFLAGS := $(debug-tools-bifteck_CFLAGS)
+$(debug-tools-bifteck_MC_TARGETS) : $(debug-tools-bifteck_MC_TGTWILDCARD).o : $(debug-tools-bifteck_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(debug-tools-bifteck_IQUOTE) $(dir $<) $(debug-tools-bifteck_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-bifteck_IQUOTE) . $(debug-tools-bifteck_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(debug-tools-bifteck_IQUOTE) $(dir $<) $(debug-tools-bifteck_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-bifteck_IQUOTE) . $(debug-tools-bifteck_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(debug-tools-bifteck_IQUOTE) $(dir $<) $(debug-tools-bifteck_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-bifteck_IQUOTE) . $(debug-tools-bifteck_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(debug-tools-bifteck_MC_DTARGETS) : $(debug-tools-bifteck_MC_TGTWILDCARD).d : $(debug-tools-bifteck_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(debug-tools-bifteck_DFLAGS) $(debug-tools-bifteck_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(debug-tools-bifteck_OBJDIR),)
+debug-tools-bifteck-MA_TARGETS := $(addsuffix .o,$(debug-tools-bifteck_ASMFILES))
+debug-tools-bifteck-MA_WILDCARD := %
+else
+debug-tools-bifteck-MA_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-bifteck_OBJDIR)/,$(notdir $(debug-tools-bifteck_ASMFILES))))
+debug-tools-bifteck-MA_WILDCARD := $(debug-tools-bifteck_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(debug-tools-bifteck-MA_TARGETS) : | $(addsuffix .s,$(debug-tools-bifteck_ASMFILES))
+
+# Be sure that all .c files are found
+debug-tools-bifteck-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+debug-tools-bifteck-MA_BASEDIRS := $(shell echo $(sort $(dir $(debug-tools-bifteck_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+debug-tools-bifteck-MA_DIRS := $(foreach dir, $(debug-tools-bifteck-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(debug-tools-bifteck-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(debug-tools-bifteck-MA_DIRS),)
+    debug-tools-bifteck-MA_DIRS := $(shell echo $(debug-tools-bifteck-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(debug-tools-bifteck-MA_DIRS)
+endif
+
+endif
+
+debug-tools-bifteck-MA_ASSEMBLER ?= $(debug-tools-bifteck_ASSEMBLER)
+
+$(debug-tools-bifteck-MA_TARGETS) : debug-tools-bifteck-MA_CMD:= $(debug-tools-bifteck-MA_ASSEMBLER)
+
+$(debug-tools-bifteck-MA_TARGETS) : CPPFLAGS := $(debug-tools-bifteck_CPPFLAGS)
+$(debug-tools-bifteck-MA_TARGETS) : AFLAGS := $(debug-tools-bifteck_AFLAGS)
+$(debug-tools-bifteck-MA_TARGETS) : $(debug-tools-bifteck-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(debug-tools-bifteck-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(debug-tools-bifteck-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(debug-tools-bifteck-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+debug-tools-bifteck-link_EXTRA_LDFLAGS := 
+debug-tools-bifteck-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    debug-tools-bifteck-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    debug-tools-bifteck-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    debug-tools-bifteck-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+debug-tools-bifteck-link_DIRS := $(subst -L ,-L,$(strip $(debug-tools-bifteck_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+debug-tools-bifteck-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(debug-tools-bifteck-link_DIRS)))
+# Add trailing /
+debug-tools-bifteck-link_DIRS := $(subst //,/,$(addsuffix /,$(debug-tools-bifteck-link_DIRS)))
+# Add normal linklib path
+debug-tools-bifteck-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+debug-tools-bifteck-link_LIBS := $(addprefix lib,$(addsuffix .a,$(debug-tools-bifteck_LIBS) $(debug-tools-bifteck-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    debug-tools-bifteck-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    debug-tools-bifteck-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+debug-tools-bifteck-link_DEPLIBS := $(foreach lib,$(debug-tools-bifteck-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(debug-tools-bifteck-link_DIRS)))) \
+)
+
+$(debug-tools-bifteck_TARGETDIR)/$(debug-tools-bifteck_PROGNAME) : OBJDIR := $(debug-tools-bifteck_OBJDIR)
+$(debug-tools-bifteck_TARGETDIR)/$(debug-tools-bifteck_PROGNAME) : OBJS := $(debug-tools-bifteck_OBJS) $(debug-tools-bifteck_ARCHOBJS) $(USER_OBJS)
+$(debug-tools-bifteck_TARGETDIR)/$(debug-tools-bifteck_PROGNAME) : LDFLAGS := $(strip $(debug-tools-bifteck_LDFLAGS) $(debug-tools-bifteck-link_EXTRA_LDFLAGS))
+$(debug-tools-bifteck_TARGETDIR)/$(debug-tools-bifteck_PROGNAME) : LIBS := $(addprefix -l,$(debug-tools-bifteck_LIBS) $(debug-tools-bifteck-link_EXTRA_LIBS) )
+$(debug-tools-bifteck_TARGETDIR)/$(debug-tools-bifteck_PROGNAME) : $(debug-tools-bifteck_OBJS) $(debug-tools-bifteck_ARCHOBJS) $(USER_OBJS) $(debug-tools-bifteck-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(debug-tools-bifteck_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(debug-tools-bifteck_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(debug-tools-bifteck_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(debug-tools-bifteck_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(debug-tools-bifteck_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(debug-tools-bifteck_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(debug-tools-bifteck_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(debug-tools-bifteck_DEPS),)
+  ifneq (debug-tools-bifteck debug-tools-bifteck-quick,)
+    ifneq ($(findstring $(TARGET),debug-tools-bifteck debug-tools-bifteck-quick),)
+      -include $(debug-tools-bifteck_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(debug-tools-bifteck_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(debug-tools-bifteck_OBJS) $(debug-tools-bifteck_DEPS) $(debug-tools-bifteck_TARGETDIR)/$(debug-tools-bifteck_PROGNAME),)
+$(debug-tools-bifteck_OBJS) $(debug-tools-bifteck_DEPS) $(debug-tools-bifteck_TARGETDIR)/$(debug-tools-bifteck_PROGNAME) : | $(debug-tools-bifteck_OBJDIR) $(debug-tools-bifteck_TARGETDIR)
+else
+$(debug-tools-bifteck_OBJS) $(debug-tools-bifteck_DEPS) $(debug-tools-bifteck_TARGETDIR)/$(debug-tools-bifteck_PROGNAME) :: $(debug-tools-bifteck_OBJDIR) $(debug-tools-bifteck_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(debug-tools-bifteck_OBJDIR) $(debug-tools-bifteck_TARGETDIR)
+
+
+debug-tools-bifteck-clean : FILES := $(debug-tools-bifteck_OBJS) $(debug-tools-bifteck_TARGETDIR)/$(debug-tools-bifteck_PROGNAME) $(debug-tools-bifteck_DEPS)
+#MM
+debug-tools-bifteck-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget debug-tools-bifteck"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

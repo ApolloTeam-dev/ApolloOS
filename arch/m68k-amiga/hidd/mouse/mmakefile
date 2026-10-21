@@ -1,0 +1,1665 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- kernel-amiga-m68k-mouse : includes kernel-potgo-includes
+#MM- kernel-amiga-m68k-mouse-kobj : includes kernel-potgo-includes
+
+USER_CPPFLAGS += \
+    -D__OOP_NOLIBBASE__ \
+    -D__UTILITY_NOLIBBASE__ \
+    -D__OOP_NOMETHODBASES__ \
+    -D__OOP_NOATTRBASES__
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-amiga-m68k-mouse
+#MM kernel-amiga-m68k-mouse-quick
+#MM kernel-amiga-m68k-mouse-makefile
+#MM kernel-amiga-m68k-mouse-clean
+
+# ABI targets:
+#MM- includes-all : kernel-amiga-m68k-mouse-includes
+#MM- linklibs-amigamouse: kernel-amiga-m68k-mouse-linklib
+#MM- linklibs-amigamouse_rel : kernel-amiga-m68k-mouse-linklib
+#MM- includes-amigamouse: kernel-amiga-m68k-mouse-includes
+#MM- includes-amigamouse_rel : kernel-amiga-m68k-mouse-includes
+#MM- kernel-amiga-m68k-mouse : kernel-amiga-m68k-mouse-includes core-linklibs linklibs-hiddstubs
+#MM kernel-amiga-m68k-mouse-linklib : kernel-amiga-m68k-mouse-includes includes-hiddstubs
+#MM- kernel-amiga-m68k-mouse-quick : kernel-amiga-m68k-mouse-includes-quick
+#MM kernel-amiga-m68k-mouse-includes : kernel-amiga-m68k-mouse-makefile kernel-amiga-m68k-mouse-includes-dirs \
+#MM     includes-generate-deps kernel-amiga-m68k-mouse-fd
+#MM kernel-amiga-m68k-mouse-includes-quick
+#MM kernel-amiga-m68k-mouse-includes-dirs
+#MM kernel-amiga-m68k-mouse-fd
+
+# Library targets
+#MM kernel-amiga-m68k-mouse-kobj : core-linklibs linklibs-hiddstubs
+#MM kernel-amiga-m68k-mouse-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-amiga-m68k-mouse-kobj : kernel-amiga-m68k-mouse-includes core-linklibs linklibs-hiddstubs
+#MM kernel-amiga-m68k-mouse-kobj-quick : kernel-amiga-m68k-mouse-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-amiga-m68k-mouse_ALLTARGETS       := kernel-amiga-m68k-mouse kernel-amiga-m68k-mouse-quick kernel-amiga-m68k-mouse-clean
+
+ifeq (M,M)
+kernel-amiga-m68k-mouse_ALLTARGETS       += kernel-amiga-m68k-mouse-kobj kernel-amiga-m68k-mouse-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-amiga-m68k-mouse_ALLTARGETS += kernel-amiga-m68k-mouse-includes \
+                 kernel-amiga-m68k-mouse-includes-quick kernel-amiga-m68k-mouse-includes-dirs  \
+                 kernel-amiga-m68k-mouse-linklib kernel-amiga-m68k-mouse-fd
+endif
+
+.PHONY : $(kernel-amiga-m68k-mouse_ALLTARGETS) kernel-amiga-m68k-mouse-makefile
+
+ifeq (amigamouse,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (hidd,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-amiga-m68k-mouse_DEFNAME      := amigamouse_
+else
+    kernel-amiga-m68k-mouse_DEFNAME      := amigamouse
+endif
+kernel-amiga-m68k-mouse_DEFLINKLIBNAME   := $(kernel-amiga-m68k-mouse_DEFNAME)
+ifneq (,)
+    kernel-amiga-m68k-mouse_LINKLIBNAME  := 
+else
+    kernel-amiga-m68k-mouse_LINKLIBNAME  = $(kernel-amiga-m68k-mouse_DEFLINKLIBNAME)
+endif
+kernel-amiga-m68k-mouse_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-amiga-m68k-mouse_DEFCPPFLAGS  += -I
+endif
+kernel-amiga-m68k-mouse_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-amiga-m68k-mouse_DFLAGS       := 
+else
+    kernel-amiga-m68k-mouse_DFLAGS       = $(kernel-amiga-m68k-mouse_DEFDFLAGS)
+endif
+kernel-amiga-m68k-mouse_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-amiga-m68k-mouse_DXXFLAGS     := 
+else
+    kernel-amiga-m68k-mouse_DXXFLAGS     = $(kernel-amiga-m68k-mouse_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-amiga-m68k-mouse_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-amiga-m68k-mouse_DEFDFLAGS))
+kernel-amiga-m68k-mouse_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-amiga-m68k-mouse_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-amiga-m68k-mouse_FUNCINSTR := yes
+kernel-amiga-m68k-mouse_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-amiga-m68k-mouse_DEFDFLAGS))
+kernel-amiga-m68k-mouse_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-amiga-m68k-mouse_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-amiga-m68k-mouse_OBJDIR                     := 
+else
+kernel-amiga-m68k-mouse_OBJDIR                     := $(OBJDIR)/$(kernel-amiga-m68k-mouse_DEFNAME)
+endif
+ifneq (,)
+kernel-amiga-m68k-mouse_OBJDIR           := $(kernel-amiga-m68k-mouse_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-amiga-m68k-mouse-makefile         := $(kernel-amiga-m68k-mouse_OBJDIR)/Makefile.$(kernel-amiga-m68k-mouse_DEFNAME)hidd
+kernel-amiga-m68k-mouse-genmakefile : $(kernel-amiga-m68k-mouse-makefile)
+
+
+kernel-amiga-m68k-mouse-genmakefile_OPTS := 
+ifneq (,)
+    kernel-amiga-m68k-mouse-genmakefile_OPTS += -f 
+    kernel-amiga-m68k-mouse-genmakefile_MODNAME := amigamouse_
+else
+    kernel-amiga-m68k-mouse-genmakefile_MODNAME := amigamouse
+endif
+kernel-amiga-m68k-mouse-genmakefile_TARGET := Makefile.$(kernel-amiga-m68k-mouse-genmakefile_MODNAME)hidd
+kernel-amiga-m68k-mouse-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-mouse-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-mouse-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-mouse-genmakefile_OPTS += -c 
+        kernel-amiga-m68k-mouse-genmakefile_DEPS += 
+    endif 
+else
+    kernel-amiga-m68k-mouse-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/amigamouse.conf
+    kernel-amiga-m68k-mouse-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/amigamouse.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-mouse-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-mouse-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-mouse-genmakefile_OPTS += -o 
+        kernel-amiga-m68k-mouse-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-amiga-m68k-mouse-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-amiga-m68k-mouse_OBJDIR),)
+    kernel-amiga-m68k-mouse-genmakefile_OPTS += -d $(kernel-amiga-m68k-mouse_OBJDIR)
+    kernel-amiga-m68k-mouse-genmakefile_TARGET := $(kernel-amiga-m68k-mouse_OBJDIR)/$(kernel-amiga-m68k-mouse-genmakefile_TARGET)
+endif
+
+$(kernel-amiga-m68k-mouse-genmakefile_TARGET) : OPTS := $(kernel-amiga-m68k-mouse-genmakefile_OPTS)
+$(kernel-amiga-m68k-mouse-genmakefile_TARGET) : MODNAME := amigamouse
+$(kernel-amiga-m68k-mouse-genmakefile_TARGET) : MODTYPE := hidd
+$(kernel-amiga-m68k-mouse-genmakefile_TARGET) : $(kernel-amiga-m68k-mouse-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-amiga-m68k-mouse-makefile),)
+$(kernel-amiga-m68k-mouse-makefile) : | $(kernel-amiga-m68k-mouse_OBJDIR)
+else
+$(kernel-amiga-m68k-mouse-makefile) :: $(kernel-amiga-m68k-mouse_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-mouse_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-amiga-m68k-mouse_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-amiga-m68k-mouse-makefile)
+
+kernel-amiga-m68k-mouse_DEFMODDIR        := $($(kernel-amiga-m68k-mouse_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-amiga-m68k-mouse_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-amiga-m68k-mouse_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-amiga-m68k-mouse_MODDIR       := 
+else
+    kernel-amiga-m68k-mouse_MODDIR       := $(kernel-amiga-m68k-mouse_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-amiga-m68k-mouse_INCDIR           := 
+else
+kernel-amiga-m68k-mouse_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-amiga-m68k-mouse_LIBDEFSINC       := $(kernel-amiga-m68k-mouse_OBJDIR)/include/$(kernel-amiga-m68k-mouse_DEFNAME)_libdefs.h
+kernel-amiga-m68k-mouse_DEFLIBDEFSINC    := $(kernel-amiga-m68k-mouse_OBJDIR)/include/$(kernel-amiga-m68k-mouse_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-amiga-m68k-mouse-includes-quick : kernel-amiga-m68k-mouse-includes
+kernel-amiga-m68k-mouse-includes : $(addprefix $(GENINCDIR)/,$($(kernel-amiga-m68k-mouse_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-amiga-m68k-mouse_INCDIR)/,$($(kernel-amiga-m68k-mouse_DEFNAME)_INCLUDES)) \
+    $(kernel-amiga-m68k-mouse_LIBDEFSINC) $(kernel-amiga-m68k-mouse_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-amiga-m68k-mouse_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-amiga-m68k-mouse-includes_MODNAME := amigamouse_
+else
+    kernel-amiga-m68k-mouse-includes_MODNAME := amigamouse
+endif
+
+ifneq ($($(kernel-amiga-m68k-mouse-includes_MODNAME)_INCLUDES),)
+
+kernel-amiga-m68k-mouse-includes_TARGETS := $($(kernel-amiga-m68k-mouse-includes_MODNAME)_INCLUDES)
+
+kernel-amiga-m68k-mouse-includes_DEPS := $(GENMODULE)
+kernel-amiga-m68k-mouse-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-mouse-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-mouse-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-mouse-includes_OPTS += -c 
+        kernel-amiga-m68k-mouse-includes_DEPS += 
+    endif 
+else
+    kernel-amiga-m68k-mouse-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/amigamouse.conf
+    kernel-amiga-m68k-mouse-includes_DEPS += $(SRCDIR)/$(CURDIR)/amigamouse.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-mouse-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-mouse-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-mouse-includes_OPTS += -o 
+        kernel-amiga-m68k-mouse-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-amiga-m68k-mouse-includes_OPTS += -s 
+endif
+ifneq ($(kernel-amiga-m68k-mouse_OBJDIR)/include,)
+    kernel-amiga-m68k-mouse-includes_OPTS += -d $(kernel-amiga-m68k-mouse_OBJDIR)/include
+    kernel-amiga-m68k-mouse-includes_TARGETS := $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/include/,$(kernel-amiga-m68k-mouse-includes_TARGETS))
+    kernel-amiga-m68k-mouse-includes_GENINCFLAG=$(kernel-amiga-m68k-mouse_OBJDIR)/include/.amigamouse.hidd-includes
+else
+    kernel-amiga-m68k-mouse-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.amigamouse.hidd-includes
+endif
+
+$(kernel-amiga-m68k-mouse-includes_TARGETS) : $(kernel-amiga-m68k-mouse-includes_DEPS) $(kernel-amiga-m68k-mouse-includes_GENINCFLAG)
+
+$(kernel-amiga-m68k-mouse-includes_GENINCFLAG) : OPTS := $(kernel-amiga-m68k-mouse-includes_OPTS)
+$(kernel-amiga-m68k-mouse-includes_GENINCFLAG) : MODNAME := amigamouse
+$(kernel-amiga-m68k-mouse-includes_GENINCFLAG) : MODTYPE := hidd
+$(kernel-amiga-m68k-mouse-includes_GENINCFLAG) : $(kernel-amiga-m68k-mouse-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-amiga-m68k-mouse_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-amiga-m68k-mouse_DEFNAME)_INCLUDES)) : | $(kernel-amiga-m68k-mouse_OBJDIR)/amigamouse_geninc
+
+$(kernel-amiga-m68k-mouse_OBJDIR)/amigamouse_geninc : COPYSRCDIR := $(kernel-amiga-m68k-mouse_OBJDIR)/include
+$(kernel-amiga-m68k-mouse_OBJDIR)/amigamouse_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-amiga-m68k-mouse_OBJDIR)/amigamouse_geninc : FILES := $($(kernel-amiga-m68k-mouse_DEFNAME)_INCLUDES)
+$(kernel-amiga-m68k-mouse_OBJDIR)/amigamouse_geninc : $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/include/,$($(kernel-amiga-m68k-mouse_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-amiga-m68k-mouse_OBJDIR)/include
+
+$(addprefix $(kernel-amiga-m68k-mouse_INCDIR)/,$($(kernel-amiga-m68k-mouse_DEFNAME)_INCLUDES)) : | $(kernel-amiga-m68k-mouse_OBJDIR)/amigamouse_incs
+
+$(kernel-amiga-m68k-mouse_OBJDIR)/amigamouse_incs : COPYSRCDIR := $(kernel-amiga-m68k-mouse_OBJDIR)/include
+$(kernel-amiga-m68k-mouse_OBJDIR)/amigamouse_incs : TGTDIR := $(kernel-amiga-m68k-mouse_INCDIR)
+$(kernel-amiga-m68k-mouse_OBJDIR)/amigamouse_incs : FILES := $($(kernel-amiga-m68k-mouse_DEFNAME)_INCLUDES)
+$(kernel-amiga-m68k-mouse_OBJDIR)/amigamouse_incs : $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/include/,$($(kernel-amiga-m68k-mouse_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-amiga-m68k-mouse_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-amiga-m68k-mouse_DEFNAME)_INCLUDES))))
+
+TMPamigamouse_INCDIRS := \
+    $(kernel-amiga-m68k-mouse_OBJDIR)/include $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/include/,$(kernel-amiga-m68k-mouse_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-amiga-m68k-mouse_INCDIRS)) \
+    $(kernel-amiga-m68k-mouse_INCDIR) $(addprefix $(kernel-amiga-m68k-mouse_INCDIR)/,$(kernel-amiga-m68k-mouse_INCDIRS))
+
+ifneq (kernel-amiga-m68k-mouse-includes-dirs,)
+kernel-amiga-m68k-mouse-includes-dirs : | $(TMPamigamouse_INCDIRS)
+else
+kernel-amiga-m68k-mouse-includes-dirs :: $(TMPamigamouse_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPamigamouse_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-amiga-m68k-mouse-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-amiga-m68k-mouse-genlibdefs_OPTS += -f 
+    kernel-amiga-m68k-mouse-genlibdefs_MODNAME := amigamouse_
+else
+    kernel-amiga-m68k-mouse-genlibdefs_MODNAME := amigamouse
+endif
+kernel-amiga-m68k-mouse-genlibdefs_TARGET := $(kernel-amiga-m68k-mouse-genlibdefs_MODNAME)_libdefs.h
+kernel-amiga-m68k-mouse-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-mouse-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-mouse-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-mouse-genlibdefs_OPTS += -c 
+        kernel-amiga-m68k-mouse-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-amiga-m68k-mouse-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/amigamouse.conf
+    kernel-amiga-m68k-mouse-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/amigamouse.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-mouse-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-mouse-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-mouse-genlibdefs_OPTS += -o 
+        kernel-amiga-m68k-mouse-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-amiga-m68k-mouse-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-amiga-m68k-mouse_OBJDIR)/include,)
+    kernel-amiga-m68k-mouse-genlibdefs_OPTS += -d $(kernel-amiga-m68k-mouse_OBJDIR)/include
+    kernel-amiga-m68k-mouse-genlibdefs_TARGET := $(kernel-amiga-m68k-mouse_OBJDIR)/include/$(kernel-amiga-m68k-mouse-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-amiga-m68k-mouse-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-amiga-m68k-mouse-genlibdefs_TARGET) : OPTS := $(kernel-amiga-m68k-mouse-genlibdefs_OPTS)
+$(kernel-amiga-m68k-mouse-genlibdefs_TARGET) : MODNAME := amigamouse
+$(kernel-amiga-m68k-mouse-genlibdefs_TARGET) : MODTYPE := hidd
+$(kernel-amiga-m68k-mouse-genlibdefs_TARGET) : $(kernel-amiga-m68k-mouse-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-amiga-m68k-mouse_DEFLIBDEFSINC) : FILENAME := $(kernel-amiga-m68k-mouse_LIBDEFSINC)
+$(kernel-amiga-m68k-mouse_DEFLIBDEFSINC) : $(kernel-amiga-m68k-mouse_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-amiga-m68k-mouse_LIBDEFSINC) $(kernel-amiga-m68k-mouse_DEFLIBDEFSINC) : | $(kernel-amiga-m68k-mouse_OBJDIR)/include
+
+ifneq (kernel-amiga-m68k-mouse-includes-dirs,)
+kernel-amiga-m68k-mouse-includes-dirs : | $(kernel-amiga-m68k-mouse_OBJDIR)/include
+else
+kernel-amiga-m68k-mouse-includes-dirs :: $(kernel-amiga-m68k-mouse_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-mouse_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-amiga-m68k-mouse-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-amiga-m68k-mouse-genmodfiles_OPTS += -f 
+    kernel-amiga-m68k-mouse-genmodfiles_MODNAME := amigamouse_
+else
+    kernel-amiga-m68k-mouse-genmodfiles_MODNAME := amigamouse
+endif
+kernel-amiga-m68k-mouse-genmodfiles_GENTARGETS := $($(kernel-amiga-m68k-mouse-genmodfiles_MODNAME)_STARTFILES) $($(kernel-amiga-m68k-mouse-genmodfiles_MODNAME)_ENDFILES)
+kernel-amiga-m68k-mouse-genmodfiles_STUBTARGETS := $($(kernel-amiga-m68k-mouse-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-amiga-m68k-mouse-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-amiga-m68k-mouse-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-amiga-m68k-mouse-genmodfiles_GENTARGETS))
+kernel-amiga-m68k-mouse-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-amiga-m68k-mouse-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-amiga-m68k-mouse-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-amiga-m68k-mouse-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-amiga-m68k-mouse-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-mouse-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-mouse-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-mouse-genmodfiles_OPTS += -c 
+        kernel-amiga-m68k-mouse-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-amiga-m68k-mouse-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/amigamouse.conf
+    kernel-amiga-m68k-mouse-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/amigamouse.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-amiga-m68k-mouse-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-amiga-m68k-mouse-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-amiga-m68k-mouse-genmodfiles_OPTS += -o 
+        kernel-amiga-m68k-mouse-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-amiga-m68k-mouse-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-amiga-m68k-mouse_OBJDIR),)
+    kernel-amiga-m68k-mouse-genmodfiles_OPTS += -d $(kernel-amiga-m68k-mouse_OBJDIR)
+    kernel-amiga-m68k-mouse-genmodfiles_TARGETDIR := $(shell echo $(kernel-amiga-m68k-mouse_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-amiga-m68k-mouse-genmodfiles_GENTARGETS := $(addprefix $(kernel-amiga-m68k-mouse-genmodfiles_TARGETDIR)/,$(kernel-amiga-m68k-mouse-genmodfiles_GENTARGETS))
+    kernel-amiga-m68k-mouse-genmodfiles_GENFILEFLAG=$(kernel-amiga-m68k-mouse-genmodfiles_TARGETDIR)/.amigamouse.hidd-genfiles
+else
+    kernel-amiga-m68k-mouse-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.amigamouse.hidd-genfiles
+endif
+ifneq ($(kernel-amiga-m68k-mouse_OBJDIR)/linklib,)
+    kernel-amiga-m68k-mouse-genmodfiles_OPTS += -l $(kernel-amiga-m68k-mouse_OBJDIR)/linklib
+    kernel-amiga-m68k-mouse-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-amiga-m68k-mouse_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-amiga-m68k-mouse-genmodfiles_STUBTARGETS := $(addprefix $(kernel-amiga-m68k-mouse-genmodfiles_STUBTARGETDIR)/,$(kernel-amiga-m68k-mouse-genmodfiles_STUBTARGETS))
+    kernel-amiga-m68k-mouse-genmodfiles_TARGETDIRS += $(kernel-amiga-m68k-mouse_OBJDIR)/linklib
+else
+ifneq ($(kernel-amiga-m68k-mouse_OBJDIR),)
+    kernel-amiga-m68k-mouse-genmodfiles_STUBTARGETS := $(addprefix $(kernel-amiga-m68k-mouse-genmodfiles_TARGETDIR)/,$(kernel-amiga-m68k-mouse-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-amiga-m68k-mouse-genmodfiles_TARGETS := $(kernel-amiga-m68k-mouse-genmodfiles_GENTARGETS) $(kernel-amiga-m68k-mouse-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-amiga-m68k-mouse-genmodfiles_TARGETDIRS),)
+$(kernel-amiga-m68k-mouse-genmodfiles_TARGETS) : | $(kernel-amiga-m68k-mouse-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-amiga-m68k-mouse-genmodfiles_TARGETS) : $(kernel-amiga-m68k-mouse-genmodfiles_DEPS) $(kernel-amiga-m68k-mouse-genmodfiles_GENFILEFLAG)
+
+$(kernel-amiga-m68k-mouse-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-amiga-m68k-mouse-genmodfiles_OPTS)
+$(kernel-amiga-m68k-mouse-genmodfiles_GENFILEFLAG) : MODNAME := amigamouse
+$(kernel-amiga-m68k-mouse-genmodfiles_GENFILEFLAG) : MODTYPE := hidd
+$(kernel-amiga-m68k-mouse-genmodfiles_GENFILEFLAG) : $(kernel-amiga-m68k-mouse-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-amiga-m68k-mouse-genmodfiles_GENFILEFLAG) : $(kernel-amiga-m68k-mouse_DEFLIBDEFSINC) $(kernel-amiga-m68k-mouse-makefile)
+
+
+ifneq ($(kernel-amiga-m68k-mouse-genmodfiles_GENFILEFLAG),)
+$(kernel-amiga-m68k-mouse-genmodfiles_GENFILEFLAG) : | $(kernel-amiga-m68k-mouse_OBJDIR)/linklib
+else
+$(kernel-amiga-m68k-mouse-genmodfiles_GENFILEFLAG) :: $(kernel-amiga-m68k-mouse_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-mouse_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-amiga-m68k-mouse_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-amiga-m68k-mouse_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-amiga-m68k-mouse-fd : $(kernel-amiga-m68k-mouse_FDDIR)/amigamouse_lib.fd
+
+
+TMP_TARGET := amigamouse_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/amigamouse.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/amigamouse.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-amiga-m68k-mouse_FDDIR),)
+    TMP_OPTS += -d $(kernel-amiga-m68k-mouse_FDDIR)
+    TMP_TARGET := $(kernel-amiga-m68k-mouse_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := amigamouse
+$(TMP_TARGET) : MODTYPE := hidd
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-amiga-m68k-mouse_FDDIR)/amigamouse_lib.fd : | $(kernel-amiga-m68k-mouse_FDDIR)
+
+
+ifneq (kernel-amiga-m68k-mouse-fd-setup,)
+kernel-amiga-m68k-mouse-fd-setup : | $(kernel-amiga-m68k-mouse_FDDIR)
+else
+kernel-amiga-m68k-mouse-fd-setup :: $(kernel-amiga-m68k-mouse_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-mouse_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-amiga-m68k-mouse_FILES            := mouse_init mouseclass
+kernel-amiga-m68k-mouse_OBJCFILES        := 
+kernel-amiga-m68k-mouse_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-amiga-m68k-mouse_LIBFILES         := 
+kernel-amiga-m68k-mouse_LIBS             := hiddstubs
+
+kernel-amiga-m68k-mouse_FDIRS            := $(sort $(dir $(kernel-amiga-m68k-mouse_FILES)))
+
+kernel-amiga-m68k-mouse_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-amiga-m68k-mouse_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-amiga-m68k-mouse_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-amiga-m68k-mouse_FILTERARCH       = $(filter-out $(call kernel-amiga-m68k-mouse_MATCHARCH,$(1),$(2)),$(2))
+kernel-amiga-m68k-mouse_STARTFILES       := $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$($(kernel-amiga-m68k-mouse_DEFNAME)_STARTFILES))
+kernel-amiga-m68k-mouse_ENDFILES         := $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$($(kernel-amiga-m68k-mouse_DEFNAME)_ENDFILES))
+
+kernel-amiga-m68k-mouse_ARCHOBJS         := $(wildcard $(kernel-amiga-m68k-mouse_OBJDIR)/arch/*.o)
+kernel-amiga-m68k-mouse_LIBARCHOBJS      := $(wildcard $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/arch/*.o)
+kernel-amiga-m68k-mouse_ARCHFILES        := $(basename $(notdir $(kernel-amiga-m68k-mouse_ARCHOBJS)))
+kernel-amiga-m68k-mouse_LIBARCHFILES     := $(basename $(notdir $(kernel-amiga-m68k-mouse_LIBARCHOBJS)))
+kernel-amiga-m68k-mouse_C_NARCHFILES     := $(call kernel-amiga-m68k-mouse_FILTERARCH,$(kernel-amiga-m68k-mouse_ARCHFILES),$(kernel-amiga-m68k-mouse_FILES))
+kernel-amiga-m68k-mouse_CXX_NARCHFILES   := $(call kernel-amiga-m68k-mouse_FILTERARCH,$(kernel-amiga-m68k-mouse_ARCHFILES),$(kernel-amiga-m68k-mouse_CXXFILES))
+kernel-amiga-m68k-mouse_OBJC_NARCHFILES  := $(call kernel-amiga-m68k-mouse_FILTERARCH,$(kernel-amiga-m68k-mouse_ARCHFILES),$(kernel-amiga-m68k-mouse_OBJCFILES))
+kernel-amiga-m68k-mouse_NLIBARCHFILES    := $(call kernel-amiga-m68k-mouse_FILTERARCH,$(kernel-amiga-m68k-mouse_LIBARCHFILES),$(kernel-amiga-m68k-mouse_LIBFILES))
+kernel-amiga-m68k-mouse_ARCHNLIBFILES    := $(call kernel-amiga-m68k-mouse_FILTERARCH,$(kernel-amiga-m68k-mouse_LIBFILES),$(kernel-amiga-m68k-mouse_LIBARCHFILES))
+
+kernel-amiga-m68k-mouse_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-amiga-m68k-mouse_OBJDIR)/include -include $(kernel-amiga-m68k-mouse_DEFLIBDEFSINC))
+ifneq (,)
+kernel-amiga-m68k-mouse_CPPFLAGS         += -I
+endif
+kernel-amiga-m68k-mouse_LINKLIBCPPFLAGS  := $(kernel-amiga-m68k-mouse_CPPFLAGS)
+kernel-amiga-m68k-mouse_CPPFLAGS         += $(strip $($(kernel-amiga-m68k-mouse_DEFNAME)_CPPFLAGS))
+kernel-amiga-m68k-mouse_LINKLIBCPPFLAGS  += $(strip $($(kernel-amiga-m68k-mouse_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-amiga-m68k-mouse_CFLAGS           := $(strip $(CFLAGS) $($(kernel-amiga-m68k-mouse_DEFNAME)_CFLAGS))
+kernel-amiga-m68k-mouse_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-amiga-m68k-mouse_DEFNAME)_LINKLIBCFLAGS))
+kernel-amiga-m68k-mouse_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-amiga-m68k-mouse_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-amiga-m68k-mouse_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-amiga-m68k-mouse_CFLAGS           := $(strip $(kernel-amiga-m68k-mouse_LTOFLAGS) $(kernel-amiga-m68k-mouse_CFLAGS))
+kernel-amiga-m68k-mouse_LINKLIBCFLAGS    := $(strip $(kernel-amiga-m68k-mouse_LTOFLAGS) $(kernel-amiga-m68k-mouse_LINKLIBCFLAGS))
+kernel-amiga-m68k-mouse_CXXFLAGS         := $(strip $(kernel-amiga-m68k-mouse_LTOFLAGS) $(kernel-amiga-m68k-mouse_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-amiga-m68k-mouse_SUBSTNULL        :=
+kernel-amiga-m68k-mouse_SUBSTSPACE       := $(kernel-amiga-m68k-mouse_SUBSTNULL) #
+kernel-amiga-m68k-mouse_SUBSTCOMMA       := ,
+kernel-amiga-m68k-mouse_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-amiga-m68k-mouse_SUBSTSPACE),$(kernel-amiga-m68k-mouse_SUBSTCOMMA),$(strip $($(kernel-amiga-m68k-mouse_DEFNAME)_STARTFILES))))
+kernel-amiga-m68k-mouse_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-amiga-m68k-mouse_CFLAGS           := $(strip $(kernel-amiga-m68k-mouse_INSTRFUNCFLAGS) $(kernel-amiga-m68k-mouse_CFLAGS))
+kernel-amiga-m68k-mouse_CXXFLAGS         := $(strip $(kernel-amiga-m68k-mouse_INSTRFUNCFLAGS) $(kernel-amiga-m68k-mouse_CXXFLAGS))
+kernel-amiga-m68k-mouse_LIBS             += $(kernel-amiga-m68k-mouse_INSTRFUNCLIBS)
+endif
+endif
+kernel-amiga-m68k-mouse_DFLAGS           := $(strip $(kernel-amiga-m68k-mouse_DFLAGS) $($(kernel-amiga-m68k-mouse_DEFNAME)_DFLAGS))
+kernel-amiga-m68k-mouse_LINKLIBDFLAGS    := $(strip $(kernel-amiga-m68k-mouse_DFLAGS) $($(kernel-amiga-m68k-mouse_DEFNAME)_LINKLIBDFLAGS))
+kernel-amiga-m68k-mouse_DXXFLAGS         := $(strip $(kernel-amiga-m68k-mouse_DXXFLAGS) $($(kernel-amiga-m68k-mouse_DEFNAME)_DXXFLAGS))
+
+ifeq (hidd,library)
+    kernel-amiga-m68k-mouse_LIBSUFFIX    := 
+else
+    kernel-amiga-m68k-mouse_LIBSUFFIX    := .hidd
+endif
+
+ifeq (,)
+kernel-amiga-m68k-mouse_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-amiga-m68k-mouse_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-amiga-m68k-mouse_LINKLIBCFILES    := $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$($(kernel-amiga-m68k-mouse_DEFNAME)_LINKLIBFILES))
+kernel-amiga-m68k-mouse_LINKLIBAFILES    := $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$($(kernel-amiga-m68k-mouse_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-amiga-m68k-mouse_DEFNAME)_LINKLIBFILES) $($(kernel-amiga-m68k-mouse_DEFNAME)_LINKLIBAFILES)  $(kernel-amiga-m68k-mouse_ARCHNLIBFILES)),)
+    kernel-amiga-m68k-mouse_LINKLIB      :=
+else
+    kernel-amiga-m68k-mouse_LINKLIB      := $(kernel-amiga-m68k-mouse_LIBDIR)/libamigamouse$(kernel-amiga-m68k-mouse_LIBSUFFIX).a
+    ifneq (amigamouse,$(kernel-amiga-m68k-mouse_LINKLIBNAME))
+        kernel-amiga-m68k-mouse_LINKLIB  += $(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_LINKLIBNAME)$(kernel-amiga-m68k-mouse_LIBSUFFIX).a
+    endif
+endif
+kernel-amiga-m68k-mouse_LINKLIBFILES     := $(kernel-amiga-m68k-mouse_LINKLIBCFILES) $(kernel-amiga-m68k-mouse_LINKLIBAFILES)
+
+kernel-amiga-m68k-mouse_RELLINKLIBCFILES := $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$($(kernel-amiga-m68k-mouse_DEFNAME)_RELLINKLIBFILES))
+kernel-amiga-m68k-mouse_RELLINKLIBAFILES := $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$($(kernel-amiga-m68k-mouse_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-amiga-m68k-mouse_DEFNAME)_RELLINKLIBFILES) $($(kernel-amiga-m68k-mouse_DEFNAME)_RELLINKLIBAFILES)  $(kernel-amiga-m68k-mouse_ARCHNLIBFILES)),)
+    kernel-amiga-m68k-mouse_RELLINKLIB   :=
+else
+    kernel-amiga-m68k-mouse_RELLINKLIB   := $(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_DEFNAME)_rel$(kernel-amiga-m68k-mouse_LIBSUFFIX).a
+    ifneq (amigamouse,$(kernel-amiga-m68k-mouse_LINKLIBNAME))
+        kernel-amiga-m68k-mouse_RELLINKLIB += $(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_LINKLIBNAME)_rel$(kernel-amiga-m68k-mouse_LIBSUFFIX).a
+    endif
+endif
+kernel-amiga-m68k-mouse_RELLINKLIBFILES  := $(kernel-amiga-m68k-mouse_RELLINKLIBCFILES) $(kernel-amiga-m68k-mouse_RELLINKLIBAFILES)
+endif
+
+kernel-amiga-m68k-mouse_ENDOBJS          := $(addsuffix .o,$(kernel-amiga-m68k-mouse_ENDFILES))
+kernel-amiga-m68k-mouse_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-mouse_NLIBARCHFILES))) $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/arch/,$(notdir $(kernel-amiga-m68k-mouse_ARCHNLIBFILES))) $(kernel-amiga-m68k-mouse_LINKLIBFILES)) \
+                 
+kernel-amiga-m68k-mouse_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-mouse_NLIBARCHFILES))) $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/arch/,$(notdir $(kernel-amiga-m68k-mouse_ARCHNLIBFILES))) $(kernel-amiga-m68k-mouse_RELLINKLIBFILES)) \
+                 
+$(kernel-amiga-m68k-mouse_LINKLIBFILES) $(kernel-amiga-m68k-mouse_RELLINKLIBFILES) : | $(kernel-amiga-m68k-mouse_OBJDIR)/linklib
+$(kernel-amiga-m68k-mouse_LINKLIBOBJS) $(kernel-amiga-m68k-mouse_RELLINKLIBOBJS) : | $(kernel-amiga-m68k-mouse_OBJDIR)/linklib
+
+kernel-amiga-m68k-mouse_CCFILES := $(kernel-amiga-m68k-mouse_C_NARCHFILES)
+kernel-amiga-m68k-mouse_TARGETCCFILES    := $(strip $(kernel-amiga-m68k-mouse_STARTFILES) $(kernel-amiga-m68k-mouse_ENDFILES))
+kernel-amiga-m68k-mouse_LINKLIBCCFILES   := $(strip $(kernel-amiga-m68k-mouse_NLIBARCHFILES) $(kernel-amiga-m68k-mouse_LINKLIBCFILES) $(kernel-amiga-m68k-mouse_RELLINKLIBCFILES))
+kernel-amiga-m68k-mouse_LINKLIBCCGENFILES := $(strip $(kernel-amiga-m68k-mouse_LINKLIBCFILES) $(kernel-amiga-m68k-mouse_RELLINKLIBCFILES))
+
+
+kernel-amiga-m68k-mouse_CXXABSBASENAMES := $(foreach kernel-amiga-m68k-mouse_CXXBASE,$(kernel-amiga-m68k-mouse_CXX_NARCHFILES),$(if $(filter /%,$(kernel-amiga-m68k-mouse_CXXBASE)),$(kernel-amiga-m68k-mouse_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-amiga-m68k-mouse_CXXBASE))))
+
+ifneq ($(kernel-amiga-m68k-mouse_CXXABSBASENAMES),)
+
+kernel-amiga-m68k-mouse_CXXBASENAMES := $(basename $(kernel-amiga-m68k-mouse_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-amiga-m68k-mouse_MCXX_FILES  := $(strip $(foreach kernel-amiga-m68k-mouse_CXXBASE,$(kernel-amiga-m68k-mouse_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-amiga-m68k-mouse_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-amiga-m68k-mouse_EXT),$(kernel-amiga-m68k-mouse_CXXBASE)))))))
+
+ifeq (,)
+kernel-amiga-m68k-mouse_MCXX_SRCWILDCARD := %
+else
+kernel-amiga-m68k-mouse_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-amiga-m68k-mouse_OBJDIR),)
+  kernel-amiga-m68k-mouse_CXXTARGETS := $(notdir $(kernel-amiga-m68k-mouse_CXXBASENAMES:=.o))
+  kernel-amiga-m68k-mouse_CXXDTARGETS := $(notdir $(kernel-amiga-m68k-mouse_CXXBASENAMES:=.d))
+  kernel-amiga-m68k-mouse_MCXX_WILDCARD := %
+else
+  kernel-amiga-m68k-mouse_CXXTARGETS := $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(notdir $(kernel-amiga-m68k-mouse_CXXBASENAMES:=.o)))
+  kernel-amiga-m68k-mouse_CXXDTARGETS := $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(notdir $(kernel-amiga-m68k-mouse_CXXBASENAMES:=.d)))
+  kernel-amiga-m68k-mouse_MCXX_WILDCARD := $(kernel-amiga-m68k-mouse_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-amiga-m68k-mouse_CXXTARGETS) $(kernel-amiga-m68k-mouse_CXXDTARGETS) : | $(kernel-amiga-m68k-mouse_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-amiga-m68k-mouse_MCXX_CPPFLAGS := $(kernel-amiga-m68k-mouse_CPPFLAGS)
+kernel-amiga-m68k-mouse_CXXFLAGS := $(kernel-amiga-m68k-mouse_CXXFLAGS)
+ifeq ($(kernel-amiga-m68k-mouse_DXXFLAGS),)
+  kernel-amiga-m68k-mouse_DXXFLAGS := $(kernel-amiga-m68k-mouse_CXXFLAGS)
+else
+  kernel-amiga-m68k-mouse_DXXFLAGS := $(kernel-amiga-m68k-mouse_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-amiga-m68k-mouse_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-amiga-m68k-mouse_STRIP ?= $(HOST_STRIP)
+  kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-amiga-m68k-mouse_CXXCMD:=$(HOST_CXX)
+  kernel-amiga-m68k-mouse_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-amiga-m68k-mouse_MCXX_CPPFLAGS) $(kernel-amiga-m68k-mouse_MCXX_EXTRA_CPPFLAGS))
+  kernel-amiga-m68k-mouse_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-amiga-m68k-mouse_CXXFLAGS))
+  kernel-amiga-m68k-mouse_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-amiga-m68k-mouse_DXXFLAGS))
+  kernel-amiga-m68k-mouse_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-amiga-m68k-mouse_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-amiga-m68k-mouse_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-amiga-m68k-mouse_STRIP ?= $(TARGET_STRIP)
+  kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-amiga-m68k-mouse_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-amiga-m68k-mouse_MCXX_CPPFLAGS := $(strip $(kernel-amiga-m68k-mouse_MCXX_CPPFLAGS) $(kernel-amiga-m68k-mouse_MCXX_EXTRA_CPPFLAGS))
+  kernel-amiga-m68k-mouse_CXXFLAGS := $(strip $(kernel-amiga-m68k-mouse_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-amiga-m68k-mouse_DXXFLAGS := $(kernel-amiga-m68k-mouse_DXXFLAGS)
+  kernel-amiga-m68k-mouse_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-amiga-m68k-mouse_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-amiga-m68k-mouse_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-amiga-m68k-mouse_STRIP ?= $(ECHO) >/dev/null
+  kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-amiga-m68k-mouse_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-amiga-m68k-mouse_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-amiga-m68k-mouse_MCXX_CPPFLAGS) $(kernel-amiga-m68k-mouse_MCXX_EXTRA_CPPFLAGS))
+  kernel-amiga-m68k-mouse_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-amiga-m68k-mouse_CXXFLAGS))
+  kernel-amiga-m68k-mouse_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-amiga-m68k-mouse_DXXFLAGS))
+  kernel-amiga-m68k-mouse_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-amiga-m68k-mouse_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-amiga-m68k-mouse_CXXCMD) $(kernel-amiga-m68k-mouse_CXXIQUOTE) $(dir $(2)) $(kernel-amiga-m68k-mouse_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_CXXIQUOTE) . $(kernel-amiga-m68k-mouse_CXXIQUOTE_END) $(strip $(kernel-amiga-m68k-mouse_CXXFLAGS) $(kernel-amiga-m68k-mouse_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-amiga-m68k-mouse_CXXCMD) $(kernel-amiga-m68k-mouse_CXXIQUOTE) $(dir $(2)) $(kernel-amiga-m68k-mouse_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_CXXIQUOTE) . $(kernel-amiga-m68k-mouse_CXXIQUOTE_END) $(strip $(kernel-amiga-m68k-mouse_CXXFLAGS) $(kernel-amiga-m68k-mouse_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-amiga-m68k-mouse_CXXCMD) $(kernel-amiga-m68k-mouse_CXXIQUOTE) $(dir $(2)) $(kernel-amiga-m68k-mouse_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_CXXIQUOTE) . $(kernel-amiga-m68k-mouse_CXXIQUOTE_END) $(strip $(kernel-amiga-m68k-mouse_CXXFLAGS) $(kernel-amiga-m68k-mouse_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-amiga-m68k-mouse_CXXCMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-mouse_DXXFLAGS) $(kernel-amiga-m68k-mouse_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-amiga-m68k-mouse_OBJDIR),)
+  $(foreach kernel-amiga-m68k-mouse_CXXFILE,$(kernel-amiga-m68k-mouse_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-amiga-m68k-mouse_CXXFILE))),$(kernel-amiga-m68k-mouse_CXXFILE))))
+else
+  $(foreach kernel-amiga-m68k-mouse_CXXFILE,$(kernel-amiga-m68k-mouse_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(notdir $(basename $(kernel-amiga-m68k-mouse_CXXFILE)))),$(kernel-amiga-m68k-mouse_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-amiga-m68k-mouse_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-amiga-m68k-mouse_MOBJC_SRCWILDCARD := %
+else
+kernel-amiga-m68k-mouse_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-amiga-m68k-mouse_OBJDIR),)
+  kernel-amiga-m68k-mouse_MOBJC_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-mouse_OBJC_NARCHFILES))
+  kernel-amiga-m68k-mouse_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-amiga-m68k-mouse_OBJC_NARCHFILES))
+  kernel-amiga-m68k-mouse_MOBJC_WILDCARD := %
+else
+  kernel-amiga-m68k-mouse_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(kernel-amiga-m68k-mouse_OBJC_NARCHFILES)))
+  kernel-amiga-m68k-mouse_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(kernel-amiga-m68k-mouse_OBJC_NARCHFILES)))
+  kernel-amiga-m68k-mouse_MOBJC_WILDCARD := $(kernel-amiga-m68k-mouse_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-amiga-m68k-mouse_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-amiga-m68k-mouse_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-amiga-m68k-mouse_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-mouse_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-amiga-m68k-mouse_MOBJC_DIRS := $(foreach dir, $(kernel-amiga-m68k-mouse_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-mouse_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-amiga-m68k-mouse_MOBJC_DIRS),)
+    kernel-amiga-m68k-mouse_MOBJC_DIRS := $(shell echo $(kernel-amiga-m68k-mouse_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-amiga-m68k-mouse_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-amiga-m68k-mouse_CC := $(TARGET_CC)
+else
+  kernel-amiga-m68k-mouse_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-amiga-m68k-mouse_MOBJC_CPPFLAGS := $(kernel-amiga-m68k-mouse_CPPFLAGS)
+kernel-amiga-m68k-mouse_OBJCFLAGS := $(kernel-amiga-m68k-mouse_CFLAGS)
+kernel-amiga-m68k-mouse_OBJCFLAGS := $(kernel-amiga-m68k-mouse_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-amiga-m68k-mouse_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-amiga-m68k-mouse_OBJCFLAGS)))
+ifeq ($(kernel-amiga-m68k-mouse_DFLAGS),)
+  kernel-amiga-m68k-mouse_OBJCDFLAGS := $(kernel-amiga-m68k-mouse_CFLAGS)
+else
+  kernel-amiga-m68k-mouse_OBJCDFLAGS := $(kernel-amiga-m68k-mouse_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-amiga-m68k-mouse_LINK ?= $(strip $(kernel-amiga-m68k-mouse_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-amiga-m68k-mouse_STRIP ?= $(TARGET_STRIP)
+  kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-amiga-m68k-mouse_CC) $(TARGET_SYSROOT))
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : kernel-amiga-m68k-mouse_MOBJC_CPPFLAGS:=$(strip $(kernel-amiga-m68k-mouse_MOBJC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : kernel-amiga-m68k-mouse_OBJCFLAGS:=$(strip $(kernel-amiga-m68k-mouse_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : kernel-amiga-m68k-mouse_OBJCDFLAGS:=$(kernel-amiga-m68k-mouse_OBJCDFLAGS)
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-amiga-m68k-mouse_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-amiga-m68k-mouse_STRIP ?= $(HOST_STRIP)
+  kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : kernel-amiga-m68k-mouse_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MOBJC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : kernel-amiga-m68k-mouse_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-mouse_OBJCFLAGS))
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : kernel-amiga-m68k-mouse_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-mouse_OBJCDFLAGS))
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-amiga-m68k-mouse_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-amiga-m68k-mouse_STRIP ?= $(ECHO) >/dev/null
+  kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : kernel-amiga-m68k-mouse_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MOBJC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : kernel-amiga-m68k-mouse_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-mouse_OBJCFLAGS))
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : kernel-amiga-m68k-mouse_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-mouse_OBJCDFLAGS))
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-amiga-m68k-mouse_MOBJC_TARGETS) $(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-amiga-m68k-mouse_MOBJC_TARGETS) : CPPFLAGS := $(kernel-amiga-m68k-mouse_MOBJC_CPPFLAGS)
+$(kernel-amiga-m68k-mouse_MOBJC_TARGETS) : CFLAGS := $(kernel-amiga-m68k-mouse_OBJCFLAGS)
+$(kernel-amiga-m68k-mouse_MOBJC_TARGETS) : $(kernel-amiga-m68k-mouse_MOBJC_WILDCARD).o : $(kernel-amiga-m68k-mouse_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-amiga-m68k-mouse_IQUOTE) $(dir $<) $(kernel-amiga-m68k-mouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_IQUOTE) . $(kernel-amiga-m68k-mouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-amiga-m68k-mouse_IQUOTE) $(dir $<) $(kernel-amiga-m68k-mouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_IQUOTE) . $(kernel-amiga-m68k-mouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-amiga-m68k-mouse_IQUOTE) $(dir $<) $(kernel-amiga-m68k-mouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_IQUOTE) . $(kernel-amiga-m68k-mouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-amiga-m68k-mouse_MOBJC_DTARGETS) : $(kernel-amiga-m68k-mouse_MOBJC_WILDCARD).d : $(kernel-amiga-m68k-mouse_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-mouse_OBJCDFLAGS) $(kernel-amiga-m68k-mouse_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-amiga-m68k-mouse_MC_SRCWILDCARD := %
+else
+kernel-amiga-m68k-mouse_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-amiga-m68k-mouse_OBJDIR),)
+kernel-amiga-m68k-mouse_MC_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-mouse_CCFILES))
+kernel-amiga-m68k-mouse_MC_DTARGETS := $(addsuffix .d,$(kernel-amiga-m68k-mouse_CCFILES))
+kernel-amiga-m68k-mouse_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-amiga-m68k-mouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(notdir $(kernel-amiga-m68k-mouse_CCFILES))))
+    kernel-amiga-m68k-mouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(notdir $(kernel-amiga-m68k-mouse_CCFILES))))
+else
+ifeq (,)
+    kernel-amiga-m68k-mouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(kernel-amiga-m68k-mouse_CCFILES)))
+    kernel-amiga-m68k-mouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(kernel-amiga-m68k-mouse_CCFILES)))
+else
+    kernel-amiga-m68k-mouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(patsubst /%,%,$(kernel-amiga-m68k-mouse_CCFILES))))
+    kernel-amiga-m68k-mouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(patsubst /%,%,$(kernel-amiga-m68k-mouse_CCFILES))))
+endif
+endif
+kernel-amiga-m68k-mouse_MC_TGTWILDCARD := $(kernel-amiga-m68k-mouse_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : | $(addsuffix .c,$(kernel-amiga-m68k-mouse_CCFILES))
+
+# Be sure that all .c files are found
+kernel-amiga-m68k-mouse_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-amiga-m68k-mouse_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-mouse_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-amiga-m68k-mouse_MC_DIRS := $(foreach dir, $(kernel-amiga-m68k-mouse_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-mouse_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-amiga-m68k-mouse_MC_DIRS),)
+    kernel-amiga-m68k-mouse_MC_DIRS := $(shell echo $(kernel-amiga-m68k-mouse_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-amiga-m68k-mouse_MC_DIRS)
+endif
+
+endif
+
+kernel-amiga-m68k-mouse_MC_CPPFLAGS := $(kernel-amiga-m68k-mouse_CPPFLAGS)
+kernel-amiga-m68k-mouse_CFLAGS := $(kernel-amiga-m68k-mouse_CFLAGS)
+ifeq ($(kernel-amiga-m68k-mouse_DFLAGS),)
+  kernel-amiga-m68k-mouse_DFLAGS := $(kernel-amiga-m68k-mouse_CFLAGS)
+else
+  kernel-amiga-m68k-mouse_DFLAGS := $(kernel-amiga-m68k-mouse_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-amiga-m68k-mouse_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-amiga-m68k-mouse_STRIP ?= $(TARGET_STRIP)
+kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_MC_CPPFLAGS:=$(strip $(kernel-amiga-m68k-mouse_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_CFLAGS:=$(strip $(kernel-amiga-m68k-mouse_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_DFLAGS:=$(kernel-amiga-m68k-mouse_DFLAGS)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-amiga-m68k-mouse_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-amiga-m68k-mouse_STRIP ?= $(HOST_STRIP)
+kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-mouse_CFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-mouse_DFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-amiga-m68k-mouse_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-amiga-m68k-mouse_STRIP ?= $(ECHO) >/dev/null
+kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-mouse_CFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-mouse_DFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-amiga-m68k-mouse_MC_TARGETS) : CPPFLAGS := $(kernel-amiga-m68k-mouse_MC_CPPFLAGS)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) : CFLAGS := $(kernel-amiga-m68k-mouse_CFLAGS)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) : $(kernel-amiga-m68k-mouse_MC_TGTWILDCARD).o : $(kernel-amiga-m68k-mouse_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-amiga-m68k-mouse_IQUOTE) $(dir $<) $(kernel-amiga-m68k-mouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_IQUOTE) . $(kernel-amiga-m68k-mouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-amiga-m68k-mouse_IQUOTE) $(dir $<) $(kernel-amiga-m68k-mouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_IQUOTE) . $(kernel-amiga-m68k-mouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-amiga-m68k-mouse_IQUOTE) $(dir $<) $(kernel-amiga-m68k-mouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_IQUOTE) . $(kernel-amiga-m68k-mouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-amiga-m68k-mouse_MC_DTARGETS) : $(kernel-amiga-m68k-mouse_MC_TGTWILDCARD).d : $(kernel-amiga-m68k-mouse_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-mouse_DFLAGS) $(kernel-amiga-m68k-mouse_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-amiga-m68k-mouse_MC_SRCWILDCARD := %
+else
+kernel-amiga-m68k-mouse_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-amiga-m68k-mouse_OBJDIR),)
+kernel-amiga-m68k-mouse_MC_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-mouse_TARGETCCFILES))
+kernel-amiga-m68k-mouse_MC_DTARGETS := $(addsuffix .d,$(kernel-amiga-m68k-mouse_TARGETCCFILES))
+kernel-amiga-m68k-mouse_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-amiga-m68k-mouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(notdir $(kernel-amiga-m68k-mouse_TARGETCCFILES))))
+    kernel-amiga-m68k-mouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(notdir $(kernel-amiga-m68k-mouse_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-amiga-m68k-mouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(kernel-amiga-m68k-mouse_TARGETCCFILES)))
+    kernel-amiga-m68k-mouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(kernel-amiga-m68k-mouse_TARGETCCFILES)))
+else
+    kernel-amiga-m68k-mouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(patsubst /%,%,$(kernel-amiga-m68k-mouse_TARGETCCFILES))))
+    kernel-amiga-m68k-mouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(patsubst /%,%,$(kernel-amiga-m68k-mouse_TARGETCCFILES))))
+endif
+endif
+kernel-amiga-m68k-mouse_MC_TGTWILDCARD := $(kernel-amiga-m68k-mouse_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : | $(addsuffix .c,$(kernel-amiga-m68k-mouse_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-amiga-m68k-mouse_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-amiga-m68k-mouse_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-mouse_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-amiga-m68k-mouse_MC_DIRS := $(foreach dir, $(kernel-amiga-m68k-mouse_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-mouse_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-amiga-m68k-mouse_MC_DIRS),)
+    kernel-amiga-m68k-mouse_MC_DIRS := $(shell echo $(kernel-amiga-m68k-mouse_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-amiga-m68k-mouse_MC_DIRS)
+endif
+
+endif
+
+kernel-amiga-m68k-mouse_MC_CPPFLAGS := $(kernel-amiga-m68k-mouse_CPPFLAGS) -D__AROS__
+kernel-amiga-m68k-mouse_CFLAGS := $(kernel-amiga-m68k-mouse_CFLAGS)
+ifeq ($(kernel-amiga-m68k-mouse_DFLAGS),)
+  kernel-amiga-m68k-mouse_DFLAGS := $(kernel-amiga-m68k-mouse_CFLAGS)
+else
+  kernel-amiga-m68k-mouse_DFLAGS := $(kernel-amiga-m68k-mouse_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-amiga-m68k-mouse_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-amiga-m68k-mouse_STRIP ?= $(TARGET_STRIP)
+kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_MC_CPPFLAGS:=$(strip $(kernel-amiga-m68k-mouse_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_CFLAGS:=$(strip $(kernel-amiga-m68k-mouse_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_DFLAGS:=$(kernel-amiga-m68k-mouse_DFLAGS)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-amiga-m68k-mouse_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-amiga-m68k-mouse_STRIP ?= $(HOST_STRIP)
+kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-mouse_CFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-mouse_DFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-amiga-m68k-mouse_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-amiga-m68k-mouse_STRIP ?= $(ECHO) >/dev/null
+kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-mouse_CFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-mouse_DFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-amiga-m68k-mouse_MC_TARGETS) : CPPFLAGS := $(kernel-amiga-m68k-mouse_MC_CPPFLAGS)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) : CFLAGS := $(kernel-amiga-m68k-mouse_CFLAGS)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) : $(kernel-amiga-m68k-mouse_MC_TGTWILDCARD).o : $(kernel-amiga-m68k-mouse_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-amiga-m68k-mouse_IQUOTE) $(dir $<) $(kernel-amiga-m68k-mouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_IQUOTE) . $(kernel-amiga-m68k-mouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-amiga-m68k-mouse_IQUOTE) $(dir $<) $(kernel-amiga-m68k-mouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_IQUOTE) . $(kernel-amiga-m68k-mouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-amiga-m68k-mouse_IQUOTE) $(dir $<) $(kernel-amiga-m68k-mouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_IQUOTE) . $(kernel-amiga-m68k-mouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-amiga-m68k-mouse_MC_DTARGETS) : $(kernel-amiga-m68k-mouse_MC_TGTWILDCARD).d : $(kernel-amiga-m68k-mouse_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-mouse_DFLAGS) $(kernel-amiga-m68k-mouse_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-amiga-m68k-mouse_MC_SRCWILDCARD := %
+else
+kernel-amiga-m68k-mouse_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-amiga-m68k-mouse_OBJDIR)/linklib,)
+kernel-amiga-m68k-mouse_MC_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-mouse_NLIBARCHFILES))
+kernel-amiga-m68k-mouse_MC_DTARGETS := $(addsuffix .d,$(kernel-amiga-m68k-mouse_NLIBARCHFILES))
+kernel-amiga-m68k-mouse_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-amiga-m68k-mouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-mouse_NLIBARCHFILES))))
+    kernel-amiga-m68k-mouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-mouse_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-amiga-m68k-mouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$(kernel-amiga-m68k-mouse_NLIBARCHFILES)))
+    kernel-amiga-m68k-mouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$(kernel-amiga-m68k-mouse_NLIBARCHFILES)))
+else
+    kernel-amiga-m68k-mouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-amiga-m68k-mouse_NLIBARCHFILES))))
+    kernel-amiga-m68k-mouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-amiga-m68k-mouse_NLIBARCHFILES))))
+endif
+endif
+kernel-amiga-m68k-mouse_MC_TGTWILDCARD := $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : | $(addsuffix .c,$(kernel-amiga-m68k-mouse_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-amiga-m68k-mouse_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-amiga-m68k-mouse_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-mouse_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-amiga-m68k-mouse_MC_DIRS := $(foreach dir, $(kernel-amiga-m68k-mouse_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-mouse_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-amiga-m68k-mouse_MC_DIRS),)
+    kernel-amiga-m68k-mouse_MC_DIRS := $(shell echo $(kernel-amiga-m68k-mouse_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-amiga-m68k-mouse_MC_DIRS)
+endif
+
+endif
+
+kernel-amiga-m68k-mouse_MC_CPPFLAGS := $(kernel-amiga-m68k-mouse_LINKLIBCPPFLAGS) -D__AROS__
+kernel-amiga-m68k-mouse_CFLAGS := $(kernel-amiga-m68k-mouse_LINKLIBCFLAGS)
+ifeq ($(kernel-amiga-m68k-mouse_LINKLIBDFLAGS),)
+  kernel-amiga-m68k-mouse_DFLAGS := $(kernel-amiga-m68k-mouse_LINKLIBCFLAGS)
+else
+  kernel-amiga-m68k-mouse_DFLAGS := $(kernel-amiga-m68k-mouse_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-amiga-m68k-mouse_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-amiga-m68k-mouse_STRIP ?= $(TARGET_STRIP)
+kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_MC_CPPFLAGS:=$(strip $(kernel-amiga-m68k-mouse_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_CFLAGS:=$(strip $(kernel-amiga-m68k-mouse_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_DFLAGS:=$(kernel-amiga-m68k-mouse_DFLAGS)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-amiga-m68k-mouse_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-amiga-m68k-mouse_STRIP ?= $(HOST_STRIP)
+kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-mouse_CFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-mouse_DFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-amiga-m68k-mouse_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-amiga-m68k-mouse_STRIP ?= $(ECHO) >/dev/null
+kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-mouse_CFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-mouse_DFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-amiga-m68k-mouse_MC_TARGETS) : CPPFLAGS := $(kernel-amiga-m68k-mouse_MC_CPPFLAGS)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) : CFLAGS := $(kernel-amiga-m68k-mouse_CFLAGS)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) : $(kernel-amiga-m68k-mouse_MC_TGTWILDCARD).o : $(kernel-amiga-m68k-mouse_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-amiga-m68k-mouse_IQUOTE) $(dir $<) $(kernel-amiga-m68k-mouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_IQUOTE) . $(kernel-amiga-m68k-mouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-amiga-m68k-mouse_IQUOTE) $(dir $<) $(kernel-amiga-m68k-mouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_IQUOTE) . $(kernel-amiga-m68k-mouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-amiga-m68k-mouse_IQUOTE) $(dir $<) $(kernel-amiga-m68k-mouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_IQUOTE) . $(kernel-amiga-m68k-mouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-amiga-m68k-mouse_MC_DTARGETS) : $(kernel-amiga-m68k-mouse_MC_TGTWILDCARD).d : $(kernel-amiga-m68k-mouse_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-mouse_DFLAGS) $(kernel-amiga-m68k-mouse_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-amiga-m68k-mouse_OBJDIR)/linklib,)
+kernel-amiga-m68k-mouse_MC_SRCWILDCARD := %
+else
+kernel-amiga-m68k-mouse_MC_SRCWILDCARD := $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-amiga-m68k-mouse_OBJDIR)/linklib,)
+kernel-amiga-m68k-mouse_MC_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-mouse_LINKLIBCCGENFILES))
+kernel-amiga-m68k-mouse_MC_DTARGETS := $(addsuffix .d,$(kernel-amiga-m68k-mouse_LINKLIBCCGENFILES))
+kernel-amiga-m68k-mouse_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-amiga-m68k-mouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-mouse_LINKLIBCCGENFILES))))
+    kernel-amiga-m68k-mouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-mouse_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-amiga-m68k-mouse_OBJDIR)/linklib,)
+    kernel-amiga-m68k-mouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$(kernel-amiga-m68k-mouse_LINKLIBCCGENFILES)))
+    kernel-amiga-m68k-mouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$(kernel-amiga-m68k-mouse_LINKLIBCCGENFILES)))
+else
+    kernel-amiga-m68k-mouse_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$(patsubst $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/%,%,$(kernel-amiga-m68k-mouse_LINKLIBCCGENFILES))))
+    kernel-amiga-m68k-mouse_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$(patsubst $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/%,%,$(kernel-amiga-m68k-mouse_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-amiga-m68k-mouse_MC_TGTWILDCARD := $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : | $(addsuffix .c,$(kernel-amiga-m68k-mouse_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-amiga-m68k-mouse_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-amiga-m68k-mouse_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-mouse_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-amiga-m68k-mouse_MC_DIRS := $(foreach dir, $(kernel-amiga-m68k-mouse_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-mouse_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-amiga-m68k-mouse_MC_DIRS),)
+    kernel-amiga-m68k-mouse_MC_DIRS := $(shell echo $(kernel-amiga-m68k-mouse_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-amiga-m68k-mouse_MC_DIRS)
+endif
+
+endif
+
+kernel-amiga-m68k-mouse_MC_CPPFLAGS := $(kernel-amiga-m68k-mouse_LINKLIBCPPFLAGS) -D__AROS__
+kernel-amiga-m68k-mouse_CFLAGS := $(kernel-amiga-m68k-mouse_LINKLIBCFLAGS)
+ifeq ($(kernel-amiga-m68k-mouse_LINKLIBDFLAGS),)
+  kernel-amiga-m68k-mouse_DFLAGS := $(kernel-amiga-m68k-mouse_LINKLIBCFLAGS)
+else
+  kernel-amiga-m68k-mouse_DFLAGS := $(kernel-amiga-m68k-mouse_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-amiga-m68k-mouse_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-amiga-m68k-mouse_STRIP ?= $(TARGET_STRIP)
+kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_MC_CPPFLAGS:=$(strip $(kernel-amiga-m68k-mouse_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_CFLAGS:=$(strip $(kernel-amiga-m68k-mouse_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_DFLAGS:=$(kernel-amiga-m68k-mouse_DFLAGS)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-amiga-m68k-mouse_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-amiga-m68k-mouse_STRIP ?= $(HOST_STRIP)
+kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-mouse_CFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-amiga-m68k-mouse_DFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-amiga-m68k-mouse_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-amiga-m68k-mouse_STRIP ?= $(ECHO) >/dev/null
+kernel-amiga-m68k-mouse_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_CPPFLAGS) $(kernel-amiga-m68k-mouse_MC_EXTRA_CPPFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-mouse_CFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-amiga-m68k-mouse_DFLAGS))
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) $(kernel-amiga-m68k-mouse_MC_DTARGETS) : kernel-amiga-m68k-mouse_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-amiga-m68k-mouse_MC_TARGETS) : CPPFLAGS := $(kernel-amiga-m68k-mouse_MC_CPPFLAGS)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) : CFLAGS := $(kernel-amiga-m68k-mouse_CFLAGS)
+$(kernel-amiga-m68k-mouse_MC_TARGETS) : $(kernel-amiga-m68k-mouse_MC_TGTWILDCARD).o : $(kernel-amiga-m68k-mouse_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-amiga-m68k-mouse_IQUOTE) $(dir $<) $(kernel-amiga-m68k-mouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_IQUOTE) . $(kernel-amiga-m68k-mouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-amiga-m68k-mouse_IQUOTE) $(dir $<) $(kernel-amiga-m68k-mouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_IQUOTE) . $(kernel-amiga-m68k-mouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-amiga-m68k-mouse_IQUOTE) $(dir $<) $(kernel-amiga-m68k-mouse_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-amiga-m68k-mouse_IQUOTE) . $(kernel-amiga-m68k-mouse_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-amiga-m68k-mouse_MC_DTARGETS) : $(kernel-amiga-m68k-mouse_MC_TGTWILDCARD).d : $(kernel-amiga-m68k-mouse_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-amiga-m68k-mouse_DFLAGS) $(kernel-amiga-m68k-mouse_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-amiga-m68k-mouse_LINKLIBAFILES),)
+
+ifeq ($(kernel-amiga-m68k-mouse_OBJDIR)/linklib,)
+kernel-amiga-m68k-mouse-MA_TARGETS := $(addsuffix .o,$(kernel-amiga-m68k-mouse_LINKLIBAFILES) $(kernel-amiga-m68k-mouse_RELLINKLIBAFILES))
+kernel-amiga-m68k-mouse-MA_WILDCARD := %
+else
+kernel-amiga-m68k-mouse-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-mouse_LINKLIBAFILES) $(kernel-amiga-m68k-mouse_RELLINKLIBAFILES))))
+kernel-amiga-m68k-mouse-MA_WILDCARD := $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-amiga-m68k-mouse-MA_TARGETS) : | $(addsuffix .S,$(kernel-amiga-m68k-mouse_LINKLIBAFILES) $(kernel-amiga-m68k-mouse_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-amiga-m68k-mouse-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-amiga-m68k-mouse-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-amiga-m68k-mouse_LINKLIBAFILES) $(kernel-amiga-m68k-mouse_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-amiga-m68k-mouse-MA_DIRS := $(foreach dir, $(kernel-amiga-m68k-mouse-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-amiga-m68k-mouse-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-amiga-m68k-mouse-MA_DIRS),)
+    kernel-amiga-m68k-mouse-MA_DIRS := $(shell echo $(kernel-amiga-m68k-mouse-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-amiga-m68k-mouse-MA_DIRS)
+endif
+
+endif
+
+kernel-amiga-m68k-mouse-MA_ASSEMBLER ?= $(kernel-amiga-m68k-mouse_ASSEMBLER)
+
+$(kernel-amiga-m68k-mouse-MA_TARGETS) : kernel-amiga-m68k-mouse-MA_CMD:= $(kernel-amiga-m68k-mouse-MA_ASSEMBLER)
+
+$(kernel-amiga-m68k-mouse-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-amiga-m68k-mouse-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-amiga-m68k-mouse-MA_TARGETS) : $(kernel-amiga-m68k-mouse-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-amiga-m68k-mouse-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-amiga-m68k-mouse-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-amiga-m68k-mouse-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-amiga-m68k-mouse_SUFFIX           := hidd
+else
+kernel-amiga-m68k-mouse_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-amiga-m68k-mouse_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-amiga-m68k-mouse_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-amiga-m68k-mouse_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-amiga-m68k-mouse_SUFFIX),handler)
+kernel-amiga-m68k-mouse_MODULE           := $(AROSDIR)/$(kernel-amiga-m68k-mouse_MODDIR)/$(kernel-amiga-m68k-mouse_DEFNAME)-$(kernel-amiga-m68k-mouse_SUFFIX)
+else
+kernel-amiga-m68k-mouse_MODULE           := $(AROSDIR)/$(kernel-amiga-m68k-mouse_MODDIR)/$(kernel-amiga-m68k-mouse_DEFNAME).$(kernel-amiga-m68k-mouse_SUFFIX)
+endif
+kernel-amiga-m68k-mouse_KOBJ             := $(KOBJSDIR)/$(kernel-amiga-m68k-mouse_DEFNAME)_$(kernel-amiga-m68k-mouse_SUFFIX).o
+else
+kernel-amiga-m68k-mouse_MODULE           :=
+kernel-amiga-m68k-mouse_KOBJ             :=
+endif
+
+kernel-amiga-m68k-mouse-quick      : kernel-amiga-m68k-mouse
+kernel-amiga-m68k-mouse            : $(kernel-amiga-m68k-mouse_MODULE) $(kernel-amiga-m68k-mouse_LINKLIB) $(kernel-amiga-m68k-mouse_RELLINKLIB)
+ifeq (M,M)
+kernel-amiga-m68k-mouse-kobj       : $(kernel-amiga-m68k-mouse_KOBJ) $(kernel-amiga-m68k-mouse_LINKLIB) $(kernel-amiga-m68k-mouse_RELLINKLIB)
+kernel-amiga-m68k-mouse-kobj-quick : $(kernel-amiga-m68k-mouse_KOBJ) $(kernel-amiga-m68k-mouse_LINKLIB) $(kernel-amiga-m68k-mouse_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-amiga-m68k-mouse-linklib    : $(kernel-amiga-m68k-mouse_LINKLIB) $(kernel-amiga-m68k-mouse_RELLINKLIB)
+endif
+
+kernel-amiga-m68k-mouse_OBJS := $(addsuffix .o,$(kernel-amiga-m68k-mouse_STARTFILES)) $(kernel-amiga-m68k-mouse_ARCHOBJS) \
+           $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(notdir $(kernel-amiga-m68k-mouse_C_NARCHFILES:=.o) $(kernel-amiga-m68k-mouse_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (hidd,handler)
+kernel-amiga-m68k-mouse_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (amigamouse,con)
+    kernel-amiga-m68k-mouse_ERR          := $(notdir $(kernel-amiga-m68k-mouse_MODULE)).err
+else
+    kernel-amiga-m68k-mouse_ERR          := amigamouse.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-amiga-m68k-mouse_DEFNAME)_LDFLAGS) $(kernel-amiga-m68k-mouse_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-amiga-m68k-mouse_LIBS) $($(kernel-amiga-m68k-mouse_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-amiga-m68k-mouse_MODULE) : LIB_NAMES := $(kernel-amiga-m68k-mouse_LIBS) $($(kernel-amiga-m68k-mouse_DEFNAME)_LIBS)
+$(kernel-amiga-m68k-mouse_MODULE) : OBJS := $(kernel-amiga-m68k-mouse_STARTOBJS) $(kernel-amiga-m68k-mouse_OBJS) $(USER_OBJS)
+$(kernel-amiga-m68k-mouse_MODULE) : ENDTAG := $(kernel-amiga-m68k-mouse_ENDOBJS)
+$(kernel-amiga-m68k-mouse_MODULE) : ERR := $(kernel-amiga-m68k-mouse_ERR)
+$(kernel-amiga-m68k-mouse_MODULE) : OBJDIR := $(kernel-amiga-m68k-mouse_OBJDIR)
+$(kernel-amiga-m68k-mouse_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-amiga-m68k-mouse_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-amiga-m68k-mouse_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-amiga-m68k-mouse_MODULE) : $(kernel-amiga-m68k-mouse_STARTOBJS) $(kernel-amiga-m68k-mouse_OBJS) $(USER_OBJS) $(kernel-amiga-m68k-mouse_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-amiga-m68k-mouse_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-amiga-m68k-mouse_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-amiga-m68k-mouse_LC_LINKLIBNAME   := $(shell echo $(kernel-amiga-m68k-mouse_LINKLIBNAME) | tr A-Z a-z)
+kernel-amiga-m68k-mouse_LC_MODNAME       := $(shell echo amigamouse | tr A-Z a-z)
+ifneq ($(kernel-amiga-m68k-mouse_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_LINKLIBNAME)$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_AR:=$(AR)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_LINKLIBNAME)$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_LINKLIBNAME)$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_AR:=$(HOST_AR)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_LINKLIBNAME)$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_LINKLIBNAME)$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_AR:=$(KERNEL_AR)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_LINKLIBNAME)$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_LINKLIBNAME)$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : $(kernel-amiga-m68k-mouse_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-amiga-m68k-mouse_AR) $@ $^
+	$(Q)$(kernel-amiga-m68k-mouse_RANLIB) $@
+ifneq ($(kernel-amiga-m68k-mouse_LC_MODNAME),$(kernel-amiga-m68k-mouse_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-amiga-m68k-mouse_LIBDIR)/libamigamouse$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_AR:=$(AR)
+$(kernel-amiga-m68k-mouse_LIBDIR)/libamigamouse$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-amiga-m68k-mouse_LIBDIR)/libamigamouse$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_AR:=$(HOST_AR)
+$(kernel-amiga-m68k-mouse_LIBDIR)/libamigamouse$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-amiga-m68k-mouse_LIBDIR)/libamigamouse$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_AR:=$(KERNEL_AR)
+$(kernel-amiga-m68k-mouse_LIBDIR)/libamigamouse$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-amiga-m68k-mouse_LIBDIR)/libamigamouse$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : $(kernel-amiga-m68k-mouse_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-amiga-m68k-mouse_AR) $@ $^
+	$(Q)$(kernel-amiga-m68k-mouse_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-amiga-m68k-mouse_LINKLIB),)
+$(kernel-amiga-m68k-mouse_LINKLIB) : | $(kernel-amiga-m68k-mouse_LIBDIR)
+else
+$(kernel-amiga-m68k-mouse_LINKLIB) :: $(kernel-amiga-m68k-mouse_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-mouse_LIBDIR)
+
+endif
+
+ifneq ($(kernel-amiga-m68k-mouse_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_LINKLIBNAME)_rel$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_AR:=$(AR)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_LINKLIBNAME)_rel$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_LINKLIBNAME)_rel$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_AR:=$(HOST_AR)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_LINKLIBNAME)_rel$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_LINKLIBNAME)_rel$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_AR:=$(KERNEL_AR)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_LINKLIBNAME)_rel$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_LINKLIBNAME)_rel$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : $(kernel-amiga-m68k-mouse_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-amiga-m68k-mouse_AR) $@ $^
+	$(Q)$(kernel-amiga-m68k-mouse_RANLIB) $@
+ifneq ($(kernel-amiga-m68k-mouse_LC_MODNAME),$(kernel-amiga-m68k-mouse_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_DEFNAME)_rel$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_AR:=$(AR)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_DEFNAME)_rel$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_DEFNAME)_rel$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_AR:=$(HOST_AR)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_DEFNAME)_rel$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_DEFNAME)_rel$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_AR:=$(KERNEL_AR)
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_DEFNAME)_rel$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : kernel-amiga-m68k-mouse_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-amiga-m68k-mouse_LIBDIR)/lib$(kernel-amiga-m68k-mouse_DEFNAME)_rel$(kernel-amiga-m68k-mouse_LIBSUFFIX).a : $(kernel-amiga-m68k-mouse_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-amiga-m68k-mouse_AR) $@ $^
+	$(Q)$(kernel-amiga-m68k-mouse_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-amiga-m68k-mouse_RELLINKLIB),)
+$(kernel-amiga-m68k-mouse_RELLINKLIB) : | $(kernel-amiga-m68k-mouse_LIBDIR)
+else
+$(kernel-amiga-m68k-mouse_RELLINKLIB) :: $(kernel-amiga-m68k-mouse_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-mouse_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-amiga-m68k-mouse_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-amiga-m68k-mouse_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-amiga-m68k-mouse_SYMBOLS := $(kernel-amiga-m68k-mouse_KBASE)
+
+kernel-amiga-m68k-mouse_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-amiga-m68k-mouse_KOBJ_LIBS        := $(filter-out $(kernel-amiga-m68k-mouse_KLIB),$(kernel-amiga-m68k-mouse_LIBS)) $(kernel-amiga-m68k-mouse_KAUTOLIB)
+$(kernel-amiga-m68k-mouse_KOBJ) : LINKLIBS:=$(kernel-amiga-m68k-mouse_KOBJ_LIBS) $($(kernel-amiga-m68k-mouse_DEFNAME)_LIBS)
+$(kernel-amiga-m68k-mouse_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-amiga-m68k-mouse_SYMBOLS))
+$(kernel-amiga-m68k-mouse_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-amiga-m68k-mouse_KOBJ) : $(kernel-amiga-m68k-mouse_OBJS) $(USER_OBJS) $(kernel-amiga-m68k-mouse_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-amiga-m68k-mouse_DEPS             := $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/,$(notdir $(kernel-amiga-m68k-mouse_CCFILES:=.d) $(kernel-amiga-m68k-mouse_TARGETCCFILES:=.d) $(kernel-amiga-m68k-mouse_CXXFILES:=.d))) $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/linklib/,$(notdir $(kernel-amiga-m68k-mouse_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-amiga-m68k-mouse_DEPS),)
+  ifneq (kernel-amiga-m68k-mouse kernel-amiga-m68k-mouse-quick kernel-amiga-m68k-mouse-kobj kernel-amiga-m68k-mouse-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-amiga-m68k-mouse kernel-amiga-m68k-mouse-quick kernel-amiga-m68k-mouse-kobj kernel-amiga-m68k-mouse-kobj-quick),)
+      -include $(kernel-amiga-m68k-mouse_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-amiga-m68k-mouse_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-amiga-m68k-mouse_OBJS) $(kernel-amiga-m68k-mouse_DEPS) : | $(kernel-amiga-m68k-mouse_OBJDIR)/linklib
+
+ifneq ($(kernel-amiga-m68k-mouse_OBJS) $(kernel-amiga-m68k-mouse_DEPS) $(kernel-amiga-m68k-mouse_MODULE) $(kernel-amiga-m68k-mouse_KOBJ),)
+$(kernel-amiga-m68k-mouse_OBJS) $(kernel-amiga-m68k-mouse_DEPS) $(kernel-amiga-m68k-mouse_MODULE) $(kernel-amiga-m68k-mouse_KOBJ) : | $(kernel-amiga-m68k-mouse_OBJDIR) $(AROSDIR)/$(kernel-amiga-m68k-mouse_MODDIR) $(KOBJSDIR)
+else
+$(kernel-amiga-m68k-mouse_OBJS) $(kernel-amiga-m68k-mouse_DEPS) $(kernel-amiga-m68k-mouse_MODULE) $(kernel-amiga-m68k-mouse_KOBJ) :: $(kernel-amiga-m68k-mouse_OBJDIR) $(AROSDIR)/$(kernel-amiga-m68k-mouse_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-amiga-m68k-mouse_OBJDIR) $(AROSDIR)/$(kernel-amiga-m68k-mouse_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-amiga-m68k-mouse kernel-amiga-m68k-mouse-includes kernel-amiga-m68k-mouse-quick kernel-amiga-m68k-mouse-kobj kernel-amiga-m68k-mouse-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-amiga-m68k-mouse_DFILE_DEPS := $(kernel-amiga-m68k-mouse_LIBDEFSINC) $(kernel-amiga-m68k-mouse_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-amiga-m68k-mouse_INCDIR)/,$($(kernel-amiga-m68k-mouse_DEFNAME)_INCLUDES))
+$(kernel-amiga-m68k-mouse_DEPS) : $(kernel-amiga-m68k-mouse_DFILE_DEPS)
+endif
+
+kernel-amiga-m68k-mouse_TOCLEAN := $(kernel-amiga-m68k-mouse_OBJS) $(kernel-amiga-m68k-mouse_DEPS) \
+    $(kernel-amiga-m68k-mouse_MODULE) $(kernel-amiga-m68k-mouse_LINKLIB) $(kernel-amiga-m68k-mouse_KOBJ) \
+    $(kernel-amiga-m68k-mouse_OBJDIR)/Makefile.amigamousehidd \
+    $(addprefix $(kernel-amiga-m68k-mouse_OBJDIR)/include/,$($(kernel-amiga-m68k-mouse_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-amiga-m68k-mouse_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-amiga-m68k-mouse_INCDIR)/,$($(kernel-amiga-m68k-mouse_DEFNAME)_INCLUDES)) \
+    $(kernel-amiga-m68k-mouse_OBJDIR)/amigamouse_geninc $(kernel-amiga-m68k-mouse_OBJDIR)/amigamouse_incs \
+    $(addsuffix .c,$(kernel-amiga-m68k-mouse_LINKLIBFILES)) $(kernel-amiga-m68k-mouse_LINKLIBOBJS) $(kernel-amiga-m68k-mouse_LIBDEFSINC) \
+    $(kernel-amiga-m68k-mouse_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-amiga-m68k-mouse_STARTFILES) $(kernel-amiga-m68k-mouse_ENDFILES)) \
+    $(kernel-amiga-m68k-mouse_ENDOBJS)
+kernel-amiga-m68k-mouse-clean : FILES              := $(kernel-amiga-m68k-mouse_TOCLEAN)
+kernel-amiga-m68k-mouse-clean ::
+	$(Q)$(ECHO) "Cleaning up for module amigamouse"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-amiga-m68k-mouse_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

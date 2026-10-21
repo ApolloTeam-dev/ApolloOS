@@ -1,0 +1,296 @@
+# Copyright © 2012, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES           := version
+EXEDIR          := $(AROS_TESTS)/z
+
+#MM- test : test-z
+#MM- test-quick : test-z-quick
+
+#MM test-z : includes linklibs workbench-libs-z
+
+
+.PHONY : test-z
+
+test-z_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-z_TARGETDIR := $(EXEDIR)
+test-z_LIBS := z
+
+test-z_FILES     := $(FILES)
+test-z_OBJS      := $(addsuffix .o,$(addprefix $(test-z_OBJDIR)/,$(test-z_FILES)))
+test-z_DEPS      := $(addsuffix .d,$(addprefix $(test-z_OBJDIR)/,$(test-z_FILES)))
+test-z_EXES      := $(addprefix $(test-z_TARGETDIR)/,$(test-z_FILES))
+
+test-z_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-z_CPPFLAGS += -I
+endif
+test-z_CFLAGS    := $(CFLAGS)
+test-z_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-z_COVERAGE := yes
+test-z_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-z_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-z_CFLAGS    := $(strip $(test-z_COVERAGEFLAGS) $(test-z_CFLAGS))
+test-z_LIBS += $(test-z_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-z_FUNCINSTR := yes
+test-z_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-z_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-z_CFLAGS    := $(strip $(test-z_INSTRFUNCFLAGS) $(test-z_CFLAGS))
+test-z_LIBS += $(test-z_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-z_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-z_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-z_DFLAGS := 
+else
+    test-z_DFLAGS := $(test-z_CFLAGS)
+endif
+ifeq (target,target)
+test-z_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-z_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-z_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-z_LDFLAGS += -L
+endif
+
+#MM
+test-z-quick : test-z
+
+#MM test-z : includes-generate-deps core-linklibs
+test-z : $(test-z_EXES)
+
+ifneq ($(filter $(TARGET),test-z test-z-quick),)
+
+ifeq (,)
+test-z_MC_SRCWILDCARD := %
+else
+test-z_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-z_OBJDIR),)
+test-z_MC_TARGETS := $(addsuffix .o,$(test-z_FILES))
+test-z_MC_DTARGETS := $(addsuffix .d,$(test-z_FILES))
+test-z_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-z_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-z_OBJDIR)/,$(notdir $(test-z_FILES))))
+    test-z_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-z_OBJDIR)/,$(notdir $(test-z_FILES))))
+else
+ifeq (,)
+    test-z_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-z_OBJDIR)/,$(test-z_FILES)))
+    test-z_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-z_OBJDIR)/,$(test-z_FILES)))
+else
+    test-z_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-z_OBJDIR)/,$(patsubst /%,%,$(test-z_FILES))))
+    test-z_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-z_OBJDIR)/,$(patsubst /%,%,$(test-z_FILES))))
+endif
+endif
+test-z_MC_TGTWILDCARD := $(test-z_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : | $(addsuffix .c,$(test-z_FILES))
+
+# Be sure that all .c files are found
+test-z_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-z_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-z_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-z_MC_DIRS := $(foreach dir, $(test-z_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-z_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-z_MC_DIRS),)
+    test-z_MC_DIRS := $(shell echo $(test-z_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-z_MC_DIRS)
+endif
+
+endif
+
+test-z_MC_CPPFLAGS := $(test-z_CPPFLAGS)
+test-z_CFLAGS := $(test-z_CFLAGS)
+ifeq ($(test-z_DFLAGS),)
+  test-z_DFLAGS := $(test-z_CFLAGS)
+else
+  test-z_DFLAGS := $(test-z_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-z_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-z_STRIP ?= $(TARGET_STRIP)
+test-z_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : test-z_MC_CPPFLAGS:=$(strip $(test-z_MC_CPPFLAGS) $(test-z_MC_EXTRA_CPPFLAGS))
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : test-z_CFLAGS:=$(strip $(test-z_CFLAGS) $(SAFETY_CFLAGS))
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : test-z_DFLAGS:=$(test-z_DFLAGS)
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : test-z_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : test-z_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-z_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-z_STRIP ?= $(HOST_STRIP)
+test-z_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : test-z_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-z_MC_CPPFLAGS) $(test-z_MC_EXTRA_CPPFLAGS))
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : test-z_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-z_CFLAGS))
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : test-z_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-z_DFLAGS))
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : test-z_IQUOTE:=$(HOST_IQUOTE)
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : test-z_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-z_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-z_STRIP ?= $(ECHO) >/dev/null
+test-z_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : test-z_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-z_MC_CPPFLAGS) $(test-z_MC_EXTRA_CPPFLAGS))
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : test-z_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-z_CFLAGS))
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : test-z_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-z_DFLAGS))
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : test-z_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-z_MC_TARGETS) $(test-z_MC_DTARGETS) : test-z_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-z_MC_TARGETS) : CPPFLAGS := $(test-z_MC_CPPFLAGS)
+$(test-z_MC_TARGETS) : CFLAGS := $(test-z_CFLAGS)
+$(test-z_MC_TARGETS) : $(test-z_MC_TGTWILDCARD).o : $(test-z_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-z_IQUOTE) $(dir $<) $(test-z_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-z_IQUOTE) . $(test-z_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-z_IQUOTE) $(dir $<) $(test-z_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-z_IQUOTE) . $(test-z_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-z_IQUOTE) $(dir $<) $(test-z_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-z_IQUOTE) . $(test-z_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-z_MC_DTARGETS) : $(test-z_MC_TGTWILDCARD).d : $(test-z_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-z_DFLAGS) $(test-z_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-z-link_EXTRA_LDFLAGS := 
+test-z-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-z-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-z-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-z-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-z-link_DIRS := $(subst -L ,-L,$(strip $(test-z_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-z-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-z-link_DIRS)))
+# Add trailing /
+test-z-link_DIRS := $(subst //,/,$(addsuffix /,$(test-z-link_DIRS)))
+# Add normal linklib path
+test-z-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-z-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-z_LIBS) $(test-z-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-z-link_DEPLIBS := $(foreach lib,$(test-z-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-z-link_DIRS)))) \
+)
+test-z-link_PROGS := $(addprefix $(test-z_TARGETDIR)/,$(test-z_FILES))
+
+$(test-z-link_PROGS) : OBJDIR := $(test-z_OBJDIR)
+$(test-z-link_PROGS) : LDFLAGS := $(strip $(test-z_LDFLAGS) $(test-z-link_EXTRA_LDFLAGS))
+$(test-z-link_PROGS) : LIBS := $(addprefix -l,$(test-z_LIBS) $(test-z-link_EXTRA_LIBS) )
+$(test-z-link_PROGS) : $(test-z_TARGETDIR)/% : $(test-z_OBJDIR)/%.o $(test-z-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-z_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-z_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-z_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-z_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-z_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-z_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-z_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-z_DEPS),)
+  ifneq (test-z test-z-quick,)
+    ifneq ($(findstring $(TARGET),test-z test-z-quick),)
+      -include $(test-z_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-z_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-z_DEPS) $(test-z_OBJS) $(addprefix $(test-z_TARGETDIR)/,$(test-z_FILES)),)
+$(test-z_DEPS) $(test-z_OBJS) $(addprefix $(test-z_TARGETDIR)/,$(test-z_FILES)) : | $(test-z_TARGETDIR) $(test-z_OBJDIR)
+else
+$(test-z_DEPS) $(test-z_OBJS) $(addprefix $(test-z_TARGETDIR)/,$(test-z_FILES)) :: $(test-z_TARGETDIR) $(test-z_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-z_TARGETDIR) $(test-z_OBJDIR)
+
+
+test-z-clean : FILES := $(test-z_OBJS) $(test-z_EXES) $(test-z_DEPS)
+#MM
+test-z-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-z"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,565 @@
+#   $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+USER_CPPFLAGS := -DADATE="\"$(shell date '+%d.%m.%Y')\""
+
+
+# Define metamake targets and their dependencies
+#MM kernel-romboot : core-linklibs includes-generate-deps
+#MM kernel-romboot-kobj : core-linklibs includes-generate-deps
+#MM kernel-romboot-kobj-quick
+#MM kernel-romboot-quick
+#MM kernel-romboot-clean
+
+kernel-romboot_ALLTARGETS := kernel-romboot kernel-romboot-clean kernel-romboot-quick kernel-romboot-kobj
+
+.PHONY : $(kernel-romboot_ALLTARGETS)
+
+ifeq (romboot,)
+$(error using %build_module_simple: modname may not be empty)
+endif
+ifeq (hook,)
+$(error using %build_module_simple: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+kernel-romboot_DEFLINKLIBNAME := romboot
+kernel-romboot_CFLAGS := $(CFLAGS)
+kernel-romboot_CXXFLAGS := $(CXXFLAGS)
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-romboot_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(kernel-romboot_CFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-romboot_FUNCINSTR := yes
+kernel-romboot_CFLAGS    := $(strip $(FUNCINSTR_FLAGS) $(kernel-romboot_CFLAGS))
+endif
+endif
+ifneq (,)
+    kernel-romboot_DFLAGS := 
+else
+    kernel-romboot_DFLAGS := $(kernel-romboot_CFLAGS)
+endif
+kernel-romboot_DEFDXXFLAGS := 
+OBJDIR ?= $(GENDIR)/$(CURDIR)
+kernel-romboot_MODDIR := 
+ifeq ($(kernel-romboot_MODDIR),)
+  ifeq (hook,library)
+    kernel-romboot_MODDIR  := $(AROS_LIBRARIES)
+  endif
+  ifeq (hook,gadget)
+    kernel-romboot_MODDIR  := $(AROS_GADGETS)
+  endif
+  ifeq (hook,datatype)
+    kernel-romboot_MODDIR  := $(AROS_DATATYPES)
+  endif
+  ifeq (hook,handler)
+    kernel-romboot_MODDIR  := $(AROS_FS)
+  endif
+  ifeq (hook,device)
+    kernel-romboot_MODDIR  := $(AROS_DEVS)
+  endif
+  ifeq (hook,resource)
+    kernel-romboot_MODDIR  := $(AROS_RESOURCES)
+  endif
+  ifeq (hook,hook)
+    kernel-romboot_MODDIR  := $(AROS_RESOURCES)
+  endif
+  ifeq (hook,mui)
+    kernel-romboot_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (hook,mcc)
+    kernel-romboot_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (hook,mcp)
+    kernel-romboot_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (hook,usbclass)
+    kernel-romboot_MODDIR  := $(AROS_CLASSES)/USB
+  endif
+  ifeq (hook,hidd)
+    kernel-romboot_MODDIR  := $(AROS_DRIVERS)
+  endif
+  ifeq (hook,printer)
+    kernel-romboot_MODDIR  := $(AROS_PRINTERS)
+  endif
+endif
+ifeq ($(kernel-romboot_MODDIR),)
+  $(error Don't know where to put the file for modtype hook. Specify moduledir=)
+endif
+
+kernel-romboot_ARCHOBJS   := $(wildcard $(OBJDIR)/arch/*.o)
+kernel-romboot_ARCHFILES  := $(basename $(notdir $(kernel-romboot_ARCHOBJS)))
+kernel-romboot_C_NARCHFILES := $(filter-out $(kernel-romboot_ARCHFILES),romboot resident_end)
+kernel-romboot_CXX_NARCHFILES := $(filter-out $(kernel-romboot_ARCHFILES),$(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT)))))
+kernel-romboot_OBJC_NARCHFILES := $(filter-out $(kernel-romboot_ARCHFILES),)
+
+
+kernel-romboot_CXXABSBASENAMES := $(foreach kernel-romboot_CXXBASE,$(kernel-romboot_CXX_NARCHFILES),$(if $(filter /%,$(kernel-romboot_CXXBASE)),$(kernel-romboot_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-romboot_CXXBASE))))
+
+ifneq ($(kernel-romboot_CXXABSBASENAMES),)
+
+kernel-romboot_CXXBASENAMES := $(basename $(kernel-romboot_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-romboot_MCXX_FILES  := $(strip $(foreach kernel-romboot_CXXBASE,$(kernel-romboot_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-romboot_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-romboot_EXT),$(kernel-romboot_CXXBASE)))))))
+
+ifeq (,)
+kernel-romboot_MCXX_SRCWILDCARD := %
+else
+kernel-romboot_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+  kernel-romboot_CXXTARGETS := $(notdir $(kernel-romboot_CXXBASENAMES:=.o))
+  kernel-romboot_CXXDTARGETS := $(notdir $(kernel-romboot_CXXBASENAMES:=.d))
+  kernel-romboot_MCXX_WILDCARD := %
+else
+  kernel-romboot_CXXTARGETS := $(addprefix $(OBJDIR)/,$(notdir $(kernel-romboot_CXXBASENAMES:=.o)))
+  kernel-romboot_CXXDTARGETS := $(addprefix $(OBJDIR)/,$(notdir $(kernel-romboot_CXXBASENAMES:=.d)))
+  kernel-romboot_MCXX_WILDCARD := $(OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-romboot_CXXTARGETS) $(kernel-romboot_CXXDTARGETS) : | $(kernel-romboot_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-romboot_MCXX_CPPFLAGS := $(CPPFLAGS)
+kernel-romboot_CXXFLAGS := $(kernel-romboot_CXXFLAGS)
+ifeq ($(kernel-romboot_DXXFLAGS),)
+  kernel-romboot_DXXFLAGS := $(kernel-romboot_CXXFLAGS)
+else
+  kernel-romboot_DXXFLAGS := $(kernel-romboot_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-romboot_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-romboot_STRIP ?= $(HOST_STRIP)
+  kernel-romboot_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-romboot_CXXCMD:=$(HOST_CXX)
+  kernel-romboot_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-romboot_MCXX_CPPFLAGS) $(kernel-romboot_MCXX_EXTRA_CPPFLAGS))
+  kernel-romboot_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-romboot_CXXFLAGS))
+  kernel-romboot_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-romboot_DXXFLAGS))
+  kernel-romboot_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-romboot_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-romboot_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-romboot_STRIP ?= $(TARGET_STRIP)
+  kernel-romboot_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-romboot_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-romboot_MCXX_CPPFLAGS := $(strip $(kernel-romboot_MCXX_CPPFLAGS) $(kernel-romboot_MCXX_EXTRA_CPPFLAGS))
+  kernel-romboot_CXXFLAGS := $(strip $(kernel-romboot_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-romboot_DXXFLAGS := $(kernel-romboot_DXXFLAGS)
+  kernel-romboot_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-romboot_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-romboot_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-romboot_STRIP ?= $(ECHO) >/dev/null
+  kernel-romboot_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-romboot_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-romboot_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-romboot_MCXX_CPPFLAGS) $(kernel-romboot_MCXX_EXTRA_CPPFLAGS))
+  kernel-romboot_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-romboot_CXXFLAGS))
+  kernel-romboot_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-romboot_DXXFLAGS))
+  kernel-romboot_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-romboot_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-romboot_CXXCMD) $(kernel-romboot_CXXIQUOTE) $(dir $(2)) $(kernel-romboot_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-romboot_CXXIQUOTE) . $(kernel-romboot_CXXIQUOTE_END) $(strip $(kernel-romboot_CXXFLAGS) $(kernel-romboot_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-romboot_CXXCMD) $(kernel-romboot_CXXIQUOTE) $(dir $(2)) $(kernel-romboot_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-romboot_CXXIQUOTE) . $(kernel-romboot_CXXIQUOTE_END) $(strip $(kernel-romboot_CXXFLAGS) $(kernel-romboot_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-romboot_CXXCMD) $(kernel-romboot_CXXIQUOTE) $(dir $(2)) $(kernel-romboot_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-romboot_CXXIQUOTE) . $(kernel-romboot_CXXIQUOTE_END) $(strip $(kernel-romboot_CXXFLAGS) $(kernel-romboot_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-romboot_CXXCMD)" $(MKDEPEND) $(strip $(kernel-romboot_DXXFLAGS) $(kernel-romboot_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(OBJDIR),)
+  $(foreach kernel-romboot_CXXFILE,$(kernel-romboot_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-romboot_CXXFILE))),$(kernel-romboot_CXXFILE))))
+else
+  $(foreach kernel-romboot_CXXFILE,$(kernel-romboot_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(OBJDIR)/,$(notdir $(basename $(kernel-romboot_CXXFILE)))),$(kernel-romboot_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-romboot_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-romboot_MOBJC_SRCWILDCARD := %
+else
+kernel-romboot_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+  kernel-romboot_MOBJC_TARGETS := $(addsuffix .o,$(kernel-romboot_OBJC_NARCHFILES))
+  kernel-romboot_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-romboot_OBJC_NARCHFILES))
+  kernel-romboot_MOBJC_WILDCARD := %
+else
+  kernel-romboot_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(kernel-romboot_OBJC_NARCHFILES)))
+  kernel-romboot_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(kernel-romboot_OBJC_NARCHFILES)))
+  kernel-romboot_MOBJC_WILDCARD := $(OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-romboot_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-romboot_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-romboot_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-romboot_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-romboot_MOBJC_DIRS := $(foreach dir, $(kernel-romboot_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-romboot_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-romboot_MOBJC_DIRS),)
+    kernel-romboot_MOBJC_DIRS := $(shell echo $(kernel-romboot_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-romboot_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-romboot_CC := $(TARGET_CC)
+else
+  kernel-romboot_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-romboot_MOBJC_CPPFLAGS := $(CPPFLAGS)
+kernel-romboot_OBJCFLAGS := $(kernel-romboot_CFLAGS)
+kernel-romboot_OBJCFLAGS := $(kernel-romboot_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-romboot_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-romboot_OBJCFLAGS)))
+ifeq ($(kernel-romboot_DFLAGS),)
+  kernel-romboot_OBJCDFLAGS := $(kernel-romboot_CFLAGS)
+else
+  kernel-romboot_OBJCDFLAGS := $(kernel-romboot_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-romboot_LINK ?= $(strip $(kernel-romboot_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-romboot_STRIP ?= $(TARGET_STRIP)
+  kernel-romboot_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-romboot_CC) $(TARGET_SYSROOT))
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : kernel-romboot_MOBJC_CPPFLAGS:=$(strip $(kernel-romboot_MOBJC_CPPFLAGS) $(kernel-romboot_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : kernel-romboot_OBJCFLAGS:=$(strip $(kernel-romboot_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : kernel-romboot_OBJCDFLAGS:=$(kernel-romboot_OBJCDFLAGS)
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : kernel-romboot_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : kernel-romboot_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-romboot_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-romboot_STRIP ?= $(HOST_STRIP)
+  kernel-romboot_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : kernel-romboot_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-romboot_MOBJC_CPPFLAGS) $(kernel-romboot_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : kernel-romboot_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-romboot_OBJCFLAGS))
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : kernel-romboot_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-romboot_OBJCDFLAGS))
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : kernel-romboot_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : kernel-romboot_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-romboot_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-romboot_STRIP ?= $(ECHO) >/dev/null
+  kernel-romboot_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : kernel-romboot_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-romboot_MOBJC_CPPFLAGS) $(kernel-romboot_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : kernel-romboot_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-romboot_OBJCFLAGS))
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : kernel-romboot_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-romboot_OBJCDFLAGS))
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : kernel-romboot_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-romboot_MOBJC_TARGETS) $(kernel-romboot_MOBJC_DTARGETS) : kernel-romboot_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-romboot_MOBJC_TARGETS) : CPPFLAGS := $(kernel-romboot_MOBJC_CPPFLAGS)
+$(kernel-romboot_MOBJC_TARGETS) : CFLAGS := $(kernel-romboot_OBJCFLAGS)
+$(kernel-romboot_MOBJC_TARGETS) : $(kernel-romboot_MOBJC_WILDCARD).o : $(kernel-romboot_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-romboot_IQUOTE) $(dir $<) $(kernel-romboot_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-romboot_IQUOTE) . $(kernel-romboot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-romboot_IQUOTE) $(dir $<) $(kernel-romboot_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-romboot_IQUOTE) . $(kernel-romboot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-romboot_IQUOTE) $(dir $<) $(kernel-romboot_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-romboot_IQUOTE) . $(kernel-romboot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-romboot_MOBJC_DTARGETS) : $(kernel-romboot_MOBJC_WILDCARD).d : $(kernel-romboot_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-romboot_OBJCDFLAGS) $(kernel-romboot_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-romboot_MC_SRCWILDCARD := %
+else
+kernel-romboot_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+kernel-romboot_MC_TARGETS := $(addsuffix .o,$(kernel-romboot_C_NARCHFILES))
+kernel-romboot_MC_DTARGETS := $(addsuffix .d,$(kernel-romboot_C_NARCHFILES))
+kernel-romboot_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-romboot_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(notdir $(kernel-romboot_C_NARCHFILES))))
+    kernel-romboot_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(notdir $(kernel-romboot_C_NARCHFILES))))
+else
+ifeq (,)
+    kernel-romboot_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(kernel-romboot_C_NARCHFILES)))
+    kernel-romboot_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(kernel-romboot_C_NARCHFILES)))
+else
+    kernel-romboot_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(patsubst /%,%,$(kernel-romboot_C_NARCHFILES))))
+    kernel-romboot_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(patsubst /%,%,$(kernel-romboot_C_NARCHFILES))))
+endif
+endif
+kernel-romboot_MC_TGTWILDCARD := $(OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : | $(addsuffix .c,$(kernel-romboot_C_NARCHFILES))
+
+# Be sure that all .c files are found
+kernel-romboot_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-romboot_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-romboot_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-romboot_MC_DIRS := $(foreach dir, $(kernel-romboot_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-romboot_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-romboot_MC_DIRS),)
+    kernel-romboot_MC_DIRS := $(shell echo $(kernel-romboot_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-romboot_MC_DIRS)
+endif
+
+endif
+
+kernel-romboot_MC_CPPFLAGS := $(CPPFLAGS)
+kernel-romboot_CFLAGS := $(kernel-romboot_CFLAGS)
+ifeq ($(kernel-romboot_DFLAGS),)
+  kernel-romboot_DFLAGS := $(kernel-romboot_CFLAGS)
+else
+  kernel-romboot_DFLAGS := $(kernel-romboot_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-romboot_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-romboot_STRIP ?= $(TARGET_STRIP)
+kernel-romboot_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : kernel-romboot_MC_CPPFLAGS:=$(strip $(kernel-romboot_MC_CPPFLAGS) $(kernel-romboot_MC_EXTRA_CPPFLAGS))
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : kernel-romboot_CFLAGS:=$(strip $(kernel-romboot_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : kernel-romboot_DFLAGS:=$(kernel-romboot_DFLAGS)
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : kernel-romboot_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : kernel-romboot_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-romboot_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-romboot_STRIP ?= $(HOST_STRIP)
+kernel-romboot_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : kernel-romboot_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-romboot_MC_CPPFLAGS) $(kernel-romboot_MC_EXTRA_CPPFLAGS))
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : kernel-romboot_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-romboot_CFLAGS))
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : kernel-romboot_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-romboot_DFLAGS))
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : kernel-romboot_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : kernel-romboot_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-romboot_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-romboot_STRIP ?= $(ECHO) >/dev/null
+kernel-romboot_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : kernel-romboot_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-romboot_MC_CPPFLAGS) $(kernel-romboot_MC_EXTRA_CPPFLAGS))
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : kernel-romboot_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-romboot_CFLAGS))
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : kernel-romboot_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-romboot_DFLAGS))
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : kernel-romboot_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-romboot_MC_TARGETS) $(kernel-romboot_MC_DTARGETS) : kernel-romboot_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-romboot_MC_TARGETS) : CPPFLAGS := $(kernel-romboot_MC_CPPFLAGS)
+$(kernel-romboot_MC_TARGETS) : CFLAGS := $(kernel-romboot_CFLAGS)
+$(kernel-romboot_MC_TARGETS) : $(kernel-romboot_MC_TGTWILDCARD).o : $(kernel-romboot_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-romboot_IQUOTE) $(dir $<) $(kernel-romboot_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-romboot_IQUOTE) . $(kernel-romboot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-romboot_IQUOTE) $(dir $<) $(kernel-romboot_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-romboot_IQUOTE) . $(kernel-romboot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-romboot_IQUOTE) $(dir $<) $(kernel-romboot_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-romboot_IQUOTE) . $(kernel-romboot_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-romboot_MC_DTARGETS) : $(kernel-romboot_MC_TGTWILDCARD).d : $(kernel-romboot_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-romboot_DFLAGS) $(kernel-romboot_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+# Handlers use dash instead of dot in their names
+ifeq (hook,handler)
+kernel-romboot_MODULE := $(kernel-romboot_MODDIR)/romboot-hook
+else
+ifeq (hook,printer)
+kernel-romboot_MODULE := $(kernel-romboot_MODDIR)/romboot
+else
+kernel-romboot_MODULE := $(kernel-romboot_MODDIR)/romboot.hook
+endif
+endif
+kernel-romboot_KOBJ   := $(KOBJSDIR)/romboot_hook.o
+
+kernel-romboot-quick : kernel-romboot
+kernel-romboot-kobj-quick : $(kernel-romboot_KOBJ)
+kernel-romboot       : $(kernel-romboot_MODULE)
+kernel-romboot-kobj  : $(kernel-romboot_KOBJ)
+
+# The module is linked from all the compiled .o files
+kernel-romboot_OBJS       := $(kernel-romboot_ARCHOBJS) $(addprefix $(OBJDIR)/, $(addsuffix .o,$(notdir $(kernel-romboot_C_NARCHFILES))))
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (romboot,con)
+    kernel-romboot_ERR := $(notdir $(kernel-romboot_MODULE)).err
+else
+    kernel-romboot_ERR := romboot.err
+endif
+
+
+TMP_LDFLAGS  := $(strip $(LDFLAGS) $(romboot_LDFLAGS))
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(romboot_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-romboot_MODULE) : LIB_NAMES := $(romboot_LIBS)
+$(kernel-romboot_MODULE) : OBJS := $(kernel-romboot_OBJS)
+$(kernel-romboot_MODULE) : ENDTAG := 
+$(kernel-romboot_MODULE) : ERR := $(kernel-romboot_ERR)
+$(kernel-romboot_MODULE) : OBJDIR := $(OBJDIR)
+$(kernel-romboot_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-romboot_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-romboot_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-romboot_MODULE) : $(kernel-romboot_OBJS)  $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(strip $(AROS_CC) $(TARGET_SYSROOT)) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(strip $(AROS_CC) $(TARGET_SYSROOT)) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+
+# Link kernel object file
+kernel-romboot_KAUTOLIB := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-romboot_KBASE := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-romboot_SYMBOLS := $(kernel-romboot_KBASE)
+
+kernel-romboot_KLIB := hiddstubs amiga arossupport autoinit libinit
+kernel-romboot_KOBJ_LIBS := $(filter-out $(kernel-romboot_KLIB),) $(kernel-romboot_KAUTOLIB)
+$(kernel-romboot_KOBJ) : LINKLIBS:=$(kernel-romboot_KOBJ_LIBS)
+$(kernel-romboot_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-romboot_SYMBOLS))
+$(kernel-romboot_KOBJ) : USER_LDFLAGS := $(USER_LDFLAGS)
+$(kernel-romboot_KOBJ) : $(kernel-romboot_OBJS) $(kernel-romboot_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+
+
+## Dependency fine-tuning
+##
+kernel-romboot_DEPS       := $(addprefix $(OBJDIR)/, $(addsuffix .d,romboot resident_end))
+ifneq ($(kernel-romboot_DEPS),)
+  ifneq (kernel-romboot kernel-romboot-quick kernel-romboot-kobj,)
+    ifneq ($(findstring $(TARGET),kernel-romboot kernel-romboot-quick kernel-romboot-kobj),)
+      -include $(kernel-romboot_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-romboot_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(kernel-romboot_OBJS) $(kernel-romboot_DEPS) $(kernel-romboot_MODULE) $(kernel-romboot_KOBJ),)
+$(kernel-romboot_OBJS) $(kernel-romboot_DEPS) $(kernel-romboot_MODULE) $(kernel-romboot_KOBJ) : | $(OBJDIR) $(kernel-romboot_MODDIR) $(KOBJSDIR)
+else
+$(kernel-romboot_OBJS) $(kernel-romboot_DEPS) $(kernel-romboot_MODULE) $(kernel-romboot_KOBJ) :: $(OBJDIR) $(kernel-romboot_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(OBJDIR) $(kernel-romboot_MODDIR) $(KOBJSDIR)
+
+
+kernel-romboot-clean : FILES := $(kernel-romboot_OBJS) $(kernel-romboot_MODULE) $(kernel-romboot_KOBJ) $(kernel-romboot_DEPS)
+kernel-romboot-clean ::
+	$(Q)$(ECHO) "Cleaning up for module romboot"
+	$(Q)$(RM) $(FILES)
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

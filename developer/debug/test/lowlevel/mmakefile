@@ -1,0 +1,634 @@
+#   $Id$
+#
+#   Makefile to make test lowlevel module.
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES  := lowlevel
+EXEDIR := $(AROS_TESTS)/lowlevel
+
+USER_INCLUDES  := -I $(SRCDIR)/$(CURDIR)/includes
+
+#MM test-lowlevel : linklibs-bootconsole
+
+
+.PHONY : test-lowlevel
+
+test-lowlevel_PROGNAME  := lowlevel
+test-lowlevel_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-lowlevel_TARGETDIR := $(EXEDIR)
+test-lowlevel_LINKER    := 
+test-lowlevel_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(test-lowlevel_LINKER),)
+    test-lowlevel_LINKER := target
+endif
+
+ifneq ("$(strip $(FILES)   )","")
+    test-lowlevel_FILES     := $(FILES)
+    test-lowlevel_OBJCFILES := 
+    test-lowlevel_ASMFILES  := 
+    test-lowlevel_CXXFILES := 
+else
+    test-lowlevel_FILES     := $(test-lowlevel_PROGNAME)
+    test-lowlevel_OBJCFILES :=
+    test-lowlevel_ASMFILES  :=
+    test-lowlevel_CXXFILES :=
+endif
+
+test-lowlevel_ARCHOBJS   := $(wildcard $(test-lowlevel_OBJDIR)/arch/*.o)
+test-lowlevel_ARCHFILES  := $(basename $(notdir $(test-lowlevel_ARCHOBJS)))
+test-lowlevel_C_NARCHFILES := $(filter-out $(test-lowlevel_ARCHFILES),$(test-lowlevel_FILES))
+test-lowlevel_CXX_NARCHFILES := $(filter-out $(test-lowlevel_ARCHFILES),$(test-lowlevel_CXXFILES))
+test-lowlevel_OBJC_NARCHFILES := $(filter-out $(test-lowlevel_ARCHFILES),$(test-lowlevel_OBJCFILES))
+
+TMP_FILES := $(test-lowlevel_C_NARCHFILES) $(test-lowlevel_CXX_NARCHFILES) $(test-lowlevel_ASMFILES) $(test-lowlevel_OBJC_NARCHFILES)
+test-lowlevel_OBJS := $(addsuffix .o,$(addprefix $(test-lowlevel_OBJDIR)/,$(notdir $(TMP_FILES))))
+test-lowlevel_DEPS := $(addsuffix .d,$(addprefix $(test-lowlevel_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+test-lowlevel_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+test-lowlevel_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-lowlevel_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+test-lowlevel_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+test-lowlevel_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+test-lowlevel_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-lowlevel_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+test-lowlevel_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+test-lowlevel_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+test-lowlevel_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-lowlevel_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+test-lowlevel_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+test-lowlevel_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+test-lowlevel_LDFLAGS          := 
+endif
+
+test-lowlevel_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-lowlevel_COVERAGE := yes
+test-lowlevel_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-lowlevel_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-lowlevel_CFLAGS    := $(strip $(test-lowlevel_COVERAGEFLAGS) $(test-lowlevel_CFLAGS))
+test-lowlevel_CXXFLAGS := $(strip $(test-lowlevel_COVERAGEFLAGS) $(test-lowlevel_CXXFLAGS))
+test-lowlevel_LIBS += $(test-lowlevel_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-lowlevel_FUNCINSTR := yes
+test-lowlevel_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-lowlevel_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-lowlevel_CFLAGS    := $(strip $(test-lowlevel_INSTRFUNCFLAGS) $(test-lowlevel_CFLAGS))
+test-lowlevel_CXXFLAGS := $(strip $(test-lowlevel_INSTRFUNCFLAGS) $(test-lowlevel_CXXFLAGS))
+test-lowlevel_LIBS += $(test-lowlevel_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-lowlevel_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-lowlevel_CFLAGS))
+test-lowlevel_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(test-lowlevel_CXXFLAGS))
+endif
+endif
+test-lowlevel_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    test-lowlevel_DFLAGS     := 
+else
+    test-lowlevel_DFLAGS     := $(test-lowlevel_CFLAGS)
+endif
+ifneq (,)
+    test-lowlevel_DXXFLAGS     := 
+else
+    test-lowlevel_DXXFLAGS     := $(test-lowlevel_CXXFLAGS)
+endif
+ifeq (target,target)
+test-lowlevel_LDFLAGS           := $(test-lowlevel_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-lowlevel_LDFLAGS           := $(test-lowlevel_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-lowlevel_LDFLAGS           := $(test-lowlevel_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+test-lowlevel_LDFLAGS   += -L
+endif
+
+#MM
+test-lowlevel-quick : test-lowlevel
+
+#MM test-lowlevel : includes-generate-deps core-linklibs
+test-lowlevel : $(test-lowlevel_TARGETDIR)/$(test-lowlevel_PROGNAME)
+
+ifneq ($(filter $(TARGET),test-lowlevel test-lowlevel-quick test-lowlevel-gz-quick),)
+
+test-lowlevel_CXXABSBASENAMES := $(foreach test-lowlevel_CXXBASE,$(test-lowlevel_CXX_NARCHFILES),$(if $(filter /%,$(test-lowlevel_CXXBASE)),$(test-lowlevel_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(test-lowlevel_CXXBASE))))
+
+ifneq ($(test-lowlevel_CXXABSBASENAMES),)
+
+test-lowlevel_CXXBASENAMES := $(basename $(test-lowlevel_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+test-lowlevel_MCXX_FILES  := $(strip $(foreach test-lowlevel_CXXBASE,$(test-lowlevel_CXXABSBASENAMES), $(firstword $(wildcard $(foreach test-lowlevel_EXT, $(AROS_CXXEXTS),$(addsuffix .$(test-lowlevel_EXT),$(test-lowlevel_CXXBASE)))))))
+
+ifeq (,)
+test-lowlevel_MCXX_SRCWILDCARD := %
+else
+test-lowlevel_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-lowlevel_OBJDIR),)
+  test-lowlevel_CXXTARGETS := $(notdir $(test-lowlevel_CXXBASENAMES:=.o))
+  test-lowlevel_CXXDTARGETS := $(notdir $(test-lowlevel_CXXBASENAMES:=.d))
+  test-lowlevel_MCXX_WILDCARD := %
+else
+  test-lowlevel_CXXTARGETS := $(addprefix $(test-lowlevel_OBJDIR)/,$(notdir $(test-lowlevel_CXXBASENAMES:=.o)))
+  test-lowlevel_CXXDTARGETS := $(addprefix $(test-lowlevel_OBJDIR)/,$(notdir $(test-lowlevel_CXXBASENAMES:=.d)))
+  test-lowlevel_MCXX_WILDCARD := $(test-lowlevel_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(test-lowlevel_CXXTARGETS) $(test-lowlevel_CXXDTARGETS) : | $(test-lowlevel_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+test-lowlevel_MCXX_CPPFLAGS := $(test-lowlevel_CPPFLAGS)
+test-lowlevel_CXXFLAGS := $(test-lowlevel_CXXFLAGS)
+ifeq ($(test-lowlevel_DXXFLAGS),)
+  test-lowlevel_DXXFLAGS := $(test-lowlevel_CXXFLAGS)
+else
+  test-lowlevel_DXXFLAGS := $(test-lowlevel_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  test-lowlevel_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  test-lowlevel_STRIP ?= $(HOST_STRIP)
+  test-lowlevel_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  test-lowlevel_CXXCMD:=$(HOST_CXX)
+  test-lowlevel_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(test-lowlevel_MCXX_CPPFLAGS) $(test-lowlevel_MCXX_EXTRA_CPPFLAGS))
+  test-lowlevel_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-lowlevel_CXXFLAGS))
+  test-lowlevel_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-lowlevel_DXXFLAGS))
+  test-lowlevel_CXXIQUOTE:=$(HOST_IQUOTE)
+  test-lowlevel_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  test-lowlevel_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-lowlevel_STRIP ?= $(TARGET_STRIP)
+  test-lowlevel_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  test-lowlevel_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  test-lowlevel_MCXX_CPPFLAGS := $(strip $(test-lowlevel_MCXX_CPPFLAGS) $(test-lowlevel_MCXX_EXTRA_CPPFLAGS))
+  test-lowlevel_CXXFLAGS := $(strip $(test-lowlevel_CXXFLAGS) $(SAFETY_CFLAGS))
+  test-lowlevel_DXXFLAGS := $(test-lowlevel_DXXFLAGS)
+  test-lowlevel_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  test-lowlevel_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  test-lowlevel_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-lowlevel_STRIP ?= $(ECHO) >/dev/null
+  test-lowlevel_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  test-lowlevel_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  test-lowlevel_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(test-lowlevel_MCXX_CPPFLAGS) $(test-lowlevel_MCXX_EXTRA_CPPFLAGS))
+  test-lowlevel_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-lowlevel_CXXFLAGS))
+  test-lowlevel_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-lowlevel_DXXFLAGS))
+  test-lowlevel_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  test-lowlevel_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(test-lowlevel_CXXCMD) $(test-lowlevel_CXXIQUOTE) $(dir $(2)) $(test-lowlevel_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-lowlevel_CXXIQUOTE) . $(test-lowlevel_CXXIQUOTE_END) $(strip $(test-lowlevel_CXXFLAGS) $(test-lowlevel_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(test-lowlevel_CXXCMD) $(test-lowlevel_CXXIQUOTE) $(dir $(2)) $(test-lowlevel_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-lowlevel_CXXIQUOTE) . $(test-lowlevel_CXXIQUOTE_END) $(strip $(test-lowlevel_CXXFLAGS) $(test-lowlevel_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(test-lowlevel_CXXCMD) $(test-lowlevel_CXXIQUOTE) $(dir $(2)) $(test-lowlevel_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-lowlevel_CXXIQUOTE) . $(test-lowlevel_CXXIQUOTE_END) $(strip $(test-lowlevel_CXXFLAGS) $(test-lowlevel_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(test-lowlevel_CXXCMD)" $(MKDEPEND) $(strip $(test-lowlevel_DXXFLAGS) $(test-lowlevel_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(test-lowlevel_OBJDIR),)
+  $(foreach test-lowlevel_CXXFILE,$(test-lowlevel_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(test-lowlevel_CXXFILE))),$(test-lowlevel_CXXFILE))))
+else
+  $(foreach test-lowlevel_CXXFILE,$(test-lowlevel_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(test-lowlevel_OBJDIR)/,$(notdir $(basename $(test-lowlevel_CXXFILE)))),$(test-lowlevel_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(test-lowlevel_OBJC_NARCHFILES),)
+
+ifeq (,)
+test-lowlevel_MOBJC_SRCWILDCARD := %
+else
+test-lowlevel_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-lowlevel_OBJDIR),)
+  test-lowlevel_MOBJC_TARGETS := $(addsuffix .o,$(test-lowlevel_OBJC_NARCHFILES))
+  test-lowlevel_MOBJC_DTARGETS := $(addsuffix .d,$(test-lowlevel_OBJC_NARCHFILES))
+  test-lowlevel_MOBJC_WILDCARD := %
+else
+  test-lowlevel_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(test-lowlevel_OBJDIR)/,$(test-lowlevel_OBJC_NARCHFILES)))
+  test-lowlevel_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(test-lowlevel_OBJDIR)/,$(test-lowlevel_OBJC_NARCHFILES)))
+  test-lowlevel_MOBJC_WILDCARD := $(test-lowlevel_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : | $(addsuffix .m,$(test-lowlevel_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  test-lowlevel_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  test-lowlevel_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(test-lowlevel_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  test-lowlevel_MOBJC_DIRS := $(foreach dir, $(test-lowlevel_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-lowlevel_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(test-lowlevel_MOBJC_DIRS),)
+    test-lowlevel_MOBJC_DIRS := $(shell echo $(test-lowlevel_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(test-lowlevel_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  test-lowlevel_CC := $(TARGET_CC)
+else
+  test-lowlevel_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+test-lowlevel_MOBJC_CPPFLAGS := $(test-lowlevel_CPPFLAGS)
+test-lowlevel_OBJCFLAGS := $(test-lowlevel_CFLAGS)
+test-lowlevel_OBJCFLAGS := $(test-lowlevel_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+test-lowlevel_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(test-lowlevel_OBJCFLAGS)))
+ifeq ($(test-lowlevel_DFLAGS),)
+  test-lowlevel_OBJCDFLAGS := $(test-lowlevel_CFLAGS)
+else
+  test-lowlevel_OBJCDFLAGS := $(test-lowlevel_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  test-lowlevel_LINK ?= $(strip $(test-lowlevel_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-lowlevel_STRIP ?= $(TARGET_STRIP)
+  test-lowlevel_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : CMD:=$(strip $(test-lowlevel_CC) $(TARGET_SYSROOT))
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : test-lowlevel_MOBJC_CPPFLAGS:=$(strip $(test-lowlevel_MOBJC_CPPFLAGS) $(test-lowlevel_MOBJC_EXTRA_CPPFLAGS))
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : test-lowlevel_OBJCFLAGS:=$(strip $(test-lowlevel_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : test-lowlevel_OBJCDFLAGS:=$(test-lowlevel_OBJCDFLAGS)
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : test-lowlevel_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : test-lowlevel_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  test-lowlevel_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  test-lowlevel_STRIP ?= $(HOST_STRIP)
+  test-lowlevel_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : test-lowlevel_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(test-lowlevel_MOBJC_CPPFLAGS) $(test-lowlevel_MOBJC_EXTRA_CPPFLAGS))
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : test-lowlevel_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(test-lowlevel_OBJCFLAGS))
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : test-lowlevel_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(test-lowlevel_OBJCDFLAGS))
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : test-lowlevel_IQUOTE:=$(HOST_IQUOTE)
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : test-lowlevel_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  test-lowlevel_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-lowlevel_STRIP ?= $(ECHO) >/dev/null
+  test-lowlevel_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : test-lowlevel_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(test-lowlevel_MOBJC_CPPFLAGS) $(test-lowlevel_MOBJC_EXTRA_CPPFLAGS))
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : test-lowlevel_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-lowlevel_OBJCFLAGS))
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : test-lowlevel_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-lowlevel_OBJCDFLAGS))
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : test-lowlevel_IQUOTE:=$(KERNEL_IQUOTE)
+  $(test-lowlevel_MOBJC_TARGETS) $(test-lowlevel_MOBJC_DTARGETS) : test-lowlevel_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-lowlevel_MOBJC_TARGETS) : CPPFLAGS := $(test-lowlevel_MOBJC_CPPFLAGS)
+$(test-lowlevel_MOBJC_TARGETS) : CFLAGS := $(test-lowlevel_OBJCFLAGS)
+$(test-lowlevel_MOBJC_TARGETS) : $(test-lowlevel_MOBJC_WILDCARD).o : $(test-lowlevel_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-lowlevel_IQUOTE) $(dir $<) $(test-lowlevel_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-lowlevel_IQUOTE) . $(test-lowlevel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-lowlevel_IQUOTE) $(dir $<) $(test-lowlevel_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-lowlevel_IQUOTE) . $(test-lowlevel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-lowlevel_IQUOTE) $(dir $<) $(test-lowlevel_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-lowlevel_IQUOTE) . $(test-lowlevel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-lowlevel_MOBJC_DTARGETS) : $(test-lowlevel_MOBJC_WILDCARD).d : $(test-lowlevel_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-lowlevel_OBJCDFLAGS) $(test-lowlevel_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+test-lowlevel_MC_SRCWILDCARD := %
+else
+test-lowlevel_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-lowlevel_OBJDIR),)
+test-lowlevel_MC_TARGETS := $(addsuffix .o,$(test-lowlevel_C_NARCHFILES))
+test-lowlevel_MC_DTARGETS := $(addsuffix .d,$(test-lowlevel_C_NARCHFILES))
+test-lowlevel_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-lowlevel_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-lowlevel_OBJDIR)/,$(notdir $(test-lowlevel_C_NARCHFILES))))
+    test-lowlevel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-lowlevel_OBJDIR)/,$(notdir $(test-lowlevel_C_NARCHFILES))))
+else
+ifeq (,)
+    test-lowlevel_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-lowlevel_OBJDIR)/,$(test-lowlevel_C_NARCHFILES)))
+    test-lowlevel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-lowlevel_OBJDIR)/,$(test-lowlevel_C_NARCHFILES)))
+else
+    test-lowlevel_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-lowlevel_OBJDIR)/,$(patsubst /%,%,$(test-lowlevel_C_NARCHFILES))))
+    test-lowlevel_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-lowlevel_OBJDIR)/,$(patsubst /%,%,$(test-lowlevel_C_NARCHFILES))))
+endif
+endif
+test-lowlevel_MC_TGTWILDCARD := $(test-lowlevel_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : | $(addsuffix .c,$(test-lowlevel_C_NARCHFILES))
+
+# Be sure that all .c files are found
+test-lowlevel_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-lowlevel_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-lowlevel_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+test-lowlevel_MC_DIRS := $(foreach dir, $(test-lowlevel_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-lowlevel_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-lowlevel_MC_DIRS),)
+    test-lowlevel_MC_DIRS := $(shell echo $(test-lowlevel_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-lowlevel_MC_DIRS)
+endif
+
+endif
+
+test-lowlevel_MC_CPPFLAGS := $(test-lowlevel_CPPFLAGS)
+test-lowlevel_CFLAGS := $(test-lowlevel_CFLAGS)
+ifeq ($(test-lowlevel_DFLAGS),)
+  test-lowlevel_DFLAGS := $(test-lowlevel_CFLAGS)
+else
+  test-lowlevel_DFLAGS := $(test-lowlevel_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-lowlevel_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-lowlevel_STRIP ?= $(TARGET_STRIP)
+test-lowlevel_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : test-lowlevel_MC_CPPFLAGS:=$(strip $(test-lowlevel_MC_CPPFLAGS) $(test-lowlevel_MC_EXTRA_CPPFLAGS))
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : test-lowlevel_CFLAGS:=$(strip $(test-lowlevel_CFLAGS) $(SAFETY_CFLAGS))
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : test-lowlevel_DFLAGS:=$(test-lowlevel_DFLAGS)
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : test-lowlevel_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : test-lowlevel_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-lowlevel_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-lowlevel_STRIP ?= $(HOST_STRIP)
+test-lowlevel_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : test-lowlevel_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-lowlevel_MC_CPPFLAGS) $(test-lowlevel_MC_EXTRA_CPPFLAGS))
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : test-lowlevel_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-lowlevel_CFLAGS))
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : test-lowlevel_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-lowlevel_DFLAGS))
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : test-lowlevel_IQUOTE:=$(HOST_IQUOTE)
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : test-lowlevel_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-lowlevel_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-lowlevel_STRIP ?= $(ECHO) >/dev/null
+test-lowlevel_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : test-lowlevel_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-lowlevel_MC_CPPFLAGS) $(test-lowlevel_MC_EXTRA_CPPFLAGS))
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : test-lowlevel_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-lowlevel_CFLAGS))
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : test-lowlevel_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-lowlevel_DFLAGS))
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : test-lowlevel_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-lowlevel_MC_TARGETS) $(test-lowlevel_MC_DTARGETS) : test-lowlevel_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-lowlevel_MC_TARGETS) : CPPFLAGS := $(test-lowlevel_MC_CPPFLAGS)
+$(test-lowlevel_MC_TARGETS) : CFLAGS := $(test-lowlevel_CFLAGS)
+$(test-lowlevel_MC_TARGETS) : $(test-lowlevel_MC_TGTWILDCARD).o : $(test-lowlevel_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-lowlevel_IQUOTE) $(dir $<) $(test-lowlevel_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-lowlevel_IQUOTE) . $(test-lowlevel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-lowlevel_IQUOTE) $(dir $<) $(test-lowlevel_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-lowlevel_IQUOTE) . $(test-lowlevel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-lowlevel_IQUOTE) $(dir $<) $(test-lowlevel_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-lowlevel_IQUOTE) . $(test-lowlevel_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-lowlevel_MC_DTARGETS) : $(test-lowlevel_MC_TGTWILDCARD).d : $(test-lowlevel_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-lowlevel_DFLAGS) $(test-lowlevel_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(test-lowlevel_OBJDIR),)
+test-lowlevel-MA_TARGETS := $(addsuffix .o,$(test-lowlevel_ASMFILES))
+test-lowlevel-MA_WILDCARD := %
+else
+test-lowlevel-MA_TARGETS := $(addsuffix .o,$(addprefix $(test-lowlevel_OBJDIR)/,$(notdir $(test-lowlevel_ASMFILES))))
+test-lowlevel-MA_WILDCARD := $(test-lowlevel_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(test-lowlevel-MA_TARGETS) : | $(addsuffix .s,$(test-lowlevel_ASMFILES))
+
+# Be sure that all .c files are found
+test-lowlevel-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-lowlevel-MA_BASEDIRS := $(shell echo $(sort $(dir $(test-lowlevel_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+test-lowlevel-MA_DIRS := $(foreach dir, $(test-lowlevel-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-lowlevel-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-lowlevel-MA_DIRS),)
+    test-lowlevel-MA_DIRS := $(shell echo $(test-lowlevel-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(test-lowlevel-MA_DIRS)
+endif
+
+endif
+
+test-lowlevel-MA_ASSEMBLER ?= $(test-lowlevel_ASSEMBLER)
+
+$(test-lowlevel-MA_TARGETS) : test-lowlevel-MA_CMD:= $(test-lowlevel-MA_ASSEMBLER)
+
+$(test-lowlevel-MA_TARGETS) : CPPFLAGS := $(test-lowlevel_CPPFLAGS)
+$(test-lowlevel-MA_TARGETS) : AFLAGS := $(test-lowlevel_AFLAGS)
+$(test-lowlevel-MA_TARGETS) : $(test-lowlevel-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(test-lowlevel-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(test-lowlevel-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(test-lowlevel-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+test-lowlevel-link_EXTRA_LDFLAGS := 
+test-lowlevel-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-lowlevel-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-lowlevel-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-lowlevel-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+test-lowlevel-link_DIRS := $(subst -L ,-L,$(strip $(test-lowlevel_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-lowlevel-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-lowlevel-link_DIRS)))
+# Add trailing /
+test-lowlevel-link_DIRS := $(subst //,/,$(addsuffix /,$(test-lowlevel-link_DIRS)))
+# Add normal linklib path
+test-lowlevel-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-lowlevel-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-lowlevel_LIBS) $(test-lowlevel-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    test-lowlevel-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    test-lowlevel-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+test-lowlevel-link_DEPLIBS := $(foreach lib,$(test-lowlevel-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-lowlevel-link_DIRS)))) \
+)
+
+$(test-lowlevel_TARGETDIR)/$(test-lowlevel_PROGNAME) : OBJDIR := $(test-lowlevel_OBJDIR)
+$(test-lowlevel_TARGETDIR)/$(test-lowlevel_PROGNAME) : OBJS := $(test-lowlevel_OBJS) $(test-lowlevel_ARCHOBJS) $(USER_OBJS)
+$(test-lowlevel_TARGETDIR)/$(test-lowlevel_PROGNAME) : LDFLAGS := $(strip $(test-lowlevel_LDFLAGS) $(test-lowlevel-link_EXTRA_LDFLAGS))
+$(test-lowlevel_TARGETDIR)/$(test-lowlevel_PROGNAME) : LIBS := $(addprefix -l,$(test-lowlevel_LIBS) $(test-lowlevel-link_EXTRA_LIBS) )
+$(test-lowlevel_TARGETDIR)/$(test-lowlevel_PROGNAME) : $(test-lowlevel_OBJS) $(test-lowlevel_ARCHOBJS) $(USER_OBJS) $(test-lowlevel-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-lowlevel_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-lowlevel_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-lowlevel_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-lowlevel_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-lowlevel_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-lowlevel_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-lowlevel_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-lowlevel_DEPS),)
+  ifneq (test-lowlevel test-lowlevel-quick,)
+    ifneq ($(findstring $(TARGET),test-lowlevel test-lowlevel-quick),)
+      -include $(test-lowlevel_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-lowlevel_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-lowlevel_OBJS) $(test-lowlevel_DEPS) $(test-lowlevel_TARGETDIR)/$(test-lowlevel_PROGNAME),)
+$(test-lowlevel_OBJS) $(test-lowlevel_DEPS) $(test-lowlevel_TARGETDIR)/$(test-lowlevel_PROGNAME) : | $(test-lowlevel_OBJDIR) $(test-lowlevel_TARGETDIR)
+else
+$(test-lowlevel_OBJS) $(test-lowlevel_DEPS) $(test-lowlevel_TARGETDIR)/$(test-lowlevel_PROGNAME) :: $(test-lowlevel_OBJDIR) $(test-lowlevel_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(test-lowlevel_OBJDIR) $(test-lowlevel_TARGETDIR)
+
+
+test-lowlevel-clean : FILES := $(test-lowlevel_OBJS) $(test-lowlevel_TARGETDIR)/$(test-lowlevel_PROGNAME) $(test-lowlevel_DEPS)
+#MM
+test-lowlevel-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-lowlevel"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,635 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES = main pciids support locale saveinfo
+
+EXEDIR = $(AROS_DEBUG)/Hardware
+
+#MM- debug-tools : debug-tools-pcitool
+#MM debug-tools-pcitool : includes symlinks \
+#MM debug-tools-pcitool-catalogs
+
+
+
+.PHONY : debug-tools-pcitool
+
+debug-tools-pcitool_PROGNAME  := PCITool
+debug-tools-pcitool_OBJDIR    := $(GENDIR)/$(CURDIR)
+debug-tools-pcitool_TARGETDIR := $(EXEDIR)
+debug-tools-pcitool_LINKER    := 
+debug-tools-pcitool_LIBS := hiddstubs
+# If not supplied, linker is equal to compiler
+ifeq ($(debug-tools-pcitool_LINKER),)
+    debug-tools-pcitool_LINKER := target
+endif
+
+ifneq ("$(strip $(FILES)   )","")
+    debug-tools-pcitool_FILES     := $(FILES)
+    debug-tools-pcitool_OBJCFILES := 
+    debug-tools-pcitool_ASMFILES  := 
+    debug-tools-pcitool_CXXFILES := 
+else
+    debug-tools-pcitool_FILES     := $(debug-tools-pcitool_PROGNAME)
+    debug-tools-pcitool_OBJCFILES :=
+    debug-tools-pcitool_ASMFILES  :=
+    debug-tools-pcitool_CXXFILES :=
+endif
+
+debug-tools-pcitool_ARCHOBJS   := $(wildcard $(debug-tools-pcitool_OBJDIR)/arch/*.o)
+debug-tools-pcitool_ARCHFILES  := $(basename $(notdir $(debug-tools-pcitool_ARCHOBJS)))
+debug-tools-pcitool_C_NARCHFILES := $(filter-out $(debug-tools-pcitool_ARCHFILES),$(debug-tools-pcitool_FILES))
+debug-tools-pcitool_CXX_NARCHFILES := $(filter-out $(debug-tools-pcitool_ARCHFILES),$(debug-tools-pcitool_CXXFILES))
+debug-tools-pcitool_OBJC_NARCHFILES := $(filter-out $(debug-tools-pcitool_ARCHFILES),$(debug-tools-pcitool_OBJCFILES))
+
+TMP_FILES := $(debug-tools-pcitool_C_NARCHFILES) $(debug-tools-pcitool_CXX_NARCHFILES) $(debug-tools-pcitool_ASMFILES) $(debug-tools-pcitool_OBJC_NARCHFILES)
+debug-tools-pcitool_OBJS := $(addsuffix .o,$(addprefix $(debug-tools-pcitool_OBJDIR)/,$(notdir $(TMP_FILES))))
+debug-tools-pcitool_DEPS := $(addsuffix .d,$(addprefix $(debug-tools-pcitool_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+debug-tools-pcitool_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+debug-tools-pcitool_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+debug-tools-pcitool_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+debug-tools-pcitool_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+debug-tools-pcitool_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+debug-tools-pcitool_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+debug-tools-pcitool_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+debug-tools-pcitool_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+debug-tools-pcitool_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+debug-tools-pcitool_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+debug-tools-pcitool_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+debug-tools-pcitool_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+debug-tools-pcitool_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+debug-tools-pcitool_LDFLAGS          := 
+endif
+
+debug-tools-pcitool_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+debug-tools-pcitool_COVERAGE := yes
+debug-tools-pcitool_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+debug-tools-pcitool_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+debug-tools-pcitool_CFLAGS    := $(strip $(debug-tools-pcitool_COVERAGEFLAGS) $(debug-tools-pcitool_CFLAGS))
+debug-tools-pcitool_CXXFLAGS := $(strip $(debug-tools-pcitool_COVERAGEFLAGS) $(debug-tools-pcitool_CXXFLAGS))
+debug-tools-pcitool_LIBS += $(debug-tools-pcitool_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+debug-tools-pcitool_FUNCINSTR := yes
+debug-tools-pcitool_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+debug-tools-pcitool_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+debug-tools-pcitool_CFLAGS    := $(strip $(debug-tools-pcitool_INSTRFUNCFLAGS) $(debug-tools-pcitool_CFLAGS))
+debug-tools-pcitool_CXXFLAGS := $(strip $(debug-tools-pcitool_INSTRFUNCFLAGS) $(debug-tools-pcitool_CXXFLAGS))
+debug-tools-pcitool_LIBS += $(debug-tools-pcitool_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+debug-tools-pcitool_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(debug-tools-pcitool_CFLAGS))
+debug-tools-pcitool_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(debug-tools-pcitool_CXXFLAGS))
+endif
+endif
+debug-tools-pcitool_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    debug-tools-pcitool_DFLAGS     := 
+else
+    debug-tools-pcitool_DFLAGS     := $(debug-tools-pcitool_CFLAGS)
+endif
+ifneq (,)
+    debug-tools-pcitool_DXXFLAGS     := 
+else
+    debug-tools-pcitool_DXXFLAGS     := $(debug-tools-pcitool_CXXFLAGS)
+endif
+ifeq (target,target)
+debug-tools-pcitool_LDFLAGS           := $(debug-tools-pcitool_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+debug-tools-pcitool_LDFLAGS           := $(debug-tools-pcitool_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+debug-tools-pcitool_LDFLAGS           := $(debug-tools-pcitool_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+debug-tools-pcitool_LDFLAGS   += -L
+endif
+
+#MM
+debug-tools-pcitool-quick : debug-tools-pcitool
+
+#MM debug-tools-pcitool : includes-generate-deps core-linklibs
+debug-tools-pcitool : $(debug-tools-pcitool_TARGETDIR)/$(debug-tools-pcitool_PROGNAME)
+
+ifneq ($(filter $(TARGET),debug-tools-pcitool debug-tools-pcitool-quick debug-tools-pcitool-gz-quick),)
+
+debug-tools-pcitool_CXXABSBASENAMES := $(foreach debug-tools-pcitool_CXXBASE,$(debug-tools-pcitool_CXX_NARCHFILES),$(if $(filter /%,$(debug-tools-pcitool_CXXBASE)),$(debug-tools-pcitool_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(debug-tools-pcitool_CXXBASE))))
+
+ifneq ($(debug-tools-pcitool_CXXABSBASENAMES),)
+
+debug-tools-pcitool_CXXBASENAMES := $(basename $(debug-tools-pcitool_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+debug-tools-pcitool_MCXX_FILES  := $(strip $(foreach debug-tools-pcitool_CXXBASE,$(debug-tools-pcitool_CXXABSBASENAMES), $(firstword $(wildcard $(foreach debug-tools-pcitool_EXT, $(AROS_CXXEXTS),$(addsuffix .$(debug-tools-pcitool_EXT),$(debug-tools-pcitool_CXXBASE)))))))
+
+ifeq (,)
+debug-tools-pcitool_MCXX_SRCWILDCARD := %
+else
+debug-tools-pcitool_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(debug-tools-pcitool_OBJDIR),)
+  debug-tools-pcitool_CXXTARGETS := $(notdir $(debug-tools-pcitool_CXXBASENAMES:=.o))
+  debug-tools-pcitool_CXXDTARGETS := $(notdir $(debug-tools-pcitool_CXXBASENAMES:=.d))
+  debug-tools-pcitool_MCXX_WILDCARD := %
+else
+  debug-tools-pcitool_CXXTARGETS := $(addprefix $(debug-tools-pcitool_OBJDIR)/,$(notdir $(debug-tools-pcitool_CXXBASENAMES:=.o)))
+  debug-tools-pcitool_CXXDTARGETS := $(addprefix $(debug-tools-pcitool_OBJDIR)/,$(notdir $(debug-tools-pcitool_CXXBASENAMES:=.d)))
+  debug-tools-pcitool_MCXX_WILDCARD := $(debug-tools-pcitool_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(debug-tools-pcitool_CXXTARGETS) $(debug-tools-pcitool_CXXDTARGETS) : | $(debug-tools-pcitool_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+debug-tools-pcitool_MCXX_CPPFLAGS := $(debug-tools-pcitool_CPPFLAGS)
+debug-tools-pcitool_CXXFLAGS := $(debug-tools-pcitool_CXXFLAGS)
+ifeq ($(debug-tools-pcitool_DXXFLAGS),)
+  debug-tools-pcitool_DXXFLAGS := $(debug-tools-pcitool_CXXFLAGS)
+else
+  debug-tools-pcitool_DXXFLAGS := $(debug-tools-pcitool_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  debug-tools-pcitool_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  debug-tools-pcitool_STRIP ?= $(HOST_STRIP)
+  debug-tools-pcitool_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  debug-tools-pcitool_CXXCMD:=$(HOST_CXX)
+  debug-tools-pcitool_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(debug-tools-pcitool_MCXX_CPPFLAGS) $(debug-tools-pcitool_MCXX_EXTRA_CPPFLAGS))
+  debug-tools-pcitool_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(debug-tools-pcitool_CXXFLAGS))
+  debug-tools-pcitool_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(debug-tools-pcitool_DXXFLAGS))
+  debug-tools-pcitool_CXXIQUOTE:=$(HOST_IQUOTE)
+  debug-tools-pcitool_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  debug-tools-pcitool_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  debug-tools-pcitool_STRIP ?= $(TARGET_STRIP)
+  debug-tools-pcitool_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  debug-tools-pcitool_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  debug-tools-pcitool_MCXX_CPPFLAGS := $(strip $(debug-tools-pcitool_MCXX_CPPFLAGS) $(debug-tools-pcitool_MCXX_EXTRA_CPPFLAGS))
+  debug-tools-pcitool_CXXFLAGS := $(strip $(debug-tools-pcitool_CXXFLAGS) $(SAFETY_CFLAGS))
+  debug-tools-pcitool_DXXFLAGS := $(debug-tools-pcitool_DXXFLAGS)
+  debug-tools-pcitool_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  debug-tools-pcitool_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  debug-tools-pcitool_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  debug-tools-pcitool_STRIP ?= $(ECHO) >/dev/null
+  debug-tools-pcitool_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  debug-tools-pcitool_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  debug-tools-pcitool_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(debug-tools-pcitool_MCXX_CPPFLAGS) $(debug-tools-pcitool_MCXX_EXTRA_CPPFLAGS))
+  debug-tools-pcitool_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(debug-tools-pcitool_CXXFLAGS))
+  debug-tools-pcitool_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(debug-tools-pcitool_DXXFLAGS))
+  debug-tools-pcitool_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  debug-tools-pcitool_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(debug-tools-pcitool_CXXCMD) $(debug-tools-pcitool_CXXIQUOTE) $(dir $(2)) $(debug-tools-pcitool_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-pcitool_CXXIQUOTE) . $(debug-tools-pcitool_CXXIQUOTE_END) $(strip $(debug-tools-pcitool_CXXFLAGS) $(debug-tools-pcitool_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(debug-tools-pcitool_CXXCMD) $(debug-tools-pcitool_CXXIQUOTE) $(dir $(2)) $(debug-tools-pcitool_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-pcitool_CXXIQUOTE) . $(debug-tools-pcitool_CXXIQUOTE_END) $(strip $(debug-tools-pcitool_CXXFLAGS) $(debug-tools-pcitool_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(debug-tools-pcitool_CXXCMD) $(debug-tools-pcitool_CXXIQUOTE) $(dir $(2)) $(debug-tools-pcitool_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-pcitool_CXXIQUOTE) . $(debug-tools-pcitool_CXXIQUOTE_END) $(strip $(debug-tools-pcitool_CXXFLAGS) $(debug-tools-pcitool_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(debug-tools-pcitool_CXXCMD)" $(MKDEPEND) $(strip $(debug-tools-pcitool_DXXFLAGS) $(debug-tools-pcitool_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(debug-tools-pcitool_OBJDIR),)
+  $(foreach debug-tools-pcitool_CXXFILE,$(debug-tools-pcitool_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(debug-tools-pcitool_CXXFILE))),$(debug-tools-pcitool_CXXFILE))))
+else
+  $(foreach debug-tools-pcitool_CXXFILE,$(debug-tools-pcitool_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(debug-tools-pcitool_OBJDIR)/,$(notdir $(basename $(debug-tools-pcitool_CXXFILE)))),$(debug-tools-pcitool_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(debug-tools-pcitool_OBJC_NARCHFILES),)
+
+ifeq (,)
+debug-tools-pcitool_MOBJC_SRCWILDCARD := %
+else
+debug-tools-pcitool_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(debug-tools-pcitool_OBJDIR),)
+  debug-tools-pcitool_MOBJC_TARGETS := $(addsuffix .o,$(debug-tools-pcitool_OBJC_NARCHFILES))
+  debug-tools-pcitool_MOBJC_DTARGETS := $(addsuffix .d,$(debug-tools-pcitool_OBJC_NARCHFILES))
+  debug-tools-pcitool_MOBJC_WILDCARD := %
+else
+  debug-tools-pcitool_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-pcitool_OBJDIR)/,$(debug-tools-pcitool_OBJC_NARCHFILES)))
+  debug-tools-pcitool_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(debug-tools-pcitool_OBJDIR)/,$(debug-tools-pcitool_OBJC_NARCHFILES)))
+  debug-tools-pcitool_MOBJC_WILDCARD := $(debug-tools-pcitool_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : | $(addsuffix .m,$(debug-tools-pcitool_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  debug-tools-pcitool_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  debug-tools-pcitool_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(debug-tools-pcitool_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  debug-tools-pcitool_MOBJC_DIRS := $(foreach dir, $(debug-tools-pcitool_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(debug-tools-pcitool_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(debug-tools-pcitool_MOBJC_DIRS),)
+    debug-tools-pcitool_MOBJC_DIRS := $(shell echo $(debug-tools-pcitool_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(debug-tools-pcitool_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  debug-tools-pcitool_CC := $(TARGET_CC)
+else
+  debug-tools-pcitool_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+debug-tools-pcitool_MOBJC_CPPFLAGS := $(debug-tools-pcitool_CPPFLAGS)
+debug-tools-pcitool_OBJCFLAGS := $(debug-tools-pcitool_CFLAGS)
+debug-tools-pcitool_OBJCFLAGS := $(debug-tools-pcitool_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+debug-tools-pcitool_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(debug-tools-pcitool_OBJCFLAGS)))
+ifeq ($(debug-tools-pcitool_DFLAGS),)
+  debug-tools-pcitool_OBJCDFLAGS := $(debug-tools-pcitool_CFLAGS)
+else
+  debug-tools-pcitool_OBJCDFLAGS := $(debug-tools-pcitool_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  debug-tools-pcitool_LINK ?= $(strip $(debug-tools-pcitool_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  debug-tools-pcitool_STRIP ?= $(TARGET_STRIP)
+  debug-tools-pcitool_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : CMD:=$(strip $(debug-tools-pcitool_CC) $(TARGET_SYSROOT))
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : debug-tools-pcitool_MOBJC_CPPFLAGS:=$(strip $(debug-tools-pcitool_MOBJC_CPPFLAGS) $(debug-tools-pcitool_MOBJC_EXTRA_CPPFLAGS))
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : debug-tools-pcitool_OBJCFLAGS:=$(strip $(debug-tools-pcitool_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : debug-tools-pcitool_OBJCDFLAGS:=$(debug-tools-pcitool_OBJCDFLAGS)
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : debug-tools-pcitool_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : debug-tools-pcitool_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  debug-tools-pcitool_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  debug-tools-pcitool_STRIP ?= $(HOST_STRIP)
+  debug-tools-pcitool_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : debug-tools-pcitool_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(debug-tools-pcitool_MOBJC_CPPFLAGS) $(debug-tools-pcitool_MOBJC_EXTRA_CPPFLAGS))
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : debug-tools-pcitool_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(debug-tools-pcitool_OBJCFLAGS))
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : debug-tools-pcitool_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(debug-tools-pcitool_OBJCDFLAGS))
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : debug-tools-pcitool_IQUOTE:=$(HOST_IQUOTE)
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : debug-tools-pcitool_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  debug-tools-pcitool_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  debug-tools-pcitool_STRIP ?= $(ECHO) >/dev/null
+  debug-tools-pcitool_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : debug-tools-pcitool_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(debug-tools-pcitool_MOBJC_CPPFLAGS) $(debug-tools-pcitool_MOBJC_EXTRA_CPPFLAGS))
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : debug-tools-pcitool_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(debug-tools-pcitool_OBJCFLAGS))
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : debug-tools-pcitool_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(debug-tools-pcitool_OBJCDFLAGS))
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : debug-tools-pcitool_IQUOTE:=$(KERNEL_IQUOTE)
+  $(debug-tools-pcitool_MOBJC_TARGETS) $(debug-tools-pcitool_MOBJC_DTARGETS) : debug-tools-pcitool_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(debug-tools-pcitool_MOBJC_TARGETS) : CPPFLAGS := $(debug-tools-pcitool_MOBJC_CPPFLAGS)
+$(debug-tools-pcitool_MOBJC_TARGETS) : CFLAGS := $(debug-tools-pcitool_OBJCFLAGS)
+$(debug-tools-pcitool_MOBJC_TARGETS) : $(debug-tools-pcitool_MOBJC_WILDCARD).o : $(debug-tools-pcitool_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(debug-tools-pcitool_IQUOTE) $(dir $<) $(debug-tools-pcitool_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-pcitool_IQUOTE) . $(debug-tools-pcitool_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(debug-tools-pcitool_IQUOTE) $(dir $<) $(debug-tools-pcitool_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-pcitool_IQUOTE) . $(debug-tools-pcitool_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(debug-tools-pcitool_IQUOTE) $(dir $<) $(debug-tools-pcitool_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-pcitool_IQUOTE) . $(debug-tools-pcitool_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(debug-tools-pcitool_MOBJC_DTARGETS) : $(debug-tools-pcitool_MOBJC_WILDCARD).d : $(debug-tools-pcitool_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(debug-tools-pcitool_OBJCDFLAGS) $(debug-tools-pcitool_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+debug-tools-pcitool_MC_SRCWILDCARD := %
+else
+debug-tools-pcitool_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(debug-tools-pcitool_OBJDIR),)
+debug-tools-pcitool_MC_TARGETS := $(addsuffix .o,$(debug-tools-pcitool_C_NARCHFILES))
+debug-tools-pcitool_MC_DTARGETS := $(addsuffix .d,$(debug-tools-pcitool_C_NARCHFILES))
+debug-tools-pcitool_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    debug-tools-pcitool_MC_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-pcitool_OBJDIR)/,$(notdir $(debug-tools-pcitool_C_NARCHFILES))))
+    debug-tools-pcitool_MC_DTARGETS := $(addsuffix .d,$(addprefix $(debug-tools-pcitool_OBJDIR)/,$(notdir $(debug-tools-pcitool_C_NARCHFILES))))
+else
+ifeq (,)
+    debug-tools-pcitool_MC_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-pcitool_OBJDIR)/,$(debug-tools-pcitool_C_NARCHFILES)))
+    debug-tools-pcitool_MC_DTARGETS := $(addsuffix .d,$(addprefix $(debug-tools-pcitool_OBJDIR)/,$(debug-tools-pcitool_C_NARCHFILES)))
+else
+    debug-tools-pcitool_MC_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-pcitool_OBJDIR)/,$(patsubst /%,%,$(debug-tools-pcitool_C_NARCHFILES))))
+    debug-tools-pcitool_MC_DTARGETS := $(addsuffix .d,$(addprefix $(debug-tools-pcitool_OBJDIR)/,$(patsubst /%,%,$(debug-tools-pcitool_C_NARCHFILES))))
+endif
+endif
+debug-tools-pcitool_MC_TGTWILDCARD := $(debug-tools-pcitool_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : | $(addsuffix .c,$(debug-tools-pcitool_C_NARCHFILES))
+
+# Be sure that all .c files are found
+debug-tools-pcitool_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+debug-tools-pcitool_MC_BASEDIRS := $(shell echo $(sort $(dir $(debug-tools-pcitool_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+debug-tools-pcitool_MC_DIRS := $(foreach dir, $(debug-tools-pcitool_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(debug-tools-pcitool_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(debug-tools-pcitool_MC_DIRS),)
+    debug-tools-pcitool_MC_DIRS := $(shell echo $(debug-tools-pcitool_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(debug-tools-pcitool_MC_DIRS)
+endif
+
+endif
+
+debug-tools-pcitool_MC_CPPFLAGS := $(debug-tools-pcitool_CPPFLAGS)
+debug-tools-pcitool_CFLAGS := $(debug-tools-pcitool_CFLAGS)
+ifeq ($(debug-tools-pcitool_DFLAGS),)
+  debug-tools-pcitool_DFLAGS := $(debug-tools-pcitool_CFLAGS)
+else
+  debug-tools-pcitool_DFLAGS := $(debug-tools-pcitool_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+debug-tools-pcitool_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+debug-tools-pcitool_STRIP ?= $(TARGET_STRIP)
+debug-tools-pcitool_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : debug-tools-pcitool_MC_CPPFLAGS:=$(strip $(debug-tools-pcitool_MC_CPPFLAGS) $(debug-tools-pcitool_MC_EXTRA_CPPFLAGS))
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : debug-tools-pcitool_CFLAGS:=$(strip $(debug-tools-pcitool_CFLAGS) $(SAFETY_CFLAGS))
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : debug-tools-pcitool_DFLAGS:=$(debug-tools-pcitool_DFLAGS)
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : debug-tools-pcitool_IQUOTE:=$(CFLAGS_IQUOTE)
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : debug-tools-pcitool_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+debug-tools-pcitool_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+debug-tools-pcitool_STRIP ?= $(HOST_STRIP)
+debug-tools-pcitool_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : debug-tools-pcitool_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(debug-tools-pcitool_MC_CPPFLAGS) $(debug-tools-pcitool_MC_EXTRA_CPPFLAGS))
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : debug-tools-pcitool_CFLAGS:=$(strip $(HOST_CFLAGS) $(debug-tools-pcitool_CFLAGS))
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : debug-tools-pcitool_DFLAGS:=$(strip $(HOST_CFLAGS) $(debug-tools-pcitool_DFLAGS))
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : debug-tools-pcitool_IQUOTE:=$(HOST_IQUOTE)
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : debug-tools-pcitool_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+debug-tools-pcitool_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+debug-tools-pcitool_STRIP ?= $(ECHO) >/dev/null
+debug-tools-pcitool_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : debug-tools-pcitool_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(debug-tools-pcitool_MC_CPPFLAGS) $(debug-tools-pcitool_MC_EXTRA_CPPFLAGS))
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : debug-tools-pcitool_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(debug-tools-pcitool_CFLAGS))
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : debug-tools-pcitool_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(debug-tools-pcitool_DFLAGS))
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : debug-tools-pcitool_IQUOTE:=$(KERNEL_IQUOTE)
+$(debug-tools-pcitool_MC_TARGETS) $(debug-tools-pcitool_MC_DTARGETS) : debug-tools-pcitool_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(debug-tools-pcitool_MC_TARGETS) : CPPFLAGS := $(debug-tools-pcitool_MC_CPPFLAGS)
+$(debug-tools-pcitool_MC_TARGETS) : CFLAGS := $(debug-tools-pcitool_CFLAGS)
+$(debug-tools-pcitool_MC_TARGETS) : $(debug-tools-pcitool_MC_TGTWILDCARD).o : $(debug-tools-pcitool_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(debug-tools-pcitool_IQUOTE) $(dir $<) $(debug-tools-pcitool_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-pcitool_IQUOTE) . $(debug-tools-pcitool_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(debug-tools-pcitool_IQUOTE) $(dir $<) $(debug-tools-pcitool_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-pcitool_IQUOTE) . $(debug-tools-pcitool_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(debug-tools-pcitool_IQUOTE) $(dir $<) $(debug-tools-pcitool_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-pcitool_IQUOTE) . $(debug-tools-pcitool_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(debug-tools-pcitool_MC_DTARGETS) : $(debug-tools-pcitool_MC_TGTWILDCARD).d : $(debug-tools-pcitool_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(debug-tools-pcitool_DFLAGS) $(debug-tools-pcitool_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(debug-tools-pcitool_OBJDIR),)
+debug-tools-pcitool-MA_TARGETS := $(addsuffix .o,$(debug-tools-pcitool_ASMFILES))
+debug-tools-pcitool-MA_WILDCARD := %
+else
+debug-tools-pcitool-MA_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-pcitool_OBJDIR)/,$(notdir $(debug-tools-pcitool_ASMFILES))))
+debug-tools-pcitool-MA_WILDCARD := $(debug-tools-pcitool_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(debug-tools-pcitool-MA_TARGETS) : | $(addsuffix .s,$(debug-tools-pcitool_ASMFILES))
+
+# Be sure that all .c files are found
+debug-tools-pcitool-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+debug-tools-pcitool-MA_BASEDIRS := $(shell echo $(sort $(dir $(debug-tools-pcitool_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+debug-tools-pcitool-MA_DIRS := $(foreach dir, $(debug-tools-pcitool-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(debug-tools-pcitool-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(debug-tools-pcitool-MA_DIRS),)
+    debug-tools-pcitool-MA_DIRS := $(shell echo $(debug-tools-pcitool-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(debug-tools-pcitool-MA_DIRS)
+endif
+
+endif
+
+debug-tools-pcitool-MA_ASSEMBLER ?= $(debug-tools-pcitool_ASSEMBLER)
+
+$(debug-tools-pcitool-MA_TARGETS) : debug-tools-pcitool-MA_CMD:= $(debug-tools-pcitool-MA_ASSEMBLER)
+
+$(debug-tools-pcitool-MA_TARGETS) : CPPFLAGS := $(debug-tools-pcitool_CPPFLAGS)
+$(debug-tools-pcitool-MA_TARGETS) : AFLAGS := $(debug-tools-pcitool_AFLAGS)
+$(debug-tools-pcitool-MA_TARGETS) : $(debug-tools-pcitool-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(debug-tools-pcitool-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(debug-tools-pcitool-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(debug-tools-pcitool-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+debug-tools-pcitool-link_EXTRA_LDFLAGS := 
+debug-tools-pcitool-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    debug-tools-pcitool-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    debug-tools-pcitool-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    debug-tools-pcitool-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+debug-tools-pcitool-link_DIRS := $(subst -L ,-L,$(strip $(debug-tools-pcitool_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+debug-tools-pcitool-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(debug-tools-pcitool-link_DIRS)))
+# Add trailing /
+debug-tools-pcitool-link_DIRS := $(subst //,/,$(addsuffix /,$(debug-tools-pcitool-link_DIRS)))
+# Add normal linklib path
+debug-tools-pcitool-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+debug-tools-pcitool-link_LIBS := $(addprefix lib,$(addsuffix .a,$(debug-tools-pcitool_LIBS) $(debug-tools-pcitool-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    debug-tools-pcitool-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    debug-tools-pcitool-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+debug-tools-pcitool-link_DEPLIBS := $(foreach lib,$(debug-tools-pcitool-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(debug-tools-pcitool-link_DIRS)))) \
+)
+
+$(debug-tools-pcitool_TARGETDIR)/$(debug-tools-pcitool_PROGNAME) : OBJDIR := $(debug-tools-pcitool_OBJDIR)
+$(debug-tools-pcitool_TARGETDIR)/$(debug-tools-pcitool_PROGNAME) : OBJS := $(debug-tools-pcitool_OBJS) $(debug-tools-pcitool_ARCHOBJS) $(USER_OBJS)
+$(debug-tools-pcitool_TARGETDIR)/$(debug-tools-pcitool_PROGNAME) : LDFLAGS := $(strip $(debug-tools-pcitool_LDFLAGS) $(debug-tools-pcitool-link_EXTRA_LDFLAGS))
+$(debug-tools-pcitool_TARGETDIR)/$(debug-tools-pcitool_PROGNAME) : LIBS := $(addprefix -l,$(debug-tools-pcitool_LIBS) $(debug-tools-pcitool-link_EXTRA_LIBS) )
+$(debug-tools-pcitool_TARGETDIR)/$(debug-tools-pcitool_PROGNAME) : $(debug-tools-pcitool_OBJS) $(debug-tools-pcitool_ARCHOBJS) $(USER_OBJS) $(debug-tools-pcitool-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(debug-tools-pcitool_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(debug-tools-pcitool_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(debug-tools-pcitool_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(debug-tools-pcitool_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(debug-tools-pcitool_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(debug-tools-pcitool_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(debug-tools-pcitool_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(debug-tools-pcitool_DEPS),)
+  ifneq (debug-tools-pcitool debug-tools-pcitool-quick,)
+    ifneq ($(findstring $(TARGET),debug-tools-pcitool debug-tools-pcitool-quick),)
+      -include $(debug-tools-pcitool_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(debug-tools-pcitool_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(debug-tools-pcitool_OBJS) $(debug-tools-pcitool_DEPS) $(debug-tools-pcitool_TARGETDIR)/$(debug-tools-pcitool_PROGNAME),)
+$(debug-tools-pcitool_OBJS) $(debug-tools-pcitool_DEPS) $(debug-tools-pcitool_TARGETDIR)/$(debug-tools-pcitool_PROGNAME) : | $(debug-tools-pcitool_OBJDIR) $(debug-tools-pcitool_TARGETDIR)
+else
+$(debug-tools-pcitool_OBJS) $(debug-tools-pcitool_DEPS) $(debug-tools-pcitool_TARGETDIR)/$(debug-tools-pcitool_PROGNAME) :: $(debug-tools-pcitool_OBJDIR) $(debug-tools-pcitool_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(debug-tools-pcitool_OBJDIR) $(debug-tools-pcitool_TARGETDIR)
+
+
+debug-tools-pcitool-clean : FILES := $(debug-tools-pcitool_OBJS) $(debug-tools-pcitool_TARGETDIR)/$(debug-tools-pcitool_PROGNAME) $(debug-tools-pcitool_DEPS)
+#MM
+debug-tools-pcitool-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget debug-tools-pcitool"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)
+

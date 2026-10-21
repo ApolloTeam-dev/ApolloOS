@@ -1,0 +1,1669 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+USER_INCLUDES := -I $(SRCDIR)/$(CURDIR)
+USER_CPPFLAGS := -D__TIMER_NOLIBBASE__
+USER_LDFLAGS := -static
+
+SDCARDFILES = \
+    sdcard_init \
+    sdcard_device \
+    sdcard_bus \
+    sdcard_mmcunit \
+    sdcard_sdscunit \
+    sdcard_ioops \
+    timer
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-sdcard
+#MM kernel-sdcard-quick
+#MM kernel-sdcard-makefile
+#MM kernel-sdcard-clean
+
+# ABI targets:
+#MM- includes-all : kernel-sdcard-includes
+#MM- linklibs-sdcard: kernel-sdcard-linklib
+#MM- linklibs-sdcard_rel : kernel-sdcard-linklib
+#MM- includes-sdcard: kernel-sdcard-includes
+#MM- includes-sdcard_rel : kernel-sdcard-includes
+#MM- kernel-sdcard : kernel-sdcard-includes core-linklibs linklibs-
+#MM kernel-sdcard-linklib : kernel-sdcard-includes includes-
+#MM- kernel-sdcard-quick : kernel-sdcard-includes-quick
+#MM kernel-sdcard-includes : kernel-sdcard-makefile kernel-sdcard-includes-dirs \
+#MM     includes-generate-deps kernel-sdcard-fd
+#MM kernel-sdcard-includes-quick
+#MM kernel-sdcard-includes-dirs
+#MM kernel-sdcard-fd
+
+# Library targets
+#MM kernel-sdcard-kobj : core-linklibs linklibs-
+#MM kernel-sdcard-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-sdcard-kobj : kernel-sdcard-includes core-linklibs linklibs-
+#MM kernel-sdcard-kobj-quick : kernel-sdcard-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-sdcard_ALLTARGETS       := kernel-sdcard kernel-sdcard-quick kernel-sdcard-clean
+
+ifeq (M,M)
+kernel-sdcard_ALLTARGETS       += kernel-sdcard-kobj kernel-sdcard-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-sdcard_ALLTARGETS += kernel-sdcard-includes \
+                 kernel-sdcard-includes-quick kernel-sdcard-includes-dirs  \
+                 kernel-sdcard-linklib kernel-sdcard-fd
+endif
+
+.PHONY : $(kernel-sdcard_ALLTARGETS) kernel-sdcard-makefile
+
+ifeq (sdcard,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (device,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-sdcard_DEFNAME      := sdcard_
+else
+    kernel-sdcard_DEFNAME      := sdcard
+endif
+kernel-sdcard_DEFLINKLIBNAME   := $(kernel-sdcard_DEFNAME)
+ifneq (,)
+    kernel-sdcard_LINKLIBNAME  := 
+else
+    kernel-sdcard_LINKLIBNAME  = $(kernel-sdcard_DEFLINKLIBNAME)
+endif
+kernel-sdcard_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-sdcard_DEFCPPFLAGS  += -I
+endif
+kernel-sdcard_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-sdcard_DFLAGS       := 
+else
+    kernel-sdcard_DFLAGS       = $(kernel-sdcard_DEFDFLAGS)
+endif
+kernel-sdcard_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-sdcard_DXXFLAGS     := 
+else
+    kernel-sdcard_DXXFLAGS     = $(kernel-sdcard_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-sdcard_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-sdcard_DEFDFLAGS))
+kernel-sdcard_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-sdcard_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-sdcard_FUNCINSTR := yes
+kernel-sdcard_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-sdcard_DEFDFLAGS))
+kernel-sdcard_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-sdcard_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-sdcard_OBJDIR                     := 
+else
+kernel-sdcard_OBJDIR                     := $(OBJDIR)/$(kernel-sdcard_DEFNAME)
+endif
+ifneq (,)
+kernel-sdcard_OBJDIR           := $(kernel-sdcard_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-sdcard-makefile         := $(kernel-sdcard_OBJDIR)/Makefile.$(kernel-sdcard_DEFNAME)device
+kernel-sdcard-genmakefile : $(kernel-sdcard-makefile)
+
+
+kernel-sdcard-genmakefile_OPTS := 
+ifneq (,)
+    kernel-sdcard-genmakefile_OPTS += -f 
+    kernel-sdcard-genmakefile_MODNAME := sdcard_
+else
+    kernel-sdcard-genmakefile_MODNAME := sdcard
+endif
+kernel-sdcard-genmakefile_TARGET := Makefile.$(kernel-sdcard-genmakefile_MODNAME)device
+kernel-sdcard-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-sdcard-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-sdcard-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-sdcard-genmakefile_OPTS += -c 
+        kernel-sdcard-genmakefile_DEPS += 
+    endif 
+else
+    kernel-sdcard-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/sdcard.conf
+    kernel-sdcard-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/sdcard.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-sdcard-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-sdcard-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-sdcard-genmakefile_OPTS += -o 
+        kernel-sdcard-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-sdcard-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-sdcard_OBJDIR),)
+    kernel-sdcard-genmakefile_OPTS += -d $(kernel-sdcard_OBJDIR)
+    kernel-sdcard-genmakefile_TARGET := $(kernel-sdcard_OBJDIR)/$(kernel-sdcard-genmakefile_TARGET)
+endif
+
+$(kernel-sdcard-genmakefile_TARGET) : OPTS := $(kernel-sdcard-genmakefile_OPTS)
+$(kernel-sdcard-genmakefile_TARGET) : MODNAME := sdcard
+$(kernel-sdcard-genmakefile_TARGET) : MODTYPE := device
+$(kernel-sdcard-genmakefile_TARGET) : $(kernel-sdcard-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-sdcard-makefile),)
+$(kernel-sdcard-makefile) : | $(kernel-sdcard_OBJDIR)
+else
+$(kernel-sdcard-makefile) :: $(kernel-sdcard_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-sdcard_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-sdcard_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-sdcard-makefile)
+
+kernel-sdcard_DEFMODDIR        := $($(kernel-sdcard_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-sdcard_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-sdcard_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-sdcard_MODDIR       := 
+else
+    kernel-sdcard_MODDIR       := $(kernel-sdcard_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-sdcard_INCDIR           := 
+else
+kernel-sdcard_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-sdcard_LIBDEFSINC       := $(kernel-sdcard_OBJDIR)/include/$(kernel-sdcard_DEFNAME)_libdefs.h
+kernel-sdcard_DEFLIBDEFSINC    := $(kernel-sdcard_OBJDIR)/include/$(kernel-sdcard_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-sdcard-includes-quick : kernel-sdcard-includes
+kernel-sdcard-includes : $(addprefix $(GENINCDIR)/,$($(kernel-sdcard_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-sdcard_INCDIR)/,$($(kernel-sdcard_DEFNAME)_INCLUDES)) \
+    $(kernel-sdcard_LIBDEFSINC) $(kernel-sdcard_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-sdcard_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-sdcard-includes_MODNAME := sdcard_
+else
+    kernel-sdcard-includes_MODNAME := sdcard
+endif
+
+ifneq ($($(kernel-sdcard-includes_MODNAME)_INCLUDES),)
+
+kernel-sdcard-includes_TARGETS := $($(kernel-sdcard-includes_MODNAME)_INCLUDES)
+
+kernel-sdcard-includes_DEPS := $(GENMODULE)
+kernel-sdcard-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-sdcard-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-sdcard-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-sdcard-includes_OPTS += -c 
+        kernel-sdcard-includes_DEPS += 
+    endif 
+else
+    kernel-sdcard-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/sdcard.conf
+    kernel-sdcard-includes_DEPS += $(SRCDIR)/$(CURDIR)/sdcard.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-sdcard-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-sdcard-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-sdcard-includes_OPTS += -o 
+        kernel-sdcard-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-sdcard-includes_OPTS += -s 
+endif
+ifneq ($(kernel-sdcard_OBJDIR)/include,)
+    kernel-sdcard-includes_OPTS += -d $(kernel-sdcard_OBJDIR)/include
+    kernel-sdcard-includes_TARGETS := $(addprefix $(kernel-sdcard_OBJDIR)/include/,$(kernel-sdcard-includes_TARGETS))
+    kernel-sdcard-includes_GENINCFLAG=$(kernel-sdcard_OBJDIR)/include/.sdcard.device-includes
+else
+    kernel-sdcard-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.sdcard.device-includes
+endif
+
+$(kernel-sdcard-includes_TARGETS) : $(kernel-sdcard-includes_DEPS) $(kernel-sdcard-includes_GENINCFLAG)
+
+$(kernel-sdcard-includes_GENINCFLAG) : OPTS := $(kernel-sdcard-includes_OPTS)
+$(kernel-sdcard-includes_GENINCFLAG) : MODNAME := sdcard
+$(kernel-sdcard-includes_GENINCFLAG) : MODTYPE := device
+$(kernel-sdcard-includes_GENINCFLAG) : $(kernel-sdcard-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-sdcard_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-sdcard_DEFNAME)_INCLUDES)) : | $(kernel-sdcard_OBJDIR)/sdcard_geninc
+
+$(kernel-sdcard_OBJDIR)/sdcard_geninc : COPYSRCDIR := $(kernel-sdcard_OBJDIR)/include
+$(kernel-sdcard_OBJDIR)/sdcard_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-sdcard_OBJDIR)/sdcard_geninc : FILES := $($(kernel-sdcard_DEFNAME)_INCLUDES)
+$(kernel-sdcard_OBJDIR)/sdcard_geninc : $(addprefix $(kernel-sdcard_OBJDIR)/include/,$($(kernel-sdcard_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-sdcard_OBJDIR)/include
+
+$(addprefix $(kernel-sdcard_INCDIR)/,$($(kernel-sdcard_DEFNAME)_INCLUDES)) : | $(kernel-sdcard_OBJDIR)/sdcard_incs
+
+$(kernel-sdcard_OBJDIR)/sdcard_incs : COPYSRCDIR := $(kernel-sdcard_OBJDIR)/include
+$(kernel-sdcard_OBJDIR)/sdcard_incs : TGTDIR := $(kernel-sdcard_INCDIR)
+$(kernel-sdcard_OBJDIR)/sdcard_incs : FILES := $($(kernel-sdcard_DEFNAME)_INCLUDES)
+$(kernel-sdcard_OBJDIR)/sdcard_incs : $(addprefix $(kernel-sdcard_OBJDIR)/include/,$($(kernel-sdcard_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-sdcard_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-sdcard_DEFNAME)_INCLUDES))))
+
+TMPsdcard_INCDIRS := \
+    $(kernel-sdcard_OBJDIR)/include $(addprefix $(kernel-sdcard_OBJDIR)/include/,$(kernel-sdcard_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-sdcard_INCDIRS)) \
+    $(kernel-sdcard_INCDIR) $(addprefix $(kernel-sdcard_INCDIR)/,$(kernel-sdcard_INCDIRS))
+
+ifneq (kernel-sdcard-includes-dirs,)
+kernel-sdcard-includes-dirs : | $(TMPsdcard_INCDIRS)
+else
+kernel-sdcard-includes-dirs :: $(TMPsdcard_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPsdcard_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-sdcard-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-sdcard-genlibdefs_OPTS += -f 
+    kernel-sdcard-genlibdefs_MODNAME := sdcard_
+else
+    kernel-sdcard-genlibdefs_MODNAME := sdcard
+endif
+kernel-sdcard-genlibdefs_TARGET := $(kernel-sdcard-genlibdefs_MODNAME)_libdefs.h
+kernel-sdcard-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-sdcard-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-sdcard-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-sdcard-genlibdefs_OPTS += -c 
+        kernel-sdcard-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-sdcard-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/sdcard.conf
+    kernel-sdcard-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/sdcard.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-sdcard-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-sdcard-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-sdcard-genlibdefs_OPTS += -o 
+        kernel-sdcard-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-sdcard-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-sdcard_OBJDIR)/include,)
+    kernel-sdcard-genlibdefs_OPTS += -d $(kernel-sdcard_OBJDIR)/include
+    kernel-sdcard-genlibdefs_TARGET := $(kernel-sdcard_OBJDIR)/include/$(kernel-sdcard-genlibdefs_TARGET)
+endif
+ifneq ($(AROS_TARGET_PLATFORM),)
+    kernel-sdcard-genlibdefs_OPTS += -v $(AROS_TARGET_PLATFORM)
+endif
+
+$(kernel-sdcard-genlibdefs_TARGET) : OPTS := $(kernel-sdcard-genlibdefs_OPTS)
+$(kernel-sdcard-genlibdefs_TARGET) : MODNAME := sdcard
+$(kernel-sdcard-genlibdefs_TARGET) : MODTYPE := device
+$(kernel-sdcard-genlibdefs_TARGET) : $(kernel-sdcard-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-sdcard_DEFLIBDEFSINC) : FILENAME := $(kernel-sdcard_LIBDEFSINC)
+$(kernel-sdcard_DEFLIBDEFSINC) : $(kernel-sdcard_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-sdcard_LIBDEFSINC) $(kernel-sdcard_DEFLIBDEFSINC) : | $(kernel-sdcard_OBJDIR)/include
+
+ifneq (kernel-sdcard-includes-dirs,)
+kernel-sdcard-includes-dirs : | $(kernel-sdcard_OBJDIR)/include
+else
+kernel-sdcard-includes-dirs :: $(kernel-sdcard_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-sdcard_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-sdcard-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-sdcard-genmodfiles_OPTS += -f 
+    kernel-sdcard-genmodfiles_MODNAME := sdcard_
+else
+    kernel-sdcard-genmodfiles_MODNAME := sdcard
+endif
+kernel-sdcard-genmodfiles_GENTARGETS := $($(kernel-sdcard-genmodfiles_MODNAME)_STARTFILES) $($(kernel-sdcard-genmodfiles_MODNAME)_ENDFILES)
+kernel-sdcard-genmodfiles_STUBTARGETS := $($(kernel-sdcard-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-sdcard-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-sdcard-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-sdcard-genmodfiles_GENTARGETS))
+kernel-sdcard-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-sdcard-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-sdcard-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-sdcard-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-sdcard-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-sdcard-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-sdcard-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-sdcard-genmodfiles_OPTS += -c 
+        kernel-sdcard-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-sdcard-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/sdcard.conf
+    kernel-sdcard-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/sdcard.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-sdcard-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-sdcard-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-sdcard-genmodfiles_OPTS += -o 
+        kernel-sdcard-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-sdcard-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-sdcard_OBJDIR),)
+    kernel-sdcard-genmodfiles_OPTS += -d $(kernel-sdcard_OBJDIR)
+    kernel-sdcard-genmodfiles_TARGETDIR := $(shell echo $(kernel-sdcard_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-sdcard-genmodfiles_GENTARGETS := $(addprefix $(kernel-sdcard-genmodfiles_TARGETDIR)/,$(kernel-sdcard-genmodfiles_GENTARGETS))
+    kernel-sdcard-genmodfiles_GENFILEFLAG=$(kernel-sdcard-genmodfiles_TARGETDIR)/.sdcard.device-genfiles
+else
+    kernel-sdcard-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.sdcard.device-genfiles
+endif
+ifneq ($(kernel-sdcard_OBJDIR)/linklib,)
+    kernel-sdcard-genmodfiles_OPTS += -l $(kernel-sdcard_OBJDIR)/linklib
+    kernel-sdcard-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-sdcard_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-sdcard-genmodfiles_STUBTARGETS := $(addprefix $(kernel-sdcard-genmodfiles_STUBTARGETDIR)/,$(kernel-sdcard-genmodfiles_STUBTARGETS))
+    kernel-sdcard-genmodfiles_TARGETDIRS += $(kernel-sdcard_OBJDIR)/linklib
+else
+ifneq ($(kernel-sdcard_OBJDIR),)
+    kernel-sdcard-genmodfiles_STUBTARGETS := $(addprefix $(kernel-sdcard-genmodfiles_TARGETDIR)/,$(kernel-sdcard-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-sdcard-genmodfiles_TARGETS := $(kernel-sdcard-genmodfiles_GENTARGETS) $(kernel-sdcard-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-sdcard-genmodfiles_TARGETDIRS),)
+$(kernel-sdcard-genmodfiles_TARGETS) : | $(kernel-sdcard-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-sdcard-genmodfiles_TARGETS) : $(kernel-sdcard-genmodfiles_DEPS) $(kernel-sdcard-genmodfiles_GENFILEFLAG)
+
+$(kernel-sdcard-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-sdcard-genmodfiles_OPTS)
+$(kernel-sdcard-genmodfiles_GENFILEFLAG) : MODNAME := sdcard
+$(kernel-sdcard-genmodfiles_GENFILEFLAG) : MODTYPE := device
+$(kernel-sdcard-genmodfiles_GENFILEFLAG) : $(kernel-sdcard-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-sdcard-genmodfiles_GENFILEFLAG) : $(kernel-sdcard_DEFLIBDEFSINC) $(kernel-sdcard-makefile)
+
+
+ifneq ($(kernel-sdcard-genmodfiles_GENFILEFLAG),)
+$(kernel-sdcard-genmodfiles_GENFILEFLAG) : | $(kernel-sdcard_OBJDIR)/linklib
+else
+$(kernel-sdcard-genmodfiles_GENFILEFLAG) :: $(kernel-sdcard_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-sdcard_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-sdcard_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-sdcard_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-sdcard-fd : $(kernel-sdcard_FDDIR)/sdcard_lib.fd
+
+
+TMP_TARGET := sdcard_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/sdcard.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/sdcard.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-sdcard_FDDIR),)
+    TMP_OPTS += -d $(kernel-sdcard_FDDIR)
+    TMP_TARGET := $(kernel-sdcard_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := sdcard
+$(TMP_TARGET) : MODTYPE := device
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-sdcard_FDDIR)/sdcard_lib.fd : | $(kernel-sdcard_FDDIR)
+
+
+ifneq (kernel-sdcard-fd-setup,)
+kernel-sdcard-fd-setup : | $(kernel-sdcard_FDDIR)
+else
+kernel-sdcard-fd-setup :: $(kernel-sdcard_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-sdcard_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-sdcard_FILES            := $(SDCARDFILES)
+kernel-sdcard_OBJCFILES        := 
+kernel-sdcard_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-sdcard_LIBFILES         := 
+kernel-sdcard_LIBS             := 
+
+kernel-sdcard_FDIRS            := $(sort $(dir $(kernel-sdcard_FILES)))
+
+kernel-sdcard_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-sdcard_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-sdcard_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-sdcard_FILTERARCH       = $(filter-out $(call kernel-sdcard_MATCHARCH,$(1),$(2)),$(2))
+kernel-sdcard_STARTFILES       := $(addprefix $(kernel-sdcard_OBJDIR)/,$($(kernel-sdcard_DEFNAME)_STARTFILES))
+kernel-sdcard_ENDFILES         := $(addprefix $(kernel-sdcard_OBJDIR)/,$($(kernel-sdcard_DEFNAME)_ENDFILES))
+
+kernel-sdcard_ARCHOBJS         := $(wildcard $(kernel-sdcard_OBJDIR)/arch/*.o)
+kernel-sdcard_LIBARCHOBJS      := $(wildcard $(kernel-sdcard_OBJDIR)/linklib/arch/*.o)
+kernel-sdcard_ARCHFILES        := $(basename $(notdir $(kernel-sdcard_ARCHOBJS)))
+kernel-sdcard_LIBARCHFILES     := $(basename $(notdir $(kernel-sdcard_LIBARCHOBJS)))
+kernel-sdcard_C_NARCHFILES     := $(call kernel-sdcard_FILTERARCH,$(kernel-sdcard_ARCHFILES),$(kernel-sdcard_FILES))
+kernel-sdcard_CXX_NARCHFILES   := $(call kernel-sdcard_FILTERARCH,$(kernel-sdcard_ARCHFILES),$(kernel-sdcard_CXXFILES))
+kernel-sdcard_OBJC_NARCHFILES  := $(call kernel-sdcard_FILTERARCH,$(kernel-sdcard_ARCHFILES),$(kernel-sdcard_OBJCFILES))
+kernel-sdcard_NLIBARCHFILES    := $(call kernel-sdcard_FILTERARCH,$(kernel-sdcard_LIBARCHFILES),$(kernel-sdcard_LIBFILES))
+kernel-sdcard_ARCHNLIBFILES    := $(call kernel-sdcard_FILTERARCH,$(kernel-sdcard_LIBFILES),$(kernel-sdcard_LIBARCHFILES))
+
+kernel-sdcard_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-sdcard_OBJDIR)/include -include $(kernel-sdcard_DEFLIBDEFSINC))
+ifneq (,)
+kernel-sdcard_CPPFLAGS         += -I
+endif
+kernel-sdcard_LINKLIBCPPFLAGS  := $(kernel-sdcard_CPPFLAGS)
+kernel-sdcard_CPPFLAGS         += $(strip $($(kernel-sdcard_DEFNAME)_CPPFLAGS))
+kernel-sdcard_LINKLIBCPPFLAGS  += $(strip $($(kernel-sdcard_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-sdcard_CFLAGS           := $(strip $(CFLAGS) $($(kernel-sdcard_DEFNAME)_CFLAGS))
+kernel-sdcard_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-sdcard_DEFNAME)_LINKLIBCFLAGS))
+kernel-sdcard_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-sdcard_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-sdcard_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-sdcard_CFLAGS           := $(strip $(kernel-sdcard_LTOFLAGS) $(kernel-sdcard_CFLAGS))
+kernel-sdcard_LINKLIBCFLAGS    := $(strip $(kernel-sdcard_LTOFLAGS) $(kernel-sdcard_LINKLIBCFLAGS))
+kernel-sdcard_CXXFLAGS         := $(strip $(kernel-sdcard_LTOFLAGS) $(kernel-sdcard_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-sdcard_SUBSTNULL        :=
+kernel-sdcard_SUBSTSPACE       := $(kernel-sdcard_SUBSTNULL) #
+kernel-sdcard_SUBSTCOMMA       := ,
+kernel-sdcard_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-sdcard_SUBSTSPACE),$(kernel-sdcard_SUBSTCOMMA),$(strip $($(kernel-sdcard_DEFNAME)_STARTFILES))))
+kernel-sdcard_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-sdcard_CFLAGS           := $(strip $(kernel-sdcard_INSTRFUNCFLAGS) $(kernel-sdcard_CFLAGS))
+kernel-sdcard_CXXFLAGS         := $(strip $(kernel-sdcard_INSTRFUNCFLAGS) $(kernel-sdcard_CXXFLAGS))
+kernel-sdcard_LIBS             += $(kernel-sdcard_INSTRFUNCLIBS)
+endif
+endif
+kernel-sdcard_DFLAGS           := $(strip $(kernel-sdcard_DFLAGS) $($(kernel-sdcard_DEFNAME)_DFLAGS))
+kernel-sdcard_LINKLIBDFLAGS    := $(strip $(kernel-sdcard_DFLAGS) $($(kernel-sdcard_DEFNAME)_LINKLIBDFLAGS))
+kernel-sdcard_DXXFLAGS         := $(strip $(kernel-sdcard_DXXFLAGS) $($(kernel-sdcard_DEFNAME)_DXXFLAGS))
+
+ifeq (device,library)
+    kernel-sdcard_LIBSUFFIX    := 
+else
+    kernel-sdcard_LIBSUFFIX    := .device
+endif
+
+ifeq (,)
+kernel-sdcard_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-sdcard_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-sdcard_LINKLIBCFILES    := $(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$($(kernel-sdcard_DEFNAME)_LINKLIBFILES))
+kernel-sdcard_LINKLIBAFILES    := $(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$($(kernel-sdcard_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-sdcard_DEFNAME)_LINKLIBFILES) $($(kernel-sdcard_DEFNAME)_LINKLIBAFILES)  $(kernel-sdcard_ARCHNLIBFILES)),)
+    kernel-sdcard_LINKLIB      :=
+else
+    kernel-sdcard_LINKLIB      := $(kernel-sdcard_LIBDIR)/libsdcard$(kernel-sdcard_LIBSUFFIX).a
+    ifneq (sdcard,$(kernel-sdcard_LINKLIBNAME))
+        kernel-sdcard_LINKLIB  += $(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_LINKLIBNAME)$(kernel-sdcard_LIBSUFFIX).a
+    endif
+endif
+kernel-sdcard_LINKLIBFILES     := $(kernel-sdcard_LINKLIBCFILES) $(kernel-sdcard_LINKLIBAFILES)
+
+kernel-sdcard_RELLINKLIBCFILES := $(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$($(kernel-sdcard_DEFNAME)_RELLINKLIBFILES))
+kernel-sdcard_RELLINKLIBAFILES := $(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$($(kernel-sdcard_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-sdcard_DEFNAME)_RELLINKLIBFILES) $($(kernel-sdcard_DEFNAME)_RELLINKLIBAFILES)  $(kernel-sdcard_ARCHNLIBFILES)),)
+    kernel-sdcard_RELLINKLIB   :=
+else
+    kernel-sdcard_RELLINKLIB   := $(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_DEFNAME)_rel$(kernel-sdcard_LIBSUFFIX).a
+    ifneq (sdcard,$(kernel-sdcard_LINKLIBNAME))
+        kernel-sdcard_RELLINKLIB += $(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_LINKLIBNAME)_rel$(kernel-sdcard_LIBSUFFIX).a
+    endif
+endif
+kernel-sdcard_RELLINKLIBFILES  := $(kernel-sdcard_RELLINKLIBCFILES) $(kernel-sdcard_RELLINKLIBAFILES)
+endif
+
+kernel-sdcard_ENDOBJS          := $(addsuffix .o,$(kernel-sdcard_ENDFILES))
+kernel-sdcard_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$(notdir $(kernel-sdcard_NLIBARCHFILES))) $(addprefix $(kernel-sdcard_OBJDIR)/linklib/arch/,$(notdir $(kernel-sdcard_ARCHNLIBFILES))) $(kernel-sdcard_LINKLIBFILES)) \
+                 
+kernel-sdcard_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$(notdir $(kernel-sdcard_NLIBARCHFILES))) $(addprefix $(kernel-sdcard_OBJDIR)/linklib/arch/,$(notdir $(kernel-sdcard_ARCHNLIBFILES))) $(kernel-sdcard_RELLINKLIBFILES)) \
+                 
+$(kernel-sdcard_LINKLIBFILES) $(kernel-sdcard_RELLINKLIBFILES) : | $(kernel-sdcard_OBJDIR)/linklib
+$(kernel-sdcard_LINKLIBOBJS) $(kernel-sdcard_RELLINKLIBOBJS) : | $(kernel-sdcard_OBJDIR)/linklib
+
+kernel-sdcard_CCFILES := $(kernel-sdcard_C_NARCHFILES)
+kernel-sdcard_TARGETCCFILES    := $(strip $(kernel-sdcard_STARTFILES) $(kernel-sdcard_ENDFILES))
+kernel-sdcard_LINKLIBCCFILES   := $(strip $(kernel-sdcard_NLIBARCHFILES) $(kernel-sdcard_LINKLIBCFILES) $(kernel-sdcard_RELLINKLIBCFILES))
+kernel-sdcard_LINKLIBCCGENFILES := $(strip $(kernel-sdcard_LINKLIBCFILES) $(kernel-sdcard_RELLINKLIBCFILES))
+
+
+kernel-sdcard_CXXABSBASENAMES := $(foreach kernel-sdcard_CXXBASE,$(kernel-sdcard_CXX_NARCHFILES),$(if $(filter /%,$(kernel-sdcard_CXXBASE)),$(kernel-sdcard_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-sdcard_CXXBASE))))
+
+ifneq ($(kernel-sdcard_CXXABSBASENAMES),)
+
+kernel-sdcard_CXXBASENAMES := $(basename $(kernel-sdcard_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-sdcard_MCXX_FILES  := $(strip $(foreach kernel-sdcard_CXXBASE,$(kernel-sdcard_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-sdcard_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-sdcard_EXT),$(kernel-sdcard_CXXBASE)))))))
+
+ifeq (,)
+kernel-sdcard_MCXX_SRCWILDCARD := %
+else
+kernel-sdcard_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-sdcard_OBJDIR),)
+  kernel-sdcard_CXXTARGETS := $(notdir $(kernel-sdcard_CXXBASENAMES:=.o))
+  kernel-sdcard_CXXDTARGETS := $(notdir $(kernel-sdcard_CXXBASENAMES:=.d))
+  kernel-sdcard_MCXX_WILDCARD := %
+else
+  kernel-sdcard_CXXTARGETS := $(addprefix $(kernel-sdcard_OBJDIR)/,$(notdir $(kernel-sdcard_CXXBASENAMES:=.o)))
+  kernel-sdcard_CXXDTARGETS := $(addprefix $(kernel-sdcard_OBJDIR)/,$(notdir $(kernel-sdcard_CXXBASENAMES:=.d)))
+  kernel-sdcard_MCXX_WILDCARD := $(kernel-sdcard_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-sdcard_CXXTARGETS) $(kernel-sdcard_CXXDTARGETS) : | $(kernel-sdcard_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-sdcard_MCXX_CPPFLAGS := $(kernel-sdcard_CPPFLAGS)
+kernel-sdcard_CXXFLAGS := $(kernel-sdcard_CXXFLAGS)
+ifeq ($(kernel-sdcard_DXXFLAGS),)
+  kernel-sdcard_DXXFLAGS := $(kernel-sdcard_CXXFLAGS)
+else
+  kernel-sdcard_DXXFLAGS := $(kernel-sdcard_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-sdcard_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-sdcard_STRIP ?= $(HOST_STRIP)
+  kernel-sdcard_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-sdcard_CXXCMD:=$(HOST_CXX)
+  kernel-sdcard_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-sdcard_MCXX_CPPFLAGS) $(kernel-sdcard_MCXX_EXTRA_CPPFLAGS))
+  kernel-sdcard_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-sdcard_CXXFLAGS))
+  kernel-sdcard_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-sdcard_DXXFLAGS))
+  kernel-sdcard_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-sdcard_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-sdcard_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-sdcard_STRIP ?= $(TARGET_STRIP)
+  kernel-sdcard_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-sdcard_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-sdcard_MCXX_CPPFLAGS := $(strip $(kernel-sdcard_MCXX_CPPFLAGS) $(kernel-sdcard_MCXX_EXTRA_CPPFLAGS))
+  kernel-sdcard_CXXFLAGS := $(strip $(kernel-sdcard_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-sdcard_DXXFLAGS := $(kernel-sdcard_DXXFLAGS)
+  kernel-sdcard_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-sdcard_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-sdcard_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-sdcard_STRIP ?= $(ECHO) >/dev/null
+  kernel-sdcard_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-sdcard_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-sdcard_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-sdcard_MCXX_CPPFLAGS) $(kernel-sdcard_MCXX_EXTRA_CPPFLAGS))
+  kernel-sdcard_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-sdcard_CXXFLAGS))
+  kernel-sdcard_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-sdcard_DXXFLAGS))
+  kernel-sdcard_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-sdcard_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-sdcard_CXXCMD) $(kernel-sdcard_CXXIQUOTE) $(dir $(2)) $(kernel-sdcard_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_CXXIQUOTE) . $(kernel-sdcard_CXXIQUOTE_END) $(strip $(kernel-sdcard_CXXFLAGS) $(kernel-sdcard_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-sdcard_CXXCMD) $(kernel-sdcard_CXXIQUOTE) $(dir $(2)) $(kernel-sdcard_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_CXXIQUOTE) . $(kernel-sdcard_CXXIQUOTE_END) $(strip $(kernel-sdcard_CXXFLAGS) $(kernel-sdcard_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-sdcard_CXXCMD) $(kernel-sdcard_CXXIQUOTE) $(dir $(2)) $(kernel-sdcard_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_CXXIQUOTE) . $(kernel-sdcard_CXXIQUOTE_END) $(strip $(kernel-sdcard_CXXFLAGS) $(kernel-sdcard_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-sdcard_CXXCMD)" $(MKDEPEND) $(strip $(kernel-sdcard_DXXFLAGS) $(kernel-sdcard_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-sdcard_OBJDIR),)
+  $(foreach kernel-sdcard_CXXFILE,$(kernel-sdcard_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-sdcard_CXXFILE))),$(kernel-sdcard_CXXFILE))))
+else
+  $(foreach kernel-sdcard_CXXFILE,$(kernel-sdcard_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-sdcard_OBJDIR)/,$(notdir $(basename $(kernel-sdcard_CXXFILE)))),$(kernel-sdcard_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-sdcard_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-sdcard_MOBJC_SRCWILDCARD := %
+else
+kernel-sdcard_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-sdcard_OBJDIR),)
+  kernel-sdcard_MOBJC_TARGETS := $(addsuffix .o,$(kernel-sdcard_OBJC_NARCHFILES))
+  kernel-sdcard_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-sdcard_OBJC_NARCHFILES))
+  kernel-sdcard_MOBJC_WILDCARD := %
+else
+  kernel-sdcard_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-sdcard_OBJDIR)/,$(kernel-sdcard_OBJC_NARCHFILES)))
+  kernel-sdcard_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-sdcard_OBJDIR)/,$(kernel-sdcard_OBJC_NARCHFILES)))
+  kernel-sdcard_MOBJC_WILDCARD := $(kernel-sdcard_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-sdcard_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-sdcard_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-sdcard_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-sdcard_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-sdcard_MOBJC_DIRS := $(foreach dir, $(kernel-sdcard_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-sdcard_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-sdcard_MOBJC_DIRS),)
+    kernel-sdcard_MOBJC_DIRS := $(shell echo $(kernel-sdcard_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-sdcard_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-sdcard_CC := $(TARGET_CC)
+else
+  kernel-sdcard_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-sdcard_MOBJC_CPPFLAGS := $(kernel-sdcard_CPPFLAGS)
+kernel-sdcard_OBJCFLAGS := $(kernel-sdcard_CFLAGS)
+kernel-sdcard_OBJCFLAGS := $(kernel-sdcard_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-sdcard_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-sdcard_OBJCFLAGS)))
+ifeq ($(kernel-sdcard_DFLAGS),)
+  kernel-sdcard_OBJCDFLAGS := $(kernel-sdcard_CFLAGS)
+else
+  kernel-sdcard_OBJCDFLAGS := $(kernel-sdcard_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-sdcard_LINK ?= $(strip $(kernel-sdcard_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-sdcard_STRIP ?= $(TARGET_STRIP)
+  kernel-sdcard_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-sdcard_CC) $(TARGET_SYSROOT))
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : kernel-sdcard_MOBJC_CPPFLAGS:=$(strip $(kernel-sdcard_MOBJC_CPPFLAGS) $(kernel-sdcard_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : kernel-sdcard_OBJCFLAGS:=$(strip $(kernel-sdcard_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : kernel-sdcard_OBJCDFLAGS:=$(kernel-sdcard_OBJCDFLAGS)
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : kernel-sdcard_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : kernel-sdcard_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-sdcard_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-sdcard_STRIP ?= $(HOST_STRIP)
+  kernel-sdcard_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : kernel-sdcard_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-sdcard_MOBJC_CPPFLAGS) $(kernel-sdcard_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : kernel-sdcard_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-sdcard_OBJCFLAGS))
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : kernel-sdcard_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-sdcard_OBJCDFLAGS))
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : kernel-sdcard_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : kernel-sdcard_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-sdcard_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-sdcard_STRIP ?= $(ECHO) >/dev/null
+  kernel-sdcard_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : kernel-sdcard_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-sdcard_MOBJC_CPPFLAGS) $(kernel-sdcard_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : kernel-sdcard_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-sdcard_OBJCFLAGS))
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : kernel-sdcard_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-sdcard_OBJCDFLAGS))
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : kernel-sdcard_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-sdcard_MOBJC_TARGETS) $(kernel-sdcard_MOBJC_DTARGETS) : kernel-sdcard_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-sdcard_MOBJC_TARGETS) : CPPFLAGS := $(kernel-sdcard_MOBJC_CPPFLAGS)
+$(kernel-sdcard_MOBJC_TARGETS) : CFLAGS := $(kernel-sdcard_OBJCFLAGS)
+$(kernel-sdcard_MOBJC_TARGETS) : $(kernel-sdcard_MOBJC_WILDCARD).o : $(kernel-sdcard_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-sdcard_IQUOTE) $(dir $<) $(kernel-sdcard_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_IQUOTE) . $(kernel-sdcard_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-sdcard_IQUOTE) $(dir $<) $(kernel-sdcard_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_IQUOTE) . $(kernel-sdcard_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-sdcard_IQUOTE) $(dir $<) $(kernel-sdcard_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_IQUOTE) . $(kernel-sdcard_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-sdcard_MOBJC_DTARGETS) : $(kernel-sdcard_MOBJC_WILDCARD).d : $(kernel-sdcard_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-sdcard_OBJCDFLAGS) $(kernel-sdcard_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-sdcard_MC_SRCWILDCARD := %
+else
+kernel-sdcard_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-sdcard_OBJDIR),)
+kernel-sdcard_MC_TARGETS := $(addsuffix .o,$(kernel-sdcard_CCFILES))
+kernel-sdcard_MC_DTARGETS := $(addsuffix .d,$(kernel-sdcard_CCFILES))
+kernel-sdcard_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-sdcard_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-sdcard_OBJDIR)/,$(notdir $(kernel-sdcard_CCFILES))))
+    kernel-sdcard_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-sdcard_OBJDIR)/,$(notdir $(kernel-sdcard_CCFILES))))
+else
+ifeq (,)
+    kernel-sdcard_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-sdcard_OBJDIR)/,$(kernel-sdcard_CCFILES)))
+    kernel-sdcard_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-sdcard_OBJDIR)/,$(kernel-sdcard_CCFILES)))
+else
+    kernel-sdcard_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-sdcard_OBJDIR)/,$(patsubst /%,%,$(kernel-sdcard_CCFILES))))
+    kernel-sdcard_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-sdcard_OBJDIR)/,$(patsubst /%,%,$(kernel-sdcard_CCFILES))))
+endif
+endif
+kernel-sdcard_MC_TGTWILDCARD := $(kernel-sdcard_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : | $(addsuffix .c,$(kernel-sdcard_CCFILES))
+
+# Be sure that all .c files are found
+kernel-sdcard_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-sdcard_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-sdcard_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-sdcard_MC_DIRS := $(foreach dir, $(kernel-sdcard_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-sdcard_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-sdcard_MC_DIRS),)
+    kernel-sdcard_MC_DIRS := $(shell echo $(kernel-sdcard_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-sdcard_MC_DIRS)
+endif
+
+endif
+
+kernel-sdcard_MC_CPPFLAGS := $(kernel-sdcard_CPPFLAGS)
+kernel-sdcard_CFLAGS := $(kernel-sdcard_CFLAGS)
+ifeq ($(kernel-sdcard_DFLAGS),)
+  kernel-sdcard_DFLAGS := $(kernel-sdcard_CFLAGS)
+else
+  kernel-sdcard_DFLAGS := $(kernel-sdcard_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-sdcard_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-sdcard_STRIP ?= $(TARGET_STRIP)
+kernel-sdcard_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_MC_CPPFLAGS:=$(strip $(kernel-sdcard_MC_CPPFLAGS) $(kernel-sdcard_MC_EXTRA_CPPFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_CFLAGS:=$(strip $(kernel-sdcard_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_DFLAGS:=$(kernel-sdcard_DFLAGS)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-sdcard_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-sdcard_STRIP ?= $(HOST_STRIP)
+kernel-sdcard_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-sdcard_MC_CPPFLAGS) $(kernel-sdcard_MC_EXTRA_CPPFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-sdcard_CFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-sdcard_DFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-sdcard_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-sdcard_STRIP ?= $(ECHO) >/dev/null
+kernel-sdcard_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-sdcard_MC_CPPFLAGS) $(kernel-sdcard_MC_EXTRA_CPPFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-sdcard_CFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-sdcard_DFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-sdcard_MC_TARGETS) : CPPFLAGS := $(kernel-sdcard_MC_CPPFLAGS)
+$(kernel-sdcard_MC_TARGETS) : CFLAGS := $(kernel-sdcard_CFLAGS)
+$(kernel-sdcard_MC_TARGETS) : $(kernel-sdcard_MC_TGTWILDCARD).o : $(kernel-sdcard_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-sdcard_IQUOTE) $(dir $<) $(kernel-sdcard_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_IQUOTE) . $(kernel-sdcard_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-sdcard_IQUOTE) $(dir $<) $(kernel-sdcard_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_IQUOTE) . $(kernel-sdcard_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-sdcard_IQUOTE) $(dir $<) $(kernel-sdcard_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_IQUOTE) . $(kernel-sdcard_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-sdcard_MC_DTARGETS) : $(kernel-sdcard_MC_TGTWILDCARD).d : $(kernel-sdcard_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-sdcard_DFLAGS) $(kernel-sdcard_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-sdcard_MC_SRCWILDCARD := %
+else
+kernel-sdcard_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-sdcard_OBJDIR),)
+kernel-sdcard_MC_TARGETS := $(addsuffix .o,$(kernel-sdcard_TARGETCCFILES))
+kernel-sdcard_MC_DTARGETS := $(addsuffix .d,$(kernel-sdcard_TARGETCCFILES))
+kernel-sdcard_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-sdcard_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-sdcard_OBJDIR)/,$(notdir $(kernel-sdcard_TARGETCCFILES))))
+    kernel-sdcard_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-sdcard_OBJDIR)/,$(notdir $(kernel-sdcard_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-sdcard_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-sdcard_OBJDIR)/,$(kernel-sdcard_TARGETCCFILES)))
+    kernel-sdcard_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-sdcard_OBJDIR)/,$(kernel-sdcard_TARGETCCFILES)))
+else
+    kernel-sdcard_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-sdcard_OBJDIR)/,$(patsubst /%,%,$(kernel-sdcard_TARGETCCFILES))))
+    kernel-sdcard_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-sdcard_OBJDIR)/,$(patsubst /%,%,$(kernel-sdcard_TARGETCCFILES))))
+endif
+endif
+kernel-sdcard_MC_TGTWILDCARD := $(kernel-sdcard_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : | $(addsuffix .c,$(kernel-sdcard_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-sdcard_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-sdcard_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-sdcard_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-sdcard_MC_DIRS := $(foreach dir, $(kernel-sdcard_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-sdcard_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-sdcard_MC_DIRS),)
+    kernel-sdcard_MC_DIRS := $(shell echo $(kernel-sdcard_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-sdcard_MC_DIRS)
+endif
+
+endif
+
+kernel-sdcard_MC_CPPFLAGS := $(kernel-sdcard_CPPFLAGS) -D__AROS__
+kernel-sdcard_CFLAGS := $(kernel-sdcard_CFLAGS)
+ifeq ($(kernel-sdcard_DFLAGS),)
+  kernel-sdcard_DFLAGS := $(kernel-sdcard_CFLAGS)
+else
+  kernel-sdcard_DFLAGS := $(kernel-sdcard_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-sdcard_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-sdcard_STRIP ?= $(TARGET_STRIP)
+kernel-sdcard_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_MC_CPPFLAGS:=$(strip $(kernel-sdcard_MC_CPPFLAGS) $(kernel-sdcard_MC_EXTRA_CPPFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_CFLAGS:=$(strip $(kernel-sdcard_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_DFLAGS:=$(kernel-sdcard_DFLAGS)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-sdcard_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-sdcard_STRIP ?= $(HOST_STRIP)
+kernel-sdcard_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-sdcard_MC_CPPFLAGS) $(kernel-sdcard_MC_EXTRA_CPPFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-sdcard_CFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-sdcard_DFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-sdcard_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-sdcard_STRIP ?= $(ECHO) >/dev/null
+kernel-sdcard_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-sdcard_MC_CPPFLAGS) $(kernel-sdcard_MC_EXTRA_CPPFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-sdcard_CFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-sdcard_DFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-sdcard_MC_TARGETS) : CPPFLAGS := $(kernel-sdcard_MC_CPPFLAGS)
+$(kernel-sdcard_MC_TARGETS) : CFLAGS := $(kernel-sdcard_CFLAGS)
+$(kernel-sdcard_MC_TARGETS) : $(kernel-sdcard_MC_TGTWILDCARD).o : $(kernel-sdcard_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-sdcard_IQUOTE) $(dir $<) $(kernel-sdcard_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_IQUOTE) . $(kernel-sdcard_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-sdcard_IQUOTE) $(dir $<) $(kernel-sdcard_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_IQUOTE) . $(kernel-sdcard_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-sdcard_IQUOTE) $(dir $<) $(kernel-sdcard_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_IQUOTE) . $(kernel-sdcard_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-sdcard_MC_DTARGETS) : $(kernel-sdcard_MC_TGTWILDCARD).d : $(kernel-sdcard_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-sdcard_DFLAGS) $(kernel-sdcard_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-sdcard_MC_SRCWILDCARD := %
+else
+kernel-sdcard_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-sdcard_OBJDIR)/linklib,)
+kernel-sdcard_MC_TARGETS := $(addsuffix .o,$(kernel-sdcard_NLIBARCHFILES))
+kernel-sdcard_MC_DTARGETS := $(addsuffix .d,$(kernel-sdcard_NLIBARCHFILES))
+kernel-sdcard_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-sdcard_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$(notdir $(kernel-sdcard_NLIBARCHFILES))))
+    kernel-sdcard_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$(notdir $(kernel-sdcard_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-sdcard_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$(kernel-sdcard_NLIBARCHFILES)))
+    kernel-sdcard_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$(kernel-sdcard_NLIBARCHFILES)))
+else
+    kernel-sdcard_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-sdcard_NLIBARCHFILES))))
+    kernel-sdcard_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-sdcard_NLIBARCHFILES))))
+endif
+endif
+kernel-sdcard_MC_TGTWILDCARD := $(kernel-sdcard_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : | $(addsuffix .c,$(kernel-sdcard_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-sdcard_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-sdcard_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-sdcard_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-sdcard_MC_DIRS := $(foreach dir, $(kernel-sdcard_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-sdcard_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-sdcard_MC_DIRS),)
+    kernel-sdcard_MC_DIRS := $(shell echo $(kernel-sdcard_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-sdcard_MC_DIRS)
+endif
+
+endif
+
+kernel-sdcard_MC_CPPFLAGS := $(kernel-sdcard_LINKLIBCPPFLAGS) -D__AROS__
+kernel-sdcard_CFLAGS := $(kernel-sdcard_LINKLIBCFLAGS)
+ifeq ($(kernel-sdcard_LINKLIBDFLAGS),)
+  kernel-sdcard_DFLAGS := $(kernel-sdcard_LINKLIBCFLAGS)
+else
+  kernel-sdcard_DFLAGS := $(kernel-sdcard_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-sdcard_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-sdcard_STRIP ?= $(TARGET_STRIP)
+kernel-sdcard_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_MC_CPPFLAGS:=$(strip $(kernel-sdcard_MC_CPPFLAGS) $(kernel-sdcard_MC_EXTRA_CPPFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_CFLAGS:=$(strip $(kernel-sdcard_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_DFLAGS:=$(kernel-sdcard_DFLAGS)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-sdcard_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-sdcard_STRIP ?= $(HOST_STRIP)
+kernel-sdcard_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-sdcard_MC_CPPFLAGS) $(kernel-sdcard_MC_EXTRA_CPPFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-sdcard_CFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-sdcard_DFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-sdcard_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-sdcard_STRIP ?= $(ECHO) >/dev/null
+kernel-sdcard_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-sdcard_MC_CPPFLAGS) $(kernel-sdcard_MC_EXTRA_CPPFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-sdcard_CFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-sdcard_DFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-sdcard_MC_TARGETS) : CPPFLAGS := $(kernel-sdcard_MC_CPPFLAGS)
+$(kernel-sdcard_MC_TARGETS) : CFLAGS := $(kernel-sdcard_CFLAGS)
+$(kernel-sdcard_MC_TARGETS) : $(kernel-sdcard_MC_TGTWILDCARD).o : $(kernel-sdcard_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-sdcard_IQUOTE) $(dir $<) $(kernel-sdcard_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_IQUOTE) . $(kernel-sdcard_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-sdcard_IQUOTE) $(dir $<) $(kernel-sdcard_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_IQUOTE) . $(kernel-sdcard_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-sdcard_IQUOTE) $(dir $<) $(kernel-sdcard_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_IQUOTE) . $(kernel-sdcard_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-sdcard_MC_DTARGETS) : $(kernel-sdcard_MC_TGTWILDCARD).d : $(kernel-sdcard_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-sdcard_DFLAGS) $(kernel-sdcard_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-sdcard_OBJDIR)/linklib,)
+kernel-sdcard_MC_SRCWILDCARD := %
+else
+kernel-sdcard_MC_SRCWILDCARD := $(kernel-sdcard_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-sdcard_OBJDIR)/linklib,)
+kernel-sdcard_MC_TARGETS := $(addsuffix .o,$(kernel-sdcard_LINKLIBCCGENFILES))
+kernel-sdcard_MC_DTARGETS := $(addsuffix .d,$(kernel-sdcard_LINKLIBCCGENFILES))
+kernel-sdcard_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-sdcard_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$(notdir $(kernel-sdcard_LINKLIBCCGENFILES))))
+    kernel-sdcard_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$(notdir $(kernel-sdcard_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-sdcard_OBJDIR)/linklib,)
+    kernel-sdcard_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$(kernel-sdcard_LINKLIBCCGENFILES)))
+    kernel-sdcard_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$(kernel-sdcard_LINKLIBCCGENFILES)))
+else
+    kernel-sdcard_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$(patsubst $(kernel-sdcard_OBJDIR)/linklib/%,%,$(kernel-sdcard_LINKLIBCCGENFILES))))
+    kernel-sdcard_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$(patsubst $(kernel-sdcard_OBJDIR)/linklib/%,%,$(kernel-sdcard_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-sdcard_MC_TGTWILDCARD := $(kernel-sdcard_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : | $(addsuffix .c,$(kernel-sdcard_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-sdcard_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-sdcard_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-sdcard_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-sdcard_MC_DIRS := $(foreach dir, $(kernel-sdcard_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-sdcard_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-sdcard_MC_DIRS),)
+    kernel-sdcard_MC_DIRS := $(shell echo $(kernel-sdcard_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-sdcard_MC_DIRS)
+endif
+
+endif
+
+kernel-sdcard_MC_CPPFLAGS := $(kernel-sdcard_LINKLIBCPPFLAGS) -D__AROS__
+kernel-sdcard_CFLAGS := $(kernel-sdcard_LINKLIBCFLAGS)
+ifeq ($(kernel-sdcard_LINKLIBDFLAGS),)
+  kernel-sdcard_DFLAGS := $(kernel-sdcard_LINKLIBCFLAGS)
+else
+  kernel-sdcard_DFLAGS := $(kernel-sdcard_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-sdcard_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-sdcard_STRIP ?= $(TARGET_STRIP)
+kernel-sdcard_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_MC_CPPFLAGS:=$(strip $(kernel-sdcard_MC_CPPFLAGS) $(kernel-sdcard_MC_EXTRA_CPPFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_CFLAGS:=$(strip $(kernel-sdcard_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_DFLAGS:=$(kernel-sdcard_DFLAGS)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-sdcard_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-sdcard_STRIP ?= $(HOST_STRIP)
+kernel-sdcard_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-sdcard_MC_CPPFLAGS) $(kernel-sdcard_MC_EXTRA_CPPFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-sdcard_CFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-sdcard_DFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-sdcard_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-sdcard_STRIP ?= $(ECHO) >/dev/null
+kernel-sdcard_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-sdcard_MC_CPPFLAGS) $(kernel-sdcard_MC_EXTRA_CPPFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-sdcard_CFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-sdcard_DFLAGS))
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-sdcard_MC_TARGETS) $(kernel-sdcard_MC_DTARGETS) : kernel-sdcard_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-sdcard_MC_TARGETS) : CPPFLAGS := $(kernel-sdcard_MC_CPPFLAGS)
+$(kernel-sdcard_MC_TARGETS) : CFLAGS := $(kernel-sdcard_CFLAGS)
+$(kernel-sdcard_MC_TARGETS) : $(kernel-sdcard_MC_TGTWILDCARD).o : $(kernel-sdcard_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-sdcard_IQUOTE) $(dir $<) $(kernel-sdcard_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_IQUOTE) . $(kernel-sdcard_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-sdcard_IQUOTE) $(dir $<) $(kernel-sdcard_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_IQUOTE) . $(kernel-sdcard_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-sdcard_IQUOTE) $(dir $<) $(kernel-sdcard_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-sdcard_IQUOTE) . $(kernel-sdcard_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-sdcard_MC_DTARGETS) : $(kernel-sdcard_MC_TGTWILDCARD).d : $(kernel-sdcard_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-sdcard_DFLAGS) $(kernel-sdcard_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-sdcard_LINKLIBAFILES),)
+
+ifeq ($(kernel-sdcard_OBJDIR)/linklib,)
+kernel-sdcard-MA_TARGETS := $(addsuffix .o,$(kernel-sdcard_LINKLIBAFILES) $(kernel-sdcard_RELLINKLIBAFILES))
+kernel-sdcard-MA_WILDCARD := %
+else
+kernel-sdcard-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$(notdir $(kernel-sdcard_LINKLIBAFILES) $(kernel-sdcard_RELLINKLIBAFILES))))
+kernel-sdcard-MA_WILDCARD := $(kernel-sdcard_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-sdcard-MA_TARGETS) : | $(addsuffix .S,$(kernel-sdcard_LINKLIBAFILES) $(kernel-sdcard_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-sdcard-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-sdcard-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-sdcard_LINKLIBAFILES) $(kernel-sdcard_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-sdcard-MA_DIRS := $(foreach dir, $(kernel-sdcard-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-sdcard-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-sdcard-MA_DIRS),)
+    kernel-sdcard-MA_DIRS := $(shell echo $(kernel-sdcard-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-sdcard-MA_DIRS)
+endif
+
+endif
+
+kernel-sdcard-MA_ASSEMBLER ?= $(kernel-sdcard_ASSEMBLER)
+
+$(kernel-sdcard-MA_TARGETS) : kernel-sdcard-MA_CMD:= $(kernel-sdcard-MA_ASSEMBLER)
+
+$(kernel-sdcard-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-sdcard-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-sdcard-MA_TARGETS) : $(kernel-sdcard-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-sdcard-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-sdcard-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-sdcard-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-sdcard_SUFFIX           := device
+else
+kernel-sdcard_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-sdcard_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-sdcard_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-sdcard_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-sdcard_SUFFIX),handler)
+kernel-sdcard_MODULE           := $(AROSDIR)/$(kernel-sdcard_MODDIR)/$(kernel-sdcard_DEFNAME)-$(kernel-sdcard_SUFFIX)
+else
+kernel-sdcard_MODULE           := $(AROSDIR)/$(kernel-sdcard_MODDIR)/$(kernel-sdcard_DEFNAME).$(kernel-sdcard_SUFFIX)
+endif
+kernel-sdcard_KOBJ             := $(KOBJSDIR)/$(kernel-sdcard_DEFNAME)_$(kernel-sdcard_SUFFIX).o
+else
+kernel-sdcard_MODULE           :=
+kernel-sdcard_KOBJ             :=
+endif
+
+kernel-sdcard-quick      : kernel-sdcard
+kernel-sdcard            : $(kernel-sdcard_MODULE) $(kernel-sdcard_LINKLIB) $(kernel-sdcard_RELLINKLIB)
+ifeq (M,M)
+kernel-sdcard-kobj       : $(kernel-sdcard_KOBJ) $(kernel-sdcard_LINKLIB) $(kernel-sdcard_RELLINKLIB)
+kernel-sdcard-kobj-quick : $(kernel-sdcard_KOBJ) $(kernel-sdcard_LINKLIB) $(kernel-sdcard_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-sdcard-linklib    : $(kernel-sdcard_LINKLIB) $(kernel-sdcard_RELLINKLIB)
+endif
+
+kernel-sdcard_OBJS := $(addsuffix .o,$(kernel-sdcard_STARTFILES)) $(kernel-sdcard_ARCHOBJS) \
+           $(addprefix $(kernel-sdcard_OBJDIR)/,$(notdir $(kernel-sdcard_C_NARCHFILES:=.o) $(kernel-sdcard_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (device,handler)
+kernel-sdcard_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (sdcard,con)
+    kernel-sdcard_ERR          := $(notdir $(kernel-sdcard_MODULE)).err
+else
+    kernel-sdcard_ERR          := sdcard.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-sdcard_DEFNAME)_LDFLAGS) $(kernel-sdcard_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-sdcard_LIBS) $($(kernel-sdcard_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-sdcard_MODULE) : LIB_NAMES := $(kernel-sdcard_LIBS) $($(kernel-sdcard_DEFNAME)_LIBS)
+$(kernel-sdcard_MODULE) : OBJS := $(kernel-sdcard_STARTOBJS) $(kernel-sdcard_OBJS) $(USER_OBJS)
+$(kernel-sdcard_MODULE) : ENDTAG := $(kernel-sdcard_ENDOBJS)
+$(kernel-sdcard_MODULE) : ERR := $(kernel-sdcard_ERR)
+$(kernel-sdcard_MODULE) : OBJDIR := $(kernel-sdcard_OBJDIR)
+$(kernel-sdcard_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-sdcard_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-sdcard_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-sdcard_MODULE) : $(kernel-sdcard_STARTOBJS) $(kernel-sdcard_OBJS) $(USER_OBJS) $(kernel-sdcard_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-sdcard_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-sdcard_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-sdcard_LC_LINKLIBNAME   := $(shell echo $(kernel-sdcard_LINKLIBNAME) | tr A-Z a-z)
+kernel-sdcard_LC_MODNAME       := $(shell echo sdcard | tr A-Z a-z)
+ifneq ($(kernel-sdcard_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_LINKLIBNAME)$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_AR:=$(AR)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_LINKLIBNAME)$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_LINKLIBNAME)$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_AR:=$(HOST_AR)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_LINKLIBNAME)$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_LINKLIBNAME)$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_AR:=$(KERNEL_AR)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_LINKLIBNAME)$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_LINKLIBNAME)$(kernel-sdcard_LIBSUFFIX).a : $(kernel-sdcard_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-sdcard_AR) $@ $^
+	$(Q)$(kernel-sdcard_RANLIB) $@
+ifneq ($(kernel-sdcard_LC_MODNAME),$(kernel-sdcard_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-sdcard_LIBDIR)/libsdcard$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_AR:=$(AR)
+$(kernel-sdcard_LIBDIR)/libsdcard$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-sdcard_LIBDIR)/libsdcard$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_AR:=$(HOST_AR)
+$(kernel-sdcard_LIBDIR)/libsdcard$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-sdcard_LIBDIR)/libsdcard$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_AR:=$(KERNEL_AR)
+$(kernel-sdcard_LIBDIR)/libsdcard$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-sdcard_LIBDIR)/libsdcard$(kernel-sdcard_LIBSUFFIX).a : $(kernel-sdcard_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-sdcard_AR) $@ $^
+	$(Q)$(kernel-sdcard_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-sdcard_LINKLIB),)
+$(kernel-sdcard_LINKLIB) : | $(kernel-sdcard_LIBDIR)
+else
+$(kernel-sdcard_LINKLIB) :: $(kernel-sdcard_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-sdcard_LIBDIR)
+
+endif
+
+ifneq ($(kernel-sdcard_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_LINKLIBNAME)_rel$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_AR:=$(AR)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_LINKLIBNAME)_rel$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_LINKLIBNAME)_rel$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_AR:=$(HOST_AR)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_LINKLIBNAME)_rel$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_LINKLIBNAME)_rel$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_AR:=$(KERNEL_AR)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_LINKLIBNAME)_rel$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_LINKLIBNAME)_rel$(kernel-sdcard_LIBSUFFIX).a : $(kernel-sdcard_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-sdcard_AR) $@ $^
+	$(Q)$(kernel-sdcard_RANLIB) $@
+ifneq ($(kernel-sdcard_LC_MODNAME),$(kernel-sdcard_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_DEFNAME)_rel$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_AR:=$(AR)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_DEFNAME)_rel$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_DEFNAME)_rel$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_AR:=$(HOST_AR)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_DEFNAME)_rel$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_DEFNAME)_rel$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_AR:=$(KERNEL_AR)
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_DEFNAME)_rel$(kernel-sdcard_LIBSUFFIX).a : kernel-sdcard_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-sdcard_LIBDIR)/lib$(kernel-sdcard_DEFNAME)_rel$(kernel-sdcard_LIBSUFFIX).a : $(kernel-sdcard_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-sdcard_AR) $@ $^
+	$(Q)$(kernel-sdcard_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-sdcard_RELLINKLIB),)
+$(kernel-sdcard_RELLINKLIB) : | $(kernel-sdcard_LIBDIR)
+else
+$(kernel-sdcard_RELLINKLIB) :: $(kernel-sdcard_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-sdcard_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-sdcard_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-sdcard_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-sdcard_SYMBOLS := $(kernel-sdcard_KBASE)
+
+kernel-sdcard_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-sdcard_KOBJ_LIBS        := $(filter-out $(kernel-sdcard_KLIB),$(kernel-sdcard_LIBS)) $(kernel-sdcard_KAUTOLIB)
+$(kernel-sdcard_KOBJ) : LINKLIBS:=$(kernel-sdcard_KOBJ_LIBS) $($(kernel-sdcard_DEFNAME)_LIBS)
+$(kernel-sdcard_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-sdcard_SYMBOLS))
+$(kernel-sdcard_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-sdcard_KOBJ) : $(kernel-sdcard_OBJS) $(USER_OBJS) $(kernel-sdcard_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-sdcard_DEPS             := $(addprefix $(kernel-sdcard_OBJDIR)/,$(notdir $(kernel-sdcard_CCFILES:=.d) $(kernel-sdcard_TARGETCCFILES:=.d) $(kernel-sdcard_CXXFILES:=.d))) $(addprefix $(kernel-sdcard_OBJDIR)/linklib/,$(notdir $(kernel-sdcard_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-sdcard_DEPS),)
+  ifneq (kernel-sdcard kernel-sdcard-quick kernel-sdcard-kobj kernel-sdcard-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-sdcard kernel-sdcard-quick kernel-sdcard-kobj kernel-sdcard-kobj-quick),)
+      -include $(kernel-sdcard_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-sdcard_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-sdcard_OBJS) $(kernel-sdcard_DEPS) : | $(kernel-sdcard_OBJDIR)/linklib
+
+ifneq ($(kernel-sdcard_OBJS) $(kernel-sdcard_DEPS) $(kernel-sdcard_MODULE) $(kernel-sdcard_KOBJ),)
+$(kernel-sdcard_OBJS) $(kernel-sdcard_DEPS) $(kernel-sdcard_MODULE) $(kernel-sdcard_KOBJ) : | $(kernel-sdcard_OBJDIR) $(AROSDIR)/$(kernel-sdcard_MODDIR) $(KOBJSDIR)
+else
+$(kernel-sdcard_OBJS) $(kernel-sdcard_DEPS) $(kernel-sdcard_MODULE) $(kernel-sdcard_KOBJ) :: $(kernel-sdcard_OBJDIR) $(AROSDIR)/$(kernel-sdcard_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-sdcard_OBJDIR) $(AROSDIR)/$(kernel-sdcard_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-sdcard kernel-sdcard-includes kernel-sdcard-quick kernel-sdcard-kobj kernel-sdcard-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-sdcard_DFILE_DEPS := $(kernel-sdcard_LIBDEFSINC) $(kernel-sdcard_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-sdcard_INCDIR)/,$($(kernel-sdcard_DEFNAME)_INCLUDES))
+$(kernel-sdcard_DEPS) : $(kernel-sdcard_DFILE_DEPS)
+endif
+
+kernel-sdcard_TOCLEAN := $(kernel-sdcard_OBJS) $(kernel-sdcard_DEPS) \
+    $(kernel-sdcard_MODULE) $(kernel-sdcard_LINKLIB) $(kernel-sdcard_KOBJ) \
+    $(kernel-sdcard_OBJDIR)/Makefile.sdcarddevice \
+    $(addprefix $(kernel-sdcard_OBJDIR)/include/,$($(kernel-sdcard_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-sdcard_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-sdcard_INCDIR)/,$($(kernel-sdcard_DEFNAME)_INCLUDES)) \
+    $(kernel-sdcard_OBJDIR)/sdcard_geninc $(kernel-sdcard_OBJDIR)/sdcard_incs \
+    $(addsuffix .c,$(kernel-sdcard_LINKLIBFILES)) $(kernel-sdcard_LINKLIBOBJS) $(kernel-sdcard_LIBDEFSINC) \
+    $(kernel-sdcard_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-sdcard_STARTFILES) $(kernel-sdcard_ENDFILES)) \
+    $(kernel-sdcard_ENDOBJS)
+kernel-sdcard-clean : FILES              := $(kernel-sdcard_TOCLEAN)
+kernel-sdcard-clean ::
+	$(Q)$(ECHO) "Cleaning up for module sdcard"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-sdcard_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

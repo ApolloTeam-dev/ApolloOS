@@ -1,0 +1,1658 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := startup kbd_init kbdclass mouseclass kbd_common drv_ps2
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-hidd-i8042
+#MM kernel-hidd-i8042-quick
+#MM kernel-hidd-i8042-makefile
+#MM kernel-hidd-i8042-clean
+
+# ABI targets:
+#MM- includes-all : kernel-hidd-i8042-includes
+#MM- linklibs-i8042: kernel-hidd-i8042-linklib
+#MM- linklibs-i8042_rel : kernel-hidd-i8042-linklib
+#MM- includes-i8042: kernel-hidd-i8042-includes
+#MM- includes-i8042_rel : kernel-hidd-i8042-includes
+#MM- kernel-hidd-i8042 : kernel-hidd-i8042-includes core-linklibs linklibs-hiddstubs
+#MM kernel-hidd-i8042-linklib : kernel-hidd-i8042-includes includes-hiddstubs
+#MM- kernel-hidd-i8042-quick : kernel-hidd-i8042-includes-quick
+#MM kernel-hidd-i8042-includes : kernel-hidd-i8042-makefile kernel-hidd-i8042-includes-dirs \
+#MM     includes-generate-deps kernel-hidd-i8042-fd
+#MM kernel-hidd-i8042-includes-quick
+#MM kernel-hidd-i8042-includes-dirs
+#MM kernel-hidd-i8042-fd
+
+# Library targets
+#MM kernel-hidd-i8042-kobj : core-linklibs linklibs-hiddstubs
+#MM kernel-hidd-i8042-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-hidd-i8042-kobj : kernel-hidd-i8042-includes core-linklibs linklibs-hiddstubs
+#MM kernel-hidd-i8042-kobj-quick : kernel-hidd-i8042-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-hidd-i8042_ALLTARGETS       := kernel-hidd-i8042 kernel-hidd-i8042-quick kernel-hidd-i8042-clean
+
+ifeq (M,M)
+kernel-hidd-i8042_ALLTARGETS       += kernel-hidd-i8042-kobj kernel-hidd-i8042-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-hidd-i8042_ALLTARGETS += kernel-hidd-i8042-includes \
+                 kernel-hidd-i8042-includes-quick kernel-hidd-i8042-includes-dirs  \
+                 kernel-hidd-i8042-linklib kernel-hidd-i8042-fd
+endif
+
+.PHONY : $(kernel-hidd-i8042_ALLTARGETS) kernel-hidd-i8042-makefile
+
+ifeq (i8042,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (hidd,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-hidd-i8042_DEFNAME      := i8042_
+else
+    kernel-hidd-i8042_DEFNAME      := i8042
+endif
+kernel-hidd-i8042_DEFLINKLIBNAME   := $(kernel-hidd-i8042_DEFNAME)
+ifneq (,)
+    kernel-hidd-i8042_LINKLIBNAME  := 
+else
+    kernel-hidd-i8042_LINKLIBNAME  = $(kernel-hidd-i8042_DEFLINKLIBNAME)
+endif
+kernel-hidd-i8042_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-hidd-i8042_DEFCPPFLAGS  += -I
+endif
+kernel-hidd-i8042_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-hidd-i8042_DFLAGS       := 
+else
+    kernel-hidd-i8042_DFLAGS       = $(kernel-hidd-i8042_DEFDFLAGS)
+endif
+kernel-hidd-i8042_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-hidd-i8042_DXXFLAGS     := 
+else
+    kernel-hidd-i8042_DXXFLAGS     = $(kernel-hidd-i8042_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-i8042_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-i8042_DEFDFLAGS))
+kernel-hidd-i8042_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-i8042_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-i8042_FUNCINSTR := yes
+kernel-hidd-i8042_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-i8042_DEFDFLAGS))
+kernel-hidd-i8042_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-i8042_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-hidd-i8042_OBJDIR                     := 
+else
+kernel-hidd-i8042_OBJDIR                     := $(OBJDIR)/$(kernel-hidd-i8042_DEFNAME)
+endif
+ifneq (,)
+kernel-hidd-i8042_OBJDIR           := $(kernel-hidd-i8042_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-hidd-i8042-makefile         := $(kernel-hidd-i8042_OBJDIR)/Makefile.$(kernel-hidd-i8042_DEFNAME)hidd
+kernel-hidd-i8042-genmakefile : $(kernel-hidd-i8042-makefile)
+
+
+kernel-hidd-i8042-genmakefile_OPTS := 
+ifneq (,)
+    kernel-hidd-i8042-genmakefile_OPTS += -f 
+    kernel-hidd-i8042-genmakefile_MODNAME := i8042_
+else
+    kernel-hidd-i8042-genmakefile_MODNAME := i8042
+endif
+kernel-hidd-i8042-genmakefile_TARGET := Makefile.$(kernel-hidd-i8042-genmakefile_MODNAME)hidd
+kernel-hidd-i8042-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-i8042-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-i8042-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-i8042-genmakefile_OPTS += -c 
+        kernel-hidd-i8042-genmakefile_DEPS += 
+    endif 
+else
+    kernel-hidd-i8042-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/i8042.conf
+    kernel-hidd-i8042-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/i8042.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-i8042-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-i8042-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-i8042-genmakefile_OPTS += -o 
+        kernel-hidd-i8042-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-i8042-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-i8042_OBJDIR),)
+    kernel-hidd-i8042-genmakefile_OPTS += -d $(kernel-hidd-i8042_OBJDIR)
+    kernel-hidd-i8042-genmakefile_TARGET := $(kernel-hidd-i8042_OBJDIR)/$(kernel-hidd-i8042-genmakefile_TARGET)
+endif
+
+$(kernel-hidd-i8042-genmakefile_TARGET) : OPTS := $(kernel-hidd-i8042-genmakefile_OPTS)
+$(kernel-hidd-i8042-genmakefile_TARGET) : MODNAME := i8042
+$(kernel-hidd-i8042-genmakefile_TARGET) : MODTYPE := hidd
+$(kernel-hidd-i8042-genmakefile_TARGET) : $(kernel-hidd-i8042-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-hidd-i8042-makefile),)
+$(kernel-hidd-i8042-makefile) : | $(kernel-hidd-i8042_OBJDIR)
+else
+$(kernel-hidd-i8042-makefile) :: $(kernel-hidd-i8042_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-i8042_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-hidd-i8042_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-hidd-i8042-makefile)
+
+kernel-hidd-i8042_DEFMODDIR        := $($(kernel-hidd-i8042_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-hidd-i8042_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-hidd-i8042_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-hidd-i8042_MODDIR       := 
+else
+    kernel-hidd-i8042_MODDIR       := $(kernel-hidd-i8042_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-hidd-i8042_INCDIR           := 
+else
+kernel-hidd-i8042_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-hidd-i8042_LIBDEFSINC       := $(kernel-hidd-i8042_OBJDIR)/include/$(kernel-hidd-i8042_DEFNAME)_libdefs.h
+kernel-hidd-i8042_DEFLIBDEFSINC    := $(kernel-hidd-i8042_OBJDIR)/include/$(kernel-hidd-i8042_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-hidd-i8042-includes-quick : kernel-hidd-i8042-includes
+kernel-hidd-i8042-includes : $(addprefix $(GENINCDIR)/,$($(kernel-hidd-i8042_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-i8042_INCDIR)/,$($(kernel-hidd-i8042_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-i8042_LIBDEFSINC) $(kernel-hidd-i8042_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-hidd-i8042_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-hidd-i8042-includes_MODNAME := i8042_
+else
+    kernel-hidd-i8042-includes_MODNAME := i8042
+endif
+
+ifneq ($($(kernel-hidd-i8042-includes_MODNAME)_INCLUDES),)
+
+kernel-hidd-i8042-includes_TARGETS := $($(kernel-hidd-i8042-includes_MODNAME)_INCLUDES)
+
+kernel-hidd-i8042-includes_DEPS := $(GENMODULE)
+kernel-hidd-i8042-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-i8042-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-i8042-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-i8042-includes_OPTS += -c 
+        kernel-hidd-i8042-includes_DEPS += 
+    endif 
+else
+    kernel-hidd-i8042-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/i8042.conf
+    kernel-hidd-i8042-includes_DEPS += $(SRCDIR)/$(CURDIR)/i8042.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-i8042-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-i8042-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-i8042-includes_OPTS += -o 
+        kernel-hidd-i8042-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-i8042-includes_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-i8042_OBJDIR)/include,)
+    kernel-hidd-i8042-includes_OPTS += -d $(kernel-hidd-i8042_OBJDIR)/include
+    kernel-hidd-i8042-includes_TARGETS := $(addprefix $(kernel-hidd-i8042_OBJDIR)/include/,$(kernel-hidd-i8042-includes_TARGETS))
+    kernel-hidd-i8042-includes_GENINCFLAG=$(kernel-hidd-i8042_OBJDIR)/include/.i8042.hidd-includes
+else
+    kernel-hidd-i8042-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.i8042.hidd-includes
+endif
+
+$(kernel-hidd-i8042-includes_TARGETS) : $(kernel-hidd-i8042-includes_DEPS) $(kernel-hidd-i8042-includes_GENINCFLAG)
+
+$(kernel-hidd-i8042-includes_GENINCFLAG) : OPTS := $(kernel-hidd-i8042-includes_OPTS)
+$(kernel-hidd-i8042-includes_GENINCFLAG) : MODNAME := i8042
+$(kernel-hidd-i8042-includes_GENINCFLAG) : MODTYPE := hidd
+$(kernel-hidd-i8042-includes_GENINCFLAG) : $(kernel-hidd-i8042-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-hidd-i8042_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-hidd-i8042_DEFNAME)_INCLUDES)) : | $(kernel-hidd-i8042_OBJDIR)/i8042_geninc
+
+$(kernel-hidd-i8042_OBJDIR)/i8042_geninc : COPYSRCDIR := $(kernel-hidd-i8042_OBJDIR)/include
+$(kernel-hidd-i8042_OBJDIR)/i8042_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-hidd-i8042_OBJDIR)/i8042_geninc : FILES := $($(kernel-hidd-i8042_DEFNAME)_INCLUDES)
+$(kernel-hidd-i8042_OBJDIR)/i8042_geninc : $(addprefix $(kernel-hidd-i8042_OBJDIR)/include/,$($(kernel-hidd-i8042_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-hidd-i8042_OBJDIR)/include
+
+$(addprefix $(kernel-hidd-i8042_INCDIR)/,$($(kernel-hidd-i8042_DEFNAME)_INCLUDES)) : | $(kernel-hidd-i8042_OBJDIR)/i8042_incs
+
+$(kernel-hidd-i8042_OBJDIR)/i8042_incs : COPYSRCDIR := $(kernel-hidd-i8042_OBJDIR)/include
+$(kernel-hidd-i8042_OBJDIR)/i8042_incs : TGTDIR := $(kernel-hidd-i8042_INCDIR)
+$(kernel-hidd-i8042_OBJDIR)/i8042_incs : FILES := $($(kernel-hidd-i8042_DEFNAME)_INCLUDES)
+$(kernel-hidd-i8042_OBJDIR)/i8042_incs : $(addprefix $(kernel-hidd-i8042_OBJDIR)/include/,$($(kernel-hidd-i8042_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-hidd-i8042_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-hidd-i8042_DEFNAME)_INCLUDES))))
+
+TMPi8042_INCDIRS := \
+    $(kernel-hidd-i8042_OBJDIR)/include $(addprefix $(kernel-hidd-i8042_OBJDIR)/include/,$(kernel-hidd-i8042_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-hidd-i8042_INCDIRS)) \
+    $(kernel-hidd-i8042_INCDIR) $(addprefix $(kernel-hidd-i8042_INCDIR)/,$(kernel-hidd-i8042_INCDIRS))
+
+ifneq (kernel-hidd-i8042-includes-dirs,)
+kernel-hidd-i8042-includes-dirs : | $(TMPi8042_INCDIRS)
+else
+kernel-hidd-i8042-includes-dirs :: $(TMPi8042_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPi8042_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-hidd-i8042-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-hidd-i8042-genlibdefs_OPTS += -f 
+    kernel-hidd-i8042-genlibdefs_MODNAME := i8042_
+else
+    kernel-hidd-i8042-genlibdefs_MODNAME := i8042
+endif
+kernel-hidd-i8042-genlibdefs_TARGET := $(kernel-hidd-i8042-genlibdefs_MODNAME)_libdefs.h
+kernel-hidd-i8042-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-i8042-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-i8042-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-i8042-genlibdefs_OPTS += -c 
+        kernel-hidd-i8042-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-hidd-i8042-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/i8042.conf
+    kernel-hidd-i8042-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/i8042.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-i8042-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-i8042-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-i8042-genlibdefs_OPTS += -o 
+        kernel-hidd-i8042-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-i8042-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-i8042_OBJDIR)/include,)
+    kernel-hidd-i8042-genlibdefs_OPTS += -d $(kernel-hidd-i8042_OBJDIR)/include
+    kernel-hidd-i8042-genlibdefs_TARGET := $(kernel-hidd-i8042_OBJDIR)/include/$(kernel-hidd-i8042-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-hidd-i8042-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-hidd-i8042-genlibdefs_TARGET) : OPTS := $(kernel-hidd-i8042-genlibdefs_OPTS)
+$(kernel-hidd-i8042-genlibdefs_TARGET) : MODNAME := i8042
+$(kernel-hidd-i8042-genlibdefs_TARGET) : MODTYPE := hidd
+$(kernel-hidd-i8042-genlibdefs_TARGET) : $(kernel-hidd-i8042-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-i8042_DEFLIBDEFSINC) : FILENAME := $(kernel-hidd-i8042_LIBDEFSINC)
+$(kernel-hidd-i8042_DEFLIBDEFSINC) : $(kernel-hidd-i8042_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-hidd-i8042_LIBDEFSINC) $(kernel-hidd-i8042_DEFLIBDEFSINC) : | $(kernel-hidd-i8042_OBJDIR)/include
+
+ifneq (kernel-hidd-i8042-includes-dirs,)
+kernel-hidd-i8042-includes-dirs : | $(kernel-hidd-i8042_OBJDIR)/include
+else
+kernel-hidd-i8042-includes-dirs :: $(kernel-hidd-i8042_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-i8042_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-hidd-i8042-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-hidd-i8042-genmodfiles_OPTS += -f 
+    kernel-hidd-i8042-genmodfiles_MODNAME := i8042_
+else
+    kernel-hidd-i8042-genmodfiles_MODNAME := i8042
+endif
+kernel-hidd-i8042-genmodfiles_GENTARGETS := $($(kernel-hidd-i8042-genmodfiles_MODNAME)_STARTFILES) $($(kernel-hidd-i8042-genmodfiles_MODNAME)_ENDFILES)
+kernel-hidd-i8042-genmodfiles_STUBTARGETS := $($(kernel-hidd-i8042-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-hidd-i8042-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-hidd-i8042-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-hidd-i8042-genmodfiles_GENTARGETS))
+kernel-hidd-i8042-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-hidd-i8042-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-hidd-i8042-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-hidd-i8042-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-hidd-i8042-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-i8042-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-i8042-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-i8042-genmodfiles_OPTS += -c 
+        kernel-hidd-i8042-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-hidd-i8042-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/i8042.conf
+    kernel-hidd-i8042-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/i8042.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-i8042-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-i8042-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-i8042-genmodfiles_OPTS += -o 
+        kernel-hidd-i8042-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-i8042-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-i8042_OBJDIR),)
+    kernel-hidd-i8042-genmodfiles_OPTS += -d $(kernel-hidd-i8042_OBJDIR)
+    kernel-hidd-i8042-genmodfiles_TARGETDIR := $(shell echo $(kernel-hidd-i8042_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-i8042-genmodfiles_GENTARGETS := $(addprefix $(kernel-hidd-i8042-genmodfiles_TARGETDIR)/,$(kernel-hidd-i8042-genmodfiles_GENTARGETS))
+    kernel-hidd-i8042-genmodfiles_GENFILEFLAG=$(kernel-hidd-i8042-genmodfiles_TARGETDIR)/.i8042.hidd-genfiles
+else
+    kernel-hidd-i8042-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.i8042.hidd-genfiles
+endif
+ifneq ($(kernel-hidd-i8042_OBJDIR)/linklib,)
+    kernel-hidd-i8042-genmodfiles_OPTS += -l $(kernel-hidd-i8042_OBJDIR)/linklib
+    kernel-hidd-i8042-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-hidd-i8042_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-i8042-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-i8042-genmodfiles_STUBTARGETDIR)/,$(kernel-hidd-i8042-genmodfiles_STUBTARGETS))
+    kernel-hidd-i8042-genmodfiles_TARGETDIRS += $(kernel-hidd-i8042_OBJDIR)/linklib
+else
+ifneq ($(kernel-hidd-i8042_OBJDIR),)
+    kernel-hidd-i8042-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-i8042-genmodfiles_TARGETDIR)/,$(kernel-hidd-i8042-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-hidd-i8042-genmodfiles_TARGETS := $(kernel-hidd-i8042-genmodfiles_GENTARGETS) $(kernel-hidd-i8042-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-hidd-i8042-genmodfiles_TARGETDIRS),)
+$(kernel-hidd-i8042-genmodfiles_TARGETS) : | $(kernel-hidd-i8042-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-hidd-i8042-genmodfiles_TARGETS) : $(kernel-hidd-i8042-genmodfiles_DEPS) $(kernel-hidd-i8042-genmodfiles_GENFILEFLAG)
+
+$(kernel-hidd-i8042-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-hidd-i8042-genmodfiles_OPTS)
+$(kernel-hidd-i8042-genmodfiles_GENFILEFLAG) : MODNAME := i8042
+$(kernel-hidd-i8042-genmodfiles_GENFILEFLAG) : MODTYPE := hidd
+$(kernel-hidd-i8042-genmodfiles_GENFILEFLAG) : $(kernel-hidd-i8042-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-hidd-i8042-genmodfiles_GENFILEFLAG) : $(kernel-hidd-i8042_DEFLIBDEFSINC) $(kernel-hidd-i8042-makefile)
+
+
+ifneq ($(kernel-hidd-i8042-genmodfiles_GENFILEFLAG),)
+$(kernel-hidd-i8042-genmodfiles_GENFILEFLAG) : | $(kernel-hidd-i8042_OBJDIR)/linklib
+else
+$(kernel-hidd-i8042-genmodfiles_GENFILEFLAG) :: $(kernel-hidd-i8042_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-i8042_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-hidd-i8042_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-hidd-i8042_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-hidd-i8042-fd : $(kernel-hidd-i8042_FDDIR)/i8042_lib.fd
+
+
+TMP_TARGET := i8042_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/i8042.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/i8042.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-i8042_FDDIR),)
+    TMP_OPTS += -d $(kernel-hidd-i8042_FDDIR)
+    TMP_TARGET := $(kernel-hidd-i8042_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := i8042
+$(TMP_TARGET) : MODTYPE := hidd
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-i8042_FDDIR)/i8042_lib.fd : | $(kernel-hidd-i8042_FDDIR)
+
+
+ifneq (kernel-hidd-i8042-fd-setup,)
+kernel-hidd-i8042-fd-setup : | $(kernel-hidd-i8042_FDDIR)
+else
+kernel-hidd-i8042-fd-setup :: $(kernel-hidd-i8042_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-i8042_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-hidd-i8042_FILES            := $(FILES)
+kernel-hidd-i8042_OBJCFILES        := 
+kernel-hidd-i8042_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-hidd-i8042_LIBFILES         := 
+kernel-hidd-i8042_LIBS             := hiddstubs
+
+kernel-hidd-i8042_FDIRS            := $(sort $(dir $(kernel-hidd-i8042_FILES)))
+
+kernel-hidd-i8042_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-hidd-i8042_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-hidd-i8042_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-hidd-i8042_FILTERARCH       = $(filter-out $(call kernel-hidd-i8042_MATCHARCH,$(1),$(2)),$(2))
+kernel-hidd-i8042_STARTFILES       := $(addprefix $(kernel-hidd-i8042_OBJDIR)/,$($(kernel-hidd-i8042_DEFNAME)_STARTFILES))
+kernel-hidd-i8042_ENDFILES         := $(addprefix $(kernel-hidd-i8042_OBJDIR)/,$($(kernel-hidd-i8042_DEFNAME)_ENDFILES))
+
+kernel-hidd-i8042_ARCHOBJS         := $(wildcard $(kernel-hidd-i8042_OBJDIR)/arch/*.o)
+kernel-hidd-i8042_LIBARCHOBJS      := $(wildcard $(kernel-hidd-i8042_OBJDIR)/linklib/arch/*.o)
+kernel-hidd-i8042_ARCHFILES        := $(basename $(notdir $(kernel-hidd-i8042_ARCHOBJS)))
+kernel-hidd-i8042_LIBARCHFILES     := $(basename $(notdir $(kernel-hidd-i8042_LIBARCHOBJS)))
+kernel-hidd-i8042_C_NARCHFILES     := $(call kernel-hidd-i8042_FILTERARCH,$(kernel-hidd-i8042_ARCHFILES),$(kernel-hidd-i8042_FILES))
+kernel-hidd-i8042_CXX_NARCHFILES   := $(call kernel-hidd-i8042_FILTERARCH,$(kernel-hidd-i8042_ARCHFILES),$(kernel-hidd-i8042_CXXFILES))
+kernel-hidd-i8042_OBJC_NARCHFILES  := $(call kernel-hidd-i8042_FILTERARCH,$(kernel-hidd-i8042_ARCHFILES),$(kernel-hidd-i8042_OBJCFILES))
+kernel-hidd-i8042_NLIBARCHFILES    := $(call kernel-hidd-i8042_FILTERARCH,$(kernel-hidd-i8042_LIBARCHFILES),$(kernel-hidd-i8042_LIBFILES))
+kernel-hidd-i8042_ARCHNLIBFILES    := $(call kernel-hidd-i8042_FILTERARCH,$(kernel-hidd-i8042_LIBFILES),$(kernel-hidd-i8042_LIBARCHFILES))
+
+kernel-hidd-i8042_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-hidd-i8042_OBJDIR)/include -include $(kernel-hidd-i8042_DEFLIBDEFSINC))
+ifneq (,)
+kernel-hidd-i8042_CPPFLAGS         += -I
+endif
+kernel-hidd-i8042_LINKLIBCPPFLAGS  := $(kernel-hidd-i8042_CPPFLAGS)
+kernel-hidd-i8042_CPPFLAGS         += $(strip $($(kernel-hidd-i8042_DEFNAME)_CPPFLAGS))
+kernel-hidd-i8042_LINKLIBCPPFLAGS  += $(strip $($(kernel-hidd-i8042_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-hidd-i8042_CFLAGS           := $(strip $(CFLAGS) $($(kernel-hidd-i8042_DEFNAME)_CFLAGS))
+kernel-hidd-i8042_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-hidd-i8042_DEFNAME)_LINKLIBCFLAGS))
+kernel-hidd-i8042_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-hidd-i8042_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-i8042_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-hidd-i8042_CFLAGS           := $(strip $(kernel-hidd-i8042_LTOFLAGS) $(kernel-hidd-i8042_CFLAGS))
+kernel-hidd-i8042_LINKLIBCFLAGS    := $(strip $(kernel-hidd-i8042_LTOFLAGS) $(kernel-hidd-i8042_LINKLIBCFLAGS))
+kernel-hidd-i8042_CXXFLAGS         := $(strip $(kernel-hidd-i8042_LTOFLAGS) $(kernel-hidd-i8042_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-i8042_SUBSTNULL        :=
+kernel-hidd-i8042_SUBSTSPACE       := $(kernel-hidd-i8042_SUBSTNULL) #
+kernel-hidd-i8042_SUBSTCOMMA       := ,
+kernel-hidd-i8042_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-hidd-i8042_SUBSTSPACE),$(kernel-hidd-i8042_SUBSTCOMMA),$(strip $($(kernel-hidd-i8042_DEFNAME)_STARTFILES))))
+kernel-hidd-i8042_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-hidd-i8042_CFLAGS           := $(strip $(kernel-hidd-i8042_INSTRFUNCFLAGS) $(kernel-hidd-i8042_CFLAGS))
+kernel-hidd-i8042_CXXFLAGS         := $(strip $(kernel-hidd-i8042_INSTRFUNCFLAGS) $(kernel-hidd-i8042_CXXFLAGS))
+kernel-hidd-i8042_LIBS             += $(kernel-hidd-i8042_INSTRFUNCLIBS)
+endif
+endif
+kernel-hidd-i8042_DFLAGS           := $(strip $(kernel-hidd-i8042_DFLAGS) $($(kernel-hidd-i8042_DEFNAME)_DFLAGS))
+kernel-hidd-i8042_LINKLIBDFLAGS    := $(strip $(kernel-hidd-i8042_DFLAGS) $($(kernel-hidd-i8042_DEFNAME)_LINKLIBDFLAGS))
+kernel-hidd-i8042_DXXFLAGS         := $(strip $(kernel-hidd-i8042_DXXFLAGS) $($(kernel-hidd-i8042_DEFNAME)_DXXFLAGS))
+
+ifeq (hidd,library)
+    kernel-hidd-i8042_LIBSUFFIX    := 
+else
+    kernel-hidd-i8042_LIBSUFFIX    := .hidd
+endif
+
+ifeq (,)
+kernel-hidd-i8042_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-hidd-i8042_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-hidd-i8042_LINKLIBCFILES    := $(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$($(kernel-hidd-i8042_DEFNAME)_LINKLIBFILES))
+kernel-hidd-i8042_LINKLIBAFILES    := $(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$($(kernel-hidd-i8042_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-i8042_DEFNAME)_LINKLIBFILES) $($(kernel-hidd-i8042_DEFNAME)_LINKLIBAFILES)  $(kernel-hidd-i8042_ARCHNLIBFILES)),)
+    kernel-hidd-i8042_LINKLIB      :=
+else
+    kernel-hidd-i8042_LINKLIB      := $(kernel-hidd-i8042_LIBDIR)/libi8042$(kernel-hidd-i8042_LIBSUFFIX).a
+    ifneq (i8042,$(kernel-hidd-i8042_LINKLIBNAME))
+        kernel-hidd-i8042_LINKLIB  += $(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_LINKLIBNAME)$(kernel-hidd-i8042_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-i8042_LINKLIBFILES     := $(kernel-hidd-i8042_LINKLIBCFILES) $(kernel-hidd-i8042_LINKLIBAFILES)
+
+kernel-hidd-i8042_RELLINKLIBCFILES := $(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$($(kernel-hidd-i8042_DEFNAME)_RELLINKLIBFILES))
+kernel-hidd-i8042_RELLINKLIBAFILES := $(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$($(kernel-hidd-i8042_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-i8042_DEFNAME)_RELLINKLIBFILES) $($(kernel-hidd-i8042_DEFNAME)_RELLINKLIBAFILES)  $(kernel-hidd-i8042_ARCHNLIBFILES)),)
+    kernel-hidd-i8042_RELLINKLIB   :=
+else
+    kernel-hidd-i8042_RELLINKLIB   := $(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_DEFNAME)_rel$(kernel-hidd-i8042_LIBSUFFIX).a
+    ifneq (i8042,$(kernel-hidd-i8042_LINKLIBNAME))
+        kernel-hidd-i8042_RELLINKLIB += $(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_LINKLIBNAME)_rel$(kernel-hidd-i8042_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-i8042_RELLINKLIBFILES  := $(kernel-hidd-i8042_RELLINKLIBCFILES) $(kernel-hidd-i8042_RELLINKLIBAFILES)
+endif
+
+kernel-hidd-i8042_ENDOBJS          := $(addsuffix .o,$(kernel-hidd-i8042_ENDFILES))
+kernel-hidd-i8042_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$(notdir $(kernel-hidd-i8042_NLIBARCHFILES))) $(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-i8042_ARCHNLIBFILES))) $(kernel-hidd-i8042_LINKLIBFILES)) \
+                 
+kernel-hidd-i8042_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$(notdir $(kernel-hidd-i8042_NLIBARCHFILES))) $(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-i8042_ARCHNLIBFILES))) $(kernel-hidd-i8042_RELLINKLIBFILES)) \
+                 
+$(kernel-hidd-i8042_LINKLIBFILES) $(kernel-hidd-i8042_RELLINKLIBFILES) : | $(kernel-hidd-i8042_OBJDIR)/linklib
+$(kernel-hidd-i8042_LINKLIBOBJS) $(kernel-hidd-i8042_RELLINKLIBOBJS) : | $(kernel-hidd-i8042_OBJDIR)/linklib
+
+kernel-hidd-i8042_CCFILES := $(kernel-hidd-i8042_C_NARCHFILES)
+kernel-hidd-i8042_TARGETCCFILES    := $(strip $(kernel-hidd-i8042_STARTFILES) $(kernel-hidd-i8042_ENDFILES))
+kernel-hidd-i8042_LINKLIBCCFILES   := $(strip $(kernel-hidd-i8042_NLIBARCHFILES) $(kernel-hidd-i8042_LINKLIBCFILES) $(kernel-hidd-i8042_RELLINKLIBCFILES))
+kernel-hidd-i8042_LINKLIBCCGENFILES := $(strip $(kernel-hidd-i8042_LINKLIBCFILES) $(kernel-hidd-i8042_RELLINKLIBCFILES))
+
+
+kernel-hidd-i8042_CXXABSBASENAMES := $(foreach kernel-hidd-i8042_CXXBASE,$(kernel-hidd-i8042_CXX_NARCHFILES),$(if $(filter /%,$(kernel-hidd-i8042_CXXBASE)),$(kernel-hidd-i8042_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-hidd-i8042_CXXBASE))))
+
+ifneq ($(kernel-hidd-i8042_CXXABSBASENAMES),)
+
+kernel-hidd-i8042_CXXBASENAMES := $(basename $(kernel-hidd-i8042_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-hidd-i8042_MCXX_FILES  := $(strip $(foreach kernel-hidd-i8042_CXXBASE,$(kernel-hidd-i8042_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-hidd-i8042_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-hidd-i8042_EXT),$(kernel-hidd-i8042_CXXBASE)))))))
+
+ifeq (,)
+kernel-hidd-i8042_MCXX_SRCWILDCARD := %
+else
+kernel-hidd-i8042_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-i8042_OBJDIR),)
+  kernel-hidd-i8042_CXXTARGETS := $(notdir $(kernel-hidd-i8042_CXXBASENAMES:=.o))
+  kernel-hidd-i8042_CXXDTARGETS := $(notdir $(kernel-hidd-i8042_CXXBASENAMES:=.d))
+  kernel-hidd-i8042_MCXX_WILDCARD := %
+else
+  kernel-hidd-i8042_CXXTARGETS := $(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(notdir $(kernel-hidd-i8042_CXXBASENAMES:=.o)))
+  kernel-hidd-i8042_CXXDTARGETS := $(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(notdir $(kernel-hidd-i8042_CXXBASENAMES:=.d)))
+  kernel-hidd-i8042_MCXX_WILDCARD := $(kernel-hidd-i8042_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-hidd-i8042_CXXTARGETS) $(kernel-hidd-i8042_CXXDTARGETS) : | $(kernel-hidd-i8042_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-hidd-i8042_MCXX_CPPFLAGS := $(kernel-hidd-i8042_CPPFLAGS)
+kernel-hidd-i8042_CXXFLAGS := $(kernel-hidd-i8042_CXXFLAGS)
+ifeq ($(kernel-hidd-i8042_DXXFLAGS),)
+  kernel-hidd-i8042_DXXFLAGS := $(kernel-hidd-i8042_CXXFLAGS)
+else
+  kernel-hidd-i8042_DXXFLAGS := $(kernel-hidd-i8042_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-hidd-i8042_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-hidd-i8042_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-i8042_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-hidd-i8042_CXXCMD:=$(HOST_CXX)
+  kernel-hidd-i8042_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-hidd-i8042_MCXX_CPPFLAGS) $(kernel-hidd-i8042_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-i8042_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-i8042_CXXFLAGS))
+  kernel-hidd-i8042_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-i8042_DXXFLAGS))
+  kernel-hidd-i8042_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-hidd-i8042_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-hidd-i8042_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-i8042_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-i8042_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-hidd-i8042_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-hidd-i8042_MCXX_CPPFLAGS := $(strip $(kernel-hidd-i8042_MCXX_CPPFLAGS) $(kernel-hidd-i8042_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-i8042_CXXFLAGS := $(strip $(kernel-hidd-i8042_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-hidd-i8042_DXXFLAGS := $(kernel-hidd-i8042_DXXFLAGS)
+  kernel-hidd-i8042_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-hidd-i8042_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-hidd-i8042_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-i8042_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-i8042_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-hidd-i8042_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-hidd-i8042_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-hidd-i8042_MCXX_CPPFLAGS) $(kernel-hidd-i8042_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-i8042_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-i8042_CXXFLAGS))
+  kernel-hidd-i8042_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-i8042_DXXFLAGS))
+  kernel-hidd-i8042_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-hidd-i8042_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-hidd-i8042_CXXCMD) $(kernel-hidd-i8042_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-i8042_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_CXXIQUOTE) . $(kernel-hidd-i8042_CXXIQUOTE_END) $(strip $(kernel-hidd-i8042_CXXFLAGS) $(kernel-hidd-i8042_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-hidd-i8042_CXXCMD) $(kernel-hidd-i8042_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-i8042_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_CXXIQUOTE) . $(kernel-hidd-i8042_CXXIQUOTE_END) $(strip $(kernel-hidd-i8042_CXXFLAGS) $(kernel-hidd-i8042_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-hidd-i8042_CXXCMD) $(kernel-hidd-i8042_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-i8042_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_CXXIQUOTE) . $(kernel-hidd-i8042_CXXIQUOTE_END) $(strip $(kernel-hidd-i8042_CXXFLAGS) $(kernel-hidd-i8042_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-hidd-i8042_CXXCMD)" $(MKDEPEND) $(strip $(kernel-hidd-i8042_DXXFLAGS) $(kernel-hidd-i8042_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-hidd-i8042_OBJDIR),)
+  $(foreach kernel-hidd-i8042_CXXFILE,$(kernel-hidd-i8042_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-hidd-i8042_CXXFILE))),$(kernel-hidd-i8042_CXXFILE))))
+else
+  $(foreach kernel-hidd-i8042_CXXFILE,$(kernel-hidd-i8042_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(notdir $(basename $(kernel-hidd-i8042_CXXFILE)))),$(kernel-hidd-i8042_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-hidd-i8042_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-hidd-i8042_MOBJC_SRCWILDCARD := %
+else
+kernel-hidd-i8042_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-i8042_OBJDIR),)
+  kernel-hidd-i8042_MOBJC_TARGETS := $(addsuffix .o,$(kernel-hidd-i8042_OBJC_NARCHFILES))
+  kernel-hidd-i8042_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-hidd-i8042_OBJC_NARCHFILES))
+  kernel-hidd-i8042_MOBJC_WILDCARD := %
+else
+  kernel-hidd-i8042_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(kernel-hidd-i8042_OBJC_NARCHFILES)))
+  kernel-hidd-i8042_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(kernel-hidd-i8042_OBJC_NARCHFILES)))
+  kernel-hidd-i8042_MOBJC_WILDCARD := $(kernel-hidd-i8042_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-hidd-i8042_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-hidd-i8042_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-hidd-i8042_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-i8042_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-hidd-i8042_MOBJC_DIRS := $(foreach dir, $(kernel-hidd-i8042_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-i8042_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-hidd-i8042_MOBJC_DIRS),)
+    kernel-hidd-i8042_MOBJC_DIRS := $(shell echo $(kernel-hidd-i8042_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-hidd-i8042_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-hidd-i8042_CC := $(TARGET_CC)
+else
+  kernel-hidd-i8042_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-hidd-i8042_MOBJC_CPPFLAGS := $(kernel-hidd-i8042_CPPFLAGS)
+kernel-hidd-i8042_OBJCFLAGS := $(kernel-hidd-i8042_CFLAGS)
+kernel-hidd-i8042_OBJCFLAGS := $(kernel-hidd-i8042_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-hidd-i8042_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-hidd-i8042_OBJCFLAGS)))
+ifeq ($(kernel-hidd-i8042_DFLAGS),)
+  kernel-hidd-i8042_OBJCDFLAGS := $(kernel-hidd-i8042_CFLAGS)
+else
+  kernel-hidd-i8042_OBJCDFLAGS := $(kernel-hidd-i8042_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-hidd-i8042_LINK ?= $(strip $(kernel-hidd-i8042_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-i8042_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-i8042_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-hidd-i8042_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : kernel-hidd-i8042_MOBJC_CPPFLAGS:=$(strip $(kernel-hidd-i8042_MOBJC_CPPFLAGS) $(kernel-hidd-i8042_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : kernel-hidd-i8042_OBJCFLAGS:=$(strip $(kernel-hidd-i8042_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : kernel-hidd-i8042_OBJCDFLAGS:=$(kernel-hidd-i8042_OBJCDFLAGS)
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : kernel-hidd-i8042_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : kernel-hidd-i8042_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-hidd-i8042_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-hidd-i8042_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-i8042_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : kernel-hidd-i8042_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-hidd-i8042_MOBJC_CPPFLAGS) $(kernel-hidd-i8042_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : kernel-hidd-i8042_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-i8042_OBJCFLAGS))
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : kernel-hidd-i8042_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-i8042_OBJCDFLAGS))
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : kernel-hidd-i8042_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : kernel-hidd-i8042_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-hidd-i8042_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-i8042_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-i8042_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : kernel-hidd-i8042_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-hidd-i8042_MOBJC_CPPFLAGS) $(kernel-hidd-i8042_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : kernel-hidd-i8042_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-i8042_OBJCFLAGS))
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : kernel-hidd-i8042_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-i8042_OBJCDFLAGS))
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : kernel-hidd-i8042_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-hidd-i8042_MOBJC_TARGETS) $(kernel-hidd-i8042_MOBJC_DTARGETS) : kernel-hidd-i8042_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-i8042_MOBJC_TARGETS) : CPPFLAGS := $(kernel-hidd-i8042_MOBJC_CPPFLAGS)
+$(kernel-hidd-i8042_MOBJC_TARGETS) : CFLAGS := $(kernel-hidd-i8042_OBJCFLAGS)
+$(kernel-hidd-i8042_MOBJC_TARGETS) : $(kernel-hidd-i8042_MOBJC_WILDCARD).o : $(kernel-hidd-i8042_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-i8042_IQUOTE) $(dir $<) $(kernel-hidd-i8042_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_IQUOTE) . $(kernel-hidd-i8042_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-i8042_IQUOTE) $(dir $<) $(kernel-hidd-i8042_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_IQUOTE) . $(kernel-hidd-i8042_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-i8042_IQUOTE) $(dir $<) $(kernel-hidd-i8042_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_IQUOTE) . $(kernel-hidd-i8042_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-i8042_MOBJC_DTARGETS) : $(kernel-hidd-i8042_MOBJC_WILDCARD).d : $(kernel-hidd-i8042_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-i8042_OBJCDFLAGS) $(kernel-hidd-i8042_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-hidd-i8042_MC_SRCWILDCARD := %
+else
+kernel-hidd-i8042_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-i8042_OBJDIR),)
+kernel-hidd-i8042_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-i8042_CCFILES))
+kernel-hidd-i8042_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-i8042_CCFILES))
+kernel-hidd-i8042_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-i8042_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(notdir $(kernel-hidd-i8042_CCFILES))))
+    kernel-hidd-i8042_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(notdir $(kernel-hidd-i8042_CCFILES))))
+else
+ifeq (,)
+    kernel-hidd-i8042_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(kernel-hidd-i8042_CCFILES)))
+    kernel-hidd-i8042_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(kernel-hidd-i8042_CCFILES)))
+else
+    kernel-hidd-i8042_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-i8042_CCFILES))))
+    kernel-hidd-i8042_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-i8042_CCFILES))))
+endif
+endif
+kernel-hidd-i8042_MC_TGTWILDCARD := $(kernel-hidd-i8042_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-i8042_CCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-i8042_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-i8042_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-i8042_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-i8042_MC_DIRS := $(foreach dir, $(kernel-hidd-i8042_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-i8042_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-i8042_MC_DIRS),)
+    kernel-hidd-i8042_MC_DIRS := $(shell echo $(kernel-hidd-i8042_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-i8042_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-i8042_MC_CPPFLAGS := $(kernel-hidd-i8042_CPPFLAGS)
+kernel-hidd-i8042_CFLAGS := $(kernel-hidd-i8042_CFLAGS)
+ifeq ($(kernel-hidd-i8042_DFLAGS),)
+  kernel-hidd-i8042_DFLAGS := $(kernel-hidd-i8042_CFLAGS)
+else
+  kernel-hidd-i8042_DFLAGS := $(kernel-hidd-i8042_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-i8042_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-i8042_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-i8042_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_MC_CPPFLAGS:=$(strip $(kernel-hidd-i8042_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_CFLAGS:=$(strip $(kernel-hidd-i8042_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_DFLAGS:=$(kernel-hidd-i8042_DFLAGS)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-i8042_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-i8042_STRIP ?= $(HOST_STRIP)
+kernel-hidd-i8042_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-i8042_CFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-i8042_DFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-i8042_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-i8042_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-i8042_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-i8042_CFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-i8042_DFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-i8042_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-i8042_MC_CPPFLAGS)
+$(kernel-hidd-i8042_MC_TARGETS) : CFLAGS := $(kernel-hidd-i8042_CFLAGS)
+$(kernel-hidd-i8042_MC_TARGETS) : $(kernel-hidd-i8042_MC_TGTWILDCARD).o : $(kernel-hidd-i8042_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-i8042_IQUOTE) $(dir $<) $(kernel-hidd-i8042_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_IQUOTE) . $(kernel-hidd-i8042_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-i8042_IQUOTE) $(dir $<) $(kernel-hidd-i8042_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_IQUOTE) . $(kernel-hidd-i8042_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-i8042_IQUOTE) $(dir $<) $(kernel-hidd-i8042_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_IQUOTE) . $(kernel-hidd-i8042_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-i8042_MC_DTARGETS) : $(kernel-hidd-i8042_MC_TGTWILDCARD).d : $(kernel-hidd-i8042_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-i8042_DFLAGS) $(kernel-hidd-i8042_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-i8042_MC_SRCWILDCARD := %
+else
+kernel-hidd-i8042_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-i8042_OBJDIR),)
+kernel-hidd-i8042_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-i8042_TARGETCCFILES))
+kernel-hidd-i8042_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-i8042_TARGETCCFILES))
+kernel-hidd-i8042_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-i8042_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(notdir $(kernel-hidd-i8042_TARGETCCFILES))))
+    kernel-hidd-i8042_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(notdir $(kernel-hidd-i8042_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-hidd-i8042_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(kernel-hidd-i8042_TARGETCCFILES)))
+    kernel-hidd-i8042_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(kernel-hidd-i8042_TARGETCCFILES)))
+else
+    kernel-hidd-i8042_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-i8042_TARGETCCFILES))))
+    kernel-hidd-i8042_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-i8042_TARGETCCFILES))))
+endif
+endif
+kernel-hidd-i8042_MC_TGTWILDCARD := $(kernel-hidd-i8042_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-i8042_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-i8042_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-i8042_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-i8042_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-i8042_MC_DIRS := $(foreach dir, $(kernel-hidd-i8042_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-i8042_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-i8042_MC_DIRS),)
+    kernel-hidd-i8042_MC_DIRS := $(shell echo $(kernel-hidd-i8042_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-i8042_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-i8042_MC_CPPFLAGS := $(kernel-hidd-i8042_CPPFLAGS) -D__AROS__
+kernel-hidd-i8042_CFLAGS := $(kernel-hidd-i8042_CFLAGS)
+ifeq ($(kernel-hidd-i8042_DFLAGS),)
+  kernel-hidd-i8042_DFLAGS := $(kernel-hidd-i8042_CFLAGS)
+else
+  kernel-hidd-i8042_DFLAGS := $(kernel-hidd-i8042_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-i8042_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-i8042_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-i8042_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_MC_CPPFLAGS:=$(strip $(kernel-hidd-i8042_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_CFLAGS:=$(strip $(kernel-hidd-i8042_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_DFLAGS:=$(kernel-hidd-i8042_DFLAGS)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-i8042_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-i8042_STRIP ?= $(HOST_STRIP)
+kernel-hidd-i8042_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-i8042_CFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-i8042_DFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-i8042_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-i8042_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-i8042_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-i8042_CFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-i8042_DFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-i8042_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-i8042_MC_CPPFLAGS)
+$(kernel-hidd-i8042_MC_TARGETS) : CFLAGS := $(kernel-hidd-i8042_CFLAGS)
+$(kernel-hidd-i8042_MC_TARGETS) : $(kernel-hidd-i8042_MC_TGTWILDCARD).o : $(kernel-hidd-i8042_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-i8042_IQUOTE) $(dir $<) $(kernel-hidd-i8042_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_IQUOTE) . $(kernel-hidd-i8042_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-i8042_IQUOTE) $(dir $<) $(kernel-hidd-i8042_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_IQUOTE) . $(kernel-hidd-i8042_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-i8042_IQUOTE) $(dir $<) $(kernel-hidd-i8042_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_IQUOTE) . $(kernel-hidd-i8042_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-i8042_MC_DTARGETS) : $(kernel-hidd-i8042_MC_TGTWILDCARD).d : $(kernel-hidd-i8042_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-i8042_DFLAGS) $(kernel-hidd-i8042_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-i8042_MC_SRCWILDCARD := %
+else
+kernel-hidd-i8042_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-i8042_OBJDIR)/linklib,)
+kernel-hidd-i8042_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-i8042_NLIBARCHFILES))
+kernel-hidd-i8042_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-i8042_NLIBARCHFILES))
+kernel-hidd-i8042_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-i8042_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$(notdir $(kernel-hidd-i8042_NLIBARCHFILES))))
+    kernel-hidd-i8042_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$(notdir $(kernel-hidd-i8042_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-hidd-i8042_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$(kernel-hidd-i8042_NLIBARCHFILES)))
+    kernel-hidd-i8042_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$(kernel-hidd-i8042_NLIBARCHFILES)))
+else
+    kernel-hidd-i8042_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-i8042_NLIBARCHFILES))))
+    kernel-hidd-i8042_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-i8042_NLIBARCHFILES))))
+endif
+endif
+kernel-hidd-i8042_MC_TGTWILDCARD := $(kernel-hidd-i8042_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-i8042_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-i8042_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-i8042_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-i8042_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-i8042_MC_DIRS := $(foreach dir, $(kernel-hidd-i8042_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-i8042_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-i8042_MC_DIRS),)
+    kernel-hidd-i8042_MC_DIRS := $(shell echo $(kernel-hidd-i8042_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-i8042_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-i8042_MC_CPPFLAGS := $(kernel-hidd-i8042_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-i8042_CFLAGS := $(kernel-hidd-i8042_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-i8042_LINKLIBDFLAGS),)
+  kernel-hidd-i8042_DFLAGS := $(kernel-hidd-i8042_LINKLIBCFLAGS)
+else
+  kernel-hidd-i8042_DFLAGS := $(kernel-hidd-i8042_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-i8042_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-i8042_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-i8042_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_MC_CPPFLAGS:=$(strip $(kernel-hidd-i8042_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_CFLAGS:=$(strip $(kernel-hidd-i8042_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_DFLAGS:=$(kernel-hidd-i8042_DFLAGS)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-i8042_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-i8042_STRIP ?= $(HOST_STRIP)
+kernel-hidd-i8042_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-i8042_CFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-i8042_DFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-i8042_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-i8042_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-i8042_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-i8042_CFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-i8042_DFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-i8042_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-i8042_MC_CPPFLAGS)
+$(kernel-hidd-i8042_MC_TARGETS) : CFLAGS := $(kernel-hidd-i8042_CFLAGS)
+$(kernel-hidd-i8042_MC_TARGETS) : $(kernel-hidd-i8042_MC_TGTWILDCARD).o : $(kernel-hidd-i8042_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-i8042_IQUOTE) $(dir $<) $(kernel-hidd-i8042_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_IQUOTE) . $(kernel-hidd-i8042_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-i8042_IQUOTE) $(dir $<) $(kernel-hidd-i8042_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_IQUOTE) . $(kernel-hidd-i8042_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-i8042_IQUOTE) $(dir $<) $(kernel-hidd-i8042_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_IQUOTE) . $(kernel-hidd-i8042_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-i8042_MC_DTARGETS) : $(kernel-hidd-i8042_MC_TGTWILDCARD).d : $(kernel-hidd-i8042_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-i8042_DFLAGS) $(kernel-hidd-i8042_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-hidd-i8042_OBJDIR)/linklib,)
+kernel-hidd-i8042_MC_SRCWILDCARD := %
+else
+kernel-hidd-i8042_MC_SRCWILDCARD := $(kernel-hidd-i8042_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-hidd-i8042_OBJDIR)/linklib,)
+kernel-hidd-i8042_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-i8042_LINKLIBCCGENFILES))
+kernel-hidd-i8042_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-i8042_LINKLIBCCGENFILES))
+kernel-hidd-i8042_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-i8042_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$(notdir $(kernel-hidd-i8042_LINKLIBCCGENFILES))))
+    kernel-hidd-i8042_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$(notdir $(kernel-hidd-i8042_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-hidd-i8042_OBJDIR)/linklib,)
+    kernel-hidd-i8042_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$(kernel-hidd-i8042_LINKLIBCCGENFILES)))
+    kernel-hidd-i8042_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$(kernel-hidd-i8042_LINKLIBCCGENFILES)))
+else
+    kernel-hidd-i8042_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-i8042_OBJDIR)/linklib/%,%,$(kernel-hidd-i8042_LINKLIBCCGENFILES))))
+    kernel-hidd-i8042_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-i8042_OBJDIR)/linklib/%,%,$(kernel-hidd-i8042_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-hidd-i8042_MC_TGTWILDCARD := $(kernel-hidd-i8042_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-i8042_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-i8042_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-i8042_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-i8042_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-i8042_MC_DIRS := $(foreach dir, $(kernel-hidd-i8042_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-i8042_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-i8042_MC_DIRS),)
+    kernel-hidd-i8042_MC_DIRS := $(shell echo $(kernel-hidd-i8042_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-i8042_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-i8042_MC_CPPFLAGS := $(kernel-hidd-i8042_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-i8042_CFLAGS := $(kernel-hidd-i8042_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-i8042_LINKLIBDFLAGS),)
+  kernel-hidd-i8042_DFLAGS := $(kernel-hidd-i8042_LINKLIBCFLAGS)
+else
+  kernel-hidd-i8042_DFLAGS := $(kernel-hidd-i8042_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-i8042_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-i8042_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-i8042_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_MC_CPPFLAGS:=$(strip $(kernel-hidd-i8042_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_CFLAGS:=$(strip $(kernel-hidd-i8042_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_DFLAGS:=$(kernel-hidd-i8042_DFLAGS)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-i8042_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-i8042_STRIP ?= $(HOST_STRIP)
+kernel-hidd-i8042_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-i8042_CFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-i8042_DFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-i8042_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-i8042_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-i8042_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_CPPFLAGS) $(kernel-hidd-i8042_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-i8042_CFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-i8042_DFLAGS))
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-i8042_MC_TARGETS) $(kernel-hidd-i8042_MC_DTARGETS) : kernel-hidd-i8042_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-i8042_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-i8042_MC_CPPFLAGS)
+$(kernel-hidd-i8042_MC_TARGETS) : CFLAGS := $(kernel-hidd-i8042_CFLAGS)
+$(kernel-hidd-i8042_MC_TARGETS) : $(kernel-hidd-i8042_MC_TGTWILDCARD).o : $(kernel-hidd-i8042_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-i8042_IQUOTE) $(dir $<) $(kernel-hidd-i8042_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_IQUOTE) . $(kernel-hidd-i8042_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-i8042_IQUOTE) $(dir $<) $(kernel-hidd-i8042_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_IQUOTE) . $(kernel-hidd-i8042_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-i8042_IQUOTE) $(dir $<) $(kernel-hidd-i8042_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-i8042_IQUOTE) . $(kernel-hidd-i8042_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-i8042_MC_DTARGETS) : $(kernel-hidd-i8042_MC_TGTWILDCARD).d : $(kernel-hidd-i8042_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-i8042_DFLAGS) $(kernel-hidd-i8042_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-hidd-i8042_LINKLIBAFILES),)
+
+ifeq ($(kernel-hidd-i8042_OBJDIR)/linklib,)
+kernel-hidd-i8042-MA_TARGETS := $(addsuffix .o,$(kernel-hidd-i8042_LINKLIBAFILES) $(kernel-hidd-i8042_RELLINKLIBAFILES))
+kernel-hidd-i8042-MA_WILDCARD := %
+else
+kernel-hidd-i8042-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$(notdir $(kernel-hidd-i8042_LINKLIBAFILES) $(kernel-hidd-i8042_RELLINKLIBAFILES))))
+kernel-hidd-i8042-MA_WILDCARD := $(kernel-hidd-i8042_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-hidd-i8042-MA_TARGETS) : | $(addsuffix .S,$(kernel-hidd-i8042_LINKLIBAFILES) $(kernel-hidd-i8042_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-i8042-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-i8042-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-i8042_LINKLIBAFILES) $(kernel-hidd-i8042_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-i8042-MA_DIRS := $(foreach dir, $(kernel-hidd-i8042-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-i8042-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-i8042-MA_DIRS),)
+    kernel-hidd-i8042-MA_DIRS := $(shell echo $(kernel-hidd-i8042-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-hidd-i8042-MA_DIRS)
+endif
+
+endif
+
+kernel-hidd-i8042-MA_ASSEMBLER ?= $(kernel-hidd-i8042_ASSEMBLER)
+
+$(kernel-hidd-i8042-MA_TARGETS) : kernel-hidd-i8042-MA_CMD:= $(kernel-hidd-i8042-MA_ASSEMBLER)
+
+$(kernel-hidd-i8042-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-hidd-i8042-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-hidd-i8042-MA_TARGETS) : $(kernel-hidd-i8042-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-hidd-i8042-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-hidd-i8042-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-hidd-i8042-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-hidd-i8042_SUFFIX           := hidd
+else
+kernel-hidd-i8042_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-hidd-i8042_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-hidd-i8042_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-hidd-i8042_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-hidd-i8042_SUFFIX),handler)
+kernel-hidd-i8042_MODULE           := $(AROSDIR)/$(kernel-hidd-i8042_MODDIR)/$(kernel-hidd-i8042_DEFNAME)-$(kernel-hidd-i8042_SUFFIX)
+else
+kernel-hidd-i8042_MODULE           := $(AROSDIR)/$(kernel-hidd-i8042_MODDIR)/$(kernel-hidd-i8042_DEFNAME).$(kernel-hidd-i8042_SUFFIX)
+endif
+kernel-hidd-i8042_KOBJ             := $(KOBJSDIR)/$(kernel-hidd-i8042_DEFNAME)_$(kernel-hidd-i8042_SUFFIX).o
+else
+kernel-hidd-i8042_MODULE           :=
+kernel-hidd-i8042_KOBJ             :=
+endif
+
+kernel-hidd-i8042-quick      : kernel-hidd-i8042
+kernel-hidd-i8042            : $(kernel-hidd-i8042_MODULE) $(kernel-hidd-i8042_LINKLIB) $(kernel-hidd-i8042_RELLINKLIB)
+ifeq (M,M)
+kernel-hidd-i8042-kobj       : $(kernel-hidd-i8042_KOBJ) $(kernel-hidd-i8042_LINKLIB) $(kernel-hidd-i8042_RELLINKLIB)
+kernel-hidd-i8042-kobj-quick : $(kernel-hidd-i8042_KOBJ) $(kernel-hidd-i8042_LINKLIB) $(kernel-hidd-i8042_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-hidd-i8042-linklib    : $(kernel-hidd-i8042_LINKLIB) $(kernel-hidd-i8042_RELLINKLIB)
+endif
+
+kernel-hidd-i8042_OBJS := $(addsuffix .o,$(kernel-hidd-i8042_STARTFILES)) $(kernel-hidd-i8042_ARCHOBJS) \
+           $(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(notdir $(kernel-hidd-i8042_C_NARCHFILES:=.o) $(kernel-hidd-i8042_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (hidd,handler)
+kernel-hidd-i8042_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (i8042,con)
+    kernel-hidd-i8042_ERR          := $(notdir $(kernel-hidd-i8042_MODULE)).err
+else
+    kernel-hidd-i8042_ERR          := i8042.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-hidd-i8042_DEFNAME)_LDFLAGS) $(kernel-hidd-i8042_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-hidd-i8042_LIBS) $($(kernel-hidd-i8042_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-hidd-i8042_MODULE) : LIB_NAMES := $(kernel-hidd-i8042_LIBS) $($(kernel-hidd-i8042_DEFNAME)_LIBS)
+$(kernel-hidd-i8042_MODULE) : OBJS := $(kernel-hidd-i8042_STARTOBJS) $(kernel-hidd-i8042_OBJS) $(USER_OBJS)
+$(kernel-hidd-i8042_MODULE) : ENDTAG := $(kernel-hidd-i8042_ENDOBJS)
+$(kernel-hidd-i8042_MODULE) : ERR := $(kernel-hidd-i8042_ERR)
+$(kernel-hidd-i8042_MODULE) : OBJDIR := $(kernel-hidd-i8042_OBJDIR)
+$(kernel-hidd-i8042_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-hidd-i8042_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-hidd-i8042_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-hidd-i8042_MODULE) : $(kernel-hidd-i8042_STARTOBJS) $(kernel-hidd-i8042_OBJS) $(USER_OBJS) $(kernel-hidd-i8042_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-hidd-i8042_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-hidd-i8042_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-hidd-i8042_LC_LINKLIBNAME   := $(shell echo $(kernel-hidd-i8042_LINKLIBNAME) | tr A-Z a-z)
+kernel-hidd-i8042_LC_MODNAME       := $(shell echo i8042 | tr A-Z a-z)
+ifneq ($(kernel-hidd-i8042_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_LINKLIBNAME)$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_AR:=$(AR)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_LINKLIBNAME)$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_LINKLIBNAME)$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_AR:=$(HOST_AR)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_LINKLIBNAME)$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_LINKLIBNAME)$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_AR:=$(KERNEL_AR)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_LINKLIBNAME)$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_LINKLIBNAME)$(kernel-hidd-i8042_LIBSUFFIX).a : $(kernel-hidd-i8042_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-i8042_AR) $@ $^
+	$(Q)$(kernel-hidd-i8042_RANLIB) $@
+ifneq ($(kernel-hidd-i8042_LC_MODNAME),$(kernel-hidd-i8042_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-i8042_LIBDIR)/libi8042$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_AR:=$(AR)
+$(kernel-hidd-i8042_LIBDIR)/libi8042$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-i8042_LIBDIR)/libi8042$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_AR:=$(HOST_AR)
+$(kernel-hidd-i8042_LIBDIR)/libi8042$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-i8042_LIBDIR)/libi8042$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_AR:=$(KERNEL_AR)
+$(kernel-hidd-i8042_LIBDIR)/libi8042$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-i8042_LIBDIR)/libi8042$(kernel-hidd-i8042_LIBSUFFIX).a : $(kernel-hidd-i8042_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-i8042_AR) $@ $^
+	$(Q)$(kernel-hidd-i8042_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-i8042_LINKLIB),)
+$(kernel-hidd-i8042_LINKLIB) : | $(kernel-hidd-i8042_LIBDIR)
+else
+$(kernel-hidd-i8042_LINKLIB) :: $(kernel-hidd-i8042_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-i8042_LIBDIR)
+
+endif
+
+ifneq ($(kernel-hidd-i8042_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_LINKLIBNAME)_rel$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_AR:=$(AR)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_LINKLIBNAME)_rel$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_LINKLIBNAME)_rel$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_AR:=$(HOST_AR)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_LINKLIBNAME)_rel$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_LINKLIBNAME)_rel$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_AR:=$(KERNEL_AR)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_LINKLIBNAME)_rel$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_LINKLIBNAME)_rel$(kernel-hidd-i8042_LIBSUFFIX).a : $(kernel-hidd-i8042_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-i8042_AR) $@ $^
+	$(Q)$(kernel-hidd-i8042_RANLIB) $@
+ifneq ($(kernel-hidd-i8042_LC_MODNAME),$(kernel-hidd-i8042_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_DEFNAME)_rel$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_AR:=$(AR)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_DEFNAME)_rel$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_DEFNAME)_rel$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_AR:=$(HOST_AR)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_DEFNAME)_rel$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_DEFNAME)_rel$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_AR:=$(KERNEL_AR)
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_DEFNAME)_rel$(kernel-hidd-i8042_LIBSUFFIX).a : kernel-hidd-i8042_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-i8042_LIBDIR)/lib$(kernel-hidd-i8042_DEFNAME)_rel$(kernel-hidd-i8042_LIBSUFFIX).a : $(kernel-hidd-i8042_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-i8042_AR) $@ $^
+	$(Q)$(kernel-hidd-i8042_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-i8042_RELLINKLIB),)
+$(kernel-hidd-i8042_RELLINKLIB) : | $(kernel-hidd-i8042_LIBDIR)
+else
+$(kernel-hidd-i8042_RELLINKLIB) :: $(kernel-hidd-i8042_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-i8042_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-hidd-i8042_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-hidd-i8042_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-hidd-i8042_SYMBOLS := $(kernel-hidd-i8042_KBASE)
+
+kernel-hidd-i8042_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-hidd-i8042_KOBJ_LIBS        := $(filter-out $(kernel-hidd-i8042_KLIB),$(kernel-hidd-i8042_LIBS)) $(kernel-hidd-i8042_KAUTOLIB)
+$(kernel-hidd-i8042_KOBJ) : LINKLIBS:=$(kernel-hidd-i8042_KOBJ_LIBS) $($(kernel-hidd-i8042_DEFNAME)_LIBS)
+$(kernel-hidd-i8042_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-hidd-i8042_SYMBOLS))
+$(kernel-hidd-i8042_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-hidd-i8042_KOBJ) : $(kernel-hidd-i8042_OBJS) $(USER_OBJS) $(kernel-hidd-i8042_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-hidd-i8042_DEPS             := $(addprefix $(kernel-hidd-i8042_OBJDIR)/,$(notdir $(kernel-hidd-i8042_CCFILES:=.d) $(kernel-hidd-i8042_TARGETCCFILES:=.d) $(kernel-hidd-i8042_CXXFILES:=.d))) $(addprefix $(kernel-hidd-i8042_OBJDIR)/linklib/,$(notdir $(kernel-hidd-i8042_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-hidd-i8042_DEPS),)
+  ifneq (kernel-hidd-i8042 kernel-hidd-i8042-quick kernel-hidd-i8042-kobj kernel-hidd-i8042-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-hidd-i8042 kernel-hidd-i8042-quick kernel-hidd-i8042-kobj kernel-hidd-i8042-kobj-quick),)
+      -include $(kernel-hidd-i8042_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-hidd-i8042_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-hidd-i8042_OBJS) $(kernel-hidd-i8042_DEPS) : | $(kernel-hidd-i8042_OBJDIR)/linklib
+
+ifneq ($(kernel-hidd-i8042_OBJS) $(kernel-hidd-i8042_DEPS) $(kernel-hidd-i8042_MODULE) $(kernel-hidd-i8042_KOBJ),)
+$(kernel-hidd-i8042_OBJS) $(kernel-hidd-i8042_DEPS) $(kernel-hidd-i8042_MODULE) $(kernel-hidd-i8042_KOBJ) : | $(kernel-hidd-i8042_OBJDIR) $(AROSDIR)/$(kernel-hidd-i8042_MODDIR) $(KOBJSDIR)
+else
+$(kernel-hidd-i8042_OBJS) $(kernel-hidd-i8042_DEPS) $(kernel-hidd-i8042_MODULE) $(kernel-hidd-i8042_KOBJ) :: $(kernel-hidd-i8042_OBJDIR) $(AROSDIR)/$(kernel-hidd-i8042_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-i8042_OBJDIR) $(AROSDIR)/$(kernel-hidd-i8042_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-hidd-i8042 kernel-hidd-i8042-includes kernel-hidd-i8042-quick kernel-hidd-i8042-kobj kernel-hidd-i8042-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-hidd-i8042_DFILE_DEPS := $(kernel-hidd-i8042_LIBDEFSINC) $(kernel-hidd-i8042_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-hidd-i8042_INCDIR)/,$($(kernel-hidd-i8042_DEFNAME)_INCLUDES))
+$(kernel-hidd-i8042_DEPS) : $(kernel-hidd-i8042_DFILE_DEPS)
+endif
+
+kernel-hidd-i8042_TOCLEAN := $(kernel-hidd-i8042_OBJS) $(kernel-hidd-i8042_DEPS) \
+    $(kernel-hidd-i8042_MODULE) $(kernel-hidd-i8042_LINKLIB) $(kernel-hidd-i8042_KOBJ) \
+    $(kernel-hidd-i8042_OBJDIR)/Makefile.i8042hidd \
+    $(addprefix $(kernel-hidd-i8042_OBJDIR)/include/,$($(kernel-hidd-i8042_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-hidd-i8042_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-i8042_INCDIR)/,$($(kernel-hidd-i8042_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-i8042_OBJDIR)/i8042_geninc $(kernel-hidd-i8042_OBJDIR)/i8042_incs \
+    $(addsuffix .c,$(kernel-hidd-i8042_LINKLIBFILES)) $(kernel-hidd-i8042_LINKLIBOBJS) $(kernel-hidd-i8042_LIBDEFSINC) \
+    $(kernel-hidd-i8042_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-hidd-i8042_STARTFILES) $(kernel-hidd-i8042_ENDFILES)) \
+    $(kernel-hidd-i8042_ENDOBJS)
+kernel-hidd-i8042-clean : FILES              := $(kernel-hidd-i8042_TOCLEAN)
+kernel-hidd-i8042-clean ::
+	$(Q)$(ECHO) "Cleaning up for module i8042"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-hidd-i8042_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

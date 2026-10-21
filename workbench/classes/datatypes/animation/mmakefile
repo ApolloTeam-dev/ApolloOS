@@ -1,0 +1,1669 @@
+#   $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := animationclass animationbuffer animationframe animationplayback animationsave animationprefs
+
+#MM- workbench-datatypes-animation : workbench-datatype-animation
+#MM workbench-datatype-animation : includes linklibs workbench-datatype-animation-envarc
+
+USER_CPPFLAGS   := -DDEBUG=0
+USER_LDFLAGS := -static
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM workbench-datatype-animation
+#MM workbench-datatype-animation-quick
+#MM workbench-datatype-animation-makefile
+#MM workbench-datatype-animation-clean
+
+# ABI targets:
+#MM- includes-all : workbench-datatype-animation-includes
+#MM- linklibs-animation: workbench-datatype-animation-linklib
+#MM- linklibs-animation_rel : workbench-datatype-animation-linklib
+#MM- includes-animation: workbench-datatype-animation-includes
+#MM- includes-animation_rel : workbench-datatype-animation-includes
+#MM- workbench-datatype-animation : workbench-datatype-animation-includes core-linklibs linklibs-
+#MM workbench-datatype-animation-linklib : workbench-datatype-animation-includes includes-
+#MM- workbench-datatype-animation-quick : workbench-datatype-animation-includes-quick
+#MM workbench-datatype-animation-includes : workbench-datatype-animation-makefile workbench-datatype-animation-includes-dirs \
+#MM     includes-generate-deps workbench-datatype-animation-fd
+#MM workbench-datatype-animation-includes-quick
+#MM workbench-datatype-animation-includes-dirs
+#MM workbench-datatype-animation-fd
+
+# Library targets
+#MM workbench-datatype-animation-kobj : core-linklibs linklibs-
+#MM workbench-datatype-animation-kobj-quick : 
+
+# Library with ABI targets:
+#MM workbench-datatype-animation-kobj : workbench-datatype-animation-includes core-linklibs linklibs-
+#MM workbench-datatype-animation-kobj-quick : workbench-datatype-animation-includes-quick
+
+# All MetaMake targets defined by this macro
+workbench-datatype-animation_ALLTARGETS       := workbench-datatype-animation workbench-datatype-animation-quick workbench-datatype-animation-clean
+
+ifeq (M,M)
+workbench-datatype-animation_ALLTARGETS       += workbench-datatype-animation-kobj workbench-datatype-animation-kobj-quick
+endif
+
+ifeq (M,M)
+workbench-datatype-animation_ALLTARGETS += workbench-datatype-animation-includes \
+                 workbench-datatype-animation-includes-quick workbench-datatype-animation-includes-dirs  \
+                 workbench-datatype-animation-linklib workbench-datatype-animation-fd
+endif
+
+.PHONY : $(workbench-datatype-animation_ALLTARGETS) workbench-datatype-animation-makefile
+
+ifeq (animation,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (datatype,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    workbench-datatype-animation_DEFNAME      := animation_
+else
+    workbench-datatype-animation_DEFNAME      := animation
+endif
+workbench-datatype-animation_DEFLINKLIBNAME   := $(workbench-datatype-animation_DEFNAME)
+ifneq (,)
+    workbench-datatype-animation_LINKLIBNAME  := 
+else
+    workbench-datatype-animation_LINKLIBNAME  = $(workbench-datatype-animation_DEFLINKLIBNAME)
+endif
+workbench-datatype-animation_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    workbench-datatype-animation_DEFCPPFLAGS  += -I
+endif
+workbench-datatype-animation_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    workbench-datatype-animation_DFLAGS       := 
+else
+    workbench-datatype-animation_DFLAGS       = $(workbench-datatype-animation_DEFDFLAGS)
+endif
+workbench-datatype-animation_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    workbench-datatype-animation_DXXFLAGS     := 
+else
+    workbench-datatype-animation_DXXFLAGS     = $(workbench-datatype-animation_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+workbench-datatype-animation_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(workbench-datatype-animation_DEFDFLAGS))
+workbench-datatype-animation_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(workbench-datatype-animation_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-datatype-animation_FUNCINSTR := yes
+workbench-datatype-animation_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(workbench-datatype-animation_DEFDFLAGS))
+workbench-datatype-animation_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(workbench-datatype-animation_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+workbench-datatype-animation_OBJDIR                     := 
+else
+workbench-datatype-animation_OBJDIR                     := $(OBJDIR)/$(workbench-datatype-animation_DEFNAME)
+endif
+ifneq (,)
+workbench-datatype-animation_OBJDIR           := $(workbench-datatype-animation_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+workbench-datatype-animation-makefile         := $(workbench-datatype-animation_OBJDIR)/Makefile.$(workbench-datatype-animation_DEFNAME)datatype
+workbench-datatype-animation-genmakefile : $(workbench-datatype-animation-makefile)
+
+
+workbench-datatype-animation-genmakefile_OPTS := 
+ifneq (,)
+    workbench-datatype-animation-genmakefile_OPTS += -f 
+    workbench-datatype-animation-genmakefile_MODNAME := animation_
+else
+    workbench-datatype-animation-genmakefile_MODNAME := animation
+endif
+workbench-datatype-animation-genmakefile_TARGET := Makefile.$(workbench-datatype-animation-genmakefile_MODNAME)datatype
+workbench-datatype-animation-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-datatype-animation-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-datatype-animation-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-datatype-animation-genmakefile_OPTS += -c 
+        workbench-datatype-animation-genmakefile_DEPS += 
+    endif 
+else
+    workbench-datatype-animation-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/animation.conf
+    workbench-datatype-animation-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/animation.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-datatype-animation-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-datatype-animation-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-datatype-animation-genmakefile_OPTS += -o 
+        workbench-datatype-animation-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-datatype-animation-genmakefile_OPTS += -s 
+endif
+ifneq ($(workbench-datatype-animation_OBJDIR),)
+    workbench-datatype-animation-genmakefile_OPTS += -d $(workbench-datatype-animation_OBJDIR)
+    workbench-datatype-animation-genmakefile_TARGET := $(workbench-datatype-animation_OBJDIR)/$(workbench-datatype-animation-genmakefile_TARGET)
+endif
+
+$(workbench-datatype-animation-genmakefile_TARGET) : OPTS := $(workbench-datatype-animation-genmakefile_OPTS)
+$(workbench-datatype-animation-genmakefile_TARGET) : MODNAME := animation
+$(workbench-datatype-animation-genmakefile_TARGET) : MODTYPE := datatype
+$(workbench-datatype-animation-genmakefile_TARGET) : $(workbench-datatype-animation-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(workbench-datatype-animation-makefile),)
+$(workbench-datatype-animation-makefile) : | $(workbench-datatype-animation_OBJDIR)
+else
+$(workbench-datatype-animation-makefile) :: $(workbench-datatype-animation_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-datatype-animation_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(workbench-datatype-animation_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(workbench-datatype-animation-makefile)
+
+workbench-datatype-animation_DEFMODDIR        := $($(workbench-datatype-animation_DEFNAME)_MODDIR)
+ifeq (no,yes)
+workbench-datatype-animation_DEFMODDIR        := $(AROS_DIR_ARCH)/$(workbench-datatype-animation_DEFMODDIR)
+endif
+ifneq (,)
+    workbench-datatype-animation_MODDIR       := 
+else
+    workbench-datatype-animation_MODDIR       := $(workbench-datatype-animation_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+workbench-datatype-animation_INCDIR           := 
+else
+workbench-datatype-animation_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+workbench-datatype-animation_LIBDEFSINC       := $(workbench-datatype-animation_OBJDIR)/include/$(workbench-datatype-animation_DEFNAME)_libdefs.h
+workbench-datatype-animation_DEFLIBDEFSINC    := $(workbench-datatype-animation_OBJDIR)/include/$(workbench-datatype-animation_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+workbench-datatype-animation-includes-quick : workbench-datatype-animation-includes
+workbench-datatype-animation-includes : $(addprefix $(GENINCDIR)/,$($(workbench-datatype-animation_DEFNAME)_INCLUDES)) \
+    $(addprefix $(workbench-datatype-animation_INCDIR)/,$($(workbench-datatype-animation_DEFNAME)_INCLUDES)) \
+    $(workbench-datatype-animation_LIBDEFSINC) $(workbench-datatype-animation_DEFLIBDEFSINC)
+
+ifneq ($($(workbench-datatype-animation_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    workbench-datatype-animation-includes_MODNAME := animation_
+else
+    workbench-datatype-animation-includes_MODNAME := animation
+endif
+
+ifneq ($($(workbench-datatype-animation-includes_MODNAME)_INCLUDES),)
+
+workbench-datatype-animation-includes_TARGETS := $($(workbench-datatype-animation-includes_MODNAME)_INCLUDES)
+
+workbench-datatype-animation-includes_DEPS := $(GENMODULE)
+workbench-datatype-animation-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-datatype-animation-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-datatype-animation-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-datatype-animation-includes_OPTS += -c 
+        workbench-datatype-animation-includes_DEPS += 
+    endif 
+else
+    workbench-datatype-animation-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/animation.conf
+    workbench-datatype-animation-includes_DEPS += $(SRCDIR)/$(CURDIR)/animation.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-datatype-animation-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-datatype-animation-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-datatype-animation-includes_OPTS += -o 
+        workbench-datatype-animation-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-datatype-animation-includes_OPTS += -s 
+endif
+ifneq ($(workbench-datatype-animation_OBJDIR)/include,)
+    workbench-datatype-animation-includes_OPTS += -d $(workbench-datatype-animation_OBJDIR)/include
+    workbench-datatype-animation-includes_TARGETS := $(addprefix $(workbench-datatype-animation_OBJDIR)/include/,$(workbench-datatype-animation-includes_TARGETS))
+    workbench-datatype-animation-includes_GENINCFLAG=$(workbench-datatype-animation_OBJDIR)/include/.animation.datatype-includes
+else
+    workbench-datatype-animation-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.animation.datatype-includes
+endif
+
+$(workbench-datatype-animation-includes_TARGETS) : $(workbench-datatype-animation-includes_DEPS) $(workbench-datatype-animation-includes_GENINCFLAG)
+
+$(workbench-datatype-animation-includes_GENINCFLAG) : OPTS := $(workbench-datatype-animation-includes_OPTS)
+$(workbench-datatype-animation-includes_GENINCFLAG) : MODNAME := animation
+$(workbench-datatype-animation-includes_GENINCFLAG) : MODTYPE := datatype
+$(workbench-datatype-animation-includes_GENINCFLAG) : $(workbench-datatype-animation-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(workbench-datatype-animation_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(workbench-datatype-animation_DEFNAME)_INCLUDES)) : | $(workbench-datatype-animation_OBJDIR)/animation_geninc
+
+$(workbench-datatype-animation_OBJDIR)/animation_geninc : COPYSRCDIR := $(workbench-datatype-animation_OBJDIR)/include
+$(workbench-datatype-animation_OBJDIR)/animation_geninc : TGTDIR := $(GENINCDIR)
+$(workbench-datatype-animation_OBJDIR)/animation_geninc : FILES := $($(workbench-datatype-animation_DEFNAME)_INCLUDES)
+$(workbench-datatype-animation_OBJDIR)/animation_geninc : $(addprefix $(workbench-datatype-animation_OBJDIR)/include/,$($(workbench-datatype-animation_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(workbench-datatype-animation_OBJDIR)/include
+
+$(addprefix $(workbench-datatype-animation_INCDIR)/,$($(workbench-datatype-animation_DEFNAME)_INCLUDES)) : | $(workbench-datatype-animation_OBJDIR)/animation_incs
+
+$(workbench-datatype-animation_OBJDIR)/animation_incs : COPYSRCDIR := $(workbench-datatype-animation_OBJDIR)/include
+$(workbench-datatype-animation_OBJDIR)/animation_incs : TGTDIR := $(workbench-datatype-animation_INCDIR)
+$(workbench-datatype-animation_OBJDIR)/animation_incs : FILES := $($(workbench-datatype-animation_DEFNAME)_INCLUDES)
+$(workbench-datatype-animation_OBJDIR)/animation_incs : $(addprefix $(workbench-datatype-animation_OBJDIR)/include/,$($(workbench-datatype-animation_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+workbench-datatype-animation_INCDIRS := $(filter-out ./,$(sort $(dir $($(workbench-datatype-animation_DEFNAME)_INCLUDES))))
+
+TMPanimation_INCDIRS := \
+    $(workbench-datatype-animation_OBJDIR)/include $(addprefix $(workbench-datatype-animation_OBJDIR)/include/,$(workbench-datatype-animation_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(workbench-datatype-animation_INCDIRS)) \
+    $(workbench-datatype-animation_INCDIR) $(addprefix $(workbench-datatype-animation_INCDIR)/,$(workbench-datatype-animation_INCDIRS))
+
+ifneq (workbench-datatype-animation-includes-dirs,)
+workbench-datatype-animation-includes-dirs : | $(TMPanimation_INCDIRS)
+else
+workbench-datatype-animation-includes-dirs :: $(TMPanimation_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPanimation_INCDIRS)
+
+
+endif
+
+endif
+
+
+workbench-datatype-animation-genlibdefs_OPTS := 
+ifneq (,)
+    workbench-datatype-animation-genlibdefs_OPTS += -f 
+    workbench-datatype-animation-genlibdefs_MODNAME := animation_
+else
+    workbench-datatype-animation-genlibdefs_MODNAME := animation
+endif
+workbench-datatype-animation-genlibdefs_TARGET := $(workbench-datatype-animation-genlibdefs_MODNAME)_libdefs.h
+workbench-datatype-animation-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-datatype-animation-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-datatype-animation-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-datatype-animation-genlibdefs_OPTS += -c 
+        workbench-datatype-animation-genlibdefs_DEPS += 
+    endif 
+else
+    workbench-datatype-animation-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/animation.conf
+    workbench-datatype-animation-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/animation.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-datatype-animation-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-datatype-animation-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-datatype-animation-genlibdefs_OPTS += -o 
+        workbench-datatype-animation-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-datatype-animation-genlibdefs_OPTS += -s 
+endif
+ifneq ($(workbench-datatype-animation_OBJDIR)/include,)
+    workbench-datatype-animation-genlibdefs_OPTS += -d $(workbench-datatype-animation_OBJDIR)/include
+    workbench-datatype-animation-genlibdefs_TARGET := $(workbench-datatype-animation_OBJDIR)/include/$(workbench-datatype-animation-genlibdefs_TARGET)
+endif
+ifneq (,)
+    workbench-datatype-animation-genlibdefs_OPTS += -v 
+endif
+
+$(workbench-datatype-animation-genlibdefs_TARGET) : OPTS := $(workbench-datatype-animation-genlibdefs_OPTS)
+$(workbench-datatype-animation-genlibdefs_TARGET) : MODNAME := animation
+$(workbench-datatype-animation-genlibdefs_TARGET) : MODTYPE := datatype
+$(workbench-datatype-animation-genlibdefs_TARGET) : $(workbench-datatype-animation-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(workbench-datatype-animation_DEFLIBDEFSINC) : FILENAME := $(workbench-datatype-animation_LIBDEFSINC)
+$(workbench-datatype-animation_DEFLIBDEFSINC) : $(workbench-datatype-animation_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(workbench-datatype-animation_LIBDEFSINC) $(workbench-datatype-animation_DEFLIBDEFSINC) : | $(workbench-datatype-animation_OBJDIR)/include
+
+ifneq (workbench-datatype-animation-includes-dirs,)
+workbench-datatype-animation-includes-dirs : | $(workbench-datatype-animation_OBJDIR)/include
+else
+workbench-datatype-animation-includes-dirs :: $(workbench-datatype-animation_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(workbench-datatype-animation_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+workbench-datatype-animation-genmodfiles_OPTS :=
+ifneq (,)
+    workbench-datatype-animation-genmodfiles_OPTS += -f 
+    workbench-datatype-animation-genmodfiles_MODNAME := animation_
+else
+    workbench-datatype-animation-genmodfiles_MODNAME := animation
+endif
+workbench-datatype-animation-genmodfiles_GENTARGETS := $($(workbench-datatype-animation-genmodfiles_MODNAME)_STARTFILES) $($(workbench-datatype-animation-genmodfiles_MODNAME)_ENDFILES)
+workbench-datatype-animation-genmodfiles_STUBTARGETS := $($(workbench-datatype-animation-genmodfiles_MODNAME)_LINKLIBFILES) $($(workbench-datatype-animation-genmodfiles_MODNAME)_RELLINKLIBFILES)
+workbench-datatype-animation-genmodfiles_GENTARGETS := $(addsuffix .c,$(workbench-datatype-animation-genmodfiles_GENTARGETS))
+workbench-datatype-animation-genmodfiles_STUBTARGETS := $(addsuffix .c,$(workbench-datatype-animation-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(workbench-datatype-animation-genmodfiles_MODNAME)_LINKLIBAFILES) $($(workbench-datatype-animation-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+workbench-datatype-animation-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-datatype-animation-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-datatype-animation-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-datatype-animation-genmodfiles_OPTS += -c 
+        workbench-datatype-animation-genmodfiles_DEPS += 
+    endif 
+else
+    workbench-datatype-animation-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/animation.conf
+    workbench-datatype-animation-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/animation.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-datatype-animation-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-datatype-animation-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-datatype-animation-genmodfiles_OPTS += -o 
+        workbench-datatype-animation-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-datatype-animation-genmodfiles_OPTS += -s 
+endif
+ifneq ($(workbench-datatype-animation_OBJDIR),)
+    workbench-datatype-animation-genmodfiles_OPTS += -d $(workbench-datatype-animation_OBJDIR)
+    workbench-datatype-animation-genmodfiles_TARGETDIR := $(shell echo $(workbench-datatype-animation_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    workbench-datatype-animation-genmodfiles_GENTARGETS := $(addprefix $(workbench-datatype-animation-genmodfiles_TARGETDIR)/,$(workbench-datatype-animation-genmodfiles_GENTARGETS))
+    workbench-datatype-animation-genmodfiles_GENFILEFLAG=$(workbench-datatype-animation-genmodfiles_TARGETDIR)/.animation.datatype-genfiles
+else
+    workbench-datatype-animation-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.animation.datatype-genfiles
+endif
+ifneq ($(workbench-datatype-animation_OBJDIR)/linklib,)
+    workbench-datatype-animation-genmodfiles_OPTS += -l $(workbench-datatype-animation_OBJDIR)/linklib
+    workbench-datatype-animation-genmodfiles_STUBTARGETDIR := $(shell echo $(workbench-datatype-animation_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    workbench-datatype-animation-genmodfiles_STUBTARGETS := $(addprefix $(workbench-datatype-animation-genmodfiles_STUBTARGETDIR)/,$(workbench-datatype-animation-genmodfiles_STUBTARGETS))
+    workbench-datatype-animation-genmodfiles_TARGETDIRS += $(workbench-datatype-animation_OBJDIR)/linklib
+else
+ifneq ($(workbench-datatype-animation_OBJDIR),)
+    workbench-datatype-animation-genmodfiles_STUBTARGETS := $(addprefix $(workbench-datatype-animation-genmodfiles_TARGETDIR)/,$(workbench-datatype-animation-genmodfiles_STUBTARGETS))
+endif
+endif
+
+workbench-datatype-animation-genmodfiles_TARGETS := $(workbench-datatype-animation-genmodfiles_GENTARGETS) $(workbench-datatype-animation-genmodfiles_STUBTARGETS)
+ifneq ($(workbench-datatype-animation-genmodfiles_TARGETDIRS),)
+$(workbench-datatype-animation-genmodfiles_TARGETS) : | $(workbench-datatype-animation-genmodfiles_TARGETDIRS)
+endif
+
+$(workbench-datatype-animation-genmodfiles_TARGETS) : $(workbench-datatype-animation-genmodfiles_DEPS) $(workbench-datatype-animation-genmodfiles_GENFILEFLAG)
+
+$(workbench-datatype-animation-genmodfiles_GENFILEFLAG) : OPTS := $(workbench-datatype-animation-genmodfiles_OPTS)
+$(workbench-datatype-animation-genmodfiles_GENFILEFLAG) : MODNAME := animation
+$(workbench-datatype-animation-genmodfiles_GENFILEFLAG) : MODTYPE := datatype
+$(workbench-datatype-animation-genmodfiles_GENFILEFLAG) : $(workbench-datatype-animation-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(workbench-datatype-animation-genmodfiles_GENFILEFLAG) : $(workbench-datatype-animation_DEFLIBDEFSINC) $(workbench-datatype-animation-makefile)
+
+
+ifneq ($(workbench-datatype-animation-genmodfiles_GENFILEFLAG),)
+$(workbench-datatype-animation-genmodfiles_GENFILEFLAG) : | $(workbench-datatype-animation_OBJDIR)/linklib
+else
+$(workbench-datatype-animation-genmodfiles_GENFILEFLAG) :: $(workbench-datatype-animation_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(workbench-datatype-animation_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+workbench-datatype-animation_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+workbench-datatype-animation_FDDIR            := /../$(AROS_DIR_FD)
+endif
+workbench-datatype-animation-fd : $(workbench-datatype-animation_FDDIR)/animation_lib.fd
+
+
+TMP_TARGET := animation_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/animation.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/animation.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(workbench-datatype-animation_FDDIR),)
+    TMP_OPTS += -d $(workbench-datatype-animation_FDDIR)
+    TMP_TARGET := $(workbench-datatype-animation_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := animation
+$(TMP_TARGET) : MODTYPE := datatype
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(workbench-datatype-animation_FDDIR)/animation_lib.fd : | $(workbench-datatype-animation_FDDIR)
+
+
+ifneq (workbench-datatype-animation-fd-setup,)
+workbench-datatype-animation-fd-setup : | $(workbench-datatype-animation_FDDIR)
+else
+workbench-datatype-animation-fd-setup :: $(workbench-datatype-animation_FDDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-datatype-animation_FDDIR)
+
+endif
+
+## Compilation
+##
+workbench-datatype-animation_FILES            := $(FILES)
+workbench-datatype-animation_OBJCFILES        := 
+workbench-datatype-animation_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+workbench-datatype-animation_LIBFILES         := 
+workbench-datatype-animation_LIBS             := 
+
+workbench-datatype-animation_FDIRS            := $(sort $(dir $(workbench-datatype-animation_FILES)))
+
+workbench-datatype-animation_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+workbench-datatype-animation_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call workbench-datatype-animation_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+workbench-datatype-animation_FILTERARCH       = $(filter-out $(call workbench-datatype-animation_MATCHARCH,$(1),$(2)),$(2))
+workbench-datatype-animation_STARTFILES       := $(addprefix $(workbench-datatype-animation_OBJDIR)/,$($(workbench-datatype-animation_DEFNAME)_STARTFILES))
+workbench-datatype-animation_ENDFILES         := $(addprefix $(workbench-datatype-animation_OBJDIR)/,$($(workbench-datatype-animation_DEFNAME)_ENDFILES))
+
+workbench-datatype-animation_ARCHOBJS         := $(wildcard $(workbench-datatype-animation_OBJDIR)/arch/*.o)
+workbench-datatype-animation_LIBARCHOBJS      := $(wildcard $(workbench-datatype-animation_OBJDIR)/linklib/arch/*.o)
+workbench-datatype-animation_ARCHFILES        := $(basename $(notdir $(workbench-datatype-animation_ARCHOBJS)))
+workbench-datatype-animation_LIBARCHFILES     := $(basename $(notdir $(workbench-datatype-animation_LIBARCHOBJS)))
+workbench-datatype-animation_C_NARCHFILES     := $(call workbench-datatype-animation_FILTERARCH,$(workbench-datatype-animation_ARCHFILES),$(workbench-datatype-animation_FILES))
+workbench-datatype-animation_CXX_NARCHFILES   := $(call workbench-datatype-animation_FILTERARCH,$(workbench-datatype-animation_ARCHFILES),$(workbench-datatype-animation_CXXFILES))
+workbench-datatype-animation_OBJC_NARCHFILES  := $(call workbench-datatype-animation_FILTERARCH,$(workbench-datatype-animation_ARCHFILES),$(workbench-datatype-animation_OBJCFILES))
+workbench-datatype-animation_NLIBARCHFILES    := $(call workbench-datatype-animation_FILTERARCH,$(workbench-datatype-animation_LIBARCHFILES),$(workbench-datatype-animation_LIBFILES))
+workbench-datatype-animation_ARCHNLIBFILES    := $(call workbench-datatype-animation_FILTERARCH,$(workbench-datatype-animation_LIBFILES),$(workbench-datatype-animation_LIBARCHFILES))
+
+workbench-datatype-animation_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(workbench-datatype-animation_OBJDIR)/include -include $(workbench-datatype-animation_DEFLIBDEFSINC))
+ifneq (,)
+workbench-datatype-animation_CPPFLAGS         += -I
+endif
+workbench-datatype-animation_LINKLIBCPPFLAGS  := $(workbench-datatype-animation_CPPFLAGS)
+workbench-datatype-animation_CPPFLAGS         += $(strip $($(workbench-datatype-animation_DEFNAME)_CPPFLAGS))
+workbench-datatype-animation_LINKLIBCPPFLAGS  += $(strip $($(workbench-datatype-animation_DEFNAME)_LINKLIBCPPFLAGS))
+workbench-datatype-animation_CFLAGS           := $(strip $(CFLAGS) $($(workbench-datatype-animation_DEFNAME)_CFLAGS))
+workbench-datatype-animation_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(workbench-datatype-animation_DEFNAME)_LINKLIBCFLAGS))
+workbench-datatype-animation_CXXFLAGS         := $(strip $(CXXFLAGS) $($(workbench-datatype-animation_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+workbench-datatype-animation_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+workbench-datatype-animation_CFLAGS           := $(strip $(workbench-datatype-animation_LTOFLAGS) $(workbench-datatype-animation_CFLAGS))
+workbench-datatype-animation_LINKLIBCFLAGS    := $(strip $(workbench-datatype-animation_LTOFLAGS) $(workbench-datatype-animation_LINKLIBCFLAGS))
+workbench-datatype-animation_CXXFLAGS         := $(strip $(workbench-datatype-animation_LTOFLAGS) $(workbench-datatype-animation_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-datatype-animation_SUBSTNULL        :=
+workbench-datatype-animation_SUBSTSPACE       := $(workbench-datatype-animation_SUBSTNULL) #
+workbench-datatype-animation_SUBSTCOMMA       := ,
+workbench-datatype-animation_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(workbench-datatype-animation_SUBSTSPACE),$(workbench-datatype-animation_SUBSTCOMMA),$(strip $($(workbench-datatype-animation_DEFNAME)_STARTFILES))))
+workbench-datatype-animation_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-datatype-animation_CFLAGS           := $(strip $(workbench-datatype-animation_INSTRFUNCFLAGS) $(workbench-datatype-animation_CFLAGS))
+workbench-datatype-animation_CXXFLAGS         := $(strip $(workbench-datatype-animation_INSTRFUNCFLAGS) $(workbench-datatype-animation_CXXFLAGS))
+workbench-datatype-animation_LIBS             += $(workbench-datatype-animation_INSTRFUNCLIBS)
+endif
+endif
+workbench-datatype-animation_DFLAGS           := $(strip $(workbench-datatype-animation_DFLAGS) $($(workbench-datatype-animation_DEFNAME)_DFLAGS))
+workbench-datatype-animation_LINKLIBDFLAGS    := $(strip $(workbench-datatype-animation_DFLAGS) $($(workbench-datatype-animation_DEFNAME)_LINKLIBDFLAGS))
+workbench-datatype-animation_DXXFLAGS         := $(strip $(workbench-datatype-animation_DXXFLAGS) $($(workbench-datatype-animation_DEFNAME)_DXXFLAGS))
+
+ifeq (datatype,library)
+    workbench-datatype-animation_LIBSUFFIX    := 
+else
+    workbench-datatype-animation_LIBSUFFIX    := .datatype
+endif
+
+ifeq (,)
+workbench-datatype-animation_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+workbench-datatype-animation_LIBDIR           := 
+endif
+
+ifeq (M,M)
+workbench-datatype-animation_LINKLIBCFILES    := $(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$($(workbench-datatype-animation_DEFNAME)_LINKLIBFILES))
+workbench-datatype-animation_LINKLIBAFILES    := $(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$($(workbench-datatype-animation_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(workbench-datatype-animation_DEFNAME)_LINKLIBFILES) $($(workbench-datatype-animation_DEFNAME)_LINKLIBAFILES)  $(workbench-datatype-animation_ARCHNLIBFILES)),)
+    workbench-datatype-animation_LINKLIB      :=
+else
+    workbench-datatype-animation_LINKLIB      := $(workbench-datatype-animation_LIBDIR)/libanimation$(workbench-datatype-animation_LIBSUFFIX).a
+    ifneq (animation,$(workbench-datatype-animation_LINKLIBNAME))
+        workbench-datatype-animation_LINKLIB  += $(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_LINKLIBNAME)$(workbench-datatype-animation_LIBSUFFIX).a
+    endif
+endif
+workbench-datatype-animation_LINKLIBFILES     := $(workbench-datatype-animation_LINKLIBCFILES) $(workbench-datatype-animation_LINKLIBAFILES)
+
+workbench-datatype-animation_RELLINKLIBCFILES := $(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$($(workbench-datatype-animation_DEFNAME)_RELLINKLIBFILES))
+workbench-datatype-animation_RELLINKLIBAFILES := $(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$($(workbench-datatype-animation_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(workbench-datatype-animation_DEFNAME)_RELLINKLIBFILES) $($(workbench-datatype-animation_DEFNAME)_RELLINKLIBAFILES)  $(workbench-datatype-animation_ARCHNLIBFILES)),)
+    workbench-datatype-animation_RELLINKLIB   :=
+else
+    workbench-datatype-animation_RELLINKLIB   := $(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_DEFNAME)_rel$(workbench-datatype-animation_LIBSUFFIX).a
+    ifneq (animation,$(workbench-datatype-animation_LINKLIBNAME))
+        workbench-datatype-animation_RELLINKLIB += $(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_LINKLIBNAME)_rel$(workbench-datatype-animation_LIBSUFFIX).a
+    endif
+endif
+workbench-datatype-animation_RELLINKLIBFILES  := $(workbench-datatype-animation_RELLINKLIBCFILES) $(workbench-datatype-animation_RELLINKLIBAFILES)
+endif
+
+workbench-datatype-animation_ENDOBJS          := $(addsuffix .o,$(workbench-datatype-animation_ENDFILES))
+workbench-datatype-animation_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$(notdir $(workbench-datatype-animation_NLIBARCHFILES))) $(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/arch/,$(notdir $(workbench-datatype-animation_ARCHNLIBFILES))) $(workbench-datatype-animation_LINKLIBFILES)) \
+                 
+workbench-datatype-animation_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$(notdir $(workbench-datatype-animation_NLIBARCHFILES))) $(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/arch/,$(notdir $(workbench-datatype-animation_ARCHNLIBFILES))) $(workbench-datatype-animation_RELLINKLIBFILES)) \
+                 
+$(workbench-datatype-animation_LINKLIBFILES) $(workbench-datatype-animation_RELLINKLIBFILES) : | $(workbench-datatype-animation_OBJDIR)/linklib
+$(workbench-datatype-animation_LINKLIBOBJS) $(workbench-datatype-animation_RELLINKLIBOBJS) : | $(workbench-datatype-animation_OBJDIR)/linklib
+
+workbench-datatype-animation_CCFILES := $(workbench-datatype-animation_C_NARCHFILES)
+workbench-datatype-animation_TARGETCCFILES    := $(strip $(workbench-datatype-animation_STARTFILES) $(workbench-datatype-animation_ENDFILES))
+workbench-datatype-animation_LINKLIBCCFILES   := $(strip $(workbench-datatype-animation_NLIBARCHFILES) $(workbench-datatype-animation_LINKLIBCFILES) $(workbench-datatype-animation_RELLINKLIBCFILES))
+workbench-datatype-animation_LINKLIBCCGENFILES := $(strip $(workbench-datatype-animation_LINKLIBCFILES) $(workbench-datatype-animation_RELLINKLIBCFILES))
+
+
+workbench-datatype-animation_CXXABSBASENAMES := $(foreach workbench-datatype-animation_CXXBASE,$(workbench-datatype-animation_CXX_NARCHFILES),$(if $(filter /%,$(workbench-datatype-animation_CXXBASE)),$(workbench-datatype-animation_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-datatype-animation_CXXBASE))))
+
+ifneq ($(workbench-datatype-animation_CXXABSBASENAMES),)
+
+workbench-datatype-animation_CXXBASENAMES := $(basename $(workbench-datatype-animation_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-datatype-animation_MCXX_FILES  := $(strip $(foreach workbench-datatype-animation_CXXBASE,$(workbench-datatype-animation_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-datatype-animation_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-datatype-animation_EXT),$(workbench-datatype-animation_CXXBASE)))))))
+
+ifeq (,)
+workbench-datatype-animation_MCXX_SRCWILDCARD := %
+else
+workbench-datatype-animation_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-datatype-animation_OBJDIR),)
+  workbench-datatype-animation_CXXTARGETS := $(notdir $(workbench-datatype-animation_CXXBASENAMES:=.o))
+  workbench-datatype-animation_CXXDTARGETS := $(notdir $(workbench-datatype-animation_CXXBASENAMES:=.d))
+  workbench-datatype-animation_MCXX_WILDCARD := %
+else
+  workbench-datatype-animation_CXXTARGETS := $(addprefix $(workbench-datatype-animation_OBJDIR)/,$(notdir $(workbench-datatype-animation_CXXBASENAMES:=.o)))
+  workbench-datatype-animation_CXXDTARGETS := $(addprefix $(workbench-datatype-animation_OBJDIR)/,$(notdir $(workbench-datatype-animation_CXXBASENAMES:=.d)))
+  workbench-datatype-animation_MCXX_WILDCARD := $(workbench-datatype-animation_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-datatype-animation_CXXTARGETS) $(workbench-datatype-animation_CXXDTARGETS) : | $(workbench-datatype-animation_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-datatype-animation_MCXX_CPPFLAGS := $(workbench-datatype-animation_CPPFLAGS)
+workbench-datatype-animation_CXXFLAGS := $(workbench-datatype-animation_CXXFLAGS)
+ifeq ($(workbench-datatype-animation_DXXFLAGS),)
+  workbench-datatype-animation_DXXFLAGS := $(workbench-datatype-animation_CXXFLAGS)
+else
+  workbench-datatype-animation_DXXFLAGS := $(workbench-datatype-animation_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-datatype-animation_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-datatype-animation_STRIP ?= $(HOST_STRIP)
+  workbench-datatype-animation_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-datatype-animation_CXXCMD:=$(HOST_CXX)
+  workbench-datatype-animation_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-datatype-animation_MCXX_CPPFLAGS) $(workbench-datatype-animation_MCXX_EXTRA_CPPFLAGS))
+  workbench-datatype-animation_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-datatype-animation_CXXFLAGS))
+  workbench-datatype-animation_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-datatype-animation_DXXFLAGS))
+  workbench-datatype-animation_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-datatype-animation_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-datatype-animation_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-datatype-animation_STRIP ?= $(TARGET_STRIP)
+  workbench-datatype-animation_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-datatype-animation_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-datatype-animation_MCXX_CPPFLAGS := $(strip $(workbench-datatype-animation_MCXX_CPPFLAGS) $(workbench-datatype-animation_MCXX_EXTRA_CPPFLAGS))
+  workbench-datatype-animation_CXXFLAGS := $(strip $(workbench-datatype-animation_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-datatype-animation_DXXFLAGS := $(workbench-datatype-animation_DXXFLAGS)
+  workbench-datatype-animation_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-datatype-animation_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-datatype-animation_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-datatype-animation_STRIP ?= $(ECHO) >/dev/null
+  workbench-datatype-animation_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-datatype-animation_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-datatype-animation_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-datatype-animation_MCXX_CPPFLAGS) $(workbench-datatype-animation_MCXX_EXTRA_CPPFLAGS))
+  workbench-datatype-animation_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-datatype-animation_CXXFLAGS))
+  workbench-datatype-animation_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-datatype-animation_DXXFLAGS))
+  workbench-datatype-animation_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-datatype-animation_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-datatype-animation_CXXCMD) $(workbench-datatype-animation_CXXIQUOTE) $(dir $(2)) $(workbench-datatype-animation_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_CXXIQUOTE) . $(workbench-datatype-animation_CXXIQUOTE_END) $(strip $(workbench-datatype-animation_CXXFLAGS) $(workbench-datatype-animation_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-datatype-animation_CXXCMD) $(workbench-datatype-animation_CXXIQUOTE) $(dir $(2)) $(workbench-datatype-animation_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_CXXIQUOTE) . $(workbench-datatype-animation_CXXIQUOTE_END) $(strip $(workbench-datatype-animation_CXXFLAGS) $(workbench-datatype-animation_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-datatype-animation_CXXCMD) $(workbench-datatype-animation_CXXIQUOTE) $(dir $(2)) $(workbench-datatype-animation_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_CXXIQUOTE) . $(workbench-datatype-animation_CXXIQUOTE_END) $(strip $(workbench-datatype-animation_CXXFLAGS) $(workbench-datatype-animation_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-datatype-animation_CXXCMD)" $(MKDEPEND) $(strip $(workbench-datatype-animation_DXXFLAGS) $(workbench-datatype-animation_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-datatype-animation_OBJDIR),)
+  $(foreach workbench-datatype-animation_CXXFILE,$(workbench-datatype-animation_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-datatype-animation_CXXFILE))),$(workbench-datatype-animation_CXXFILE))))
+else
+  $(foreach workbench-datatype-animation_CXXFILE,$(workbench-datatype-animation_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-datatype-animation_OBJDIR)/,$(notdir $(basename $(workbench-datatype-animation_CXXFILE)))),$(workbench-datatype-animation_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-datatype-animation_OBJC_NARCHFILES),)
+
+ifeq (,)
+workbench-datatype-animation_MOBJC_SRCWILDCARD := %
+else
+workbench-datatype-animation_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-datatype-animation_OBJDIR),)
+  workbench-datatype-animation_MOBJC_TARGETS := $(addsuffix .o,$(workbench-datatype-animation_OBJC_NARCHFILES))
+  workbench-datatype-animation_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-datatype-animation_OBJC_NARCHFILES))
+  workbench-datatype-animation_MOBJC_WILDCARD := %
+else
+  workbench-datatype-animation_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-datatype-animation_OBJDIR)/,$(workbench-datatype-animation_OBJC_NARCHFILES)))
+  workbench-datatype-animation_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-datatype-animation_OBJDIR)/,$(workbench-datatype-animation_OBJC_NARCHFILES)))
+  workbench-datatype-animation_MOBJC_WILDCARD := $(workbench-datatype-animation_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-datatype-animation_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  workbench-datatype-animation_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-datatype-animation_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-datatype-animation_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-datatype-animation_MOBJC_DIRS := $(foreach dir, $(workbench-datatype-animation_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-datatype-animation_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-datatype-animation_MOBJC_DIRS),)
+    workbench-datatype-animation_MOBJC_DIRS := $(shell echo $(workbench-datatype-animation_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-datatype-animation_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-datatype-animation_CC := $(TARGET_CC)
+else
+  workbench-datatype-animation_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-datatype-animation_MOBJC_CPPFLAGS := $(workbench-datatype-animation_CPPFLAGS)
+workbench-datatype-animation_OBJCFLAGS := $(workbench-datatype-animation_CFLAGS)
+workbench-datatype-animation_OBJCFLAGS := $(workbench-datatype-animation_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-datatype-animation_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-datatype-animation_OBJCFLAGS)))
+ifeq ($(workbench-datatype-animation_DFLAGS),)
+  workbench-datatype-animation_OBJCDFLAGS := $(workbench-datatype-animation_CFLAGS)
+else
+  workbench-datatype-animation_OBJCDFLAGS := $(workbench-datatype-animation_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-datatype-animation_LINK ?= $(strip $(workbench-datatype-animation_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-datatype-animation_STRIP ?= $(TARGET_STRIP)
+  workbench-datatype-animation_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-datatype-animation_CC) $(TARGET_SYSROOT))
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : workbench-datatype-animation_MOBJC_CPPFLAGS:=$(strip $(workbench-datatype-animation_MOBJC_CPPFLAGS) $(workbench-datatype-animation_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : workbench-datatype-animation_OBJCFLAGS:=$(strip $(workbench-datatype-animation_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : workbench-datatype-animation_OBJCDFLAGS:=$(workbench-datatype-animation_OBJCDFLAGS)
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : workbench-datatype-animation_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : workbench-datatype-animation_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-datatype-animation_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-datatype-animation_STRIP ?= $(HOST_STRIP)
+  workbench-datatype-animation_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : workbench-datatype-animation_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-datatype-animation_MOBJC_CPPFLAGS) $(workbench-datatype-animation_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : workbench-datatype-animation_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-datatype-animation_OBJCFLAGS))
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : workbench-datatype-animation_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-datatype-animation_OBJCDFLAGS))
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : workbench-datatype-animation_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : workbench-datatype-animation_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-datatype-animation_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-datatype-animation_STRIP ?= $(ECHO) >/dev/null
+  workbench-datatype-animation_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : workbench-datatype-animation_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-datatype-animation_MOBJC_CPPFLAGS) $(workbench-datatype-animation_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : workbench-datatype-animation_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-datatype-animation_OBJCFLAGS))
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : workbench-datatype-animation_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-datatype-animation_OBJCDFLAGS))
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : workbench-datatype-animation_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-datatype-animation_MOBJC_TARGETS) $(workbench-datatype-animation_MOBJC_DTARGETS) : workbench-datatype-animation_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-datatype-animation_MOBJC_TARGETS) : CPPFLAGS := $(workbench-datatype-animation_MOBJC_CPPFLAGS)
+$(workbench-datatype-animation_MOBJC_TARGETS) : CFLAGS := $(workbench-datatype-animation_OBJCFLAGS)
+$(workbench-datatype-animation_MOBJC_TARGETS) : $(workbench-datatype-animation_MOBJC_WILDCARD).o : $(workbench-datatype-animation_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-datatype-animation_IQUOTE) $(dir $<) $(workbench-datatype-animation_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_IQUOTE) . $(workbench-datatype-animation_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-datatype-animation_IQUOTE) $(dir $<) $(workbench-datatype-animation_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_IQUOTE) . $(workbench-datatype-animation_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-datatype-animation_IQUOTE) $(dir $<) $(workbench-datatype-animation_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_IQUOTE) . $(workbench-datatype-animation_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-datatype-animation_MOBJC_DTARGETS) : $(workbench-datatype-animation_MOBJC_WILDCARD).d : $(workbench-datatype-animation_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-datatype-animation_OBJCDFLAGS) $(workbench-datatype-animation_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-datatype-animation_MC_SRCWILDCARD := %
+else
+workbench-datatype-animation_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-datatype-animation_OBJDIR),)
+workbench-datatype-animation_MC_TARGETS := $(addsuffix .o,$(workbench-datatype-animation_CCFILES))
+workbench-datatype-animation_MC_DTARGETS := $(addsuffix .d,$(workbench-datatype-animation_CCFILES))
+workbench-datatype-animation_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-datatype-animation_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-datatype-animation_OBJDIR)/,$(notdir $(workbench-datatype-animation_CCFILES))))
+    workbench-datatype-animation_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-datatype-animation_OBJDIR)/,$(notdir $(workbench-datatype-animation_CCFILES))))
+else
+ifeq (,)
+    workbench-datatype-animation_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-datatype-animation_OBJDIR)/,$(workbench-datatype-animation_CCFILES)))
+    workbench-datatype-animation_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-datatype-animation_OBJDIR)/,$(workbench-datatype-animation_CCFILES)))
+else
+    workbench-datatype-animation_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-datatype-animation_OBJDIR)/,$(patsubst /%,%,$(workbench-datatype-animation_CCFILES))))
+    workbench-datatype-animation_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-datatype-animation_OBJDIR)/,$(patsubst /%,%,$(workbench-datatype-animation_CCFILES))))
+endif
+endif
+workbench-datatype-animation_MC_TGTWILDCARD := $(workbench-datatype-animation_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : | $(addsuffix .c,$(workbench-datatype-animation_CCFILES))
+
+# Be sure that all .c files are found
+workbench-datatype-animation_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-datatype-animation_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-datatype-animation_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-datatype-animation_MC_DIRS := $(foreach dir, $(workbench-datatype-animation_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-datatype-animation_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-datatype-animation_MC_DIRS),)
+    workbench-datatype-animation_MC_DIRS := $(shell echo $(workbench-datatype-animation_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-datatype-animation_MC_DIRS)
+endif
+
+endif
+
+workbench-datatype-animation_MC_CPPFLAGS := $(workbench-datatype-animation_CPPFLAGS)
+workbench-datatype-animation_CFLAGS := $(workbench-datatype-animation_CFLAGS)
+ifeq ($(workbench-datatype-animation_DFLAGS),)
+  workbench-datatype-animation_DFLAGS := $(workbench-datatype-animation_CFLAGS)
+else
+  workbench-datatype-animation_DFLAGS := $(workbench-datatype-animation_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-datatype-animation_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-datatype-animation_STRIP ?= $(TARGET_STRIP)
+workbench-datatype-animation_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_MC_CPPFLAGS:=$(strip $(workbench-datatype-animation_MC_CPPFLAGS) $(workbench-datatype-animation_MC_EXTRA_CPPFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_CFLAGS:=$(strip $(workbench-datatype-animation_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_DFLAGS:=$(workbench-datatype-animation_DFLAGS)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-datatype-animation_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-datatype-animation_STRIP ?= $(HOST_STRIP)
+workbench-datatype-animation_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-datatype-animation_MC_CPPFLAGS) $(workbench-datatype-animation_MC_EXTRA_CPPFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-datatype-animation_CFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-datatype-animation_DFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-datatype-animation_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-datatype-animation_STRIP ?= $(ECHO) >/dev/null
+workbench-datatype-animation_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-datatype-animation_MC_CPPFLAGS) $(workbench-datatype-animation_MC_EXTRA_CPPFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-datatype-animation_CFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-datatype-animation_DFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-datatype-animation_MC_TARGETS) : CPPFLAGS := $(workbench-datatype-animation_MC_CPPFLAGS)
+$(workbench-datatype-animation_MC_TARGETS) : CFLAGS := $(workbench-datatype-animation_CFLAGS)
+$(workbench-datatype-animation_MC_TARGETS) : $(workbench-datatype-animation_MC_TGTWILDCARD).o : $(workbench-datatype-animation_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-datatype-animation_IQUOTE) $(dir $<) $(workbench-datatype-animation_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_IQUOTE) . $(workbench-datatype-animation_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-datatype-animation_IQUOTE) $(dir $<) $(workbench-datatype-animation_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_IQUOTE) . $(workbench-datatype-animation_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-datatype-animation_IQUOTE) $(dir $<) $(workbench-datatype-animation_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_IQUOTE) . $(workbench-datatype-animation_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-datatype-animation_MC_DTARGETS) : $(workbench-datatype-animation_MC_TGTWILDCARD).d : $(workbench-datatype-animation_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-datatype-animation_DFLAGS) $(workbench-datatype-animation_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+workbench-datatype-animation_MC_SRCWILDCARD := %
+else
+workbench-datatype-animation_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-datatype-animation_OBJDIR),)
+workbench-datatype-animation_MC_TARGETS := $(addsuffix .o,$(workbench-datatype-animation_TARGETCCFILES))
+workbench-datatype-animation_MC_DTARGETS := $(addsuffix .d,$(workbench-datatype-animation_TARGETCCFILES))
+workbench-datatype-animation_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-datatype-animation_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-datatype-animation_OBJDIR)/,$(notdir $(workbench-datatype-animation_TARGETCCFILES))))
+    workbench-datatype-animation_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-datatype-animation_OBJDIR)/,$(notdir $(workbench-datatype-animation_TARGETCCFILES))))
+else
+ifeq (,)
+    workbench-datatype-animation_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-datatype-animation_OBJDIR)/,$(workbench-datatype-animation_TARGETCCFILES)))
+    workbench-datatype-animation_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-datatype-animation_OBJDIR)/,$(workbench-datatype-animation_TARGETCCFILES)))
+else
+    workbench-datatype-animation_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-datatype-animation_OBJDIR)/,$(patsubst /%,%,$(workbench-datatype-animation_TARGETCCFILES))))
+    workbench-datatype-animation_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-datatype-animation_OBJDIR)/,$(patsubst /%,%,$(workbench-datatype-animation_TARGETCCFILES))))
+endif
+endif
+workbench-datatype-animation_MC_TGTWILDCARD := $(workbench-datatype-animation_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : | $(addsuffix .c,$(workbench-datatype-animation_TARGETCCFILES))
+
+# Be sure that all .c files are found
+workbench-datatype-animation_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-datatype-animation_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-datatype-animation_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-datatype-animation_MC_DIRS := $(foreach dir, $(workbench-datatype-animation_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-datatype-animation_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-datatype-animation_MC_DIRS),)
+    workbench-datatype-animation_MC_DIRS := $(shell echo $(workbench-datatype-animation_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-datatype-animation_MC_DIRS)
+endif
+
+endif
+
+workbench-datatype-animation_MC_CPPFLAGS := $(workbench-datatype-animation_CPPFLAGS) -D__AROS__
+workbench-datatype-animation_CFLAGS := $(workbench-datatype-animation_CFLAGS)
+ifeq ($(workbench-datatype-animation_DFLAGS),)
+  workbench-datatype-animation_DFLAGS := $(workbench-datatype-animation_CFLAGS)
+else
+  workbench-datatype-animation_DFLAGS := $(workbench-datatype-animation_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-datatype-animation_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-datatype-animation_STRIP ?= $(TARGET_STRIP)
+workbench-datatype-animation_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_MC_CPPFLAGS:=$(strip $(workbench-datatype-animation_MC_CPPFLAGS) $(workbench-datatype-animation_MC_EXTRA_CPPFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_CFLAGS:=$(strip $(workbench-datatype-animation_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_DFLAGS:=$(workbench-datatype-animation_DFLAGS)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-datatype-animation_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-datatype-animation_STRIP ?= $(HOST_STRIP)
+workbench-datatype-animation_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-datatype-animation_MC_CPPFLAGS) $(workbench-datatype-animation_MC_EXTRA_CPPFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-datatype-animation_CFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-datatype-animation_DFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-datatype-animation_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-datatype-animation_STRIP ?= $(ECHO) >/dev/null
+workbench-datatype-animation_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-datatype-animation_MC_CPPFLAGS) $(workbench-datatype-animation_MC_EXTRA_CPPFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-datatype-animation_CFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-datatype-animation_DFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-datatype-animation_MC_TARGETS) : CPPFLAGS := $(workbench-datatype-animation_MC_CPPFLAGS)
+$(workbench-datatype-animation_MC_TARGETS) : CFLAGS := $(workbench-datatype-animation_CFLAGS)
+$(workbench-datatype-animation_MC_TARGETS) : $(workbench-datatype-animation_MC_TGTWILDCARD).o : $(workbench-datatype-animation_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-datatype-animation_IQUOTE) $(dir $<) $(workbench-datatype-animation_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_IQUOTE) . $(workbench-datatype-animation_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-datatype-animation_IQUOTE) $(dir $<) $(workbench-datatype-animation_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_IQUOTE) . $(workbench-datatype-animation_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-datatype-animation_IQUOTE) $(dir $<) $(workbench-datatype-animation_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_IQUOTE) . $(workbench-datatype-animation_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-datatype-animation_MC_DTARGETS) : $(workbench-datatype-animation_MC_TGTWILDCARD).d : $(workbench-datatype-animation_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-datatype-animation_DFLAGS) $(workbench-datatype-animation_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+workbench-datatype-animation_MC_SRCWILDCARD := %
+else
+workbench-datatype-animation_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-datatype-animation_OBJDIR)/linklib,)
+workbench-datatype-animation_MC_TARGETS := $(addsuffix .o,$(workbench-datatype-animation_NLIBARCHFILES))
+workbench-datatype-animation_MC_DTARGETS := $(addsuffix .d,$(workbench-datatype-animation_NLIBARCHFILES))
+workbench-datatype-animation_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-datatype-animation_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$(notdir $(workbench-datatype-animation_NLIBARCHFILES))))
+    workbench-datatype-animation_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$(notdir $(workbench-datatype-animation_NLIBARCHFILES))))
+else
+ifeq (,)
+    workbench-datatype-animation_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$(workbench-datatype-animation_NLIBARCHFILES)))
+    workbench-datatype-animation_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$(workbench-datatype-animation_NLIBARCHFILES)))
+else
+    workbench-datatype-animation_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$(patsubst /%,%,$(workbench-datatype-animation_NLIBARCHFILES))))
+    workbench-datatype-animation_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$(patsubst /%,%,$(workbench-datatype-animation_NLIBARCHFILES))))
+endif
+endif
+workbench-datatype-animation_MC_TGTWILDCARD := $(workbench-datatype-animation_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : | $(addsuffix .c,$(workbench-datatype-animation_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+workbench-datatype-animation_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-datatype-animation_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-datatype-animation_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-datatype-animation_MC_DIRS := $(foreach dir, $(workbench-datatype-animation_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-datatype-animation_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-datatype-animation_MC_DIRS),)
+    workbench-datatype-animation_MC_DIRS := $(shell echo $(workbench-datatype-animation_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-datatype-animation_MC_DIRS)
+endif
+
+endif
+
+workbench-datatype-animation_MC_CPPFLAGS := $(workbench-datatype-animation_LINKLIBCPPFLAGS) -D__AROS__
+workbench-datatype-animation_CFLAGS := $(workbench-datatype-animation_LINKLIBCFLAGS)
+ifeq ($(workbench-datatype-animation_LINKLIBDFLAGS),)
+  workbench-datatype-animation_DFLAGS := $(workbench-datatype-animation_LINKLIBCFLAGS)
+else
+  workbench-datatype-animation_DFLAGS := $(workbench-datatype-animation_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-datatype-animation_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-datatype-animation_STRIP ?= $(TARGET_STRIP)
+workbench-datatype-animation_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_MC_CPPFLAGS:=$(strip $(workbench-datatype-animation_MC_CPPFLAGS) $(workbench-datatype-animation_MC_EXTRA_CPPFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_CFLAGS:=$(strip $(workbench-datatype-animation_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_DFLAGS:=$(workbench-datatype-animation_DFLAGS)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-datatype-animation_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-datatype-animation_STRIP ?= $(HOST_STRIP)
+workbench-datatype-animation_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-datatype-animation_MC_CPPFLAGS) $(workbench-datatype-animation_MC_EXTRA_CPPFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-datatype-animation_CFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-datatype-animation_DFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-datatype-animation_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-datatype-animation_STRIP ?= $(ECHO) >/dev/null
+workbench-datatype-animation_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-datatype-animation_MC_CPPFLAGS) $(workbench-datatype-animation_MC_EXTRA_CPPFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-datatype-animation_CFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-datatype-animation_DFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-datatype-animation_MC_TARGETS) : CPPFLAGS := $(workbench-datatype-animation_MC_CPPFLAGS)
+$(workbench-datatype-animation_MC_TARGETS) : CFLAGS := $(workbench-datatype-animation_CFLAGS)
+$(workbench-datatype-animation_MC_TARGETS) : $(workbench-datatype-animation_MC_TGTWILDCARD).o : $(workbench-datatype-animation_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-datatype-animation_IQUOTE) $(dir $<) $(workbench-datatype-animation_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_IQUOTE) . $(workbench-datatype-animation_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-datatype-animation_IQUOTE) $(dir $<) $(workbench-datatype-animation_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_IQUOTE) . $(workbench-datatype-animation_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-datatype-animation_IQUOTE) $(dir $<) $(workbench-datatype-animation_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_IQUOTE) . $(workbench-datatype-animation_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-datatype-animation_MC_DTARGETS) : $(workbench-datatype-animation_MC_TGTWILDCARD).d : $(workbench-datatype-animation_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-datatype-animation_DFLAGS) $(workbench-datatype-animation_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-datatype-animation_OBJDIR)/linklib,)
+workbench-datatype-animation_MC_SRCWILDCARD := %
+else
+workbench-datatype-animation_MC_SRCWILDCARD := $(workbench-datatype-animation_OBJDIR)/linklib/%
+endif
+
+ifeq ($(workbench-datatype-animation_OBJDIR)/linklib,)
+workbench-datatype-animation_MC_TARGETS := $(addsuffix .o,$(workbench-datatype-animation_LINKLIBCCGENFILES))
+workbench-datatype-animation_MC_DTARGETS := $(addsuffix .d,$(workbench-datatype-animation_LINKLIBCCGENFILES))
+workbench-datatype-animation_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-datatype-animation_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$(notdir $(workbench-datatype-animation_LINKLIBCCGENFILES))))
+    workbench-datatype-animation_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$(notdir $(workbench-datatype-animation_LINKLIBCCGENFILES))))
+else
+ifeq ($(workbench-datatype-animation_OBJDIR)/linklib,)
+    workbench-datatype-animation_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$(workbench-datatype-animation_LINKLIBCCGENFILES)))
+    workbench-datatype-animation_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$(workbench-datatype-animation_LINKLIBCCGENFILES)))
+else
+    workbench-datatype-animation_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$(patsubst $(workbench-datatype-animation_OBJDIR)/linklib/%,%,$(workbench-datatype-animation_LINKLIBCCGENFILES))))
+    workbench-datatype-animation_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$(patsubst $(workbench-datatype-animation_OBJDIR)/linklib/%,%,$(workbench-datatype-animation_LINKLIBCCGENFILES))))
+endif
+endif
+workbench-datatype-animation_MC_TGTWILDCARD := $(workbench-datatype-animation_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : | $(addsuffix .c,$(workbench-datatype-animation_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+workbench-datatype-animation_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-datatype-animation_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-datatype-animation_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-datatype-animation_MC_DIRS := $(foreach dir, $(workbench-datatype-animation_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-datatype-animation_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-datatype-animation_MC_DIRS),)
+    workbench-datatype-animation_MC_DIRS := $(shell echo $(workbench-datatype-animation_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-datatype-animation_MC_DIRS)
+endif
+
+endif
+
+workbench-datatype-animation_MC_CPPFLAGS := $(workbench-datatype-animation_LINKLIBCPPFLAGS) -D__AROS__
+workbench-datatype-animation_CFLAGS := $(workbench-datatype-animation_LINKLIBCFLAGS)
+ifeq ($(workbench-datatype-animation_LINKLIBDFLAGS),)
+  workbench-datatype-animation_DFLAGS := $(workbench-datatype-animation_LINKLIBCFLAGS)
+else
+  workbench-datatype-animation_DFLAGS := $(workbench-datatype-animation_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-datatype-animation_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-datatype-animation_STRIP ?= $(TARGET_STRIP)
+workbench-datatype-animation_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_MC_CPPFLAGS:=$(strip $(workbench-datatype-animation_MC_CPPFLAGS) $(workbench-datatype-animation_MC_EXTRA_CPPFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_CFLAGS:=$(strip $(workbench-datatype-animation_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_DFLAGS:=$(workbench-datatype-animation_DFLAGS)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-datatype-animation_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-datatype-animation_STRIP ?= $(HOST_STRIP)
+workbench-datatype-animation_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-datatype-animation_MC_CPPFLAGS) $(workbench-datatype-animation_MC_EXTRA_CPPFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-datatype-animation_CFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-datatype-animation_DFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-datatype-animation_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-datatype-animation_STRIP ?= $(ECHO) >/dev/null
+workbench-datatype-animation_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-datatype-animation_MC_CPPFLAGS) $(workbench-datatype-animation_MC_EXTRA_CPPFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-datatype-animation_CFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-datatype-animation_DFLAGS))
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-datatype-animation_MC_TARGETS) $(workbench-datatype-animation_MC_DTARGETS) : workbench-datatype-animation_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-datatype-animation_MC_TARGETS) : CPPFLAGS := $(workbench-datatype-animation_MC_CPPFLAGS)
+$(workbench-datatype-animation_MC_TARGETS) : CFLAGS := $(workbench-datatype-animation_CFLAGS)
+$(workbench-datatype-animation_MC_TARGETS) : $(workbench-datatype-animation_MC_TGTWILDCARD).o : $(workbench-datatype-animation_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-datatype-animation_IQUOTE) $(dir $<) $(workbench-datatype-animation_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_IQUOTE) . $(workbench-datatype-animation_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-datatype-animation_IQUOTE) $(dir $<) $(workbench-datatype-animation_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_IQUOTE) . $(workbench-datatype-animation_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-datatype-animation_IQUOTE) $(dir $<) $(workbench-datatype-animation_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-datatype-animation_IQUOTE) . $(workbench-datatype-animation_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-datatype-animation_MC_DTARGETS) : $(workbench-datatype-animation_MC_TGTWILDCARD).d : $(workbench-datatype-animation_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-datatype-animation_DFLAGS) $(workbench-datatype-animation_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(workbench-datatype-animation_LINKLIBAFILES),)
+
+ifeq ($(workbench-datatype-animation_OBJDIR)/linklib,)
+workbench-datatype-animation-MA_TARGETS := $(addsuffix .o,$(workbench-datatype-animation_LINKLIBAFILES) $(workbench-datatype-animation_RELLINKLIBAFILES))
+workbench-datatype-animation-MA_WILDCARD := %
+else
+workbench-datatype-animation-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$(notdir $(workbench-datatype-animation_LINKLIBAFILES) $(workbench-datatype-animation_RELLINKLIBAFILES))))
+workbench-datatype-animation-MA_WILDCARD := $(workbench-datatype-animation_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(workbench-datatype-animation-MA_TARGETS) : | $(addsuffix .S,$(workbench-datatype-animation_LINKLIBAFILES) $(workbench-datatype-animation_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+workbench-datatype-animation-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-datatype-animation-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-datatype-animation_LINKLIBAFILES) $(workbench-datatype-animation_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-datatype-animation-MA_DIRS := $(foreach dir, $(workbench-datatype-animation-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-datatype-animation-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-datatype-animation-MA_DIRS),)
+    workbench-datatype-animation-MA_DIRS := $(shell echo $(workbench-datatype-animation-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(workbench-datatype-animation-MA_DIRS)
+endif
+
+endif
+
+workbench-datatype-animation-MA_ASSEMBLER ?= $(workbench-datatype-animation_ASSEMBLER)
+
+$(workbench-datatype-animation-MA_TARGETS) : workbench-datatype-animation-MA_CMD:= $(workbench-datatype-animation-MA_ASSEMBLER)
+
+$(workbench-datatype-animation-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(workbench-datatype-animation-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(workbench-datatype-animation-MA_TARGETS) : $(workbench-datatype-animation-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-datatype-animation-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-datatype-animation-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-datatype-animation-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+workbench-datatype-animation_SUFFIX           := datatype
+else
+workbench-datatype-animation_SUFFIX           := 
+endif
+
+ifeq (target,target)
+workbench-datatype-animation_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-datatype-animation_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-datatype-animation_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(workbench-datatype-animation_SUFFIX),handler)
+workbench-datatype-animation_MODULE           := $(AROSDIR)/$(workbench-datatype-animation_MODDIR)/$(workbench-datatype-animation_DEFNAME)-$(workbench-datatype-animation_SUFFIX)
+else
+workbench-datatype-animation_MODULE           := $(AROSDIR)/$(workbench-datatype-animation_MODDIR)/$(workbench-datatype-animation_DEFNAME).$(workbench-datatype-animation_SUFFIX)
+endif
+workbench-datatype-animation_KOBJ             := $(KOBJSDIR)/$(workbench-datatype-animation_DEFNAME)_$(workbench-datatype-animation_SUFFIX).o
+else
+workbench-datatype-animation_MODULE           :=
+workbench-datatype-animation_KOBJ             :=
+endif
+
+workbench-datatype-animation-quick      : workbench-datatype-animation
+workbench-datatype-animation            : $(workbench-datatype-animation_MODULE) $(workbench-datatype-animation_LINKLIB) $(workbench-datatype-animation_RELLINKLIB)
+ifeq (M,M)
+workbench-datatype-animation-kobj       : $(workbench-datatype-animation_KOBJ) $(workbench-datatype-animation_LINKLIB) $(workbench-datatype-animation_RELLINKLIB)
+workbench-datatype-animation-kobj-quick : $(workbench-datatype-animation_KOBJ) $(workbench-datatype-animation_LINKLIB) $(workbench-datatype-animation_RELLINKLIB)
+endif
+ifeq (M,M)
+workbench-datatype-animation-linklib    : $(workbench-datatype-animation_LINKLIB) $(workbench-datatype-animation_RELLINKLIB)
+endif
+
+workbench-datatype-animation_OBJS := $(addsuffix .o,$(workbench-datatype-animation_STARTFILES)) $(workbench-datatype-animation_ARCHOBJS) \
+           $(addprefix $(workbench-datatype-animation_OBJDIR)/,$(notdir $(workbench-datatype-animation_C_NARCHFILES:=.o) $(workbench-datatype-animation_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (datatype,handler)
+workbench-datatype-animation_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (animation,con)
+    workbench-datatype-animation_ERR          := $(notdir $(workbench-datatype-animation_MODULE)).err
+else
+    workbench-datatype-animation_ERR          := animation.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(workbench-datatype-animation_DEFNAME)_LDFLAGS) $(workbench-datatype-animation_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-datatype-animation_LIBS) $($(workbench-datatype-animation_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(workbench-datatype-animation_MODULE) : LIB_NAMES := $(workbench-datatype-animation_LIBS) $($(workbench-datatype-animation_DEFNAME)_LIBS)
+$(workbench-datatype-animation_MODULE) : OBJS := $(workbench-datatype-animation_STARTOBJS) $(workbench-datatype-animation_OBJS) $(USER_OBJS)
+$(workbench-datatype-animation_MODULE) : ENDTAG := $(workbench-datatype-animation_ENDOBJS)
+$(workbench-datatype-animation_MODULE) : ERR := $(workbench-datatype-animation_ERR)
+$(workbench-datatype-animation_MODULE) : OBJDIR := $(workbench-datatype-animation_OBJDIR)
+$(workbench-datatype-animation_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(workbench-datatype-animation_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(workbench-datatype-animation_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(workbench-datatype-animation_MODULE) : $(workbench-datatype-animation_STARTOBJS) $(workbench-datatype-animation_OBJS) $(USER_OBJS) $(workbench-datatype-animation_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(workbench-datatype-animation_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(workbench-datatype-animation_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+workbench-datatype-animation_LC_LINKLIBNAME   := $(shell echo $(workbench-datatype-animation_LINKLIBNAME) | tr A-Z a-z)
+workbench-datatype-animation_LC_MODNAME       := $(shell echo animation | tr A-Z a-z)
+ifneq ($(workbench-datatype-animation_LINKLIB),)
+
+ifeq (target,target)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_LINKLIBNAME)$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_AR:=$(AR)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_LINKLIBNAME)$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_LINKLIBNAME)$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_AR:=$(HOST_AR)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_LINKLIBNAME)$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_LINKLIBNAME)$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_AR:=$(KERNEL_AR)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_LINKLIBNAME)$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_LINKLIBNAME)$(workbench-datatype-animation_LIBSUFFIX).a : $(workbench-datatype-animation_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-datatype-animation_AR) $@ $^
+	$(Q)$(workbench-datatype-animation_RANLIB) $@
+ifneq ($(workbench-datatype-animation_LC_MODNAME),$(workbench-datatype-animation_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(workbench-datatype-animation_LIBDIR)/libanimation$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_AR:=$(AR)
+$(workbench-datatype-animation_LIBDIR)/libanimation$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-datatype-animation_LIBDIR)/libanimation$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_AR:=$(HOST_AR)
+$(workbench-datatype-animation_LIBDIR)/libanimation$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-datatype-animation_LIBDIR)/libanimation$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_AR:=$(KERNEL_AR)
+$(workbench-datatype-animation_LIBDIR)/libanimation$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-datatype-animation_LIBDIR)/libanimation$(workbench-datatype-animation_LIBSUFFIX).a : $(workbench-datatype-animation_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-datatype-animation_AR) $@ $^
+	$(Q)$(workbench-datatype-animation_RANLIB) $@
+endif
+
+
+ifneq ($(workbench-datatype-animation_LINKLIB),)
+$(workbench-datatype-animation_LINKLIB) : | $(workbench-datatype-animation_LIBDIR)
+else
+$(workbench-datatype-animation_LINKLIB) :: $(workbench-datatype-animation_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-datatype-animation_LIBDIR)
+
+endif
+
+ifneq ($(workbench-datatype-animation_RELLINKLIB),)
+
+ifeq (target,target)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_LINKLIBNAME)_rel$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_AR:=$(AR)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_LINKLIBNAME)_rel$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_LINKLIBNAME)_rel$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_AR:=$(HOST_AR)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_LINKLIBNAME)_rel$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_LINKLIBNAME)_rel$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_AR:=$(KERNEL_AR)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_LINKLIBNAME)_rel$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_LINKLIBNAME)_rel$(workbench-datatype-animation_LIBSUFFIX).a : $(workbench-datatype-animation_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-datatype-animation_AR) $@ $^
+	$(Q)$(workbench-datatype-animation_RANLIB) $@
+ifneq ($(workbench-datatype-animation_LC_MODNAME),$(workbench-datatype-animation_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_DEFNAME)_rel$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_AR:=$(AR)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_DEFNAME)_rel$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_DEFNAME)_rel$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_AR:=$(HOST_AR)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_DEFNAME)_rel$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_DEFNAME)_rel$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_AR:=$(KERNEL_AR)
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_DEFNAME)_rel$(workbench-datatype-animation_LIBSUFFIX).a : workbench-datatype-animation_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-datatype-animation_LIBDIR)/lib$(workbench-datatype-animation_DEFNAME)_rel$(workbench-datatype-animation_LIBSUFFIX).a : $(workbench-datatype-animation_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-datatype-animation_AR) $@ $^
+	$(Q)$(workbench-datatype-animation_RANLIB) $@
+endif
+
+
+ifneq ($(workbench-datatype-animation_RELLINKLIB),)
+$(workbench-datatype-animation_RELLINKLIB) : | $(workbench-datatype-animation_LIBDIR)
+else
+$(workbench-datatype-animation_RELLINKLIB) :: $(workbench-datatype-animation_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-datatype-animation_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+workbench-datatype-animation_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+workbench-datatype-animation_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+workbench-datatype-animation_SYMBOLS := $(workbench-datatype-animation_KBASE)
+
+workbench-datatype-animation_KLIB             := hiddstubs amiga arossupport autoinit libinit
+workbench-datatype-animation_KOBJ_LIBS        := $(filter-out $(workbench-datatype-animation_KLIB),$(workbench-datatype-animation_LIBS)) $(workbench-datatype-animation_KAUTOLIB)
+$(workbench-datatype-animation_KOBJ) : LINKLIBS:=$(workbench-datatype-animation_KOBJ_LIBS) $($(workbench-datatype-animation_DEFNAME)_LIBS)
+$(workbench-datatype-animation_KOBJ) : FILTBASES:=$(addprefix -L ,$(workbench-datatype-animation_SYMBOLS))
+$(workbench-datatype-animation_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(workbench-datatype-animation_KOBJ) : $(workbench-datatype-animation_OBJS) $(USER_OBJS) $(workbench-datatype-animation_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+workbench-datatype-animation_DEPS             := $(addprefix $(workbench-datatype-animation_OBJDIR)/,$(notdir $(workbench-datatype-animation_CCFILES:=.d) $(workbench-datatype-animation_TARGETCCFILES:=.d) $(workbench-datatype-animation_CXXFILES:=.d))) $(addprefix $(workbench-datatype-animation_OBJDIR)/linklib/,$(notdir $(workbench-datatype-animation_LINKLIBCCFILES:=.d)))
+
+ifneq ($(workbench-datatype-animation_DEPS),)
+  ifneq (workbench-datatype-animation workbench-datatype-animation-quick workbench-datatype-animation-kobj workbench-datatype-animation-kobj-quick,)
+    ifneq ($(findstring $(TARGET),workbench-datatype-animation workbench-datatype-animation-quick workbench-datatype-animation-kobj workbench-datatype-animation-kobj-quick),)
+      -include $(workbench-datatype-animation_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-datatype-animation_DEPS)
+    endif
+  endif
+endif
+
+$(workbench-datatype-animation_OBJS) $(workbench-datatype-animation_DEPS) : | $(workbench-datatype-animation_OBJDIR)/linklib
+
+ifneq ($(workbench-datatype-animation_OBJS) $(workbench-datatype-animation_DEPS) $(workbench-datatype-animation_MODULE) $(workbench-datatype-animation_KOBJ),)
+$(workbench-datatype-animation_OBJS) $(workbench-datatype-animation_DEPS) $(workbench-datatype-animation_MODULE) $(workbench-datatype-animation_KOBJ) : | $(workbench-datatype-animation_OBJDIR) $(AROSDIR)/$(workbench-datatype-animation_MODDIR) $(KOBJSDIR)
+else
+$(workbench-datatype-animation_OBJS) $(workbench-datatype-animation_DEPS) $(workbench-datatype-animation_MODULE) $(workbench-datatype-animation_KOBJ) :: $(workbench-datatype-animation_OBJDIR) $(AROSDIR)/$(workbench-datatype-animation_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-datatype-animation_OBJDIR) $(AROSDIR)/$(workbench-datatype-animation_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),workbench-datatype-animation workbench-datatype-animation-includes workbench-datatype-animation-quick workbench-datatype-animation-kobj workbench-datatype-animation-kobj-quick),) # Only for this target these deps are wanted
+
+workbench-datatype-animation_DFILE_DEPS := $(workbench-datatype-animation_LIBDEFSINC) $(workbench-datatype-animation_DEFLIBDEFSINC) \
+    $(addprefix $(workbench-datatype-animation_INCDIR)/,$($(workbench-datatype-animation_DEFNAME)_INCLUDES))
+$(workbench-datatype-animation_DEPS) : $(workbench-datatype-animation_DFILE_DEPS)
+endif
+
+workbench-datatype-animation_TOCLEAN := $(workbench-datatype-animation_OBJS) $(workbench-datatype-animation_DEPS) \
+    $(workbench-datatype-animation_MODULE) $(workbench-datatype-animation_LINKLIB) $(workbench-datatype-animation_KOBJ) \
+    $(workbench-datatype-animation_OBJDIR)/Makefile.animationdatatype \
+    $(addprefix $(workbench-datatype-animation_OBJDIR)/include/,$($(workbench-datatype-animation_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(workbench-datatype-animation_DEFNAME)_INCLUDES)) \
+    $(addprefix $(workbench-datatype-animation_INCDIR)/,$($(workbench-datatype-animation_DEFNAME)_INCLUDES)) \
+    $(workbench-datatype-animation_OBJDIR)/animation_geninc $(workbench-datatype-animation_OBJDIR)/animation_incs \
+    $(addsuffix .c,$(workbench-datatype-animation_LINKLIBFILES)) $(workbench-datatype-animation_LINKLIBOBJS) $(workbench-datatype-animation_LIBDEFSINC) \
+    $(workbench-datatype-animation_DEFLIBDEFSINC) $(addsuffix .c,$(workbench-datatype-animation_STARTFILES) $(workbench-datatype-animation_ENDFILES)) \
+    $(workbench-datatype-animation_ENDOBJS)
+workbench-datatype-animation-clean : FILES              := $(workbench-datatype-animation_TOCLEAN)
+workbench-datatype-animation-clean ::
+	$(Q)$(ECHO) "Cleaning up for module animation"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(workbench-datatype-animation_ALLTARGETS)
+
+
+#MM
+workbench-datatype-animation-envarc:
+	@$(MKDIR) $(AROS_ENVARC)/Classes/DataTypes
+	@$(ECHO) "NOSKIP" > $(AROS_ENVARC)/Classes/DataTypes/animation.prefs
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,27 @@
+# $Id: $
+
+include $(SRCDIR)/config/aros.cfg
+
+FONTSDIRPL  := $(AROSDIR)/Storage/Fonts/AmigaPL
+EXCLUDEFILES := \
+        mmakefile.src \
+        AmigaPL_fonts.readme
+
+#MM- workbench-fonts : workbench-fontsPL
+
+
+.PHONY : workbench-fontsPL
+
+#MM
+workbench-fontsPL :
+	$(Q)cd $(SRCDIR)/$(CURDIR) && $(CPYDIRREC) -s . -d $(FONTSDIRPL) -e $(EXCLUDEFILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

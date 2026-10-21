@@ -1,0 +1,646 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+DIGFX  := digfx
+
+#MM workbench-devs-diskimage-gui : includes linklibs workbench-devs-diskimage-support \
+#MM workbench-devs-diskimage-device workbench-devs-diskimage-gui-catalogs \
+#MM workbench-devs-diskimage-gfx
+
+CFILES := locale main gui drivelist pluginlist driveops requesters images
+
+USER_CPPFLAGS := -DGUI -DCATCOMP_NUMBERS
+USER_INCLUDES := -I$(AROS_INCLUDES)/SDI \
+                 -I$(SRCDIR)/$(CURDIR)/include \
+                 -I$(SRCDIR)/$(CURDIR)/../include
+
+
+.PHONY : workbench-devs-diskimage-gui
+
+workbench-devs-diskimage-gui_PROGNAME  := DiskImageGUI
+workbench-devs-diskimage-gui_OBJDIR    := $(GENDIR)/$(CURDIR)
+workbench-devs-diskimage-gui_TARGETDIR := $(AROS_SYSTEM)
+workbench-devs-diskimage-gui_LINKER    := 
+workbench-devs-diskimage-gui_LIBS := diskimagesupport
+# If not supplied, linker is equal to compiler
+ifeq ($(workbench-devs-diskimage-gui_LINKER),)
+    workbench-devs-diskimage-gui_LINKER := target
+endif
+
+ifneq ("$(strip $(CFILES)   )","")
+    workbench-devs-diskimage-gui_FILES     := $(CFILES)
+    workbench-devs-diskimage-gui_OBJCFILES := 
+    workbench-devs-diskimage-gui_ASMFILES  := 
+    workbench-devs-diskimage-gui_CXXFILES := 
+else
+    workbench-devs-diskimage-gui_FILES     := $(workbench-devs-diskimage-gui_PROGNAME)
+    workbench-devs-diskimage-gui_OBJCFILES :=
+    workbench-devs-diskimage-gui_ASMFILES  :=
+    workbench-devs-diskimage-gui_CXXFILES :=
+endif
+
+workbench-devs-diskimage-gui_ARCHOBJS   := $(wildcard $(workbench-devs-diskimage-gui_OBJDIR)/arch/*.o)
+workbench-devs-diskimage-gui_ARCHFILES  := $(basename $(notdir $(workbench-devs-diskimage-gui_ARCHOBJS)))
+workbench-devs-diskimage-gui_C_NARCHFILES := $(filter-out $(workbench-devs-diskimage-gui_ARCHFILES),$(workbench-devs-diskimage-gui_FILES))
+workbench-devs-diskimage-gui_CXX_NARCHFILES := $(filter-out $(workbench-devs-diskimage-gui_ARCHFILES),$(workbench-devs-diskimage-gui_CXXFILES))
+workbench-devs-diskimage-gui_OBJC_NARCHFILES := $(filter-out $(workbench-devs-diskimage-gui_ARCHFILES),$(workbench-devs-diskimage-gui_OBJCFILES))
+
+TMP_FILES := $(workbench-devs-diskimage-gui_C_NARCHFILES) $(workbench-devs-diskimage-gui_CXX_NARCHFILES) $(workbench-devs-diskimage-gui_ASMFILES) $(workbench-devs-diskimage-gui_OBJC_NARCHFILES)
+workbench-devs-diskimage-gui_OBJS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-gui_OBJDIR)/,$(notdir $(TMP_FILES))))
+workbench-devs-diskimage-gui_DEPS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-gui_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+workbench-devs-diskimage-gui_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+workbench-devs-diskimage-gui_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-devs-diskimage-gui_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+workbench-devs-diskimage-gui_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+workbench-devs-diskimage-gui_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+workbench-devs-diskimage-gui_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-devs-diskimage-gui_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+workbench-devs-diskimage-gui_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+workbench-devs-diskimage-gui_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+workbench-devs-diskimage-gui_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-devs-diskimage-gui_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+workbench-devs-diskimage-gui_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+workbench-devs-diskimage-gui_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+workbench-devs-diskimage-gui_LDFLAGS          := 
+endif
+
+workbench-devs-diskimage-gui_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+workbench-devs-diskimage-gui_COVERAGE := yes
+workbench-devs-diskimage-gui_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+workbench-devs-diskimage-gui_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+workbench-devs-diskimage-gui_CFLAGS    := $(strip $(workbench-devs-diskimage-gui_COVERAGEFLAGS) $(workbench-devs-diskimage-gui_CFLAGS))
+workbench-devs-diskimage-gui_CXXFLAGS := $(strip $(workbench-devs-diskimage-gui_COVERAGEFLAGS) $(workbench-devs-diskimage-gui_CXXFLAGS))
+workbench-devs-diskimage-gui_LIBS += $(workbench-devs-diskimage-gui_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-devs-diskimage-gui_FUNCINSTR := yes
+workbench-devs-diskimage-gui_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+workbench-devs-diskimage-gui_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-devs-diskimage-gui_CFLAGS    := $(strip $(workbench-devs-diskimage-gui_INSTRFUNCFLAGS) $(workbench-devs-diskimage-gui_CFLAGS))
+workbench-devs-diskimage-gui_CXXFLAGS := $(strip $(workbench-devs-diskimage-gui_INSTRFUNCFLAGS) $(workbench-devs-diskimage-gui_CXXFLAGS))
+workbench-devs-diskimage-gui_LIBS += $(workbench-devs-diskimage-gui_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+workbench-devs-diskimage-gui_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(workbench-devs-diskimage-gui_CFLAGS))
+workbench-devs-diskimage-gui_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(workbench-devs-diskimage-gui_CXXFLAGS))
+endif
+endif
+workbench-devs-diskimage-gui_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    workbench-devs-diskimage-gui_DFLAGS     := 
+else
+    workbench-devs-diskimage-gui_DFLAGS     := $(workbench-devs-diskimage-gui_CFLAGS)
+endif
+ifneq (,)
+    workbench-devs-diskimage-gui_DXXFLAGS     := 
+else
+    workbench-devs-diskimage-gui_DXXFLAGS     := $(workbench-devs-diskimage-gui_CXXFLAGS)
+endif
+ifeq (target,target)
+workbench-devs-diskimage-gui_LDFLAGS           := $(workbench-devs-diskimage-gui_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-devs-diskimage-gui_LDFLAGS           := $(workbench-devs-diskimage-gui_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-devs-diskimage-gui_LDFLAGS           := $(workbench-devs-diskimage-gui_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+workbench-devs-diskimage-gui_LDFLAGS   += -L
+endif
+
+#MM
+workbench-devs-diskimage-gui-quick : workbench-devs-diskimage-gui
+
+#MM workbench-devs-diskimage-gui : includes-generate-deps core-linklibs
+workbench-devs-diskimage-gui : $(workbench-devs-diskimage-gui_TARGETDIR)/$(workbench-devs-diskimage-gui_PROGNAME)
+
+ifneq ($(filter $(TARGET),workbench-devs-diskimage-gui workbench-devs-diskimage-gui-quick workbench-devs-diskimage-gui-gz-quick),)
+
+workbench-devs-diskimage-gui_CXXABSBASENAMES := $(foreach workbench-devs-diskimage-gui_CXXBASE,$(workbench-devs-diskimage-gui_CXX_NARCHFILES),$(if $(filter /%,$(workbench-devs-diskimage-gui_CXXBASE)),$(workbench-devs-diskimage-gui_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-devs-diskimage-gui_CXXBASE))))
+
+ifneq ($(workbench-devs-diskimage-gui_CXXABSBASENAMES),)
+
+workbench-devs-diskimage-gui_CXXBASENAMES := $(basename $(workbench-devs-diskimage-gui_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-devs-diskimage-gui_MCXX_FILES  := $(strip $(foreach workbench-devs-diskimage-gui_CXXBASE,$(workbench-devs-diskimage-gui_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-devs-diskimage-gui_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-devs-diskimage-gui_EXT),$(workbench-devs-diskimage-gui_CXXBASE)))))))
+
+ifeq (,)
+workbench-devs-diskimage-gui_MCXX_SRCWILDCARD := %
+else
+workbench-devs-diskimage-gui_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-devs-diskimage-gui_OBJDIR),)
+  workbench-devs-diskimage-gui_CXXTARGETS := $(notdir $(workbench-devs-diskimage-gui_CXXBASENAMES:=.o))
+  workbench-devs-diskimage-gui_CXXDTARGETS := $(notdir $(workbench-devs-diskimage-gui_CXXBASENAMES:=.d))
+  workbench-devs-diskimage-gui_MCXX_WILDCARD := %
+else
+  workbench-devs-diskimage-gui_CXXTARGETS := $(addprefix $(workbench-devs-diskimage-gui_OBJDIR)/,$(notdir $(workbench-devs-diskimage-gui_CXXBASENAMES:=.o)))
+  workbench-devs-diskimage-gui_CXXDTARGETS := $(addprefix $(workbench-devs-diskimage-gui_OBJDIR)/,$(notdir $(workbench-devs-diskimage-gui_CXXBASENAMES:=.d)))
+  workbench-devs-diskimage-gui_MCXX_WILDCARD := $(workbench-devs-diskimage-gui_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-devs-diskimage-gui_CXXTARGETS) $(workbench-devs-diskimage-gui_CXXDTARGETS) : | $(workbench-devs-diskimage-gui_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-devs-diskimage-gui_MCXX_CPPFLAGS := $(workbench-devs-diskimage-gui_CPPFLAGS)
+workbench-devs-diskimage-gui_CXXFLAGS := $(workbench-devs-diskimage-gui_CXXFLAGS)
+ifeq ($(workbench-devs-diskimage-gui_DXXFLAGS),)
+  workbench-devs-diskimage-gui_DXXFLAGS := $(workbench-devs-diskimage-gui_CXXFLAGS)
+else
+  workbench-devs-diskimage-gui_DXXFLAGS := $(workbench-devs-diskimage-gui_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-devs-diskimage-gui_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-devs-diskimage-gui_STRIP ?= $(HOST_STRIP)
+  workbench-devs-diskimage-gui_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-devs-diskimage-gui_CXXCMD:=$(HOST_CXX)
+  workbench-devs-diskimage-gui_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-devs-diskimage-gui_MCXX_CPPFLAGS) $(workbench-devs-diskimage-gui_MCXX_EXTRA_CPPFLAGS))
+  workbench-devs-diskimage-gui_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-devs-diskimage-gui_CXXFLAGS))
+  workbench-devs-diskimage-gui_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-devs-diskimage-gui_DXXFLAGS))
+  workbench-devs-diskimage-gui_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-devs-diskimage-gui_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-devs-diskimage-gui_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-devs-diskimage-gui_STRIP ?= $(TARGET_STRIP)
+  workbench-devs-diskimage-gui_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-devs-diskimage-gui_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-devs-diskimage-gui_MCXX_CPPFLAGS := $(strip $(workbench-devs-diskimage-gui_MCXX_CPPFLAGS) $(workbench-devs-diskimage-gui_MCXX_EXTRA_CPPFLAGS))
+  workbench-devs-diskimage-gui_CXXFLAGS := $(strip $(workbench-devs-diskimage-gui_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-devs-diskimage-gui_DXXFLAGS := $(workbench-devs-diskimage-gui_DXXFLAGS)
+  workbench-devs-diskimage-gui_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-devs-diskimage-gui_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-devs-diskimage-gui_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-devs-diskimage-gui_STRIP ?= $(ECHO) >/dev/null
+  workbench-devs-diskimage-gui_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-devs-diskimage-gui_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-devs-diskimage-gui_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-devs-diskimage-gui_MCXX_CPPFLAGS) $(workbench-devs-diskimage-gui_MCXX_EXTRA_CPPFLAGS))
+  workbench-devs-diskimage-gui_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-devs-diskimage-gui_CXXFLAGS))
+  workbench-devs-diskimage-gui_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-devs-diskimage-gui_DXXFLAGS))
+  workbench-devs-diskimage-gui_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-devs-diskimage-gui_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-devs-diskimage-gui_CXXCMD) $(workbench-devs-diskimage-gui_CXXIQUOTE) $(dir $(2)) $(workbench-devs-diskimage-gui_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-gui_CXXIQUOTE) . $(workbench-devs-diskimage-gui_CXXIQUOTE_END) $(strip $(workbench-devs-diskimage-gui_CXXFLAGS) $(workbench-devs-diskimage-gui_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-devs-diskimage-gui_CXXCMD) $(workbench-devs-diskimage-gui_CXXIQUOTE) $(dir $(2)) $(workbench-devs-diskimage-gui_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-gui_CXXIQUOTE) . $(workbench-devs-diskimage-gui_CXXIQUOTE_END) $(strip $(workbench-devs-diskimage-gui_CXXFLAGS) $(workbench-devs-diskimage-gui_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-devs-diskimage-gui_CXXCMD) $(workbench-devs-diskimage-gui_CXXIQUOTE) $(dir $(2)) $(workbench-devs-diskimage-gui_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-gui_CXXIQUOTE) . $(workbench-devs-diskimage-gui_CXXIQUOTE_END) $(strip $(workbench-devs-diskimage-gui_CXXFLAGS) $(workbench-devs-diskimage-gui_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-devs-diskimage-gui_CXXCMD)" $(MKDEPEND) $(strip $(workbench-devs-diskimage-gui_DXXFLAGS) $(workbench-devs-diskimage-gui_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-devs-diskimage-gui_OBJDIR),)
+  $(foreach workbench-devs-diskimage-gui_CXXFILE,$(workbench-devs-diskimage-gui_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-devs-diskimage-gui_CXXFILE))),$(workbench-devs-diskimage-gui_CXXFILE))))
+else
+  $(foreach workbench-devs-diskimage-gui_CXXFILE,$(workbench-devs-diskimage-gui_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-devs-diskimage-gui_OBJDIR)/,$(notdir $(basename $(workbench-devs-diskimage-gui_CXXFILE)))),$(workbench-devs-diskimage-gui_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-devs-diskimage-gui_OBJC_NARCHFILES),)
+
+ifeq (,)
+workbench-devs-diskimage-gui_MOBJC_SRCWILDCARD := %
+else
+workbench-devs-diskimage-gui_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-devs-diskimage-gui_OBJDIR),)
+  workbench-devs-diskimage-gui_MOBJC_TARGETS := $(addsuffix .o,$(workbench-devs-diskimage-gui_OBJC_NARCHFILES))
+  workbench-devs-diskimage-gui_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-devs-diskimage-gui_OBJC_NARCHFILES))
+  workbench-devs-diskimage-gui_MOBJC_WILDCARD := %
+else
+  workbench-devs-diskimage-gui_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-gui_OBJDIR)/,$(workbench-devs-diskimage-gui_OBJC_NARCHFILES)))
+  workbench-devs-diskimage-gui_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-gui_OBJDIR)/,$(workbench-devs-diskimage-gui_OBJC_NARCHFILES)))
+  workbench-devs-diskimage-gui_MOBJC_WILDCARD := $(workbench-devs-diskimage-gui_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-devs-diskimage-gui_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  workbench-devs-diskimage-gui_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-devs-diskimage-gui_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-diskimage-gui_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-devs-diskimage-gui_MOBJC_DIRS := $(foreach dir, $(workbench-devs-diskimage-gui_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-diskimage-gui_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-devs-diskimage-gui_MOBJC_DIRS),)
+    workbench-devs-diskimage-gui_MOBJC_DIRS := $(shell echo $(workbench-devs-diskimage-gui_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-devs-diskimage-gui_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-devs-diskimage-gui_CC := $(TARGET_CC)
+else
+  workbench-devs-diskimage-gui_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-devs-diskimage-gui_MOBJC_CPPFLAGS := $(workbench-devs-diskimage-gui_CPPFLAGS)
+workbench-devs-diskimage-gui_OBJCFLAGS := $(workbench-devs-diskimage-gui_CFLAGS)
+workbench-devs-diskimage-gui_OBJCFLAGS := $(workbench-devs-diskimage-gui_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-devs-diskimage-gui_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-devs-diskimage-gui_OBJCFLAGS)))
+ifeq ($(workbench-devs-diskimage-gui_DFLAGS),)
+  workbench-devs-diskimage-gui_OBJCDFLAGS := $(workbench-devs-diskimage-gui_CFLAGS)
+else
+  workbench-devs-diskimage-gui_OBJCDFLAGS := $(workbench-devs-diskimage-gui_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-devs-diskimage-gui_LINK ?= $(strip $(workbench-devs-diskimage-gui_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-devs-diskimage-gui_STRIP ?= $(TARGET_STRIP)
+  workbench-devs-diskimage-gui_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-devs-diskimage-gui_CC) $(TARGET_SYSROOT))
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : workbench-devs-diskimage-gui_MOBJC_CPPFLAGS:=$(strip $(workbench-devs-diskimage-gui_MOBJC_CPPFLAGS) $(workbench-devs-diskimage-gui_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : workbench-devs-diskimage-gui_OBJCFLAGS:=$(strip $(workbench-devs-diskimage-gui_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : workbench-devs-diskimage-gui_OBJCDFLAGS:=$(workbench-devs-diskimage-gui_OBJCDFLAGS)
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : workbench-devs-diskimage-gui_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : workbench-devs-diskimage-gui_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-devs-diskimage-gui_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-devs-diskimage-gui_STRIP ?= $(HOST_STRIP)
+  workbench-devs-diskimage-gui_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : workbench-devs-diskimage-gui_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-devs-diskimage-gui_MOBJC_CPPFLAGS) $(workbench-devs-diskimage-gui_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : workbench-devs-diskimage-gui_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-gui_OBJCFLAGS))
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : workbench-devs-diskimage-gui_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-gui_OBJCDFLAGS))
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : workbench-devs-diskimage-gui_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : workbench-devs-diskimage-gui_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-devs-diskimage-gui_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-devs-diskimage-gui_STRIP ?= $(ECHO) >/dev/null
+  workbench-devs-diskimage-gui_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : workbench-devs-diskimage-gui_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-devs-diskimage-gui_MOBJC_CPPFLAGS) $(workbench-devs-diskimage-gui_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : workbench-devs-diskimage-gui_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-gui_OBJCFLAGS))
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : workbench-devs-diskimage-gui_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-gui_OBJCDFLAGS))
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : workbench-devs-diskimage-gui_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-devs-diskimage-gui_MOBJC_TARGETS) $(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : workbench-devs-diskimage-gui_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-devs-diskimage-gui_MOBJC_TARGETS) : CPPFLAGS := $(workbench-devs-diskimage-gui_MOBJC_CPPFLAGS)
+$(workbench-devs-diskimage-gui_MOBJC_TARGETS) : CFLAGS := $(workbench-devs-diskimage-gui_OBJCFLAGS)
+$(workbench-devs-diskimage-gui_MOBJC_TARGETS) : $(workbench-devs-diskimage-gui_MOBJC_WILDCARD).o : $(workbench-devs-diskimage-gui_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-devs-diskimage-gui_IQUOTE) $(dir $<) $(workbench-devs-diskimage-gui_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-gui_IQUOTE) . $(workbench-devs-diskimage-gui_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-devs-diskimage-gui_IQUOTE) $(dir $<) $(workbench-devs-diskimage-gui_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-gui_IQUOTE) . $(workbench-devs-diskimage-gui_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-devs-diskimage-gui_IQUOTE) $(dir $<) $(workbench-devs-diskimage-gui_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-gui_IQUOTE) . $(workbench-devs-diskimage-gui_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-devs-diskimage-gui_MOBJC_DTARGETS) : $(workbench-devs-diskimage-gui_MOBJC_WILDCARD).d : $(workbench-devs-diskimage-gui_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-devs-diskimage-gui_OBJCDFLAGS) $(workbench-devs-diskimage-gui_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-devs-diskimage-gui_MC_SRCWILDCARD := %
+else
+workbench-devs-diskimage-gui_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-devs-diskimage-gui_OBJDIR),)
+workbench-devs-diskimage-gui_MC_TARGETS := $(addsuffix .o,$(workbench-devs-diskimage-gui_C_NARCHFILES))
+workbench-devs-diskimage-gui_MC_DTARGETS := $(addsuffix .d,$(workbench-devs-diskimage-gui_C_NARCHFILES))
+workbench-devs-diskimage-gui_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-devs-diskimage-gui_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-gui_OBJDIR)/,$(notdir $(workbench-devs-diskimage-gui_C_NARCHFILES))))
+    workbench-devs-diskimage-gui_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-gui_OBJDIR)/,$(notdir $(workbench-devs-diskimage-gui_C_NARCHFILES))))
+else
+ifeq (,)
+    workbench-devs-diskimage-gui_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-gui_OBJDIR)/,$(workbench-devs-diskimage-gui_C_NARCHFILES)))
+    workbench-devs-diskimage-gui_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-gui_OBJDIR)/,$(workbench-devs-diskimage-gui_C_NARCHFILES)))
+else
+    workbench-devs-diskimage-gui_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-gui_OBJDIR)/,$(patsubst /%,%,$(workbench-devs-diskimage-gui_C_NARCHFILES))))
+    workbench-devs-diskimage-gui_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-devs-diskimage-gui_OBJDIR)/,$(patsubst /%,%,$(workbench-devs-diskimage-gui_C_NARCHFILES))))
+endif
+endif
+workbench-devs-diskimage-gui_MC_TGTWILDCARD := $(workbench-devs-diskimage-gui_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : | $(addsuffix .c,$(workbench-devs-diskimage-gui_C_NARCHFILES))
+
+# Be sure that all .c files are found
+workbench-devs-diskimage-gui_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-devs-diskimage-gui_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-diskimage-gui_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-devs-diskimage-gui_MC_DIRS := $(foreach dir, $(workbench-devs-diskimage-gui_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-diskimage-gui_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-devs-diskimage-gui_MC_DIRS),)
+    workbench-devs-diskimage-gui_MC_DIRS := $(shell echo $(workbench-devs-diskimage-gui_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-devs-diskimage-gui_MC_DIRS)
+endif
+
+endif
+
+workbench-devs-diskimage-gui_MC_CPPFLAGS := $(workbench-devs-diskimage-gui_CPPFLAGS)
+workbench-devs-diskimage-gui_CFLAGS := $(workbench-devs-diskimage-gui_CFLAGS)
+ifeq ($(workbench-devs-diskimage-gui_DFLAGS),)
+  workbench-devs-diskimage-gui_DFLAGS := $(workbench-devs-diskimage-gui_CFLAGS)
+else
+  workbench-devs-diskimage-gui_DFLAGS := $(workbench-devs-diskimage-gui_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-devs-diskimage-gui_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-devs-diskimage-gui_STRIP ?= $(TARGET_STRIP)
+workbench-devs-diskimage-gui_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : workbench-devs-diskimage-gui_MC_CPPFLAGS:=$(strip $(workbench-devs-diskimage-gui_MC_CPPFLAGS) $(workbench-devs-diskimage-gui_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : workbench-devs-diskimage-gui_CFLAGS:=$(strip $(workbench-devs-diskimage-gui_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : workbench-devs-diskimage-gui_DFLAGS:=$(workbench-devs-diskimage-gui_DFLAGS)
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : workbench-devs-diskimage-gui_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : workbench-devs-diskimage-gui_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-devs-diskimage-gui_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-devs-diskimage-gui_STRIP ?= $(HOST_STRIP)
+workbench-devs-diskimage-gui_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : workbench-devs-diskimage-gui_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-devs-diskimage-gui_MC_CPPFLAGS) $(workbench-devs-diskimage-gui_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : workbench-devs-diskimage-gui_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-gui_CFLAGS))
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : workbench-devs-diskimage-gui_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-devs-diskimage-gui_DFLAGS))
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : workbench-devs-diskimage-gui_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : workbench-devs-diskimage-gui_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-devs-diskimage-gui_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-devs-diskimage-gui_STRIP ?= $(ECHO) >/dev/null
+workbench-devs-diskimage-gui_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : workbench-devs-diskimage-gui_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-devs-diskimage-gui_MC_CPPFLAGS) $(workbench-devs-diskimage-gui_MC_EXTRA_CPPFLAGS))
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : workbench-devs-diskimage-gui_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-gui_CFLAGS))
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : workbench-devs-diskimage-gui_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-devs-diskimage-gui_DFLAGS))
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : workbench-devs-diskimage-gui_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-devs-diskimage-gui_MC_TARGETS) $(workbench-devs-diskimage-gui_MC_DTARGETS) : workbench-devs-diskimage-gui_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-devs-diskimage-gui_MC_TARGETS) : CPPFLAGS := $(workbench-devs-diskimage-gui_MC_CPPFLAGS)
+$(workbench-devs-diskimage-gui_MC_TARGETS) : CFLAGS := $(workbench-devs-diskimage-gui_CFLAGS)
+$(workbench-devs-diskimage-gui_MC_TARGETS) : $(workbench-devs-diskimage-gui_MC_TGTWILDCARD).o : $(workbench-devs-diskimage-gui_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-devs-diskimage-gui_IQUOTE) $(dir $<) $(workbench-devs-diskimage-gui_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-gui_IQUOTE) . $(workbench-devs-diskimage-gui_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-devs-diskimage-gui_IQUOTE) $(dir $<) $(workbench-devs-diskimage-gui_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-gui_IQUOTE) . $(workbench-devs-diskimage-gui_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-devs-diskimage-gui_IQUOTE) $(dir $<) $(workbench-devs-diskimage-gui_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-devs-diskimage-gui_IQUOTE) . $(workbench-devs-diskimage-gui_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-devs-diskimage-gui_MC_DTARGETS) : $(workbench-devs-diskimage-gui_MC_TGTWILDCARD).d : $(workbench-devs-diskimage-gui_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-devs-diskimage-gui_DFLAGS) $(workbench-devs-diskimage-gui_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-devs-diskimage-gui_OBJDIR),)
+workbench-devs-diskimage-gui-MA_TARGETS := $(addsuffix .o,$(workbench-devs-diskimage-gui_ASMFILES))
+workbench-devs-diskimage-gui-MA_WILDCARD := %
+else
+workbench-devs-diskimage-gui-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-devs-diskimage-gui_OBJDIR)/,$(notdir $(workbench-devs-diskimage-gui_ASMFILES))))
+workbench-devs-diskimage-gui-MA_WILDCARD := $(workbench-devs-diskimage-gui_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(workbench-devs-diskimage-gui-MA_TARGETS) : | $(addsuffix .s,$(workbench-devs-diskimage-gui_ASMFILES))
+
+# Be sure that all .c files are found
+workbench-devs-diskimage-gui-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-devs-diskimage-gui-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-devs-diskimage-gui_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-devs-diskimage-gui-MA_DIRS := $(foreach dir, $(workbench-devs-diskimage-gui-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-devs-diskimage-gui-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-devs-diskimage-gui-MA_DIRS),)
+    workbench-devs-diskimage-gui-MA_DIRS := $(shell echo $(workbench-devs-diskimage-gui-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(workbench-devs-diskimage-gui-MA_DIRS)
+endif
+
+endif
+
+workbench-devs-diskimage-gui-MA_ASSEMBLER ?= $(workbench-devs-diskimage-gui_ASSEMBLER)
+
+$(workbench-devs-diskimage-gui-MA_TARGETS) : workbench-devs-diskimage-gui-MA_CMD:= $(workbench-devs-diskimage-gui-MA_ASSEMBLER)
+
+$(workbench-devs-diskimage-gui-MA_TARGETS) : CPPFLAGS := $(workbench-devs-diskimage-gui_CPPFLAGS)
+$(workbench-devs-diskimage-gui-MA_TARGETS) : AFLAGS := $(workbench-devs-diskimage-gui_AFLAGS)
+$(workbench-devs-diskimage-gui-MA_TARGETS) : $(workbench-devs-diskimage-gui-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-devs-diskimage-gui-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-devs-diskimage-gui-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-devs-diskimage-gui-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+workbench-devs-diskimage-gui-link_EXTRA_LDFLAGS := 
+workbench-devs-diskimage-gui-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    workbench-devs-diskimage-gui-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    workbench-devs-diskimage-gui-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    workbench-devs-diskimage-gui-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+workbench-devs-diskimage-gui-link_DIRS := $(subst -L ,-L,$(strip $(workbench-devs-diskimage-gui_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+workbench-devs-diskimage-gui-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(workbench-devs-diskimage-gui-link_DIRS)))
+# Add trailing /
+workbench-devs-diskimage-gui-link_DIRS := $(subst //,/,$(addsuffix /,$(workbench-devs-diskimage-gui-link_DIRS)))
+# Add normal linklib path
+workbench-devs-diskimage-gui-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+workbench-devs-diskimage-gui-link_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-devs-diskimage-gui_LIBS) $(workbench-devs-diskimage-gui-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    workbench-devs-diskimage-gui-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    workbench-devs-diskimage-gui-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+workbench-devs-diskimage-gui-link_DEPLIBS := $(foreach lib,$(workbench-devs-diskimage-gui-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(workbench-devs-diskimage-gui-link_DIRS)))) \
+)
+
+$(workbench-devs-diskimage-gui_TARGETDIR)/$(workbench-devs-diskimage-gui_PROGNAME) : OBJDIR := $(workbench-devs-diskimage-gui_OBJDIR)
+$(workbench-devs-diskimage-gui_TARGETDIR)/$(workbench-devs-diskimage-gui_PROGNAME) : OBJS := $(workbench-devs-diskimage-gui_OBJS) $(workbench-devs-diskimage-gui_ARCHOBJS) $(USER_OBJS)
+$(workbench-devs-diskimage-gui_TARGETDIR)/$(workbench-devs-diskimage-gui_PROGNAME) : LDFLAGS := $(strip $(workbench-devs-diskimage-gui_LDFLAGS) $(workbench-devs-diskimage-gui-link_EXTRA_LDFLAGS))
+$(workbench-devs-diskimage-gui_TARGETDIR)/$(workbench-devs-diskimage-gui_PROGNAME) : LIBS := $(addprefix -l,$(workbench-devs-diskimage-gui_LIBS) $(workbench-devs-diskimage-gui-link_EXTRA_LIBS) )
+$(workbench-devs-diskimage-gui_TARGETDIR)/$(workbench-devs-diskimage-gui_PROGNAME) : $(workbench-devs-diskimage-gui_OBJS) $(workbench-devs-diskimage-gui_ARCHOBJS) $(USER_OBJS) $(workbench-devs-diskimage-gui-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(workbench-devs-diskimage-gui_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(workbench-devs-diskimage-gui_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(workbench-devs-diskimage-gui_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-devs-diskimage-gui_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(workbench-devs-diskimage-gui_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(workbench-devs-diskimage-gui_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-devs-diskimage-gui_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(workbench-devs-diskimage-gui_DEPS),)
+  ifneq (workbench-devs-diskimage-gui workbench-devs-diskimage-gui-quick,)
+    ifneq ($(findstring $(TARGET),workbench-devs-diskimage-gui workbench-devs-diskimage-gui-quick),)
+      -include $(workbench-devs-diskimage-gui_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-devs-diskimage-gui_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(workbench-devs-diskimage-gui_OBJS) $(workbench-devs-diskimage-gui_DEPS) $(workbench-devs-diskimage-gui_TARGETDIR)/$(workbench-devs-diskimage-gui_PROGNAME),)
+$(workbench-devs-diskimage-gui_OBJS) $(workbench-devs-diskimage-gui_DEPS) $(workbench-devs-diskimage-gui_TARGETDIR)/$(workbench-devs-diskimage-gui_PROGNAME) : | $(workbench-devs-diskimage-gui_OBJDIR) $(workbench-devs-diskimage-gui_TARGETDIR)
+else
+$(workbench-devs-diskimage-gui_OBJS) $(workbench-devs-diskimage-gui_DEPS) $(workbench-devs-diskimage-gui_TARGETDIR)/$(workbench-devs-diskimage-gui_PROGNAME) :: $(workbench-devs-diskimage-gui_OBJDIR) $(workbench-devs-diskimage-gui_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-devs-diskimage-gui_OBJDIR) $(workbench-devs-diskimage-gui_TARGETDIR)
+
+
+workbench-devs-diskimage-gui-clean : FILES := $(workbench-devs-diskimage-gui_OBJS) $(workbench-devs-diskimage-gui_TARGETDIR)/$(workbench-devs-diskimage-gui_PROGNAME) $(workbench-devs-diskimage-gui_DEPS)
+#MM
+workbench-devs-diskimage-gui-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-devs-diskimage-gui"
+	$(Q)$(RM) $(FILES)
+
+
+
+.PHONY : workbench-devs-diskimage-gfx
+
+#MM
+workbench-devs-diskimage-gfx :
+	$(Q)cd $(SRCDIR)/$(CURDIR) && $(CPYDIRREC) -s $(DIGFX) -d $(AROS_IMAGES)/$(DIGFX) -e 
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

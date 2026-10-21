@@ -1,0 +1,1708 @@
+#   $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+USER_INCLUDES := -I.
+
+USER_CPPFLAGS := -D__KERNEL__
+USER_LDFLAGS := -static
+
+FILES	:= pci_init pcidriverclass pcideviceclass pciclass pciutil
+
+#MM kernel-hidd-pci : kernel-hidd-pci-ids
+#MM kernel-hidd-pci-kobj : kernel-hidd-pci-ids
+
+#MM
+includes-copy : $(AROS_INCLUDES)/hidd/pci.h $(GENINCDIR)/hidd/pci.h
+
+$(AROS_INCLUDES)/hidd/pci.h: include/pci_hidd.h
+	$(CP) $< $(AROS_INCLUDES)/hidd/pci.h
+
+$(GENINCDIR)/hidd/pci.h: include/pci_hidd.h
+	$(CP) $< $(GENINCDIR)/hidd/pci.h
+
+
+.PHONY: kernel-hidd-pci-ids
+
+ifneq ($(TOOLDIR),)
+    kernel-hidd-pci-ids-tooldir := "$(TOOLDIR)/"
+else
+    kernel-hidd-pci-ids-tooldir := "$(TOOLDIR)/"
+endif
+
+ifneq ($(AROS_DEVS),)
+    kernel-hidd-pci-ids-location := $(AROS_DEVS)
+else
+    kernel-hidd-pci-ids-location := .
+endif
+
+kernel-hidd-pci-ids-fetchedflag := $(kernel-hidd-pci-ids-location)/.pci.ids-fetched
+
+#MM
+kernel-hidd-pci-ids :
+	$(Q)$(ECHO) "Fetching   pci.ids ..."
+	$(Q)TOOLDIR="$(kernel-hidd-pci-ids-tooldir)" $(FETCH) -ao "http://pciids.sourceforge.net/v2.2/ https://pci-ids.ucw.cz/v2.2/" -a pci.ids -s "" -l $(kernel-hidd-pci-ids-location) \
+	-d . -po "$(SRCDIR)/$(CURDIR)" -p "::"
+	$(Q)$(IF) ! $(TEST) -f $(kernel-hidd-pci-ids-fetchedflag) ; then \
+		 $(TOUCH) $(kernel-hidd-pci-ids-fetchedflag) ; \
+	fi
+
+#	$(Q)$(IF) ! $(TEST) -f $(kernel-hidd-pci-ids-fetchedflag) ; then \
+#		$(ECHO) "Fetching   pci.ids ..." \
+#		&& $(FETCH) -ao "http://pciids.sourceforge.net/v2.2/ https://pci-ids.ucw.cz/v2.2/" -a pci.ids -s "" -l $(kernel-hidd-pci-ids-location) \
+#		-d . -po "$(SRCDIR)/$(CURDIR)" -p "::" \
+#		&& $(TOUCH) $(kernel-hidd-pci-ids-fetchedflag) ; \
+#	fi
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-hidd-pci
+#MM kernel-hidd-pci-quick
+#MM kernel-hidd-pci-makefile
+#MM kernel-hidd-pci-clean
+
+# ABI targets:
+#MM- includes-all : kernel-hidd-pci-includes
+#MM- linklibs-pci: kernel-hidd-pci-linklib
+#MM- linklibs-pci_rel : kernel-hidd-pci-linklib
+#MM- includes-pci: kernel-hidd-pci-includes
+#MM- includes-pci_rel : kernel-hidd-pci-includes
+#MM- kernel-hidd-pci : kernel-hidd-pci-includes core-linklibs linklibs-
+#MM kernel-hidd-pci-linklib : kernel-hidd-pci-includes includes-
+#MM- kernel-hidd-pci-quick : kernel-hidd-pci-includes-quick
+#MM kernel-hidd-pci-includes : kernel-hidd-pci-makefile kernel-hidd-pci-includes-dirs \
+#MM     includes-generate-deps kernel-hidd-pci-fd
+#MM kernel-hidd-pci-includes-quick
+#MM kernel-hidd-pci-includes-dirs
+#MM kernel-hidd-pci-fd
+
+# Library targets
+#MM kernel-hidd-pci-kobj : core-linklibs linklibs-
+#MM kernel-hidd-pci-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-hidd-pci-kobj : kernel-hidd-pci-includes core-linklibs linklibs-
+#MM kernel-hidd-pci-kobj-quick : kernel-hidd-pci-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-hidd-pci_ALLTARGETS       := kernel-hidd-pci kernel-hidd-pci-quick kernel-hidd-pci-clean
+
+ifeq (M,M)
+kernel-hidd-pci_ALLTARGETS       += kernel-hidd-pci-kobj kernel-hidd-pci-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-hidd-pci_ALLTARGETS += kernel-hidd-pci-includes \
+                 kernel-hidd-pci-includes-quick kernel-hidd-pci-includes-dirs  \
+                 kernel-hidd-pci-linklib kernel-hidd-pci-fd
+endif
+
+.PHONY : $(kernel-hidd-pci_ALLTARGETS) kernel-hidd-pci-makefile
+
+ifeq (pci,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (hidd,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-hidd-pci_DEFNAME      := pci_
+else
+    kernel-hidd-pci_DEFNAME      := pci
+endif
+kernel-hidd-pci_DEFLINKLIBNAME   := $(kernel-hidd-pci_DEFNAME)
+ifneq (,)
+    kernel-hidd-pci_LINKLIBNAME  := 
+else
+    kernel-hidd-pci_LINKLIBNAME  = $(kernel-hidd-pci_DEFLINKLIBNAME)
+endif
+kernel-hidd-pci_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-hidd-pci_DEFCPPFLAGS  += -I
+endif
+kernel-hidd-pci_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-hidd-pci_DFLAGS       := 
+else
+    kernel-hidd-pci_DFLAGS       = $(kernel-hidd-pci_DEFDFLAGS)
+endif
+kernel-hidd-pci_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-hidd-pci_DXXFLAGS     := 
+else
+    kernel-hidd-pci_DXXFLAGS     = $(kernel-hidd-pci_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-pci_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-pci_DEFDFLAGS))
+kernel-hidd-pci_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-pci_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-pci_FUNCINSTR := yes
+kernel-hidd-pci_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-pci_DEFDFLAGS))
+kernel-hidd-pci_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-pci_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-hidd-pci_OBJDIR                     := 
+else
+kernel-hidd-pci_OBJDIR                     := $(OBJDIR)/$(kernel-hidd-pci_DEFNAME)
+endif
+ifneq (,)
+kernel-hidd-pci_OBJDIR           := $(kernel-hidd-pci_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-hidd-pci-makefile         := $(kernel-hidd-pci_OBJDIR)/Makefile.$(kernel-hidd-pci_DEFNAME)hidd
+kernel-hidd-pci-genmakefile : $(kernel-hidd-pci-makefile)
+
+
+kernel-hidd-pci-genmakefile_OPTS := 
+ifneq (,)
+    kernel-hidd-pci-genmakefile_OPTS += -f 
+    kernel-hidd-pci-genmakefile_MODNAME := pci_
+else
+    kernel-hidd-pci-genmakefile_MODNAME := pci
+endif
+kernel-hidd-pci-genmakefile_TARGET := Makefile.$(kernel-hidd-pci-genmakefile_MODNAME)hidd
+kernel-hidd-pci-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-pci-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-pci-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-pci-genmakefile_OPTS += -c 
+        kernel-hidd-pci-genmakefile_DEPS += 
+    endif 
+else
+    kernel-hidd-pci-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/pci.conf
+    kernel-hidd-pci-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/pci.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-pci-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-pci-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-pci-genmakefile_OPTS += -o 
+        kernel-hidd-pci-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-pci-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-pci_OBJDIR),)
+    kernel-hidd-pci-genmakefile_OPTS += -d $(kernel-hidd-pci_OBJDIR)
+    kernel-hidd-pci-genmakefile_TARGET := $(kernel-hidd-pci_OBJDIR)/$(kernel-hidd-pci-genmakefile_TARGET)
+endif
+
+$(kernel-hidd-pci-genmakefile_TARGET) : OPTS := $(kernel-hidd-pci-genmakefile_OPTS)
+$(kernel-hidd-pci-genmakefile_TARGET) : MODNAME := pci
+$(kernel-hidd-pci-genmakefile_TARGET) : MODTYPE := hidd
+$(kernel-hidd-pci-genmakefile_TARGET) : $(kernel-hidd-pci-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-hidd-pci-makefile),)
+$(kernel-hidd-pci-makefile) : | $(kernel-hidd-pci_OBJDIR)
+else
+$(kernel-hidd-pci-makefile) :: $(kernel-hidd-pci_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-pci_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-hidd-pci_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-hidd-pci-makefile)
+
+kernel-hidd-pci_DEFMODDIR        := $($(kernel-hidd-pci_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-hidd-pci_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-hidd-pci_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-hidd-pci_MODDIR       := 
+else
+    kernel-hidd-pci_MODDIR       := $(kernel-hidd-pci_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-hidd-pci_INCDIR           := 
+else
+kernel-hidd-pci_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-hidd-pci_LIBDEFSINC       := $(kernel-hidd-pci_OBJDIR)/include/$(kernel-hidd-pci_DEFNAME)_libdefs.h
+kernel-hidd-pci_DEFLIBDEFSINC    := $(kernel-hidd-pci_OBJDIR)/include/$(kernel-hidd-pci_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-hidd-pci-includes-quick : kernel-hidd-pci-includes
+kernel-hidd-pci-includes : $(addprefix $(GENINCDIR)/,$($(kernel-hidd-pci_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-pci_INCDIR)/,$($(kernel-hidd-pci_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-pci_LIBDEFSINC) $(kernel-hidd-pci_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-hidd-pci_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-hidd-pci-includes_MODNAME := pci_
+else
+    kernel-hidd-pci-includes_MODNAME := pci
+endif
+
+ifneq ($($(kernel-hidd-pci-includes_MODNAME)_INCLUDES),)
+
+kernel-hidd-pci-includes_TARGETS := $($(kernel-hidd-pci-includes_MODNAME)_INCLUDES)
+
+kernel-hidd-pci-includes_DEPS := $(GENMODULE)
+kernel-hidd-pci-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-pci-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-pci-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-pci-includes_OPTS += -c 
+        kernel-hidd-pci-includes_DEPS += 
+    endif 
+else
+    kernel-hidd-pci-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/pci.conf
+    kernel-hidd-pci-includes_DEPS += $(SRCDIR)/$(CURDIR)/pci.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-pci-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-pci-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-pci-includes_OPTS += -o 
+        kernel-hidd-pci-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-pci-includes_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-pci_OBJDIR)/include,)
+    kernel-hidd-pci-includes_OPTS += -d $(kernel-hidd-pci_OBJDIR)/include
+    kernel-hidd-pci-includes_TARGETS := $(addprefix $(kernel-hidd-pci_OBJDIR)/include/,$(kernel-hidd-pci-includes_TARGETS))
+    kernel-hidd-pci-includes_GENINCFLAG=$(kernel-hidd-pci_OBJDIR)/include/.pci.hidd-includes
+else
+    kernel-hidd-pci-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.pci.hidd-includes
+endif
+
+$(kernel-hidd-pci-includes_TARGETS) : $(kernel-hidd-pci-includes_DEPS) $(kernel-hidd-pci-includes_GENINCFLAG)
+
+$(kernel-hidd-pci-includes_GENINCFLAG) : OPTS := $(kernel-hidd-pci-includes_OPTS)
+$(kernel-hidd-pci-includes_GENINCFLAG) : MODNAME := pci
+$(kernel-hidd-pci-includes_GENINCFLAG) : MODTYPE := hidd
+$(kernel-hidd-pci-includes_GENINCFLAG) : $(kernel-hidd-pci-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-hidd-pci_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-hidd-pci_DEFNAME)_INCLUDES)) : | $(kernel-hidd-pci_OBJDIR)/pci_geninc
+
+$(kernel-hidd-pci_OBJDIR)/pci_geninc : COPYSRCDIR := $(kernel-hidd-pci_OBJDIR)/include
+$(kernel-hidd-pci_OBJDIR)/pci_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-hidd-pci_OBJDIR)/pci_geninc : FILES := $($(kernel-hidd-pci_DEFNAME)_INCLUDES)
+$(kernel-hidd-pci_OBJDIR)/pci_geninc : $(addprefix $(kernel-hidd-pci_OBJDIR)/include/,$($(kernel-hidd-pci_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-hidd-pci_OBJDIR)/include
+
+$(addprefix $(kernel-hidd-pci_INCDIR)/,$($(kernel-hidd-pci_DEFNAME)_INCLUDES)) : | $(kernel-hidd-pci_OBJDIR)/pci_incs
+
+$(kernel-hidd-pci_OBJDIR)/pci_incs : COPYSRCDIR := $(kernel-hidd-pci_OBJDIR)/include
+$(kernel-hidd-pci_OBJDIR)/pci_incs : TGTDIR := $(kernel-hidd-pci_INCDIR)
+$(kernel-hidd-pci_OBJDIR)/pci_incs : FILES := $($(kernel-hidd-pci_DEFNAME)_INCLUDES)
+$(kernel-hidd-pci_OBJDIR)/pci_incs : $(addprefix $(kernel-hidd-pci_OBJDIR)/include/,$($(kernel-hidd-pci_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-hidd-pci_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-hidd-pci_DEFNAME)_INCLUDES))))
+
+TMPpci_INCDIRS := \
+    $(kernel-hidd-pci_OBJDIR)/include $(addprefix $(kernel-hidd-pci_OBJDIR)/include/,$(kernel-hidd-pci_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-hidd-pci_INCDIRS)) \
+    $(kernel-hidd-pci_INCDIR) $(addprefix $(kernel-hidd-pci_INCDIR)/,$(kernel-hidd-pci_INCDIRS))
+
+ifneq (kernel-hidd-pci-includes-dirs,)
+kernel-hidd-pci-includes-dirs : | $(TMPpci_INCDIRS)
+else
+kernel-hidd-pci-includes-dirs :: $(TMPpci_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPpci_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-hidd-pci-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-hidd-pci-genlibdefs_OPTS += -f 
+    kernel-hidd-pci-genlibdefs_MODNAME := pci_
+else
+    kernel-hidd-pci-genlibdefs_MODNAME := pci
+endif
+kernel-hidd-pci-genlibdefs_TARGET := $(kernel-hidd-pci-genlibdefs_MODNAME)_libdefs.h
+kernel-hidd-pci-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-pci-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-pci-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-pci-genlibdefs_OPTS += -c 
+        kernel-hidd-pci-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-hidd-pci-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/pci.conf
+    kernel-hidd-pci-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/pci.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-pci-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-pci-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-pci-genlibdefs_OPTS += -o 
+        kernel-hidd-pci-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-pci-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-pci_OBJDIR)/include,)
+    kernel-hidd-pci-genlibdefs_OPTS += -d $(kernel-hidd-pci_OBJDIR)/include
+    kernel-hidd-pci-genlibdefs_TARGET := $(kernel-hidd-pci_OBJDIR)/include/$(kernel-hidd-pci-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-hidd-pci-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-hidd-pci-genlibdefs_TARGET) : OPTS := $(kernel-hidd-pci-genlibdefs_OPTS)
+$(kernel-hidd-pci-genlibdefs_TARGET) : MODNAME := pci
+$(kernel-hidd-pci-genlibdefs_TARGET) : MODTYPE := hidd
+$(kernel-hidd-pci-genlibdefs_TARGET) : $(kernel-hidd-pci-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-pci_DEFLIBDEFSINC) : FILENAME := $(kernel-hidd-pci_LIBDEFSINC)
+$(kernel-hidd-pci_DEFLIBDEFSINC) : $(kernel-hidd-pci_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-hidd-pci_LIBDEFSINC) $(kernel-hidd-pci_DEFLIBDEFSINC) : | $(kernel-hidd-pci_OBJDIR)/include
+
+ifneq (kernel-hidd-pci-includes-dirs,)
+kernel-hidd-pci-includes-dirs : | $(kernel-hidd-pci_OBJDIR)/include
+else
+kernel-hidd-pci-includes-dirs :: $(kernel-hidd-pci_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-pci_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-hidd-pci-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-hidd-pci-genmodfiles_OPTS += -f 
+    kernel-hidd-pci-genmodfiles_MODNAME := pci_
+else
+    kernel-hidd-pci-genmodfiles_MODNAME := pci
+endif
+kernel-hidd-pci-genmodfiles_GENTARGETS := $($(kernel-hidd-pci-genmodfiles_MODNAME)_STARTFILES) $($(kernel-hidd-pci-genmodfiles_MODNAME)_ENDFILES)
+kernel-hidd-pci-genmodfiles_STUBTARGETS := $($(kernel-hidd-pci-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-hidd-pci-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-hidd-pci-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-hidd-pci-genmodfiles_GENTARGETS))
+kernel-hidd-pci-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-hidd-pci-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-hidd-pci-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-hidd-pci-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-hidd-pci-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-pci-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-pci-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-pci-genmodfiles_OPTS += -c 
+        kernel-hidd-pci-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-hidd-pci-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/pci.conf
+    kernel-hidd-pci-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/pci.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-pci-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-pci-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-pci-genmodfiles_OPTS += -o 
+        kernel-hidd-pci-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-pci-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-pci_OBJDIR),)
+    kernel-hidd-pci-genmodfiles_OPTS += -d $(kernel-hidd-pci_OBJDIR)
+    kernel-hidd-pci-genmodfiles_TARGETDIR := $(shell echo $(kernel-hidd-pci_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-pci-genmodfiles_GENTARGETS := $(addprefix $(kernel-hidd-pci-genmodfiles_TARGETDIR)/,$(kernel-hidd-pci-genmodfiles_GENTARGETS))
+    kernel-hidd-pci-genmodfiles_GENFILEFLAG=$(kernel-hidd-pci-genmodfiles_TARGETDIR)/.pci.hidd-genfiles
+else
+    kernel-hidd-pci-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.pci.hidd-genfiles
+endif
+ifneq ($(kernel-hidd-pci_OBJDIR)/linklib,)
+    kernel-hidd-pci-genmodfiles_OPTS += -l $(kernel-hidd-pci_OBJDIR)/linklib
+    kernel-hidd-pci-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-hidd-pci_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-pci-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-pci-genmodfiles_STUBTARGETDIR)/,$(kernel-hidd-pci-genmodfiles_STUBTARGETS))
+    kernel-hidd-pci-genmodfiles_TARGETDIRS += $(kernel-hidd-pci_OBJDIR)/linklib
+else
+ifneq ($(kernel-hidd-pci_OBJDIR),)
+    kernel-hidd-pci-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-pci-genmodfiles_TARGETDIR)/,$(kernel-hidd-pci-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-hidd-pci-genmodfiles_TARGETS := $(kernel-hidd-pci-genmodfiles_GENTARGETS) $(kernel-hidd-pci-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-hidd-pci-genmodfiles_TARGETDIRS),)
+$(kernel-hidd-pci-genmodfiles_TARGETS) : | $(kernel-hidd-pci-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-hidd-pci-genmodfiles_TARGETS) : $(kernel-hidd-pci-genmodfiles_DEPS) $(kernel-hidd-pci-genmodfiles_GENFILEFLAG)
+
+$(kernel-hidd-pci-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-hidd-pci-genmodfiles_OPTS)
+$(kernel-hidd-pci-genmodfiles_GENFILEFLAG) : MODNAME := pci
+$(kernel-hidd-pci-genmodfiles_GENFILEFLAG) : MODTYPE := hidd
+$(kernel-hidd-pci-genmodfiles_GENFILEFLAG) : $(kernel-hidd-pci-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-hidd-pci-genmodfiles_GENFILEFLAG) : $(kernel-hidd-pci_DEFLIBDEFSINC) $(kernel-hidd-pci-makefile)
+
+
+ifneq ($(kernel-hidd-pci-genmodfiles_GENFILEFLAG),)
+$(kernel-hidd-pci-genmodfiles_GENFILEFLAG) : | $(kernel-hidd-pci_OBJDIR)/linklib
+else
+$(kernel-hidd-pci-genmodfiles_GENFILEFLAG) :: $(kernel-hidd-pci_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-pci_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-hidd-pci_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-hidd-pci_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-hidd-pci-fd : $(kernel-hidd-pci_FDDIR)/pci_lib.fd
+
+
+TMP_TARGET := pci_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/pci.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/pci.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-pci_FDDIR),)
+    TMP_OPTS += -d $(kernel-hidd-pci_FDDIR)
+    TMP_TARGET := $(kernel-hidd-pci_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := pci
+$(TMP_TARGET) : MODTYPE := hidd
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-pci_FDDIR)/pci_lib.fd : | $(kernel-hidd-pci_FDDIR)
+
+
+ifneq (kernel-hidd-pci-fd-setup,)
+kernel-hidd-pci-fd-setup : | $(kernel-hidd-pci_FDDIR)
+else
+kernel-hidd-pci-fd-setup :: $(kernel-hidd-pci_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-pci_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-hidd-pci_FILES            := $(FILES)
+kernel-hidd-pci_OBJCFILES        := 
+kernel-hidd-pci_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-hidd-pci_LIBFILES         := 
+kernel-hidd-pci_LIBS             := 
+
+kernel-hidd-pci_FDIRS            := $(sort $(dir $(kernel-hidd-pci_FILES)))
+
+kernel-hidd-pci_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-hidd-pci_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-hidd-pci_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-hidd-pci_FILTERARCH       = $(filter-out $(call kernel-hidd-pci_MATCHARCH,$(1),$(2)),$(2))
+kernel-hidd-pci_STARTFILES       := $(addprefix $(kernel-hidd-pci_OBJDIR)/,$($(kernel-hidd-pci_DEFNAME)_STARTFILES))
+kernel-hidd-pci_ENDFILES         := $(addprefix $(kernel-hidd-pci_OBJDIR)/,$($(kernel-hidd-pci_DEFNAME)_ENDFILES))
+
+kernel-hidd-pci_ARCHOBJS         := $(wildcard $(kernel-hidd-pci_OBJDIR)/arch/*.o)
+kernel-hidd-pci_LIBARCHOBJS      := $(wildcard $(kernel-hidd-pci_OBJDIR)/linklib/arch/*.o)
+kernel-hidd-pci_ARCHFILES        := $(basename $(notdir $(kernel-hidd-pci_ARCHOBJS)))
+kernel-hidd-pci_LIBARCHFILES     := $(basename $(notdir $(kernel-hidd-pci_LIBARCHOBJS)))
+kernel-hidd-pci_C_NARCHFILES     := $(call kernel-hidd-pci_FILTERARCH,$(kernel-hidd-pci_ARCHFILES),$(kernel-hidd-pci_FILES))
+kernel-hidd-pci_CXX_NARCHFILES   := $(call kernel-hidd-pci_FILTERARCH,$(kernel-hidd-pci_ARCHFILES),$(kernel-hidd-pci_CXXFILES))
+kernel-hidd-pci_OBJC_NARCHFILES  := $(call kernel-hidd-pci_FILTERARCH,$(kernel-hidd-pci_ARCHFILES),$(kernel-hidd-pci_OBJCFILES))
+kernel-hidd-pci_NLIBARCHFILES    := $(call kernel-hidd-pci_FILTERARCH,$(kernel-hidd-pci_LIBARCHFILES),$(kernel-hidd-pci_LIBFILES))
+kernel-hidd-pci_ARCHNLIBFILES    := $(call kernel-hidd-pci_FILTERARCH,$(kernel-hidd-pci_LIBFILES),$(kernel-hidd-pci_LIBARCHFILES))
+
+kernel-hidd-pci_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-hidd-pci_OBJDIR)/include -include $(kernel-hidd-pci_DEFLIBDEFSINC))
+ifneq (,)
+kernel-hidd-pci_CPPFLAGS         += -I
+endif
+kernel-hidd-pci_LINKLIBCPPFLAGS  := $(kernel-hidd-pci_CPPFLAGS)
+kernel-hidd-pci_CPPFLAGS         += $(strip $($(kernel-hidd-pci_DEFNAME)_CPPFLAGS))
+kernel-hidd-pci_LINKLIBCPPFLAGS  += $(strip $($(kernel-hidd-pci_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-hidd-pci_CFLAGS           := $(strip $(CFLAGS) $($(kernel-hidd-pci_DEFNAME)_CFLAGS))
+kernel-hidd-pci_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-hidd-pci_DEFNAME)_LINKLIBCFLAGS))
+kernel-hidd-pci_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-hidd-pci_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-pci_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-hidd-pci_CFLAGS           := $(strip $(kernel-hidd-pci_LTOFLAGS) $(kernel-hidd-pci_CFLAGS))
+kernel-hidd-pci_LINKLIBCFLAGS    := $(strip $(kernel-hidd-pci_LTOFLAGS) $(kernel-hidd-pci_LINKLIBCFLAGS))
+kernel-hidd-pci_CXXFLAGS         := $(strip $(kernel-hidd-pci_LTOFLAGS) $(kernel-hidd-pci_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-pci_SUBSTNULL        :=
+kernel-hidd-pci_SUBSTSPACE       := $(kernel-hidd-pci_SUBSTNULL) #
+kernel-hidd-pci_SUBSTCOMMA       := ,
+kernel-hidd-pci_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-hidd-pci_SUBSTSPACE),$(kernel-hidd-pci_SUBSTCOMMA),$(strip $($(kernel-hidd-pci_DEFNAME)_STARTFILES))))
+kernel-hidd-pci_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-hidd-pci_CFLAGS           := $(strip $(kernel-hidd-pci_INSTRFUNCFLAGS) $(kernel-hidd-pci_CFLAGS))
+kernel-hidd-pci_CXXFLAGS         := $(strip $(kernel-hidd-pci_INSTRFUNCFLAGS) $(kernel-hidd-pci_CXXFLAGS))
+kernel-hidd-pci_LIBS             += $(kernel-hidd-pci_INSTRFUNCLIBS)
+endif
+endif
+kernel-hidd-pci_DFLAGS           := $(strip $(kernel-hidd-pci_DFLAGS) $($(kernel-hidd-pci_DEFNAME)_DFLAGS))
+kernel-hidd-pci_LINKLIBDFLAGS    := $(strip $(kernel-hidd-pci_DFLAGS) $($(kernel-hidd-pci_DEFNAME)_LINKLIBDFLAGS))
+kernel-hidd-pci_DXXFLAGS         := $(strip $(kernel-hidd-pci_DXXFLAGS) $($(kernel-hidd-pci_DEFNAME)_DXXFLAGS))
+
+ifeq (hidd,library)
+    kernel-hidd-pci_LIBSUFFIX    := 
+else
+    kernel-hidd-pci_LIBSUFFIX    := .hidd
+endif
+
+ifeq (,)
+kernel-hidd-pci_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-hidd-pci_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-hidd-pci_LINKLIBCFILES    := $(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$($(kernel-hidd-pci_DEFNAME)_LINKLIBFILES))
+kernel-hidd-pci_LINKLIBAFILES    := $(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$($(kernel-hidd-pci_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-pci_DEFNAME)_LINKLIBFILES) $($(kernel-hidd-pci_DEFNAME)_LINKLIBAFILES)  $(kernel-hidd-pci_ARCHNLIBFILES)),)
+    kernel-hidd-pci_LINKLIB      :=
+else
+    kernel-hidd-pci_LINKLIB      := $(kernel-hidd-pci_LIBDIR)/libpci$(kernel-hidd-pci_LIBSUFFIX).a
+    ifneq (pci,$(kernel-hidd-pci_LINKLIBNAME))
+        kernel-hidd-pci_LINKLIB  += $(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_LINKLIBNAME)$(kernel-hidd-pci_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-pci_LINKLIBFILES     := $(kernel-hidd-pci_LINKLIBCFILES) $(kernel-hidd-pci_LINKLIBAFILES)
+
+kernel-hidd-pci_RELLINKLIBCFILES := $(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$($(kernel-hidd-pci_DEFNAME)_RELLINKLIBFILES))
+kernel-hidd-pci_RELLINKLIBAFILES := $(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$($(kernel-hidd-pci_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-pci_DEFNAME)_RELLINKLIBFILES) $($(kernel-hidd-pci_DEFNAME)_RELLINKLIBAFILES)  $(kernel-hidd-pci_ARCHNLIBFILES)),)
+    kernel-hidd-pci_RELLINKLIB   :=
+else
+    kernel-hidd-pci_RELLINKLIB   := $(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_DEFNAME)_rel$(kernel-hidd-pci_LIBSUFFIX).a
+    ifneq (pci,$(kernel-hidd-pci_LINKLIBNAME))
+        kernel-hidd-pci_RELLINKLIB += $(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_LINKLIBNAME)_rel$(kernel-hidd-pci_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-pci_RELLINKLIBFILES  := $(kernel-hidd-pci_RELLINKLIBCFILES) $(kernel-hidd-pci_RELLINKLIBAFILES)
+endif
+
+kernel-hidd-pci_ENDOBJS          := $(addsuffix .o,$(kernel-hidd-pci_ENDFILES))
+kernel-hidd-pci_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$(notdir $(kernel-hidd-pci_NLIBARCHFILES))) $(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-pci_ARCHNLIBFILES))) $(kernel-hidd-pci_LINKLIBFILES)) \
+                 
+kernel-hidd-pci_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$(notdir $(kernel-hidd-pci_NLIBARCHFILES))) $(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-pci_ARCHNLIBFILES))) $(kernel-hidd-pci_RELLINKLIBFILES)) \
+                 
+$(kernel-hidd-pci_LINKLIBFILES) $(kernel-hidd-pci_RELLINKLIBFILES) : | $(kernel-hidd-pci_OBJDIR)/linklib
+$(kernel-hidd-pci_LINKLIBOBJS) $(kernel-hidd-pci_RELLINKLIBOBJS) : | $(kernel-hidd-pci_OBJDIR)/linklib
+
+kernel-hidd-pci_CCFILES := $(kernel-hidd-pci_C_NARCHFILES)
+kernel-hidd-pci_TARGETCCFILES    := $(strip $(kernel-hidd-pci_STARTFILES) $(kernel-hidd-pci_ENDFILES))
+kernel-hidd-pci_LINKLIBCCFILES   := $(strip $(kernel-hidd-pci_NLIBARCHFILES) $(kernel-hidd-pci_LINKLIBCFILES) $(kernel-hidd-pci_RELLINKLIBCFILES))
+kernel-hidd-pci_LINKLIBCCGENFILES := $(strip $(kernel-hidd-pci_LINKLIBCFILES) $(kernel-hidd-pci_RELLINKLIBCFILES))
+
+
+kernel-hidd-pci_CXXABSBASENAMES := $(foreach kernel-hidd-pci_CXXBASE,$(kernel-hidd-pci_CXX_NARCHFILES),$(if $(filter /%,$(kernel-hidd-pci_CXXBASE)),$(kernel-hidd-pci_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-hidd-pci_CXXBASE))))
+
+ifneq ($(kernel-hidd-pci_CXXABSBASENAMES),)
+
+kernel-hidd-pci_CXXBASENAMES := $(basename $(kernel-hidd-pci_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-hidd-pci_MCXX_FILES  := $(strip $(foreach kernel-hidd-pci_CXXBASE,$(kernel-hidd-pci_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-hidd-pci_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-hidd-pci_EXT),$(kernel-hidd-pci_CXXBASE)))))))
+
+ifeq (,)
+kernel-hidd-pci_MCXX_SRCWILDCARD := %
+else
+kernel-hidd-pci_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-pci_OBJDIR),)
+  kernel-hidd-pci_CXXTARGETS := $(notdir $(kernel-hidd-pci_CXXBASENAMES:=.o))
+  kernel-hidd-pci_CXXDTARGETS := $(notdir $(kernel-hidd-pci_CXXBASENAMES:=.d))
+  kernel-hidd-pci_MCXX_WILDCARD := %
+else
+  kernel-hidd-pci_CXXTARGETS := $(addprefix $(kernel-hidd-pci_OBJDIR)/,$(notdir $(kernel-hidd-pci_CXXBASENAMES:=.o)))
+  kernel-hidd-pci_CXXDTARGETS := $(addprefix $(kernel-hidd-pci_OBJDIR)/,$(notdir $(kernel-hidd-pci_CXXBASENAMES:=.d)))
+  kernel-hidd-pci_MCXX_WILDCARD := $(kernel-hidd-pci_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-hidd-pci_CXXTARGETS) $(kernel-hidd-pci_CXXDTARGETS) : | $(kernel-hidd-pci_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-hidd-pci_MCXX_CPPFLAGS := $(kernel-hidd-pci_CPPFLAGS)
+kernel-hidd-pci_CXXFLAGS := $(kernel-hidd-pci_CXXFLAGS)
+ifeq ($(kernel-hidd-pci_DXXFLAGS),)
+  kernel-hidd-pci_DXXFLAGS := $(kernel-hidd-pci_CXXFLAGS)
+else
+  kernel-hidd-pci_DXXFLAGS := $(kernel-hidd-pci_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-hidd-pci_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-hidd-pci_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-pci_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-hidd-pci_CXXCMD:=$(HOST_CXX)
+  kernel-hidd-pci_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-hidd-pci_MCXX_CPPFLAGS) $(kernel-hidd-pci_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-pci_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-pci_CXXFLAGS))
+  kernel-hidd-pci_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-pci_DXXFLAGS))
+  kernel-hidd-pci_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-hidd-pci_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-hidd-pci_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-pci_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-pci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-hidd-pci_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-hidd-pci_MCXX_CPPFLAGS := $(strip $(kernel-hidd-pci_MCXX_CPPFLAGS) $(kernel-hidd-pci_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-pci_CXXFLAGS := $(strip $(kernel-hidd-pci_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-hidd-pci_DXXFLAGS := $(kernel-hidd-pci_DXXFLAGS)
+  kernel-hidd-pci_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-hidd-pci_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-hidd-pci_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-pci_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-pci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-hidd-pci_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-hidd-pci_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-hidd-pci_MCXX_CPPFLAGS) $(kernel-hidd-pci_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-pci_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-pci_CXXFLAGS))
+  kernel-hidd-pci_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-pci_DXXFLAGS))
+  kernel-hidd-pci_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-hidd-pci_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-hidd-pci_CXXCMD) $(kernel-hidd-pci_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-pci_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_CXXIQUOTE) . $(kernel-hidd-pci_CXXIQUOTE_END) $(strip $(kernel-hidd-pci_CXXFLAGS) $(kernel-hidd-pci_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-hidd-pci_CXXCMD) $(kernel-hidd-pci_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-pci_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_CXXIQUOTE) . $(kernel-hidd-pci_CXXIQUOTE_END) $(strip $(kernel-hidd-pci_CXXFLAGS) $(kernel-hidd-pci_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-hidd-pci_CXXCMD) $(kernel-hidd-pci_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-pci_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_CXXIQUOTE) . $(kernel-hidd-pci_CXXIQUOTE_END) $(strip $(kernel-hidd-pci_CXXFLAGS) $(kernel-hidd-pci_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-hidd-pci_CXXCMD)" $(MKDEPEND) $(strip $(kernel-hidd-pci_DXXFLAGS) $(kernel-hidd-pci_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-hidd-pci_OBJDIR),)
+  $(foreach kernel-hidd-pci_CXXFILE,$(kernel-hidd-pci_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-hidd-pci_CXXFILE))),$(kernel-hidd-pci_CXXFILE))))
+else
+  $(foreach kernel-hidd-pci_CXXFILE,$(kernel-hidd-pci_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-hidd-pci_OBJDIR)/,$(notdir $(basename $(kernel-hidd-pci_CXXFILE)))),$(kernel-hidd-pci_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-hidd-pci_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-hidd-pci_MOBJC_SRCWILDCARD := %
+else
+kernel-hidd-pci_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-pci_OBJDIR),)
+  kernel-hidd-pci_MOBJC_TARGETS := $(addsuffix .o,$(kernel-hidd-pci_OBJC_NARCHFILES))
+  kernel-hidd-pci_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-hidd-pci_OBJC_NARCHFILES))
+  kernel-hidd-pci_MOBJC_WILDCARD := %
+else
+  kernel-hidd-pci_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-pci_OBJDIR)/,$(kernel-hidd-pci_OBJC_NARCHFILES)))
+  kernel-hidd-pci_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-pci_OBJDIR)/,$(kernel-hidd-pci_OBJC_NARCHFILES)))
+  kernel-hidd-pci_MOBJC_WILDCARD := $(kernel-hidd-pci_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-hidd-pci_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-hidd-pci_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-hidd-pci_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-pci_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-hidd-pci_MOBJC_DIRS := $(foreach dir, $(kernel-hidd-pci_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-pci_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-hidd-pci_MOBJC_DIRS),)
+    kernel-hidd-pci_MOBJC_DIRS := $(shell echo $(kernel-hidd-pci_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-hidd-pci_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-hidd-pci_CC := $(TARGET_CC)
+else
+  kernel-hidd-pci_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-hidd-pci_MOBJC_CPPFLAGS := $(kernel-hidd-pci_CPPFLAGS)
+kernel-hidd-pci_OBJCFLAGS := $(kernel-hidd-pci_CFLAGS)
+kernel-hidd-pci_OBJCFLAGS := $(kernel-hidd-pci_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-hidd-pci_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-hidd-pci_OBJCFLAGS)))
+ifeq ($(kernel-hidd-pci_DFLAGS),)
+  kernel-hidd-pci_OBJCDFLAGS := $(kernel-hidd-pci_CFLAGS)
+else
+  kernel-hidd-pci_OBJCDFLAGS := $(kernel-hidd-pci_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-hidd-pci_LINK ?= $(strip $(kernel-hidd-pci_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-pci_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-pci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-hidd-pci_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : kernel-hidd-pci_MOBJC_CPPFLAGS:=$(strip $(kernel-hidd-pci_MOBJC_CPPFLAGS) $(kernel-hidd-pci_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : kernel-hidd-pci_OBJCFLAGS:=$(strip $(kernel-hidd-pci_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : kernel-hidd-pci_OBJCDFLAGS:=$(kernel-hidd-pci_OBJCDFLAGS)
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : kernel-hidd-pci_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : kernel-hidd-pci_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-hidd-pci_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-hidd-pci_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-pci_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : kernel-hidd-pci_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-hidd-pci_MOBJC_CPPFLAGS) $(kernel-hidd-pci_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : kernel-hidd-pci_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-pci_OBJCFLAGS))
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : kernel-hidd-pci_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-pci_OBJCDFLAGS))
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : kernel-hidd-pci_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : kernel-hidd-pci_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-hidd-pci_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-pci_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-pci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : kernel-hidd-pci_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-hidd-pci_MOBJC_CPPFLAGS) $(kernel-hidd-pci_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : kernel-hidd-pci_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-pci_OBJCFLAGS))
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : kernel-hidd-pci_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-pci_OBJCDFLAGS))
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : kernel-hidd-pci_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-hidd-pci_MOBJC_TARGETS) $(kernel-hidd-pci_MOBJC_DTARGETS) : kernel-hidd-pci_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-pci_MOBJC_TARGETS) : CPPFLAGS := $(kernel-hidd-pci_MOBJC_CPPFLAGS)
+$(kernel-hidd-pci_MOBJC_TARGETS) : CFLAGS := $(kernel-hidd-pci_OBJCFLAGS)
+$(kernel-hidd-pci_MOBJC_TARGETS) : $(kernel-hidd-pci_MOBJC_WILDCARD).o : $(kernel-hidd-pci_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-pci_IQUOTE) $(dir $<) $(kernel-hidd-pci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_IQUOTE) . $(kernel-hidd-pci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-pci_IQUOTE) $(dir $<) $(kernel-hidd-pci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_IQUOTE) . $(kernel-hidd-pci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-pci_IQUOTE) $(dir $<) $(kernel-hidd-pci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_IQUOTE) . $(kernel-hidd-pci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-pci_MOBJC_DTARGETS) : $(kernel-hidd-pci_MOBJC_WILDCARD).d : $(kernel-hidd-pci_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-pci_OBJCDFLAGS) $(kernel-hidd-pci_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-hidd-pci_MC_SRCWILDCARD := %
+else
+kernel-hidd-pci_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-pci_OBJDIR),)
+kernel-hidd-pci_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-pci_CCFILES))
+kernel-hidd-pci_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-pci_CCFILES))
+kernel-hidd-pci_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-pci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-pci_OBJDIR)/,$(notdir $(kernel-hidd-pci_CCFILES))))
+    kernel-hidd-pci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-pci_OBJDIR)/,$(notdir $(kernel-hidd-pci_CCFILES))))
+else
+ifeq (,)
+    kernel-hidd-pci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-pci_OBJDIR)/,$(kernel-hidd-pci_CCFILES)))
+    kernel-hidd-pci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-pci_OBJDIR)/,$(kernel-hidd-pci_CCFILES)))
+else
+    kernel-hidd-pci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-pci_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-pci_CCFILES))))
+    kernel-hidd-pci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-pci_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-pci_CCFILES))))
+endif
+endif
+kernel-hidd-pci_MC_TGTWILDCARD := $(kernel-hidd-pci_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-pci_CCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-pci_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-pci_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-pci_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-pci_MC_DIRS := $(foreach dir, $(kernel-hidd-pci_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-pci_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-pci_MC_DIRS),)
+    kernel-hidd-pci_MC_DIRS := $(shell echo $(kernel-hidd-pci_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-pci_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-pci_MC_CPPFLAGS := $(kernel-hidd-pci_CPPFLAGS)
+kernel-hidd-pci_CFLAGS := $(kernel-hidd-pci_CFLAGS)
+ifeq ($(kernel-hidd-pci_DFLAGS),)
+  kernel-hidd-pci_DFLAGS := $(kernel-hidd-pci_CFLAGS)
+else
+  kernel-hidd-pci_DFLAGS := $(kernel-hidd-pci_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-pci_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-pci_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-pci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_MC_CPPFLAGS:=$(strip $(kernel-hidd-pci_MC_CPPFLAGS) $(kernel-hidd-pci_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_CFLAGS:=$(strip $(kernel-hidd-pci_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_DFLAGS:=$(kernel-hidd-pci_DFLAGS)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-pci_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-pci_STRIP ?= $(HOST_STRIP)
+kernel-hidd-pci_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-pci_MC_CPPFLAGS) $(kernel-hidd-pci_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-pci_CFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-pci_DFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-pci_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-pci_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-pci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-pci_MC_CPPFLAGS) $(kernel-hidd-pci_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-pci_CFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-pci_DFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-pci_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-pci_MC_CPPFLAGS)
+$(kernel-hidd-pci_MC_TARGETS) : CFLAGS := $(kernel-hidd-pci_CFLAGS)
+$(kernel-hidd-pci_MC_TARGETS) : $(kernel-hidd-pci_MC_TGTWILDCARD).o : $(kernel-hidd-pci_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-pci_IQUOTE) $(dir $<) $(kernel-hidd-pci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_IQUOTE) . $(kernel-hidd-pci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-pci_IQUOTE) $(dir $<) $(kernel-hidd-pci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_IQUOTE) . $(kernel-hidd-pci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-pci_IQUOTE) $(dir $<) $(kernel-hidd-pci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_IQUOTE) . $(kernel-hidd-pci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-pci_MC_DTARGETS) : $(kernel-hidd-pci_MC_TGTWILDCARD).d : $(kernel-hidd-pci_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-pci_DFLAGS) $(kernel-hidd-pci_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-pci_MC_SRCWILDCARD := %
+else
+kernel-hidd-pci_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-pci_OBJDIR),)
+kernel-hidd-pci_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-pci_TARGETCCFILES))
+kernel-hidd-pci_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-pci_TARGETCCFILES))
+kernel-hidd-pci_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-pci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-pci_OBJDIR)/,$(notdir $(kernel-hidd-pci_TARGETCCFILES))))
+    kernel-hidd-pci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-pci_OBJDIR)/,$(notdir $(kernel-hidd-pci_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-hidd-pci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-pci_OBJDIR)/,$(kernel-hidd-pci_TARGETCCFILES)))
+    kernel-hidd-pci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-pci_OBJDIR)/,$(kernel-hidd-pci_TARGETCCFILES)))
+else
+    kernel-hidd-pci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-pci_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-pci_TARGETCCFILES))))
+    kernel-hidd-pci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-pci_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-pci_TARGETCCFILES))))
+endif
+endif
+kernel-hidd-pci_MC_TGTWILDCARD := $(kernel-hidd-pci_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-pci_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-pci_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-pci_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-pci_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-pci_MC_DIRS := $(foreach dir, $(kernel-hidd-pci_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-pci_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-pci_MC_DIRS),)
+    kernel-hidd-pci_MC_DIRS := $(shell echo $(kernel-hidd-pci_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-pci_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-pci_MC_CPPFLAGS := $(kernel-hidd-pci_CPPFLAGS) -D__AROS__
+kernel-hidd-pci_CFLAGS := $(kernel-hidd-pci_CFLAGS)
+ifeq ($(kernel-hidd-pci_DFLAGS),)
+  kernel-hidd-pci_DFLAGS := $(kernel-hidd-pci_CFLAGS)
+else
+  kernel-hidd-pci_DFLAGS := $(kernel-hidd-pci_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-pci_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-pci_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-pci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_MC_CPPFLAGS:=$(strip $(kernel-hidd-pci_MC_CPPFLAGS) $(kernel-hidd-pci_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_CFLAGS:=$(strip $(kernel-hidd-pci_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_DFLAGS:=$(kernel-hidd-pci_DFLAGS)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-pci_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-pci_STRIP ?= $(HOST_STRIP)
+kernel-hidd-pci_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-pci_MC_CPPFLAGS) $(kernel-hidd-pci_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-pci_CFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-pci_DFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-pci_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-pci_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-pci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-pci_MC_CPPFLAGS) $(kernel-hidd-pci_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-pci_CFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-pci_DFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-pci_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-pci_MC_CPPFLAGS)
+$(kernel-hidd-pci_MC_TARGETS) : CFLAGS := $(kernel-hidd-pci_CFLAGS)
+$(kernel-hidd-pci_MC_TARGETS) : $(kernel-hidd-pci_MC_TGTWILDCARD).o : $(kernel-hidd-pci_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-pci_IQUOTE) $(dir $<) $(kernel-hidd-pci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_IQUOTE) . $(kernel-hidd-pci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-pci_IQUOTE) $(dir $<) $(kernel-hidd-pci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_IQUOTE) . $(kernel-hidd-pci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-pci_IQUOTE) $(dir $<) $(kernel-hidd-pci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_IQUOTE) . $(kernel-hidd-pci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-pci_MC_DTARGETS) : $(kernel-hidd-pci_MC_TGTWILDCARD).d : $(kernel-hidd-pci_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-pci_DFLAGS) $(kernel-hidd-pci_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-pci_MC_SRCWILDCARD := %
+else
+kernel-hidd-pci_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-pci_OBJDIR)/linklib,)
+kernel-hidd-pci_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-pci_NLIBARCHFILES))
+kernel-hidd-pci_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-pci_NLIBARCHFILES))
+kernel-hidd-pci_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-pci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$(notdir $(kernel-hidd-pci_NLIBARCHFILES))))
+    kernel-hidd-pci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$(notdir $(kernel-hidd-pci_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-hidd-pci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$(kernel-hidd-pci_NLIBARCHFILES)))
+    kernel-hidd-pci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$(kernel-hidd-pci_NLIBARCHFILES)))
+else
+    kernel-hidd-pci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-pci_NLIBARCHFILES))))
+    kernel-hidd-pci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-pci_NLIBARCHFILES))))
+endif
+endif
+kernel-hidd-pci_MC_TGTWILDCARD := $(kernel-hidd-pci_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-pci_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-pci_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-pci_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-pci_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-pci_MC_DIRS := $(foreach dir, $(kernel-hidd-pci_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-pci_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-pci_MC_DIRS),)
+    kernel-hidd-pci_MC_DIRS := $(shell echo $(kernel-hidd-pci_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-pci_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-pci_MC_CPPFLAGS := $(kernel-hidd-pci_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-pci_CFLAGS := $(kernel-hidd-pci_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-pci_LINKLIBDFLAGS),)
+  kernel-hidd-pci_DFLAGS := $(kernel-hidd-pci_LINKLIBCFLAGS)
+else
+  kernel-hidd-pci_DFLAGS := $(kernel-hidd-pci_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-pci_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-pci_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-pci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_MC_CPPFLAGS:=$(strip $(kernel-hidd-pci_MC_CPPFLAGS) $(kernel-hidd-pci_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_CFLAGS:=$(strip $(kernel-hidd-pci_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_DFLAGS:=$(kernel-hidd-pci_DFLAGS)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-pci_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-pci_STRIP ?= $(HOST_STRIP)
+kernel-hidd-pci_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-pci_MC_CPPFLAGS) $(kernel-hidd-pci_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-pci_CFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-pci_DFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-pci_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-pci_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-pci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-pci_MC_CPPFLAGS) $(kernel-hidd-pci_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-pci_CFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-pci_DFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-pci_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-pci_MC_CPPFLAGS)
+$(kernel-hidd-pci_MC_TARGETS) : CFLAGS := $(kernel-hidd-pci_CFLAGS)
+$(kernel-hidd-pci_MC_TARGETS) : $(kernel-hidd-pci_MC_TGTWILDCARD).o : $(kernel-hidd-pci_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-pci_IQUOTE) $(dir $<) $(kernel-hidd-pci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_IQUOTE) . $(kernel-hidd-pci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-pci_IQUOTE) $(dir $<) $(kernel-hidd-pci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_IQUOTE) . $(kernel-hidd-pci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-pci_IQUOTE) $(dir $<) $(kernel-hidd-pci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_IQUOTE) . $(kernel-hidd-pci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-pci_MC_DTARGETS) : $(kernel-hidd-pci_MC_TGTWILDCARD).d : $(kernel-hidd-pci_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-pci_DFLAGS) $(kernel-hidd-pci_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-hidd-pci_OBJDIR)/linklib,)
+kernel-hidd-pci_MC_SRCWILDCARD := %
+else
+kernel-hidd-pci_MC_SRCWILDCARD := $(kernel-hidd-pci_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-hidd-pci_OBJDIR)/linklib,)
+kernel-hidd-pci_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-pci_LINKLIBCCGENFILES))
+kernel-hidd-pci_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-pci_LINKLIBCCGENFILES))
+kernel-hidd-pci_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-pci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$(notdir $(kernel-hidd-pci_LINKLIBCCGENFILES))))
+    kernel-hidd-pci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$(notdir $(kernel-hidd-pci_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-hidd-pci_OBJDIR)/linklib,)
+    kernel-hidd-pci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$(kernel-hidd-pci_LINKLIBCCGENFILES)))
+    kernel-hidd-pci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$(kernel-hidd-pci_LINKLIBCCGENFILES)))
+else
+    kernel-hidd-pci_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-pci_OBJDIR)/linklib/%,%,$(kernel-hidd-pci_LINKLIBCCGENFILES))))
+    kernel-hidd-pci_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-pci_OBJDIR)/linklib/%,%,$(kernel-hidd-pci_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-hidd-pci_MC_TGTWILDCARD := $(kernel-hidd-pci_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-pci_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-pci_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-pci_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-pci_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-pci_MC_DIRS := $(foreach dir, $(kernel-hidd-pci_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-pci_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-pci_MC_DIRS),)
+    kernel-hidd-pci_MC_DIRS := $(shell echo $(kernel-hidd-pci_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-pci_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-pci_MC_CPPFLAGS := $(kernel-hidd-pci_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-pci_CFLAGS := $(kernel-hidd-pci_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-pci_LINKLIBDFLAGS),)
+  kernel-hidd-pci_DFLAGS := $(kernel-hidd-pci_LINKLIBCFLAGS)
+else
+  kernel-hidd-pci_DFLAGS := $(kernel-hidd-pci_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-pci_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-pci_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-pci_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_MC_CPPFLAGS:=$(strip $(kernel-hidd-pci_MC_CPPFLAGS) $(kernel-hidd-pci_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_CFLAGS:=$(strip $(kernel-hidd-pci_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_DFLAGS:=$(kernel-hidd-pci_DFLAGS)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-pci_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-pci_STRIP ?= $(HOST_STRIP)
+kernel-hidd-pci_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-pci_MC_CPPFLAGS) $(kernel-hidd-pci_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-pci_CFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-pci_DFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-pci_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-pci_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-pci_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-pci_MC_CPPFLAGS) $(kernel-hidd-pci_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-pci_CFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-pci_DFLAGS))
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-pci_MC_TARGETS) $(kernel-hidd-pci_MC_DTARGETS) : kernel-hidd-pci_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-pci_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-pci_MC_CPPFLAGS)
+$(kernel-hidd-pci_MC_TARGETS) : CFLAGS := $(kernel-hidd-pci_CFLAGS)
+$(kernel-hidd-pci_MC_TARGETS) : $(kernel-hidd-pci_MC_TGTWILDCARD).o : $(kernel-hidd-pci_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-pci_IQUOTE) $(dir $<) $(kernel-hidd-pci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_IQUOTE) . $(kernel-hidd-pci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-pci_IQUOTE) $(dir $<) $(kernel-hidd-pci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_IQUOTE) . $(kernel-hidd-pci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-pci_IQUOTE) $(dir $<) $(kernel-hidd-pci_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-pci_IQUOTE) . $(kernel-hidd-pci_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-pci_MC_DTARGETS) : $(kernel-hidd-pci_MC_TGTWILDCARD).d : $(kernel-hidd-pci_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-pci_DFLAGS) $(kernel-hidd-pci_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-hidd-pci_LINKLIBAFILES),)
+
+ifeq ($(kernel-hidd-pci_OBJDIR)/linklib,)
+kernel-hidd-pci-MA_TARGETS := $(addsuffix .o,$(kernel-hidd-pci_LINKLIBAFILES) $(kernel-hidd-pci_RELLINKLIBAFILES))
+kernel-hidd-pci-MA_WILDCARD := %
+else
+kernel-hidd-pci-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$(notdir $(kernel-hidd-pci_LINKLIBAFILES) $(kernel-hidd-pci_RELLINKLIBAFILES))))
+kernel-hidd-pci-MA_WILDCARD := $(kernel-hidd-pci_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-hidd-pci-MA_TARGETS) : | $(addsuffix .S,$(kernel-hidd-pci_LINKLIBAFILES) $(kernel-hidd-pci_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-pci-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-pci-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-pci_LINKLIBAFILES) $(kernel-hidd-pci_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-pci-MA_DIRS := $(foreach dir, $(kernel-hidd-pci-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-pci-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-pci-MA_DIRS),)
+    kernel-hidd-pci-MA_DIRS := $(shell echo $(kernel-hidd-pci-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-hidd-pci-MA_DIRS)
+endif
+
+endif
+
+kernel-hidd-pci-MA_ASSEMBLER ?= $(kernel-hidd-pci_ASSEMBLER)
+
+$(kernel-hidd-pci-MA_TARGETS) : kernel-hidd-pci-MA_CMD:= $(kernel-hidd-pci-MA_ASSEMBLER)
+
+$(kernel-hidd-pci-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-hidd-pci-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-hidd-pci-MA_TARGETS) : $(kernel-hidd-pci-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-hidd-pci-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-hidd-pci-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-hidd-pci-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-hidd-pci_SUFFIX           := hidd
+else
+kernel-hidd-pci_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-hidd-pci_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-hidd-pci_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-hidd-pci_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-hidd-pci_SUFFIX),handler)
+kernel-hidd-pci_MODULE           := $(AROSDIR)/$(kernel-hidd-pci_MODDIR)/$(kernel-hidd-pci_DEFNAME)-$(kernel-hidd-pci_SUFFIX)
+else
+kernel-hidd-pci_MODULE           := $(AROSDIR)/$(kernel-hidd-pci_MODDIR)/$(kernel-hidd-pci_DEFNAME).$(kernel-hidd-pci_SUFFIX)
+endif
+kernel-hidd-pci_KOBJ             := $(KOBJSDIR)/$(kernel-hidd-pci_DEFNAME)_$(kernel-hidd-pci_SUFFIX).o
+else
+kernel-hidd-pci_MODULE           :=
+kernel-hidd-pci_KOBJ             :=
+endif
+
+kernel-hidd-pci-quick      : kernel-hidd-pci
+kernel-hidd-pci            : $(kernel-hidd-pci_MODULE) $(kernel-hidd-pci_LINKLIB) $(kernel-hidd-pci_RELLINKLIB)
+ifeq (M,M)
+kernel-hidd-pci-kobj       : $(kernel-hidd-pci_KOBJ) $(kernel-hidd-pci_LINKLIB) $(kernel-hidd-pci_RELLINKLIB)
+kernel-hidd-pci-kobj-quick : $(kernel-hidd-pci_KOBJ) $(kernel-hidd-pci_LINKLIB) $(kernel-hidd-pci_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-hidd-pci-linklib    : $(kernel-hidd-pci_LINKLIB) $(kernel-hidd-pci_RELLINKLIB)
+endif
+
+kernel-hidd-pci_OBJS := $(addsuffix .o,$(kernel-hidd-pci_STARTFILES)) $(kernel-hidd-pci_ARCHOBJS) \
+           $(addprefix $(kernel-hidd-pci_OBJDIR)/,$(notdir $(kernel-hidd-pci_C_NARCHFILES:=.o) $(kernel-hidd-pci_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (hidd,handler)
+kernel-hidd-pci_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (pci,con)
+    kernel-hidd-pci_ERR          := $(notdir $(kernel-hidd-pci_MODULE)).err
+else
+    kernel-hidd-pci_ERR          := pci.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-hidd-pci_DEFNAME)_LDFLAGS) $(kernel-hidd-pci_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-hidd-pci_LIBS) $($(kernel-hidd-pci_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-hidd-pci_MODULE) : LIB_NAMES := $(kernel-hidd-pci_LIBS) $($(kernel-hidd-pci_DEFNAME)_LIBS)
+$(kernel-hidd-pci_MODULE) : OBJS := $(kernel-hidd-pci_STARTOBJS) $(kernel-hidd-pci_OBJS) $(USER_OBJS)
+$(kernel-hidd-pci_MODULE) : ENDTAG := $(kernel-hidd-pci_ENDOBJS)
+$(kernel-hidd-pci_MODULE) : ERR := $(kernel-hidd-pci_ERR)
+$(kernel-hidd-pci_MODULE) : OBJDIR := $(kernel-hidd-pci_OBJDIR)
+$(kernel-hidd-pci_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-hidd-pci_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-hidd-pci_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-hidd-pci_MODULE) : $(kernel-hidd-pci_STARTOBJS) $(kernel-hidd-pci_OBJS) $(USER_OBJS) $(kernel-hidd-pci_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-hidd-pci_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-hidd-pci_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-hidd-pci_LC_LINKLIBNAME   := $(shell echo $(kernel-hidd-pci_LINKLIBNAME) | tr A-Z a-z)
+kernel-hidd-pci_LC_MODNAME       := $(shell echo pci | tr A-Z a-z)
+ifneq ($(kernel-hidd-pci_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_LINKLIBNAME)$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_AR:=$(AR)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_LINKLIBNAME)$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_LINKLIBNAME)$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_AR:=$(HOST_AR)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_LINKLIBNAME)$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_LINKLIBNAME)$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_AR:=$(KERNEL_AR)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_LINKLIBNAME)$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_LINKLIBNAME)$(kernel-hidd-pci_LIBSUFFIX).a : $(kernel-hidd-pci_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-pci_AR) $@ $^
+	$(Q)$(kernel-hidd-pci_RANLIB) $@
+ifneq ($(kernel-hidd-pci_LC_MODNAME),$(kernel-hidd-pci_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-pci_LIBDIR)/libpci$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_AR:=$(AR)
+$(kernel-hidd-pci_LIBDIR)/libpci$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-pci_LIBDIR)/libpci$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_AR:=$(HOST_AR)
+$(kernel-hidd-pci_LIBDIR)/libpci$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-pci_LIBDIR)/libpci$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_AR:=$(KERNEL_AR)
+$(kernel-hidd-pci_LIBDIR)/libpci$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-pci_LIBDIR)/libpci$(kernel-hidd-pci_LIBSUFFIX).a : $(kernel-hidd-pci_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-pci_AR) $@ $^
+	$(Q)$(kernel-hidd-pci_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-pci_LINKLIB),)
+$(kernel-hidd-pci_LINKLIB) : | $(kernel-hidd-pci_LIBDIR)
+else
+$(kernel-hidd-pci_LINKLIB) :: $(kernel-hidd-pci_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-pci_LIBDIR)
+
+endif
+
+ifneq ($(kernel-hidd-pci_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_LINKLIBNAME)_rel$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_AR:=$(AR)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_LINKLIBNAME)_rel$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_LINKLIBNAME)_rel$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_AR:=$(HOST_AR)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_LINKLIBNAME)_rel$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_LINKLIBNAME)_rel$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_AR:=$(KERNEL_AR)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_LINKLIBNAME)_rel$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_LINKLIBNAME)_rel$(kernel-hidd-pci_LIBSUFFIX).a : $(kernel-hidd-pci_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-pci_AR) $@ $^
+	$(Q)$(kernel-hidd-pci_RANLIB) $@
+ifneq ($(kernel-hidd-pci_LC_MODNAME),$(kernel-hidd-pci_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_DEFNAME)_rel$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_AR:=$(AR)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_DEFNAME)_rel$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_DEFNAME)_rel$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_AR:=$(HOST_AR)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_DEFNAME)_rel$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_DEFNAME)_rel$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_AR:=$(KERNEL_AR)
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_DEFNAME)_rel$(kernel-hidd-pci_LIBSUFFIX).a : kernel-hidd-pci_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-pci_LIBDIR)/lib$(kernel-hidd-pci_DEFNAME)_rel$(kernel-hidd-pci_LIBSUFFIX).a : $(kernel-hidd-pci_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-pci_AR) $@ $^
+	$(Q)$(kernel-hidd-pci_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-pci_RELLINKLIB),)
+$(kernel-hidd-pci_RELLINKLIB) : | $(kernel-hidd-pci_LIBDIR)
+else
+$(kernel-hidd-pci_RELLINKLIB) :: $(kernel-hidd-pci_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-pci_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-hidd-pci_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-hidd-pci_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-hidd-pci_SYMBOLS := $(kernel-hidd-pci_KBASE)
+
+kernel-hidd-pci_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-hidd-pci_KOBJ_LIBS        := $(filter-out $(kernel-hidd-pci_KLIB),$(kernel-hidd-pci_LIBS)) $(kernel-hidd-pci_KAUTOLIB)
+$(kernel-hidd-pci_KOBJ) : LINKLIBS:=$(kernel-hidd-pci_KOBJ_LIBS) $($(kernel-hidd-pci_DEFNAME)_LIBS)
+$(kernel-hidd-pci_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-hidd-pci_SYMBOLS))
+$(kernel-hidd-pci_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-hidd-pci_KOBJ) : $(kernel-hidd-pci_OBJS) $(USER_OBJS) $(kernel-hidd-pci_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-hidd-pci_DEPS             := $(addprefix $(kernel-hidd-pci_OBJDIR)/,$(notdir $(kernel-hidd-pci_CCFILES:=.d) $(kernel-hidd-pci_TARGETCCFILES:=.d) $(kernel-hidd-pci_CXXFILES:=.d))) $(addprefix $(kernel-hidd-pci_OBJDIR)/linklib/,$(notdir $(kernel-hidd-pci_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-hidd-pci_DEPS),)
+  ifneq (kernel-hidd-pci kernel-hidd-pci-quick kernel-hidd-pci-kobj kernel-hidd-pci-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-hidd-pci kernel-hidd-pci-quick kernel-hidd-pci-kobj kernel-hidd-pci-kobj-quick),)
+      -include $(kernel-hidd-pci_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-hidd-pci_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-hidd-pci_OBJS) $(kernel-hidd-pci_DEPS) : | $(kernel-hidd-pci_OBJDIR)/linklib
+
+ifneq ($(kernel-hidd-pci_OBJS) $(kernel-hidd-pci_DEPS) $(kernel-hidd-pci_MODULE) $(kernel-hidd-pci_KOBJ),)
+$(kernel-hidd-pci_OBJS) $(kernel-hidd-pci_DEPS) $(kernel-hidd-pci_MODULE) $(kernel-hidd-pci_KOBJ) : | $(kernel-hidd-pci_OBJDIR) $(AROSDIR)/$(kernel-hidd-pci_MODDIR) $(KOBJSDIR)
+else
+$(kernel-hidd-pci_OBJS) $(kernel-hidd-pci_DEPS) $(kernel-hidd-pci_MODULE) $(kernel-hidd-pci_KOBJ) :: $(kernel-hidd-pci_OBJDIR) $(AROSDIR)/$(kernel-hidd-pci_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-pci_OBJDIR) $(AROSDIR)/$(kernel-hidd-pci_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-hidd-pci kernel-hidd-pci-includes kernel-hidd-pci-quick kernel-hidd-pci-kobj kernel-hidd-pci-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-hidd-pci_DFILE_DEPS := $(kernel-hidd-pci_LIBDEFSINC) $(kernel-hidd-pci_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-hidd-pci_INCDIR)/,$($(kernel-hidd-pci_DEFNAME)_INCLUDES))
+$(kernel-hidd-pci_DEPS) : $(kernel-hidd-pci_DFILE_DEPS)
+endif
+
+kernel-hidd-pci_TOCLEAN := $(kernel-hidd-pci_OBJS) $(kernel-hidd-pci_DEPS) \
+    $(kernel-hidd-pci_MODULE) $(kernel-hidd-pci_LINKLIB) $(kernel-hidd-pci_KOBJ) \
+    $(kernel-hidd-pci_OBJDIR)/Makefile.pcihidd \
+    $(addprefix $(kernel-hidd-pci_OBJDIR)/include/,$($(kernel-hidd-pci_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-hidd-pci_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-pci_INCDIR)/,$($(kernel-hidd-pci_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-pci_OBJDIR)/pci_geninc $(kernel-hidd-pci_OBJDIR)/pci_incs \
+    $(addsuffix .c,$(kernel-hidd-pci_LINKLIBFILES)) $(kernel-hidd-pci_LINKLIBOBJS) $(kernel-hidd-pci_LIBDEFSINC) \
+    $(kernel-hidd-pci_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-hidd-pci_STARTFILES) $(kernel-hidd-pci_ENDFILES)) \
+    $(kernel-hidd-pci_ENDOBJS)
+kernel-hidd-pci-clean : FILES              := $(kernel-hidd-pci_TOCLEAN)
+kernel-hidd-pci-clean ::
+	$(Q)$(ECHO) "Cleaning up for module pci"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-hidd-pci_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

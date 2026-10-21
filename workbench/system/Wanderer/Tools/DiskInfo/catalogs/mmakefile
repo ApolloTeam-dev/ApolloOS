@@ -1,0 +1,76 @@
+# Copyright © 2019, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+CATALOGS:=croatian czech danish german polish russian norwegian
+# other catalogs need update to version 2
+
+
+ifeq (,)
+workbench-system-wanderer-tools-diskinfo-catalogs_DESC := $(basename $(wildcard $(SRCDIR)/$(CURDIR)/*.cd))
+else
+workbench-system-wanderer-tools-diskinfo-catalogs_DESC := 
+endif
+
+workbench-system-wanderer-tools-diskinfo-catalogs_SRC := $(shell echo $(TOOLDIR)/C_h_aros | sed 's/^\(.\):\//\/\1\//')
+
+ifeq ($(CATALOGS),)
+workbench-system-wanderer-tools-diskinfo-catalogs_LNGS := $(basename $(notdir $(call WILDCARD, $(SRCDIR)/$(CURDIR)/*.ct)))
+else
+workbench-system-wanderer-tools-diskinfo-catalogs_LNGS := $(CATALOGS)
+endif
+
+workbench-system-wanderer-tools-diskinfo-catalogs_OBJS := $(addsuffix /System/System/Wanderer/Tools/DiskInfo.catalog, $(addprefix $(AROS_CATALOGS)/, $(workbench-system-wanderer-tools-diskinfo-catalogs_LNGS)))
+workbench-system-wanderer-tools-diskinfo-catalogs_DIRS := $(addsuffix /System/System/Wanderer/Tools, $(addprefix $(AROS_CATALOGS)/, $(workbench-system-wanderer-tools-diskinfo-catalogs_LNGS))) $(dir ../strings.h)
+
+#MM- workbench-system-wanderer-tools-diskinfo-catalogs-quick : workbench-system-wanderer-tools-diskinfo-catalogs
+
+#MM
+workbench-system-wanderer-tools-diskinfo-catalogs : $(workbench-system-wanderer-tools-diskinfo-catalogs_OBJS) ../strings.h
+
+
+ifneq ($(workbench-system-wanderer-tools-diskinfo-catalogs_OBJS),)
+$(workbench-system-wanderer-tools-diskinfo-catalogs_OBJS) : | $(workbench-system-wanderer-tools-diskinfo-catalogs_DIRS)
+else
+$(workbench-system-wanderer-tools-diskinfo-catalogs_OBJS) :: $(workbench-system-wanderer-tools-diskinfo-catalogs_DIRS)
+endif
+
+GLOB_MKDIRS += $(workbench-system-wanderer-tools-diskinfo-catalogs_DIRS)
+
+
+$(AROS_CATALOGS)/%/System/System/Wanderer/Tools/DiskInfo.catalog : $(SRCDIR)/$(CURDIR)/%.ct $(workbench-system-wanderer-tools-diskinfo-catalogs_DESC).cd
+	$(Q)$(ECHO) "Creating   DiskInfo catalog for language $*."
+	$(Q)$(IF) $(TEST) "$*" = "polish"; then \
+	    $(FLEXCAT) iso88592toamigapl $(workbench-system-wanderer-tools-diskinfo-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/System/Wanderer/Tools/DiskInfo.catalog" || [ $$? -lt 10 ] ; \
+	elif $(TEST) "$*" = "russian"; then \
+	    $(FLEXCAT) win1251toamiga1251 $(workbench-system-wanderer-tools-diskinfo-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/System/Wanderer/Tools/DiskInfo.catalog" || [ $$? -lt 10 ] ; \
+	else \
+	    $(FLEXCAT) $(workbench-system-wanderer-tools-diskinfo-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/System/Wanderer/Tools/DiskInfo.catalog" || [ $$? -lt 10 ] ; \
+	fi
+
+ifneq (../strings.h,)
+../strings.h : workbench-system-wanderer-tools-diskinfo-catalogs_DESC := $(workbench-system-wanderer-tools-diskinfo-catalogs_DESC)
+../strings.h : workbench-system-wanderer-tools-diskinfo-catalogs_SRC := $(workbench-system-wanderer-tools-diskinfo-catalogs_SRC)
+../strings.h : $(workbench-system-wanderer-tools-diskinfo-catalogs_DESC).cd $(workbench-system-wanderer-tools-diskinfo-catalogs_SRC).sd | $(dir ../strings.h)
+	$(Q)$(ECHO) "Creating   DiskInfo catalog source file $@"
+	$(Q)$(FLEXCAT) $(workbench-system-wanderer-tools-diskinfo-catalogs_DESC).cd $@=$(workbench-system-wanderer-tools-diskinfo-catalogs_SRC).sd
+endif
+
+workbench-system-wanderer-tools-diskinfo-catalogs-clean : FILES := $(workbench-system-wanderer-tools-diskinfo-catalogs_OBJS) ../strings.h
+#MM
+workbench-system-wanderer-tools-diskinfo-catalogs-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-system-wanderer-tools-diskinfo-catalogs"
+	$(Q)$(RM) $(FILES)
+
+.PHONY: workbench-system-wanderer-tools-diskinfo-catalogs workbench-system-wanderer-tools-diskinfo-catalogs-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

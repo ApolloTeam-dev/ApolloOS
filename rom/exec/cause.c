@@ -1,12 +1,12 @@
 /*
-    Copyright © 1995-2018, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2026, The AROS Development Team. All rights reserved.
 
     Desc: Cause() - Cause a software interrupt.
     Lang: english
 */
 
 #include <aros/asmcall.h>
+#include <aros/atomic.h>
 #include <exec/execbase.h>
 #include <hardware/intbits.h>
 
@@ -110,6 +110,25 @@
          * looking at SFF_SoftInt flag.
          */
     }
+
+    /* Signal pending software interrupt condition */
+#ifndef AROS_NO_ATOMIC_OPERATIONS
+    __AROS_ATOMIC_OR_W(SysBase->SysFlags, SFF_SoftInt);
+#else
+    SysBase->SysFlags |= SFF_SoftInt;
+#endif
+
+    /*
+     * Quick soft int request. For optimal performance m68k-amiga
+     * Enable() does not do any extra SFF_SoftInt checks
+     */
+    CUSTOM_CAUSE(INTF_SOFTINT);
+    /*
+     * If we are in usermode the software interrupt will end up being triggered
+     * in Enable(). On Amiga hardware this happens because a hardware interrupt
+     * was queued. On other machines Enable() will simulate this behavior,
+     * looking at SFF_SoftInt flag.
+     */
     Enable();
 
     AROS_LIBFUNC_EXIT
@@ -141,8 +160,14 @@ AROS_INTH0(SoftIntDispatch)
     /* Don't bother if there are no software ints queued. */
     if( SysBase->SysFlags & SFF_SoftInt )
     {
-	/* Clear Software interrupt pending flag. */
-	SysBase->SysFlags &= ~(SFF_SoftInt);
+        /* Clear Software interrupt pending flag. The scheduler's attention
+         * flags share this word and can be set from higher interrupt levels,
+         * so the update should not be a load/modify/store sequence. */
+#ifndef AROS_NO_ATOMIC_OPERATIONS
+        __AROS_ATOMIC_AND_W(SysBase->SysFlags, ~SFF_SoftInt);
+#else
+        SysBase->SysFlags &= ~(SFF_SoftInt);
+#endif
 
         for(;;)
         {

@@ -1,0 +1,295 @@
+# Copyright © 2003, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES  := examine writetooltypes diskobj render
+EXEDIR := $(AROS_TESTS)/Icon
+
+#MM- test : test-icon
+#MM test-icon:
+#MM test-icon-quick:
+
+
+.PHONY : test-icon
+
+test-icon_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-icon_TARGETDIR := $(EXEDIR)
+test-icon_LIBS := 
+
+test-icon_FILES     := $(FILES)
+test-icon_OBJS      := $(addsuffix .o,$(addprefix $(test-icon_OBJDIR)/,$(test-icon_FILES)))
+test-icon_DEPS      := $(addsuffix .d,$(addprefix $(test-icon_OBJDIR)/,$(test-icon_FILES)))
+test-icon_EXES      := $(addprefix $(test-icon_TARGETDIR)/,$(test-icon_FILES))
+
+test-icon_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-icon_CPPFLAGS += -I
+endif
+test-icon_CFLAGS    := $(CFLAGS)
+test-icon_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-icon_COVERAGE := yes
+test-icon_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-icon_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-icon_CFLAGS    := $(strip $(test-icon_COVERAGEFLAGS) $(test-icon_CFLAGS))
+test-icon_LIBS += $(test-icon_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-icon_FUNCINSTR := yes
+test-icon_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-icon_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-icon_CFLAGS    := $(strip $(test-icon_INSTRFUNCFLAGS) $(test-icon_CFLAGS))
+test-icon_LIBS += $(test-icon_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-icon_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-icon_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-icon_DFLAGS := 
+else
+    test-icon_DFLAGS := $(test-icon_CFLAGS)
+endif
+ifeq (target,target)
+test-icon_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-icon_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-icon_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-icon_LDFLAGS += -L
+endif
+
+#MM
+test-icon-quick : test-icon
+
+#MM test-icon : includes-generate-deps core-linklibs
+test-icon : $(test-icon_EXES)
+
+ifneq ($(filter $(TARGET),test-icon test-icon-quick),)
+
+ifeq (,)
+test-icon_MC_SRCWILDCARD := %
+else
+test-icon_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-icon_OBJDIR),)
+test-icon_MC_TARGETS := $(addsuffix .o,$(test-icon_FILES))
+test-icon_MC_DTARGETS := $(addsuffix .d,$(test-icon_FILES))
+test-icon_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-icon_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-icon_OBJDIR)/,$(notdir $(test-icon_FILES))))
+    test-icon_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-icon_OBJDIR)/,$(notdir $(test-icon_FILES))))
+else
+ifeq (,)
+    test-icon_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-icon_OBJDIR)/,$(test-icon_FILES)))
+    test-icon_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-icon_OBJDIR)/,$(test-icon_FILES)))
+else
+    test-icon_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-icon_OBJDIR)/,$(patsubst /%,%,$(test-icon_FILES))))
+    test-icon_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-icon_OBJDIR)/,$(patsubst /%,%,$(test-icon_FILES))))
+endif
+endif
+test-icon_MC_TGTWILDCARD := $(test-icon_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : | $(addsuffix .c,$(test-icon_FILES))
+
+# Be sure that all .c files are found
+test-icon_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-icon_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-icon_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-icon_MC_DIRS := $(foreach dir, $(test-icon_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-icon_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-icon_MC_DIRS),)
+    test-icon_MC_DIRS := $(shell echo $(test-icon_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-icon_MC_DIRS)
+endif
+
+endif
+
+test-icon_MC_CPPFLAGS := $(test-icon_CPPFLAGS)
+test-icon_CFLAGS := $(test-icon_CFLAGS)
+ifeq ($(test-icon_DFLAGS),)
+  test-icon_DFLAGS := $(test-icon_CFLAGS)
+else
+  test-icon_DFLAGS := $(test-icon_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-icon_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-icon_STRIP ?= $(TARGET_STRIP)
+test-icon_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : test-icon_MC_CPPFLAGS:=$(strip $(test-icon_MC_CPPFLAGS) $(test-icon_MC_EXTRA_CPPFLAGS))
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : test-icon_CFLAGS:=$(strip $(test-icon_CFLAGS) $(SAFETY_CFLAGS))
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : test-icon_DFLAGS:=$(test-icon_DFLAGS)
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : test-icon_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : test-icon_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-icon_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-icon_STRIP ?= $(HOST_STRIP)
+test-icon_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : test-icon_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-icon_MC_CPPFLAGS) $(test-icon_MC_EXTRA_CPPFLAGS))
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : test-icon_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-icon_CFLAGS))
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : test-icon_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-icon_DFLAGS))
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : test-icon_IQUOTE:=$(HOST_IQUOTE)
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : test-icon_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-icon_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-icon_STRIP ?= $(ECHO) >/dev/null
+test-icon_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : test-icon_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-icon_MC_CPPFLAGS) $(test-icon_MC_EXTRA_CPPFLAGS))
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : test-icon_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-icon_CFLAGS))
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : test-icon_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-icon_DFLAGS))
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : test-icon_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-icon_MC_TARGETS) $(test-icon_MC_DTARGETS) : test-icon_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-icon_MC_TARGETS) : CPPFLAGS := $(test-icon_MC_CPPFLAGS)
+$(test-icon_MC_TARGETS) : CFLAGS := $(test-icon_CFLAGS)
+$(test-icon_MC_TARGETS) : $(test-icon_MC_TGTWILDCARD).o : $(test-icon_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-icon_IQUOTE) $(dir $<) $(test-icon_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-icon_IQUOTE) . $(test-icon_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-icon_IQUOTE) $(dir $<) $(test-icon_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-icon_IQUOTE) . $(test-icon_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-icon_IQUOTE) $(dir $<) $(test-icon_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-icon_IQUOTE) . $(test-icon_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-icon_MC_DTARGETS) : $(test-icon_MC_TGTWILDCARD).d : $(test-icon_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-icon_DFLAGS) $(test-icon_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-icon-link_EXTRA_LDFLAGS := 
+test-icon-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-icon-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-icon-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-icon-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-icon-link_DIRS := $(subst -L ,-L,$(strip $(test-icon_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-icon-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-icon-link_DIRS)))
+# Add trailing /
+test-icon-link_DIRS := $(subst //,/,$(addsuffix /,$(test-icon-link_DIRS)))
+# Add normal linklib path
+test-icon-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-icon-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-icon_LIBS) $(test-icon-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-icon-link_DEPLIBS := $(foreach lib,$(test-icon-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-icon-link_DIRS)))) \
+)
+test-icon-link_PROGS := $(addprefix $(test-icon_TARGETDIR)/,$(test-icon_FILES))
+
+$(test-icon-link_PROGS) : OBJDIR := $(test-icon_OBJDIR)
+$(test-icon-link_PROGS) : LDFLAGS := $(strip $(test-icon_LDFLAGS) $(test-icon-link_EXTRA_LDFLAGS))
+$(test-icon-link_PROGS) : LIBS := $(addprefix -l,$(test-icon_LIBS) $(test-icon-link_EXTRA_LIBS) )
+$(test-icon-link_PROGS) : $(test-icon_TARGETDIR)/% : $(test-icon_OBJDIR)/%.o $(test-icon-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-icon_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-icon_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-icon_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-icon_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-icon_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-icon_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-icon_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-icon_DEPS),)
+  ifneq (test-icon test-icon-quick,)
+    ifneq ($(findstring $(TARGET),test-icon test-icon-quick),)
+      -include $(test-icon_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-icon_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-icon_DEPS) $(test-icon_OBJS) $(addprefix $(test-icon_TARGETDIR)/,$(test-icon_FILES)),)
+$(test-icon_DEPS) $(test-icon_OBJS) $(addprefix $(test-icon_TARGETDIR)/,$(test-icon_FILES)) : | $(test-icon_TARGETDIR) $(test-icon_OBJDIR)
+else
+$(test-icon_DEPS) $(test-icon_OBJS) $(addprefix $(test-icon_TARGETDIR)/,$(test-icon_FILES)) :: $(test-icon_TARGETDIR) $(test-icon_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-icon_TARGETDIR) $(test-icon_OBJDIR)
+
+
+test-icon-clean : FILES := $(test-icon_OBJS) $(test-icon_EXES) $(test-icon_DEPS)
+#MM
+test-icon-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-icon"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

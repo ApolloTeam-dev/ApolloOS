@@ -1,0 +1,76 @@
+# Copyright © 2003, The AROS Development Team. All rights reserved.
+# $Id: mmakefile.src
+
+include $(SRCDIR)/config/aros.cfg
+
+CATALOGS:=german
+# other catalogs need update to version 2
+
+
+ifeq (,)
+workbench-c-r-catalogs_DESC := $(basename $(wildcard $(SRCDIR)/$(CURDIR)/*.cd))
+else
+workbench-c-r-catalogs_DESC := 
+endif
+
+workbench-c-r-catalogs_SRC := $(shell echo $(TOOLDIR)/C_h_aros | sed 's/^\(.\):\//\/\1\//')
+
+ifeq ($(CATALOGS),)
+workbench-c-r-catalogs_LNGS := $(basename $(notdir $(call WILDCARD, $(SRCDIR)/$(CURDIR)/*.ct)))
+else
+workbench-c-r-catalogs_LNGS := $(CATALOGS)
+endif
+
+workbench-c-r-catalogs_OBJS := $(addsuffix /System/C/R.catalog, $(addprefix $(AROS_CATALOGS)/, $(workbench-c-r-catalogs_LNGS)))
+workbench-c-r-catalogs_DIRS := $(addsuffix /System/C, $(addprefix $(AROS_CATALOGS)/, $(workbench-c-r-catalogs_LNGS))) $(dir ../strings.h)
+
+#MM- workbench-c-r-catalogs-quick : workbench-c-r-catalogs
+
+#MM
+workbench-c-r-catalogs : $(workbench-c-r-catalogs_OBJS) ../strings.h
+
+
+ifneq ($(workbench-c-r-catalogs_OBJS),)
+$(workbench-c-r-catalogs_OBJS) : | $(workbench-c-r-catalogs_DIRS)
+else
+$(workbench-c-r-catalogs_OBJS) :: $(workbench-c-r-catalogs_DIRS)
+endif
+
+GLOB_MKDIRS += $(workbench-c-r-catalogs_DIRS)
+
+
+$(AROS_CATALOGS)/%/System/C/R.catalog : $(SRCDIR)/$(CURDIR)/%.ct $(workbench-c-r-catalogs_DESC).cd
+	$(Q)$(ECHO) "Creating   R catalog for language $*."
+	$(Q)$(IF) $(TEST) "$*" = "polish"; then \
+	    $(FLEXCAT) iso88592toamigapl $(workbench-c-r-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/C/R.catalog" || [ $$? -lt 10 ] ; \
+	elif $(TEST) "$*" = "russian"; then \
+	    $(FLEXCAT) win1251toamiga1251 $(workbench-c-r-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/C/R.catalog" || [ $$? -lt 10 ] ; \
+	else \
+	    $(FLEXCAT) $(workbench-c-r-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/C/R.catalog" || [ $$? -lt 10 ] ; \
+	fi
+
+ifneq (../strings.h,)
+../strings.h : workbench-c-r-catalogs_DESC := $(workbench-c-r-catalogs_DESC)
+../strings.h : workbench-c-r-catalogs_SRC := $(workbench-c-r-catalogs_SRC)
+../strings.h : $(workbench-c-r-catalogs_DESC).cd $(workbench-c-r-catalogs_SRC).sd | $(dir ../strings.h)
+	$(Q)$(ECHO) "Creating   R catalog source file $@"
+	$(Q)$(FLEXCAT) $(workbench-c-r-catalogs_DESC).cd $@=$(workbench-c-r-catalogs_SRC).sd
+endif
+
+workbench-c-r-catalogs-clean : FILES := $(workbench-c-r-catalogs_OBJS) ../strings.h
+#MM
+workbench-c-r-catalogs-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-c-r-catalogs"
+	$(Q)$(RM) $(FILES)
+
+.PHONY: workbench-c-r-catalogs workbench-c-r-catalogs-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

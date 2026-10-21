@@ -1,0 +1,580 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FUNCTIONS := ableicr addicrvector remicrvector seticr
+
+USER_CPPFLAGS := -DADATE="\"$(shell date '+%d.%m.%Y')\""
+
+
+# Define metamake targets and their dependencies
+#MM kernel-cia : core-linklibs includes-generate-deps
+#MM kernel-cia-kobj : core-linklibs includes-generate-deps
+#MM kernel-cia-kobj-quick
+#MM kernel-cia-quick
+#MM kernel-cia-clean
+
+kernel-cia_ALLTARGETS := kernel-cia kernel-cia-clean kernel-cia-quick kernel-cia-kobj
+
+.PHONY : $(kernel-cia_ALLTARGETS)
+
+ifeq (cia,)
+$(error using %build_module_simple: modname may not be empty)
+endif
+ifeq (resource,)
+$(error using %build_module_simple: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+kernel-cia_DEFLINKLIBNAME := cia
+kernel-cia_CFLAGS := $(CFLAGS)
+kernel-cia_CXXFLAGS := $(CXXFLAGS)
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-cia_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(kernel-cia_CFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-cia_FUNCINSTR := yes
+kernel-cia_CFLAGS    := $(strip $(FUNCINSTR_FLAGS) $(kernel-cia_CFLAGS))
+endif
+endif
+ifneq (,)
+    kernel-cia_DFLAGS := 
+else
+    kernel-cia_DFLAGS := $(kernel-cia_CFLAGS)
+endif
+kernel-cia_DEFDXXFLAGS := 
+OBJDIR ?= $(GENDIR)/$(CURDIR)
+kernel-cia_MODDIR := 
+ifeq ($(kernel-cia_MODDIR),)
+  ifeq (resource,library)
+    kernel-cia_MODDIR  := $(AROS_LIBRARIES)
+  endif
+  ifeq (resource,gadget)
+    kernel-cia_MODDIR  := $(AROS_GADGETS)
+  endif
+  ifeq (resource,datatype)
+    kernel-cia_MODDIR  := $(AROS_DATATYPES)
+  endif
+  ifeq (resource,handler)
+    kernel-cia_MODDIR  := $(AROS_FS)
+  endif
+  ifeq (resource,device)
+    kernel-cia_MODDIR  := $(AROS_DEVS)
+  endif
+  ifeq (resource,resource)
+    kernel-cia_MODDIR  := $(AROS_RESOURCES)
+  endif
+  ifeq (resource,hook)
+    kernel-cia_MODDIR  := $(AROS_RESOURCES)
+  endif
+  ifeq (resource,mui)
+    kernel-cia_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (resource,mcc)
+    kernel-cia_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (resource,mcp)
+    kernel-cia_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (resource,usbclass)
+    kernel-cia_MODDIR  := $(AROS_CLASSES)/USB
+  endif
+  ifeq (resource,hidd)
+    kernel-cia_MODDIR  := $(AROS_DRIVERS)
+  endif
+  ifeq (resource,printer)
+    kernel-cia_MODDIR  := $(AROS_PRINTERS)
+  endif
+endif
+ifeq ($(kernel-cia_MODDIR),)
+  $(error Don't know where to put the file for modtype resource. Specify moduledir=)
+endif
+
+kernel-cia_ARCHOBJS   := $(wildcard $(OBJDIR)/arch/*.o)
+kernel-cia_ARCHFILES  := $(basename $(notdir $(kernel-cia_ARCHOBJS)))
+kernel-cia_C_NARCHFILES := $(filter-out $(kernel-cia_ARCHFILES),cia_init cia_interrupt $(FUNCTIONS) resident_end)
+kernel-cia_CXX_NARCHFILES := $(filter-out $(kernel-cia_ARCHFILES),$(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT)))))
+kernel-cia_OBJC_NARCHFILES := $(filter-out $(kernel-cia_ARCHFILES),)
+
+
+kernel-cia_CXXABSBASENAMES := $(foreach kernel-cia_CXXBASE,$(kernel-cia_CXX_NARCHFILES),$(if $(filter /%,$(kernel-cia_CXXBASE)),$(kernel-cia_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-cia_CXXBASE))))
+
+ifneq ($(kernel-cia_CXXABSBASENAMES),)
+
+kernel-cia_CXXBASENAMES := $(basename $(kernel-cia_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-cia_MCXX_FILES  := $(strip $(foreach kernel-cia_CXXBASE,$(kernel-cia_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-cia_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-cia_EXT),$(kernel-cia_CXXBASE)))))))
+
+ifeq (,)
+kernel-cia_MCXX_SRCWILDCARD := %
+else
+kernel-cia_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+  kernel-cia_CXXTARGETS := $(notdir $(kernel-cia_CXXBASENAMES:=.o))
+  kernel-cia_CXXDTARGETS := $(notdir $(kernel-cia_CXXBASENAMES:=.d))
+  kernel-cia_MCXX_WILDCARD := %
+else
+  kernel-cia_CXXTARGETS := $(addprefix $(OBJDIR)/,$(notdir $(kernel-cia_CXXBASENAMES:=.o)))
+  kernel-cia_CXXDTARGETS := $(addprefix $(OBJDIR)/,$(notdir $(kernel-cia_CXXBASENAMES:=.d)))
+  kernel-cia_MCXX_WILDCARD := $(OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-cia_CXXTARGETS) $(kernel-cia_CXXDTARGETS) : | $(kernel-cia_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-cia_MCXX_CPPFLAGS := $(CPPFLAGS)
+kernel-cia_CXXFLAGS := $(kernel-cia_CXXFLAGS)
+ifeq ($(kernel-cia_DXXFLAGS),)
+  kernel-cia_DXXFLAGS := $(kernel-cia_CXXFLAGS)
+else
+  kernel-cia_DXXFLAGS := $(kernel-cia_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-cia_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-cia_STRIP ?= $(HOST_STRIP)
+  kernel-cia_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-cia_CXXCMD:=$(HOST_CXX)
+  kernel-cia_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-cia_MCXX_CPPFLAGS) $(kernel-cia_MCXX_EXTRA_CPPFLAGS))
+  kernel-cia_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-cia_CXXFLAGS))
+  kernel-cia_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-cia_DXXFLAGS))
+  kernel-cia_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-cia_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-cia_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-cia_STRIP ?= $(TARGET_STRIP)
+  kernel-cia_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-cia_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-cia_MCXX_CPPFLAGS := $(strip $(kernel-cia_MCXX_CPPFLAGS) $(kernel-cia_MCXX_EXTRA_CPPFLAGS))
+  kernel-cia_CXXFLAGS := $(strip $(kernel-cia_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-cia_DXXFLAGS := $(kernel-cia_DXXFLAGS)
+  kernel-cia_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-cia_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-cia_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-cia_STRIP ?= $(ECHO) >/dev/null
+  kernel-cia_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-cia_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-cia_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-cia_MCXX_CPPFLAGS) $(kernel-cia_MCXX_EXTRA_CPPFLAGS))
+  kernel-cia_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-cia_CXXFLAGS))
+  kernel-cia_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-cia_DXXFLAGS))
+  kernel-cia_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-cia_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-cia_CXXCMD) $(kernel-cia_CXXIQUOTE) $(dir $(2)) $(kernel-cia_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cia_CXXIQUOTE) . $(kernel-cia_CXXIQUOTE_END) $(strip $(kernel-cia_CXXFLAGS) $(kernel-cia_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-cia_CXXCMD) $(kernel-cia_CXXIQUOTE) $(dir $(2)) $(kernel-cia_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cia_CXXIQUOTE) . $(kernel-cia_CXXIQUOTE_END) $(strip $(kernel-cia_CXXFLAGS) $(kernel-cia_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-cia_CXXCMD) $(kernel-cia_CXXIQUOTE) $(dir $(2)) $(kernel-cia_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cia_CXXIQUOTE) . $(kernel-cia_CXXIQUOTE_END) $(strip $(kernel-cia_CXXFLAGS) $(kernel-cia_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-cia_CXXCMD)" $(MKDEPEND) $(strip $(kernel-cia_DXXFLAGS) $(kernel-cia_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(OBJDIR),)
+  $(foreach kernel-cia_CXXFILE,$(kernel-cia_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-cia_CXXFILE))),$(kernel-cia_CXXFILE))))
+else
+  $(foreach kernel-cia_CXXFILE,$(kernel-cia_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(OBJDIR)/,$(notdir $(basename $(kernel-cia_CXXFILE)))),$(kernel-cia_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-cia_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-cia_MOBJC_SRCWILDCARD := %
+else
+kernel-cia_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+  kernel-cia_MOBJC_TARGETS := $(addsuffix .o,$(kernel-cia_OBJC_NARCHFILES))
+  kernel-cia_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-cia_OBJC_NARCHFILES))
+  kernel-cia_MOBJC_WILDCARD := %
+else
+  kernel-cia_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(kernel-cia_OBJC_NARCHFILES)))
+  kernel-cia_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(kernel-cia_OBJC_NARCHFILES)))
+  kernel-cia_MOBJC_WILDCARD := $(OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-cia_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-cia_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-cia_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-cia_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-cia_MOBJC_DIRS := $(foreach dir, $(kernel-cia_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-cia_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-cia_MOBJC_DIRS),)
+    kernel-cia_MOBJC_DIRS := $(shell echo $(kernel-cia_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-cia_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-cia_CC := $(TARGET_CC)
+else
+  kernel-cia_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-cia_MOBJC_CPPFLAGS := $(CPPFLAGS)
+kernel-cia_OBJCFLAGS := $(kernel-cia_CFLAGS)
+kernel-cia_OBJCFLAGS := $(kernel-cia_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-cia_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-cia_OBJCFLAGS)))
+ifeq ($(kernel-cia_DFLAGS),)
+  kernel-cia_OBJCDFLAGS := $(kernel-cia_CFLAGS)
+else
+  kernel-cia_OBJCDFLAGS := $(kernel-cia_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-cia_LINK ?= $(strip $(kernel-cia_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-cia_STRIP ?= $(TARGET_STRIP)
+  kernel-cia_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-cia_CC) $(TARGET_SYSROOT))
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : kernel-cia_MOBJC_CPPFLAGS:=$(strip $(kernel-cia_MOBJC_CPPFLAGS) $(kernel-cia_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : kernel-cia_OBJCFLAGS:=$(strip $(kernel-cia_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : kernel-cia_OBJCDFLAGS:=$(kernel-cia_OBJCDFLAGS)
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : kernel-cia_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : kernel-cia_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-cia_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-cia_STRIP ?= $(HOST_STRIP)
+  kernel-cia_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : kernel-cia_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-cia_MOBJC_CPPFLAGS) $(kernel-cia_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : kernel-cia_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-cia_OBJCFLAGS))
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : kernel-cia_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-cia_OBJCDFLAGS))
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : kernel-cia_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : kernel-cia_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-cia_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-cia_STRIP ?= $(ECHO) >/dev/null
+  kernel-cia_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : kernel-cia_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-cia_MOBJC_CPPFLAGS) $(kernel-cia_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : kernel-cia_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-cia_OBJCFLAGS))
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : kernel-cia_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-cia_OBJCDFLAGS))
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : kernel-cia_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-cia_MOBJC_TARGETS) $(kernel-cia_MOBJC_DTARGETS) : kernel-cia_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-cia_MOBJC_TARGETS) : CPPFLAGS := $(kernel-cia_MOBJC_CPPFLAGS)
+$(kernel-cia_MOBJC_TARGETS) : CFLAGS := $(kernel-cia_OBJCFLAGS)
+$(kernel-cia_MOBJC_TARGETS) : $(kernel-cia_MOBJC_WILDCARD).o : $(kernel-cia_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-cia_IQUOTE) $(dir $<) $(kernel-cia_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cia_IQUOTE) . $(kernel-cia_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-cia_IQUOTE) $(dir $<) $(kernel-cia_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cia_IQUOTE) . $(kernel-cia_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-cia_IQUOTE) $(dir $<) $(kernel-cia_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cia_IQUOTE) . $(kernel-cia_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-cia_MOBJC_DTARGETS) : $(kernel-cia_MOBJC_WILDCARD).d : $(kernel-cia_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-cia_OBJCDFLAGS) $(kernel-cia_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-cia_MC_SRCWILDCARD := %
+else
+kernel-cia_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+kernel-cia_MC_TARGETS := $(addsuffix .o,$(kernel-cia_C_NARCHFILES))
+kernel-cia_MC_DTARGETS := $(addsuffix .d,$(kernel-cia_C_NARCHFILES))
+kernel-cia_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-cia_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(notdir $(kernel-cia_C_NARCHFILES))))
+    kernel-cia_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(notdir $(kernel-cia_C_NARCHFILES))))
+else
+ifeq (,)
+    kernel-cia_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(kernel-cia_C_NARCHFILES)))
+    kernel-cia_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(kernel-cia_C_NARCHFILES)))
+else
+    kernel-cia_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(patsubst /%,%,$(kernel-cia_C_NARCHFILES))))
+    kernel-cia_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(patsubst /%,%,$(kernel-cia_C_NARCHFILES))))
+endif
+endif
+kernel-cia_MC_TGTWILDCARD := $(OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : | $(addsuffix .c,$(kernel-cia_C_NARCHFILES))
+
+# Be sure that all .c files are found
+kernel-cia_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-cia_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-cia_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-cia_MC_DIRS := $(foreach dir, $(kernel-cia_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-cia_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-cia_MC_DIRS),)
+    kernel-cia_MC_DIRS := $(shell echo $(kernel-cia_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-cia_MC_DIRS)
+endif
+
+endif
+
+kernel-cia_MC_CPPFLAGS := $(CPPFLAGS)
+kernel-cia_CFLAGS := $(kernel-cia_CFLAGS)
+ifeq ($(kernel-cia_DFLAGS),)
+  kernel-cia_DFLAGS := $(kernel-cia_CFLAGS)
+else
+  kernel-cia_DFLAGS := $(kernel-cia_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-cia_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-cia_STRIP ?= $(TARGET_STRIP)
+kernel-cia_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : kernel-cia_MC_CPPFLAGS:=$(strip $(kernel-cia_MC_CPPFLAGS) $(kernel-cia_MC_EXTRA_CPPFLAGS))
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : kernel-cia_CFLAGS:=$(strip $(kernel-cia_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : kernel-cia_DFLAGS:=$(kernel-cia_DFLAGS)
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : kernel-cia_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : kernel-cia_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-cia_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-cia_STRIP ?= $(HOST_STRIP)
+kernel-cia_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : kernel-cia_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-cia_MC_CPPFLAGS) $(kernel-cia_MC_EXTRA_CPPFLAGS))
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : kernel-cia_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-cia_CFLAGS))
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : kernel-cia_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-cia_DFLAGS))
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : kernel-cia_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : kernel-cia_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-cia_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-cia_STRIP ?= $(ECHO) >/dev/null
+kernel-cia_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : kernel-cia_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-cia_MC_CPPFLAGS) $(kernel-cia_MC_EXTRA_CPPFLAGS))
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : kernel-cia_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-cia_CFLAGS))
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : kernel-cia_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-cia_DFLAGS))
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : kernel-cia_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-cia_MC_TARGETS) $(kernel-cia_MC_DTARGETS) : kernel-cia_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-cia_MC_TARGETS) : CPPFLAGS := $(kernel-cia_MC_CPPFLAGS)
+$(kernel-cia_MC_TARGETS) : CFLAGS := $(kernel-cia_CFLAGS)
+$(kernel-cia_MC_TARGETS) : $(kernel-cia_MC_TGTWILDCARD).o : $(kernel-cia_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-cia_IQUOTE) $(dir $<) $(kernel-cia_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cia_IQUOTE) . $(kernel-cia_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-cia_IQUOTE) $(dir $<) $(kernel-cia_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cia_IQUOTE) . $(kernel-cia_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-cia_IQUOTE) $(dir $<) $(kernel-cia_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cia_IQUOTE) . $(kernel-cia_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-cia_MC_DTARGETS) : $(kernel-cia_MC_TGTWILDCARD).d : $(kernel-cia_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-cia_DFLAGS) $(kernel-cia_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+# Handlers use dash instead of dot in their names
+ifeq (resource,handler)
+kernel-cia_MODULE := $(kernel-cia_MODDIR)/cia-resource
+else
+ifeq (resource,printer)
+kernel-cia_MODULE := $(kernel-cia_MODDIR)/cia
+else
+kernel-cia_MODULE := $(kernel-cia_MODDIR)/cia.resource
+endif
+endif
+kernel-cia_KOBJ   := $(KOBJSDIR)/cia_resource.o
+
+kernel-cia-quick : kernel-cia
+kernel-cia-kobj-quick : $(kernel-cia_KOBJ)
+kernel-cia       : $(kernel-cia_MODULE)
+kernel-cia-kobj  : $(kernel-cia_KOBJ)
+
+# The module is linked from all the compiled .o files
+kernel-cia_OBJS       := $(kernel-cia_ARCHOBJS) $(addprefix $(OBJDIR)/, $(addsuffix .o,$(notdir $(kernel-cia_C_NARCHFILES))))
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (cia,con)
+    kernel-cia_ERR := $(notdir $(kernel-cia_MODULE)).err
+else
+    kernel-cia_ERR := cia.err
+endif
+
+
+TMP_LDFLAGS  := $(strip $(LDFLAGS) $(cia_LDFLAGS))
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(cia_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-cia_MODULE) : LIB_NAMES := $(cia_LIBS)
+$(kernel-cia_MODULE) : OBJS := $(kernel-cia_OBJS)
+$(kernel-cia_MODULE) : ENDTAG := 
+$(kernel-cia_MODULE) : ERR := $(kernel-cia_ERR)
+$(kernel-cia_MODULE) : OBJDIR := $(OBJDIR)
+$(kernel-cia_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-cia_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-cia_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-cia_MODULE) : $(kernel-cia_OBJS)  $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(strip $(AROS_CC) $(TARGET_SYSROOT)) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(strip $(AROS_CC) $(TARGET_SYSROOT)) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+
+# Link kernel object file
+kernel-cia_KAUTOLIB := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-cia_KBASE := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-cia_SYMBOLS := $(kernel-cia_KBASE)
+
+kernel-cia_KLIB := hiddstubs amiga arossupport autoinit libinit
+kernel-cia_KOBJ_LIBS := $(filter-out $(kernel-cia_KLIB),) $(kernel-cia_KAUTOLIB)
+$(kernel-cia_KOBJ) : LINKLIBS:=$(kernel-cia_KOBJ_LIBS)
+$(kernel-cia_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-cia_SYMBOLS))
+$(kernel-cia_KOBJ) : USER_LDFLAGS := $(USER_LDFLAGS)
+$(kernel-cia_KOBJ) : $(kernel-cia_OBJS) $(kernel-cia_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+
+
+## Dependency fine-tuning
+##
+kernel-cia_DEPS       := $(addprefix $(OBJDIR)/, $(addsuffix .d,cia_init cia_interrupt $(FUNCTIONS) resident_end))
+ifneq ($(kernel-cia_DEPS),)
+  ifneq (kernel-cia kernel-cia-quick kernel-cia-kobj,)
+    ifneq ($(findstring $(TARGET),kernel-cia kernel-cia-quick kernel-cia-kobj),)
+      -include $(kernel-cia_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-cia_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(kernel-cia_OBJS) $(kernel-cia_DEPS) $(kernel-cia_MODULE) $(kernel-cia_KOBJ),)
+$(kernel-cia_OBJS) $(kernel-cia_DEPS) $(kernel-cia_MODULE) $(kernel-cia_KOBJ) : | $(OBJDIR) $(kernel-cia_MODDIR) $(KOBJSDIR)
+else
+$(kernel-cia_OBJS) $(kernel-cia_DEPS) $(kernel-cia_MODULE) $(kernel-cia_KOBJ) :: $(OBJDIR) $(kernel-cia_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(OBJDIR) $(kernel-cia_MODDIR) $(KOBJSDIR)
+
+
+kernel-cia-clean : FILES := $(kernel-cia_OBJS) $(kernel-cia_MODULE) $(kernel-cia_KOBJ) $(kernel-cia_DEPS)
+kernel-cia-clean ::
+	$(Q)$(ECHO) "Cleaning up for module cia"
+	$(Q)$(RM) $(FILES)
+
+#MM
+kernel-cia-includes: $(AROS_INCLUDES)/clib/cia_protos.h $(AROS_INCLUDES)/defines/cia.h \
+		     $(AROS_INCLUDES)/proto/cia.h
+
+$(AROS_INCLUDES)/clib/cia_protos.h: $(SRCDIR)/$(CURDIR)/cia_lib.sfd
+	$(SFDC) --mode=clib --target=x-aros --output=$@ $<
+
+$(AROS_INCLUDES)/defines/cia.h: $(SRCDIR)/$(CURDIR)/cia_lib.sfd
+	$(SFDC) --mode=macros --target=x-aros --output=$@ $<
+
+$(AROS_INCLUDES)/proto/cia.h: $(SRCDIR)/$(CURDIR)/cia_lib.sfd
+	$(SFDC) --mode=proto --target=x-aros --output=$@ $<
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,297 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+EXEDIR      := $(AROS_TESTS)/hidds/gfx
+
+FILES := \
+ convertpixels \
+ hiddmodeid \
+ modeid
+
+#MM- test : test-hidd-gfx
+#MM test-hidd-gfx : includes linklibs
+
+
+.PHONY : test-hidd-gfx
+
+test-hidd-gfx_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-hidd-gfx_TARGETDIR := $(EXEDIR)
+test-hidd-gfx_LIBS := hiddstubs
+
+test-hidd-gfx_FILES     := $(FILES)
+test-hidd-gfx_OBJS      := $(addsuffix .o,$(addprefix $(test-hidd-gfx_OBJDIR)/,$(test-hidd-gfx_FILES)))
+test-hidd-gfx_DEPS      := $(addsuffix .d,$(addprefix $(test-hidd-gfx_OBJDIR)/,$(test-hidd-gfx_FILES)))
+test-hidd-gfx_EXES      := $(addprefix $(test-hidd-gfx_TARGETDIR)/,$(test-hidd-gfx_FILES))
+
+test-hidd-gfx_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-hidd-gfx_CPPFLAGS += -I
+endif
+test-hidd-gfx_CFLAGS    := $(CFLAGS)
+test-hidd-gfx_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-hidd-gfx_COVERAGE := yes
+test-hidd-gfx_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-hidd-gfx_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-hidd-gfx_CFLAGS    := $(strip $(test-hidd-gfx_COVERAGEFLAGS) $(test-hidd-gfx_CFLAGS))
+test-hidd-gfx_LIBS += $(test-hidd-gfx_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-hidd-gfx_FUNCINSTR := yes
+test-hidd-gfx_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-hidd-gfx_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-hidd-gfx_CFLAGS    := $(strip $(test-hidd-gfx_INSTRFUNCFLAGS) $(test-hidd-gfx_CFLAGS))
+test-hidd-gfx_LIBS += $(test-hidd-gfx_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-hidd-gfx_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-hidd-gfx_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-hidd-gfx_DFLAGS := 
+else
+    test-hidd-gfx_DFLAGS := $(test-hidd-gfx_CFLAGS)
+endif
+ifeq (target,target)
+test-hidd-gfx_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-hidd-gfx_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-hidd-gfx_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-hidd-gfx_LDFLAGS += -L
+endif
+
+#MM
+test-hidd-gfx-quick : test-hidd-gfx
+
+#MM test-hidd-gfx : includes-generate-deps core-linklibs
+test-hidd-gfx : $(test-hidd-gfx_EXES)
+
+ifneq ($(filter $(TARGET),test-hidd-gfx test-hidd-gfx-quick),)
+
+ifeq (,)
+test-hidd-gfx_MC_SRCWILDCARD := %
+else
+test-hidd-gfx_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-hidd-gfx_OBJDIR),)
+test-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(test-hidd-gfx_FILES))
+test-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(test-hidd-gfx_FILES))
+test-hidd-gfx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-hidd-gfx_OBJDIR)/,$(notdir $(test-hidd-gfx_FILES))))
+    test-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-hidd-gfx_OBJDIR)/,$(notdir $(test-hidd-gfx_FILES))))
+else
+ifeq (,)
+    test-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-hidd-gfx_OBJDIR)/,$(test-hidd-gfx_FILES)))
+    test-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-hidd-gfx_OBJDIR)/,$(test-hidd-gfx_FILES)))
+else
+    test-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-hidd-gfx_OBJDIR)/,$(patsubst /%,%,$(test-hidd-gfx_FILES))))
+    test-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-hidd-gfx_OBJDIR)/,$(patsubst /%,%,$(test-hidd-gfx_FILES))))
+endif
+endif
+test-hidd-gfx_MC_TGTWILDCARD := $(test-hidd-gfx_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : | $(addsuffix .c,$(test-hidd-gfx_FILES))
+
+# Be sure that all .c files are found
+test-hidd-gfx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-hidd-gfx_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-hidd-gfx_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-hidd-gfx_MC_DIRS := $(foreach dir, $(test-hidd-gfx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-hidd-gfx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-hidd-gfx_MC_DIRS),)
+    test-hidd-gfx_MC_DIRS := $(shell echo $(test-hidd-gfx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-hidd-gfx_MC_DIRS)
+endif
+
+endif
+
+test-hidd-gfx_MC_CPPFLAGS := $(test-hidd-gfx_CPPFLAGS)
+test-hidd-gfx_CFLAGS := $(test-hidd-gfx_CFLAGS)
+ifeq ($(test-hidd-gfx_DFLAGS),)
+  test-hidd-gfx_DFLAGS := $(test-hidd-gfx_CFLAGS)
+else
+  test-hidd-gfx_DFLAGS := $(test-hidd-gfx_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-hidd-gfx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-hidd-gfx_STRIP ?= $(TARGET_STRIP)
+test-hidd-gfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : test-hidd-gfx_MC_CPPFLAGS:=$(strip $(test-hidd-gfx_MC_CPPFLAGS) $(test-hidd-gfx_MC_EXTRA_CPPFLAGS))
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : test-hidd-gfx_CFLAGS:=$(strip $(test-hidd-gfx_CFLAGS) $(SAFETY_CFLAGS))
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : test-hidd-gfx_DFLAGS:=$(test-hidd-gfx_DFLAGS)
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : test-hidd-gfx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : test-hidd-gfx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-hidd-gfx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-hidd-gfx_STRIP ?= $(HOST_STRIP)
+test-hidd-gfx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : test-hidd-gfx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-hidd-gfx_MC_CPPFLAGS) $(test-hidd-gfx_MC_EXTRA_CPPFLAGS))
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : test-hidd-gfx_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-hidd-gfx_CFLAGS))
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : test-hidd-gfx_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-hidd-gfx_DFLAGS))
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : test-hidd-gfx_IQUOTE:=$(HOST_IQUOTE)
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : test-hidd-gfx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-hidd-gfx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-hidd-gfx_STRIP ?= $(ECHO) >/dev/null
+test-hidd-gfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : test-hidd-gfx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-hidd-gfx_MC_CPPFLAGS) $(test-hidd-gfx_MC_EXTRA_CPPFLAGS))
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : test-hidd-gfx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-hidd-gfx_CFLAGS))
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : test-hidd-gfx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-hidd-gfx_DFLAGS))
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : test-hidd-gfx_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-hidd-gfx_MC_TARGETS) $(test-hidd-gfx_MC_DTARGETS) : test-hidd-gfx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-hidd-gfx_MC_TARGETS) : CPPFLAGS := $(test-hidd-gfx_MC_CPPFLAGS)
+$(test-hidd-gfx_MC_TARGETS) : CFLAGS := $(test-hidd-gfx_CFLAGS)
+$(test-hidd-gfx_MC_TARGETS) : $(test-hidd-gfx_MC_TGTWILDCARD).o : $(test-hidd-gfx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-hidd-gfx_IQUOTE) $(dir $<) $(test-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-hidd-gfx_IQUOTE) . $(test-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-hidd-gfx_IQUOTE) $(dir $<) $(test-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-hidd-gfx_IQUOTE) . $(test-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-hidd-gfx_IQUOTE) $(dir $<) $(test-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-hidd-gfx_IQUOTE) . $(test-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-hidd-gfx_MC_DTARGETS) : $(test-hidd-gfx_MC_TGTWILDCARD).d : $(test-hidd-gfx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-hidd-gfx_DFLAGS) $(test-hidd-gfx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-hidd-gfx-link_EXTRA_LDFLAGS := 
+test-hidd-gfx-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-hidd-gfx-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-hidd-gfx-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-hidd-gfx-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-hidd-gfx-link_DIRS := $(subst -L ,-L,$(strip $(test-hidd-gfx_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-hidd-gfx-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-hidd-gfx-link_DIRS)))
+# Add trailing /
+test-hidd-gfx-link_DIRS := $(subst //,/,$(addsuffix /,$(test-hidd-gfx-link_DIRS)))
+# Add normal linklib path
+test-hidd-gfx-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-hidd-gfx-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-hidd-gfx_LIBS) $(test-hidd-gfx-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-hidd-gfx-link_DEPLIBS := $(foreach lib,$(test-hidd-gfx-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-hidd-gfx-link_DIRS)))) \
+)
+test-hidd-gfx-link_PROGS := $(addprefix $(test-hidd-gfx_TARGETDIR)/,$(test-hidd-gfx_FILES))
+
+$(test-hidd-gfx-link_PROGS) : OBJDIR := $(test-hidd-gfx_OBJDIR)
+$(test-hidd-gfx-link_PROGS) : LDFLAGS := $(strip $(test-hidd-gfx_LDFLAGS) $(test-hidd-gfx-link_EXTRA_LDFLAGS))
+$(test-hidd-gfx-link_PROGS) : LIBS := $(addprefix -l,$(test-hidd-gfx_LIBS) $(test-hidd-gfx-link_EXTRA_LIBS) )
+$(test-hidd-gfx-link_PROGS) : $(test-hidd-gfx_TARGETDIR)/% : $(test-hidd-gfx_OBJDIR)/%.o $(test-hidd-gfx-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-hidd-gfx_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-hidd-gfx_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-hidd-gfx_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-hidd-gfx_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-hidd-gfx_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-hidd-gfx_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-hidd-gfx_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-hidd-gfx_DEPS),)
+  ifneq (test-hidd-gfx test-hidd-gfx-quick,)
+    ifneq ($(findstring $(TARGET),test-hidd-gfx test-hidd-gfx-quick),)
+      -include $(test-hidd-gfx_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-hidd-gfx_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-hidd-gfx_DEPS) $(test-hidd-gfx_OBJS) $(addprefix $(test-hidd-gfx_TARGETDIR)/,$(test-hidd-gfx_FILES)),)
+$(test-hidd-gfx_DEPS) $(test-hidd-gfx_OBJS) $(addprefix $(test-hidd-gfx_TARGETDIR)/,$(test-hidd-gfx_FILES)) : | $(test-hidd-gfx_TARGETDIR) $(test-hidd-gfx_OBJDIR)
+else
+$(test-hidd-gfx_DEPS) $(test-hidd-gfx_OBJS) $(addprefix $(test-hidd-gfx_TARGETDIR)/,$(test-hidd-gfx_FILES)) :: $(test-hidd-gfx_TARGETDIR) $(test-hidd-gfx_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-hidd-gfx_TARGETDIR) $(test-hidd-gfx_OBJDIR)
+
+
+test-hidd-gfx-clean : FILES := $(test-hidd-gfx_OBJS) $(test-hidd-gfx_EXES) $(test-hidd-gfx_DEPS)
+#MM
+test-hidd-gfx-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-hidd-gfx"
+	$(Q)$(RM) $(FILES)
+
+	
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

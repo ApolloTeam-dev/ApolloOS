@@ -1,0 +1,55 @@
+# Copyright © 2017, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+ADDITIONALICONS := PCITool 
+
+#MM- iconset-GorillaSmall-additional-icons-aros-clean : iconset-GorillaSmall-additional-icons-aros-debug-hardware-clean
+#MM- iconset-GorillaSmall-additional-icons-aros-debug : iconset-GorillaSmall-additional-icons-aros-debug-hardware
+
+BD_OBJS := $(addprefix  $(AROS_DEBUG)/Hardware/, $(addsuffix .info,$(ADDITIONALICONS)))
+
+#MM
+iconset-GorillaSmall-additional-icons-aros-debug-hardware : $(BD_OBJS)
+
+ifeq (,)
+
+$(AROS_DEBUG)/Hardware/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/%.png
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+else
+
+$(AROS_DEBUG)/Hardware/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+endif
+
+
+ifneq ($(BD_OBJS),)
+$(BD_OBJS) : | $(AROS_DEBUG)/Hardware
+else
+$(BD_OBJS) :: $(AROS_DEBUG)/Hardware
+endif
+
+GLOB_MKDIRS += $(AROS_DEBUG)/Hardware
+
+
+iconset-GorillaSmall-additional-icons-aros-debug-hardware-clean : FILES := $(BD_OBJS)
+#MM
+iconset-GorillaSmall-additional-icons-aros-debug-hardware-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: iconset-GorillaSmall-additional-icons-aros-debug-hardware iconset-GorillaSmall-additional-icons-aros-debug-hardware-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

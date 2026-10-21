@@ -1,0 +1,52 @@
+include $(SRCDIR)/config/aros.cfg
+
+FILES := \
+    70scurve.png \
+    amoeba.png \
+    arabesq.png \
+    arizonabg.png \
+    backblue.png \
+    bluefuture.png \
+    bluegear.png \
+    bluejag.png \
+    bluestripe.png \
+    blueswirl.png \
+    greendrp.png \
+    greyfuture.png \
+    grnswrl.png \
+    litemrbl.png \
+    rednoise.png \
+    ripples.png \
+    rock.png \
+    starblu.png \
+    wp_ivy.png \
+    wp_rose10.png
+
+
+workbench-prefs-patterns_SRC := $(shell echo . | sed 's/^\(.\):\//\/\1\//')
+
+
+ifneq (setup,)
+setup : | $(AROSDIR)/Prefs/Presets/Patterns/Misc
+else
+setup :: $(AROSDIR)/Prefs/Presets/Patterns/Misc
+endif
+
+GLOB_MKDIRS += $(AROSDIR)/Prefs/Presets/Patterns/Misc
+
+
+.PHONY : workbench-prefs-patterns
+
+#MM
+workbench-prefs-patterns : | $(AROSDIR)/Prefs/Presets/Patterns/Misc 
+	$(foreach file, $(FILES), $(shell $(CP) $(addprefix $(if $(filter /%,$(workbench-prefs-patterns_SRC)),$(workbench-prefs-patterns_SRC),$(SRCDIR)/$(CURDIR)/$(workbench-prefs-patterns_SRC))/, $(file)) $(addprefix $(AROSDIR)/Prefs/Presets/Patterns/Misc/, $(file))))
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

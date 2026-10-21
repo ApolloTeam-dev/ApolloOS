@@ -1,0 +1,1668 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+# Stub library for CD32 support.
+#
+# The original 'freeanim' library did started a spinning logo
+# to hide the Workbench until the CD was mounted.
+#
+# The CD32 game would have a 'freeanim' program that expunged
+# freeanim.library, which would remove the animation.
+#
+# For now, we just have an empty library that does nothing -
+# this is enough to prevent 'freeanim' from crashing when
+# it tries to expunge the library.
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-freeanim
+#MM kernel-freeanim-quick
+#MM kernel-freeanim-makefile
+#MM kernel-freeanim-clean
+
+# ABI targets:
+#MM- includes-all : kernel-freeanim-includes
+#MM- linklibs-freeanim: kernel-freeanim-linklib
+#MM- linklibs-freeanim_rel : kernel-freeanim-linklib
+#MM- includes-freeanim: kernel-freeanim-includes
+#MM- includes-freeanim_rel : kernel-freeanim-includes
+#MM- kernel-freeanim : kernel-freeanim-includes core-linklibs linklibs-
+#MM kernel-freeanim-linklib : kernel-freeanim-includes includes-
+#MM- kernel-freeanim-quick : kernel-freeanim-includes-quick
+#MM kernel-freeanim-includes : kernel-freeanim-makefile kernel-freeanim-includes-dirs \
+#MM     includes-generate-deps kernel-freeanim-fd
+#MM kernel-freeanim-includes-quick
+#MM kernel-freeanim-includes-dirs
+#MM kernel-freeanim-fd
+
+# Library targets
+#MM kernel-freeanim-kobj : core-linklibs linklibs-
+#MM kernel-freeanim-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-freeanim-kobj : kernel-freeanim-includes core-linklibs linklibs-
+#MM kernel-freeanim-kobj-quick : kernel-freeanim-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-freeanim_ALLTARGETS       := kernel-freeanim kernel-freeanim-quick kernel-freeanim-clean
+
+ifeq (M,M)
+kernel-freeanim_ALLTARGETS       += kernel-freeanim-kobj kernel-freeanim-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-freeanim_ALLTARGETS += kernel-freeanim-includes \
+                 kernel-freeanim-includes-quick kernel-freeanim-includes-dirs  \
+                 kernel-freeanim-linklib kernel-freeanim-fd
+endif
+
+.PHONY : $(kernel-freeanim_ALLTARGETS) kernel-freeanim-makefile
+
+ifeq (freeanim,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (library,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-freeanim_DEFNAME      := freeanim_
+else
+    kernel-freeanim_DEFNAME      := freeanim
+endif
+kernel-freeanim_DEFLINKLIBNAME   := $(kernel-freeanim_DEFNAME)
+ifneq (,)
+    kernel-freeanim_LINKLIBNAME  := 
+else
+    kernel-freeanim_LINKLIBNAME  = $(kernel-freeanim_DEFLINKLIBNAME)
+endif
+kernel-freeanim_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-freeanim_DEFCPPFLAGS  += -I
+endif
+kernel-freeanim_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-freeanim_DFLAGS       := 
+else
+    kernel-freeanim_DFLAGS       = $(kernel-freeanim_DEFDFLAGS)
+endif
+kernel-freeanim_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-freeanim_DXXFLAGS     := 
+else
+    kernel-freeanim_DXXFLAGS     = $(kernel-freeanim_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-freeanim_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-freeanim_DEFDFLAGS))
+kernel-freeanim_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-freeanim_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-freeanim_FUNCINSTR := yes
+kernel-freeanim_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-freeanim_DEFDFLAGS))
+kernel-freeanim_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-freeanim_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-freeanim_OBJDIR                     := 
+else
+kernel-freeanim_OBJDIR                     := $(OBJDIR)/$(kernel-freeanim_DEFNAME)
+endif
+ifneq (,)
+kernel-freeanim_OBJDIR           := $(kernel-freeanim_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-freeanim-makefile         := $(kernel-freeanim_OBJDIR)/Makefile.$(kernel-freeanim_DEFNAME)library
+kernel-freeanim-genmakefile : $(kernel-freeanim-makefile)
+
+
+kernel-freeanim-genmakefile_OPTS := 
+ifneq (,)
+    kernel-freeanim-genmakefile_OPTS += -f 
+    kernel-freeanim-genmakefile_MODNAME := freeanim_
+else
+    kernel-freeanim-genmakefile_MODNAME := freeanim
+endif
+kernel-freeanim-genmakefile_TARGET := Makefile.$(kernel-freeanim-genmakefile_MODNAME)library
+kernel-freeanim-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-freeanim-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-freeanim-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-freeanim-genmakefile_OPTS += -c 
+        kernel-freeanim-genmakefile_DEPS += 
+    endif 
+else
+    kernel-freeanim-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/freeanim.conf
+    kernel-freeanim-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/freeanim.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-freeanim-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-freeanim-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-freeanim-genmakefile_OPTS += -o 
+        kernel-freeanim-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-freeanim-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-freeanim_OBJDIR),)
+    kernel-freeanim-genmakefile_OPTS += -d $(kernel-freeanim_OBJDIR)
+    kernel-freeanim-genmakefile_TARGET := $(kernel-freeanim_OBJDIR)/$(kernel-freeanim-genmakefile_TARGET)
+endif
+
+$(kernel-freeanim-genmakefile_TARGET) : OPTS := $(kernel-freeanim-genmakefile_OPTS)
+$(kernel-freeanim-genmakefile_TARGET) : MODNAME := freeanim
+$(kernel-freeanim-genmakefile_TARGET) : MODTYPE := library
+$(kernel-freeanim-genmakefile_TARGET) : $(kernel-freeanim-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-freeanim-makefile),)
+$(kernel-freeanim-makefile) : | $(kernel-freeanim_OBJDIR)
+else
+$(kernel-freeanim-makefile) :: $(kernel-freeanim_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-freeanim_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-freeanim_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-freeanim-makefile)
+
+kernel-freeanim_DEFMODDIR        := $($(kernel-freeanim_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-freeanim_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-freeanim_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-freeanim_MODDIR       := 
+else
+    kernel-freeanim_MODDIR       := $(kernel-freeanim_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-freeanim_INCDIR           := 
+else
+kernel-freeanim_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-freeanim_LIBDEFSINC       := $(kernel-freeanim_OBJDIR)/include/$(kernel-freeanim_DEFNAME)_libdefs.h
+kernel-freeanim_DEFLIBDEFSINC    := $(kernel-freeanim_OBJDIR)/include/$(kernel-freeanim_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-freeanim-includes-quick : kernel-freeanim-includes
+kernel-freeanim-includes : $(addprefix $(GENINCDIR)/,$($(kernel-freeanim_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-freeanim_INCDIR)/,$($(kernel-freeanim_DEFNAME)_INCLUDES)) \
+    $(kernel-freeanim_LIBDEFSINC) $(kernel-freeanim_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-freeanim_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-freeanim-includes_MODNAME := freeanim_
+else
+    kernel-freeanim-includes_MODNAME := freeanim
+endif
+
+ifneq ($($(kernel-freeanim-includes_MODNAME)_INCLUDES),)
+
+kernel-freeanim-includes_TARGETS := $($(kernel-freeanim-includes_MODNAME)_INCLUDES)
+
+kernel-freeanim-includes_DEPS := $(GENMODULE)
+kernel-freeanim-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-freeanim-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-freeanim-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-freeanim-includes_OPTS += -c 
+        kernel-freeanim-includes_DEPS += 
+    endif 
+else
+    kernel-freeanim-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/freeanim.conf
+    kernel-freeanim-includes_DEPS += $(SRCDIR)/$(CURDIR)/freeanim.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-freeanim-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-freeanim-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-freeanim-includes_OPTS += -o 
+        kernel-freeanim-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-freeanim-includes_OPTS += -s 
+endif
+ifneq ($(kernel-freeanim_OBJDIR)/include,)
+    kernel-freeanim-includes_OPTS += -d $(kernel-freeanim_OBJDIR)/include
+    kernel-freeanim-includes_TARGETS := $(addprefix $(kernel-freeanim_OBJDIR)/include/,$(kernel-freeanim-includes_TARGETS))
+    kernel-freeanim-includes_GENINCFLAG=$(kernel-freeanim_OBJDIR)/include/.freeanim.library-includes
+else
+    kernel-freeanim-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.freeanim.library-includes
+endif
+
+$(kernel-freeanim-includes_TARGETS) : $(kernel-freeanim-includes_DEPS) $(kernel-freeanim-includes_GENINCFLAG)
+
+$(kernel-freeanim-includes_GENINCFLAG) : OPTS := $(kernel-freeanim-includes_OPTS)
+$(kernel-freeanim-includes_GENINCFLAG) : MODNAME := freeanim
+$(kernel-freeanim-includes_GENINCFLAG) : MODTYPE := library
+$(kernel-freeanim-includes_GENINCFLAG) : $(kernel-freeanim-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-freeanim_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-freeanim_DEFNAME)_INCLUDES)) : | $(kernel-freeanim_OBJDIR)/freeanim_geninc
+
+$(kernel-freeanim_OBJDIR)/freeanim_geninc : COPYSRCDIR := $(kernel-freeanim_OBJDIR)/include
+$(kernel-freeanim_OBJDIR)/freeanim_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-freeanim_OBJDIR)/freeanim_geninc : FILES := $($(kernel-freeanim_DEFNAME)_INCLUDES)
+$(kernel-freeanim_OBJDIR)/freeanim_geninc : $(addprefix $(kernel-freeanim_OBJDIR)/include/,$($(kernel-freeanim_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-freeanim_OBJDIR)/include
+
+$(addprefix $(kernel-freeanim_INCDIR)/,$($(kernel-freeanim_DEFNAME)_INCLUDES)) : | $(kernel-freeanim_OBJDIR)/freeanim_incs
+
+$(kernel-freeanim_OBJDIR)/freeanim_incs : COPYSRCDIR := $(kernel-freeanim_OBJDIR)/include
+$(kernel-freeanim_OBJDIR)/freeanim_incs : TGTDIR := $(kernel-freeanim_INCDIR)
+$(kernel-freeanim_OBJDIR)/freeanim_incs : FILES := $($(kernel-freeanim_DEFNAME)_INCLUDES)
+$(kernel-freeanim_OBJDIR)/freeanim_incs : $(addprefix $(kernel-freeanim_OBJDIR)/include/,$($(kernel-freeanim_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-freeanim_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-freeanim_DEFNAME)_INCLUDES))))
+
+TMPfreeanim_INCDIRS := \
+    $(kernel-freeanim_OBJDIR)/include $(addprefix $(kernel-freeanim_OBJDIR)/include/,$(kernel-freeanim_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-freeanim_INCDIRS)) \
+    $(kernel-freeanim_INCDIR) $(addprefix $(kernel-freeanim_INCDIR)/,$(kernel-freeanim_INCDIRS))
+
+ifneq (kernel-freeanim-includes-dirs,)
+kernel-freeanim-includes-dirs : | $(TMPfreeanim_INCDIRS)
+else
+kernel-freeanim-includes-dirs :: $(TMPfreeanim_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPfreeanim_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-freeanim-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-freeanim-genlibdefs_OPTS += -f 
+    kernel-freeanim-genlibdefs_MODNAME := freeanim_
+else
+    kernel-freeanim-genlibdefs_MODNAME := freeanim
+endif
+kernel-freeanim-genlibdefs_TARGET := $(kernel-freeanim-genlibdefs_MODNAME)_libdefs.h
+kernel-freeanim-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-freeanim-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-freeanim-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-freeanim-genlibdefs_OPTS += -c 
+        kernel-freeanim-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-freeanim-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/freeanim.conf
+    kernel-freeanim-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/freeanim.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-freeanim-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-freeanim-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-freeanim-genlibdefs_OPTS += -o 
+        kernel-freeanim-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-freeanim-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-freeanim_OBJDIR)/include,)
+    kernel-freeanim-genlibdefs_OPTS += -d $(kernel-freeanim_OBJDIR)/include
+    kernel-freeanim-genlibdefs_TARGET := $(kernel-freeanim_OBJDIR)/include/$(kernel-freeanim-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-freeanim-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-freeanim-genlibdefs_TARGET) : OPTS := $(kernel-freeanim-genlibdefs_OPTS)
+$(kernel-freeanim-genlibdefs_TARGET) : MODNAME := freeanim
+$(kernel-freeanim-genlibdefs_TARGET) : MODTYPE := library
+$(kernel-freeanim-genlibdefs_TARGET) : $(kernel-freeanim-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-freeanim_DEFLIBDEFSINC) : FILENAME := $(kernel-freeanim_LIBDEFSINC)
+$(kernel-freeanim_DEFLIBDEFSINC) : $(kernel-freeanim_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-freeanim_LIBDEFSINC) $(kernel-freeanim_DEFLIBDEFSINC) : | $(kernel-freeanim_OBJDIR)/include
+
+ifneq (kernel-freeanim-includes-dirs,)
+kernel-freeanim-includes-dirs : | $(kernel-freeanim_OBJDIR)/include
+else
+kernel-freeanim-includes-dirs :: $(kernel-freeanim_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-freeanim_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-freeanim-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-freeanim-genmodfiles_OPTS += -f 
+    kernel-freeanim-genmodfiles_MODNAME := freeanim_
+else
+    kernel-freeanim-genmodfiles_MODNAME := freeanim
+endif
+kernel-freeanim-genmodfiles_GENTARGETS := $($(kernel-freeanim-genmodfiles_MODNAME)_STARTFILES) $($(kernel-freeanim-genmodfiles_MODNAME)_ENDFILES)
+kernel-freeanim-genmodfiles_STUBTARGETS := $($(kernel-freeanim-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-freeanim-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-freeanim-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-freeanim-genmodfiles_GENTARGETS))
+kernel-freeanim-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-freeanim-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-freeanim-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-freeanim-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-freeanim-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-freeanim-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-freeanim-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-freeanim-genmodfiles_OPTS += -c 
+        kernel-freeanim-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-freeanim-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/freeanim.conf
+    kernel-freeanim-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/freeanim.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-freeanim-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-freeanim-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-freeanim-genmodfiles_OPTS += -o 
+        kernel-freeanim-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-freeanim-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-freeanim_OBJDIR),)
+    kernel-freeanim-genmodfiles_OPTS += -d $(kernel-freeanim_OBJDIR)
+    kernel-freeanim-genmodfiles_TARGETDIR := $(shell echo $(kernel-freeanim_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-freeanim-genmodfiles_GENTARGETS := $(addprefix $(kernel-freeanim-genmodfiles_TARGETDIR)/,$(kernel-freeanim-genmodfiles_GENTARGETS))
+    kernel-freeanim-genmodfiles_GENFILEFLAG=$(kernel-freeanim-genmodfiles_TARGETDIR)/.freeanim.library-genfiles
+else
+    kernel-freeanim-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.freeanim.library-genfiles
+endif
+ifneq ($(kernel-freeanim_OBJDIR)/linklib,)
+    kernel-freeanim-genmodfiles_OPTS += -l $(kernel-freeanim_OBJDIR)/linklib
+    kernel-freeanim-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-freeanim_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-freeanim-genmodfiles_STUBTARGETS := $(addprefix $(kernel-freeanim-genmodfiles_STUBTARGETDIR)/,$(kernel-freeanim-genmodfiles_STUBTARGETS))
+    kernel-freeanim-genmodfiles_TARGETDIRS += $(kernel-freeanim_OBJDIR)/linklib
+else
+ifneq ($(kernel-freeanim_OBJDIR),)
+    kernel-freeanim-genmodfiles_STUBTARGETS := $(addprefix $(kernel-freeanim-genmodfiles_TARGETDIR)/,$(kernel-freeanim-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-freeanim-genmodfiles_TARGETS := $(kernel-freeanim-genmodfiles_GENTARGETS) $(kernel-freeanim-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-freeanim-genmodfiles_TARGETDIRS),)
+$(kernel-freeanim-genmodfiles_TARGETS) : | $(kernel-freeanim-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-freeanim-genmodfiles_TARGETS) : $(kernel-freeanim-genmodfiles_DEPS) $(kernel-freeanim-genmodfiles_GENFILEFLAG)
+
+$(kernel-freeanim-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-freeanim-genmodfiles_OPTS)
+$(kernel-freeanim-genmodfiles_GENFILEFLAG) : MODNAME := freeanim
+$(kernel-freeanim-genmodfiles_GENFILEFLAG) : MODTYPE := library
+$(kernel-freeanim-genmodfiles_GENFILEFLAG) : $(kernel-freeanim-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-freeanim-genmodfiles_GENFILEFLAG) : $(kernel-freeanim_DEFLIBDEFSINC) $(kernel-freeanim-makefile)
+
+
+ifneq ($(kernel-freeanim-genmodfiles_GENFILEFLAG),)
+$(kernel-freeanim-genmodfiles_GENFILEFLAG) : | $(kernel-freeanim_OBJDIR)/linklib
+else
+$(kernel-freeanim-genmodfiles_GENFILEFLAG) :: $(kernel-freeanim_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-freeanim_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-freeanim_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-freeanim_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-freeanim-fd : $(kernel-freeanim_FDDIR)/freeanim_lib.fd
+
+
+TMP_TARGET := freeanim_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/freeanim.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/freeanim.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-freeanim_FDDIR),)
+    TMP_OPTS += -d $(kernel-freeanim_FDDIR)
+    TMP_TARGET := $(kernel-freeanim_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := freeanim
+$(TMP_TARGET) : MODTYPE := library
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-freeanim_FDDIR)/freeanim_lib.fd : | $(kernel-freeanim_FDDIR)
+
+
+ifneq (kernel-freeanim-fd-setup,)
+kernel-freeanim-fd-setup : | $(kernel-freeanim_FDDIR)
+else
+kernel-freeanim-fd-setup :: $(kernel-freeanim_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-freeanim_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-freeanim_FILES            := $(basename $(call WILDCARD, *.c))
+kernel-freeanim_OBJCFILES        := 
+kernel-freeanim_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-freeanim_LIBFILES         := 
+kernel-freeanim_LIBS             := 
+
+kernel-freeanim_FDIRS            := $(sort $(dir $(kernel-freeanim_FILES)))
+
+kernel-freeanim_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-freeanim_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-freeanim_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-freeanim_FILTERARCH       = $(filter-out $(call kernel-freeanim_MATCHARCH,$(1),$(2)),$(2))
+kernel-freeanim_STARTFILES       := $(addprefix $(kernel-freeanim_OBJDIR)/,$($(kernel-freeanim_DEFNAME)_STARTFILES))
+kernel-freeanim_ENDFILES         := $(addprefix $(kernel-freeanim_OBJDIR)/,$($(kernel-freeanim_DEFNAME)_ENDFILES))
+
+kernel-freeanim_ARCHOBJS         := $(wildcard $(kernel-freeanim_OBJDIR)/arch/*.o)
+kernel-freeanim_LIBARCHOBJS      := $(wildcard $(kernel-freeanim_OBJDIR)/linklib/arch/*.o)
+kernel-freeanim_ARCHFILES        := $(basename $(notdir $(kernel-freeanim_ARCHOBJS)))
+kernel-freeanim_LIBARCHFILES     := $(basename $(notdir $(kernel-freeanim_LIBARCHOBJS)))
+kernel-freeanim_C_NARCHFILES     := $(call kernel-freeanim_FILTERARCH,$(kernel-freeanim_ARCHFILES),$(kernel-freeanim_FILES))
+kernel-freeanim_CXX_NARCHFILES   := $(call kernel-freeanim_FILTERARCH,$(kernel-freeanim_ARCHFILES),$(kernel-freeanim_CXXFILES))
+kernel-freeanim_OBJC_NARCHFILES  := $(call kernel-freeanim_FILTERARCH,$(kernel-freeanim_ARCHFILES),$(kernel-freeanim_OBJCFILES))
+kernel-freeanim_NLIBARCHFILES    := $(call kernel-freeanim_FILTERARCH,$(kernel-freeanim_LIBARCHFILES),$(kernel-freeanim_LIBFILES))
+kernel-freeanim_ARCHNLIBFILES    := $(call kernel-freeanim_FILTERARCH,$(kernel-freeanim_LIBFILES),$(kernel-freeanim_LIBARCHFILES))
+
+kernel-freeanim_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-freeanim_OBJDIR)/include -include $(kernel-freeanim_DEFLIBDEFSINC))
+ifneq (,)
+kernel-freeanim_CPPFLAGS         += -I
+endif
+kernel-freeanim_LINKLIBCPPFLAGS  := $(kernel-freeanim_CPPFLAGS)
+kernel-freeanim_CPPFLAGS         += $(strip $($(kernel-freeanim_DEFNAME)_CPPFLAGS))
+kernel-freeanim_LINKLIBCPPFLAGS  += $(strip $($(kernel-freeanim_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-freeanim_CFLAGS           := $(strip $(CFLAGS) $($(kernel-freeanim_DEFNAME)_CFLAGS))
+kernel-freeanim_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-freeanim_DEFNAME)_LINKLIBCFLAGS))
+kernel-freeanim_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-freeanim_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-freeanim_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-freeanim_CFLAGS           := $(strip $(kernel-freeanim_LTOFLAGS) $(kernel-freeanim_CFLAGS))
+kernel-freeanim_LINKLIBCFLAGS    := $(strip $(kernel-freeanim_LTOFLAGS) $(kernel-freeanim_LINKLIBCFLAGS))
+kernel-freeanim_CXXFLAGS         := $(strip $(kernel-freeanim_LTOFLAGS) $(kernel-freeanim_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-freeanim_SUBSTNULL        :=
+kernel-freeanim_SUBSTSPACE       := $(kernel-freeanim_SUBSTNULL) #
+kernel-freeanim_SUBSTCOMMA       := ,
+kernel-freeanim_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-freeanim_SUBSTSPACE),$(kernel-freeanim_SUBSTCOMMA),$(strip $($(kernel-freeanim_DEFNAME)_STARTFILES))))
+kernel-freeanim_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-freeanim_CFLAGS           := $(strip $(kernel-freeanim_INSTRFUNCFLAGS) $(kernel-freeanim_CFLAGS))
+kernel-freeanim_CXXFLAGS         := $(strip $(kernel-freeanim_INSTRFUNCFLAGS) $(kernel-freeanim_CXXFLAGS))
+kernel-freeanim_LIBS             += $(kernel-freeanim_INSTRFUNCLIBS)
+endif
+endif
+kernel-freeanim_DFLAGS           := $(strip $(kernel-freeanim_DFLAGS) $($(kernel-freeanim_DEFNAME)_DFLAGS))
+kernel-freeanim_LINKLIBDFLAGS    := $(strip $(kernel-freeanim_DFLAGS) $($(kernel-freeanim_DEFNAME)_LINKLIBDFLAGS))
+kernel-freeanim_DXXFLAGS         := $(strip $(kernel-freeanim_DXXFLAGS) $($(kernel-freeanim_DEFNAME)_DXXFLAGS))
+
+ifeq (library,library)
+    kernel-freeanim_LIBSUFFIX    := 
+else
+    kernel-freeanim_LIBSUFFIX    := .library
+endif
+
+ifeq (,)
+kernel-freeanim_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-freeanim_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-freeanim_LINKLIBCFILES    := $(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$($(kernel-freeanim_DEFNAME)_LINKLIBFILES))
+kernel-freeanim_LINKLIBAFILES    := $(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$($(kernel-freeanim_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-freeanim_DEFNAME)_LINKLIBFILES) $($(kernel-freeanim_DEFNAME)_LINKLIBAFILES)  $(kernel-freeanim_ARCHNLIBFILES)),)
+    kernel-freeanim_LINKLIB      :=
+else
+    kernel-freeanim_LINKLIB      := $(kernel-freeanim_LIBDIR)/libfreeanim$(kernel-freeanim_LIBSUFFIX).a
+    ifneq (freeanim,$(kernel-freeanim_LINKLIBNAME))
+        kernel-freeanim_LINKLIB  += $(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_LINKLIBNAME)$(kernel-freeanim_LIBSUFFIX).a
+    endif
+endif
+kernel-freeanim_LINKLIBFILES     := $(kernel-freeanim_LINKLIBCFILES) $(kernel-freeanim_LINKLIBAFILES)
+
+kernel-freeanim_RELLINKLIBCFILES := $(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$($(kernel-freeanim_DEFNAME)_RELLINKLIBFILES))
+kernel-freeanim_RELLINKLIBAFILES := $(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$($(kernel-freeanim_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-freeanim_DEFNAME)_RELLINKLIBFILES) $($(kernel-freeanim_DEFNAME)_RELLINKLIBAFILES)  $(kernel-freeanim_ARCHNLIBFILES)),)
+    kernel-freeanim_RELLINKLIB   :=
+else
+    kernel-freeanim_RELLINKLIB   := $(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_DEFNAME)_rel$(kernel-freeanim_LIBSUFFIX).a
+    ifneq (freeanim,$(kernel-freeanim_LINKLIBNAME))
+        kernel-freeanim_RELLINKLIB += $(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_LINKLIBNAME)_rel$(kernel-freeanim_LIBSUFFIX).a
+    endif
+endif
+kernel-freeanim_RELLINKLIBFILES  := $(kernel-freeanim_RELLINKLIBCFILES) $(kernel-freeanim_RELLINKLIBAFILES)
+endif
+
+kernel-freeanim_ENDOBJS          := $(addsuffix .o,$(kernel-freeanim_ENDFILES))
+kernel-freeanim_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$(notdir $(kernel-freeanim_NLIBARCHFILES))) $(addprefix $(kernel-freeanim_OBJDIR)/linklib/arch/,$(notdir $(kernel-freeanim_ARCHNLIBFILES))) $(kernel-freeanim_LINKLIBFILES)) \
+                 
+kernel-freeanim_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$(notdir $(kernel-freeanim_NLIBARCHFILES))) $(addprefix $(kernel-freeanim_OBJDIR)/linklib/arch/,$(notdir $(kernel-freeanim_ARCHNLIBFILES))) $(kernel-freeanim_RELLINKLIBFILES)) \
+                 
+$(kernel-freeanim_LINKLIBFILES) $(kernel-freeanim_RELLINKLIBFILES) : | $(kernel-freeanim_OBJDIR)/linklib
+$(kernel-freeanim_LINKLIBOBJS) $(kernel-freeanim_RELLINKLIBOBJS) : | $(kernel-freeanim_OBJDIR)/linklib
+
+kernel-freeanim_CCFILES := $(kernel-freeanim_C_NARCHFILES)
+kernel-freeanim_TARGETCCFILES    := $(strip $(kernel-freeanim_STARTFILES) $(kernel-freeanim_ENDFILES))
+kernel-freeanim_LINKLIBCCFILES   := $(strip $(kernel-freeanim_NLIBARCHFILES) $(kernel-freeanim_LINKLIBCFILES) $(kernel-freeanim_RELLINKLIBCFILES))
+kernel-freeanim_LINKLIBCCGENFILES := $(strip $(kernel-freeanim_LINKLIBCFILES) $(kernel-freeanim_RELLINKLIBCFILES))
+
+
+kernel-freeanim_CXXABSBASENAMES := $(foreach kernel-freeanim_CXXBASE,$(kernel-freeanim_CXX_NARCHFILES),$(if $(filter /%,$(kernel-freeanim_CXXBASE)),$(kernel-freeanim_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-freeanim_CXXBASE))))
+
+ifneq ($(kernel-freeanim_CXXABSBASENAMES),)
+
+kernel-freeanim_CXXBASENAMES := $(basename $(kernel-freeanim_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-freeanim_MCXX_FILES  := $(strip $(foreach kernel-freeanim_CXXBASE,$(kernel-freeanim_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-freeanim_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-freeanim_EXT),$(kernel-freeanim_CXXBASE)))))))
+
+ifeq (,)
+kernel-freeanim_MCXX_SRCWILDCARD := %
+else
+kernel-freeanim_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-freeanim_OBJDIR),)
+  kernel-freeanim_CXXTARGETS := $(notdir $(kernel-freeanim_CXXBASENAMES:=.o))
+  kernel-freeanim_CXXDTARGETS := $(notdir $(kernel-freeanim_CXXBASENAMES:=.d))
+  kernel-freeanim_MCXX_WILDCARD := %
+else
+  kernel-freeanim_CXXTARGETS := $(addprefix $(kernel-freeanim_OBJDIR)/,$(notdir $(kernel-freeanim_CXXBASENAMES:=.o)))
+  kernel-freeanim_CXXDTARGETS := $(addprefix $(kernel-freeanim_OBJDIR)/,$(notdir $(kernel-freeanim_CXXBASENAMES:=.d)))
+  kernel-freeanim_MCXX_WILDCARD := $(kernel-freeanim_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-freeanim_CXXTARGETS) $(kernel-freeanim_CXXDTARGETS) : | $(kernel-freeanim_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-freeanim_MCXX_CPPFLAGS := $(kernel-freeanim_CPPFLAGS)
+kernel-freeanim_CXXFLAGS := $(kernel-freeanim_CXXFLAGS)
+ifeq ($(kernel-freeanim_DXXFLAGS),)
+  kernel-freeanim_DXXFLAGS := $(kernel-freeanim_CXXFLAGS)
+else
+  kernel-freeanim_DXXFLAGS := $(kernel-freeanim_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-freeanim_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-freeanim_STRIP ?= $(HOST_STRIP)
+  kernel-freeanim_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-freeanim_CXXCMD:=$(HOST_CXX)
+  kernel-freeanim_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-freeanim_MCXX_CPPFLAGS) $(kernel-freeanim_MCXX_EXTRA_CPPFLAGS))
+  kernel-freeanim_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-freeanim_CXXFLAGS))
+  kernel-freeanim_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-freeanim_DXXFLAGS))
+  kernel-freeanim_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-freeanim_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-freeanim_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-freeanim_STRIP ?= $(TARGET_STRIP)
+  kernel-freeanim_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-freeanim_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-freeanim_MCXX_CPPFLAGS := $(strip $(kernel-freeanim_MCXX_CPPFLAGS) $(kernel-freeanim_MCXX_EXTRA_CPPFLAGS))
+  kernel-freeanim_CXXFLAGS := $(strip $(kernel-freeanim_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-freeanim_DXXFLAGS := $(kernel-freeanim_DXXFLAGS)
+  kernel-freeanim_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-freeanim_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-freeanim_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-freeanim_STRIP ?= $(ECHO) >/dev/null
+  kernel-freeanim_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-freeanim_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-freeanim_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-freeanim_MCXX_CPPFLAGS) $(kernel-freeanim_MCXX_EXTRA_CPPFLAGS))
+  kernel-freeanim_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-freeanim_CXXFLAGS))
+  kernel-freeanim_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-freeanim_DXXFLAGS))
+  kernel-freeanim_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-freeanim_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-freeanim_CXXCMD) $(kernel-freeanim_CXXIQUOTE) $(dir $(2)) $(kernel-freeanim_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_CXXIQUOTE) . $(kernel-freeanim_CXXIQUOTE_END) $(strip $(kernel-freeanim_CXXFLAGS) $(kernel-freeanim_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-freeanim_CXXCMD) $(kernel-freeanim_CXXIQUOTE) $(dir $(2)) $(kernel-freeanim_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_CXXIQUOTE) . $(kernel-freeanim_CXXIQUOTE_END) $(strip $(kernel-freeanim_CXXFLAGS) $(kernel-freeanim_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-freeanim_CXXCMD) $(kernel-freeanim_CXXIQUOTE) $(dir $(2)) $(kernel-freeanim_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_CXXIQUOTE) . $(kernel-freeanim_CXXIQUOTE_END) $(strip $(kernel-freeanim_CXXFLAGS) $(kernel-freeanim_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-freeanim_CXXCMD)" $(MKDEPEND) $(strip $(kernel-freeanim_DXXFLAGS) $(kernel-freeanim_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-freeanim_OBJDIR),)
+  $(foreach kernel-freeanim_CXXFILE,$(kernel-freeanim_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-freeanim_CXXFILE))),$(kernel-freeanim_CXXFILE))))
+else
+  $(foreach kernel-freeanim_CXXFILE,$(kernel-freeanim_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-freeanim_OBJDIR)/,$(notdir $(basename $(kernel-freeanim_CXXFILE)))),$(kernel-freeanim_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-freeanim_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-freeanim_MOBJC_SRCWILDCARD := %
+else
+kernel-freeanim_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-freeanim_OBJDIR),)
+  kernel-freeanim_MOBJC_TARGETS := $(addsuffix .o,$(kernel-freeanim_OBJC_NARCHFILES))
+  kernel-freeanim_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-freeanim_OBJC_NARCHFILES))
+  kernel-freeanim_MOBJC_WILDCARD := %
+else
+  kernel-freeanim_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-freeanim_OBJDIR)/,$(kernel-freeanim_OBJC_NARCHFILES)))
+  kernel-freeanim_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-freeanim_OBJDIR)/,$(kernel-freeanim_OBJC_NARCHFILES)))
+  kernel-freeanim_MOBJC_WILDCARD := $(kernel-freeanim_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-freeanim_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-freeanim_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-freeanim_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-freeanim_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-freeanim_MOBJC_DIRS := $(foreach dir, $(kernel-freeanim_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-freeanim_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-freeanim_MOBJC_DIRS),)
+    kernel-freeanim_MOBJC_DIRS := $(shell echo $(kernel-freeanim_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-freeanim_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-freeanim_CC := $(TARGET_CC)
+else
+  kernel-freeanim_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-freeanim_MOBJC_CPPFLAGS := $(kernel-freeanim_CPPFLAGS)
+kernel-freeanim_OBJCFLAGS := $(kernel-freeanim_CFLAGS)
+kernel-freeanim_OBJCFLAGS := $(kernel-freeanim_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-freeanim_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-freeanim_OBJCFLAGS)))
+ifeq ($(kernel-freeanim_DFLAGS),)
+  kernel-freeanim_OBJCDFLAGS := $(kernel-freeanim_CFLAGS)
+else
+  kernel-freeanim_OBJCDFLAGS := $(kernel-freeanim_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-freeanim_LINK ?= $(strip $(kernel-freeanim_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-freeanim_STRIP ?= $(TARGET_STRIP)
+  kernel-freeanim_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-freeanim_CC) $(TARGET_SYSROOT))
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : kernel-freeanim_MOBJC_CPPFLAGS:=$(strip $(kernel-freeanim_MOBJC_CPPFLAGS) $(kernel-freeanim_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : kernel-freeanim_OBJCFLAGS:=$(strip $(kernel-freeanim_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : kernel-freeanim_OBJCDFLAGS:=$(kernel-freeanim_OBJCDFLAGS)
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : kernel-freeanim_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : kernel-freeanim_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-freeanim_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-freeanim_STRIP ?= $(HOST_STRIP)
+  kernel-freeanim_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : kernel-freeanim_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-freeanim_MOBJC_CPPFLAGS) $(kernel-freeanim_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : kernel-freeanim_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-freeanim_OBJCFLAGS))
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : kernel-freeanim_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-freeanim_OBJCDFLAGS))
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : kernel-freeanim_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : kernel-freeanim_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-freeanim_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-freeanim_STRIP ?= $(ECHO) >/dev/null
+  kernel-freeanim_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : kernel-freeanim_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-freeanim_MOBJC_CPPFLAGS) $(kernel-freeanim_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : kernel-freeanim_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-freeanim_OBJCFLAGS))
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : kernel-freeanim_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-freeanim_OBJCDFLAGS))
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : kernel-freeanim_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-freeanim_MOBJC_TARGETS) $(kernel-freeanim_MOBJC_DTARGETS) : kernel-freeanim_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-freeanim_MOBJC_TARGETS) : CPPFLAGS := $(kernel-freeanim_MOBJC_CPPFLAGS)
+$(kernel-freeanim_MOBJC_TARGETS) : CFLAGS := $(kernel-freeanim_OBJCFLAGS)
+$(kernel-freeanim_MOBJC_TARGETS) : $(kernel-freeanim_MOBJC_WILDCARD).o : $(kernel-freeanim_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-freeanim_IQUOTE) $(dir $<) $(kernel-freeanim_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_IQUOTE) . $(kernel-freeanim_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-freeanim_IQUOTE) $(dir $<) $(kernel-freeanim_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_IQUOTE) . $(kernel-freeanim_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-freeanim_IQUOTE) $(dir $<) $(kernel-freeanim_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_IQUOTE) . $(kernel-freeanim_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-freeanim_MOBJC_DTARGETS) : $(kernel-freeanim_MOBJC_WILDCARD).d : $(kernel-freeanim_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-freeanim_OBJCDFLAGS) $(kernel-freeanim_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-freeanim_MC_SRCWILDCARD := %
+else
+kernel-freeanim_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-freeanim_OBJDIR),)
+kernel-freeanim_MC_TARGETS := $(addsuffix .o,$(kernel-freeanim_CCFILES))
+kernel-freeanim_MC_DTARGETS := $(addsuffix .d,$(kernel-freeanim_CCFILES))
+kernel-freeanim_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-freeanim_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-freeanim_OBJDIR)/,$(notdir $(kernel-freeanim_CCFILES))))
+    kernel-freeanim_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-freeanim_OBJDIR)/,$(notdir $(kernel-freeanim_CCFILES))))
+else
+ifeq (,)
+    kernel-freeanim_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-freeanim_OBJDIR)/,$(kernel-freeanim_CCFILES)))
+    kernel-freeanim_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-freeanim_OBJDIR)/,$(kernel-freeanim_CCFILES)))
+else
+    kernel-freeanim_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-freeanim_OBJDIR)/,$(patsubst /%,%,$(kernel-freeanim_CCFILES))))
+    kernel-freeanim_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-freeanim_OBJDIR)/,$(patsubst /%,%,$(kernel-freeanim_CCFILES))))
+endif
+endif
+kernel-freeanim_MC_TGTWILDCARD := $(kernel-freeanim_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : | $(addsuffix .c,$(kernel-freeanim_CCFILES))
+
+# Be sure that all .c files are found
+kernel-freeanim_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-freeanim_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-freeanim_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-freeanim_MC_DIRS := $(foreach dir, $(kernel-freeanim_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-freeanim_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-freeanim_MC_DIRS),)
+    kernel-freeanim_MC_DIRS := $(shell echo $(kernel-freeanim_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-freeanim_MC_DIRS)
+endif
+
+endif
+
+kernel-freeanim_MC_CPPFLAGS := $(kernel-freeanim_CPPFLAGS)
+kernel-freeanim_CFLAGS := $(kernel-freeanim_CFLAGS)
+ifeq ($(kernel-freeanim_DFLAGS),)
+  kernel-freeanim_DFLAGS := $(kernel-freeanim_CFLAGS)
+else
+  kernel-freeanim_DFLAGS := $(kernel-freeanim_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-freeanim_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-freeanim_STRIP ?= $(TARGET_STRIP)
+kernel-freeanim_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_MC_CPPFLAGS:=$(strip $(kernel-freeanim_MC_CPPFLAGS) $(kernel-freeanim_MC_EXTRA_CPPFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_CFLAGS:=$(strip $(kernel-freeanim_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_DFLAGS:=$(kernel-freeanim_DFLAGS)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-freeanim_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-freeanim_STRIP ?= $(HOST_STRIP)
+kernel-freeanim_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-freeanim_MC_CPPFLAGS) $(kernel-freeanim_MC_EXTRA_CPPFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-freeanim_CFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-freeanim_DFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-freeanim_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-freeanim_STRIP ?= $(ECHO) >/dev/null
+kernel-freeanim_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-freeanim_MC_CPPFLAGS) $(kernel-freeanim_MC_EXTRA_CPPFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-freeanim_CFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-freeanim_DFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-freeanim_MC_TARGETS) : CPPFLAGS := $(kernel-freeanim_MC_CPPFLAGS)
+$(kernel-freeanim_MC_TARGETS) : CFLAGS := $(kernel-freeanim_CFLAGS)
+$(kernel-freeanim_MC_TARGETS) : $(kernel-freeanim_MC_TGTWILDCARD).o : $(kernel-freeanim_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-freeanim_IQUOTE) $(dir $<) $(kernel-freeanim_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_IQUOTE) . $(kernel-freeanim_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-freeanim_IQUOTE) $(dir $<) $(kernel-freeanim_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_IQUOTE) . $(kernel-freeanim_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-freeanim_IQUOTE) $(dir $<) $(kernel-freeanim_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_IQUOTE) . $(kernel-freeanim_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-freeanim_MC_DTARGETS) : $(kernel-freeanim_MC_TGTWILDCARD).d : $(kernel-freeanim_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-freeanim_DFLAGS) $(kernel-freeanim_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-freeanim_MC_SRCWILDCARD := %
+else
+kernel-freeanim_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-freeanim_OBJDIR),)
+kernel-freeanim_MC_TARGETS := $(addsuffix .o,$(kernel-freeanim_TARGETCCFILES))
+kernel-freeanim_MC_DTARGETS := $(addsuffix .d,$(kernel-freeanim_TARGETCCFILES))
+kernel-freeanim_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-freeanim_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-freeanim_OBJDIR)/,$(notdir $(kernel-freeanim_TARGETCCFILES))))
+    kernel-freeanim_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-freeanim_OBJDIR)/,$(notdir $(kernel-freeanim_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-freeanim_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-freeanim_OBJDIR)/,$(kernel-freeanim_TARGETCCFILES)))
+    kernel-freeanim_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-freeanim_OBJDIR)/,$(kernel-freeanim_TARGETCCFILES)))
+else
+    kernel-freeanim_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-freeanim_OBJDIR)/,$(patsubst /%,%,$(kernel-freeanim_TARGETCCFILES))))
+    kernel-freeanim_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-freeanim_OBJDIR)/,$(patsubst /%,%,$(kernel-freeanim_TARGETCCFILES))))
+endif
+endif
+kernel-freeanim_MC_TGTWILDCARD := $(kernel-freeanim_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : | $(addsuffix .c,$(kernel-freeanim_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-freeanim_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-freeanim_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-freeanim_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-freeanim_MC_DIRS := $(foreach dir, $(kernel-freeanim_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-freeanim_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-freeanim_MC_DIRS),)
+    kernel-freeanim_MC_DIRS := $(shell echo $(kernel-freeanim_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-freeanim_MC_DIRS)
+endif
+
+endif
+
+kernel-freeanim_MC_CPPFLAGS := $(kernel-freeanim_CPPFLAGS) -D__AROS__
+kernel-freeanim_CFLAGS := $(kernel-freeanim_CFLAGS)
+ifeq ($(kernel-freeanim_DFLAGS),)
+  kernel-freeanim_DFLAGS := $(kernel-freeanim_CFLAGS)
+else
+  kernel-freeanim_DFLAGS := $(kernel-freeanim_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-freeanim_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-freeanim_STRIP ?= $(TARGET_STRIP)
+kernel-freeanim_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_MC_CPPFLAGS:=$(strip $(kernel-freeanim_MC_CPPFLAGS) $(kernel-freeanim_MC_EXTRA_CPPFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_CFLAGS:=$(strip $(kernel-freeanim_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_DFLAGS:=$(kernel-freeanim_DFLAGS)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-freeanim_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-freeanim_STRIP ?= $(HOST_STRIP)
+kernel-freeanim_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-freeanim_MC_CPPFLAGS) $(kernel-freeanim_MC_EXTRA_CPPFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-freeanim_CFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-freeanim_DFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-freeanim_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-freeanim_STRIP ?= $(ECHO) >/dev/null
+kernel-freeanim_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-freeanim_MC_CPPFLAGS) $(kernel-freeanim_MC_EXTRA_CPPFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-freeanim_CFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-freeanim_DFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-freeanim_MC_TARGETS) : CPPFLAGS := $(kernel-freeanim_MC_CPPFLAGS)
+$(kernel-freeanim_MC_TARGETS) : CFLAGS := $(kernel-freeanim_CFLAGS)
+$(kernel-freeanim_MC_TARGETS) : $(kernel-freeanim_MC_TGTWILDCARD).o : $(kernel-freeanim_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-freeanim_IQUOTE) $(dir $<) $(kernel-freeanim_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_IQUOTE) . $(kernel-freeanim_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-freeanim_IQUOTE) $(dir $<) $(kernel-freeanim_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_IQUOTE) . $(kernel-freeanim_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-freeanim_IQUOTE) $(dir $<) $(kernel-freeanim_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_IQUOTE) . $(kernel-freeanim_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-freeanim_MC_DTARGETS) : $(kernel-freeanim_MC_TGTWILDCARD).d : $(kernel-freeanim_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-freeanim_DFLAGS) $(kernel-freeanim_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-freeanim_MC_SRCWILDCARD := %
+else
+kernel-freeanim_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-freeanim_OBJDIR)/linklib,)
+kernel-freeanim_MC_TARGETS := $(addsuffix .o,$(kernel-freeanim_NLIBARCHFILES))
+kernel-freeanim_MC_DTARGETS := $(addsuffix .d,$(kernel-freeanim_NLIBARCHFILES))
+kernel-freeanim_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-freeanim_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$(notdir $(kernel-freeanim_NLIBARCHFILES))))
+    kernel-freeanim_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$(notdir $(kernel-freeanim_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-freeanim_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$(kernel-freeanim_NLIBARCHFILES)))
+    kernel-freeanim_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$(kernel-freeanim_NLIBARCHFILES)))
+else
+    kernel-freeanim_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-freeanim_NLIBARCHFILES))))
+    kernel-freeanim_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-freeanim_NLIBARCHFILES))))
+endif
+endif
+kernel-freeanim_MC_TGTWILDCARD := $(kernel-freeanim_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : | $(addsuffix .c,$(kernel-freeanim_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-freeanim_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-freeanim_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-freeanim_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-freeanim_MC_DIRS := $(foreach dir, $(kernel-freeanim_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-freeanim_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-freeanim_MC_DIRS),)
+    kernel-freeanim_MC_DIRS := $(shell echo $(kernel-freeanim_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-freeanim_MC_DIRS)
+endif
+
+endif
+
+kernel-freeanim_MC_CPPFLAGS := $(kernel-freeanim_LINKLIBCPPFLAGS) -D__AROS__
+kernel-freeanim_CFLAGS := $(kernel-freeanim_LINKLIBCFLAGS)
+ifeq ($(kernel-freeanim_LINKLIBDFLAGS),)
+  kernel-freeanim_DFLAGS := $(kernel-freeanim_LINKLIBCFLAGS)
+else
+  kernel-freeanim_DFLAGS := $(kernel-freeanim_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-freeanim_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-freeanim_STRIP ?= $(TARGET_STRIP)
+kernel-freeanim_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_MC_CPPFLAGS:=$(strip $(kernel-freeanim_MC_CPPFLAGS) $(kernel-freeanim_MC_EXTRA_CPPFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_CFLAGS:=$(strip $(kernel-freeanim_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_DFLAGS:=$(kernel-freeanim_DFLAGS)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-freeanim_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-freeanim_STRIP ?= $(HOST_STRIP)
+kernel-freeanim_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-freeanim_MC_CPPFLAGS) $(kernel-freeanim_MC_EXTRA_CPPFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-freeanim_CFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-freeanim_DFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-freeanim_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-freeanim_STRIP ?= $(ECHO) >/dev/null
+kernel-freeanim_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-freeanim_MC_CPPFLAGS) $(kernel-freeanim_MC_EXTRA_CPPFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-freeanim_CFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-freeanim_DFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-freeanim_MC_TARGETS) : CPPFLAGS := $(kernel-freeanim_MC_CPPFLAGS)
+$(kernel-freeanim_MC_TARGETS) : CFLAGS := $(kernel-freeanim_CFLAGS)
+$(kernel-freeanim_MC_TARGETS) : $(kernel-freeanim_MC_TGTWILDCARD).o : $(kernel-freeanim_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-freeanim_IQUOTE) $(dir $<) $(kernel-freeanim_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_IQUOTE) . $(kernel-freeanim_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-freeanim_IQUOTE) $(dir $<) $(kernel-freeanim_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_IQUOTE) . $(kernel-freeanim_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-freeanim_IQUOTE) $(dir $<) $(kernel-freeanim_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_IQUOTE) . $(kernel-freeanim_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-freeanim_MC_DTARGETS) : $(kernel-freeanim_MC_TGTWILDCARD).d : $(kernel-freeanim_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-freeanim_DFLAGS) $(kernel-freeanim_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-freeanim_OBJDIR)/linklib,)
+kernel-freeanim_MC_SRCWILDCARD := %
+else
+kernel-freeanim_MC_SRCWILDCARD := $(kernel-freeanim_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-freeanim_OBJDIR)/linklib,)
+kernel-freeanim_MC_TARGETS := $(addsuffix .o,$(kernel-freeanim_LINKLIBCCGENFILES))
+kernel-freeanim_MC_DTARGETS := $(addsuffix .d,$(kernel-freeanim_LINKLIBCCGENFILES))
+kernel-freeanim_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-freeanim_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$(notdir $(kernel-freeanim_LINKLIBCCGENFILES))))
+    kernel-freeanim_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$(notdir $(kernel-freeanim_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-freeanim_OBJDIR)/linklib,)
+    kernel-freeanim_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$(kernel-freeanim_LINKLIBCCGENFILES)))
+    kernel-freeanim_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$(kernel-freeanim_LINKLIBCCGENFILES)))
+else
+    kernel-freeanim_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$(patsubst $(kernel-freeanim_OBJDIR)/linklib/%,%,$(kernel-freeanim_LINKLIBCCGENFILES))))
+    kernel-freeanim_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$(patsubst $(kernel-freeanim_OBJDIR)/linklib/%,%,$(kernel-freeanim_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-freeanim_MC_TGTWILDCARD := $(kernel-freeanim_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : | $(addsuffix .c,$(kernel-freeanim_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-freeanim_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-freeanim_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-freeanim_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-freeanim_MC_DIRS := $(foreach dir, $(kernel-freeanim_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-freeanim_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-freeanim_MC_DIRS),)
+    kernel-freeanim_MC_DIRS := $(shell echo $(kernel-freeanim_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-freeanim_MC_DIRS)
+endif
+
+endif
+
+kernel-freeanim_MC_CPPFLAGS := $(kernel-freeanim_LINKLIBCPPFLAGS) -D__AROS__
+kernel-freeanim_CFLAGS := $(kernel-freeanim_LINKLIBCFLAGS)
+ifeq ($(kernel-freeanim_LINKLIBDFLAGS),)
+  kernel-freeanim_DFLAGS := $(kernel-freeanim_LINKLIBCFLAGS)
+else
+  kernel-freeanim_DFLAGS := $(kernel-freeanim_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-freeanim_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-freeanim_STRIP ?= $(TARGET_STRIP)
+kernel-freeanim_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_MC_CPPFLAGS:=$(strip $(kernel-freeanim_MC_CPPFLAGS) $(kernel-freeanim_MC_EXTRA_CPPFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_CFLAGS:=$(strip $(kernel-freeanim_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_DFLAGS:=$(kernel-freeanim_DFLAGS)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-freeanim_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-freeanim_STRIP ?= $(HOST_STRIP)
+kernel-freeanim_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-freeanim_MC_CPPFLAGS) $(kernel-freeanim_MC_EXTRA_CPPFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-freeanim_CFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-freeanim_DFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-freeanim_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-freeanim_STRIP ?= $(ECHO) >/dev/null
+kernel-freeanim_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-freeanim_MC_CPPFLAGS) $(kernel-freeanim_MC_EXTRA_CPPFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-freeanim_CFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-freeanim_DFLAGS))
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-freeanim_MC_TARGETS) $(kernel-freeanim_MC_DTARGETS) : kernel-freeanim_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-freeanim_MC_TARGETS) : CPPFLAGS := $(kernel-freeanim_MC_CPPFLAGS)
+$(kernel-freeanim_MC_TARGETS) : CFLAGS := $(kernel-freeanim_CFLAGS)
+$(kernel-freeanim_MC_TARGETS) : $(kernel-freeanim_MC_TGTWILDCARD).o : $(kernel-freeanim_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-freeanim_IQUOTE) $(dir $<) $(kernel-freeanim_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_IQUOTE) . $(kernel-freeanim_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-freeanim_IQUOTE) $(dir $<) $(kernel-freeanim_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_IQUOTE) . $(kernel-freeanim_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-freeanim_IQUOTE) $(dir $<) $(kernel-freeanim_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-freeanim_IQUOTE) . $(kernel-freeanim_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-freeanim_MC_DTARGETS) : $(kernel-freeanim_MC_TGTWILDCARD).d : $(kernel-freeanim_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-freeanim_DFLAGS) $(kernel-freeanim_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-freeanim_LINKLIBAFILES),)
+
+ifeq ($(kernel-freeanim_OBJDIR)/linklib,)
+kernel-freeanim-MA_TARGETS := $(addsuffix .o,$(kernel-freeanim_LINKLIBAFILES) $(kernel-freeanim_RELLINKLIBAFILES))
+kernel-freeanim-MA_WILDCARD := %
+else
+kernel-freeanim-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$(notdir $(kernel-freeanim_LINKLIBAFILES) $(kernel-freeanim_RELLINKLIBAFILES))))
+kernel-freeanim-MA_WILDCARD := $(kernel-freeanim_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-freeanim-MA_TARGETS) : | $(addsuffix .S,$(kernel-freeanim_LINKLIBAFILES) $(kernel-freeanim_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-freeanim-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-freeanim-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-freeanim_LINKLIBAFILES) $(kernel-freeanim_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-freeanim-MA_DIRS := $(foreach dir, $(kernel-freeanim-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-freeanim-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-freeanim-MA_DIRS),)
+    kernel-freeanim-MA_DIRS := $(shell echo $(kernel-freeanim-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-freeanim-MA_DIRS)
+endif
+
+endif
+
+kernel-freeanim-MA_ASSEMBLER ?= $(kernel-freeanim_ASSEMBLER)
+
+$(kernel-freeanim-MA_TARGETS) : kernel-freeanim-MA_CMD:= $(kernel-freeanim-MA_ASSEMBLER)
+
+$(kernel-freeanim-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-freeanim-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-freeanim-MA_TARGETS) : $(kernel-freeanim-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-freeanim-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-freeanim-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-freeanim-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-freeanim_SUFFIX           := library
+else
+kernel-freeanim_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-freeanim_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-freeanim_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-freeanim_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-freeanim_SUFFIX),handler)
+kernel-freeanim_MODULE           := $(AROSDIR)/$(kernel-freeanim_MODDIR)/$(kernel-freeanim_DEFNAME)-$(kernel-freeanim_SUFFIX)
+else
+kernel-freeanim_MODULE           := $(AROSDIR)/$(kernel-freeanim_MODDIR)/$(kernel-freeanim_DEFNAME).$(kernel-freeanim_SUFFIX)
+endif
+kernel-freeanim_KOBJ             := $(KOBJSDIR)/$(kernel-freeanim_DEFNAME)_$(kernel-freeanim_SUFFIX).o
+else
+kernel-freeanim_MODULE           :=
+kernel-freeanim_KOBJ             :=
+endif
+
+kernel-freeanim-quick      : kernel-freeanim
+kernel-freeanim            : $(kernel-freeanim_MODULE) $(kernel-freeanim_LINKLIB) $(kernel-freeanim_RELLINKLIB)
+ifeq (M,M)
+kernel-freeanim-kobj       : $(kernel-freeanim_KOBJ) $(kernel-freeanim_LINKLIB) $(kernel-freeanim_RELLINKLIB)
+kernel-freeanim-kobj-quick : $(kernel-freeanim_KOBJ) $(kernel-freeanim_LINKLIB) $(kernel-freeanim_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-freeanim-linklib    : $(kernel-freeanim_LINKLIB) $(kernel-freeanim_RELLINKLIB)
+endif
+
+kernel-freeanim_OBJS := $(addsuffix .o,$(kernel-freeanim_STARTFILES)) $(kernel-freeanim_ARCHOBJS) \
+           $(addprefix $(kernel-freeanim_OBJDIR)/,$(notdir $(kernel-freeanim_C_NARCHFILES:=.o) $(kernel-freeanim_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (library,handler)
+kernel-freeanim_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (freeanim,con)
+    kernel-freeanim_ERR          := $(notdir $(kernel-freeanim_MODULE)).err
+else
+    kernel-freeanim_ERR          := freeanim.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-freeanim_DEFNAME)_LDFLAGS) $(kernel-freeanim_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-freeanim_LIBS) $($(kernel-freeanim_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-freeanim_MODULE) : LIB_NAMES := $(kernel-freeanim_LIBS) $($(kernel-freeanim_DEFNAME)_LIBS)
+$(kernel-freeanim_MODULE) : OBJS := $(kernel-freeanim_STARTOBJS) $(kernel-freeanim_OBJS) $(USER_OBJS)
+$(kernel-freeanim_MODULE) : ENDTAG := $(kernel-freeanim_ENDOBJS)
+$(kernel-freeanim_MODULE) : ERR := $(kernel-freeanim_ERR)
+$(kernel-freeanim_MODULE) : OBJDIR := $(kernel-freeanim_OBJDIR)
+$(kernel-freeanim_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-freeanim_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-freeanim_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-freeanim_MODULE) : $(kernel-freeanim_STARTOBJS) $(kernel-freeanim_OBJS) $(USER_OBJS) $(kernel-freeanim_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-freeanim_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-freeanim_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-freeanim_LC_LINKLIBNAME   := $(shell echo $(kernel-freeanim_LINKLIBNAME) | tr A-Z a-z)
+kernel-freeanim_LC_MODNAME       := $(shell echo freeanim | tr A-Z a-z)
+ifneq ($(kernel-freeanim_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_LINKLIBNAME)$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_AR:=$(AR)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_LINKLIBNAME)$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_LINKLIBNAME)$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_AR:=$(HOST_AR)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_LINKLIBNAME)$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_LINKLIBNAME)$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_AR:=$(KERNEL_AR)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_LINKLIBNAME)$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_LINKLIBNAME)$(kernel-freeanim_LIBSUFFIX).a : $(kernel-freeanim_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-freeanim_AR) $@ $^
+	$(Q)$(kernel-freeanim_RANLIB) $@
+ifneq ($(kernel-freeanim_LC_MODNAME),$(kernel-freeanim_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-freeanim_LIBDIR)/libfreeanim$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_AR:=$(AR)
+$(kernel-freeanim_LIBDIR)/libfreeanim$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-freeanim_LIBDIR)/libfreeanim$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_AR:=$(HOST_AR)
+$(kernel-freeanim_LIBDIR)/libfreeanim$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-freeanim_LIBDIR)/libfreeanim$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_AR:=$(KERNEL_AR)
+$(kernel-freeanim_LIBDIR)/libfreeanim$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-freeanim_LIBDIR)/libfreeanim$(kernel-freeanim_LIBSUFFIX).a : $(kernel-freeanim_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-freeanim_AR) $@ $^
+	$(Q)$(kernel-freeanim_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-freeanim_LINKLIB),)
+$(kernel-freeanim_LINKLIB) : | $(kernel-freeanim_LIBDIR)
+else
+$(kernel-freeanim_LINKLIB) :: $(kernel-freeanim_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-freeanim_LIBDIR)
+
+endif
+
+ifneq ($(kernel-freeanim_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_LINKLIBNAME)_rel$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_AR:=$(AR)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_LINKLIBNAME)_rel$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_LINKLIBNAME)_rel$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_AR:=$(HOST_AR)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_LINKLIBNAME)_rel$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_LINKLIBNAME)_rel$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_AR:=$(KERNEL_AR)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_LINKLIBNAME)_rel$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_LINKLIBNAME)_rel$(kernel-freeanim_LIBSUFFIX).a : $(kernel-freeanim_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-freeanim_AR) $@ $^
+	$(Q)$(kernel-freeanim_RANLIB) $@
+ifneq ($(kernel-freeanim_LC_MODNAME),$(kernel-freeanim_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_DEFNAME)_rel$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_AR:=$(AR)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_DEFNAME)_rel$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_DEFNAME)_rel$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_AR:=$(HOST_AR)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_DEFNAME)_rel$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_DEFNAME)_rel$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_AR:=$(KERNEL_AR)
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_DEFNAME)_rel$(kernel-freeanim_LIBSUFFIX).a : kernel-freeanim_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-freeanim_LIBDIR)/lib$(kernel-freeanim_DEFNAME)_rel$(kernel-freeanim_LIBSUFFIX).a : $(kernel-freeanim_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-freeanim_AR) $@ $^
+	$(Q)$(kernel-freeanim_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-freeanim_RELLINKLIB),)
+$(kernel-freeanim_RELLINKLIB) : | $(kernel-freeanim_LIBDIR)
+else
+$(kernel-freeanim_RELLINKLIB) :: $(kernel-freeanim_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-freeanim_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-freeanim_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-freeanim_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-freeanim_SYMBOLS := $(kernel-freeanim_KBASE)
+
+kernel-freeanim_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-freeanim_KOBJ_LIBS        := $(filter-out $(kernel-freeanim_KLIB),$(kernel-freeanim_LIBS)) $(kernel-freeanim_KAUTOLIB)
+$(kernel-freeanim_KOBJ) : LINKLIBS:=$(kernel-freeanim_KOBJ_LIBS) $($(kernel-freeanim_DEFNAME)_LIBS)
+$(kernel-freeanim_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-freeanim_SYMBOLS))
+$(kernel-freeanim_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-freeanim_KOBJ) : $(kernel-freeanim_OBJS) $(USER_OBJS) $(kernel-freeanim_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-freeanim_DEPS             := $(addprefix $(kernel-freeanim_OBJDIR)/,$(notdir $(kernel-freeanim_CCFILES:=.d) $(kernel-freeanim_TARGETCCFILES:=.d) $(kernel-freeanim_CXXFILES:=.d))) $(addprefix $(kernel-freeanim_OBJDIR)/linklib/,$(notdir $(kernel-freeanim_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-freeanim_DEPS),)
+  ifneq (kernel-freeanim kernel-freeanim-quick kernel-freeanim-kobj kernel-freeanim-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-freeanim kernel-freeanim-quick kernel-freeanim-kobj kernel-freeanim-kobj-quick),)
+      -include $(kernel-freeanim_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-freeanim_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-freeanim_OBJS) $(kernel-freeanim_DEPS) : | $(kernel-freeanim_OBJDIR)/linklib
+
+ifneq ($(kernel-freeanim_OBJS) $(kernel-freeanim_DEPS) $(kernel-freeanim_MODULE) $(kernel-freeanim_KOBJ),)
+$(kernel-freeanim_OBJS) $(kernel-freeanim_DEPS) $(kernel-freeanim_MODULE) $(kernel-freeanim_KOBJ) : | $(kernel-freeanim_OBJDIR) $(AROSDIR)/$(kernel-freeanim_MODDIR) $(KOBJSDIR)
+else
+$(kernel-freeanim_OBJS) $(kernel-freeanim_DEPS) $(kernel-freeanim_MODULE) $(kernel-freeanim_KOBJ) :: $(kernel-freeanim_OBJDIR) $(AROSDIR)/$(kernel-freeanim_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-freeanim_OBJDIR) $(AROSDIR)/$(kernel-freeanim_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-freeanim kernel-freeanim-includes kernel-freeanim-quick kernel-freeanim-kobj kernel-freeanim-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-freeanim_DFILE_DEPS := $(kernel-freeanim_LIBDEFSINC) $(kernel-freeanim_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-freeanim_INCDIR)/,$($(kernel-freeanim_DEFNAME)_INCLUDES))
+$(kernel-freeanim_DEPS) : $(kernel-freeanim_DFILE_DEPS)
+endif
+
+kernel-freeanim_TOCLEAN := $(kernel-freeanim_OBJS) $(kernel-freeanim_DEPS) \
+    $(kernel-freeanim_MODULE) $(kernel-freeanim_LINKLIB) $(kernel-freeanim_KOBJ) \
+    $(kernel-freeanim_OBJDIR)/Makefile.freeanimlibrary \
+    $(addprefix $(kernel-freeanim_OBJDIR)/include/,$($(kernel-freeanim_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-freeanim_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-freeanim_INCDIR)/,$($(kernel-freeanim_DEFNAME)_INCLUDES)) \
+    $(kernel-freeanim_OBJDIR)/freeanim_geninc $(kernel-freeanim_OBJDIR)/freeanim_incs \
+    $(addsuffix .c,$(kernel-freeanim_LINKLIBFILES)) $(kernel-freeanim_LINKLIBOBJS) $(kernel-freeanim_LIBDEFSINC) \
+    $(kernel-freeanim_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-freeanim_STARTFILES) $(kernel-freeanim_ENDFILES)) \
+    $(kernel-freeanim_ENDOBJS)
+kernel-freeanim-clean : FILES              := $(kernel-freeanim_TOCLEAN)
+kernel-freeanim-clean ::
+	$(Q)$(ECHO) "Cleaning up for module freeanim"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-freeanim_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

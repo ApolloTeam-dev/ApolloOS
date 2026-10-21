@@ -1,0 +1,634 @@
+# $Id$
+#
+# Makefile for netstat
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES  := if inet iso main mbuf mroute ns route unix
+
+NOWARN_FLAGS := $(NOWARN_UNINITIALIZED) $(NOWARN_PARENTHESES)
+USER_CFLAGS := $(NOWARN_FLAGS) -D__BSD_VISIBLE=1
+
+##MM- workbench-network-stacks-arostcp-c : arostcp-c-netstat
+
+
+.PHONY : arostcp-c-netstat
+
+arostcp-c-netstat_PROGNAME  := netstat
+arostcp-c-netstat_OBJDIR    := $(GENDIR)/$(CURDIR)
+arostcp-c-netstat_TARGETDIR := $(AROS_SYSTEM)/Networks/AROSTCP/C
+arostcp-c-netstat_LINKER    := 
+arostcp-c-netstat_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(arostcp-c-netstat_LINKER),)
+    arostcp-c-netstat_LINKER := target
+endif
+
+ifneq ("$(strip $(FILES)   )","")
+    arostcp-c-netstat_FILES     := $(FILES)
+    arostcp-c-netstat_OBJCFILES := 
+    arostcp-c-netstat_ASMFILES  := 
+    arostcp-c-netstat_CXXFILES := 
+else
+    arostcp-c-netstat_FILES     := $(arostcp-c-netstat_PROGNAME)
+    arostcp-c-netstat_OBJCFILES :=
+    arostcp-c-netstat_ASMFILES  :=
+    arostcp-c-netstat_CXXFILES :=
+endif
+
+arostcp-c-netstat_ARCHOBJS   := $(wildcard $(arostcp-c-netstat_OBJDIR)/arch/*.o)
+arostcp-c-netstat_ARCHFILES  := $(basename $(notdir $(arostcp-c-netstat_ARCHOBJS)))
+arostcp-c-netstat_C_NARCHFILES := $(filter-out $(arostcp-c-netstat_ARCHFILES),$(arostcp-c-netstat_FILES))
+arostcp-c-netstat_CXX_NARCHFILES := $(filter-out $(arostcp-c-netstat_ARCHFILES),$(arostcp-c-netstat_CXXFILES))
+arostcp-c-netstat_OBJC_NARCHFILES := $(filter-out $(arostcp-c-netstat_ARCHFILES),$(arostcp-c-netstat_OBJCFILES))
+
+TMP_FILES := $(arostcp-c-netstat_C_NARCHFILES) $(arostcp-c-netstat_CXX_NARCHFILES) $(arostcp-c-netstat_ASMFILES) $(arostcp-c-netstat_OBJC_NARCHFILES)
+arostcp-c-netstat_OBJS := $(addsuffix .o,$(addprefix $(arostcp-c-netstat_OBJDIR)/,$(notdir $(TMP_FILES))))
+arostcp-c-netstat_DEPS := $(addsuffix .d,$(addprefix $(arostcp-c-netstat_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+arostcp-c-netstat_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+arostcp-c-netstat_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+arostcp-c-netstat_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+arostcp-c-netstat_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+arostcp-c-netstat_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+arostcp-c-netstat_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+arostcp-c-netstat_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+arostcp-c-netstat_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+arostcp-c-netstat_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+arostcp-c-netstat_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+arostcp-c-netstat_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+arostcp-c-netstat_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+arostcp-c-netstat_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+arostcp-c-netstat_LDFLAGS          := 
+endif
+
+arostcp-c-netstat_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+arostcp-c-netstat_COVERAGE := yes
+arostcp-c-netstat_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+arostcp-c-netstat_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+arostcp-c-netstat_CFLAGS    := $(strip $(arostcp-c-netstat_COVERAGEFLAGS) $(arostcp-c-netstat_CFLAGS))
+arostcp-c-netstat_CXXFLAGS := $(strip $(arostcp-c-netstat_COVERAGEFLAGS) $(arostcp-c-netstat_CXXFLAGS))
+arostcp-c-netstat_LIBS += $(arostcp-c-netstat_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+arostcp-c-netstat_FUNCINSTR := yes
+arostcp-c-netstat_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+arostcp-c-netstat_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+arostcp-c-netstat_CFLAGS    := $(strip $(arostcp-c-netstat_INSTRFUNCFLAGS) $(arostcp-c-netstat_CFLAGS))
+arostcp-c-netstat_CXXFLAGS := $(strip $(arostcp-c-netstat_INSTRFUNCFLAGS) $(arostcp-c-netstat_CXXFLAGS))
+arostcp-c-netstat_LIBS += $(arostcp-c-netstat_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+arostcp-c-netstat_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(arostcp-c-netstat_CFLAGS))
+arostcp-c-netstat_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(arostcp-c-netstat_CXXFLAGS))
+endif
+endif
+arostcp-c-netstat_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    arostcp-c-netstat_DFLAGS     := 
+else
+    arostcp-c-netstat_DFLAGS     := $(arostcp-c-netstat_CFLAGS)
+endif
+ifneq (,)
+    arostcp-c-netstat_DXXFLAGS     := 
+else
+    arostcp-c-netstat_DXXFLAGS     := $(arostcp-c-netstat_CXXFLAGS)
+endif
+ifeq (target,target)
+arostcp-c-netstat_LDFLAGS           := $(arostcp-c-netstat_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+arostcp-c-netstat_LDFLAGS           := $(arostcp-c-netstat_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+arostcp-c-netstat_LDFLAGS           := $(arostcp-c-netstat_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+arostcp-c-netstat_LDFLAGS   += -L
+endif
+
+#MM
+arostcp-c-netstat-quick : arostcp-c-netstat
+
+#MM arostcp-c-netstat : includes-generate-deps core-linklibs
+arostcp-c-netstat : $(arostcp-c-netstat_TARGETDIR)/$(arostcp-c-netstat_PROGNAME)
+
+ifneq ($(filter $(TARGET),arostcp-c-netstat arostcp-c-netstat-quick arostcp-c-netstat-gz-quick),)
+
+arostcp-c-netstat_CXXABSBASENAMES := $(foreach arostcp-c-netstat_CXXBASE,$(arostcp-c-netstat_CXX_NARCHFILES),$(if $(filter /%,$(arostcp-c-netstat_CXXBASE)),$(arostcp-c-netstat_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(arostcp-c-netstat_CXXBASE))))
+
+ifneq ($(arostcp-c-netstat_CXXABSBASENAMES),)
+
+arostcp-c-netstat_CXXBASENAMES := $(basename $(arostcp-c-netstat_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+arostcp-c-netstat_MCXX_FILES  := $(strip $(foreach arostcp-c-netstat_CXXBASE,$(arostcp-c-netstat_CXXABSBASENAMES), $(firstword $(wildcard $(foreach arostcp-c-netstat_EXT, $(AROS_CXXEXTS),$(addsuffix .$(arostcp-c-netstat_EXT),$(arostcp-c-netstat_CXXBASE)))))))
+
+ifeq (,)
+arostcp-c-netstat_MCXX_SRCWILDCARD := %
+else
+arostcp-c-netstat_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(arostcp-c-netstat_OBJDIR),)
+  arostcp-c-netstat_CXXTARGETS := $(notdir $(arostcp-c-netstat_CXXBASENAMES:=.o))
+  arostcp-c-netstat_CXXDTARGETS := $(notdir $(arostcp-c-netstat_CXXBASENAMES:=.d))
+  arostcp-c-netstat_MCXX_WILDCARD := %
+else
+  arostcp-c-netstat_CXXTARGETS := $(addprefix $(arostcp-c-netstat_OBJDIR)/,$(notdir $(arostcp-c-netstat_CXXBASENAMES:=.o)))
+  arostcp-c-netstat_CXXDTARGETS := $(addprefix $(arostcp-c-netstat_OBJDIR)/,$(notdir $(arostcp-c-netstat_CXXBASENAMES:=.d)))
+  arostcp-c-netstat_MCXX_WILDCARD := $(arostcp-c-netstat_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(arostcp-c-netstat_CXXTARGETS) $(arostcp-c-netstat_CXXDTARGETS) : | $(arostcp-c-netstat_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+arostcp-c-netstat_MCXX_CPPFLAGS := $(arostcp-c-netstat_CPPFLAGS)
+arostcp-c-netstat_CXXFLAGS := $(arostcp-c-netstat_CXXFLAGS)
+ifeq ($(arostcp-c-netstat_DXXFLAGS),)
+  arostcp-c-netstat_DXXFLAGS := $(arostcp-c-netstat_CXXFLAGS)
+else
+  arostcp-c-netstat_DXXFLAGS := $(arostcp-c-netstat_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  arostcp-c-netstat_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  arostcp-c-netstat_STRIP ?= $(HOST_STRIP)
+  arostcp-c-netstat_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  arostcp-c-netstat_CXXCMD:=$(HOST_CXX)
+  arostcp-c-netstat_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(arostcp-c-netstat_MCXX_CPPFLAGS) $(arostcp-c-netstat_MCXX_EXTRA_CPPFLAGS))
+  arostcp-c-netstat_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(arostcp-c-netstat_CXXFLAGS))
+  arostcp-c-netstat_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(arostcp-c-netstat_DXXFLAGS))
+  arostcp-c-netstat_CXXIQUOTE:=$(HOST_IQUOTE)
+  arostcp-c-netstat_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  arostcp-c-netstat_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  arostcp-c-netstat_STRIP ?= $(TARGET_STRIP)
+  arostcp-c-netstat_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  arostcp-c-netstat_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  arostcp-c-netstat_MCXX_CPPFLAGS := $(strip $(arostcp-c-netstat_MCXX_CPPFLAGS) $(arostcp-c-netstat_MCXX_EXTRA_CPPFLAGS))
+  arostcp-c-netstat_CXXFLAGS := $(strip $(arostcp-c-netstat_CXXFLAGS) $(SAFETY_CFLAGS))
+  arostcp-c-netstat_DXXFLAGS := $(arostcp-c-netstat_DXXFLAGS)
+  arostcp-c-netstat_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  arostcp-c-netstat_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  arostcp-c-netstat_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  arostcp-c-netstat_STRIP ?= $(ECHO) >/dev/null
+  arostcp-c-netstat_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  arostcp-c-netstat_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  arostcp-c-netstat_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(arostcp-c-netstat_MCXX_CPPFLAGS) $(arostcp-c-netstat_MCXX_EXTRA_CPPFLAGS))
+  arostcp-c-netstat_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(arostcp-c-netstat_CXXFLAGS))
+  arostcp-c-netstat_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(arostcp-c-netstat_DXXFLAGS))
+  arostcp-c-netstat_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  arostcp-c-netstat_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(arostcp-c-netstat_CXXCMD) $(arostcp-c-netstat_CXXIQUOTE) $(dir $(2)) $(arostcp-c-netstat_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(arostcp-c-netstat_CXXIQUOTE) . $(arostcp-c-netstat_CXXIQUOTE_END) $(strip $(arostcp-c-netstat_CXXFLAGS) $(arostcp-c-netstat_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(arostcp-c-netstat_CXXCMD) $(arostcp-c-netstat_CXXIQUOTE) $(dir $(2)) $(arostcp-c-netstat_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(arostcp-c-netstat_CXXIQUOTE) . $(arostcp-c-netstat_CXXIQUOTE_END) $(strip $(arostcp-c-netstat_CXXFLAGS) $(arostcp-c-netstat_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(arostcp-c-netstat_CXXCMD) $(arostcp-c-netstat_CXXIQUOTE) $(dir $(2)) $(arostcp-c-netstat_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(arostcp-c-netstat_CXXIQUOTE) . $(arostcp-c-netstat_CXXIQUOTE_END) $(strip $(arostcp-c-netstat_CXXFLAGS) $(arostcp-c-netstat_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(arostcp-c-netstat_CXXCMD)" $(MKDEPEND) $(strip $(arostcp-c-netstat_DXXFLAGS) $(arostcp-c-netstat_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(arostcp-c-netstat_OBJDIR),)
+  $(foreach arostcp-c-netstat_CXXFILE,$(arostcp-c-netstat_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(arostcp-c-netstat_CXXFILE))),$(arostcp-c-netstat_CXXFILE))))
+else
+  $(foreach arostcp-c-netstat_CXXFILE,$(arostcp-c-netstat_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(arostcp-c-netstat_OBJDIR)/,$(notdir $(basename $(arostcp-c-netstat_CXXFILE)))),$(arostcp-c-netstat_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(arostcp-c-netstat_OBJC_NARCHFILES),)
+
+ifeq (,)
+arostcp-c-netstat_MOBJC_SRCWILDCARD := %
+else
+arostcp-c-netstat_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(arostcp-c-netstat_OBJDIR),)
+  arostcp-c-netstat_MOBJC_TARGETS := $(addsuffix .o,$(arostcp-c-netstat_OBJC_NARCHFILES))
+  arostcp-c-netstat_MOBJC_DTARGETS := $(addsuffix .d,$(arostcp-c-netstat_OBJC_NARCHFILES))
+  arostcp-c-netstat_MOBJC_WILDCARD := %
+else
+  arostcp-c-netstat_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(arostcp-c-netstat_OBJDIR)/,$(arostcp-c-netstat_OBJC_NARCHFILES)))
+  arostcp-c-netstat_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(arostcp-c-netstat_OBJDIR)/,$(arostcp-c-netstat_OBJC_NARCHFILES)))
+  arostcp-c-netstat_MOBJC_WILDCARD := $(arostcp-c-netstat_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : | $(addsuffix .m,$(arostcp-c-netstat_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  arostcp-c-netstat_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  arostcp-c-netstat_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(arostcp-c-netstat_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  arostcp-c-netstat_MOBJC_DIRS := $(foreach dir, $(arostcp-c-netstat_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(arostcp-c-netstat_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(arostcp-c-netstat_MOBJC_DIRS),)
+    arostcp-c-netstat_MOBJC_DIRS := $(shell echo $(arostcp-c-netstat_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(arostcp-c-netstat_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  arostcp-c-netstat_CC := $(TARGET_CC)
+else
+  arostcp-c-netstat_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+arostcp-c-netstat_MOBJC_CPPFLAGS := $(arostcp-c-netstat_CPPFLAGS)
+arostcp-c-netstat_OBJCFLAGS := $(arostcp-c-netstat_CFLAGS)
+arostcp-c-netstat_OBJCFLAGS := $(arostcp-c-netstat_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+arostcp-c-netstat_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(arostcp-c-netstat_OBJCFLAGS)))
+ifeq ($(arostcp-c-netstat_DFLAGS),)
+  arostcp-c-netstat_OBJCDFLAGS := $(arostcp-c-netstat_CFLAGS)
+else
+  arostcp-c-netstat_OBJCDFLAGS := $(arostcp-c-netstat_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  arostcp-c-netstat_LINK ?= $(strip $(arostcp-c-netstat_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  arostcp-c-netstat_STRIP ?= $(TARGET_STRIP)
+  arostcp-c-netstat_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : CMD:=$(strip $(arostcp-c-netstat_CC) $(TARGET_SYSROOT))
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : arostcp-c-netstat_MOBJC_CPPFLAGS:=$(strip $(arostcp-c-netstat_MOBJC_CPPFLAGS) $(arostcp-c-netstat_MOBJC_EXTRA_CPPFLAGS))
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : arostcp-c-netstat_OBJCFLAGS:=$(strip $(arostcp-c-netstat_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : arostcp-c-netstat_OBJCDFLAGS:=$(arostcp-c-netstat_OBJCDFLAGS)
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : arostcp-c-netstat_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : arostcp-c-netstat_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  arostcp-c-netstat_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  arostcp-c-netstat_STRIP ?= $(HOST_STRIP)
+  arostcp-c-netstat_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : arostcp-c-netstat_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(arostcp-c-netstat_MOBJC_CPPFLAGS) $(arostcp-c-netstat_MOBJC_EXTRA_CPPFLAGS))
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : arostcp-c-netstat_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(arostcp-c-netstat_OBJCFLAGS))
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : arostcp-c-netstat_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(arostcp-c-netstat_OBJCDFLAGS))
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : arostcp-c-netstat_IQUOTE:=$(HOST_IQUOTE)
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : arostcp-c-netstat_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  arostcp-c-netstat_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  arostcp-c-netstat_STRIP ?= $(ECHO) >/dev/null
+  arostcp-c-netstat_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : arostcp-c-netstat_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(arostcp-c-netstat_MOBJC_CPPFLAGS) $(arostcp-c-netstat_MOBJC_EXTRA_CPPFLAGS))
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : arostcp-c-netstat_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(arostcp-c-netstat_OBJCFLAGS))
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : arostcp-c-netstat_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(arostcp-c-netstat_OBJCDFLAGS))
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : arostcp-c-netstat_IQUOTE:=$(KERNEL_IQUOTE)
+  $(arostcp-c-netstat_MOBJC_TARGETS) $(arostcp-c-netstat_MOBJC_DTARGETS) : arostcp-c-netstat_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(arostcp-c-netstat_MOBJC_TARGETS) : CPPFLAGS := $(arostcp-c-netstat_MOBJC_CPPFLAGS)
+$(arostcp-c-netstat_MOBJC_TARGETS) : CFLAGS := $(arostcp-c-netstat_OBJCFLAGS)
+$(arostcp-c-netstat_MOBJC_TARGETS) : $(arostcp-c-netstat_MOBJC_WILDCARD).o : $(arostcp-c-netstat_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(arostcp-c-netstat_IQUOTE) $(dir $<) $(arostcp-c-netstat_IQUOTE) $(SRCDIR)/$(CURDIR) $(arostcp-c-netstat_IQUOTE) . $(arostcp-c-netstat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(arostcp-c-netstat_IQUOTE) $(dir $<) $(arostcp-c-netstat_IQUOTE) $(SRCDIR)/$(CURDIR) $(arostcp-c-netstat_IQUOTE) . $(arostcp-c-netstat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(arostcp-c-netstat_IQUOTE) $(dir $<) $(arostcp-c-netstat_IQUOTE) $(SRCDIR)/$(CURDIR) $(arostcp-c-netstat_IQUOTE) . $(arostcp-c-netstat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(arostcp-c-netstat_MOBJC_DTARGETS) : $(arostcp-c-netstat_MOBJC_WILDCARD).d : $(arostcp-c-netstat_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(arostcp-c-netstat_OBJCDFLAGS) $(arostcp-c-netstat_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+arostcp-c-netstat_MC_SRCWILDCARD := %
+else
+arostcp-c-netstat_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(arostcp-c-netstat_OBJDIR),)
+arostcp-c-netstat_MC_TARGETS := $(addsuffix .o,$(arostcp-c-netstat_C_NARCHFILES))
+arostcp-c-netstat_MC_DTARGETS := $(addsuffix .d,$(arostcp-c-netstat_C_NARCHFILES))
+arostcp-c-netstat_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    arostcp-c-netstat_MC_TARGETS := $(addsuffix .o,$(addprefix $(arostcp-c-netstat_OBJDIR)/,$(notdir $(arostcp-c-netstat_C_NARCHFILES))))
+    arostcp-c-netstat_MC_DTARGETS := $(addsuffix .d,$(addprefix $(arostcp-c-netstat_OBJDIR)/,$(notdir $(arostcp-c-netstat_C_NARCHFILES))))
+else
+ifeq (,)
+    arostcp-c-netstat_MC_TARGETS := $(addsuffix .o,$(addprefix $(arostcp-c-netstat_OBJDIR)/,$(arostcp-c-netstat_C_NARCHFILES)))
+    arostcp-c-netstat_MC_DTARGETS := $(addsuffix .d,$(addprefix $(arostcp-c-netstat_OBJDIR)/,$(arostcp-c-netstat_C_NARCHFILES)))
+else
+    arostcp-c-netstat_MC_TARGETS := $(addsuffix .o,$(addprefix $(arostcp-c-netstat_OBJDIR)/,$(patsubst /%,%,$(arostcp-c-netstat_C_NARCHFILES))))
+    arostcp-c-netstat_MC_DTARGETS := $(addsuffix .d,$(addprefix $(arostcp-c-netstat_OBJDIR)/,$(patsubst /%,%,$(arostcp-c-netstat_C_NARCHFILES))))
+endif
+endif
+arostcp-c-netstat_MC_TGTWILDCARD := $(arostcp-c-netstat_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : | $(addsuffix .c,$(arostcp-c-netstat_C_NARCHFILES))
+
+# Be sure that all .c files are found
+arostcp-c-netstat_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+arostcp-c-netstat_MC_BASEDIRS := $(shell echo $(sort $(dir $(arostcp-c-netstat_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+arostcp-c-netstat_MC_DIRS := $(foreach dir, $(arostcp-c-netstat_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(arostcp-c-netstat_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(arostcp-c-netstat_MC_DIRS),)
+    arostcp-c-netstat_MC_DIRS := $(shell echo $(arostcp-c-netstat_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(arostcp-c-netstat_MC_DIRS)
+endif
+
+endif
+
+arostcp-c-netstat_MC_CPPFLAGS := $(arostcp-c-netstat_CPPFLAGS)
+arostcp-c-netstat_CFLAGS := $(arostcp-c-netstat_CFLAGS)
+ifeq ($(arostcp-c-netstat_DFLAGS),)
+  arostcp-c-netstat_DFLAGS := $(arostcp-c-netstat_CFLAGS)
+else
+  arostcp-c-netstat_DFLAGS := $(arostcp-c-netstat_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+arostcp-c-netstat_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+arostcp-c-netstat_STRIP ?= $(TARGET_STRIP)
+arostcp-c-netstat_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : arostcp-c-netstat_MC_CPPFLAGS:=$(strip $(arostcp-c-netstat_MC_CPPFLAGS) $(arostcp-c-netstat_MC_EXTRA_CPPFLAGS))
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : arostcp-c-netstat_CFLAGS:=$(strip $(arostcp-c-netstat_CFLAGS) $(SAFETY_CFLAGS))
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : arostcp-c-netstat_DFLAGS:=$(arostcp-c-netstat_DFLAGS)
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : arostcp-c-netstat_IQUOTE:=$(CFLAGS_IQUOTE)
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : arostcp-c-netstat_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+arostcp-c-netstat_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+arostcp-c-netstat_STRIP ?= $(HOST_STRIP)
+arostcp-c-netstat_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : arostcp-c-netstat_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(arostcp-c-netstat_MC_CPPFLAGS) $(arostcp-c-netstat_MC_EXTRA_CPPFLAGS))
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : arostcp-c-netstat_CFLAGS:=$(strip $(HOST_CFLAGS) $(arostcp-c-netstat_CFLAGS))
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : arostcp-c-netstat_DFLAGS:=$(strip $(HOST_CFLAGS) $(arostcp-c-netstat_DFLAGS))
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : arostcp-c-netstat_IQUOTE:=$(HOST_IQUOTE)
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : arostcp-c-netstat_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+arostcp-c-netstat_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+arostcp-c-netstat_STRIP ?= $(ECHO) >/dev/null
+arostcp-c-netstat_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : arostcp-c-netstat_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(arostcp-c-netstat_MC_CPPFLAGS) $(arostcp-c-netstat_MC_EXTRA_CPPFLAGS))
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : arostcp-c-netstat_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(arostcp-c-netstat_CFLAGS))
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : arostcp-c-netstat_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(arostcp-c-netstat_DFLAGS))
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : arostcp-c-netstat_IQUOTE:=$(KERNEL_IQUOTE)
+$(arostcp-c-netstat_MC_TARGETS) $(arostcp-c-netstat_MC_DTARGETS) : arostcp-c-netstat_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(arostcp-c-netstat_MC_TARGETS) : CPPFLAGS := $(arostcp-c-netstat_MC_CPPFLAGS)
+$(arostcp-c-netstat_MC_TARGETS) : CFLAGS := $(arostcp-c-netstat_CFLAGS)
+$(arostcp-c-netstat_MC_TARGETS) : $(arostcp-c-netstat_MC_TGTWILDCARD).o : $(arostcp-c-netstat_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(arostcp-c-netstat_IQUOTE) $(dir $<) $(arostcp-c-netstat_IQUOTE) $(SRCDIR)/$(CURDIR) $(arostcp-c-netstat_IQUOTE) . $(arostcp-c-netstat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(arostcp-c-netstat_IQUOTE) $(dir $<) $(arostcp-c-netstat_IQUOTE) $(SRCDIR)/$(CURDIR) $(arostcp-c-netstat_IQUOTE) . $(arostcp-c-netstat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(arostcp-c-netstat_IQUOTE) $(dir $<) $(arostcp-c-netstat_IQUOTE) $(SRCDIR)/$(CURDIR) $(arostcp-c-netstat_IQUOTE) . $(arostcp-c-netstat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(arostcp-c-netstat_MC_DTARGETS) : $(arostcp-c-netstat_MC_TGTWILDCARD).d : $(arostcp-c-netstat_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(arostcp-c-netstat_DFLAGS) $(arostcp-c-netstat_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(arostcp-c-netstat_OBJDIR),)
+arostcp-c-netstat-MA_TARGETS := $(addsuffix .o,$(arostcp-c-netstat_ASMFILES))
+arostcp-c-netstat-MA_WILDCARD := %
+else
+arostcp-c-netstat-MA_TARGETS := $(addsuffix .o,$(addprefix $(arostcp-c-netstat_OBJDIR)/,$(notdir $(arostcp-c-netstat_ASMFILES))))
+arostcp-c-netstat-MA_WILDCARD := $(arostcp-c-netstat_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(arostcp-c-netstat-MA_TARGETS) : | $(addsuffix .s,$(arostcp-c-netstat_ASMFILES))
+
+# Be sure that all .c files are found
+arostcp-c-netstat-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+arostcp-c-netstat-MA_BASEDIRS := $(shell echo $(sort $(dir $(arostcp-c-netstat_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+arostcp-c-netstat-MA_DIRS := $(foreach dir, $(arostcp-c-netstat-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(arostcp-c-netstat-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(arostcp-c-netstat-MA_DIRS),)
+    arostcp-c-netstat-MA_DIRS := $(shell echo $(arostcp-c-netstat-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(arostcp-c-netstat-MA_DIRS)
+endif
+
+endif
+
+arostcp-c-netstat-MA_ASSEMBLER ?= $(arostcp-c-netstat_ASSEMBLER)
+
+$(arostcp-c-netstat-MA_TARGETS) : arostcp-c-netstat-MA_CMD:= $(arostcp-c-netstat-MA_ASSEMBLER)
+
+$(arostcp-c-netstat-MA_TARGETS) : CPPFLAGS := $(arostcp-c-netstat_CPPFLAGS)
+$(arostcp-c-netstat-MA_TARGETS) : AFLAGS := $(arostcp-c-netstat_AFLAGS)
+$(arostcp-c-netstat-MA_TARGETS) : $(arostcp-c-netstat-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(arostcp-c-netstat-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(arostcp-c-netstat-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(arostcp-c-netstat-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+arostcp-c-netstat-link_EXTRA_LDFLAGS := 
+arostcp-c-netstat-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    arostcp-c-netstat-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    arostcp-c-netstat-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    arostcp-c-netstat-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+arostcp-c-netstat-link_DIRS := $(subst -L ,-L,$(strip $(arostcp-c-netstat_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+arostcp-c-netstat-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(arostcp-c-netstat-link_DIRS)))
+# Add trailing /
+arostcp-c-netstat-link_DIRS := $(subst //,/,$(addsuffix /,$(arostcp-c-netstat-link_DIRS)))
+# Add normal linklib path
+arostcp-c-netstat-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+arostcp-c-netstat-link_LIBS := $(addprefix lib,$(addsuffix .a,$(arostcp-c-netstat_LIBS) $(arostcp-c-netstat-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    arostcp-c-netstat-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    arostcp-c-netstat-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+arostcp-c-netstat-link_DEPLIBS := $(foreach lib,$(arostcp-c-netstat-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(arostcp-c-netstat-link_DIRS)))) \
+)
+
+$(arostcp-c-netstat_TARGETDIR)/$(arostcp-c-netstat_PROGNAME) : OBJDIR := $(arostcp-c-netstat_OBJDIR)
+$(arostcp-c-netstat_TARGETDIR)/$(arostcp-c-netstat_PROGNAME) : OBJS := $(arostcp-c-netstat_OBJS) $(arostcp-c-netstat_ARCHOBJS) $(USER_OBJS)
+$(arostcp-c-netstat_TARGETDIR)/$(arostcp-c-netstat_PROGNAME) : LDFLAGS := $(strip $(arostcp-c-netstat_LDFLAGS) $(arostcp-c-netstat-link_EXTRA_LDFLAGS))
+$(arostcp-c-netstat_TARGETDIR)/$(arostcp-c-netstat_PROGNAME) : LIBS := $(addprefix -l,$(arostcp-c-netstat_LIBS) $(arostcp-c-netstat-link_EXTRA_LIBS) )
+$(arostcp-c-netstat_TARGETDIR)/$(arostcp-c-netstat_PROGNAME) : $(arostcp-c-netstat_OBJS) $(arostcp-c-netstat_ARCHOBJS) $(USER_OBJS) $(arostcp-c-netstat-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(arostcp-c-netstat_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(arostcp-c-netstat_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(arostcp-c-netstat_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(arostcp-c-netstat_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(arostcp-c-netstat_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(arostcp-c-netstat_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(arostcp-c-netstat_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(arostcp-c-netstat_DEPS),)
+  ifneq (arostcp-c-netstat arostcp-c-netstat-quick,)
+    ifneq ($(findstring $(TARGET),arostcp-c-netstat arostcp-c-netstat-quick),)
+      -include $(arostcp-c-netstat_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(arostcp-c-netstat_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(arostcp-c-netstat_OBJS) $(arostcp-c-netstat_DEPS) $(arostcp-c-netstat_TARGETDIR)/$(arostcp-c-netstat_PROGNAME),)
+$(arostcp-c-netstat_OBJS) $(arostcp-c-netstat_DEPS) $(arostcp-c-netstat_TARGETDIR)/$(arostcp-c-netstat_PROGNAME) : | $(arostcp-c-netstat_OBJDIR) $(arostcp-c-netstat_TARGETDIR)
+else
+$(arostcp-c-netstat_OBJS) $(arostcp-c-netstat_DEPS) $(arostcp-c-netstat_TARGETDIR)/$(arostcp-c-netstat_PROGNAME) :: $(arostcp-c-netstat_OBJDIR) $(arostcp-c-netstat_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(arostcp-c-netstat_OBJDIR) $(arostcp-c-netstat_TARGETDIR)
+
+
+arostcp-c-netstat-clean : FILES := $(arostcp-c-netstat_OBJS) $(arostcp-c-netstat_TARGETDIR)/$(arostcp-c-netstat_PROGNAME) $(arostcp-c-netstat_DEPS)
+#MM
+arostcp-c-netstat-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget arostcp-c-netstat"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

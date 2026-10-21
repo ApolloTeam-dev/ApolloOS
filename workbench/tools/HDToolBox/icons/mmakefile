@@ -1,0 +1,54 @@
+# Copyright © 2004-2011, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+ICONS := def_Mountlist
+
+#MM- iconset-Gorilla-icons-aros-prefs-envarc : iconset-Gorilla-icons-aros-prefs-envarc-mountlist
+
+BD_OBJS := $(addprefix  $(AROS_ENVARC)/SYS/, $(addsuffix .info,$(ICONS)))
+
+#MM
+iconset-Gorilla-icons-aros-prefs-envarc-mountlist : $(BD_OBJS)
+
+ifeq (,)
+
+$(AROS_ENVARC)/SYS/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/%.png
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+else
+
+$(AROS_ENVARC)/SYS/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+endif
+
+
+ifneq ($(BD_OBJS),)
+$(BD_OBJS) : | $(AROS_ENVARC)/SYS
+else
+$(BD_OBJS) :: $(AROS_ENVARC)/SYS
+endif
+
+GLOB_MKDIRS += $(AROS_ENVARC)/SYS
+
+
+iconset-Gorilla-icons-aros-prefs-envarc-mountlist-clean : FILES := $(BD_OBJS)
+#MM
+iconset-Gorilla-icons-aros-prefs-envarc-mountlist-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: iconset-Gorilla-icons-aros-prefs-envarc-mountlist iconset-Gorilla-icons-aros-prefs-envarc-mountlist-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

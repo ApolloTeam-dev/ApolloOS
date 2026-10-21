@@ -1,0 +1,99 @@
+# Copyright © 2004-2017, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+BASEICONS := Time Locale Serial Presets Input IControl Font ScreenMode Palette Pointer Printer
+ADDITIONALICONS := AHI Appearance Boot  \
+ ReqTools Wanderer Zune Editor Trackdisk PSI Network Trident \
+ OpenURL BoingIconBar
+
+#MM- iconset-GorillaSmall-wbench-icons-aros-clean : iconset-GorillaSmall-wbench-icons-aros-prefs-clean
+#MM- iconset-GorillaSmall-additional-icons-aros-clean : iconset-GorillaSmall-additional-icons-aros-prefs-clean
+#MM- iconset-GorillaSmall-wbench-icons-aros : iconset-GorillaSmall-wbench-icons-aros-prefs
+#MM- iconset-GorillaSmall-additional-icons-aros : iconset-GorillaSmall-additional-icons-aros-prefs
+
+
+BD_OBJS := $(addprefix  $(AROS_PREFS)/, $(addsuffix .info,$(BASEICONS)))
+
+#MM
+iconset-GorillaSmall-wbench-icons-aros-prefs : $(BD_OBJS)
+
+ifeq (,)
+
+$(AROS_PREFS)/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/%.png
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+else
+
+$(AROS_PREFS)/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+endif
+
+
+ifneq ($(BD_OBJS),)
+$(BD_OBJS) : | $(AROS_PREFS)
+else
+$(BD_OBJS) :: $(AROS_PREFS)
+endif
+
+GLOB_MKDIRS += $(AROS_PREFS)
+
+
+iconset-GorillaSmall-wbench-icons-aros-prefs-clean : FILES := $(BD_OBJS)
+#MM
+iconset-GorillaSmall-wbench-icons-aros-prefs-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: iconset-GorillaSmall-wbench-icons-aros-prefs iconset-GorillaSmall-wbench-icons-aros-prefs-clean
+
+
+
+BD_OBJS := $(addprefix  $(AROS_PREFS)/, $(addsuffix .info,$(ADDITIONALICONS)))
+
+#MM
+iconset-GorillaSmall-additional-icons-aros-prefs : $(BD_OBJS)
+
+ifeq (,)
+
+$(AROS_PREFS)/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/%.png
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+else
+
+$(AROS_PREFS)/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+endif
+
+
+ifneq ($(BD_OBJS),)
+$(BD_OBJS) : | $(AROS_PREFS)
+else
+$(BD_OBJS) :: $(AROS_PREFS)
+endif
+
+GLOB_MKDIRS += $(AROS_PREFS)
+
+
+iconset-GorillaSmall-additional-icons-aros-prefs-clean : FILES := $(BD_OBJS)
+#MM
+iconset-GorillaSmall-additional-icons-aros-prefs-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: iconset-GorillaSmall-additional-icons-aros-prefs iconset-GorillaSmall-additional-icons-aros-prefs-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,1739 @@
+#   $Id$
+#
+#   Makefile to make MultiUserFS compatible security.library.
+
+include $(SRCDIR)/config/aros.cfg
+
+PUBLICFUNCS := \
+	secAccess_Control \
+	secAddMonitor \
+	secAllocGroupInfo \
+	secAllocUserInfo \
+	secCheckPasswd \
+	secContextLocate \
+	secEnumChildren \
+	secFreeExtOwner \
+	secFreeGroupInfo \
+	secFreeUserInfo \
+	secFreeze \
+	secGetConfigDirLock \
+	secGetDefProtection \
+	secGetGroupInfo \
+	secGetPasswdDirLock \
+	secGetPktDefProtection \
+	secGetPktOwner \
+	secGetRelationshipA \
+	secGetTaskExtOwner \
+	secGetTaskOwner \
+	secGetUserInfo \
+	secKill \
+	secLimitDOSSetProtection \
+	secLocksecBase \
+	secLoginA \
+	secLogout \
+	secPasswd \
+	secRemMonitor \
+	secSetDefProtectionA \
+	secSetProtection \
+	secUnfreeze \
+	secUnlocksecBase \
+	secUserInfo2ExtOwner
+
+CRTPUBLICFUNCS := \
+	secgetgid \
+	secgetpgid \
+	secgetuid \
+	secsetegid \
+	secseteuid \
+	secsetgid \
+	secsetreuid \
+	secsetuid
+
+PRIVATEFUNCS := \
+	secFSRendezVous \
+	secLoadPlugin \
+	secUnloadPlugin \
+	secRegisterHandler \
+	secUnRegisterHandler \
+	secPluginOperationComplete
+
+SECURITYFILES := \
+	security_config \
+	security_execfuncs \
+	security_dosfuncs \
+	security_locale \
+	security_volumes \
+	security_memory \
+	security_plugins \
+	security_crypto \
+	security_monitor \
+	security_packetio \
+	security_enforce \
+	security_task \
+	security_server \
+	security_segment \
+	security_support
+
+EXEDIR := $(AROSDIR)/MuFS
+
+#USER_INCLUDES := -I$(SRCDIR)/$(CURDIR)/../Include
+USER_CPPFLAGS := -DDEBUG
+USER_LDFLAGS := -static
+
+#MM kernel-security : includes linklibs kernel-security-catalogs
+#MM- workbench-libs : kernel-security
+#MM- workbench-libs-includes : kernel-security-includes
+#MM- workbench-libs-quick : kernel-security-quick
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-security
+#MM kernel-security-quick
+#MM kernel-security-makefile
+#MM kernel-security-clean
+
+# ABI targets:
+#MM- includes-all : kernel-security-includes
+#MM- linklibs-security: kernel-security-linklib
+#MM- linklibs-security_rel : kernel-security-linklib
+#MM- includes-security: kernel-security-includes
+#MM- includes-security_rel : kernel-security-includes
+#MM- kernel-security : kernel-security-includes core-linklibs linklibs-
+#MM kernel-security-linklib : kernel-security-includes includes-
+#MM- kernel-security-quick : kernel-security-includes-quick
+#MM kernel-security-includes : kernel-security-makefile kernel-security-includes-dirs \
+#MM     includes-generate-deps kernel-security-fd
+#MM kernel-security-includes-quick
+#MM kernel-security-includes-dirs
+#MM kernel-security-fd
+
+# Library targets
+#MM kernel-security-kobj : core-linklibs linklibs-
+#MM kernel-security-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-security-kobj : kernel-security-includes core-linklibs linklibs-
+#MM kernel-security-kobj-quick : kernel-security-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-security_ALLTARGETS       := kernel-security kernel-security-quick kernel-security-clean
+
+ifeq (M,M)
+kernel-security_ALLTARGETS       += kernel-security-kobj kernel-security-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-security_ALLTARGETS += kernel-security-includes \
+                 kernel-security-includes-quick kernel-security-includes-dirs  \
+                 kernel-security-linklib kernel-security-fd
+endif
+
+.PHONY : $(kernel-security_ALLTARGETS) kernel-security-makefile
+
+ifeq (security,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (library,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-security_DEFNAME      := security_
+else
+    kernel-security_DEFNAME      := security
+endif
+kernel-security_DEFLINKLIBNAME   := $(kernel-security_DEFNAME)
+ifneq (,)
+    kernel-security_LINKLIBNAME  := 
+else
+    kernel-security_LINKLIBNAME  = $(kernel-security_DEFLINKLIBNAME)
+endif
+kernel-security_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-security_DEFCPPFLAGS  += -I
+endif
+kernel-security_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-security_DFLAGS       := 
+else
+    kernel-security_DFLAGS       = $(kernel-security_DEFDFLAGS)
+endif
+kernel-security_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-security_DXXFLAGS     := 
+else
+    kernel-security_DXXFLAGS     = $(kernel-security_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-security_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-security_DEFDFLAGS))
+kernel-security_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-security_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-security_FUNCINSTR := yes
+kernel-security_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-security_DEFDFLAGS))
+kernel-security_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-security_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-security_OBJDIR                     := 
+else
+kernel-security_OBJDIR                     := $(OBJDIR)/$(kernel-security_DEFNAME)
+endif
+ifneq (,)
+kernel-security_OBJDIR           := $(kernel-security_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-security-makefile         := $(kernel-security_OBJDIR)/Makefile.$(kernel-security_DEFNAME)library
+kernel-security-genmakefile : $(kernel-security-makefile)
+
+
+kernel-security-genmakefile_OPTS := 
+ifneq (,)
+    kernel-security-genmakefile_OPTS += -f 
+    kernel-security-genmakefile_MODNAME := security_
+else
+    kernel-security-genmakefile_MODNAME := security
+endif
+kernel-security-genmakefile_TARGET := Makefile.$(kernel-security-genmakefile_MODNAME)library
+kernel-security-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-security-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-security-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-security-genmakefile_OPTS += -c 
+        kernel-security-genmakefile_DEPS += 
+    endif 
+else
+    kernel-security-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/security.conf
+    kernel-security-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/security.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-security-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-security-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-security-genmakefile_OPTS += -o 
+        kernel-security-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-security-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-security_OBJDIR),)
+    kernel-security-genmakefile_OPTS += -d $(kernel-security_OBJDIR)
+    kernel-security-genmakefile_TARGET := $(kernel-security_OBJDIR)/$(kernel-security-genmakefile_TARGET)
+endif
+
+$(kernel-security-genmakefile_TARGET) : OPTS := $(kernel-security-genmakefile_OPTS)
+$(kernel-security-genmakefile_TARGET) : MODNAME := security
+$(kernel-security-genmakefile_TARGET) : MODTYPE := library
+$(kernel-security-genmakefile_TARGET) : $(kernel-security-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-security-makefile),)
+$(kernel-security-makefile) : | $(kernel-security_OBJDIR)
+else
+$(kernel-security-makefile) :: $(kernel-security_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-security_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-security_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-security-makefile)
+
+kernel-security_DEFMODDIR        := $($(kernel-security_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-security_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-security_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-security_MODDIR       := 
+else
+    kernel-security_MODDIR       := $(kernel-security_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-security_INCDIR           := 
+else
+kernel-security_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-security_LIBDEFSINC       := $(kernel-security_OBJDIR)/include/$(kernel-security_DEFNAME)_libdefs.h
+kernel-security_DEFLIBDEFSINC    := $(kernel-security_OBJDIR)/include/$(kernel-security_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-security-includes-quick : kernel-security-includes
+kernel-security-includes : $(addprefix $(GENINCDIR)/,$($(kernel-security_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-security_INCDIR)/,$($(kernel-security_DEFNAME)_INCLUDES)) \
+    $(kernel-security_LIBDEFSINC) $(kernel-security_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-security_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-security-includes_MODNAME := security_
+else
+    kernel-security-includes_MODNAME := security
+endif
+
+ifneq ($($(kernel-security-includes_MODNAME)_INCLUDES),)
+
+kernel-security-includes_TARGETS := $($(kernel-security-includes_MODNAME)_INCLUDES)
+
+kernel-security-includes_DEPS := $(GENMODULE)
+kernel-security-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-security-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-security-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-security-includes_OPTS += -c 
+        kernel-security-includes_DEPS += 
+    endif 
+else
+    kernel-security-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/security.conf
+    kernel-security-includes_DEPS += $(SRCDIR)/$(CURDIR)/security.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-security-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-security-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-security-includes_OPTS += -o 
+        kernel-security-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-security-includes_OPTS += -s 
+endif
+ifneq ($(kernel-security_OBJDIR)/include,)
+    kernel-security-includes_OPTS += -d $(kernel-security_OBJDIR)/include
+    kernel-security-includes_TARGETS := $(addprefix $(kernel-security_OBJDIR)/include/,$(kernel-security-includes_TARGETS))
+    kernel-security-includes_GENINCFLAG=$(kernel-security_OBJDIR)/include/.security.library-includes
+else
+    kernel-security-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.security.library-includes
+endif
+
+$(kernel-security-includes_TARGETS) : $(kernel-security-includes_DEPS) $(kernel-security-includes_GENINCFLAG)
+
+$(kernel-security-includes_GENINCFLAG) : OPTS := $(kernel-security-includes_OPTS)
+$(kernel-security-includes_GENINCFLAG) : MODNAME := security
+$(kernel-security-includes_GENINCFLAG) : MODTYPE := library
+$(kernel-security-includes_GENINCFLAG) : $(kernel-security-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-security_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-security_DEFNAME)_INCLUDES)) : | $(kernel-security_OBJDIR)/security_geninc
+
+$(kernel-security_OBJDIR)/security_geninc : COPYSRCDIR := $(kernel-security_OBJDIR)/include
+$(kernel-security_OBJDIR)/security_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-security_OBJDIR)/security_geninc : FILES := $($(kernel-security_DEFNAME)_INCLUDES)
+$(kernel-security_OBJDIR)/security_geninc : $(addprefix $(kernel-security_OBJDIR)/include/,$($(kernel-security_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-security_OBJDIR)/include
+
+$(addprefix $(kernel-security_INCDIR)/,$($(kernel-security_DEFNAME)_INCLUDES)) : | $(kernel-security_OBJDIR)/security_incs
+
+$(kernel-security_OBJDIR)/security_incs : COPYSRCDIR := $(kernel-security_OBJDIR)/include
+$(kernel-security_OBJDIR)/security_incs : TGTDIR := $(kernel-security_INCDIR)
+$(kernel-security_OBJDIR)/security_incs : FILES := $($(kernel-security_DEFNAME)_INCLUDES)
+$(kernel-security_OBJDIR)/security_incs : $(addprefix $(kernel-security_OBJDIR)/include/,$($(kernel-security_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-security_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-security_DEFNAME)_INCLUDES))))
+
+TMPsecurity_INCDIRS := \
+    $(kernel-security_OBJDIR)/include $(addprefix $(kernel-security_OBJDIR)/include/,$(kernel-security_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-security_INCDIRS)) \
+    $(kernel-security_INCDIR) $(addprefix $(kernel-security_INCDIR)/,$(kernel-security_INCDIRS))
+
+ifneq (kernel-security-includes-dirs,)
+kernel-security-includes-dirs : | $(TMPsecurity_INCDIRS)
+else
+kernel-security-includes-dirs :: $(TMPsecurity_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPsecurity_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-security-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-security-genlibdefs_OPTS += -f 
+    kernel-security-genlibdefs_MODNAME := security_
+else
+    kernel-security-genlibdefs_MODNAME := security
+endif
+kernel-security-genlibdefs_TARGET := $(kernel-security-genlibdefs_MODNAME)_libdefs.h
+kernel-security-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-security-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-security-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-security-genlibdefs_OPTS += -c 
+        kernel-security-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-security-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/security.conf
+    kernel-security-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/security.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-security-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-security-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-security-genlibdefs_OPTS += -o 
+        kernel-security-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-security-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-security_OBJDIR)/include,)
+    kernel-security-genlibdefs_OPTS += -d $(kernel-security_OBJDIR)/include
+    kernel-security-genlibdefs_TARGET := $(kernel-security_OBJDIR)/include/$(kernel-security-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-security-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-security-genlibdefs_TARGET) : OPTS := $(kernel-security-genlibdefs_OPTS)
+$(kernel-security-genlibdefs_TARGET) : MODNAME := security
+$(kernel-security-genlibdefs_TARGET) : MODTYPE := library
+$(kernel-security-genlibdefs_TARGET) : $(kernel-security-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-security_DEFLIBDEFSINC) : FILENAME := $(kernel-security_LIBDEFSINC)
+$(kernel-security_DEFLIBDEFSINC) : $(kernel-security_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-security_LIBDEFSINC) $(kernel-security_DEFLIBDEFSINC) : | $(kernel-security_OBJDIR)/include
+
+ifneq (kernel-security-includes-dirs,)
+kernel-security-includes-dirs : | $(kernel-security_OBJDIR)/include
+else
+kernel-security-includes-dirs :: $(kernel-security_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-security_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-security-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-security-genmodfiles_OPTS += -f 
+    kernel-security-genmodfiles_MODNAME := security_
+else
+    kernel-security-genmodfiles_MODNAME := security
+endif
+kernel-security-genmodfiles_GENTARGETS := $($(kernel-security-genmodfiles_MODNAME)_STARTFILES) $($(kernel-security-genmodfiles_MODNAME)_ENDFILES)
+kernel-security-genmodfiles_STUBTARGETS := $($(kernel-security-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-security-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-security-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-security-genmodfiles_GENTARGETS))
+kernel-security-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-security-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-security-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-security-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-security-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-security-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-security-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-security-genmodfiles_OPTS += -c 
+        kernel-security-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-security-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/security.conf
+    kernel-security-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/security.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-security-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-security-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-security-genmodfiles_OPTS += -o 
+        kernel-security-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-security-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-security_OBJDIR),)
+    kernel-security-genmodfiles_OPTS += -d $(kernel-security_OBJDIR)
+    kernel-security-genmodfiles_TARGETDIR := $(shell echo $(kernel-security_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-security-genmodfiles_GENTARGETS := $(addprefix $(kernel-security-genmodfiles_TARGETDIR)/,$(kernel-security-genmodfiles_GENTARGETS))
+    kernel-security-genmodfiles_GENFILEFLAG=$(kernel-security-genmodfiles_TARGETDIR)/.security.library-genfiles
+else
+    kernel-security-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.security.library-genfiles
+endif
+ifneq ($(kernel-security_OBJDIR)/linklib,)
+    kernel-security-genmodfiles_OPTS += -l $(kernel-security_OBJDIR)/linklib
+    kernel-security-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-security_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-security-genmodfiles_STUBTARGETS := $(addprefix $(kernel-security-genmodfiles_STUBTARGETDIR)/,$(kernel-security-genmodfiles_STUBTARGETS))
+    kernel-security-genmodfiles_TARGETDIRS += $(kernel-security_OBJDIR)/linklib
+else
+ifneq ($(kernel-security_OBJDIR),)
+    kernel-security-genmodfiles_STUBTARGETS := $(addprefix $(kernel-security-genmodfiles_TARGETDIR)/,$(kernel-security-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-security-genmodfiles_TARGETS := $(kernel-security-genmodfiles_GENTARGETS) $(kernel-security-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-security-genmodfiles_TARGETDIRS),)
+$(kernel-security-genmodfiles_TARGETS) : | $(kernel-security-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-security-genmodfiles_TARGETS) : $(kernel-security-genmodfiles_DEPS) $(kernel-security-genmodfiles_GENFILEFLAG)
+
+$(kernel-security-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-security-genmodfiles_OPTS)
+$(kernel-security-genmodfiles_GENFILEFLAG) : MODNAME := security
+$(kernel-security-genmodfiles_GENFILEFLAG) : MODTYPE := library
+$(kernel-security-genmodfiles_GENFILEFLAG) : $(kernel-security-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-security-genmodfiles_GENFILEFLAG) : $(kernel-security_DEFLIBDEFSINC) $(kernel-security-makefile)
+
+
+ifneq ($(kernel-security-genmodfiles_GENFILEFLAG),)
+$(kernel-security-genmodfiles_GENFILEFLAG) : | $(kernel-security_OBJDIR)/linklib
+else
+$(kernel-security-genmodfiles_GENFILEFLAG) :: $(kernel-security_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-security_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-security_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-security_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-security-fd : $(kernel-security_FDDIR)/security_lib.fd
+
+
+TMP_TARGET := security_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/security.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/security.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-security_FDDIR),)
+    TMP_OPTS += -d $(kernel-security_FDDIR)
+    TMP_TARGET := $(kernel-security_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := security
+$(TMP_TARGET) : MODTYPE := library
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-security_FDDIR)/security_lib.fd : | $(kernel-security_FDDIR)
+
+
+ifneq (kernel-security-fd-setup,)
+kernel-security-fd-setup : | $(kernel-security_FDDIR)
+else
+kernel-security-fd-setup :: $(kernel-security_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-security_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-security_FILES            := security_init $(PUBLICFUNCS) $(CRTPUBLICFUNCS) $(PRIVATEFUNCS) $(SECURITYFILES)
+kernel-security_OBJCFILES        := 
+kernel-security_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-security_LIBFILES         := 
+kernel-security_LIBS             := 
+
+kernel-security_FDIRS            := $(sort $(dir $(kernel-security_FILES)))
+
+kernel-security_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-security_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-security_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-security_FILTERARCH       = $(filter-out $(call kernel-security_MATCHARCH,$(1),$(2)),$(2))
+kernel-security_STARTFILES       := $(addprefix $(kernel-security_OBJDIR)/,$($(kernel-security_DEFNAME)_STARTFILES))
+kernel-security_ENDFILES         := $(addprefix $(kernel-security_OBJDIR)/,$($(kernel-security_DEFNAME)_ENDFILES))
+
+kernel-security_ARCHOBJS         := $(wildcard $(kernel-security_OBJDIR)/arch/*.o)
+kernel-security_LIBARCHOBJS      := $(wildcard $(kernel-security_OBJDIR)/linklib/arch/*.o)
+kernel-security_ARCHFILES        := $(basename $(notdir $(kernel-security_ARCHOBJS)))
+kernel-security_LIBARCHFILES     := $(basename $(notdir $(kernel-security_LIBARCHOBJS)))
+kernel-security_C_NARCHFILES     := $(call kernel-security_FILTERARCH,$(kernel-security_ARCHFILES),$(kernel-security_FILES))
+kernel-security_CXX_NARCHFILES   := $(call kernel-security_FILTERARCH,$(kernel-security_ARCHFILES),$(kernel-security_CXXFILES))
+kernel-security_OBJC_NARCHFILES  := $(call kernel-security_FILTERARCH,$(kernel-security_ARCHFILES),$(kernel-security_OBJCFILES))
+kernel-security_NLIBARCHFILES    := $(call kernel-security_FILTERARCH,$(kernel-security_LIBARCHFILES),$(kernel-security_LIBFILES))
+kernel-security_ARCHNLIBFILES    := $(call kernel-security_FILTERARCH,$(kernel-security_LIBFILES),$(kernel-security_LIBARCHFILES))
+
+kernel-security_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-security_OBJDIR)/include -include $(kernel-security_DEFLIBDEFSINC))
+ifneq (,)
+kernel-security_CPPFLAGS         += -I
+endif
+kernel-security_LINKLIBCPPFLAGS  := $(kernel-security_CPPFLAGS)
+kernel-security_CPPFLAGS         += $(strip $($(kernel-security_DEFNAME)_CPPFLAGS))
+kernel-security_LINKLIBCPPFLAGS  += $(strip $($(kernel-security_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-security_CFLAGS           := $(strip $(CFLAGS) $($(kernel-security_DEFNAME)_CFLAGS))
+kernel-security_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-security_DEFNAME)_LINKLIBCFLAGS))
+kernel-security_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-security_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-security_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-security_CFLAGS           := $(strip $(kernel-security_LTOFLAGS) $(kernel-security_CFLAGS))
+kernel-security_LINKLIBCFLAGS    := $(strip $(kernel-security_LTOFLAGS) $(kernel-security_LINKLIBCFLAGS))
+kernel-security_CXXFLAGS         := $(strip $(kernel-security_LTOFLAGS) $(kernel-security_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-security_SUBSTNULL        :=
+kernel-security_SUBSTSPACE       := $(kernel-security_SUBSTNULL) #
+kernel-security_SUBSTCOMMA       := ,
+kernel-security_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-security_SUBSTSPACE),$(kernel-security_SUBSTCOMMA),$(strip $($(kernel-security_DEFNAME)_STARTFILES))))
+kernel-security_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-security_CFLAGS           := $(strip $(kernel-security_INSTRFUNCFLAGS) $(kernel-security_CFLAGS))
+kernel-security_CXXFLAGS         := $(strip $(kernel-security_INSTRFUNCFLAGS) $(kernel-security_CXXFLAGS))
+kernel-security_LIBS             += $(kernel-security_INSTRFUNCLIBS)
+endif
+endif
+kernel-security_DFLAGS           := $(strip $(kernel-security_DFLAGS) $($(kernel-security_DEFNAME)_DFLAGS))
+kernel-security_LINKLIBDFLAGS    := $(strip $(kernel-security_DFLAGS) $($(kernel-security_DEFNAME)_LINKLIBDFLAGS))
+kernel-security_DXXFLAGS         := $(strip $(kernel-security_DXXFLAGS) $($(kernel-security_DEFNAME)_DXXFLAGS))
+
+ifeq (library,library)
+    kernel-security_LIBSUFFIX    := 
+else
+    kernel-security_LIBSUFFIX    := .library
+endif
+
+ifeq (,)
+kernel-security_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-security_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-security_LINKLIBCFILES    := $(addprefix $(kernel-security_OBJDIR)/linklib/,$($(kernel-security_DEFNAME)_LINKLIBFILES))
+kernel-security_LINKLIBAFILES    := $(addprefix $(kernel-security_OBJDIR)/linklib/,$($(kernel-security_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-security_DEFNAME)_LINKLIBFILES) $($(kernel-security_DEFNAME)_LINKLIBAFILES)  $(kernel-security_ARCHNLIBFILES)),)
+    kernel-security_LINKLIB      :=
+else
+    kernel-security_LINKLIB      := $(kernel-security_LIBDIR)/libsecurity$(kernel-security_LIBSUFFIX).a
+    ifneq (security,$(kernel-security_LINKLIBNAME))
+        kernel-security_LINKLIB  += $(kernel-security_LIBDIR)/lib$(kernel-security_LINKLIBNAME)$(kernel-security_LIBSUFFIX).a
+    endif
+endif
+kernel-security_LINKLIBFILES     := $(kernel-security_LINKLIBCFILES) $(kernel-security_LINKLIBAFILES)
+
+kernel-security_RELLINKLIBCFILES := $(addprefix $(kernel-security_OBJDIR)/linklib/,$($(kernel-security_DEFNAME)_RELLINKLIBFILES))
+kernel-security_RELLINKLIBAFILES := $(addprefix $(kernel-security_OBJDIR)/linklib/,$($(kernel-security_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-security_DEFNAME)_RELLINKLIBFILES) $($(kernel-security_DEFNAME)_RELLINKLIBAFILES)  $(kernel-security_ARCHNLIBFILES)),)
+    kernel-security_RELLINKLIB   :=
+else
+    kernel-security_RELLINKLIB   := $(kernel-security_LIBDIR)/lib$(kernel-security_DEFNAME)_rel$(kernel-security_LIBSUFFIX).a
+    ifneq (security,$(kernel-security_LINKLIBNAME))
+        kernel-security_RELLINKLIB += $(kernel-security_LIBDIR)/lib$(kernel-security_LINKLIBNAME)_rel$(kernel-security_LIBSUFFIX).a
+    endif
+endif
+kernel-security_RELLINKLIBFILES  := $(kernel-security_RELLINKLIBCFILES) $(kernel-security_RELLINKLIBAFILES)
+endif
+
+kernel-security_ENDOBJS          := $(addsuffix .o,$(kernel-security_ENDFILES))
+kernel-security_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-security_OBJDIR)/linklib/,$(notdir $(kernel-security_NLIBARCHFILES))) $(addprefix $(kernel-security_OBJDIR)/linklib/arch/,$(notdir $(kernel-security_ARCHNLIBFILES))) $(kernel-security_LINKLIBFILES)) \
+                 
+kernel-security_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-security_OBJDIR)/linklib/,$(notdir $(kernel-security_NLIBARCHFILES))) $(addprefix $(kernel-security_OBJDIR)/linklib/arch/,$(notdir $(kernel-security_ARCHNLIBFILES))) $(kernel-security_RELLINKLIBFILES)) \
+                 
+$(kernel-security_LINKLIBFILES) $(kernel-security_RELLINKLIBFILES) : | $(kernel-security_OBJDIR)/linklib
+$(kernel-security_LINKLIBOBJS) $(kernel-security_RELLINKLIBOBJS) : | $(kernel-security_OBJDIR)/linklib
+
+kernel-security_CCFILES := $(kernel-security_C_NARCHFILES)
+kernel-security_TARGETCCFILES    := $(strip $(kernel-security_STARTFILES) $(kernel-security_ENDFILES))
+kernel-security_LINKLIBCCFILES   := $(strip $(kernel-security_NLIBARCHFILES) $(kernel-security_LINKLIBCFILES) $(kernel-security_RELLINKLIBCFILES))
+kernel-security_LINKLIBCCGENFILES := $(strip $(kernel-security_LINKLIBCFILES) $(kernel-security_RELLINKLIBCFILES))
+
+
+kernel-security_CXXABSBASENAMES := $(foreach kernel-security_CXXBASE,$(kernel-security_CXX_NARCHFILES),$(if $(filter /%,$(kernel-security_CXXBASE)),$(kernel-security_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-security_CXXBASE))))
+
+ifneq ($(kernel-security_CXXABSBASENAMES),)
+
+kernel-security_CXXBASENAMES := $(basename $(kernel-security_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-security_MCXX_FILES  := $(strip $(foreach kernel-security_CXXBASE,$(kernel-security_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-security_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-security_EXT),$(kernel-security_CXXBASE)))))))
+
+ifeq (,)
+kernel-security_MCXX_SRCWILDCARD := %
+else
+kernel-security_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-security_OBJDIR),)
+  kernel-security_CXXTARGETS := $(notdir $(kernel-security_CXXBASENAMES:=.o))
+  kernel-security_CXXDTARGETS := $(notdir $(kernel-security_CXXBASENAMES:=.d))
+  kernel-security_MCXX_WILDCARD := %
+else
+  kernel-security_CXXTARGETS := $(addprefix $(kernel-security_OBJDIR)/,$(notdir $(kernel-security_CXXBASENAMES:=.o)))
+  kernel-security_CXXDTARGETS := $(addprefix $(kernel-security_OBJDIR)/,$(notdir $(kernel-security_CXXBASENAMES:=.d)))
+  kernel-security_MCXX_WILDCARD := $(kernel-security_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-security_CXXTARGETS) $(kernel-security_CXXDTARGETS) : | $(kernel-security_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-security_MCXX_CPPFLAGS := $(kernel-security_CPPFLAGS)
+kernel-security_CXXFLAGS := $(kernel-security_CXXFLAGS)
+ifeq ($(kernel-security_DXXFLAGS),)
+  kernel-security_DXXFLAGS := $(kernel-security_CXXFLAGS)
+else
+  kernel-security_DXXFLAGS := $(kernel-security_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-security_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-security_STRIP ?= $(HOST_STRIP)
+  kernel-security_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-security_CXXCMD:=$(HOST_CXX)
+  kernel-security_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-security_MCXX_CPPFLAGS) $(kernel-security_MCXX_EXTRA_CPPFLAGS))
+  kernel-security_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-security_CXXFLAGS))
+  kernel-security_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-security_DXXFLAGS))
+  kernel-security_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-security_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-security_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-security_STRIP ?= $(TARGET_STRIP)
+  kernel-security_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-security_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-security_MCXX_CPPFLAGS := $(strip $(kernel-security_MCXX_CPPFLAGS) $(kernel-security_MCXX_EXTRA_CPPFLAGS))
+  kernel-security_CXXFLAGS := $(strip $(kernel-security_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-security_DXXFLAGS := $(kernel-security_DXXFLAGS)
+  kernel-security_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-security_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-security_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-security_STRIP ?= $(ECHO) >/dev/null
+  kernel-security_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-security_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-security_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-security_MCXX_CPPFLAGS) $(kernel-security_MCXX_EXTRA_CPPFLAGS))
+  kernel-security_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-security_CXXFLAGS))
+  kernel-security_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-security_DXXFLAGS))
+  kernel-security_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-security_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-security_CXXCMD) $(kernel-security_CXXIQUOTE) $(dir $(2)) $(kernel-security_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_CXXIQUOTE) . $(kernel-security_CXXIQUOTE_END) $(strip $(kernel-security_CXXFLAGS) $(kernel-security_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-security_CXXCMD) $(kernel-security_CXXIQUOTE) $(dir $(2)) $(kernel-security_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_CXXIQUOTE) . $(kernel-security_CXXIQUOTE_END) $(strip $(kernel-security_CXXFLAGS) $(kernel-security_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-security_CXXCMD) $(kernel-security_CXXIQUOTE) $(dir $(2)) $(kernel-security_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_CXXIQUOTE) . $(kernel-security_CXXIQUOTE_END) $(strip $(kernel-security_CXXFLAGS) $(kernel-security_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-security_CXXCMD)" $(MKDEPEND) $(strip $(kernel-security_DXXFLAGS) $(kernel-security_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-security_OBJDIR),)
+  $(foreach kernel-security_CXXFILE,$(kernel-security_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-security_CXXFILE))),$(kernel-security_CXXFILE))))
+else
+  $(foreach kernel-security_CXXFILE,$(kernel-security_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-security_OBJDIR)/,$(notdir $(basename $(kernel-security_CXXFILE)))),$(kernel-security_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-security_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-security_MOBJC_SRCWILDCARD := %
+else
+kernel-security_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-security_OBJDIR),)
+  kernel-security_MOBJC_TARGETS := $(addsuffix .o,$(kernel-security_OBJC_NARCHFILES))
+  kernel-security_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-security_OBJC_NARCHFILES))
+  kernel-security_MOBJC_WILDCARD := %
+else
+  kernel-security_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-security_OBJDIR)/,$(kernel-security_OBJC_NARCHFILES)))
+  kernel-security_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-security_OBJDIR)/,$(kernel-security_OBJC_NARCHFILES)))
+  kernel-security_MOBJC_WILDCARD := $(kernel-security_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-security_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-security_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-security_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-security_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-security_MOBJC_DIRS := $(foreach dir, $(kernel-security_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-security_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-security_MOBJC_DIRS),)
+    kernel-security_MOBJC_DIRS := $(shell echo $(kernel-security_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-security_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-security_CC := $(TARGET_CC)
+else
+  kernel-security_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-security_MOBJC_CPPFLAGS := $(kernel-security_CPPFLAGS)
+kernel-security_OBJCFLAGS := $(kernel-security_CFLAGS)
+kernel-security_OBJCFLAGS := $(kernel-security_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-security_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-security_OBJCFLAGS)))
+ifeq ($(kernel-security_DFLAGS),)
+  kernel-security_OBJCDFLAGS := $(kernel-security_CFLAGS)
+else
+  kernel-security_OBJCDFLAGS := $(kernel-security_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-security_LINK ?= $(strip $(kernel-security_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-security_STRIP ?= $(TARGET_STRIP)
+  kernel-security_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-security_CC) $(TARGET_SYSROOT))
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : kernel-security_MOBJC_CPPFLAGS:=$(strip $(kernel-security_MOBJC_CPPFLAGS) $(kernel-security_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : kernel-security_OBJCFLAGS:=$(strip $(kernel-security_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : kernel-security_OBJCDFLAGS:=$(kernel-security_OBJCDFLAGS)
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : kernel-security_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : kernel-security_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-security_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-security_STRIP ?= $(HOST_STRIP)
+  kernel-security_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : kernel-security_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-security_MOBJC_CPPFLAGS) $(kernel-security_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : kernel-security_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-security_OBJCFLAGS))
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : kernel-security_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-security_OBJCDFLAGS))
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : kernel-security_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : kernel-security_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-security_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-security_STRIP ?= $(ECHO) >/dev/null
+  kernel-security_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : kernel-security_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-security_MOBJC_CPPFLAGS) $(kernel-security_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : kernel-security_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-security_OBJCFLAGS))
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : kernel-security_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-security_OBJCDFLAGS))
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : kernel-security_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-security_MOBJC_TARGETS) $(kernel-security_MOBJC_DTARGETS) : kernel-security_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-security_MOBJC_TARGETS) : CPPFLAGS := $(kernel-security_MOBJC_CPPFLAGS)
+$(kernel-security_MOBJC_TARGETS) : CFLAGS := $(kernel-security_OBJCFLAGS)
+$(kernel-security_MOBJC_TARGETS) : $(kernel-security_MOBJC_WILDCARD).o : $(kernel-security_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-security_IQUOTE) $(dir $<) $(kernel-security_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_IQUOTE) . $(kernel-security_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-security_IQUOTE) $(dir $<) $(kernel-security_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_IQUOTE) . $(kernel-security_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-security_IQUOTE) $(dir $<) $(kernel-security_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_IQUOTE) . $(kernel-security_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-security_MOBJC_DTARGETS) : $(kernel-security_MOBJC_WILDCARD).d : $(kernel-security_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-security_OBJCDFLAGS) $(kernel-security_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-security_MC_SRCWILDCARD := %
+else
+kernel-security_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-security_OBJDIR),)
+kernel-security_MC_TARGETS := $(addsuffix .o,$(kernel-security_CCFILES))
+kernel-security_MC_DTARGETS := $(addsuffix .d,$(kernel-security_CCFILES))
+kernel-security_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-security_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-security_OBJDIR)/,$(notdir $(kernel-security_CCFILES))))
+    kernel-security_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-security_OBJDIR)/,$(notdir $(kernel-security_CCFILES))))
+else
+ifeq (,)
+    kernel-security_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-security_OBJDIR)/,$(kernel-security_CCFILES)))
+    kernel-security_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-security_OBJDIR)/,$(kernel-security_CCFILES)))
+else
+    kernel-security_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-security_OBJDIR)/,$(patsubst /%,%,$(kernel-security_CCFILES))))
+    kernel-security_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-security_OBJDIR)/,$(patsubst /%,%,$(kernel-security_CCFILES))))
+endif
+endif
+kernel-security_MC_TGTWILDCARD := $(kernel-security_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : | $(addsuffix .c,$(kernel-security_CCFILES))
+
+# Be sure that all .c files are found
+kernel-security_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-security_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-security_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-security_MC_DIRS := $(foreach dir, $(kernel-security_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-security_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-security_MC_DIRS),)
+    kernel-security_MC_DIRS := $(shell echo $(kernel-security_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-security_MC_DIRS)
+endif
+
+endif
+
+kernel-security_MC_CPPFLAGS := $(kernel-security_CPPFLAGS)
+kernel-security_CFLAGS := $(kernel-security_CFLAGS)
+ifeq ($(kernel-security_DFLAGS),)
+  kernel-security_DFLAGS := $(kernel-security_CFLAGS)
+else
+  kernel-security_DFLAGS := $(kernel-security_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-security_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-security_STRIP ?= $(TARGET_STRIP)
+kernel-security_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_MC_CPPFLAGS:=$(strip $(kernel-security_MC_CPPFLAGS) $(kernel-security_MC_EXTRA_CPPFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_CFLAGS:=$(strip $(kernel-security_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_DFLAGS:=$(kernel-security_DFLAGS)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-security_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-security_STRIP ?= $(HOST_STRIP)
+kernel-security_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-security_MC_CPPFLAGS) $(kernel-security_MC_EXTRA_CPPFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-security_CFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-security_DFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-security_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-security_STRIP ?= $(ECHO) >/dev/null
+kernel-security_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-security_MC_CPPFLAGS) $(kernel-security_MC_EXTRA_CPPFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-security_CFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-security_DFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-security_MC_TARGETS) : CPPFLAGS := $(kernel-security_MC_CPPFLAGS)
+$(kernel-security_MC_TARGETS) : CFLAGS := $(kernel-security_CFLAGS)
+$(kernel-security_MC_TARGETS) : $(kernel-security_MC_TGTWILDCARD).o : $(kernel-security_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-security_IQUOTE) $(dir $<) $(kernel-security_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_IQUOTE) . $(kernel-security_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-security_IQUOTE) $(dir $<) $(kernel-security_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_IQUOTE) . $(kernel-security_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-security_IQUOTE) $(dir $<) $(kernel-security_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_IQUOTE) . $(kernel-security_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-security_MC_DTARGETS) : $(kernel-security_MC_TGTWILDCARD).d : $(kernel-security_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-security_DFLAGS) $(kernel-security_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-security_MC_SRCWILDCARD := %
+else
+kernel-security_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-security_OBJDIR),)
+kernel-security_MC_TARGETS := $(addsuffix .o,$(kernel-security_TARGETCCFILES))
+kernel-security_MC_DTARGETS := $(addsuffix .d,$(kernel-security_TARGETCCFILES))
+kernel-security_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-security_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-security_OBJDIR)/,$(notdir $(kernel-security_TARGETCCFILES))))
+    kernel-security_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-security_OBJDIR)/,$(notdir $(kernel-security_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-security_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-security_OBJDIR)/,$(kernel-security_TARGETCCFILES)))
+    kernel-security_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-security_OBJDIR)/,$(kernel-security_TARGETCCFILES)))
+else
+    kernel-security_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-security_OBJDIR)/,$(patsubst /%,%,$(kernel-security_TARGETCCFILES))))
+    kernel-security_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-security_OBJDIR)/,$(patsubst /%,%,$(kernel-security_TARGETCCFILES))))
+endif
+endif
+kernel-security_MC_TGTWILDCARD := $(kernel-security_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : | $(addsuffix .c,$(kernel-security_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-security_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-security_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-security_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-security_MC_DIRS := $(foreach dir, $(kernel-security_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-security_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-security_MC_DIRS),)
+    kernel-security_MC_DIRS := $(shell echo $(kernel-security_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-security_MC_DIRS)
+endif
+
+endif
+
+kernel-security_MC_CPPFLAGS := $(kernel-security_CPPFLAGS) -D__AROS__
+kernel-security_CFLAGS := $(kernel-security_CFLAGS)
+ifeq ($(kernel-security_DFLAGS),)
+  kernel-security_DFLAGS := $(kernel-security_CFLAGS)
+else
+  kernel-security_DFLAGS := $(kernel-security_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-security_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-security_STRIP ?= $(TARGET_STRIP)
+kernel-security_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_MC_CPPFLAGS:=$(strip $(kernel-security_MC_CPPFLAGS) $(kernel-security_MC_EXTRA_CPPFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_CFLAGS:=$(strip $(kernel-security_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_DFLAGS:=$(kernel-security_DFLAGS)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-security_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-security_STRIP ?= $(HOST_STRIP)
+kernel-security_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-security_MC_CPPFLAGS) $(kernel-security_MC_EXTRA_CPPFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-security_CFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-security_DFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-security_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-security_STRIP ?= $(ECHO) >/dev/null
+kernel-security_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-security_MC_CPPFLAGS) $(kernel-security_MC_EXTRA_CPPFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-security_CFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-security_DFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-security_MC_TARGETS) : CPPFLAGS := $(kernel-security_MC_CPPFLAGS)
+$(kernel-security_MC_TARGETS) : CFLAGS := $(kernel-security_CFLAGS)
+$(kernel-security_MC_TARGETS) : $(kernel-security_MC_TGTWILDCARD).o : $(kernel-security_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-security_IQUOTE) $(dir $<) $(kernel-security_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_IQUOTE) . $(kernel-security_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-security_IQUOTE) $(dir $<) $(kernel-security_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_IQUOTE) . $(kernel-security_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-security_IQUOTE) $(dir $<) $(kernel-security_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_IQUOTE) . $(kernel-security_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-security_MC_DTARGETS) : $(kernel-security_MC_TGTWILDCARD).d : $(kernel-security_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-security_DFLAGS) $(kernel-security_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-security_MC_SRCWILDCARD := %
+else
+kernel-security_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-security_OBJDIR)/linklib,)
+kernel-security_MC_TARGETS := $(addsuffix .o,$(kernel-security_NLIBARCHFILES))
+kernel-security_MC_DTARGETS := $(addsuffix .d,$(kernel-security_NLIBARCHFILES))
+kernel-security_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-security_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-security_OBJDIR)/linklib/,$(notdir $(kernel-security_NLIBARCHFILES))))
+    kernel-security_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-security_OBJDIR)/linklib/,$(notdir $(kernel-security_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-security_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-security_OBJDIR)/linklib/,$(kernel-security_NLIBARCHFILES)))
+    kernel-security_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-security_OBJDIR)/linklib/,$(kernel-security_NLIBARCHFILES)))
+else
+    kernel-security_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-security_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-security_NLIBARCHFILES))))
+    kernel-security_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-security_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-security_NLIBARCHFILES))))
+endif
+endif
+kernel-security_MC_TGTWILDCARD := $(kernel-security_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : | $(addsuffix .c,$(kernel-security_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-security_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-security_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-security_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-security_MC_DIRS := $(foreach dir, $(kernel-security_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-security_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-security_MC_DIRS),)
+    kernel-security_MC_DIRS := $(shell echo $(kernel-security_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-security_MC_DIRS)
+endif
+
+endif
+
+kernel-security_MC_CPPFLAGS := $(kernel-security_LINKLIBCPPFLAGS) -D__AROS__
+kernel-security_CFLAGS := $(kernel-security_LINKLIBCFLAGS)
+ifeq ($(kernel-security_LINKLIBDFLAGS),)
+  kernel-security_DFLAGS := $(kernel-security_LINKLIBCFLAGS)
+else
+  kernel-security_DFLAGS := $(kernel-security_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-security_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-security_STRIP ?= $(TARGET_STRIP)
+kernel-security_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_MC_CPPFLAGS:=$(strip $(kernel-security_MC_CPPFLAGS) $(kernel-security_MC_EXTRA_CPPFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_CFLAGS:=$(strip $(kernel-security_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_DFLAGS:=$(kernel-security_DFLAGS)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-security_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-security_STRIP ?= $(HOST_STRIP)
+kernel-security_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-security_MC_CPPFLAGS) $(kernel-security_MC_EXTRA_CPPFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-security_CFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-security_DFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-security_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-security_STRIP ?= $(ECHO) >/dev/null
+kernel-security_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-security_MC_CPPFLAGS) $(kernel-security_MC_EXTRA_CPPFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-security_CFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-security_DFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-security_MC_TARGETS) : CPPFLAGS := $(kernel-security_MC_CPPFLAGS)
+$(kernel-security_MC_TARGETS) : CFLAGS := $(kernel-security_CFLAGS)
+$(kernel-security_MC_TARGETS) : $(kernel-security_MC_TGTWILDCARD).o : $(kernel-security_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-security_IQUOTE) $(dir $<) $(kernel-security_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_IQUOTE) . $(kernel-security_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-security_IQUOTE) $(dir $<) $(kernel-security_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_IQUOTE) . $(kernel-security_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-security_IQUOTE) $(dir $<) $(kernel-security_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_IQUOTE) . $(kernel-security_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-security_MC_DTARGETS) : $(kernel-security_MC_TGTWILDCARD).d : $(kernel-security_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-security_DFLAGS) $(kernel-security_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-security_OBJDIR)/linklib,)
+kernel-security_MC_SRCWILDCARD := %
+else
+kernel-security_MC_SRCWILDCARD := $(kernel-security_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-security_OBJDIR)/linklib,)
+kernel-security_MC_TARGETS := $(addsuffix .o,$(kernel-security_LINKLIBCCGENFILES))
+kernel-security_MC_DTARGETS := $(addsuffix .d,$(kernel-security_LINKLIBCCGENFILES))
+kernel-security_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-security_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-security_OBJDIR)/linklib/,$(notdir $(kernel-security_LINKLIBCCGENFILES))))
+    kernel-security_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-security_OBJDIR)/linklib/,$(notdir $(kernel-security_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-security_OBJDIR)/linklib,)
+    kernel-security_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-security_OBJDIR)/linklib/,$(kernel-security_LINKLIBCCGENFILES)))
+    kernel-security_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-security_OBJDIR)/linklib/,$(kernel-security_LINKLIBCCGENFILES)))
+else
+    kernel-security_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-security_OBJDIR)/linklib/,$(patsubst $(kernel-security_OBJDIR)/linklib/%,%,$(kernel-security_LINKLIBCCGENFILES))))
+    kernel-security_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-security_OBJDIR)/linklib/,$(patsubst $(kernel-security_OBJDIR)/linklib/%,%,$(kernel-security_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-security_MC_TGTWILDCARD := $(kernel-security_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : | $(addsuffix .c,$(kernel-security_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-security_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-security_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-security_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-security_MC_DIRS := $(foreach dir, $(kernel-security_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-security_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-security_MC_DIRS),)
+    kernel-security_MC_DIRS := $(shell echo $(kernel-security_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-security_MC_DIRS)
+endif
+
+endif
+
+kernel-security_MC_CPPFLAGS := $(kernel-security_LINKLIBCPPFLAGS) -D__AROS__
+kernel-security_CFLAGS := $(kernel-security_LINKLIBCFLAGS)
+ifeq ($(kernel-security_LINKLIBDFLAGS),)
+  kernel-security_DFLAGS := $(kernel-security_LINKLIBCFLAGS)
+else
+  kernel-security_DFLAGS := $(kernel-security_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-security_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-security_STRIP ?= $(TARGET_STRIP)
+kernel-security_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_MC_CPPFLAGS:=$(strip $(kernel-security_MC_CPPFLAGS) $(kernel-security_MC_EXTRA_CPPFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_CFLAGS:=$(strip $(kernel-security_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_DFLAGS:=$(kernel-security_DFLAGS)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-security_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-security_STRIP ?= $(HOST_STRIP)
+kernel-security_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-security_MC_CPPFLAGS) $(kernel-security_MC_EXTRA_CPPFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-security_CFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-security_DFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-security_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-security_STRIP ?= $(ECHO) >/dev/null
+kernel-security_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-security_MC_CPPFLAGS) $(kernel-security_MC_EXTRA_CPPFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-security_CFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-security_DFLAGS))
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-security_MC_TARGETS) $(kernel-security_MC_DTARGETS) : kernel-security_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-security_MC_TARGETS) : CPPFLAGS := $(kernel-security_MC_CPPFLAGS)
+$(kernel-security_MC_TARGETS) : CFLAGS := $(kernel-security_CFLAGS)
+$(kernel-security_MC_TARGETS) : $(kernel-security_MC_TGTWILDCARD).o : $(kernel-security_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-security_IQUOTE) $(dir $<) $(kernel-security_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_IQUOTE) . $(kernel-security_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-security_IQUOTE) $(dir $<) $(kernel-security_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_IQUOTE) . $(kernel-security_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-security_IQUOTE) $(dir $<) $(kernel-security_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-security_IQUOTE) . $(kernel-security_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-security_MC_DTARGETS) : $(kernel-security_MC_TGTWILDCARD).d : $(kernel-security_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-security_DFLAGS) $(kernel-security_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-security_LINKLIBAFILES),)
+
+ifeq ($(kernel-security_OBJDIR)/linklib,)
+kernel-security-MA_TARGETS := $(addsuffix .o,$(kernel-security_LINKLIBAFILES) $(kernel-security_RELLINKLIBAFILES))
+kernel-security-MA_WILDCARD := %
+else
+kernel-security-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-security_OBJDIR)/linklib/,$(notdir $(kernel-security_LINKLIBAFILES) $(kernel-security_RELLINKLIBAFILES))))
+kernel-security-MA_WILDCARD := $(kernel-security_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-security-MA_TARGETS) : | $(addsuffix .S,$(kernel-security_LINKLIBAFILES) $(kernel-security_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-security-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-security-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-security_LINKLIBAFILES) $(kernel-security_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-security-MA_DIRS := $(foreach dir, $(kernel-security-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-security-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-security-MA_DIRS),)
+    kernel-security-MA_DIRS := $(shell echo $(kernel-security-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-security-MA_DIRS)
+endif
+
+endif
+
+kernel-security-MA_ASSEMBLER ?= $(kernel-security_ASSEMBLER)
+
+$(kernel-security-MA_TARGETS) : kernel-security-MA_CMD:= $(kernel-security-MA_ASSEMBLER)
+
+$(kernel-security-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-security-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-security-MA_TARGETS) : $(kernel-security-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-security-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-security-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-security-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-security_SUFFIX           := library
+else
+kernel-security_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-security_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-security_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-security_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-security_SUFFIX),handler)
+kernel-security_MODULE           := $(AROSDIR)/$(kernel-security_MODDIR)/$(kernel-security_DEFNAME)-$(kernel-security_SUFFIX)
+else
+kernel-security_MODULE           := $(AROSDIR)/$(kernel-security_MODDIR)/$(kernel-security_DEFNAME).$(kernel-security_SUFFIX)
+endif
+kernel-security_KOBJ             := $(KOBJSDIR)/$(kernel-security_DEFNAME)_$(kernel-security_SUFFIX).o
+else
+kernel-security_MODULE           :=
+kernel-security_KOBJ             :=
+endif
+
+kernel-security-quick      : kernel-security
+kernel-security            : $(kernel-security_MODULE) $(kernel-security_LINKLIB) $(kernel-security_RELLINKLIB)
+ifeq (M,M)
+kernel-security-kobj       : $(kernel-security_KOBJ) $(kernel-security_LINKLIB) $(kernel-security_RELLINKLIB)
+kernel-security-kobj-quick : $(kernel-security_KOBJ) $(kernel-security_LINKLIB) $(kernel-security_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-security-linklib    : $(kernel-security_LINKLIB) $(kernel-security_RELLINKLIB)
+endif
+
+kernel-security_OBJS := $(addsuffix .o,$(kernel-security_STARTFILES)) $(kernel-security_ARCHOBJS) \
+           $(addprefix $(kernel-security_OBJDIR)/,$(notdir $(kernel-security_C_NARCHFILES:=.o) $(kernel-security_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (library,handler)
+kernel-security_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (security,con)
+    kernel-security_ERR          := $(notdir $(kernel-security_MODULE)).err
+else
+    kernel-security_ERR          := security.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-security_DEFNAME)_LDFLAGS) $(kernel-security_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-security_LIBS) $($(kernel-security_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-security_MODULE) : LIB_NAMES := $(kernel-security_LIBS) $($(kernel-security_DEFNAME)_LIBS)
+$(kernel-security_MODULE) : OBJS := $(kernel-security_STARTOBJS) $(kernel-security_OBJS) $(USER_OBJS)
+$(kernel-security_MODULE) : ENDTAG := $(kernel-security_ENDOBJS)
+$(kernel-security_MODULE) : ERR := $(kernel-security_ERR)
+$(kernel-security_MODULE) : OBJDIR := $(kernel-security_OBJDIR)
+$(kernel-security_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-security_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-security_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-security_MODULE) : $(kernel-security_STARTOBJS) $(kernel-security_OBJS) $(USER_OBJS) $(kernel-security_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-security_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-security_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-security_LC_LINKLIBNAME   := $(shell echo $(kernel-security_LINKLIBNAME) | tr A-Z a-z)
+kernel-security_LC_MODNAME       := $(shell echo security | tr A-Z a-z)
+ifneq ($(kernel-security_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-security_LIBDIR)/lib$(kernel-security_LINKLIBNAME)$(kernel-security_LIBSUFFIX).a : kernel-security_AR:=$(AR)
+$(kernel-security_LIBDIR)/lib$(kernel-security_LINKLIBNAME)$(kernel-security_LIBSUFFIX).a : kernel-security_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-security_LIBDIR)/lib$(kernel-security_LINKLIBNAME)$(kernel-security_LIBSUFFIX).a : kernel-security_AR:=$(HOST_AR)
+$(kernel-security_LIBDIR)/lib$(kernel-security_LINKLIBNAME)$(kernel-security_LIBSUFFIX).a : kernel-security_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-security_LIBDIR)/lib$(kernel-security_LINKLIBNAME)$(kernel-security_LIBSUFFIX).a : kernel-security_AR:=$(KERNEL_AR)
+$(kernel-security_LIBDIR)/lib$(kernel-security_LINKLIBNAME)$(kernel-security_LIBSUFFIX).a : kernel-security_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-security_LIBDIR)/lib$(kernel-security_LINKLIBNAME)$(kernel-security_LIBSUFFIX).a : $(kernel-security_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-security_AR) $@ $^
+	$(Q)$(kernel-security_RANLIB) $@
+ifneq ($(kernel-security_LC_MODNAME),$(kernel-security_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-security_LIBDIR)/libsecurity$(kernel-security_LIBSUFFIX).a : kernel-security_AR:=$(AR)
+$(kernel-security_LIBDIR)/libsecurity$(kernel-security_LIBSUFFIX).a : kernel-security_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-security_LIBDIR)/libsecurity$(kernel-security_LIBSUFFIX).a : kernel-security_AR:=$(HOST_AR)
+$(kernel-security_LIBDIR)/libsecurity$(kernel-security_LIBSUFFIX).a : kernel-security_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-security_LIBDIR)/libsecurity$(kernel-security_LIBSUFFIX).a : kernel-security_AR:=$(KERNEL_AR)
+$(kernel-security_LIBDIR)/libsecurity$(kernel-security_LIBSUFFIX).a : kernel-security_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-security_LIBDIR)/libsecurity$(kernel-security_LIBSUFFIX).a : $(kernel-security_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-security_AR) $@ $^
+	$(Q)$(kernel-security_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-security_LINKLIB),)
+$(kernel-security_LINKLIB) : | $(kernel-security_LIBDIR)
+else
+$(kernel-security_LINKLIB) :: $(kernel-security_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-security_LIBDIR)
+
+endif
+
+ifneq ($(kernel-security_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-security_LIBDIR)/lib$(kernel-security_LINKLIBNAME)_rel$(kernel-security_LIBSUFFIX).a : kernel-security_AR:=$(AR)
+$(kernel-security_LIBDIR)/lib$(kernel-security_LINKLIBNAME)_rel$(kernel-security_LIBSUFFIX).a : kernel-security_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-security_LIBDIR)/lib$(kernel-security_LINKLIBNAME)_rel$(kernel-security_LIBSUFFIX).a : kernel-security_AR:=$(HOST_AR)
+$(kernel-security_LIBDIR)/lib$(kernel-security_LINKLIBNAME)_rel$(kernel-security_LIBSUFFIX).a : kernel-security_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-security_LIBDIR)/lib$(kernel-security_LINKLIBNAME)_rel$(kernel-security_LIBSUFFIX).a : kernel-security_AR:=$(KERNEL_AR)
+$(kernel-security_LIBDIR)/lib$(kernel-security_LINKLIBNAME)_rel$(kernel-security_LIBSUFFIX).a : kernel-security_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-security_LIBDIR)/lib$(kernel-security_LINKLIBNAME)_rel$(kernel-security_LIBSUFFIX).a : $(kernel-security_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-security_AR) $@ $^
+	$(Q)$(kernel-security_RANLIB) $@
+ifneq ($(kernel-security_LC_MODNAME),$(kernel-security_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-security_LIBDIR)/lib$(kernel-security_DEFNAME)_rel$(kernel-security_LIBSUFFIX).a : kernel-security_AR:=$(AR)
+$(kernel-security_LIBDIR)/lib$(kernel-security_DEFNAME)_rel$(kernel-security_LIBSUFFIX).a : kernel-security_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-security_LIBDIR)/lib$(kernel-security_DEFNAME)_rel$(kernel-security_LIBSUFFIX).a : kernel-security_AR:=$(HOST_AR)
+$(kernel-security_LIBDIR)/lib$(kernel-security_DEFNAME)_rel$(kernel-security_LIBSUFFIX).a : kernel-security_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-security_LIBDIR)/lib$(kernel-security_DEFNAME)_rel$(kernel-security_LIBSUFFIX).a : kernel-security_AR:=$(KERNEL_AR)
+$(kernel-security_LIBDIR)/lib$(kernel-security_DEFNAME)_rel$(kernel-security_LIBSUFFIX).a : kernel-security_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-security_LIBDIR)/lib$(kernel-security_DEFNAME)_rel$(kernel-security_LIBSUFFIX).a : $(kernel-security_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-security_AR) $@ $^
+	$(Q)$(kernel-security_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-security_RELLINKLIB),)
+$(kernel-security_RELLINKLIB) : | $(kernel-security_LIBDIR)
+else
+$(kernel-security_RELLINKLIB) :: $(kernel-security_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-security_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-security_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-security_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-security_SYMBOLS := $(kernel-security_KBASE)
+
+kernel-security_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-security_KOBJ_LIBS        := $(filter-out $(kernel-security_KLIB),$(kernel-security_LIBS)) $(kernel-security_KAUTOLIB)
+$(kernel-security_KOBJ) : LINKLIBS:=$(kernel-security_KOBJ_LIBS) $($(kernel-security_DEFNAME)_LIBS)
+$(kernel-security_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-security_SYMBOLS))
+$(kernel-security_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-security_KOBJ) : $(kernel-security_OBJS) $(USER_OBJS) $(kernel-security_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-security_DEPS             := $(addprefix $(kernel-security_OBJDIR)/,$(notdir $(kernel-security_CCFILES:=.d) $(kernel-security_TARGETCCFILES:=.d) $(kernel-security_CXXFILES:=.d))) $(addprefix $(kernel-security_OBJDIR)/linklib/,$(notdir $(kernel-security_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-security_DEPS),)
+  ifneq (kernel-security kernel-security-quick kernel-security-kobj kernel-security-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-security kernel-security-quick kernel-security-kobj kernel-security-kobj-quick),)
+      -include $(kernel-security_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-security_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-security_OBJS) $(kernel-security_DEPS) : | $(kernel-security_OBJDIR)/linklib
+
+ifneq ($(kernel-security_OBJS) $(kernel-security_DEPS) $(kernel-security_MODULE) $(kernel-security_KOBJ),)
+$(kernel-security_OBJS) $(kernel-security_DEPS) $(kernel-security_MODULE) $(kernel-security_KOBJ) : | $(kernel-security_OBJDIR) $(AROSDIR)/$(kernel-security_MODDIR) $(KOBJSDIR)
+else
+$(kernel-security_OBJS) $(kernel-security_DEPS) $(kernel-security_MODULE) $(kernel-security_KOBJ) :: $(kernel-security_OBJDIR) $(AROSDIR)/$(kernel-security_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-security_OBJDIR) $(AROSDIR)/$(kernel-security_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-security kernel-security-includes kernel-security-quick kernel-security-kobj kernel-security-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-security_DFILE_DEPS := $(kernel-security_LIBDEFSINC) $(kernel-security_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-security_INCDIR)/,$($(kernel-security_DEFNAME)_INCLUDES))
+$(kernel-security_DEPS) : $(kernel-security_DFILE_DEPS)
+endif
+
+kernel-security_TOCLEAN := $(kernel-security_OBJS) $(kernel-security_DEPS) \
+    $(kernel-security_MODULE) $(kernel-security_LINKLIB) $(kernel-security_KOBJ) \
+    $(kernel-security_OBJDIR)/Makefile.securitylibrary \
+    $(addprefix $(kernel-security_OBJDIR)/include/,$($(kernel-security_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-security_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-security_INCDIR)/,$($(kernel-security_DEFNAME)_INCLUDES)) \
+    $(kernel-security_OBJDIR)/security_geninc $(kernel-security_OBJDIR)/security_incs \
+    $(addsuffix .c,$(kernel-security_LINKLIBFILES)) $(kernel-security_LINKLIBOBJS) $(kernel-security_LIBDEFSINC) \
+    $(kernel-security_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-security_STARTFILES) $(kernel-security_ENDFILES)) \
+    $(kernel-security_ENDOBJS)
+kernel-security-clean : FILES              := $(kernel-security_TOCLEAN)
+kernel-security-clean ::
+	$(Q)$(ECHO) "Cleaning up for module security"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-security_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

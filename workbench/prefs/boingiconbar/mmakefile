@@ -1,0 +1,633 @@
+# $Id$
+# Makefile to make Serial prefs program.
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := main locale bibeditor prefs args misc
+
+EXEDIR      := $(AROSDIR)/Prefs
+
+#MM- workbench-prefs : workbench-prefs-iconbar
+#MM workbench-prefs-iconbar : includes linklibs workbench-prefs-iconbar-catalogs
+
+
+.PHONY : workbench-prefs-iconbar
+
+workbench-prefs-iconbar_PROGNAME  := BoingIconBar
+workbench-prefs-iconbar_OBJDIR    := $(GENDIR)/$(CURDIR)
+workbench-prefs-iconbar_TARGETDIR := $(EXEDIR)
+workbench-prefs-iconbar_LINKER    := 
+workbench-prefs-iconbar_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(workbench-prefs-iconbar_LINKER),)
+    workbench-prefs-iconbar_LINKER := target
+endif
+
+ifneq ("$(strip $(FILES)   )","")
+    workbench-prefs-iconbar_FILES     := $(FILES)
+    workbench-prefs-iconbar_OBJCFILES := 
+    workbench-prefs-iconbar_ASMFILES  := 
+    workbench-prefs-iconbar_CXXFILES := 
+else
+    workbench-prefs-iconbar_FILES     := $(workbench-prefs-iconbar_PROGNAME)
+    workbench-prefs-iconbar_OBJCFILES :=
+    workbench-prefs-iconbar_ASMFILES  :=
+    workbench-prefs-iconbar_CXXFILES :=
+endif
+
+workbench-prefs-iconbar_ARCHOBJS   := $(wildcard $(workbench-prefs-iconbar_OBJDIR)/arch/*.o)
+workbench-prefs-iconbar_ARCHFILES  := $(basename $(notdir $(workbench-prefs-iconbar_ARCHOBJS)))
+workbench-prefs-iconbar_C_NARCHFILES := $(filter-out $(workbench-prefs-iconbar_ARCHFILES),$(workbench-prefs-iconbar_FILES))
+workbench-prefs-iconbar_CXX_NARCHFILES := $(filter-out $(workbench-prefs-iconbar_ARCHFILES),$(workbench-prefs-iconbar_CXXFILES))
+workbench-prefs-iconbar_OBJC_NARCHFILES := $(filter-out $(workbench-prefs-iconbar_ARCHFILES),$(workbench-prefs-iconbar_OBJCFILES))
+
+TMP_FILES := $(workbench-prefs-iconbar_C_NARCHFILES) $(workbench-prefs-iconbar_CXX_NARCHFILES) $(workbench-prefs-iconbar_ASMFILES) $(workbench-prefs-iconbar_OBJC_NARCHFILES)
+workbench-prefs-iconbar_OBJS := $(addsuffix .o,$(addprefix $(workbench-prefs-iconbar_OBJDIR)/,$(notdir $(TMP_FILES))))
+workbench-prefs-iconbar_DEPS := $(addsuffix .d,$(addprefix $(workbench-prefs-iconbar_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+workbench-prefs-iconbar_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+workbench-prefs-iconbar_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-prefs-iconbar_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+workbench-prefs-iconbar_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+workbench-prefs-iconbar_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+workbench-prefs-iconbar_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-prefs-iconbar_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+workbench-prefs-iconbar_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+workbench-prefs-iconbar_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+workbench-prefs-iconbar_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-prefs-iconbar_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+workbench-prefs-iconbar_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+workbench-prefs-iconbar_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+workbench-prefs-iconbar_LDFLAGS          := 
+endif
+
+workbench-prefs-iconbar_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+workbench-prefs-iconbar_COVERAGE := yes
+workbench-prefs-iconbar_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+workbench-prefs-iconbar_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+workbench-prefs-iconbar_CFLAGS    := $(strip $(workbench-prefs-iconbar_COVERAGEFLAGS) $(workbench-prefs-iconbar_CFLAGS))
+workbench-prefs-iconbar_CXXFLAGS := $(strip $(workbench-prefs-iconbar_COVERAGEFLAGS) $(workbench-prefs-iconbar_CXXFLAGS))
+workbench-prefs-iconbar_LIBS += $(workbench-prefs-iconbar_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-prefs-iconbar_FUNCINSTR := yes
+workbench-prefs-iconbar_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+workbench-prefs-iconbar_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-prefs-iconbar_CFLAGS    := $(strip $(workbench-prefs-iconbar_INSTRFUNCFLAGS) $(workbench-prefs-iconbar_CFLAGS))
+workbench-prefs-iconbar_CXXFLAGS := $(strip $(workbench-prefs-iconbar_INSTRFUNCFLAGS) $(workbench-prefs-iconbar_CXXFLAGS))
+workbench-prefs-iconbar_LIBS += $(workbench-prefs-iconbar_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+workbench-prefs-iconbar_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(workbench-prefs-iconbar_CFLAGS))
+workbench-prefs-iconbar_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(workbench-prefs-iconbar_CXXFLAGS))
+endif
+endif
+workbench-prefs-iconbar_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    workbench-prefs-iconbar_DFLAGS     := 
+else
+    workbench-prefs-iconbar_DFLAGS     := $(workbench-prefs-iconbar_CFLAGS)
+endif
+ifneq (,)
+    workbench-prefs-iconbar_DXXFLAGS     := 
+else
+    workbench-prefs-iconbar_DXXFLAGS     := $(workbench-prefs-iconbar_CXXFLAGS)
+endif
+ifeq (target,target)
+workbench-prefs-iconbar_LDFLAGS           := $(workbench-prefs-iconbar_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-prefs-iconbar_LDFLAGS           := $(workbench-prefs-iconbar_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-prefs-iconbar_LDFLAGS           := $(workbench-prefs-iconbar_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+workbench-prefs-iconbar_LDFLAGS   += -L
+endif
+
+#MM
+workbench-prefs-iconbar-quick : workbench-prefs-iconbar
+
+#MM workbench-prefs-iconbar : includes-generate-deps core-linklibs
+workbench-prefs-iconbar : $(workbench-prefs-iconbar_TARGETDIR)/$(workbench-prefs-iconbar_PROGNAME)
+
+ifneq ($(filter $(TARGET),workbench-prefs-iconbar workbench-prefs-iconbar-quick workbench-prefs-iconbar-gz-quick),)
+
+workbench-prefs-iconbar_CXXABSBASENAMES := $(foreach workbench-prefs-iconbar_CXXBASE,$(workbench-prefs-iconbar_CXX_NARCHFILES),$(if $(filter /%,$(workbench-prefs-iconbar_CXXBASE)),$(workbench-prefs-iconbar_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-prefs-iconbar_CXXBASE))))
+
+ifneq ($(workbench-prefs-iconbar_CXXABSBASENAMES),)
+
+workbench-prefs-iconbar_CXXBASENAMES := $(basename $(workbench-prefs-iconbar_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-prefs-iconbar_MCXX_FILES  := $(strip $(foreach workbench-prefs-iconbar_CXXBASE,$(workbench-prefs-iconbar_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-prefs-iconbar_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-prefs-iconbar_EXT),$(workbench-prefs-iconbar_CXXBASE)))))))
+
+ifeq (,)
+workbench-prefs-iconbar_MCXX_SRCWILDCARD := %
+else
+workbench-prefs-iconbar_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-prefs-iconbar_OBJDIR),)
+  workbench-prefs-iconbar_CXXTARGETS := $(notdir $(workbench-prefs-iconbar_CXXBASENAMES:=.o))
+  workbench-prefs-iconbar_CXXDTARGETS := $(notdir $(workbench-prefs-iconbar_CXXBASENAMES:=.d))
+  workbench-prefs-iconbar_MCXX_WILDCARD := %
+else
+  workbench-prefs-iconbar_CXXTARGETS := $(addprefix $(workbench-prefs-iconbar_OBJDIR)/,$(notdir $(workbench-prefs-iconbar_CXXBASENAMES:=.o)))
+  workbench-prefs-iconbar_CXXDTARGETS := $(addprefix $(workbench-prefs-iconbar_OBJDIR)/,$(notdir $(workbench-prefs-iconbar_CXXBASENAMES:=.d)))
+  workbench-prefs-iconbar_MCXX_WILDCARD := $(workbench-prefs-iconbar_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-prefs-iconbar_CXXTARGETS) $(workbench-prefs-iconbar_CXXDTARGETS) : | $(workbench-prefs-iconbar_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-prefs-iconbar_MCXX_CPPFLAGS := $(workbench-prefs-iconbar_CPPFLAGS)
+workbench-prefs-iconbar_CXXFLAGS := $(workbench-prefs-iconbar_CXXFLAGS)
+ifeq ($(workbench-prefs-iconbar_DXXFLAGS),)
+  workbench-prefs-iconbar_DXXFLAGS := $(workbench-prefs-iconbar_CXXFLAGS)
+else
+  workbench-prefs-iconbar_DXXFLAGS := $(workbench-prefs-iconbar_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-prefs-iconbar_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-prefs-iconbar_STRIP ?= $(HOST_STRIP)
+  workbench-prefs-iconbar_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-prefs-iconbar_CXXCMD:=$(HOST_CXX)
+  workbench-prefs-iconbar_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-prefs-iconbar_MCXX_CPPFLAGS) $(workbench-prefs-iconbar_MCXX_EXTRA_CPPFLAGS))
+  workbench-prefs-iconbar_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-prefs-iconbar_CXXFLAGS))
+  workbench-prefs-iconbar_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-prefs-iconbar_DXXFLAGS))
+  workbench-prefs-iconbar_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-prefs-iconbar_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-prefs-iconbar_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-prefs-iconbar_STRIP ?= $(TARGET_STRIP)
+  workbench-prefs-iconbar_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-prefs-iconbar_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-prefs-iconbar_MCXX_CPPFLAGS := $(strip $(workbench-prefs-iconbar_MCXX_CPPFLAGS) $(workbench-prefs-iconbar_MCXX_EXTRA_CPPFLAGS))
+  workbench-prefs-iconbar_CXXFLAGS := $(strip $(workbench-prefs-iconbar_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-prefs-iconbar_DXXFLAGS := $(workbench-prefs-iconbar_DXXFLAGS)
+  workbench-prefs-iconbar_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-prefs-iconbar_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-prefs-iconbar_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-prefs-iconbar_STRIP ?= $(ECHO) >/dev/null
+  workbench-prefs-iconbar_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-prefs-iconbar_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-prefs-iconbar_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-prefs-iconbar_MCXX_CPPFLAGS) $(workbench-prefs-iconbar_MCXX_EXTRA_CPPFLAGS))
+  workbench-prefs-iconbar_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-prefs-iconbar_CXXFLAGS))
+  workbench-prefs-iconbar_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-prefs-iconbar_DXXFLAGS))
+  workbench-prefs-iconbar_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-prefs-iconbar_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-prefs-iconbar_CXXCMD) $(workbench-prefs-iconbar_CXXIQUOTE) $(dir $(2)) $(workbench-prefs-iconbar_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-iconbar_CXXIQUOTE) . $(workbench-prefs-iconbar_CXXIQUOTE_END) $(strip $(workbench-prefs-iconbar_CXXFLAGS) $(workbench-prefs-iconbar_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-prefs-iconbar_CXXCMD) $(workbench-prefs-iconbar_CXXIQUOTE) $(dir $(2)) $(workbench-prefs-iconbar_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-iconbar_CXXIQUOTE) . $(workbench-prefs-iconbar_CXXIQUOTE_END) $(strip $(workbench-prefs-iconbar_CXXFLAGS) $(workbench-prefs-iconbar_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-prefs-iconbar_CXXCMD) $(workbench-prefs-iconbar_CXXIQUOTE) $(dir $(2)) $(workbench-prefs-iconbar_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-iconbar_CXXIQUOTE) . $(workbench-prefs-iconbar_CXXIQUOTE_END) $(strip $(workbench-prefs-iconbar_CXXFLAGS) $(workbench-prefs-iconbar_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-prefs-iconbar_CXXCMD)" $(MKDEPEND) $(strip $(workbench-prefs-iconbar_DXXFLAGS) $(workbench-prefs-iconbar_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-prefs-iconbar_OBJDIR),)
+  $(foreach workbench-prefs-iconbar_CXXFILE,$(workbench-prefs-iconbar_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-prefs-iconbar_CXXFILE))),$(workbench-prefs-iconbar_CXXFILE))))
+else
+  $(foreach workbench-prefs-iconbar_CXXFILE,$(workbench-prefs-iconbar_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-prefs-iconbar_OBJDIR)/,$(notdir $(basename $(workbench-prefs-iconbar_CXXFILE)))),$(workbench-prefs-iconbar_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-prefs-iconbar_OBJC_NARCHFILES),)
+
+ifeq (,)
+workbench-prefs-iconbar_MOBJC_SRCWILDCARD := %
+else
+workbench-prefs-iconbar_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-prefs-iconbar_OBJDIR),)
+  workbench-prefs-iconbar_MOBJC_TARGETS := $(addsuffix .o,$(workbench-prefs-iconbar_OBJC_NARCHFILES))
+  workbench-prefs-iconbar_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-prefs-iconbar_OBJC_NARCHFILES))
+  workbench-prefs-iconbar_MOBJC_WILDCARD := %
+else
+  workbench-prefs-iconbar_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-prefs-iconbar_OBJDIR)/,$(workbench-prefs-iconbar_OBJC_NARCHFILES)))
+  workbench-prefs-iconbar_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-prefs-iconbar_OBJDIR)/,$(workbench-prefs-iconbar_OBJC_NARCHFILES)))
+  workbench-prefs-iconbar_MOBJC_WILDCARD := $(workbench-prefs-iconbar_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-prefs-iconbar_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  workbench-prefs-iconbar_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-prefs-iconbar_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-prefs-iconbar_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-prefs-iconbar_MOBJC_DIRS := $(foreach dir, $(workbench-prefs-iconbar_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-prefs-iconbar_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-prefs-iconbar_MOBJC_DIRS),)
+    workbench-prefs-iconbar_MOBJC_DIRS := $(shell echo $(workbench-prefs-iconbar_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-prefs-iconbar_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-prefs-iconbar_CC := $(TARGET_CC)
+else
+  workbench-prefs-iconbar_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-prefs-iconbar_MOBJC_CPPFLAGS := $(workbench-prefs-iconbar_CPPFLAGS)
+workbench-prefs-iconbar_OBJCFLAGS := $(workbench-prefs-iconbar_CFLAGS)
+workbench-prefs-iconbar_OBJCFLAGS := $(workbench-prefs-iconbar_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-prefs-iconbar_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-prefs-iconbar_OBJCFLAGS)))
+ifeq ($(workbench-prefs-iconbar_DFLAGS),)
+  workbench-prefs-iconbar_OBJCDFLAGS := $(workbench-prefs-iconbar_CFLAGS)
+else
+  workbench-prefs-iconbar_OBJCDFLAGS := $(workbench-prefs-iconbar_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-prefs-iconbar_LINK ?= $(strip $(workbench-prefs-iconbar_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-prefs-iconbar_STRIP ?= $(TARGET_STRIP)
+  workbench-prefs-iconbar_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-prefs-iconbar_CC) $(TARGET_SYSROOT))
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : workbench-prefs-iconbar_MOBJC_CPPFLAGS:=$(strip $(workbench-prefs-iconbar_MOBJC_CPPFLAGS) $(workbench-prefs-iconbar_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : workbench-prefs-iconbar_OBJCFLAGS:=$(strip $(workbench-prefs-iconbar_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : workbench-prefs-iconbar_OBJCDFLAGS:=$(workbench-prefs-iconbar_OBJCDFLAGS)
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : workbench-prefs-iconbar_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : workbench-prefs-iconbar_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-prefs-iconbar_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-prefs-iconbar_STRIP ?= $(HOST_STRIP)
+  workbench-prefs-iconbar_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : workbench-prefs-iconbar_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-prefs-iconbar_MOBJC_CPPFLAGS) $(workbench-prefs-iconbar_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : workbench-prefs-iconbar_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-prefs-iconbar_OBJCFLAGS))
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : workbench-prefs-iconbar_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-prefs-iconbar_OBJCDFLAGS))
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : workbench-prefs-iconbar_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : workbench-prefs-iconbar_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-prefs-iconbar_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-prefs-iconbar_STRIP ?= $(ECHO) >/dev/null
+  workbench-prefs-iconbar_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : workbench-prefs-iconbar_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-prefs-iconbar_MOBJC_CPPFLAGS) $(workbench-prefs-iconbar_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : workbench-prefs-iconbar_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-prefs-iconbar_OBJCFLAGS))
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : workbench-prefs-iconbar_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-prefs-iconbar_OBJCDFLAGS))
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : workbench-prefs-iconbar_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-prefs-iconbar_MOBJC_TARGETS) $(workbench-prefs-iconbar_MOBJC_DTARGETS) : workbench-prefs-iconbar_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-prefs-iconbar_MOBJC_TARGETS) : CPPFLAGS := $(workbench-prefs-iconbar_MOBJC_CPPFLAGS)
+$(workbench-prefs-iconbar_MOBJC_TARGETS) : CFLAGS := $(workbench-prefs-iconbar_OBJCFLAGS)
+$(workbench-prefs-iconbar_MOBJC_TARGETS) : $(workbench-prefs-iconbar_MOBJC_WILDCARD).o : $(workbench-prefs-iconbar_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-prefs-iconbar_IQUOTE) $(dir $<) $(workbench-prefs-iconbar_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-iconbar_IQUOTE) . $(workbench-prefs-iconbar_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-prefs-iconbar_IQUOTE) $(dir $<) $(workbench-prefs-iconbar_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-iconbar_IQUOTE) . $(workbench-prefs-iconbar_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-prefs-iconbar_IQUOTE) $(dir $<) $(workbench-prefs-iconbar_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-iconbar_IQUOTE) . $(workbench-prefs-iconbar_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-prefs-iconbar_MOBJC_DTARGETS) : $(workbench-prefs-iconbar_MOBJC_WILDCARD).d : $(workbench-prefs-iconbar_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-prefs-iconbar_OBJCDFLAGS) $(workbench-prefs-iconbar_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-prefs-iconbar_MC_SRCWILDCARD := %
+else
+workbench-prefs-iconbar_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-prefs-iconbar_OBJDIR),)
+workbench-prefs-iconbar_MC_TARGETS := $(addsuffix .o,$(workbench-prefs-iconbar_C_NARCHFILES))
+workbench-prefs-iconbar_MC_DTARGETS := $(addsuffix .d,$(workbench-prefs-iconbar_C_NARCHFILES))
+workbench-prefs-iconbar_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-prefs-iconbar_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-prefs-iconbar_OBJDIR)/,$(notdir $(workbench-prefs-iconbar_C_NARCHFILES))))
+    workbench-prefs-iconbar_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-prefs-iconbar_OBJDIR)/,$(notdir $(workbench-prefs-iconbar_C_NARCHFILES))))
+else
+ifeq (,)
+    workbench-prefs-iconbar_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-prefs-iconbar_OBJDIR)/,$(workbench-prefs-iconbar_C_NARCHFILES)))
+    workbench-prefs-iconbar_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-prefs-iconbar_OBJDIR)/,$(workbench-prefs-iconbar_C_NARCHFILES)))
+else
+    workbench-prefs-iconbar_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-prefs-iconbar_OBJDIR)/,$(patsubst /%,%,$(workbench-prefs-iconbar_C_NARCHFILES))))
+    workbench-prefs-iconbar_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-prefs-iconbar_OBJDIR)/,$(patsubst /%,%,$(workbench-prefs-iconbar_C_NARCHFILES))))
+endif
+endif
+workbench-prefs-iconbar_MC_TGTWILDCARD := $(workbench-prefs-iconbar_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : | $(addsuffix .c,$(workbench-prefs-iconbar_C_NARCHFILES))
+
+# Be sure that all .c files are found
+workbench-prefs-iconbar_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-prefs-iconbar_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-prefs-iconbar_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-prefs-iconbar_MC_DIRS := $(foreach dir, $(workbench-prefs-iconbar_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-prefs-iconbar_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-prefs-iconbar_MC_DIRS),)
+    workbench-prefs-iconbar_MC_DIRS := $(shell echo $(workbench-prefs-iconbar_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-prefs-iconbar_MC_DIRS)
+endif
+
+endif
+
+workbench-prefs-iconbar_MC_CPPFLAGS := $(workbench-prefs-iconbar_CPPFLAGS)
+workbench-prefs-iconbar_CFLAGS := $(workbench-prefs-iconbar_CFLAGS)
+ifeq ($(workbench-prefs-iconbar_DFLAGS),)
+  workbench-prefs-iconbar_DFLAGS := $(workbench-prefs-iconbar_CFLAGS)
+else
+  workbench-prefs-iconbar_DFLAGS := $(workbench-prefs-iconbar_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-prefs-iconbar_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-prefs-iconbar_STRIP ?= $(TARGET_STRIP)
+workbench-prefs-iconbar_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : workbench-prefs-iconbar_MC_CPPFLAGS:=$(strip $(workbench-prefs-iconbar_MC_CPPFLAGS) $(workbench-prefs-iconbar_MC_EXTRA_CPPFLAGS))
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : workbench-prefs-iconbar_CFLAGS:=$(strip $(workbench-prefs-iconbar_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : workbench-prefs-iconbar_DFLAGS:=$(workbench-prefs-iconbar_DFLAGS)
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : workbench-prefs-iconbar_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : workbench-prefs-iconbar_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-prefs-iconbar_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-prefs-iconbar_STRIP ?= $(HOST_STRIP)
+workbench-prefs-iconbar_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : workbench-prefs-iconbar_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-prefs-iconbar_MC_CPPFLAGS) $(workbench-prefs-iconbar_MC_EXTRA_CPPFLAGS))
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : workbench-prefs-iconbar_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-prefs-iconbar_CFLAGS))
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : workbench-prefs-iconbar_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-prefs-iconbar_DFLAGS))
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : workbench-prefs-iconbar_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : workbench-prefs-iconbar_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-prefs-iconbar_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-prefs-iconbar_STRIP ?= $(ECHO) >/dev/null
+workbench-prefs-iconbar_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : workbench-prefs-iconbar_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-prefs-iconbar_MC_CPPFLAGS) $(workbench-prefs-iconbar_MC_EXTRA_CPPFLAGS))
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : workbench-prefs-iconbar_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-prefs-iconbar_CFLAGS))
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : workbench-prefs-iconbar_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-prefs-iconbar_DFLAGS))
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : workbench-prefs-iconbar_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-prefs-iconbar_MC_TARGETS) $(workbench-prefs-iconbar_MC_DTARGETS) : workbench-prefs-iconbar_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-prefs-iconbar_MC_TARGETS) : CPPFLAGS := $(workbench-prefs-iconbar_MC_CPPFLAGS)
+$(workbench-prefs-iconbar_MC_TARGETS) : CFLAGS := $(workbench-prefs-iconbar_CFLAGS)
+$(workbench-prefs-iconbar_MC_TARGETS) : $(workbench-prefs-iconbar_MC_TGTWILDCARD).o : $(workbench-prefs-iconbar_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-prefs-iconbar_IQUOTE) $(dir $<) $(workbench-prefs-iconbar_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-iconbar_IQUOTE) . $(workbench-prefs-iconbar_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-prefs-iconbar_IQUOTE) $(dir $<) $(workbench-prefs-iconbar_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-iconbar_IQUOTE) . $(workbench-prefs-iconbar_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-prefs-iconbar_IQUOTE) $(dir $<) $(workbench-prefs-iconbar_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-prefs-iconbar_IQUOTE) . $(workbench-prefs-iconbar_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-prefs-iconbar_MC_DTARGETS) : $(workbench-prefs-iconbar_MC_TGTWILDCARD).d : $(workbench-prefs-iconbar_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-prefs-iconbar_DFLAGS) $(workbench-prefs-iconbar_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-prefs-iconbar_OBJDIR),)
+workbench-prefs-iconbar-MA_TARGETS := $(addsuffix .o,$(workbench-prefs-iconbar_ASMFILES))
+workbench-prefs-iconbar-MA_WILDCARD := %
+else
+workbench-prefs-iconbar-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-prefs-iconbar_OBJDIR)/,$(notdir $(workbench-prefs-iconbar_ASMFILES))))
+workbench-prefs-iconbar-MA_WILDCARD := $(workbench-prefs-iconbar_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(workbench-prefs-iconbar-MA_TARGETS) : | $(addsuffix .s,$(workbench-prefs-iconbar_ASMFILES))
+
+# Be sure that all .c files are found
+workbench-prefs-iconbar-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-prefs-iconbar-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-prefs-iconbar_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-prefs-iconbar-MA_DIRS := $(foreach dir, $(workbench-prefs-iconbar-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-prefs-iconbar-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-prefs-iconbar-MA_DIRS),)
+    workbench-prefs-iconbar-MA_DIRS := $(shell echo $(workbench-prefs-iconbar-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(workbench-prefs-iconbar-MA_DIRS)
+endif
+
+endif
+
+workbench-prefs-iconbar-MA_ASSEMBLER ?= $(workbench-prefs-iconbar_ASSEMBLER)
+
+$(workbench-prefs-iconbar-MA_TARGETS) : workbench-prefs-iconbar-MA_CMD:= $(workbench-prefs-iconbar-MA_ASSEMBLER)
+
+$(workbench-prefs-iconbar-MA_TARGETS) : CPPFLAGS := $(workbench-prefs-iconbar_CPPFLAGS)
+$(workbench-prefs-iconbar-MA_TARGETS) : AFLAGS := $(workbench-prefs-iconbar_AFLAGS)
+$(workbench-prefs-iconbar-MA_TARGETS) : $(workbench-prefs-iconbar-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-prefs-iconbar-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-prefs-iconbar-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-prefs-iconbar-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+workbench-prefs-iconbar-link_EXTRA_LDFLAGS := 
+workbench-prefs-iconbar-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    workbench-prefs-iconbar-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    workbench-prefs-iconbar-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    workbench-prefs-iconbar-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+workbench-prefs-iconbar-link_DIRS := $(subst -L ,-L,$(strip $(workbench-prefs-iconbar_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+workbench-prefs-iconbar-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(workbench-prefs-iconbar-link_DIRS)))
+# Add trailing /
+workbench-prefs-iconbar-link_DIRS := $(subst //,/,$(addsuffix /,$(workbench-prefs-iconbar-link_DIRS)))
+# Add normal linklib path
+workbench-prefs-iconbar-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+workbench-prefs-iconbar-link_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-prefs-iconbar_LIBS) $(workbench-prefs-iconbar-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    workbench-prefs-iconbar-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    workbench-prefs-iconbar-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+workbench-prefs-iconbar-link_DEPLIBS := $(foreach lib,$(workbench-prefs-iconbar-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(workbench-prefs-iconbar-link_DIRS)))) \
+)
+
+$(workbench-prefs-iconbar_TARGETDIR)/$(workbench-prefs-iconbar_PROGNAME) : OBJDIR := $(workbench-prefs-iconbar_OBJDIR)
+$(workbench-prefs-iconbar_TARGETDIR)/$(workbench-prefs-iconbar_PROGNAME) : OBJS := $(workbench-prefs-iconbar_OBJS) $(workbench-prefs-iconbar_ARCHOBJS) $(USER_OBJS)
+$(workbench-prefs-iconbar_TARGETDIR)/$(workbench-prefs-iconbar_PROGNAME) : LDFLAGS := $(strip $(workbench-prefs-iconbar_LDFLAGS) $(workbench-prefs-iconbar-link_EXTRA_LDFLAGS))
+$(workbench-prefs-iconbar_TARGETDIR)/$(workbench-prefs-iconbar_PROGNAME) : LIBS := $(addprefix -l,$(workbench-prefs-iconbar_LIBS) $(workbench-prefs-iconbar-link_EXTRA_LIBS) )
+$(workbench-prefs-iconbar_TARGETDIR)/$(workbench-prefs-iconbar_PROGNAME) : $(workbench-prefs-iconbar_OBJS) $(workbench-prefs-iconbar_ARCHOBJS) $(USER_OBJS) $(workbench-prefs-iconbar-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(workbench-prefs-iconbar_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(workbench-prefs-iconbar_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(workbench-prefs-iconbar_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-prefs-iconbar_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(workbench-prefs-iconbar_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(workbench-prefs-iconbar_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-prefs-iconbar_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(workbench-prefs-iconbar_DEPS),)
+  ifneq (workbench-prefs-iconbar workbench-prefs-iconbar-quick,)
+    ifneq ($(findstring $(TARGET),workbench-prefs-iconbar workbench-prefs-iconbar-quick),)
+      -include $(workbench-prefs-iconbar_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-prefs-iconbar_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(workbench-prefs-iconbar_OBJS) $(workbench-prefs-iconbar_DEPS) $(workbench-prefs-iconbar_TARGETDIR)/$(workbench-prefs-iconbar_PROGNAME),)
+$(workbench-prefs-iconbar_OBJS) $(workbench-prefs-iconbar_DEPS) $(workbench-prefs-iconbar_TARGETDIR)/$(workbench-prefs-iconbar_PROGNAME) : | $(workbench-prefs-iconbar_OBJDIR) $(workbench-prefs-iconbar_TARGETDIR)
+else
+$(workbench-prefs-iconbar_OBJS) $(workbench-prefs-iconbar_DEPS) $(workbench-prefs-iconbar_TARGETDIR)/$(workbench-prefs-iconbar_PROGNAME) :: $(workbench-prefs-iconbar_OBJDIR) $(workbench-prefs-iconbar_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-prefs-iconbar_OBJDIR) $(workbench-prefs-iconbar_TARGETDIR)
+
+
+workbench-prefs-iconbar-clean : FILES := $(workbench-prefs-iconbar_OBJS) $(workbench-prefs-iconbar_TARGETDIR)/$(workbench-prefs-iconbar_PROGNAME) $(workbench-prefs-iconbar_DEPS)
+#MM
+workbench-prefs-iconbar-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-prefs-iconbar"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

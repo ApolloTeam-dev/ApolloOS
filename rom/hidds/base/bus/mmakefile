@@ -1,0 +1,1724 @@
+#$Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES :=  bus_init bus_class
+
+NOWARN_FLAGS := $(NOWARN_PARENTHESES)
+USER_CFLAGS := $(NOWARN_FLAGS)
+USER_CPPFLAGS := \
+               -DUSE_EXEC_DEBUG \
+               -DAROS_USE_OOP \
+               -D__OOP_NOMETHODBASES__ \
+               -D__OOP_NOATTRBASES__
+#USER_CPPFLAGS += -DDEBUG
+USER_LDFLAGS := -static
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-hidd-bus
+#MM kernel-hidd-bus-quick
+#MM kernel-hidd-bus-makefile
+#MM kernel-hidd-bus-clean
+
+# ABI targets:
+#MM- includes-all : kernel-hidd-bus-includes
+#MM- linklibs-bus: kernel-hidd-bus-linklib
+#MM- linklibs-bus_rel : kernel-hidd-bus-linklib
+#MM- includes-bus: kernel-hidd-bus-includes
+#MM- includes-bus_rel : kernel-hidd-bus-includes
+#MM- kernel-hidd-bus : kernel-hidd-bus-includes core-linklibs linklibs-
+#MM kernel-hidd-bus-linklib : kernel-hidd-bus-includes includes-
+#MM- kernel-hidd-bus-quick : kernel-hidd-bus-includes-quick
+#MM kernel-hidd-bus-includes : kernel-hidd-bus-makefile kernel-hidd-bus-includes-dirs \
+#MM     includes-generate-deps kernel-hidd-bus-fd
+#MM kernel-hidd-bus-includes-quick
+#MM kernel-hidd-bus-includes-dirs
+#MM kernel-hidd-bus-fd
+
+# Library targets
+#MM kernel-hidd-bus-kobj : core-linklibs linklibs-
+#MM kernel-hidd-bus-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-hidd-bus-kobj : kernel-hidd-bus-includes core-linklibs linklibs-
+#MM kernel-hidd-bus-kobj-quick : kernel-hidd-bus-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-hidd-bus_ALLTARGETS       := kernel-hidd-bus kernel-hidd-bus-quick kernel-hidd-bus-clean
+
+ifeq (M,M)
+kernel-hidd-bus_ALLTARGETS       += kernel-hidd-bus-kobj kernel-hidd-bus-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-hidd-bus_ALLTARGETS += kernel-hidd-bus-includes \
+                 kernel-hidd-bus-includes-quick kernel-hidd-bus-includes-dirs  \
+                 kernel-hidd-bus-linklib kernel-hidd-bus-fd
+endif
+
+.PHONY : $(kernel-hidd-bus_ALLTARGETS) kernel-hidd-bus-makefile
+
+ifeq (bus,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (hidd,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-hidd-bus_DEFNAME      := bus_
+else
+    kernel-hidd-bus_DEFNAME      := bus
+endif
+kernel-hidd-bus_DEFLINKLIBNAME   := $(kernel-hidd-bus_DEFNAME)
+ifneq (,)
+    kernel-hidd-bus_LINKLIBNAME  := 
+else
+    kernel-hidd-bus_LINKLIBNAME  = $(kernel-hidd-bus_DEFLINKLIBNAME)
+endif
+kernel-hidd-bus_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-hidd-bus_DEFCPPFLAGS  += -I
+endif
+kernel-hidd-bus_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-hidd-bus_DFLAGS       := 
+else
+    kernel-hidd-bus_DFLAGS       = $(kernel-hidd-bus_DEFDFLAGS)
+endif
+kernel-hidd-bus_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-hidd-bus_DXXFLAGS     := 
+else
+    kernel-hidd-bus_DXXFLAGS     = $(kernel-hidd-bus_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-bus_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-bus_DEFDFLAGS))
+kernel-hidd-bus_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-bus_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-bus_FUNCINSTR := yes
+kernel-hidd-bus_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-bus_DEFDFLAGS))
+kernel-hidd-bus_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-bus_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-hidd-bus_OBJDIR                     := 
+else
+kernel-hidd-bus_OBJDIR                     := $(OBJDIR)/$(kernel-hidd-bus_DEFNAME)
+endif
+ifneq (,)
+kernel-hidd-bus_OBJDIR           := $(kernel-hidd-bus_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-hidd-bus-makefile         := $(kernel-hidd-bus_OBJDIR)/Makefile.$(kernel-hidd-bus_DEFNAME)hidd
+kernel-hidd-bus-genmakefile : $(kernel-hidd-bus-makefile)
+
+
+kernel-hidd-bus-genmakefile_OPTS := 
+ifneq (,)
+    kernel-hidd-bus-genmakefile_OPTS += -f 
+    kernel-hidd-bus-genmakefile_MODNAME := bus_
+else
+    kernel-hidd-bus-genmakefile_MODNAME := bus
+endif
+kernel-hidd-bus-genmakefile_TARGET := Makefile.$(kernel-hidd-bus-genmakefile_MODNAME)hidd
+kernel-hidd-bus-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-bus-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-bus-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-bus-genmakefile_OPTS += -c 
+        kernel-hidd-bus-genmakefile_DEPS += 
+    endif 
+else
+    kernel-hidd-bus-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/bus.conf
+    kernel-hidd-bus-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/bus.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-bus-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-bus-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-bus-genmakefile_OPTS += -o 
+        kernel-hidd-bus-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-bus-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-bus_OBJDIR),)
+    kernel-hidd-bus-genmakefile_OPTS += -d $(kernel-hidd-bus_OBJDIR)
+    kernel-hidd-bus-genmakefile_TARGET := $(kernel-hidd-bus_OBJDIR)/$(kernel-hidd-bus-genmakefile_TARGET)
+endif
+
+$(kernel-hidd-bus-genmakefile_TARGET) : OPTS := $(kernel-hidd-bus-genmakefile_OPTS)
+$(kernel-hidd-bus-genmakefile_TARGET) : MODNAME := bus
+$(kernel-hidd-bus-genmakefile_TARGET) : MODTYPE := hidd
+$(kernel-hidd-bus-genmakefile_TARGET) : $(kernel-hidd-bus-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-hidd-bus-makefile),)
+$(kernel-hidd-bus-makefile) : | $(kernel-hidd-bus_OBJDIR)
+else
+$(kernel-hidd-bus-makefile) :: $(kernel-hidd-bus_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-bus_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-hidd-bus_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-hidd-bus-makefile)
+
+kernel-hidd-bus_DEFMODDIR        := $($(kernel-hidd-bus_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-hidd-bus_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-hidd-bus_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-hidd-bus_MODDIR       := 
+else
+    kernel-hidd-bus_MODDIR       := $(kernel-hidd-bus_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-hidd-bus_INCDIR           := 
+else
+kernel-hidd-bus_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-hidd-bus_LIBDEFSINC       := $(kernel-hidd-bus_OBJDIR)/include/$(kernel-hidd-bus_DEFNAME)_libdefs.h
+kernel-hidd-bus_DEFLIBDEFSINC    := $(kernel-hidd-bus_OBJDIR)/include/$(kernel-hidd-bus_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-hidd-bus-includes-quick : kernel-hidd-bus-includes
+kernel-hidd-bus-includes : $(addprefix $(GENINCDIR)/,$($(kernel-hidd-bus_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-bus_INCDIR)/,$($(kernel-hidd-bus_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-bus_LIBDEFSINC) $(kernel-hidd-bus_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-hidd-bus_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-hidd-bus-includes_MODNAME := bus_
+else
+    kernel-hidd-bus-includes_MODNAME := bus
+endif
+
+ifneq ($($(kernel-hidd-bus-includes_MODNAME)_INCLUDES),)
+
+kernel-hidd-bus-includes_TARGETS := $($(kernel-hidd-bus-includes_MODNAME)_INCLUDES)
+
+kernel-hidd-bus-includes_DEPS := $(GENMODULE)
+kernel-hidd-bus-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-bus-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-bus-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-bus-includes_OPTS += -c 
+        kernel-hidd-bus-includes_DEPS += 
+    endif 
+else
+    kernel-hidd-bus-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/bus.conf
+    kernel-hidd-bus-includes_DEPS += $(SRCDIR)/$(CURDIR)/bus.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-bus-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-bus-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-bus-includes_OPTS += -o 
+        kernel-hidd-bus-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-bus-includes_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-bus_OBJDIR)/include,)
+    kernel-hidd-bus-includes_OPTS += -d $(kernel-hidd-bus_OBJDIR)/include
+    kernel-hidd-bus-includes_TARGETS := $(addprefix $(kernel-hidd-bus_OBJDIR)/include/,$(kernel-hidd-bus-includes_TARGETS))
+    kernel-hidd-bus-includes_GENINCFLAG=$(kernel-hidd-bus_OBJDIR)/include/.bus.hidd-includes
+else
+    kernel-hidd-bus-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.bus.hidd-includes
+endif
+
+$(kernel-hidd-bus-includes_TARGETS) : $(kernel-hidd-bus-includes_DEPS) $(kernel-hidd-bus-includes_GENINCFLAG)
+
+$(kernel-hidd-bus-includes_GENINCFLAG) : OPTS := $(kernel-hidd-bus-includes_OPTS)
+$(kernel-hidd-bus-includes_GENINCFLAG) : MODNAME := bus
+$(kernel-hidd-bus-includes_GENINCFLAG) : MODTYPE := hidd
+$(kernel-hidd-bus-includes_GENINCFLAG) : $(kernel-hidd-bus-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-hidd-bus_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-hidd-bus_DEFNAME)_INCLUDES)) : | $(kernel-hidd-bus_OBJDIR)/bus_geninc
+
+$(kernel-hidd-bus_OBJDIR)/bus_geninc : COPYSRCDIR := $(kernel-hidd-bus_OBJDIR)/include
+$(kernel-hidd-bus_OBJDIR)/bus_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-hidd-bus_OBJDIR)/bus_geninc : FILES := $($(kernel-hidd-bus_DEFNAME)_INCLUDES)
+$(kernel-hidd-bus_OBJDIR)/bus_geninc : $(addprefix $(kernel-hidd-bus_OBJDIR)/include/,$($(kernel-hidd-bus_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-hidd-bus_OBJDIR)/include
+
+$(addprefix $(kernel-hidd-bus_INCDIR)/,$($(kernel-hidd-bus_DEFNAME)_INCLUDES)) : | $(kernel-hidd-bus_OBJDIR)/bus_incs
+
+$(kernel-hidd-bus_OBJDIR)/bus_incs : COPYSRCDIR := $(kernel-hidd-bus_OBJDIR)/include
+$(kernel-hidd-bus_OBJDIR)/bus_incs : TGTDIR := $(kernel-hidd-bus_INCDIR)
+$(kernel-hidd-bus_OBJDIR)/bus_incs : FILES := $($(kernel-hidd-bus_DEFNAME)_INCLUDES)
+$(kernel-hidd-bus_OBJDIR)/bus_incs : $(addprefix $(kernel-hidd-bus_OBJDIR)/include/,$($(kernel-hidd-bus_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-hidd-bus_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-hidd-bus_DEFNAME)_INCLUDES))))
+
+TMPbus_INCDIRS := \
+    $(kernel-hidd-bus_OBJDIR)/include $(addprefix $(kernel-hidd-bus_OBJDIR)/include/,$(kernel-hidd-bus_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-hidd-bus_INCDIRS)) \
+    $(kernel-hidd-bus_INCDIR) $(addprefix $(kernel-hidd-bus_INCDIR)/,$(kernel-hidd-bus_INCDIRS))
+
+ifneq (kernel-hidd-bus-includes-dirs,)
+kernel-hidd-bus-includes-dirs : | $(TMPbus_INCDIRS)
+else
+kernel-hidd-bus-includes-dirs :: $(TMPbus_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPbus_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-hidd-bus-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-hidd-bus-genlibdefs_OPTS += -f 
+    kernel-hidd-bus-genlibdefs_MODNAME := bus_
+else
+    kernel-hidd-bus-genlibdefs_MODNAME := bus
+endif
+kernel-hidd-bus-genlibdefs_TARGET := $(kernel-hidd-bus-genlibdefs_MODNAME)_libdefs.h
+kernel-hidd-bus-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-bus-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-bus-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-bus-genlibdefs_OPTS += -c 
+        kernel-hidd-bus-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-hidd-bus-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/bus.conf
+    kernel-hidd-bus-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/bus.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-bus-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-bus-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-bus-genlibdefs_OPTS += -o 
+        kernel-hidd-bus-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-bus-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-bus_OBJDIR)/include,)
+    kernel-hidd-bus-genlibdefs_OPTS += -d $(kernel-hidd-bus_OBJDIR)/include
+    kernel-hidd-bus-genlibdefs_TARGET := $(kernel-hidd-bus_OBJDIR)/include/$(kernel-hidd-bus-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-hidd-bus-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-hidd-bus-genlibdefs_TARGET) : OPTS := $(kernel-hidd-bus-genlibdefs_OPTS)
+$(kernel-hidd-bus-genlibdefs_TARGET) : MODNAME := bus
+$(kernel-hidd-bus-genlibdefs_TARGET) : MODTYPE := hidd
+$(kernel-hidd-bus-genlibdefs_TARGET) : $(kernel-hidd-bus-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-bus_DEFLIBDEFSINC) : FILENAME := $(kernel-hidd-bus_LIBDEFSINC)
+$(kernel-hidd-bus_DEFLIBDEFSINC) : $(kernel-hidd-bus_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-hidd-bus_LIBDEFSINC) $(kernel-hidd-bus_DEFLIBDEFSINC) : | $(kernel-hidd-bus_OBJDIR)/include
+
+ifneq (kernel-hidd-bus-includes-dirs,)
+kernel-hidd-bus-includes-dirs : | $(kernel-hidd-bus_OBJDIR)/include
+else
+kernel-hidd-bus-includes-dirs :: $(kernel-hidd-bus_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-bus_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-hidd-bus-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-hidd-bus-genmodfiles_OPTS += -f 
+    kernel-hidd-bus-genmodfiles_MODNAME := bus_
+else
+    kernel-hidd-bus-genmodfiles_MODNAME := bus
+endif
+kernel-hidd-bus-genmodfiles_GENTARGETS := $($(kernel-hidd-bus-genmodfiles_MODNAME)_STARTFILES) $($(kernel-hidd-bus-genmodfiles_MODNAME)_ENDFILES)
+kernel-hidd-bus-genmodfiles_STUBTARGETS := $($(kernel-hidd-bus-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-hidd-bus-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-hidd-bus-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-hidd-bus-genmodfiles_GENTARGETS))
+kernel-hidd-bus-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-hidd-bus-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-hidd-bus-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-hidd-bus-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-hidd-bus-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-bus-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-bus-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-bus-genmodfiles_OPTS += -c 
+        kernel-hidd-bus-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-hidd-bus-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/bus.conf
+    kernel-hidd-bus-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/bus.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-bus-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-bus-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-bus-genmodfiles_OPTS += -o 
+        kernel-hidd-bus-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-bus-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-bus_OBJDIR),)
+    kernel-hidd-bus-genmodfiles_OPTS += -d $(kernel-hidd-bus_OBJDIR)
+    kernel-hidd-bus-genmodfiles_TARGETDIR := $(shell echo $(kernel-hidd-bus_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-bus-genmodfiles_GENTARGETS := $(addprefix $(kernel-hidd-bus-genmodfiles_TARGETDIR)/,$(kernel-hidd-bus-genmodfiles_GENTARGETS))
+    kernel-hidd-bus-genmodfiles_GENFILEFLAG=$(kernel-hidd-bus-genmodfiles_TARGETDIR)/.bus.hidd-genfiles
+else
+    kernel-hidd-bus-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.bus.hidd-genfiles
+endif
+ifneq ($(kernel-hidd-bus_OBJDIR)/linklib,)
+    kernel-hidd-bus-genmodfiles_OPTS += -l $(kernel-hidd-bus_OBJDIR)/linklib
+    kernel-hidd-bus-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-hidd-bus_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-bus-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-bus-genmodfiles_STUBTARGETDIR)/,$(kernel-hidd-bus-genmodfiles_STUBTARGETS))
+    kernel-hidd-bus-genmodfiles_TARGETDIRS += $(kernel-hidd-bus_OBJDIR)/linklib
+else
+ifneq ($(kernel-hidd-bus_OBJDIR),)
+    kernel-hidd-bus-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-bus-genmodfiles_TARGETDIR)/,$(kernel-hidd-bus-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-hidd-bus-genmodfiles_TARGETS := $(kernel-hidd-bus-genmodfiles_GENTARGETS) $(kernel-hidd-bus-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-hidd-bus-genmodfiles_TARGETDIRS),)
+$(kernel-hidd-bus-genmodfiles_TARGETS) : | $(kernel-hidd-bus-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-hidd-bus-genmodfiles_TARGETS) : $(kernel-hidd-bus-genmodfiles_DEPS) $(kernel-hidd-bus-genmodfiles_GENFILEFLAG)
+
+$(kernel-hidd-bus-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-hidd-bus-genmodfiles_OPTS)
+$(kernel-hidd-bus-genmodfiles_GENFILEFLAG) : MODNAME := bus
+$(kernel-hidd-bus-genmodfiles_GENFILEFLAG) : MODTYPE := hidd
+$(kernel-hidd-bus-genmodfiles_GENFILEFLAG) : $(kernel-hidd-bus-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-hidd-bus-genmodfiles_GENFILEFLAG) : $(kernel-hidd-bus_DEFLIBDEFSINC) $(kernel-hidd-bus-makefile)
+
+
+ifneq ($(kernel-hidd-bus-genmodfiles_GENFILEFLAG),)
+$(kernel-hidd-bus-genmodfiles_GENFILEFLAG) : | $(kernel-hidd-bus_OBJDIR)/linklib
+else
+$(kernel-hidd-bus-genmodfiles_GENFILEFLAG) :: $(kernel-hidd-bus_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-bus_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-hidd-bus_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-hidd-bus_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-hidd-bus-fd : $(kernel-hidd-bus_FDDIR)/bus_lib.fd
+
+
+TMP_TARGET := bus_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/bus.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/bus.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-bus_FDDIR),)
+    TMP_OPTS += -d $(kernel-hidd-bus_FDDIR)
+    TMP_TARGET := $(kernel-hidd-bus_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := bus
+$(TMP_TARGET) : MODTYPE := hidd
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-bus_FDDIR)/bus_lib.fd : | $(kernel-hidd-bus_FDDIR)
+
+
+ifneq (kernel-hidd-bus-fd-setup,)
+kernel-hidd-bus-fd-setup : | $(kernel-hidd-bus_FDDIR)
+else
+kernel-hidd-bus-fd-setup :: $(kernel-hidd-bus_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-bus_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-hidd-bus_FILES            := $(FILES)
+kernel-hidd-bus_OBJCFILES        := 
+kernel-hidd-bus_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-hidd-bus_LIBFILES         := 
+kernel-hidd-bus_LIBS             := 
+
+kernel-hidd-bus_FDIRS            := $(sort $(dir $(kernel-hidd-bus_FILES)))
+
+kernel-hidd-bus_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-hidd-bus_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-hidd-bus_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-hidd-bus_FILTERARCH       = $(filter-out $(call kernel-hidd-bus_MATCHARCH,$(1),$(2)),$(2))
+kernel-hidd-bus_STARTFILES       := $(addprefix $(kernel-hidd-bus_OBJDIR)/,$($(kernel-hidd-bus_DEFNAME)_STARTFILES))
+kernel-hidd-bus_ENDFILES         := $(addprefix $(kernel-hidd-bus_OBJDIR)/,$($(kernel-hidd-bus_DEFNAME)_ENDFILES))
+
+kernel-hidd-bus_ARCHOBJS         := $(wildcard $(kernel-hidd-bus_OBJDIR)/arch/*.o)
+kernel-hidd-bus_LIBARCHOBJS      := $(wildcard $(kernel-hidd-bus_OBJDIR)/linklib/arch/*.o)
+kernel-hidd-bus_ARCHFILES        := $(basename $(notdir $(kernel-hidd-bus_ARCHOBJS)))
+kernel-hidd-bus_LIBARCHFILES     := $(basename $(notdir $(kernel-hidd-bus_LIBARCHOBJS)))
+kernel-hidd-bus_C_NARCHFILES     := $(call kernel-hidd-bus_FILTERARCH,$(kernel-hidd-bus_ARCHFILES),$(kernel-hidd-bus_FILES))
+kernel-hidd-bus_CXX_NARCHFILES   := $(call kernel-hidd-bus_FILTERARCH,$(kernel-hidd-bus_ARCHFILES),$(kernel-hidd-bus_CXXFILES))
+kernel-hidd-bus_OBJC_NARCHFILES  := $(call kernel-hidd-bus_FILTERARCH,$(kernel-hidd-bus_ARCHFILES),$(kernel-hidd-bus_OBJCFILES))
+kernel-hidd-bus_NLIBARCHFILES    := $(call kernel-hidd-bus_FILTERARCH,$(kernel-hidd-bus_LIBARCHFILES),$(kernel-hidd-bus_LIBFILES))
+kernel-hidd-bus_ARCHNLIBFILES    := $(call kernel-hidd-bus_FILTERARCH,$(kernel-hidd-bus_LIBFILES),$(kernel-hidd-bus_LIBARCHFILES))
+
+kernel-hidd-bus_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-hidd-bus_OBJDIR)/include -include $(kernel-hidd-bus_DEFLIBDEFSINC))
+ifneq (,)
+kernel-hidd-bus_CPPFLAGS         += -I
+endif
+kernel-hidd-bus_LINKLIBCPPFLAGS  := $(kernel-hidd-bus_CPPFLAGS)
+kernel-hidd-bus_CPPFLAGS         += $(strip $($(kernel-hidd-bus_DEFNAME)_CPPFLAGS))
+kernel-hidd-bus_LINKLIBCPPFLAGS  += $(strip $($(kernel-hidd-bus_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-hidd-bus_CFLAGS           := $(strip $(CFLAGS) $($(kernel-hidd-bus_DEFNAME)_CFLAGS))
+kernel-hidd-bus_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-hidd-bus_DEFNAME)_LINKLIBCFLAGS))
+kernel-hidd-bus_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-hidd-bus_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-bus_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-hidd-bus_CFLAGS           := $(strip $(kernel-hidd-bus_LTOFLAGS) $(kernel-hidd-bus_CFLAGS))
+kernel-hidd-bus_LINKLIBCFLAGS    := $(strip $(kernel-hidd-bus_LTOFLAGS) $(kernel-hidd-bus_LINKLIBCFLAGS))
+kernel-hidd-bus_CXXFLAGS         := $(strip $(kernel-hidd-bus_LTOFLAGS) $(kernel-hidd-bus_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-bus_SUBSTNULL        :=
+kernel-hidd-bus_SUBSTSPACE       := $(kernel-hidd-bus_SUBSTNULL) #
+kernel-hidd-bus_SUBSTCOMMA       := ,
+kernel-hidd-bus_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-hidd-bus_SUBSTSPACE),$(kernel-hidd-bus_SUBSTCOMMA),$(strip $($(kernel-hidd-bus_DEFNAME)_STARTFILES))))
+kernel-hidd-bus_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-hidd-bus_CFLAGS           := $(strip $(kernel-hidd-bus_INSTRFUNCFLAGS) $(kernel-hidd-bus_CFLAGS))
+kernel-hidd-bus_CXXFLAGS         := $(strip $(kernel-hidd-bus_INSTRFUNCFLAGS) $(kernel-hidd-bus_CXXFLAGS))
+kernel-hidd-bus_LIBS             += $(kernel-hidd-bus_INSTRFUNCLIBS)
+endif
+endif
+kernel-hidd-bus_DFLAGS           := $(strip $(kernel-hidd-bus_DFLAGS) $($(kernel-hidd-bus_DEFNAME)_DFLAGS))
+kernel-hidd-bus_LINKLIBDFLAGS    := $(strip $(kernel-hidd-bus_DFLAGS) $($(kernel-hidd-bus_DEFNAME)_LINKLIBDFLAGS))
+kernel-hidd-bus_DXXFLAGS         := $(strip $(kernel-hidd-bus_DXXFLAGS) $($(kernel-hidd-bus_DEFNAME)_DXXFLAGS))
+
+ifeq (hidd,library)
+    kernel-hidd-bus_LIBSUFFIX    := 
+else
+    kernel-hidd-bus_LIBSUFFIX    := .hidd
+endif
+
+ifeq (,)
+kernel-hidd-bus_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-hidd-bus_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-hidd-bus_LINKLIBCFILES    := $(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$($(kernel-hidd-bus_DEFNAME)_LINKLIBFILES))
+kernel-hidd-bus_LINKLIBAFILES    := $(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$($(kernel-hidd-bus_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-bus_DEFNAME)_LINKLIBFILES) $($(kernel-hidd-bus_DEFNAME)_LINKLIBAFILES)  $(kernel-hidd-bus_ARCHNLIBFILES)),)
+    kernel-hidd-bus_LINKLIB      :=
+else
+    kernel-hidd-bus_LINKLIB      := $(kernel-hidd-bus_LIBDIR)/libbus$(kernel-hidd-bus_LIBSUFFIX).a
+    ifneq (bus,$(kernel-hidd-bus_LINKLIBNAME))
+        kernel-hidd-bus_LINKLIB  += $(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_LINKLIBNAME)$(kernel-hidd-bus_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-bus_LINKLIBFILES     := $(kernel-hidd-bus_LINKLIBCFILES) $(kernel-hidd-bus_LINKLIBAFILES)
+
+kernel-hidd-bus_RELLINKLIBCFILES := $(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$($(kernel-hidd-bus_DEFNAME)_RELLINKLIBFILES))
+kernel-hidd-bus_RELLINKLIBAFILES := $(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$($(kernel-hidd-bus_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-bus_DEFNAME)_RELLINKLIBFILES) $($(kernel-hidd-bus_DEFNAME)_RELLINKLIBAFILES)  $(kernel-hidd-bus_ARCHNLIBFILES)),)
+    kernel-hidd-bus_RELLINKLIB   :=
+else
+    kernel-hidd-bus_RELLINKLIB   := $(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_DEFNAME)_rel$(kernel-hidd-bus_LIBSUFFIX).a
+    ifneq (bus,$(kernel-hidd-bus_LINKLIBNAME))
+        kernel-hidd-bus_RELLINKLIB += $(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_LINKLIBNAME)_rel$(kernel-hidd-bus_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-bus_RELLINKLIBFILES  := $(kernel-hidd-bus_RELLINKLIBCFILES) $(kernel-hidd-bus_RELLINKLIBAFILES)
+endif
+
+kernel-hidd-bus_ENDOBJS          := $(addsuffix .o,$(kernel-hidd-bus_ENDFILES))
+kernel-hidd-bus_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$(notdir $(kernel-hidd-bus_NLIBARCHFILES))) $(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-bus_ARCHNLIBFILES))) $(kernel-hidd-bus_LINKLIBFILES)) \
+                 
+kernel-hidd-bus_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$(notdir $(kernel-hidd-bus_NLIBARCHFILES))) $(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-bus_ARCHNLIBFILES))) $(kernel-hidd-bus_RELLINKLIBFILES)) \
+                 
+$(kernel-hidd-bus_LINKLIBFILES) $(kernel-hidd-bus_RELLINKLIBFILES) : | $(kernel-hidd-bus_OBJDIR)/linklib
+$(kernel-hidd-bus_LINKLIBOBJS) $(kernel-hidd-bus_RELLINKLIBOBJS) : | $(kernel-hidd-bus_OBJDIR)/linklib
+
+kernel-hidd-bus_CCFILES := $(kernel-hidd-bus_C_NARCHFILES)
+kernel-hidd-bus_TARGETCCFILES    := $(strip $(kernel-hidd-bus_STARTFILES) $(kernel-hidd-bus_ENDFILES))
+kernel-hidd-bus_LINKLIBCCFILES   := $(strip $(kernel-hidd-bus_NLIBARCHFILES) $(kernel-hidd-bus_LINKLIBCFILES) $(kernel-hidd-bus_RELLINKLIBCFILES))
+kernel-hidd-bus_LINKLIBCCGENFILES := $(strip $(kernel-hidd-bus_LINKLIBCFILES) $(kernel-hidd-bus_RELLINKLIBCFILES))
+
+
+kernel-hidd-bus_CXXABSBASENAMES := $(foreach kernel-hidd-bus_CXXBASE,$(kernel-hidd-bus_CXX_NARCHFILES),$(if $(filter /%,$(kernel-hidd-bus_CXXBASE)),$(kernel-hidd-bus_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-hidd-bus_CXXBASE))))
+
+ifneq ($(kernel-hidd-bus_CXXABSBASENAMES),)
+
+kernel-hidd-bus_CXXBASENAMES := $(basename $(kernel-hidd-bus_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-hidd-bus_MCXX_FILES  := $(strip $(foreach kernel-hidd-bus_CXXBASE,$(kernel-hidd-bus_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-hidd-bus_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-hidd-bus_EXT),$(kernel-hidd-bus_CXXBASE)))))))
+
+ifeq (,)
+kernel-hidd-bus_MCXX_SRCWILDCARD := %
+else
+kernel-hidd-bus_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-bus_OBJDIR),)
+  kernel-hidd-bus_CXXTARGETS := $(notdir $(kernel-hidd-bus_CXXBASENAMES:=.o))
+  kernel-hidd-bus_CXXDTARGETS := $(notdir $(kernel-hidd-bus_CXXBASENAMES:=.d))
+  kernel-hidd-bus_MCXX_WILDCARD := %
+else
+  kernel-hidd-bus_CXXTARGETS := $(addprefix $(kernel-hidd-bus_OBJDIR)/,$(notdir $(kernel-hidd-bus_CXXBASENAMES:=.o)))
+  kernel-hidd-bus_CXXDTARGETS := $(addprefix $(kernel-hidd-bus_OBJDIR)/,$(notdir $(kernel-hidd-bus_CXXBASENAMES:=.d)))
+  kernel-hidd-bus_MCXX_WILDCARD := $(kernel-hidd-bus_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-hidd-bus_CXXTARGETS) $(kernel-hidd-bus_CXXDTARGETS) : | $(kernel-hidd-bus_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-hidd-bus_MCXX_CPPFLAGS := $(kernel-hidd-bus_CPPFLAGS)
+kernel-hidd-bus_CXXFLAGS := $(kernel-hidd-bus_CXXFLAGS)
+ifeq ($(kernel-hidd-bus_DXXFLAGS),)
+  kernel-hidd-bus_DXXFLAGS := $(kernel-hidd-bus_CXXFLAGS)
+else
+  kernel-hidd-bus_DXXFLAGS := $(kernel-hidd-bus_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-hidd-bus_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-hidd-bus_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-bus_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-hidd-bus_CXXCMD:=$(HOST_CXX)
+  kernel-hidd-bus_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-hidd-bus_MCXX_CPPFLAGS) $(kernel-hidd-bus_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-bus_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-bus_CXXFLAGS))
+  kernel-hidd-bus_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-bus_DXXFLAGS))
+  kernel-hidd-bus_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-hidd-bus_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-hidd-bus_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-bus_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-bus_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-hidd-bus_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-hidd-bus_MCXX_CPPFLAGS := $(strip $(kernel-hidd-bus_MCXX_CPPFLAGS) $(kernel-hidd-bus_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-bus_CXXFLAGS := $(strip $(kernel-hidd-bus_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-hidd-bus_DXXFLAGS := $(kernel-hidd-bus_DXXFLAGS)
+  kernel-hidd-bus_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-hidd-bus_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-hidd-bus_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-bus_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-bus_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-hidd-bus_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-hidd-bus_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-hidd-bus_MCXX_CPPFLAGS) $(kernel-hidd-bus_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-bus_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-bus_CXXFLAGS))
+  kernel-hidd-bus_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-bus_DXXFLAGS))
+  kernel-hidd-bus_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-hidd-bus_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-hidd-bus_CXXCMD) $(kernel-hidd-bus_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-bus_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_CXXIQUOTE) . $(kernel-hidd-bus_CXXIQUOTE_END) $(strip $(kernel-hidd-bus_CXXFLAGS) $(kernel-hidd-bus_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-hidd-bus_CXXCMD) $(kernel-hidd-bus_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-bus_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_CXXIQUOTE) . $(kernel-hidd-bus_CXXIQUOTE_END) $(strip $(kernel-hidd-bus_CXXFLAGS) $(kernel-hidd-bus_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-hidd-bus_CXXCMD) $(kernel-hidd-bus_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-bus_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_CXXIQUOTE) . $(kernel-hidd-bus_CXXIQUOTE_END) $(strip $(kernel-hidd-bus_CXXFLAGS) $(kernel-hidd-bus_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-hidd-bus_CXXCMD)" $(MKDEPEND) $(strip $(kernel-hidd-bus_DXXFLAGS) $(kernel-hidd-bus_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-hidd-bus_OBJDIR),)
+  $(foreach kernel-hidd-bus_CXXFILE,$(kernel-hidd-bus_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-hidd-bus_CXXFILE))),$(kernel-hidd-bus_CXXFILE))))
+else
+  $(foreach kernel-hidd-bus_CXXFILE,$(kernel-hidd-bus_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-hidd-bus_OBJDIR)/,$(notdir $(basename $(kernel-hidd-bus_CXXFILE)))),$(kernel-hidd-bus_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-hidd-bus_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-hidd-bus_MOBJC_SRCWILDCARD := %
+else
+kernel-hidd-bus_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-bus_OBJDIR),)
+  kernel-hidd-bus_MOBJC_TARGETS := $(addsuffix .o,$(kernel-hidd-bus_OBJC_NARCHFILES))
+  kernel-hidd-bus_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-hidd-bus_OBJC_NARCHFILES))
+  kernel-hidd-bus_MOBJC_WILDCARD := %
+else
+  kernel-hidd-bus_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-bus_OBJDIR)/,$(kernel-hidd-bus_OBJC_NARCHFILES)))
+  kernel-hidd-bus_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-bus_OBJDIR)/,$(kernel-hidd-bus_OBJC_NARCHFILES)))
+  kernel-hidd-bus_MOBJC_WILDCARD := $(kernel-hidd-bus_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-hidd-bus_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-hidd-bus_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-hidd-bus_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-bus_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-hidd-bus_MOBJC_DIRS := $(foreach dir, $(kernel-hidd-bus_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-bus_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-hidd-bus_MOBJC_DIRS),)
+    kernel-hidd-bus_MOBJC_DIRS := $(shell echo $(kernel-hidd-bus_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-hidd-bus_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-hidd-bus_CC := $(TARGET_CC)
+else
+  kernel-hidd-bus_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-hidd-bus_MOBJC_CPPFLAGS := $(kernel-hidd-bus_CPPFLAGS)
+kernel-hidd-bus_OBJCFLAGS := $(kernel-hidd-bus_CFLAGS)
+kernel-hidd-bus_OBJCFLAGS := $(kernel-hidd-bus_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-hidd-bus_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-hidd-bus_OBJCFLAGS)))
+ifeq ($(kernel-hidd-bus_DFLAGS),)
+  kernel-hidd-bus_OBJCDFLAGS := $(kernel-hidd-bus_CFLAGS)
+else
+  kernel-hidd-bus_OBJCDFLAGS := $(kernel-hidd-bus_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-hidd-bus_LINK ?= $(strip $(kernel-hidd-bus_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-bus_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-bus_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-hidd-bus_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : kernel-hidd-bus_MOBJC_CPPFLAGS:=$(strip $(kernel-hidd-bus_MOBJC_CPPFLAGS) $(kernel-hidd-bus_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : kernel-hidd-bus_OBJCFLAGS:=$(strip $(kernel-hidd-bus_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : kernel-hidd-bus_OBJCDFLAGS:=$(kernel-hidd-bus_OBJCDFLAGS)
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : kernel-hidd-bus_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : kernel-hidd-bus_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-hidd-bus_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-hidd-bus_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-bus_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : kernel-hidd-bus_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-hidd-bus_MOBJC_CPPFLAGS) $(kernel-hidd-bus_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : kernel-hidd-bus_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-bus_OBJCFLAGS))
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : kernel-hidd-bus_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-bus_OBJCDFLAGS))
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : kernel-hidd-bus_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : kernel-hidd-bus_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-hidd-bus_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-bus_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-bus_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : kernel-hidd-bus_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-hidd-bus_MOBJC_CPPFLAGS) $(kernel-hidd-bus_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : kernel-hidd-bus_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-bus_OBJCFLAGS))
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : kernel-hidd-bus_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-bus_OBJCDFLAGS))
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : kernel-hidd-bus_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-hidd-bus_MOBJC_TARGETS) $(kernel-hidd-bus_MOBJC_DTARGETS) : kernel-hidd-bus_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-bus_MOBJC_TARGETS) : CPPFLAGS := $(kernel-hidd-bus_MOBJC_CPPFLAGS)
+$(kernel-hidd-bus_MOBJC_TARGETS) : CFLAGS := $(kernel-hidd-bus_OBJCFLAGS)
+$(kernel-hidd-bus_MOBJC_TARGETS) : $(kernel-hidd-bus_MOBJC_WILDCARD).o : $(kernel-hidd-bus_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-bus_IQUOTE) $(dir $<) $(kernel-hidd-bus_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_IQUOTE) . $(kernel-hidd-bus_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-bus_IQUOTE) $(dir $<) $(kernel-hidd-bus_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_IQUOTE) . $(kernel-hidd-bus_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-bus_IQUOTE) $(dir $<) $(kernel-hidd-bus_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_IQUOTE) . $(kernel-hidd-bus_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-bus_MOBJC_DTARGETS) : $(kernel-hidd-bus_MOBJC_WILDCARD).d : $(kernel-hidd-bus_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-bus_OBJCDFLAGS) $(kernel-hidd-bus_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-hidd-bus_MC_SRCWILDCARD := %
+else
+kernel-hidd-bus_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-bus_OBJDIR),)
+kernel-hidd-bus_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-bus_CCFILES))
+kernel-hidd-bus_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-bus_CCFILES))
+kernel-hidd-bus_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-bus_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-bus_OBJDIR)/,$(notdir $(kernel-hidd-bus_CCFILES))))
+    kernel-hidd-bus_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-bus_OBJDIR)/,$(notdir $(kernel-hidd-bus_CCFILES))))
+else
+ifeq (,)
+    kernel-hidd-bus_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-bus_OBJDIR)/,$(kernel-hidd-bus_CCFILES)))
+    kernel-hidd-bus_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-bus_OBJDIR)/,$(kernel-hidd-bus_CCFILES)))
+else
+    kernel-hidd-bus_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-bus_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-bus_CCFILES))))
+    kernel-hidd-bus_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-bus_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-bus_CCFILES))))
+endif
+endif
+kernel-hidd-bus_MC_TGTWILDCARD := $(kernel-hidd-bus_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-bus_CCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-bus_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-bus_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-bus_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-bus_MC_DIRS := $(foreach dir, $(kernel-hidd-bus_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-bus_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-bus_MC_DIRS),)
+    kernel-hidd-bus_MC_DIRS := $(shell echo $(kernel-hidd-bus_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-bus_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-bus_MC_CPPFLAGS := $(kernel-hidd-bus_CPPFLAGS)
+kernel-hidd-bus_CFLAGS := $(kernel-hidd-bus_CFLAGS)
+ifeq ($(kernel-hidd-bus_DFLAGS),)
+  kernel-hidd-bus_DFLAGS := $(kernel-hidd-bus_CFLAGS)
+else
+  kernel-hidd-bus_DFLAGS := $(kernel-hidd-bus_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-bus_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-bus_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-bus_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_MC_CPPFLAGS:=$(strip $(kernel-hidd-bus_MC_CPPFLAGS) $(kernel-hidd-bus_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_CFLAGS:=$(strip $(kernel-hidd-bus_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_DFLAGS:=$(kernel-hidd-bus_DFLAGS)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-bus_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-bus_STRIP ?= $(HOST_STRIP)
+kernel-hidd-bus_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-bus_MC_CPPFLAGS) $(kernel-hidd-bus_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-bus_CFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-bus_DFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-bus_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-bus_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-bus_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-bus_MC_CPPFLAGS) $(kernel-hidd-bus_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-bus_CFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-bus_DFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-bus_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-bus_MC_CPPFLAGS)
+$(kernel-hidd-bus_MC_TARGETS) : CFLAGS := $(kernel-hidd-bus_CFLAGS)
+$(kernel-hidd-bus_MC_TARGETS) : $(kernel-hidd-bus_MC_TGTWILDCARD).o : $(kernel-hidd-bus_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-bus_IQUOTE) $(dir $<) $(kernel-hidd-bus_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_IQUOTE) . $(kernel-hidd-bus_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-bus_IQUOTE) $(dir $<) $(kernel-hidd-bus_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_IQUOTE) . $(kernel-hidd-bus_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-bus_IQUOTE) $(dir $<) $(kernel-hidd-bus_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_IQUOTE) . $(kernel-hidd-bus_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-bus_MC_DTARGETS) : $(kernel-hidd-bus_MC_TGTWILDCARD).d : $(kernel-hidd-bus_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-bus_DFLAGS) $(kernel-hidd-bus_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-bus_MC_SRCWILDCARD := %
+else
+kernel-hidd-bus_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-bus_OBJDIR),)
+kernel-hidd-bus_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-bus_TARGETCCFILES))
+kernel-hidd-bus_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-bus_TARGETCCFILES))
+kernel-hidd-bus_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-bus_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-bus_OBJDIR)/,$(notdir $(kernel-hidd-bus_TARGETCCFILES))))
+    kernel-hidd-bus_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-bus_OBJDIR)/,$(notdir $(kernel-hidd-bus_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-hidd-bus_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-bus_OBJDIR)/,$(kernel-hidd-bus_TARGETCCFILES)))
+    kernel-hidd-bus_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-bus_OBJDIR)/,$(kernel-hidd-bus_TARGETCCFILES)))
+else
+    kernel-hidd-bus_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-bus_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-bus_TARGETCCFILES))))
+    kernel-hidd-bus_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-bus_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-bus_TARGETCCFILES))))
+endif
+endif
+kernel-hidd-bus_MC_TGTWILDCARD := $(kernel-hidd-bus_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-bus_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-bus_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-bus_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-bus_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-bus_MC_DIRS := $(foreach dir, $(kernel-hidd-bus_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-bus_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-bus_MC_DIRS),)
+    kernel-hidd-bus_MC_DIRS := $(shell echo $(kernel-hidd-bus_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-bus_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-bus_MC_CPPFLAGS := $(kernel-hidd-bus_CPPFLAGS) -D__AROS__
+kernel-hidd-bus_CFLAGS := $(kernel-hidd-bus_CFLAGS)
+ifeq ($(kernel-hidd-bus_DFLAGS),)
+  kernel-hidd-bus_DFLAGS := $(kernel-hidd-bus_CFLAGS)
+else
+  kernel-hidd-bus_DFLAGS := $(kernel-hidd-bus_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-bus_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-bus_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-bus_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_MC_CPPFLAGS:=$(strip $(kernel-hidd-bus_MC_CPPFLAGS) $(kernel-hidd-bus_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_CFLAGS:=$(strip $(kernel-hidd-bus_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_DFLAGS:=$(kernel-hidd-bus_DFLAGS)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-bus_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-bus_STRIP ?= $(HOST_STRIP)
+kernel-hidd-bus_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-bus_MC_CPPFLAGS) $(kernel-hidd-bus_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-bus_CFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-bus_DFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-bus_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-bus_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-bus_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-bus_MC_CPPFLAGS) $(kernel-hidd-bus_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-bus_CFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-bus_DFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-bus_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-bus_MC_CPPFLAGS)
+$(kernel-hidd-bus_MC_TARGETS) : CFLAGS := $(kernel-hidd-bus_CFLAGS)
+$(kernel-hidd-bus_MC_TARGETS) : $(kernel-hidd-bus_MC_TGTWILDCARD).o : $(kernel-hidd-bus_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-bus_IQUOTE) $(dir $<) $(kernel-hidd-bus_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_IQUOTE) . $(kernel-hidd-bus_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-bus_IQUOTE) $(dir $<) $(kernel-hidd-bus_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_IQUOTE) . $(kernel-hidd-bus_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-bus_IQUOTE) $(dir $<) $(kernel-hidd-bus_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_IQUOTE) . $(kernel-hidd-bus_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-bus_MC_DTARGETS) : $(kernel-hidd-bus_MC_TGTWILDCARD).d : $(kernel-hidd-bus_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-bus_DFLAGS) $(kernel-hidd-bus_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-bus_MC_SRCWILDCARD := %
+else
+kernel-hidd-bus_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-bus_OBJDIR)/linklib,)
+kernel-hidd-bus_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-bus_NLIBARCHFILES))
+kernel-hidd-bus_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-bus_NLIBARCHFILES))
+kernel-hidd-bus_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-bus_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$(notdir $(kernel-hidd-bus_NLIBARCHFILES))))
+    kernel-hidd-bus_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$(notdir $(kernel-hidd-bus_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-hidd-bus_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$(kernel-hidd-bus_NLIBARCHFILES)))
+    kernel-hidd-bus_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$(kernel-hidd-bus_NLIBARCHFILES)))
+else
+    kernel-hidd-bus_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-bus_NLIBARCHFILES))))
+    kernel-hidd-bus_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-bus_NLIBARCHFILES))))
+endif
+endif
+kernel-hidd-bus_MC_TGTWILDCARD := $(kernel-hidd-bus_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-bus_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-bus_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-bus_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-bus_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-bus_MC_DIRS := $(foreach dir, $(kernel-hidd-bus_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-bus_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-bus_MC_DIRS),)
+    kernel-hidd-bus_MC_DIRS := $(shell echo $(kernel-hidd-bus_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-bus_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-bus_MC_CPPFLAGS := $(kernel-hidd-bus_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-bus_CFLAGS := $(kernel-hidd-bus_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-bus_LINKLIBDFLAGS),)
+  kernel-hidd-bus_DFLAGS := $(kernel-hidd-bus_LINKLIBCFLAGS)
+else
+  kernel-hidd-bus_DFLAGS := $(kernel-hidd-bus_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-bus_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-bus_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-bus_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_MC_CPPFLAGS:=$(strip $(kernel-hidd-bus_MC_CPPFLAGS) $(kernel-hidd-bus_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_CFLAGS:=$(strip $(kernel-hidd-bus_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_DFLAGS:=$(kernel-hidd-bus_DFLAGS)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-bus_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-bus_STRIP ?= $(HOST_STRIP)
+kernel-hidd-bus_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-bus_MC_CPPFLAGS) $(kernel-hidd-bus_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-bus_CFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-bus_DFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-bus_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-bus_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-bus_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-bus_MC_CPPFLAGS) $(kernel-hidd-bus_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-bus_CFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-bus_DFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-bus_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-bus_MC_CPPFLAGS)
+$(kernel-hidd-bus_MC_TARGETS) : CFLAGS := $(kernel-hidd-bus_CFLAGS)
+$(kernel-hidd-bus_MC_TARGETS) : $(kernel-hidd-bus_MC_TGTWILDCARD).o : $(kernel-hidd-bus_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-bus_IQUOTE) $(dir $<) $(kernel-hidd-bus_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_IQUOTE) . $(kernel-hidd-bus_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-bus_IQUOTE) $(dir $<) $(kernel-hidd-bus_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_IQUOTE) . $(kernel-hidd-bus_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-bus_IQUOTE) $(dir $<) $(kernel-hidd-bus_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_IQUOTE) . $(kernel-hidd-bus_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-bus_MC_DTARGETS) : $(kernel-hidd-bus_MC_TGTWILDCARD).d : $(kernel-hidd-bus_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-bus_DFLAGS) $(kernel-hidd-bus_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-hidd-bus_OBJDIR)/linklib,)
+kernel-hidd-bus_MC_SRCWILDCARD := %
+else
+kernel-hidd-bus_MC_SRCWILDCARD := $(kernel-hidd-bus_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-hidd-bus_OBJDIR)/linklib,)
+kernel-hidd-bus_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-bus_LINKLIBCCGENFILES))
+kernel-hidd-bus_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-bus_LINKLIBCCGENFILES))
+kernel-hidd-bus_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-bus_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$(notdir $(kernel-hidd-bus_LINKLIBCCGENFILES))))
+    kernel-hidd-bus_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$(notdir $(kernel-hidd-bus_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-hidd-bus_OBJDIR)/linklib,)
+    kernel-hidd-bus_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$(kernel-hidd-bus_LINKLIBCCGENFILES)))
+    kernel-hidd-bus_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$(kernel-hidd-bus_LINKLIBCCGENFILES)))
+else
+    kernel-hidd-bus_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-bus_OBJDIR)/linklib/%,%,$(kernel-hidd-bus_LINKLIBCCGENFILES))))
+    kernel-hidd-bus_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-bus_OBJDIR)/linklib/%,%,$(kernel-hidd-bus_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-hidd-bus_MC_TGTWILDCARD := $(kernel-hidd-bus_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-bus_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-bus_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-bus_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-bus_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-bus_MC_DIRS := $(foreach dir, $(kernel-hidd-bus_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-bus_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-bus_MC_DIRS),)
+    kernel-hidd-bus_MC_DIRS := $(shell echo $(kernel-hidd-bus_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-bus_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-bus_MC_CPPFLAGS := $(kernel-hidd-bus_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-bus_CFLAGS := $(kernel-hidd-bus_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-bus_LINKLIBDFLAGS),)
+  kernel-hidd-bus_DFLAGS := $(kernel-hidd-bus_LINKLIBCFLAGS)
+else
+  kernel-hidd-bus_DFLAGS := $(kernel-hidd-bus_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-bus_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-bus_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-bus_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_MC_CPPFLAGS:=$(strip $(kernel-hidd-bus_MC_CPPFLAGS) $(kernel-hidd-bus_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_CFLAGS:=$(strip $(kernel-hidd-bus_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_DFLAGS:=$(kernel-hidd-bus_DFLAGS)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-bus_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-bus_STRIP ?= $(HOST_STRIP)
+kernel-hidd-bus_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-bus_MC_CPPFLAGS) $(kernel-hidd-bus_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-bus_CFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-bus_DFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-bus_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-bus_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-bus_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-bus_MC_CPPFLAGS) $(kernel-hidd-bus_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-bus_CFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-bus_DFLAGS))
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-bus_MC_TARGETS) $(kernel-hidd-bus_MC_DTARGETS) : kernel-hidd-bus_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-bus_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-bus_MC_CPPFLAGS)
+$(kernel-hidd-bus_MC_TARGETS) : CFLAGS := $(kernel-hidd-bus_CFLAGS)
+$(kernel-hidd-bus_MC_TARGETS) : $(kernel-hidd-bus_MC_TGTWILDCARD).o : $(kernel-hidd-bus_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-bus_IQUOTE) $(dir $<) $(kernel-hidd-bus_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_IQUOTE) . $(kernel-hidd-bus_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-bus_IQUOTE) $(dir $<) $(kernel-hidd-bus_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_IQUOTE) . $(kernel-hidd-bus_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-bus_IQUOTE) $(dir $<) $(kernel-hidd-bus_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-bus_IQUOTE) . $(kernel-hidd-bus_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-bus_MC_DTARGETS) : $(kernel-hidd-bus_MC_TGTWILDCARD).d : $(kernel-hidd-bus_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-bus_DFLAGS) $(kernel-hidd-bus_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-hidd-bus_LINKLIBAFILES),)
+
+ifeq ($(kernel-hidd-bus_OBJDIR)/linklib,)
+kernel-hidd-bus-MA_TARGETS := $(addsuffix .o,$(kernel-hidd-bus_LINKLIBAFILES) $(kernel-hidd-bus_RELLINKLIBAFILES))
+kernel-hidd-bus-MA_WILDCARD := %
+else
+kernel-hidd-bus-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$(notdir $(kernel-hidd-bus_LINKLIBAFILES) $(kernel-hidd-bus_RELLINKLIBAFILES))))
+kernel-hidd-bus-MA_WILDCARD := $(kernel-hidd-bus_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-hidd-bus-MA_TARGETS) : | $(addsuffix .S,$(kernel-hidd-bus_LINKLIBAFILES) $(kernel-hidd-bus_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-bus-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-bus-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-bus_LINKLIBAFILES) $(kernel-hidd-bus_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-bus-MA_DIRS := $(foreach dir, $(kernel-hidd-bus-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-bus-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-bus-MA_DIRS),)
+    kernel-hidd-bus-MA_DIRS := $(shell echo $(kernel-hidd-bus-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-hidd-bus-MA_DIRS)
+endif
+
+endif
+
+kernel-hidd-bus-MA_ASSEMBLER ?= $(kernel-hidd-bus_ASSEMBLER)
+
+$(kernel-hidd-bus-MA_TARGETS) : kernel-hidd-bus-MA_CMD:= $(kernel-hidd-bus-MA_ASSEMBLER)
+
+$(kernel-hidd-bus-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-hidd-bus-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-hidd-bus-MA_TARGETS) : $(kernel-hidd-bus-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-hidd-bus-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-hidd-bus-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-hidd-bus-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-hidd-bus_SUFFIX           := hidd
+else
+kernel-hidd-bus_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-hidd-bus_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-hidd-bus_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-hidd-bus_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-hidd-bus_SUFFIX),handler)
+kernel-hidd-bus_MODULE           := $(AROSDIR)/$(kernel-hidd-bus_MODDIR)/$(kernel-hidd-bus_DEFNAME)-$(kernel-hidd-bus_SUFFIX)
+else
+kernel-hidd-bus_MODULE           := $(AROSDIR)/$(kernel-hidd-bus_MODDIR)/$(kernel-hidd-bus_DEFNAME).$(kernel-hidd-bus_SUFFIX)
+endif
+kernel-hidd-bus_KOBJ             := $(KOBJSDIR)/$(kernel-hidd-bus_DEFNAME)_$(kernel-hidd-bus_SUFFIX).o
+else
+kernel-hidd-bus_MODULE           :=
+kernel-hidd-bus_KOBJ             :=
+endif
+
+kernel-hidd-bus-quick      : kernel-hidd-bus
+kernel-hidd-bus            : $(kernel-hidd-bus_MODULE) $(kernel-hidd-bus_LINKLIB) $(kernel-hidd-bus_RELLINKLIB)
+ifeq (M,M)
+kernel-hidd-bus-kobj       : $(kernel-hidd-bus_KOBJ) $(kernel-hidd-bus_LINKLIB) $(kernel-hidd-bus_RELLINKLIB)
+kernel-hidd-bus-kobj-quick : $(kernel-hidd-bus_KOBJ) $(kernel-hidd-bus_LINKLIB) $(kernel-hidd-bus_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-hidd-bus-linklib    : $(kernel-hidd-bus_LINKLIB) $(kernel-hidd-bus_RELLINKLIB)
+endif
+
+kernel-hidd-bus_OBJS := $(addsuffix .o,$(kernel-hidd-bus_STARTFILES)) $(kernel-hidd-bus_ARCHOBJS) \
+           $(addprefix $(kernel-hidd-bus_OBJDIR)/,$(notdir $(kernel-hidd-bus_C_NARCHFILES:=.o) $(kernel-hidd-bus_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (hidd,handler)
+kernel-hidd-bus_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (bus,con)
+    kernel-hidd-bus_ERR          := $(notdir $(kernel-hidd-bus_MODULE)).err
+else
+    kernel-hidd-bus_ERR          := bus.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-hidd-bus_DEFNAME)_LDFLAGS) $(kernel-hidd-bus_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-hidd-bus_LIBS) $($(kernel-hidd-bus_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-hidd-bus_MODULE) : LIB_NAMES := $(kernel-hidd-bus_LIBS) $($(kernel-hidd-bus_DEFNAME)_LIBS)
+$(kernel-hidd-bus_MODULE) : OBJS := $(kernel-hidd-bus_STARTOBJS) $(kernel-hidd-bus_OBJS) $(USER_OBJS)
+$(kernel-hidd-bus_MODULE) : ENDTAG := $(kernel-hidd-bus_ENDOBJS)
+$(kernel-hidd-bus_MODULE) : ERR := $(kernel-hidd-bus_ERR)
+$(kernel-hidd-bus_MODULE) : OBJDIR := $(kernel-hidd-bus_OBJDIR)
+$(kernel-hidd-bus_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-hidd-bus_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-hidd-bus_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-hidd-bus_MODULE) : $(kernel-hidd-bus_STARTOBJS) $(kernel-hidd-bus_OBJS) $(USER_OBJS) $(kernel-hidd-bus_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-hidd-bus_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-hidd-bus_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-hidd-bus_LC_LINKLIBNAME   := $(shell echo $(kernel-hidd-bus_LINKLIBNAME) | tr A-Z a-z)
+kernel-hidd-bus_LC_MODNAME       := $(shell echo bus | tr A-Z a-z)
+ifneq ($(kernel-hidd-bus_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_LINKLIBNAME)$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_AR:=$(AR)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_LINKLIBNAME)$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_LINKLIBNAME)$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_AR:=$(HOST_AR)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_LINKLIBNAME)$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_LINKLIBNAME)$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_AR:=$(KERNEL_AR)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_LINKLIBNAME)$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_LINKLIBNAME)$(kernel-hidd-bus_LIBSUFFIX).a : $(kernel-hidd-bus_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-bus_AR) $@ $^
+	$(Q)$(kernel-hidd-bus_RANLIB) $@
+ifneq ($(kernel-hidd-bus_LC_MODNAME),$(kernel-hidd-bus_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-bus_LIBDIR)/libbus$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_AR:=$(AR)
+$(kernel-hidd-bus_LIBDIR)/libbus$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-bus_LIBDIR)/libbus$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_AR:=$(HOST_AR)
+$(kernel-hidd-bus_LIBDIR)/libbus$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-bus_LIBDIR)/libbus$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_AR:=$(KERNEL_AR)
+$(kernel-hidd-bus_LIBDIR)/libbus$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-bus_LIBDIR)/libbus$(kernel-hidd-bus_LIBSUFFIX).a : $(kernel-hidd-bus_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-bus_AR) $@ $^
+	$(Q)$(kernel-hidd-bus_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-bus_LINKLIB),)
+$(kernel-hidd-bus_LINKLIB) : | $(kernel-hidd-bus_LIBDIR)
+else
+$(kernel-hidd-bus_LINKLIB) :: $(kernel-hidd-bus_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-bus_LIBDIR)
+
+endif
+
+ifneq ($(kernel-hidd-bus_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_LINKLIBNAME)_rel$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_AR:=$(AR)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_LINKLIBNAME)_rel$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_LINKLIBNAME)_rel$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_AR:=$(HOST_AR)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_LINKLIBNAME)_rel$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_LINKLIBNAME)_rel$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_AR:=$(KERNEL_AR)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_LINKLIBNAME)_rel$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_LINKLIBNAME)_rel$(kernel-hidd-bus_LIBSUFFIX).a : $(kernel-hidd-bus_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-bus_AR) $@ $^
+	$(Q)$(kernel-hidd-bus_RANLIB) $@
+ifneq ($(kernel-hidd-bus_LC_MODNAME),$(kernel-hidd-bus_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_DEFNAME)_rel$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_AR:=$(AR)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_DEFNAME)_rel$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_DEFNAME)_rel$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_AR:=$(HOST_AR)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_DEFNAME)_rel$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_DEFNAME)_rel$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_AR:=$(KERNEL_AR)
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_DEFNAME)_rel$(kernel-hidd-bus_LIBSUFFIX).a : kernel-hidd-bus_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-bus_LIBDIR)/lib$(kernel-hidd-bus_DEFNAME)_rel$(kernel-hidd-bus_LIBSUFFIX).a : $(kernel-hidd-bus_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-bus_AR) $@ $^
+	$(Q)$(kernel-hidd-bus_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-bus_RELLINKLIB),)
+$(kernel-hidd-bus_RELLINKLIB) : | $(kernel-hidd-bus_LIBDIR)
+else
+$(kernel-hidd-bus_RELLINKLIB) :: $(kernel-hidd-bus_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-bus_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-hidd-bus_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-hidd-bus_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-hidd-bus_SYMBOLS := $(kernel-hidd-bus_KBASE)
+
+kernel-hidd-bus_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-hidd-bus_KOBJ_LIBS        := $(filter-out $(kernel-hidd-bus_KLIB),$(kernel-hidd-bus_LIBS)) $(kernel-hidd-bus_KAUTOLIB)
+$(kernel-hidd-bus_KOBJ) : LINKLIBS:=$(kernel-hidd-bus_KOBJ_LIBS) $($(kernel-hidd-bus_DEFNAME)_LIBS)
+$(kernel-hidd-bus_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-hidd-bus_SYMBOLS))
+$(kernel-hidd-bus_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-hidd-bus_KOBJ) : $(kernel-hidd-bus_OBJS) $(USER_OBJS) $(kernel-hidd-bus_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-hidd-bus_DEPS             := $(addprefix $(kernel-hidd-bus_OBJDIR)/,$(notdir $(kernel-hidd-bus_CCFILES:=.d) $(kernel-hidd-bus_TARGETCCFILES:=.d) $(kernel-hidd-bus_CXXFILES:=.d))) $(addprefix $(kernel-hidd-bus_OBJDIR)/linklib/,$(notdir $(kernel-hidd-bus_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-hidd-bus_DEPS),)
+  ifneq (kernel-hidd-bus kernel-hidd-bus-quick kernel-hidd-bus-kobj kernel-hidd-bus-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-hidd-bus kernel-hidd-bus-quick kernel-hidd-bus-kobj kernel-hidd-bus-kobj-quick),)
+      -include $(kernel-hidd-bus_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-hidd-bus_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-hidd-bus_OBJS) $(kernel-hidd-bus_DEPS) : | $(kernel-hidd-bus_OBJDIR)/linklib
+
+ifneq ($(kernel-hidd-bus_OBJS) $(kernel-hidd-bus_DEPS) $(kernel-hidd-bus_MODULE) $(kernel-hidd-bus_KOBJ),)
+$(kernel-hidd-bus_OBJS) $(kernel-hidd-bus_DEPS) $(kernel-hidd-bus_MODULE) $(kernel-hidd-bus_KOBJ) : | $(kernel-hidd-bus_OBJDIR) $(AROSDIR)/$(kernel-hidd-bus_MODDIR) $(KOBJSDIR)
+else
+$(kernel-hidd-bus_OBJS) $(kernel-hidd-bus_DEPS) $(kernel-hidd-bus_MODULE) $(kernel-hidd-bus_KOBJ) :: $(kernel-hidd-bus_OBJDIR) $(AROSDIR)/$(kernel-hidd-bus_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-bus_OBJDIR) $(AROSDIR)/$(kernel-hidd-bus_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-hidd-bus kernel-hidd-bus-includes kernel-hidd-bus-quick kernel-hidd-bus-kobj kernel-hidd-bus-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-hidd-bus_DFILE_DEPS := $(kernel-hidd-bus_LIBDEFSINC) $(kernel-hidd-bus_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-hidd-bus_INCDIR)/,$($(kernel-hidd-bus_DEFNAME)_INCLUDES))
+$(kernel-hidd-bus_DEPS) : $(kernel-hidd-bus_DFILE_DEPS)
+endif
+
+kernel-hidd-bus_TOCLEAN := $(kernel-hidd-bus_OBJS) $(kernel-hidd-bus_DEPS) \
+    $(kernel-hidd-bus_MODULE) $(kernel-hidd-bus_LINKLIB) $(kernel-hidd-bus_KOBJ) \
+    $(kernel-hidd-bus_OBJDIR)/Makefile.bushidd \
+    $(addprefix $(kernel-hidd-bus_OBJDIR)/include/,$($(kernel-hidd-bus_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-hidd-bus_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-bus_INCDIR)/,$($(kernel-hidd-bus_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-bus_OBJDIR)/bus_geninc $(kernel-hidd-bus_OBJDIR)/bus_incs \
+    $(addsuffix .c,$(kernel-hidd-bus_LINKLIBFILES)) $(kernel-hidd-bus_LINKLIBOBJS) $(kernel-hidd-bus_LIBDEFSINC) \
+    $(kernel-hidd-bus_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-hidd-bus_STARTFILES) $(kernel-hidd-bus_ENDFILES)) \
+    $(kernel-hidd-bus_ENDOBJS)
+kernel-hidd-bus-clean : FILES              := $(kernel-hidd-bus_TOCLEAN)
+kernel-hidd-bus-clean ::
+	$(Q)$(ECHO) "Cleaning up for module bus"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-hidd-bus_ALLTARGETS)
+
+
+INCLUDE_FILES    := $(call WILDCARD, include/*.h)
+
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq (include,)
+TMP_DIR                := include
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst include,$(GENINCDIR)/hidd,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/hidd/,$(notdir $(INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := include/
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/include/
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/hidd/,$(INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/hidd/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq (include,)
+BD_INCL_FILES2         := $(subst include,$(AROS_INCLUDES)/hidd,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/hidd/,$(notdir $(INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/hidd/,$(INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/hidd/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

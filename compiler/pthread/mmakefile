@@ -1,0 +1,622 @@
+include $(SRCDIR)/config/aros.cfg
+
+#MM- core-linklibs : linklibs-pthread
+#MM linklibs-pthreads : includes
+
+#MM- includes-copy : pthread-includes-copy
+#MM- compiler-includes : pthread-includes-copy
+
+USER_CFLAGS := -D_XOPEN_SOURCE=600
+
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq (,)
+TMP_DIR                := 
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst ,$(GENINCDIR)/.,$(dir pthread.h sched.h semaphore.h))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/./,$(notdir pthread.h sched.h semaphore.h))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := /
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)//
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/./,pthread.h sched.h semaphore.h)
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/./% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq (,)
+BD_INCL_FILES2         := $(subst ,$(AROS_INCLUDES)/.,$(dir pthread.h sched.h semaphore.h))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/./,$(notdir pthread.h sched.h semaphore.h))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/./,pthread.h sched.h semaphore.h)
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/./% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+pthread-includes-copy : $(BD_INCL_FILES)
+
+.PHONY: pthread-includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+LINKLIBFILES := pthread sched semaphore
+LIBRARYFILES := 
+
+PTHREADFUNCS :=  \
+    pthread_create \
+    pthread_cancel \
+    pthread_equal \
+    pthread_join \
+    pthread_self \
+    pthread_suspend_np \
+    pthread_continue_np \
+    pthread_setcancelstate \
+    pthread_setcanceltype \
+    pthread_attr_destroy \
+    pthread_attr_init \
+    pthread_attr_setstacksize \
+    pthread_cond_destroy \
+    pthread_cond_init \
+    pthread_cond_signal \
+    pthread_cond_timedwait \
+    pthread_mutex_init \
+    pthread_mutex_destroy \
+    pthread_mutex_lock \
+    pthread_mutex_unlock \
+    pthread_mutexattr_destroy \
+    pthread_mutexattr_init \
+    pthread_mutexattr_settype \
+    pthread_exit \
+    pthread_getspecific \
+    pthread_setspecific \
+    pthread_key_create \
+    pthread_cond_broadcast \
+    pthread_cond_wait \
+    pthread_mutex_trylock
+
+#%build_module mmake=compiler-pthread \
+#    modname=pthread modtype=library \
+#    files="$(LIBRARYFILES) $(PTHREADFUNCS)" \
+#    linklibfiles=$(LINKLIBFILES)
+
+
+# assign and generate the local variables used in this macro
+linklibs-pthread_LIBNAME           := pthread
+linklibs-pthread_LINKLIB           := $(AROS_LIB)/libpthread.a
+
+linklibs-pthread_FILES             ?= $(LINKLIBFILES) $(PTHREADFUNCS)
+linklibs-pthread_ASMFILES          := 
+linklibs-pthread_OBJCFILES         := 
+linklibs-pthread_CXXFILES          := 
+
+linklibs-pthread_OBJDIR            ?= $(GENDIR)/$(CURDIR)
+linklibs-pthread_ARCHOBJS          := $(wildcard $(linklibs-pthread_OBJDIR)/arch/*.o)
+ifeq (no,no)
+    linklibs-pthread_ARCHFILES     := $(basename $(notdir $(linklibs-pthread_ARCHOBJS)))
+else
+    linklibs-pthread_ARCHFILES     := $(basename $(patsubst $(linklibs-pthread_OBJDIR)/%,%,$(linklibs-pthread_ARCHOBJS)))
+endif
+linklibs-pthread_C_NARCHFILES      := $(filter-out $(linklibs-pthread_ARCHFILES),$(linklibs-pthread_FILES))
+linklibs-pthread_C_FILES           ?= $(linklibs-pthread_C_NARCHFILES)
+linklibs-pthread_CXX_NARCHFILES    := $(filter-out $(linklibs-pthread_ARCHFILES),$(linklibs-pthread_CXXFILES))
+linklibs-pthread_CXX_FILES         ?= $(linklibs-pthread_CXX_NARCHFILES)
+linklibs-pthread_OBJC_NARCHFILES   := $(filter-out $(linklibs-pthread_ARCHFILES),$(linklibs-pthread_OBJCFILES))
+linklibs-pthread_OBJC_FILES        ?= $(linklibs-pthread_OBJC_NARCHFILES)
+
+ifeq (no,no)
+    linklibs-pthread_OBJ_FILES     ?= $(addprefix $(linklibs-pthread_OBJDIR)/,$(notdir $(linklibs-pthread_C_NARCHFILES:=.o) $(linklibs-pthread_CXX_NARCHFILES:=.o) $(linklibs-pthread_ASMFILES:=.o) $(linklibs-pthread_OBJC_NARCHFILES:=.o)))
+else
+    linklibs-pthread_OBJ_FILES     ?= $(addprefix $(linklibs-pthread_OBJDIR)/,$(linklibs-pthread_C_NARCHFILES:=.o) $(linklibs-pthread_CXX_NARCHFILES:=.o) $(linklibs-pthread_ASMFILES:=.o) $(linklibs-pthread_OBJC_NARCHFILES:=.o))
+endif
+linklibs-pthread_OBJS              ?= $(linklibs-pthread_ARCHOBJS) $(linklibs-pthread_OBJ_FILES) 
+linklibs-pthread_DEPS              := $(patsubst %.o,%.d,$(linklibs-pthread_OBJS))
+
+linklibs-pthread_CPPFLAGS          := $(CPPFLAGS)
+ifneq (,)
+    linklibs-pthread_CPPFLAGS      += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+linklibs-pthread_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+linklibs-pthread_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+linklibs-pthread_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+linklibs-pthread_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+linklibs-pthread_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+linklibs-pthread_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+linklibs-pthread_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+linklibs-pthread_CXXFLAGS          := 
+endif
+
+ifeq ($(TARGET_LTO),yes)
+ifeq (target,target)
+        linklibs-pthread_CFLAGS    := $(strip $(LTO_CFLAGS) $(linklibs-pthread_CFLAGS))
+        linklibs-pthread_CXXFLAGS  := $(strip $(LTO_CFLAGS) $(linklibs-pthread_CXXFLAGS))
+endif
+endif
+linklibs-pthread_AFLAGS            := $(AFLAGS)
+linklibs-pthread_DFLAGS            := 
+ifneq (,)
+    linklibs-pthread_DFLAGS        := 
+else
+    linklibs-pthread_DFLAGS        := $(linklibs-pthread_CFLAGS)
+endif
+linklibs-pthread_DXXFLAGS          := 
+ifneq (,)
+    linklibs-pthread_DXXFLAGS      := 
+else
+    linklibs-pthread_DXXFLAGS      := $(linklibs-pthread_CXXFLAGS)
+endif
+
+.PHONY : linklibs-pthread linklibs-pthread-clean linklibs-pthread-quick
+
+#MM
+linklibs-pthread-quick : linklibs-pthread
+
+#MM linklibs-pthread : includes-generate-deps
+linklibs-pthread : $(linklibs-pthread_LINKLIB)
+
+ifneq ($(filter $(TARGET),linklibs-pthread linklibs-pthread-quick),)
+
+
+linklibs-pthread_CXXABSBASENAMES := $(foreach linklibs-pthread_CXXBASE,$(linklibs-pthread_CXX_FILES),$(if $(filter /%,$(linklibs-pthread_CXXBASE)),$(linklibs-pthread_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(linklibs-pthread_CXXBASE))))
+
+ifneq ($(linklibs-pthread_CXXABSBASENAMES),)
+
+linklibs-pthread_CXXBASENAMES := $(basename $(linklibs-pthread_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+linklibs-pthread_MCXX_FILES  := $(strip $(foreach linklibs-pthread_CXXBASE,$(linklibs-pthread_CXXABSBASENAMES), $(firstword $(wildcard $(foreach linklibs-pthread_EXT, $(AROS_CXXEXTS),$(addsuffix .$(linklibs-pthread_EXT),$(linklibs-pthread_CXXBASE)))))))
+
+ifeq (,)
+linklibs-pthread_MCXX_SRCWILDCARD := %
+else
+linklibs-pthread_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(linklibs-pthread_OBJDIR),)
+  linklibs-pthread_CXXTARGETS := $(notdir $(linklibs-pthread_CXXBASENAMES:=.o))
+  linklibs-pthread_CXXDTARGETS := $(notdir $(linklibs-pthread_CXXBASENAMES:=.d))
+  linklibs-pthread_MCXX_WILDCARD := %
+else
+  linklibs-pthread_CXXTARGETS := $(addprefix $(linklibs-pthread_OBJDIR)/,$(notdir $(linklibs-pthread_CXXBASENAMES:=.o)))
+  linklibs-pthread_CXXDTARGETS := $(addprefix $(linklibs-pthread_OBJDIR)/,$(notdir $(linklibs-pthread_CXXBASENAMES:=.d)))
+  linklibs-pthread_MCXX_WILDCARD := $(linklibs-pthread_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(linklibs-pthread_CXXTARGETS) $(linklibs-pthread_CXXDTARGETS) : | $(linklibs-pthread_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+linklibs-pthread_MCXX_CPPFLAGS := $(linklibs-pthread_CPPFLAGS)
+linklibs-pthread_CXXFLAGS := $(linklibs-pthread_CXXFLAGS)
+ifeq ($(linklibs-pthread_DXXFLAGS),)
+  linklibs-pthread_DXXFLAGS := $(linklibs-pthread_CXXFLAGS)
+else
+  linklibs-pthread_DXXFLAGS := $(linklibs-pthread_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  linklibs-pthread_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  linklibs-pthread_STRIP ?= $(HOST_STRIP)
+  linklibs-pthread_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  linklibs-pthread_CXXCMD:=$(HOST_CXX)
+  linklibs-pthread_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(linklibs-pthread_MCXX_CPPFLAGS) $(linklibs-pthread_MCXX_EXTRA_CPPFLAGS))
+  linklibs-pthread_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(linklibs-pthread_CXXFLAGS))
+  linklibs-pthread_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(linklibs-pthread_DXXFLAGS))
+  linklibs-pthread_CXXIQUOTE:=$(HOST_IQUOTE)
+  linklibs-pthread_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  linklibs-pthread_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  linklibs-pthread_STRIP ?= $(TARGET_STRIP)
+  linklibs-pthread_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  linklibs-pthread_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  linklibs-pthread_MCXX_CPPFLAGS := $(strip $(linklibs-pthread_MCXX_CPPFLAGS) $(linklibs-pthread_MCXX_EXTRA_CPPFLAGS))
+  linklibs-pthread_CXXFLAGS := $(strip $(linklibs-pthread_CXXFLAGS) $(SAFETY_CFLAGS))
+  linklibs-pthread_DXXFLAGS := $(linklibs-pthread_DXXFLAGS)
+  linklibs-pthread_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  linklibs-pthread_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  linklibs-pthread_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  linklibs-pthread_STRIP ?= $(ECHO) >/dev/null
+  linklibs-pthread_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  linklibs-pthread_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  linklibs-pthread_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(linklibs-pthread_MCXX_CPPFLAGS) $(linklibs-pthread_MCXX_EXTRA_CPPFLAGS))
+  linklibs-pthread_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(linklibs-pthread_CXXFLAGS))
+  linklibs-pthread_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(linklibs-pthread_DXXFLAGS))
+  linklibs-pthread_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  linklibs-pthread_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(linklibs-pthread_CXXCMD) $(linklibs-pthread_CXXIQUOTE) $(dir $(2)) $(linklibs-pthread_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-pthread_CXXIQUOTE) . $(linklibs-pthread_CXXIQUOTE_END) $(strip $(linklibs-pthread_CXXFLAGS) $(linklibs-pthread_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(linklibs-pthread_CXXCMD) $(linklibs-pthread_CXXIQUOTE) $(dir $(2)) $(linklibs-pthread_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-pthread_CXXIQUOTE) . $(linklibs-pthread_CXXIQUOTE_END) $(strip $(linklibs-pthread_CXXFLAGS) $(linklibs-pthread_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(linklibs-pthread_CXXCMD) $(linklibs-pthread_CXXIQUOTE) $(dir $(2)) $(linklibs-pthread_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-pthread_CXXIQUOTE) . $(linklibs-pthread_CXXIQUOTE_END) $(strip $(linklibs-pthread_CXXFLAGS) $(linklibs-pthread_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(linklibs-pthread_CXXCMD)" $(MKDEPEND) $(strip $(linklibs-pthread_DXXFLAGS) $(linklibs-pthread_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(linklibs-pthread_OBJDIR),)
+  $(foreach linklibs-pthread_CXXFILE,$(linklibs-pthread_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(linklibs-pthread_CXXFILE))),$(linklibs-pthread_CXXFILE))))
+else
+  $(foreach linklibs-pthread_CXXFILE,$(linklibs-pthread_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(linklibs-pthread_OBJDIR)/,$(notdir $(basename $(linklibs-pthread_CXXFILE)))),$(linklibs-pthread_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(linklibs-pthread_OBJC_FILES),)
+
+ifeq (,)
+linklibs-pthread_MOBJC_SRCWILDCARD := %
+else
+linklibs-pthread_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(linklibs-pthread_OBJDIR),)
+  linklibs-pthread_MOBJC_TARGETS := $(addsuffix .o,$(linklibs-pthread_OBJC_FILES))
+  linklibs-pthread_MOBJC_DTARGETS := $(addsuffix .d,$(linklibs-pthread_OBJC_FILES))
+  linklibs-pthread_MOBJC_WILDCARD := %
+else
+  linklibs-pthread_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(linklibs-pthread_OBJDIR)/,$(linklibs-pthread_OBJC_FILES)))
+  linklibs-pthread_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(linklibs-pthread_OBJDIR)/,$(linklibs-pthread_OBJC_FILES)))
+  linklibs-pthread_MOBJC_WILDCARD := $(linklibs-pthread_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : | $(addsuffix .m,$(linklibs-pthread_OBJC_FILES))
+
+  # Be sure that all .m files are found
+  linklibs-pthread_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  linklibs-pthread_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(linklibs-pthread_OBJC_FILES))) | sed 's/\(.\):\//\/\1\//g')
+  linklibs-pthread_MOBJC_DIRS := $(foreach dir, $(linklibs-pthread_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(linklibs-pthread_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(linklibs-pthread_MOBJC_DIRS),)
+    linklibs-pthread_MOBJC_DIRS := $(shell echo $(linklibs-pthread_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(linklibs-pthread_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  linklibs-pthread_CC := $(TARGET_CC)
+else
+  linklibs-pthread_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+linklibs-pthread_MOBJC_CPPFLAGS := $(linklibs-pthread_CPPFLAGS)
+linklibs-pthread_OBJCFLAGS := $(linklibs-pthread_CFLAGS)
+linklibs-pthread_OBJCFLAGS := $(linklibs-pthread_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+linklibs-pthread_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(linklibs-pthread_OBJCFLAGS)))
+ifeq ($(linklibs-pthread_DFLAGS),)
+  linklibs-pthread_OBJCDFLAGS := $(linklibs-pthread_CFLAGS)
+else
+  linklibs-pthread_OBJCDFLAGS := $(linklibs-pthread_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  linklibs-pthread_LINK ?= $(strip $(linklibs-pthread_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  linklibs-pthread_STRIP ?= $(TARGET_STRIP)
+  linklibs-pthread_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : CMD:=$(strip $(linklibs-pthread_CC) $(TARGET_SYSROOT))
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : linklibs-pthread_MOBJC_CPPFLAGS:=$(strip $(linklibs-pthread_MOBJC_CPPFLAGS) $(linklibs-pthread_MOBJC_EXTRA_CPPFLAGS))
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : linklibs-pthread_OBJCFLAGS:=$(strip $(linklibs-pthread_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : linklibs-pthread_OBJCDFLAGS:=$(linklibs-pthread_OBJCDFLAGS)
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : linklibs-pthread_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : linklibs-pthread_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  linklibs-pthread_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  linklibs-pthread_STRIP ?= $(HOST_STRIP)
+  linklibs-pthread_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : linklibs-pthread_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(linklibs-pthread_MOBJC_CPPFLAGS) $(linklibs-pthread_MOBJC_EXTRA_CPPFLAGS))
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : linklibs-pthread_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(linklibs-pthread_OBJCFLAGS))
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : linklibs-pthread_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(linklibs-pthread_OBJCDFLAGS))
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : linklibs-pthread_IQUOTE:=$(HOST_IQUOTE)
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : linklibs-pthread_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  linklibs-pthread_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  linklibs-pthread_STRIP ?= $(ECHO) >/dev/null
+  linklibs-pthread_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : linklibs-pthread_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(linklibs-pthread_MOBJC_CPPFLAGS) $(linklibs-pthread_MOBJC_EXTRA_CPPFLAGS))
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : linklibs-pthread_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(linklibs-pthread_OBJCFLAGS))
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : linklibs-pthread_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(linklibs-pthread_OBJCDFLAGS))
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : linklibs-pthread_IQUOTE:=$(KERNEL_IQUOTE)
+  $(linklibs-pthread_MOBJC_TARGETS) $(linklibs-pthread_MOBJC_DTARGETS) : linklibs-pthread_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(linklibs-pthread_MOBJC_TARGETS) : CPPFLAGS := $(linklibs-pthread_MOBJC_CPPFLAGS)
+$(linklibs-pthread_MOBJC_TARGETS) : CFLAGS := $(linklibs-pthread_OBJCFLAGS)
+$(linklibs-pthread_MOBJC_TARGETS) : $(linklibs-pthread_MOBJC_WILDCARD).o : $(linklibs-pthread_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(linklibs-pthread_IQUOTE) $(dir $<) $(linklibs-pthread_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-pthread_IQUOTE) . $(linklibs-pthread_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(linklibs-pthread_IQUOTE) $(dir $<) $(linklibs-pthread_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-pthread_IQUOTE) . $(linklibs-pthread_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(linklibs-pthread_IQUOTE) $(dir $<) $(linklibs-pthread_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-pthread_IQUOTE) . $(linklibs-pthread_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(linklibs-pthread_MOBJC_DTARGETS) : $(linklibs-pthread_MOBJC_WILDCARD).d : $(linklibs-pthread_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(linklibs-pthread_OBJCDFLAGS) $(linklibs-pthread_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+linklibs-pthread_MC_SRCWILDCARD := %
+else
+linklibs-pthread_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(linklibs-pthread_OBJDIR),)
+linklibs-pthread_MC_TARGETS := $(addsuffix .o,$(linklibs-pthread_C_FILES))
+linklibs-pthread_MC_DTARGETS := $(addsuffix .d,$(linklibs-pthread_C_FILES))
+linklibs-pthread_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    linklibs-pthread_MC_TARGETS := $(addsuffix .o,$(addprefix $(linklibs-pthread_OBJDIR)/,$(notdir $(linklibs-pthread_C_FILES))))
+    linklibs-pthread_MC_DTARGETS := $(addsuffix .d,$(addprefix $(linklibs-pthread_OBJDIR)/,$(notdir $(linklibs-pthread_C_FILES))))
+else
+ifeq (,)
+    linklibs-pthread_MC_TARGETS := $(addsuffix .o,$(addprefix $(linklibs-pthread_OBJDIR)/,$(linklibs-pthread_C_FILES)))
+    linklibs-pthread_MC_DTARGETS := $(addsuffix .d,$(addprefix $(linklibs-pthread_OBJDIR)/,$(linklibs-pthread_C_FILES)))
+else
+    linklibs-pthread_MC_TARGETS := $(addsuffix .o,$(addprefix $(linklibs-pthread_OBJDIR)/,$(patsubst /%,%,$(linklibs-pthread_C_FILES))))
+    linklibs-pthread_MC_DTARGETS := $(addsuffix .d,$(addprefix $(linklibs-pthread_OBJDIR)/,$(patsubst /%,%,$(linklibs-pthread_C_FILES))))
+endif
+endif
+linklibs-pthread_MC_TGTWILDCARD := $(linklibs-pthread_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : | $(addsuffix .c,$(linklibs-pthread_C_FILES))
+
+# Be sure that all .c files are found
+linklibs-pthread_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+linklibs-pthread_MC_BASEDIRS := $(shell echo $(sort $(dir $(linklibs-pthread_C_FILES))) | sed 's/\(.\):\//\/\1\//g')
+linklibs-pthread_MC_DIRS := $(foreach dir, $(linklibs-pthread_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(linklibs-pthread_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(linklibs-pthread_MC_DIRS),)
+    linklibs-pthread_MC_DIRS := $(shell echo $(linklibs-pthread_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(linklibs-pthread_MC_DIRS)
+endif
+
+endif
+
+linklibs-pthread_MC_CPPFLAGS := $(linklibs-pthread_CPPFLAGS)
+linklibs-pthread_CFLAGS := $(linklibs-pthread_CFLAGS)
+ifeq ($(linklibs-pthread_DFLAGS),)
+  linklibs-pthread_DFLAGS := $(linklibs-pthread_CFLAGS)
+else
+  linklibs-pthread_DFLAGS := $(linklibs-pthread_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+linklibs-pthread_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+linklibs-pthread_STRIP ?= $(TARGET_STRIP)
+linklibs-pthread_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : linklibs-pthread_MC_CPPFLAGS:=$(strip $(linklibs-pthread_MC_CPPFLAGS) $(linklibs-pthread_MC_EXTRA_CPPFLAGS))
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : linklibs-pthread_CFLAGS:=$(strip $(linklibs-pthread_CFLAGS) $(SAFETY_CFLAGS))
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : linklibs-pthread_DFLAGS:=$(linklibs-pthread_DFLAGS)
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : linklibs-pthread_IQUOTE:=$(CFLAGS_IQUOTE)
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : linklibs-pthread_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+linklibs-pthread_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+linklibs-pthread_STRIP ?= $(HOST_STRIP)
+linklibs-pthread_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : linklibs-pthread_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(linklibs-pthread_MC_CPPFLAGS) $(linklibs-pthread_MC_EXTRA_CPPFLAGS))
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : linklibs-pthread_CFLAGS:=$(strip $(HOST_CFLAGS) $(linklibs-pthread_CFLAGS))
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : linklibs-pthread_DFLAGS:=$(strip $(HOST_CFLAGS) $(linklibs-pthread_DFLAGS))
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : linklibs-pthread_IQUOTE:=$(HOST_IQUOTE)
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : linklibs-pthread_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+linklibs-pthread_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+linklibs-pthread_STRIP ?= $(ECHO) >/dev/null
+linklibs-pthread_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : linklibs-pthread_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(linklibs-pthread_MC_CPPFLAGS) $(linklibs-pthread_MC_EXTRA_CPPFLAGS))
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : linklibs-pthread_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(linklibs-pthread_CFLAGS))
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : linklibs-pthread_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(linklibs-pthread_DFLAGS))
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : linklibs-pthread_IQUOTE:=$(KERNEL_IQUOTE)
+$(linklibs-pthread_MC_TARGETS) $(linklibs-pthread_MC_DTARGETS) : linklibs-pthread_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(linklibs-pthread_MC_TARGETS) : CPPFLAGS := $(linklibs-pthread_MC_CPPFLAGS)
+$(linklibs-pthread_MC_TARGETS) : CFLAGS := $(linklibs-pthread_CFLAGS)
+$(linklibs-pthread_MC_TARGETS) : $(linklibs-pthread_MC_TGTWILDCARD).o : $(linklibs-pthread_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(linklibs-pthread_IQUOTE) $(dir $<) $(linklibs-pthread_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-pthread_IQUOTE) . $(linklibs-pthread_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(linklibs-pthread_IQUOTE) $(dir $<) $(linklibs-pthread_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-pthread_IQUOTE) . $(linklibs-pthread_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(linklibs-pthread_IQUOTE) $(dir $<) $(linklibs-pthread_IQUOTE) $(SRCDIR)/$(CURDIR) $(linklibs-pthread_IQUOTE) . $(linklibs-pthread_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(linklibs-pthread_MC_DTARGETS) : $(linklibs-pthread_MC_TGTWILDCARD).d : $(linklibs-pthread_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(linklibs-pthread_DFLAGS) $(linklibs-pthread_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(linklibs-pthread_OBJDIR),)
+linklibs-pthread-MA_TARGETS := $(addsuffix .o,$(linklibs-pthread_ASMFILES))
+linklibs-pthread-MA_WILDCARD := %
+else
+linklibs-pthread-MA_TARGETS := $(addsuffix .o,$(addprefix $(linklibs-pthread_OBJDIR)/,$(notdir $(linklibs-pthread_ASMFILES))))
+linklibs-pthread-MA_WILDCARD := $(linklibs-pthread_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(linklibs-pthread-MA_TARGETS) : | $(addsuffix .s,$(linklibs-pthread_ASMFILES))
+
+# Be sure that all .c files are found
+linklibs-pthread-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+linklibs-pthread-MA_BASEDIRS := $(shell echo $(sort $(dir $(linklibs-pthread_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+linklibs-pthread-MA_DIRS := $(foreach dir, $(linklibs-pthread-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(linklibs-pthread-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(linklibs-pthread-MA_DIRS),)
+    linklibs-pthread-MA_DIRS := $(shell echo $(linklibs-pthread-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(linklibs-pthread-MA_DIRS)
+endif
+
+endif
+
+linklibs-pthread-MA_ASSEMBLER ?= $(linklibs-pthread_ASSEMBLER)
+
+$(linklibs-pthread-MA_TARGETS) : linklibs-pthread-MA_CMD:= $(linklibs-pthread-MA_ASSEMBLER)
+
+$(linklibs-pthread-MA_TARGETS) : CPPFLAGS := $(linklibs-pthread_CPPFLAGS)
+$(linklibs-pthread-MA_TARGETS) : AFLAGS := $(linklibs-pthread_AFLAGS)
+$(linklibs-pthread-MA_TARGETS) : $(linklibs-pthread-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(linklibs-pthread-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(linklibs-pthread-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(linklibs-pthread-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+ifeq (target,target)
+$(AROS_LIB)/libpthread.a : linklibs-pthread_AR:=$(AR)
+$(AROS_LIB)/libpthread.a : linklibs-pthread_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(AROS_LIB)/libpthread.a : linklibs-pthread_AR:=$(HOST_AR)
+$(AROS_LIB)/libpthread.a : linklibs-pthread_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(AROS_LIB)/libpthread.a : linklibs-pthread_AR:=$(KERNEL_AR)
+$(AROS_LIB)/libpthread.a : linklibs-pthread_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(AROS_LIB)/libpthread.a : $(linklibs-pthread_OBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(linklibs-pthread_AR) $@ $^
+	$(Q)$(linklibs-pthread_RANLIB) $@
+endif
+
+ifneq ($(linklibs-pthread_DEPS),)
+  ifneq (linklibs-pthread linklibs-pthread-quick,)
+    ifneq ($(findstring $(TARGET),linklibs-pthread linklibs-pthread-quick),)
+      -include $(linklibs-pthread_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(linklibs-pthread_DEPS)
+    endif
+  endif
+endif
+
+
+
+ifneq ($(linklibs-pthread_OBJS) $(linklibs-pthread_DEPS) $(linklibs-pthread_LINKLIB),)
+$(linklibs-pthread_OBJS) $(linklibs-pthread_DEPS) $(linklibs-pthread_LINKLIB) : | $(linklibs-pthread_OBJDIR) $(AROS_LIB)
+else
+$(linklibs-pthread_OBJS) $(linklibs-pthread_DEPS) $(linklibs-pthread_LINKLIB) :: $(linklibs-pthread_OBJDIR) $(AROS_LIB)
+endif
+
+GLOB_MKDIRS += $(linklibs-pthread_OBJDIR) $(AROS_LIB)
+
+
+linklibs-pthread-clean : FILES := $(linklibs-pthread_OBJS) $(linklibs-pthread_LINKLIB) $(linklibs-pthread_DEPS)
+#MM
+linklibs-pthread-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget linklibs-pthread"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

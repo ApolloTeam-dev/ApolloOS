@@ -1,0 +1,1675 @@
+#   $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- workbench-hidds: hidd-i2c
+#MM hidd-i2c : kernel-hidd-bus-includes
+
+USER_INCLUDES := -I.
+
+USER_CPPFLAGS := -D__KERNEL__
+USER_LDFLAGS := -static
+
+FILES	:= i2c_init i2cdeviceclass i2cclass
+
+#MM
+includes-copy : $(AROS_INCLUDES)/hidd/i2c.h $(GENINCDIR)/hidd/i2c.h
+
+$(AROS_INCLUDES)/hidd/i2c.h: include/i2c.h
+	$(CP) $< $(AROS_INCLUDES)/hidd/i2c.h
+
+$(GENINCDIR)/hidd/i2c.h: include/i2c.h
+	$(CP) $< $(GENINCDIR)/hidd/i2c.h
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM hidd-i2c
+#MM hidd-i2c-quick
+#MM hidd-i2c-makefile
+#MM hidd-i2c-clean
+
+# ABI targets:
+#MM- includes-all : hidd-i2c-includes
+#MM- linklibs-i2c: hidd-i2c-linklib
+#MM- linklibs-i2c_rel : hidd-i2c-linklib
+#MM- includes-i2c: hidd-i2c-includes
+#MM- includes-i2c_rel : hidd-i2c-includes
+#MM- hidd-i2c : hidd-i2c-includes core-linklibs linklibs-
+#MM hidd-i2c-linklib : hidd-i2c-includes includes-
+#MM- hidd-i2c-quick : hidd-i2c-includes-quick
+#MM hidd-i2c-includes : hidd-i2c-makefile hidd-i2c-includes-dirs \
+#MM     includes-generate-deps hidd-i2c-fd
+#MM hidd-i2c-includes-quick
+#MM hidd-i2c-includes-dirs
+#MM hidd-i2c-fd
+
+# Library targets
+#MM hidd-i2c-kobj : core-linklibs linklibs-
+#MM hidd-i2c-kobj-quick : 
+
+# Library with ABI targets:
+#MM hidd-i2c-kobj : hidd-i2c-includes core-linklibs linklibs-
+#MM hidd-i2c-kobj-quick : hidd-i2c-includes-quick
+
+# All MetaMake targets defined by this macro
+hidd-i2c_ALLTARGETS       := hidd-i2c hidd-i2c-quick hidd-i2c-clean
+
+ifeq (M,M)
+hidd-i2c_ALLTARGETS       += hidd-i2c-kobj hidd-i2c-kobj-quick
+endif
+
+ifeq (M,M)
+hidd-i2c_ALLTARGETS += hidd-i2c-includes \
+                 hidd-i2c-includes-quick hidd-i2c-includes-dirs  \
+                 hidd-i2c-linklib hidd-i2c-fd
+endif
+
+.PHONY : $(hidd-i2c_ALLTARGETS) hidd-i2c-makefile
+
+ifeq (i2c,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (hidd,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    hidd-i2c_DEFNAME      := i2c_
+else
+    hidd-i2c_DEFNAME      := i2c
+endif
+hidd-i2c_DEFLINKLIBNAME   := $(hidd-i2c_DEFNAME)
+ifneq (,)
+    hidd-i2c_LINKLIBNAME  := 
+else
+    hidd-i2c_LINKLIBNAME  = $(hidd-i2c_DEFLINKLIBNAME)
+endif
+hidd-i2c_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    hidd-i2c_DEFCPPFLAGS  += -I
+endif
+hidd-i2c_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    hidd-i2c_DFLAGS       := 
+else
+    hidd-i2c_DFLAGS       = $(hidd-i2c_DEFDFLAGS)
+endif
+hidd-i2c_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    hidd-i2c_DXXFLAGS     := 
+else
+    hidd-i2c_DXXFLAGS     = $(hidd-i2c_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+hidd-i2c_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(hidd-i2c_DEFDFLAGS))
+hidd-i2c_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(hidd-i2c_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+hidd-i2c_FUNCINSTR := yes
+hidd-i2c_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(hidd-i2c_DEFDFLAGS))
+hidd-i2c_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(hidd-i2c_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+hidd-i2c_OBJDIR                     := 
+else
+hidd-i2c_OBJDIR                     := $(OBJDIR)/$(hidd-i2c_DEFNAME)
+endif
+ifneq (,)
+hidd-i2c_OBJDIR           := $(hidd-i2c_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+hidd-i2c-makefile         := $(hidd-i2c_OBJDIR)/Makefile.$(hidd-i2c_DEFNAME)hidd
+hidd-i2c-genmakefile : $(hidd-i2c-makefile)
+
+
+hidd-i2c-genmakefile_OPTS := 
+ifneq (,)
+    hidd-i2c-genmakefile_OPTS += -f 
+    hidd-i2c-genmakefile_MODNAME := i2c_
+else
+    hidd-i2c-genmakefile_MODNAME := i2c
+endif
+hidd-i2c-genmakefile_TARGET := Makefile.$(hidd-i2c-genmakefile_MODNAME)hidd
+hidd-i2c-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        hidd-i2c-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        hidd-i2c-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        hidd-i2c-genmakefile_OPTS += -c 
+        hidd-i2c-genmakefile_DEPS += 
+    endif 
+else
+    hidd-i2c-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/i2c.conf
+    hidd-i2c-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/i2c.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        hidd-i2c-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        hidd-i2c-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        hidd-i2c-genmakefile_OPTS += -o 
+        hidd-i2c-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    hidd-i2c-genmakefile_OPTS += -s 
+endif
+ifneq ($(hidd-i2c_OBJDIR),)
+    hidd-i2c-genmakefile_OPTS += -d $(hidd-i2c_OBJDIR)
+    hidd-i2c-genmakefile_TARGET := $(hidd-i2c_OBJDIR)/$(hidd-i2c-genmakefile_TARGET)
+endif
+
+$(hidd-i2c-genmakefile_TARGET) : OPTS := $(hidd-i2c-genmakefile_OPTS)
+$(hidd-i2c-genmakefile_TARGET) : MODNAME := i2c
+$(hidd-i2c-genmakefile_TARGET) : MODTYPE := hidd
+$(hidd-i2c-genmakefile_TARGET) : $(hidd-i2c-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(hidd-i2c-makefile),)
+$(hidd-i2c-makefile) : | $(hidd-i2c_OBJDIR)
+else
+$(hidd-i2c-makefile) :: $(hidd-i2c_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(hidd-i2c_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(hidd-i2c_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(hidd-i2c-makefile)
+
+hidd-i2c_DEFMODDIR        := $($(hidd-i2c_DEFNAME)_MODDIR)
+ifeq (no,yes)
+hidd-i2c_DEFMODDIR        := $(AROS_DIR_ARCH)/$(hidd-i2c_DEFMODDIR)
+endif
+ifneq (,)
+    hidd-i2c_MODDIR       := 
+else
+    hidd-i2c_MODDIR       := $(hidd-i2c_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+hidd-i2c_INCDIR           := 
+else
+hidd-i2c_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+hidd-i2c_LIBDEFSINC       := $(hidd-i2c_OBJDIR)/include/$(hidd-i2c_DEFNAME)_libdefs.h
+hidd-i2c_DEFLIBDEFSINC    := $(hidd-i2c_OBJDIR)/include/$(hidd-i2c_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+hidd-i2c-includes-quick : hidd-i2c-includes
+hidd-i2c-includes : $(addprefix $(GENINCDIR)/,$($(hidd-i2c_DEFNAME)_INCLUDES)) \
+    $(addprefix $(hidd-i2c_INCDIR)/,$($(hidd-i2c_DEFNAME)_INCLUDES)) \
+    $(hidd-i2c_LIBDEFSINC) $(hidd-i2c_DEFLIBDEFSINC)
+
+ifneq ($($(hidd-i2c_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    hidd-i2c-includes_MODNAME := i2c_
+else
+    hidd-i2c-includes_MODNAME := i2c
+endif
+
+ifneq ($($(hidd-i2c-includes_MODNAME)_INCLUDES),)
+
+hidd-i2c-includes_TARGETS := $($(hidd-i2c-includes_MODNAME)_INCLUDES)
+
+hidd-i2c-includes_DEPS := $(GENMODULE)
+hidd-i2c-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        hidd-i2c-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        hidd-i2c-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        hidd-i2c-includes_OPTS += -c 
+        hidd-i2c-includes_DEPS += 
+    endif 
+else
+    hidd-i2c-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/i2c.conf
+    hidd-i2c-includes_DEPS += $(SRCDIR)/$(CURDIR)/i2c.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        hidd-i2c-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        hidd-i2c-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        hidd-i2c-includes_OPTS += -o 
+        hidd-i2c-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    hidd-i2c-includes_OPTS += -s 
+endif
+ifneq ($(hidd-i2c_OBJDIR)/include,)
+    hidd-i2c-includes_OPTS += -d $(hidd-i2c_OBJDIR)/include
+    hidd-i2c-includes_TARGETS := $(addprefix $(hidd-i2c_OBJDIR)/include/,$(hidd-i2c-includes_TARGETS))
+    hidd-i2c-includes_GENINCFLAG=$(hidd-i2c_OBJDIR)/include/.i2c.hidd-includes
+else
+    hidd-i2c-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.i2c.hidd-includes
+endif
+
+$(hidd-i2c-includes_TARGETS) : $(hidd-i2c-includes_DEPS) $(hidd-i2c-includes_GENINCFLAG)
+
+$(hidd-i2c-includes_GENINCFLAG) : OPTS := $(hidd-i2c-includes_OPTS)
+$(hidd-i2c-includes_GENINCFLAG) : MODNAME := i2c
+$(hidd-i2c-includes_GENINCFLAG) : MODTYPE := hidd
+$(hidd-i2c-includes_GENINCFLAG) : $(hidd-i2c-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(hidd-i2c_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(hidd-i2c_DEFNAME)_INCLUDES)) : | $(hidd-i2c_OBJDIR)/i2c_geninc
+
+$(hidd-i2c_OBJDIR)/i2c_geninc : COPYSRCDIR := $(hidd-i2c_OBJDIR)/include
+$(hidd-i2c_OBJDIR)/i2c_geninc : TGTDIR := $(GENINCDIR)
+$(hidd-i2c_OBJDIR)/i2c_geninc : FILES := $($(hidd-i2c_DEFNAME)_INCLUDES)
+$(hidd-i2c_OBJDIR)/i2c_geninc : $(addprefix $(hidd-i2c_OBJDIR)/include/,$($(hidd-i2c_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(hidd-i2c_OBJDIR)/include
+
+$(addprefix $(hidd-i2c_INCDIR)/,$($(hidd-i2c_DEFNAME)_INCLUDES)) : | $(hidd-i2c_OBJDIR)/i2c_incs
+
+$(hidd-i2c_OBJDIR)/i2c_incs : COPYSRCDIR := $(hidd-i2c_OBJDIR)/include
+$(hidd-i2c_OBJDIR)/i2c_incs : TGTDIR := $(hidd-i2c_INCDIR)
+$(hidd-i2c_OBJDIR)/i2c_incs : FILES := $($(hidd-i2c_DEFNAME)_INCLUDES)
+$(hidd-i2c_OBJDIR)/i2c_incs : $(addprefix $(hidd-i2c_OBJDIR)/include/,$($(hidd-i2c_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+hidd-i2c_INCDIRS := $(filter-out ./,$(sort $(dir $($(hidd-i2c_DEFNAME)_INCLUDES))))
+
+TMPi2c_INCDIRS := \
+    $(hidd-i2c_OBJDIR)/include $(addprefix $(hidd-i2c_OBJDIR)/include/,$(hidd-i2c_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(hidd-i2c_INCDIRS)) \
+    $(hidd-i2c_INCDIR) $(addprefix $(hidd-i2c_INCDIR)/,$(hidd-i2c_INCDIRS))
+
+ifneq (hidd-i2c-includes-dirs,)
+hidd-i2c-includes-dirs : | $(TMPi2c_INCDIRS)
+else
+hidd-i2c-includes-dirs :: $(TMPi2c_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPi2c_INCDIRS)
+
+
+endif
+
+endif
+
+
+hidd-i2c-genlibdefs_OPTS := 
+ifneq (,)
+    hidd-i2c-genlibdefs_OPTS += -f 
+    hidd-i2c-genlibdefs_MODNAME := i2c_
+else
+    hidd-i2c-genlibdefs_MODNAME := i2c
+endif
+hidd-i2c-genlibdefs_TARGET := $(hidd-i2c-genlibdefs_MODNAME)_libdefs.h
+hidd-i2c-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        hidd-i2c-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        hidd-i2c-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        hidd-i2c-genlibdefs_OPTS += -c 
+        hidd-i2c-genlibdefs_DEPS += 
+    endif 
+else
+    hidd-i2c-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/i2c.conf
+    hidd-i2c-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/i2c.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        hidd-i2c-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        hidd-i2c-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        hidd-i2c-genlibdefs_OPTS += -o 
+        hidd-i2c-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    hidd-i2c-genlibdefs_OPTS += -s 
+endif
+ifneq ($(hidd-i2c_OBJDIR)/include,)
+    hidd-i2c-genlibdefs_OPTS += -d $(hidd-i2c_OBJDIR)/include
+    hidd-i2c-genlibdefs_TARGET := $(hidd-i2c_OBJDIR)/include/$(hidd-i2c-genlibdefs_TARGET)
+endif
+ifneq (,)
+    hidd-i2c-genlibdefs_OPTS += -v 
+endif
+
+$(hidd-i2c-genlibdefs_TARGET) : OPTS := $(hidd-i2c-genlibdefs_OPTS)
+$(hidd-i2c-genlibdefs_TARGET) : MODNAME := i2c
+$(hidd-i2c-genlibdefs_TARGET) : MODTYPE := hidd
+$(hidd-i2c-genlibdefs_TARGET) : $(hidd-i2c-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(hidd-i2c_DEFLIBDEFSINC) : FILENAME := $(hidd-i2c_LIBDEFSINC)
+$(hidd-i2c_DEFLIBDEFSINC) : $(hidd-i2c_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(hidd-i2c_LIBDEFSINC) $(hidd-i2c_DEFLIBDEFSINC) : | $(hidd-i2c_OBJDIR)/include
+
+ifneq (hidd-i2c-includes-dirs,)
+hidd-i2c-includes-dirs : | $(hidd-i2c_OBJDIR)/include
+else
+hidd-i2c-includes-dirs :: $(hidd-i2c_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(hidd-i2c_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+hidd-i2c-genmodfiles_OPTS :=
+ifneq (,)
+    hidd-i2c-genmodfiles_OPTS += -f 
+    hidd-i2c-genmodfiles_MODNAME := i2c_
+else
+    hidd-i2c-genmodfiles_MODNAME := i2c
+endif
+hidd-i2c-genmodfiles_GENTARGETS := $($(hidd-i2c-genmodfiles_MODNAME)_STARTFILES) $($(hidd-i2c-genmodfiles_MODNAME)_ENDFILES)
+hidd-i2c-genmodfiles_STUBTARGETS := $($(hidd-i2c-genmodfiles_MODNAME)_LINKLIBFILES) $($(hidd-i2c-genmodfiles_MODNAME)_RELLINKLIBFILES)
+hidd-i2c-genmodfiles_GENTARGETS := $(addsuffix .c,$(hidd-i2c-genmodfiles_GENTARGETS))
+hidd-i2c-genmodfiles_STUBTARGETS := $(addsuffix .c,$(hidd-i2c-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(hidd-i2c-genmodfiles_MODNAME)_LINKLIBAFILES) $($(hidd-i2c-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+hidd-i2c-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        hidd-i2c-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        hidd-i2c-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        hidd-i2c-genmodfiles_OPTS += -c 
+        hidd-i2c-genmodfiles_DEPS += 
+    endif 
+else
+    hidd-i2c-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/i2c.conf
+    hidd-i2c-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/i2c.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        hidd-i2c-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        hidd-i2c-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        hidd-i2c-genmodfiles_OPTS += -o 
+        hidd-i2c-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    hidd-i2c-genmodfiles_OPTS += -s 
+endif
+ifneq ($(hidd-i2c_OBJDIR),)
+    hidd-i2c-genmodfiles_OPTS += -d $(hidd-i2c_OBJDIR)
+    hidd-i2c-genmodfiles_TARGETDIR := $(shell echo $(hidd-i2c_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    hidd-i2c-genmodfiles_GENTARGETS := $(addprefix $(hidd-i2c-genmodfiles_TARGETDIR)/,$(hidd-i2c-genmodfiles_GENTARGETS))
+    hidd-i2c-genmodfiles_GENFILEFLAG=$(hidd-i2c-genmodfiles_TARGETDIR)/.i2c.hidd-genfiles
+else
+    hidd-i2c-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.i2c.hidd-genfiles
+endif
+ifneq ($(hidd-i2c_OBJDIR)/linklib,)
+    hidd-i2c-genmodfiles_OPTS += -l $(hidd-i2c_OBJDIR)/linklib
+    hidd-i2c-genmodfiles_STUBTARGETDIR := $(shell echo $(hidd-i2c_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    hidd-i2c-genmodfiles_STUBTARGETS := $(addprefix $(hidd-i2c-genmodfiles_STUBTARGETDIR)/,$(hidd-i2c-genmodfiles_STUBTARGETS))
+    hidd-i2c-genmodfiles_TARGETDIRS += $(hidd-i2c_OBJDIR)/linklib
+else
+ifneq ($(hidd-i2c_OBJDIR),)
+    hidd-i2c-genmodfiles_STUBTARGETS := $(addprefix $(hidd-i2c-genmodfiles_TARGETDIR)/,$(hidd-i2c-genmodfiles_STUBTARGETS))
+endif
+endif
+
+hidd-i2c-genmodfiles_TARGETS := $(hidd-i2c-genmodfiles_GENTARGETS) $(hidd-i2c-genmodfiles_STUBTARGETS)
+ifneq ($(hidd-i2c-genmodfiles_TARGETDIRS),)
+$(hidd-i2c-genmodfiles_TARGETS) : | $(hidd-i2c-genmodfiles_TARGETDIRS)
+endif
+
+$(hidd-i2c-genmodfiles_TARGETS) : $(hidd-i2c-genmodfiles_DEPS) $(hidd-i2c-genmodfiles_GENFILEFLAG)
+
+$(hidd-i2c-genmodfiles_GENFILEFLAG) : OPTS := $(hidd-i2c-genmodfiles_OPTS)
+$(hidd-i2c-genmodfiles_GENFILEFLAG) : MODNAME := i2c
+$(hidd-i2c-genmodfiles_GENFILEFLAG) : MODTYPE := hidd
+$(hidd-i2c-genmodfiles_GENFILEFLAG) : $(hidd-i2c-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(hidd-i2c-genmodfiles_GENFILEFLAG) : $(hidd-i2c_DEFLIBDEFSINC) $(hidd-i2c-makefile)
+
+
+ifneq ($(hidd-i2c-genmodfiles_GENFILEFLAG),)
+$(hidd-i2c-genmodfiles_GENFILEFLAG) : | $(hidd-i2c_OBJDIR)/linklib
+else
+$(hidd-i2c-genmodfiles_GENFILEFLAG) :: $(hidd-i2c_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(hidd-i2c_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+hidd-i2c_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+hidd-i2c_FDDIR            := /../$(AROS_DIR_FD)
+endif
+hidd-i2c-fd : $(hidd-i2c_FDDIR)/i2c_lib.fd
+
+
+TMP_TARGET := i2c_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/i2c.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/i2c.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(hidd-i2c_FDDIR),)
+    TMP_OPTS += -d $(hidd-i2c_FDDIR)
+    TMP_TARGET := $(hidd-i2c_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := i2c
+$(TMP_TARGET) : MODTYPE := hidd
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(hidd-i2c_FDDIR)/i2c_lib.fd : | $(hidd-i2c_FDDIR)
+
+
+ifneq (hidd-i2c-fd-setup,)
+hidd-i2c-fd-setup : | $(hidd-i2c_FDDIR)
+else
+hidd-i2c-fd-setup :: $(hidd-i2c_FDDIR)
+endif
+
+GLOB_MKDIRS += $(hidd-i2c_FDDIR)
+
+endif
+
+## Compilation
+##
+hidd-i2c_FILES            := $(FILES)
+hidd-i2c_OBJCFILES        := 
+hidd-i2c_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+hidd-i2c_LIBFILES         := 
+hidd-i2c_LIBS             := 
+
+hidd-i2c_FDIRS            := $(sort $(dir $(hidd-i2c_FILES)))
+
+hidd-i2c_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+hidd-i2c_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call hidd-i2c_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+hidd-i2c_FILTERARCH       = $(filter-out $(call hidd-i2c_MATCHARCH,$(1),$(2)),$(2))
+hidd-i2c_STARTFILES       := $(addprefix $(hidd-i2c_OBJDIR)/,$($(hidd-i2c_DEFNAME)_STARTFILES))
+hidd-i2c_ENDFILES         := $(addprefix $(hidd-i2c_OBJDIR)/,$($(hidd-i2c_DEFNAME)_ENDFILES))
+
+hidd-i2c_ARCHOBJS         := $(wildcard $(hidd-i2c_OBJDIR)/arch/*.o)
+hidd-i2c_LIBARCHOBJS      := $(wildcard $(hidd-i2c_OBJDIR)/linklib/arch/*.o)
+hidd-i2c_ARCHFILES        := $(basename $(notdir $(hidd-i2c_ARCHOBJS)))
+hidd-i2c_LIBARCHFILES     := $(basename $(notdir $(hidd-i2c_LIBARCHOBJS)))
+hidd-i2c_C_NARCHFILES     := $(call hidd-i2c_FILTERARCH,$(hidd-i2c_ARCHFILES),$(hidd-i2c_FILES))
+hidd-i2c_CXX_NARCHFILES   := $(call hidd-i2c_FILTERARCH,$(hidd-i2c_ARCHFILES),$(hidd-i2c_CXXFILES))
+hidd-i2c_OBJC_NARCHFILES  := $(call hidd-i2c_FILTERARCH,$(hidd-i2c_ARCHFILES),$(hidd-i2c_OBJCFILES))
+hidd-i2c_NLIBARCHFILES    := $(call hidd-i2c_FILTERARCH,$(hidd-i2c_LIBARCHFILES),$(hidd-i2c_LIBFILES))
+hidd-i2c_ARCHNLIBFILES    := $(call hidd-i2c_FILTERARCH,$(hidd-i2c_LIBFILES),$(hidd-i2c_LIBARCHFILES))
+
+hidd-i2c_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(hidd-i2c_OBJDIR)/include -include $(hidd-i2c_DEFLIBDEFSINC))
+ifneq (,)
+hidd-i2c_CPPFLAGS         += -I
+endif
+hidd-i2c_LINKLIBCPPFLAGS  := $(hidd-i2c_CPPFLAGS)
+hidd-i2c_CPPFLAGS         += $(strip $($(hidd-i2c_DEFNAME)_CPPFLAGS))
+hidd-i2c_LINKLIBCPPFLAGS  += $(strip $($(hidd-i2c_DEFNAME)_LINKLIBCPPFLAGS))
+hidd-i2c_CFLAGS           := $(strip $(CFLAGS) $($(hidd-i2c_DEFNAME)_CFLAGS))
+hidd-i2c_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(hidd-i2c_DEFNAME)_LINKLIBCFLAGS))
+hidd-i2c_CXXFLAGS         := $(strip $(CXXFLAGS) $($(hidd-i2c_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+hidd-i2c_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+hidd-i2c_CFLAGS           := $(strip $(hidd-i2c_LTOFLAGS) $(hidd-i2c_CFLAGS))
+hidd-i2c_LINKLIBCFLAGS    := $(strip $(hidd-i2c_LTOFLAGS) $(hidd-i2c_LINKLIBCFLAGS))
+hidd-i2c_CXXFLAGS         := $(strip $(hidd-i2c_LTOFLAGS) $(hidd-i2c_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+hidd-i2c_SUBSTNULL        :=
+hidd-i2c_SUBSTSPACE       := $(hidd-i2c_SUBSTNULL) #
+hidd-i2c_SUBSTCOMMA       := ,
+hidd-i2c_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(hidd-i2c_SUBSTSPACE),$(hidd-i2c_SUBSTCOMMA),$(strip $($(hidd-i2c_DEFNAME)_STARTFILES))))
+hidd-i2c_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+hidd-i2c_CFLAGS           := $(strip $(hidd-i2c_INSTRFUNCFLAGS) $(hidd-i2c_CFLAGS))
+hidd-i2c_CXXFLAGS         := $(strip $(hidd-i2c_INSTRFUNCFLAGS) $(hidd-i2c_CXXFLAGS))
+hidd-i2c_LIBS             += $(hidd-i2c_INSTRFUNCLIBS)
+endif
+endif
+hidd-i2c_DFLAGS           := $(strip $(hidd-i2c_DFLAGS) $($(hidd-i2c_DEFNAME)_DFLAGS))
+hidd-i2c_LINKLIBDFLAGS    := $(strip $(hidd-i2c_DFLAGS) $($(hidd-i2c_DEFNAME)_LINKLIBDFLAGS))
+hidd-i2c_DXXFLAGS         := $(strip $(hidd-i2c_DXXFLAGS) $($(hidd-i2c_DEFNAME)_DXXFLAGS))
+
+ifeq (hidd,library)
+    hidd-i2c_LIBSUFFIX    := 
+else
+    hidd-i2c_LIBSUFFIX    := .hidd
+endif
+
+ifeq (,)
+hidd-i2c_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+hidd-i2c_LIBDIR           := 
+endif
+
+ifeq (M,M)
+hidd-i2c_LINKLIBCFILES    := $(addprefix $(hidd-i2c_OBJDIR)/linklib/,$($(hidd-i2c_DEFNAME)_LINKLIBFILES))
+hidd-i2c_LINKLIBAFILES    := $(addprefix $(hidd-i2c_OBJDIR)/linklib/,$($(hidd-i2c_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(hidd-i2c_DEFNAME)_LINKLIBFILES) $($(hidd-i2c_DEFNAME)_LINKLIBAFILES)  $(hidd-i2c_ARCHNLIBFILES)),)
+    hidd-i2c_LINKLIB      :=
+else
+    hidd-i2c_LINKLIB      := $(hidd-i2c_LIBDIR)/libi2c$(hidd-i2c_LIBSUFFIX).a
+    ifneq (i2c,$(hidd-i2c_LINKLIBNAME))
+        hidd-i2c_LINKLIB  += $(hidd-i2c_LIBDIR)/lib$(hidd-i2c_LINKLIBNAME)$(hidd-i2c_LIBSUFFIX).a
+    endif
+endif
+hidd-i2c_LINKLIBFILES     := $(hidd-i2c_LINKLIBCFILES) $(hidd-i2c_LINKLIBAFILES)
+
+hidd-i2c_RELLINKLIBCFILES := $(addprefix $(hidd-i2c_OBJDIR)/linklib/,$($(hidd-i2c_DEFNAME)_RELLINKLIBFILES))
+hidd-i2c_RELLINKLIBAFILES := $(addprefix $(hidd-i2c_OBJDIR)/linklib/,$($(hidd-i2c_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(hidd-i2c_DEFNAME)_RELLINKLIBFILES) $($(hidd-i2c_DEFNAME)_RELLINKLIBAFILES)  $(hidd-i2c_ARCHNLIBFILES)),)
+    hidd-i2c_RELLINKLIB   :=
+else
+    hidd-i2c_RELLINKLIB   := $(hidd-i2c_LIBDIR)/lib$(hidd-i2c_DEFNAME)_rel$(hidd-i2c_LIBSUFFIX).a
+    ifneq (i2c,$(hidd-i2c_LINKLIBNAME))
+        hidd-i2c_RELLINKLIB += $(hidd-i2c_LIBDIR)/lib$(hidd-i2c_LINKLIBNAME)_rel$(hidd-i2c_LIBSUFFIX).a
+    endif
+endif
+hidd-i2c_RELLINKLIBFILES  := $(hidd-i2c_RELLINKLIBCFILES) $(hidd-i2c_RELLINKLIBAFILES)
+endif
+
+hidd-i2c_ENDOBJS          := $(addsuffix .o,$(hidd-i2c_ENDFILES))
+hidd-i2c_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(hidd-i2c_OBJDIR)/linklib/,$(notdir $(hidd-i2c_NLIBARCHFILES))) $(addprefix $(hidd-i2c_OBJDIR)/linklib/arch/,$(notdir $(hidd-i2c_ARCHNLIBFILES))) $(hidd-i2c_LINKLIBFILES)) \
+                 
+hidd-i2c_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(hidd-i2c_OBJDIR)/linklib/,$(notdir $(hidd-i2c_NLIBARCHFILES))) $(addprefix $(hidd-i2c_OBJDIR)/linklib/arch/,$(notdir $(hidd-i2c_ARCHNLIBFILES))) $(hidd-i2c_RELLINKLIBFILES)) \
+                 
+$(hidd-i2c_LINKLIBFILES) $(hidd-i2c_RELLINKLIBFILES) : | $(hidd-i2c_OBJDIR)/linklib
+$(hidd-i2c_LINKLIBOBJS) $(hidd-i2c_RELLINKLIBOBJS) : | $(hidd-i2c_OBJDIR)/linklib
+
+hidd-i2c_CCFILES := $(hidd-i2c_C_NARCHFILES)
+hidd-i2c_TARGETCCFILES    := $(strip $(hidd-i2c_STARTFILES) $(hidd-i2c_ENDFILES))
+hidd-i2c_LINKLIBCCFILES   := $(strip $(hidd-i2c_NLIBARCHFILES) $(hidd-i2c_LINKLIBCFILES) $(hidd-i2c_RELLINKLIBCFILES))
+hidd-i2c_LINKLIBCCGENFILES := $(strip $(hidd-i2c_LINKLIBCFILES) $(hidd-i2c_RELLINKLIBCFILES))
+
+
+hidd-i2c_CXXABSBASENAMES := $(foreach hidd-i2c_CXXBASE,$(hidd-i2c_CXX_NARCHFILES),$(if $(filter /%,$(hidd-i2c_CXXBASE)),$(hidd-i2c_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(hidd-i2c_CXXBASE))))
+
+ifneq ($(hidd-i2c_CXXABSBASENAMES),)
+
+hidd-i2c_CXXBASENAMES := $(basename $(hidd-i2c_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+hidd-i2c_MCXX_FILES  := $(strip $(foreach hidd-i2c_CXXBASE,$(hidd-i2c_CXXABSBASENAMES), $(firstword $(wildcard $(foreach hidd-i2c_EXT, $(AROS_CXXEXTS),$(addsuffix .$(hidd-i2c_EXT),$(hidd-i2c_CXXBASE)))))))
+
+ifeq (,)
+hidd-i2c_MCXX_SRCWILDCARD := %
+else
+hidd-i2c_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(hidd-i2c_OBJDIR),)
+  hidd-i2c_CXXTARGETS := $(notdir $(hidd-i2c_CXXBASENAMES:=.o))
+  hidd-i2c_CXXDTARGETS := $(notdir $(hidd-i2c_CXXBASENAMES:=.d))
+  hidd-i2c_MCXX_WILDCARD := %
+else
+  hidd-i2c_CXXTARGETS := $(addprefix $(hidd-i2c_OBJDIR)/,$(notdir $(hidd-i2c_CXXBASENAMES:=.o)))
+  hidd-i2c_CXXDTARGETS := $(addprefix $(hidd-i2c_OBJDIR)/,$(notdir $(hidd-i2c_CXXBASENAMES:=.d)))
+  hidd-i2c_MCXX_WILDCARD := $(hidd-i2c_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(hidd-i2c_CXXTARGETS) $(hidd-i2c_CXXDTARGETS) : | $(hidd-i2c_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+hidd-i2c_MCXX_CPPFLAGS := $(hidd-i2c_CPPFLAGS)
+hidd-i2c_CXXFLAGS := $(hidd-i2c_CXXFLAGS)
+ifeq ($(hidd-i2c_DXXFLAGS),)
+  hidd-i2c_DXXFLAGS := $(hidd-i2c_CXXFLAGS)
+else
+  hidd-i2c_DXXFLAGS := $(hidd-i2c_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  hidd-i2c_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  hidd-i2c_STRIP ?= $(HOST_STRIP)
+  hidd-i2c_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  hidd-i2c_CXXCMD:=$(HOST_CXX)
+  hidd-i2c_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(hidd-i2c_MCXX_CPPFLAGS) $(hidd-i2c_MCXX_EXTRA_CPPFLAGS))
+  hidd-i2c_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(hidd-i2c_CXXFLAGS))
+  hidd-i2c_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(hidd-i2c_DXXFLAGS))
+  hidd-i2c_CXXIQUOTE:=$(HOST_IQUOTE)
+  hidd-i2c_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  hidd-i2c_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  hidd-i2c_STRIP ?= $(TARGET_STRIP)
+  hidd-i2c_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  hidd-i2c_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  hidd-i2c_MCXX_CPPFLAGS := $(strip $(hidd-i2c_MCXX_CPPFLAGS) $(hidd-i2c_MCXX_EXTRA_CPPFLAGS))
+  hidd-i2c_CXXFLAGS := $(strip $(hidd-i2c_CXXFLAGS) $(SAFETY_CFLAGS))
+  hidd-i2c_DXXFLAGS := $(hidd-i2c_DXXFLAGS)
+  hidd-i2c_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  hidd-i2c_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  hidd-i2c_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  hidd-i2c_STRIP ?= $(ECHO) >/dev/null
+  hidd-i2c_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  hidd-i2c_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  hidd-i2c_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(hidd-i2c_MCXX_CPPFLAGS) $(hidd-i2c_MCXX_EXTRA_CPPFLAGS))
+  hidd-i2c_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(hidd-i2c_CXXFLAGS))
+  hidd-i2c_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(hidd-i2c_DXXFLAGS))
+  hidd-i2c_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  hidd-i2c_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(hidd-i2c_CXXCMD) $(hidd-i2c_CXXIQUOTE) $(dir $(2)) $(hidd-i2c_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_CXXIQUOTE) . $(hidd-i2c_CXXIQUOTE_END) $(strip $(hidd-i2c_CXXFLAGS) $(hidd-i2c_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(hidd-i2c_CXXCMD) $(hidd-i2c_CXXIQUOTE) $(dir $(2)) $(hidd-i2c_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_CXXIQUOTE) . $(hidd-i2c_CXXIQUOTE_END) $(strip $(hidd-i2c_CXXFLAGS) $(hidd-i2c_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(hidd-i2c_CXXCMD) $(hidd-i2c_CXXIQUOTE) $(dir $(2)) $(hidd-i2c_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_CXXIQUOTE) . $(hidd-i2c_CXXIQUOTE_END) $(strip $(hidd-i2c_CXXFLAGS) $(hidd-i2c_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(hidd-i2c_CXXCMD)" $(MKDEPEND) $(strip $(hidd-i2c_DXXFLAGS) $(hidd-i2c_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(hidd-i2c_OBJDIR),)
+  $(foreach hidd-i2c_CXXFILE,$(hidd-i2c_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(hidd-i2c_CXXFILE))),$(hidd-i2c_CXXFILE))))
+else
+  $(foreach hidd-i2c_CXXFILE,$(hidd-i2c_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(hidd-i2c_OBJDIR)/,$(notdir $(basename $(hidd-i2c_CXXFILE)))),$(hidd-i2c_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(hidd-i2c_OBJC_NARCHFILES),)
+
+ifeq (,)
+hidd-i2c_MOBJC_SRCWILDCARD := %
+else
+hidd-i2c_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(hidd-i2c_OBJDIR),)
+  hidd-i2c_MOBJC_TARGETS := $(addsuffix .o,$(hidd-i2c_OBJC_NARCHFILES))
+  hidd-i2c_MOBJC_DTARGETS := $(addsuffix .d,$(hidd-i2c_OBJC_NARCHFILES))
+  hidd-i2c_MOBJC_WILDCARD := %
+else
+  hidd-i2c_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-i2c_OBJDIR)/,$(hidd-i2c_OBJC_NARCHFILES)))
+  hidd-i2c_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-i2c_OBJDIR)/,$(hidd-i2c_OBJC_NARCHFILES)))
+  hidd-i2c_MOBJC_WILDCARD := $(hidd-i2c_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : | $(addsuffix .m,$(hidd-i2c_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  hidd-i2c_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  hidd-i2c_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(hidd-i2c_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  hidd-i2c_MOBJC_DIRS := $(foreach dir, $(hidd-i2c_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(hidd-i2c_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(hidd-i2c_MOBJC_DIRS),)
+    hidd-i2c_MOBJC_DIRS := $(shell echo $(hidd-i2c_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(hidd-i2c_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  hidd-i2c_CC := $(TARGET_CC)
+else
+  hidd-i2c_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+hidd-i2c_MOBJC_CPPFLAGS := $(hidd-i2c_CPPFLAGS)
+hidd-i2c_OBJCFLAGS := $(hidd-i2c_CFLAGS)
+hidd-i2c_OBJCFLAGS := $(hidd-i2c_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+hidd-i2c_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(hidd-i2c_OBJCFLAGS)))
+ifeq ($(hidd-i2c_DFLAGS),)
+  hidd-i2c_OBJCDFLAGS := $(hidd-i2c_CFLAGS)
+else
+  hidd-i2c_OBJCDFLAGS := $(hidd-i2c_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  hidd-i2c_LINK ?= $(strip $(hidd-i2c_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  hidd-i2c_STRIP ?= $(TARGET_STRIP)
+  hidd-i2c_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : CMD:=$(strip $(hidd-i2c_CC) $(TARGET_SYSROOT))
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : hidd-i2c_MOBJC_CPPFLAGS:=$(strip $(hidd-i2c_MOBJC_CPPFLAGS) $(hidd-i2c_MOBJC_EXTRA_CPPFLAGS))
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : hidd-i2c_OBJCFLAGS:=$(strip $(hidd-i2c_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : hidd-i2c_OBJCDFLAGS:=$(hidd-i2c_OBJCDFLAGS)
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : hidd-i2c_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : hidd-i2c_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  hidd-i2c_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  hidd-i2c_STRIP ?= $(HOST_STRIP)
+  hidd-i2c_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : hidd-i2c_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(hidd-i2c_MOBJC_CPPFLAGS) $(hidd-i2c_MOBJC_EXTRA_CPPFLAGS))
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : hidd-i2c_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-i2c_OBJCFLAGS))
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : hidd-i2c_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-i2c_OBJCDFLAGS))
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : hidd-i2c_IQUOTE:=$(HOST_IQUOTE)
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : hidd-i2c_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  hidd-i2c_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  hidd-i2c_STRIP ?= $(ECHO) >/dev/null
+  hidd-i2c_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : hidd-i2c_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(hidd-i2c_MOBJC_CPPFLAGS) $(hidd-i2c_MOBJC_EXTRA_CPPFLAGS))
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : hidd-i2c_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-i2c_OBJCFLAGS))
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : hidd-i2c_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-i2c_OBJCDFLAGS))
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : hidd-i2c_IQUOTE:=$(KERNEL_IQUOTE)
+  $(hidd-i2c_MOBJC_TARGETS) $(hidd-i2c_MOBJC_DTARGETS) : hidd-i2c_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(hidd-i2c_MOBJC_TARGETS) : CPPFLAGS := $(hidd-i2c_MOBJC_CPPFLAGS)
+$(hidd-i2c_MOBJC_TARGETS) : CFLAGS := $(hidd-i2c_OBJCFLAGS)
+$(hidd-i2c_MOBJC_TARGETS) : $(hidd-i2c_MOBJC_WILDCARD).o : $(hidd-i2c_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(hidd-i2c_IQUOTE) $(dir $<) $(hidd-i2c_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_IQUOTE) . $(hidd-i2c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(hidd-i2c_IQUOTE) $(dir $<) $(hidd-i2c_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_IQUOTE) . $(hidd-i2c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(hidd-i2c_IQUOTE) $(dir $<) $(hidd-i2c_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_IQUOTE) . $(hidd-i2c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(hidd-i2c_MOBJC_DTARGETS) : $(hidd-i2c_MOBJC_WILDCARD).d : $(hidd-i2c_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(hidd-i2c_OBJCDFLAGS) $(hidd-i2c_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+hidd-i2c_MC_SRCWILDCARD := %
+else
+hidd-i2c_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(hidd-i2c_OBJDIR),)
+hidd-i2c_MC_TARGETS := $(addsuffix .o,$(hidd-i2c_CCFILES))
+hidd-i2c_MC_DTARGETS := $(addsuffix .d,$(hidd-i2c_CCFILES))
+hidd-i2c_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    hidd-i2c_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-i2c_OBJDIR)/,$(notdir $(hidd-i2c_CCFILES))))
+    hidd-i2c_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-i2c_OBJDIR)/,$(notdir $(hidd-i2c_CCFILES))))
+else
+ifeq (,)
+    hidd-i2c_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-i2c_OBJDIR)/,$(hidd-i2c_CCFILES)))
+    hidd-i2c_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-i2c_OBJDIR)/,$(hidd-i2c_CCFILES)))
+else
+    hidd-i2c_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-i2c_OBJDIR)/,$(patsubst /%,%,$(hidd-i2c_CCFILES))))
+    hidd-i2c_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-i2c_OBJDIR)/,$(patsubst /%,%,$(hidd-i2c_CCFILES))))
+endif
+endif
+hidd-i2c_MC_TGTWILDCARD := $(hidd-i2c_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : | $(addsuffix .c,$(hidd-i2c_CCFILES))
+
+# Be sure that all .c files are found
+hidd-i2c_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+hidd-i2c_MC_BASEDIRS := $(shell echo $(sort $(dir $(hidd-i2c_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+hidd-i2c_MC_DIRS := $(foreach dir, $(hidd-i2c_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(hidd-i2c_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(hidd-i2c_MC_DIRS),)
+    hidd-i2c_MC_DIRS := $(shell echo $(hidd-i2c_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(hidd-i2c_MC_DIRS)
+endif
+
+endif
+
+hidd-i2c_MC_CPPFLAGS := $(hidd-i2c_CPPFLAGS)
+hidd-i2c_CFLAGS := $(hidd-i2c_CFLAGS)
+ifeq ($(hidd-i2c_DFLAGS),)
+  hidd-i2c_DFLAGS := $(hidd-i2c_CFLAGS)
+else
+  hidd-i2c_DFLAGS := $(hidd-i2c_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+hidd-i2c_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+hidd-i2c_STRIP ?= $(TARGET_STRIP)
+hidd-i2c_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_MC_CPPFLAGS:=$(strip $(hidd-i2c_MC_CPPFLAGS) $(hidd-i2c_MC_EXTRA_CPPFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_CFLAGS:=$(strip $(hidd-i2c_CFLAGS) $(SAFETY_CFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_DFLAGS:=$(hidd-i2c_DFLAGS)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE:=$(CFLAGS_IQUOTE)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+hidd-i2c_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+hidd-i2c_STRIP ?= $(HOST_STRIP)
+hidd-i2c_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(hidd-i2c_MC_CPPFLAGS) $(hidd-i2c_MC_EXTRA_CPPFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_CFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-i2c_CFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_DFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-i2c_DFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE:=$(HOST_IQUOTE)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+hidd-i2c_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+hidd-i2c_STRIP ?= $(ECHO) >/dev/null
+hidd-i2c_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(hidd-i2c_MC_CPPFLAGS) $(hidd-i2c_MC_EXTRA_CPPFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-i2c_CFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-i2c_DFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE:=$(KERNEL_IQUOTE)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(hidd-i2c_MC_TARGETS) : CPPFLAGS := $(hidd-i2c_MC_CPPFLAGS)
+$(hidd-i2c_MC_TARGETS) : CFLAGS := $(hidd-i2c_CFLAGS)
+$(hidd-i2c_MC_TARGETS) : $(hidd-i2c_MC_TGTWILDCARD).o : $(hidd-i2c_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(hidd-i2c_IQUOTE) $(dir $<) $(hidd-i2c_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_IQUOTE) . $(hidd-i2c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(hidd-i2c_IQUOTE) $(dir $<) $(hidd-i2c_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_IQUOTE) . $(hidd-i2c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(hidd-i2c_IQUOTE) $(dir $<) $(hidd-i2c_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_IQUOTE) . $(hidd-i2c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(hidd-i2c_MC_DTARGETS) : $(hidd-i2c_MC_TGTWILDCARD).d : $(hidd-i2c_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(hidd-i2c_DFLAGS) $(hidd-i2c_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+hidd-i2c_MC_SRCWILDCARD := %
+else
+hidd-i2c_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(hidd-i2c_OBJDIR),)
+hidd-i2c_MC_TARGETS := $(addsuffix .o,$(hidd-i2c_TARGETCCFILES))
+hidd-i2c_MC_DTARGETS := $(addsuffix .d,$(hidd-i2c_TARGETCCFILES))
+hidd-i2c_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    hidd-i2c_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-i2c_OBJDIR)/,$(notdir $(hidd-i2c_TARGETCCFILES))))
+    hidd-i2c_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-i2c_OBJDIR)/,$(notdir $(hidd-i2c_TARGETCCFILES))))
+else
+ifeq (,)
+    hidd-i2c_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-i2c_OBJDIR)/,$(hidd-i2c_TARGETCCFILES)))
+    hidd-i2c_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-i2c_OBJDIR)/,$(hidd-i2c_TARGETCCFILES)))
+else
+    hidd-i2c_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-i2c_OBJDIR)/,$(patsubst /%,%,$(hidd-i2c_TARGETCCFILES))))
+    hidd-i2c_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-i2c_OBJDIR)/,$(patsubst /%,%,$(hidd-i2c_TARGETCCFILES))))
+endif
+endif
+hidd-i2c_MC_TGTWILDCARD := $(hidd-i2c_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : | $(addsuffix .c,$(hidd-i2c_TARGETCCFILES))
+
+# Be sure that all .c files are found
+hidd-i2c_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+hidd-i2c_MC_BASEDIRS := $(shell echo $(sort $(dir $(hidd-i2c_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+hidd-i2c_MC_DIRS := $(foreach dir, $(hidd-i2c_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(hidd-i2c_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(hidd-i2c_MC_DIRS),)
+    hidd-i2c_MC_DIRS := $(shell echo $(hidd-i2c_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(hidd-i2c_MC_DIRS)
+endif
+
+endif
+
+hidd-i2c_MC_CPPFLAGS := $(hidd-i2c_CPPFLAGS) -D__AROS__
+hidd-i2c_CFLAGS := $(hidd-i2c_CFLAGS)
+ifeq ($(hidd-i2c_DFLAGS),)
+  hidd-i2c_DFLAGS := $(hidd-i2c_CFLAGS)
+else
+  hidd-i2c_DFLAGS := $(hidd-i2c_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+hidd-i2c_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+hidd-i2c_STRIP ?= $(TARGET_STRIP)
+hidd-i2c_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_MC_CPPFLAGS:=$(strip $(hidd-i2c_MC_CPPFLAGS) $(hidd-i2c_MC_EXTRA_CPPFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_CFLAGS:=$(strip $(hidd-i2c_CFLAGS) $(SAFETY_CFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_DFLAGS:=$(hidd-i2c_DFLAGS)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE:=$(CFLAGS_IQUOTE)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+hidd-i2c_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+hidd-i2c_STRIP ?= $(HOST_STRIP)
+hidd-i2c_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(hidd-i2c_MC_CPPFLAGS) $(hidd-i2c_MC_EXTRA_CPPFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_CFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-i2c_CFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_DFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-i2c_DFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE:=$(HOST_IQUOTE)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+hidd-i2c_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+hidd-i2c_STRIP ?= $(ECHO) >/dev/null
+hidd-i2c_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(hidd-i2c_MC_CPPFLAGS) $(hidd-i2c_MC_EXTRA_CPPFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-i2c_CFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-i2c_DFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE:=$(KERNEL_IQUOTE)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(hidd-i2c_MC_TARGETS) : CPPFLAGS := $(hidd-i2c_MC_CPPFLAGS)
+$(hidd-i2c_MC_TARGETS) : CFLAGS := $(hidd-i2c_CFLAGS)
+$(hidd-i2c_MC_TARGETS) : $(hidd-i2c_MC_TGTWILDCARD).o : $(hidd-i2c_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(hidd-i2c_IQUOTE) $(dir $<) $(hidd-i2c_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_IQUOTE) . $(hidd-i2c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(hidd-i2c_IQUOTE) $(dir $<) $(hidd-i2c_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_IQUOTE) . $(hidd-i2c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(hidd-i2c_IQUOTE) $(dir $<) $(hidd-i2c_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_IQUOTE) . $(hidd-i2c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(hidd-i2c_MC_DTARGETS) : $(hidd-i2c_MC_TGTWILDCARD).d : $(hidd-i2c_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(hidd-i2c_DFLAGS) $(hidd-i2c_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+hidd-i2c_MC_SRCWILDCARD := %
+else
+hidd-i2c_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(hidd-i2c_OBJDIR)/linklib,)
+hidd-i2c_MC_TARGETS := $(addsuffix .o,$(hidd-i2c_NLIBARCHFILES))
+hidd-i2c_MC_DTARGETS := $(addsuffix .d,$(hidd-i2c_NLIBARCHFILES))
+hidd-i2c_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    hidd-i2c_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-i2c_OBJDIR)/linklib/,$(notdir $(hidd-i2c_NLIBARCHFILES))))
+    hidd-i2c_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-i2c_OBJDIR)/linklib/,$(notdir $(hidd-i2c_NLIBARCHFILES))))
+else
+ifeq (,)
+    hidd-i2c_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-i2c_OBJDIR)/linklib/,$(hidd-i2c_NLIBARCHFILES)))
+    hidd-i2c_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-i2c_OBJDIR)/linklib/,$(hidd-i2c_NLIBARCHFILES)))
+else
+    hidd-i2c_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-i2c_OBJDIR)/linklib/,$(patsubst /%,%,$(hidd-i2c_NLIBARCHFILES))))
+    hidd-i2c_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-i2c_OBJDIR)/linklib/,$(patsubst /%,%,$(hidd-i2c_NLIBARCHFILES))))
+endif
+endif
+hidd-i2c_MC_TGTWILDCARD := $(hidd-i2c_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : | $(addsuffix .c,$(hidd-i2c_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+hidd-i2c_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+hidd-i2c_MC_BASEDIRS := $(shell echo $(sort $(dir $(hidd-i2c_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+hidd-i2c_MC_DIRS := $(foreach dir, $(hidd-i2c_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(hidd-i2c_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(hidd-i2c_MC_DIRS),)
+    hidd-i2c_MC_DIRS := $(shell echo $(hidd-i2c_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(hidd-i2c_MC_DIRS)
+endif
+
+endif
+
+hidd-i2c_MC_CPPFLAGS := $(hidd-i2c_LINKLIBCPPFLAGS) -D__AROS__
+hidd-i2c_CFLAGS := $(hidd-i2c_LINKLIBCFLAGS)
+ifeq ($(hidd-i2c_LINKLIBDFLAGS),)
+  hidd-i2c_DFLAGS := $(hidd-i2c_LINKLIBCFLAGS)
+else
+  hidd-i2c_DFLAGS := $(hidd-i2c_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+hidd-i2c_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+hidd-i2c_STRIP ?= $(TARGET_STRIP)
+hidd-i2c_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_MC_CPPFLAGS:=$(strip $(hidd-i2c_MC_CPPFLAGS) $(hidd-i2c_MC_EXTRA_CPPFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_CFLAGS:=$(strip $(hidd-i2c_CFLAGS) $(SAFETY_CFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_DFLAGS:=$(hidd-i2c_DFLAGS)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE:=$(CFLAGS_IQUOTE)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+hidd-i2c_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+hidd-i2c_STRIP ?= $(HOST_STRIP)
+hidd-i2c_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(hidd-i2c_MC_CPPFLAGS) $(hidd-i2c_MC_EXTRA_CPPFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_CFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-i2c_CFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_DFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-i2c_DFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE:=$(HOST_IQUOTE)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+hidd-i2c_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+hidd-i2c_STRIP ?= $(ECHO) >/dev/null
+hidd-i2c_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(hidd-i2c_MC_CPPFLAGS) $(hidd-i2c_MC_EXTRA_CPPFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-i2c_CFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-i2c_DFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE:=$(KERNEL_IQUOTE)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(hidd-i2c_MC_TARGETS) : CPPFLAGS := $(hidd-i2c_MC_CPPFLAGS)
+$(hidd-i2c_MC_TARGETS) : CFLAGS := $(hidd-i2c_CFLAGS)
+$(hidd-i2c_MC_TARGETS) : $(hidd-i2c_MC_TGTWILDCARD).o : $(hidd-i2c_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(hidd-i2c_IQUOTE) $(dir $<) $(hidd-i2c_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_IQUOTE) . $(hidd-i2c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(hidd-i2c_IQUOTE) $(dir $<) $(hidd-i2c_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_IQUOTE) . $(hidd-i2c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(hidd-i2c_IQUOTE) $(dir $<) $(hidd-i2c_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_IQUOTE) . $(hidd-i2c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(hidd-i2c_MC_DTARGETS) : $(hidd-i2c_MC_TGTWILDCARD).d : $(hidd-i2c_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(hidd-i2c_DFLAGS) $(hidd-i2c_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(hidd-i2c_OBJDIR)/linklib,)
+hidd-i2c_MC_SRCWILDCARD := %
+else
+hidd-i2c_MC_SRCWILDCARD := $(hidd-i2c_OBJDIR)/linklib/%
+endif
+
+ifeq ($(hidd-i2c_OBJDIR)/linklib,)
+hidd-i2c_MC_TARGETS := $(addsuffix .o,$(hidd-i2c_LINKLIBCCGENFILES))
+hidd-i2c_MC_DTARGETS := $(addsuffix .d,$(hidd-i2c_LINKLIBCCGENFILES))
+hidd-i2c_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    hidd-i2c_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-i2c_OBJDIR)/linklib/,$(notdir $(hidd-i2c_LINKLIBCCGENFILES))))
+    hidd-i2c_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-i2c_OBJDIR)/linklib/,$(notdir $(hidd-i2c_LINKLIBCCGENFILES))))
+else
+ifeq ($(hidd-i2c_OBJDIR)/linklib,)
+    hidd-i2c_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-i2c_OBJDIR)/linklib/,$(hidd-i2c_LINKLIBCCGENFILES)))
+    hidd-i2c_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-i2c_OBJDIR)/linklib/,$(hidd-i2c_LINKLIBCCGENFILES)))
+else
+    hidd-i2c_MC_TARGETS := $(addsuffix .o,$(addprefix $(hidd-i2c_OBJDIR)/linklib/,$(patsubst $(hidd-i2c_OBJDIR)/linklib/%,%,$(hidd-i2c_LINKLIBCCGENFILES))))
+    hidd-i2c_MC_DTARGETS := $(addsuffix .d,$(addprefix $(hidd-i2c_OBJDIR)/linklib/,$(patsubst $(hidd-i2c_OBJDIR)/linklib/%,%,$(hidd-i2c_LINKLIBCCGENFILES))))
+endif
+endif
+hidd-i2c_MC_TGTWILDCARD := $(hidd-i2c_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : | $(addsuffix .c,$(hidd-i2c_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+hidd-i2c_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+hidd-i2c_MC_BASEDIRS := $(shell echo $(sort $(dir $(hidd-i2c_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+hidd-i2c_MC_DIRS := $(foreach dir, $(hidd-i2c_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(hidd-i2c_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(hidd-i2c_MC_DIRS),)
+    hidd-i2c_MC_DIRS := $(shell echo $(hidd-i2c_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(hidd-i2c_MC_DIRS)
+endif
+
+endif
+
+hidd-i2c_MC_CPPFLAGS := $(hidd-i2c_LINKLIBCPPFLAGS) -D__AROS__
+hidd-i2c_CFLAGS := $(hidd-i2c_LINKLIBCFLAGS)
+ifeq ($(hidd-i2c_LINKLIBDFLAGS),)
+  hidd-i2c_DFLAGS := $(hidd-i2c_LINKLIBCFLAGS)
+else
+  hidd-i2c_DFLAGS := $(hidd-i2c_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+hidd-i2c_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+hidd-i2c_STRIP ?= $(TARGET_STRIP)
+hidd-i2c_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_MC_CPPFLAGS:=$(strip $(hidd-i2c_MC_CPPFLAGS) $(hidd-i2c_MC_EXTRA_CPPFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_CFLAGS:=$(strip $(hidd-i2c_CFLAGS) $(SAFETY_CFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_DFLAGS:=$(hidd-i2c_DFLAGS)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE:=$(CFLAGS_IQUOTE)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+hidd-i2c_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+hidd-i2c_STRIP ?= $(HOST_STRIP)
+hidd-i2c_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(hidd-i2c_MC_CPPFLAGS) $(hidd-i2c_MC_EXTRA_CPPFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_CFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-i2c_CFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_DFLAGS:=$(strip $(HOST_CFLAGS) $(hidd-i2c_DFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE:=$(HOST_IQUOTE)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+hidd-i2c_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+hidd-i2c_STRIP ?= $(ECHO) >/dev/null
+hidd-i2c_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(hidd-i2c_MC_CPPFLAGS) $(hidd-i2c_MC_EXTRA_CPPFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-i2c_CFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(hidd-i2c_DFLAGS))
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE:=$(KERNEL_IQUOTE)
+$(hidd-i2c_MC_TARGETS) $(hidd-i2c_MC_DTARGETS) : hidd-i2c_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(hidd-i2c_MC_TARGETS) : CPPFLAGS := $(hidd-i2c_MC_CPPFLAGS)
+$(hidd-i2c_MC_TARGETS) : CFLAGS := $(hidd-i2c_CFLAGS)
+$(hidd-i2c_MC_TARGETS) : $(hidd-i2c_MC_TGTWILDCARD).o : $(hidd-i2c_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(hidd-i2c_IQUOTE) $(dir $<) $(hidd-i2c_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_IQUOTE) . $(hidd-i2c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(hidd-i2c_IQUOTE) $(dir $<) $(hidd-i2c_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_IQUOTE) . $(hidd-i2c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(hidd-i2c_IQUOTE) $(dir $<) $(hidd-i2c_IQUOTE) $(SRCDIR)/$(CURDIR) $(hidd-i2c_IQUOTE) . $(hidd-i2c_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(hidd-i2c_MC_DTARGETS) : $(hidd-i2c_MC_TGTWILDCARD).d : $(hidd-i2c_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(hidd-i2c_DFLAGS) $(hidd-i2c_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(hidd-i2c_LINKLIBAFILES),)
+
+ifeq ($(hidd-i2c_OBJDIR)/linklib,)
+hidd-i2c-MA_TARGETS := $(addsuffix .o,$(hidd-i2c_LINKLIBAFILES) $(hidd-i2c_RELLINKLIBAFILES))
+hidd-i2c-MA_WILDCARD := %
+else
+hidd-i2c-MA_TARGETS := $(addsuffix .o,$(addprefix $(hidd-i2c_OBJDIR)/linklib/,$(notdir $(hidd-i2c_LINKLIBAFILES) $(hidd-i2c_RELLINKLIBAFILES))))
+hidd-i2c-MA_WILDCARD := $(hidd-i2c_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(hidd-i2c-MA_TARGETS) : | $(addsuffix .S,$(hidd-i2c_LINKLIBAFILES) $(hidd-i2c_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+hidd-i2c-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+hidd-i2c-MA_BASEDIRS := $(shell echo $(sort $(dir $(hidd-i2c_LINKLIBAFILES) $(hidd-i2c_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+hidd-i2c-MA_DIRS := $(foreach dir, $(hidd-i2c-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(hidd-i2c-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(hidd-i2c-MA_DIRS),)
+    hidd-i2c-MA_DIRS := $(shell echo $(hidd-i2c-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(hidd-i2c-MA_DIRS)
+endif
+
+endif
+
+hidd-i2c-MA_ASSEMBLER ?= $(hidd-i2c_ASSEMBLER)
+
+$(hidd-i2c-MA_TARGETS) : hidd-i2c-MA_CMD:= $(hidd-i2c-MA_ASSEMBLER)
+
+$(hidd-i2c-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(hidd-i2c-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(hidd-i2c-MA_TARGETS) : $(hidd-i2c-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(hidd-i2c-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(hidd-i2c-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(hidd-i2c-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+hidd-i2c_SUFFIX           := hidd
+else
+hidd-i2c_SUFFIX           := 
+endif
+
+ifeq (target,target)
+hidd-i2c_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+hidd-i2c_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+hidd-i2c_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(hidd-i2c_SUFFIX),handler)
+hidd-i2c_MODULE           := $(AROSDIR)/$(hidd-i2c_MODDIR)/$(hidd-i2c_DEFNAME)-$(hidd-i2c_SUFFIX)
+else
+hidd-i2c_MODULE           := $(AROSDIR)/$(hidd-i2c_MODDIR)/$(hidd-i2c_DEFNAME).$(hidd-i2c_SUFFIX)
+endif
+hidd-i2c_KOBJ             := $(KOBJSDIR)/$(hidd-i2c_DEFNAME)_$(hidd-i2c_SUFFIX).o
+else
+hidd-i2c_MODULE           :=
+hidd-i2c_KOBJ             :=
+endif
+
+hidd-i2c-quick      : hidd-i2c
+hidd-i2c            : $(hidd-i2c_MODULE) $(hidd-i2c_LINKLIB) $(hidd-i2c_RELLINKLIB)
+ifeq (M,M)
+hidd-i2c-kobj       : $(hidd-i2c_KOBJ) $(hidd-i2c_LINKLIB) $(hidd-i2c_RELLINKLIB)
+hidd-i2c-kobj-quick : $(hidd-i2c_KOBJ) $(hidd-i2c_LINKLIB) $(hidd-i2c_RELLINKLIB)
+endif
+ifeq (M,M)
+hidd-i2c-linklib    : $(hidd-i2c_LINKLIB) $(hidd-i2c_RELLINKLIB)
+endif
+
+hidd-i2c_OBJS := $(addsuffix .o,$(hidd-i2c_STARTFILES)) $(hidd-i2c_ARCHOBJS) \
+           $(addprefix $(hidd-i2c_OBJDIR)/,$(notdir $(hidd-i2c_C_NARCHFILES:=.o) $(hidd-i2c_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (hidd,handler)
+hidd-i2c_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (i2c,con)
+    hidd-i2c_ERR          := $(notdir $(hidd-i2c_MODULE)).err
+else
+    hidd-i2c_ERR          := i2c.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(hidd-i2c_DEFNAME)_LDFLAGS) $(hidd-i2c_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(hidd-i2c_LIBS) $($(hidd-i2c_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(hidd-i2c_MODULE) : LIB_NAMES := $(hidd-i2c_LIBS) $($(hidd-i2c_DEFNAME)_LIBS)
+$(hidd-i2c_MODULE) : OBJS := $(hidd-i2c_STARTOBJS) $(hidd-i2c_OBJS) $(USER_OBJS)
+$(hidd-i2c_MODULE) : ENDTAG := $(hidd-i2c_ENDOBJS)
+$(hidd-i2c_MODULE) : ERR := $(hidd-i2c_ERR)
+$(hidd-i2c_MODULE) : OBJDIR := $(hidd-i2c_OBJDIR)
+$(hidd-i2c_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(hidd-i2c_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(hidd-i2c_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(hidd-i2c_MODULE) : $(hidd-i2c_STARTOBJS) $(hidd-i2c_OBJS) $(USER_OBJS) $(hidd-i2c_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(hidd-i2c_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(hidd-i2c_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+hidd-i2c_LC_LINKLIBNAME   := $(shell echo $(hidd-i2c_LINKLIBNAME) | tr A-Z a-z)
+hidd-i2c_LC_MODNAME       := $(shell echo i2c | tr A-Z a-z)
+ifneq ($(hidd-i2c_LINKLIB),)
+
+ifeq (target,target)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_LINKLIBNAME)$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_AR:=$(AR)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_LINKLIBNAME)$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_LINKLIBNAME)$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_AR:=$(HOST_AR)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_LINKLIBNAME)$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_LINKLIBNAME)$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_AR:=$(KERNEL_AR)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_LINKLIBNAME)$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_LINKLIBNAME)$(hidd-i2c_LIBSUFFIX).a : $(hidd-i2c_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(hidd-i2c_AR) $@ $^
+	$(Q)$(hidd-i2c_RANLIB) $@
+ifneq ($(hidd-i2c_LC_MODNAME),$(hidd-i2c_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(hidd-i2c_LIBDIR)/libi2c$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_AR:=$(AR)
+$(hidd-i2c_LIBDIR)/libi2c$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(hidd-i2c_LIBDIR)/libi2c$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_AR:=$(HOST_AR)
+$(hidd-i2c_LIBDIR)/libi2c$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(hidd-i2c_LIBDIR)/libi2c$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_AR:=$(KERNEL_AR)
+$(hidd-i2c_LIBDIR)/libi2c$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(hidd-i2c_LIBDIR)/libi2c$(hidd-i2c_LIBSUFFIX).a : $(hidd-i2c_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(hidd-i2c_AR) $@ $^
+	$(Q)$(hidd-i2c_RANLIB) $@
+endif
+
+
+ifneq ($(hidd-i2c_LINKLIB),)
+$(hidd-i2c_LINKLIB) : | $(hidd-i2c_LIBDIR)
+else
+$(hidd-i2c_LINKLIB) :: $(hidd-i2c_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(hidd-i2c_LIBDIR)
+
+endif
+
+ifneq ($(hidd-i2c_RELLINKLIB),)
+
+ifeq (target,target)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_LINKLIBNAME)_rel$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_AR:=$(AR)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_LINKLIBNAME)_rel$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_LINKLIBNAME)_rel$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_AR:=$(HOST_AR)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_LINKLIBNAME)_rel$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_LINKLIBNAME)_rel$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_AR:=$(KERNEL_AR)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_LINKLIBNAME)_rel$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_LINKLIBNAME)_rel$(hidd-i2c_LIBSUFFIX).a : $(hidd-i2c_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(hidd-i2c_AR) $@ $^
+	$(Q)$(hidd-i2c_RANLIB) $@
+ifneq ($(hidd-i2c_LC_MODNAME),$(hidd-i2c_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_DEFNAME)_rel$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_AR:=$(AR)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_DEFNAME)_rel$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_DEFNAME)_rel$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_AR:=$(HOST_AR)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_DEFNAME)_rel$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_DEFNAME)_rel$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_AR:=$(KERNEL_AR)
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_DEFNAME)_rel$(hidd-i2c_LIBSUFFIX).a : hidd-i2c_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(hidd-i2c_LIBDIR)/lib$(hidd-i2c_DEFNAME)_rel$(hidd-i2c_LIBSUFFIX).a : $(hidd-i2c_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(hidd-i2c_AR) $@ $^
+	$(Q)$(hidd-i2c_RANLIB) $@
+endif
+
+
+ifneq ($(hidd-i2c_RELLINKLIB),)
+$(hidd-i2c_RELLINKLIB) : | $(hidd-i2c_LIBDIR)
+else
+$(hidd-i2c_RELLINKLIB) :: $(hidd-i2c_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(hidd-i2c_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+hidd-i2c_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+hidd-i2c_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+hidd-i2c_SYMBOLS := $(hidd-i2c_KBASE)
+
+hidd-i2c_KLIB             := hiddstubs amiga arossupport autoinit libinit
+hidd-i2c_KOBJ_LIBS        := $(filter-out $(hidd-i2c_KLIB),$(hidd-i2c_LIBS)) $(hidd-i2c_KAUTOLIB)
+$(hidd-i2c_KOBJ) : LINKLIBS:=$(hidd-i2c_KOBJ_LIBS) $($(hidd-i2c_DEFNAME)_LIBS)
+$(hidd-i2c_KOBJ) : FILTBASES:=$(addprefix -L ,$(hidd-i2c_SYMBOLS))
+$(hidd-i2c_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(hidd-i2c_KOBJ) : $(hidd-i2c_OBJS) $(USER_OBJS) $(hidd-i2c_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+hidd-i2c_DEPS             := $(addprefix $(hidd-i2c_OBJDIR)/,$(notdir $(hidd-i2c_CCFILES:=.d) $(hidd-i2c_TARGETCCFILES:=.d) $(hidd-i2c_CXXFILES:=.d))) $(addprefix $(hidd-i2c_OBJDIR)/linklib/,$(notdir $(hidd-i2c_LINKLIBCCFILES:=.d)))
+
+ifneq ($(hidd-i2c_DEPS),)
+  ifneq (hidd-i2c hidd-i2c-quick hidd-i2c-kobj hidd-i2c-kobj-quick,)
+    ifneq ($(findstring $(TARGET),hidd-i2c hidd-i2c-quick hidd-i2c-kobj hidd-i2c-kobj-quick),)
+      -include $(hidd-i2c_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(hidd-i2c_DEPS)
+    endif
+  endif
+endif
+
+$(hidd-i2c_OBJS) $(hidd-i2c_DEPS) : | $(hidd-i2c_OBJDIR)/linklib
+
+ifneq ($(hidd-i2c_OBJS) $(hidd-i2c_DEPS) $(hidd-i2c_MODULE) $(hidd-i2c_KOBJ),)
+$(hidd-i2c_OBJS) $(hidd-i2c_DEPS) $(hidd-i2c_MODULE) $(hidd-i2c_KOBJ) : | $(hidd-i2c_OBJDIR) $(AROSDIR)/$(hidd-i2c_MODDIR) $(KOBJSDIR)
+else
+$(hidd-i2c_OBJS) $(hidd-i2c_DEPS) $(hidd-i2c_MODULE) $(hidd-i2c_KOBJ) :: $(hidd-i2c_OBJDIR) $(AROSDIR)/$(hidd-i2c_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(hidd-i2c_OBJDIR) $(AROSDIR)/$(hidd-i2c_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),hidd-i2c hidd-i2c-includes hidd-i2c-quick hidd-i2c-kobj hidd-i2c-kobj-quick),) # Only for this target these deps are wanted
+
+hidd-i2c_DFILE_DEPS := $(hidd-i2c_LIBDEFSINC) $(hidd-i2c_DEFLIBDEFSINC) \
+    $(addprefix $(hidd-i2c_INCDIR)/,$($(hidd-i2c_DEFNAME)_INCLUDES))
+$(hidd-i2c_DEPS) : $(hidd-i2c_DFILE_DEPS)
+endif
+
+hidd-i2c_TOCLEAN := $(hidd-i2c_OBJS) $(hidd-i2c_DEPS) \
+    $(hidd-i2c_MODULE) $(hidd-i2c_LINKLIB) $(hidd-i2c_KOBJ) \
+    $(hidd-i2c_OBJDIR)/Makefile.i2chidd \
+    $(addprefix $(hidd-i2c_OBJDIR)/include/,$($(hidd-i2c_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(hidd-i2c_DEFNAME)_INCLUDES)) \
+    $(addprefix $(hidd-i2c_INCDIR)/,$($(hidd-i2c_DEFNAME)_INCLUDES)) \
+    $(hidd-i2c_OBJDIR)/i2c_geninc $(hidd-i2c_OBJDIR)/i2c_incs \
+    $(addsuffix .c,$(hidd-i2c_LINKLIBFILES)) $(hidd-i2c_LINKLIBOBJS) $(hidd-i2c_LIBDEFSINC) \
+    $(hidd-i2c_DEFLIBDEFSINC) $(addsuffix .c,$(hidd-i2c_STARTFILES) $(hidd-i2c_ENDFILES)) \
+    $(hidd-i2c_ENDOBJS)
+hidd-i2c-clean : FILES              := $(hidd-i2c_TOCLEAN)
+hidd-i2c-clean ::
+	$(Q)$(ECHO) "Cleaning up for module i2c"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(hidd-i2c_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

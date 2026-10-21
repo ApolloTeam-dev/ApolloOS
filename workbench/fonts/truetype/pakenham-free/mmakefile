@@ -1,0 +1,46 @@
+# Copyright © 2020, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- fonts-truetype : fonts-truetype-pakenham-free
+#MM- fonts-truetype-quick : fonts-truetype-pakenham-free
+#MM- fonts-truetype-pakenham-free : fonts-truetype-pakenham-free-ttf fonts-truetype-pakenham-free-amifonts
+
+
+fonts-truetype-pakenham-free-ttf_SRC := $(shell echo . | sed 's/^\(.\):\//\/\1\//')
+
+
+ifneq (setup,)
+setup : | $(AROSDIR)/Fonts/TrueType
+else
+setup :: $(AROSDIR)/Fonts/TrueType
+endif
+
+GLOB_MKDIRS += $(AROSDIR)/Fonts/TrueType
+
+
+.PHONY : fonts-truetype-pakenham-free-ttf
+
+#MM
+fonts-truetype-pakenham-free-ttf : | $(AROSDIR)/Fonts/TrueType 
+	$(foreach file, $(call WILDCARD, *.ttf), $(shell $(CP) $(addprefix $(if $(filter /%,$(fonts-truetype-pakenham-free-ttf_SRC)),$(fonts-truetype-pakenham-free-ttf_SRC),$(SRCDIR)/$(CURDIR)/$(fonts-truetype-pakenham-free-ttf_SRC))/, $(file)) $(addprefix $(AROSDIR)/Fonts/TrueType/, $(file))))
+
+
+#MM
+fonts-truetype-pakenham-free-amifonts :
+	@cd $(SRCDIR)/$(CURDIR); for file in *.font *.otag; do \
+            if [ ! -e "$(AROSDIR)/Fonts/$$file" ]; then \
+                $(ECHO) Copying "$$file"...; \
+                $(CP) "$$file" $(AROSDIR)/Fonts; \
+            fi; \
+        done
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

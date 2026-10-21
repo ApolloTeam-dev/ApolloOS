@@ -1,0 +1,631 @@
+include $(SRCDIR)/config/aros.cfg
+
+## Host build
+
+#MM- tools-mkkeymap: includes
+
+USER_INCLUDES := -I$(GENINCDIR)
+EXEDIR := $(dir $(MKKEYMAP))
+FILES := mkkeymap config parsedescriptor writekeymap
+
+
+.PHONY : tools-mkkeymap
+
+tools-mkkeymap_PROGNAME  := $(notdir $(MKKEYMAP))
+tools-mkkeymap_OBJDIR    := $(GENDIR)/$(CURDIR)
+tools-mkkeymap_TARGETDIR := $(EXEDIR)
+tools-mkkeymap_LINKER    := 
+tools-mkkeymap_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(tools-mkkeymap_LINKER),)
+    tools-mkkeymap_LINKER := host
+endif
+
+ifneq ("$(strip $(FILES)   )","")
+    tools-mkkeymap_FILES     := $(FILES)
+    tools-mkkeymap_OBJCFILES := 
+    tools-mkkeymap_ASMFILES  := 
+    tools-mkkeymap_CXXFILES := 
+else
+    tools-mkkeymap_FILES     := $(tools-mkkeymap_PROGNAME)
+    tools-mkkeymap_OBJCFILES :=
+    tools-mkkeymap_ASMFILES  :=
+    tools-mkkeymap_CXXFILES :=
+endif
+
+tools-mkkeymap_ARCHOBJS   := $(wildcard $(tools-mkkeymap_OBJDIR)/arch/*.o)
+tools-mkkeymap_ARCHFILES  := $(basename $(notdir $(tools-mkkeymap_ARCHOBJS)))
+tools-mkkeymap_C_NARCHFILES := $(filter-out $(tools-mkkeymap_ARCHFILES),$(tools-mkkeymap_FILES))
+tools-mkkeymap_CXX_NARCHFILES := $(filter-out $(tools-mkkeymap_ARCHFILES),$(tools-mkkeymap_CXXFILES))
+tools-mkkeymap_OBJC_NARCHFILES := $(filter-out $(tools-mkkeymap_ARCHFILES),$(tools-mkkeymap_OBJCFILES))
+
+TMP_FILES := $(tools-mkkeymap_C_NARCHFILES) $(tools-mkkeymap_CXX_NARCHFILES) $(tools-mkkeymap_ASMFILES) $(tools-mkkeymap_OBJC_NARCHFILES)
+tools-mkkeymap_OBJS := $(addsuffix .o,$(addprefix $(tools-mkkeymap_OBJDIR)/,$(notdir $(TMP_FILES))))
+tools-mkkeymap_DEPS := $(addsuffix .d,$(addprefix $(tools-mkkeymap_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+tools-mkkeymap_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+tools-mkkeymap_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (host,target)
+tools-mkkeymap_CFLAGS            := $(CFLAGS)
+endif
+ifeq (host,host)
+tools-mkkeymap_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (host,kernel)
+tools-mkkeymap_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+tools-mkkeymap_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (host,target)
+tools-mkkeymap_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (host,host)
+tools-mkkeymap_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (host,kernel)
+tools-mkkeymap_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+tools-mkkeymap_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (host,target)
+tools-mkkeymap_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (host,host)
+tools-mkkeymap_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (host,kernel)
+tools-mkkeymap_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+tools-mkkeymap_LDFLAGS          := 
+endif
+
+tools-mkkeymap_COVERAGE := no
+ifeq (host,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+tools-mkkeymap_COVERAGE := yes
+tools-mkkeymap_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+tools-mkkeymap_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+tools-mkkeymap_CFLAGS    := $(strip $(tools-mkkeymap_COVERAGEFLAGS) $(tools-mkkeymap_CFLAGS))
+tools-mkkeymap_CXXFLAGS := $(strip $(tools-mkkeymap_COVERAGEFLAGS) $(tools-mkkeymap_CXXFLAGS))
+tools-mkkeymap_LIBS += $(tools-mkkeymap_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+tools-mkkeymap_FUNCINSTR := yes
+tools-mkkeymap_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+tools-mkkeymap_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+tools-mkkeymap_CFLAGS    := $(strip $(tools-mkkeymap_INSTRFUNCFLAGS) $(tools-mkkeymap_CFLAGS))
+tools-mkkeymap_CXXFLAGS := $(strip $(tools-mkkeymap_INSTRFUNCFLAGS) $(tools-mkkeymap_CXXFLAGS))
+tools-mkkeymap_LIBS += $(tools-mkkeymap_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+tools-mkkeymap_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(tools-mkkeymap_CFLAGS))
+tools-mkkeymap_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(tools-mkkeymap_CXXFLAGS))
+endif
+endif
+tools-mkkeymap_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    tools-mkkeymap_DFLAGS     := 
+else
+    tools-mkkeymap_DFLAGS     := $(tools-mkkeymap_CFLAGS)
+endif
+ifneq (,)
+    tools-mkkeymap_DXXFLAGS     := 
+else
+    tools-mkkeymap_DXXFLAGS     := $(tools-mkkeymap_CXXFLAGS)
+endif
+ifeq (host,target)
+tools-mkkeymap_LDFLAGS           := $(tools-mkkeymap_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (host,host)
+tools-mkkeymap_LDFLAGS           := $(tools-mkkeymap_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (host,kernel)
+tools-mkkeymap_LDFLAGS           := $(tools-mkkeymap_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+tools-mkkeymap_LDFLAGS   += -L
+endif
+
+#MM
+tools-mkkeymap-quick : tools-mkkeymap
+
+#MM tools-mkkeymap : includes-generate-deps core-linklibs
+tools-mkkeymap : $(tools-mkkeymap_TARGETDIR)/$(tools-mkkeymap_PROGNAME)
+
+ifneq ($(filter $(TARGET),tools-mkkeymap tools-mkkeymap-quick tools-mkkeymap-gz-quick),)
+
+tools-mkkeymap_CXXABSBASENAMES := $(foreach tools-mkkeymap_CXXBASE,$(tools-mkkeymap_CXX_NARCHFILES),$(if $(filter /%,$(tools-mkkeymap_CXXBASE)),$(tools-mkkeymap_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(tools-mkkeymap_CXXBASE))))
+
+ifneq ($(tools-mkkeymap_CXXABSBASENAMES),)
+
+tools-mkkeymap_CXXBASENAMES := $(basename $(tools-mkkeymap_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+tools-mkkeymap_MCXX_FILES  := $(strip $(foreach tools-mkkeymap_CXXBASE,$(tools-mkkeymap_CXXABSBASENAMES), $(firstword $(wildcard $(foreach tools-mkkeymap_EXT, $(AROS_CXXEXTS),$(addsuffix .$(tools-mkkeymap_EXT),$(tools-mkkeymap_CXXBASE)))))))
+
+ifeq (,)
+tools-mkkeymap_MCXX_SRCWILDCARD := %
+else
+tools-mkkeymap_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(tools-mkkeymap_OBJDIR),)
+  tools-mkkeymap_CXXTARGETS := $(notdir $(tools-mkkeymap_CXXBASENAMES:=.o))
+  tools-mkkeymap_CXXDTARGETS := $(notdir $(tools-mkkeymap_CXXBASENAMES:=.d))
+  tools-mkkeymap_MCXX_WILDCARD := %
+else
+  tools-mkkeymap_CXXTARGETS := $(addprefix $(tools-mkkeymap_OBJDIR)/,$(notdir $(tools-mkkeymap_CXXBASENAMES:=.o)))
+  tools-mkkeymap_CXXDTARGETS := $(addprefix $(tools-mkkeymap_OBJDIR)/,$(notdir $(tools-mkkeymap_CXXBASENAMES:=.d)))
+  tools-mkkeymap_MCXX_WILDCARD := $(tools-mkkeymap_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(tools-mkkeymap_CXXTARGETS) $(tools-mkkeymap_CXXDTARGETS) : | $(tools-mkkeymap_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+tools-mkkeymap_MCXX_CPPFLAGS := $(tools-mkkeymap_CPPFLAGS)
+tools-mkkeymap_CXXFLAGS := $(tools-mkkeymap_CXXFLAGS)
+ifeq ($(tools-mkkeymap_DXXFLAGS),)
+  tools-mkkeymap_DXXFLAGS := $(tools-mkkeymap_CXXFLAGS)
+else
+  tools-mkkeymap_DXXFLAGS := $(tools-mkkeymap_DXXFLAGS)
+endif
+
+ifeq ($(findstring host,host kernel target),)
+  $(error unknown compiler host)
+endif
+ifeq (host,host)
+  tools-mkkeymap_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  tools-mkkeymap_STRIP ?= $(HOST_STRIP)
+  tools-mkkeymap_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  tools-mkkeymap_CXXCMD:=$(HOST_CXX)
+  tools-mkkeymap_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(tools-mkkeymap_MCXX_CPPFLAGS) $(tools-mkkeymap_MCXX_EXTRA_CPPFLAGS))
+  tools-mkkeymap_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(tools-mkkeymap_CXXFLAGS))
+  tools-mkkeymap_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(tools-mkkeymap_DXXFLAGS))
+  tools-mkkeymap_CXXIQUOTE:=$(HOST_IQUOTE)
+  tools-mkkeymap_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (host,target)
+  tools-mkkeymap_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  tools-mkkeymap_STRIP ?= $(TARGET_STRIP)
+  tools-mkkeymap_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  tools-mkkeymap_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  tools-mkkeymap_MCXX_CPPFLAGS := $(strip $(tools-mkkeymap_MCXX_CPPFLAGS) $(tools-mkkeymap_MCXX_EXTRA_CPPFLAGS))
+  tools-mkkeymap_CXXFLAGS := $(strip $(tools-mkkeymap_CXXFLAGS) $(SAFETY_CFLAGS))
+  tools-mkkeymap_DXXFLAGS := $(tools-mkkeymap_DXXFLAGS)
+  tools-mkkeymap_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  tools-mkkeymap_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (host,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  tools-mkkeymap_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  tools-mkkeymap_STRIP ?= $(ECHO) >/dev/null
+  tools-mkkeymap_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  tools-mkkeymap_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  tools-mkkeymap_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(tools-mkkeymap_MCXX_CPPFLAGS) $(tools-mkkeymap_MCXX_EXTRA_CPPFLAGS))
+  tools-mkkeymap_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(tools-mkkeymap_CXXFLAGS))
+  tools-mkkeymap_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(tools-mkkeymap_DXXFLAGS))
+  tools-mkkeymap_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  tools-mkkeymap_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(tools-mkkeymap_CXXCMD) $(tools-mkkeymap_CXXIQUOTE) $(dir $(2)) $(tools-mkkeymap_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(tools-mkkeymap_CXXIQUOTE) . $(tools-mkkeymap_CXXIQUOTE_END) $(strip $(tools-mkkeymap_CXXFLAGS) $(tools-mkkeymap_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(tools-mkkeymap_CXXCMD) $(tools-mkkeymap_CXXIQUOTE) $(dir $(2)) $(tools-mkkeymap_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(tools-mkkeymap_CXXIQUOTE) . $(tools-mkkeymap_CXXIQUOTE_END) $(strip $(tools-mkkeymap_CXXFLAGS) $(tools-mkkeymap_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(tools-mkkeymap_CXXCMD) $(tools-mkkeymap_CXXIQUOTE) $(dir $(2)) $(tools-mkkeymap_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(tools-mkkeymap_CXXIQUOTE) . $(tools-mkkeymap_CXXIQUOTE_END) $(strip $(tools-mkkeymap_CXXFLAGS) $(tools-mkkeymap_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(tools-mkkeymap_CXXCMD)" $(MKDEPEND) $(strip $(tools-mkkeymap_DXXFLAGS) $(tools-mkkeymap_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(tools-mkkeymap_OBJDIR),)
+  $(foreach tools-mkkeymap_CXXFILE,$(tools-mkkeymap_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(tools-mkkeymap_CXXFILE))),$(tools-mkkeymap_CXXFILE))))
+else
+  $(foreach tools-mkkeymap_CXXFILE,$(tools-mkkeymap_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(tools-mkkeymap_OBJDIR)/,$(notdir $(basename $(tools-mkkeymap_CXXFILE)))),$(tools-mkkeymap_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(tools-mkkeymap_OBJC_NARCHFILES),)
+
+ifeq (,)
+tools-mkkeymap_MOBJC_SRCWILDCARD := %
+else
+tools-mkkeymap_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(tools-mkkeymap_OBJDIR),)
+  tools-mkkeymap_MOBJC_TARGETS := $(addsuffix .o,$(tools-mkkeymap_OBJC_NARCHFILES))
+  tools-mkkeymap_MOBJC_DTARGETS := $(addsuffix .d,$(tools-mkkeymap_OBJC_NARCHFILES))
+  tools-mkkeymap_MOBJC_WILDCARD := %
+else
+  tools-mkkeymap_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(tools-mkkeymap_OBJDIR)/,$(tools-mkkeymap_OBJC_NARCHFILES)))
+  tools-mkkeymap_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(tools-mkkeymap_OBJDIR)/,$(tools-mkkeymap_OBJC_NARCHFILES)))
+  tools-mkkeymap_MOBJC_WILDCARD := $(tools-mkkeymap_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : | $(addsuffix .m,$(tools-mkkeymap_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  tools-mkkeymap_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  tools-mkkeymap_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(tools-mkkeymap_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  tools-mkkeymap_MOBJC_DIRS := $(foreach dir, $(tools-mkkeymap_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(tools-mkkeymap_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(tools-mkkeymap_MOBJC_DIRS),)
+    tools-mkkeymap_MOBJC_DIRS := $(shell echo $(tools-mkkeymap_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(tools-mkkeymap_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  tools-mkkeymap_CC := $(TARGET_CC)
+else
+  tools-mkkeymap_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+tools-mkkeymap_MOBJC_CPPFLAGS := $(tools-mkkeymap_CPPFLAGS)
+tools-mkkeymap_OBJCFLAGS := $(tools-mkkeymap_CFLAGS)
+tools-mkkeymap_OBJCFLAGS := $(tools-mkkeymap_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+tools-mkkeymap_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(tools-mkkeymap_OBJCFLAGS)))
+ifeq ($(tools-mkkeymap_DFLAGS),)
+  tools-mkkeymap_OBJCDFLAGS := $(tools-mkkeymap_CFLAGS)
+else
+  tools-mkkeymap_OBJCDFLAGS := $(tools-mkkeymap_DFLAGS)
+endif
+
+ifeq ($(findstring host,host kernel target),)
+  $(error unknown compiler host)
+endif
+ifeq (host,target)
+  tools-mkkeymap_LINK ?= $(strip $(tools-mkkeymap_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  tools-mkkeymap_STRIP ?= $(TARGET_STRIP)
+  tools-mkkeymap_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : CMD:=$(strip $(tools-mkkeymap_CC) $(TARGET_SYSROOT))
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : tools-mkkeymap_MOBJC_CPPFLAGS:=$(strip $(tools-mkkeymap_MOBJC_CPPFLAGS) $(tools-mkkeymap_MOBJC_EXTRA_CPPFLAGS))
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : tools-mkkeymap_OBJCFLAGS:=$(strip $(tools-mkkeymap_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : tools-mkkeymap_OBJCDFLAGS:=$(tools-mkkeymap_OBJCDFLAGS)
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : tools-mkkeymap_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : tools-mkkeymap_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (host,host)
+  tools-mkkeymap_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  tools-mkkeymap_STRIP ?= $(HOST_STRIP)
+  tools-mkkeymap_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : tools-mkkeymap_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(tools-mkkeymap_MOBJC_CPPFLAGS) $(tools-mkkeymap_MOBJC_EXTRA_CPPFLAGS))
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : tools-mkkeymap_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(tools-mkkeymap_OBJCFLAGS))
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : tools-mkkeymap_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(tools-mkkeymap_OBJCDFLAGS))
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : tools-mkkeymap_IQUOTE:=$(HOST_IQUOTE)
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : tools-mkkeymap_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (host,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  tools-mkkeymap_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  tools-mkkeymap_STRIP ?= $(ECHO) >/dev/null
+  tools-mkkeymap_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : tools-mkkeymap_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(tools-mkkeymap_MOBJC_CPPFLAGS) $(tools-mkkeymap_MOBJC_EXTRA_CPPFLAGS))
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : tools-mkkeymap_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(tools-mkkeymap_OBJCFLAGS))
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : tools-mkkeymap_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(tools-mkkeymap_OBJCDFLAGS))
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : tools-mkkeymap_IQUOTE:=$(KERNEL_IQUOTE)
+  $(tools-mkkeymap_MOBJC_TARGETS) $(tools-mkkeymap_MOBJC_DTARGETS) : tools-mkkeymap_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(tools-mkkeymap_MOBJC_TARGETS) : CPPFLAGS := $(tools-mkkeymap_MOBJC_CPPFLAGS)
+$(tools-mkkeymap_MOBJC_TARGETS) : CFLAGS := $(tools-mkkeymap_OBJCFLAGS)
+$(tools-mkkeymap_MOBJC_TARGETS) : $(tools-mkkeymap_MOBJC_WILDCARD).o : $(tools-mkkeymap_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(tools-mkkeymap_IQUOTE) $(dir $<) $(tools-mkkeymap_IQUOTE) $(SRCDIR)/$(CURDIR) $(tools-mkkeymap_IQUOTE) . $(tools-mkkeymap_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(tools-mkkeymap_IQUOTE) $(dir $<) $(tools-mkkeymap_IQUOTE) $(SRCDIR)/$(CURDIR) $(tools-mkkeymap_IQUOTE) . $(tools-mkkeymap_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(tools-mkkeymap_IQUOTE) $(dir $<) $(tools-mkkeymap_IQUOTE) $(SRCDIR)/$(CURDIR) $(tools-mkkeymap_IQUOTE) . $(tools-mkkeymap_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(tools-mkkeymap_MOBJC_DTARGETS) : $(tools-mkkeymap_MOBJC_WILDCARD).d : $(tools-mkkeymap_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(tools-mkkeymap_OBJCDFLAGS) $(tools-mkkeymap_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+tools-mkkeymap_MC_SRCWILDCARD := %
+else
+tools-mkkeymap_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(tools-mkkeymap_OBJDIR),)
+tools-mkkeymap_MC_TARGETS := $(addsuffix .o,$(tools-mkkeymap_C_NARCHFILES))
+tools-mkkeymap_MC_DTARGETS := $(addsuffix .d,$(tools-mkkeymap_C_NARCHFILES))
+tools-mkkeymap_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    tools-mkkeymap_MC_TARGETS := $(addsuffix .o,$(addprefix $(tools-mkkeymap_OBJDIR)/,$(notdir $(tools-mkkeymap_C_NARCHFILES))))
+    tools-mkkeymap_MC_DTARGETS := $(addsuffix .d,$(addprefix $(tools-mkkeymap_OBJDIR)/,$(notdir $(tools-mkkeymap_C_NARCHFILES))))
+else
+ifeq (,)
+    tools-mkkeymap_MC_TARGETS := $(addsuffix .o,$(addprefix $(tools-mkkeymap_OBJDIR)/,$(tools-mkkeymap_C_NARCHFILES)))
+    tools-mkkeymap_MC_DTARGETS := $(addsuffix .d,$(addprefix $(tools-mkkeymap_OBJDIR)/,$(tools-mkkeymap_C_NARCHFILES)))
+else
+    tools-mkkeymap_MC_TARGETS := $(addsuffix .o,$(addprefix $(tools-mkkeymap_OBJDIR)/,$(patsubst /%,%,$(tools-mkkeymap_C_NARCHFILES))))
+    tools-mkkeymap_MC_DTARGETS := $(addsuffix .d,$(addprefix $(tools-mkkeymap_OBJDIR)/,$(patsubst /%,%,$(tools-mkkeymap_C_NARCHFILES))))
+endif
+endif
+tools-mkkeymap_MC_TGTWILDCARD := $(tools-mkkeymap_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : | $(addsuffix .c,$(tools-mkkeymap_C_NARCHFILES))
+
+# Be sure that all .c files are found
+tools-mkkeymap_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+tools-mkkeymap_MC_BASEDIRS := $(shell echo $(sort $(dir $(tools-mkkeymap_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+tools-mkkeymap_MC_DIRS := $(foreach dir, $(tools-mkkeymap_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(tools-mkkeymap_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(tools-mkkeymap_MC_DIRS),)
+    tools-mkkeymap_MC_DIRS := $(shell echo $(tools-mkkeymap_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(tools-mkkeymap_MC_DIRS)
+endif
+
+endif
+
+tools-mkkeymap_MC_CPPFLAGS := $(tools-mkkeymap_CPPFLAGS)
+tools-mkkeymap_CFLAGS := $(tools-mkkeymap_CFLAGS)
+ifeq ($(tools-mkkeymap_DFLAGS),)
+  tools-mkkeymap_DFLAGS := $(tools-mkkeymap_CFLAGS)
+else
+  tools-mkkeymap_DFLAGS := $(tools-mkkeymap_DFLAGS)
+endif
+
+ifeq ($(findstring host,host kernel target),)
+  $(error unknown compiler host)
+endif
+ifeq (host,target)
+tools-mkkeymap_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+tools-mkkeymap_STRIP ?= $(TARGET_STRIP)
+tools-mkkeymap_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : tools-mkkeymap_MC_CPPFLAGS:=$(strip $(tools-mkkeymap_MC_CPPFLAGS) $(tools-mkkeymap_MC_EXTRA_CPPFLAGS))
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : tools-mkkeymap_CFLAGS:=$(strip $(tools-mkkeymap_CFLAGS) $(SAFETY_CFLAGS))
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : tools-mkkeymap_DFLAGS:=$(tools-mkkeymap_DFLAGS)
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : tools-mkkeymap_IQUOTE:=$(CFLAGS_IQUOTE)
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : tools-mkkeymap_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (host,host)
+tools-mkkeymap_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+tools-mkkeymap_STRIP ?= $(HOST_STRIP)
+tools-mkkeymap_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : tools-mkkeymap_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(tools-mkkeymap_MC_CPPFLAGS) $(tools-mkkeymap_MC_EXTRA_CPPFLAGS))
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : tools-mkkeymap_CFLAGS:=$(strip $(HOST_CFLAGS) $(tools-mkkeymap_CFLAGS))
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : tools-mkkeymap_DFLAGS:=$(strip $(HOST_CFLAGS) $(tools-mkkeymap_DFLAGS))
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : tools-mkkeymap_IQUOTE:=$(HOST_IQUOTE)
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : tools-mkkeymap_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (host,kernel)
+tools-mkkeymap_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+tools-mkkeymap_STRIP ?= $(ECHO) >/dev/null
+tools-mkkeymap_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : tools-mkkeymap_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(tools-mkkeymap_MC_CPPFLAGS) $(tools-mkkeymap_MC_EXTRA_CPPFLAGS))
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : tools-mkkeymap_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(tools-mkkeymap_CFLAGS))
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : tools-mkkeymap_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(tools-mkkeymap_DFLAGS))
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : tools-mkkeymap_IQUOTE:=$(KERNEL_IQUOTE)
+$(tools-mkkeymap_MC_TARGETS) $(tools-mkkeymap_MC_DTARGETS) : tools-mkkeymap_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(tools-mkkeymap_MC_TARGETS) : CPPFLAGS := $(tools-mkkeymap_MC_CPPFLAGS)
+$(tools-mkkeymap_MC_TARGETS) : CFLAGS := $(tools-mkkeymap_CFLAGS)
+$(tools-mkkeymap_MC_TARGETS) : $(tools-mkkeymap_MC_TGTWILDCARD).o : $(tools-mkkeymap_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(tools-mkkeymap_IQUOTE) $(dir $<) $(tools-mkkeymap_IQUOTE) $(SRCDIR)/$(CURDIR) $(tools-mkkeymap_IQUOTE) . $(tools-mkkeymap_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(tools-mkkeymap_IQUOTE) $(dir $<) $(tools-mkkeymap_IQUOTE) $(SRCDIR)/$(CURDIR) $(tools-mkkeymap_IQUOTE) . $(tools-mkkeymap_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(tools-mkkeymap_IQUOTE) $(dir $<) $(tools-mkkeymap_IQUOTE) $(SRCDIR)/$(CURDIR) $(tools-mkkeymap_IQUOTE) . $(tools-mkkeymap_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(tools-mkkeymap_MC_DTARGETS) : $(tools-mkkeymap_MC_TGTWILDCARD).d : $(tools-mkkeymap_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(tools-mkkeymap_DFLAGS) $(tools-mkkeymap_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(tools-mkkeymap_OBJDIR),)
+tools-mkkeymap-MA_TARGETS := $(addsuffix .o,$(tools-mkkeymap_ASMFILES))
+tools-mkkeymap-MA_WILDCARD := %
+else
+tools-mkkeymap-MA_TARGETS := $(addsuffix .o,$(addprefix $(tools-mkkeymap_OBJDIR)/,$(notdir $(tools-mkkeymap_ASMFILES))))
+tools-mkkeymap-MA_WILDCARD := $(tools-mkkeymap_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(tools-mkkeymap-MA_TARGETS) : | $(addsuffix .s,$(tools-mkkeymap_ASMFILES))
+
+# Be sure that all .c files are found
+tools-mkkeymap-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+tools-mkkeymap-MA_BASEDIRS := $(shell echo $(sort $(dir $(tools-mkkeymap_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+tools-mkkeymap-MA_DIRS := $(foreach dir, $(tools-mkkeymap-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(tools-mkkeymap-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(tools-mkkeymap-MA_DIRS),)
+    tools-mkkeymap-MA_DIRS := $(shell echo $(tools-mkkeymap-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(tools-mkkeymap-MA_DIRS)
+endif
+
+endif
+
+tools-mkkeymap-MA_ASSEMBLER ?= $(tools-mkkeymap_ASSEMBLER)
+
+$(tools-mkkeymap-MA_TARGETS) : tools-mkkeymap-MA_CMD:= $(tools-mkkeymap-MA_ASSEMBLER)
+
+$(tools-mkkeymap-MA_TARGETS) : CPPFLAGS := $(tools-mkkeymap_CPPFLAGS)
+$(tools-mkkeymap-MA_TARGETS) : AFLAGS := $(tools-mkkeymap_AFLAGS)
+$(tools-mkkeymap-MA_TARGETS) : $(tools-mkkeymap-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(tools-mkkeymap-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(tools-mkkeymap-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(tools-mkkeymap-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+tools-mkkeymap-link_EXTRA_LDFLAGS := 
+tools-mkkeymap-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    tools-mkkeymap-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    tools-mkkeymap-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    tools-mkkeymap-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+tools-mkkeymap-link_DIRS := $(subst -L ,-L,$(strip $(tools-mkkeymap_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+tools-mkkeymap-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(tools-mkkeymap-link_DIRS)))
+# Add trailing /
+tools-mkkeymap-link_DIRS := $(subst //,/,$(addsuffix /,$(tools-mkkeymap-link_DIRS)))
+# Add normal linklib path
+tools-mkkeymap-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+tools-mkkeymap-link_LIBS := $(addprefix lib,$(addsuffix .a,$(tools-mkkeymap_LIBS) $(tools-mkkeymap-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    tools-mkkeymap-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    tools-mkkeymap-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+tools-mkkeymap-link_DEPLIBS := $(foreach lib,$(tools-mkkeymap-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(tools-mkkeymap-link_DIRS)))) \
+)
+
+$(tools-mkkeymap_TARGETDIR)/$(tools-mkkeymap_PROGNAME) : OBJDIR := $(tools-mkkeymap_OBJDIR)
+$(tools-mkkeymap_TARGETDIR)/$(tools-mkkeymap_PROGNAME) : OBJS := $(tools-mkkeymap_OBJS) $(tools-mkkeymap_ARCHOBJS) $(USER_OBJS)
+$(tools-mkkeymap_TARGETDIR)/$(tools-mkkeymap_PROGNAME) : LDFLAGS := $(strip $(tools-mkkeymap_LDFLAGS) $(tools-mkkeymap-link_EXTRA_LDFLAGS))
+$(tools-mkkeymap_TARGETDIR)/$(tools-mkkeymap_PROGNAME) : LIBS := $(addprefix -l,$(tools-mkkeymap_LIBS) $(tools-mkkeymap-link_EXTRA_LIBS) )
+$(tools-mkkeymap_TARGETDIR)/$(tools-mkkeymap_PROGNAME) : $(tools-mkkeymap_OBJS) $(tools-mkkeymap_ARCHOBJS) $(USER_OBJS) $(tools-mkkeymap-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(tools-mkkeymap_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(tools-mkkeymap_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(tools-mkkeymap_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(tools-mkkeymap_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(tools-mkkeymap_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(tools-mkkeymap_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(tools-mkkeymap_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(tools-mkkeymap_DEPS),)
+  ifneq (tools-mkkeymap tools-mkkeymap-quick,)
+    ifneq ($(findstring $(TARGET),tools-mkkeymap tools-mkkeymap-quick),)
+      -include $(tools-mkkeymap_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(tools-mkkeymap_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(tools-mkkeymap_OBJS) $(tools-mkkeymap_DEPS) $(tools-mkkeymap_TARGETDIR)/$(tools-mkkeymap_PROGNAME),)
+$(tools-mkkeymap_OBJS) $(tools-mkkeymap_DEPS) $(tools-mkkeymap_TARGETDIR)/$(tools-mkkeymap_PROGNAME) : | $(tools-mkkeymap_OBJDIR) $(tools-mkkeymap_TARGETDIR)
+else
+$(tools-mkkeymap_OBJS) $(tools-mkkeymap_DEPS) $(tools-mkkeymap_TARGETDIR)/$(tools-mkkeymap_PROGNAME) :: $(tools-mkkeymap_OBJDIR) $(tools-mkkeymap_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(tools-mkkeymap_OBJDIR) $(tools-mkkeymap_TARGETDIR)
+
+
+tools-mkkeymap-clean : FILES := $(tools-mkkeymap_OBJS) $(tools-mkkeymap_TARGETDIR)/$(tools-mkkeymap_PROGNAME) $(tools-mkkeymap_DEPS)
+#MM
+tools-mkkeymap-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget tools-mkkeymap"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

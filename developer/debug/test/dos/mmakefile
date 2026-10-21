@@ -1,0 +1,619 @@
+# Copyright © 2003-2016, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := \
+    addpart \
+    consolemodes \
+    doslist \
+    dosvartest \
+    examine \
+    examinefh \
+    exnext \
+    filetest \
+    fread \
+    fstest \
+    getenv \
+    inhibit \
+    isinteractive \
+    match \
+    matchtest \
+    minicat \
+    mountlist \
+    namefromfh \
+    nil \
+    notify \
+    openfromlock \
+    output \
+    r \
+    rawtest \
+    readargs \
+    readitem \
+    readitemloop \
+    runcommand \
+    rwverify \
+    scantest \
+    scanvarstest \
+    seektest \
+    setfiledate \
+    setenv \
+    setfilesize \
+    strtodate \
+    systemtags \
+    systemtags_slave \
+    systemtags2 \
+    systemtags2_slave \
+    waitforchar
+
+PURE_FILES := \
+    exit \
+    isfilesystem
+
+EXEDIR          := $(AROS_TESTS)/dos
+
+USER_CFLAGS += -DADATE="\"$(shell date '+%d.%m.%Y')\""
+
+#MM- test : test-dos test-dos-pure
+#MM- test-quick : test-dos-quick test-dos-pure-quick
+
+#MM test-dos : includes linklibs
+
+
+.PHONY : test-dos
+
+test-dos_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-dos_TARGETDIR := $(EXEDIR)
+test-dos_LIBS := 
+
+test-dos_FILES     := $(FILES)
+test-dos_OBJS      := $(addsuffix .o,$(addprefix $(test-dos_OBJDIR)/,$(test-dos_FILES)))
+test-dos_DEPS      := $(addsuffix .d,$(addprefix $(test-dos_OBJDIR)/,$(test-dos_FILES)))
+test-dos_EXES      := $(addprefix $(test-dos_TARGETDIR)/,$(test-dos_FILES))
+
+test-dos_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-dos_CPPFLAGS += -I
+endif
+test-dos_CFLAGS    := $(CFLAGS)
+test-dos_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-dos_COVERAGE := yes
+test-dos_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-dos_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-dos_CFLAGS    := $(strip $(test-dos_COVERAGEFLAGS) $(test-dos_CFLAGS))
+test-dos_LIBS += $(test-dos_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-dos_FUNCINSTR := yes
+test-dos_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-dos_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-dos_CFLAGS    := $(strip $(test-dos_INSTRFUNCFLAGS) $(test-dos_CFLAGS))
+test-dos_LIBS += $(test-dos_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-dos_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-dos_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-dos_DFLAGS := 
+else
+    test-dos_DFLAGS := $(test-dos_CFLAGS)
+endif
+ifeq (target,target)
+test-dos_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-dos_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-dos_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-dos_LDFLAGS += -L
+endif
+
+#MM
+test-dos-quick : test-dos
+
+#MM test-dos : includes-generate-deps core-linklibs
+test-dos : $(test-dos_EXES)
+
+ifneq ($(filter $(TARGET),test-dos test-dos-quick),)
+
+ifeq (,)
+test-dos_MC_SRCWILDCARD := %
+else
+test-dos_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-dos_OBJDIR),)
+test-dos_MC_TARGETS := $(addsuffix .o,$(test-dos_FILES))
+test-dos_MC_DTARGETS := $(addsuffix .d,$(test-dos_FILES))
+test-dos_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-dos_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-dos_OBJDIR)/,$(notdir $(test-dos_FILES))))
+    test-dos_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-dos_OBJDIR)/,$(notdir $(test-dos_FILES))))
+else
+ifeq (,)
+    test-dos_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-dos_OBJDIR)/,$(test-dos_FILES)))
+    test-dos_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-dos_OBJDIR)/,$(test-dos_FILES)))
+else
+    test-dos_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-dos_OBJDIR)/,$(patsubst /%,%,$(test-dos_FILES))))
+    test-dos_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-dos_OBJDIR)/,$(patsubst /%,%,$(test-dos_FILES))))
+endif
+endif
+test-dos_MC_TGTWILDCARD := $(test-dos_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : | $(addsuffix .c,$(test-dos_FILES))
+
+# Be sure that all .c files are found
+test-dos_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-dos_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-dos_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-dos_MC_DIRS := $(foreach dir, $(test-dos_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-dos_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-dos_MC_DIRS),)
+    test-dos_MC_DIRS := $(shell echo $(test-dos_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-dos_MC_DIRS)
+endif
+
+endif
+
+test-dos_MC_CPPFLAGS := $(test-dos_CPPFLAGS)
+test-dos_CFLAGS := $(test-dos_CFLAGS)
+ifeq ($(test-dos_DFLAGS),)
+  test-dos_DFLAGS := $(test-dos_CFLAGS)
+else
+  test-dos_DFLAGS := $(test-dos_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-dos_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-dos_STRIP ?= $(TARGET_STRIP)
+test-dos_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : test-dos_MC_CPPFLAGS:=$(strip $(test-dos_MC_CPPFLAGS) $(test-dos_MC_EXTRA_CPPFLAGS))
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : test-dos_CFLAGS:=$(strip $(test-dos_CFLAGS) $(SAFETY_CFLAGS))
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : test-dos_DFLAGS:=$(test-dos_DFLAGS)
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : test-dos_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : test-dos_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-dos_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-dos_STRIP ?= $(HOST_STRIP)
+test-dos_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : test-dos_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-dos_MC_CPPFLAGS) $(test-dos_MC_EXTRA_CPPFLAGS))
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : test-dos_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-dos_CFLAGS))
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : test-dos_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-dos_DFLAGS))
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : test-dos_IQUOTE:=$(HOST_IQUOTE)
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : test-dos_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-dos_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-dos_STRIP ?= $(ECHO) >/dev/null
+test-dos_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : test-dos_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-dos_MC_CPPFLAGS) $(test-dos_MC_EXTRA_CPPFLAGS))
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : test-dos_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-dos_CFLAGS))
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : test-dos_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-dos_DFLAGS))
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : test-dos_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-dos_MC_TARGETS) $(test-dos_MC_DTARGETS) : test-dos_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-dos_MC_TARGETS) : CPPFLAGS := $(test-dos_MC_CPPFLAGS)
+$(test-dos_MC_TARGETS) : CFLAGS := $(test-dos_CFLAGS)
+$(test-dos_MC_TARGETS) : $(test-dos_MC_TGTWILDCARD).o : $(test-dos_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-dos_IQUOTE) $(dir $<) $(test-dos_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-dos_IQUOTE) . $(test-dos_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-dos_IQUOTE) $(dir $<) $(test-dos_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-dos_IQUOTE) . $(test-dos_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-dos_IQUOTE) $(dir $<) $(test-dos_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-dos_IQUOTE) . $(test-dos_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-dos_MC_DTARGETS) : $(test-dos_MC_TGTWILDCARD).d : $(test-dos_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-dos_DFLAGS) $(test-dos_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-dos-link_EXTRA_LDFLAGS := 
+test-dos-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-dos-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-dos-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-dos-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-dos-link_DIRS := $(subst -L ,-L,$(strip $(test-dos_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-dos-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-dos-link_DIRS)))
+# Add trailing /
+test-dos-link_DIRS := $(subst //,/,$(addsuffix /,$(test-dos-link_DIRS)))
+# Add normal linklib path
+test-dos-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-dos-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-dos_LIBS) $(test-dos-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-dos-link_DEPLIBS := $(foreach lib,$(test-dos-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-dos-link_DIRS)))) \
+)
+test-dos-link_PROGS := $(addprefix $(test-dos_TARGETDIR)/,$(test-dos_FILES))
+
+$(test-dos-link_PROGS) : OBJDIR := $(test-dos_OBJDIR)
+$(test-dos-link_PROGS) : LDFLAGS := $(strip $(test-dos_LDFLAGS) $(test-dos-link_EXTRA_LDFLAGS))
+$(test-dos-link_PROGS) : LIBS := $(addprefix -l,$(test-dos_LIBS) $(test-dos-link_EXTRA_LIBS) )
+$(test-dos-link_PROGS) : $(test-dos_TARGETDIR)/% : $(test-dos_OBJDIR)/%.o $(test-dos-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-dos_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-dos_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-dos_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-dos_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-dos_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-dos_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-dos_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-dos_DEPS),)
+  ifneq (test-dos test-dos-quick,)
+    ifneq ($(findstring $(TARGET),test-dos test-dos-quick),)
+      -include $(test-dos_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-dos_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-dos_DEPS) $(test-dos_OBJS) $(addprefix $(test-dos_TARGETDIR)/,$(test-dos_FILES)),)
+$(test-dos_DEPS) $(test-dos_OBJS) $(addprefix $(test-dos_TARGETDIR)/,$(test-dos_FILES)) : | $(test-dos_TARGETDIR) $(test-dos_OBJDIR)
+else
+$(test-dos_DEPS) $(test-dos_OBJS) $(addprefix $(test-dos_TARGETDIR)/,$(test-dos_FILES)) :: $(test-dos_TARGETDIR) $(test-dos_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-dos_TARGETDIR) $(test-dos_OBJDIR)
+
+
+test-dos-clean : FILES := $(test-dos_OBJS) $(test-dos_EXES) $(test-dos_DEPS)
+#MM
+test-dos-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-dos"
+	$(Q)$(RM) $(FILES)
+
+
+
+.PHONY : test-dos-pure
+
+test-dos-pure_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-dos-pure_TARGETDIR := $(EXEDIR)
+test-dos-pure_LIBS := 
+
+test-dos-pure_FILES     := $(PURE_FILES)
+test-dos-pure_OBJS      := $(addsuffix .o,$(addprefix $(test-dos-pure_OBJDIR)/,$(test-dos-pure_FILES)))
+test-dos-pure_DEPS      := $(addsuffix .d,$(addprefix $(test-dos-pure_OBJDIR)/,$(test-dos-pure_FILES)))
+test-dos-pure_EXES      := $(addprefix $(test-dos-pure_TARGETDIR)/,$(test-dos-pure_FILES))
+
+test-dos-pure_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-dos-pure_CPPFLAGS += -I
+endif
+test-dos-pure_CFLAGS    := $(CFLAGS)
+test-dos-pure_COVERAGE := no
+ifeq (target,target)
+ifeq (no,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-dos-pure_COVERAGE := yes
+test-dos-pure_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-dos-pure_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-dos-pure_CFLAGS    := $(strip $(test-dos-pure_COVERAGEFLAGS) $(test-dos-pure_CFLAGS))
+test-dos-pure_LIBS += $(test-dos-pure_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-dos-pure_FUNCINSTR := yes
+test-dos-pure_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-dos-pure_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-dos-pure_CFLAGS    := $(strip $(test-dos-pure_INSTRFUNCFLAGS) $(test-dos-pure_CFLAGS))
+test-dos-pure_LIBS += $(test-dos-pure_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-dos-pure_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-dos-pure_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-dos-pure_DFLAGS := 
+else
+    test-dos-pure_DFLAGS := $(test-dos-pure_CFLAGS)
+endif
+ifeq (target,target)
+test-dos-pure_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-dos-pure_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-dos-pure_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-dos-pure_LDFLAGS += -L
+endif
+
+#MM
+test-dos-pure-quick : test-dos-pure
+
+#MM test-dos-pure : includes-generate-deps core-linklibs
+test-dos-pure : $(test-dos-pure_EXES)
+
+ifneq ($(filter $(TARGET),test-dos-pure test-dos-pure-quick),)
+
+ifeq (,)
+test-dos-pure_MC_SRCWILDCARD := %
+else
+test-dos-pure_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-dos-pure_OBJDIR),)
+test-dos-pure_MC_TARGETS := $(addsuffix .o,$(test-dos-pure_FILES))
+test-dos-pure_MC_DTARGETS := $(addsuffix .d,$(test-dos-pure_FILES))
+test-dos-pure_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-dos-pure_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-dos-pure_OBJDIR)/,$(notdir $(test-dos-pure_FILES))))
+    test-dos-pure_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-dos-pure_OBJDIR)/,$(notdir $(test-dos-pure_FILES))))
+else
+ifeq (,)
+    test-dos-pure_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-dos-pure_OBJDIR)/,$(test-dos-pure_FILES)))
+    test-dos-pure_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-dos-pure_OBJDIR)/,$(test-dos-pure_FILES)))
+else
+    test-dos-pure_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-dos-pure_OBJDIR)/,$(patsubst /%,%,$(test-dos-pure_FILES))))
+    test-dos-pure_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-dos-pure_OBJDIR)/,$(patsubst /%,%,$(test-dos-pure_FILES))))
+endif
+endif
+test-dos-pure_MC_TGTWILDCARD := $(test-dos-pure_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : | $(addsuffix .c,$(test-dos-pure_FILES))
+
+# Be sure that all .c files are found
+test-dos-pure_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-dos-pure_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-dos-pure_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-dos-pure_MC_DIRS := $(foreach dir, $(test-dos-pure_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-dos-pure_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-dos-pure_MC_DIRS),)
+    test-dos-pure_MC_DIRS := $(shell echo $(test-dos-pure_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-dos-pure_MC_DIRS)
+endif
+
+endif
+
+test-dos-pure_MC_CPPFLAGS := $(test-dos-pure_CPPFLAGS)
+test-dos-pure_CFLAGS := $(test-dos-pure_CFLAGS)
+ifeq ($(test-dos-pure_DFLAGS),)
+  test-dos-pure_DFLAGS := $(test-dos-pure_CFLAGS)
+else
+  test-dos-pure_DFLAGS := $(test-dos-pure_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-dos-pure_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-dos-pure_STRIP ?= $(TARGET_STRIP)
+test-dos-pure_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : test-dos-pure_MC_CPPFLAGS:=$(strip $(test-dos-pure_MC_CPPFLAGS) $(test-dos-pure_MC_EXTRA_CPPFLAGS))
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : test-dos-pure_CFLAGS:=$(strip $(test-dos-pure_CFLAGS) $(SAFETY_CFLAGS))
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : test-dos-pure_DFLAGS:=$(test-dos-pure_DFLAGS)
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : test-dos-pure_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : test-dos-pure_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-dos-pure_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-dos-pure_STRIP ?= $(HOST_STRIP)
+test-dos-pure_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : test-dos-pure_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-dos-pure_MC_CPPFLAGS) $(test-dos-pure_MC_EXTRA_CPPFLAGS))
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : test-dos-pure_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-dos-pure_CFLAGS))
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : test-dos-pure_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-dos-pure_DFLAGS))
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : test-dos-pure_IQUOTE:=$(HOST_IQUOTE)
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : test-dos-pure_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-dos-pure_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-dos-pure_STRIP ?= $(ECHO) >/dev/null
+test-dos-pure_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : test-dos-pure_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-dos-pure_MC_CPPFLAGS) $(test-dos-pure_MC_EXTRA_CPPFLAGS))
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : test-dos-pure_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-dos-pure_CFLAGS))
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : test-dos-pure_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-dos-pure_DFLAGS))
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : test-dos-pure_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-dos-pure_MC_TARGETS) $(test-dos-pure_MC_DTARGETS) : test-dos-pure_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-dos-pure_MC_TARGETS) : CPPFLAGS := $(test-dos-pure_MC_CPPFLAGS)
+$(test-dos-pure_MC_TARGETS) : CFLAGS := $(test-dos-pure_CFLAGS)
+$(test-dos-pure_MC_TARGETS) : $(test-dos-pure_MC_TGTWILDCARD).o : $(test-dos-pure_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-dos-pure_IQUOTE) $(dir $<) $(test-dos-pure_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-dos-pure_IQUOTE) . $(test-dos-pure_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-dos-pure_IQUOTE) $(dir $<) $(test-dos-pure_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-dos-pure_IQUOTE) . $(test-dos-pure_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-dos-pure_IQUOTE) $(dir $<) $(test-dos-pure_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-dos-pure_IQUOTE) . $(test-dos-pure_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-dos-pure_MC_DTARGETS) : $(test-dos-pure_MC_TGTWILDCARD).d : $(test-dos-pure_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-dos-pure_DFLAGS) $(test-dos-pure_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-dos-pure-link_EXTRA_LDFLAGS := 
+test-dos-pure-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-dos-pure-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (no,no)
+    test-dos-pure-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-dos-pure-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-dos-pure-link_DIRS := $(subst -L ,-L,$(strip $(test-dos-pure_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-dos-pure-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-dos-pure-link_DIRS)))
+# Add trailing /
+test-dos-pure-link_DIRS := $(subst //,/,$(addsuffix /,$(test-dos-pure-link_DIRS)))
+# Add normal linklib path
+test-dos-pure-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-dos-pure-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-dos-pure_LIBS) $(test-dos-pure-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-dos-pure-link_DEPLIBS := $(foreach lib,$(test-dos-pure-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-dos-pure-link_DIRS)))) \
+)
+test-dos-pure-link_PROGS := $(addprefix $(test-dos-pure_TARGETDIR)/,$(test-dos-pure_FILES))
+
+$(test-dos-pure-link_PROGS) : OBJDIR := $(test-dos-pure_OBJDIR)
+$(test-dos-pure-link_PROGS) : LDFLAGS := $(strip $(test-dos-pure_LDFLAGS) $(test-dos-pure-link_EXTRA_LDFLAGS))
+$(test-dos-pure-link_PROGS) : LIBS := $(addprefix -l,$(test-dos-pure_LIBS) $(test-dos-pure-link_EXTRA_LIBS) )
+$(test-dos-pure-link_PROGS) : $(test-dos-pure_TARGETDIR)/% : $(test-dos-pure_OBJDIR)/%.o $(test-dos-pure-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-dos-pure_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-dos-pure_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-dos-pure_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-dos-pure_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-dos-pure_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-dos-pure_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-dos-pure_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-dos-pure_DEPS),)
+  ifneq (test-dos-pure test-dos-pure-quick,)
+    ifneq ($(findstring $(TARGET),test-dos-pure test-dos-pure-quick),)
+      -include $(test-dos-pure_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-dos-pure_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-dos-pure_DEPS) $(test-dos-pure_OBJS) $(addprefix $(test-dos-pure_TARGETDIR)/,$(test-dos-pure_FILES)),)
+$(test-dos-pure_DEPS) $(test-dos-pure_OBJS) $(addprefix $(test-dos-pure_TARGETDIR)/,$(test-dos-pure_FILES)) : | $(test-dos-pure_TARGETDIR) $(test-dos-pure_OBJDIR)
+else
+$(test-dos-pure_DEPS) $(test-dos-pure_OBJS) $(addprefix $(test-dos-pure_TARGETDIR)/,$(test-dos-pure_FILES)) :: $(test-dos-pure_TARGETDIR) $(test-dos-pure_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-dos-pure_TARGETDIR) $(test-dos-pure_OBJDIR)
+
+
+test-dos-pure-clean : FILES := $(test-dos-pure_OBJS) $(test-dos-pure_EXES) $(test-dos-pure_DEPS)
+#MM
+test-dos-pure-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-dos-pure"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

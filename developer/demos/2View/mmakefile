@@ -1,0 +1,636 @@
+#   $Id$
+#
+#   Makefile to make the 2View image viewer.
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := \
+    2View \
+    Misc \
+    read
+
+EXEDIR := $(AROSDIR)/Demos
+
+#MM demos : includes linklibs
+
+
+.PHONY : demos
+
+demos_PROGNAME  := 2View
+demos_OBJDIR    := $(GENDIR)/$(CURDIR)
+demos_TARGETDIR := $(EXEDIR)
+demos_LINKER    := 
+demos_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(demos_LINKER),)
+    demos_LINKER := target
+endif
+
+ifneq ("$(strip $(FILES)   )","")
+    demos_FILES     := $(FILES)
+    demos_OBJCFILES := 
+    demos_ASMFILES  := 
+    demos_CXXFILES := 
+else
+    demos_FILES     := $(demos_PROGNAME)
+    demos_OBJCFILES :=
+    demos_ASMFILES  :=
+    demos_CXXFILES :=
+endif
+
+demos_ARCHOBJS   := $(wildcard $(demos_OBJDIR)/arch/*.o)
+demos_ARCHFILES  := $(basename $(notdir $(demos_ARCHOBJS)))
+demos_C_NARCHFILES := $(filter-out $(demos_ARCHFILES),$(demos_FILES))
+demos_CXX_NARCHFILES := $(filter-out $(demos_ARCHFILES),$(demos_CXXFILES))
+demos_OBJC_NARCHFILES := $(filter-out $(demos_ARCHFILES),$(demos_OBJCFILES))
+
+TMP_FILES := $(demos_C_NARCHFILES) $(demos_CXX_NARCHFILES) $(demos_ASMFILES) $(demos_OBJC_NARCHFILES)
+demos_OBJS := $(addsuffix .o,$(addprefix $(demos_OBJDIR)/,$(notdir $(TMP_FILES))))
+demos_DEPS := $(addsuffix .d,$(addprefix $(demos_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+demos_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+demos_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+demos_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+demos_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+demos_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+demos_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+demos_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+demos_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+demos_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+demos_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+demos_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+demos_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+demos_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+demos_LDFLAGS          := 
+endif
+
+demos_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+demos_COVERAGE := yes
+demos_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+demos_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+demos_CFLAGS    := $(strip $(demos_COVERAGEFLAGS) $(demos_CFLAGS))
+demos_CXXFLAGS := $(strip $(demos_COVERAGEFLAGS) $(demos_CXXFLAGS))
+demos_LIBS += $(demos_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+demos_FUNCINSTR := yes
+demos_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+demos_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+demos_CFLAGS    := $(strip $(demos_INSTRFUNCFLAGS) $(demos_CFLAGS))
+demos_CXXFLAGS := $(strip $(demos_INSTRFUNCFLAGS) $(demos_CXXFLAGS))
+demos_LIBS += $(demos_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+demos_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(demos_CFLAGS))
+demos_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(demos_CXXFLAGS))
+endif
+endif
+demos_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    demos_DFLAGS     := 
+else
+    demos_DFLAGS     := $(demos_CFLAGS)
+endif
+ifneq (,)
+    demos_DXXFLAGS     := 
+else
+    demos_DXXFLAGS     := $(demos_CXXFLAGS)
+endif
+ifeq (target,target)
+demos_LDFLAGS           := $(demos_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+demos_LDFLAGS           := $(demos_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+demos_LDFLAGS           := $(demos_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+demos_LDFLAGS   += -L
+endif
+
+#MM
+demos-quick : demos
+
+#MM demos : includes-generate-deps core-linklibs
+demos : $(demos_TARGETDIR)/$(demos_PROGNAME)
+
+ifneq ($(filter $(TARGET),demos demos-quick demos-gz-quick),)
+
+demos_CXXABSBASENAMES := $(foreach demos_CXXBASE,$(demos_CXX_NARCHFILES),$(if $(filter /%,$(demos_CXXBASE)),$(demos_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(demos_CXXBASE))))
+
+ifneq ($(demos_CXXABSBASENAMES),)
+
+demos_CXXBASENAMES := $(basename $(demos_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+demos_MCXX_FILES  := $(strip $(foreach demos_CXXBASE,$(demos_CXXABSBASENAMES), $(firstword $(wildcard $(foreach demos_EXT, $(AROS_CXXEXTS),$(addsuffix .$(demos_EXT),$(demos_CXXBASE)))))))
+
+ifeq (,)
+demos_MCXX_SRCWILDCARD := %
+else
+demos_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(demos_OBJDIR),)
+  demos_CXXTARGETS := $(notdir $(demos_CXXBASENAMES:=.o))
+  demos_CXXDTARGETS := $(notdir $(demos_CXXBASENAMES:=.d))
+  demos_MCXX_WILDCARD := %
+else
+  demos_CXXTARGETS := $(addprefix $(demos_OBJDIR)/,$(notdir $(demos_CXXBASENAMES:=.o)))
+  demos_CXXDTARGETS := $(addprefix $(demos_OBJDIR)/,$(notdir $(demos_CXXBASENAMES:=.d)))
+  demos_MCXX_WILDCARD := $(demos_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(demos_CXXTARGETS) $(demos_CXXDTARGETS) : | $(demos_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+demos_MCXX_CPPFLAGS := $(demos_CPPFLAGS)
+demos_CXXFLAGS := $(demos_CXXFLAGS)
+ifeq ($(demos_DXXFLAGS),)
+  demos_DXXFLAGS := $(demos_CXXFLAGS)
+else
+  demos_DXXFLAGS := $(demos_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  demos_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  demos_STRIP ?= $(HOST_STRIP)
+  demos_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  demos_CXXCMD:=$(HOST_CXX)
+  demos_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(demos_MCXX_CPPFLAGS) $(demos_MCXX_EXTRA_CPPFLAGS))
+  demos_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(demos_CXXFLAGS))
+  demos_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(demos_DXXFLAGS))
+  demos_CXXIQUOTE:=$(HOST_IQUOTE)
+  demos_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  demos_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  demos_STRIP ?= $(TARGET_STRIP)
+  demos_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  demos_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  demos_MCXX_CPPFLAGS := $(strip $(demos_MCXX_CPPFLAGS) $(demos_MCXX_EXTRA_CPPFLAGS))
+  demos_CXXFLAGS := $(strip $(demos_CXXFLAGS) $(SAFETY_CFLAGS))
+  demos_DXXFLAGS := $(demos_DXXFLAGS)
+  demos_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  demos_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  demos_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  demos_STRIP ?= $(ECHO) >/dev/null
+  demos_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  demos_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  demos_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(demos_MCXX_CPPFLAGS) $(demos_MCXX_EXTRA_CPPFLAGS))
+  demos_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(demos_CXXFLAGS))
+  demos_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(demos_DXXFLAGS))
+  demos_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  demos_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(demos_CXXCMD) $(demos_CXXIQUOTE) $(dir $(2)) $(demos_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(demos_CXXIQUOTE) . $(demos_CXXIQUOTE_END) $(strip $(demos_CXXFLAGS) $(demos_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(demos_CXXCMD) $(demos_CXXIQUOTE) $(dir $(2)) $(demos_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(demos_CXXIQUOTE) . $(demos_CXXIQUOTE_END) $(strip $(demos_CXXFLAGS) $(demos_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(demos_CXXCMD) $(demos_CXXIQUOTE) $(dir $(2)) $(demos_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(demos_CXXIQUOTE) . $(demos_CXXIQUOTE_END) $(strip $(demos_CXXFLAGS) $(demos_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(demos_CXXCMD)" $(MKDEPEND) $(strip $(demos_DXXFLAGS) $(demos_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(demos_OBJDIR),)
+  $(foreach demos_CXXFILE,$(demos_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(demos_CXXFILE))),$(demos_CXXFILE))))
+else
+  $(foreach demos_CXXFILE,$(demos_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(demos_OBJDIR)/,$(notdir $(basename $(demos_CXXFILE)))),$(demos_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(demos_OBJC_NARCHFILES),)
+
+ifeq (,)
+demos_MOBJC_SRCWILDCARD := %
+else
+demos_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(demos_OBJDIR),)
+  demos_MOBJC_TARGETS := $(addsuffix .o,$(demos_OBJC_NARCHFILES))
+  demos_MOBJC_DTARGETS := $(addsuffix .d,$(demos_OBJC_NARCHFILES))
+  demos_MOBJC_WILDCARD := %
+else
+  demos_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(demos_OBJDIR)/,$(demos_OBJC_NARCHFILES)))
+  demos_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(demos_OBJDIR)/,$(demos_OBJC_NARCHFILES)))
+  demos_MOBJC_WILDCARD := $(demos_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : | $(addsuffix .m,$(demos_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  demos_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  demos_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(demos_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  demos_MOBJC_DIRS := $(foreach dir, $(demos_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(demos_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(demos_MOBJC_DIRS),)
+    demos_MOBJC_DIRS := $(shell echo $(demos_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(demos_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  demos_CC := $(TARGET_CC)
+else
+  demos_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+demos_MOBJC_CPPFLAGS := $(demos_CPPFLAGS)
+demos_OBJCFLAGS := $(demos_CFLAGS)
+demos_OBJCFLAGS := $(demos_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+demos_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(demos_OBJCFLAGS)))
+ifeq ($(demos_DFLAGS),)
+  demos_OBJCDFLAGS := $(demos_CFLAGS)
+else
+  demos_OBJCDFLAGS := $(demos_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  demos_LINK ?= $(strip $(demos_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  demos_STRIP ?= $(TARGET_STRIP)
+  demos_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : CMD:=$(strip $(demos_CC) $(TARGET_SYSROOT))
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : demos_MOBJC_CPPFLAGS:=$(strip $(demos_MOBJC_CPPFLAGS) $(demos_MOBJC_EXTRA_CPPFLAGS))
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : demos_OBJCFLAGS:=$(strip $(demos_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : demos_OBJCDFLAGS:=$(demos_OBJCDFLAGS)
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : demos_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : demos_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  demos_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  demos_STRIP ?= $(HOST_STRIP)
+  demos_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : demos_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(demos_MOBJC_CPPFLAGS) $(demos_MOBJC_EXTRA_CPPFLAGS))
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : demos_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(demos_OBJCFLAGS))
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : demos_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(demos_OBJCDFLAGS))
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : demos_IQUOTE:=$(HOST_IQUOTE)
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : demos_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  demos_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  demos_STRIP ?= $(ECHO) >/dev/null
+  demos_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : demos_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(demos_MOBJC_CPPFLAGS) $(demos_MOBJC_EXTRA_CPPFLAGS))
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : demos_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(demos_OBJCFLAGS))
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : demos_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(demos_OBJCDFLAGS))
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : demos_IQUOTE:=$(KERNEL_IQUOTE)
+  $(demos_MOBJC_TARGETS) $(demos_MOBJC_DTARGETS) : demos_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(demos_MOBJC_TARGETS) : CPPFLAGS := $(demos_MOBJC_CPPFLAGS)
+$(demos_MOBJC_TARGETS) : CFLAGS := $(demos_OBJCFLAGS)
+$(demos_MOBJC_TARGETS) : $(demos_MOBJC_WILDCARD).o : $(demos_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(demos_IQUOTE) $(dir $<) $(demos_IQUOTE) $(SRCDIR)/$(CURDIR) $(demos_IQUOTE) . $(demos_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(demos_IQUOTE) $(dir $<) $(demos_IQUOTE) $(SRCDIR)/$(CURDIR) $(demos_IQUOTE) . $(demos_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(demos_IQUOTE) $(dir $<) $(demos_IQUOTE) $(SRCDIR)/$(CURDIR) $(demos_IQUOTE) . $(demos_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(demos_MOBJC_DTARGETS) : $(demos_MOBJC_WILDCARD).d : $(demos_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(demos_OBJCDFLAGS) $(demos_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+demos_MC_SRCWILDCARD := %
+else
+demos_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(demos_OBJDIR),)
+demos_MC_TARGETS := $(addsuffix .o,$(demos_C_NARCHFILES))
+demos_MC_DTARGETS := $(addsuffix .d,$(demos_C_NARCHFILES))
+demos_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    demos_MC_TARGETS := $(addsuffix .o,$(addprefix $(demos_OBJDIR)/,$(notdir $(demos_C_NARCHFILES))))
+    demos_MC_DTARGETS := $(addsuffix .d,$(addprefix $(demos_OBJDIR)/,$(notdir $(demos_C_NARCHFILES))))
+else
+ifeq (,)
+    demos_MC_TARGETS := $(addsuffix .o,$(addprefix $(demos_OBJDIR)/,$(demos_C_NARCHFILES)))
+    demos_MC_DTARGETS := $(addsuffix .d,$(addprefix $(demos_OBJDIR)/,$(demos_C_NARCHFILES)))
+else
+    demos_MC_TARGETS := $(addsuffix .o,$(addprefix $(demos_OBJDIR)/,$(patsubst /%,%,$(demos_C_NARCHFILES))))
+    demos_MC_DTARGETS := $(addsuffix .d,$(addprefix $(demos_OBJDIR)/,$(patsubst /%,%,$(demos_C_NARCHFILES))))
+endif
+endif
+demos_MC_TGTWILDCARD := $(demos_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : | $(addsuffix .c,$(demos_C_NARCHFILES))
+
+# Be sure that all .c files are found
+demos_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+demos_MC_BASEDIRS := $(shell echo $(sort $(dir $(demos_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+demos_MC_DIRS := $(foreach dir, $(demos_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(demos_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(demos_MC_DIRS),)
+    demos_MC_DIRS := $(shell echo $(demos_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(demos_MC_DIRS)
+endif
+
+endif
+
+demos_MC_CPPFLAGS := $(demos_CPPFLAGS)
+demos_CFLAGS := $(demos_CFLAGS)
+ifeq ($(demos_DFLAGS),)
+  demos_DFLAGS := $(demos_CFLAGS)
+else
+  demos_DFLAGS := $(demos_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+demos_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+demos_STRIP ?= $(TARGET_STRIP)
+demos_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : demos_MC_CPPFLAGS:=$(strip $(demos_MC_CPPFLAGS) $(demos_MC_EXTRA_CPPFLAGS))
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : demos_CFLAGS:=$(strip $(demos_CFLAGS) $(SAFETY_CFLAGS))
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : demos_DFLAGS:=$(demos_DFLAGS)
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : demos_IQUOTE:=$(CFLAGS_IQUOTE)
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : demos_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+demos_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+demos_STRIP ?= $(HOST_STRIP)
+demos_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : demos_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(demos_MC_CPPFLAGS) $(demos_MC_EXTRA_CPPFLAGS))
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : demos_CFLAGS:=$(strip $(HOST_CFLAGS) $(demos_CFLAGS))
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : demos_DFLAGS:=$(strip $(HOST_CFLAGS) $(demos_DFLAGS))
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : demos_IQUOTE:=$(HOST_IQUOTE)
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : demos_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+demos_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+demos_STRIP ?= $(ECHO) >/dev/null
+demos_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : demos_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(demos_MC_CPPFLAGS) $(demos_MC_EXTRA_CPPFLAGS))
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : demos_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(demos_CFLAGS))
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : demos_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(demos_DFLAGS))
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : demos_IQUOTE:=$(KERNEL_IQUOTE)
+$(demos_MC_TARGETS) $(demos_MC_DTARGETS) : demos_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(demos_MC_TARGETS) : CPPFLAGS := $(demos_MC_CPPFLAGS)
+$(demos_MC_TARGETS) : CFLAGS := $(demos_CFLAGS)
+$(demos_MC_TARGETS) : $(demos_MC_TGTWILDCARD).o : $(demos_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(demos_IQUOTE) $(dir $<) $(demos_IQUOTE) $(SRCDIR)/$(CURDIR) $(demos_IQUOTE) . $(demos_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(demos_IQUOTE) $(dir $<) $(demos_IQUOTE) $(SRCDIR)/$(CURDIR) $(demos_IQUOTE) . $(demos_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(demos_IQUOTE) $(dir $<) $(demos_IQUOTE) $(SRCDIR)/$(CURDIR) $(demos_IQUOTE) . $(demos_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(demos_MC_DTARGETS) : $(demos_MC_TGTWILDCARD).d : $(demos_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(demos_DFLAGS) $(demos_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(demos_OBJDIR),)
+demos-MA_TARGETS := $(addsuffix .o,$(demos_ASMFILES))
+demos-MA_WILDCARD := %
+else
+demos-MA_TARGETS := $(addsuffix .o,$(addprefix $(demos_OBJDIR)/,$(notdir $(demos_ASMFILES))))
+demos-MA_WILDCARD := $(demos_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(demos-MA_TARGETS) : | $(addsuffix .s,$(demos_ASMFILES))
+
+# Be sure that all .c files are found
+demos-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+demos-MA_BASEDIRS := $(shell echo $(sort $(dir $(demos_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+demos-MA_DIRS := $(foreach dir, $(demos-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(demos-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(demos-MA_DIRS),)
+    demos-MA_DIRS := $(shell echo $(demos-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(demos-MA_DIRS)
+endif
+
+endif
+
+demos-MA_ASSEMBLER ?= $(demos_ASSEMBLER)
+
+$(demos-MA_TARGETS) : demos-MA_CMD:= $(demos-MA_ASSEMBLER)
+
+$(demos-MA_TARGETS) : CPPFLAGS := $(demos_CPPFLAGS)
+$(demos-MA_TARGETS) : AFLAGS := $(demos_AFLAGS)
+$(demos-MA_TARGETS) : $(demos-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(demos-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(demos-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(demos-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+demos-link_EXTRA_LDFLAGS := 
+demos-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    demos-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    demos-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    demos-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+demos-link_DIRS := $(subst -L ,-L,$(strip $(demos_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+demos-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(demos-link_DIRS)))
+# Add trailing /
+demos-link_DIRS := $(subst //,/,$(addsuffix /,$(demos-link_DIRS)))
+# Add normal linklib path
+demos-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+demos-link_LIBS := $(addprefix lib,$(addsuffix .a,$(demos_LIBS) $(demos-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    demos-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    demos-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+demos-link_DEPLIBS := $(foreach lib,$(demos-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(demos-link_DIRS)))) \
+)
+
+$(demos_TARGETDIR)/$(demos_PROGNAME) : OBJDIR := $(demos_OBJDIR)
+$(demos_TARGETDIR)/$(demos_PROGNAME) : OBJS := $(demos_OBJS) $(demos_ARCHOBJS) $(USER_OBJS)
+$(demos_TARGETDIR)/$(demos_PROGNAME) : LDFLAGS := $(strip $(demos_LDFLAGS) $(demos-link_EXTRA_LDFLAGS))
+$(demos_TARGETDIR)/$(demos_PROGNAME) : LIBS := $(addprefix -l,$(demos_LIBS) $(demos-link_EXTRA_LIBS) )
+$(demos_TARGETDIR)/$(demos_PROGNAME) : $(demos_OBJS) $(demos_ARCHOBJS) $(USER_OBJS) $(demos-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(demos_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(demos_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(demos_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(demos_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(demos_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(demos_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(demos_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(demos_DEPS),)
+  ifneq (demos demos-quick,)
+    ifneq ($(findstring $(TARGET),demos demos-quick),)
+      -include $(demos_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(demos_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(demos_OBJS) $(demos_DEPS) $(demos_TARGETDIR)/$(demos_PROGNAME),)
+$(demos_OBJS) $(demos_DEPS) $(demos_TARGETDIR)/$(demos_PROGNAME) : | $(demos_OBJDIR) $(demos_TARGETDIR)
+else
+$(demos_OBJS) $(demos_DEPS) $(demos_TARGETDIR)/$(demos_PROGNAME) :: $(demos_OBJDIR) $(demos_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(demos_OBJDIR) $(demos_TARGETDIR)
+
+
+demos-clean : FILES := $(demos_OBJS) $(demos_TARGETDIR)/$(demos_PROGNAME) $(demos_DEPS)
+#MM
+demos-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget demos"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

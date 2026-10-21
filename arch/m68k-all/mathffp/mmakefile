@@ -1,0 +1,262 @@
+# $Id: mmakefile.src
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES :=
+AFILES := spcmp sptst
+
+USER_AFLAGS := -I$(GENINCDIR)
+USER_CPPFLAGS := -DDoRegisterCalls
+TARGET_ISA_AFLAGS:=$(ISA_MC68020_FLAGS)
+
+
+ifeq ($(FILES)   $(AFILES),)
+    $(error no files or asmfiles given)
+endif
+
+ifneq (,)
+    $(error cxx support is TODO)
+endif
+
+BDID := $(BDID)_
+ifneq ($(filter $(TARGET),workbench-libs-mathffp-m68k),)
+    BDTARGETID := $(BDID)
+endif
+
+#MM- workbench-libs-mathffp : \
+#MM			    workbench-libs-mathffp-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT) \
+#MM			    workbench-libs-mathffp-$(ARCH)-$(CPU) \
+#MM			    workbench-libs-mathffp-$(ARCH)-$(AROS_TARGET_VARIANT) \
+#MM			    workbench-libs-mathffp-$(ARCH) \
+#MM			    workbench-libs-mathffp-$(FAMILY) \
+#MM			    workbench-libs-mathffp-$(CPU)
+#MM- workbench-libs-mathffp-linklib : \
+#MM			    workbench-libs-mathffp-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT) \
+#MM			    workbench-libs-mathffp-$(ARCH)-$(CPU) \
+#MM			    workbench-libs-mathffp-$(ARCH)-$(AROS_TARGET_VARIANT) \
+#MM			    workbench-libs-mathffp-$(ARCH) \
+#MM			    workbench-libs-mathffp-$(FAMILY) \
+#MM			    workbench-libs-mathffp-$(CPU)
+#MM- workbench-libs-mathffp-kobj : \
+#MM			    workbench-libs-mathffp-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT) \
+#MM			    workbench-libs-mathffp-$(ARCH)-$(CPU) \
+#MM			    workbench-libs-mathffp-$(ARCH)-$(AROS_TARGET_VARIANT) \
+#MM			    workbench-libs-mathffp-$(ARCH) \
+#MM			    workbench-libs-mathffp-$(FAMILY) \
+#MM			    workbench-libs-mathffp-$(CPU)
+#MM- workbench-libs-mathffp-kobj-quick : \
+#MM			    workbench-libs-mathffp-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT)-quick \
+#MM			    workbench-libs-mathffp-$(ARCH)-$(CPU)-quick \
+#MM			    workbench-libs-mathffp-$(ARCH)-$(AROS_TARGET_VARIANT)-quick \
+#MM			    workbench-libs-mathffp-$(ARCH)-quick \
+#MM			    workbench-libs-mathffp-$(FAMILY)-quick \
+#MM			    workbench-libs-mathffp-$(CPU)-quick
+#MM- workbench-libs-mathffp-quick : \
+#MM			    workbench-libs-mathffp-$(ARCH)-$(CPU)-$(AROS_TARGET_VARIANT)-quick \
+#MM			    workbench-libs-mathffp-$(ARCH)-$(CPU)-quick \
+#MM			    workbench-libs-mathffp-$(ARCH)-$(AROS_TARGET_VARIANT)-quick \
+#MM			    workbench-libs-mathffp-$(ARCH)-quick \
+#MM			    workbench-libs-mathffp-$(FAMILY)-quick \
+#MM			    workbench-libs-mathffp-$(CPU)-quick
+
+#MM workbench-libs-mathffp-m68k : workbench-libs-mathffp-includes
+
+ifneq (,)
+    BD_OBJROOT$(BDID)  := 
+else
+ifneq (mathffp,)
+    BD_OBJROOT$(BDID)  := $(GENDIR)/workbench/libs/mathffp/mathffp
+else
+    BD_OBJROOT$(BDID)  := $(GENDIR)/workbench/libs/mathffp
+endif
+endif
+BD_OBJDIR$(BDID)  := $(BD_OBJROOT$(BDID))/arch
+BD_LIBOBJDIR$(BDID)  := $(BD_OBJROOT$(BDID))/linklib/arch
+BD_FILEOBJS$(BDID)   := $(addsuffix .o,$(addprefix $(BD_OBJDIR$(BDID))/,$(notdir $(FILES)))) $(addsuffix .o,$(addprefix $(BD_OBJDIR$(BDID))/,$(notdir )))
+BD_LINKLIBOBJS$(BDID)   := $(addsuffix .o,$(addprefix $(BD_LIBOBJDIR$(BDID))/,$(notdir )))
+BD_LINKLIBARCHOBJS$(BDID)   := $(addprefix $(BD_LIBOBJDIR$(BDID))/,$(notdir ))
+BD_ASMOBJS$(BDID) := $(addsuffix .o,$(addprefix $(BD_OBJDIR$(BDID))/,$(notdir $(AFILES))))
+BD_OBJS$(BDID)    := $(BD_FILEOBJS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) $(BD_ASMOBJS$(BDID))
+BD_DEPS$(BDID)    := $(addsuffix .d,$(addprefix $(BD_OBJDIR$(BDID))/,$(notdir $(FILES)))) $(addsuffix .d,$(addprefix $(BD_LIBOBJDIR$(BDID))/,$(notdir )))
+
+ifneq (mathffp,)
+BD_DEFLIBDEFSINC$(BDID) := -include $(BD_OBJROOT$(BDID))/include/mathffp_deflibdefs.h
+endif
+
+ifeq ($(TARGET),workbench-libs-mathffp-m68k-quick)
+    BD_TARGET := workbench-libs-mathffp-m68k-quick
+else
+    BD_TARGET := workbench-libs-mathffp-m68k
+endif
+
+ifeq ($(TARGET),$(BD_TARGET))
+TMP_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+vpath %.c $(addprefix $(TMP_SRCDIR)/$(CURDIR)/,$(dir $(FILES)))
+vpath %.c $(addprefix $(TMP_SRCDIR)/$(CURDIR)/,$(dir ))
+vpath %.s $(addprefix $(TMP_SRCDIR)/$(CURDIR)/,$(dir $(AFILES)))
+vpath %.S $(addprefix $(TMP_SRCDIR)/$(CURDIR)/,$(dir $(AFILES)))
+endif
+
+
+ifneq ($(BD_OBJS$(BDID)),)
+$(BD_OBJS$(BDID)) : | $(BD_OBJDIR$(BDID)) $(BD_LIBOBJDIR$(BDID))
+else
+$(BD_OBJS$(BDID)) :: $(BD_OBJDIR$(BDID)) $(BD_LIBOBJDIR$(BDID))
+endif
+
+GLOB_MKDIRS += $(BD_OBJDIR$(BDID)) $(BD_LIBOBJDIR$(BDID))
+
+
+#MM
+workbench-libs-mathffp-m68k :: $(BD_OBJS$(BDID))
+
+#MM
+workbench-libs-mathffp-m68k-quick :: $(BD_OBJS$(BDID))
+
+ifeq ($(findstring kernel,host kernel target),)
+    $(error unknown compiler kernel)
+endif
+
+ifneq (mathffp,)
+$(BD_FILEOBJS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CPPFLAGS:=$(strip $(CPPFLAGS) -I$(BD_OBJROOT$(BDID)) $(BD_DEFLIBDEFSINC$(BDID)))
+else
+$(BD_FILEOBJS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CPPFLAGS:=$(CPPFLAGS)
+endif
+
+ifeq (kernel,target)
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CPPFLAGS:=$(TMP_CPPFLAGS)
+ifeq ("","")
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CFLAGS:=$(strip $(CFLAGS) $(SAFETY_CFLAGS))
+else
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CFLAGS:=$(strip  $(SAFETY_CFLAGS))
+endif
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_IQUOTE:=$(CFLAGS_IQUOTE)
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (kernel,host)
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CMD:=$(HOST_CC)
+ifeq ("","")
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CFLAGS:=$(strip $(HOST_CFLAGS))
+else
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CFLAGS:=$(strip )
+endif
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_IQUOTE:=$(HOST_IQUOTE)
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (kernel,kernel)
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CPPFLAGS:=$(strip $(KERNEL_CPPFLAGS) $(TMP_CPPFLAGS))
+ifeq ("","")
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+else
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_CFLAGS:=$(strip )
+endif
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_IQUOTE:=$(KERNEL_IQUOTE)
+$(BD_FILEOBJS$(BDID)) $(BD_DEPS$(BDID)) $(BD_LINKLIBOBJS$(BDID)) : TMP_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+ifeq ($(TARGET),$(BD_TARGET))
+$(BD_LIBOBJDIR$(BDID))/%.o : $(SRCDIR)/$(CURDIR)/%.c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(TMP_CMD) $(TMP_IQUOTE) $(dir $<) $(TMP_IQUOTE) $(SRCDIR)/$(CURDIR) $(TMP_IQUOTE) . $(TMP_IQUOTE_END) $(strip $(TMP_CFLAGS) $(TMP_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(TMP_CMD) $(TMP_IQUOTE) $(dir $<) $(TMP_IQUOTE) $(SRCDIR)/$(CURDIR) $(TMP_IQUOTE) . $(TMP_IQUOTE_END) $(strip $(TMP_CFLAGS) $(TMP_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(TMP_CMD) $(TMP_IQUOTE) $(dir $<) $(TMP_IQUOTE) $(SRCDIR)/$(CURDIR) $(TMP_IQUOTE) . $(TMP_IQUOTE_END) $(strip $(TMP_CFLAGS) $(TMP_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+$(BD_OBJDIR$(BDID))/%.o : $(SRCDIR)/$(CURDIR)/%.c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(TMP_CMD) $(TMP_IQUOTE) $(dir $<) $(TMP_IQUOTE) $(SRCDIR)/$(CURDIR) $(TMP_IQUOTE) . $(TMP_IQUOTE_END) $(strip $(TMP_CFLAGS) $(TMP_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(TMP_CMD) $(TMP_IQUOTE) $(dir $<) $(TMP_IQUOTE) $(SRCDIR)/$(CURDIR) $(TMP_IQUOTE) . $(TMP_IQUOTE_END) $(strip $(TMP_CFLAGS) $(TMP_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(TMP_CMD) $(TMP_IQUOTE) $(dir $<) $(TMP_IQUOTE) $(SRCDIR)/$(CURDIR) $(TMP_IQUOTE) . $(TMP_IQUOTE_END) $(strip $(TMP_CFLAGS) $(TMP_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+ifeq (,)
+$(BD_DEPS$(BDID)) : TMP_CPPFLAGS:=$(strip $(CPPFLAGS) $(BD_DEFLIBDEFSINC$(BDID)))
+$(BD_DEPS$(BDID)) : TMP_DFLAGS:=
+else
+$(BD_DEPS$(BDID)) : TMP_CPPFLAGS:=$(CPPFLAGS)
+$(BD_DEPS$(BDID)) : TMP_DFLAGS:=
+endif
+ifeq ($(TARGET),$(BD_TARGET))
+$(BD_LIBOBJDIR$(BDID))/%.d : $(SRCDIR)/$(CURDIR)/%.c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(TMP_CMD)" $(MKDEPEND) $(strip $(TMP_DFLAGS) $(TMP_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+$(BD_OBJDIR$(BDID))/%.d : $(SRCDIR)/$(CURDIR)/%.c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(TMP_CMD)" $(MKDEPEND) $(strip $(TMP_DFLAGS) $(TMP_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+endif
+
+$(BD_ASMOBJS$(BDID)) : CPPFLAGS:=$(CPPFLAGS)
+$(BD_ASMOBJS$(BDID)) : AFLAGS:=$(AFLAGS)
+
+ifeq ($(TARGET),$(BD_TARGET))
+$(BD_OBJDIR$(BDID))/%.o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(strip $(CC) $(TARGET_SYSROOT)) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(strip $(CC) $(TARGET_SYSROOT)) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(strip $(CC) $(TARGET_SYSROOT)) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+$(BD_OBJDIR$(BDID))/%.o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(strip $(CC) $(TARGET_SYSROOT)) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(strip $(CC) $(TARGET_SYSROOT)) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(strip $(CC) $(TARGET_SYSROOT)) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+ifneq ($(BD_DEPS$(BDID)),)
+  ifneq ($(BD_TARGET),)
+    ifneq ($(findstring $(TARGET),$(BD_TARGET)),)
+      -include $(BD_DEPS$(BDID))
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(BD_DEPS$(BDID))
+    endif
+  endif
+endif
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

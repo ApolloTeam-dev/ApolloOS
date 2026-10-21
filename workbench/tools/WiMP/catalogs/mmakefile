@@ -1,0 +1,75 @@
+# Copyright � 20168, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+CATALOGS:=czech french norwegian
+
+
+ifeq (,)
+workbench-tools-wimp-catalogs_DESC := $(basename $(wildcard $(SRCDIR)/$(CURDIR)/*.cd))
+else
+workbench-tools-wimp-catalogs_DESC := 
+endif
+
+workbench-tools-wimp-catalogs_SRC := $(shell echo $(TOOLDIR)/C_h_aros | sed 's/^\(.\):\//\/\1\//')
+
+ifeq ($(CATALOGS),)
+workbench-tools-wimp-catalogs_LNGS := $(basename $(notdir $(call WILDCARD, $(SRCDIR)/$(CURDIR)/*.ct)))
+else
+workbench-tools-wimp-catalogs_LNGS := $(CATALOGS)
+endif
+
+workbench-tools-wimp-catalogs_OBJS := $(addsuffix /System/Tools/WiMP.catalog, $(addprefix $(AROS_CATALOGS)/, $(workbench-tools-wimp-catalogs_LNGS)))
+workbench-tools-wimp-catalogs_DIRS := $(addsuffix /System/Tools, $(addprefix $(AROS_CATALOGS)/, $(workbench-tools-wimp-catalogs_LNGS))) $(dir ../strings.h)
+
+#MM- workbench-tools-wimp-catalogs-quick : workbench-tools-wimp-catalogs
+
+#MM
+workbench-tools-wimp-catalogs : $(workbench-tools-wimp-catalogs_OBJS) ../strings.h
+
+
+ifneq ($(workbench-tools-wimp-catalogs_OBJS),)
+$(workbench-tools-wimp-catalogs_OBJS) : | $(workbench-tools-wimp-catalogs_DIRS)
+else
+$(workbench-tools-wimp-catalogs_OBJS) :: $(workbench-tools-wimp-catalogs_DIRS)
+endif
+
+GLOB_MKDIRS += $(workbench-tools-wimp-catalogs_DIRS)
+
+
+$(AROS_CATALOGS)/%/System/Tools/WiMP.catalog : $(SRCDIR)/$(CURDIR)/%.ct $(workbench-tools-wimp-catalogs_DESC).cd
+	$(Q)$(ECHO) "Creating   WiMP catalog for language $*."
+	$(Q)$(IF) $(TEST) "$*" = "polish"; then \
+	    $(FLEXCAT) iso88592toamigapl $(workbench-tools-wimp-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Tools/WiMP.catalog" || [ $$? -lt 10 ] ; \
+	elif $(TEST) "$*" = "russian"; then \
+	    $(FLEXCAT) win1251toamiga1251 $(workbench-tools-wimp-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Tools/WiMP.catalog" || [ $$? -lt 10 ] ; \
+	else \
+	    $(FLEXCAT) $(workbench-tools-wimp-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Tools/WiMP.catalog" || [ $$? -lt 10 ] ; \
+	fi
+
+ifneq (../strings.h,)
+../strings.h : workbench-tools-wimp-catalogs_DESC := $(workbench-tools-wimp-catalogs_DESC)
+../strings.h : workbench-tools-wimp-catalogs_SRC := $(workbench-tools-wimp-catalogs_SRC)
+../strings.h : $(workbench-tools-wimp-catalogs_DESC).cd $(workbench-tools-wimp-catalogs_SRC).sd | $(dir ../strings.h)
+	$(Q)$(ECHO) "Creating   WiMP catalog source file $@"
+	$(Q)$(FLEXCAT) $(workbench-tools-wimp-catalogs_DESC).cd $@=$(workbench-tools-wimp-catalogs_SRC).sd
+endif
+
+workbench-tools-wimp-catalogs-clean : FILES := $(workbench-tools-wimp-catalogs_OBJS) ../strings.h
+#MM
+workbench-tools-wimp-catalogs-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-tools-wimp-catalogs"
+	$(Q)$(RM) $(FILES)
+
+.PHONY: workbench-tools-wimp-catalogs workbench-tools-wimp-catalogs-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

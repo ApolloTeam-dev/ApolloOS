@@ -1,0 +1,296 @@
+# Copyright © 2003, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES  := newobject domethod
+EXEDIR := $(AROS_TESTS)/benchmarks/boopsi
+
+#MM- test-benchmarks : test-benchmarks-boopsi
+#MM- test-benchmarks-quick : test-benchmarks-boopsi-quick
+
+#MM test-benchmarks-boopsi : includes linklibs 
+
+
+.PHONY : test-benchmarks-boopsi
+
+test-benchmarks-boopsi_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-benchmarks-boopsi_TARGETDIR := $(EXEDIR)
+test-benchmarks-boopsi_LIBS := 
+
+test-benchmarks-boopsi_FILES     := $(FILES)
+test-benchmarks-boopsi_OBJS      := $(addsuffix .o,$(addprefix $(test-benchmarks-boopsi_OBJDIR)/,$(test-benchmarks-boopsi_FILES)))
+test-benchmarks-boopsi_DEPS      := $(addsuffix .d,$(addprefix $(test-benchmarks-boopsi_OBJDIR)/,$(test-benchmarks-boopsi_FILES)))
+test-benchmarks-boopsi_EXES      := $(addprefix $(test-benchmarks-boopsi_TARGETDIR)/,$(test-benchmarks-boopsi_FILES))
+
+test-benchmarks-boopsi_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-benchmarks-boopsi_CPPFLAGS += -I
+endif
+test-benchmarks-boopsi_CFLAGS    := $(CFLAGS)
+test-benchmarks-boopsi_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-benchmarks-boopsi_COVERAGE := yes
+test-benchmarks-boopsi_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-benchmarks-boopsi_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-benchmarks-boopsi_CFLAGS    := $(strip $(test-benchmarks-boopsi_COVERAGEFLAGS) $(test-benchmarks-boopsi_CFLAGS))
+test-benchmarks-boopsi_LIBS += $(test-benchmarks-boopsi_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-benchmarks-boopsi_FUNCINSTR := yes
+test-benchmarks-boopsi_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-benchmarks-boopsi_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-benchmarks-boopsi_CFLAGS    := $(strip $(test-benchmarks-boopsi_INSTRFUNCFLAGS) $(test-benchmarks-boopsi_CFLAGS))
+test-benchmarks-boopsi_LIBS += $(test-benchmarks-boopsi_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-benchmarks-boopsi_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-benchmarks-boopsi_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-benchmarks-boopsi_DFLAGS := 
+else
+    test-benchmarks-boopsi_DFLAGS := $(test-benchmarks-boopsi_CFLAGS)
+endif
+ifeq (target,target)
+test-benchmarks-boopsi_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-benchmarks-boopsi_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-benchmarks-boopsi_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-benchmarks-boopsi_LDFLAGS += -L
+endif
+
+#MM
+test-benchmarks-boopsi-quick : test-benchmarks-boopsi
+
+#MM test-benchmarks-boopsi : includes-generate-deps core-linklibs
+test-benchmarks-boopsi : $(test-benchmarks-boopsi_EXES)
+
+ifneq ($(filter $(TARGET),test-benchmarks-boopsi test-benchmarks-boopsi-quick),)
+
+ifeq (,)
+test-benchmarks-boopsi_MC_SRCWILDCARD := %
+else
+test-benchmarks-boopsi_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-benchmarks-boopsi_OBJDIR),)
+test-benchmarks-boopsi_MC_TARGETS := $(addsuffix .o,$(test-benchmarks-boopsi_FILES))
+test-benchmarks-boopsi_MC_DTARGETS := $(addsuffix .d,$(test-benchmarks-boopsi_FILES))
+test-benchmarks-boopsi_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-benchmarks-boopsi_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-benchmarks-boopsi_OBJDIR)/,$(notdir $(test-benchmarks-boopsi_FILES))))
+    test-benchmarks-boopsi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-benchmarks-boopsi_OBJDIR)/,$(notdir $(test-benchmarks-boopsi_FILES))))
+else
+ifeq (,)
+    test-benchmarks-boopsi_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-benchmarks-boopsi_OBJDIR)/,$(test-benchmarks-boopsi_FILES)))
+    test-benchmarks-boopsi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-benchmarks-boopsi_OBJDIR)/,$(test-benchmarks-boopsi_FILES)))
+else
+    test-benchmarks-boopsi_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-benchmarks-boopsi_OBJDIR)/,$(patsubst /%,%,$(test-benchmarks-boopsi_FILES))))
+    test-benchmarks-boopsi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-benchmarks-boopsi_OBJDIR)/,$(patsubst /%,%,$(test-benchmarks-boopsi_FILES))))
+endif
+endif
+test-benchmarks-boopsi_MC_TGTWILDCARD := $(test-benchmarks-boopsi_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : | $(addsuffix .c,$(test-benchmarks-boopsi_FILES))
+
+# Be sure that all .c files are found
+test-benchmarks-boopsi_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-benchmarks-boopsi_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-benchmarks-boopsi_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-benchmarks-boopsi_MC_DIRS := $(foreach dir, $(test-benchmarks-boopsi_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-benchmarks-boopsi_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-benchmarks-boopsi_MC_DIRS),)
+    test-benchmarks-boopsi_MC_DIRS := $(shell echo $(test-benchmarks-boopsi_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-benchmarks-boopsi_MC_DIRS)
+endif
+
+endif
+
+test-benchmarks-boopsi_MC_CPPFLAGS := $(test-benchmarks-boopsi_CPPFLAGS)
+test-benchmarks-boopsi_CFLAGS := $(test-benchmarks-boopsi_CFLAGS)
+ifeq ($(test-benchmarks-boopsi_DFLAGS),)
+  test-benchmarks-boopsi_DFLAGS := $(test-benchmarks-boopsi_CFLAGS)
+else
+  test-benchmarks-boopsi_DFLAGS := $(test-benchmarks-boopsi_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-benchmarks-boopsi_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-benchmarks-boopsi_STRIP ?= $(TARGET_STRIP)
+test-benchmarks-boopsi_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : test-benchmarks-boopsi_MC_CPPFLAGS:=$(strip $(test-benchmarks-boopsi_MC_CPPFLAGS) $(test-benchmarks-boopsi_MC_EXTRA_CPPFLAGS))
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : test-benchmarks-boopsi_CFLAGS:=$(strip $(test-benchmarks-boopsi_CFLAGS) $(SAFETY_CFLAGS))
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : test-benchmarks-boopsi_DFLAGS:=$(test-benchmarks-boopsi_DFLAGS)
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : test-benchmarks-boopsi_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : test-benchmarks-boopsi_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-benchmarks-boopsi_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-benchmarks-boopsi_STRIP ?= $(HOST_STRIP)
+test-benchmarks-boopsi_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : test-benchmarks-boopsi_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-benchmarks-boopsi_MC_CPPFLAGS) $(test-benchmarks-boopsi_MC_EXTRA_CPPFLAGS))
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : test-benchmarks-boopsi_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-benchmarks-boopsi_CFLAGS))
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : test-benchmarks-boopsi_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-benchmarks-boopsi_DFLAGS))
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : test-benchmarks-boopsi_IQUOTE:=$(HOST_IQUOTE)
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : test-benchmarks-boopsi_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-benchmarks-boopsi_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-benchmarks-boopsi_STRIP ?= $(ECHO) >/dev/null
+test-benchmarks-boopsi_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : test-benchmarks-boopsi_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-benchmarks-boopsi_MC_CPPFLAGS) $(test-benchmarks-boopsi_MC_EXTRA_CPPFLAGS))
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : test-benchmarks-boopsi_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-benchmarks-boopsi_CFLAGS))
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : test-benchmarks-boopsi_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-benchmarks-boopsi_DFLAGS))
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : test-benchmarks-boopsi_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-benchmarks-boopsi_MC_TARGETS) $(test-benchmarks-boopsi_MC_DTARGETS) : test-benchmarks-boopsi_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-benchmarks-boopsi_MC_TARGETS) : CPPFLAGS := $(test-benchmarks-boopsi_MC_CPPFLAGS)
+$(test-benchmarks-boopsi_MC_TARGETS) : CFLAGS := $(test-benchmarks-boopsi_CFLAGS)
+$(test-benchmarks-boopsi_MC_TARGETS) : $(test-benchmarks-boopsi_MC_TGTWILDCARD).o : $(test-benchmarks-boopsi_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-benchmarks-boopsi_IQUOTE) $(dir $<) $(test-benchmarks-boopsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-benchmarks-boopsi_IQUOTE) . $(test-benchmarks-boopsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-benchmarks-boopsi_IQUOTE) $(dir $<) $(test-benchmarks-boopsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-benchmarks-boopsi_IQUOTE) . $(test-benchmarks-boopsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-benchmarks-boopsi_IQUOTE) $(dir $<) $(test-benchmarks-boopsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-benchmarks-boopsi_IQUOTE) . $(test-benchmarks-boopsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-benchmarks-boopsi_MC_DTARGETS) : $(test-benchmarks-boopsi_MC_TGTWILDCARD).d : $(test-benchmarks-boopsi_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-benchmarks-boopsi_DFLAGS) $(test-benchmarks-boopsi_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-benchmarks-boopsi-link_EXTRA_LDFLAGS := 
+test-benchmarks-boopsi-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-benchmarks-boopsi-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-benchmarks-boopsi-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-benchmarks-boopsi-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-benchmarks-boopsi-link_DIRS := $(subst -L ,-L,$(strip $(test-benchmarks-boopsi_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-benchmarks-boopsi-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-benchmarks-boopsi-link_DIRS)))
+# Add trailing /
+test-benchmarks-boopsi-link_DIRS := $(subst //,/,$(addsuffix /,$(test-benchmarks-boopsi-link_DIRS)))
+# Add normal linklib path
+test-benchmarks-boopsi-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-benchmarks-boopsi-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-benchmarks-boopsi_LIBS) $(test-benchmarks-boopsi-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-benchmarks-boopsi-link_DEPLIBS := $(foreach lib,$(test-benchmarks-boopsi-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-benchmarks-boopsi-link_DIRS)))) \
+)
+test-benchmarks-boopsi-link_PROGS := $(addprefix $(test-benchmarks-boopsi_TARGETDIR)/,$(test-benchmarks-boopsi_FILES))
+
+$(test-benchmarks-boopsi-link_PROGS) : OBJDIR := $(test-benchmarks-boopsi_OBJDIR)
+$(test-benchmarks-boopsi-link_PROGS) : LDFLAGS := $(strip $(test-benchmarks-boopsi_LDFLAGS) $(test-benchmarks-boopsi-link_EXTRA_LDFLAGS))
+$(test-benchmarks-boopsi-link_PROGS) : LIBS := $(addprefix -l,$(test-benchmarks-boopsi_LIBS) $(test-benchmarks-boopsi-link_EXTRA_LIBS) )
+$(test-benchmarks-boopsi-link_PROGS) : $(test-benchmarks-boopsi_TARGETDIR)/% : $(test-benchmarks-boopsi_OBJDIR)/%.o $(test-benchmarks-boopsi-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-benchmarks-boopsi_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-benchmarks-boopsi_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-benchmarks-boopsi_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-benchmarks-boopsi_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-benchmarks-boopsi_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-benchmarks-boopsi_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-benchmarks-boopsi_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-benchmarks-boopsi_DEPS),)
+  ifneq (test-benchmarks-boopsi test-benchmarks-boopsi-quick,)
+    ifneq ($(findstring $(TARGET),test-benchmarks-boopsi test-benchmarks-boopsi-quick),)
+      -include $(test-benchmarks-boopsi_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-benchmarks-boopsi_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-benchmarks-boopsi_DEPS) $(test-benchmarks-boopsi_OBJS) $(addprefix $(test-benchmarks-boopsi_TARGETDIR)/,$(test-benchmarks-boopsi_FILES)),)
+$(test-benchmarks-boopsi_DEPS) $(test-benchmarks-boopsi_OBJS) $(addprefix $(test-benchmarks-boopsi_TARGETDIR)/,$(test-benchmarks-boopsi_FILES)) : | $(test-benchmarks-boopsi_TARGETDIR) $(test-benchmarks-boopsi_OBJDIR)
+else
+$(test-benchmarks-boopsi_DEPS) $(test-benchmarks-boopsi_OBJS) $(addprefix $(test-benchmarks-boopsi_TARGETDIR)/,$(test-benchmarks-boopsi_FILES)) :: $(test-benchmarks-boopsi_TARGETDIR) $(test-benchmarks-boopsi_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-benchmarks-boopsi_TARGETDIR) $(test-benchmarks-boopsi_OBJDIR)
+
+
+test-benchmarks-boopsi-clean : FILES := $(test-benchmarks-boopsi_OBJS) $(test-benchmarks-boopsi_EXES) $(test-benchmarks-boopsi_DEPS)
+#MM
+test-benchmarks-boopsi-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-benchmarks-boopsi"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

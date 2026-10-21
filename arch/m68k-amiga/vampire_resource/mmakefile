@@ -1,0 +1,18 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM
+kernel-vampire-amiga-m68k: $(KOBJSDIR)/vampire_resource.ko
+
+$(KOBJSDIR)/%.ko: $(SRCDIR)/$(CURDIR)/%.ko
+	@$(CP) $< $@
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

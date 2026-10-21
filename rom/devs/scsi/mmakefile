@@ -1,0 +1,1839 @@
+# $Id: mmakefile.src 55802 2019-03-08 21:47:59Z wawa $
+
+include $(SRCDIR)/config/aros.cfg
+
+USER_CPPFLAGS := -D__OOP_NOMETHODBASES__ -D__OOP_NOATTRBASES__
+USER_CPPFLAGS += -DDEBUG=1
+
+INCLUDE_FILES := $(call WILDCARD, include/devices/*.h)
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq (include/devices,)
+TMP_DIR                := include/devices
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst include/devices,$(GENINCDIR)/devices,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/devices/,$(notdir $(INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := include/devices/
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/include/devices/
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/devices/,$(INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/devices/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq (include/devices,)
+BD_INCL_FILES2         := $(subst include/devices,$(AROS_INCLUDES)/devices,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/devices/,$(notdir $(INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/devices/,$(INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/devices/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+INCLUDE_FILES := $(call WILDCARD, include/hardware/*.h)
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq (include/hardware,)
+TMP_DIR                := include/hardware
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst include/hardware,$(GENINCDIR)/hardware,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/hardware/,$(notdir $(INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := include/hardware/
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/include/hardware/
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/hardware/,$(INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/hardware/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq (include/hardware,)
+BD_INCL_FILES2         := $(subst include/hardware,$(AROS_INCLUDES)/hardware,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/hardware/,$(notdir $(INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/hardware/,$(INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/hardware/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+INCLUDE_FILES := $(call WILDCARD, include/hidd/*.h)
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq (include/hidd,)
+TMP_DIR                := include/hidd
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst include/hidd,$(GENINCDIR)/hidd,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/hidd/,$(notdir $(INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := include/hidd/
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/include/hidd/
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/hidd/,$(INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/hidd/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq (include/hidd,)
+BD_INCL_FILES2         := $(subst include/hidd,$(AROS_INCLUDES)/hidd,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/hidd/,$(notdir $(INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/hidd/,$(INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/hidd/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+USER_LDFLAGS := -static
+
+SCSI_DEVICEFILES :=             \
+    scsi_init                   \
+    scsi                        \
+    lowlevel                    \
+    timer                       \
+    bootwait                    \
+    waitto
+
+SCSI_CLASSFILES :=              \
+    scsi_controllerclass        \
+    scsi_busclass               \
+    scsi_unitclass
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-scsi
+#MM kernel-scsi-quick
+#MM kernel-scsi-makefile
+#MM kernel-scsi-clean
+
+# ABI targets:
+#MM- includes-all : kernel-scsi-includes
+#MM- linklibs-scsi: kernel-scsi-linklib
+#MM- linklibs-scsi_rel : kernel-scsi-linklib
+#MM- includes-scsi: kernel-scsi-includes
+#MM- includes-scsi_rel : kernel-scsi-includes
+#MM- kernel-scsi : kernel-scsi-includes core-linklibs linklibs-
+#MM kernel-scsi-linklib : kernel-scsi-includes includes-
+#MM- kernel-scsi-quick : kernel-scsi-includes-quick
+#MM kernel-scsi-includes : kernel-scsi-makefile kernel-scsi-includes-dirs \
+#MM     includes-generate-deps kernel-scsi-fd
+#MM kernel-scsi-includes-quick
+#MM kernel-scsi-includes-dirs
+#MM kernel-scsi-fd
+
+# Library targets
+#MM kernel-scsi-kobj : core-linklibs linklibs-
+#MM kernel-scsi-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-scsi-kobj : kernel-scsi-includes core-linklibs linklibs-
+#MM kernel-scsi-kobj-quick : kernel-scsi-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-scsi_ALLTARGETS       := kernel-scsi kernel-scsi-quick kernel-scsi-clean
+
+ifeq (M,M)
+kernel-scsi_ALLTARGETS       += kernel-scsi-kobj kernel-scsi-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-scsi_ALLTARGETS += kernel-scsi-includes \
+                 kernel-scsi-includes-quick kernel-scsi-includes-dirs  \
+                 kernel-scsi-linklib kernel-scsi-fd
+endif
+
+.PHONY : $(kernel-scsi_ALLTARGETS) kernel-scsi-makefile
+
+ifeq (scsi,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (device,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-scsi_DEFNAME      := scsi_
+else
+    kernel-scsi_DEFNAME      := scsi
+endif
+kernel-scsi_DEFLINKLIBNAME   := $(kernel-scsi_DEFNAME)
+ifneq (,)
+    kernel-scsi_LINKLIBNAME  := 
+else
+    kernel-scsi_LINKLIBNAME  = $(kernel-scsi_DEFLINKLIBNAME)
+endif
+kernel-scsi_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-scsi_DEFCPPFLAGS  += -I
+endif
+kernel-scsi_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-scsi_DFLAGS       := 
+else
+    kernel-scsi_DFLAGS       = $(kernel-scsi_DEFDFLAGS)
+endif
+kernel-scsi_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-scsi_DXXFLAGS     := 
+else
+    kernel-scsi_DXXFLAGS     = $(kernel-scsi_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-scsi_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-scsi_DEFDFLAGS))
+kernel-scsi_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-scsi_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-scsi_FUNCINSTR := yes
+kernel-scsi_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-scsi_DEFDFLAGS))
+kernel-scsi_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-scsi_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-scsi_OBJDIR                     := 
+else
+kernel-scsi_OBJDIR                     := $(OBJDIR)/$(kernel-scsi_DEFNAME)
+endif
+ifneq (,)
+kernel-scsi_OBJDIR           := $(kernel-scsi_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-scsi-makefile         := $(kernel-scsi_OBJDIR)/Makefile.$(kernel-scsi_DEFNAME)device
+kernel-scsi-genmakefile : $(kernel-scsi-makefile)
+
+
+kernel-scsi-genmakefile_OPTS := 
+ifneq (,)
+    kernel-scsi-genmakefile_OPTS += -f 
+    kernel-scsi-genmakefile_MODNAME := scsi_
+else
+    kernel-scsi-genmakefile_MODNAME := scsi
+endif
+kernel-scsi-genmakefile_TARGET := Makefile.$(kernel-scsi-genmakefile_MODNAME)device
+kernel-scsi-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-scsi-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-scsi-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-scsi-genmakefile_OPTS += -c 
+        kernel-scsi-genmakefile_DEPS += 
+    endif 
+else
+    kernel-scsi-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/scsi.conf
+    kernel-scsi-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/scsi.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-scsi-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-scsi-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-scsi-genmakefile_OPTS += -o 
+        kernel-scsi-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-scsi-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-scsi_OBJDIR),)
+    kernel-scsi-genmakefile_OPTS += -d $(kernel-scsi_OBJDIR)
+    kernel-scsi-genmakefile_TARGET := $(kernel-scsi_OBJDIR)/$(kernel-scsi-genmakefile_TARGET)
+endif
+
+$(kernel-scsi-genmakefile_TARGET) : OPTS := $(kernel-scsi-genmakefile_OPTS)
+$(kernel-scsi-genmakefile_TARGET) : MODNAME := scsi
+$(kernel-scsi-genmakefile_TARGET) : MODTYPE := device
+$(kernel-scsi-genmakefile_TARGET) : $(kernel-scsi-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-scsi-makefile),)
+$(kernel-scsi-makefile) : | $(kernel-scsi_OBJDIR)
+else
+$(kernel-scsi-makefile) :: $(kernel-scsi_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-scsi_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-scsi_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-scsi-makefile)
+
+kernel-scsi_DEFMODDIR        := $($(kernel-scsi_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-scsi_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-scsi_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-scsi_MODDIR       := 
+else
+    kernel-scsi_MODDIR       := $(kernel-scsi_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-scsi_INCDIR           := 
+else
+kernel-scsi_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-scsi_LIBDEFSINC       := $(kernel-scsi_OBJDIR)/include/$(kernel-scsi_DEFNAME)_libdefs.h
+kernel-scsi_DEFLIBDEFSINC    := $(kernel-scsi_OBJDIR)/include/$(kernel-scsi_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-scsi-includes-quick : kernel-scsi-includes
+kernel-scsi-includes : $(addprefix $(GENINCDIR)/,$($(kernel-scsi_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-scsi_INCDIR)/,$($(kernel-scsi_DEFNAME)_INCLUDES)) \
+    $(kernel-scsi_LIBDEFSINC) $(kernel-scsi_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-scsi_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-scsi-includes_MODNAME := scsi_
+else
+    kernel-scsi-includes_MODNAME := scsi
+endif
+
+ifneq ($($(kernel-scsi-includes_MODNAME)_INCLUDES),)
+
+kernel-scsi-includes_TARGETS := $($(kernel-scsi-includes_MODNAME)_INCLUDES)
+
+kernel-scsi-includes_DEPS := $(GENMODULE)
+kernel-scsi-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-scsi-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-scsi-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-scsi-includes_OPTS += -c 
+        kernel-scsi-includes_DEPS += 
+    endif 
+else
+    kernel-scsi-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/scsi.conf
+    kernel-scsi-includes_DEPS += $(SRCDIR)/$(CURDIR)/scsi.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-scsi-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-scsi-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-scsi-includes_OPTS += -o 
+        kernel-scsi-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-scsi-includes_OPTS += -s 
+endif
+ifneq ($(kernel-scsi_OBJDIR)/include,)
+    kernel-scsi-includes_OPTS += -d $(kernel-scsi_OBJDIR)/include
+    kernel-scsi-includes_TARGETS := $(addprefix $(kernel-scsi_OBJDIR)/include/,$(kernel-scsi-includes_TARGETS))
+    kernel-scsi-includes_GENINCFLAG=$(kernel-scsi_OBJDIR)/include/.scsi.device-includes
+else
+    kernel-scsi-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.scsi.device-includes
+endif
+
+$(kernel-scsi-includes_TARGETS) : $(kernel-scsi-includes_DEPS) $(kernel-scsi-includes_GENINCFLAG)
+
+$(kernel-scsi-includes_GENINCFLAG) : OPTS := $(kernel-scsi-includes_OPTS)
+$(kernel-scsi-includes_GENINCFLAG) : MODNAME := scsi
+$(kernel-scsi-includes_GENINCFLAG) : MODTYPE := device
+$(kernel-scsi-includes_GENINCFLAG) : $(kernel-scsi-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-scsi_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-scsi_DEFNAME)_INCLUDES)) : | $(kernel-scsi_OBJDIR)/scsi_geninc
+
+$(kernel-scsi_OBJDIR)/scsi_geninc : COPYSRCDIR := $(kernel-scsi_OBJDIR)/include
+$(kernel-scsi_OBJDIR)/scsi_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-scsi_OBJDIR)/scsi_geninc : FILES := $($(kernel-scsi_DEFNAME)_INCLUDES)
+$(kernel-scsi_OBJDIR)/scsi_geninc : $(addprefix $(kernel-scsi_OBJDIR)/include/,$($(kernel-scsi_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-scsi_OBJDIR)/include
+
+$(addprefix $(kernel-scsi_INCDIR)/,$($(kernel-scsi_DEFNAME)_INCLUDES)) : | $(kernel-scsi_OBJDIR)/scsi_incs
+
+$(kernel-scsi_OBJDIR)/scsi_incs : COPYSRCDIR := $(kernel-scsi_OBJDIR)/include
+$(kernel-scsi_OBJDIR)/scsi_incs : TGTDIR := $(kernel-scsi_INCDIR)
+$(kernel-scsi_OBJDIR)/scsi_incs : FILES := $($(kernel-scsi_DEFNAME)_INCLUDES)
+$(kernel-scsi_OBJDIR)/scsi_incs : $(addprefix $(kernel-scsi_OBJDIR)/include/,$($(kernel-scsi_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-scsi_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-scsi_DEFNAME)_INCLUDES))))
+
+TMPscsi_INCDIRS := \
+    $(kernel-scsi_OBJDIR)/include $(addprefix $(kernel-scsi_OBJDIR)/include/,$(kernel-scsi_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-scsi_INCDIRS)) \
+    $(kernel-scsi_INCDIR) $(addprefix $(kernel-scsi_INCDIR)/,$(kernel-scsi_INCDIRS))
+
+ifneq (kernel-scsi-includes-dirs,)
+kernel-scsi-includes-dirs : | $(TMPscsi_INCDIRS)
+else
+kernel-scsi-includes-dirs :: $(TMPscsi_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPscsi_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-scsi-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-scsi-genlibdefs_OPTS += -f 
+    kernel-scsi-genlibdefs_MODNAME := scsi_
+else
+    kernel-scsi-genlibdefs_MODNAME := scsi
+endif
+kernel-scsi-genlibdefs_TARGET := $(kernel-scsi-genlibdefs_MODNAME)_libdefs.h
+kernel-scsi-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-scsi-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-scsi-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-scsi-genlibdefs_OPTS += -c 
+        kernel-scsi-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-scsi-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/scsi.conf
+    kernel-scsi-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/scsi.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-scsi-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-scsi-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-scsi-genlibdefs_OPTS += -o 
+        kernel-scsi-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-scsi-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-scsi_OBJDIR)/include,)
+    kernel-scsi-genlibdefs_OPTS += -d $(kernel-scsi_OBJDIR)/include
+    kernel-scsi-genlibdefs_TARGET := $(kernel-scsi_OBJDIR)/include/$(kernel-scsi-genlibdefs_TARGET)
+endif
+ifneq ($(AROS_TARGET_PLATFORM),)
+    kernel-scsi-genlibdefs_OPTS += -v $(AROS_TARGET_PLATFORM)
+endif
+
+$(kernel-scsi-genlibdefs_TARGET) : OPTS := $(kernel-scsi-genlibdefs_OPTS)
+$(kernel-scsi-genlibdefs_TARGET) : MODNAME := scsi
+$(kernel-scsi-genlibdefs_TARGET) : MODTYPE := device
+$(kernel-scsi-genlibdefs_TARGET) : $(kernel-scsi-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-scsi_DEFLIBDEFSINC) : FILENAME := $(kernel-scsi_LIBDEFSINC)
+$(kernel-scsi_DEFLIBDEFSINC) : $(kernel-scsi_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-scsi_LIBDEFSINC) $(kernel-scsi_DEFLIBDEFSINC) : | $(kernel-scsi_OBJDIR)/include
+
+ifneq (kernel-scsi-includes-dirs,)
+kernel-scsi-includes-dirs : | $(kernel-scsi_OBJDIR)/include
+else
+kernel-scsi-includes-dirs :: $(kernel-scsi_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-scsi_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-scsi-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-scsi-genmodfiles_OPTS += -f 
+    kernel-scsi-genmodfiles_MODNAME := scsi_
+else
+    kernel-scsi-genmodfiles_MODNAME := scsi
+endif
+kernel-scsi-genmodfiles_GENTARGETS := $($(kernel-scsi-genmodfiles_MODNAME)_STARTFILES) $($(kernel-scsi-genmodfiles_MODNAME)_ENDFILES)
+kernel-scsi-genmodfiles_STUBTARGETS := $($(kernel-scsi-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-scsi-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-scsi-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-scsi-genmodfiles_GENTARGETS))
+kernel-scsi-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-scsi-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-scsi-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-scsi-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-scsi-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-scsi-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-scsi-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-scsi-genmodfiles_OPTS += -c 
+        kernel-scsi-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-scsi-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/scsi.conf
+    kernel-scsi-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/scsi.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-scsi-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-scsi-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-scsi-genmodfiles_OPTS += -o 
+        kernel-scsi-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-scsi-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-scsi_OBJDIR),)
+    kernel-scsi-genmodfiles_OPTS += -d $(kernel-scsi_OBJDIR)
+    kernel-scsi-genmodfiles_TARGETDIR := $(shell echo $(kernel-scsi_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-scsi-genmodfiles_GENTARGETS := $(addprefix $(kernel-scsi-genmodfiles_TARGETDIR)/,$(kernel-scsi-genmodfiles_GENTARGETS))
+    kernel-scsi-genmodfiles_GENFILEFLAG=$(kernel-scsi-genmodfiles_TARGETDIR)/.scsi.device-genfiles
+else
+    kernel-scsi-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.scsi.device-genfiles
+endif
+ifneq ($(kernel-scsi_OBJDIR)/linklib,)
+    kernel-scsi-genmodfiles_OPTS += -l $(kernel-scsi_OBJDIR)/linklib
+    kernel-scsi-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-scsi_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-scsi-genmodfiles_STUBTARGETS := $(addprefix $(kernel-scsi-genmodfiles_STUBTARGETDIR)/,$(kernel-scsi-genmodfiles_STUBTARGETS))
+    kernel-scsi-genmodfiles_TARGETDIRS += $(kernel-scsi_OBJDIR)/linklib
+else
+ifneq ($(kernel-scsi_OBJDIR),)
+    kernel-scsi-genmodfiles_STUBTARGETS := $(addprefix $(kernel-scsi-genmodfiles_TARGETDIR)/,$(kernel-scsi-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-scsi-genmodfiles_TARGETS := $(kernel-scsi-genmodfiles_GENTARGETS) $(kernel-scsi-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-scsi-genmodfiles_TARGETDIRS),)
+$(kernel-scsi-genmodfiles_TARGETS) : | $(kernel-scsi-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-scsi-genmodfiles_TARGETS) : $(kernel-scsi-genmodfiles_DEPS) $(kernel-scsi-genmodfiles_GENFILEFLAG)
+
+$(kernel-scsi-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-scsi-genmodfiles_OPTS)
+$(kernel-scsi-genmodfiles_GENFILEFLAG) : MODNAME := scsi
+$(kernel-scsi-genmodfiles_GENFILEFLAG) : MODTYPE := device
+$(kernel-scsi-genmodfiles_GENFILEFLAG) : $(kernel-scsi-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-scsi-genmodfiles_GENFILEFLAG) : $(kernel-scsi_DEFLIBDEFSINC) $(kernel-scsi-makefile)
+
+
+ifneq ($(kernel-scsi-genmodfiles_GENFILEFLAG),)
+$(kernel-scsi-genmodfiles_GENFILEFLAG) : | $(kernel-scsi_OBJDIR)/linklib
+else
+$(kernel-scsi-genmodfiles_GENFILEFLAG) :: $(kernel-scsi_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-scsi_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-scsi_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-scsi_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-scsi-fd : $(kernel-scsi_FDDIR)/scsi_lib.fd
+
+
+TMP_TARGET := scsi_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/scsi.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/scsi.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-scsi_FDDIR),)
+    TMP_OPTS += -d $(kernel-scsi_FDDIR)
+    TMP_TARGET := $(kernel-scsi_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := scsi
+$(TMP_TARGET) : MODTYPE := device
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-scsi_FDDIR)/scsi_lib.fd : | $(kernel-scsi_FDDIR)
+
+
+ifneq (kernel-scsi-fd-setup,)
+kernel-scsi-fd-setup : | $(kernel-scsi_FDDIR)
+else
+kernel-scsi-fd-setup :: $(kernel-scsi_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-scsi_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-scsi_FILES            := $(SCSI_DEVICEFILES) $(SCSI_CLASSFILES)
+kernel-scsi_OBJCFILES        := 
+kernel-scsi_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-scsi_LIBFILES         := 
+kernel-scsi_LIBS             := 
+
+kernel-scsi_FDIRS            := $(sort $(dir $(kernel-scsi_FILES)))
+
+kernel-scsi_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-scsi_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-scsi_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-scsi_FILTERARCH       = $(filter-out $(call kernel-scsi_MATCHARCH,$(1),$(2)),$(2))
+kernel-scsi_STARTFILES       := $(addprefix $(kernel-scsi_OBJDIR)/,$($(kernel-scsi_DEFNAME)_STARTFILES))
+kernel-scsi_ENDFILES         := $(addprefix $(kernel-scsi_OBJDIR)/,$($(kernel-scsi_DEFNAME)_ENDFILES))
+
+kernel-scsi_ARCHOBJS         := $(wildcard $(kernel-scsi_OBJDIR)/arch/*.o)
+kernel-scsi_LIBARCHOBJS      := $(wildcard $(kernel-scsi_OBJDIR)/linklib/arch/*.o)
+kernel-scsi_ARCHFILES        := $(basename $(notdir $(kernel-scsi_ARCHOBJS)))
+kernel-scsi_LIBARCHFILES     := $(basename $(notdir $(kernel-scsi_LIBARCHOBJS)))
+kernel-scsi_C_NARCHFILES     := $(call kernel-scsi_FILTERARCH,$(kernel-scsi_ARCHFILES),$(kernel-scsi_FILES))
+kernel-scsi_CXX_NARCHFILES   := $(call kernel-scsi_FILTERARCH,$(kernel-scsi_ARCHFILES),$(kernel-scsi_CXXFILES))
+kernel-scsi_OBJC_NARCHFILES  := $(call kernel-scsi_FILTERARCH,$(kernel-scsi_ARCHFILES),$(kernel-scsi_OBJCFILES))
+kernel-scsi_NLIBARCHFILES    := $(call kernel-scsi_FILTERARCH,$(kernel-scsi_LIBARCHFILES),$(kernel-scsi_LIBFILES))
+kernel-scsi_ARCHNLIBFILES    := $(call kernel-scsi_FILTERARCH,$(kernel-scsi_LIBFILES),$(kernel-scsi_LIBARCHFILES))
+
+kernel-scsi_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-scsi_OBJDIR)/include -include $(kernel-scsi_DEFLIBDEFSINC))
+ifneq (,)
+kernel-scsi_CPPFLAGS         += -I
+endif
+kernel-scsi_LINKLIBCPPFLAGS  := $(kernel-scsi_CPPFLAGS)
+kernel-scsi_CPPFLAGS         += $(strip $($(kernel-scsi_DEFNAME)_CPPFLAGS))
+kernel-scsi_LINKLIBCPPFLAGS  += $(strip $($(kernel-scsi_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-scsi_CFLAGS           := $(strip $(CFLAGS) $($(kernel-scsi_DEFNAME)_CFLAGS))
+kernel-scsi_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-scsi_DEFNAME)_LINKLIBCFLAGS))
+kernel-scsi_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-scsi_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-scsi_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-scsi_CFLAGS           := $(strip $(kernel-scsi_LTOFLAGS) $(kernel-scsi_CFLAGS))
+kernel-scsi_LINKLIBCFLAGS    := $(strip $(kernel-scsi_LTOFLAGS) $(kernel-scsi_LINKLIBCFLAGS))
+kernel-scsi_CXXFLAGS         := $(strip $(kernel-scsi_LTOFLAGS) $(kernel-scsi_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-scsi_SUBSTNULL        :=
+kernel-scsi_SUBSTSPACE       := $(kernel-scsi_SUBSTNULL) #
+kernel-scsi_SUBSTCOMMA       := ,
+kernel-scsi_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-scsi_SUBSTSPACE),$(kernel-scsi_SUBSTCOMMA),$(strip $($(kernel-scsi_DEFNAME)_STARTFILES))))
+kernel-scsi_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-scsi_CFLAGS           := $(strip $(kernel-scsi_INSTRFUNCFLAGS) $(kernel-scsi_CFLAGS))
+kernel-scsi_CXXFLAGS         := $(strip $(kernel-scsi_INSTRFUNCFLAGS) $(kernel-scsi_CXXFLAGS))
+kernel-scsi_LIBS             += $(kernel-scsi_INSTRFUNCLIBS)
+endif
+endif
+kernel-scsi_DFLAGS           := $(strip $(kernel-scsi_DFLAGS) $($(kernel-scsi_DEFNAME)_DFLAGS))
+kernel-scsi_LINKLIBDFLAGS    := $(strip $(kernel-scsi_DFLAGS) $($(kernel-scsi_DEFNAME)_LINKLIBDFLAGS))
+kernel-scsi_DXXFLAGS         := $(strip $(kernel-scsi_DXXFLAGS) $($(kernel-scsi_DEFNAME)_DXXFLAGS))
+
+ifeq (device,library)
+    kernel-scsi_LIBSUFFIX    := 
+else
+    kernel-scsi_LIBSUFFIX    := .device
+endif
+
+ifeq (,)
+kernel-scsi_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-scsi_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-scsi_LINKLIBCFILES    := $(addprefix $(kernel-scsi_OBJDIR)/linklib/,$($(kernel-scsi_DEFNAME)_LINKLIBFILES))
+kernel-scsi_LINKLIBAFILES    := $(addprefix $(kernel-scsi_OBJDIR)/linklib/,$($(kernel-scsi_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-scsi_DEFNAME)_LINKLIBFILES) $($(kernel-scsi_DEFNAME)_LINKLIBAFILES)  $(kernel-scsi_ARCHNLIBFILES)),)
+    kernel-scsi_LINKLIB      :=
+else
+    kernel-scsi_LINKLIB      := $(kernel-scsi_LIBDIR)/libscsi$(kernel-scsi_LIBSUFFIX).a
+    ifneq (scsi,$(kernel-scsi_LINKLIBNAME))
+        kernel-scsi_LINKLIB  += $(kernel-scsi_LIBDIR)/lib$(kernel-scsi_LINKLIBNAME)$(kernel-scsi_LIBSUFFIX).a
+    endif
+endif
+kernel-scsi_LINKLIBFILES     := $(kernel-scsi_LINKLIBCFILES) $(kernel-scsi_LINKLIBAFILES)
+
+kernel-scsi_RELLINKLIBCFILES := $(addprefix $(kernel-scsi_OBJDIR)/linklib/,$($(kernel-scsi_DEFNAME)_RELLINKLIBFILES))
+kernel-scsi_RELLINKLIBAFILES := $(addprefix $(kernel-scsi_OBJDIR)/linklib/,$($(kernel-scsi_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-scsi_DEFNAME)_RELLINKLIBFILES) $($(kernel-scsi_DEFNAME)_RELLINKLIBAFILES)  $(kernel-scsi_ARCHNLIBFILES)),)
+    kernel-scsi_RELLINKLIB   :=
+else
+    kernel-scsi_RELLINKLIB   := $(kernel-scsi_LIBDIR)/lib$(kernel-scsi_DEFNAME)_rel$(kernel-scsi_LIBSUFFIX).a
+    ifneq (scsi,$(kernel-scsi_LINKLIBNAME))
+        kernel-scsi_RELLINKLIB += $(kernel-scsi_LIBDIR)/lib$(kernel-scsi_LINKLIBNAME)_rel$(kernel-scsi_LIBSUFFIX).a
+    endif
+endif
+kernel-scsi_RELLINKLIBFILES  := $(kernel-scsi_RELLINKLIBCFILES) $(kernel-scsi_RELLINKLIBAFILES)
+endif
+
+kernel-scsi_ENDOBJS          := $(addsuffix .o,$(kernel-scsi_ENDFILES))
+kernel-scsi_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-scsi_OBJDIR)/linklib/,$(notdir $(kernel-scsi_NLIBARCHFILES))) $(addprefix $(kernel-scsi_OBJDIR)/linklib/arch/,$(notdir $(kernel-scsi_ARCHNLIBFILES))) $(kernel-scsi_LINKLIBFILES)) \
+                 
+kernel-scsi_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-scsi_OBJDIR)/linklib/,$(notdir $(kernel-scsi_NLIBARCHFILES))) $(addprefix $(kernel-scsi_OBJDIR)/linklib/arch/,$(notdir $(kernel-scsi_ARCHNLIBFILES))) $(kernel-scsi_RELLINKLIBFILES)) \
+                 
+$(kernel-scsi_LINKLIBFILES) $(kernel-scsi_RELLINKLIBFILES) : | $(kernel-scsi_OBJDIR)/linklib
+$(kernel-scsi_LINKLIBOBJS) $(kernel-scsi_RELLINKLIBOBJS) : | $(kernel-scsi_OBJDIR)/linklib
+
+kernel-scsi_CCFILES := $(kernel-scsi_C_NARCHFILES)
+kernel-scsi_TARGETCCFILES    := $(strip $(kernel-scsi_STARTFILES) $(kernel-scsi_ENDFILES))
+kernel-scsi_LINKLIBCCFILES   := $(strip $(kernel-scsi_NLIBARCHFILES) $(kernel-scsi_LINKLIBCFILES) $(kernel-scsi_RELLINKLIBCFILES))
+kernel-scsi_LINKLIBCCGENFILES := $(strip $(kernel-scsi_LINKLIBCFILES) $(kernel-scsi_RELLINKLIBCFILES))
+
+
+kernel-scsi_CXXABSBASENAMES := $(foreach kernel-scsi_CXXBASE,$(kernel-scsi_CXX_NARCHFILES),$(if $(filter /%,$(kernel-scsi_CXXBASE)),$(kernel-scsi_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-scsi_CXXBASE))))
+
+ifneq ($(kernel-scsi_CXXABSBASENAMES),)
+
+kernel-scsi_CXXBASENAMES := $(basename $(kernel-scsi_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-scsi_MCXX_FILES  := $(strip $(foreach kernel-scsi_CXXBASE,$(kernel-scsi_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-scsi_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-scsi_EXT),$(kernel-scsi_CXXBASE)))))))
+
+ifeq (,)
+kernel-scsi_MCXX_SRCWILDCARD := %
+else
+kernel-scsi_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-scsi_OBJDIR),)
+  kernel-scsi_CXXTARGETS := $(notdir $(kernel-scsi_CXXBASENAMES:=.o))
+  kernel-scsi_CXXDTARGETS := $(notdir $(kernel-scsi_CXXBASENAMES:=.d))
+  kernel-scsi_MCXX_WILDCARD := %
+else
+  kernel-scsi_CXXTARGETS := $(addprefix $(kernel-scsi_OBJDIR)/,$(notdir $(kernel-scsi_CXXBASENAMES:=.o)))
+  kernel-scsi_CXXDTARGETS := $(addprefix $(kernel-scsi_OBJDIR)/,$(notdir $(kernel-scsi_CXXBASENAMES:=.d)))
+  kernel-scsi_MCXX_WILDCARD := $(kernel-scsi_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-scsi_CXXTARGETS) $(kernel-scsi_CXXDTARGETS) : | $(kernel-scsi_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-scsi_MCXX_CPPFLAGS := $(kernel-scsi_CPPFLAGS)
+kernel-scsi_CXXFLAGS := $(kernel-scsi_CXXFLAGS)
+ifeq ($(kernel-scsi_DXXFLAGS),)
+  kernel-scsi_DXXFLAGS := $(kernel-scsi_CXXFLAGS)
+else
+  kernel-scsi_DXXFLAGS := $(kernel-scsi_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-scsi_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-scsi_STRIP ?= $(HOST_STRIP)
+  kernel-scsi_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-scsi_CXXCMD:=$(HOST_CXX)
+  kernel-scsi_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-scsi_MCXX_CPPFLAGS) $(kernel-scsi_MCXX_EXTRA_CPPFLAGS))
+  kernel-scsi_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-scsi_CXXFLAGS))
+  kernel-scsi_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-scsi_DXXFLAGS))
+  kernel-scsi_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-scsi_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-scsi_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-scsi_STRIP ?= $(TARGET_STRIP)
+  kernel-scsi_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-scsi_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-scsi_MCXX_CPPFLAGS := $(strip $(kernel-scsi_MCXX_CPPFLAGS) $(kernel-scsi_MCXX_EXTRA_CPPFLAGS))
+  kernel-scsi_CXXFLAGS := $(strip $(kernel-scsi_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-scsi_DXXFLAGS := $(kernel-scsi_DXXFLAGS)
+  kernel-scsi_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-scsi_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-scsi_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-scsi_STRIP ?= $(ECHO) >/dev/null
+  kernel-scsi_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-scsi_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-scsi_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-scsi_MCXX_CPPFLAGS) $(kernel-scsi_MCXX_EXTRA_CPPFLAGS))
+  kernel-scsi_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-scsi_CXXFLAGS))
+  kernel-scsi_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-scsi_DXXFLAGS))
+  kernel-scsi_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-scsi_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-scsi_CXXCMD) $(kernel-scsi_CXXIQUOTE) $(dir $(2)) $(kernel-scsi_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_CXXIQUOTE) . $(kernel-scsi_CXXIQUOTE_END) $(strip $(kernel-scsi_CXXFLAGS) $(kernel-scsi_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-scsi_CXXCMD) $(kernel-scsi_CXXIQUOTE) $(dir $(2)) $(kernel-scsi_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_CXXIQUOTE) . $(kernel-scsi_CXXIQUOTE_END) $(strip $(kernel-scsi_CXXFLAGS) $(kernel-scsi_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-scsi_CXXCMD) $(kernel-scsi_CXXIQUOTE) $(dir $(2)) $(kernel-scsi_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_CXXIQUOTE) . $(kernel-scsi_CXXIQUOTE_END) $(strip $(kernel-scsi_CXXFLAGS) $(kernel-scsi_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-scsi_CXXCMD)" $(MKDEPEND) $(strip $(kernel-scsi_DXXFLAGS) $(kernel-scsi_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-scsi_OBJDIR),)
+  $(foreach kernel-scsi_CXXFILE,$(kernel-scsi_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-scsi_CXXFILE))),$(kernel-scsi_CXXFILE))))
+else
+  $(foreach kernel-scsi_CXXFILE,$(kernel-scsi_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-scsi_OBJDIR)/,$(notdir $(basename $(kernel-scsi_CXXFILE)))),$(kernel-scsi_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-scsi_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-scsi_MOBJC_SRCWILDCARD := %
+else
+kernel-scsi_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-scsi_OBJDIR),)
+  kernel-scsi_MOBJC_TARGETS := $(addsuffix .o,$(kernel-scsi_OBJC_NARCHFILES))
+  kernel-scsi_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-scsi_OBJC_NARCHFILES))
+  kernel-scsi_MOBJC_WILDCARD := %
+else
+  kernel-scsi_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-scsi_OBJDIR)/,$(kernel-scsi_OBJC_NARCHFILES)))
+  kernel-scsi_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-scsi_OBJDIR)/,$(kernel-scsi_OBJC_NARCHFILES)))
+  kernel-scsi_MOBJC_WILDCARD := $(kernel-scsi_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-scsi_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-scsi_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-scsi_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-scsi_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-scsi_MOBJC_DIRS := $(foreach dir, $(kernel-scsi_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-scsi_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-scsi_MOBJC_DIRS),)
+    kernel-scsi_MOBJC_DIRS := $(shell echo $(kernel-scsi_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-scsi_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-scsi_CC := $(TARGET_CC)
+else
+  kernel-scsi_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-scsi_MOBJC_CPPFLAGS := $(kernel-scsi_CPPFLAGS)
+kernel-scsi_OBJCFLAGS := $(kernel-scsi_CFLAGS)
+kernel-scsi_OBJCFLAGS := $(kernel-scsi_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-scsi_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-scsi_OBJCFLAGS)))
+ifeq ($(kernel-scsi_DFLAGS),)
+  kernel-scsi_OBJCDFLAGS := $(kernel-scsi_CFLAGS)
+else
+  kernel-scsi_OBJCDFLAGS := $(kernel-scsi_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-scsi_LINK ?= $(strip $(kernel-scsi_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-scsi_STRIP ?= $(TARGET_STRIP)
+  kernel-scsi_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-scsi_CC) $(TARGET_SYSROOT))
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : kernel-scsi_MOBJC_CPPFLAGS:=$(strip $(kernel-scsi_MOBJC_CPPFLAGS) $(kernel-scsi_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : kernel-scsi_OBJCFLAGS:=$(strip $(kernel-scsi_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : kernel-scsi_OBJCDFLAGS:=$(kernel-scsi_OBJCDFLAGS)
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : kernel-scsi_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : kernel-scsi_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-scsi_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-scsi_STRIP ?= $(HOST_STRIP)
+  kernel-scsi_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : kernel-scsi_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-scsi_MOBJC_CPPFLAGS) $(kernel-scsi_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : kernel-scsi_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-scsi_OBJCFLAGS))
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : kernel-scsi_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-scsi_OBJCDFLAGS))
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : kernel-scsi_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : kernel-scsi_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-scsi_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-scsi_STRIP ?= $(ECHO) >/dev/null
+  kernel-scsi_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : kernel-scsi_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-scsi_MOBJC_CPPFLAGS) $(kernel-scsi_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : kernel-scsi_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-scsi_OBJCFLAGS))
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : kernel-scsi_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-scsi_OBJCDFLAGS))
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : kernel-scsi_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-scsi_MOBJC_TARGETS) $(kernel-scsi_MOBJC_DTARGETS) : kernel-scsi_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-scsi_MOBJC_TARGETS) : CPPFLAGS := $(kernel-scsi_MOBJC_CPPFLAGS)
+$(kernel-scsi_MOBJC_TARGETS) : CFLAGS := $(kernel-scsi_OBJCFLAGS)
+$(kernel-scsi_MOBJC_TARGETS) : $(kernel-scsi_MOBJC_WILDCARD).o : $(kernel-scsi_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-scsi_IQUOTE) $(dir $<) $(kernel-scsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_IQUOTE) . $(kernel-scsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-scsi_IQUOTE) $(dir $<) $(kernel-scsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_IQUOTE) . $(kernel-scsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-scsi_IQUOTE) $(dir $<) $(kernel-scsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_IQUOTE) . $(kernel-scsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-scsi_MOBJC_DTARGETS) : $(kernel-scsi_MOBJC_WILDCARD).d : $(kernel-scsi_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-scsi_OBJCDFLAGS) $(kernel-scsi_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-scsi_MC_SRCWILDCARD := %
+else
+kernel-scsi_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-scsi_OBJDIR),)
+kernel-scsi_MC_TARGETS := $(addsuffix .o,$(kernel-scsi_CCFILES))
+kernel-scsi_MC_DTARGETS := $(addsuffix .d,$(kernel-scsi_CCFILES))
+kernel-scsi_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-scsi_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-scsi_OBJDIR)/,$(notdir $(kernel-scsi_CCFILES))))
+    kernel-scsi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-scsi_OBJDIR)/,$(notdir $(kernel-scsi_CCFILES))))
+else
+ifeq (,)
+    kernel-scsi_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-scsi_OBJDIR)/,$(kernel-scsi_CCFILES)))
+    kernel-scsi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-scsi_OBJDIR)/,$(kernel-scsi_CCFILES)))
+else
+    kernel-scsi_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-scsi_OBJDIR)/,$(patsubst /%,%,$(kernel-scsi_CCFILES))))
+    kernel-scsi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-scsi_OBJDIR)/,$(patsubst /%,%,$(kernel-scsi_CCFILES))))
+endif
+endif
+kernel-scsi_MC_TGTWILDCARD := $(kernel-scsi_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : | $(addsuffix .c,$(kernel-scsi_CCFILES))
+
+# Be sure that all .c files are found
+kernel-scsi_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-scsi_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-scsi_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-scsi_MC_DIRS := $(foreach dir, $(kernel-scsi_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-scsi_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-scsi_MC_DIRS),)
+    kernel-scsi_MC_DIRS := $(shell echo $(kernel-scsi_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-scsi_MC_DIRS)
+endif
+
+endif
+
+kernel-scsi_MC_CPPFLAGS := $(kernel-scsi_CPPFLAGS)
+kernel-scsi_CFLAGS := $(kernel-scsi_CFLAGS)
+ifeq ($(kernel-scsi_DFLAGS),)
+  kernel-scsi_DFLAGS := $(kernel-scsi_CFLAGS)
+else
+  kernel-scsi_DFLAGS := $(kernel-scsi_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-scsi_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-scsi_STRIP ?= $(TARGET_STRIP)
+kernel-scsi_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_MC_CPPFLAGS:=$(strip $(kernel-scsi_MC_CPPFLAGS) $(kernel-scsi_MC_EXTRA_CPPFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_CFLAGS:=$(strip $(kernel-scsi_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_DFLAGS:=$(kernel-scsi_DFLAGS)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-scsi_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-scsi_STRIP ?= $(HOST_STRIP)
+kernel-scsi_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-scsi_MC_CPPFLAGS) $(kernel-scsi_MC_EXTRA_CPPFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-scsi_CFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-scsi_DFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-scsi_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-scsi_STRIP ?= $(ECHO) >/dev/null
+kernel-scsi_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-scsi_MC_CPPFLAGS) $(kernel-scsi_MC_EXTRA_CPPFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-scsi_CFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-scsi_DFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-scsi_MC_TARGETS) : CPPFLAGS := $(kernel-scsi_MC_CPPFLAGS)
+$(kernel-scsi_MC_TARGETS) : CFLAGS := $(kernel-scsi_CFLAGS)
+$(kernel-scsi_MC_TARGETS) : $(kernel-scsi_MC_TGTWILDCARD).o : $(kernel-scsi_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-scsi_IQUOTE) $(dir $<) $(kernel-scsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_IQUOTE) . $(kernel-scsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-scsi_IQUOTE) $(dir $<) $(kernel-scsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_IQUOTE) . $(kernel-scsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-scsi_IQUOTE) $(dir $<) $(kernel-scsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_IQUOTE) . $(kernel-scsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-scsi_MC_DTARGETS) : $(kernel-scsi_MC_TGTWILDCARD).d : $(kernel-scsi_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-scsi_DFLAGS) $(kernel-scsi_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-scsi_MC_SRCWILDCARD := %
+else
+kernel-scsi_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-scsi_OBJDIR),)
+kernel-scsi_MC_TARGETS := $(addsuffix .o,$(kernel-scsi_TARGETCCFILES))
+kernel-scsi_MC_DTARGETS := $(addsuffix .d,$(kernel-scsi_TARGETCCFILES))
+kernel-scsi_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-scsi_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-scsi_OBJDIR)/,$(notdir $(kernel-scsi_TARGETCCFILES))))
+    kernel-scsi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-scsi_OBJDIR)/,$(notdir $(kernel-scsi_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-scsi_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-scsi_OBJDIR)/,$(kernel-scsi_TARGETCCFILES)))
+    kernel-scsi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-scsi_OBJDIR)/,$(kernel-scsi_TARGETCCFILES)))
+else
+    kernel-scsi_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-scsi_OBJDIR)/,$(patsubst /%,%,$(kernel-scsi_TARGETCCFILES))))
+    kernel-scsi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-scsi_OBJDIR)/,$(patsubst /%,%,$(kernel-scsi_TARGETCCFILES))))
+endif
+endif
+kernel-scsi_MC_TGTWILDCARD := $(kernel-scsi_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : | $(addsuffix .c,$(kernel-scsi_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-scsi_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-scsi_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-scsi_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-scsi_MC_DIRS := $(foreach dir, $(kernel-scsi_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-scsi_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-scsi_MC_DIRS),)
+    kernel-scsi_MC_DIRS := $(shell echo $(kernel-scsi_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-scsi_MC_DIRS)
+endif
+
+endif
+
+kernel-scsi_MC_CPPFLAGS := $(kernel-scsi_CPPFLAGS) -D__AROS__
+kernel-scsi_CFLAGS := $(kernel-scsi_CFLAGS)
+ifeq ($(kernel-scsi_DFLAGS),)
+  kernel-scsi_DFLAGS := $(kernel-scsi_CFLAGS)
+else
+  kernel-scsi_DFLAGS := $(kernel-scsi_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-scsi_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-scsi_STRIP ?= $(TARGET_STRIP)
+kernel-scsi_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_MC_CPPFLAGS:=$(strip $(kernel-scsi_MC_CPPFLAGS) $(kernel-scsi_MC_EXTRA_CPPFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_CFLAGS:=$(strip $(kernel-scsi_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_DFLAGS:=$(kernel-scsi_DFLAGS)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-scsi_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-scsi_STRIP ?= $(HOST_STRIP)
+kernel-scsi_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-scsi_MC_CPPFLAGS) $(kernel-scsi_MC_EXTRA_CPPFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-scsi_CFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-scsi_DFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-scsi_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-scsi_STRIP ?= $(ECHO) >/dev/null
+kernel-scsi_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-scsi_MC_CPPFLAGS) $(kernel-scsi_MC_EXTRA_CPPFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-scsi_CFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-scsi_DFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-scsi_MC_TARGETS) : CPPFLAGS := $(kernel-scsi_MC_CPPFLAGS)
+$(kernel-scsi_MC_TARGETS) : CFLAGS := $(kernel-scsi_CFLAGS)
+$(kernel-scsi_MC_TARGETS) : $(kernel-scsi_MC_TGTWILDCARD).o : $(kernel-scsi_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-scsi_IQUOTE) $(dir $<) $(kernel-scsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_IQUOTE) . $(kernel-scsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-scsi_IQUOTE) $(dir $<) $(kernel-scsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_IQUOTE) . $(kernel-scsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-scsi_IQUOTE) $(dir $<) $(kernel-scsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_IQUOTE) . $(kernel-scsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-scsi_MC_DTARGETS) : $(kernel-scsi_MC_TGTWILDCARD).d : $(kernel-scsi_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-scsi_DFLAGS) $(kernel-scsi_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-scsi_MC_SRCWILDCARD := %
+else
+kernel-scsi_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-scsi_OBJDIR)/linklib,)
+kernel-scsi_MC_TARGETS := $(addsuffix .o,$(kernel-scsi_NLIBARCHFILES))
+kernel-scsi_MC_DTARGETS := $(addsuffix .d,$(kernel-scsi_NLIBARCHFILES))
+kernel-scsi_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-scsi_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-scsi_OBJDIR)/linklib/,$(notdir $(kernel-scsi_NLIBARCHFILES))))
+    kernel-scsi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-scsi_OBJDIR)/linklib/,$(notdir $(kernel-scsi_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-scsi_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-scsi_OBJDIR)/linklib/,$(kernel-scsi_NLIBARCHFILES)))
+    kernel-scsi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-scsi_OBJDIR)/linklib/,$(kernel-scsi_NLIBARCHFILES)))
+else
+    kernel-scsi_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-scsi_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-scsi_NLIBARCHFILES))))
+    kernel-scsi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-scsi_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-scsi_NLIBARCHFILES))))
+endif
+endif
+kernel-scsi_MC_TGTWILDCARD := $(kernel-scsi_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : | $(addsuffix .c,$(kernel-scsi_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-scsi_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-scsi_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-scsi_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-scsi_MC_DIRS := $(foreach dir, $(kernel-scsi_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-scsi_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-scsi_MC_DIRS),)
+    kernel-scsi_MC_DIRS := $(shell echo $(kernel-scsi_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-scsi_MC_DIRS)
+endif
+
+endif
+
+kernel-scsi_MC_CPPFLAGS := $(kernel-scsi_LINKLIBCPPFLAGS) -D__AROS__
+kernel-scsi_CFLAGS := $(kernel-scsi_LINKLIBCFLAGS)
+ifeq ($(kernel-scsi_LINKLIBDFLAGS),)
+  kernel-scsi_DFLAGS := $(kernel-scsi_LINKLIBCFLAGS)
+else
+  kernel-scsi_DFLAGS := $(kernel-scsi_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-scsi_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-scsi_STRIP ?= $(TARGET_STRIP)
+kernel-scsi_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_MC_CPPFLAGS:=$(strip $(kernel-scsi_MC_CPPFLAGS) $(kernel-scsi_MC_EXTRA_CPPFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_CFLAGS:=$(strip $(kernel-scsi_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_DFLAGS:=$(kernel-scsi_DFLAGS)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-scsi_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-scsi_STRIP ?= $(HOST_STRIP)
+kernel-scsi_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-scsi_MC_CPPFLAGS) $(kernel-scsi_MC_EXTRA_CPPFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-scsi_CFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-scsi_DFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-scsi_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-scsi_STRIP ?= $(ECHO) >/dev/null
+kernel-scsi_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-scsi_MC_CPPFLAGS) $(kernel-scsi_MC_EXTRA_CPPFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-scsi_CFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-scsi_DFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-scsi_MC_TARGETS) : CPPFLAGS := $(kernel-scsi_MC_CPPFLAGS)
+$(kernel-scsi_MC_TARGETS) : CFLAGS := $(kernel-scsi_CFLAGS)
+$(kernel-scsi_MC_TARGETS) : $(kernel-scsi_MC_TGTWILDCARD).o : $(kernel-scsi_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-scsi_IQUOTE) $(dir $<) $(kernel-scsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_IQUOTE) . $(kernel-scsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-scsi_IQUOTE) $(dir $<) $(kernel-scsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_IQUOTE) . $(kernel-scsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-scsi_IQUOTE) $(dir $<) $(kernel-scsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_IQUOTE) . $(kernel-scsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-scsi_MC_DTARGETS) : $(kernel-scsi_MC_TGTWILDCARD).d : $(kernel-scsi_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-scsi_DFLAGS) $(kernel-scsi_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-scsi_OBJDIR)/linklib,)
+kernel-scsi_MC_SRCWILDCARD := %
+else
+kernel-scsi_MC_SRCWILDCARD := $(kernel-scsi_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-scsi_OBJDIR)/linklib,)
+kernel-scsi_MC_TARGETS := $(addsuffix .o,$(kernel-scsi_LINKLIBCCGENFILES))
+kernel-scsi_MC_DTARGETS := $(addsuffix .d,$(kernel-scsi_LINKLIBCCGENFILES))
+kernel-scsi_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-scsi_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-scsi_OBJDIR)/linklib/,$(notdir $(kernel-scsi_LINKLIBCCGENFILES))))
+    kernel-scsi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-scsi_OBJDIR)/linklib/,$(notdir $(kernel-scsi_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-scsi_OBJDIR)/linklib,)
+    kernel-scsi_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-scsi_OBJDIR)/linklib/,$(kernel-scsi_LINKLIBCCGENFILES)))
+    kernel-scsi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-scsi_OBJDIR)/linklib/,$(kernel-scsi_LINKLIBCCGENFILES)))
+else
+    kernel-scsi_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-scsi_OBJDIR)/linklib/,$(patsubst $(kernel-scsi_OBJDIR)/linklib/%,%,$(kernel-scsi_LINKLIBCCGENFILES))))
+    kernel-scsi_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-scsi_OBJDIR)/linklib/,$(patsubst $(kernel-scsi_OBJDIR)/linklib/%,%,$(kernel-scsi_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-scsi_MC_TGTWILDCARD := $(kernel-scsi_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : | $(addsuffix .c,$(kernel-scsi_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-scsi_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-scsi_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-scsi_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-scsi_MC_DIRS := $(foreach dir, $(kernel-scsi_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-scsi_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-scsi_MC_DIRS),)
+    kernel-scsi_MC_DIRS := $(shell echo $(kernel-scsi_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-scsi_MC_DIRS)
+endif
+
+endif
+
+kernel-scsi_MC_CPPFLAGS := $(kernel-scsi_LINKLIBCPPFLAGS) -D__AROS__
+kernel-scsi_CFLAGS := $(kernel-scsi_LINKLIBCFLAGS)
+ifeq ($(kernel-scsi_LINKLIBDFLAGS),)
+  kernel-scsi_DFLAGS := $(kernel-scsi_LINKLIBCFLAGS)
+else
+  kernel-scsi_DFLAGS := $(kernel-scsi_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-scsi_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-scsi_STRIP ?= $(TARGET_STRIP)
+kernel-scsi_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_MC_CPPFLAGS:=$(strip $(kernel-scsi_MC_CPPFLAGS) $(kernel-scsi_MC_EXTRA_CPPFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_CFLAGS:=$(strip $(kernel-scsi_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_DFLAGS:=$(kernel-scsi_DFLAGS)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-scsi_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-scsi_STRIP ?= $(HOST_STRIP)
+kernel-scsi_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-scsi_MC_CPPFLAGS) $(kernel-scsi_MC_EXTRA_CPPFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-scsi_CFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-scsi_DFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-scsi_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-scsi_STRIP ?= $(ECHO) >/dev/null
+kernel-scsi_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-scsi_MC_CPPFLAGS) $(kernel-scsi_MC_EXTRA_CPPFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-scsi_CFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-scsi_DFLAGS))
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-scsi_MC_TARGETS) $(kernel-scsi_MC_DTARGETS) : kernel-scsi_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-scsi_MC_TARGETS) : CPPFLAGS := $(kernel-scsi_MC_CPPFLAGS)
+$(kernel-scsi_MC_TARGETS) : CFLAGS := $(kernel-scsi_CFLAGS)
+$(kernel-scsi_MC_TARGETS) : $(kernel-scsi_MC_TGTWILDCARD).o : $(kernel-scsi_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-scsi_IQUOTE) $(dir $<) $(kernel-scsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_IQUOTE) . $(kernel-scsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-scsi_IQUOTE) $(dir $<) $(kernel-scsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_IQUOTE) . $(kernel-scsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-scsi_IQUOTE) $(dir $<) $(kernel-scsi_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-scsi_IQUOTE) . $(kernel-scsi_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-scsi_MC_DTARGETS) : $(kernel-scsi_MC_TGTWILDCARD).d : $(kernel-scsi_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-scsi_DFLAGS) $(kernel-scsi_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-scsi_LINKLIBAFILES),)
+
+ifeq ($(kernel-scsi_OBJDIR)/linklib,)
+kernel-scsi-MA_TARGETS := $(addsuffix .o,$(kernel-scsi_LINKLIBAFILES) $(kernel-scsi_RELLINKLIBAFILES))
+kernel-scsi-MA_WILDCARD := %
+else
+kernel-scsi-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-scsi_OBJDIR)/linklib/,$(notdir $(kernel-scsi_LINKLIBAFILES) $(kernel-scsi_RELLINKLIBAFILES))))
+kernel-scsi-MA_WILDCARD := $(kernel-scsi_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-scsi-MA_TARGETS) : | $(addsuffix .S,$(kernel-scsi_LINKLIBAFILES) $(kernel-scsi_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-scsi-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-scsi-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-scsi_LINKLIBAFILES) $(kernel-scsi_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-scsi-MA_DIRS := $(foreach dir, $(kernel-scsi-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-scsi-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-scsi-MA_DIRS),)
+    kernel-scsi-MA_DIRS := $(shell echo $(kernel-scsi-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-scsi-MA_DIRS)
+endif
+
+endif
+
+kernel-scsi-MA_ASSEMBLER ?= $(kernel-scsi_ASSEMBLER)
+
+$(kernel-scsi-MA_TARGETS) : kernel-scsi-MA_CMD:= $(kernel-scsi-MA_ASSEMBLER)
+
+$(kernel-scsi-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-scsi-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-scsi-MA_TARGETS) : $(kernel-scsi-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-scsi-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-scsi-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-scsi-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-scsi_SUFFIX           := device
+else
+kernel-scsi_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-scsi_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-scsi_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-scsi_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-scsi_SUFFIX),handler)
+kernel-scsi_MODULE           := $(AROSDIR)/$(kernel-scsi_MODDIR)/$(kernel-scsi_DEFNAME)-$(kernel-scsi_SUFFIX)
+else
+kernel-scsi_MODULE           := $(AROSDIR)/$(kernel-scsi_MODDIR)/$(kernel-scsi_DEFNAME).$(kernel-scsi_SUFFIX)
+endif
+kernel-scsi_KOBJ             := $(KOBJSDIR)/$(kernel-scsi_DEFNAME)_$(kernel-scsi_SUFFIX).o
+else
+kernel-scsi_MODULE           :=
+kernel-scsi_KOBJ             :=
+endif
+
+kernel-scsi-quick      : kernel-scsi
+kernel-scsi            : $(kernel-scsi_MODULE) $(kernel-scsi_LINKLIB) $(kernel-scsi_RELLINKLIB)
+ifeq (M,M)
+kernel-scsi-kobj       : $(kernel-scsi_KOBJ) $(kernel-scsi_LINKLIB) $(kernel-scsi_RELLINKLIB)
+kernel-scsi-kobj-quick : $(kernel-scsi_KOBJ) $(kernel-scsi_LINKLIB) $(kernel-scsi_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-scsi-linklib    : $(kernel-scsi_LINKLIB) $(kernel-scsi_RELLINKLIB)
+endif
+
+kernel-scsi_OBJS := $(addsuffix .o,$(kernel-scsi_STARTFILES)) $(kernel-scsi_ARCHOBJS) \
+           $(addprefix $(kernel-scsi_OBJDIR)/,$(notdir $(kernel-scsi_C_NARCHFILES:=.o) $(kernel-scsi_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (device,handler)
+kernel-scsi_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (scsi,con)
+    kernel-scsi_ERR          := $(notdir $(kernel-scsi_MODULE)).err
+else
+    kernel-scsi_ERR          := scsi.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-scsi_DEFNAME)_LDFLAGS) $(kernel-scsi_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-scsi_LIBS) $($(kernel-scsi_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-scsi_MODULE) : LIB_NAMES := $(kernel-scsi_LIBS) $($(kernel-scsi_DEFNAME)_LIBS)
+$(kernel-scsi_MODULE) : OBJS := $(kernel-scsi_STARTOBJS) $(kernel-scsi_OBJS) $(USER_OBJS)
+$(kernel-scsi_MODULE) : ENDTAG := $(kernel-scsi_ENDOBJS)
+$(kernel-scsi_MODULE) : ERR := $(kernel-scsi_ERR)
+$(kernel-scsi_MODULE) : OBJDIR := $(kernel-scsi_OBJDIR)
+$(kernel-scsi_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-scsi_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-scsi_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-scsi_MODULE) : $(kernel-scsi_STARTOBJS) $(kernel-scsi_OBJS) $(USER_OBJS) $(kernel-scsi_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-scsi_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-scsi_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-scsi_LC_LINKLIBNAME   := $(shell echo $(kernel-scsi_LINKLIBNAME) | tr A-Z a-z)
+kernel-scsi_LC_MODNAME       := $(shell echo scsi | tr A-Z a-z)
+ifneq ($(kernel-scsi_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_LINKLIBNAME)$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_AR:=$(AR)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_LINKLIBNAME)$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_LINKLIBNAME)$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_AR:=$(HOST_AR)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_LINKLIBNAME)$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_LINKLIBNAME)$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_AR:=$(KERNEL_AR)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_LINKLIBNAME)$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_LINKLIBNAME)$(kernel-scsi_LIBSUFFIX).a : $(kernel-scsi_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-scsi_AR) $@ $^
+	$(Q)$(kernel-scsi_RANLIB) $@
+ifneq ($(kernel-scsi_LC_MODNAME),$(kernel-scsi_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-scsi_LIBDIR)/libscsi$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_AR:=$(AR)
+$(kernel-scsi_LIBDIR)/libscsi$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-scsi_LIBDIR)/libscsi$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_AR:=$(HOST_AR)
+$(kernel-scsi_LIBDIR)/libscsi$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-scsi_LIBDIR)/libscsi$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_AR:=$(KERNEL_AR)
+$(kernel-scsi_LIBDIR)/libscsi$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-scsi_LIBDIR)/libscsi$(kernel-scsi_LIBSUFFIX).a : $(kernel-scsi_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-scsi_AR) $@ $^
+	$(Q)$(kernel-scsi_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-scsi_LINKLIB),)
+$(kernel-scsi_LINKLIB) : | $(kernel-scsi_LIBDIR)
+else
+$(kernel-scsi_LINKLIB) :: $(kernel-scsi_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-scsi_LIBDIR)
+
+endif
+
+ifneq ($(kernel-scsi_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_LINKLIBNAME)_rel$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_AR:=$(AR)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_LINKLIBNAME)_rel$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_LINKLIBNAME)_rel$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_AR:=$(HOST_AR)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_LINKLIBNAME)_rel$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_LINKLIBNAME)_rel$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_AR:=$(KERNEL_AR)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_LINKLIBNAME)_rel$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_LINKLIBNAME)_rel$(kernel-scsi_LIBSUFFIX).a : $(kernel-scsi_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-scsi_AR) $@ $^
+	$(Q)$(kernel-scsi_RANLIB) $@
+ifneq ($(kernel-scsi_LC_MODNAME),$(kernel-scsi_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_DEFNAME)_rel$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_AR:=$(AR)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_DEFNAME)_rel$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_DEFNAME)_rel$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_AR:=$(HOST_AR)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_DEFNAME)_rel$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_DEFNAME)_rel$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_AR:=$(KERNEL_AR)
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_DEFNAME)_rel$(kernel-scsi_LIBSUFFIX).a : kernel-scsi_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-scsi_LIBDIR)/lib$(kernel-scsi_DEFNAME)_rel$(kernel-scsi_LIBSUFFIX).a : $(kernel-scsi_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-scsi_AR) $@ $^
+	$(Q)$(kernel-scsi_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-scsi_RELLINKLIB),)
+$(kernel-scsi_RELLINKLIB) : | $(kernel-scsi_LIBDIR)
+else
+$(kernel-scsi_RELLINKLIB) :: $(kernel-scsi_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-scsi_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-scsi_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-scsi_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-scsi_SYMBOLS := $(kernel-scsi_KBASE)
+
+kernel-scsi_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-scsi_KOBJ_LIBS        := $(filter-out $(kernel-scsi_KLIB),$(kernel-scsi_LIBS)) $(kernel-scsi_KAUTOLIB)
+$(kernel-scsi_KOBJ) : LINKLIBS:=$(kernel-scsi_KOBJ_LIBS) $($(kernel-scsi_DEFNAME)_LIBS)
+$(kernel-scsi_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-scsi_SYMBOLS))
+$(kernel-scsi_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-scsi_KOBJ) : $(kernel-scsi_OBJS) $(USER_OBJS) $(kernel-scsi_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-scsi_DEPS             := $(addprefix $(kernel-scsi_OBJDIR)/,$(notdir $(kernel-scsi_CCFILES:=.d) $(kernel-scsi_TARGETCCFILES:=.d) $(kernel-scsi_CXXFILES:=.d))) $(addprefix $(kernel-scsi_OBJDIR)/linklib/,$(notdir $(kernel-scsi_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-scsi_DEPS),)
+  ifneq (kernel-scsi kernel-scsi-quick kernel-scsi-kobj kernel-scsi-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-scsi kernel-scsi-quick kernel-scsi-kobj kernel-scsi-kobj-quick),)
+      -include $(kernel-scsi_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-scsi_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-scsi_OBJS) $(kernel-scsi_DEPS) : | $(kernel-scsi_OBJDIR)/linklib
+
+ifneq ($(kernel-scsi_OBJS) $(kernel-scsi_DEPS) $(kernel-scsi_MODULE) $(kernel-scsi_KOBJ),)
+$(kernel-scsi_OBJS) $(kernel-scsi_DEPS) $(kernel-scsi_MODULE) $(kernel-scsi_KOBJ) : | $(kernel-scsi_OBJDIR) $(AROSDIR)/$(kernel-scsi_MODDIR) $(KOBJSDIR)
+else
+$(kernel-scsi_OBJS) $(kernel-scsi_DEPS) $(kernel-scsi_MODULE) $(kernel-scsi_KOBJ) :: $(kernel-scsi_OBJDIR) $(AROSDIR)/$(kernel-scsi_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-scsi_OBJDIR) $(AROSDIR)/$(kernel-scsi_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-scsi kernel-scsi-includes kernel-scsi-quick kernel-scsi-kobj kernel-scsi-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-scsi_DFILE_DEPS := $(kernel-scsi_LIBDEFSINC) $(kernel-scsi_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-scsi_INCDIR)/,$($(kernel-scsi_DEFNAME)_INCLUDES))
+$(kernel-scsi_DEPS) : $(kernel-scsi_DFILE_DEPS)
+endif
+
+kernel-scsi_TOCLEAN := $(kernel-scsi_OBJS) $(kernel-scsi_DEPS) \
+    $(kernel-scsi_MODULE) $(kernel-scsi_LINKLIB) $(kernel-scsi_KOBJ) \
+    $(kernel-scsi_OBJDIR)/Makefile.scsidevice \
+    $(addprefix $(kernel-scsi_OBJDIR)/include/,$($(kernel-scsi_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-scsi_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-scsi_INCDIR)/,$($(kernel-scsi_DEFNAME)_INCLUDES)) \
+    $(kernel-scsi_OBJDIR)/scsi_geninc $(kernel-scsi_OBJDIR)/scsi_incs \
+    $(addsuffix .c,$(kernel-scsi_LINKLIBFILES)) $(kernel-scsi_LINKLIBOBJS) $(kernel-scsi_LIBDEFSINC) \
+    $(kernel-scsi_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-scsi_STARTFILES) $(kernel-scsi_ENDFILES)) \
+    $(kernel-scsi_ENDOBJS)
+kernel-scsi-clean : FILES              := $(kernel-scsi_TOCLEAN)
+kernel-scsi-clean ::
+	$(Q)$(ECHO) "Cleaning up for module scsi"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-scsi_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

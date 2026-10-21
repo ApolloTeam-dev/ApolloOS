@@ -1,0 +1,611 @@
+#   $Id$
+#
+#   Makefile for AROS C Standard Library Tests
+
+include $(SRCDIR)/config/aros.cfg
+
+STDCTESTFILES := \
+        arguments \
+        ctype \
+        environ \
+        exit \
+        jmpbuf \
+        mktime \
+        raise \
+        setjmp \
+        sscanf \
+        stpblk \
+        strchr \
+        strtok \
+        strtod \
+        strtol \
+        strtoul \
+        strtoull \
+        system \
+        time \
+        tmpfile \
+        stdin1 stdin2 stdin3 stdin4 \
+        argv0_slave \
+        abort \
+        assert
+
+STDCPRINTTESTFILES := \
+        snprintf \
+        sprintf \
+        sprintf_f
+
+EXEDIR := $(AROS_TESTS)/crt/stdc
+
+#MM- test-crt : test-crt-stdc test-crt-stdc-$(AROS_TARGET_CPU)
+#MM- test-crt-quick : test-crt-stdc-quick test-crt-stdc-$(AROS_TARGET_CPU)-quick
+
+#MM- test-crt-stdc : test-crt-stdc-general test-crt-stdc-print
+#MM- test-crt-stdc-quick : test-crt-stdc-general-quick test-crt-stdc-print-quick
+
+#MM test-crt-stdc-general : includes includes-copy linklibs kernel
+#MM test-crt-stdc-print : includes includes-copy linklibs kernel
+
+USER_INCLUDES := -I$(SRCDIR)/$(CURDIR)/..
+
+USER_CFLAGS = -noposixc -ffloat-store
+
+.PHONY : test-crt-stdc-general
+
+test-crt-stdc-general_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-crt-stdc-general_TARGETDIR := $(EXEDIR)
+test-crt-stdc-general_LIBS := 
+
+test-crt-stdc-general_FILES     := $(STDCTESTFILES)
+test-crt-stdc-general_OBJS      := $(addsuffix .o,$(addprefix $(test-crt-stdc-general_OBJDIR)/,$(test-crt-stdc-general_FILES)))
+test-crt-stdc-general_DEPS      := $(addsuffix .d,$(addprefix $(test-crt-stdc-general_OBJDIR)/,$(test-crt-stdc-general_FILES)))
+test-crt-stdc-general_EXES      := $(addprefix $(test-crt-stdc-general_TARGETDIR)/,$(test-crt-stdc-general_FILES))
+
+test-crt-stdc-general_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-crt-stdc-general_CPPFLAGS += -I
+endif
+test-crt-stdc-general_CFLAGS    := $(CFLAGS)
+test-crt-stdc-general_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-crt-stdc-general_COVERAGE := yes
+test-crt-stdc-general_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-crt-stdc-general_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-crt-stdc-general_CFLAGS    := $(strip $(test-crt-stdc-general_COVERAGEFLAGS) $(test-crt-stdc-general_CFLAGS))
+test-crt-stdc-general_LIBS += $(test-crt-stdc-general_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-crt-stdc-general_FUNCINSTR := yes
+test-crt-stdc-general_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-crt-stdc-general_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-crt-stdc-general_CFLAGS    := $(strip $(test-crt-stdc-general_INSTRFUNCFLAGS) $(test-crt-stdc-general_CFLAGS))
+test-crt-stdc-general_LIBS += $(test-crt-stdc-general_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-crt-stdc-general_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-crt-stdc-general_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-crt-stdc-general_DFLAGS := 
+else
+    test-crt-stdc-general_DFLAGS := $(test-crt-stdc-general_CFLAGS)
+endif
+ifeq (target,target)
+test-crt-stdc-general_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-crt-stdc-general_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-crt-stdc-general_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-crt-stdc-general_LDFLAGS += -L
+endif
+
+#MM
+test-crt-stdc-general-quick : test-crt-stdc-general
+
+#MM test-crt-stdc-general : includes-generate-deps core-linklibs
+test-crt-stdc-general : $(test-crt-stdc-general_EXES)
+
+ifneq ($(filter $(TARGET),test-crt-stdc-general test-crt-stdc-general-quick),)
+
+ifeq (,)
+test-crt-stdc-general_MC_SRCWILDCARD := %
+else
+test-crt-stdc-general_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-crt-stdc-general_OBJDIR),)
+test-crt-stdc-general_MC_TARGETS := $(addsuffix .o,$(test-crt-stdc-general_FILES))
+test-crt-stdc-general_MC_DTARGETS := $(addsuffix .d,$(test-crt-stdc-general_FILES))
+test-crt-stdc-general_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-crt-stdc-general_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-crt-stdc-general_OBJDIR)/,$(notdir $(test-crt-stdc-general_FILES))))
+    test-crt-stdc-general_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-crt-stdc-general_OBJDIR)/,$(notdir $(test-crt-stdc-general_FILES))))
+else
+ifeq (,)
+    test-crt-stdc-general_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-crt-stdc-general_OBJDIR)/,$(test-crt-stdc-general_FILES)))
+    test-crt-stdc-general_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-crt-stdc-general_OBJDIR)/,$(test-crt-stdc-general_FILES)))
+else
+    test-crt-stdc-general_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-crt-stdc-general_OBJDIR)/,$(patsubst /%,%,$(test-crt-stdc-general_FILES))))
+    test-crt-stdc-general_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-crt-stdc-general_OBJDIR)/,$(patsubst /%,%,$(test-crt-stdc-general_FILES))))
+endif
+endif
+test-crt-stdc-general_MC_TGTWILDCARD := $(test-crt-stdc-general_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : | $(addsuffix .c,$(test-crt-stdc-general_FILES))
+
+# Be sure that all .c files are found
+test-crt-stdc-general_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-crt-stdc-general_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-crt-stdc-general_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-crt-stdc-general_MC_DIRS := $(foreach dir, $(test-crt-stdc-general_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-crt-stdc-general_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-crt-stdc-general_MC_DIRS),)
+    test-crt-stdc-general_MC_DIRS := $(shell echo $(test-crt-stdc-general_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-crt-stdc-general_MC_DIRS)
+endif
+
+endif
+
+test-crt-stdc-general_MC_CPPFLAGS := $(test-crt-stdc-general_CPPFLAGS)
+test-crt-stdc-general_CFLAGS := $(test-crt-stdc-general_CFLAGS)
+ifeq ($(test-crt-stdc-general_DFLAGS),)
+  test-crt-stdc-general_DFLAGS := $(test-crt-stdc-general_CFLAGS)
+else
+  test-crt-stdc-general_DFLAGS := $(test-crt-stdc-general_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-crt-stdc-general_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-crt-stdc-general_STRIP ?= $(TARGET_STRIP)
+test-crt-stdc-general_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : test-crt-stdc-general_MC_CPPFLAGS:=$(strip $(test-crt-stdc-general_MC_CPPFLAGS) $(test-crt-stdc-general_MC_EXTRA_CPPFLAGS))
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : test-crt-stdc-general_CFLAGS:=$(strip $(test-crt-stdc-general_CFLAGS) $(SAFETY_CFLAGS))
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : test-crt-stdc-general_DFLAGS:=$(test-crt-stdc-general_DFLAGS)
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : test-crt-stdc-general_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : test-crt-stdc-general_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-crt-stdc-general_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-crt-stdc-general_STRIP ?= $(HOST_STRIP)
+test-crt-stdc-general_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : test-crt-stdc-general_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-crt-stdc-general_MC_CPPFLAGS) $(test-crt-stdc-general_MC_EXTRA_CPPFLAGS))
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : test-crt-stdc-general_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-crt-stdc-general_CFLAGS))
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : test-crt-stdc-general_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-crt-stdc-general_DFLAGS))
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : test-crt-stdc-general_IQUOTE:=$(HOST_IQUOTE)
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : test-crt-stdc-general_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-crt-stdc-general_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-crt-stdc-general_STRIP ?= $(ECHO) >/dev/null
+test-crt-stdc-general_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : test-crt-stdc-general_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-crt-stdc-general_MC_CPPFLAGS) $(test-crt-stdc-general_MC_EXTRA_CPPFLAGS))
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : test-crt-stdc-general_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-crt-stdc-general_CFLAGS))
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : test-crt-stdc-general_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-crt-stdc-general_DFLAGS))
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : test-crt-stdc-general_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-crt-stdc-general_MC_TARGETS) $(test-crt-stdc-general_MC_DTARGETS) : test-crt-stdc-general_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-crt-stdc-general_MC_TARGETS) : CPPFLAGS := $(test-crt-stdc-general_MC_CPPFLAGS)
+$(test-crt-stdc-general_MC_TARGETS) : CFLAGS := $(test-crt-stdc-general_CFLAGS)
+$(test-crt-stdc-general_MC_TARGETS) : $(test-crt-stdc-general_MC_TGTWILDCARD).o : $(test-crt-stdc-general_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-crt-stdc-general_IQUOTE) $(dir $<) $(test-crt-stdc-general_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-crt-stdc-general_IQUOTE) . $(test-crt-stdc-general_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-crt-stdc-general_IQUOTE) $(dir $<) $(test-crt-stdc-general_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-crt-stdc-general_IQUOTE) . $(test-crt-stdc-general_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-crt-stdc-general_IQUOTE) $(dir $<) $(test-crt-stdc-general_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-crt-stdc-general_IQUOTE) . $(test-crt-stdc-general_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-crt-stdc-general_MC_DTARGETS) : $(test-crt-stdc-general_MC_TGTWILDCARD).d : $(test-crt-stdc-general_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-crt-stdc-general_DFLAGS) $(test-crt-stdc-general_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-crt-stdc-general-link_EXTRA_LDFLAGS := 
+test-crt-stdc-general-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-crt-stdc-general-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-crt-stdc-general-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-crt-stdc-general-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-crt-stdc-general-link_DIRS := $(subst -L ,-L,$(strip $(test-crt-stdc-general_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-crt-stdc-general-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-crt-stdc-general-link_DIRS)))
+# Add trailing /
+test-crt-stdc-general-link_DIRS := $(subst //,/,$(addsuffix /,$(test-crt-stdc-general-link_DIRS)))
+# Add normal linklib path
+test-crt-stdc-general-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-crt-stdc-general-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-crt-stdc-general_LIBS) $(test-crt-stdc-general-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-crt-stdc-general-link_DEPLIBS := $(foreach lib,$(test-crt-stdc-general-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-crt-stdc-general-link_DIRS)))) \
+)
+test-crt-stdc-general-link_PROGS := $(addprefix $(test-crt-stdc-general_TARGETDIR)/,$(test-crt-stdc-general_FILES))
+
+$(test-crt-stdc-general-link_PROGS) : OBJDIR := $(test-crt-stdc-general_OBJDIR)
+$(test-crt-stdc-general-link_PROGS) : LDFLAGS := $(strip $(test-crt-stdc-general_LDFLAGS) $(test-crt-stdc-general-link_EXTRA_LDFLAGS))
+$(test-crt-stdc-general-link_PROGS) : LIBS := $(addprefix -l,$(test-crt-stdc-general_LIBS) $(test-crt-stdc-general-link_EXTRA_LIBS) )
+$(test-crt-stdc-general-link_PROGS) : $(test-crt-stdc-general_TARGETDIR)/% : $(test-crt-stdc-general_OBJDIR)/%.o $(test-crt-stdc-general-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-crt-stdc-general_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-crt-stdc-general_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-crt-stdc-general_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-crt-stdc-general_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-crt-stdc-general_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-crt-stdc-general_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-crt-stdc-general_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-crt-stdc-general_DEPS),)
+  ifneq (test-crt-stdc-general test-crt-stdc-general-quick,)
+    ifneq ($(findstring $(TARGET),test-crt-stdc-general test-crt-stdc-general-quick),)
+      -include $(test-crt-stdc-general_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-crt-stdc-general_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-crt-stdc-general_DEPS) $(test-crt-stdc-general_OBJS) $(addprefix $(test-crt-stdc-general_TARGETDIR)/,$(test-crt-stdc-general_FILES)),)
+$(test-crt-stdc-general_DEPS) $(test-crt-stdc-general_OBJS) $(addprefix $(test-crt-stdc-general_TARGETDIR)/,$(test-crt-stdc-general_FILES)) : | $(test-crt-stdc-general_TARGETDIR) $(test-crt-stdc-general_OBJDIR)
+else
+$(test-crt-stdc-general_DEPS) $(test-crt-stdc-general_OBJS) $(addprefix $(test-crt-stdc-general_TARGETDIR)/,$(test-crt-stdc-general_FILES)) :: $(test-crt-stdc-general_TARGETDIR) $(test-crt-stdc-general_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-crt-stdc-general_TARGETDIR) $(test-crt-stdc-general_OBJDIR)
+
+
+test-crt-stdc-general-clean : FILES := $(test-crt-stdc-general_OBJS) $(test-crt-stdc-general_EXES) $(test-crt-stdc-general_DEPS)
+#MM
+test-crt-stdc-general-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-crt-stdc-general"
+	$(Q)$(RM) $(FILES)
+
+
+NOWARN_CFLAGS := $(NOWARN_FORMAT_TRUNCATION)
+USER_CFLAGS = -noposixc -ffloat-store $(NOWARN_CFLAGS)
+
+
+.PHONY : test-crt-stdc-print
+
+test-crt-stdc-print_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-crt-stdc-print_TARGETDIR := $(EXEDIR)
+test-crt-stdc-print_LIBS := 
+
+test-crt-stdc-print_FILES     := $(STDCPRINTTESTFILES)
+test-crt-stdc-print_OBJS      := $(addsuffix .o,$(addprefix $(test-crt-stdc-print_OBJDIR)/,$(test-crt-stdc-print_FILES)))
+test-crt-stdc-print_DEPS      := $(addsuffix .d,$(addprefix $(test-crt-stdc-print_OBJDIR)/,$(test-crt-stdc-print_FILES)))
+test-crt-stdc-print_EXES      := $(addprefix $(test-crt-stdc-print_TARGETDIR)/,$(test-crt-stdc-print_FILES))
+
+test-crt-stdc-print_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-crt-stdc-print_CPPFLAGS += -I
+endif
+test-crt-stdc-print_CFLAGS    := $(CFLAGS)
+test-crt-stdc-print_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-crt-stdc-print_COVERAGE := yes
+test-crt-stdc-print_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-crt-stdc-print_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-crt-stdc-print_CFLAGS    := $(strip $(test-crt-stdc-print_COVERAGEFLAGS) $(test-crt-stdc-print_CFLAGS))
+test-crt-stdc-print_LIBS += $(test-crt-stdc-print_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-crt-stdc-print_FUNCINSTR := yes
+test-crt-stdc-print_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-crt-stdc-print_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-crt-stdc-print_CFLAGS    := $(strip $(test-crt-stdc-print_INSTRFUNCFLAGS) $(test-crt-stdc-print_CFLAGS))
+test-crt-stdc-print_LIBS += $(test-crt-stdc-print_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-crt-stdc-print_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-crt-stdc-print_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-crt-stdc-print_DFLAGS := 
+else
+    test-crt-stdc-print_DFLAGS := $(test-crt-stdc-print_CFLAGS)
+endif
+ifeq (target,target)
+test-crt-stdc-print_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-crt-stdc-print_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-crt-stdc-print_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-crt-stdc-print_LDFLAGS += -L
+endif
+
+#MM
+test-crt-stdc-print-quick : test-crt-stdc-print
+
+#MM test-crt-stdc-print : includes-generate-deps core-linklibs
+test-crt-stdc-print : $(test-crt-stdc-print_EXES)
+
+ifneq ($(filter $(TARGET),test-crt-stdc-print test-crt-stdc-print-quick),)
+
+ifeq (,)
+test-crt-stdc-print_MC_SRCWILDCARD := %
+else
+test-crt-stdc-print_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-crt-stdc-print_OBJDIR),)
+test-crt-stdc-print_MC_TARGETS := $(addsuffix .o,$(test-crt-stdc-print_FILES))
+test-crt-stdc-print_MC_DTARGETS := $(addsuffix .d,$(test-crt-stdc-print_FILES))
+test-crt-stdc-print_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-crt-stdc-print_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-crt-stdc-print_OBJDIR)/,$(notdir $(test-crt-stdc-print_FILES))))
+    test-crt-stdc-print_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-crt-stdc-print_OBJDIR)/,$(notdir $(test-crt-stdc-print_FILES))))
+else
+ifeq (,)
+    test-crt-stdc-print_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-crt-stdc-print_OBJDIR)/,$(test-crt-stdc-print_FILES)))
+    test-crt-stdc-print_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-crt-stdc-print_OBJDIR)/,$(test-crt-stdc-print_FILES)))
+else
+    test-crt-stdc-print_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-crt-stdc-print_OBJDIR)/,$(patsubst /%,%,$(test-crt-stdc-print_FILES))))
+    test-crt-stdc-print_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-crt-stdc-print_OBJDIR)/,$(patsubst /%,%,$(test-crt-stdc-print_FILES))))
+endif
+endif
+test-crt-stdc-print_MC_TGTWILDCARD := $(test-crt-stdc-print_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : | $(addsuffix .c,$(test-crt-stdc-print_FILES))
+
+# Be sure that all .c files are found
+test-crt-stdc-print_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-crt-stdc-print_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-crt-stdc-print_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-crt-stdc-print_MC_DIRS := $(foreach dir, $(test-crt-stdc-print_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-crt-stdc-print_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-crt-stdc-print_MC_DIRS),)
+    test-crt-stdc-print_MC_DIRS := $(shell echo $(test-crt-stdc-print_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-crt-stdc-print_MC_DIRS)
+endif
+
+endif
+
+test-crt-stdc-print_MC_CPPFLAGS := $(test-crt-stdc-print_CPPFLAGS)
+test-crt-stdc-print_CFLAGS := $(test-crt-stdc-print_CFLAGS)
+ifeq ($(test-crt-stdc-print_DFLAGS),)
+  test-crt-stdc-print_DFLAGS := $(test-crt-stdc-print_CFLAGS)
+else
+  test-crt-stdc-print_DFLAGS := $(test-crt-stdc-print_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-crt-stdc-print_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-crt-stdc-print_STRIP ?= $(TARGET_STRIP)
+test-crt-stdc-print_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : test-crt-stdc-print_MC_CPPFLAGS:=$(strip $(test-crt-stdc-print_MC_CPPFLAGS) $(test-crt-stdc-print_MC_EXTRA_CPPFLAGS))
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : test-crt-stdc-print_CFLAGS:=$(strip $(test-crt-stdc-print_CFLAGS) $(SAFETY_CFLAGS))
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : test-crt-stdc-print_DFLAGS:=$(test-crt-stdc-print_DFLAGS)
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : test-crt-stdc-print_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : test-crt-stdc-print_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-crt-stdc-print_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-crt-stdc-print_STRIP ?= $(HOST_STRIP)
+test-crt-stdc-print_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : test-crt-stdc-print_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-crt-stdc-print_MC_CPPFLAGS) $(test-crt-stdc-print_MC_EXTRA_CPPFLAGS))
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : test-crt-stdc-print_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-crt-stdc-print_CFLAGS))
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : test-crt-stdc-print_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-crt-stdc-print_DFLAGS))
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : test-crt-stdc-print_IQUOTE:=$(HOST_IQUOTE)
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : test-crt-stdc-print_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-crt-stdc-print_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-crt-stdc-print_STRIP ?= $(ECHO) >/dev/null
+test-crt-stdc-print_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : test-crt-stdc-print_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-crt-stdc-print_MC_CPPFLAGS) $(test-crt-stdc-print_MC_EXTRA_CPPFLAGS))
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : test-crt-stdc-print_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-crt-stdc-print_CFLAGS))
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : test-crt-stdc-print_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-crt-stdc-print_DFLAGS))
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : test-crt-stdc-print_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-crt-stdc-print_MC_TARGETS) $(test-crt-stdc-print_MC_DTARGETS) : test-crt-stdc-print_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-crt-stdc-print_MC_TARGETS) : CPPFLAGS := $(test-crt-stdc-print_MC_CPPFLAGS)
+$(test-crt-stdc-print_MC_TARGETS) : CFLAGS := $(test-crt-stdc-print_CFLAGS)
+$(test-crt-stdc-print_MC_TARGETS) : $(test-crt-stdc-print_MC_TGTWILDCARD).o : $(test-crt-stdc-print_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-crt-stdc-print_IQUOTE) $(dir $<) $(test-crt-stdc-print_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-crt-stdc-print_IQUOTE) . $(test-crt-stdc-print_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-crt-stdc-print_IQUOTE) $(dir $<) $(test-crt-stdc-print_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-crt-stdc-print_IQUOTE) . $(test-crt-stdc-print_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-crt-stdc-print_IQUOTE) $(dir $<) $(test-crt-stdc-print_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-crt-stdc-print_IQUOTE) . $(test-crt-stdc-print_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-crt-stdc-print_MC_DTARGETS) : $(test-crt-stdc-print_MC_TGTWILDCARD).d : $(test-crt-stdc-print_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-crt-stdc-print_DFLAGS) $(test-crt-stdc-print_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-crt-stdc-print-link_EXTRA_LDFLAGS := 
+test-crt-stdc-print-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-crt-stdc-print-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-crt-stdc-print-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-crt-stdc-print-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-crt-stdc-print-link_DIRS := $(subst -L ,-L,$(strip $(test-crt-stdc-print_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-crt-stdc-print-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-crt-stdc-print-link_DIRS)))
+# Add trailing /
+test-crt-stdc-print-link_DIRS := $(subst //,/,$(addsuffix /,$(test-crt-stdc-print-link_DIRS)))
+# Add normal linklib path
+test-crt-stdc-print-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-crt-stdc-print-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-crt-stdc-print_LIBS) $(test-crt-stdc-print-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-crt-stdc-print-link_DEPLIBS := $(foreach lib,$(test-crt-stdc-print-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-crt-stdc-print-link_DIRS)))) \
+)
+test-crt-stdc-print-link_PROGS := $(addprefix $(test-crt-stdc-print_TARGETDIR)/,$(test-crt-stdc-print_FILES))
+
+$(test-crt-stdc-print-link_PROGS) : OBJDIR := $(test-crt-stdc-print_OBJDIR)
+$(test-crt-stdc-print-link_PROGS) : LDFLAGS := $(strip $(test-crt-stdc-print_LDFLAGS) $(test-crt-stdc-print-link_EXTRA_LDFLAGS))
+$(test-crt-stdc-print-link_PROGS) : LIBS := $(addprefix -l,$(test-crt-stdc-print_LIBS) $(test-crt-stdc-print-link_EXTRA_LIBS) )
+$(test-crt-stdc-print-link_PROGS) : $(test-crt-stdc-print_TARGETDIR)/% : $(test-crt-stdc-print_OBJDIR)/%.o $(test-crt-stdc-print-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-crt-stdc-print_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-crt-stdc-print_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-crt-stdc-print_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-crt-stdc-print_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-crt-stdc-print_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-crt-stdc-print_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-crt-stdc-print_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-crt-stdc-print_DEPS),)
+  ifneq (test-crt-stdc-print test-crt-stdc-print-quick,)
+    ifneq ($(findstring $(TARGET),test-crt-stdc-print test-crt-stdc-print-quick),)
+      -include $(test-crt-stdc-print_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-crt-stdc-print_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-crt-stdc-print_DEPS) $(test-crt-stdc-print_OBJS) $(addprefix $(test-crt-stdc-print_TARGETDIR)/,$(test-crt-stdc-print_FILES)),)
+$(test-crt-stdc-print_DEPS) $(test-crt-stdc-print_OBJS) $(addprefix $(test-crt-stdc-print_TARGETDIR)/,$(test-crt-stdc-print_FILES)) : | $(test-crt-stdc-print_TARGETDIR) $(test-crt-stdc-print_OBJDIR)
+else
+$(test-crt-stdc-print_DEPS) $(test-crt-stdc-print_OBJS) $(addprefix $(test-crt-stdc-print_TARGETDIR)/,$(test-crt-stdc-print_FILES)) :: $(test-crt-stdc-print_TARGETDIR) $(test-crt-stdc-print_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-crt-stdc-print_TARGETDIR) $(test-crt-stdc-print_OBJDIR)
+
+
+test-crt-stdc-print-clean : FILES := $(test-crt-stdc-print_OBJS) $(test-crt-stdc-print_EXES) $(test-crt-stdc-print_DEPS)
+#MM
+test-crt-stdc-print-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-crt-stdc-print"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

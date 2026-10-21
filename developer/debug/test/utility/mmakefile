@@ -1,0 +1,306 @@
+# Copyright © 2003-2020, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := \
+    amiga2date \
+    callhooktest \
+    date2amiga \
+    setmem \
+    smult \
+    utility50 \
+    vartags \
+
+EXEDIR := $(AROS_TESTS)/utility
+
+USER_CFLAGS += -DADATE="\"$(shell date '+%d.%m.%Y')\""
+
+#MM- test : test-utility
+#MM- test-quick : test-utility-quick
+
+#MM test-utility : includes linklibs
+
+
+.PHONY : test-utility
+
+test-utility_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-utility_TARGETDIR := $(EXEDIR)
+test-utility_LIBS := 
+
+test-utility_FILES     := $(FILES)
+test-utility_OBJS      := $(addsuffix .o,$(addprefix $(test-utility_OBJDIR)/,$(test-utility_FILES)))
+test-utility_DEPS      := $(addsuffix .d,$(addprefix $(test-utility_OBJDIR)/,$(test-utility_FILES)))
+test-utility_EXES      := $(addprefix $(test-utility_TARGETDIR)/,$(test-utility_FILES))
+
+test-utility_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-utility_CPPFLAGS += -I
+endif
+test-utility_CFLAGS    := $(CFLAGS)
+test-utility_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-utility_COVERAGE := yes
+test-utility_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-utility_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-utility_CFLAGS    := $(strip $(test-utility_COVERAGEFLAGS) $(test-utility_CFLAGS))
+test-utility_LIBS += $(test-utility_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-utility_FUNCINSTR := yes
+test-utility_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-utility_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-utility_CFLAGS    := $(strip $(test-utility_INSTRFUNCFLAGS) $(test-utility_CFLAGS))
+test-utility_LIBS += $(test-utility_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-utility_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-utility_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-utility_DFLAGS := 
+else
+    test-utility_DFLAGS := $(test-utility_CFLAGS)
+endif
+ifeq (target,target)
+test-utility_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-utility_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-utility_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-utility_LDFLAGS += -L
+endif
+
+#MM
+test-utility-quick : test-utility
+
+#MM test-utility : includes-generate-deps core-linklibs
+test-utility : $(test-utility_EXES)
+
+ifneq ($(filter $(TARGET),test-utility test-utility-quick),)
+
+ifeq (,)
+test-utility_MC_SRCWILDCARD := %
+else
+test-utility_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-utility_OBJDIR),)
+test-utility_MC_TARGETS := $(addsuffix .o,$(test-utility_FILES))
+test-utility_MC_DTARGETS := $(addsuffix .d,$(test-utility_FILES))
+test-utility_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-utility_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-utility_OBJDIR)/,$(notdir $(test-utility_FILES))))
+    test-utility_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-utility_OBJDIR)/,$(notdir $(test-utility_FILES))))
+else
+ifeq (,)
+    test-utility_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-utility_OBJDIR)/,$(test-utility_FILES)))
+    test-utility_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-utility_OBJDIR)/,$(test-utility_FILES)))
+else
+    test-utility_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-utility_OBJDIR)/,$(patsubst /%,%,$(test-utility_FILES))))
+    test-utility_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-utility_OBJDIR)/,$(patsubst /%,%,$(test-utility_FILES))))
+endif
+endif
+test-utility_MC_TGTWILDCARD := $(test-utility_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : | $(addsuffix .c,$(test-utility_FILES))
+
+# Be sure that all .c files are found
+test-utility_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-utility_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-utility_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-utility_MC_DIRS := $(foreach dir, $(test-utility_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-utility_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-utility_MC_DIRS),)
+    test-utility_MC_DIRS := $(shell echo $(test-utility_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-utility_MC_DIRS)
+endif
+
+endif
+
+test-utility_MC_CPPFLAGS := $(test-utility_CPPFLAGS)
+test-utility_CFLAGS := $(test-utility_CFLAGS)
+ifeq ($(test-utility_DFLAGS),)
+  test-utility_DFLAGS := $(test-utility_CFLAGS)
+else
+  test-utility_DFLAGS := $(test-utility_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-utility_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-utility_STRIP ?= $(TARGET_STRIP)
+test-utility_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : test-utility_MC_CPPFLAGS:=$(strip $(test-utility_MC_CPPFLAGS) $(test-utility_MC_EXTRA_CPPFLAGS))
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : test-utility_CFLAGS:=$(strip $(test-utility_CFLAGS) $(SAFETY_CFLAGS))
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : test-utility_DFLAGS:=$(test-utility_DFLAGS)
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : test-utility_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : test-utility_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-utility_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-utility_STRIP ?= $(HOST_STRIP)
+test-utility_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : test-utility_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-utility_MC_CPPFLAGS) $(test-utility_MC_EXTRA_CPPFLAGS))
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : test-utility_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-utility_CFLAGS))
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : test-utility_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-utility_DFLAGS))
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : test-utility_IQUOTE:=$(HOST_IQUOTE)
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : test-utility_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-utility_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-utility_STRIP ?= $(ECHO) >/dev/null
+test-utility_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : test-utility_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-utility_MC_CPPFLAGS) $(test-utility_MC_EXTRA_CPPFLAGS))
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : test-utility_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-utility_CFLAGS))
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : test-utility_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-utility_DFLAGS))
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : test-utility_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-utility_MC_TARGETS) $(test-utility_MC_DTARGETS) : test-utility_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-utility_MC_TARGETS) : CPPFLAGS := $(test-utility_MC_CPPFLAGS)
+$(test-utility_MC_TARGETS) : CFLAGS := $(test-utility_CFLAGS)
+$(test-utility_MC_TARGETS) : $(test-utility_MC_TGTWILDCARD).o : $(test-utility_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-utility_IQUOTE) $(dir $<) $(test-utility_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-utility_IQUOTE) . $(test-utility_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-utility_IQUOTE) $(dir $<) $(test-utility_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-utility_IQUOTE) . $(test-utility_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-utility_IQUOTE) $(dir $<) $(test-utility_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-utility_IQUOTE) . $(test-utility_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-utility_MC_DTARGETS) : $(test-utility_MC_TGTWILDCARD).d : $(test-utility_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-utility_DFLAGS) $(test-utility_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-utility-link_EXTRA_LDFLAGS := 
+test-utility-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-utility-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-utility-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-utility-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-utility-link_DIRS := $(subst -L ,-L,$(strip $(test-utility_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-utility-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-utility-link_DIRS)))
+# Add trailing /
+test-utility-link_DIRS := $(subst //,/,$(addsuffix /,$(test-utility-link_DIRS)))
+# Add normal linklib path
+test-utility-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-utility-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-utility_LIBS) $(test-utility-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-utility-link_DEPLIBS := $(foreach lib,$(test-utility-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-utility-link_DIRS)))) \
+)
+test-utility-link_PROGS := $(addprefix $(test-utility_TARGETDIR)/,$(test-utility_FILES))
+
+$(test-utility-link_PROGS) : OBJDIR := $(test-utility_OBJDIR)
+$(test-utility-link_PROGS) : LDFLAGS := $(strip $(test-utility_LDFLAGS) $(test-utility-link_EXTRA_LDFLAGS))
+$(test-utility-link_PROGS) : LIBS := $(addprefix -l,$(test-utility_LIBS) $(test-utility-link_EXTRA_LIBS) )
+$(test-utility-link_PROGS) : $(test-utility_TARGETDIR)/% : $(test-utility_OBJDIR)/%.o $(test-utility-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-utility_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-utility_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-utility_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-utility_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-utility_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-utility_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-utility_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-utility_DEPS),)
+  ifneq (test-utility test-utility-quick,)
+    ifneq ($(findstring $(TARGET),test-utility test-utility-quick),)
+      -include $(test-utility_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-utility_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-utility_DEPS) $(test-utility_OBJS) $(addprefix $(test-utility_TARGETDIR)/,$(test-utility_FILES)),)
+$(test-utility_DEPS) $(test-utility_OBJS) $(addprefix $(test-utility_TARGETDIR)/,$(test-utility_FILES)) : | $(test-utility_TARGETDIR) $(test-utility_OBJDIR)
+else
+$(test-utility_DEPS) $(test-utility_OBJS) $(addprefix $(test-utility_TARGETDIR)/,$(test-utility_FILES)) :: $(test-utility_TARGETDIR) $(test-utility_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-utility_TARGETDIR) $(test-utility_OBJDIR)
+
+
+test-utility-clean : FILES := $(test-utility_OBJS) $(test-utility_EXES) $(test-utility_DEPS)
+#MM
+test-utility-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-utility"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

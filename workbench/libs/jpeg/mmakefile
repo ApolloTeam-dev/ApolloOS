@@ -1,0 +1,1734 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM workbench-libs-jpeg-includes : \
+#MM     kernel-exec-includes \
+#MM     kernel-dos-includes \
+#MM     includes-copy
+
+FILES := jaricom jcapimin jcapistd jcarith jccoefct jccolor \
+        jcdctmgr jchuff jcinit jcmainct jcmarker jcmaster \
+        jcomapi jcparam jcprepct jcsample jctrans jdapimin \
+        jdapistd jdarith jdatadst jdatasrc jdcoefct jdcolor \
+        jddctmgr jdhuff jdinput jdmainct jdmarker jdmaster \
+        jdmerge jdpostct jdsample jdtrans jerror jfdctflt \
+        jfdctfst jfdctint jidctflt jidctfst jidctint jquant1 \
+        jquant2 jutils jmemmgr jmemamiga
+
+# We trust upstream
+NOWARN_FLAGS := -Wno-main
+USER_CFLAGS := $(NOWARN_FLAGS)
+USER_CPPFLAGS := -DNO_GETENV
+
+#MM- core-linklibs : linklibs-jpeg
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM workbench-libs-jpeg
+#MM workbench-libs-jpeg-quick
+#MM workbench-libs-jpeg-makefile
+#MM workbench-libs-jpeg-clean
+
+# ABI targets:
+#MM- includes-all : workbench-libs-jpeg-includes
+#MM- linklibs-jfif: workbench-libs-jpeg-linklib
+#MM- linklibs-jfif_rel : workbench-libs-jpeg-linklib
+#MM- includes-jfif: workbench-libs-jpeg-includes
+#MM- includes-jfif_rel : workbench-libs-jpeg-includes
+#MM- workbench-libs-jpeg : workbench-libs-jpeg-includes core-linklibs linklibs-
+#MM workbench-libs-jpeg-linklib : workbench-libs-jpeg-includes includes-
+#MM- workbench-libs-jpeg-quick : workbench-libs-jpeg-includes-quick
+#MM workbench-libs-jpeg-includes : workbench-libs-jpeg-makefile workbench-libs-jpeg-includes-dirs \
+#MM     includes-generate-deps workbench-libs-jpeg-fd
+#MM workbench-libs-jpeg-includes-quick
+#MM workbench-libs-jpeg-includes-dirs
+#MM workbench-libs-jpeg-fd
+
+# Library targets
+#MM workbench-libs-jpeg-kobj : core-linklibs linklibs-
+#MM workbench-libs-jpeg-kobj-quick : 
+
+# Library with ABI targets:
+#MM workbench-libs-jpeg-kobj : workbench-libs-jpeg-includes core-linklibs linklibs-
+#MM workbench-libs-jpeg-kobj-quick : workbench-libs-jpeg-includes-quick
+
+# All MetaMake targets defined by this macro
+workbench-libs-jpeg_ALLTARGETS       := workbench-libs-jpeg workbench-libs-jpeg-quick workbench-libs-jpeg-clean
+
+ifeq (M,M)
+workbench-libs-jpeg_ALLTARGETS       += workbench-libs-jpeg-kobj workbench-libs-jpeg-kobj-quick
+endif
+
+ifeq (M,M)
+workbench-libs-jpeg_ALLTARGETS += workbench-libs-jpeg-includes \
+                 workbench-libs-jpeg-includes-quick workbench-libs-jpeg-includes-dirs  \
+                 workbench-libs-jpeg-linklib workbench-libs-jpeg-fd
+endif
+
+.PHONY : $(workbench-libs-jpeg_ALLTARGETS) workbench-libs-jpeg-makefile
+
+ifeq (jfif,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (library,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    workbench-libs-jpeg_DEFNAME      := jfif_
+else
+    workbench-libs-jpeg_DEFNAME      := jfif
+endif
+workbench-libs-jpeg_DEFLINKLIBNAME   := $(workbench-libs-jpeg_DEFNAME)
+ifneq (jpeg,)
+    workbench-libs-jpeg_LINKLIBNAME  := jpeg
+else
+    workbench-libs-jpeg_LINKLIBNAME  = $(workbench-libs-jpeg_DEFLINKLIBNAME)
+endif
+workbench-libs-jpeg_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    workbench-libs-jpeg_DEFCPPFLAGS  += -I
+endif
+workbench-libs-jpeg_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    workbench-libs-jpeg_DFLAGS       := 
+else
+    workbench-libs-jpeg_DFLAGS       = $(workbench-libs-jpeg_DEFDFLAGS)
+endif
+workbench-libs-jpeg_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    workbench-libs-jpeg_DXXFLAGS     := 
+else
+    workbench-libs-jpeg_DXXFLAGS     = $(workbench-libs-jpeg_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+workbench-libs-jpeg_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(workbench-libs-jpeg_DEFDFLAGS))
+workbench-libs-jpeg_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(workbench-libs-jpeg_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-libs-jpeg_FUNCINSTR := yes
+workbench-libs-jpeg_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(workbench-libs-jpeg_DEFDFLAGS))
+workbench-libs-jpeg_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(workbench-libs-jpeg_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+workbench-libs-jpeg_OBJDIR                     := 
+else
+workbench-libs-jpeg_OBJDIR                     := $(OBJDIR)/$(workbench-libs-jpeg_DEFNAME)
+endif
+ifneq (,)
+workbench-libs-jpeg_OBJDIR           := $(workbench-libs-jpeg_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+workbench-libs-jpeg-makefile         := $(workbench-libs-jpeg_OBJDIR)/Makefile.$(workbench-libs-jpeg_DEFNAME)library
+workbench-libs-jpeg-genmakefile : $(workbench-libs-jpeg-makefile)
+
+
+workbench-libs-jpeg-genmakefile_OPTS := 
+ifneq (,)
+    workbench-libs-jpeg-genmakefile_OPTS += -f 
+    workbench-libs-jpeg-genmakefile_MODNAME := jfif_
+else
+    workbench-libs-jpeg-genmakefile_MODNAME := jfif
+endif
+workbench-libs-jpeg-genmakefile_TARGET := Makefile.$(workbench-libs-jpeg-genmakefile_MODNAME)library
+workbench-libs-jpeg-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-jpeg-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-libs-jpeg-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-jpeg-genmakefile_OPTS += -c 
+        workbench-libs-jpeg-genmakefile_DEPS += 
+    endif 
+else
+    workbench-libs-jpeg-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/jfif.conf
+    workbench-libs-jpeg-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/jfif.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-jpeg-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-libs-jpeg-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-jpeg-genmakefile_OPTS += -o 
+        workbench-libs-jpeg-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-libs-jpeg-genmakefile_OPTS += -s 
+endif
+ifneq ($(workbench-libs-jpeg_OBJDIR),)
+    workbench-libs-jpeg-genmakefile_OPTS += -d $(workbench-libs-jpeg_OBJDIR)
+    workbench-libs-jpeg-genmakefile_TARGET := $(workbench-libs-jpeg_OBJDIR)/$(workbench-libs-jpeg-genmakefile_TARGET)
+endif
+
+$(workbench-libs-jpeg-genmakefile_TARGET) : OPTS := $(workbench-libs-jpeg-genmakefile_OPTS)
+$(workbench-libs-jpeg-genmakefile_TARGET) : MODNAME := jfif
+$(workbench-libs-jpeg-genmakefile_TARGET) : MODTYPE := library
+$(workbench-libs-jpeg-genmakefile_TARGET) : $(workbench-libs-jpeg-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(workbench-libs-jpeg-makefile),)
+$(workbench-libs-jpeg-makefile) : | $(workbench-libs-jpeg_OBJDIR)
+else
+$(workbench-libs-jpeg-makefile) :: $(workbench-libs-jpeg_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-jpeg_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(workbench-libs-jpeg_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(workbench-libs-jpeg-makefile)
+
+workbench-libs-jpeg_DEFMODDIR        := $($(workbench-libs-jpeg_DEFNAME)_MODDIR)
+ifeq (no,yes)
+workbench-libs-jpeg_DEFMODDIR        := $(AROS_DIR_ARCH)/$(workbench-libs-jpeg_DEFMODDIR)
+endif
+ifneq (,)
+    workbench-libs-jpeg_MODDIR       := 
+else
+    workbench-libs-jpeg_MODDIR       := $(workbench-libs-jpeg_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+workbench-libs-jpeg_INCDIR           := 
+else
+workbench-libs-jpeg_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+workbench-libs-jpeg_LIBDEFSINC       := $(workbench-libs-jpeg_OBJDIR)/include/$(workbench-libs-jpeg_DEFNAME)_libdefs.h
+workbench-libs-jpeg_DEFLIBDEFSINC    := $(workbench-libs-jpeg_OBJDIR)/include/$(workbench-libs-jpeg_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+workbench-libs-jpeg-includes-quick : workbench-libs-jpeg-includes
+workbench-libs-jpeg-includes : $(addprefix $(GENINCDIR)/,$($(workbench-libs-jpeg_DEFNAME)_INCLUDES)) \
+    $(addprefix $(workbench-libs-jpeg_INCDIR)/,$($(workbench-libs-jpeg_DEFNAME)_INCLUDES)) \
+    $(workbench-libs-jpeg_LIBDEFSINC) $(workbench-libs-jpeg_DEFLIBDEFSINC)
+
+ifneq ($($(workbench-libs-jpeg_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    workbench-libs-jpeg-includes_MODNAME := jfif_
+else
+    workbench-libs-jpeg-includes_MODNAME := jfif
+endif
+
+ifneq ($($(workbench-libs-jpeg-includes_MODNAME)_INCLUDES),)
+
+workbench-libs-jpeg-includes_TARGETS := $($(workbench-libs-jpeg-includes_MODNAME)_INCLUDES)
+
+workbench-libs-jpeg-includes_DEPS := $(GENMODULE)
+workbench-libs-jpeg-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-jpeg-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-libs-jpeg-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-jpeg-includes_OPTS += -c 
+        workbench-libs-jpeg-includes_DEPS += 
+    endif 
+else
+    workbench-libs-jpeg-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/jfif.conf
+    workbench-libs-jpeg-includes_DEPS += $(SRCDIR)/$(CURDIR)/jfif.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-jpeg-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-libs-jpeg-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-jpeg-includes_OPTS += -o 
+        workbench-libs-jpeg-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-libs-jpeg-includes_OPTS += -s 
+endif
+ifneq ($(workbench-libs-jpeg_OBJDIR)/include,)
+    workbench-libs-jpeg-includes_OPTS += -d $(workbench-libs-jpeg_OBJDIR)/include
+    workbench-libs-jpeg-includes_TARGETS := $(addprefix $(workbench-libs-jpeg_OBJDIR)/include/,$(workbench-libs-jpeg-includes_TARGETS))
+    workbench-libs-jpeg-includes_GENINCFLAG=$(workbench-libs-jpeg_OBJDIR)/include/.jfif.library-includes
+else
+    workbench-libs-jpeg-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.jfif.library-includes
+endif
+
+$(workbench-libs-jpeg-includes_TARGETS) : $(workbench-libs-jpeg-includes_DEPS) $(workbench-libs-jpeg-includes_GENINCFLAG)
+
+$(workbench-libs-jpeg-includes_GENINCFLAG) : OPTS := $(workbench-libs-jpeg-includes_OPTS)
+$(workbench-libs-jpeg-includes_GENINCFLAG) : MODNAME := jfif
+$(workbench-libs-jpeg-includes_GENINCFLAG) : MODTYPE := library
+$(workbench-libs-jpeg-includes_GENINCFLAG) : $(workbench-libs-jpeg-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(workbench-libs-jpeg_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(workbench-libs-jpeg_DEFNAME)_INCLUDES)) : | $(workbench-libs-jpeg_OBJDIR)/jfif_geninc
+
+$(workbench-libs-jpeg_OBJDIR)/jfif_geninc : COPYSRCDIR := $(workbench-libs-jpeg_OBJDIR)/include
+$(workbench-libs-jpeg_OBJDIR)/jfif_geninc : TGTDIR := $(GENINCDIR)
+$(workbench-libs-jpeg_OBJDIR)/jfif_geninc : FILES := $($(workbench-libs-jpeg_DEFNAME)_INCLUDES)
+$(workbench-libs-jpeg_OBJDIR)/jfif_geninc : $(addprefix $(workbench-libs-jpeg_OBJDIR)/include/,$($(workbench-libs-jpeg_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(workbench-libs-jpeg_OBJDIR)/include
+
+$(addprefix $(workbench-libs-jpeg_INCDIR)/,$($(workbench-libs-jpeg_DEFNAME)_INCLUDES)) : | $(workbench-libs-jpeg_OBJDIR)/jfif_incs
+
+$(workbench-libs-jpeg_OBJDIR)/jfif_incs : COPYSRCDIR := $(workbench-libs-jpeg_OBJDIR)/include
+$(workbench-libs-jpeg_OBJDIR)/jfif_incs : TGTDIR := $(workbench-libs-jpeg_INCDIR)
+$(workbench-libs-jpeg_OBJDIR)/jfif_incs : FILES := $($(workbench-libs-jpeg_DEFNAME)_INCLUDES)
+$(workbench-libs-jpeg_OBJDIR)/jfif_incs : $(addprefix $(workbench-libs-jpeg_OBJDIR)/include/,$($(workbench-libs-jpeg_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+workbench-libs-jpeg_INCDIRS := $(filter-out ./,$(sort $(dir $($(workbench-libs-jpeg_DEFNAME)_INCLUDES))))
+
+TMPjfif_INCDIRS := \
+    $(workbench-libs-jpeg_OBJDIR)/include $(addprefix $(workbench-libs-jpeg_OBJDIR)/include/,$(workbench-libs-jpeg_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(workbench-libs-jpeg_INCDIRS)) \
+    $(workbench-libs-jpeg_INCDIR) $(addprefix $(workbench-libs-jpeg_INCDIR)/,$(workbench-libs-jpeg_INCDIRS))
+
+ifneq (workbench-libs-jpeg-includes-dirs,)
+workbench-libs-jpeg-includes-dirs : | $(TMPjfif_INCDIRS)
+else
+workbench-libs-jpeg-includes-dirs :: $(TMPjfif_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPjfif_INCDIRS)
+
+
+endif
+
+endif
+
+
+workbench-libs-jpeg-genlibdefs_OPTS := 
+ifneq (,)
+    workbench-libs-jpeg-genlibdefs_OPTS += -f 
+    workbench-libs-jpeg-genlibdefs_MODNAME := jfif_
+else
+    workbench-libs-jpeg-genlibdefs_MODNAME := jfif
+endif
+workbench-libs-jpeg-genlibdefs_TARGET := $(workbench-libs-jpeg-genlibdefs_MODNAME)_libdefs.h
+workbench-libs-jpeg-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-jpeg-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-libs-jpeg-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-jpeg-genlibdefs_OPTS += -c 
+        workbench-libs-jpeg-genlibdefs_DEPS += 
+    endif 
+else
+    workbench-libs-jpeg-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/jfif.conf
+    workbench-libs-jpeg-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/jfif.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-jpeg-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-libs-jpeg-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-jpeg-genlibdefs_OPTS += -o 
+        workbench-libs-jpeg-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-libs-jpeg-genlibdefs_OPTS += -s 
+endif
+ifneq ($(workbench-libs-jpeg_OBJDIR)/include,)
+    workbench-libs-jpeg-genlibdefs_OPTS += -d $(workbench-libs-jpeg_OBJDIR)/include
+    workbench-libs-jpeg-genlibdefs_TARGET := $(workbench-libs-jpeg_OBJDIR)/include/$(workbench-libs-jpeg-genlibdefs_TARGET)
+endif
+ifneq (,)
+    workbench-libs-jpeg-genlibdefs_OPTS += -v 
+endif
+
+$(workbench-libs-jpeg-genlibdefs_TARGET) : OPTS := $(workbench-libs-jpeg-genlibdefs_OPTS)
+$(workbench-libs-jpeg-genlibdefs_TARGET) : MODNAME := jfif
+$(workbench-libs-jpeg-genlibdefs_TARGET) : MODTYPE := library
+$(workbench-libs-jpeg-genlibdefs_TARGET) : $(workbench-libs-jpeg-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(workbench-libs-jpeg_DEFLIBDEFSINC) : FILENAME := $(workbench-libs-jpeg_LIBDEFSINC)
+$(workbench-libs-jpeg_DEFLIBDEFSINC) : $(workbench-libs-jpeg_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(workbench-libs-jpeg_LIBDEFSINC) $(workbench-libs-jpeg_DEFLIBDEFSINC) : | $(workbench-libs-jpeg_OBJDIR)/include
+
+ifneq (workbench-libs-jpeg-includes-dirs,)
+workbench-libs-jpeg-includes-dirs : | $(workbench-libs-jpeg_OBJDIR)/include
+else
+workbench-libs-jpeg-includes-dirs :: $(workbench-libs-jpeg_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(workbench-libs-jpeg_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+workbench-libs-jpeg-genmodfiles_OPTS :=
+ifneq (,)
+    workbench-libs-jpeg-genmodfiles_OPTS += -f 
+    workbench-libs-jpeg-genmodfiles_MODNAME := jfif_
+else
+    workbench-libs-jpeg-genmodfiles_MODNAME := jfif
+endif
+workbench-libs-jpeg-genmodfiles_GENTARGETS := $($(workbench-libs-jpeg-genmodfiles_MODNAME)_STARTFILES) $($(workbench-libs-jpeg-genmodfiles_MODNAME)_ENDFILES)
+workbench-libs-jpeg-genmodfiles_STUBTARGETS := $($(workbench-libs-jpeg-genmodfiles_MODNAME)_LINKLIBFILES) $($(workbench-libs-jpeg-genmodfiles_MODNAME)_RELLINKLIBFILES)
+workbench-libs-jpeg-genmodfiles_GENTARGETS := $(addsuffix .c,$(workbench-libs-jpeg-genmodfiles_GENTARGETS))
+workbench-libs-jpeg-genmodfiles_STUBTARGETS := $(addsuffix .c,$(workbench-libs-jpeg-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(workbench-libs-jpeg-genmodfiles_MODNAME)_LINKLIBAFILES) $($(workbench-libs-jpeg-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+workbench-libs-jpeg-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-jpeg-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-libs-jpeg-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-jpeg-genmodfiles_OPTS += -c 
+        workbench-libs-jpeg-genmodfiles_DEPS += 
+    endif 
+else
+    workbench-libs-jpeg-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/jfif.conf
+    workbench-libs-jpeg-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/jfif.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-jpeg-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-libs-jpeg-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-jpeg-genmodfiles_OPTS += -o 
+        workbench-libs-jpeg-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-libs-jpeg-genmodfiles_OPTS += -s 
+endif
+ifneq ($(workbench-libs-jpeg_OBJDIR),)
+    workbench-libs-jpeg-genmodfiles_OPTS += -d $(workbench-libs-jpeg_OBJDIR)
+    workbench-libs-jpeg-genmodfiles_TARGETDIR := $(shell echo $(workbench-libs-jpeg_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    workbench-libs-jpeg-genmodfiles_GENTARGETS := $(addprefix $(workbench-libs-jpeg-genmodfiles_TARGETDIR)/,$(workbench-libs-jpeg-genmodfiles_GENTARGETS))
+    workbench-libs-jpeg-genmodfiles_GENFILEFLAG=$(workbench-libs-jpeg-genmodfiles_TARGETDIR)/.jfif.library-genfiles
+else
+    workbench-libs-jpeg-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.jfif.library-genfiles
+endif
+ifneq ($(workbench-libs-jpeg_OBJDIR)/linklib,)
+    workbench-libs-jpeg-genmodfiles_OPTS += -l $(workbench-libs-jpeg_OBJDIR)/linklib
+    workbench-libs-jpeg-genmodfiles_STUBTARGETDIR := $(shell echo $(workbench-libs-jpeg_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    workbench-libs-jpeg-genmodfiles_STUBTARGETS := $(addprefix $(workbench-libs-jpeg-genmodfiles_STUBTARGETDIR)/,$(workbench-libs-jpeg-genmodfiles_STUBTARGETS))
+    workbench-libs-jpeg-genmodfiles_TARGETDIRS += $(workbench-libs-jpeg_OBJDIR)/linklib
+else
+ifneq ($(workbench-libs-jpeg_OBJDIR),)
+    workbench-libs-jpeg-genmodfiles_STUBTARGETS := $(addprefix $(workbench-libs-jpeg-genmodfiles_TARGETDIR)/,$(workbench-libs-jpeg-genmodfiles_STUBTARGETS))
+endif
+endif
+
+workbench-libs-jpeg-genmodfiles_TARGETS := $(workbench-libs-jpeg-genmodfiles_GENTARGETS) $(workbench-libs-jpeg-genmodfiles_STUBTARGETS)
+ifneq ($(workbench-libs-jpeg-genmodfiles_TARGETDIRS),)
+$(workbench-libs-jpeg-genmodfiles_TARGETS) : | $(workbench-libs-jpeg-genmodfiles_TARGETDIRS)
+endif
+
+$(workbench-libs-jpeg-genmodfiles_TARGETS) : $(workbench-libs-jpeg-genmodfiles_DEPS) $(workbench-libs-jpeg-genmodfiles_GENFILEFLAG)
+
+$(workbench-libs-jpeg-genmodfiles_GENFILEFLAG) : OPTS := $(workbench-libs-jpeg-genmodfiles_OPTS)
+$(workbench-libs-jpeg-genmodfiles_GENFILEFLAG) : MODNAME := jfif
+$(workbench-libs-jpeg-genmodfiles_GENFILEFLAG) : MODTYPE := library
+$(workbench-libs-jpeg-genmodfiles_GENFILEFLAG) : $(workbench-libs-jpeg-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(workbench-libs-jpeg-genmodfiles_GENFILEFLAG) : $(workbench-libs-jpeg_DEFLIBDEFSINC) $(workbench-libs-jpeg-makefile)
+
+
+ifneq ($(workbench-libs-jpeg-genmodfiles_GENFILEFLAG),)
+$(workbench-libs-jpeg-genmodfiles_GENFILEFLAG) : | $(workbench-libs-jpeg_OBJDIR)/linklib
+else
+$(workbench-libs-jpeg-genmodfiles_GENFILEFLAG) :: $(workbench-libs-jpeg_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(workbench-libs-jpeg_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+workbench-libs-jpeg_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+workbench-libs-jpeg_FDDIR            := /../$(AROS_DIR_FD)
+endif
+workbench-libs-jpeg-fd : $(workbench-libs-jpeg_FDDIR)/jfif_lib.fd
+
+
+TMP_TARGET := jfif_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/jfif.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/jfif.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(workbench-libs-jpeg_FDDIR),)
+    TMP_OPTS += -d $(workbench-libs-jpeg_FDDIR)
+    TMP_TARGET := $(workbench-libs-jpeg_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := jfif
+$(TMP_TARGET) : MODTYPE := library
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(workbench-libs-jpeg_FDDIR)/jfif_lib.fd : | $(workbench-libs-jpeg_FDDIR)
+
+
+ifneq (workbench-libs-jpeg-fd-setup,)
+workbench-libs-jpeg-fd-setup : | $(workbench-libs-jpeg_FDDIR)
+else
+workbench-libs-jpeg-fd-setup :: $(workbench-libs-jpeg_FDDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-jpeg_FDDIR)
+
+endif
+
+## Compilation
+##
+workbench-libs-jpeg_FILES            := $(FILES)
+workbench-libs-jpeg_OBJCFILES        := 
+workbench-libs-jpeg_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+workbench-libs-jpeg_LIBFILES         := 
+workbench-libs-jpeg_LIBS             := 
+
+workbench-libs-jpeg_FDIRS            := $(sort $(dir $(workbench-libs-jpeg_FILES)))
+
+workbench-libs-jpeg_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+workbench-libs-jpeg_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call workbench-libs-jpeg_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+workbench-libs-jpeg_FILTERARCH       = $(filter-out $(call workbench-libs-jpeg_MATCHARCH,$(1),$(2)),$(2))
+workbench-libs-jpeg_STARTFILES       := $(addprefix $(workbench-libs-jpeg_OBJDIR)/,$($(workbench-libs-jpeg_DEFNAME)_STARTFILES))
+workbench-libs-jpeg_ENDFILES         := $(addprefix $(workbench-libs-jpeg_OBJDIR)/,$($(workbench-libs-jpeg_DEFNAME)_ENDFILES))
+
+workbench-libs-jpeg_ARCHOBJS         := $(wildcard $(workbench-libs-jpeg_OBJDIR)/arch/*.o)
+workbench-libs-jpeg_LIBARCHOBJS      := $(wildcard $(workbench-libs-jpeg_OBJDIR)/linklib/arch/*.o)
+workbench-libs-jpeg_ARCHFILES        := $(basename $(notdir $(workbench-libs-jpeg_ARCHOBJS)))
+workbench-libs-jpeg_LIBARCHFILES     := $(basename $(notdir $(workbench-libs-jpeg_LIBARCHOBJS)))
+workbench-libs-jpeg_C_NARCHFILES     := $(call workbench-libs-jpeg_FILTERARCH,$(workbench-libs-jpeg_ARCHFILES),$(workbench-libs-jpeg_FILES))
+workbench-libs-jpeg_CXX_NARCHFILES   := $(call workbench-libs-jpeg_FILTERARCH,$(workbench-libs-jpeg_ARCHFILES),$(workbench-libs-jpeg_CXXFILES))
+workbench-libs-jpeg_OBJC_NARCHFILES  := $(call workbench-libs-jpeg_FILTERARCH,$(workbench-libs-jpeg_ARCHFILES),$(workbench-libs-jpeg_OBJCFILES))
+workbench-libs-jpeg_NLIBARCHFILES    := $(call workbench-libs-jpeg_FILTERARCH,$(workbench-libs-jpeg_LIBARCHFILES),$(workbench-libs-jpeg_LIBFILES))
+workbench-libs-jpeg_ARCHNLIBFILES    := $(call workbench-libs-jpeg_FILTERARCH,$(workbench-libs-jpeg_LIBFILES),$(workbench-libs-jpeg_LIBARCHFILES))
+
+workbench-libs-jpeg_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(workbench-libs-jpeg_OBJDIR)/include -include $(workbench-libs-jpeg_DEFLIBDEFSINC))
+ifneq (,)
+workbench-libs-jpeg_CPPFLAGS         += -I
+endif
+workbench-libs-jpeg_LINKLIBCPPFLAGS  := $(workbench-libs-jpeg_CPPFLAGS)
+workbench-libs-jpeg_CPPFLAGS         += $(strip $($(workbench-libs-jpeg_DEFNAME)_CPPFLAGS))
+workbench-libs-jpeg_LINKLIBCPPFLAGS  += $(strip $($(workbench-libs-jpeg_DEFNAME)_LINKLIBCPPFLAGS))
+workbench-libs-jpeg_CFLAGS           := $(strip $(CFLAGS) $($(workbench-libs-jpeg_DEFNAME)_CFLAGS))
+workbench-libs-jpeg_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(workbench-libs-jpeg_DEFNAME)_LINKLIBCFLAGS))
+workbench-libs-jpeg_CXXFLAGS         := $(strip $(CXXFLAGS) $($(workbench-libs-jpeg_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+workbench-libs-jpeg_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+workbench-libs-jpeg_CFLAGS           := $(strip $(workbench-libs-jpeg_LTOFLAGS) $(workbench-libs-jpeg_CFLAGS))
+workbench-libs-jpeg_LINKLIBCFLAGS    := $(strip $(workbench-libs-jpeg_LTOFLAGS) $(workbench-libs-jpeg_LINKLIBCFLAGS))
+workbench-libs-jpeg_CXXFLAGS         := $(strip $(workbench-libs-jpeg_LTOFLAGS) $(workbench-libs-jpeg_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-libs-jpeg_SUBSTNULL        :=
+workbench-libs-jpeg_SUBSTSPACE       := $(workbench-libs-jpeg_SUBSTNULL) #
+workbench-libs-jpeg_SUBSTCOMMA       := ,
+workbench-libs-jpeg_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(workbench-libs-jpeg_SUBSTSPACE),$(workbench-libs-jpeg_SUBSTCOMMA),$(strip $($(workbench-libs-jpeg_DEFNAME)_STARTFILES))))
+workbench-libs-jpeg_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-libs-jpeg_CFLAGS           := $(strip $(workbench-libs-jpeg_INSTRFUNCFLAGS) $(workbench-libs-jpeg_CFLAGS))
+workbench-libs-jpeg_CXXFLAGS         := $(strip $(workbench-libs-jpeg_INSTRFUNCFLAGS) $(workbench-libs-jpeg_CXXFLAGS))
+workbench-libs-jpeg_LIBS             += $(workbench-libs-jpeg_INSTRFUNCLIBS)
+endif
+endif
+workbench-libs-jpeg_DFLAGS           := $(strip $(workbench-libs-jpeg_DFLAGS) $($(workbench-libs-jpeg_DEFNAME)_DFLAGS))
+workbench-libs-jpeg_LINKLIBDFLAGS    := $(strip $(workbench-libs-jpeg_DFLAGS) $($(workbench-libs-jpeg_DEFNAME)_LINKLIBDFLAGS))
+workbench-libs-jpeg_DXXFLAGS         := $(strip $(workbench-libs-jpeg_DXXFLAGS) $($(workbench-libs-jpeg_DEFNAME)_DXXFLAGS))
+
+ifeq (library,library)
+    workbench-libs-jpeg_LIBSUFFIX    := 
+else
+    workbench-libs-jpeg_LIBSUFFIX    := .library
+endif
+
+ifeq (,)
+workbench-libs-jpeg_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+workbench-libs-jpeg_LIBDIR           := 
+endif
+
+ifeq (M,M)
+workbench-libs-jpeg_LINKLIBCFILES    := $(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$($(workbench-libs-jpeg_DEFNAME)_LINKLIBFILES))
+workbench-libs-jpeg_LINKLIBAFILES    := $(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$($(workbench-libs-jpeg_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(workbench-libs-jpeg_DEFNAME)_LINKLIBFILES) $($(workbench-libs-jpeg_DEFNAME)_LINKLIBAFILES)  $(workbench-libs-jpeg_ARCHNLIBFILES)),)
+    workbench-libs-jpeg_LINKLIB      :=
+else
+    workbench-libs-jpeg_LINKLIB      := $(workbench-libs-jpeg_LIBDIR)/libjfif$(workbench-libs-jpeg_LIBSUFFIX).a
+    ifneq (jfif,$(workbench-libs-jpeg_LINKLIBNAME))
+        workbench-libs-jpeg_LINKLIB  += $(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_LINKLIBNAME)$(workbench-libs-jpeg_LIBSUFFIX).a
+    endif
+endif
+workbench-libs-jpeg_LINKLIBFILES     := $(workbench-libs-jpeg_LINKLIBCFILES) $(workbench-libs-jpeg_LINKLIBAFILES)
+
+workbench-libs-jpeg_RELLINKLIBCFILES := $(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$($(workbench-libs-jpeg_DEFNAME)_RELLINKLIBFILES))
+workbench-libs-jpeg_RELLINKLIBAFILES := $(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$($(workbench-libs-jpeg_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(workbench-libs-jpeg_DEFNAME)_RELLINKLIBFILES) $($(workbench-libs-jpeg_DEFNAME)_RELLINKLIBAFILES)  $(workbench-libs-jpeg_ARCHNLIBFILES)),)
+    workbench-libs-jpeg_RELLINKLIB   :=
+else
+    workbench-libs-jpeg_RELLINKLIB   := $(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_DEFNAME)_rel$(workbench-libs-jpeg_LIBSUFFIX).a
+    ifneq (jfif,$(workbench-libs-jpeg_LINKLIBNAME))
+        workbench-libs-jpeg_RELLINKLIB += $(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_LINKLIBNAME)_rel$(workbench-libs-jpeg_LIBSUFFIX).a
+    endif
+endif
+workbench-libs-jpeg_RELLINKLIBFILES  := $(workbench-libs-jpeg_RELLINKLIBCFILES) $(workbench-libs-jpeg_RELLINKLIBAFILES)
+endif
+
+workbench-libs-jpeg_ENDOBJS          := $(addsuffix .o,$(workbench-libs-jpeg_ENDFILES))
+workbench-libs-jpeg_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$(notdir $(workbench-libs-jpeg_NLIBARCHFILES))) $(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/arch/,$(notdir $(workbench-libs-jpeg_ARCHNLIBFILES))) $(workbench-libs-jpeg_LINKLIBFILES)) \
+                 
+workbench-libs-jpeg_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$(notdir $(workbench-libs-jpeg_NLIBARCHFILES))) $(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/arch/,$(notdir $(workbench-libs-jpeg_ARCHNLIBFILES))) $(workbench-libs-jpeg_RELLINKLIBFILES)) \
+                 
+$(workbench-libs-jpeg_LINKLIBFILES) $(workbench-libs-jpeg_RELLINKLIBFILES) : | $(workbench-libs-jpeg_OBJDIR)/linklib
+$(workbench-libs-jpeg_LINKLIBOBJS) $(workbench-libs-jpeg_RELLINKLIBOBJS) : | $(workbench-libs-jpeg_OBJDIR)/linklib
+
+workbench-libs-jpeg_CCFILES := $(workbench-libs-jpeg_C_NARCHFILES)
+workbench-libs-jpeg_TARGETCCFILES    := $(strip $(workbench-libs-jpeg_STARTFILES) $(workbench-libs-jpeg_ENDFILES))
+workbench-libs-jpeg_LINKLIBCCFILES   := $(strip $(workbench-libs-jpeg_NLIBARCHFILES) $(workbench-libs-jpeg_LINKLIBCFILES) $(workbench-libs-jpeg_RELLINKLIBCFILES))
+workbench-libs-jpeg_LINKLIBCCGENFILES := $(strip $(workbench-libs-jpeg_LINKLIBCFILES) $(workbench-libs-jpeg_RELLINKLIBCFILES))
+
+
+workbench-libs-jpeg_CXXABSBASENAMES := $(foreach workbench-libs-jpeg_CXXBASE,$(workbench-libs-jpeg_CXX_NARCHFILES),$(if $(filter /%,$(workbench-libs-jpeg_CXXBASE)),$(workbench-libs-jpeg_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-libs-jpeg_CXXBASE))))
+
+ifneq ($(workbench-libs-jpeg_CXXABSBASENAMES),)
+
+workbench-libs-jpeg_CXXBASENAMES := $(basename $(workbench-libs-jpeg_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-libs-jpeg_MCXX_FILES  := $(strip $(foreach workbench-libs-jpeg_CXXBASE,$(workbench-libs-jpeg_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-libs-jpeg_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-libs-jpeg_EXT),$(workbench-libs-jpeg_CXXBASE)))))))
+
+ifeq (,)
+workbench-libs-jpeg_MCXX_SRCWILDCARD := %
+else
+workbench-libs-jpeg_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-jpeg_OBJDIR),)
+  workbench-libs-jpeg_CXXTARGETS := $(notdir $(workbench-libs-jpeg_CXXBASENAMES:=.o))
+  workbench-libs-jpeg_CXXDTARGETS := $(notdir $(workbench-libs-jpeg_CXXBASENAMES:=.d))
+  workbench-libs-jpeg_MCXX_WILDCARD := %
+else
+  workbench-libs-jpeg_CXXTARGETS := $(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(notdir $(workbench-libs-jpeg_CXXBASENAMES:=.o)))
+  workbench-libs-jpeg_CXXDTARGETS := $(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(notdir $(workbench-libs-jpeg_CXXBASENAMES:=.d)))
+  workbench-libs-jpeg_MCXX_WILDCARD := $(workbench-libs-jpeg_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-libs-jpeg_CXXTARGETS) $(workbench-libs-jpeg_CXXDTARGETS) : | $(workbench-libs-jpeg_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-libs-jpeg_MCXX_CPPFLAGS := $(workbench-libs-jpeg_CPPFLAGS)
+workbench-libs-jpeg_CXXFLAGS := $(workbench-libs-jpeg_CXXFLAGS)
+ifeq ($(workbench-libs-jpeg_DXXFLAGS),)
+  workbench-libs-jpeg_DXXFLAGS := $(workbench-libs-jpeg_CXXFLAGS)
+else
+  workbench-libs-jpeg_DXXFLAGS := $(workbench-libs-jpeg_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-libs-jpeg_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-libs-jpeg_STRIP ?= $(HOST_STRIP)
+  workbench-libs-jpeg_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-libs-jpeg_CXXCMD:=$(HOST_CXX)
+  workbench-libs-jpeg_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-libs-jpeg_MCXX_CPPFLAGS) $(workbench-libs-jpeg_MCXX_EXTRA_CPPFLAGS))
+  workbench-libs-jpeg_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-libs-jpeg_CXXFLAGS))
+  workbench-libs-jpeg_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-libs-jpeg_DXXFLAGS))
+  workbench-libs-jpeg_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-libs-jpeg_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-libs-jpeg_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-libs-jpeg_STRIP ?= $(TARGET_STRIP)
+  workbench-libs-jpeg_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-libs-jpeg_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-libs-jpeg_MCXX_CPPFLAGS := $(strip $(workbench-libs-jpeg_MCXX_CPPFLAGS) $(workbench-libs-jpeg_MCXX_EXTRA_CPPFLAGS))
+  workbench-libs-jpeg_CXXFLAGS := $(strip $(workbench-libs-jpeg_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-libs-jpeg_DXXFLAGS := $(workbench-libs-jpeg_DXXFLAGS)
+  workbench-libs-jpeg_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-libs-jpeg_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-libs-jpeg_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-libs-jpeg_STRIP ?= $(ECHO) >/dev/null
+  workbench-libs-jpeg_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-libs-jpeg_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-libs-jpeg_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-libs-jpeg_MCXX_CPPFLAGS) $(workbench-libs-jpeg_MCXX_EXTRA_CPPFLAGS))
+  workbench-libs-jpeg_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-libs-jpeg_CXXFLAGS))
+  workbench-libs-jpeg_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-libs-jpeg_DXXFLAGS))
+  workbench-libs-jpeg_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-libs-jpeg_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-libs-jpeg_CXXCMD) $(workbench-libs-jpeg_CXXIQUOTE) $(dir $(2)) $(workbench-libs-jpeg_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_CXXIQUOTE) . $(workbench-libs-jpeg_CXXIQUOTE_END) $(strip $(workbench-libs-jpeg_CXXFLAGS) $(workbench-libs-jpeg_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-libs-jpeg_CXXCMD) $(workbench-libs-jpeg_CXXIQUOTE) $(dir $(2)) $(workbench-libs-jpeg_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_CXXIQUOTE) . $(workbench-libs-jpeg_CXXIQUOTE_END) $(strip $(workbench-libs-jpeg_CXXFLAGS) $(workbench-libs-jpeg_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-libs-jpeg_CXXCMD) $(workbench-libs-jpeg_CXXIQUOTE) $(dir $(2)) $(workbench-libs-jpeg_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_CXXIQUOTE) . $(workbench-libs-jpeg_CXXIQUOTE_END) $(strip $(workbench-libs-jpeg_CXXFLAGS) $(workbench-libs-jpeg_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-libs-jpeg_CXXCMD)" $(MKDEPEND) $(strip $(workbench-libs-jpeg_DXXFLAGS) $(workbench-libs-jpeg_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-libs-jpeg_OBJDIR),)
+  $(foreach workbench-libs-jpeg_CXXFILE,$(workbench-libs-jpeg_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-libs-jpeg_CXXFILE))),$(workbench-libs-jpeg_CXXFILE))))
+else
+  $(foreach workbench-libs-jpeg_CXXFILE,$(workbench-libs-jpeg_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(notdir $(basename $(workbench-libs-jpeg_CXXFILE)))),$(workbench-libs-jpeg_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-libs-jpeg_OBJC_NARCHFILES),)
+
+ifeq (,)
+workbench-libs-jpeg_MOBJC_SRCWILDCARD := %
+else
+workbench-libs-jpeg_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-jpeg_OBJDIR),)
+  workbench-libs-jpeg_MOBJC_TARGETS := $(addsuffix .o,$(workbench-libs-jpeg_OBJC_NARCHFILES))
+  workbench-libs-jpeg_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-libs-jpeg_OBJC_NARCHFILES))
+  workbench-libs-jpeg_MOBJC_WILDCARD := %
+else
+  workbench-libs-jpeg_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(workbench-libs-jpeg_OBJC_NARCHFILES)))
+  workbench-libs-jpeg_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(workbench-libs-jpeg_OBJC_NARCHFILES)))
+  workbench-libs-jpeg_MOBJC_WILDCARD := $(workbench-libs-jpeg_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-libs-jpeg_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  workbench-libs-jpeg_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-libs-jpeg_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-jpeg_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-libs-jpeg_MOBJC_DIRS := $(foreach dir, $(workbench-libs-jpeg_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-jpeg_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-libs-jpeg_MOBJC_DIRS),)
+    workbench-libs-jpeg_MOBJC_DIRS := $(shell echo $(workbench-libs-jpeg_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-libs-jpeg_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-libs-jpeg_CC := $(TARGET_CC)
+else
+  workbench-libs-jpeg_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-libs-jpeg_MOBJC_CPPFLAGS := $(workbench-libs-jpeg_CPPFLAGS)
+workbench-libs-jpeg_OBJCFLAGS := $(workbench-libs-jpeg_CFLAGS)
+workbench-libs-jpeg_OBJCFLAGS := $(workbench-libs-jpeg_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-libs-jpeg_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-libs-jpeg_OBJCFLAGS)))
+ifeq ($(workbench-libs-jpeg_DFLAGS),)
+  workbench-libs-jpeg_OBJCDFLAGS := $(workbench-libs-jpeg_CFLAGS)
+else
+  workbench-libs-jpeg_OBJCDFLAGS := $(workbench-libs-jpeg_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-libs-jpeg_LINK ?= $(strip $(workbench-libs-jpeg_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-libs-jpeg_STRIP ?= $(TARGET_STRIP)
+  workbench-libs-jpeg_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-libs-jpeg_CC) $(TARGET_SYSROOT))
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : workbench-libs-jpeg_MOBJC_CPPFLAGS:=$(strip $(workbench-libs-jpeg_MOBJC_CPPFLAGS) $(workbench-libs-jpeg_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : workbench-libs-jpeg_OBJCFLAGS:=$(strip $(workbench-libs-jpeg_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : workbench-libs-jpeg_OBJCDFLAGS:=$(workbench-libs-jpeg_OBJCDFLAGS)
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : workbench-libs-jpeg_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : workbench-libs-jpeg_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-libs-jpeg_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-libs-jpeg_STRIP ?= $(HOST_STRIP)
+  workbench-libs-jpeg_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : workbench-libs-jpeg_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-libs-jpeg_MOBJC_CPPFLAGS) $(workbench-libs-jpeg_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : workbench-libs-jpeg_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-jpeg_OBJCFLAGS))
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : workbench-libs-jpeg_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-jpeg_OBJCDFLAGS))
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : workbench-libs-jpeg_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : workbench-libs-jpeg_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-libs-jpeg_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-libs-jpeg_STRIP ?= $(ECHO) >/dev/null
+  workbench-libs-jpeg_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : workbench-libs-jpeg_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-libs-jpeg_MOBJC_CPPFLAGS) $(workbench-libs-jpeg_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : workbench-libs-jpeg_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-jpeg_OBJCFLAGS))
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : workbench-libs-jpeg_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-jpeg_OBJCDFLAGS))
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : workbench-libs-jpeg_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-libs-jpeg_MOBJC_TARGETS) $(workbench-libs-jpeg_MOBJC_DTARGETS) : workbench-libs-jpeg_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-jpeg_MOBJC_TARGETS) : CPPFLAGS := $(workbench-libs-jpeg_MOBJC_CPPFLAGS)
+$(workbench-libs-jpeg_MOBJC_TARGETS) : CFLAGS := $(workbench-libs-jpeg_OBJCFLAGS)
+$(workbench-libs-jpeg_MOBJC_TARGETS) : $(workbench-libs-jpeg_MOBJC_WILDCARD).o : $(workbench-libs-jpeg_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-jpeg_IQUOTE) $(dir $<) $(workbench-libs-jpeg_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_IQUOTE) . $(workbench-libs-jpeg_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-jpeg_IQUOTE) $(dir $<) $(workbench-libs-jpeg_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_IQUOTE) . $(workbench-libs-jpeg_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-jpeg_IQUOTE) $(dir $<) $(workbench-libs-jpeg_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_IQUOTE) . $(workbench-libs-jpeg_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-jpeg_MOBJC_DTARGETS) : $(workbench-libs-jpeg_MOBJC_WILDCARD).d : $(workbench-libs-jpeg_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-jpeg_OBJCDFLAGS) $(workbench-libs-jpeg_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-libs-jpeg_MC_SRCWILDCARD := %
+else
+workbench-libs-jpeg_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-jpeg_OBJDIR),)
+workbench-libs-jpeg_MC_TARGETS := $(addsuffix .o,$(workbench-libs-jpeg_CCFILES))
+workbench-libs-jpeg_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-jpeg_CCFILES))
+workbench-libs-jpeg_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-jpeg_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(notdir $(workbench-libs-jpeg_CCFILES))))
+    workbench-libs-jpeg_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(notdir $(workbench-libs-jpeg_CCFILES))))
+else
+ifeq (,)
+    workbench-libs-jpeg_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(workbench-libs-jpeg_CCFILES)))
+    workbench-libs-jpeg_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(workbench-libs-jpeg_CCFILES)))
+else
+    workbench-libs-jpeg_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-jpeg_CCFILES))))
+    workbench-libs-jpeg_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-jpeg_CCFILES))))
+endif
+endif
+workbench-libs-jpeg_MC_TGTWILDCARD := $(workbench-libs-jpeg_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-jpeg_CCFILES))
+
+# Be sure that all .c files are found
+workbench-libs-jpeg_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-jpeg_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-jpeg_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-jpeg_MC_DIRS := $(foreach dir, $(workbench-libs-jpeg_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-jpeg_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-jpeg_MC_DIRS),)
+    workbench-libs-jpeg_MC_DIRS := $(shell echo $(workbench-libs-jpeg_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-jpeg_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-jpeg_MC_CPPFLAGS := $(workbench-libs-jpeg_CPPFLAGS)
+workbench-libs-jpeg_CFLAGS := $(workbench-libs-jpeg_CFLAGS)
+ifeq ($(workbench-libs-jpeg_DFLAGS),)
+  workbench-libs-jpeg_DFLAGS := $(workbench-libs-jpeg_CFLAGS)
+else
+  workbench-libs-jpeg_DFLAGS := $(workbench-libs-jpeg_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-jpeg_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-jpeg_STRIP ?= $(TARGET_STRIP)
+workbench-libs-jpeg_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_MC_CPPFLAGS:=$(strip $(workbench-libs-jpeg_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_CFLAGS:=$(strip $(workbench-libs-jpeg_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_DFLAGS:=$(workbench-libs-jpeg_DFLAGS)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-jpeg_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-jpeg_STRIP ?= $(HOST_STRIP)
+workbench-libs-jpeg_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-jpeg_CFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-jpeg_DFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-jpeg_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-jpeg_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-jpeg_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-jpeg_CFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-jpeg_DFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-jpeg_MC_TARGETS) : CPPFLAGS := $(workbench-libs-jpeg_MC_CPPFLAGS)
+$(workbench-libs-jpeg_MC_TARGETS) : CFLAGS := $(workbench-libs-jpeg_CFLAGS)
+$(workbench-libs-jpeg_MC_TARGETS) : $(workbench-libs-jpeg_MC_TGTWILDCARD).o : $(workbench-libs-jpeg_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-jpeg_IQUOTE) $(dir $<) $(workbench-libs-jpeg_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_IQUOTE) . $(workbench-libs-jpeg_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-jpeg_IQUOTE) $(dir $<) $(workbench-libs-jpeg_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_IQUOTE) . $(workbench-libs-jpeg_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-jpeg_IQUOTE) $(dir $<) $(workbench-libs-jpeg_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_IQUOTE) . $(workbench-libs-jpeg_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-jpeg_MC_DTARGETS) : $(workbench-libs-jpeg_MC_TGTWILDCARD).d : $(workbench-libs-jpeg_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-jpeg_DFLAGS) $(workbench-libs-jpeg_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+workbench-libs-jpeg_MC_SRCWILDCARD := %
+else
+workbench-libs-jpeg_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-jpeg_OBJDIR),)
+workbench-libs-jpeg_MC_TARGETS := $(addsuffix .o,$(workbench-libs-jpeg_TARGETCCFILES))
+workbench-libs-jpeg_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-jpeg_TARGETCCFILES))
+workbench-libs-jpeg_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-jpeg_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(notdir $(workbench-libs-jpeg_TARGETCCFILES))))
+    workbench-libs-jpeg_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(notdir $(workbench-libs-jpeg_TARGETCCFILES))))
+else
+ifeq (,)
+    workbench-libs-jpeg_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(workbench-libs-jpeg_TARGETCCFILES)))
+    workbench-libs-jpeg_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(workbench-libs-jpeg_TARGETCCFILES)))
+else
+    workbench-libs-jpeg_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-jpeg_TARGETCCFILES))))
+    workbench-libs-jpeg_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-jpeg_TARGETCCFILES))))
+endif
+endif
+workbench-libs-jpeg_MC_TGTWILDCARD := $(workbench-libs-jpeg_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-jpeg_TARGETCCFILES))
+
+# Be sure that all .c files are found
+workbench-libs-jpeg_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-jpeg_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-jpeg_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-jpeg_MC_DIRS := $(foreach dir, $(workbench-libs-jpeg_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-jpeg_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-jpeg_MC_DIRS),)
+    workbench-libs-jpeg_MC_DIRS := $(shell echo $(workbench-libs-jpeg_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-jpeg_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-jpeg_MC_CPPFLAGS := $(workbench-libs-jpeg_CPPFLAGS) -D__AROS__
+workbench-libs-jpeg_CFLAGS := $(workbench-libs-jpeg_CFLAGS)
+ifeq ($(workbench-libs-jpeg_DFLAGS),)
+  workbench-libs-jpeg_DFLAGS := $(workbench-libs-jpeg_CFLAGS)
+else
+  workbench-libs-jpeg_DFLAGS := $(workbench-libs-jpeg_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-jpeg_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-jpeg_STRIP ?= $(TARGET_STRIP)
+workbench-libs-jpeg_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_MC_CPPFLAGS:=$(strip $(workbench-libs-jpeg_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_CFLAGS:=$(strip $(workbench-libs-jpeg_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_DFLAGS:=$(workbench-libs-jpeg_DFLAGS)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-jpeg_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-jpeg_STRIP ?= $(HOST_STRIP)
+workbench-libs-jpeg_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-jpeg_CFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-jpeg_DFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-jpeg_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-jpeg_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-jpeg_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-jpeg_CFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-jpeg_DFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-jpeg_MC_TARGETS) : CPPFLAGS := $(workbench-libs-jpeg_MC_CPPFLAGS)
+$(workbench-libs-jpeg_MC_TARGETS) : CFLAGS := $(workbench-libs-jpeg_CFLAGS)
+$(workbench-libs-jpeg_MC_TARGETS) : $(workbench-libs-jpeg_MC_TGTWILDCARD).o : $(workbench-libs-jpeg_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-jpeg_IQUOTE) $(dir $<) $(workbench-libs-jpeg_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_IQUOTE) . $(workbench-libs-jpeg_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-jpeg_IQUOTE) $(dir $<) $(workbench-libs-jpeg_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_IQUOTE) . $(workbench-libs-jpeg_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-jpeg_IQUOTE) $(dir $<) $(workbench-libs-jpeg_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_IQUOTE) . $(workbench-libs-jpeg_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-jpeg_MC_DTARGETS) : $(workbench-libs-jpeg_MC_TGTWILDCARD).d : $(workbench-libs-jpeg_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-jpeg_DFLAGS) $(workbench-libs-jpeg_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+workbench-libs-jpeg_MC_SRCWILDCARD := %
+else
+workbench-libs-jpeg_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-jpeg_OBJDIR)/linklib,)
+workbench-libs-jpeg_MC_TARGETS := $(addsuffix .o,$(workbench-libs-jpeg_NLIBARCHFILES))
+workbench-libs-jpeg_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-jpeg_NLIBARCHFILES))
+workbench-libs-jpeg_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-jpeg_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$(notdir $(workbench-libs-jpeg_NLIBARCHFILES))))
+    workbench-libs-jpeg_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$(notdir $(workbench-libs-jpeg_NLIBARCHFILES))))
+else
+ifeq (,)
+    workbench-libs-jpeg_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$(workbench-libs-jpeg_NLIBARCHFILES)))
+    workbench-libs-jpeg_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$(workbench-libs-jpeg_NLIBARCHFILES)))
+else
+    workbench-libs-jpeg_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$(patsubst /%,%,$(workbench-libs-jpeg_NLIBARCHFILES))))
+    workbench-libs-jpeg_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$(patsubst /%,%,$(workbench-libs-jpeg_NLIBARCHFILES))))
+endif
+endif
+workbench-libs-jpeg_MC_TGTWILDCARD := $(workbench-libs-jpeg_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-jpeg_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+workbench-libs-jpeg_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-jpeg_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-jpeg_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-jpeg_MC_DIRS := $(foreach dir, $(workbench-libs-jpeg_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-jpeg_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-jpeg_MC_DIRS),)
+    workbench-libs-jpeg_MC_DIRS := $(shell echo $(workbench-libs-jpeg_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-jpeg_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-jpeg_MC_CPPFLAGS := $(workbench-libs-jpeg_LINKLIBCPPFLAGS) -D__AROS__
+workbench-libs-jpeg_CFLAGS := $(workbench-libs-jpeg_LINKLIBCFLAGS)
+ifeq ($(workbench-libs-jpeg_LINKLIBDFLAGS),)
+  workbench-libs-jpeg_DFLAGS := $(workbench-libs-jpeg_LINKLIBCFLAGS)
+else
+  workbench-libs-jpeg_DFLAGS := $(workbench-libs-jpeg_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-jpeg_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-jpeg_STRIP ?= $(TARGET_STRIP)
+workbench-libs-jpeg_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_MC_CPPFLAGS:=$(strip $(workbench-libs-jpeg_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_CFLAGS:=$(strip $(workbench-libs-jpeg_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_DFLAGS:=$(workbench-libs-jpeg_DFLAGS)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-jpeg_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-jpeg_STRIP ?= $(HOST_STRIP)
+workbench-libs-jpeg_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-jpeg_CFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-jpeg_DFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-jpeg_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-jpeg_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-jpeg_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-jpeg_CFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-jpeg_DFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-jpeg_MC_TARGETS) : CPPFLAGS := $(workbench-libs-jpeg_MC_CPPFLAGS)
+$(workbench-libs-jpeg_MC_TARGETS) : CFLAGS := $(workbench-libs-jpeg_CFLAGS)
+$(workbench-libs-jpeg_MC_TARGETS) : $(workbench-libs-jpeg_MC_TGTWILDCARD).o : $(workbench-libs-jpeg_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-jpeg_IQUOTE) $(dir $<) $(workbench-libs-jpeg_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_IQUOTE) . $(workbench-libs-jpeg_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-jpeg_IQUOTE) $(dir $<) $(workbench-libs-jpeg_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_IQUOTE) . $(workbench-libs-jpeg_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-jpeg_IQUOTE) $(dir $<) $(workbench-libs-jpeg_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_IQUOTE) . $(workbench-libs-jpeg_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-jpeg_MC_DTARGETS) : $(workbench-libs-jpeg_MC_TGTWILDCARD).d : $(workbench-libs-jpeg_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-jpeg_DFLAGS) $(workbench-libs-jpeg_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-libs-jpeg_OBJDIR)/linklib,)
+workbench-libs-jpeg_MC_SRCWILDCARD := %
+else
+workbench-libs-jpeg_MC_SRCWILDCARD := $(workbench-libs-jpeg_OBJDIR)/linklib/%
+endif
+
+ifeq ($(workbench-libs-jpeg_OBJDIR)/linklib,)
+workbench-libs-jpeg_MC_TARGETS := $(addsuffix .o,$(workbench-libs-jpeg_LINKLIBCCGENFILES))
+workbench-libs-jpeg_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-jpeg_LINKLIBCCGENFILES))
+workbench-libs-jpeg_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-jpeg_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$(notdir $(workbench-libs-jpeg_LINKLIBCCGENFILES))))
+    workbench-libs-jpeg_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$(notdir $(workbench-libs-jpeg_LINKLIBCCGENFILES))))
+else
+ifeq ($(workbench-libs-jpeg_OBJDIR)/linklib,)
+    workbench-libs-jpeg_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$(workbench-libs-jpeg_LINKLIBCCGENFILES)))
+    workbench-libs-jpeg_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$(workbench-libs-jpeg_LINKLIBCCGENFILES)))
+else
+    workbench-libs-jpeg_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$(patsubst $(workbench-libs-jpeg_OBJDIR)/linklib/%,%,$(workbench-libs-jpeg_LINKLIBCCGENFILES))))
+    workbench-libs-jpeg_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$(patsubst $(workbench-libs-jpeg_OBJDIR)/linklib/%,%,$(workbench-libs-jpeg_LINKLIBCCGENFILES))))
+endif
+endif
+workbench-libs-jpeg_MC_TGTWILDCARD := $(workbench-libs-jpeg_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-jpeg_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+workbench-libs-jpeg_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-jpeg_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-jpeg_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-jpeg_MC_DIRS := $(foreach dir, $(workbench-libs-jpeg_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-jpeg_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-jpeg_MC_DIRS),)
+    workbench-libs-jpeg_MC_DIRS := $(shell echo $(workbench-libs-jpeg_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-jpeg_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-jpeg_MC_CPPFLAGS := $(workbench-libs-jpeg_LINKLIBCPPFLAGS) -D__AROS__
+workbench-libs-jpeg_CFLAGS := $(workbench-libs-jpeg_LINKLIBCFLAGS)
+ifeq ($(workbench-libs-jpeg_LINKLIBDFLAGS),)
+  workbench-libs-jpeg_DFLAGS := $(workbench-libs-jpeg_LINKLIBCFLAGS)
+else
+  workbench-libs-jpeg_DFLAGS := $(workbench-libs-jpeg_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-jpeg_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-jpeg_STRIP ?= $(TARGET_STRIP)
+workbench-libs-jpeg_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_MC_CPPFLAGS:=$(strip $(workbench-libs-jpeg_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_CFLAGS:=$(strip $(workbench-libs-jpeg_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_DFLAGS:=$(workbench-libs-jpeg_DFLAGS)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-jpeg_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-jpeg_STRIP ?= $(HOST_STRIP)
+workbench-libs-jpeg_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-jpeg_CFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-jpeg_DFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-jpeg_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-jpeg_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-jpeg_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_CPPFLAGS) $(workbench-libs-jpeg_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-jpeg_CFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-jpeg_DFLAGS))
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-jpeg_MC_TARGETS) $(workbench-libs-jpeg_MC_DTARGETS) : workbench-libs-jpeg_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-jpeg_MC_TARGETS) : CPPFLAGS := $(workbench-libs-jpeg_MC_CPPFLAGS)
+$(workbench-libs-jpeg_MC_TARGETS) : CFLAGS := $(workbench-libs-jpeg_CFLAGS)
+$(workbench-libs-jpeg_MC_TARGETS) : $(workbench-libs-jpeg_MC_TGTWILDCARD).o : $(workbench-libs-jpeg_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-jpeg_IQUOTE) $(dir $<) $(workbench-libs-jpeg_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_IQUOTE) . $(workbench-libs-jpeg_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-jpeg_IQUOTE) $(dir $<) $(workbench-libs-jpeg_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_IQUOTE) . $(workbench-libs-jpeg_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-jpeg_IQUOTE) $(dir $<) $(workbench-libs-jpeg_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-jpeg_IQUOTE) . $(workbench-libs-jpeg_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-jpeg_MC_DTARGETS) : $(workbench-libs-jpeg_MC_TGTWILDCARD).d : $(workbench-libs-jpeg_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-jpeg_DFLAGS) $(workbench-libs-jpeg_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(workbench-libs-jpeg_LINKLIBAFILES),)
+
+ifeq ($(workbench-libs-jpeg_OBJDIR)/linklib,)
+workbench-libs-jpeg-MA_TARGETS := $(addsuffix .o,$(workbench-libs-jpeg_LINKLIBAFILES) $(workbench-libs-jpeg_RELLINKLIBAFILES))
+workbench-libs-jpeg-MA_WILDCARD := %
+else
+workbench-libs-jpeg-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$(notdir $(workbench-libs-jpeg_LINKLIBAFILES) $(workbench-libs-jpeg_RELLINKLIBAFILES))))
+workbench-libs-jpeg-MA_WILDCARD := $(workbench-libs-jpeg_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(workbench-libs-jpeg-MA_TARGETS) : | $(addsuffix .S,$(workbench-libs-jpeg_LINKLIBAFILES) $(workbench-libs-jpeg_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+workbench-libs-jpeg-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-jpeg-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-jpeg_LINKLIBAFILES) $(workbench-libs-jpeg_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-jpeg-MA_DIRS := $(foreach dir, $(workbench-libs-jpeg-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-jpeg-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-jpeg-MA_DIRS),)
+    workbench-libs-jpeg-MA_DIRS := $(shell echo $(workbench-libs-jpeg-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(workbench-libs-jpeg-MA_DIRS)
+endif
+
+endif
+
+workbench-libs-jpeg-MA_ASSEMBLER ?= $(workbench-libs-jpeg_ASSEMBLER)
+
+$(workbench-libs-jpeg-MA_TARGETS) : workbench-libs-jpeg-MA_CMD:= $(workbench-libs-jpeg-MA_ASSEMBLER)
+
+$(workbench-libs-jpeg-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(workbench-libs-jpeg-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(workbench-libs-jpeg-MA_TARGETS) : $(workbench-libs-jpeg-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-libs-jpeg-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-libs-jpeg-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-libs-jpeg-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+workbench-libs-jpeg_SUFFIX           := library
+else
+workbench-libs-jpeg_SUFFIX           := 
+endif
+
+ifeq (target,target)
+workbench-libs-jpeg_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-libs-jpeg_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-libs-jpeg_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(workbench-libs-jpeg_SUFFIX),handler)
+workbench-libs-jpeg_MODULE           := $(AROSDIR)/$(workbench-libs-jpeg_MODDIR)/$(workbench-libs-jpeg_DEFNAME)-$(workbench-libs-jpeg_SUFFIX)
+else
+workbench-libs-jpeg_MODULE           := $(AROSDIR)/$(workbench-libs-jpeg_MODDIR)/$(workbench-libs-jpeg_DEFNAME).$(workbench-libs-jpeg_SUFFIX)
+endif
+workbench-libs-jpeg_KOBJ             := $(KOBJSDIR)/$(workbench-libs-jpeg_DEFNAME)_$(workbench-libs-jpeg_SUFFIX).o
+else
+workbench-libs-jpeg_MODULE           :=
+workbench-libs-jpeg_KOBJ             :=
+endif
+
+workbench-libs-jpeg-quick      : workbench-libs-jpeg
+workbench-libs-jpeg            : $(workbench-libs-jpeg_MODULE) $(workbench-libs-jpeg_LINKLIB) $(workbench-libs-jpeg_RELLINKLIB)
+ifeq (M,M)
+workbench-libs-jpeg-kobj       : $(workbench-libs-jpeg_KOBJ) $(workbench-libs-jpeg_LINKLIB) $(workbench-libs-jpeg_RELLINKLIB)
+workbench-libs-jpeg-kobj-quick : $(workbench-libs-jpeg_KOBJ) $(workbench-libs-jpeg_LINKLIB) $(workbench-libs-jpeg_RELLINKLIB)
+endif
+ifeq (M,M)
+workbench-libs-jpeg-linklib    : $(workbench-libs-jpeg_LINKLIB) $(workbench-libs-jpeg_RELLINKLIB)
+endif
+
+workbench-libs-jpeg_OBJS := $(addsuffix .o,$(workbench-libs-jpeg_STARTFILES)) $(workbench-libs-jpeg_ARCHOBJS) \
+           $(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(notdir $(workbench-libs-jpeg_C_NARCHFILES:=.o) $(workbench-libs-jpeg_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (library,handler)
+workbench-libs-jpeg_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (jfif,con)
+    workbench-libs-jpeg_ERR          := $(notdir $(workbench-libs-jpeg_MODULE)).err
+else
+    workbench-libs-jpeg_ERR          := jfif.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(workbench-libs-jpeg_DEFNAME)_LDFLAGS) $(workbench-libs-jpeg_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-libs-jpeg_LIBS) $($(workbench-libs-jpeg_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(workbench-libs-jpeg_MODULE) : LIB_NAMES := $(workbench-libs-jpeg_LIBS) $($(workbench-libs-jpeg_DEFNAME)_LIBS)
+$(workbench-libs-jpeg_MODULE) : OBJS := $(workbench-libs-jpeg_STARTOBJS) $(workbench-libs-jpeg_OBJS) $(USER_OBJS)
+$(workbench-libs-jpeg_MODULE) : ENDTAG := $(workbench-libs-jpeg_ENDOBJS)
+$(workbench-libs-jpeg_MODULE) : ERR := $(workbench-libs-jpeg_ERR)
+$(workbench-libs-jpeg_MODULE) : OBJDIR := $(workbench-libs-jpeg_OBJDIR)
+$(workbench-libs-jpeg_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(workbench-libs-jpeg_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(workbench-libs-jpeg_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(workbench-libs-jpeg_MODULE) : $(workbench-libs-jpeg_STARTOBJS) $(workbench-libs-jpeg_OBJS) $(USER_OBJS) $(workbench-libs-jpeg_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(workbench-libs-jpeg_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(workbench-libs-jpeg_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+workbench-libs-jpeg_LC_LINKLIBNAME   := $(shell echo $(workbench-libs-jpeg_LINKLIBNAME) | tr A-Z a-z)
+workbench-libs-jpeg_LC_MODNAME       := $(shell echo jfif | tr A-Z a-z)
+ifneq ($(workbench-libs-jpeg_LINKLIB),)
+
+ifeq (target,target)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_LINKLIBNAME)$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_AR:=$(AR)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_LINKLIBNAME)$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_LINKLIBNAME)$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_AR:=$(HOST_AR)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_LINKLIBNAME)$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_LINKLIBNAME)$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_AR:=$(KERNEL_AR)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_LINKLIBNAME)$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_LINKLIBNAME)$(workbench-libs-jpeg_LIBSUFFIX).a : $(workbench-libs-jpeg_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-libs-jpeg_AR) $@ $^
+	$(Q)$(workbench-libs-jpeg_RANLIB) $@
+ifneq ($(workbench-libs-jpeg_LC_MODNAME),$(workbench-libs-jpeg_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(workbench-libs-jpeg_LIBDIR)/libjfif$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_AR:=$(AR)
+$(workbench-libs-jpeg_LIBDIR)/libjfif$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-libs-jpeg_LIBDIR)/libjfif$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_AR:=$(HOST_AR)
+$(workbench-libs-jpeg_LIBDIR)/libjfif$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-libs-jpeg_LIBDIR)/libjfif$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_AR:=$(KERNEL_AR)
+$(workbench-libs-jpeg_LIBDIR)/libjfif$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-libs-jpeg_LIBDIR)/libjfif$(workbench-libs-jpeg_LIBSUFFIX).a : $(workbench-libs-jpeg_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-libs-jpeg_AR) $@ $^
+	$(Q)$(workbench-libs-jpeg_RANLIB) $@
+endif
+
+
+ifneq ($(workbench-libs-jpeg_LINKLIB),)
+$(workbench-libs-jpeg_LINKLIB) : | $(workbench-libs-jpeg_LIBDIR)
+else
+$(workbench-libs-jpeg_LINKLIB) :: $(workbench-libs-jpeg_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-jpeg_LIBDIR)
+
+endif
+
+ifneq ($(workbench-libs-jpeg_RELLINKLIB),)
+
+ifeq (target,target)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_LINKLIBNAME)_rel$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_AR:=$(AR)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_LINKLIBNAME)_rel$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_LINKLIBNAME)_rel$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_AR:=$(HOST_AR)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_LINKLIBNAME)_rel$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_LINKLIBNAME)_rel$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_AR:=$(KERNEL_AR)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_LINKLIBNAME)_rel$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_LINKLIBNAME)_rel$(workbench-libs-jpeg_LIBSUFFIX).a : $(workbench-libs-jpeg_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-libs-jpeg_AR) $@ $^
+	$(Q)$(workbench-libs-jpeg_RANLIB) $@
+ifneq ($(workbench-libs-jpeg_LC_MODNAME),$(workbench-libs-jpeg_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_DEFNAME)_rel$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_AR:=$(AR)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_DEFNAME)_rel$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_DEFNAME)_rel$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_AR:=$(HOST_AR)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_DEFNAME)_rel$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_DEFNAME)_rel$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_AR:=$(KERNEL_AR)
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_DEFNAME)_rel$(workbench-libs-jpeg_LIBSUFFIX).a : workbench-libs-jpeg_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-libs-jpeg_LIBDIR)/lib$(workbench-libs-jpeg_DEFNAME)_rel$(workbench-libs-jpeg_LIBSUFFIX).a : $(workbench-libs-jpeg_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-libs-jpeg_AR) $@ $^
+	$(Q)$(workbench-libs-jpeg_RANLIB) $@
+endif
+
+
+ifneq ($(workbench-libs-jpeg_RELLINKLIB),)
+$(workbench-libs-jpeg_RELLINKLIB) : | $(workbench-libs-jpeg_LIBDIR)
+else
+$(workbench-libs-jpeg_RELLINKLIB) :: $(workbench-libs-jpeg_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-jpeg_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+workbench-libs-jpeg_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+workbench-libs-jpeg_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+workbench-libs-jpeg_SYMBOLS := $(workbench-libs-jpeg_KBASE)
+
+workbench-libs-jpeg_KLIB             := hiddstubs amiga arossupport autoinit libinit
+workbench-libs-jpeg_KOBJ_LIBS        := $(filter-out $(workbench-libs-jpeg_KLIB),$(workbench-libs-jpeg_LIBS)) $(workbench-libs-jpeg_KAUTOLIB)
+$(workbench-libs-jpeg_KOBJ) : LINKLIBS:=$(workbench-libs-jpeg_KOBJ_LIBS) $($(workbench-libs-jpeg_DEFNAME)_LIBS)
+$(workbench-libs-jpeg_KOBJ) : FILTBASES:=$(addprefix -L ,$(workbench-libs-jpeg_SYMBOLS))
+$(workbench-libs-jpeg_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(workbench-libs-jpeg_KOBJ) : $(workbench-libs-jpeg_OBJS) $(USER_OBJS) $(workbench-libs-jpeg_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+workbench-libs-jpeg_DEPS             := $(addprefix $(workbench-libs-jpeg_OBJDIR)/,$(notdir $(workbench-libs-jpeg_CCFILES:=.d) $(workbench-libs-jpeg_TARGETCCFILES:=.d) $(workbench-libs-jpeg_CXXFILES:=.d))) $(addprefix $(workbench-libs-jpeg_OBJDIR)/linklib/,$(notdir $(workbench-libs-jpeg_LINKLIBCCFILES:=.d)))
+
+ifneq ($(workbench-libs-jpeg_DEPS),)
+  ifneq (workbench-libs-jpeg workbench-libs-jpeg-quick workbench-libs-jpeg-kobj workbench-libs-jpeg-kobj-quick,)
+    ifneq ($(findstring $(TARGET),workbench-libs-jpeg workbench-libs-jpeg-quick workbench-libs-jpeg-kobj workbench-libs-jpeg-kobj-quick),)
+      -include $(workbench-libs-jpeg_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-libs-jpeg_DEPS)
+    endif
+  endif
+endif
+
+$(workbench-libs-jpeg_OBJS) $(workbench-libs-jpeg_DEPS) : | $(workbench-libs-jpeg_OBJDIR)/linklib
+
+ifneq ($(workbench-libs-jpeg_OBJS) $(workbench-libs-jpeg_DEPS) $(workbench-libs-jpeg_MODULE) $(workbench-libs-jpeg_KOBJ),)
+$(workbench-libs-jpeg_OBJS) $(workbench-libs-jpeg_DEPS) $(workbench-libs-jpeg_MODULE) $(workbench-libs-jpeg_KOBJ) : | $(workbench-libs-jpeg_OBJDIR) $(AROSDIR)/$(workbench-libs-jpeg_MODDIR) $(KOBJSDIR)
+else
+$(workbench-libs-jpeg_OBJS) $(workbench-libs-jpeg_DEPS) $(workbench-libs-jpeg_MODULE) $(workbench-libs-jpeg_KOBJ) :: $(workbench-libs-jpeg_OBJDIR) $(AROSDIR)/$(workbench-libs-jpeg_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-jpeg_OBJDIR) $(AROSDIR)/$(workbench-libs-jpeg_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),workbench-libs-jpeg workbench-libs-jpeg-includes workbench-libs-jpeg-quick workbench-libs-jpeg-kobj workbench-libs-jpeg-kobj-quick),) # Only for this target these deps are wanted
+
+workbench-libs-jpeg_DFILE_DEPS := $(workbench-libs-jpeg_LIBDEFSINC) $(workbench-libs-jpeg_DEFLIBDEFSINC) \
+    $(addprefix $(workbench-libs-jpeg_INCDIR)/,$($(workbench-libs-jpeg_DEFNAME)_INCLUDES))
+$(workbench-libs-jpeg_DEPS) : $(workbench-libs-jpeg_DFILE_DEPS)
+endif
+
+workbench-libs-jpeg_TOCLEAN := $(workbench-libs-jpeg_OBJS) $(workbench-libs-jpeg_DEPS) \
+    $(workbench-libs-jpeg_MODULE) $(workbench-libs-jpeg_LINKLIB) $(workbench-libs-jpeg_KOBJ) \
+    $(workbench-libs-jpeg_OBJDIR)/Makefile.jfiflibrary \
+    $(addprefix $(workbench-libs-jpeg_OBJDIR)/include/,$($(workbench-libs-jpeg_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(workbench-libs-jpeg_DEFNAME)_INCLUDES)) \
+    $(addprefix $(workbench-libs-jpeg_INCDIR)/,$($(workbench-libs-jpeg_DEFNAME)_INCLUDES)) \
+    $(workbench-libs-jpeg_OBJDIR)/jfif_geninc $(workbench-libs-jpeg_OBJDIR)/jfif_incs \
+    $(addsuffix .c,$(workbench-libs-jpeg_LINKLIBFILES)) $(workbench-libs-jpeg_LINKLIBOBJS) $(workbench-libs-jpeg_LIBDEFSINC) \
+    $(workbench-libs-jpeg_DEFLIBDEFSINC) $(addsuffix .c,$(workbench-libs-jpeg_STARTFILES) $(workbench-libs-jpeg_ENDFILES)) \
+    $(workbench-libs-jpeg_ENDOBJS)
+workbench-libs-jpeg-clean : FILES              := $(workbench-libs-jpeg_TOCLEAN)
+workbench-libs-jpeg-clean ::
+	$(Q)$(ECHO) "Cleaning up for module jfif"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(workbench-libs-jpeg_ALLTARGETS)
+
+
+
+INCLUDE_FILES := jerror.h jmorecfg.h jpeglib.h jconfig.h
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq (,)
+TMP_DIR                := 
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst ,$(GENINCDIR)/.,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/./,$(notdir $(INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := /
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)//
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/./,$(INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/./% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq (,)
+BD_INCL_FILES2         := $(subst ,$(AROS_INCLUDES)/.,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/./,$(notdir $(INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/./,$(INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/./% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

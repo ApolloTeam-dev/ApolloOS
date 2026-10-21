@@ -1,0 +1,22 @@
+#   $Id: mmakefile.src 54326 2017-03-28 20:54:52Z NicJA $
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- test : test-datatypes
+
+
+.PHONY : test-datatypes
+
+#MM
+test-datatypes :
+	$(Q)cd $(SRCDIR)/$(CURDIR) && $(CPYDIRREC) -s . -d $(AROS_TESTS)/Datatypes -e 
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

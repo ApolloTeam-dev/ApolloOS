@@ -1,0 +1,152 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#INCLUDES    := -I$(AROSDIR)/include -I$(TOP)/amiga/include
+EXEDIR      := $(AROSDIR)/Demos
+OBJDIR      := $(GENDIR)/test/HiddGraphics
+
+STARTUP = $(AROS_LIB)/startup.o
+LIBS    = -L$(AROS_LIB) -larossupport -lamiga $(TOOL).a -lstdc
+
+FILES	    := \
+	BitMapNewDispose \
+        GCNewDispose     \
+        GCReadWritePixelDirect \
+	GCWritePixel \
+	GCDrawLine \
+	GCCopyArea \
+	GCDrawRect \
+	GCDrawPolygon \
+	GCDrawEllipse \
+	GCDrawText
+
+TOOL  := gfxhiddtool
+
+EXES := $(foreach f,$(FILES),$(EXEDIR)/$(f))
+OBJS := $(foreach f,$(FILES),$(OBJDIR)/$(f).o)
+DEPS := $(foreach f,$(FILES) $(TOOL),$(OBJDIR)/$(f).d)
+
+#MM obsolete-test-hidd-graphics : includes
+obsolete-test-hidd-graphics : $(EXES)
+	@$(NOP)
+
+#MM obsolete-test-hidd-graphics-quick : 
+obsolete-test-hidd-graphics-quick : $(EXES)
+	@$(NOP)
+
+
+ifneq (setup,)
+setup : | $(EXEDIR) $(OBJDIR)
+else
+setup :: $(EXEDIR) $(OBJDIR)
+endif
+
+GLOB_MKDIRS += $(EXEDIR) $(OBJDIR)
+
+
+#MM
+clean ::
+	-$(RM) $(EXES)
+
+$(EXEDIR)/% : $(OBJDIR)/%.o $(TOOL).a $(AROS_LIB)/startup.o $(DEPLIBS) | $(EXEDIR)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(GENDIR)/$(CURDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(strip $(AROS_CC) $(TARGET_SYSROOT)) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(strip $(AROS_CC) $(TARGET_SYSROOT)) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(strip $(AROS_CC) $(TARGET_SYSROOT)) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(GENDIR)/$(CURDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(GENDIR)/$(CURDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+$(OBJDIR)/%.o : %.c | $(OBJDIR)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(strip $(TARGET_CC) $(TARGET_SYSROOT)) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(APPCFLAGS) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(strip $(TARGET_CC) $(TARGET_SYSROOT)) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(APPCFLAGS) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(strip $(TARGET_CC) $(TARGET_SYSROOT)) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(APPCFLAGS) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(OBJDIR)/%.d : %.c | $(OBJDIR)
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(strip $(AROS_CC) $(TARGET_SYSROOT))" $(MKDEPEND) $(strip $(CFLAGS) $(CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+$(TOOL).a : $(OBJDIR)/$(TOOL).o
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(AR) $@ $(OBJDIR)/$(TOOL).o
+	$(Q)$(RANLIB) $@
+
+$(OBJDIR)/$(TOOL).o : $(TOOL).c | $(OBJDIR)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(strip $(TARGET_CC) $(TARGET_SYSROOT)) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(strip $(TARGET_CC) $(TARGET_SYSROOT)) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(strip $(TARGET_CC) $(TARGET_SYSROOT)) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	
+ifneq ($(DEPS),)
+  ifneq (,)
+    ifneq ($(findstring $(TARGET),),)
+      -include $(DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(DEPS)
+    endif
+  endif
+endif
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

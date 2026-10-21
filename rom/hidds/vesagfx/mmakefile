@@ -1,0 +1,1664 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM kernel-hidd-vesagfx : kernel-hidd-gfx-includes
+
+FILES	:=	\
+	vesagfx_init \
+	vesagfx_hiddclass \
+	vesagfx_support \
+	vesagfx_bitmapclass
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-hidd-vesagfx
+#MM kernel-hidd-vesagfx-quick
+#MM kernel-hidd-vesagfx-makefile
+#MM kernel-hidd-vesagfx-clean
+
+# ABI targets:
+#MM- includes-all : kernel-hidd-vesagfx-includes
+#MM- linklibs-vesagfx: kernel-hidd-vesagfx-linklib
+#MM- linklibs-vesagfx_rel : kernel-hidd-vesagfx-linklib
+#MM- includes-vesagfx: kernel-hidd-vesagfx-includes
+#MM- includes-vesagfx_rel : kernel-hidd-vesagfx-includes
+#MM- kernel-hidd-vesagfx : kernel-hidd-vesagfx-includes core-linklibs linklibs-
+#MM kernel-hidd-vesagfx-linklib : kernel-hidd-vesagfx-includes includes-
+#MM- kernel-hidd-vesagfx-quick : kernel-hidd-vesagfx-includes-quick
+#MM kernel-hidd-vesagfx-includes : kernel-hidd-vesagfx-makefile kernel-hidd-vesagfx-includes-dirs \
+#MM     includes-generate-deps kernel-hidd-vesagfx-fd
+#MM kernel-hidd-vesagfx-includes-quick
+#MM kernel-hidd-vesagfx-includes-dirs
+#MM kernel-hidd-vesagfx-fd
+
+# Library targets
+#MM kernel-hidd-vesagfx-kobj : core-linklibs linklibs-
+#MM kernel-hidd-vesagfx-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-hidd-vesagfx-kobj : kernel-hidd-vesagfx-includes core-linklibs linklibs-
+#MM kernel-hidd-vesagfx-kobj-quick : kernel-hidd-vesagfx-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-hidd-vesagfx_ALLTARGETS       := kernel-hidd-vesagfx kernel-hidd-vesagfx-quick kernel-hidd-vesagfx-clean
+
+ifeq (M,M)
+kernel-hidd-vesagfx_ALLTARGETS       += kernel-hidd-vesagfx-kobj kernel-hidd-vesagfx-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-hidd-vesagfx_ALLTARGETS += kernel-hidd-vesagfx-includes \
+                 kernel-hidd-vesagfx-includes-quick kernel-hidd-vesagfx-includes-dirs  \
+                 kernel-hidd-vesagfx-linklib kernel-hidd-vesagfx-fd
+endif
+
+.PHONY : $(kernel-hidd-vesagfx_ALLTARGETS) kernel-hidd-vesagfx-makefile
+
+ifeq (vesagfx,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (hidd,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-hidd-vesagfx_DEFNAME      := vesagfx_
+else
+    kernel-hidd-vesagfx_DEFNAME      := vesagfx
+endif
+kernel-hidd-vesagfx_DEFLINKLIBNAME   := $(kernel-hidd-vesagfx_DEFNAME)
+ifneq (,)
+    kernel-hidd-vesagfx_LINKLIBNAME  := 
+else
+    kernel-hidd-vesagfx_LINKLIBNAME  = $(kernel-hidd-vesagfx_DEFLINKLIBNAME)
+endif
+kernel-hidd-vesagfx_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-hidd-vesagfx_DEFCPPFLAGS  += -I
+endif
+kernel-hidd-vesagfx_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-hidd-vesagfx_DFLAGS       := 
+else
+    kernel-hidd-vesagfx_DFLAGS       = $(kernel-hidd-vesagfx_DEFDFLAGS)
+endif
+kernel-hidd-vesagfx_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-hidd-vesagfx_DXXFLAGS     := 
+else
+    kernel-hidd-vesagfx_DXXFLAGS     = $(kernel-hidd-vesagfx_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-vesagfx_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-vesagfx_DEFDFLAGS))
+kernel-hidd-vesagfx_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-vesagfx_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-vesagfx_FUNCINSTR := yes
+kernel-hidd-vesagfx_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-vesagfx_DEFDFLAGS))
+kernel-hidd-vesagfx_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-vesagfx_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-hidd-vesagfx_OBJDIR                     := 
+else
+kernel-hidd-vesagfx_OBJDIR                     := $(OBJDIR)/$(kernel-hidd-vesagfx_DEFNAME)
+endif
+ifneq (,)
+kernel-hidd-vesagfx_OBJDIR           := $(kernel-hidd-vesagfx_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-hidd-vesagfx-makefile         := $(kernel-hidd-vesagfx_OBJDIR)/Makefile.$(kernel-hidd-vesagfx_DEFNAME)hidd
+kernel-hidd-vesagfx-genmakefile : $(kernel-hidd-vesagfx-makefile)
+
+
+kernel-hidd-vesagfx-genmakefile_OPTS := 
+ifneq (,)
+    kernel-hidd-vesagfx-genmakefile_OPTS += -f 
+    kernel-hidd-vesagfx-genmakefile_MODNAME := vesagfx_
+else
+    kernel-hidd-vesagfx-genmakefile_MODNAME := vesagfx
+endif
+kernel-hidd-vesagfx-genmakefile_TARGET := Makefile.$(kernel-hidd-vesagfx-genmakefile_MODNAME)hidd
+kernel-hidd-vesagfx-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-vesagfx-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-vesagfx-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-vesagfx-genmakefile_OPTS += -c 
+        kernel-hidd-vesagfx-genmakefile_DEPS += 
+    endif 
+else
+    kernel-hidd-vesagfx-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/vesagfx.conf
+    kernel-hidd-vesagfx-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/vesagfx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-vesagfx-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-vesagfx-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-vesagfx-genmakefile_OPTS += -o 
+        kernel-hidd-vesagfx-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-vesagfx-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-vesagfx_OBJDIR),)
+    kernel-hidd-vesagfx-genmakefile_OPTS += -d $(kernel-hidd-vesagfx_OBJDIR)
+    kernel-hidd-vesagfx-genmakefile_TARGET := $(kernel-hidd-vesagfx_OBJDIR)/$(kernel-hidd-vesagfx-genmakefile_TARGET)
+endif
+
+$(kernel-hidd-vesagfx-genmakefile_TARGET) : OPTS := $(kernel-hidd-vesagfx-genmakefile_OPTS)
+$(kernel-hidd-vesagfx-genmakefile_TARGET) : MODNAME := vesagfx
+$(kernel-hidd-vesagfx-genmakefile_TARGET) : MODTYPE := hidd
+$(kernel-hidd-vesagfx-genmakefile_TARGET) : $(kernel-hidd-vesagfx-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-hidd-vesagfx-makefile),)
+$(kernel-hidd-vesagfx-makefile) : | $(kernel-hidd-vesagfx_OBJDIR)
+else
+$(kernel-hidd-vesagfx-makefile) :: $(kernel-hidd-vesagfx_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-vesagfx_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-hidd-vesagfx_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-hidd-vesagfx-makefile)
+
+kernel-hidd-vesagfx_DEFMODDIR        := $($(kernel-hidd-vesagfx_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-hidd-vesagfx_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-hidd-vesagfx_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-hidd-vesagfx_MODDIR       := 
+else
+    kernel-hidd-vesagfx_MODDIR       := $(kernel-hidd-vesagfx_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-hidd-vesagfx_INCDIR           := 
+else
+kernel-hidd-vesagfx_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-hidd-vesagfx_LIBDEFSINC       := $(kernel-hidd-vesagfx_OBJDIR)/include/$(kernel-hidd-vesagfx_DEFNAME)_libdefs.h
+kernel-hidd-vesagfx_DEFLIBDEFSINC    := $(kernel-hidd-vesagfx_OBJDIR)/include/$(kernel-hidd-vesagfx_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-hidd-vesagfx-includes-quick : kernel-hidd-vesagfx-includes
+kernel-hidd-vesagfx-includes : $(addprefix $(GENINCDIR)/,$($(kernel-hidd-vesagfx_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-vesagfx_INCDIR)/,$($(kernel-hidd-vesagfx_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-vesagfx_LIBDEFSINC) $(kernel-hidd-vesagfx_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-hidd-vesagfx_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-hidd-vesagfx-includes_MODNAME := vesagfx_
+else
+    kernel-hidd-vesagfx-includes_MODNAME := vesagfx
+endif
+
+ifneq ($($(kernel-hidd-vesagfx-includes_MODNAME)_INCLUDES),)
+
+kernel-hidd-vesagfx-includes_TARGETS := $($(kernel-hidd-vesagfx-includes_MODNAME)_INCLUDES)
+
+kernel-hidd-vesagfx-includes_DEPS := $(GENMODULE)
+kernel-hidd-vesagfx-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-vesagfx-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-vesagfx-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-vesagfx-includes_OPTS += -c 
+        kernel-hidd-vesagfx-includes_DEPS += 
+    endif 
+else
+    kernel-hidd-vesagfx-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/vesagfx.conf
+    kernel-hidd-vesagfx-includes_DEPS += $(SRCDIR)/$(CURDIR)/vesagfx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-vesagfx-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-vesagfx-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-vesagfx-includes_OPTS += -o 
+        kernel-hidd-vesagfx-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-vesagfx-includes_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-vesagfx_OBJDIR)/include,)
+    kernel-hidd-vesagfx-includes_OPTS += -d $(kernel-hidd-vesagfx_OBJDIR)/include
+    kernel-hidd-vesagfx-includes_TARGETS := $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/include/,$(kernel-hidd-vesagfx-includes_TARGETS))
+    kernel-hidd-vesagfx-includes_GENINCFLAG=$(kernel-hidd-vesagfx_OBJDIR)/include/.vesagfx.hidd-includes
+else
+    kernel-hidd-vesagfx-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.vesagfx.hidd-includes
+endif
+
+$(kernel-hidd-vesagfx-includes_TARGETS) : $(kernel-hidd-vesagfx-includes_DEPS) $(kernel-hidd-vesagfx-includes_GENINCFLAG)
+
+$(kernel-hidd-vesagfx-includes_GENINCFLAG) : OPTS := $(kernel-hidd-vesagfx-includes_OPTS)
+$(kernel-hidd-vesagfx-includes_GENINCFLAG) : MODNAME := vesagfx
+$(kernel-hidd-vesagfx-includes_GENINCFLAG) : MODTYPE := hidd
+$(kernel-hidd-vesagfx-includes_GENINCFLAG) : $(kernel-hidd-vesagfx-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-hidd-vesagfx_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-hidd-vesagfx_DEFNAME)_INCLUDES)) : | $(kernel-hidd-vesagfx_OBJDIR)/vesagfx_geninc
+
+$(kernel-hidd-vesagfx_OBJDIR)/vesagfx_geninc : COPYSRCDIR := $(kernel-hidd-vesagfx_OBJDIR)/include
+$(kernel-hidd-vesagfx_OBJDIR)/vesagfx_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-hidd-vesagfx_OBJDIR)/vesagfx_geninc : FILES := $($(kernel-hidd-vesagfx_DEFNAME)_INCLUDES)
+$(kernel-hidd-vesagfx_OBJDIR)/vesagfx_geninc : $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/include/,$($(kernel-hidd-vesagfx_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-hidd-vesagfx_OBJDIR)/include
+
+$(addprefix $(kernel-hidd-vesagfx_INCDIR)/,$($(kernel-hidd-vesagfx_DEFNAME)_INCLUDES)) : | $(kernel-hidd-vesagfx_OBJDIR)/vesagfx_incs
+
+$(kernel-hidd-vesagfx_OBJDIR)/vesagfx_incs : COPYSRCDIR := $(kernel-hidd-vesagfx_OBJDIR)/include
+$(kernel-hidd-vesagfx_OBJDIR)/vesagfx_incs : TGTDIR := $(kernel-hidd-vesagfx_INCDIR)
+$(kernel-hidd-vesagfx_OBJDIR)/vesagfx_incs : FILES := $($(kernel-hidd-vesagfx_DEFNAME)_INCLUDES)
+$(kernel-hidd-vesagfx_OBJDIR)/vesagfx_incs : $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/include/,$($(kernel-hidd-vesagfx_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-hidd-vesagfx_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-hidd-vesagfx_DEFNAME)_INCLUDES))))
+
+TMPvesagfx_INCDIRS := \
+    $(kernel-hidd-vesagfx_OBJDIR)/include $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/include/,$(kernel-hidd-vesagfx_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-hidd-vesagfx_INCDIRS)) \
+    $(kernel-hidd-vesagfx_INCDIR) $(addprefix $(kernel-hidd-vesagfx_INCDIR)/,$(kernel-hidd-vesagfx_INCDIRS))
+
+ifneq (kernel-hidd-vesagfx-includes-dirs,)
+kernel-hidd-vesagfx-includes-dirs : | $(TMPvesagfx_INCDIRS)
+else
+kernel-hidd-vesagfx-includes-dirs :: $(TMPvesagfx_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPvesagfx_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-hidd-vesagfx-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-hidd-vesagfx-genlibdefs_OPTS += -f 
+    kernel-hidd-vesagfx-genlibdefs_MODNAME := vesagfx_
+else
+    kernel-hidd-vesagfx-genlibdefs_MODNAME := vesagfx
+endif
+kernel-hidd-vesagfx-genlibdefs_TARGET := $(kernel-hidd-vesagfx-genlibdefs_MODNAME)_libdefs.h
+kernel-hidd-vesagfx-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-vesagfx-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-vesagfx-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-vesagfx-genlibdefs_OPTS += -c 
+        kernel-hidd-vesagfx-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-hidd-vesagfx-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/vesagfx.conf
+    kernel-hidd-vesagfx-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/vesagfx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-vesagfx-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-vesagfx-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-vesagfx-genlibdefs_OPTS += -o 
+        kernel-hidd-vesagfx-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-vesagfx-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-vesagfx_OBJDIR)/include,)
+    kernel-hidd-vesagfx-genlibdefs_OPTS += -d $(kernel-hidd-vesagfx_OBJDIR)/include
+    kernel-hidd-vesagfx-genlibdefs_TARGET := $(kernel-hidd-vesagfx_OBJDIR)/include/$(kernel-hidd-vesagfx-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-hidd-vesagfx-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-hidd-vesagfx-genlibdefs_TARGET) : OPTS := $(kernel-hidd-vesagfx-genlibdefs_OPTS)
+$(kernel-hidd-vesagfx-genlibdefs_TARGET) : MODNAME := vesagfx
+$(kernel-hidd-vesagfx-genlibdefs_TARGET) : MODTYPE := hidd
+$(kernel-hidd-vesagfx-genlibdefs_TARGET) : $(kernel-hidd-vesagfx-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-vesagfx_DEFLIBDEFSINC) : FILENAME := $(kernel-hidd-vesagfx_LIBDEFSINC)
+$(kernel-hidd-vesagfx_DEFLIBDEFSINC) : $(kernel-hidd-vesagfx_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-hidd-vesagfx_LIBDEFSINC) $(kernel-hidd-vesagfx_DEFLIBDEFSINC) : | $(kernel-hidd-vesagfx_OBJDIR)/include
+
+ifneq (kernel-hidd-vesagfx-includes-dirs,)
+kernel-hidd-vesagfx-includes-dirs : | $(kernel-hidd-vesagfx_OBJDIR)/include
+else
+kernel-hidd-vesagfx-includes-dirs :: $(kernel-hidd-vesagfx_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-vesagfx_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-hidd-vesagfx-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-hidd-vesagfx-genmodfiles_OPTS += -f 
+    kernel-hidd-vesagfx-genmodfiles_MODNAME := vesagfx_
+else
+    kernel-hidd-vesagfx-genmodfiles_MODNAME := vesagfx
+endif
+kernel-hidd-vesagfx-genmodfiles_GENTARGETS := $($(kernel-hidd-vesagfx-genmodfiles_MODNAME)_STARTFILES) $($(kernel-hidd-vesagfx-genmodfiles_MODNAME)_ENDFILES)
+kernel-hidd-vesagfx-genmodfiles_STUBTARGETS := $($(kernel-hidd-vesagfx-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-hidd-vesagfx-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-hidd-vesagfx-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-hidd-vesagfx-genmodfiles_GENTARGETS))
+kernel-hidd-vesagfx-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-hidd-vesagfx-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-hidd-vesagfx-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-hidd-vesagfx-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-hidd-vesagfx-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-vesagfx-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-vesagfx-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-vesagfx-genmodfiles_OPTS += -c 
+        kernel-hidd-vesagfx-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-hidd-vesagfx-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/vesagfx.conf
+    kernel-hidd-vesagfx-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/vesagfx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-vesagfx-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-vesagfx-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-vesagfx-genmodfiles_OPTS += -o 
+        kernel-hidd-vesagfx-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-vesagfx-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-vesagfx_OBJDIR),)
+    kernel-hidd-vesagfx-genmodfiles_OPTS += -d $(kernel-hidd-vesagfx_OBJDIR)
+    kernel-hidd-vesagfx-genmodfiles_TARGETDIR := $(shell echo $(kernel-hidd-vesagfx_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-vesagfx-genmodfiles_GENTARGETS := $(addprefix $(kernel-hidd-vesagfx-genmodfiles_TARGETDIR)/,$(kernel-hidd-vesagfx-genmodfiles_GENTARGETS))
+    kernel-hidd-vesagfx-genmodfiles_GENFILEFLAG=$(kernel-hidd-vesagfx-genmodfiles_TARGETDIR)/.vesagfx.hidd-genfiles
+else
+    kernel-hidd-vesagfx-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.vesagfx.hidd-genfiles
+endif
+ifneq ($(kernel-hidd-vesagfx_OBJDIR)/linklib,)
+    kernel-hidd-vesagfx-genmodfiles_OPTS += -l $(kernel-hidd-vesagfx_OBJDIR)/linklib
+    kernel-hidd-vesagfx-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-hidd-vesagfx_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-vesagfx-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-vesagfx-genmodfiles_STUBTARGETDIR)/,$(kernel-hidd-vesagfx-genmodfiles_STUBTARGETS))
+    kernel-hidd-vesagfx-genmodfiles_TARGETDIRS += $(kernel-hidd-vesagfx_OBJDIR)/linklib
+else
+ifneq ($(kernel-hidd-vesagfx_OBJDIR),)
+    kernel-hidd-vesagfx-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-vesagfx-genmodfiles_TARGETDIR)/,$(kernel-hidd-vesagfx-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-hidd-vesagfx-genmodfiles_TARGETS := $(kernel-hidd-vesagfx-genmodfiles_GENTARGETS) $(kernel-hidd-vesagfx-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-hidd-vesagfx-genmodfiles_TARGETDIRS),)
+$(kernel-hidd-vesagfx-genmodfiles_TARGETS) : | $(kernel-hidd-vesagfx-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-hidd-vesagfx-genmodfiles_TARGETS) : $(kernel-hidd-vesagfx-genmodfiles_DEPS) $(kernel-hidd-vesagfx-genmodfiles_GENFILEFLAG)
+
+$(kernel-hidd-vesagfx-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-hidd-vesagfx-genmodfiles_OPTS)
+$(kernel-hidd-vesagfx-genmodfiles_GENFILEFLAG) : MODNAME := vesagfx
+$(kernel-hidd-vesagfx-genmodfiles_GENFILEFLAG) : MODTYPE := hidd
+$(kernel-hidd-vesagfx-genmodfiles_GENFILEFLAG) : $(kernel-hidd-vesagfx-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-hidd-vesagfx-genmodfiles_GENFILEFLAG) : $(kernel-hidd-vesagfx_DEFLIBDEFSINC) $(kernel-hidd-vesagfx-makefile)
+
+
+ifneq ($(kernel-hidd-vesagfx-genmodfiles_GENFILEFLAG),)
+$(kernel-hidd-vesagfx-genmodfiles_GENFILEFLAG) : | $(kernel-hidd-vesagfx_OBJDIR)/linklib
+else
+$(kernel-hidd-vesagfx-genmodfiles_GENFILEFLAG) :: $(kernel-hidd-vesagfx_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-vesagfx_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-hidd-vesagfx_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-hidd-vesagfx_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-hidd-vesagfx-fd : $(kernel-hidd-vesagfx_FDDIR)/vesagfx_lib.fd
+
+
+TMP_TARGET := vesagfx_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/vesagfx.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/vesagfx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-vesagfx_FDDIR),)
+    TMP_OPTS += -d $(kernel-hidd-vesagfx_FDDIR)
+    TMP_TARGET := $(kernel-hidd-vesagfx_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := vesagfx
+$(TMP_TARGET) : MODTYPE := hidd
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-vesagfx_FDDIR)/vesagfx_lib.fd : | $(kernel-hidd-vesagfx_FDDIR)
+
+
+ifneq (kernel-hidd-vesagfx-fd-setup,)
+kernel-hidd-vesagfx-fd-setup : | $(kernel-hidd-vesagfx_FDDIR)
+else
+kernel-hidd-vesagfx-fd-setup :: $(kernel-hidd-vesagfx_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-vesagfx_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-hidd-vesagfx_FILES            := $(FILES)
+kernel-hidd-vesagfx_OBJCFILES        := 
+kernel-hidd-vesagfx_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-hidd-vesagfx_LIBFILES         := 
+kernel-hidd-vesagfx_LIBS             := 
+
+kernel-hidd-vesagfx_FDIRS            := $(sort $(dir $(kernel-hidd-vesagfx_FILES)))
+
+kernel-hidd-vesagfx_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-hidd-vesagfx_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-hidd-vesagfx_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-hidd-vesagfx_FILTERARCH       = $(filter-out $(call kernel-hidd-vesagfx_MATCHARCH,$(1),$(2)),$(2))
+kernel-hidd-vesagfx_STARTFILES       := $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$($(kernel-hidd-vesagfx_DEFNAME)_STARTFILES))
+kernel-hidd-vesagfx_ENDFILES         := $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$($(kernel-hidd-vesagfx_DEFNAME)_ENDFILES))
+
+kernel-hidd-vesagfx_ARCHOBJS         := $(wildcard $(kernel-hidd-vesagfx_OBJDIR)/arch/*.o)
+kernel-hidd-vesagfx_LIBARCHOBJS      := $(wildcard $(kernel-hidd-vesagfx_OBJDIR)/linklib/arch/*.o)
+kernel-hidd-vesagfx_ARCHFILES        := $(basename $(notdir $(kernel-hidd-vesagfx_ARCHOBJS)))
+kernel-hidd-vesagfx_LIBARCHFILES     := $(basename $(notdir $(kernel-hidd-vesagfx_LIBARCHOBJS)))
+kernel-hidd-vesagfx_C_NARCHFILES     := $(call kernel-hidd-vesagfx_FILTERARCH,$(kernel-hidd-vesagfx_ARCHFILES),$(kernel-hidd-vesagfx_FILES))
+kernel-hidd-vesagfx_CXX_NARCHFILES   := $(call kernel-hidd-vesagfx_FILTERARCH,$(kernel-hidd-vesagfx_ARCHFILES),$(kernel-hidd-vesagfx_CXXFILES))
+kernel-hidd-vesagfx_OBJC_NARCHFILES  := $(call kernel-hidd-vesagfx_FILTERARCH,$(kernel-hidd-vesagfx_ARCHFILES),$(kernel-hidd-vesagfx_OBJCFILES))
+kernel-hidd-vesagfx_NLIBARCHFILES    := $(call kernel-hidd-vesagfx_FILTERARCH,$(kernel-hidd-vesagfx_LIBARCHFILES),$(kernel-hidd-vesagfx_LIBFILES))
+kernel-hidd-vesagfx_ARCHNLIBFILES    := $(call kernel-hidd-vesagfx_FILTERARCH,$(kernel-hidd-vesagfx_LIBFILES),$(kernel-hidd-vesagfx_LIBARCHFILES))
+
+kernel-hidd-vesagfx_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-hidd-vesagfx_OBJDIR)/include -include $(kernel-hidd-vesagfx_DEFLIBDEFSINC))
+ifneq (,)
+kernel-hidd-vesagfx_CPPFLAGS         += -I
+endif
+kernel-hidd-vesagfx_LINKLIBCPPFLAGS  := $(kernel-hidd-vesagfx_CPPFLAGS)
+kernel-hidd-vesagfx_CPPFLAGS         += $(strip $($(kernel-hidd-vesagfx_DEFNAME)_CPPFLAGS))
+kernel-hidd-vesagfx_LINKLIBCPPFLAGS  += $(strip $($(kernel-hidd-vesagfx_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-hidd-vesagfx_CFLAGS           := $(strip $(CFLAGS) $($(kernel-hidd-vesagfx_DEFNAME)_CFLAGS))
+kernel-hidd-vesagfx_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-hidd-vesagfx_DEFNAME)_LINKLIBCFLAGS))
+kernel-hidd-vesagfx_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-hidd-vesagfx_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-vesagfx_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-hidd-vesagfx_CFLAGS           := $(strip $(kernel-hidd-vesagfx_LTOFLAGS) $(kernel-hidd-vesagfx_CFLAGS))
+kernel-hidd-vesagfx_LINKLIBCFLAGS    := $(strip $(kernel-hidd-vesagfx_LTOFLAGS) $(kernel-hidd-vesagfx_LINKLIBCFLAGS))
+kernel-hidd-vesagfx_CXXFLAGS         := $(strip $(kernel-hidd-vesagfx_LTOFLAGS) $(kernel-hidd-vesagfx_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-vesagfx_SUBSTNULL        :=
+kernel-hidd-vesagfx_SUBSTSPACE       := $(kernel-hidd-vesagfx_SUBSTNULL) #
+kernel-hidd-vesagfx_SUBSTCOMMA       := ,
+kernel-hidd-vesagfx_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-hidd-vesagfx_SUBSTSPACE),$(kernel-hidd-vesagfx_SUBSTCOMMA),$(strip $($(kernel-hidd-vesagfx_DEFNAME)_STARTFILES))))
+kernel-hidd-vesagfx_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-hidd-vesagfx_CFLAGS           := $(strip $(kernel-hidd-vesagfx_INSTRFUNCFLAGS) $(kernel-hidd-vesagfx_CFLAGS))
+kernel-hidd-vesagfx_CXXFLAGS         := $(strip $(kernel-hidd-vesagfx_INSTRFUNCFLAGS) $(kernel-hidd-vesagfx_CXXFLAGS))
+kernel-hidd-vesagfx_LIBS             += $(kernel-hidd-vesagfx_INSTRFUNCLIBS)
+endif
+endif
+kernel-hidd-vesagfx_DFLAGS           := $(strip $(kernel-hidd-vesagfx_DFLAGS) $($(kernel-hidd-vesagfx_DEFNAME)_DFLAGS))
+kernel-hidd-vesagfx_LINKLIBDFLAGS    := $(strip $(kernel-hidd-vesagfx_DFLAGS) $($(kernel-hidd-vesagfx_DEFNAME)_LINKLIBDFLAGS))
+kernel-hidd-vesagfx_DXXFLAGS         := $(strip $(kernel-hidd-vesagfx_DXXFLAGS) $($(kernel-hidd-vesagfx_DEFNAME)_DXXFLAGS))
+
+ifeq (hidd,library)
+    kernel-hidd-vesagfx_LIBSUFFIX    := 
+else
+    kernel-hidd-vesagfx_LIBSUFFIX    := .hidd
+endif
+
+ifeq (,)
+kernel-hidd-vesagfx_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-hidd-vesagfx_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-hidd-vesagfx_LINKLIBCFILES    := $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$($(kernel-hidd-vesagfx_DEFNAME)_LINKLIBFILES))
+kernel-hidd-vesagfx_LINKLIBAFILES    := $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$($(kernel-hidd-vesagfx_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-vesagfx_DEFNAME)_LINKLIBFILES) $($(kernel-hidd-vesagfx_DEFNAME)_LINKLIBAFILES)  $(kernel-hidd-vesagfx_ARCHNLIBFILES)),)
+    kernel-hidd-vesagfx_LINKLIB      :=
+else
+    kernel-hidd-vesagfx_LINKLIB      := $(kernel-hidd-vesagfx_LIBDIR)/libvesagfx$(kernel-hidd-vesagfx_LIBSUFFIX).a
+    ifneq (vesagfx,$(kernel-hidd-vesagfx_LINKLIBNAME))
+        kernel-hidd-vesagfx_LINKLIB  += $(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_LINKLIBNAME)$(kernel-hidd-vesagfx_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-vesagfx_LINKLIBFILES     := $(kernel-hidd-vesagfx_LINKLIBCFILES) $(kernel-hidd-vesagfx_LINKLIBAFILES)
+
+kernel-hidd-vesagfx_RELLINKLIBCFILES := $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$($(kernel-hidd-vesagfx_DEFNAME)_RELLINKLIBFILES))
+kernel-hidd-vesagfx_RELLINKLIBAFILES := $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$($(kernel-hidd-vesagfx_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-vesagfx_DEFNAME)_RELLINKLIBFILES) $($(kernel-hidd-vesagfx_DEFNAME)_RELLINKLIBAFILES)  $(kernel-hidd-vesagfx_ARCHNLIBFILES)),)
+    kernel-hidd-vesagfx_RELLINKLIB   :=
+else
+    kernel-hidd-vesagfx_RELLINKLIB   := $(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_DEFNAME)_rel$(kernel-hidd-vesagfx_LIBSUFFIX).a
+    ifneq (vesagfx,$(kernel-hidd-vesagfx_LINKLIBNAME))
+        kernel-hidd-vesagfx_RELLINKLIB += $(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_LINKLIBNAME)_rel$(kernel-hidd-vesagfx_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-vesagfx_RELLINKLIBFILES  := $(kernel-hidd-vesagfx_RELLINKLIBCFILES) $(kernel-hidd-vesagfx_RELLINKLIBAFILES)
+endif
+
+kernel-hidd-vesagfx_ENDOBJS          := $(addsuffix .o,$(kernel-hidd-vesagfx_ENDFILES))
+kernel-hidd-vesagfx_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$(notdir $(kernel-hidd-vesagfx_NLIBARCHFILES))) $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-vesagfx_ARCHNLIBFILES))) $(kernel-hidd-vesagfx_LINKLIBFILES)) \
+                 
+kernel-hidd-vesagfx_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$(notdir $(kernel-hidd-vesagfx_NLIBARCHFILES))) $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-vesagfx_ARCHNLIBFILES))) $(kernel-hidd-vesagfx_RELLINKLIBFILES)) \
+                 
+$(kernel-hidd-vesagfx_LINKLIBFILES) $(kernel-hidd-vesagfx_RELLINKLIBFILES) : | $(kernel-hidd-vesagfx_OBJDIR)/linklib
+$(kernel-hidd-vesagfx_LINKLIBOBJS) $(kernel-hidd-vesagfx_RELLINKLIBOBJS) : | $(kernel-hidd-vesagfx_OBJDIR)/linklib
+
+kernel-hidd-vesagfx_CCFILES := $(kernel-hidd-vesagfx_C_NARCHFILES)
+kernel-hidd-vesagfx_TARGETCCFILES    := $(strip $(kernel-hidd-vesagfx_STARTFILES) $(kernel-hidd-vesagfx_ENDFILES))
+kernel-hidd-vesagfx_LINKLIBCCFILES   := $(strip $(kernel-hidd-vesagfx_NLIBARCHFILES) $(kernel-hidd-vesagfx_LINKLIBCFILES) $(kernel-hidd-vesagfx_RELLINKLIBCFILES))
+kernel-hidd-vesagfx_LINKLIBCCGENFILES := $(strip $(kernel-hidd-vesagfx_LINKLIBCFILES) $(kernel-hidd-vesagfx_RELLINKLIBCFILES))
+
+
+kernel-hidd-vesagfx_CXXABSBASENAMES := $(foreach kernel-hidd-vesagfx_CXXBASE,$(kernel-hidd-vesagfx_CXX_NARCHFILES),$(if $(filter /%,$(kernel-hidd-vesagfx_CXXBASE)),$(kernel-hidd-vesagfx_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-hidd-vesagfx_CXXBASE))))
+
+ifneq ($(kernel-hidd-vesagfx_CXXABSBASENAMES),)
+
+kernel-hidd-vesagfx_CXXBASENAMES := $(basename $(kernel-hidd-vesagfx_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-hidd-vesagfx_MCXX_FILES  := $(strip $(foreach kernel-hidd-vesagfx_CXXBASE,$(kernel-hidd-vesagfx_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-hidd-vesagfx_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-hidd-vesagfx_EXT),$(kernel-hidd-vesagfx_CXXBASE)))))))
+
+ifeq (,)
+kernel-hidd-vesagfx_MCXX_SRCWILDCARD := %
+else
+kernel-hidd-vesagfx_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-vesagfx_OBJDIR),)
+  kernel-hidd-vesagfx_CXXTARGETS := $(notdir $(kernel-hidd-vesagfx_CXXBASENAMES:=.o))
+  kernel-hidd-vesagfx_CXXDTARGETS := $(notdir $(kernel-hidd-vesagfx_CXXBASENAMES:=.d))
+  kernel-hidd-vesagfx_MCXX_WILDCARD := %
+else
+  kernel-hidd-vesagfx_CXXTARGETS := $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(notdir $(kernel-hidd-vesagfx_CXXBASENAMES:=.o)))
+  kernel-hidd-vesagfx_CXXDTARGETS := $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(notdir $(kernel-hidd-vesagfx_CXXBASENAMES:=.d)))
+  kernel-hidd-vesagfx_MCXX_WILDCARD := $(kernel-hidd-vesagfx_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-hidd-vesagfx_CXXTARGETS) $(kernel-hidd-vesagfx_CXXDTARGETS) : | $(kernel-hidd-vesagfx_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-hidd-vesagfx_MCXX_CPPFLAGS := $(kernel-hidd-vesagfx_CPPFLAGS)
+kernel-hidd-vesagfx_CXXFLAGS := $(kernel-hidd-vesagfx_CXXFLAGS)
+ifeq ($(kernel-hidd-vesagfx_DXXFLAGS),)
+  kernel-hidd-vesagfx_DXXFLAGS := $(kernel-hidd-vesagfx_CXXFLAGS)
+else
+  kernel-hidd-vesagfx_DXXFLAGS := $(kernel-hidd-vesagfx_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-hidd-vesagfx_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-hidd-vesagfx_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-hidd-vesagfx_CXXCMD:=$(HOST_CXX)
+  kernel-hidd-vesagfx_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-hidd-vesagfx_MCXX_CPPFLAGS) $(kernel-hidd-vesagfx_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-vesagfx_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-vesagfx_CXXFLAGS))
+  kernel-hidd-vesagfx_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-vesagfx_DXXFLAGS))
+  kernel-hidd-vesagfx_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-hidd-vesagfx_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-hidd-vesagfx_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-vesagfx_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-hidd-vesagfx_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-hidd-vesagfx_MCXX_CPPFLAGS := $(strip $(kernel-hidd-vesagfx_MCXX_CPPFLAGS) $(kernel-hidd-vesagfx_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-vesagfx_CXXFLAGS := $(strip $(kernel-hidd-vesagfx_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-hidd-vesagfx_DXXFLAGS := $(kernel-hidd-vesagfx_DXXFLAGS)
+  kernel-hidd-vesagfx_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-hidd-vesagfx_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-hidd-vesagfx_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-vesagfx_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-hidd-vesagfx_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-hidd-vesagfx_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-hidd-vesagfx_MCXX_CPPFLAGS) $(kernel-hidd-vesagfx_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-vesagfx_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-vesagfx_CXXFLAGS))
+  kernel-hidd-vesagfx_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-vesagfx_DXXFLAGS))
+  kernel-hidd-vesagfx_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-hidd-vesagfx_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-hidd-vesagfx_CXXCMD) $(kernel-hidd-vesagfx_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-vesagfx_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_CXXIQUOTE) . $(kernel-hidd-vesagfx_CXXIQUOTE_END) $(strip $(kernel-hidd-vesagfx_CXXFLAGS) $(kernel-hidd-vesagfx_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-hidd-vesagfx_CXXCMD) $(kernel-hidd-vesagfx_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-vesagfx_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_CXXIQUOTE) . $(kernel-hidd-vesagfx_CXXIQUOTE_END) $(strip $(kernel-hidd-vesagfx_CXXFLAGS) $(kernel-hidd-vesagfx_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-hidd-vesagfx_CXXCMD) $(kernel-hidd-vesagfx_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-vesagfx_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_CXXIQUOTE) . $(kernel-hidd-vesagfx_CXXIQUOTE_END) $(strip $(kernel-hidd-vesagfx_CXXFLAGS) $(kernel-hidd-vesagfx_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-hidd-vesagfx_CXXCMD)" $(MKDEPEND) $(strip $(kernel-hidd-vesagfx_DXXFLAGS) $(kernel-hidd-vesagfx_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-hidd-vesagfx_OBJDIR),)
+  $(foreach kernel-hidd-vesagfx_CXXFILE,$(kernel-hidd-vesagfx_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-hidd-vesagfx_CXXFILE))),$(kernel-hidd-vesagfx_CXXFILE))))
+else
+  $(foreach kernel-hidd-vesagfx_CXXFILE,$(kernel-hidd-vesagfx_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(notdir $(basename $(kernel-hidd-vesagfx_CXXFILE)))),$(kernel-hidd-vesagfx_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-hidd-vesagfx_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-hidd-vesagfx_MOBJC_SRCWILDCARD := %
+else
+kernel-hidd-vesagfx_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-vesagfx_OBJDIR),)
+  kernel-hidd-vesagfx_MOBJC_TARGETS := $(addsuffix .o,$(kernel-hidd-vesagfx_OBJC_NARCHFILES))
+  kernel-hidd-vesagfx_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-hidd-vesagfx_OBJC_NARCHFILES))
+  kernel-hidd-vesagfx_MOBJC_WILDCARD := %
+else
+  kernel-hidd-vesagfx_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(kernel-hidd-vesagfx_OBJC_NARCHFILES)))
+  kernel-hidd-vesagfx_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(kernel-hidd-vesagfx_OBJC_NARCHFILES)))
+  kernel-hidd-vesagfx_MOBJC_WILDCARD := $(kernel-hidd-vesagfx_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-hidd-vesagfx_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-hidd-vesagfx_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-hidd-vesagfx_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-vesagfx_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-hidd-vesagfx_MOBJC_DIRS := $(foreach dir, $(kernel-hidd-vesagfx_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-vesagfx_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-hidd-vesagfx_MOBJC_DIRS),)
+    kernel-hidd-vesagfx_MOBJC_DIRS := $(shell echo $(kernel-hidd-vesagfx_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-hidd-vesagfx_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-hidd-vesagfx_CC := $(TARGET_CC)
+else
+  kernel-hidd-vesagfx_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-hidd-vesagfx_MOBJC_CPPFLAGS := $(kernel-hidd-vesagfx_CPPFLAGS)
+kernel-hidd-vesagfx_OBJCFLAGS := $(kernel-hidd-vesagfx_CFLAGS)
+kernel-hidd-vesagfx_OBJCFLAGS := $(kernel-hidd-vesagfx_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-hidd-vesagfx_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-hidd-vesagfx_OBJCFLAGS)))
+ifeq ($(kernel-hidd-vesagfx_DFLAGS),)
+  kernel-hidd-vesagfx_OBJCDFLAGS := $(kernel-hidd-vesagfx_CFLAGS)
+else
+  kernel-hidd-vesagfx_OBJCDFLAGS := $(kernel-hidd-vesagfx_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-hidd-vesagfx_LINK ?= $(strip $(kernel-hidd-vesagfx_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-vesagfx_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-hidd-vesagfx_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : kernel-hidd-vesagfx_MOBJC_CPPFLAGS:=$(strip $(kernel-hidd-vesagfx_MOBJC_CPPFLAGS) $(kernel-hidd-vesagfx_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : kernel-hidd-vesagfx_OBJCFLAGS:=$(strip $(kernel-hidd-vesagfx_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : kernel-hidd-vesagfx_OBJCDFLAGS:=$(kernel-hidd-vesagfx_OBJCDFLAGS)
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-hidd-vesagfx_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-hidd-vesagfx_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : kernel-hidd-vesagfx_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-hidd-vesagfx_MOBJC_CPPFLAGS) $(kernel-hidd-vesagfx_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : kernel-hidd-vesagfx_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-vesagfx_OBJCFLAGS))
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : kernel-hidd-vesagfx_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-vesagfx_OBJCDFLAGS))
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-hidd-vesagfx_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-vesagfx_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : kernel-hidd-vesagfx_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-hidd-vesagfx_MOBJC_CPPFLAGS) $(kernel-hidd-vesagfx_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : kernel-hidd-vesagfx_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-vesagfx_OBJCFLAGS))
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : kernel-hidd-vesagfx_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-vesagfx_OBJCDFLAGS))
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-hidd-vesagfx_MOBJC_TARGETS) $(kernel-hidd-vesagfx_MOBJC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-vesagfx_MOBJC_TARGETS) : CPPFLAGS := $(kernel-hidd-vesagfx_MOBJC_CPPFLAGS)
+$(kernel-hidd-vesagfx_MOBJC_TARGETS) : CFLAGS := $(kernel-hidd-vesagfx_OBJCFLAGS)
+$(kernel-hidd-vesagfx_MOBJC_TARGETS) : $(kernel-hidd-vesagfx_MOBJC_WILDCARD).o : $(kernel-hidd-vesagfx_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-vesagfx_IQUOTE) $(dir $<) $(kernel-hidd-vesagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_IQUOTE) . $(kernel-hidd-vesagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-vesagfx_IQUOTE) $(dir $<) $(kernel-hidd-vesagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_IQUOTE) . $(kernel-hidd-vesagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-vesagfx_IQUOTE) $(dir $<) $(kernel-hidd-vesagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_IQUOTE) . $(kernel-hidd-vesagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-vesagfx_MOBJC_DTARGETS) : $(kernel-hidd-vesagfx_MOBJC_WILDCARD).d : $(kernel-hidd-vesagfx_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-vesagfx_OBJCDFLAGS) $(kernel-hidd-vesagfx_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-hidd-vesagfx_MC_SRCWILDCARD := %
+else
+kernel-hidd-vesagfx_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-vesagfx_OBJDIR),)
+kernel-hidd-vesagfx_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-vesagfx_CCFILES))
+kernel-hidd-vesagfx_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-vesagfx_CCFILES))
+kernel-hidd-vesagfx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-vesagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(notdir $(kernel-hidd-vesagfx_CCFILES))))
+    kernel-hidd-vesagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(notdir $(kernel-hidd-vesagfx_CCFILES))))
+else
+ifeq (,)
+    kernel-hidd-vesagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(kernel-hidd-vesagfx_CCFILES)))
+    kernel-hidd-vesagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(kernel-hidd-vesagfx_CCFILES)))
+else
+    kernel-hidd-vesagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-vesagfx_CCFILES))))
+    kernel-hidd-vesagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-vesagfx_CCFILES))))
+endif
+endif
+kernel-hidd-vesagfx_MC_TGTWILDCARD := $(kernel-hidd-vesagfx_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-vesagfx_CCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-vesagfx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-vesagfx_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-vesagfx_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-vesagfx_MC_DIRS := $(foreach dir, $(kernel-hidd-vesagfx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-vesagfx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-vesagfx_MC_DIRS),)
+    kernel-hidd-vesagfx_MC_DIRS := $(shell echo $(kernel-hidd-vesagfx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-vesagfx_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-vesagfx_MC_CPPFLAGS := $(kernel-hidd-vesagfx_CPPFLAGS)
+kernel-hidd-vesagfx_CFLAGS := $(kernel-hidd-vesagfx_CFLAGS)
+ifeq ($(kernel-hidd-vesagfx_DFLAGS),)
+  kernel-hidd-vesagfx_DFLAGS := $(kernel-hidd-vesagfx_CFLAGS)
+else
+  kernel-hidd-vesagfx_DFLAGS := $(kernel-hidd-vesagfx_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-vesagfx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-vesagfx_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_MC_CPPFLAGS:=$(strip $(kernel-hidd-vesagfx_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_CFLAGS:=$(strip $(kernel-hidd-vesagfx_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_DFLAGS:=$(kernel-hidd-vesagfx_DFLAGS)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-vesagfx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-vesagfx_STRIP ?= $(HOST_STRIP)
+kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-vesagfx_CFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-vesagfx_DFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-vesagfx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-vesagfx_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-vesagfx_CFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-vesagfx_DFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-vesagfx_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-vesagfx_MC_CPPFLAGS)
+$(kernel-hidd-vesagfx_MC_TARGETS) : CFLAGS := $(kernel-hidd-vesagfx_CFLAGS)
+$(kernel-hidd-vesagfx_MC_TARGETS) : $(kernel-hidd-vesagfx_MC_TGTWILDCARD).o : $(kernel-hidd-vesagfx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-vesagfx_IQUOTE) $(dir $<) $(kernel-hidd-vesagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_IQUOTE) . $(kernel-hidd-vesagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-vesagfx_IQUOTE) $(dir $<) $(kernel-hidd-vesagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_IQUOTE) . $(kernel-hidd-vesagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-vesagfx_IQUOTE) $(dir $<) $(kernel-hidd-vesagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_IQUOTE) . $(kernel-hidd-vesagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-vesagfx_MC_DTARGETS) : $(kernel-hidd-vesagfx_MC_TGTWILDCARD).d : $(kernel-hidd-vesagfx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-vesagfx_DFLAGS) $(kernel-hidd-vesagfx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-vesagfx_MC_SRCWILDCARD := %
+else
+kernel-hidd-vesagfx_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-vesagfx_OBJDIR),)
+kernel-hidd-vesagfx_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-vesagfx_TARGETCCFILES))
+kernel-hidd-vesagfx_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-vesagfx_TARGETCCFILES))
+kernel-hidd-vesagfx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-vesagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(notdir $(kernel-hidd-vesagfx_TARGETCCFILES))))
+    kernel-hidd-vesagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(notdir $(kernel-hidd-vesagfx_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-hidd-vesagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(kernel-hidd-vesagfx_TARGETCCFILES)))
+    kernel-hidd-vesagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(kernel-hidd-vesagfx_TARGETCCFILES)))
+else
+    kernel-hidd-vesagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-vesagfx_TARGETCCFILES))))
+    kernel-hidd-vesagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-vesagfx_TARGETCCFILES))))
+endif
+endif
+kernel-hidd-vesagfx_MC_TGTWILDCARD := $(kernel-hidd-vesagfx_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-vesagfx_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-vesagfx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-vesagfx_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-vesagfx_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-vesagfx_MC_DIRS := $(foreach dir, $(kernel-hidd-vesagfx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-vesagfx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-vesagfx_MC_DIRS),)
+    kernel-hidd-vesagfx_MC_DIRS := $(shell echo $(kernel-hidd-vesagfx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-vesagfx_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-vesagfx_MC_CPPFLAGS := $(kernel-hidd-vesagfx_CPPFLAGS) -D__AROS__
+kernel-hidd-vesagfx_CFLAGS := $(kernel-hidd-vesagfx_CFLAGS)
+ifeq ($(kernel-hidd-vesagfx_DFLAGS),)
+  kernel-hidd-vesagfx_DFLAGS := $(kernel-hidd-vesagfx_CFLAGS)
+else
+  kernel-hidd-vesagfx_DFLAGS := $(kernel-hidd-vesagfx_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-vesagfx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-vesagfx_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_MC_CPPFLAGS:=$(strip $(kernel-hidd-vesagfx_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_CFLAGS:=$(strip $(kernel-hidd-vesagfx_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_DFLAGS:=$(kernel-hidd-vesagfx_DFLAGS)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-vesagfx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-vesagfx_STRIP ?= $(HOST_STRIP)
+kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-vesagfx_CFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-vesagfx_DFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-vesagfx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-vesagfx_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-vesagfx_CFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-vesagfx_DFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-vesagfx_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-vesagfx_MC_CPPFLAGS)
+$(kernel-hidd-vesagfx_MC_TARGETS) : CFLAGS := $(kernel-hidd-vesagfx_CFLAGS)
+$(kernel-hidd-vesagfx_MC_TARGETS) : $(kernel-hidd-vesagfx_MC_TGTWILDCARD).o : $(kernel-hidd-vesagfx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-vesagfx_IQUOTE) $(dir $<) $(kernel-hidd-vesagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_IQUOTE) . $(kernel-hidd-vesagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-vesagfx_IQUOTE) $(dir $<) $(kernel-hidd-vesagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_IQUOTE) . $(kernel-hidd-vesagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-vesagfx_IQUOTE) $(dir $<) $(kernel-hidd-vesagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_IQUOTE) . $(kernel-hidd-vesagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-vesagfx_MC_DTARGETS) : $(kernel-hidd-vesagfx_MC_TGTWILDCARD).d : $(kernel-hidd-vesagfx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-vesagfx_DFLAGS) $(kernel-hidd-vesagfx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-vesagfx_MC_SRCWILDCARD := %
+else
+kernel-hidd-vesagfx_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-vesagfx_OBJDIR)/linklib,)
+kernel-hidd-vesagfx_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-vesagfx_NLIBARCHFILES))
+kernel-hidd-vesagfx_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-vesagfx_NLIBARCHFILES))
+kernel-hidd-vesagfx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-vesagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$(notdir $(kernel-hidd-vesagfx_NLIBARCHFILES))))
+    kernel-hidd-vesagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$(notdir $(kernel-hidd-vesagfx_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-hidd-vesagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$(kernel-hidd-vesagfx_NLIBARCHFILES)))
+    kernel-hidd-vesagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$(kernel-hidd-vesagfx_NLIBARCHFILES)))
+else
+    kernel-hidd-vesagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-vesagfx_NLIBARCHFILES))))
+    kernel-hidd-vesagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-vesagfx_NLIBARCHFILES))))
+endif
+endif
+kernel-hidd-vesagfx_MC_TGTWILDCARD := $(kernel-hidd-vesagfx_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-vesagfx_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-vesagfx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-vesagfx_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-vesagfx_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-vesagfx_MC_DIRS := $(foreach dir, $(kernel-hidd-vesagfx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-vesagfx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-vesagfx_MC_DIRS),)
+    kernel-hidd-vesagfx_MC_DIRS := $(shell echo $(kernel-hidd-vesagfx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-vesagfx_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-vesagfx_MC_CPPFLAGS := $(kernel-hidd-vesagfx_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-vesagfx_CFLAGS := $(kernel-hidd-vesagfx_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-vesagfx_LINKLIBDFLAGS),)
+  kernel-hidd-vesagfx_DFLAGS := $(kernel-hidd-vesagfx_LINKLIBCFLAGS)
+else
+  kernel-hidd-vesagfx_DFLAGS := $(kernel-hidd-vesagfx_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-vesagfx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-vesagfx_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_MC_CPPFLAGS:=$(strip $(kernel-hidd-vesagfx_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_CFLAGS:=$(strip $(kernel-hidd-vesagfx_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_DFLAGS:=$(kernel-hidd-vesagfx_DFLAGS)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-vesagfx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-vesagfx_STRIP ?= $(HOST_STRIP)
+kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-vesagfx_CFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-vesagfx_DFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-vesagfx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-vesagfx_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-vesagfx_CFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-vesagfx_DFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-vesagfx_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-vesagfx_MC_CPPFLAGS)
+$(kernel-hidd-vesagfx_MC_TARGETS) : CFLAGS := $(kernel-hidd-vesagfx_CFLAGS)
+$(kernel-hidd-vesagfx_MC_TARGETS) : $(kernel-hidd-vesagfx_MC_TGTWILDCARD).o : $(kernel-hidd-vesagfx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-vesagfx_IQUOTE) $(dir $<) $(kernel-hidd-vesagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_IQUOTE) . $(kernel-hidd-vesagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-vesagfx_IQUOTE) $(dir $<) $(kernel-hidd-vesagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_IQUOTE) . $(kernel-hidd-vesagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-vesagfx_IQUOTE) $(dir $<) $(kernel-hidd-vesagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_IQUOTE) . $(kernel-hidd-vesagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-vesagfx_MC_DTARGETS) : $(kernel-hidd-vesagfx_MC_TGTWILDCARD).d : $(kernel-hidd-vesagfx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-vesagfx_DFLAGS) $(kernel-hidd-vesagfx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-hidd-vesagfx_OBJDIR)/linklib,)
+kernel-hidd-vesagfx_MC_SRCWILDCARD := %
+else
+kernel-hidd-vesagfx_MC_SRCWILDCARD := $(kernel-hidd-vesagfx_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-hidd-vesagfx_OBJDIR)/linklib,)
+kernel-hidd-vesagfx_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-vesagfx_LINKLIBCCGENFILES))
+kernel-hidd-vesagfx_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-vesagfx_LINKLIBCCGENFILES))
+kernel-hidd-vesagfx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-vesagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$(notdir $(kernel-hidd-vesagfx_LINKLIBCCGENFILES))))
+    kernel-hidd-vesagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$(notdir $(kernel-hidd-vesagfx_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-hidd-vesagfx_OBJDIR)/linklib,)
+    kernel-hidd-vesagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$(kernel-hidd-vesagfx_LINKLIBCCGENFILES)))
+    kernel-hidd-vesagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$(kernel-hidd-vesagfx_LINKLIBCCGENFILES)))
+else
+    kernel-hidd-vesagfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-vesagfx_OBJDIR)/linklib/%,%,$(kernel-hidd-vesagfx_LINKLIBCCGENFILES))))
+    kernel-hidd-vesagfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-vesagfx_OBJDIR)/linklib/%,%,$(kernel-hidd-vesagfx_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-hidd-vesagfx_MC_TGTWILDCARD := $(kernel-hidd-vesagfx_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-vesagfx_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-vesagfx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-vesagfx_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-vesagfx_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-vesagfx_MC_DIRS := $(foreach dir, $(kernel-hidd-vesagfx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-vesagfx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-vesagfx_MC_DIRS),)
+    kernel-hidd-vesagfx_MC_DIRS := $(shell echo $(kernel-hidd-vesagfx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-vesagfx_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-vesagfx_MC_CPPFLAGS := $(kernel-hidd-vesagfx_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-vesagfx_CFLAGS := $(kernel-hidd-vesagfx_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-vesagfx_LINKLIBDFLAGS),)
+  kernel-hidd-vesagfx_DFLAGS := $(kernel-hidd-vesagfx_LINKLIBCFLAGS)
+else
+  kernel-hidd-vesagfx_DFLAGS := $(kernel-hidd-vesagfx_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-vesagfx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-vesagfx_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_MC_CPPFLAGS:=$(strip $(kernel-hidd-vesagfx_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_CFLAGS:=$(strip $(kernel-hidd-vesagfx_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_DFLAGS:=$(kernel-hidd-vesagfx_DFLAGS)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-vesagfx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-vesagfx_STRIP ?= $(HOST_STRIP)
+kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-vesagfx_CFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-vesagfx_DFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-vesagfx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-vesagfx_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-vesagfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_CPPFLAGS) $(kernel-hidd-vesagfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-vesagfx_CFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-vesagfx_DFLAGS))
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-vesagfx_MC_TARGETS) $(kernel-hidd-vesagfx_MC_DTARGETS) : kernel-hidd-vesagfx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-vesagfx_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-vesagfx_MC_CPPFLAGS)
+$(kernel-hidd-vesagfx_MC_TARGETS) : CFLAGS := $(kernel-hidd-vesagfx_CFLAGS)
+$(kernel-hidd-vesagfx_MC_TARGETS) : $(kernel-hidd-vesagfx_MC_TGTWILDCARD).o : $(kernel-hidd-vesagfx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-vesagfx_IQUOTE) $(dir $<) $(kernel-hidd-vesagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_IQUOTE) . $(kernel-hidd-vesagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-vesagfx_IQUOTE) $(dir $<) $(kernel-hidd-vesagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_IQUOTE) . $(kernel-hidd-vesagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-vesagfx_IQUOTE) $(dir $<) $(kernel-hidd-vesagfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-vesagfx_IQUOTE) . $(kernel-hidd-vesagfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-vesagfx_MC_DTARGETS) : $(kernel-hidd-vesagfx_MC_TGTWILDCARD).d : $(kernel-hidd-vesagfx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-vesagfx_DFLAGS) $(kernel-hidd-vesagfx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-hidd-vesagfx_LINKLIBAFILES),)
+
+ifeq ($(kernel-hidd-vesagfx_OBJDIR)/linklib,)
+kernel-hidd-vesagfx-MA_TARGETS := $(addsuffix .o,$(kernel-hidd-vesagfx_LINKLIBAFILES) $(kernel-hidd-vesagfx_RELLINKLIBAFILES))
+kernel-hidd-vesagfx-MA_WILDCARD := %
+else
+kernel-hidd-vesagfx-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$(notdir $(kernel-hidd-vesagfx_LINKLIBAFILES) $(kernel-hidd-vesagfx_RELLINKLIBAFILES))))
+kernel-hidd-vesagfx-MA_WILDCARD := $(kernel-hidd-vesagfx_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-hidd-vesagfx-MA_TARGETS) : | $(addsuffix .S,$(kernel-hidd-vesagfx_LINKLIBAFILES) $(kernel-hidd-vesagfx_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-vesagfx-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-vesagfx-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-vesagfx_LINKLIBAFILES) $(kernel-hidd-vesagfx_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-vesagfx-MA_DIRS := $(foreach dir, $(kernel-hidd-vesagfx-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-vesagfx-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-vesagfx-MA_DIRS),)
+    kernel-hidd-vesagfx-MA_DIRS := $(shell echo $(kernel-hidd-vesagfx-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-hidd-vesagfx-MA_DIRS)
+endif
+
+endif
+
+kernel-hidd-vesagfx-MA_ASSEMBLER ?= $(kernel-hidd-vesagfx_ASSEMBLER)
+
+$(kernel-hidd-vesagfx-MA_TARGETS) : kernel-hidd-vesagfx-MA_CMD:= $(kernel-hidd-vesagfx-MA_ASSEMBLER)
+
+$(kernel-hidd-vesagfx-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-hidd-vesagfx-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-hidd-vesagfx-MA_TARGETS) : $(kernel-hidd-vesagfx-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-hidd-vesagfx-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-hidd-vesagfx-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-hidd-vesagfx-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-hidd-vesagfx_SUFFIX           := hidd
+else
+kernel-hidd-vesagfx_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-hidd-vesagfx_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-hidd-vesagfx_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-hidd-vesagfx_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-hidd-vesagfx_SUFFIX),handler)
+kernel-hidd-vesagfx_MODULE           := $(AROSDIR)/$(kernel-hidd-vesagfx_MODDIR)/$(kernel-hidd-vesagfx_DEFNAME)-$(kernel-hidd-vesagfx_SUFFIX)
+else
+kernel-hidd-vesagfx_MODULE           := $(AROSDIR)/$(kernel-hidd-vesagfx_MODDIR)/$(kernel-hidd-vesagfx_DEFNAME).$(kernel-hidd-vesagfx_SUFFIX)
+endif
+kernel-hidd-vesagfx_KOBJ             := $(KOBJSDIR)/$(kernel-hidd-vesagfx_DEFNAME)_$(kernel-hidd-vesagfx_SUFFIX).o
+else
+kernel-hidd-vesagfx_MODULE           :=
+kernel-hidd-vesagfx_KOBJ             :=
+endif
+
+kernel-hidd-vesagfx-quick      : kernel-hidd-vesagfx
+kernel-hidd-vesagfx            : $(kernel-hidd-vesagfx_MODULE) $(kernel-hidd-vesagfx_LINKLIB) $(kernel-hidd-vesagfx_RELLINKLIB)
+ifeq (M,M)
+kernel-hidd-vesagfx-kobj       : $(kernel-hidd-vesagfx_KOBJ) $(kernel-hidd-vesagfx_LINKLIB) $(kernel-hidd-vesagfx_RELLINKLIB)
+kernel-hidd-vesagfx-kobj-quick : $(kernel-hidd-vesagfx_KOBJ) $(kernel-hidd-vesagfx_LINKLIB) $(kernel-hidd-vesagfx_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-hidd-vesagfx-linklib    : $(kernel-hidd-vesagfx_LINKLIB) $(kernel-hidd-vesagfx_RELLINKLIB)
+endif
+
+kernel-hidd-vesagfx_OBJS := $(addsuffix .o,$(kernel-hidd-vesagfx_STARTFILES)) $(kernel-hidd-vesagfx_ARCHOBJS) \
+           $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(notdir $(kernel-hidd-vesagfx_C_NARCHFILES:=.o) $(kernel-hidd-vesagfx_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (hidd,handler)
+kernel-hidd-vesagfx_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (vesagfx,con)
+    kernel-hidd-vesagfx_ERR          := $(notdir $(kernel-hidd-vesagfx_MODULE)).err
+else
+    kernel-hidd-vesagfx_ERR          := vesagfx.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-hidd-vesagfx_DEFNAME)_LDFLAGS) $(kernel-hidd-vesagfx_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-hidd-vesagfx_LIBS) $($(kernel-hidd-vesagfx_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-hidd-vesagfx_MODULE) : LIB_NAMES := $(kernel-hidd-vesagfx_LIBS) $($(kernel-hidd-vesagfx_DEFNAME)_LIBS)
+$(kernel-hidd-vesagfx_MODULE) : OBJS := $(kernel-hidd-vesagfx_STARTOBJS) $(kernel-hidd-vesagfx_OBJS) $(USER_OBJS)
+$(kernel-hidd-vesagfx_MODULE) : ENDTAG := $(kernel-hidd-vesagfx_ENDOBJS)
+$(kernel-hidd-vesagfx_MODULE) : ERR := $(kernel-hidd-vesagfx_ERR)
+$(kernel-hidd-vesagfx_MODULE) : OBJDIR := $(kernel-hidd-vesagfx_OBJDIR)
+$(kernel-hidd-vesagfx_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-hidd-vesagfx_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-hidd-vesagfx_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-hidd-vesagfx_MODULE) : $(kernel-hidd-vesagfx_STARTOBJS) $(kernel-hidd-vesagfx_OBJS) $(USER_OBJS) $(kernel-hidd-vesagfx_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-hidd-vesagfx_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-hidd-vesagfx_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-hidd-vesagfx_LC_LINKLIBNAME   := $(shell echo $(kernel-hidd-vesagfx_LINKLIBNAME) | tr A-Z a-z)
+kernel-hidd-vesagfx_LC_MODNAME       := $(shell echo vesagfx | tr A-Z a-z)
+ifneq ($(kernel-hidd-vesagfx_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_LINKLIBNAME)$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_AR:=$(AR)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_LINKLIBNAME)$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_LINKLIBNAME)$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_AR:=$(HOST_AR)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_LINKLIBNAME)$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_LINKLIBNAME)$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_AR:=$(KERNEL_AR)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_LINKLIBNAME)$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_LINKLIBNAME)$(kernel-hidd-vesagfx_LIBSUFFIX).a : $(kernel-hidd-vesagfx_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-vesagfx_AR) $@ $^
+	$(Q)$(kernel-hidd-vesagfx_RANLIB) $@
+ifneq ($(kernel-hidd-vesagfx_LC_MODNAME),$(kernel-hidd-vesagfx_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-vesagfx_LIBDIR)/libvesagfx$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_AR:=$(AR)
+$(kernel-hidd-vesagfx_LIBDIR)/libvesagfx$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-vesagfx_LIBDIR)/libvesagfx$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_AR:=$(HOST_AR)
+$(kernel-hidd-vesagfx_LIBDIR)/libvesagfx$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-vesagfx_LIBDIR)/libvesagfx$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_AR:=$(KERNEL_AR)
+$(kernel-hidd-vesagfx_LIBDIR)/libvesagfx$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-vesagfx_LIBDIR)/libvesagfx$(kernel-hidd-vesagfx_LIBSUFFIX).a : $(kernel-hidd-vesagfx_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-vesagfx_AR) $@ $^
+	$(Q)$(kernel-hidd-vesagfx_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-vesagfx_LINKLIB),)
+$(kernel-hidd-vesagfx_LINKLIB) : | $(kernel-hidd-vesagfx_LIBDIR)
+else
+$(kernel-hidd-vesagfx_LINKLIB) :: $(kernel-hidd-vesagfx_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-vesagfx_LIBDIR)
+
+endif
+
+ifneq ($(kernel-hidd-vesagfx_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_LINKLIBNAME)_rel$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_AR:=$(AR)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_LINKLIBNAME)_rel$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_LINKLIBNAME)_rel$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_AR:=$(HOST_AR)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_LINKLIBNAME)_rel$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_LINKLIBNAME)_rel$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_AR:=$(KERNEL_AR)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_LINKLIBNAME)_rel$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_LINKLIBNAME)_rel$(kernel-hidd-vesagfx_LIBSUFFIX).a : $(kernel-hidd-vesagfx_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-vesagfx_AR) $@ $^
+	$(Q)$(kernel-hidd-vesagfx_RANLIB) $@
+ifneq ($(kernel-hidd-vesagfx_LC_MODNAME),$(kernel-hidd-vesagfx_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_DEFNAME)_rel$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_AR:=$(AR)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_DEFNAME)_rel$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_DEFNAME)_rel$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_AR:=$(HOST_AR)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_DEFNAME)_rel$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_DEFNAME)_rel$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_AR:=$(KERNEL_AR)
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_DEFNAME)_rel$(kernel-hidd-vesagfx_LIBSUFFIX).a : kernel-hidd-vesagfx_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-vesagfx_LIBDIR)/lib$(kernel-hidd-vesagfx_DEFNAME)_rel$(kernel-hidd-vesagfx_LIBSUFFIX).a : $(kernel-hidd-vesagfx_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-vesagfx_AR) $@ $^
+	$(Q)$(kernel-hidd-vesagfx_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-vesagfx_RELLINKLIB),)
+$(kernel-hidd-vesagfx_RELLINKLIB) : | $(kernel-hidd-vesagfx_LIBDIR)
+else
+$(kernel-hidd-vesagfx_RELLINKLIB) :: $(kernel-hidd-vesagfx_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-vesagfx_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-hidd-vesagfx_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-hidd-vesagfx_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-hidd-vesagfx_SYMBOLS := $(kernel-hidd-vesagfx_KBASE)
+
+kernel-hidd-vesagfx_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-hidd-vesagfx_KOBJ_LIBS        := $(filter-out $(kernel-hidd-vesagfx_KLIB),$(kernel-hidd-vesagfx_LIBS)) $(kernel-hidd-vesagfx_KAUTOLIB)
+$(kernel-hidd-vesagfx_KOBJ) : LINKLIBS:=$(kernel-hidd-vesagfx_KOBJ_LIBS) $($(kernel-hidd-vesagfx_DEFNAME)_LIBS)
+$(kernel-hidd-vesagfx_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-hidd-vesagfx_SYMBOLS))
+$(kernel-hidd-vesagfx_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-hidd-vesagfx_KOBJ) : $(kernel-hidd-vesagfx_OBJS) $(USER_OBJS) $(kernel-hidd-vesagfx_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-hidd-vesagfx_DEPS             := $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/,$(notdir $(kernel-hidd-vesagfx_CCFILES:=.d) $(kernel-hidd-vesagfx_TARGETCCFILES:=.d) $(kernel-hidd-vesagfx_CXXFILES:=.d))) $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/linklib/,$(notdir $(kernel-hidd-vesagfx_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-hidd-vesagfx_DEPS),)
+  ifneq (kernel-hidd-vesagfx kernel-hidd-vesagfx-quick kernel-hidd-vesagfx-kobj kernel-hidd-vesagfx-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-hidd-vesagfx kernel-hidd-vesagfx-quick kernel-hidd-vesagfx-kobj kernel-hidd-vesagfx-kobj-quick),)
+      -include $(kernel-hidd-vesagfx_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-hidd-vesagfx_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-hidd-vesagfx_OBJS) $(kernel-hidd-vesagfx_DEPS) : | $(kernel-hidd-vesagfx_OBJDIR)/linklib
+
+ifneq ($(kernel-hidd-vesagfx_OBJS) $(kernel-hidd-vesagfx_DEPS) $(kernel-hidd-vesagfx_MODULE) $(kernel-hidd-vesagfx_KOBJ),)
+$(kernel-hidd-vesagfx_OBJS) $(kernel-hidd-vesagfx_DEPS) $(kernel-hidd-vesagfx_MODULE) $(kernel-hidd-vesagfx_KOBJ) : | $(kernel-hidd-vesagfx_OBJDIR) $(AROSDIR)/$(kernel-hidd-vesagfx_MODDIR) $(KOBJSDIR)
+else
+$(kernel-hidd-vesagfx_OBJS) $(kernel-hidd-vesagfx_DEPS) $(kernel-hidd-vesagfx_MODULE) $(kernel-hidd-vesagfx_KOBJ) :: $(kernel-hidd-vesagfx_OBJDIR) $(AROSDIR)/$(kernel-hidd-vesagfx_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-vesagfx_OBJDIR) $(AROSDIR)/$(kernel-hidd-vesagfx_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-hidd-vesagfx kernel-hidd-vesagfx-includes kernel-hidd-vesagfx-quick kernel-hidd-vesagfx-kobj kernel-hidd-vesagfx-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-hidd-vesagfx_DFILE_DEPS := $(kernel-hidd-vesagfx_LIBDEFSINC) $(kernel-hidd-vesagfx_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-hidd-vesagfx_INCDIR)/,$($(kernel-hidd-vesagfx_DEFNAME)_INCLUDES))
+$(kernel-hidd-vesagfx_DEPS) : $(kernel-hidd-vesagfx_DFILE_DEPS)
+endif
+
+kernel-hidd-vesagfx_TOCLEAN := $(kernel-hidd-vesagfx_OBJS) $(kernel-hidd-vesagfx_DEPS) \
+    $(kernel-hidd-vesagfx_MODULE) $(kernel-hidd-vesagfx_LINKLIB) $(kernel-hidd-vesagfx_KOBJ) \
+    $(kernel-hidd-vesagfx_OBJDIR)/Makefile.vesagfxhidd \
+    $(addprefix $(kernel-hidd-vesagfx_OBJDIR)/include/,$($(kernel-hidd-vesagfx_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-hidd-vesagfx_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-vesagfx_INCDIR)/,$($(kernel-hidd-vesagfx_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-vesagfx_OBJDIR)/vesagfx_geninc $(kernel-hidd-vesagfx_OBJDIR)/vesagfx_incs \
+    $(addsuffix .c,$(kernel-hidd-vesagfx_LINKLIBFILES)) $(kernel-hidd-vesagfx_LINKLIBOBJS) $(kernel-hidd-vesagfx_LIBDEFSINC) \
+    $(kernel-hidd-vesagfx_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-hidd-vesagfx_STARTFILES) $(kernel-hidd-vesagfx_ENDFILES)) \
+    $(kernel-hidd-vesagfx_ENDOBJS)
+kernel-hidd-vesagfx-clean : FILES              := $(kernel-hidd-vesagfx_TOCLEAN)
+kernel-hidd-vesagfx-clean ::
+	$(Q)$(ECHO) "Cleaning up for module vesagfx"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-hidd-vesagfx_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

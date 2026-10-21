@@ -1,0 +1,18 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- boot-distfiles : boot-distfiles-$(AROS_TARGET_ARCH)-$(AROS_TARGET_CPU)
+#MM- boot-distfiles-quick : boot-distfiles-quick-$(AROS_TARGET_ARCH)-$(AROS_TARGET_CPU)
+
+#MM- distfiles : distfiles-$(AROS_TARGET_ARCH)-$(AROS_TARGET_CPU)
+#MM- distfiles-quick : distfiles-quick-$(AROS_TARGET_ARCH)-$(AROS_TARGET_CPU)
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,1662 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := cdfs bcache iso9660
+
+USER_CPPFLAGS += -D__NOLIBBASE__ -DADATE="\"$(shell date '+%d.%m.%Y')\""
+#USER_CPPFLAGS += -DDEBUG=1
+USER_LDFLAGS := -static
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-fs-cdfs
+#MM kernel-fs-cdfs-quick
+#MM kernel-fs-cdfs-makefile
+#MM kernel-fs-cdfs-clean
+
+# ABI targets:
+#MM- includes-all : kernel-fs-cdfs-includes
+#MM- linklibs-cdfs: kernel-fs-cdfs-linklib
+#MM- linklibs-cdfs_rel : kernel-fs-cdfs-linklib
+#MM- includes-cdfs: kernel-fs-cdfs-includes
+#MM- includes-cdfs_rel : kernel-fs-cdfs-includes
+#MM- kernel-fs-cdfs : kernel-fs-cdfs-includes core-linklibs linklibs-
+#MM kernel-fs-cdfs-linklib : kernel-fs-cdfs-includes includes-
+#MM- kernel-fs-cdfs-quick : kernel-fs-cdfs-includes-quick
+#MM kernel-fs-cdfs-includes : kernel-fs-cdfs-makefile kernel-fs-cdfs-includes-dirs \
+#MM     includes-generate-deps kernel-fs-cdfs-fd
+#MM kernel-fs-cdfs-includes-quick
+#MM kernel-fs-cdfs-includes-dirs
+#MM kernel-fs-cdfs-fd
+
+# Library targets
+#MM kernel-fs-cdfs-kobj : core-linklibs linklibs-
+#MM kernel-fs-cdfs-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-fs-cdfs-kobj : kernel-fs-cdfs-includes core-linklibs linklibs-
+#MM kernel-fs-cdfs-kobj-quick : kernel-fs-cdfs-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-fs-cdfs_ALLTARGETS       := kernel-fs-cdfs kernel-fs-cdfs-quick kernel-fs-cdfs-clean
+
+ifeq (M,M)
+kernel-fs-cdfs_ALLTARGETS       += kernel-fs-cdfs-kobj kernel-fs-cdfs-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-fs-cdfs_ALLTARGETS += kernel-fs-cdfs-includes \
+                 kernel-fs-cdfs-includes-quick kernel-fs-cdfs-includes-dirs  \
+                 kernel-fs-cdfs-linklib kernel-fs-cdfs-fd
+endif
+
+.PHONY : $(kernel-fs-cdfs_ALLTARGETS) kernel-fs-cdfs-makefile
+
+ifeq (cdfs,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (handler,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-fs-cdfs_DEFNAME      := cdfs_
+else
+    kernel-fs-cdfs_DEFNAME      := cdfs
+endif
+kernel-fs-cdfs_DEFLINKLIBNAME   := $(kernel-fs-cdfs_DEFNAME)
+ifneq (,)
+    kernel-fs-cdfs_LINKLIBNAME  := 
+else
+    kernel-fs-cdfs_LINKLIBNAME  = $(kernel-fs-cdfs_DEFLINKLIBNAME)
+endif
+kernel-fs-cdfs_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-fs-cdfs_DEFCPPFLAGS  += -I
+endif
+kernel-fs-cdfs_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-fs-cdfs_DFLAGS       := 
+else
+    kernel-fs-cdfs_DFLAGS       = $(kernel-fs-cdfs_DEFDFLAGS)
+endif
+kernel-fs-cdfs_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-fs-cdfs_DXXFLAGS     := 
+else
+    kernel-fs-cdfs_DXXFLAGS     = $(kernel-fs-cdfs_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-fs-cdfs_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-fs-cdfs_DEFDFLAGS))
+kernel-fs-cdfs_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-fs-cdfs_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-fs-cdfs_FUNCINSTR := yes
+kernel-fs-cdfs_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-fs-cdfs_DEFDFLAGS))
+kernel-fs-cdfs_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-fs-cdfs_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-fs-cdfs_OBJDIR                     := 
+else
+kernel-fs-cdfs_OBJDIR                     := $(OBJDIR)/$(kernel-fs-cdfs_DEFNAME)
+endif
+ifneq (,)
+kernel-fs-cdfs_OBJDIR           := $(kernel-fs-cdfs_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-fs-cdfs-makefile         := $(kernel-fs-cdfs_OBJDIR)/Makefile.$(kernel-fs-cdfs_DEFNAME)handler
+kernel-fs-cdfs-genmakefile : $(kernel-fs-cdfs-makefile)
+
+
+kernel-fs-cdfs-genmakefile_OPTS := 
+ifneq (,)
+    kernel-fs-cdfs-genmakefile_OPTS += -f 
+    kernel-fs-cdfs-genmakefile_MODNAME := cdfs_
+else
+    kernel-fs-cdfs-genmakefile_MODNAME := cdfs
+endif
+kernel-fs-cdfs-genmakefile_TARGET := Makefile.$(kernel-fs-cdfs-genmakefile_MODNAME)handler
+kernel-fs-cdfs-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-fs-cdfs-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-fs-cdfs-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-fs-cdfs-genmakefile_OPTS += -c 
+        kernel-fs-cdfs-genmakefile_DEPS += 
+    endif 
+else
+    kernel-fs-cdfs-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/cdfs.conf
+    kernel-fs-cdfs-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/cdfs.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-fs-cdfs-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-fs-cdfs-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-fs-cdfs-genmakefile_OPTS += -o 
+        kernel-fs-cdfs-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-fs-cdfs-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-fs-cdfs_OBJDIR),)
+    kernel-fs-cdfs-genmakefile_OPTS += -d $(kernel-fs-cdfs_OBJDIR)
+    kernel-fs-cdfs-genmakefile_TARGET := $(kernel-fs-cdfs_OBJDIR)/$(kernel-fs-cdfs-genmakefile_TARGET)
+endif
+
+$(kernel-fs-cdfs-genmakefile_TARGET) : OPTS := $(kernel-fs-cdfs-genmakefile_OPTS)
+$(kernel-fs-cdfs-genmakefile_TARGET) : MODNAME := cdfs
+$(kernel-fs-cdfs-genmakefile_TARGET) : MODTYPE := handler
+$(kernel-fs-cdfs-genmakefile_TARGET) : $(kernel-fs-cdfs-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-fs-cdfs-makefile),)
+$(kernel-fs-cdfs-makefile) : | $(kernel-fs-cdfs_OBJDIR)
+else
+$(kernel-fs-cdfs-makefile) :: $(kernel-fs-cdfs_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-fs-cdfs_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-fs-cdfs_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-fs-cdfs-makefile)
+
+kernel-fs-cdfs_DEFMODDIR        := $($(kernel-fs-cdfs_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-fs-cdfs_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-fs-cdfs_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-fs-cdfs_MODDIR       := 
+else
+    kernel-fs-cdfs_MODDIR       := $(kernel-fs-cdfs_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-fs-cdfs_INCDIR           := 
+else
+kernel-fs-cdfs_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-fs-cdfs_LIBDEFSINC       := $(kernel-fs-cdfs_OBJDIR)/include/$(kernel-fs-cdfs_DEFNAME)_libdefs.h
+kernel-fs-cdfs_DEFLIBDEFSINC    := $(kernel-fs-cdfs_OBJDIR)/include/$(kernel-fs-cdfs_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-fs-cdfs-includes-quick : kernel-fs-cdfs-includes
+kernel-fs-cdfs-includes : $(addprefix $(GENINCDIR)/,$($(kernel-fs-cdfs_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-fs-cdfs_INCDIR)/,$($(kernel-fs-cdfs_DEFNAME)_INCLUDES)) \
+    $(kernel-fs-cdfs_LIBDEFSINC) $(kernel-fs-cdfs_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-fs-cdfs_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-fs-cdfs-includes_MODNAME := cdfs_
+else
+    kernel-fs-cdfs-includes_MODNAME := cdfs
+endif
+
+ifneq ($($(kernel-fs-cdfs-includes_MODNAME)_INCLUDES),)
+
+kernel-fs-cdfs-includes_TARGETS := $($(kernel-fs-cdfs-includes_MODNAME)_INCLUDES)
+
+kernel-fs-cdfs-includes_DEPS := $(GENMODULE)
+kernel-fs-cdfs-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-fs-cdfs-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-fs-cdfs-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-fs-cdfs-includes_OPTS += -c 
+        kernel-fs-cdfs-includes_DEPS += 
+    endif 
+else
+    kernel-fs-cdfs-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/cdfs.conf
+    kernel-fs-cdfs-includes_DEPS += $(SRCDIR)/$(CURDIR)/cdfs.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-fs-cdfs-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-fs-cdfs-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-fs-cdfs-includes_OPTS += -o 
+        kernel-fs-cdfs-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-fs-cdfs-includes_OPTS += -s 
+endif
+ifneq ($(kernel-fs-cdfs_OBJDIR)/include,)
+    kernel-fs-cdfs-includes_OPTS += -d $(kernel-fs-cdfs_OBJDIR)/include
+    kernel-fs-cdfs-includes_TARGETS := $(addprefix $(kernel-fs-cdfs_OBJDIR)/include/,$(kernel-fs-cdfs-includes_TARGETS))
+    kernel-fs-cdfs-includes_GENINCFLAG=$(kernel-fs-cdfs_OBJDIR)/include/.cdfs.handler-includes
+else
+    kernel-fs-cdfs-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.cdfs.handler-includes
+endif
+
+$(kernel-fs-cdfs-includes_TARGETS) : $(kernel-fs-cdfs-includes_DEPS) $(kernel-fs-cdfs-includes_GENINCFLAG)
+
+$(kernel-fs-cdfs-includes_GENINCFLAG) : OPTS := $(kernel-fs-cdfs-includes_OPTS)
+$(kernel-fs-cdfs-includes_GENINCFLAG) : MODNAME := cdfs
+$(kernel-fs-cdfs-includes_GENINCFLAG) : MODTYPE := handler
+$(kernel-fs-cdfs-includes_GENINCFLAG) : $(kernel-fs-cdfs-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-fs-cdfs_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-fs-cdfs_DEFNAME)_INCLUDES)) : | $(kernel-fs-cdfs_OBJDIR)/cdfs_geninc
+
+$(kernel-fs-cdfs_OBJDIR)/cdfs_geninc : COPYSRCDIR := $(kernel-fs-cdfs_OBJDIR)/include
+$(kernel-fs-cdfs_OBJDIR)/cdfs_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-fs-cdfs_OBJDIR)/cdfs_geninc : FILES := $($(kernel-fs-cdfs_DEFNAME)_INCLUDES)
+$(kernel-fs-cdfs_OBJDIR)/cdfs_geninc : $(addprefix $(kernel-fs-cdfs_OBJDIR)/include/,$($(kernel-fs-cdfs_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-fs-cdfs_OBJDIR)/include
+
+$(addprefix $(kernel-fs-cdfs_INCDIR)/,$($(kernel-fs-cdfs_DEFNAME)_INCLUDES)) : | $(kernel-fs-cdfs_OBJDIR)/cdfs_incs
+
+$(kernel-fs-cdfs_OBJDIR)/cdfs_incs : COPYSRCDIR := $(kernel-fs-cdfs_OBJDIR)/include
+$(kernel-fs-cdfs_OBJDIR)/cdfs_incs : TGTDIR := $(kernel-fs-cdfs_INCDIR)
+$(kernel-fs-cdfs_OBJDIR)/cdfs_incs : FILES := $($(kernel-fs-cdfs_DEFNAME)_INCLUDES)
+$(kernel-fs-cdfs_OBJDIR)/cdfs_incs : $(addprefix $(kernel-fs-cdfs_OBJDIR)/include/,$($(kernel-fs-cdfs_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-fs-cdfs_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-fs-cdfs_DEFNAME)_INCLUDES))))
+
+TMPcdfs_INCDIRS := \
+    $(kernel-fs-cdfs_OBJDIR)/include $(addprefix $(kernel-fs-cdfs_OBJDIR)/include/,$(kernel-fs-cdfs_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-fs-cdfs_INCDIRS)) \
+    $(kernel-fs-cdfs_INCDIR) $(addprefix $(kernel-fs-cdfs_INCDIR)/,$(kernel-fs-cdfs_INCDIRS))
+
+ifneq (kernel-fs-cdfs-includes-dirs,)
+kernel-fs-cdfs-includes-dirs : | $(TMPcdfs_INCDIRS)
+else
+kernel-fs-cdfs-includes-dirs :: $(TMPcdfs_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPcdfs_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-fs-cdfs-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-fs-cdfs-genlibdefs_OPTS += -f 
+    kernel-fs-cdfs-genlibdefs_MODNAME := cdfs_
+else
+    kernel-fs-cdfs-genlibdefs_MODNAME := cdfs
+endif
+kernel-fs-cdfs-genlibdefs_TARGET := $(kernel-fs-cdfs-genlibdefs_MODNAME)_libdefs.h
+kernel-fs-cdfs-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-fs-cdfs-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-fs-cdfs-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-fs-cdfs-genlibdefs_OPTS += -c 
+        kernel-fs-cdfs-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-fs-cdfs-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/cdfs.conf
+    kernel-fs-cdfs-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/cdfs.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-fs-cdfs-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-fs-cdfs-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-fs-cdfs-genlibdefs_OPTS += -o 
+        kernel-fs-cdfs-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-fs-cdfs-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-fs-cdfs_OBJDIR)/include,)
+    kernel-fs-cdfs-genlibdefs_OPTS += -d $(kernel-fs-cdfs_OBJDIR)/include
+    kernel-fs-cdfs-genlibdefs_TARGET := $(kernel-fs-cdfs_OBJDIR)/include/$(kernel-fs-cdfs-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-fs-cdfs-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-fs-cdfs-genlibdefs_TARGET) : OPTS := $(kernel-fs-cdfs-genlibdefs_OPTS)
+$(kernel-fs-cdfs-genlibdefs_TARGET) : MODNAME := cdfs
+$(kernel-fs-cdfs-genlibdefs_TARGET) : MODTYPE := handler
+$(kernel-fs-cdfs-genlibdefs_TARGET) : $(kernel-fs-cdfs-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-fs-cdfs_DEFLIBDEFSINC) : FILENAME := $(kernel-fs-cdfs_LIBDEFSINC)
+$(kernel-fs-cdfs_DEFLIBDEFSINC) : $(kernel-fs-cdfs_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-fs-cdfs_LIBDEFSINC) $(kernel-fs-cdfs_DEFLIBDEFSINC) : | $(kernel-fs-cdfs_OBJDIR)/include
+
+ifneq (kernel-fs-cdfs-includes-dirs,)
+kernel-fs-cdfs-includes-dirs : | $(kernel-fs-cdfs_OBJDIR)/include
+else
+kernel-fs-cdfs-includes-dirs :: $(kernel-fs-cdfs_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-fs-cdfs_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-fs-cdfs-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-fs-cdfs-genmodfiles_OPTS += -f 
+    kernel-fs-cdfs-genmodfiles_MODNAME := cdfs_
+else
+    kernel-fs-cdfs-genmodfiles_MODNAME := cdfs
+endif
+kernel-fs-cdfs-genmodfiles_GENTARGETS := $($(kernel-fs-cdfs-genmodfiles_MODNAME)_STARTFILES) $($(kernel-fs-cdfs-genmodfiles_MODNAME)_ENDFILES)
+kernel-fs-cdfs-genmodfiles_STUBTARGETS := $($(kernel-fs-cdfs-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-fs-cdfs-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-fs-cdfs-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-fs-cdfs-genmodfiles_GENTARGETS))
+kernel-fs-cdfs-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-fs-cdfs-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-fs-cdfs-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-fs-cdfs-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-fs-cdfs-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-fs-cdfs-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-fs-cdfs-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-fs-cdfs-genmodfiles_OPTS += -c 
+        kernel-fs-cdfs-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-fs-cdfs-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/cdfs.conf
+    kernel-fs-cdfs-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/cdfs.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-fs-cdfs-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-fs-cdfs-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-fs-cdfs-genmodfiles_OPTS += -o 
+        kernel-fs-cdfs-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-fs-cdfs-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-fs-cdfs_OBJDIR),)
+    kernel-fs-cdfs-genmodfiles_OPTS += -d $(kernel-fs-cdfs_OBJDIR)
+    kernel-fs-cdfs-genmodfiles_TARGETDIR := $(shell echo $(kernel-fs-cdfs_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-fs-cdfs-genmodfiles_GENTARGETS := $(addprefix $(kernel-fs-cdfs-genmodfiles_TARGETDIR)/,$(kernel-fs-cdfs-genmodfiles_GENTARGETS))
+    kernel-fs-cdfs-genmodfiles_GENFILEFLAG=$(kernel-fs-cdfs-genmodfiles_TARGETDIR)/.cdfs.handler-genfiles
+else
+    kernel-fs-cdfs-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.cdfs.handler-genfiles
+endif
+ifneq ($(kernel-fs-cdfs_OBJDIR)/linklib,)
+    kernel-fs-cdfs-genmodfiles_OPTS += -l $(kernel-fs-cdfs_OBJDIR)/linklib
+    kernel-fs-cdfs-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-fs-cdfs_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-fs-cdfs-genmodfiles_STUBTARGETS := $(addprefix $(kernel-fs-cdfs-genmodfiles_STUBTARGETDIR)/,$(kernel-fs-cdfs-genmodfiles_STUBTARGETS))
+    kernel-fs-cdfs-genmodfiles_TARGETDIRS += $(kernel-fs-cdfs_OBJDIR)/linklib
+else
+ifneq ($(kernel-fs-cdfs_OBJDIR),)
+    kernel-fs-cdfs-genmodfiles_STUBTARGETS := $(addprefix $(kernel-fs-cdfs-genmodfiles_TARGETDIR)/,$(kernel-fs-cdfs-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-fs-cdfs-genmodfiles_TARGETS := $(kernel-fs-cdfs-genmodfiles_GENTARGETS) $(kernel-fs-cdfs-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-fs-cdfs-genmodfiles_TARGETDIRS),)
+$(kernel-fs-cdfs-genmodfiles_TARGETS) : | $(kernel-fs-cdfs-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-fs-cdfs-genmodfiles_TARGETS) : $(kernel-fs-cdfs-genmodfiles_DEPS) $(kernel-fs-cdfs-genmodfiles_GENFILEFLAG)
+
+$(kernel-fs-cdfs-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-fs-cdfs-genmodfiles_OPTS)
+$(kernel-fs-cdfs-genmodfiles_GENFILEFLAG) : MODNAME := cdfs
+$(kernel-fs-cdfs-genmodfiles_GENFILEFLAG) : MODTYPE := handler
+$(kernel-fs-cdfs-genmodfiles_GENFILEFLAG) : $(kernel-fs-cdfs-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-fs-cdfs-genmodfiles_GENFILEFLAG) : $(kernel-fs-cdfs_DEFLIBDEFSINC) $(kernel-fs-cdfs-makefile)
+
+
+ifneq ($(kernel-fs-cdfs-genmodfiles_GENFILEFLAG),)
+$(kernel-fs-cdfs-genmodfiles_GENFILEFLAG) : | $(kernel-fs-cdfs_OBJDIR)/linklib
+else
+$(kernel-fs-cdfs-genmodfiles_GENFILEFLAG) :: $(kernel-fs-cdfs_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-fs-cdfs_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-fs-cdfs_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-fs-cdfs_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-fs-cdfs-fd : $(kernel-fs-cdfs_FDDIR)/cdfs_lib.fd
+
+
+TMP_TARGET := cdfs_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/cdfs.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/cdfs.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-fs-cdfs_FDDIR),)
+    TMP_OPTS += -d $(kernel-fs-cdfs_FDDIR)
+    TMP_TARGET := $(kernel-fs-cdfs_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := cdfs
+$(TMP_TARGET) : MODTYPE := handler
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-fs-cdfs_FDDIR)/cdfs_lib.fd : | $(kernel-fs-cdfs_FDDIR)
+
+
+ifneq (kernel-fs-cdfs-fd-setup,)
+kernel-fs-cdfs-fd-setup : | $(kernel-fs-cdfs_FDDIR)
+else
+kernel-fs-cdfs-fd-setup :: $(kernel-fs-cdfs_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-fs-cdfs_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-fs-cdfs_FILES            := $(FILES)
+kernel-fs-cdfs_OBJCFILES        := 
+kernel-fs-cdfs_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-fs-cdfs_LIBFILES         := 
+kernel-fs-cdfs_LIBS             := 
+
+kernel-fs-cdfs_FDIRS            := $(sort $(dir $(kernel-fs-cdfs_FILES)))
+
+kernel-fs-cdfs_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-fs-cdfs_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-fs-cdfs_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-fs-cdfs_FILTERARCH       = $(filter-out $(call kernel-fs-cdfs_MATCHARCH,$(1),$(2)),$(2))
+kernel-fs-cdfs_STARTFILES       := $(addprefix $(kernel-fs-cdfs_OBJDIR)/,$($(kernel-fs-cdfs_DEFNAME)_STARTFILES))
+kernel-fs-cdfs_ENDFILES         := $(addprefix $(kernel-fs-cdfs_OBJDIR)/,$($(kernel-fs-cdfs_DEFNAME)_ENDFILES))
+
+kernel-fs-cdfs_ARCHOBJS         := $(wildcard $(kernel-fs-cdfs_OBJDIR)/arch/*.o)
+kernel-fs-cdfs_LIBARCHOBJS      := $(wildcard $(kernel-fs-cdfs_OBJDIR)/linklib/arch/*.o)
+kernel-fs-cdfs_ARCHFILES        := $(basename $(notdir $(kernel-fs-cdfs_ARCHOBJS)))
+kernel-fs-cdfs_LIBARCHFILES     := $(basename $(notdir $(kernel-fs-cdfs_LIBARCHOBJS)))
+kernel-fs-cdfs_C_NARCHFILES     := $(call kernel-fs-cdfs_FILTERARCH,$(kernel-fs-cdfs_ARCHFILES),$(kernel-fs-cdfs_FILES))
+kernel-fs-cdfs_CXX_NARCHFILES   := $(call kernel-fs-cdfs_FILTERARCH,$(kernel-fs-cdfs_ARCHFILES),$(kernel-fs-cdfs_CXXFILES))
+kernel-fs-cdfs_OBJC_NARCHFILES  := $(call kernel-fs-cdfs_FILTERARCH,$(kernel-fs-cdfs_ARCHFILES),$(kernel-fs-cdfs_OBJCFILES))
+kernel-fs-cdfs_NLIBARCHFILES    := $(call kernel-fs-cdfs_FILTERARCH,$(kernel-fs-cdfs_LIBARCHFILES),$(kernel-fs-cdfs_LIBFILES))
+kernel-fs-cdfs_ARCHNLIBFILES    := $(call kernel-fs-cdfs_FILTERARCH,$(kernel-fs-cdfs_LIBFILES),$(kernel-fs-cdfs_LIBARCHFILES))
+
+kernel-fs-cdfs_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-fs-cdfs_OBJDIR)/include -include $(kernel-fs-cdfs_DEFLIBDEFSINC))
+ifneq (,)
+kernel-fs-cdfs_CPPFLAGS         += -I
+endif
+kernel-fs-cdfs_LINKLIBCPPFLAGS  := $(kernel-fs-cdfs_CPPFLAGS)
+kernel-fs-cdfs_CPPFLAGS         += $(strip $($(kernel-fs-cdfs_DEFNAME)_CPPFLAGS))
+kernel-fs-cdfs_LINKLIBCPPFLAGS  += $(strip $($(kernel-fs-cdfs_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-fs-cdfs_CFLAGS           := $(strip $(CFLAGS) $($(kernel-fs-cdfs_DEFNAME)_CFLAGS))
+kernel-fs-cdfs_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-fs-cdfs_DEFNAME)_LINKLIBCFLAGS))
+kernel-fs-cdfs_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-fs-cdfs_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-fs-cdfs_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-fs-cdfs_CFLAGS           := $(strip $(kernel-fs-cdfs_LTOFLAGS) $(kernel-fs-cdfs_CFLAGS))
+kernel-fs-cdfs_LINKLIBCFLAGS    := $(strip $(kernel-fs-cdfs_LTOFLAGS) $(kernel-fs-cdfs_LINKLIBCFLAGS))
+kernel-fs-cdfs_CXXFLAGS         := $(strip $(kernel-fs-cdfs_LTOFLAGS) $(kernel-fs-cdfs_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-fs-cdfs_SUBSTNULL        :=
+kernel-fs-cdfs_SUBSTSPACE       := $(kernel-fs-cdfs_SUBSTNULL) #
+kernel-fs-cdfs_SUBSTCOMMA       := ,
+kernel-fs-cdfs_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-fs-cdfs_SUBSTSPACE),$(kernel-fs-cdfs_SUBSTCOMMA),$(strip $($(kernel-fs-cdfs_DEFNAME)_STARTFILES))))
+kernel-fs-cdfs_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-fs-cdfs_CFLAGS           := $(strip $(kernel-fs-cdfs_INSTRFUNCFLAGS) $(kernel-fs-cdfs_CFLAGS))
+kernel-fs-cdfs_CXXFLAGS         := $(strip $(kernel-fs-cdfs_INSTRFUNCFLAGS) $(kernel-fs-cdfs_CXXFLAGS))
+kernel-fs-cdfs_LIBS             += $(kernel-fs-cdfs_INSTRFUNCLIBS)
+endif
+endif
+kernel-fs-cdfs_DFLAGS           := $(strip $(kernel-fs-cdfs_DFLAGS) $($(kernel-fs-cdfs_DEFNAME)_DFLAGS))
+kernel-fs-cdfs_LINKLIBDFLAGS    := $(strip $(kernel-fs-cdfs_DFLAGS) $($(kernel-fs-cdfs_DEFNAME)_LINKLIBDFLAGS))
+kernel-fs-cdfs_DXXFLAGS         := $(strip $(kernel-fs-cdfs_DXXFLAGS) $($(kernel-fs-cdfs_DEFNAME)_DXXFLAGS))
+
+ifeq (handler,library)
+    kernel-fs-cdfs_LIBSUFFIX    := 
+else
+    kernel-fs-cdfs_LIBSUFFIX    := .handler
+endif
+
+ifeq (,)
+kernel-fs-cdfs_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-fs-cdfs_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-fs-cdfs_LINKLIBCFILES    := $(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$($(kernel-fs-cdfs_DEFNAME)_LINKLIBFILES))
+kernel-fs-cdfs_LINKLIBAFILES    := $(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$($(kernel-fs-cdfs_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-fs-cdfs_DEFNAME)_LINKLIBFILES) $($(kernel-fs-cdfs_DEFNAME)_LINKLIBAFILES)  $(kernel-fs-cdfs_ARCHNLIBFILES)),)
+    kernel-fs-cdfs_LINKLIB      :=
+else
+    kernel-fs-cdfs_LINKLIB      := $(kernel-fs-cdfs_LIBDIR)/libcdfs$(kernel-fs-cdfs_LIBSUFFIX).a
+    ifneq (cdfs,$(kernel-fs-cdfs_LINKLIBNAME))
+        kernel-fs-cdfs_LINKLIB  += $(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_LINKLIBNAME)$(kernel-fs-cdfs_LIBSUFFIX).a
+    endif
+endif
+kernel-fs-cdfs_LINKLIBFILES     := $(kernel-fs-cdfs_LINKLIBCFILES) $(kernel-fs-cdfs_LINKLIBAFILES)
+
+kernel-fs-cdfs_RELLINKLIBCFILES := $(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$($(kernel-fs-cdfs_DEFNAME)_RELLINKLIBFILES))
+kernel-fs-cdfs_RELLINKLIBAFILES := $(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$($(kernel-fs-cdfs_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-fs-cdfs_DEFNAME)_RELLINKLIBFILES) $($(kernel-fs-cdfs_DEFNAME)_RELLINKLIBAFILES)  $(kernel-fs-cdfs_ARCHNLIBFILES)),)
+    kernel-fs-cdfs_RELLINKLIB   :=
+else
+    kernel-fs-cdfs_RELLINKLIB   := $(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_DEFNAME)_rel$(kernel-fs-cdfs_LIBSUFFIX).a
+    ifneq (cdfs,$(kernel-fs-cdfs_LINKLIBNAME))
+        kernel-fs-cdfs_RELLINKLIB += $(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_LINKLIBNAME)_rel$(kernel-fs-cdfs_LIBSUFFIX).a
+    endif
+endif
+kernel-fs-cdfs_RELLINKLIBFILES  := $(kernel-fs-cdfs_RELLINKLIBCFILES) $(kernel-fs-cdfs_RELLINKLIBAFILES)
+endif
+
+kernel-fs-cdfs_ENDOBJS          := $(addsuffix .o,$(kernel-fs-cdfs_ENDFILES))
+kernel-fs-cdfs_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$(notdir $(kernel-fs-cdfs_NLIBARCHFILES))) $(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/arch/,$(notdir $(kernel-fs-cdfs_ARCHNLIBFILES))) $(kernel-fs-cdfs_LINKLIBFILES)) \
+                 
+kernel-fs-cdfs_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$(notdir $(kernel-fs-cdfs_NLIBARCHFILES))) $(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/arch/,$(notdir $(kernel-fs-cdfs_ARCHNLIBFILES))) $(kernel-fs-cdfs_RELLINKLIBFILES)) \
+                 
+$(kernel-fs-cdfs_LINKLIBFILES) $(kernel-fs-cdfs_RELLINKLIBFILES) : | $(kernel-fs-cdfs_OBJDIR)/linklib
+$(kernel-fs-cdfs_LINKLIBOBJS) $(kernel-fs-cdfs_RELLINKLIBOBJS) : | $(kernel-fs-cdfs_OBJDIR)/linklib
+
+kernel-fs-cdfs_CCFILES := $(kernel-fs-cdfs_C_NARCHFILES)
+kernel-fs-cdfs_TARGETCCFILES    := $(strip $(kernel-fs-cdfs_STARTFILES) $(kernel-fs-cdfs_ENDFILES))
+kernel-fs-cdfs_LINKLIBCCFILES   := $(strip $(kernel-fs-cdfs_NLIBARCHFILES) $(kernel-fs-cdfs_LINKLIBCFILES) $(kernel-fs-cdfs_RELLINKLIBCFILES))
+kernel-fs-cdfs_LINKLIBCCGENFILES := $(strip $(kernel-fs-cdfs_LINKLIBCFILES) $(kernel-fs-cdfs_RELLINKLIBCFILES))
+
+
+kernel-fs-cdfs_CXXABSBASENAMES := $(foreach kernel-fs-cdfs_CXXBASE,$(kernel-fs-cdfs_CXX_NARCHFILES),$(if $(filter /%,$(kernel-fs-cdfs_CXXBASE)),$(kernel-fs-cdfs_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-fs-cdfs_CXXBASE))))
+
+ifneq ($(kernel-fs-cdfs_CXXABSBASENAMES),)
+
+kernel-fs-cdfs_CXXBASENAMES := $(basename $(kernel-fs-cdfs_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-fs-cdfs_MCXX_FILES  := $(strip $(foreach kernel-fs-cdfs_CXXBASE,$(kernel-fs-cdfs_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-fs-cdfs_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-fs-cdfs_EXT),$(kernel-fs-cdfs_CXXBASE)))))))
+
+ifeq (,)
+kernel-fs-cdfs_MCXX_SRCWILDCARD := %
+else
+kernel-fs-cdfs_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-fs-cdfs_OBJDIR),)
+  kernel-fs-cdfs_CXXTARGETS := $(notdir $(kernel-fs-cdfs_CXXBASENAMES:=.o))
+  kernel-fs-cdfs_CXXDTARGETS := $(notdir $(kernel-fs-cdfs_CXXBASENAMES:=.d))
+  kernel-fs-cdfs_MCXX_WILDCARD := %
+else
+  kernel-fs-cdfs_CXXTARGETS := $(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(notdir $(kernel-fs-cdfs_CXXBASENAMES:=.o)))
+  kernel-fs-cdfs_CXXDTARGETS := $(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(notdir $(kernel-fs-cdfs_CXXBASENAMES:=.d)))
+  kernel-fs-cdfs_MCXX_WILDCARD := $(kernel-fs-cdfs_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-fs-cdfs_CXXTARGETS) $(kernel-fs-cdfs_CXXDTARGETS) : | $(kernel-fs-cdfs_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-fs-cdfs_MCXX_CPPFLAGS := $(kernel-fs-cdfs_CPPFLAGS)
+kernel-fs-cdfs_CXXFLAGS := $(kernel-fs-cdfs_CXXFLAGS)
+ifeq ($(kernel-fs-cdfs_DXXFLAGS),)
+  kernel-fs-cdfs_DXXFLAGS := $(kernel-fs-cdfs_CXXFLAGS)
+else
+  kernel-fs-cdfs_DXXFLAGS := $(kernel-fs-cdfs_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-fs-cdfs_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-fs-cdfs_STRIP ?= $(HOST_STRIP)
+  kernel-fs-cdfs_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-fs-cdfs_CXXCMD:=$(HOST_CXX)
+  kernel-fs-cdfs_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-fs-cdfs_MCXX_CPPFLAGS) $(kernel-fs-cdfs_MCXX_EXTRA_CPPFLAGS))
+  kernel-fs-cdfs_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-fs-cdfs_CXXFLAGS))
+  kernel-fs-cdfs_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-fs-cdfs_DXXFLAGS))
+  kernel-fs-cdfs_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-fs-cdfs_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-fs-cdfs_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-fs-cdfs_STRIP ?= $(TARGET_STRIP)
+  kernel-fs-cdfs_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-fs-cdfs_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-fs-cdfs_MCXX_CPPFLAGS := $(strip $(kernel-fs-cdfs_MCXX_CPPFLAGS) $(kernel-fs-cdfs_MCXX_EXTRA_CPPFLAGS))
+  kernel-fs-cdfs_CXXFLAGS := $(strip $(kernel-fs-cdfs_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-fs-cdfs_DXXFLAGS := $(kernel-fs-cdfs_DXXFLAGS)
+  kernel-fs-cdfs_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-fs-cdfs_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-fs-cdfs_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-fs-cdfs_STRIP ?= $(ECHO) >/dev/null
+  kernel-fs-cdfs_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-fs-cdfs_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-fs-cdfs_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-fs-cdfs_MCXX_CPPFLAGS) $(kernel-fs-cdfs_MCXX_EXTRA_CPPFLAGS))
+  kernel-fs-cdfs_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-fs-cdfs_CXXFLAGS))
+  kernel-fs-cdfs_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-fs-cdfs_DXXFLAGS))
+  kernel-fs-cdfs_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-fs-cdfs_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-fs-cdfs_CXXCMD) $(kernel-fs-cdfs_CXXIQUOTE) $(dir $(2)) $(kernel-fs-cdfs_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_CXXIQUOTE) . $(kernel-fs-cdfs_CXXIQUOTE_END) $(strip $(kernel-fs-cdfs_CXXFLAGS) $(kernel-fs-cdfs_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-fs-cdfs_CXXCMD) $(kernel-fs-cdfs_CXXIQUOTE) $(dir $(2)) $(kernel-fs-cdfs_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_CXXIQUOTE) . $(kernel-fs-cdfs_CXXIQUOTE_END) $(strip $(kernel-fs-cdfs_CXXFLAGS) $(kernel-fs-cdfs_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-fs-cdfs_CXXCMD) $(kernel-fs-cdfs_CXXIQUOTE) $(dir $(2)) $(kernel-fs-cdfs_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_CXXIQUOTE) . $(kernel-fs-cdfs_CXXIQUOTE_END) $(strip $(kernel-fs-cdfs_CXXFLAGS) $(kernel-fs-cdfs_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-fs-cdfs_CXXCMD)" $(MKDEPEND) $(strip $(kernel-fs-cdfs_DXXFLAGS) $(kernel-fs-cdfs_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-fs-cdfs_OBJDIR),)
+  $(foreach kernel-fs-cdfs_CXXFILE,$(kernel-fs-cdfs_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-fs-cdfs_CXXFILE))),$(kernel-fs-cdfs_CXXFILE))))
+else
+  $(foreach kernel-fs-cdfs_CXXFILE,$(kernel-fs-cdfs_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(notdir $(basename $(kernel-fs-cdfs_CXXFILE)))),$(kernel-fs-cdfs_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-fs-cdfs_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-fs-cdfs_MOBJC_SRCWILDCARD := %
+else
+kernel-fs-cdfs_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-fs-cdfs_OBJDIR),)
+  kernel-fs-cdfs_MOBJC_TARGETS := $(addsuffix .o,$(kernel-fs-cdfs_OBJC_NARCHFILES))
+  kernel-fs-cdfs_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-fs-cdfs_OBJC_NARCHFILES))
+  kernel-fs-cdfs_MOBJC_WILDCARD := %
+else
+  kernel-fs-cdfs_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(kernel-fs-cdfs_OBJC_NARCHFILES)))
+  kernel-fs-cdfs_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(kernel-fs-cdfs_OBJC_NARCHFILES)))
+  kernel-fs-cdfs_MOBJC_WILDCARD := $(kernel-fs-cdfs_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-fs-cdfs_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-fs-cdfs_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-fs-cdfs_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-fs-cdfs_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-fs-cdfs_MOBJC_DIRS := $(foreach dir, $(kernel-fs-cdfs_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-fs-cdfs_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-fs-cdfs_MOBJC_DIRS),)
+    kernel-fs-cdfs_MOBJC_DIRS := $(shell echo $(kernel-fs-cdfs_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-fs-cdfs_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-fs-cdfs_CC := $(TARGET_CC)
+else
+  kernel-fs-cdfs_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-fs-cdfs_MOBJC_CPPFLAGS := $(kernel-fs-cdfs_CPPFLAGS)
+kernel-fs-cdfs_OBJCFLAGS := $(kernel-fs-cdfs_CFLAGS)
+kernel-fs-cdfs_OBJCFLAGS := $(kernel-fs-cdfs_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-fs-cdfs_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-fs-cdfs_OBJCFLAGS)))
+ifeq ($(kernel-fs-cdfs_DFLAGS),)
+  kernel-fs-cdfs_OBJCDFLAGS := $(kernel-fs-cdfs_CFLAGS)
+else
+  kernel-fs-cdfs_OBJCDFLAGS := $(kernel-fs-cdfs_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-fs-cdfs_LINK ?= $(strip $(kernel-fs-cdfs_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-fs-cdfs_STRIP ?= $(TARGET_STRIP)
+  kernel-fs-cdfs_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-fs-cdfs_CC) $(TARGET_SYSROOT))
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : kernel-fs-cdfs_MOBJC_CPPFLAGS:=$(strip $(kernel-fs-cdfs_MOBJC_CPPFLAGS) $(kernel-fs-cdfs_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : kernel-fs-cdfs_OBJCFLAGS:=$(strip $(kernel-fs-cdfs_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : kernel-fs-cdfs_OBJCDFLAGS:=$(kernel-fs-cdfs_OBJCDFLAGS)
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : kernel-fs-cdfs_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : kernel-fs-cdfs_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-fs-cdfs_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-fs-cdfs_STRIP ?= $(HOST_STRIP)
+  kernel-fs-cdfs_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : kernel-fs-cdfs_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-fs-cdfs_MOBJC_CPPFLAGS) $(kernel-fs-cdfs_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : kernel-fs-cdfs_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-cdfs_OBJCFLAGS))
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : kernel-fs-cdfs_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-cdfs_OBJCDFLAGS))
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : kernel-fs-cdfs_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : kernel-fs-cdfs_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-fs-cdfs_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-fs-cdfs_STRIP ?= $(ECHO) >/dev/null
+  kernel-fs-cdfs_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : kernel-fs-cdfs_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-fs-cdfs_MOBJC_CPPFLAGS) $(kernel-fs-cdfs_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : kernel-fs-cdfs_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-cdfs_OBJCFLAGS))
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : kernel-fs-cdfs_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-cdfs_OBJCDFLAGS))
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : kernel-fs-cdfs_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-fs-cdfs_MOBJC_TARGETS) $(kernel-fs-cdfs_MOBJC_DTARGETS) : kernel-fs-cdfs_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-fs-cdfs_MOBJC_TARGETS) : CPPFLAGS := $(kernel-fs-cdfs_MOBJC_CPPFLAGS)
+$(kernel-fs-cdfs_MOBJC_TARGETS) : CFLAGS := $(kernel-fs-cdfs_OBJCFLAGS)
+$(kernel-fs-cdfs_MOBJC_TARGETS) : $(kernel-fs-cdfs_MOBJC_WILDCARD).o : $(kernel-fs-cdfs_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-fs-cdfs_IQUOTE) $(dir $<) $(kernel-fs-cdfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_IQUOTE) . $(kernel-fs-cdfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-fs-cdfs_IQUOTE) $(dir $<) $(kernel-fs-cdfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_IQUOTE) . $(kernel-fs-cdfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-fs-cdfs_IQUOTE) $(dir $<) $(kernel-fs-cdfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_IQUOTE) . $(kernel-fs-cdfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-fs-cdfs_MOBJC_DTARGETS) : $(kernel-fs-cdfs_MOBJC_WILDCARD).d : $(kernel-fs-cdfs_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-fs-cdfs_OBJCDFLAGS) $(kernel-fs-cdfs_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-fs-cdfs_MC_SRCWILDCARD := %
+else
+kernel-fs-cdfs_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-fs-cdfs_OBJDIR),)
+kernel-fs-cdfs_MC_TARGETS := $(addsuffix .o,$(kernel-fs-cdfs_CCFILES))
+kernel-fs-cdfs_MC_DTARGETS := $(addsuffix .d,$(kernel-fs-cdfs_CCFILES))
+kernel-fs-cdfs_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-fs-cdfs_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(notdir $(kernel-fs-cdfs_CCFILES))))
+    kernel-fs-cdfs_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(notdir $(kernel-fs-cdfs_CCFILES))))
+else
+ifeq (,)
+    kernel-fs-cdfs_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(kernel-fs-cdfs_CCFILES)))
+    kernel-fs-cdfs_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(kernel-fs-cdfs_CCFILES)))
+else
+    kernel-fs-cdfs_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(patsubst /%,%,$(kernel-fs-cdfs_CCFILES))))
+    kernel-fs-cdfs_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(patsubst /%,%,$(kernel-fs-cdfs_CCFILES))))
+endif
+endif
+kernel-fs-cdfs_MC_TGTWILDCARD := $(kernel-fs-cdfs_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : | $(addsuffix .c,$(kernel-fs-cdfs_CCFILES))
+
+# Be sure that all .c files are found
+kernel-fs-cdfs_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-fs-cdfs_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-fs-cdfs_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-fs-cdfs_MC_DIRS := $(foreach dir, $(kernel-fs-cdfs_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-fs-cdfs_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-fs-cdfs_MC_DIRS),)
+    kernel-fs-cdfs_MC_DIRS := $(shell echo $(kernel-fs-cdfs_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-fs-cdfs_MC_DIRS)
+endif
+
+endif
+
+kernel-fs-cdfs_MC_CPPFLAGS := $(kernel-fs-cdfs_CPPFLAGS)
+kernel-fs-cdfs_CFLAGS := $(kernel-fs-cdfs_CFLAGS)
+ifeq ($(kernel-fs-cdfs_DFLAGS),)
+  kernel-fs-cdfs_DFLAGS := $(kernel-fs-cdfs_CFLAGS)
+else
+  kernel-fs-cdfs_DFLAGS := $(kernel-fs-cdfs_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-fs-cdfs_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-fs-cdfs_STRIP ?= $(TARGET_STRIP)
+kernel-fs-cdfs_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_MC_CPPFLAGS:=$(strip $(kernel-fs-cdfs_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_CFLAGS:=$(strip $(kernel-fs-cdfs_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_DFLAGS:=$(kernel-fs-cdfs_DFLAGS)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-fs-cdfs_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-fs-cdfs_STRIP ?= $(HOST_STRIP)
+kernel-fs-cdfs_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-cdfs_CFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-cdfs_DFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-fs-cdfs_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-fs-cdfs_STRIP ?= $(ECHO) >/dev/null
+kernel-fs-cdfs_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-cdfs_CFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-cdfs_DFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-fs-cdfs_MC_TARGETS) : CPPFLAGS := $(kernel-fs-cdfs_MC_CPPFLAGS)
+$(kernel-fs-cdfs_MC_TARGETS) : CFLAGS := $(kernel-fs-cdfs_CFLAGS)
+$(kernel-fs-cdfs_MC_TARGETS) : $(kernel-fs-cdfs_MC_TGTWILDCARD).o : $(kernel-fs-cdfs_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-fs-cdfs_IQUOTE) $(dir $<) $(kernel-fs-cdfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_IQUOTE) . $(kernel-fs-cdfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-fs-cdfs_IQUOTE) $(dir $<) $(kernel-fs-cdfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_IQUOTE) . $(kernel-fs-cdfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-fs-cdfs_IQUOTE) $(dir $<) $(kernel-fs-cdfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_IQUOTE) . $(kernel-fs-cdfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-fs-cdfs_MC_DTARGETS) : $(kernel-fs-cdfs_MC_TGTWILDCARD).d : $(kernel-fs-cdfs_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-fs-cdfs_DFLAGS) $(kernel-fs-cdfs_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-fs-cdfs_MC_SRCWILDCARD := %
+else
+kernel-fs-cdfs_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-fs-cdfs_OBJDIR),)
+kernel-fs-cdfs_MC_TARGETS := $(addsuffix .o,$(kernel-fs-cdfs_TARGETCCFILES))
+kernel-fs-cdfs_MC_DTARGETS := $(addsuffix .d,$(kernel-fs-cdfs_TARGETCCFILES))
+kernel-fs-cdfs_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-fs-cdfs_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(notdir $(kernel-fs-cdfs_TARGETCCFILES))))
+    kernel-fs-cdfs_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(notdir $(kernel-fs-cdfs_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-fs-cdfs_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(kernel-fs-cdfs_TARGETCCFILES)))
+    kernel-fs-cdfs_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(kernel-fs-cdfs_TARGETCCFILES)))
+else
+    kernel-fs-cdfs_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(patsubst /%,%,$(kernel-fs-cdfs_TARGETCCFILES))))
+    kernel-fs-cdfs_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(patsubst /%,%,$(kernel-fs-cdfs_TARGETCCFILES))))
+endif
+endif
+kernel-fs-cdfs_MC_TGTWILDCARD := $(kernel-fs-cdfs_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : | $(addsuffix .c,$(kernel-fs-cdfs_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-fs-cdfs_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-fs-cdfs_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-fs-cdfs_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-fs-cdfs_MC_DIRS := $(foreach dir, $(kernel-fs-cdfs_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-fs-cdfs_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-fs-cdfs_MC_DIRS),)
+    kernel-fs-cdfs_MC_DIRS := $(shell echo $(kernel-fs-cdfs_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-fs-cdfs_MC_DIRS)
+endif
+
+endif
+
+kernel-fs-cdfs_MC_CPPFLAGS := $(kernel-fs-cdfs_CPPFLAGS) -D__AROS__
+kernel-fs-cdfs_CFLAGS := $(kernel-fs-cdfs_CFLAGS)
+ifeq ($(kernel-fs-cdfs_DFLAGS),)
+  kernel-fs-cdfs_DFLAGS := $(kernel-fs-cdfs_CFLAGS)
+else
+  kernel-fs-cdfs_DFLAGS := $(kernel-fs-cdfs_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-fs-cdfs_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-fs-cdfs_STRIP ?= $(TARGET_STRIP)
+kernel-fs-cdfs_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_MC_CPPFLAGS:=$(strip $(kernel-fs-cdfs_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_CFLAGS:=$(strip $(kernel-fs-cdfs_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_DFLAGS:=$(kernel-fs-cdfs_DFLAGS)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-fs-cdfs_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-fs-cdfs_STRIP ?= $(HOST_STRIP)
+kernel-fs-cdfs_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-cdfs_CFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-cdfs_DFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-fs-cdfs_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-fs-cdfs_STRIP ?= $(ECHO) >/dev/null
+kernel-fs-cdfs_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-cdfs_CFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-cdfs_DFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-fs-cdfs_MC_TARGETS) : CPPFLAGS := $(kernel-fs-cdfs_MC_CPPFLAGS)
+$(kernel-fs-cdfs_MC_TARGETS) : CFLAGS := $(kernel-fs-cdfs_CFLAGS)
+$(kernel-fs-cdfs_MC_TARGETS) : $(kernel-fs-cdfs_MC_TGTWILDCARD).o : $(kernel-fs-cdfs_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-fs-cdfs_IQUOTE) $(dir $<) $(kernel-fs-cdfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_IQUOTE) . $(kernel-fs-cdfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-fs-cdfs_IQUOTE) $(dir $<) $(kernel-fs-cdfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_IQUOTE) . $(kernel-fs-cdfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-fs-cdfs_IQUOTE) $(dir $<) $(kernel-fs-cdfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_IQUOTE) . $(kernel-fs-cdfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-fs-cdfs_MC_DTARGETS) : $(kernel-fs-cdfs_MC_TGTWILDCARD).d : $(kernel-fs-cdfs_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-fs-cdfs_DFLAGS) $(kernel-fs-cdfs_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-fs-cdfs_MC_SRCWILDCARD := %
+else
+kernel-fs-cdfs_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-fs-cdfs_OBJDIR)/linklib,)
+kernel-fs-cdfs_MC_TARGETS := $(addsuffix .o,$(kernel-fs-cdfs_NLIBARCHFILES))
+kernel-fs-cdfs_MC_DTARGETS := $(addsuffix .d,$(kernel-fs-cdfs_NLIBARCHFILES))
+kernel-fs-cdfs_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-fs-cdfs_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$(notdir $(kernel-fs-cdfs_NLIBARCHFILES))))
+    kernel-fs-cdfs_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$(notdir $(kernel-fs-cdfs_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-fs-cdfs_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$(kernel-fs-cdfs_NLIBARCHFILES)))
+    kernel-fs-cdfs_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$(kernel-fs-cdfs_NLIBARCHFILES)))
+else
+    kernel-fs-cdfs_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-fs-cdfs_NLIBARCHFILES))))
+    kernel-fs-cdfs_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-fs-cdfs_NLIBARCHFILES))))
+endif
+endif
+kernel-fs-cdfs_MC_TGTWILDCARD := $(kernel-fs-cdfs_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : | $(addsuffix .c,$(kernel-fs-cdfs_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-fs-cdfs_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-fs-cdfs_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-fs-cdfs_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-fs-cdfs_MC_DIRS := $(foreach dir, $(kernel-fs-cdfs_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-fs-cdfs_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-fs-cdfs_MC_DIRS),)
+    kernel-fs-cdfs_MC_DIRS := $(shell echo $(kernel-fs-cdfs_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-fs-cdfs_MC_DIRS)
+endif
+
+endif
+
+kernel-fs-cdfs_MC_CPPFLAGS := $(kernel-fs-cdfs_LINKLIBCPPFLAGS) -D__AROS__
+kernel-fs-cdfs_CFLAGS := $(kernel-fs-cdfs_LINKLIBCFLAGS)
+ifeq ($(kernel-fs-cdfs_LINKLIBDFLAGS),)
+  kernel-fs-cdfs_DFLAGS := $(kernel-fs-cdfs_LINKLIBCFLAGS)
+else
+  kernel-fs-cdfs_DFLAGS := $(kernel-fs-cdfs_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-fs-cdfs_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-fs-cdfs_STRIP ?= $(TARGET_STRIP)
+kernel-fs-cdfs_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_MC_CPPFLAGS:=$(strip $(kernel-fs-cdfs_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_CFLAGS:=$(strip $(kernel-fs-cdfs_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_DFLAGS:=$(kernel-fs-cdfs_DFLAGS)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-fs-cdfs_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-fs-cdfs_STRIP ?= $(HOST_STRIP)
+kernel-fs-cdfs_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-cdfs_CFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-cdfs_DFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-fs-cdfs_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-fs-cdfs_STRIP ?= $(ECHO) >/dev/null
+kernel-fs-cdfs_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-cdfs_CFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-cdfs_DFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-fs-cdfs_MC_TARGETS) : CPPFLAGS := $(kernel-fs-cdfs_MC_CPPFLAGS)
+$(kernel-fs-cdfs_MC_TARGETS) : CFLAGS := $(kernel-fs-cdfs_CFLAGS)
+$(kernel-fs-cdfs_MC_TARGETS) : $(kernel-fs-cdfs_MC_TGTWILDCARD).o : $(kernel-fs-cdfs_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-fs-cdfs_IQUOTE) $(dir $<) $(kernel-fs-cdfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_IQUOTE) . $(kernel-fs-cdfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-fs-cdfs_IQUOTE) $(dir $<) $(kernel-fs-cdfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_IQUOTE) . $(kernel-fs-cdfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-fs-cdfs_IQUOTE) $(dir $<) $(kernel-fs-cdfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_IQUOTE) . $(kernel-fs-cdfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-fs-cdfs_MC_DTARGETS) : $(kernel-fs-cdfs_MC_TGTWILDCARD).d : $(kernel-fs-cdfs_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-fs-cdfs_DFLAGS) $(kernel-fs-cdfs_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-fs-cdfs_OBJDIR)/linklib,)
+kernel-fs-cdfs_MC_SRCWILDCARD := %
+else
+kernel-fs-cdfs_MC_SRCWILDCARD := $(kernel-fs-cdfs_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-fs-cdfs_OBJDIR)/linklib,)
+kernel-fs-cdfs_MC_TARGETS := $(addsuffix .o,$(kernel-fs-cdfs_LINKLIBCCGENFILES))
+kernel-fs-cdfs_MC_DTARGETS := $(addsuffix .d,$(kernel-fs-cdfs_LINKLIBCCGENFILES))
+kernel-fs-cdfs_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-fs-cdfs_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$(notdir $(kernel-fs-cdfs_LINKLIBCCGENFILES))))
+    kernel-fs-cdfs_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$(notdir $(kernel-fs-cdfs_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-fs-cdfs_OBJDIR)/linklib,)
+    kernel-fs-cdfs_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$(kernel-fs-cdfs_LINKLIBCCGENFILES)))
+    kernel-fs-cdfs_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$(kernel-fs-cdfs_LINKLIBCCGENFILES)))
+else
+    kernel-fs-cdfs_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$(patsubst $(kernel-fs-cdfs_OBJDIR)/linklib/%,%,$(kernel-fs-cdfs_LINKLIBCCGENFILES))))
+    kernel-fs-cdfs_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$(patsubst $(kernel-fs-cdfs_OBJDIR)/linklib/%,%,$(kernel-fs-cdfs_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-fs-cdfs_MC_TGTWILDCARD := $(kernel-fs-cdfs_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : | $(addsuffix .c,$(kernel-fs-cdfs_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-fs-cdfs_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-fs-cdfs_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-fs-cdfs_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-fs-cdfs_MC_DIRS := $(foreach dir, $(kernel-fs-cdfs_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-fs-cdfs_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-fs-cdfs_MC_DIRS),)
+    kernel-fs-cdfs_MC_DIRS := $(shell echo $(kernel-fs-cdfs_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-fs-cdfs_MC_DIRS)
+endif
+
+endif
+
+kernel-fs-cdfs_MC_CPPFLAGS := $(kernel-fs-cdfs_LINKLIBCPPFLAGS) -D__AROS__
+kernel-fs-cdfs_CFLAGS := $(kernel-fs-cdfs_LINKLIBCFLAGS)
+ifeq ($(kernel-fs-cdfs_LINKLIBDFLAGS),)
+  kernel-fs-cdfs_DFLAGS := $(kernel-fs-cdfs_LINKLIBCFLAGS)
+else
+  kernel-fs-cdfs_DFLAGS := $(kernel-fs-cdfs_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-fs-cdfs_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-fs-cdfs_STRIP ?= $(TARGET_STRIP)
+kernel-fs-cdfs_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_MC_CPPFLAGS:=$(strip $(kernel-fs-cdfs_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_CFLAGS:=$(strip $(kernel-fs-cdfs_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_DFLAGS:=$(kernel-fs-cdfs_DFLAGS)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-fs-cdfs_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-fs-cdfs_STRIP ?= $(HOST_STRIP)
+kernel-fs-cdfs_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-cdfs_CFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-cdfs_DFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-fs-cdfs_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-fs-cdfs_STRIP ?= $(ECHO) >/dev/null
+kernel-fs-cdfs_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_CPPFLAGS) $(kernel-fs-cdfs_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-cdfs_CFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-cdfs_DFLAGS))
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-fs-cdfs_MC_TARGETS) $(kernel-fs-cdfs_MC_DTARGETS) : kernel-fs-cdfs_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-fs-cdfs_MC_TARGETS) : CPPFLAGS := $(kernel-fs-cdfs_MC_CPPFLAGS)
+$(kernel-fs-cdfs_MC_TARGETS) : CFLAGS := $(kernel-fs-cdfs_CFLAGS)
+$(kernel-fs-cdfs_MC_TARGETS) : $(kernel-fs-cdfs_MC_TGTWILDCARD).o : $(kernel-fs-cdfs_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-fs-cdfs_IQUOTE) $(dir $<) $(kernel-fs-cdfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_IQUOTE) . $(kernel-fs-cdfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-fs-cdfs_IQUOTE) $(dir $<) $(kernel-fs-cdfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_IQUOTE) . $(kernel-fs-cdfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-fs-cdfs_IQUOTE) $(dir $<) $(kernel-fs-cdfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-cdfs_IQUOTE) . $(kernel-fs-cdfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-fs-cdfs_MC_DTARGETS) : $(kernel-fs-cdfs_MC_TGTWILDCARD).d : $(kernel-fs-cdfs_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-fs-cdfs_DFLAGS) $(kernel-fs-cdfs_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-fs-cdfs_LINKLIBAFILES),)
+
+ifeq ($(kernel-fs-cdfs_OBJDIR)/linklib,)
+kernel-fs-cdfs-MA_TARGETS := $(addsuffix .o,$(kernel-fs-cdfs_LINKLIBAFILES) $(kernel-fs-cdfs_RELLINKLIBAFILES))
+kernel-fs-cdfs-MA_WILDCARD := %
+else
+kernel-fs-cdfs-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$(notdir $(kernel-fs-cdfs_LINKLIBAFILES) $(kernel-fs-cdfs_RELLINKLIBAFILES))))
+kernel-fs-cdfs-MA_WILDCARD := $(kernel-fs-cdfs_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-fs-cdfs-MA_TARGETS) : | $(addsuffix .S,$(kernel-fs-cdfs_LINKLIBAFILES) $(kernel-fs-cdfs_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-fs-cdfs-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-fs-cdfs-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-fs-cdfs_LINKLIBAFILES) $(kernel-fs-cdfs_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-fs-cdfs-MA_DIRS := $(foreach dir, $(kernel-fs-cdfs-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-fs-cdfs-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-fs-cdfs-MA_DIRS),)
+    kernel-fs-cdfs-MA_DIRS := $(shell echo $(kernel-fs-cdfs-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-fs-cdfs-MA_DIRS)
+endif
+
+endif
+
+kernel-fs-cdfs-MA_ASSEMBLER ?= $(kernel-fs-cdfs_ASSEMBLER)
+
+$(kernel-fs-cdfs-MA_TARGETS) : kernel-fs-cdfs-MA_CMD:= $(kernel-fs-cdfs-MA_ASSEMBLER)
+
+$(kernel-fs-cdfs-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-fs-cdfs-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-fs-cdfs-MA_TARGETS) : $(kernel-fs-cdfs-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-fs-cdfs-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-fs-cdfs-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-fs-cdfs-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-fs-cdfs_SUFFIX           := handler
+else
+kernel-fs-cdfs_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-fs-cdfs_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-fs-cdfs_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-fs-cdfs_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-fs-cdfs_SUFFIX),handler)
+kernel-fs-cdfs_MODULE           := $(AROSDIR)/$(kernel-fs-cdfs_MODDIR)/$(kernel-fs-cdfs_DEFNAME)-$(kernel-fs-cdfs_SUFFIX)
+else
+kernel-fs-cdfs_MODULE           := $(AROSDIR)/$(kernel-fs-cdfs_MODDIR)/$(kernel-fs-cdfs_DEFNAME).$(kernel-fs-cdfs_SUFFIX)
+endif
+kernel-fs-cdfs_KOBJ             := $(KOBJSDIR)/$(kernel-fs-cdfs_DEFNAME)_$(kernel-fs-cdfs_SUFFIX).o
+else
+kernel-fs-cdfs_MODULE           :=
+kernel-fs-cdfs_KOBJ             :=
+endif
+
+kernel-fs-cdfs-quick      : kernel-fs-cdfs
+kernel-fs-cdfs            : $(kernel-fs-cdfs_MODULE) $(kernel-fs-cdfs_LINKLIB) $(kernel-fs-cdfs_RELLINKLIB)
+ifeq (M,M)
+kernel-fs-cdfs-kobj       : $(kernel-fs-cdfs_KOBJ) $(kernel-fs-cdfs_LINKLIB) $(kernel-fs-cdfs_RELLINKLIB)
+kernel-fs-cdfs-kobj-quick : $(kernel-fs-cdfs_KOBJ) $(kernel-fs-cdfs_LINKLIB) $(kernel-fs-cdfs_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-fs-cdfs-linklib    : $(kernel-fs-cdfs_LINKLIB) $(kernel-fs-cdfs_RELLINKLIB)
+endif
+
+kernel-fs-cdfs_OBJS := $(addsuffix .o,$(kernel-fs-cdfs_STARTFILES)) $(kernel-fs-cdfs_ARCHOBJS) \
+           $(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(notdir $(kernel-fs-cdfs_C_NARCHFILES:=.o) $(kernel-fs-cdfs_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (handler,handler)
+kernel-fs-cdfs_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (cdfs,con)
+    kernel-fs-cdfs_ERR          := $(notdir $(kernel-fs-cdfs_MODULE)).err
+else
+    kernel-fs-cdfs_ERR          := cdfs.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-fs-cdfs_DEFNAME)_LDFLAGS) $(kernel-fs-cdfs_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-fs-cdfs_LIBS) $($(kernel-fs-cdfs_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-fs-cdfs_MODULE) : LIB_NAMES := $(kernel-fs-cdfs_LIBS) $($(kernel-fs-cdfs_DEFNAME)_LIBS)
+$(kernel-fs-cdfs_MODULE) : OBJS := $(kernel-fs-cdfs_STARTOBJS) $(kernel-fs-cdfs_OBJS) $(USER_OBJS)
+$(kernel-fs-cdfs_MODULE) : ENDTAG := $(kernel-fs-cdfs_ENDOBJS)
+$(kernel-fs-cdfs_MODULE) : ERR := $(kernel-fs-cdfs_ERR)
+$(kernel-fs-cdfs_MODULE) : OBJDIR := $(kernel-fs-cdfs_OBJDIR)
+$(kernel-fs-cdfs_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-fs-cdfs_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-fs-cdfs_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-fs-cdfs_MODULE) : $(kernel-fs-cdfs_STARTOBJS) $(kernel-fs-cdfs_OBJS) $(USER_OBJS) $(kernel-fs-cdfs_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-fs-cdfs_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-fs-cdfs_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-fs-cdfs_LC_LINKLIBNAME   := $(shell echo $(kernel-fs-cdfs_LINKLIBNAME) | tr A-Z a-z)
+kernel-fs-cdfs_LC_MODNAME       := $(shell echo cdfs | tr A-Z a-z)
+ifneq ($(kernel-fs-cdfs_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_LINKLIBNAME)$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_AR:=$(AR)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_LINKLIBNAME)$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_LINKLIBNAME)$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_AR:=$(HOST_AR)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_LINKLIBNAME)$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_LINKLIBNAME)$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_AR:=$(KERNEL_AR)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_LINKLIBNAME)$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_LINKLIBNAME)$(kernel-fs-cdfs_LIBSUFFIX).a : $(kernel-fs-cdfs_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-fs-cdfs_AR) $@ $^
+	$(Q)$(kernel-fs-cdfs_RANLIB) $@
+ifneq ($(kernel-fs-cdfs_LC_MODNAME),$(kernel-fs-cdfs_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-fs-cdfs_LIBDIR)/libcdfs$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_AR:=$(AR)
+$(kernel-fs-cdfs_LIBDIR)/libcdfs$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-fs-cdfs_LIBDIR)/libcdfs$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_AR:=$(HOST_AR)
+$(kernel-fs-cdfs_LIBDIR)/libcdfs$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-fs-cdfs_LIBDIR)/libcdfs$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_AR:=$(KERNEL_AR)
+$(kernel-fs-cdfs_LIBDIR)/libcdfs$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-fs-cdfs_LIBDIR)/libcdfs$(kernel-fs-cdfs_LIBSUFFIX).a : $(kernel-fs-cdfs_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-fs-cdfs_AR) $@ $^
+	$(Q)$(kernel-fs-cdfs_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-fs-cdfs_LINKLIB),)
+$(kernel-fs-cdfs_LINKLIB) : | $(kernel-fs-cdfs_LIBDIR)
+else
+$(kernel-fs-cdfs_LINKLIB) :: $(kernel-fs-cdfs_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-fs-cdfs_LIBDIR)
+
+endif
+
+ifneq ($(kernel-fs-cdfs_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_LINKLIBNAME)_rel$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_AR:=$(AR)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_LINKLIBNAME)_rel$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_LINKLIBNAME)_rel$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_AR:=$(HOST_AR)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_LINKLIBNAME)_rel$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_LINKLIBNAME)_rel$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_AR:=$(KERNEL_AR)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_LINKLIBNAME)_rel$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_LINKLIBNAME)_rel$(kernel-fs-cdfs_LIBSUFFIX).a : $(kernel-fs-cdfs_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-fs-cdfs_AR) $@ $^
+	$(Q)$(kernel-fs-cdfs_RANLIB) $@
+ifneq ($(kernel-fs-cdfs_LC_MODNAME),$(kernel-fs-cdfs_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_DEFNAME)_rel$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_AR:=$(AR)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_DEFNAME)_rel$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_DEFNAME)_rel$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_AR:=$(HOST_AR)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_DEFNAME)_rel$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_DEFNAME)_rel$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_AR:=$(KERNEL_AR)
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_DEFNAME)_rel$(kernel-fs-cdfs_LIBSUFFIX).a : kernel-fs-cdfs_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-fs-cdfs_LIBDIR)/lib$(kernel-fs-cdfs_DEFNAME)_rel$(kernel-fs-cdfs_LIBSUFFIX).a : $(kernel-fs-cdfs_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-fs-cdfs_AR) $@ $^
+	$(Q)$(kernel-fs-cdfs_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-fs-cdfs_RELLINKLIB),)
+$(kernel-fs-cdfs_RELLINKLIB) : | $(kernel-fs-cdfs_LIBDIR)
+else
+$(kernel-fs-cdfs_RELLINKLIB) :: $(kernel-fs-cdfs_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-fs-cdfs_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-fs-cdfs_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-fs-cdfs_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-fs-cdfs_SYMBOLS := $(kernel-fs-cdfs_KBASE)
+
+kernel-fs-cdfs_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-fs-cdfs_KOBJ_LIBS        := $(filter-out $(kernel-fs-cdfs_KLIB),$(kernel-fs-cdfs_LIBS)) $(kernel-fs-cdfs_KAUTOLIB)
+$(kernel-fs-cdfs_KOBJ) : LINKLIBS:=$(kernel-fs-cdfs_KOBJ_LIBS) $($(kernel-fs-cdfs_DEFNAME)_LIBS)
+$(kernel-fs-cdfs_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-fs-cdfs_SYMBOLS))
+$(kernel-fs-cdfs_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-fs-cdfs_KOBJ) : $(kernel-fs-cdfs_OBJS) $(USER_OBJS) $(kernel-fs-cdfs_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-fs-cdfs_DEPS             := $(addprefix $(kernel-fs-cdfs_OBJDIR)/,$(notdir $(kernel-fs-cdfs_CCFILES:=.d) $(kernel-fs-cdfs_TARGETCCFILES:=.d) $(kernel-fs-cdfs_CXXFILES:=.d))) $(addprefix $(kernel-fs-cdfs_OBJDIR)/linklib/,$(notdir $(kernel-fs-cdfs_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-fs-cdfs_DEPS),)
+  ifneq (kernel-fs-cdfs kernel-fs-cdfs-quick kernel-fs-cdfs-kobj kernel-fs-cdfs-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-fs-cdfs kernel-fs-cdfs-quick kernel-fs-cdfs-kobj kernel-fs-cdfs-kobj-quick),)
+      -include $(kernel-fs-cdfs_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-fs-cdfs_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-fs-cdfs_OBJS) $(kernel-fs-cdfs_DEPS) : | $(kernel-fs-cdfs_OBJDIR)/linklib
+
+ifneq ($(kernel-fs-cdfs_OBJS) $(kernel-fs-cdfs_DEPS) $(kernel-fs-cdfs_MODULE) $(kernel-fs-cdfs_KOBJ),)
+$(kernel-fs-cdfs_OBJS) $(kernel-fs-cdfs_DEPS) $(kernel-fs-cdfs_MODULE) $(kernel-fs-cdfs_KOBJ) : | $(kernel-fs-cdfs_OBJDIR) $(AROSDIR)/$(kernel-fs-cdfs_MODDIR) $(KOBJSDIR)
+else
+$(kernel-fs-cdfs_OBJS) $(kernel-fs-cdfs_DEPS) $(kernel-fs-cdfs_MODULE) $(kernel-fs-cdfs_KOBJ) :: $(kernel-fs-cdfs_OBJDIR) $(AROSDIR)/$(kernel-fs-cdfs_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-fs-cdfs_OBJDIR) $(AROSDIR)/$(kernel-fs-cdfs_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-fs-cdfs kernel-fs-cdfs-includes kernel-fs-cdfs-quick kernel-fs-cdfs-kobj kernel-fs-cdfs-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-fs-cdfs_DFILE_DEPS := $(kernel-fs-cdfs_LIBDEFSINC) $(kernel-fs-cdfs_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-fs-cdfs_INCDIR)/,$($(kernel-fs-cdfs_DEFNAME)_INCLUDES))
+$(kernel-fs-cdfs_DEPS) : $(kernel-fs-cdfs_DFILE_DEPS)
+endif
+
+kernel-fs-cdfs_TOCLEAN := $(kernel-fs-cdfs_OBJS) $(kernel-fs-cdfs_DEPS) \
+    $(kernel-fs-cdfs_MODULE) $(kernel-fs-cdfs_LINKLIB) $(kernel-fs-cdfs_KOBJ) \
+    $(kernel-fs-cdfs_OBJDIR)/Makefile.cdfshandler \
+    $(addprefix $(kernel-fs-cdfs_OBJDIR)/include/,$($(kernel-fs-cdfs_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-fs-cdfs_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-fs-cdfs_INCDIR)/,$($(kernel-fs-cdfs_DEFNAME)_INCLUDES)) \
+    $(kernel-fs-cdfs_OBJDIR)/cdfs_geninc $(kernel-fs-cdfs_OBJDIR)/cdfs_incs \
+    $(addsuffix .c,$(kernel-fs-cdfs_LINKLIBFILES)) $(kernel-fs-cdfs_LINKLIBOBJS) $(kernel-fs-cdfs_LIBDEFSINC) \
+    $(kernel-fs-cdfs_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-fs-cdfs_STARTFILES) $(kernel-fs-cdfs_ENDFILES)) \
+    $(kernel-fs-cdfs_ENDOBJS)
+kernel-fs-cdfs-clean : FILES              := $(kernel-fs-cdfs_TOCLEAN)
+kernel-fs-cdfs-clean ::
+	$(Q)$(ECHO) "Cleaning up for module cdfs"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-fs-cdfs_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

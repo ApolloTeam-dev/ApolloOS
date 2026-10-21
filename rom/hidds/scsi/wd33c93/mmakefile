@@ -1,0 +1,1666 @@
+#$Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := \
+        wd33c93_init \
+        wd33c93_probe \
+        wd33c93_busclass \
+        wd33c93
+
+USER_CPPFLAGS := -D__OOP_NOMETHODBASES__ -D__OOP_NOATTRBASES__
+#USER_CPPFLAGS += -DDEBUG
+USER_LDFLAGS := -static
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-hidd-scsiwd33c93
+#MM kernel-hidd-scsiwd33c93-quick
+#MM kernel-hidd-scsiwd33c93-makefile
+#MM kernel-hidd-scsiwd33c93-clean
+
+# ABI targets:
+#MM- includes-all : kernel-hidd-scsiwd33c93-includes
+#MM- linklibs-scsi_wd33c93: kernel-hidd-scsiwd33c93-linklib
+#MM- linklibs-scsi_wd33c93_rel : kernel-hidd-scsiwd33c93-linklib
+#MM- includes-scsi_wd33c93: kernel-hidd-scsiwd33c93-includes
+#MM- includes-scsi_wd33c93_rel : kernel-hidd-scsiwd33c93-includes
+#MM- kernel-hidd-scsiwd33c93 : kernel-hidd-scsiwd33c93-includes core-linklibs linklibs-
+#MM kernel-hidd-scsiwd33c93-linklib : kernel-hidd-scsiwd33c93-includes includes-
+#MM- kernel-hidd-scsiwd33c93-quick : kernel-hidd-scsiwd33c93-includes-quick
+#MM kernel-hidd-scsiwd33c93-includes : kernel-hidd-scsiwd33c93-makefile kernel-hidd-scsiwd33c93-includes-dirs \
+#MM     includes-generate-deps kernel-hidd-scsiwd33c93-fd
+#MM kernel-hidd-scsiwd33c93-includes-quick
+#MM kernel-hidd-scsiwd33c93-includes-dirs
+#MM kernel-hidd-scsiwd33c93-fd
+
+# Library targets
+#MM kernel-hidd-scsiwd33c93-kobj : core-linklibs linklibs-
+#MM kernel-hidd-scsiwd33c93-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-hidd-scsiwd33c93-kobj : kernel-hidd-scsiwd33c93-includes core-linklibs linklibs-
+#MM kernel-hidd-scsiwd33c93-kobj-quick : kernel-hidd-scsiwd33c93-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-hidd-scsiwd33c93_ALLTARGETS       := kernel-hidd-scsiwd33c93 kernel-hidd-scsiwd33c93-quick kernel-hidd-scsiwd33c93-clean
+
+ifeq (M,M)
+kernel-hidd-scsiwd33c93_ALLTARGETS       += kernel-hidd-scsiwd33c93-kobj kernel-hidd-scsiwd33c93-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-hidd-scsiwd33c93_ALLTARGETS += kernel-hidd-scsiwd33c93-includes \
+                 kernel-hidd-scsiwd33c93-includes-quick kernel-hidd-scsiwd33c93-includes-dirs  \
+                 kernel-hidd-scsiwd33c93-linklib kernel-hidd-scsiwd33c93-fd
+endif
+
+.PHONY : $(kernel-hidd-scsiwd33c93_ALLTARGETS) kernel-hidd-scsiwd33c93-makefile
+
+ifeq (scsi_wd33c93,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (hidd,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-hidd-scsiwd33c93_DEFNAME      := scsi_wd33c93_
+else
+    kernel-hidd-scsiwd33c93_DEFNAME      := scsi_wd33c93
+endif
+kernel-hidd-scsiwd33c93_DEFLINKLIBNAME   := $(kernel-hidd-scsiwd33c93_DEFNAME)
+ifneq (,)
+    kernel-hidd-scsiwd33c93_LINKLIBNAME  := 
+else
+    kernel-hidd-scsiwd33c93_LINKLIBNAME  = $(kernel-hidd-scsiwd33c93_DEFLINKLIBNAME)
+endif
+kernel-hidd-scsiwd33c93_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-hidd-scsiwd33c93_DEFCPPFLAGS  += -I
+endif
+kernel-hidd-scsiwd33c93_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-hidd-scsiwd33c93_DFLAGS       := 
+else
+    kernel-hidd-scsiwd33c93_DFLAGS       = $(kernel-hidd-scsiwd33c93_DEFDFLAGS)
+endif
+kernel-hidd-scsiwd33c93_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-hidd-scsiwd33c93_DXXFLAGS     := 
+else
+    kernel-hidd-scsiwd33c93_DXXFLAGS     = $(kernel-hidd-scsiwd33c93_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-scsiwd33c93_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-scsiwd33c93_DEFDFLAGS))
+kernel-hidd-scsiwd33c93_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-scsiwd33c93_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-scsiwd33c93_FUNCINSTR := yes
+kernel-hidd-scsiwd33c93_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-scsiwd33c93_DEFDFLAGS))
+kernel-hidd-scsiwd33c93_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-scsiwd33c93_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-hidd-scsiwd33c93_OBJDIR                     := 
+else
+kernel-hidd-scsiwd33c93_OBJDIR                     := $(OBJDIR)/$(kernel-hidd-scsiwd33c93_DEFNAME)
+endif
+ifneq (,)
+kernel-hidd-scsiwd33c93_OBJDIR           := $(kernel-hidd-scsiwd33c93_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-hidd-scsiwd33c93-makefile         := $(kernel-hidd-scsiwd33c93_OBJDIR)/Makefile.$(kernel-hidd-scsiwd33c93_DEFNAME)hidd
+kernel-hidd-scsiwd33c93-genmakefile : $(kernel-hidd-scsiwd33c93-makefile)
+
+
+kernel-hidd-scsiwd33c93-genmakefile_OPTS := 
+ifneq (,)
+    kernel-hidd-scsiwd33c93-genmakefile_OPTS += -f 
+    kernel-hidd-scsiwd33c93-genmakefile_MODNAME := scsi_wd33c93_
+else
+    kernel-hidd-scsiwd33c93-genmakefile_MODNAME := scsi_wd33c93
+endif
+kernel-hidd-scsiwd33c93-genmakefile_TARGET := Makefile.$(kernel-hidd-scsiwd33c93-genmakefile_MODNAME)hidd
+kernel-hidd-scsiwd33c93-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-scsiwd33c93-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-scsiwd33c93-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-scsiwd33c93-genmakefile_OPTS += -c 
+        kernel-hidd-scsiwd33c93-genmakefile_DEPS += 
+    endif 
+else
+    kernel-hidd-scsiwd33c93-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/scsi_wd33c93.conf
+    kernel-hidd-scsiwd33c93-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/scsi_wd33c93.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-scsiwd33c93-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-scsiwd33c93-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-scsiwd33c93-genmakefile_OPTS += -o 
+        kernel-hidd-scsiwd33c93-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-scsiwd33c93-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-scsiwd33c93_OBJDIR),)
+    kernel-hidd-scsiwd33c93-genmakefile_OPTS += -d $(kernel-hidd-scsiwd33c93_OBJDIR)
+    kernel-hidd-scsiwd33c93-genmakefile_TARGET := $(kernel-hidd-scsiwd33c93_OBJDIR)/$(kernel-hidd-scsiwd33c93-genmakefile_TARGET)
+endif
+
+$(kernel-hidd-scsiwd33c93-genmakefile_TARGET) : OPTS := $(kernel-hidd-scsiwd33c93-genmakefile_OPTS)
+$(kernel-hidd-scsiwd33c93-genmakefile_TARGET) : MODNAME := scsi_wd33c93
+$(kernel-hidd-scsiwd33c93-genmakefile_TARGET) : MODTYPE := hidd
+$(kernel-hidd-scsiwd33c93-genmakefile_TARGET) : $(kernel-hidd-scsiwd33c93-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-hidd-scsiwd33c93-makefile),)
+$(kernel-hidd-scsiwd33c93-makefile) : | $(kernel-hidd-scsiwd33c93_OBJDIR)
+else
+$(kernel-hidd-scsiwd33c93-makefile) :: $(kernel-hidd-scsiwd33c93_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-scsiwd33c93_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-hidd-scsiwd33c93_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-hidd-scsiwd33c93-makefile)
+
+kernel-hidd-scsiwd33c93_DEFMODDIR        := $($(kernel-hidd-scsiwd33c93_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-hidd-scsiwd33c93_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-hidd-scsiwd33c93_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-hidd-scsiwd33c93_MODDIR       := 
+else
+    kernel-hidd-scsiwd33c93_MODDIR       := $(kernel-hidd-scsiwd33c93_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-hidd-scsiwd33c93_INCDIR           := 
+else
+kernel-hidd-scsiwd33c93_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-hidd-scsiwd33c93_LIBDEFSINC       := $(kernel-hidd-scsiwd33c93_OBJDIR)/include/$(kernel-hidd-scsiwd33c93_DEFNAME)_libdefs.h
+kernel-hidd-scsiwd33c93_DEFLIBDEFSINC    := $(kernel-hidd-scsiwd33c93_OBJDIR)/include/$(kernel-hidd-scsiwd33c93_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-hidd-scsiwd33c93-includes-quick : kernel-hidd-scsiwd33c93-includes
+kernel-hidd-scsiwd33c93-includes : $(addprefix $(GENINCDIR)/,$($(kernel-hidd-scsiwd33c93_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-scsiwd33c93_INCDIR)/,$($(kernel-hidd-scsiwd33c93_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-scsiwd33c93_LIBDEFSINC) $(kernel-hidd-scsiwd33c93_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-hidd-scsiwd33c93_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-hidd-scsiwd33c93-includes_MODNAME := scsi_wd33c93_
+else
+    kernel-hidd-scsiwd33c93-includes_MODNAME := scsi_wd33c93
+endif
+
+ifneq ($($(kernel-hidd-scsiwd33c93-includes_MODNAME)_INCLUDES),)
+
+kernel-hidd-scsiwd33c93-includes_TARGETS := $($(kernel-hidd-scsiwd33c93-includes_MODNAME)_INCLUDES)
+
+kernel-hidd-scsiwd33c93-includes_DEPS := $(GENMODULE)
+kernel-hidd-scsiwd33c93-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-scsiwd33c93-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-scsiwd33c93-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-scsiwd33c93-includes_OPTS += -c 
+        kernel-hidd-scsiwd33c93-includes_DEPS += 
+    endif 
+else
+    kernel-hidd-scsiwd33c93-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/scsi_wd33c93.conf
+    kernel-hidd-scsiwd33c93-includes_DEPS += $(SRCDIR)/$(CURDIR)/scsi_wd33c93.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-scsiwd33c93-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-scsiwd33c93-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-scsiwd33c93-includes_OPTS += -o 
+        kernel-hidd-scsiwd33c93-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-scsiwd33c93-includes_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-scsiwd33c93_OBJDIR)/include,)
+    kernel-hidd-scsiwd33c93-includes_OPTS += -d $(kernel-hidd-scsiwd33c93_OBJDIR)/include
+    kernel-hidd-scsiwd33c93-includes_TARGETS := $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/include/,$(kernel-hidd-scsiwd33c93-includes_TARGETS))
+    kernel-hidd-scsiwd33c93-includes_GENINCFLAG=$(kernel-hidd-scsiwd33c93_OBJDIR)/include/.scsi_wd33c93.hidd-includes
+else
+    kernel-hidd-scsiwd33c93-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.scsi_wd33c93.hidd-includes
+endif
+
+$(kernel-hidd-scsiwd33c93-includes_TARGETS) : $(kernel-hidd-scsiwd33c93-includes_DEPS) $(kernel-hidd-scsiwd33c93-includes_GENINCFLAG)
+
+$(kernel-hidd-scsiwd33c93-includes_GENINCFLAG) : OPTS := $(kernel-hidd-scsiwd33c93-includes_OPTS)
+$(kernel-hidd-scsiwd33c93-includes_GENINCFLAG) : MODNAME := scsi_wd33c93
+$(kernel-hidd-scsiwd33c93-includes_GENINCFLAG) : MODTYPE := hidd
+$(kernel-hidd-scsiwd33c93-includes_GENINCFLAG) : $(kernel-hidd-scsiwd33c93-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-hidd-scsiwd33c93_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-hidd-scsiwd33c93_DEFNAME)_INCLUDES)) : | $(kernel-hidd-scsiwd33c93_OBJDIR)/scsi_wd33c93_geninc
+
+$(kernel-hidd-scsiwd33c93_OBJDIR)/scsi_wd33c93_geninc : COPYSRCDIR := $(kernel-hidd-scsiwd33c93_OBJDIR)/include
+$(kernel-hidd-scsiwd33c93_OBJDIR)/scsi_wd33c93_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-hidd-scsiwd33c93_OBJDIR)/scsi_wd33c93_geninc : FILES := $($(kernel-hidd-scsiwd33c93_DEFNAME)_INCLUDES)
+$(kernel-hidd-scsiwd33c93_OBJDIR)/scsi_wd33c93_geninc : $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/include/,$($(kernel-hidd-scsiwd33c93_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-hidd-scsiwd33c93_OBJDIR)/include
+
+$(addprefix $(kernel-hidd-scsiwd33c93_INCDIR)/,$($(kernel-hidd-scsiwd33c93_DEFNAME)_INCLUDES)) : | $(kernel-hidd-scsiwd33c93_OBJDIR)/scsi_wd33c93_incs
+
+$(kernel-hidd-scsiwd33c93_OBJDIR)/scsi_wd33c93_incs : COPYSRCDIR := $(kernel-hidd-scsiwd33c93_OBJDIR)/include
+$(kernel-hidd-scsiwd33c93_OBJDIR)/scsi_wd33c93_incs : TGTDIR := $(kernel-hidd-scsiwd33c93_INCDIR)
+$(kernel-hidd-scsiwd33c93_OBJDIR)/scsi_wd33c93_incs : FILES := $($(kernel-hidd-scsiwd33c93_DEFNAME)_INCLUDES)
+$(kernel-hidd-scsiwd33c93_OBJDIR)/scsi_wd33c93_incs : $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/include/,$($(kernel-hidd-scsiwd33c93_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-hidd-scsiwd33c93_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-hidd-scsiwd33c93_DEFNAME)_INCLUDES))))
+
+TMPscsi_wd33c93_INCDIRS := \
+    $(kernel-hidd-scsiwd33c93_OBJDIR)/include $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/include/,$(kernel-hidd-scsiwd33c93_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-hidd-scsiwd33c93_INCDIRS)) \
+    $(kernel-hidd-scsiwd33c93_INCDIR) $(addprefix $(kernel-hidd-scsiwd33c93_INCDIR)/,$(kernel-hidd-scsiwd33c93_INCDIRS))
+
+ifneq (kernel-hidd-scsiwd33c93-includes-dirs,)
+kernel-hidd-scsiwd33c93-includes-dirs : | $(TMPscsi_wd33c93_INCDIRS)
+else
+kernel-hidd-scsiwd33c93-includes-dirs :: $(TMPscsi_wd33c93_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPscsi_wd33c93_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-hidd-scsiwd33c93-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-hidd-scsiwd33c93-genlibdefs_OPTS += -f 
+    kernel-hidd-scsiwd33c93-genlibdefs_MODNAME := scsi_wd33c93_
+else
+    kernel-hidd-scsiwd33c93-genlibdefs_MODNAME := scsi_wd33c93
+endif
+kernel-hidd-scsiwd33c93-genlibdefs_TARGET := $(kernel-hidd-scsiwd33c93-genlibdefs_MODNAME)_libdefs.h
+kernel-hidd-scsiwd33c93-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-scsiwd33c93-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-scsiwd33c93-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-scsiwd33c93-genlibdefs_OPTS += -c 
+        kernel-hidd-scsiwd33c93-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-hidd-scsiwd33c93-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/scsi_wd33c93.conf
+    kernel-hidd-scsiwd33c93-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/scsi_wd33c93.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-scsiwd33c93-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-scsiwd33c93-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-scsiwd33c93-genlibdefs_OPTS += -o 
+        kernel-hidd-scsiwd33c93-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-scsiwd33c93-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-scsiwd33c93_OBJDIR)/include,)
+    kernel-hidd-scsiwd33c93-genlibdefs_OPTS += -d $(kernel-hidd-scsiwd33c93_OBJDIR)/include
+    kernel-hidd-scsiwd33c93-genlibdefs_TARGET := $(kernel-hidd-scsiwd33c93_OBJDIR)/include/$(kernel-hidd-scsiwd33c93-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-hidd-scsiwd33c93-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-hidd-scsiwd33c93-genlibdefs_TARGET) : OPTS := $(kernel-hidd-scsiwd33c93-genlibdefs_OPTS)
+$(kernel-hidd-scsiwd33c93-genlibdefs_TARGET) : MODNAME := scsi_wd33c93
+$(kernel-hidd-scsiwd33c93-genlibdefs_TARGET) : MODTYPE := hidd
+$(kernel-hidd-scsiwd33c93-genlibdefs_TARGET) : $(kernel-hidd-scsiwd33c93-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-scsiwd33c93_DEFLIBDEFSINC) : FILENAME := $(kernel-hidd-scsiwd33c93_LIBDEFSINC)
+$(kernel-hidd-scsiwd33c93_DEFLIBDEFSINC) : $(kernel-hidd-scsiwd33c93_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-hidd-scsiwd33c93_LIBDEFSINC) $(kernel-hidd-scsiwd33c93_DEFLIBDEFSINC) : | $(kernel-hidd-scsiwd33c93_OBJDIR)/include
+
+ifneq (kernel-hidd-scsiwd33c93-includes-dirs,)
+kernel-hidd-scsiwd33c93-includes-dirs : | $(kernel-hidd-scsiwd33c93_OBJDIR)/include
+else
+kernel-hidd-scsiwd33c93-includes-dirs :: $(kernel-hidd-scsiwd33c93_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-scsiwd33c93_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-hidd-scsiwd33c93-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-hidd-scsiwd33c93-genmodfiles_OPTS += -f 
+    kernel-hidd-scsiwd33c93-genmodfiles_MODNAME := scsi_wd33c93_
+else
+    kernel-hidd-scsiwd33c93-genmodfiles_MODNAME := scsi_wd33c93
+endif
+kernel-hidd-scsiwd33c93-genmodfiles_GENTARGETS := $($(kernel-hidd-scsiwd33c93-genmodfiles_MODNAME)_STARTFILES) $($(kernel-hidd-scsiwd33c93-genmodfiles_MODNAME)_ENDFILES)
+kernel-hidd-scsiwd33c93-genmodfiles_STUBTARGETS := $($(kernel-hidd-scsiwd33c93-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-hidd-scsiwd33c93-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-hidd-scsiwd33c93-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-hidd-scsiwd33c93-genmodfiles_GENTARGETS))
+kernel-hidd-scsiwd33c93-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-hidd-scsiwd33c93-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-hidd-scsiwd33c93-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-hidd-scsiwd33c93-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-hidd-scsiwd33c93-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-scsiwd33c93-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-scsiwd33c93-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-scsiwd33c93-genmodfiles_OPTS += -c 
+        kernel-hidd-scsiwd33c93-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-hidd-scsiwd33c93-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/scsi_wd33c93.conf
+    kernel-hidd-scsiwd33c93-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/scsi_wd33c93.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-scsiwd33c93-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-scsiwd33c93-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-scsiwd33c93-genmodfiles_OPTS += -o 
+        kernel-hidd-scsiwd33c93-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-scsiwd33c93-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-scsiwd33c93_OBJDIR),)
+    kernel-hidd-scsiwd33c93-genmodfiles_OPTS += -d $(kernel-hidd-scsiwd33c93_OBJDIR)
+    kernel-hidd-scsiwd33c93-genmodfiles_TARGETDIR := $(shell echo $(kernel-hidd-scsiwd33c93_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-scsiwd33c93-genmodfiles_GENTARGETS := $(addprefix $(kernel-hidd-scsiwd33c93-genmodfiles_TARGETDIR)/,$(kernel-hidd-scsiwd33c93-genmodfiles_GENTARGETS))
+    kernel-hidd-scsiwd33c93-genmodfiles_GENFILEFLAG=$(kernel-hidd-scsiwd33c93-genmodfiles_TARGETDIR)/.scsi_wd33c93.hidd-genfiles
+else
+    kernel-hidd-scsiwd33c93-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.scsi_wd33c93.hidd-genfiles
+endif
+ifneq ($(kernel-hidd-scsiwd33c93_OBJDIR)/linklib,)
+    kernel-hidd-scsiwd33c93-genmodfiles_OPTS += -l $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib
+    kernel-hidd-scsiwd33c93-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-scsiwd33c93-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-scsiwd33c93-genmodfiles_STUBTARGETDIR)/,$(kernel-hidd-scsiwd33c93-genmodfiles_STUBTARGETS))
+    kernel-hidd-scsiwd33c93-genmodfiles_TARGETDIRS += $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib
+else
+ifneq ($(kernel-hidd-scsiwd33c93_OBJDIR),)
+    kernel-hidd-scsiwd33c93-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-scsiwd33c93-genmodfiles_TARGETDIR)/,$(kernel-hidd-scsiwd33c93-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-hidd-scsiwd33c93-genmodfiles_TARGETS := $(kernel-hidd-scsiwd33c93-genmodfiles_GENTARGETS) $(kernel-hidd-scsiwd33c93-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-hidd-scsiwd33c93-genmodfiles_TARGETDIRS),)
+$(kernel-hidd-scsiwd33c93-genmodfiles_TARGETS) : | $(kernel-hidd-scsiwd33c93-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-hidd-scsiwd33c93-genmodfiles_TARGETS) : $(kernel-hidd-scsiwd33c93-genmodfiles_DEPS) $(kernel-hidd-scsiwd33c93-genmodfiles_GENFILEFLAG)
+
+$(kernel-hidd-scsiwd33c93-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-hidd-scsiwd33c93-genmodfiles_OPTS)
+$(kernel-hidd-scsiwd33c93-genmodfiles_GENFILEFLAG) : MODNAME := scsi_wd33c93
+$(kernel-hidd-scsiwd33c93-genmodfiles_GENFILEFLAG) : MODTYPE := hidd
+$(kernel-hidd-scsiwd33c93-genmodfiles_GENFILEFLAG) : $(kernel-hidd-scsiwd33c93-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-hidd-scsiwd33c93-genmodfiles_GENFILEFLAG) : $(kernel-hidd-scsiwd33c93_DEFLIBDEFSINC) $(kernel-hidd-scsiwd33c93-makefile)
+
+
+ifneq ($(kernel-hidd-scsiwd33c93-genmodfiles_GENFILEFLAG),)
+$(kernel-hidd-scsiwd33c93-genmodfiles_GENFILEFLAG) : | $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib
+else
+$(kernel-hidd-scsiwd33c93-genmodfiles_GENFILEFLAG) :: $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-hidd-scsiwd33c93_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-hidd-scsiwd33c93_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-hidd-scsiwd33c93-fd : $(kernel-hidd-scsiwd33c93_FDDIR)/scsi_wd33c93_lib.fd
+
+
+TMP_TARGET := scsi_wd33c93_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/scsi_wd33c93.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/scsi_wd33c93.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-scsiwd33c93_FDDIR),)
+    TMP_OPTS += -d $(kernel-hidd-scsiwd33c93_FDDIR)
+    TMP_TARGET := $(kernel-hidd-scsiwd33c93_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := scsi_wd33c93
+$(TMP_TARGET) : MODTYPE := hidd
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-scsiwd33c93_FDDIR)/scsi_wd33c93_lib.fd : | $(kernel-hidd-scsiwd33c93_FDDIR)
+
+
+ifneq (kernel-hidd-scsiwd33c93-fd-setup,)
+kernel-hidd-scsiwd33c93-fd-setup : | $(kernel-hidd-scsiwd33c93_FDDIR)
+else
+kernel-hidd-scsiwd33c93-fd-setup :: $(kernel-hidd-scsiwd33c93_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-scsiwd33c93_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-hidd-scsiwd33c93_FILES            := $(FILES)
+kernel-hidd-scsiwd33c93_OBJCFILES        := 
+kernel-hidd-scsiwd33c93_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-hidd-scsiwd33c93_LIBFILES         := 
+kernel-hidd-scsiwd33c93_LIBS             := 
+
+kernel-hidd-scsiwd33c93_FDIRS            := $(sort $(dir $(kernel-hidd-scsiwd33c93_FILES)))
+
+kernel-hidd-scsiwd33c93_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-hidd-scsiwd33c93_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-hidd-scsiwd33c93_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-hidd-scsiwd33c93_FILTERARCH       = $(filter-out $(call kernel-hidd-scsiwd33c93_MATCHARCH,$(1),$(2)),$(2))
+kernel-hidd-scsiwd33c93_STARTFILES       := $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$($(kernel-hidd-scsiwd33c93_DEFNAME)_STARTFILES))
+kernel-hidd-scsiwd33c93_ENDFILES         := $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$($(kernel-hidd-scsiwd33c93_DEFNAME)_ENDFILES))
+
+kernel-hidd-scsiwd33c93_ARCHOBJS         := $(wildcard $(kernel-hidd-scsiwd33c93_OBJDIR)/arch/*.o)
+kernel-hidd-scsiwd33c93_LIBARCHOBJS      := $(wildcard $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/arch/*.o)
+kernel-hidd-scsiwd33c93_ARCHFILES        := $(basename $(notdir $(kernel-hidd-scsiwd33c93_ARCHOBJS)))
+kernel-hidd-scsiwd33c93_LIBARCHFILES     := $(basename $(notdir $(kernel-hidd-scsiwd33c93_LIBARCHOBJS)))
+kernel-hidd-scsiwd33c93_C_NARCHFILES     := $(call kernel-hidd-scsiwd33c93_FILTERARCH,$(kernel-hidd-scsiwd33c93_ARCHFILES),$(kernel-hidd-scsiwd33c93_FILES))
+kernel-hidd-scsiwd33c93_CXX_NARCHFILES   := $(call kernel-hidd-scsiwd33c93_FILTERARCH,$(kernel-hidd-scsiwd33c93_ARCHFILES),$(kernel-hidd-scsiwd33c93_CXXFILES))
+kernel-hidd-scsiwd33c93_OBJC_NARCHFILES  := $(call kernel-hidd-scsiwd33c93_FILTERARCH,$(kernel-hidd-scsiwd33c93_ARCHFILES),$(kernel-hidd-scsiwd33c93_OBJCFILES))
+kernel-hidd-scsiwd33c93_NLIBARCHFILES    := $(call kernel-hidd-scsiwd33c93_FILTERARCH,$(kernel-hidd-scsiwd33c93_LIBARCHFILES),$(kernel-hidd-scsiwd33c93_LIBFILES))
+kernel-hidd-scsiwd33c93_ARCHNLIBFILES    := $(call kernel-hidd-scsiwd33c93_FILTERARCH,$(kernel-hidd-scsiwd33c93_LIBFILES),$(kernel-hidd-scsiwd33c93_LIBARCHFILES))
+
+kernel-hidd-scsiwd33c93_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-hidd-scsiwd33c93_OBJDIR)/include -include $(kernel-hidd-scsiwd33c93_DEFLIBDEFSINC))
+ifneq (,)
+kernel-hidd-scsiwd33c93_CPPFLAGS         += -I
+endif
+kernel-hidd-scsiwd33c93_LINKLIBCPPFLAGS  := $(kernel-hidd-scsiwd33c93_CPPFLAGS)
+kernel-hidd-scsiwd33c93_CPPFLAGS         += $(strip $($(kernel-hidd-scsiwd33c93_DEFNAME)_CPPFLAGS))
+kernel-hidd-scsiwd33c93_LINKLIBCPPFLAGS  += $(strip $($(kernel-hidd-scsiwd33c93_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-hidd-scsiwd33c93_CFLAGS           := $(strip $(CFLAGS) $($(kernel-hidd-scsiwd33c93_DEFNAME)_CFLAGS))
+kernel-hidd-scsiwd33c93_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-hidd-scsiwd33c93_DEFNAME)_LINKLIBCFLAGS))
+kernel-hidd-scsiwd33c93_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-hidd-scsiwd33c93_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-scsiwd33c93_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-hidd-scsiwd33c93_CFLAGS           := $(strip $(kernel-hidd-scsiwd33c93_LTOFLAGS) $(kernel-hidd-scsiwd33c93_CFLAGS))
+kernel-hidd-scsiwd33c93_LINKLIBCFLAGS    := $(strip $(kernel-hidd-scsiwd33c93_LTOFLAGS) $(kernel-hidd-scsiwd33c93_LINKLIBCFLAGS))
+kernel-hidd-scsiwd33c93_CXXFLAGS         := $(strip $(kernel-hidd-scsiwd33c93_LTOFLAGS) $(kernel-hidd-scsiwd33c93_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-scsiwd33c93_SUBSTNULL        :=
+kernel-hidd-scsiwd33c93_SUBSTSPACE       := $(kernel-hidd-scsiwd33c93_SUBSTNULL) #
+kernel-hidd-scsiwd33c93_SUBSTCOMMA       := ,
+kernel-hidd-scsiwd33c93_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-hidd-scsiwd33c93_SUBSTSPACE),$(kernel-hidd-scsiwd33c93_SUBSTCOMMA),$(strip $($(kernel-hidd-scsiwd33c93_DEFNAME)_STARTFILES))))
+kernel-hidd-scsiwd33c93_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-hidd-scsiwd33c93_CFLAGS           := $(strip $(kernel-hidd-scsiwd33c93_INSTRFUNCFLAGS) $(kernel-hidd-scsiwd33c93_CFLAGS))
+kernel-hidd-scsiwd33c93_CXXFLAGS         := $(strip $(kernel-hidd-scsiwd33c93_INSTRFUNCFLAGS) $(kernel-hidd-scsiwd33c93_CXXFLAGS))
+kernel-hidd-scsiwd33c93_LIBS             += $(kernel-hidd-scsiwd33c93_INSTRFUNCLIBS)
+endif
+endif
+kernel-hidd-scsiwd33c93_DFLAGS           := $(strip $(kernel-hidd-scsiwd33c93_DFLAGS) $($(kernel-hidd-scsiwd33c93_DEFNAME)_DFLAGS))
+kernel-hidd-scsiwd33c93_LINKLIBDFLAGS    := $(strip $(kernel-hidd-scsiwd33c93_DFLAGS) $($(kernel-hidd-scsiwd33c93_DEFNAME)_LINKLIBDFLAGS))
+kernel-hidd-scsiwd33c93_DXXFLAGS         := $(strip $(kernel-hidd-scsiwd33c93_DXXFLAGS) $($(kernel-hidd-scsiwd33c93_DEFNAME)_DXXFLAGS))
+
+ifeq (hidd,library)
+    kernel-hidd-scsiwd33c93_LIBSUFFIX    := 
+else
+    kernel-hidd-scsiwd33c93_LIBSUFFIX    := .hidd
+endif
+
+ifeq (,)
+kernel-hidd-scsiwd33c93_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-hidd-scsiwd33c93_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-hidd-scsiwd33c93_LINKLIBCFILES    := $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$($(kernel-hidd-scsiwd33c93_DEFNAME)_LINKLIBFILES))
+kernel-hidd-scsiwd33c93_LINKLIBAFILES    := $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$($(kernel-hidd-scsiwd33c93_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-scsiwd33c93_DEFNAME)_LINKLIBFILES) $($(kernel-hidd-scsiwd33c93_DEFNAME)_LINKLIBAFILES)  $(kernel-hidd-scsiwd33c93_ARCHNLIBFILES)),)
+    kernel-hidd-scsiwd33c93_LINKLIB      :=
+else
+    kernel-hidd-scsiwd33c93_LINKLIB      := $(kernel-hidd-scsiwd33c93_LIBDIR)/libscsi_wd33c93$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a
+    ifneq (scsi_wd33c93,$(kernel-hidd-scsiwd33c93_LINKLIBNAME))
+        kernel-hidd-scsiwd33c93_LINKLIB  += $(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_LINKLIBNAME)$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-scsiwd33c93_LINKLIBFILES     := $(kernel-hidd-scsiwd33c93_LINKLIBCFILES) $(kernel-hidd-scsiwd33c93_LINKLIBAFILES)
+
+kernel-hidd-scsiwd33c93_RELLINKLIBCFILES := $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$($(kernel-hidd-scsiwd33c93_DEFNAME)_RELLINKLIBFILES))
+kernel-hidd-scsiwd33c93_RELLINKLIBAFILES := $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$($(kernel-hidd-scsiwd33c93_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-scsiwd33c93_DEFNAME)_RELLINKLIBFILES) $($(kernel-hidd-scsiwd33c93_DEFNAME)_RELLINKLIBAFILES)  $(kernel-hidd-scsiwd33c93_ARCHNLIBFILES)),)
+    kernel-hidd-scsiwd33c93_RELLINKLIB   :=
+else
+    kernel-hidd-scsiwd33c93_RELLINKLIB   := $(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_DEFNAME)_rel$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a
+    ifneq (scsi_wd33c93,$(kernel-hidd-scsiwd33c93_LINKLIBNAME))
+        kernel-hidd-scsiwd33c93_RELLINKLIB += $(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_LINKLIBNAME)_rel$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-scsiwd33c93_RELLINKLIBFILES  := $(kernel-hidd-scsiwd33c93_RELLINKLIBCFILES) $(kernel-hidd-scsiwd33c93_RELLINKLIBAFILES)
+endif
+
+kernel-hidd-scsiwd33c93_ENDOBJS          := $(addsuffix .o,$(kernel-hidd-scsiwd33c93_ENDFILES))
+kernel-hidd-scsiwd33c93_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$(notdir $(kernel-hidd-scsiwd33c93_NLIBARCHFILES))) $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-scsiwd33c93_ARCHNLIBFILES))) $(kernel-hidd-scsiwd33c93_LINKLIBFILES)) \
+                 
+kernel-hidd-scsiwd33c93_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$(notdir $(kernel-hidd-scsiwd33c93_NLIBARCHFILES))) $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-scsiwd33c93_ARCHNLIBFILES))) $(kernel-hidd-scsiwd33c93_RELLINKLIBFILES)) \
+                 
+$(kernel-hidd-scsiwd33c93_LINKLIBFILES) $(kernel-hidd-scsiwd33c93_RELLINKLIBFILES) : | $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib
+$(kernel-hidd-scsiwd33c93_LINKLIBOBJS) $(kernel-hidd-scsiwd33c93_RELLINKLIBOBJS) : | $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib
+
+kernel-hidd-scsiwd33c93_CCFILES := $(kernel-hidd-scsiwd33c93_C_NARCHFILES)
+kernel-hidd-scsiwd33c93_TARGETCCFILES    := $(strip $(kernel-hidd-scsiwd33c93_STARTFILES) $(kernel-hidd-scsiwd33c93_ENDFILES))
+kernel-hidd-scsiwd33c93_LINKLIBCCFILES   := $(strip $(kernel-hidd-scsiwd33c93_NLIBARCHFILES) $(kernel-hidd-scsiwd33c93_LINKLIBCFILES) $(kernel-hidd-scsiwd33c93_RELLINKLIBCFILES))
+kernel-hidd-scsiwd33c93_LINKLIBCCGENFILES := $(strip $(kernel-hidd-scsiwd33c93_LINKLIBCFILES) $(kernel-hidd-scsiwd33c93_RELLINKLIBCFILES))
+
+
+kernel-hidd-scsiwd33c93_CXXABSBASENAMES := $(foreach kernel-hidd-scsiwd33c93_CXXBASE,$(kernel-hidd-scsiwd33c93_CXX_NARCHFILES),$(if $(filter /%,$(kernel-hidd-scsiwd33c93_CXXBASE)),$(kernel-hidd-scsiwd33c93_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-hidd-scsiwd33c93_CXXBASE))))
+
+ifneq ($(kernel-hidd-scsiwd33c93_CXXABSBASENAMES),)
+
+kernel-hidd-scsiwd33c93_CXXBASENAMES := $(basename $(kernel-hidd-scsiwd33c93_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-hidd-scsiwd33c93_MCXX_FILES  := $(strip $(foreach kernel-hidd-scsiwd33c93_CXXBASE,$(kernel-hidd-scsiwd33c93_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-hidd-scsiwd33c93_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-hidd-scsiwd33c93_EXT),$(kernel-hidd-scsiwd33c93_CXXBASE)))))))
+
+ifeq (,)
+kernel-hidd-scsiwd33c93_MCXX_SRCWILDCARD := %
+else
+kernel-hidd-scsiwd33c93_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-scsiwd33c93_OBJDIR),)
+  kernel-hidd-scsiwd33c93_CXXTARGETS := $(notdir $(kernel-hidd-scsiwd33c93_CXXBASENAMES:=.o))
+  kernel-hidd-scsiwd33c93_CXXDTARGETS := $(notdir $(kernel-hidd-scsiwd33c93_CXXBASENAMES:=.d))
+  kernel-hidd-scsiwd33c93_MCXX_WILDCARD := %
+else
+  kernel-hidd-scsiwd33c93_CXXTARGETS := $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(notdir $(kernel-hidd-scsiwd33c93_CXXBASENAMES:=.o)))
+  kernel-hidd-scsiwd33c93_CXXDTARGETS := $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(notdir $(kernel-hidd-scsiwd33c93_CXXBASENAMES:=.d)))
+  kernel-hidd-scsiwd33c93_MCXX_WILDCARD := $(kernel-hidd-scsiwd33c93_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-hidd-scsiwd33c93_CXXTARGETS) $(kernel-hidd-scsiwd33c93_CXXDTARGETS) : | $(kernel-hidd-scsiwd33c93_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-hidd-scsiwd33c93_MCXX_CPPFLAGS := $(kernel-hidd-scsiwd33c93_CPPFLAGS)
+kernel-hidd-scsiwd33c93_CXXFLAGS := $(kernel-hidd-scsiwd33c93_CXXFLAGS)
+ifeq ($(kernel-hidd-scsiwd33c93_DXXFLAGS),)
+  kernel-hidd-scsiwd33c93_DXXFLAGS := $(kernel-hidd-scsiwd33c93_CXXFLAGS)
+else
+  kernel-hidd-scsiwd33c93_DXXFLAGS := $(kernel-hidd-scsiwd33c93_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-hidd-scsiwd33c93_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-hidd-scsiwd33c93_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-hidd-scsiwd33c93_CXXCMD:=$(HOST_CXX)
+  kernel-hidd-scsiwd33c93_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MCXX_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-scsiwd33c93_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-scsiwd33c93_CXXFLAGS))
+  kernel-hidd-scsiwd33c93_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-scsiwd33c93_DXXFLAGS))
+  kernel-hidd-scsiwd33c93_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-hidd-scsiwd33c93_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-hidd-scsiwd33c93_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-scsiwd33c93_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-hidd-scsiwd33c93_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-hidd-scsiwd33c93_MCXX_CPPFLAGS := $(strip $(kernel-hidd-scsiwd33c93_MCXX_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-scsiwd33c93_CXXFLAGS := $(strip $(kernel-hidd-scsiwd33c93_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-hidd-scsiwd33c93_DXXFLAGS := $(kernel-hidd-scsiwd33c93_DXXFLAGS)
+  kernel-hidd-scsiwd33c93_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-hidd-scsiwd33c93_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-hidd-scsiwd33c93_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-scsiwd33c93_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-hidd-scsiwd33c93_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-hidd-scsiwd33c93_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MCXX_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-scsiwd33c93_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-scsiwd33c93_CXXFLAGS))
+  kernel-hidd-scsiwd33c93_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-scsiwd33c93_DXXFLAGS))
+  kernel-hidd-scsiwd33c93_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-hidd-scsiwd33c93_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-hidd-scsiwd33c93_CXXCMD) $(kernel-hidd-scsiwd33c93_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-scsiwd33c93_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_CXXIQUOTE) . $(kernel-hidd-scsiwd33c93_CXXIQUOTE_END) $(strip $(kernel-hidd-scsiwd33c93_CXXFLAGS) $(kernel-hidd-scsiwd33c93_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-hidd-scsiwd33c93_CXXCMD) $(kernel-hidd-scsiwd33c93_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-scsiwd33c93_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_CXXIQUOTE) . $(kernel-hidd-scsiwd33c93_CXXIQUOTE_END) $(strip $(kernel-hidd-scsiwd33c93_CXXFLAGS) $(kernel-hidd-scsiwd33c93_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-hidd-scsiwd33c93_CXXCMD) $(kernel-hidd-scsiwd33c93_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-scsiwd33c93_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_CXXIQUOTE) . $(kernel-hidd-scsiwd33c93_CXXIQUOTE_END) $(strip $(kernel-hidd-scsiwd33c93_CXXFLAGS) $(kernel-hidd-scsiwd33c93_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-hidd-scsiwd33c93_CXXCMD)" $(MKDEPEND) $(strip $(kernel-hidd-scsiwd33c93_DXXFLAGS) $(kernel-hidd-scsiwd33c93_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-hidd-scsiwd33c93_OBJDIR),)
+  $(foreach kernel-hidd-scsiwd33c93_CXXFILE,$(kernel-hidd-scsiwd33c93_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-hidd-scsiwd33c93_CXXFILE))),$(kernel-hidd-scsiwd33c93_CXXFILE))))
+else
+  $(foreach kernel-hidd-scsiwd33c93_CXXFILE,$(kernel-hidd-scsiwd33c93_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(notdir $(basename $(kernel-hidd-scsiwd33c93_CXXFILE)))),$(kernel-hidd-scsiwd33c93_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-hidd-scsiwd33c93_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-hidd-scsiwd33c93_MOBJC_SRCWILDCARD := %
+else
+kernel-hidd-scsiwd33c93_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-scsiwd33c93_OBJDIR),)
+  kernel-hidd-scsiwd33c93_MOBJC_TARGETS := $(addsuffix .o,$(kernel-hidd-scsiwd33c93_OBJC_NARCHFILES))
+  kernel-hidd-scsiwd33c93_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-hidd-scsiwd33c93_OBJC_NARCHFILES))
+  kernel-hidd-scsiwd33c93_MOBJC_WILDCARD := %
+else
+  kernel-hidd-scsiwd33c93_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(kernel-hidd-scsiwd33c93_OBJC_NARCHFILES)))
+  kernel-hidd-scsiwd33c93_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(kernel-hidd-scsiwd33c93_OBJC_NARCHFILES)))
+  kernel-hidd-scsiwd33c93_MOBJC_WILDCARD := $(kernel-hidd-scsiwd33c93_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-hidd-scsiwd33c93_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-hidd-scsiwd33c93_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-hidd-scsiwd33c93_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-scsiwd33c93_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-hidd-scsiwd33c93_MOBJC_DIRS := $(foreach dir, $(kernel-hidd-scsiwd33c93_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-scsiwd33c93_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-hidd-scsiwd33c93_MOBJC_DIRS),)
+    kernel-hidd-scsiwd33c93_MOBJC_DIRS := $(shell echo $(kernel-hidd-scsiwd33c93_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-hidd-scsiwd33c93_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-hidd-scsiwd33c93_CC := $(TARGET_CC)
+else
+  kernel-hidd-scsiwd33c93_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-hidd-scsiwd33c93_MOBJC_CPPFLAGS := $(kernel-hidd-scsiwd33c93_CPPFLAGS)
+kernel-hidd-scsiwd33c93_OBJCFLAGS := $(kernel-hidd-scsiwd33c93_CFLAGS)
+kernel-hidd-scsiwd33c93_OBJCFLAGS := $(kernel-hidd-scsiwd33c93_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-hidd-scsiwd33c93_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-hidd-scsiwd33c93_OBJCFLAGS)))
+ifeq ($(kernel-hidd-scsiwd33c93_DFLAGS),)
+  kernel-hidd-scsiwd33c93_OBJCDFLAGS := $(kernel-hidd-scsiwd33c93_CFLAGS)
+else
+  kernel-hidd-scsiwd33c93_OBJCDFLAGS := $(kernel-hidd-scsiwd33c93_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-hidd-scsiwd33c93_LINK ?= $(strip $(kernel-hidd-scsiwd33c93_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-scsiwd33c93_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-hidd-scsiwd33c93_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : kernel-hidd-scsiwd33c93_MOBJC_CPPFLAGS:=$(strip $(kernel-hidd-scsiwd33c93_MOBJC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : kernel-hidd-scsiwd33c93_OBJCFLAGS:=$(strip $(kernel-hidd-scsiwd33c93_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : kernel-hidd-scsiwd33c93_OBJCDFLAGS:=$(kernel-hidd-scsiwd33c93_OBJCDFLAGS)
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-hidd-scsiwd33c93_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-hidd-scsiwd33c93_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : kernel-hidd-scsiwd33c93_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MOBJC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : kernel-hidd-scsiwd33c93_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-scsiwd33c93_OBJCFLAGS))
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : kernel-hidd-scsiwd33c93_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-scsiwd33c93_OBJCDFLAGS))
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-hidd-scsiwd33c93_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-scsiwd33c93_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : kernel-hidd-scsiwd33c93_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MOBJC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : kernel-hidd-scsiwd33c93_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-scsiwd33c93_OBJCFLAGS))
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : kernel-hidd-scsiwd33c93_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-scsiwd33c93_OBJCDFLAGS))
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) $(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) : CPPFLAGS := $(kernel-hidd-scsiwd33c93_MOBJC_CPPFLAGS)
+$(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) : CFLAGS := $(kernel-hidd-scsiwd33c93_OBJCFLAGS)
+$(kernel-hidd-scsiwd33c93_MOBJC_TARGETS) : $(kernel-hidd-scsiwd33c93_MOBJC_WILDCARD).o : $(kernel-hidd-scsiwd33c93_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-scsiwd33c93_IQUOTE) $(dir $<) $(kernel-hidd-scsiwd33c93_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_IQUOTE) . $(kernel-hidd-scsiwd33c93_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-scsiwd33c93_IQUOTE) $(dir $<) $(kernel-hidd-scsiwd33c93_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_IQUOTE) . $(kernel-hidd-scsiwd33c93_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-scsiwd33c93_IQUOTE) $(dir $<) $(kernel-hidd-scsiwd33c93_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_IQUOTE) . $(kernel-hidd-scsiwd33c93_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-scsiwd33c93_MOBJC_DTARGETS) : $(kernel-hidd-scsiwd33c93_MOBJC_WILDCARD).d : $(kernel-hidd-scsiwd33c93_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-scsiwd33c93_OBJCDFLAGS) $(kernel-hidd-scsiwd33c93_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-hidd-scsiwd33c93_MC_SRCWILDCARD := %
+else
+kernel-hidd-scsiwd33c93_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-scsiwd33c93_OBJDIR),)
+kernel-hidd-scsiwd33c93_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-scsiwd33c93_CCFILES))
+kernel-hidd-scsiwd33c93_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-scsiwd33c93_CCFILES))
+kernel-hidd-scsiwd33c93_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-scsiwd33c93_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(notdir $(kernel-hidd-scsiwd33c93_CCFILES))))
+    kernel-hidd-scsiwd33c93_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(notdir $(kernel-hidd-scsiwd33c93_CCFILES))))
+else
+ifeq (,)
+    kernel-hidd-scsiwd33c93_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(kernel-hidd-scsiwd33c93_CCFILES)))
+    kernel-hidd-scsiwd33c93_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(kernel-hidd-scsiwd33c93_CCFILES)))
+else
+    kernel-hidd-scsiwd33c93_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-scsiwd33c93_CCFILES))))
+    kernel-hidd-scsiwd33c93_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-scsiwd33c93_CCFILES))))
+endif
+endif
+kernel-hidd-scsiwd33c93_MC_TGTWILDCARD := $(kernel-hidd-scsiwd33c93_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-scsiwd33c93_CCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-scsiwd33c93_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-scsiwd33c93_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-scsiwd33c93_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-scsiwd33c93_MC_DIRS := $(foreach dir, $(kernel-hidd-scsiwd33c93_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-scsiwd33c93_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-scsiwd33c93_MC_DIRS),)
+    kernel-hidd-scsiwd33c93_MC_DIRS := $(shell echo $(kernel-hidd-scsiwd33c93_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-scsiwd33c93_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-scsiwd33c93_MC_CPPFLAGS := $(kernel-hidd-scsiwd33c93_CPPFLAGS)
+kernel-hidd-scsiwd33c93_CFLAGS := $(kernel-hidd-scsiwd33c93_CFLAGS)
+ifeq ($(kernel-hidd-scsiwd33c93_DFLAGS),)
+  kernel-hidd-scsiwd33c93_DFLAGS := $(kernel-hidd-scsiwd33c93_CFLAGS)
+else
+  kernel-hidd-scsiwd33c93_DFLAGS := $(kernel-hidd-scsiwd33c93_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-scsiwd33c93_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-scsiwd33c93_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_MC_CPPFLAGS:=$(strip $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_CFLAGS:=$(strip $(kernel-hidd-scsiwd33c93_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_DFLAGS:=$(kernel-hidd-scsiwd33c93_DFLAGS)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-scsiwd33c93_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-scsiwd33c93_STRIP ?= $(HOST_STRIP)
+kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-scsiwd33c93_CFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-scsiwd33c93_DFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-scsiwd33c93_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-scsiwd33c93_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-scsiwd33c93_CFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-scsiwd33c93_DFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) : CFLAGS := $(kernel-hidd-scsiwd33c93_CFLAGS)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) : $(kernel-hidd-scsiwd33c93_MC_TGTWILDCARD).o : $(kernel-hidd-scsiwd33c93_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-scsiwd33c93_IQUOTE) $(dir $<) $(kernel-hidd-scsiwd33c93_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_IQUOTE) . $(kernel-hidd-scsiwd33c93_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-scsiwd33c93_IQUOTE) $(dir $<) $(kernel-hidd-scsiwd33c93_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_IQUOTE) . $(kernel-hidd-scsiwd33c93_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-scsiwd33c93_IQUOTE) $(dir $<) $(kernel-hidd-scsiwd33c93_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_IQUOTE) . $(kernel-hidd-scsiwd33c93_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-scsiwd33c93_MC_DTARGETS) : $(kernel-hidd-scsiwd33c93_MC_TGTWILDCARD).d : $(kernel-hidd-scsiwd33c93_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-scsiwd33c93_DFLAGS) $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-scsiwd33c93_MC_SRCWILDCARD := %
+else
+kernel-hidd-scsiwd33c93_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-scsiwd33c93_OBJDIR),)
+kernel-hidd-scsiwd33c93_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-scsiwd33c93_TARGETCCFILES))
+kernel-hidd-scsiwd33c93_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-scsiwd33c93_TARGETCCFILES))
+kernel-hidd-scsiwd33c93_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-scsiwd33c93_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(notdir $(kernel-hidd-scsiwd33c93_TARGETCCFILES))))
+    kernel-hidd-scsiwd33c93_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(notdir $(kernel-hidd-scsiwd33c93_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-hidd-scsiwd33c93_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(kernel-hidd-scsiwd33c93_TARGETCCFILES)))
+    kernel-hidd-scsiwd33c93_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(kernel-hidd-scsiwd33c93_TARGETCCFILES)))
+else
+    kernel-hidd-scsiwd33c93_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-scsiwd33c93_TARGETCCFILES))))
+    kernel-hidd-scsiwd33c93_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-scsiwd33c93_TARGETCCFILES))))
+endif
+endif
+kernel-hidd-scsiwd33c93_MC_TGTWILDCARD := $(kernel-hidd-scsiwd33c93_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-scsiwd33c93_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-scsiwd33c93_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-scsiwd33c93_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-scsiwd33c93_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-scsiwd33c93_MC_DIRS := $(foreach dir, $(kernel-hidd-scsiwd33c93_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-scsiwd33c93_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-scsiwd33c93_MC_DIRS),)
+    kernel-hidd-scsiwd33c93_MC_DIRS := $(shell echo $(kernel-hidd-scsiwd33c93_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-scsiwd33c93_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-scsiwd33c93_MC_CPPFLAGS := $(kernel-hidd-scsiwd33c93_CPPFLAGS) -D__AROS__
+kernel-hidd-scsiwd33c93_CFLAGS := $(kernel-hidd-scsiwd33c93_CFLAGS)
+ifeq ($(kernel-hidd-scsiwd33c93_DFLAGS),)
+  kernel-hidd-scsiwd33c93_DFLAGS := $(kernel-hidd-scsiwd33c93_CFLAGS)
+else
+  kernel-hidd-scsiwd33c93_DFLAGS := $(kernel-hidd-scsiwd33c93_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-scsiwd33c93_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-scsiwd33c93_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_MC_CPPFLAGS:=$(strip $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_CFLAGS:=$(strip $(kernel-hidd-scsiwd33c93_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_DFLAGS:=$(kernel-hidd-scsiwd33c93_DFLAGS)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-scsiwd33c93_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-scsiwd33c93_STRIP ?= $(HOST_STRIP)
+kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-scsiwd33c93_CFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-scsiwd33c93_DFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-scsiwd33c93_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-scsiwd33c93_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-scsiwd33c93_CFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-scsiwd33c93_DFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) : CFLAGS := $(kernel-hidd-scsiwd33c93_CFLAGS)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) : $(kernel-hidd-scsiwd33c93_MC_TGTWILDCARD).o : $(kernel-hidd-scsiwd33c93_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-scsiwd33c93_IQUOTE) $(dir $<) $(kernel-hidd-scsiwd33c93_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_IQUOTE) . $(kernel-hidd-scsiwd33c93_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-scsiwd33c93_IQUOTE) $(dir $<) $(kernel-hidd-scsiwd33c93_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_IQUOTE) . $(kernel-hidd-scsiwd33c93_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-scsiwd33c93_IQUOTE) $(dir $<) $(kernel-hidd-scsiwd33c93_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_IQUOTE) . $(kernel-hidd-scsiwd33c93_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-scsiwd33c93_MC_DTARGETS) : $(kernel-hidd-scsiwd33c93_MC_TGTWILDCARD).d : $(kernel-hidd-scsiwd33c93_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-scsiwd33c93_DFLAGS) $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-scsiwd33c93_MC_SRCWILDCARD := %
+else
+kernel-hidd-scsiwd33c93_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-scsiwd33c93_OBJDIR)/linklib,)
+kernel-hidd-scsiwd33c93_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-scsiwd33c93_NLIBARCHFILES))
+kernel-hidd-scsiwd33c93_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-scsiwd33c93_NLIBARCHFILES))
+kernel-hidd-scsiwd33c93_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-scsiwd33c93_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$(notdir $(kernel-hidd-scsiwd33c93_NLIBARCHFILES))))
+    kernel-hidd-scsiwd33c93_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$(notdir $(kernel-hidd-scsiwd33c93_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-hidd-scsiwd33c93_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$(kernel-hidd-scsiwd33c93_NLIBARCHFILES)))
+    kernel-hidd-scsiwd33c93_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$(kernel-hidd-scsiwd33c93_NLIBARCHFILES)))
+else
+    kernel-hidd-scsiwd33c93_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-scsiwd33c93_NLIBARCHFILES))))
+    kernel-hidd-scsiwd33c93_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-scsiwd33c93_NLIBARCHFILES))))
+endif
+endif
+kernel-hidd-scsiwd33c93_MC_TGTWILDCARD := $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-scsiwd33c93_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-scsiwd33c93_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-scsiwd33c93_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-scsiwd33c93_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-scsiwd33c93_MC_DIRS := $(foreach dir, $(kernel-hidd-scsiwd33c93_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-scsiwd33c93_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-scsiwd33c93_MC_DIRS),)
+    kernel-hidd-scsiwd33c93_MC_DIRS := $(shell echo $(kernel-hidd-scsiwd33c93_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-scsiwd33c93_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-scsiwd33c93_MC_CPPFLAGS := $(kernel-hidd-scsiwd33c93_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-scsiwd33c93_CFLAGS := $(kernel-hidd-scsiwd33c93_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-scsiwd33c93_LINKLIBDFLAGS),)
+  kernel-hidd-scsiwd33c93_DFLAGS := $(kernel-hidd-scsiwd33c93_LINKLIBCFLAGS)
+else
+  kernel-hidd-scsiwd33c93_DFLAGS := $(kernel-hidd-scsiwd33c93_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-scsiwd33c93_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-scsiwd33c93_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_MC_CPPFLAGS:=$(strip $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_CFLAGS:=$(strip $(kernel-hidd-scsiwd33c93_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_DFLAGS:=$(kernel-hidd-scsiwd33c93_DFLAGS)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-scsiwd33c93_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-scsiwd33c93_STRIP ?= $(HOST_STRIP)
+kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-scsiwd33c93_CFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-scsiwd33c93_DFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-scsiwd33c93_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-scsiwd33c93_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-scsiwd33c93_CFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-scsiwd33c93_DFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) : CFLAGS := $(kernel-hidd-scsiwd33c93_CFLAGS)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) : $(kernel-hidd-scsiwd33c93_MC_TGTWILDCARD).o : $(kernel-hidd-scsiwd33c93_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-scsiwd33c93_IQUOTE) $(dir $<) $(kernel-hidd-scsiwd33c93_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_IQUOTE) . $(kernel-hidd-scsiwd33c93_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-scsiwd33c93_IQUOTE) $(dir $<) $(kernel-hidd-scsiwd33c93_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_IQUOTE) . $(kernel-hidd-scsiwd33c93_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-scsiwd33c93_IQUOTE) $(dir $<) $(kernel-hidd-scsiwd33c93_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_IQUOTE) . $(kernel-hidd-scsiwd33c93_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-scsiwd33c93_MC_DTARGETS) : $(kernel-hidd-scsiwd33c93_MC_TGTWILDCARD).d : $(kernel-hidd-scsiwd33c93_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-scsiwd33c93_DFLAGS) $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-hidd-scsiwd33c93_OBJDIR)/linklib,)
+kernel-hidd-scsiwd33c93_MC_SRCWILDCARD := %
+else
+kernel-hidd-scsiwd33c93_MC_SRCWILDCARD := $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-hidd-scsiwd33c93_OBJDIR)/linklib,)
+kernel-hidd-scsiwd33c93_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-scsiwd33c93_LINKLIBCCGENFILES))
+kernel-hidd-scsiwd33c93_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-scsiwd33c93_LINKLIBCCGENFILES))
+kernel-hidd-scsiwd33c93_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-scsiwd33c93_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$(notdir $(kernel-hidd-scsiwd33c93_LINKLIBCCGENFILES))))
+    kernel-hidd-scsiwd33c93_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$(notdir $(kernel-hidd-scsiwd33c93_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-hidd-scsiwd33c93_OBJDIR)/linklib,)
+    kernel-hidd-scsiwd33c93_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$(kernel-hidd-scsiwd33c93_LINKLIBCCGENFILES)))
+    kernel-hidd-scsiwd33c93_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$(kernel-hidd-scsiwd33c93_LINKLIBCCGENFILES)))
+else
+    kernel-hidd-scsiwd33c93_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/%,%,$(kernel-hidd-scsiwd33c93_LINKLIBCCGENFILES))))
+    kernel-hidd-scsiwd33c93_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/%,%,$(kernel-hidd-scsiwd33c93_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-hidd-scsiwd33c93_MC_TGTWILDCARD := $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-scsiwd33c93_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-scsiwd33c93_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-scsiwd33c93_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-scsiwd33c93_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-scsiwd33c93_MC_DIRS := $(foreach dir, $(kernel-hidd-scsiwd33c93_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-scsiwd33c93_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-scsiwd33c93_MC_DIRS),)
+    kernel-hidd-scsiwd33c93_MC_DIRS := $(shell echo $(kernel-hidd-scsiwd33c93_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-scsiwd33c93_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-scsiwd33c93_MC_CPPFLAGS := $(kernel-hidd-scsiwd33c93_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-scsiwd33c93_CFLAGS := $(kernel-hidd-scsiwd33c93_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-scsiwd33c93_LINKLIBDFLAGS),)
+  kernel-hidd-scsiwd33c93_DFLAGS := $(kernel-hidd-scsiwd33c93_LINKLIBCFLAGS)
+else
+  kernel-hidd-scsiwd33c93_DFLAGS := $(kernel-hidd-scsiwd33c93_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-scsiwd33c93_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-scsiwd33c93_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_MC_CPPFLAGS:=$(strip $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_CFLAGS:=$(strip $(kernel-hidd-scsiwd33c93_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_DFLAGS:=$(kernel-hidd-scsiwd33c93_DFLAGS)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-scsiwd33c93_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-scsiwd33c93_STRIP ?= $(HOST_STRIP)
+kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-scsiwd33c93_CFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-scsiwd33c93_DFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-scsiwd33c93_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-scsiwd33c93_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-scsiwd33c93_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS) $(kernel-hidd-scsiwd33c93_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-scsiwd33c93_CFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-scsiwd33c93_DFLAGS))
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) $(kernel-hidd-scsiwd33c93_MC_DTARGETS) : kernel-hidd-scsiwd33c93_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) : CFLAGS := $(kernel-hidd-scsiwd33c93_CFLAGS)
+$(kernel-hidd-scsiwd33c93_MC_TARGETS) : $(kernel-hidd-scsiwd33c93_MC_TGTWILDCARD).o : $(kernel-hidd-scsiwd33c93_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-scsiwd33c93_IQUOTE) $(dir $<) $(kernel-hidd-scsiwd33c93_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_IQUOTE) . $(kernel-hidd-scsiwd33c93_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-scsiwd33c93_IQUOTE) $(dir $<) $(kernel-hidd-scsiwd33c93_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_IQUOTE) . $(kernel-hidd-scsiwd33c93_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-scsiwd33c93_IQUOTE) $(dir $<) $(kernel-hidd-scsiwd33c93_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-scsiwd33c93_IQUOTE) . $(kernel-hidd-scsiwd33c93_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-scsiwd33c93_MC_DTARGETS) : $(kernel-hidd-scsiwd33c93_MC_TGTWILDCARD).d : $(kernel-hidd-scsiwd33c93_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-scsiwd33c93_DFLAGS) $(kernel-hidd-scsiwd33c93_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-hidd-scsiwd33c93_LINKLIBAFILES),)
+
+ifeq ($(kernel-hidd-scsiwd33c93_OBJDIR)/linklib,)
+kernel-hidd-scsiwd33c93-MA_TARGETS := $(addsuffix .o,$(kernel-hidd-scsiwd33c93_LINKLIBAFILES) $(kernel-hidd-scsiwd33c93_RELLINKLIBAFILES))
+kernel-hidd-scsiwd33c93-MA_WILDCARD := %
+else
+kernel-hidd-scsiwd33c93-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$(notdir $(kernel-hidd-scsiwd33c93_LINKLIBAFILES) $(kernel-hidd-scsiwd33c93_RELLINKLIBAFILES))))
+kernel-hidd-scsiwd33c93-MA_WILDCARD := $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-hidd-scsiwd33c93-MA_TARGETS) : | $(addsuffix .S,$(kernel-hidd-scsiwd33c93_LINKLIBAFILES) $(kernel-hidd-scsiwd33c93_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-scsiwd33c93-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-scsiwd33c93-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-scsiwd33c93_LINKLIBAFILES) $(kernel-hidd-scsiwd33c93_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-scsiwd33c93-MA_DIRS := $(foreach dir, $(kernel-hidd-scsiwd33c93-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-scsiwd33c93-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-scsiwd33c93-MA_DIRS),)
+    kernel-hidd-scsiwd33c93-MA_DIRS := $(shell echo $(kernel-hidd-scsiwd33c93-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-hidd-scsiwd33c93-MA_DIRS)
+endif
+
+endif
+
+kernel-hidd-scsiwd33c93-MA_ASSEMBLER ?= $(kernel-hidd-scsiwd33c93_ASSEMBLER)
+
+$(kernel-hidd-scsiwd33c93-MA_TARGETS) : kernel-hidd-scsiwd33c93-MA_CMD:= $(kernel-hidd-scsiwd33c93-MA_ASSEMBLER)
+
+$(kernel-hidd-scsiwd33c93-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-hidd-scsiwd33c93-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-hidd-scsiwd33c93-MA_TARGETS) : $(kernel-hidd-scsiwd33c93-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-hidd-scsiwd33c93-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-hidd-scsiwd33c93-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-hidd-scsiwd33c93-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-hidd-scsiwd33c93_SUFFIX           := hidd
+else
+kernel-hidd-scsiwd33c93_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-hidd-scsiwd33c93_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-hidd-scsiwd33c93_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-hidd-scsiwd33c93_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-hidd-scsiwd33c93_SUFFIX),handler)
+kernel-hidd-scsiwd33c93_MODULE           := $(AROSDIR)/$(kernel-hidd-scsiwd33c93_MODDIR)/$(kernel-hidd-scsiwd33c93_DEFNAME)-$(kernel-hidd-scsiwd33c93_SUFFIX)
+else
+kernel-hidd-scsiwd33c93_MODULE           := $(AROSDIR)/$(kernel-hidd-scsiwd33c93_MODDIR)/$(kernel-hidd-scsiwd33c93_DEFNAME).$(kernel-hidd-scsiwd33c93_SUFFIX)
+endif
+kernel-hidd-scsiwd33c93_KOBJ             := $(KOBJSDIR)/$(kernel-hidd-scsiwd33c93_DEFNAME)_$(kernel-hidd-scsiwd33c93_SUFFIX).o
+else
+kernel-hidd-scsiwd33c93_MODULE           :=
+kernel-hidd-scsiwd33c93_KOBJ             :=
+endif
+
+kernel-hidd-scsiwd33c93-quick      : kernel-hidd-scsiwd33c93
+kernel-hidd-scsiwd33c93            : $(kernel-hidd-scsiwd33c93_MODULE) $(kernel-hidd-scsiwd33c93_LINKLIB) $(kernel-hidd-scsiwd33c93_RELLINKLIB)
+ifeq (M,M)
+kernel-hidd-scsiwd33c93-kobj       : $(kernel-hidd-scsiwd33c93_KOBJ) $(kernel-hidd-scsiwd33c93_LINKLIB) $(kernel-hidd-scsiwd33c93_RELLINKLIB)
+kernel-hidd-scsiwd33c93-kobj-quick : $(kernel-hidd-scsiwd33c93_KOBJ) $(kernel-hidd-scsiwd33c93_LINKLIB) $(kernel-hidd-scsiwd33c93_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-hidd-scsiwd33c93-linklib    : $(kernel-hidd-scsiwd33c93_LINKLIB) $(kernel-hidd-scsiwd33c93_RELLINKLIB)
+endif
+
+kernel-hidd-scsiwd33c93_OBJS := $(addsuffix .o,$(kernel-hidd-scsiwd33c93_STARTFILES)) $(kernel-hidd-scsiwd33c93_ARCHOBJS) \
+           $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(notdir $(kernel-hidd-scsiwd33c93_C_NARCHFILES:=.o) $(kernel-hidd-scsiwd33c93_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (hidd,handler)
+kernel-hidd-scsiwd33c93_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (scsi_wd33c93,con)
+    kernel-hidd-scsiwd33c93_ERR          := $(notdir $(kernel-hidd-scsiwd33c93_MODULE)).err
+else
+    kernel-hidd-scsiwd33c93_ERR          := scsi_wd33c93.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-hidd-scsiwd33c93_DEFNAME)_LDFLAGS) $(kernel-hidd-scsiwd33c93_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-hidd-scsiwd33c93_LIBS) $($(kernel-hidd-scsiwd33c93_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-hidd-scsiwd33c93_MODULE) : LIB_NAMES := $(kernel-hidd-scsiwd33c93_LIBS) $($(kernel-hidd-scsiwd33c93_DEFNAME)_LIBS)
+$(kernel-hidd-scsiwd33c93_MODULE) : OBJS := $(kernel-hidd-scsiwd33c93_STARTOBJS) $(kernel-hidd-scsiwd33c93_OBJS) $(USER_OBJS)
+$(kernel-hidd-scsiwd33c93_MODULE) : ENDTAG := $(kernel-hidd-scsiwd33c93_ENDOBJS)
+$(kernel-hidd-scsiwd33c93_MODULE) : ERR := $(kernel-hidd-scsiwd33c93_ERR)
+$(kernel-hidd-scsiwd33c93_MODULE) : OBJDIR := $(kernel-hidd-scsiwd33c93_OBJDIR)
+$(kernel-hidd-scsiwd33c93_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-hidd-scsiwd33c93_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-hidd-scsiwd33c93_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-hidd-scsiwd33c93_MODULE) : $(kernel-hidd-scsiwd33c93_STARTOBJS) $(kernel-hidd-scsiwd33c93_OBJS) $(USER_OBJS) $(kernel-hidd-scsiwd33c93_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-hidd-scsiwd33c93_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-hidd-scsiwd33c93_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-hidd-scsiwd33c93_LC_LINKLIBNAME   := $(shell echo $(kernel-hidd-scsiwd33c93_LINKLIBNAME) | tr A-Z a-z)
+kernel-hidd-scsiwd33c93_LC_MODNAME       := $(shell echo scsi_wd33c93 | tr A-Z a-z)
+ifneq ($(kernel-hidd-scsiwd33c93_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_LINKLIBNAME)$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_AR:=$(AR)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_LINKLIBNAME)$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_LINKLIBNAME)$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_AR:=$(HOST_AR)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_LINKLIBNAME)$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_LINKLIBNAME)$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_AR:=$(KERNEL_AR)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_LINKLIBNAME)$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_LINKLIBNAME)$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : $(kernel-hidd-scsiwd33c93_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-scsiwd33c93_AR) $@ $^
+	$(Q)$(kernel-hidd-scsiwd33c93_RANLIB) $@
+ifneq ($(kernel-hidd-scsiwd33c93_LC_MODNAME),$(kernel-hidd-scsiwd33c93_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/libscsi_wd33c93$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_AR:=$(AR)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/libscsi_wd33c93$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/libscsi_wd33c93$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_AR:=$(HOST_AR)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/libscsi_wd33c93$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/libscsi_wd33c93$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_AR:=$(KERNEL_AR)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/libscsi_wd33c93$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-scsiwd33c93_LIBDIR)/libscsi_wd33c93$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : $(kernel-hidd-scsiwd33c93_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-scsiwd33c93_AR) $@ $^
+	$(Q)$(kernel-hidd-scsiwd33c93_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-scsiwd33c93_LINKLIB),)
+$(kernel-hidd-scsiwd33c93_LINKLIB) : | $(kernel-hidd-scsiwd33c93_LIBDIR)
+else
+$(kernel-hidd-scsiwd33c93_LINKLIB) :: $(kernel-hidd-scsiwd33c93_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-scsiwd33c93_LIBDIR)
+
+endif
+
+ifneq ($(kernel-hidd-scsiwd33c93_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_LINKLIBNAME)_rel$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_AR:=$(AR)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_LINKLIBNAME)_rel$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_LINKLIBNAME)_rel$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_AR:=$(HOST_AR)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_LINKLIBNAME)_rel$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_LINKLIBNAME)_rel$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_AR:=$(KERNEL_AR)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_LINKLIBNAME)_rel$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_LINKLIBNAME)_rel$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : $(kernel-hidd-scsiwd33c93_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-scsiwd33c93_AR) $@ $^
+	$(Q)$(kernel-hidd-scsiwd33c93_RANLIB) $@
+ifneq ($(kernel-hidd-scsiwd33c93_LC_MODNAME),$(kernel-hidd-scsiwd33c93_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_DEFNAME)_rel$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_AR:=$(AR)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_DEFNAME)_rel$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_DEFNAME)_rel$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_AR:=$(HOST_AR)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_DEFNAME)_rel$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_DEFNAME)_rel$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_AR:=$(KERNEL_AR)
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_DEFNAME)_rel$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : kernel-hidd-scsiwd33c93_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-scsiwd33c93_LIBDIR)/lib$(kernel-hidd-scsiwd33c93_DEFNAME)_rel$(kernel-hidd-scsiwd33c93_LIBSUFFIX).a : $(kernel-hidd-scsiwd33c93_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-scsiwd33c93_AR) $@ $^
+	$(Q)$(kernel-hidd-scsiwd33c93_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-scsiwd33c93_RELLINKLIB),)
+$(kernel-hidd-scsiwd33c93_RELLINKLIB) : | $(kernel-hidd-scsiwd33c93_LIBDIR)
+else
+$(kernel-hidd-scsiwd33c93_RELLINKLIB) :: $(kernel-hidd-scsiwd33c93_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-scsiwd33c93_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-hidd-scsiwd33c93_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-hidd-scsiwd33c93_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-hidd-scsiwd33c93_SYMBOLS := $(kernel-hidd-scsiwd33c93_KBASE)
+
+kernel-hidd-scsiwd33c93_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-hidd-scsiwd33c93_KOBJ_LIBS        := $(filter-out $(kernel-hidd-scsiwd33c93_KLIB),$(kernel-hidd-scsiwd33c93_LIBS)) $(kernel-hidd-scsiwd33c93_KAUTOLIB)
+$(kernel-hidd-scsiwd33c93_KOBJ) : LINKLIBS:=$(kernel-hidd-scsiwd33c93_KOBJ_LIBS) $($(kernel-hidd-scsiwd33c93_DEFNAME)_LIBS)
+$(kernel-hidd-scsiwd33c93_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-hidd-scsiwd33c93_SYMBOLS))
+$(kernel-hidd-scsiwd33c93_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-hidd-scsiwd33c93_KOBJ) : $(kernel-hidd-scsiwd33c93_OBJS) $(USER_OBJS) $(kernel-hidd-scsiwd33c93_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-hidd-scsiwd33c93_DEPS             := $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/,$(notdir $(kernel-hidd-scsiwd33c93_CCFILES:=.d) $(kernel-hidd-scsiwd33c93_TARGETCCFILES:=.d) $(kernel-hidd-scsiwd33c93_CXXFILES:=.d))) $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib/,$(notdir $(kernel-hidd-scsiwd33c93_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-hidd-scsiwd33c93_DEPS),)
+  ifneq (kernel-hidd-scsiwd33c93 kernel-hidd-scsiwd33c93-quick kernel-hidd-scsiwd33c93-kobj kernel-hidd-scsiwd33c93-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-hidd-scsiwd33c93 kernel-hidd-scsiwd33c93-quick kernel-hidd-scsiwd33c93-kobj kernel-hidd-scsiwd33c93-kobj-quick),)
+      -include $(kernel-hidd-scsiwd33c93_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-hidd-scsiwd33c93_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-hidd-scsiwd33c93_OBJS) $(kernel-hidd-scsiwd33c93_DEPS) : | $(kernel-hidd-scsiwd33c93_OBJDIR)/linklib
+
+ifneq ($(kernel-hidd-scsiwd33c93_OBJS) $(kernel-hidd-scsiwd33c93_DEPS) $(kernel-hidd-scsiwd33c93_MODULE) $(kernel-hidd-scsiwd33c93_KOBJ),)
+$(kernel-hidd-scsiwd33c93_OBJS) $(kernel-hidd-scsiwd33c93_DEPS) $(kernel-hidd-scsiwd33c93_MODULE) $(kernel-hidd-scsiwd33c93_KOBJ) : | $(kernel-hidd-scsiwd33c93_OBJDIR) $(AROSDIR)/$(kernel-hidd-scsiwd33c93_MODDIR) $(KOBJSDIR)
+else
+$(kernel-hidd-scsiwd33c93_OBJS) $(kernel-hidd-scsiwd33c93_DEPS) $(kernel-hidd-scsiwd33c93_MODULE) $(kernel-hidd-scsiwd33c93_KOBJ) :: $(kernel-hidd-scsiwd33c93_OBJDIR) $(AROSDIR)/$(kernel-hidd-scsiwd33c93_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-scsiwd33c93_OBJDIR) $(AROSDIR)/$(kernel-hidd-scsiwd33c93_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-hidd-scsiwd33c93 kernel-hidd-scsiwd33c93-includes kernel-hidd-scsiwd33c93-quick kernel-hidd-scsiwd33c93-kobj kernel-hidd-scsiwd33c93-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-hidd-scsiwd33c93_DFILE_DEPS := $(kernel-hidd-scsiwd33c93_LIBDEFSINC) $(kernel-hidd-scsiwd33c93_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-hidd-scsiwd33c93_INCDIR)/,$($(kernel-hidd-scsiwd33c93_DEFNAME)_INCLUDES))
+$(kernel-hidd-scsiwd33c93_DEPS) : $(kernel-hidd-scsiwd33c93_DFILE_DEPS)
+endif
+
+kernel-hidd-scsiwd33c93_TOCLEAN := $(kernel-hidd-scsiwd33c93_OBJS) $(kernel-hidd-scsiwd33c93_DEPS) \
+    $(kernel-hidd-scsiwd33c93_MODULE) $(kernel-hidd-scsiwd33c93_LINKLIB) $(kernel-hidd-scsiwd33c93_KOBJ) \
+    $(kernel-hidd-scsiwd33c93_OBJDIR)/Makefile.scsi_wd33c93hidd \
+    $(addprefix $(kernel-hidd-scsiwd33c93_OBJDIR)/include/,$($(kernel-hidd-scsiwd33c93_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-hidd-scsiwd33c93_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-scsiwd33c93_INCDIR)/,$($(kernel-hidd-scsiwd33c93_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-scsiwd33c93_OBJDIR)/scsi_wd33c93_geninc $(kernel-hidd-scsiwd33c93_OBJDIR)/scsi_wd33c93_incs \
+    $(addsuffix .c,$(kernel-hidd-scsiwd33c93_LINKLIBFILES)) $(kernel-hidd-scsiwd33c93_LINKLIBOBJS) $(kernel-hidd-scsiwd33c93_LIBDEFSINC) \
+    $(kernel-hidd-scsiwd33c93_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-hidd-scsiwd33c93_STARTFILES) $(kernel-hidd-scsiwd33c93_ENDFILES)) \
+    $(kernel-hidd-scsiwd33c93_ENDOBJS)
+kernel-hidd-scsiwd33c93-clean : FILES              := $(kernel-hidd-scsiwd33c93_TOCLEAN)
+kernel-hidd-scsiwd33c93-clean ::
+	$(Q)$(ECHO) "Cleaning up for module scsi_wd33c93"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-hidd-scsiwd33c93_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

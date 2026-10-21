@@ -1,0 +1,1742 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- workbench-libs-expat : \
+#MM     workbench-libs-expat-lib \
+#MM     workbench-libs-expat-examples \
+#MM     workbench-libs-expat-pc
+
+#MM- workbench-libs-expat-quick : \
+#MM     workbench-libs-expat-lib-quick \
+#MM     workbench-libs-expat-examples-quick
+
+#MM- workbench-libs-expat-clean : \
+#MM     workbench-libs-expat-lib-clean \
+#MM     workbench-libs-expat-examples-clean
+
+#MM  workbench-libs-expat-lib : linklibs
+
+#MM- workbench-libs-expat-includes : \
+#MM     kernel-exec-includes includes-copy
+
+
+CFILES := xmlparse xmlrole xmltok
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM workbench-libs-expat-lib
+#MM workbench-libs-expat-lib-quick
+#MM workbench-libs-expat-lib-makefile
+#MM workbench-libs-expat-lib-clean
+
+# ABI targets:
+#MM- includes-all : workbench-libs-expat-lib-includes
+#MM- linklibs-expat: workbench-libs-expat-lib-linklib
+#MM- linklibs-expat_rel : workbench-libs-expat-lib-linklib
+#MM- includes-expat: workbench-libs-expat-lib-includes
+#MM- includes-expat_rel : workbench-libs-expat-lib-includes
+#MM- workbench-libs-expat-lib : workbench-libs-expat-lib-includes core-linklibs linklibs-
+#MM workbench-libs-expat-lib-linklib : workbench-libs-expat-lib-includes includes-
+#MM- workbench-libs-expat-lib-quick : workbench-libs-expat-lib-includes-quick
+#MM workbench-libs-expat-lib-includes : workbench-libs-expat-lib-makefile workbench-libs-expat-lib-includes-dirs \
+#MM     includes-generate-deps workbench-libs-expat-lib-fd
+#MM workbench-libs-expat-lib-includes-quick
+#MM workbench-libs-expat-lib-includes-dirs
+#MM workbench-libs-expat-lib-fd
+
+# Library targets
+#MM workbench-libs-expat-lib-kobj : core-linklibs linklibs-
+#MM workbench-libs-expat-lib-kobj-quick : 
+
+# Library with ABI targets:
+#MM workbench-libs-expat-lib-kobj : workbench-libs-expat-lib-includes core-linklibs linklibs-
+#MM workbench-libs-expat-lib-kobj-quick : workbench-libs-expat-lib-includes-quick
+
+# All MetaMake targets defined by this macro
+workbench-libs-expat-lib_ALLTARGETS       := workbench-libs-expat-lib workbench-libs-expat-lib-quick workbench-libs-expat-lib-clean
+
+ifeq (M,M)
+workbench-libs-expat-lib_ALLTARGETS       += workbench-libs-expat-lib-kobj workbench-libs-expat-lib-kobj-quick
+endif
+
+ifeq (M,M)
+workbench-libs-expat-lib_ALLTARGETS += workbench-libs-expat-lib-includes \
+                 workbench-libs-expat-lib-includes-quick workbench-libs-expat-lib-includes-dirs  \
+                 workbench-libs-expat-lib-linklib workbench-libs-expat-lib-fd
+endif
+
+.PHONY : $(workbench-libs-expat-lib_ALLTARGETS) workbench-libs-expat-lib-makefile
+
+ifeq (expat,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (library,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    workbench-libs-expat-lib_DEFNAME      := expat_
+else
+    workbench-libs-expat-lib_DEFNAME      := expat
+endif
+workbench-libs-expat-lib_DEFLINKLIBNAME   := $(workbench-libs-expat-lib_DEFNAME)
+ifneq (expat,)
+    workbench-libs-expat-lib_LINKLIBNAME  := expat
+else
+    workbench-libs-expat-lib_LINKLIBNAME  = $(workbench-libs-expat-lib_DEFLINKLIBNAME)
+endif
+workbench-libs-expat-lib_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    workbench-libs-expat-lib_DEFCPPFLAGS  += -I
+endif
+workbench-libs-expat-lib_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    workbench-libs-expat-lib_DFLAGS       := 
+else
+    workbench-libs-expat-lib_DFLAGS       = $(workbench-libs-expat-lib_DEFDFLAGS)
+endif
+workbench-libs-expat-lib_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    workbench-libs-expat-lib_DXXFLAGS     := 
+else
+    workbench-libs-expat-lib_DXXFLAGS     = $(workbench-libs-expat-lib_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+workbench-libs-expat-lib_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(workbench-libs-expat-lib_DEFDFLAGS))
+workbench-libs-expat-lib_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(workbench-libs-expat-lib_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-libs-expat-lib_FUNCINSTR := yes
+workbench-libs-expat-lib_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(workbench-libs-expat-lib_DEFDFLAGS))
+workbench-libs-expat-lib_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(workbench-libs-expat-lib_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+workbench-libs-expat-lib_OBJDIR                     := 
+else
+workbench-libs-expat-lib_OBJDIR                     := $(OBJDIR)/$(workbench-libs-expat-lib_DEFNAME)
+endif
+ifneq (,)
+workbench-libs-expat-lib_OBJDIR           := $(workbench-libs-expat-lib_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+workbench-libs-expat-lib-makefile         := $(workbench-libs-expat-lib_OBJDIR)/Makefile.$(workbench-libs-expat-lib_DEFNAME)library
+workbench-libs-expat-lib-genmakefile : $(workbench-libs-expat-lib-makefile)
+
+
+workbench-libs-expat-lib-genmakefile_OPTS := 
+ifneq (,)
+    workbench-libs-expat-lib-genmakefile_OPTS += -f 
+    workbench-libs-expat-lib-genmakefile_MODNAME := expat_
+else
+    workbench-libs-expat-lib-genmakefile_MODNAME := expat
+endif
+workbench-libs-expat-lib-genmakefile_TARGET := Makefile.$(workbench-libs-expat-lib-genmakefile_MODNAME)library
+workbench-libs-expat-lib-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-expat-lib-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-libs-expat-lib-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-expat-lib-genmakefile_OPTS += -c 
+        workbench-libs-expat-lib-genmakefile_DEPS += 
+    endif 
+else
+    workbench-libs-expat-lib-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/expat.conf
+    workbench-libs-expat-lib-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/expat.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-expat-lib-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-libs-expat-lib-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-expat-lib-genmakefile_OPTS += -o 
+        workbench-libs-expat-lib-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-libs-expat-lib-genmakefile_OPTS += -s 
+endif
+ifneq ($(workbench-libs-expat-lib_OBJDIR),)
+    workbench-libs-expat-lib-genmakefile_OPTS += -d $(workbench-libs-expat-lib_OBJDIR)
+    workbench-libs-expat-lib-genmakefile_TARGET := $(workbench-libs-expat-lib_OBJDIR)/$(workbench-libs-expat-lib-genmakefile_TARGET)
+endif
+
+$(workbench-libs-expat-lib-genmakefile_TARGET) : OPTS := $(workbench-libs-expat-lib-genmakefile_OPTS)
+$(workbench-libs-expat-lib-genmakefile_TARGET) : MODNAME := expat
+$(workbench-libs-expat-lib-genmakefile_TARGET) : MODTYPE := library
+$(workbench-libs-expat-lib-genmakefile_TARGET) : $(workbench-libs-expat-lib-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(workbench-libs-expat-lib-makefile),)
+$(workbench-libs-expat-lib-makefile) : | $(workbench-libs-expat-lib_OBJDIR)
+else
+$(workbench-libs-expat-lib-makefile) :: $(workbench-libs-expat-lib_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-expat-lib_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(workbench-libs-expat-lib_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(workbench-libs-expat-lib-makefile)
+
+workbench-libs-expat-lib_DEFMODDIR        := $($(workbench-libs-expat-lib_DEFNAME)_MODDIR)
+ifeq (no,yes)
+workbench-libs-expat-lib_DEFMODDIR        := $(AROS_DIR_ARCH)/$(workbench-libs-expat-lib_DEFMODDIR)
+endif
+ifneq (,)
+    workbench-libs-expat-lib_MODDIR       := 
+else
+    workbench-libs-expat-lib_MODDIR       := $(workbench-libs-expat-lib_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+workbench-libs-expat-lib_INCDIR           := 
+else
+workbench-libs-expat-lib_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+workbench-libs-expat-lib_LIBDEFSINC       := $(workbench-libs-expat-lib_OBJDIR)/include/$(workbench-libs-expat-lib_DEFNAME)_libdefs.h
+workbench-libs-expat-lib_DEFLIBDEFSINC    := $(workbench-libs-expat-lib_OBJDIR)/include/$(workbench-libs-expat-lib_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+workbench-libs-expat-lib-includes-quick : workbench-libs-expat-lib-includes
+workbench-libs-expat-lib-includes : $(addprefix $(GENINCDIR)/,$($(workbench-libs-expat-lib_DEFNAME)_INCLUDES)) \
+    $(addprefix $(workbench-libs-expat-lib_INCDIR)/,$($(workbench-libs-expat-lib_DEFNAME)_INCLUDES)) \
+    $(workbench-libs-expat-lib_LIBDEFSINC) $(workbench-libs-expat-lib_DEFLIBDEFSINC)
+
+ifneq ($($(workbench-libs-expat-lib_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    workbench-libs-expat-lib-includes_MODNAME := expat_
+else
+    workbench-libs-expat-lib-includes_MODNAME := expat
+endif
+
+ifneq ($($(workbench-libs-expat-lib-includes_MODNAME)_INCLUDES),)
+
+workbench-libs-expat-lib-includes_TARGETS := $($(workbench-libs-expat-lib-includes_MODNAME)_INCLUDES)
+
+workbench-libs-expat-lib-includes_DEPS := $(GENMODULE)
+workbench-libs-expat-lib-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-expat-lib-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-libs-expat-lib-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-expat-lib-includes_OPTS += -c 
+        workbench-libs-expat-lib-includes_DEPS += 
+    endif 
+else
+    workbench-libs-expat-lib-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/expat.conf
+    workbench-libs-expat-lib-includes_DEPS += $(SRCDIR)/$(CURDIR)/expat.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-expat-lib-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-libs-expat-lib-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-expat-lib-includes_OPTS += -o 
+        workbench-libs-expat-lib-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-libs-expat-lib-includes_OPTS += -s 
+endif
+ifneq ($(workbench-libs-expat-lib_OBJDIR)/include,)
+    workbench-libs-expat-lib-includes_OPTS += -d $(workbench-libs-expat-lib_OBJDIR)/include
+    workbench-libs-expat-lib-includes_TARGETS := $(addprefix $(workbench-libs-expat-lib_OBJDIR)/include/,$(workbench-libs-expat-lib-includes_TARGETS))
+    workbench-libs-expat-lib-includes_GENINCFLAG=$(workbench-libs-expat-lib_OBJDIR)/include/.expat.library-includes
+else
+    workbench-libs-expat-lib-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.expat.library-includes
+endif
+
+$(workbench-libs-expat-lib-includes_TARGETS) : $(workbench-libs-expat-lib-includes_DEPS) $(workbench-libs-expat-lib-includes_GENINCFLAG)
+
+$(workbench-libs-expat-lib-includes_GENINCFLAG) : OPTS := $(workbench-libs-expat-lib-includes_OPTS)
+$(workbench-libs-expat-lib-includes_GENINCFLAG) : MODNAME := expat
+$(workbench-libs-expat-lib-includes_GENINCFLAG) : MODTYPE := library
+$(workbench-libs-expat-lib-includes_GENINCFLAG) : $(workbench-libs-expat-lib-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(workbench-libs-expat-lib_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(workbench-libs-expat-lib_DEFNAME)_INCLUDES)) : | $(workbench-libs-expat-lib_OBJDIR)/expat_geninc
+
+$(workbench-libs-expat-lib_OBJDIR)/expat_geninc : COPYSRCDIR := $(workbench-libs-expat-lib_OBJDIR)/include
+$(workbench-libs-expat-lib_OBJDIR)/expat_geninc : TGTDIR := $(GENINCDIR)
+$(workbench-libs-expat-lib_OBJDIR)/expat_geninc : FILES := $($(workbench-libs-expat-lib_DEFNAME)_INCLUDES)
+$(workbench-libs-expat-lib_OBJDIR)/expat_geninc : $(addprefix $(workbench-libs-expat-lib_OBJDIR)/include/,$($(workbench-libs-expat-lib_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(workbench-libs-expat-lib_OBJDIR)/include
+
+$(addprefix $(workbench-libs-expat-lib_INCDIR)/,$($(workbench-libs-expat-lib_DEFNAME)_INCLUDES)) : | $(workbench-libs-expat-lib_OBJDIR)/expat_incs
+
+$(workbench-libs-expat-lib_OBJDIR)/expat_incs : COPYSRCDIR := $(workbench-libs-expat-lib_OBJDIR)/include
+$(workbench-libs-expat-lib_OBJDIR)/expat_incs : TGTDIR := $(workbench-libs-expat-lib_INCDIR)
+$(workbench-libs-expat-lib_OBJDIR)/expat_incs : FILES := $($(workbench-libs-expat-lib_DEFNAME)_INCLUDES)
+$(workbench-libs-expat-lib_OBJDIR)/expat_incs : $(addprefix $(workbench-libs-expat-lib_OBJDIR)/include/,$($(workbench-libs-expat-lib_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+workbench-libs-expat-lib_INCDIRS := $(filter-out ./,$(sort $(dir $($(workbench-libs-expat-lib_DEFNAME)_INCLUDES))))
+
+TMPexpat_INCDIRS := \
+    $(workbench-libs-expat-lib_OBJDIR)/include $(addprefix $(workbench-libs-expat-lib_OBJDIR)/include/,$(workbench-libs-expat-lib_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(workbench-libs-expat-lib_INCDIRS)) \
+    $(workbench-libs-expat-lib_INCDIR) $(addprefix $(workbench-libs-expat-lib_INCDIR)/,$(workbench-libs-expat-lib_INCDIRS))
+
+ifneq (workbench-libs-expat-lib-includes-dirs,)
+workbench-libs-expat-lib-includes-dirs : | $(TMPexpat_INCDIRS)
+else
+workbench-libs-expat-lib-includes-dirs :: $(TMPexpat_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPexpat_INCDIRS)
+
+
+endif
+
+endif
+
+
+workbench-libs-expat-lib-genlibdefs_OPTS := 
+ifneq (,)
+    workbench-libs-expat-lib-genlibdefs_OPTS += -f 
+    workbench-libs-expat-lib-genlibdefs_MODNAME := expat_
+else
+    workbench-libs-expat-lib-genlibdefs_MODNAME := expat
+endif
+workbench-libs-expat-lib-genlibdefs_TARGET := $(workbench-libs-expat-lib-genlibdefs_MODNAME)_libdefs.h
+workbench-libs-expat-lib-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-expat-lib-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-libs-expat-lib-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-expat-lib-genlibdefs_OPTS += -c 
+        workbench-libs-expat-lib-genlibdefs_DEPS += 
+    endif 
+else
+    workbench-libs-expat-lib-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/expat.conf
+    workbench-libs-expat-lib-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/expat.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-expat-lib-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-libs-expat-lib-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-expat-lib-genlibdefs_OPTS += -o 
+        workbench-libs-expat-lib-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-libs-expat-lib-genlibdefs_OPTS += -s 
+endif
+ifneq ($(workbench-libs-expat-lib_OBJDIR)/include,)
+    workbench-libs-expat-lib-genlibdefs_OPTS += -d $(workbench-libs-expat-lib_OBJDIR)/include
+    workbench-libs-expat-lib-genlibdefs_TARGET := $(workbench-libs-expat-lib_OBJDIR)/include/$(workbench-libs-expat-lib-genlibdefs_TARGET)
+endif
+ifneq (,)
+    workbench-libs-expat-lib-genlibdefs_OPTS += -v 
+endif
+
+$(workbench-libs-expat-lib-genlibdefs_TARGET) : OPTS := $(workbench-libs-expat-lib-genlibdefs_OPTS)
+$(workbench-libs-expat-lib-genlibdefs_TARGET) : MODNAME := expat
+$(workbench-libs-expat-lib-genlibdefs_TARGET) : MODTYPE := library
+$(workbench-libs-expat-lib-genlibdefs_TARGET) : $(workbench-libs-expat-lib-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(workbench-libs-expat-lib_DEFLIBDEFSINC) : FILENAME := $(workbench-libs-expat-lib_LIBDEFSINC)
+$(workbench-libs-expat-lib_DEFLIBDEFSINC) : $(workbench-libs-expat-lib_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(workbench-libs-expat-lib_LIBDEFSINC) $(workbench-libs-expat-lib_DEFLIBDEFSINC) : | $(workbench-libs-expat-lib_OBJDIR)/include
+
+ifneq (workbench-libs-expat-lib-includes-dirs,)
+workbench-libs-expat-lib-includes-dirs : | $(workbench-libs-expat-lib_OBJDIR)/include
+else
+workbench-libs-expat-lib-includes-dirs :: $(workbench-libs-expat-lib_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(workbench-libs-expat-lib_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+workbench-libs-expat-lib-genmodfiles_OPTS :=
+ifneq (,)
+    workbench-libs-expat-lib-genmodfiles_OPTS += -f 
+    workbench-libs-expat-lib-genmodfiles_MODNAME := expat_
+else
+    workbench-libs-expat-lib-genmodfiles_MODNAME := expat
+endif
+workbench-libs-expat-lib-genmodfiles_GENTARGETS := $($(workbench-libs-expat-lib-genmodfiles_MODNAME)_STARTFILES) $($(workbench-libs-expat-lib-genmodfiles_MODNAME)_ENDFILES)
+workbench-libs-expat-lib-genmodfiles_STUBTARGETS := $($(workbench-libs-expat-lib-genmodfiles_MODNAME)_LINKLIBFILES) $($(workbench-libs-expat-lib-genmodfiles_MODNAME)_RELLINKLIBFILES)
+workbench-libs-expat-lib-genmodfiles_GENTARGETS := $(addsuffix .c,$(workbench-libs-expat-lib-genmodfiles_GENTARGETS))
+workbench-libs-expat-lib-genmodfiles_STUBTARGETS := $(addsuffix .c,$(workbench-libs-expat-lib-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(workbench-libs-expat-lib-genmodfiles_MODNAME)_LINKLIBAFILES) $($(workbench-libs-expat-lib-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+workbench-libs-expat-lib-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-expat-lib-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-libs-expat-lib-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-expat-lib-genmodfiles_OPTS += -c 
+        workbench-libs-expat-lib-genmodfiles_DEPS += 
+    endif 
+else
+    workbench-libs-expat-lib-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/expat.conf
+    workbench-libs-expat-lib-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/expat.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-libs-expat-lib-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-libs-expat-lib-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-libs-expat-lib-genmodfiles_OPTS += -o 
+        workbench-libs-expat-lib-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-libs-expat-lib-genmodfiles_OPTS += -s 
+endif
+ifneq ($(workbench-libs-expat-lib_OBJDIR),)
+    workbench-libs-expat-lib-genmodfiles_OPTS += -d $(workbench-libs-expat-lib_OBJDIR)
+    workbench-libs-expat-lib-genmodfiles_TARGETDIR := $(shell echo $(workbench-libs-expat-lib_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    workbench-libs-expat-lib-genmodfiles_GENTARGETS := $(addprefix $(workbench-libs-expat-lib-genmodfiles_TARGETDIR)/,$(workbench-libs-expat-lib-genmodfiles_GENTARGETS))
+    workbench-libs-expat-lib-genmodfiles_GENFILEFLAG=$(workbench-libs-expat-lib-genmodfiles_TARGETDIR)/.expat.library-genfiles
+else
+    workbench-libs-expat-lib-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.expat.library-genfiles
+endif
+ifneq ($(workbench-libs-expat-lib_OBJDIR)/linklib,)
+    workbench-libs-expat-lib-genmodfiles_OPTS += -l $(workbench-libs-expat-lib_OBJDIR)/linklib
+    workbench-libs-expat-lib-genmodfiles_STUBTARGETDIR := $(shell echo $(workbench-libs-expat-lib_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    workbench-libs-expat-lib-genmodfiles_STUBTARGETS := $(addprefix $(workbench-libs-expat-lib-genmodfiles_STUBTARGETDIR)/,$(workbench-libs-expat-lib-genmodfiles_STUBTARGETS))
+    workbench-libs-expat-lib-genmodfiles_TARGETDIRS += $(workbench-libs-expat-lib_OBJDIR)/linklib
+else
+ifneq ($(workbench-libs-expat-lib_OBJDIR),)
+    workbench-libs-expat-lib-genmodfiles_STUBTARGETS := $(addprefix $(workbench-libs-expat-lib-genmodfiles_TARGETDIR)/,$(workbench-libs-expat-lib-genmodfiles_STUBTARGETS))
+endif
+endif
+
+workbench-libs-expat-lib-genmodfiles_TARGETS := $(workbench-libs-expat-lib-genmodfiles_GENTARGETS) $(workbench-libs-expat-lib-genmodfiles_STUBTARGETS)
+ifneq ($(workbench-libs-expat-lib-genmodfiles_TARGETDIRS),)
+$(workbench-libs-expat-lib-genmodfiles_TARGETS) : | $(workbench-libs-expat-lib-genmodfiles_TARGETDIRS)
+endif
+
+$(workbench-libs-expat-lib-genmodfiles_TARGETS) : $(workbench-libs-expat-lib-genmodfiles_DEPS) $(workbench-libs-expat-lib-genmodfiles_GENFILEFLAG)
+
+$(workbench-libs-expat-lib-genmodfiles_GENFILEFLAG) : OPTS := $(workbench-libs-expat-lib-genmodfiles_OPTS)
+$(workbench-libs-expat-lib-genmodfiles_GENFILEFLAG) : MODNAME := expat
+$(workbench-libs-expat-lib-genmodfiles_GENFILEFLAG) : MODTYPE := library
+$(workbench-libs-expat-lib-genmodfiles_GENFILEFLAG) : $(workbench-libs-expat-lib-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(workbench-libs-expat-lib-genmodfiles_GENFILEFLAG) : $(workbench-libs-expat-lib_DEFLIBDEFSINC) $(workbench-libs-expat-lib-makefile)
+
+
+ifneq ($(workbench-libs-expat-lib-genmodfiles_GENFILEFLAG),)
+$(workbench-libs-expat-lib-genmodfiles_GENFILEFLAG) : | $(workbench-libs-expat-lib_OBJDIR)/linklib
+else
+$(workbench-libs-expat-lib-genmodfiles_GENFILEFLAG) :: $(workbench-libs-expat-lib_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(workbench-libs-expat-lib_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+workbench-libs-expat-lib_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+workbench-libs-expat-lib_FDDIR            := /../$(AROS_DIR_FD)
+endif
+workbench-libs-expat-lib-fd : $(workbench-libs-expat-lib_FDDIR)/expat_lib.fd
+
+
+TMP_TARGET := expat_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/expat.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/expat.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(workbench-libs-expat-lib_FDDIR),)
+    TMP_OPTS += -d $(workbench-libs-expat-lib_FDDIR)
+    TMP_TARGET := $(workbench-libs-expat-lib_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := expat
+$(TMP_TARGET) : MODTYPE := library
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(workbench-libs-expat-lib_FDDIR)/expat_lib.fd : | $(workbench-libs-expat-lib_FDDIR)
+
+
+ifneq (workbench-libs-expat-lib-fd-setup,)
+workbench-libs-expat-lib-fd-setup : | $(workbench-libs-expat-lib_FDDIR)
+else
+workbench-libs-expat-lib-fd-setup :: $(workbench-libs-expat-lib_FDDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-expat-lib_FDDIR)
+
+endif
+
+## Compilation
+##
+workbench-libs-expat-lib_FILES            := $(CFILES)
+workbench-libs-expat-lib_OBJCFILES        := 
+workbench-libs-expat-lib_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+workbench-libs-expat-lib_LIBFILES         := 
+workbench-libs-expat-lib_LIBS             := 
+
+workbench-libs-expat-lib_FDIRS            := $(sort $(dir $(workbench-libs-expat-lib_FILES)))
+
+workbench-libs-expat-lib_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+workbench-libs-expat-lib_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call workbench-libs-expat-lib_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+workbench-libs-expat-lib_FILTERARCH       = $(filter-out $(call workbench-libs-expat-lib_MATCHARCH,$(1),$(2)),$(2))
+workbench-libs-expat-lib_STARTFILES       := $(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$($(workbench-libs-expat-lib_DEFNAME)_STARTFILES))
+workbench-libs-expat-lib_ENDFILES         := $(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$($(workbench-libs-expat-lib_DEFNAME)_ENDFILES))
+
+workbench-libs-expat-lib_ARCHOBJS         := $(wildcard $(workbench-libs-expat-lib_OBJDIR)/arch/*.o)
+workbench-libs-expat-lib_LIBARCHOBJS      := $(wildcard $(workbench-libs-expat-lib_OBJDIR)/linklib/arch/*.o)
+workbench-libs-expat-lib_ARCHFILES        := $(basename $(notdir $(workbench-libs-expat-lib_ARCHOBJS)))
+workbench-libs-expat-lib_LIBARCHFILES     := $(basename $(notdir $(workbench-libs-expat-lib_LIBARCHOBJS)))
+workbench-libs-expat-lib_C_NARCHFILES     := $(call workbench-libs-expat-lib_FILTERARCH,$(workbench-libs-expat-lib_ARCHFILES),$(workbench-libs-expat-lib_FILES))
+workbench-libs-expat-lib_CXX_NARCHFILES   := $(call workbench-libs-expat-lib_FILTERARCH,$(workbench-libs-expat-lib_ARCHFILES),$(workbench-libs-expat-lib_CXXFILES))
+workbench-libs-expat-lib_OBJC_NARCHFILES  := $(call workbench-libs-expat-lib_FILTERARCH,$(workbench-libs-expat-lib_ARCHFILES),$(workbench-libs-expat-lib_OBJCFILES))
+workbench-libs-expat-lib_NLIBARCHFILES    := $(call workbench-libs-expat-lib_FILTERARCH,$(workbench-libs-expat-lib_LIBARCHFILES),$(workbench-libs-expat-lib_LIBFILES))
+workbench-libs-expat-lib_ARCHNLIBFILES    := $(call workbench-libs-expat-lib_FILTERARCH,$(workbench-libs-expat-lib_LIBFILES),$(workbench-libs-expat-lib_LIBARCHFILES))
+
+workbench-libs-expat-lib_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(workbench-libs-expat-lib_OBJDIR)/include -include $(workbench-libs-expat-lib_DEFLIBDEFSINC))
+ifneq (,)
+workbench-libs-expat-lib_CPPFLAGS         += -I
+endif
+workbench-libs-expat-lib_LINKLIBCPPFLAGS  := $(workbench-libs-expat-lib_CPPFLAGS)
+workbench-libs-expat-lib_CPPFLAGS         += $(strip $($(workbench-libs-expat-lib_DEFNAME)_CPPFLAGS))
+workbench-libs-expat-lib_LINKLIBCPPFLAGS  += $(strip $($(workbench-libs-expat-lib_DEFNAME)_LINKLIBCPPFLAGS))
+workbench-libs-expat-lib_CFLAGS           := $(strip $(CFLAGS) $($(workbench-libs-expat-lib_DEFNAME)_CFLAGS))
+workbench-libs-expat-lib_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(workbench-libs-expat-lib_DEFNAME)_LINKLIBCFLAGS))
+workbench-libs-expat-lib_CXXFLAGS         := $(strip $(CXXFLAGS) $($(workbench-libs-expat-lib_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+workbench-libs-expat-lib_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+workbench-libs-expat-lib_CFLAGS           := $(strip $(workbench-libs-expat-lib_LTOFLAGS) $(workbench-libs-expat-lib_CFLAGS))
+workbench-libs-expat-lib_LINKLIBCFLAGS    := $(strip $(workbench-libs-expat-lib_LTOFLAGS) $(workbench-libs-expat-lib_LINKLIBCFLAGS))
+workbench-libs-expat-lib_CXXFLAGS         := $(strip $(workbench-libs-expat-lib_LTOFLAGS) $(workbench-libs-expat-lib_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-libs-expat-lib_SUBSTNULL        :=
+workbench-libs-expat-lib_SUBSTSPACE       := $(workbench-libs-expat-lib_SUBSTNULL) #
+workbench-libs-expat-lib_SUBSTCOMMA       := ,
+workbench-libs-expat-lib_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(workbench-libs-expat-lib_SUBSTSPACE),$(workbench-libs-expat-lib_SUBSTCOMMA),$(strip $($(workbench-libs-expat-lib_DEFNAME)_STARTFILES))))
+workbench-libs-expat-lib_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-libs-expat-lib_CFLAGS           := $(strip $(workbench-libs-expat-lib_INSTRFUNCFLAGS) $(workbench-libs-expat-lib_CFLAGS))
+workbench-libs-expat-lib_CXXFLAGS         := $(strip $(workbench-libs-expat-lib_INSTRFUNCFLAGS) $(workbench-libs-expat-lib_CXXFLAGS))
+workbench-libs-expat-lib_LIBS             += $(workbench-libs-expat-lib_INSTRFUNCLIBS)
+endif
+endif
+workbench-libs-expat-lib_DFLAGS           := $(strip $(workbench-libs-expat-lib_DFLAGS) $($(workbench-libs-expat-lib_DEFNAME)_DFLAGS))
+workbench-libs-expat-lib_LINKLIBDFLAGS    := $(strip $(workbench-libs-expat-lib_DFLAGS) $($(workbench-libs-expat-lib_DEFNAME)_LINKLIBDFLAGS))
+workbench-libs-expat-lib_DXXFLAGS         := $(strip $(workbench-libs-expat-lib_DXXFLAGS) $($(workbench-libs-expat-lib_DEFNAME)_DXXFLAGS))
+
+ifeq (library,library)
+    workbench-libs-expat-lib_LIBSUFFIX    := 
+else
+    workbench-libs-expat-lib_LIBSUFFIX    := .library
+endif
+
+ifeq (,)
+workbench-libs-expat-lib_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+workbench-libs-expat-lib_LIBDIR           := 
+endif
+
+ifeq (M,M)
+workbench-libs-expat-lib_LINKLIBCFILES    := $(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$($(workbench-libs-expat-lib_DEFNAME)_LINKLIBFILES))
+workbench-libs-expat-lib_LINKLIBAFILES    := $(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$($(workbench-libs-expat-lib_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(workbench-libs-expat-lib_DEFNAME)_LINKLIBFILES) $($(workbench-libs-expat-lib_DEFNAME)_LINKLIBAFILES)  $(workbench-libs-expat-lib_ARCHNLIBFILES)),)
+    workbench-libs-expat-lib_LINKLIB      :=
+else
+    workbench-libs-expat-lib_LINKLIB      := $(workbench-libs-expat-lib_LIBDIR)/libexpat$(workbench-libs-expat-lib_LIBSUFFIX).a
+    ifneq (expat,$(workbench-libs-expat-lib_LINKLIBNAME))
+        workbench-libs-expat-lib_LINKLIB  += $(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_LINKLIBNAME)$(workbench-libs-expat-lib_LIBSUFFIX).a
+    endif
+endif
+workbench-libs-expat-lib_LINKLIBFILES     := $(workbench-libs-expat-lib_LINKLIBCFILES) $(workbench-libs-expat-lib_LINKLIBAFILES)
+
+workbench-libs-expat-lib_RELLINKLIBCFILES := $(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$($(workbench-libs-expat-lib_DEFNAME)_RELLINKLIBFILES))
+workbench-libs-expat-lib_RELLINKLIBAFILES := $(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$($(workbench-libs-expat-lib_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(workbench-libs-expat-lib_DEFNAME)_RELLINKLIBFILES) $($(workbench-libs-expat-lib_DEFNAME)_RELLINKLIBAFILES)  $(workbench-libs-expat-lib_ARCHNLIBFILES)),)
+    workbench-libs-expat-lib_RELLINKLIB   :=
+else
+    workbench-libs-expat-lib_RELLINKLIB   := $(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_DEFNAME)_rel$(workbench-libs-expat-lib_LIBSUFFIX).a
+    ifneq (expat,$(workbench-libs-expat-lib_LINKLIBNAME))
+        workbench-libs-expat-lib_RELLINKLIB += $(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_LINKLIBNAME)_rel$(workbench-libs-expat-lib_LIBSUFFIX).a
+    endif
+endif
+workbench-libs-expat-lib_RELLINKLIBFILES  := $(workbench-libs-expat-lib_RELLINKLIBCFILES) $(workbench-libs-expat-lib_RELLINKLIBAFILES)
+endif
+
+workbench-libs-expat-lib_ENDOBJS          := $(addsuffix .o,$(workbench-libs-expat-lib_ENDFILES))
+workbench-libs-expat-lib_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$(notdir $(workbench-libs-expat-lib_NLIBARCHFILES))) $(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/arch/,$(notdir $(workbench-libs-expat-lib_ARCHNLIBFILES))) $(workbench-libs-expat-lib_LINKLIBFILES)) \
+                 
+workbench-libs-expat-lib_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$(notdir $(workbench-libs-expat-lib_NLIBARCHFILES))) $(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/arch/,$(notdir $(workbench-libs-expat-lib_ARCHNLIBFILES))) $(workbench-libs-expat-lib_RELLINKLIBFILES)) \
+                 
+$(workbench-libs-expat-lib_LINKLIBFILES) $(workbench-libs-expat-lib_RELLINKLIBFILES) : | $(workbench-libs-expat-lib_OBJDIR)/linklib
+$(workbench-libs-expat-lib_LINKLIBOBJS) $(workbench-libs-expat-lib_RELLINKLIBOBJS) : | $(workbench-libs-expat-lib_OBJDIR)/linklib
+
+workbench-libs-expat-lib_CCFILES := $(workbench-libs-expat-lib_C_NARCHFILES)
+workbench-libs-expat-lib_TARGETCCFILES    := $(strip $(workbench-libs-expat-lib_STARTFILES) $(workbench-libs-expat-lib_ENDFILES))
+workbench-libs-expat-lib_LINKLIBCCFILES   := $(strip $(workbench-libs-expat-lib_NLIBARCHFILES) $(workbench-libs-expat-lib_LINKLIBCFILES) $(workbench-libs-expat-lib_RELLINKLIBCFILES))
+workbench-libs-expat-lib_LINKLIBCCGENFILES := $(strip $(workbench-libs-expat-lib_LINKLIBCFILES) $(workbench-libs-expat-lib_RELLINKLIBCFILES))
+
+
+workbench-libs-expat-lib_CXXABSBASENAMES := $(foreach workbench-libs-expat-lib_CXXBASE,$(workbench-libs-expat-lib_CXX_NARCHFILES),$(if $(filter /%,$(workbench-libs-expat-lib_CXXBASE)),$(workbench-libs-expat-lib_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-libs-expat-lib_CXXBASE))))
+
+ifneq ($(workbench-libs-expat-lib_CXXABSBASENAMES),)
+
+workbench-libs-expat-lib_CXXBASENAMES := $(basename $(workbench-libs-expat-lib_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-libs-expat-lib_MCXX_FILES  := $(strip $(foreach workbench-libs-expat-lib_CXXBASE,$(workbench-libs-expat-lib_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-libs-expat-lib_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-libs-expat-lib_EXT),$(workbench-libs-expat-lib_CXXBASE)))))))
+
+ifeq (,)
+workbench-libs-expat-lib_MCXX_SRCWILDCARD := %
+else
+workbench-libs-expat-lib_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-expat-lib_OBJDIR),)
+  workbench-libs-expat-lib_CXXTARGETS := $(notdir $(workbench-libs-expat-lib_CXXBASENAMES:=.o))
+  workbench-libs-expat-lib_CXXDTARGETS := $(notdir $(workbench-libs-expat-lib_CXXBASENAMES:=.d))
+  workbench-libs-expat-lib_MCXX_WILDCARD := %
+else
+  workbench-libs-expat-lib_CXXTARGETS := $(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(notdir $(workbench-libs-expat-lib_CXXBASENAMES:=.o)))
+  workbench-libs-expat-lib_CXXDTARGETS := $(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(notdir $(workbench-libs-expat-lib_CXXBASENAMES:=.d)))
+  workbench-libs-expat-lib_MCXX_WILDCARD := $(workbench-libs-expat-lib_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-libs-expat-lib_CXXTARGETS) $(workbench-libs-expat-lib_CXXDTARGETS) : | $(workbench-libs-expat-lib_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-libs-expat-lib_MCXX_CPPFLAGS := $(workbench-libs-expat-lib_CPPFLAGS)
+workbench-libs-expat-lib_CXXFLAGS := $(workbench-libs-expat-lib_CXXFLAGS)
+ifeq ($(workbench-libs-expat-lib_DXXFLAGS),)
+  workbench-libs-expat-lib_DXXFLAGS := $(workbench-libs-expat-lib_CXXFLAGS)
+else
+  workbench-libs-expat-lib_DXXFLAGS := $(workbench-libs-expat-lib_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-libs-expat-lib_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-libs-expat-lib_STRIP ?= $(HOST_STRIP)
+  workbench-libs-expat-lib_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-libs-expat-lib_CXXCMD:=$(HOST_CXX)
+  workbench-libs-expat-lib_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-libs-expat-lib_MCXX_CPPFLAGS) $(workbench-libs-expat-lib_MCXX_EXTRA_CPPFLAGS))
+  workbench-libs-expat-lib_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-libs-expat-lib_CXXFLAGS))
+  workbench-libs-expat-lib_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-libs-expat-lib_DXXFLAGS))
+  workbench-libs-expat-lib_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-libs-expat-lib_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-libs-expat-lib_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-libs-expat-lib_STRIP ?= $(TARGET_STRIP)
+  workbench-libs-expat-lib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-libs-expat-lib_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-libs-expat-lib_MCXX_CPPFLAGS := $(strip $(workbench-libs-expat-lib_MCXX_CPPFLAGS) $(workbench-libs-expat-lib_MCXX_EXTRA_CPPFLAGS))
+  workbench-libs-expat-lib_CXXFLAGS := $(strip $(workbench-libs-expat-lib_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-libs-expat-lib_DXXFLAGS := $(workbench-libs-expat-lib_DXXFLAGS)
+  workbench-libs-expat-lib_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-libs-expat-lib_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-libs-expat-lib_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-libs-expat-lib_STRIP ?= $(ECHO) >/dev/null
+  workbench-libs-expat-lib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-libs-expat-lib_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-libs-expat-lib_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-libs-expat-lib_MCXX_CPPFLAGS) $(workbench-libs-expat-lib_MCXX_EXTRA_CPPFLAGS))
+  workbench-libs-expat-lib_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-libs-expat-lib_CXXFLAGS))
+  workbench-libs-expat-lib_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-libs-expat-lib_DXXFLAGS))
+  workbench-libs-expat-lib_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-libs-expat-lib_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-libs-expat-lib_CXXCMD) $(workbench-libs-expat-lib_CXXIQUOTE) $(dir $(2)) $(workbench-libs-expat-lib_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_CXXIQUOTE) . $(workbench-libs-expat-lib_CXXIQUOTE_END) $(strip $(workbench-libs-expat-lib_CXXFLAGS) $(workbench-libs-expat-lib_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-libs-expat-lib_CXXCMD) $(workbench-libs-expat-lib_CXXIQUOTE) $(dir $(2)) $(workbench-libs-expat-lib_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_CXXIQUOTE) . $(workbench-libs-expat-lib_CXXIQUOTE_END) $(strip $(workbench-libs-expat-lib_CXXFLAGS) $(workbench-libs-expat-lib_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-libs-expat-lib_CXXCMD) $(workbench-libs-expat-lib_CXXIQUOTE) $(dir $(2)) $(workbench-libs-expat-lib_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_CXXIQUOTE) . $(workbench-libs-expat-lib_CXXIQUOTE_END) $(strip $(workbench-libs-expat-lib_CXXFLAGS) $(workbench-libs-expat-lib_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-libs-expat-lib_CXXCMD)" $(MKDEPEND) $(strip $(workbench-libs-expat-lib_DXXFLAGS) $(workbench-libs-expat-lib_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-libs-expat-lib_OBJDIR),)
+  $(foreach workbench-libs-expat-lib_CXXFILE,$(workbench-libs-expat-lib_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-libs-expat-lib_CXXFILE))),$(workbench-libs-expat-lib_CXXFILE))))
+else
+  $(foreach workbench-libs-expat-lib_CXXFILE,$(workbench-libs-expat-lib_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(notdir $(basename $(workbench-libs-expat-lib_CXXFILE)))),$(workbench-libs-expat-lib_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-libs-expat-lib_OBJC_NARCHFILES),)
+
+ifeq (,)
+workbench-libs-expat-lib_MOBJC_SRCWILDCARD := %
+else
+workbench-libs-expat-lib_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-expat-lib_OBJDIR),)
+  workbench-libs-expat-lib_MOBJC_TARGETS := $(addsuffix .o,$(workbench-libs-expat-lib_OBJC_NARCHFILES))
+  workbench-libs-expat-lib_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-libs-expat-lib_OBJC_NARCHFILES))
+  workbench-libs-expat-lib_MOBJC_WILDCARD := %
+else
+  workbench-libs-expat-lib_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(workbench-libs-expat-lib_OBJC_NARCHFILES)))
+  workbench-libs-expat-lib_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(workbench-libs-expat-lib_OBJC_NARCHFILES)))
+  workbench-libs-expat-lib_MOBJC_WILDCARD := $(workbench-libs-expat-lib_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-libs-expat-lib_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  workbench-libs-expat-lib_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-libs-expat-lib_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-expat-lib_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-libs-expat-lib_MOBJC_DIRS := $(foreach dir, $(workbench-libs-expat-lib_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-expat-lib_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-libs-expat-lib_MOBJC_DIRS),)
+    workbench-libs-expat-lib_MOBJC_DIRS := $(shell echo $(workbench-libs-expat-lib_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-libs-expat-lib_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-libs-expat-lib_CC := $(TARGET_CC)
+else
+  workbench-libs-expat-lib_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-libs-expat-lib_MOBJC_CPPFLAGS := $(workbench-libs-expat-lib_CPPFLAGS)
+workbench-libs-expat-lib_OBJCFLAGS := $(workbench-libs-expat-lib_CFLAGS)
+workbench-libs-expat-lib_OBJCFLAGS := $(workbench-libs-expat-lib_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-libs-expat-lib_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-libs-expat-lib_OBJCFLAGS)))
+ifeq ($(workbench-libs-expat-lib_DFLAGS),)
+  workbench-libs-expat-lib_OBJCDFLAGS := $(workbench-libs-expat-lib_CFLAGS)
+else
+  workbench-libs-expat-lib_OBJCDFLAGS := $(workbench-libs-expat-lib_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-libs-expat-lib_LINK ?= $(strip $(workbench-libs-expat-lib_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-libs-expat-lib_STRIP ?= $(TARGET_STRIP)
+  workbench-libs-expat-lib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-libs-expat-lib_CC) $(TARGET_SYSROOT))
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : workbench-libs-expat-lib_MOBJC_CPPFLAGS:=$(strip $(workbench-libs-expat-lib_MOBJC_CPPFLAGS) $(workbench-libs-expat-lib_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : workbench-libs-expat-lib_OBJCFLAGS:=$(strip $(workbench-libs-expat-lib_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : workbench-libs-expat-lib_OBJCDFLAGS:=$(workbench-libs-expat-lib_OBJCDFLAGS)
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : workbench-libs-expat-lib_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : workbench-libs-expat-lib_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-libs-expat-lib_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-libs-expat-lib_STRIP ?= $(HOST_STRIP)
+  workbench-libs-expat-lib_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : workbench-libs-expat-lib_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-libs-expat-lib_MOBJC_CPPFLAGS) $(workbench-libs-expat-lib_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : workbench-libs-expat-lib_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-expat-lib_OBJCFLAGS))
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : workbench-libs-expat-lib_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-expat-lib_OBJCDFLAGS))
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : workbench-libs-expat-lib_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : workbench-libs-expat-lib_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-libs-expat-lib_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-libs-expat-lib_STRIP ?= $(ECHO) >/dev/null
+  workbench-libs-expat-lib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : workbench-libs-expat-lib_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-libs-expat-lib_MOBJC_CPPFLAGS) $(workbench-libs-expat-lib_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : workbench-libs-expat-lib_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-expat-lib_OBJCFLAGS))
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : workbench-libs-expat-lib_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-expat-lib_OBJCDFLAGS))
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : workbench-libs-expat-lib_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-libs-expat-lib_MOBJC_TARGETS) $(workbench-libs-expat-lib_MOBJC_DTARGETS) : workbench-libs-expat-lib_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-expat-lib_MOBJC_TARGETS) : CPPFLAGS := $(workbench-libs-expat-lib_MOBJC_CPPFLAGS)
+$(workbench-libs-expat-lib_MOBJC_TARGETS) : CFLAGS := $(workbench-libs-expat-lib_OBJCFLAGS)
+$(workbench-libs-expat-lib_MOBJC_TARGETS) : $(workbench-libs-expat-lib_MOBJC_WILDCARD).o : $(workbench-libs-expat-lib_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-expat-lib_IQUOTE) $(dir $<) $(workbench-libs-expat-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_IQUOTE) . $(workbench-libs-expat-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-expat-lib_IQUOTE) $(dir $<) $(workbench-libs-expat-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_IQUOTE) . $(workbench-libs-expat-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-expat-lib_IQUOTE) $(dir $<) $(workbench-libs-expat-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_IQUOTE) . $(workbench-libs-expat-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-expat-lib_MOBJC_DTARGETS) : $(workbench-libs-expat-lib_MOBJC_WILDCARD).d : $(workbench-libs-expat-lib_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-expat-lib_OBJCDFLAGS) $(workbench-libs-expat-lib_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-libs-expat-lib_MC_SRCWILDCARD := %
+else
+workbench-libs-expat-lib_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-expat-lib_OBJDIR),)
+workbench-libs-expat-lib_MC_TARGETS := $(addsuffix .o,$(workbench-libs-expat-lib_CCFILES))
+workbench-libs-expat-lib_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-expat-lib_CCFILES))
+workbench-libs-expat-lib_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-expat-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(notdir $(workbench-libs-expat-lib_CCFILES))))
+    workbench-libs-expat-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(notdir $(workbench-libs-expat-lib_CCFILES))))
+else
+ifeq (,)
+    workbench-libs-expat-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(workbench-libs-expat-lib_CCFILES)))
+    workbench-libs-expat-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(workbench-libs-expat-lib_CCFILES)))
+else
+    workbench-libs-expat-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-expat-lib_CCFILES))))
+    workbench-libs-expat-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-expat-lib_CCFILES))))
+endif
+endif
+workbench-libs-expat-lib_MC_TGTWILDCARD := $(workbench-libs-expat-lib_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-expat-lib_CCFILES))
+
+# Be sure that all .c files are found
+workbench-libs-expat-lib_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-expat-lib_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-expat-lib_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-expat-lib_MC_DIRS := $(foreach dir, $(workbench-libs-expat-lib_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-expat-lib_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-expat-lib_MC_DIRS),)
+    workbench-libs-expat-lib_MC_DIRS := $(shell echo $(workbench-libs-expat-lib_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-expat-lib_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-expat-lib_MC_CPPFLAGS := $(workbench-libs-expat-lib_CPPFLAGS)
+workbench-libs-expat-lib_CFLAGS := $(workbench-libs-expat-lib_CFLAGS)
+ifeq ($(workbench-libs-expat-lib_DFLAGS),)
+  workbench-libs-expat-lib_DFLAGS := $(workbench-libs-expat-lib_CFLAGS)
+else
+  workbench-libs-expat-lib_DFLAGS := $(workbench-libs-expat-lib_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-expat-lib_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-expat-lib_STRIP ?= $(TARGET_STRIP)
+workbench-libs-expat-lib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_MC_CPPFLAGS:=$(strip $(workbench-libs-expat-lib_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_CFLAGS:=$(strip $(workbench-libs-expat-lib_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_DFLAGS:=$(workbench-libs-expat-lib_DFLAGS)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-expat-lib_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-expat-lib_STRIP ?= $(HOST_STRIP)
+workbench-libs-expat-lib_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-expat-lib_CFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-expat-lib_DFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-expat-lib_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-expat-lib_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-expat-lib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-expat-lib_CFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-expat-lib_DFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-expat-lib_MC_TARGETS) : CPPFLAGS := $(workbench-libs-expat-lib_MC_CPPFLAGS)
+$(workbench-libs-expat-lib_MC_TARGETS) : CFLAGS := $(workbench-libs-expat-lib_CFLAGS)
+$(workbench-libs-expat-lib_MC_TARGETS) : $(workbench-libs-expat-lib_MC_TGTWILDCARD).o : $(workbench-libs-expat-lib_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-expat-lib_IQUOTE) $(dir $<) $(workbench-libs-expat-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_IQUOTE) . $(workbench-libs-expat-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-expat-lib_IQUOTE) $(dir $<) $(workbench-libs-expat-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_IQUOTE) . $(workbench-libs-expat-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-expat-lib_IQUOTE) $(dir $<) $(workbench-libs-expat-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_IQUOTE) . $(workbench-libs-expat-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-expat-lib_MC_DTARGETS) : $(workbench-libs-expat-lib_MC_TGTWILDCARD).d : $(workbench-libs-expat-lib_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-expat-lib_DFLAGS) $(workbench-libs-expat-lib_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+workbench-libs-expat-lib_MC_SRCWILDCARD := %
+else
+workbench-libs-expat-lib_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-expat-lib_OBJDIR),)
+workbench-libs-expat-lib_MC_TARGETS := $(addsuffix .o,$(workbench-libs-expat-lib_TARGETCCFILES))
+workbench-libs-expat-lib_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-expat-lib_TARGETCCFILES))
+workbench-libs-expat-lib_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-expat-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(notdir $(workbench-libs-expat-lib_TARGETCCFILES))))
+    workbench-libs-expat-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(notdir $(workbench-libs-expat-lib_TARGETCCFILES))))
+else
+ifeq (,)
+    workbench-libs-expat-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(workbench-libs-expat-lib_TARGETCCFILES)))
+    workbench-libs-expat-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(workbench-libs-expat-lib_TARGETCCFILES)))
+else
+    workbench-libs-expat-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-expat-lib_TARGETCCFILES))))
+    workbench-libs-expat-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(patsubst /%,%,$(workbench-libs-expat-lib_TARGETCCFILES))))
+endif
+endif
+workbench-libs-expat-lib_MC_TGTWILDCARD := $(workbench-libs-expat-lib_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-expat-lib_TARGETCCFILES))
+
+# Be sure that all .c files are found
+workbench-libs-expat-lib_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-expat-lib_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-expat-lib_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-expat-lib_MC_DIRS := $(foreach dir, $(workbench-libs-expat-lib_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-expat-lib_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-expat-lib_MC_DIRS),)
+    workbench-libs-expat-lib_MC_DIRS := $(shell echo $(workbench-libs-expat-lib_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-expat-lib_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-expat-lib_MC_CPPFLAGS := $(workbench-libs-expat-lib_CPPFLAGS) -D__AROS__
+workbench-libs-expat-lib_CFLAGS := $(workbench-libs-expat-lib_CFLAGS)
+ifeq ($(workbench-libs-expat-lib_DFLAGS),)
+  workbench-libs-expat-lib_DFLAGS := $(workbench-libs-expat-lib_CFLAGS)
+else
+  workbench-libs-expat-lib_DFLAGS := $(workbench-libs-expat-lib_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-expat-lib_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-expat-lib_STRIP ?= $(TARGET_STRIP)
+workbench-libs-expat-lib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_MC_CPPFLAGS:=$(strip $(workbench-libs-expat-lib_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_CFLAGS:=$(strip $(workbench-libs-expat-lib_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_DFLAGS:=$(workbench-libs-expat-lib_DFLAGS)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-expat-lib_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-expat-lib_STRIP ?= $(HOST_STRIP)
+workbench-libs-expat-lib_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-expat-lib_CFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-expat-lib_DFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-expat-lib_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-expat-lib_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-expat-lib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-expat-lib_CFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-expat-lib_DFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-expat-lib_MC_TARGETS) : CPPFLAGS := $(workbench-libs-expat-lib_MC_CPPFLAGS)
+$(workbench-libs-expat-lib_MC_TARGETS) : CFLAGS := $(workbench-libs-expat-lib_CFLAGS)
+$(workbench-libs-expat-lib_MC_TARGETS) : $(workbench-libs-expat-lib_MC_TGTWILDCARD).o : $(workbench-libs-expat-lib_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-expat-lib_IQUOTE) $(dir $<) $(workbench-libs-expat-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_IQUOTE) . $(workbench-libs-expat-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-expat-lib_IQUOTE) $(dir $<) $(workbench-libs-expat-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_IQUOTE) . $(workbench-libs-expat-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-expat-lib_IQUOTE) $(dir $<) $(workbench-libs-expat-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_IQUOTE) . $(workbench-libs-expat-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-expat-lib_MC_DTARGETS) : $(workbench-libs-expat-lib_MC_TGTWILDCARD).d : $(workbench-libs-expat-lib_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-expat-lib_DFLAGS) $(workbench-libs-expat-lib_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+workbench-libs-expat-lib_MC_SRCWILDCARD := %
+else
+workbench-libs-expat-lib_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-libs-expat-lib_OBJDIR)/linklib,)
+workbench-libs-expat-lib_MC_TARGETS := $(addsuffix .o,$(workbench-libs-expat-lib_NLIBARCHFILES))
+workbench-libs-expat-lib_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-expat-lib_NLIBARCHFILES))
+workbench-libs-expat-lib_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-expat-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$(notdir $(workbench-libs-expat-lib_NLIBARCHFILES))))
+    workbench-libs-expat-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$(notdir $(workbench-libs-expat-lib_NLIBARCHFILES))))
+else
+ifeq (,)
+    workbench-libs-expat-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$(workbench-libs-expat-lib_NLIBARCHFILES)))
+    workbench-libs-expat-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$(workbench-libs-expat-lib_NLIBARCHFILES)))
+else
+    workbench-libs-expat-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$(patsubst /%,%,$(workbench-libs-expat-lib_NLIBARCHFILES))))
+    workbench-libs-expat-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$(patsubst /%,%,$(workbench-libs-expat-lib_NLIBARCHFILES))))
+endif
+endif
+workbench-libs-expat-lib_MC_TGTWILDCARD := $(workbench-libs-expat-lib_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-expat-lib_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+workbench-libs-expat-lib_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-expat-lib_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-expat-lib_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-expat-lib_MC_DIRS := $(foreach dir, $(workbench-libs-expat-lib_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-expat-lib_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-expat-lib_MC_DIRS),)
+    workbench-libs-expat-lib_MC_DIRS := $(shell echo $(workbench-libs-expat-lib_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-expat-lib_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-expat-lib_MC_CPPFLAGS := $(workbench-libs-expat-lib_LINKLIBCPPFLAGS) -D__AROS__
+workbench-libs-expat-lib_CFLAGS := $(workbench-libs-expat-lib_LINKLIBCFLAGS)
+ifeq ($(workbench-libs-expat-lib_LINKLIBDFLAGS),)
+  workbench-libs-expat-lib_DFLAGS := $(workbench-libs-expat-lib_LINKLIBCFLAGS)
+else
+  workbench-libs-expat-lib_DFLAGS := $(workbench-libs-expat-lib_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-expat-lib_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-expat-lib_STRIP ?= $(TARGET_STRIP)
+workbench-libs-expat-lib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_MC_CPPFLAGS:=$(strip $(workbench-libs-expat-lib_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_CFLAGS:=$(strip $(workbench-libs-expat-lib_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_DFLAGS:=$(workbench-libs-expat-lib_DFLAGS)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-expat-lib_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-expat-lib_STRIP ?= $(HOST_STRIP)
+workbench-libs-expat-lib_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-expat-lib_CFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-expat-lib_DFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-expat-lib_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-expat-lib_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-expat-lib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-expat-lib_CFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-expat-lib_DFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-expat-lib_MC_TARGETS) : CPPFLAGS := $(workbench-libs-expat-lib_MC_CPPFLAGS)
+$(workbench-libs-expat-lib_MC_TARGETS) : CFLAGS := $(workbench-libs-expat-lib_CFLAGS)
+$(workbench-libs-expat-lib_MC_TARGETS) : $(workbench-libs-expat-lib_MC_TGTWILDCARD).o : $(workbench-libs-expat-lib_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-expat-lib_IQUOTE) $(dir $<) $(workbench-libs-expat-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_IQUOTE) . $(workbench-libs-expat-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-expat-lib_IQUOTE) $(dir $<) $(workbench-libs-expat-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_IQUOTE) . $(workbench-libs-expat-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-expat-lib_IQUOTE) $(dir $<) $(workbench-libs-expat-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_IQUOTE) . $(workbench-libs-expat-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-expat-lib_MC_DTARGETS) : $(workbench-libs-expat-lib_MC_TGTWILDCARD).d : $(workbench-libs-expat-lib_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-expat-lib_DFLAGS) $(workbench-libs-expat-lib_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-libs-expat-lib_OBJDIR)/linklib,)
+workbench-libs-expat-lib_MC_SRCWILDCARD := %
+else
+workbench-libs-expat-lib_MC_SRCWILDCARD := $(workbench-libs-expat-lib_OBJDIR)/linklib/%
+endif
+
+ifeq ($(workbench-libs-expat-lib_OBJDIR)/linklib,)
+workbench-libs-expat-lib_MC_TARGETS := $(addsuffix .o,$(workbench-libs-expat-lib_LINKLIBCCGENFILES))
+workbench-libs-expat-lib_MC_DTARGETS := $(addsuffix .d,$(workbench-libs-expat-lib_LINKLIBCCGENFILES))
+workbench-libs-expat-lib_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-libs-expat-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$(notdir $(workbench-libs-expat-lib_LINKLIBCCGENFILES))))
+    workbench-libs-expat-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$(notdir $(workbench-libs-expat-lib_LINKLIBCCGENFILES))))
+else
+ifeq ($(workbench-libs-expat-lib_OBJDIR)/linklib,)
+    workbench-libs-expat-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$(workbench-libs-expat-lib_LINKLIBCCGENFILES)))
+    workbench-libs-expat-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$(workbench-libs-expat-lib_LINKLIBCCGENFILES)))
+else
+    workbench-libs-expat-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$(patsubst $(workbench-libs-expat-lib_OBJDIR)/linklib/%,%,$(workbench-libs-expat-lib_LINKLIBCCGENFILES))))
+    workbench-libs-expat-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$(patsubst $(workbench-libs-expat-lib_OBJDIR)/linklib/%,%,$(workbench-libs-expat-lib_LINKLIBCCGENFILES))))
+endif
+endif
+workbench-libs-expat-lib_MC_TGTWILDCARD := $(workbench-libs-expat-lib_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : | $(addsuffix .c,$(workbench-libs-expat-lib_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+workbench-libs-expat-lib_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-expat-lib_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-expat-lib_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-expat-lib_MC_DIRS := $(foreach dir, $(workbench-libs-expat-lib_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-expat-lib_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-expat-lib_MC_DIRS),)
+    workbench-libs-expat-lib_MC_DIRS := $(shell echo $(workbench-libs-expat-lib_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-libs-expat-lib_MC_DIRS)
+endif
+
+endif
+
+workbench-libs-expat-lib_MC_CPPFLAGS := $(workbench-libs-expat-lib_LINKLIBCPPFLAGS) -D__AROS__
+workbench-libs-expat-lib_CFLAGS := $(workbench-libs-expat-lib_LINKLIBCFLAGS)
+ifeq ($(workbench-libs-expat-lib_LINKLIBDFLAGS),)
+  workbench-libs-expat-lib_DFLAGS := $(workbench-libs-expat-lib_LINKLIBCFLAGS)
+else
+  workbench-libs-expat-lib_DFLAGS := $(workbench-libs-expat-lib_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-libs-expat-lib_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-libs-expat-lib_STRIP ?= $(TARGET_STRIP)
+workbench-libs-expat-lib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_MC_CPPFLAGS:=$(strip $(workbench-libs-expat-lib_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_CFLAGS:=$(strip $(workbench-libs-expat-lib_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_DFLAGS:=$(workbench-libs-expat-lib_DFLAGS)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-libs-expat-lib_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-libs-expat-lib_STRIP ?= $(HOST_STRIP)
+workbench-libs-expat-lib_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-expat-lib_CFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-libs-expat-lib_DFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-libs-expat-lib_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-libs-expat-lib_STRIP ?= $(ECHO) >/dev/null
+workbench-libs-expat-lib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_CPPFLAGS) $(workbench-libs-expat-lib_MC_EXTRA_CPPFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-expat-lib_CFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-libs-expat-lib_DFLAGS))
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-libs-expat-lib_MC_TARGETS) $(workbench-libs-expat-lib_MC_DTARGETS) : workbench-libs-expat-lib_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-libs-expat-lib_MC_TARGETS) : CPPFLAGS := $(workbench-libs-expat-lib_MC_CPPFLAGS)
+$(workbench-libs-expat-lib_MC_TARGETS) : CFLAGS := $(workbench-libs-expat-lib_CFLAGS)
+$(workbench-libs-expat-lib_MC_TARGETS) : $(workbench-libs-expat-lib_MC_TGTWILDCARD).o : $(workbench-libs-expat-lib_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-libs-expat-lib_IQUOTE) $(dir $<) $(workbench-libs-expat-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_IQUOTE) . $(workbench-libs-expat-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-libs-expat-lib_IQUOTE) $(dir $<) $(workbench-libs-expat-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_IQUOTE) . $(workbench-libs-expat-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-libs-expat-lib_IQUOTE) $(dir $<) $(workbench-libs-expat-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-libs-expat-lib_IQUOTE) . $(workbench-libs-expat-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-libs-expat-lib_MC_DTARGETS) : $(workbench-libs-expat-lib_MC_TGTWILDCARD).d : $(workbench-libs-expat-lib_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-libs-expat-lib_DFLAGS) $(workbench-libs-expat-lib_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(workbench-libs-expat-lib_LINKLIBAFILES),)
+
+ifeq ($(workbench-libs-expat-lib_OBJDIR)/linklib,)
+workbench-libs-expat-lib-MA_TARGETS := $(addsuffix .o,$(workbench-libs-expat-lib_LINKLIBAFILES) $(workbench-libs-expat-lib_RELLINKLIBAFILES))
+workbench-libs-expat-lib-MA_WILDCARD := %
+else
+workbench-libs-expat-lib-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$(notdir $(workbench-libs-expat-lib_LINKLIBAFILES) $(workbench-libs-expat-lib_RELLINKLIBAFILES))))
+workbench-libs-expat-lib-MA_WILDCARD := $(workbench-libs-expat-lib_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(workbench-libs-expat-lib-MA_TARGETS) : | $(addsuffix .S,$(workbench-libs-expat-lib_LINKLIBAFILES) $(workbench-libs-expat-lib_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+workbench-libs-expat-lib-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-libs-expat-lib-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-libs-expat-lib_LINKLIBAFILES) $(workbench-libs-expat-lib_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-libs-expat-lib-MA_DIRS := $(foreach dir, $(workbench-libs-expat-lib-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-libs-expat-lib-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-libs-expat-lib-MA_DIRS),)
+    workbench-libs-expat-lib-MA_DIRS := $(shell echo $(workbench-libs-expat-lib-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(workbench-libs-expat-lib-MA_DIRS)
+endif
+
+endif
+
+workbench-libs-expat-lib-MA_ASSEMBLER ?= $(workbench-libs-expat-lib_ASSEMBLER)
+
+$(workbench-libs-expat-lib-MA_TARGETS) : workbench-libs-expat-lib-MA_CMD:= $(workbench-libs-expat-lib-MA_ASSEMBLER)
+
+$(workbench-libs-expat-lib-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(workbench-libs-expat-lib-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(workbench-libs-expat-lib-MA_TARGETS) : $(workbench-libs-expat-lib-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-libs-expat-lib-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-libs-expat-lib-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-libs-expat-lib-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+workbench-libs-expat-lib_SUFFIX           := library
+else
+workbench-libs-expat-lib_SUFFIX           := 
+endif
+
+ifeq (target,target)
+workbench-libs-expat-lib_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-libs-expat-lib_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-libs-expat-lib_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(workbench-libs-expat-lib_SUFFIX),handler)
+workbench-libs-expat-lib_MODULE           := $(AROSDIR)/$(workbench-libs-expat-lib_MODDIR)/$(workbench-libs-expat-lib_DEFNAME)-$(workbench-libs-expat-lib_SUFFIX)
+else
+workbench-libs-expat-lib_MODULE           := $(AROSDIR)/$(workbench-libs-expat-lib_MODDIR)/$(workbench-libs-expat-lib_DEFNAME).$(workbench-libs-expat-lib_SUFFIX)
+endif
+workbench-libs-expat-lib_KOBJ             := $(KOBJSDIR)/$(workbench-libs-expat-lib_DEFNAME)_$(workbench-libs-expat-lib_SUFFIX).o
+else
+workbench-libs-expat-lib_MODULE           :=
+workbench-libs-expat-lib_KOBJ             :=
+endif
+
+workbench-libs-expat-lib-quick      : workbench-libs-expat-lib
+workbench-libs-expat-lib            : $(workbench-libs-expat-lib_MODULE) $(workbench-libs-expat-lib_LINKLIB) $(workbench-libs-expat-lib_RELLINKLIB)
+ifeq (M,M)
+workbench-libs-expat-lib-kobj       : $(workbench-libs-expat-lib_KOBJ) $(workbench-libs-expat-lib_LINKLIB) $(workbench-libs-expat-lib_RELLINKLIB)
+workbench-libs-expat-lib-kobj-quick : $(workbench-libs-expat-lib_KOBJ) $(workbench-libs-expat-lib_LINKLIB) $(workbench-libs-expat-lib_RELLINKLIB)
+endif
+ifeq (M,M)
+workbench-libs-expat-lib-linklib    : $(workbench-libs-expat-lib_LINKLIB) $(workbench-libs-expat-lib_RELLINKLIB)
+endif
+
+workbench-libs-expat-lib_OBJS := $(addsuffix .o,$(workbench-libs-expat-lib_STARTFILES)) $(workbench-libs-expat-lib_ARCHOBJS) \
+           $(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(notdir $(workbench-libs-expat-lib_C_NARCHFILES:=.o) $(workbench-libs-expat-lib_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (library,handler)
+workbench-libs-expat-lib_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (expat,con)
+    workbench-libs-expat-lib_ERR          := $(notdir $(workbench-libs-expat-lib_MODULE)).err
+else
+    workbench-libs-expat-lib_ERR          := expat.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(workbench-libs-expat-lib_DEFNAME)_LDFLAGS) $(workbench-libs-expat-lib_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-libs-expat-lib_LIBS) $($(workbench-libs-expat-lib_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(workbench-libs-expat-lib_MODULE) : LIB_NAMES := $(workbench-libs-expat-lib_LIBS) $($(workbench-libs-expat-lib_DEFNAME)_LIBS)
+$(workbench-libs-expat-lib_MODULE) : OBJS := $(workbench-libs-expat-lib_STARTOBJS) $(workbench-libs-expat-lib_OBJS) $(USER_OBJS)
+$(workbench-libs-expat-lib_MODULE) : ENDTAG := $(workbench-libs-expat-lib_ENDOBJS)
+$(workbench-libs-expat-lib_MODULE) : ERR := $(workbench-libs-expat-lib_ERR)
+$(workbench-libs-expat-lib_MODULE) : OBJDIR := $(workbench-libs-expat-lib_OBJDIR)
+$(workbench-libs-expat-lib_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(workbench-libs-expat-lib_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(workbench-libs-expat-lib_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(workbench-libs-expat-lib_MODULE) : $(workbench-libs-expat-lib_STARTOBJS) $(workbench-libs-expat-lib_OBJS) $(USER_OBJS) $(workbench-libs-expat-lib_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(workbench-libs-expat-lib_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(workbench-libs-expat-lib_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+workbench-libs-expat-lib_LC_LINKLIBNAME   := $(shell echo $(workbench-libs-expat-lib_LINKLIBNAME) | tr A-Z a-z)
+workbench-libs-expat-lib_LC_MODNAME       := $(shell echo expat | tr A-Z a-z)
+ifneq ($(workbench-libs-expat-lib_LINKLIB),)
+
+ifeq (target,target)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_LINKLIBNAME)$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_AR:=$(AR)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_LINKLIBNAME)$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_LINKLIBNAME)$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_AR:=$(HOST_AR)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_LINKLIBNAME)$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_LINKLIBNAME)$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_AR:=$(KERNEL_AR)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_LINKLIBNAME)$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_LINKLIBNAME)$(workbench-libs-expat-lib_LIBSUFFIX).a : $(workbench-libs-expat-lib_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-libs-expat-lib_AR) $@ $^
+	$(Q)$(workbench-libs-expat-lib_RANLIB) $@
+ifneq ($(workbench-libs-expat-lib_LC_MODNAME),$(workbench-libs-expat-lib_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(workbench-libs-expat-lib_LIBDIR)/libexpat$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_AR:=$(AR)
+$(workbench-libs-expat-lib_LIBDIR)/libexpat$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-libs-expat-lib_LIBDIR)/libexpat$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_AR:=$(HOST_AR)
+$(workbench-libs-expat-lib_LIBDIR)/libexpat$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-libs-expat-lib_LIBDIR)/libexpat$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_AR:=$(KERNEL_AR)
+$(workbench-libs-expat-lib_LIBDIR)/libexpat$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-libs-expat-lib_LIBDIR)/libexpat$(workbench-libs-expat-lib_LIBSUFFIX).a : $(workbench-libs-expat-lib_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-libs-expat-lib_AR) $@ $^
+	$(Q)$(workbench-libs-expat-lib_RANLIB) $@
+endif
+
+
+ifneq ($(workbench-libs-expat-lib_LINKLIB),)
+$(workbench-libs-expat-lib_LINKLIB) : | $(workbench-libs-expat-lib_LIBDIR)
+else
+$(workbench-libs-expat-lib_LINKLIB) :: $(workbench-libs-expat-lib_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-expat-lib_LIBDIR)
+
+endif
+
+ifneq ($(workbench-libs-expat-lib_RELLINKLIB),)
+
+ifeq (target,target)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_LINKLIBNAME)_rel$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_AR:=$(AR)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_LINKLIBNAME)_rel$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_LINKLIBNAME)_rel$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_AR:=$(HOST_AR)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_LINKLIBNAME)_rel$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_LINKLIBNAME)_rel$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_AR:=$(KERNEL_AR)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_LINKLIBNAME)_rel$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_LINKLIBNAME)_rel$(workbench-libs-expat-lib_LIBSUFFIX).a : $(workbench-libs-expat-lib_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-libs-expat-lib_AR) $@ $^
+	$(Q)$(workbench-libs-expat-lib_RANLIB) $@
+ifneq ($(workbench-libs-expat-lib_LC_MODNAME),$(workbench-libs-expat-lib_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_DEFNAME)_rel$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_AR:=$(AR)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_DEFNAME)_rel$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_DEFNAME)_rel$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_AR:=$(HOST_AR)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_DEFNAME)_rel$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_DEFNAME)_rel$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_AR:=$(KERNEL_AR)
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_DEFNAME)_rel$(workbench-libs-expat-lib_LIBSUFFIX).a : workbench-libs-expat-lib_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-libs-expat-lib_LIBDIR)/lib$(workbench-libs-expat-lib_DEFNAME)_rel$(workbench-libs-expat-lib_LIBSUFFIX).a : $(workbench-libs-expat-lib_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-libs-expat-lib_AR) $@ $^
+	$(Q)$(workbench-libs-expat-lib_RANLIB) $@
+endif
+
+
+ifneq ($(workbench-libs-expat-lib_RELLINKLIB),)
+$(workbench-libs-expat-lib_RELLINKLIB) : | $(workbench-libs-expat-lib_LIBDIR)
+else
+$(workbench-libs-expat-lib_RELLINKLIB) :: $(workbench-libs-expat-lib_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-expat-lib_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+workbench-libs-expat-lib_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+workbench-libs-expat-lib_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+workbench-libs-expat-lib_SYMBOLS := $(workbench-libs-expat-lib_KBASE)
+
+workbench-libs-expat-lib_KLIB             := hiddstubs amiga arossupport autoinit libinit
+workbench-libs-expat-lib_KOBJ_LIBS        := $(filter-out $(workbench-libs-expat-lib_KLIB),$(workbench-libs-expat-lib_LIBS)) $(workbench-libs-expat-lib_KAUTOLIB)
+$(workbench-libs-expat-lib_KOBJ) : LINKLIBS:=$(workbench-libs-expat-lib_KOBJ_LIBS) $($(workbench-libs-expat-lib_DEFNAME)_LIBS)
+$(workbench-libs-expat-lib_KOBJ) : FILTBASES:=$(addprefix -L ,$(workbench-libs-expat-lib_SYMBOLS))
+$(workbench-libs-expat-lib_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(workbench-libs-expat-lib_KOBJ) : $(workbench-libs-expat-lib_OBJS) $(USER_OBJS) $(workbench-libs-expat-lib_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+workbench-libs-expat-lib_DEPS             := $(addprefix $(workbench-libs-expat-lib_OBJDIR)/,$(notdir $(workbench-libs-expat-lib_CCFILES:=.d) $(workbench-libs-expat-lib_TARGETCCFILES:=.d) $(workbench-libs-expat-lib_CXXFILES:=.d))) $(addprefix $(workbench-libs-expat-lib_OBJDIR)/linklib/,$(notdir $(workbench-libs-expat-lib_LINKLIBCCFILES:=.d)))
+
+ifneq ($(workbench-libs-expat-lib_DEPS),)
+  ifneq (workbench-libs-expat-lib workbench-libs-expat-lib-quick workbench-libs-expat-lib-kobj workbench-libs-expat-lib-kobj-quick,)
+    ifneq ($(findstring $(TARGET),workbench-libs-expat-lib workbench-libs-expat-lib-quick workbench-libs-expat-lib-kobj workbench-libs-expat-lib-kobj-quick),)
+      -include $(workbench-libs-expat-lib_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-libs-expat-lib_DEPS)
+    endif
+  endif
+endif
+
+$(workbench-libs-expat-lib_OBJS) $(workbench-libs-expat-lib_DEPS) : | $(workbench-libs-expat-lib_OBJDIR)/linklib
+
+ifneq ($(workbench-libs-expat-lib_OBJS) $(workbench-libs-expat-lib_DEPS) $(workbench-libs-expat-lib_MODULE) $(workbench-libs-expat-lib_KOBJ),)
+$(workbench-libs-expat-lib_OBJS) $(workbench-libs-expat-lib_DEPS) $(workbench-libs-expat-lib_MODULE) $(workbench-libs-expat-lib_KOBJ) : | $(workbench-libs-expat-lib_OBJDIR) $(AROSDIR)/$(workbench-libs-expat-lib_MODDIR) $(KOBJSDIR)
+else
+$(workbench-libs-expat-lib_OBJS) $(workbench-libs-expat-lib_DEPS) $(workbench-libs-expat-lib_MODULE) $(workbench-libs-expat-lib_KOBJ) :: $(workbench-libs-expat-lib_OBJDIR) $(AROSDIR)/$(workbench-libs-expat-lib_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-libs-expat-lib_OBJDIR) $(AROSDIR)/$(workbench-libs-expat-lib_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),workbench-libs-expat-lib workbench-libs-expat-lib-includes workbench-libs-expat-lib-quick workbench-libs-expat-lib-kobj workbench-libs-expat-lib-kobj-quick),) # Only for this target these deps are wanted
+
+workbench-libs-expat-lib_DFILE_DEPS := $(workbench-libs-expat-lib_LIBDEFSINC) $(workbench-libs-expat-lib_DEFLIBDEFSINC) \
+    $(addprefix $(workbench-libs-expat-lib_INCDIR)/,$($(workbench-libs-expat-lib_DEFNAME)_INCLUDES))
+$(workbench-libs-expat-lib_DEPS) : $(workbench-libs-expat-lib_DFILE_DEPS)
+endif
+
+workbench-libs-expat-lib_TOCLEAN := $(workbench-libs-expat-lib_OBJS) $(workbench-libs-expat-lib_DEPS) \
+    $(workbench-libs-expat-lib_MODULE) $(workbench-libs-expat-lib_LINKLIB) $(workbench-libs-expat-lib_KOBJ) \
+    $(workbench-libs-expat-lib_OBJDIR)/Makefile.expatlibrary \
+    $(addprefix $(workbench-libs-expat-lib_OBJDIR)/include/,$($(workbench-libs-expat-lib_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(workbench-libs-expat-lib_DEFNAME)_INCLUDES)) \
+    $(addprefix $(workbench-libs-expat-lib_INCDIR)/,$($(workbench-libs-expat-lib_DEFNAME)_INCLUDES)) \
+    $(workbench-libs-expat-lib_OBJDIR)/expat_geninc $(workbench-libs-expat-lib_OBJDIR)/expat_incs \
+    $(addsuffix .c,$(workbench-libs-expat-lib_LINKLIBFILES)) $(workbench-libs-expat-lib_LINKLIBOBJS) $(workbench-libs-expat-lib_LIBDEFSINC) \
+    $(workbench-libs-expat-lib_DEFLIBDEFSINC) $(addsuffix .c,$(workbench-libs-expat-lib_STARTFILES) $(workbench-libs-expat-lib_ENDFILES)) \
+    $(workbench-libs-expat-lib_ENDOBJS)
+workbench-libs-expat-lib-clean : FILES              := $(workbench-libs-expat-lib_TOCLEAN)
+workbench-libs-expat-lib-clean ::
+	$(Q)$(ECHO) "Cleaning up for module expat"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(workbench-libs-expat-lib_ALLTARGETS)
+
+
+
+INCLUDE_FILES := expat.h expat_external.h
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq (,)
+TMP_DIR                := 
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst ,$(GENINCDIR)/.,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/./,$(notdir $(INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := /
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)//
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/./,$(INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/./% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq (,)
+BD_INCL_FILES2         := $(subst ,$(AROS_INCLUDES)/.,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/./,$(notdir $(INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/./,$(INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/./% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+
+#MM
+workbench-libs-expat-pc : $(AROS_LIB)/pkgconfig/expat.pc
+
+$(AROS_LIB)/pkgconfig/expat.pc : $(SRCDIR)/$(CURDIR)/../expat.pc.aros
+	@$(IF) $(TEST) ! -d $(AROS_LIB)/pkgconfig ; then $(MKDIR) $(AROS_LIB)/pkgconfig ; else $(NOP) ; fi
+	$(CP) $^ $@
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

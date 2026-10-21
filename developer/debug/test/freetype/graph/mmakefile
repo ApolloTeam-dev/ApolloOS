@@ -1,0 +1,539 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM test-freetype-lib-graph : includes linklibs
+
+FILES := \
+	grblit \
+    gblender \
+    gblblit \
+	grobjs \
+    grfill \
+	grfont \
+	grdevice \
+	grinit \
+    grswizzle \
+	aros/graros
+
+USER_INCLUDES		:= -I$(SRCDIR)/$(CURDIR) -I$(SRCDIR)/$(CURDIR)/graph
+USER_CPPFLAGS		:= -DDEVICE_AROS
+
+
+# assign and generate the local variables used in this macro
+test-freetype-lib-graph_LIBNAME           := graph
+test-freetype-lib-graph_LINKLIB           := $(AROS_LIB)/libgraph.a
+
+test-freetype-lib-graph_FILES             ?= $(FILES)
+test-freetype-lib-graph_ASMFILES          := 
+test-freetype-lib-graph_OBJCFILES         := 
+test-freetype-lib-graph_CXXFILES          := 
+
+test-freetype-lib-graph_OBJDIR            ?= $(GENDIR)/$(CURDIR)
+test-freetype-lib-graph_ARCHOBJS          := $(wildcard $(test-freetype-lib-graph_OBJDIR)/arch/*.o)
+ifeq (no,no)
+    test-freetype-lib-graph_ARCHFILES     := $(basename $(notdir $(test-freetype-lib-graph_ARCHOBJS)))
+else
+    test-freetype-lib-graph_ARCHFILES     := $(basename $(patsubst $(test-freetype-lib-graph_OBJDIR)/%,%,$(test-freetype-lib-graph_ARCHOBJS)))
+endif
+test-freetype-lib-graph_C_NARCHFILES      := $(filter-out $(test-freetype-lib-graph_ARCHFILES),$(test-freetype-lib-graph_FILES))
+test-freetype-lib-graph_C_FILES           ?= $(test-freetype-lib-graph_C_NARCHFILES)
+test-freetype-lib-graph_CXX_NARCHFILES    := $(filter-out $(test-freetype-lib-graph_ARCHFILES),$(test-freetype-lib-graph_CXXFILES))
+test-freetype-lib-graph_CXX_FILES         ?= $(test-freetype-lib-graph_CXX_NARCHFILES)
+test-freetype-lib-graph_OBJC_NARCHFILES   := $(filter-out $(test-freetype-lib-graph_ARCHFILES),$(test-freetype-lib-graph_OBJCFILES))
+test-freetype-lib-graph_OBJC_FILES        ?= $(test-freetype-lib-graph_OBJC_NARCHFILES)
+
+ifeq (no,no)
+    test-freetype-lib-graph_OBJ_FILES     ?= $(addprefix $(test-freetype-lib-graph_OBJDIR)/,$(notdir $(test-freetype-lib-graph_C_NARCHFILES:=.o) $(test-freetype-lib-graph_CXX_NARCHFILES:=.o) $(test-freetype-lib-graph_ASMFILES:=.o) $(test-freetype-lib-graph_OBJC_NARCHFILES:=.o)))
+else
+    test-freetype-lib-graph_OBJ_FILES     ?= $(addprefix $(test-freetype-lib-graph_OBJDIR)/,$(test-freetype-lib-graph_C_NARCHFILES:=.o) $(test-freetype-lib-graph_CXX_NARCHFILES:=.o) $(test-freetype-lib-graph_ASMFILES:=.o) $(test-freetype-lib-graph_OBJC_NARCHFILES:=.o))
+endif
+test-freetype-lib-graph_OBJS              ?= $(test-freetype-lib-graph_ARCHOBJS) $(test-freetype-lib-graph_OBJ_FILES) 
+test-freetype-lib-graph_DEPS              := $(patsubst %.o,%.d,$(test-freetype-lib-graph_OBJS))
+
+test-freetype-lib-graph_CPPFLAGS          := $(CPPFLAGS)
+ifneq (,)
+    test-freetype-lib-graph_CPPFLAGS      += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-freetype-lib-graph_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+test-freetype-lib-graph_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+test-freetype-lib-graph_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+test-freetype-lib-graph_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-freetype-lib-graph_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+test-freetype-lib-graph_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+test-freetype-lib-graph_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+test-freetype-lib-graph_CXXFLAGS          := 
+endif
+
+ifeq ($(TARGET_LTO),yes)
+ifeq (target,target)
+        test-freetype-lib-graph_CFLAGS    := $(strip $(LTO_CFLAGS) $(test-freetype-lib-graph_CFLAGS))
+        test-freetype-lib-graph_CXXFLAGS  := $(strip $(LTO_CFLAGS) $(test-freetype-lib-graph_CXXFLAGS))
+endif
+endif
+test-freetype-lib-graph_AFLAGS            := $(AFLAGS)
+test-freetype-lib-graph_DFLAGS            := 
+ifneq (,)
+    test-freetype-lib-graph_DFLAGS        := 
+else
+    test-freetype-lib-graph_DFLAGS        := $(test-freetype-lib-graph_CFLAGS)
+endif
+test-freetype-lib-graph_DXXFLAGS          := 
+ifneq (,)
+    test-freetype-lib-graph_DXXFLAGS      := 
+else
+    test-freetype-lib-graph_DXXFLAGS      := $(test-freetype-lib-graph_CXXFLAGS)
+endif
+
+.PHONY : test-freetype-lib-graph test-freetype-lib-graph-clean test-freetype-lib-graph-quick
+
+#MM
+test-freetype-lib-graph-quick : test-freetype-lib-graph
+
+#MM test-freetype-lib-graph : includes-generate-deps
+test-freetype-lib-graph : $(test-freetype-lib-graph_LINKLIB)
+
+ifneq ($(filter $(TARGET),test-freetype-lib-graph test-freetype-lib-graph-quick),)
+
+
+test-freetype-lib-graph_CXXABSBASENAMES := $(foreach test-freetype-lib-graph_CXXBASE,$(test-freetype-lib-graph_CXX_FILES),$(if $(filter /%,$(test-freetype-lib-graph_CXXBASE)),$(test-freetype-lib-graph_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(test-freetype-lib-graph_CXXBASE))))
+
+ifneq ($(test-freetype-lib-graph_CXXABSBASENAMES),)
+
+test-freetype-lib-graph_CXXBASENAMES := $(basename $(test-freetype-lib-graph_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+test-freetype-lib-graph_MCXX_FILES  := $(strip $(foreach test-freetype-lib-graph_CXXBASE,$(test-freetype-lib-graph_CXXABSBASENAMES), $(firstword $(wildcard $(foreach test-freetype-lib-graph_EXT, $(AROS_CXXEXTS),$(addsuffix .$(test-freetype-lib-graph_EXT),$(test-freetype-lib-graph_CXXBASE)))))))
+
+ifeq (,)
+test-freetype-lib-graph_MCXX_SRCWILDCARD := %
+else
+test-freetype-lib-graph_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-freetype-lib-graph_OBJDIR),)
+  test-freetype-lib-graph_CXXTARGETS := $(notdir $(test-freetype-lib-graph_CXXBASENAMES:=.o))
+  test-freetype-lib-graph_CXXDTARGETS := $(notdir $(test-freetype-lib-graph_CXXBASENAMES:=.d))
+  test-freetype-lib-graph_MCXX_WILDCARD := %
+else
+  test-freetype-lib-graph_CXXTARGETS := $(addprefix $(test-freetype-lib-graph_OBJDIR)/,$(notdir $(test-freetype-lib-graph_CXXBASENAMES:=.o)))
+  test-freetype-lib-graph_CXXDTARGETS := $(addprefix $(test-freetype-lib-graph_OBJDIR)/,$(notdir $(test-freetype-lib-graph_CXXBASENAMES:=.d)))
+  test-freetype-lib-graph_MCXX_WILDCARD := $(test-freetype-lib-graph_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(test-freetype-lib-graph_CXXTARGETS) $(test-freetype-lib-graph_CXXDTARGETS) : | $(test-freetype-lib-graph_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+test-freetype-lib-graph_MCXX_CPPFLAGS := $(test-freetype-lib-graph_CPPFLAGS)
+test-freetype-lib-graph_CXXFLAGS := $(test-freetype-lib-graph_CXXFLAGS)
+ifeq ($(test-freetype-lib-graph_DXXFLAGS),)
+  test-freetype-lib-graph_DXXFLAGS := $(test-freetype-lib-graph_CXXFLAGS)
+else
+  test-freetype-lib-graph_DXXFLAGS := $(test-freetype-lib-graph_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  test-freetype-lib-graph_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  test-freetype-lib-graph_STRIP ?= $(HOST_STRIP)
+  test-freetype-lib-graph_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  test-freetype-lib-graph_CXXCMD:=$(HOST_CXX)
+  test-freetype-lib-graph_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(test-freetype-lib-graph_MCXX_CPPFLAGS) $(test-freetype-lib-graph_MCXX_EXTRA_CPPFLAGS))
+  test-freetype-lib-graph_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-freetype-lib-graph_CXXFLAGS))
+  test-freetype-lib-graph_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-freetype-lib-graph_DXXFLAGS))
+  test-freetype-lib-graph_CXXIQUOTE:=$(HOST_IQUOTE)
+  test-freetype-lib-graph_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  test-freetype-lib-graph_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-freetype-lib-graph_STRIP ?= $(TARGET_STRIP)
+  test-freetype-lib-graph_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  test-freetype-lib-graph_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  test-freetype-lib-graph_MCXX_CPPFLAGS := $(strip $(test-freetype-lib-graph_MCXX_CPPFLAGS) $(test-freetype-lib-graph_MCXX_EXTRA_CPPFLAGS))
+  test-freetype-lib-graph_CXXFLAGS := $(strip $(test-freetype-lib-graph_CXXFLAGS) $(SAFETY_CFLAGS))
+  test-freetype-lib-graph_DXXFLAGS := $(test-freetype-lib-graph_DXXFLAGS)
+  test-freetype-lib-graph_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  test-freetype-lib-graph_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  test-freetype-lib-graph_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-freetype-lib-graph_STRIP ?= $(ECHO) >/dev/null
+  test-freetype-lib-graph_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  test-freetype-lib-graph_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  test-freetype-lib-graph_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(test-freetype-lib-graph_MCXX_CPPFLAGS) $(test-freetype-lib-graph_MCXX_EXTRA_CPPFLAGS))
+  test-freetype-lib-graph_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-freetype-lib-graph_CXXFLAGS))
+  test-freetype-lib-graph_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-freetype-lib-graph_DXXFLAGS))
+  test-freetype-lib-graph_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  test-freetype-lib-graph_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(test-freetype-lib-graph_CXXCMD) $(test-freetype-lib-graph_CXXIQUOTE) $(dir $(2)) $(test-freetype-lib-graph_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-lib-graph_CXXIQUOTE) . $(test-freetype-lib-graph_CXXIQUOTE_END) $(strip $(test-freetype-lib-graph_CXXFLAGS) $(test-freetype-lib-graph_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(test-freetype-lib-graph_CXXCMD) $(test-freetype-lib-graph_CXXIQUOTE) $(dir $(2)) $(test-freetype-lib-graph_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-lib-graph_CXXIQUOTE) . $(test-freetype-lib-graph_CXXIQUOTE_END) $(strip $(test-freetype-lib-graph_CXXFLAGS) $(test-freetype-lib-graph_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(test-freetype-lib-graph_CXXCMD) $(test-freetype-lib-graph_CXXIQUOTE) $(dir $(2)) $(test-freetype-lib-graph_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-lib-graph_CXXIQUOTE) . $(test-freetype-lib-graph_CXXIQUOTE_END) $(strip $(test-freetype-lib-graph_CXXFLAGS) $(test-freetype-lib-graph_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(test-freetype-lib-graph_CXXCMD)" $(MKDEPEND) $(strip $(test-freetype-lib-graph_DXXFLAGS) $(test-freetype-lib-graph_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(test-freetype-lib-graph_OBJDIR),)
+  $(foreach test-freetype-lib-graph_CXXFILE,$(test-freetype-lib-graph_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(test-freetype-lib-graph_CXXFILE))),$(test-freetype-lib-graph_CXXFILE))))
+else
+  $(foreach test-freetype-lib-graph_CXXFILE,$(test-freetype-lib-graph_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(test-freetype-lib-graph_OBJDIR)/,$(notdir $(basename $(test-freetype-lib-graph_CXXFILE)))),$(test-freetype-lib-graph_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(test-freetype-lib-graph_OBJC_FILES),)
+
+ifeq (,)
+test-freetype-lib-graph_MOBJC_SRCWILDCARD := %
+else
+test-freetype-lib-graph_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-freetype-lib-graph_OBJDIR),)
+  test-freetype-lib-graph_MOBJC_TARGETS := $(addsuffix .o,$(test-freetype-lib-graph_OBJC_FILES))
+  test-freetype-lib-graph_MOBJC_DTARGETS := $(addsuffix .d,$(test-freetype-lib-graph_OBJC_FILES))
+  test-freetype-lib-graph_MOBJC_WILDCARD := %
+else
+  test-freetype-lib-graph_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(test-freetype-lib-graph_OBJDIR)/,$(test-freetype-lib-graph_OBJC_FILES)))
+  test-freetype-lib-graph_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(test-freetype-lib-graph_OBJDIR)/,$(test-freetype-lib-graph_OBJC_FILES)))
+  test-freetype-lib-graph_MOBJC_WILDCARD := $(test-freetype-lib-graph_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : | $(addsuffix .m,$(test-freetype-lib-graph_OBJC_FILES))
+
+  # Be sure that all .m files are found
+  test-freetype-lib-graph_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  test-freetype-lib-graph_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(test-freetype-lib-graph_OBJC_FILES))) | sed 's/\(.\):\//\/\1\//g')
+  test-freetype-lib-graph_MOBJC_DIRS := $(foreach dir, $(test-freetype-lib-graph_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-freetype-lib-graph_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(test-freetype-lib-graph_MOBJC_DIRS),)
+    test-freetype-lib-graph_MOBJC_DIRS := $(shell echo $(test-freetype-lib-graph_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(test-freetype-lib-graph_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  test-freetype-lib-graph_CC := $(TARGET_CC)
+else
+  test-freetype-lib-graph_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+test-freetype-lib-graph_MOBJC_CPPFLAGS := $(test-freetype-lib-graph_CPPFLAGS)
+test-freetype-lib-graph_OBJCFLAGS := $(test-freetype-lib-graph_CFLAGS)
+test-freetype-lib-graph_OBJCFLAGS := $(test-freetype-lib-graph_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+test-freetype-lib-graph_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(test-freetype-lib-graph_OBJCFLAGS)))
+ifeq ($(test-freetype-lib-graph_DFLAGS),)
+  test-freetype-lib-graph_OBJCDFLAGS := $(test-freetype-lib-graph_CFLAGS)
+else
+  test-freetype-lib-graph_OBJCDFLAGS := $(test-freetype-lib-graph_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  test-freetype-lib-graph_LINK ?= $(strip $(test-freetype-lib-graph_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-freetype-lib-graph_STRIP ?= $(TARGET_STRIP)
+  test-freetype-lib-graph_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : CMD:=$(strip $(test-freetype-lib-graph_CC) $(TARGET_SYSROOT))
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : test-freetype-lib-graph_MOBJC_CPPFLAGS:=$(strip $(test-freetype-lib-graph_MOBJC_CPPFLAGS) $(test-freetype-lib-graph_MOBJC_EXTRA_CPPFLAGS))
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : test-freetype-lib-graph_OBJCFLAGS:=$(strip $(test-freetype-lib-graph_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : test-freetype-lib-graph_OBJCDFLAGS:=$(test-freetype-lib-graph_OBJCDFLAGS)
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : test-freetype-lib-graph_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : test-freetype-lib-graph_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  test-freetype-lib-graph_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  test-freetype-lib-graph_STRIP ?= $(HOST_STRIP)
+  test-freetype-lib-graph_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : test-freetype-lib-graph_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(test-freetype-lib-graph_MOBJC_CPPFLAGS) $(test-freetype-lib-graph_MOBJC_EXTRA_CPPFLAGS))
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : test-freetype-lib-graph_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(test-freetype-lib-graph_OBJCFLAGS))
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : test-freetype-lib-graph_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(test-freetype-lib-graph_OBJCDFLAGS))
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : test-freetype-lib-graph_IQUOTE:=$(HOST_IQUOTE)
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : test-freetype-lib-graph_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  test-freetype-lib-graph_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-freetype-lib-graph_STRIP ?= $(ECHO) >/dev/null
+  test-freetype-lib-graph_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : test-freetype-lib-graph_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(test-freetype-lib-graph_MOBJC_CPPFLAGS) $(test-freetype-lib-graph_MOBJC_EXTRA_CPPFLAGS))
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : test-freetype-lib-graph_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-freetype-lib-graph_OBJCFLAGS))
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : test-freetype-lib-graph_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-freetype-lib-graph_OBJCDFLAGS))
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : test-freetype-lib-graph_IQUOTE:=$(KERNEL_IQUOTE)
+  $(test-freetype-lib-graph_MOBJC_TARGETS) $(test-freetype-lib-graph_MOBJC_DTARGETS) : test-freetype-lib-graph_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-freetype-lib-graph_MOBJC_TARGETS) : CPPFLAGS := $(test-freetype-lib-graph_MOBJC_CPPFLAGS)
+$(test-freetype-lib-graph_MOBJC_TARGETS) : CFLAGS := $(test-freetype-lib-graph_OBJCFLAGS)
+$(test-freetype-lib-graph_MOBJC_TARGETS) : $(test-freetype-lib-graph_MOBJC_WILDCARD).o : $(test-freetype-lib-graph_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-freetype-lib-graph_IQUOTE) $(dir $<) $(test-freetype-lib-graph_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-lib-graph_IQUOTE) . $(test-freetype-lib-graph_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-freetype-lib-graph_IQUOTE) $(dir $<) $(test-freetype-lib-graph_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-lib-graph_IQUOTE) . $(test-freetype-lib-graph_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-freetype-lib-graph_IQUOTE) $(dir $<) $(test-freetype-lib-graph_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-lib-graph_IQUOTE) . $(test-freetype-lib-graph_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-freetype-lib-graph_MOBJC_DTARGETS) : $(test-freetype-lib-graph_MOBJC_WILDCARD).d : $(test-freetype-lib-graph_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-freetype-lib-graph_OBJCDFLAGS) $(test-freetype-lib-graph_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+test-freetype-lib-graph_MC_SRCWILDCARD := %
+else
+test-freetype-lib-graph_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-freetype-lib-graph_OBJDIR),)
+test-freetype-lib-graph_MC_TARGETS := $(addsuffix .o,$(test-freetype-lib-graph_C_FILES))
+test-freetype-lib-graph_MC_DTARGETS := $(addsuffix .d,$(test-freetype-lib-graph_C_FILES))
+test-freetype-lib-graph_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-freetype-lib-graph_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-freetype-lib-graph_OBJDIR)/,$(notdir $(test-freetype-lib-graph_C_FILES))))
+    test-freetype-lib-graph_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-freetype-lib-graph_OBJDIR)/,$(notdir $(test-freetype-lib-graph_C_FILES))))
+else
+ifeq (,)
+    test-freetype-lib-graph_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-freetype-lib-graph_OBJDIR)/,$(test-freetype-lib-graph_C_FILES)))
+    test-freetype-lib-graph_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-freetype-lib-graph_OBJDIR)/,$(test-freetype-lib-graph_C_FILES)))
+else
+    test-freetype-lib-graph_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-freetype-lib-graph_OBJDIR)/,$(patsubst /%,%,$(test-freetype-lib-graph_C_FILES))))
+    test-freetype-lib-graph_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-freetype-lib-graph_OBJDIR)/,$(patsubst /%,%,$(test-freetype-lib-graph_C_FILES))))
+endif
+endif
+test-freetype-lib-graph_MC_TGTWILDCARD := $(test-freetype-lib-graph_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : | $(addsuffix .c,$(test-freetype-lib-graph_C_FILES))
+
+# Be sure that all .c files are found
+test-freetype-lib-graph_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-freetype-lib-graph_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-freetype-lib-graph_C_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-freetype-lib-graph_MC_DIRS := $(foreach dir, $(test-freetype-lib-graph_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-freetype-lib-graph_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-freetype-lib-graph_MC_DIRS),)
+    test-freetype-lib-graph_MC_DIRS := $(shell echo $(test-freetype-lib-graph_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-freetype-lib-graph_MC_DIRS)
+endif
+
+endif
+
+test-freetype-lib-graph_MC_CPPFLAGS := $(test-freetype-lib-graph_CPPFLAGS)
+test-freetype-lib-graph_CFLAGS := $(test-freetype-lib-graph_CFLAGS)
+ifeq ($(test-freetype-lib-graph_DFLAGS),)
+  test-freetype-lib-graph_DFLAGS := $(test-freetype-lib-graph_CFLAGS)
+else
+  test-freetype-lib-graph_DFLAGS := $(test-freetype-lib-graph_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-freetype-lib-graph_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-freetype-lib-graph_STRIP ?= $(TARGET_STRIP)
+test-freetype-lib-graph_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : test-freetype-lib-graph_MC_CPPFLAGS:=$(strip $(test-freetype-lib-graph_MC_CPPFLAGS) $(test-freetype-lib-graph_MC_EXTRA_CPPFLAGS))
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : test-freetype-lib-graph_CFLAGS:=$(strip $(test-freetype-lib-graph_CFLAGS) $(SAFETY_CFLAGS))
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : test-freetype-lib-graph_DFLAGS:=$(test-freetype-lib-graph_DFLAGS)
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : test-freetype-lib-graph_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : test-freetype-lib-graph_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-freetype-lib-graph_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-freetype-lib-graph_STRIP ?= $(HOST_STRIP)
+test-freetype-lib-graph_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : test-freetype-lib-graph_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-freetype-lib-graph_MC_CPPFLAGS) $(test-freetype-lib-graph_MC_EXTRA_CPPFLAGS))
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : test-freetype-lib-graph_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-freetype-lib-graph_CFLAGS))
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : test-freetype-lib-graph_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-freetype-lib-graph_DFLAGS))
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : test-freetype-lib-graph_IQUOTE:=$(HOST_IQUOTE)
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : test-freetype-lib-graph_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-freetype-lib-graph_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-freetype-lib-graph_STRIP ?= $(ECHO) >/dev/null
+test-freetype-lib-graph_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : test-freetype-lib-graph_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-freetype-lib-graph_MC_CPPFLAGS) $(test-freetype-lib-graph_MC_EXTRA_CPPFLAGS))
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : test-freetype-lib-graph_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-freetype-lib-graph_CFLAGS))
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : test-freetype-lib-graph_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-freetype-lib-graph_DFLAGS))
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : test-freetype-lib-graph_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-freetype-lib-graph_MC_TARGETS) $(test-freetype-lib-graph_MC_DTARGETS) : test-freetype-lib-graph_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-freetype-lib-graph_MC_TARGETS) : CPPFLAGS := $(test-freetype-lib-graph_MC_CPPFLAGS)
+$(test-freetype-lib-graph_MC_TARGETS) : CFLAGS := $(test-freetype-lib-graph_CFLAGS)
+$(test-freetype-lib-graph_MC_TARGETS) : $(test-freetype-lib-graph_MC_TGTWILDCARD).o : $(test-freetype-lib-graph_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-freetype-lib-graph_IQUOTE) $(dir $<) $(test-freetype-lib-graph_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-lib-graph_IQUOTE) . $(test-freetype-lib-graph_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-freetype-lib-graph_IQUOTE) $(dir $<) $(test-freetype-lib-graph_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-lib-graph_IQUOTE) . $(test-freetype-lib-graph_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-freetype-lib-graph_IQUOTE) $(dir $<) $(test-freetype-lib-graph_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-freetype-lib-graph_IQUOTE) . $(test-freetype-lib-graph_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-freetype-lib-graph_MC_DTARGETS) : $(test-freetype-lib-graph_MC_TGTWILDCARD).d : $(test-freetype-lib-graph_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-freetype-lib-graph_DFLAGS) $(test-freetype-lib-graph_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(test-freetype-lib-graph_OBJDIR),)
+test-freetype-lib-graph-MA_TARGETS := $(addsuffix .o,$(test-freetype-lib-graph_ASMFILES))
+test-freetype-lib-graph-MA_WILDCARD := %
+else
+test-freetype-lib-graph-MA_TARGETS := $(addsuffix .o,$(addprefix $(test-freetype-lib-graph_OBJDIR)/,$(notdir $(test-freetype-lib-graph_ASMFILES))))
+test-freetype-lib-graph-MA_WILDCARD := $(test-freetype-lib-graph_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(test-freetype-lib-graph-MA_TARGETS) : | $(addsuffix .s,$(test-freetype-lib-graph_ASMFILES))
+
+# Be sure that all .c files are found
+test-freetype-lib-graph-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-freetype-lib-graph-MA_BASEDIRS := $(shell echo $(sort $(dir $(test-freetype-lib-graph_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+test-freetype-lib-graph-MA_DIRS := $(foreach dir, $(test-freetype-lib-graph-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-freetype-lib-graph-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-freetype-lib-graph-MA_DIRS),)
+    test-freetype-lib-graph-MA_DIRS := $(shell echo $(test-freetype-lib-graph-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(test-freetype-lib-graph-MA_DIRS)
+endif
+
+endif
+
+test-freetype-lib-graph-MA_ASSEMBLER ?= $(test-freetype-lib-graph_ASSEMBLER)
+
+$(test-freetype-lib-graph-MA_TARGETS) : test-freetype-lib-graph-MA_CMD:= $(test-freetype-lib-graph-MA_ASSEMBLER)
+
+$(test-freetype-lib-graph-MA_TARGETS) : CPPFLAGS := $(test-freetype-lib-graph_CPPFLAGS)
+$(test-freetype-lib-graph-MA_TARGETS) : AFLAGS := $(test-freetype-lib-graph_AFLAGS)
+$(test-freetype-lib-graph-MA_TARGETS) : $(test-freetype-lib-graph-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(test-freetype-lib-graph-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(test-freetype-lib-graph-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(test-freetype-lib-graph-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+ifeq (target,target)
+$(AROS_LIB)/libgraph.a : test-freetype-lib-graph_AR:=$(AR)
+$(AROS_LIB)/libgraph.a : test-freetype-lib-graph_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(AROS_LIB)/libgraph.a : test-freetype-lib-graph_AR:=$(HOST_AR)
+$(AROS_LIB)/libgraph.a : test-freetype-lib-graph_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(AROS_LIB)/libgraph.a : test-freetype-lib-graph_AR:=$(KERNEL_AR)
+$(AROS_LIB)/libgraph.a : test-freetype-lib-graph_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(AROS_LIB)/libgraph.a : $(test-freetype-lib-graph_OBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(test-freetype-lib-graph_AR) $@ $^
+	$(Q)$(test-freetype-lib-graph_RANLIB) $@
+endif
+
+ifneq ($(test-freetype-lib-graph_DEPS),)
+  ifneq (test-freetype-lib-graph test-freetype-lib-graph-quick,)
+    ifneq ($(findstring $(TARGET),test-freetype-lib-graph test-freetype-lib-graph-quick),)
+      -include $(test-freetype-lib-graph_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-freetype-lib-graph_DEPS)
+    endif
+  endif
+endif
+
+
+
+ifneq ($(test-freetype-lib-graph_OBJS) $(test-freetype-lib-graph_DEPS) $(test-freetype-lib-graph_LINKLIB),)
+$(test-freetype-lib-graph_OBJS) $(test-freetype-lib-graph_DEPS) $(test-freetype-lib-graph_LINKLIB) : | $(test-freetype-lib-graph_OBJDIR) $(AROS_LIB)
+else
+$(test-freetype-lib-graph_OBJS) $(test-freetype-lib-graph_DEPS) $(test-freetype-lib-graph_LINKLIB) :: $(test-freetype-lib-graph_OBJDIR) $(AROS_LIB)
+endif
+
+GLOB_MKDIRS += $(test-freetype-lib-graph_OBJDIR) $(AROS_LIB)
+
+
+test-freetype-lib-graph-clean : FILES := $(test-freetype-lib-graph_OBJS) $(test-freetype-lib-graph_LINKLIB) $(test-freetype-lib-graph_DEPS)
+#MM
+test-freetype-lib-graph-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-freetype-lib-graph"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

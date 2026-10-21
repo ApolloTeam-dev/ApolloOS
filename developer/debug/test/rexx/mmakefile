@@ -1,0 +1,303 @@
+#   $Id$
+#
+#   Makefile for AROS Test
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := vartest rexxsyslibtest
+EXEDIR := $(AROS_TESTS)/rexx
+
+USER_CFLAGS := -I$(SRCDIR)/workbench/libs
+
+#MM- test : test-rexx
+#MM- test-rexx : test-rexx-util test-rexx-copy
+
+
+.PHONY : test-rexx-util
+
+test-rexx-util_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-rexx-util_TARGETDIR := $(EXEDIR)
+test-rexx-util_LIBS := 
+
+test-rexx-util_FILES     := $(FILES)
+test-rexx-util_OBJS      := $(addsuffix .o,$(addprefix $(test-rexx-util_OBJDIR)/,$(test-rexx-util_FILES)))
+test-rexx-util_DEPS      := $(addsuffix .d,$(addprefix $(test-rexx-util_OBJDIR)/,$(test-rexx-util_FILES)))
+test-rexx-util_EXES      := $(addprefix $(test-rexx-util_TARGETDIR)/,$(test-rexx-util_FILES))
+
+test-rexx-util_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-rexx-util_CPPFLAGS += -I
+endif
+test-rexx-util_CFLAGS    := $(CFLAGS)
+test-rexx-util_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-rexx-util_COVERAGE := yes
+test-rexx-util_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-rexx-util_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-rexx-util_CFLAGS    := $(strip $(test-rexx-util_COVERAGEFLAGS) $(test-rexx-util_CFLAGS))
+test-rexx-util_LIBS += $(test-rexx-util_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-rexx-util_FUNCINSTR := yes
+test-rexx-util_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-rexx-util_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-rexx-util_CFLAGS    := $(strip $(test-rexx-util_INSTRFUNCFLAGS) $(test-rexx-util_CFLAGS))
+test-rexx-util_LIBS += $(test-rexx-util_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-rexx-util_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-rexx-util_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-rexx-util_DFLAGS := 
+else
+    test-rexx-util_DFLAGS := $(test-rexx-util_CFLAGS)
+endif
+ifeq (target,target)
+test-rexx-util_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-rexx-util_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-rexx-util_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-rexx-util_LDFLAGS += -L
+endif
+
+#MM
+test-rexx-util-quick : test-rexx-util
+
+#MM test-rexx-util : includes-generate-deps core-linklibs
+test-rexx-util : $(test-rexx-util_EXES)
+
+ifneq ($(filter $(TARGET),test-rexx-util test-rexx-util-quick),)
+
+ifeq (,)
+test-rexx-util_MC_SRCWILDCARD := %
+else
+test-rexx-util_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-rexx-util_OBJDIR),)
+test-rexx-util_MC_TARGETS := $(addsuffix .o,$(test-rexx-util_FILES))
+test-rexx-util_MC_DTARGETS := $(addsuffix .d,$(test-rexx-util_FILES))
+test-rexx-util_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-rexx-util_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-rexx-util_OBJDIR)/,$(notdir $(test-rexx-util_FILES))))
+    test-rexx-util_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-rexx-util_OBJDIR)/,$(notdir $(test-rexx-util_FILES))))
+else
+ifeq (,)
+    test-rexx-util_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-rexx-util_OBJDIR)/,$(test-rexx-util_FILES)))
+    test-rexx-util_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-rexx-util_OBJDIR)/,$(test-rexx-util_FILES)))
+else
+    test-rexx-util_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-rexx-util_OBJDIR)/,$(patsubst /%,%,$(test-rexx-util_FILES))))
+    test-rexx-util_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-rexx-util_OBJDIR)/,$(patsubst /%,%,$(test-rexx-util_FILES))))
+endif
+endif
+test-rexx-util_MC_TGTWILDCARD := $(test-rexx-util_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : | $(addsuffix .c,$(test-rexx-util_FILES))
+
+# Be sure that all .c files are found
+test-rexx-util_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-rexx-util_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-rexx-util_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-rexx-util_MC_DIRS := $(foreach dir, $(test-rexx-util_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-rexx-util_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-rexx-util_MC_DIRS),)
+    test-rexx-util_MC_DIRS := $(shell echo $(test-rexx-util_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-rexx-util_MC_DIRS)
+endif
+
+endif
+
+test-rexx-util_MC_CPPFLAGS := $(test-rexx-util_CPPFLAGS)
+test-rexx-util_CFLAGS := $(test-rexx-util_CFLAGS)
+ifeq ($(test-rexx-util_DFLAGS),)
+  test-rexx-util_DFLAGS := $(test-rexx-util_CFLAGS)
+else
+  test-rexx-util_DFLAGS := $(test-rexx-util_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-rexx-util_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-rexx-util_STRIP ?= $(TARGET_STRIP)
+test-rexx-util_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : test-rexx-util_MC_CPPFLAGS:=$(strip $(test-rexx-util_MC_CPPFLAGS) $(test-rexx-util_MC_EXTRA_CPPFLAGS))
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : test-rexx-util_CFLAGS:=$(strip $(test-rexx-util_CFLAGS) $(SAFETY_CFLAGS))
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : test-rexx-util_DFLAGS:=$(test-rexx-util_DFLAGS)
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : test-rexx-util_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : test-rexx-util_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-rexx-util_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-rexx-util_STRIP ?= $(HOST_STRIP)
+test-rexx-util_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : test-rexx-util_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-rexx-util_MC_CPPFLAGS) $(test-rexx-util_MC_EXTRA_CPPFLAGS))
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : test-rexx-util_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-rexx-util_CFLAGS))
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : test-rexx-util_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-rexx-util_DFLAGS))
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : test-rexx-util_IQUOTE:=$(HOST_IQUOTE)
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : test-rexx-util_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-rexx-util_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-rexx-util_STRIP ?= $(ECHO) >/dev/null
+test-rexx-util_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : test-rexx-util_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-rexx-util_MC_CPPFLAGS) $(test-rexx-util_MC_EXTRA_CPPFLAGS))
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : test-rexx-util_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-rexx-util_CFLAGS))
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : test-rexx-util_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-rexx-util_DFLAGS))
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : test-rexx-util_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-rexx-util_MC_TARGETS) $(test-rexx-util_MC_DTARGETS) : test-rexx-util_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-rexx-util_MC_TARGETS) : CPPFLAGS := $(test-rexx-util_MC_CPPFLAGS)
+$(test-rexx-util_MC_TARGETS) : CFLAGS := $(test-rexx-util_CFLAGS)
+$(test-rexx-util_MC_TARGETS) : $(test-rexx-util_MC_TGTWILDCARD).o : $(test-rexx-util_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-rexx-util_IQUOTE) $(dir $<) $(test-rexx-util_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-rexx-util_IQUOTE) . $(test-rexx-util_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-rexx-util_IQUOTE) $(dir $<) $(test-rexx-util_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-rexx-util_IQUOTE) . $(test-rexx-util_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-rexx-util_IQUOTE) $(dir $<) $(test-rexx-util_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-rexx-util_IQUOTE) . $(test-rexx-util_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-rexx-util_MC_DTARGETS) : $(test-rexx-util_MC_TGTWILDCARD).d : $(test-rexx-util_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-rexx-util_DFLAGS) $(test-rexx-util_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-rexx-util-link_EXTRA_LDFLAGS := 
+test-rexx-util-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-rexx-util-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-rexx-util-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-rexx-util-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-rexx-util-link_DIRS := $(subst -L ,-L,$(strip $(test-rexx-util_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-rexx-util-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-rexx-util-link_DIRS)))
+# Add trailing /
+test-rexx-util-link_DIRS := $(subst //,/,$(addsuffix /,$(test-rexx-util-link_DIRS)))
+# Add normal linklib path
+test-rexx-util-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-rexx-util-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-rexx-util_LIBS) $(test-rexx-util-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-rexx-util-link_DEPLIBS := $(foreach lib,$(test-rexx-util-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-rexx-util-link_DIRS)))) \
+)
+test-rexx-util-link_PROGS := $(addprefix $(test-rexx-util_TARGETDIR)/,$(test-rexx-util_FILES))
+
+$(test-rexx-util-link_PROGS) : OBJDIR := $(test-rexx-util_OBJDIR)
+$(test-rexx-util-link_PROGS) : LDFLAGS := $(strip $(test-rexx-util_LDFLAGS) $(test-rexx-util-link_EXTRA_LDFLAGS))
+$(test-rexx-util-link_PROGS) : LIBS := $(addprefix -l,$(test-rexx-util_LIBS) $(test-rexx-util-link_EXTRA_LIBS) )
+$(test-rexx-util-link_PROGS) : $(test-rexx-util_TARGETDIR)/% : $(test-rexx-util_OBJDIR)/%.o $(test-rexx-util-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-rexx-util_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-rexx-util_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-rexx-util_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-rexx-util_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-rexx-util_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-rexx-util_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-rexx-util_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-rexx-util_DEPS),)
+  ifneq (test-rexx-util test-rexx-util-quick,)
+    ifneq ($(findstring $(TARGET),test-rexx-util test-rexx-util-quick),)
+      -include $(test-rexx-util_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-rexx-util_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-rexx-util_DEPS) $(test-rexx-util_OBJS) $(addprefix $(test-rexx-util_TARGETDIR)/,$(test-rexx-util_FILES)),)
+$(test-rexx-util_DEPS) $(test-rexx-util_OBJS) $(addprefix $(test-rexx-util_TARGETDIR)/,$(test-rexx-util_FILES)) : | $(test-rexx-util_TARGETDIR) $(test-rexx-util_OBJDIR)
+else
+$(test-rexx-util_DEPS) $(test-rexx-util_OBJS) $(addprefix $(test-rexx-util_TARGETDIR)/,$(test-rexx-util_FILES)) :: $(test-rexx-util_TARGETDIR) $(test-rexx-util_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-rexx-util_TARGETDIR) $(test-rexx-util_OBJDIR)
+
+
+test-rexx-util-clean : FILES := $(test-rexx-util_OBJS) $(test-rexx-util_EXES) $(test-rexx-util_DEPS)
+#MM
+test-rexx-util-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-rexx-util"
+	$(Q)$(RM) $(FILES)
+
+
+#MM
+test-rexx-copy : $(EXEDIR)/vartest.rexx
+
+$(EXEDIR)/vartest.rexx: vartest.rexx test-rexx-util
+	@$(CP) $< $@
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

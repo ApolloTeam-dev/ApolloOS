@@ -1,0 +1,56 @@
+# Copyright © 2004, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+ICONS := AltKeyQ ASCIITable AutoPoint Blanker ClickToFront DepthMenu Exchange \
+         FKey NoCapsLock Opaque  
+
+#MM- iconset-GorillaSmall-wbench-icons-aros-clean : iconset-GorillaSmall-wbench-icons-aros-tools-commodities-clean
+#MM- iconset-GorillaSmall-wbench-icons-aros : iconset-GorillaSmall-wbench-icons-aros-tools-commodities
+
+BD_OBJS := $(addprefix  $(AROS_TOOLS)/Commodities/, $(addsuffix .info,$(ICONS)))
+
+#MM
+iconset-GorillaSmall-wbench-icons-aros-tools-commodities : $(BD_OBJS)
+
+ifeq (,)
+
+$(AROS_TOOLS)/Commodities/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/%.png
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+else
+
+$(AROS_TOOLS)/Commodities/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+endif
+
+
+ifneq ($(BD_OBJS),)
+$(BD_OBJS) : | $(AROS_TOOLS)/Commodities
+else
+$(BD_OBJS) :: $(AROS_TOOLS)/Commodities
+endif
+
+GLOB_MKDIRS += $(AROS_TOOLS)/Commodities
+
+
+iconset-GorillaSmall-wbench-icons-aros-tools-commodities-clean : FILES := $(BD_OBJS)
+#MM
+iconset-GorillaSmall-wbench-icons-aros-tools-commodities-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: iconset-GorillaSmall-wbench-icons-aros-tools-commodities iconset-GorillaSmall-wbench-icons-aros-tools-commodities-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

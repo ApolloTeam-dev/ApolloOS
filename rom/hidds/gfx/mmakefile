@@ -1,0 +1,1747 @@
+#$Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+COLORCONVFILES := \
+                rgbconv \
+                rgbconv_arch \
+                colorconv_init \
+
+FILES       := \
+                gfx_init \
+                gfx_hwclass \
+                gfx_hiddclass \
+                gfx_bitmapclass \
+                gfx_histogramclass \
+                gfx_colormapclass \
+                gfx_gcclass \
+                gfx_planarbitmapclass \
+                gfx_chunkybitmapclass \
+                gfx_bitmapconvertpixels \
+                gfx_bitmapmemblit \
+                gfx_pixfmtclass \
+                gfx_syncclass
+
+NOWARN_FLAGS := $(NOWARN_PARENTHESES)
+USER_CFLAGS      := $(NOWARN_FLAGS)
+USER_CPPFLAGS:= -DAROS_USE_OOP \
+                    -D__GRAPHICS_NOLIBBASE__ \
+                    -D__OOP_NOLIBBASE__ \
+                    -D__UTILITY_NOLIBBASE__
+USER_LDFLAGS := -static
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-hidd-gfx
+#MM kernel-hidd-gfx-quick
+#MM kernel-hidd-gfx-makefile
+#MM kernel-hidd-gfx-clean
+
+# ABI targets:
+#MM- includes-all : kernel-hidd-gfx-includes
+#MM- linklibs-gfx: kernel-hidd-gfx-linklib
+#MM- linklibs-gfx_rel : kernel-hidd-gfx-linklib
+#MM- includes-gfx: kernel-hidd-gfx-includes
+#MM- includes-gfx_rel : kernel-hidd-gfx-includes
+#MM- kernel-hidd-gfx : kernel-hidd-gfx-includes core-linklibs linklibs-
+#MM kernel-hidd-gfx-linklib : kernel-hidd-gfx-includes includes-
+#MM- kernel-hidd-gfx-quick : kernel-hidd-gfx-includes-quick
+#MM kernel-hidd-gfx-includes : kernel-hidd-gfx-makefile kernel-hidd-gfx-includes-dirs \
+#MM     includes-generate-deps kernel-hidd-gfx-fd
+#MM kernel-hidd-gfx-includes-quick
+#MM kernel-hidd-gfx-includes-dirs
+#MM kernel-hidd-gfx-fd
+
+# Library targets
+#MM kernel-hidd-gfx-kobj : core-linklibs linklibs-
+#MM kernel-hidd-gfx-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-hidd-gfx-kobj : kernel-hidd-gfx-includes core-linklibs linklibs-
+#MM kernel-hidd-gfx-kobj-quick : kernel-hidd-gfx-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-hidd-gfx_ALLTARGETS       := kernel-hidd-gfx kernel-hidd-gfx-quick kernel-hidd-gfx-clean
+
+ifeq (M,M)
+kernel-hidd-gfx_ALLTARGETS       += kernel-hidd-gfx-kobj kernel-hidd-gfx-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-hidd-gfx_ALLTARGETS += kernel-hidd-gfx-includes \
+                 kernel-hidd-gfx-includes-quick kernel-hidd-gfx-includes-dirs  \
+                 kernel-hidd-gfx-linklib kernel-hidd-gfx-fd
+endif
+
+.PHONY : $(kernel-hidd-gfx_ALLTARGETS) kernel-hidd-gfx-makefile
+
+ifeq (gfx,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (hidd,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-hidd-gfx_DEFNAME      := gfx_
+else
+    kernel-hidd-gfx_DEFNAME      := gfx
+endif
+kernel-hidd-gfx_DEFLINKLIBNAME   := $(kernel-hidd-gfx_DEFNAME)
+ifneq (,)
+    kernel-hidd-gfx_LINKLIBNAME  := 
+else
+    kernel-hidd-gfx_LINKLIBNAME  = $(kernel-hidd-gfx_DEFLINKLIBNAME)
+endif
+kernel-hidd-gfx_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-hidd-gfx_DEFCPPFLAGS  += -I
+endif
+kernel-hidd-gfx_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-hidd-gfx_DFLAGS       := 
+else
+    kernel-hidd-gfx_DFLAGS       = $(kernel-hidd-gfx_DEFDFLAGS)
+endif
+kernel-hidd-gfx_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-hidd-gfx_DXXFLAGS     := 
+else
+    kernel-hidd-gfx_DXXFLAGS     = $(kernel-hidd-gfx_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-gfx_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-gfx_DEFDFLAGS))
+kernel-hidd-gfx_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-hidd-gfx_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-gfx_FUNCINSTR := yes
+kernel-hidd-gfx_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-gfx_DEFDFLAGS))
+kernel-hidd-gfx_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-hidd-gfx_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-hidd-gfx_OBJDIR                     := 
+else
+kernel-hidd-gfx_OBJDIR                     := $(OBJDIR)/$(kernel-hidd-gfx_DEFNAME)
+endif
+ifneq (,)
+kernel-hidd-gfx_OBJDIR           := $(kernel-hidd-gfx_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-hidd-gfx-makefile         := $(kernel-hidd-gfx_OBJDIR)/Makefile.$(kernel-hidd-gfx_DEFNAME)hidd
+kernel-hidd-gfx-genmakefile : $(kernel-hidd-gfx-makefile)
+
+
+kernel-hidd-gfx-genmakefile_OPTS := 
+ifneq (,)
+    kernel-hidd-gfx-genmakefile_OPTS += -f 
+    kernel-hidd-gfx-genmakefile_MODNAME := gfx_
+else
+    kernel-hidd-gfx-genmakefile_MODNAME := gfx
+endif
+kernel-hidd-gfx-genmakefile_TARGET := Makefile.$(kernel-hidd-gfx-genmakefile_MODNAME)hidd
+kernel-hidd-gfx-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-gfx-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-gfx-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-gfx-genmakefile_OPTS += -c 
+        kernel-hidd-gfx-genmakefile_DEPS += 
+    endif 
+else
+    kernel-hidd-gfx-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/gfx.conf
+    kernel-hidd-gfx-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/gfx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-gfx-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-gfx-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-gfx-genmakefile_OPTS += -o 
+        kernel-hidd-gfx-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-gfx-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-gfx_OBJDIR),)
+    kernel-hidd-gfx-genmakefile_OPTS += -d $(kernel-hidd-gfx_OBJDIR)
+    kernel-hidd-gfx-genmakefile_TARGET := $(kernel-hidd-gfx_OBJDIR)/$(kernel-hidd-gfx-genmakefile_TARGET)
+endif
+
+$(kernel-hidd-gfx-genmakefile_TARGET) : OPTS := $(kernel-hidd-gfx-genmakefile_OPTS)
+$(kernel-hidd-gfx-genmakefile_TARGET) : MODNAME := gfx
+$(kernel-hidd-gfx-genmakefile_TARGET) : MODTYPE := hidd
+$(kernel-hidd-gfx-genmakefile_TARGET) : $(kernel-hidd-gfx-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-hidd-gfx-makefile),)
+$(kernel-hidd-gfx-makefile) : | $(kernel-hidd-gfx_OBJDIR)
+else
+$(kernel-hidd-gfx-makefile) :: $(kernel-hidd-gfx_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-gfx_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-hidd-gfx_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-hidd-gfx-makefile)
+
+kernel-hidd-gfx_DEFMODDIR        := $($(kernel-hidd-gfx_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-hidd-gfx_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-hidd-gfx_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-hidd-gfx_MODDIR       := 
+else
+    kernel-hidd-gfx_MODDIR       := $(kernel-hidd-gfx_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-hidd-gfx_INCDIR           := 
+else
+kernel-hidd-gfx_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-hidd-gfx_LIBDEFSINC       := $(kernel-hidd-gfx_OBJDIR)/include/$(kernel-hidd-gfx_DEFNAME)_libdefs.h
+kernel-hidd-gfx_DEFLIBDEFSINC    := $(kernel-hidd-gfx_OBJDIR)/include/$(kernel-hidd-gfx_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-hidd-gfx-includes-quick : kernel-hidd-gfx-includes
+kernel-hidd-gfx-includes : $(addprefix $(GENINCDIR)/,$($(kernel-hidd-gfx_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-gfx_INCDIR)/,$($(kernel-hidd-gfx_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-gfx_LIBDEFSINC) $(kernel-hidd-gfx_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-hidd-gfx_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-hidd-gfx-includes_MODNAME := gfx_
+else
+    kernel-hidd-gfx-includes_MODNAME := gfx
+endif
+
+ifneq ($($(kernel-hidd-gfx-includes_MODNAME)_INCLUDES),)
+
+kernel-hidd-gfx-includes_TARGETS := $($(kernel-hidd-gfx-includes_MODNAME)_INCLUDES)
+
+kernel-hidd-gfx-includes_DEPS := $(GENMODULE)
+kernel-hidd-gfx-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-gfx-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-gfx-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-gfx-includes_OPTS += -c 
+        kernel-hidd-gfx-includes_DEPS += 
+    endif 
+else
+    kernel-hidd-gfx-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/gfx.conf
+    kernel-hidd-gfx-includes_DEPS += $(SRCDIR)/$(CURDIR)/gfx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-gfx-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-gfx-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-gfx-includes_OPTS += -o 
+        kernel-hidd-gfx-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-gfx-includes_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-gfx_OBJDIR)/include,)
+    kernel-hidd-gfx-includes_OPTS += -d $(kernel-hidd-gfx_OBJDIR)/include
+    kernel-hidd-gfx-includes_TARGETS := $(addprefix $(kernel-hidd-gfx_OBJDIR)/include/,$(kernel-hidd-gfx-includes_TARGETS))
+    kernel-hidd-gfx-includes_GENINCFLAG=$(kernel-hidd-gfx_OBJDIR)/include/.gfx.hidd-includes
+else
+    kernel-hidd-gfx-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.gfx.hidd-includes
+endif
+
+$(kernel-hidd-gfx-includes_TARGETS) : $(kernel-hidd-gfx-includes_DEPS) $(kernel-hidd-gfx-includes_GENINCFLAG)
+
+$(kernel-hidd-gfx-includes_GENINCFLAG) : OPTS := $(kernel-hidd-gfx-includes_OPTS)
+$(kernel-hidd-gfx-includes_GENINCFLAG) : MODNAME := gfx
+$(kernel-hidd-gfx-includes_GENINCFLAG) : MODTYPE := hidd
+$(kernel-hidd-gfx-includes_GENINCFLAG) : $(kernel-hidd-gfx-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-hidd-gfx_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-hidd-gfx_DEFNAME)_INCLUDES)) : | $(kernel-hidd-gfx_OBJDIR)/gfx_geninc
+
+$(kernel-hidd-gfx_OBJDIR)/gfx_geninc : COPYSRCDIR := $(kernel-hidd-gfx_OBJDIR)/include
+$(kernel-hidd-gfx_OBJDIR)/gfx_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-hidd-gfx_OBJDIR)/gfx_geninc : FILES := $($(kernel-hidd-gfx_DEFNAME)_INCLUDES)
+$(kernel-hidd-gfx_OBJDIR)/gfx_geninc : $(addprefix $(kernel-hidd-gfx_OBJDIR)/include/,$($(kernel-hidd-gfx_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-hidd-gfx_OBJDIR)/include
+
+$(addprefix $(kernel-hidd-gfx_INCDIR)/,$($(kernel-hidd-gfx_DEFNAME)_INCLUDES)) : | $(kernel-hidd-gfx_OBJDIR)/gfx_incs
+
+$(kernel-hidd-gfx_OBJDIR)/gfx_incs : COPYSRCDIR := $(kernel-hidd-gfx_OBJDIR)/include
+$(kernel-hidd-gfx_OBJDIR)/gfx_incs : TGTDIR := $(kernel-hidd-gfx_INCDIR)
+$(kernel-hidd-gfx_OBJDIR)/gfx_incs : FILES := $($(kernel-hidd-gfx_DEFNAME)_INCLUDES)
+$(kernel-hidd-gfx_OBJDIR)/gfx_incs : $(addprefix $(kernel-hidd-gfx_OBJDIR)/include/,$($(kernel-hidd-gfx_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-hidd-gfx_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-hidd-gfx_DEFNAME)_INCLUDES))))
+
+TMPgfx_INCDIRS := \
+    $(kernel-hidd-gfx_OBJDIR)/include $(addprefix $(kernel-hidd-gfx_OBJDIR)/include/,$(kernel-hidd-gfx_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-hidd-gfx_INCDIRS)) \
+    $(kernel-hidd-gfx_INCDIR) $(addprefix $(kernel-hidd-gfx_INCDIR)/,$(kernel-hidd-gfx_INCDIRS))
+
+ifneq (kernel-hidd-gfx-includes-dirs,)
+kernel-hidd-gfx-includes-dirs : | $(TMPgfx_INCDIRS)
+else
+kernel-hidd-gfx-includes-dirs :: $(TMPgfx_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPgfx_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-hidd-gfx-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-hidd-gfx-genlibdefs_OPTS += -f 
+    kernel-hidd-gfx-genlibdefs_MODNAME := gfx_
+else
+    kernel-hidd-gfx-genlibdefs_MODNAME := gfx
+endif
+kernel-hidd-gfx-genlibdefs_TARGET := $(kernel-hidd-gfx-genlibdefs_MODNAME)_libdefs.h
+kernel-hidd-gfx-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-gfx-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-gfx-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-gfx-genlibdefs_OPTS += -c 
+        kernel-hidd-gfx-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-hidd-gfx-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/gfx.conf
+    kernel-hidd-gfx-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/gfx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-gfx-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-gfx-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-gfx-genlibdefs_OPTS += -o 
+        kernel-hidd-gfx-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-gfx-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-gfx_OBJDIR)/include,)
+    kernel-hidd-gfx-genlibdefs_OPTS += -d $(kernel-hidd-gfx_OBJDIR)/include
+    kernel-hidd-gfx-genlibdefs_TARGET := $(kernel-hidd-gfx_OBJDIR)/include/$(kernel-hidd-gfx-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-hidd-gfx-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-hidd-gfx-genlibdefs_TARGET) : OPTS := $(kernel-hidd-gfx-genlibdefs_OPTS)
+$(kernel-hidd-gfx-genlibdefs_TARGET) : MODNAME := gfx
+$(kernel-hidd-gfx-genlibdefs_TARGET) : MODTYPE := hidd
+$(kernel-hidd-gfx-genlibdefs_TARGET) : $(kernel-hidd-gfx-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-gfx_DEFLIBDEFSINC) : FILENAME := $(kernel-hidd-gfx_LIBDEFSINC)
+$(kernel-hidd-gfx_DEFLIBDEFSINC) : $(kernel-hidd-gfx_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-hidd-gfx_LIBDEFSINC) $(kernel-hidd-gfx_DEFLIBDEFSINC) : | $(kernel-hidd-gfx_OBJDIR)/include
+
+ifneq (kernel-hidd-gfx-includes-dirs,)
+kernel-hidd-gfx-includes-dirs : | $(kernel-hidd-gfx_OBJDIR)/include
+else
+kernel-hidd-gfx-includes-dirs :: $(kernel-hidd-gfx_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-gfx_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-hidd-gfx-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-hidd-gfx-genmodfiles_OPTS += -f 
+    kernel-hidd-gfx-genmodfiles_MODNAME := gfx_
+else
+    kernel-hidd-gfx-genmodfiles_MODNAME := gfx
+endif
+kernel-hidd-gfx-genmodfiles_GENTARGETS := $($(kernel-hidd-gfx-genmodfiles_MODNAME)_STARTFILES) $($(kernel-hidd-gfx-genmodfiles_MODNAME)_ENDFILES)
+kernel-hidd-gfx-genmodfiles_STUBTARGETS := $($(kernel-hidd-gfx-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-hidd-gfx-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-hidd-gfx-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-hidd-gfx-genmodfiles_GENTARGETS))
+kernel-hidd-gfx-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-hidd-gfx-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-hidd-gfx-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-hidd-gfx-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-hidd-gfx-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-gfx-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-gfx-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-gfx-genmodfiles_OPTS += -c 
+        kernel-hidd-gfx-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-hidd-gfx-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/gfx.conf
+    kernel-hidd-gfx-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/gfx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-hidd-gfx-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-hidd-gfx-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-hidd-gfx-genmodfiles_OPTS += -o 
+        kernel-hidd-gfx-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-hidd-gfx-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-gfx_OBJDIR),)
+    kernel-hidd-gfx-genmodfiles_OPTS += -d $(kernel-hidd-gfx_OBJDIR)
+    kernel-hidd-gfx-genmodfiles_TARGETDIR := $(shell echo $(kernel-hidd-gfx_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-gfx-genmodfiles_GENTARGETS := $(addprefix $(kernel-hidd-gfx-genmodfiles_TARGETDIR)/,$(kernel-hidd-gfx-genmodfiles_GENTARGETS))
+    kernel-hidd-gfx-genmodfiles_GENFILEFLAG=$(kernel-hidd-gfx-genmodfiles_TARGETDIR)/.gfx.hidd-genfiles
+else
+    kernel-hidd-gfx-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.gfx.hidd-genfiles
+endif
+ifneq ($(kernel-hidd-gfx_OBJDIR)/linklib,)
+    kernel-hidd-gfx-genmodfiles_OPTS += -l $(kernel-hidd-gfx_OBJDIR)/linklib
+    kernel-hidd-gfx-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-hidd-gfx_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-hidd-gfx-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-gfx-genmodfiles_STUBTARGETDIR)/,$(kernel-hidd-gfx-genmodfiles_STUBTARGETS))
+    kernel-hidd-gfx-genmodfiles_TARGETDIRS += $(kernel-hidd-gfx_OBJDIR)/linklib
+else
+ifneq ($(kernel-hidd-gfx_OBJDIR),)
+    kernel-hidd-gfx-genmodfiles_STUBTARGETS := $(addprefix $(kernel-hidd-gfx-genmodfiles_TARGETDIR)/,$(kernel-hidd-gfx-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-hidd-gfx-genmodfiles_TARGETS := $(kernel-hidd-gfx-genmodfiles_GENTARGETS) $(kernel-hidd-gfx-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-hidd-gfx-genmodfiles_TARGETDIRS),)
+$(kernel-hidd-gfx-genmodfiles_TARGETS) : | $(kernel-hidd-gfx-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-hidd-gfx-genmodfiles_TARGETS) : $(kernel-hidd-gfx-genmodfiles_DEPS) $(kernel-hidd-gfx-genmodfiles_GENFILEFLAG)
+
+$(kernel-hidd-gfx-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-hidd-gfx-genmodfiles_OPTS)
+$(kernel-hidd-gfx-genmodfiles_GENFILEFLAG) : MODNAME := gfx
+$(kernel-hidd-gfx-genmodfiles_GENFILEFLAG) : MODTYPE := hidd
+$(kernel-hidd-gfx-genmodfiles_GENFILEFLAG) : $(kernel-hidd-gfx-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-hidd-gfx-genmodfiles_GENFILEFLAG) : $(kernel-hidd-gfx_DEFLIBDEFSINC) $(kernel-hidd-gfx-makefile)
+
+
+ifneq ($(kernel-hidd-gfx-genmodfiles_GENFILEFLAG),)
+$(kernel-hidd-gfx-genmodfiles_GENFILEFLAG) : | $(kernel-hidd-gfx_OBJDIR)/linklib
+else
+$(kernel-hidd-gfx-genmodfiles_GENFILEFLAG) :: $(kernel-hidd-gfx_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-gfx_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-hidd-gfx_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-hidd-gfx_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-hidd-gfx-fd : $(kernel-hidd-gfx_FDDIR)/gfx_lib.fd
+
+
+TMP_TARGET := gfx_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/gfx.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/gfx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-hidd-gfx_FDDIR),)
+    TMP_OPTS += -d $(kernel-hidd-gfx_FDDIR)
+    TMP_TARGET := $(kernel-hidd-gfx_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := gfx
+$(TMP_TARGET) : MODTYPE := hidd
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-hidd-gfx_FDDIR)/gfx_lib.fd : | $(kernel-hidd-gfx_FDDIR)
+
+
+ifneq (kernel-hidd-gfx-fd-setup,)
+kernel-hidd-gfx-fd-setup : | $(kernel-hidd-gfx_FDDIR)
+else
+kernel-hidd-gfx-fd-setup :: $(kernel-hidd-gfx_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-gfx_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-hidd-gfx_FILES            := $(FILES) $(COLORCONVFILES)
+kernel-hidd-gfx_OBJCFILES        := 
+kernel-hidd-gfx_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-hidd-gfx_LIBFILES         := 
+kernel-hidd-gfx_LIBS             := 
+
+kernel-hidd-gfx_FDIRS            := $(sort $(dir $(kernel-hidd-gfx_FILES)))
+
+kernel-hidd-gfx_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-hidd-gfx_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-hidd-gfx_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-hidd-gfx_FILTERARCH       = $(filter-out $(call kernel-hidd-gfx_MATCHARCH,$(1),$(2)),$(2))
+kernel-hidd-gfx_STARTFILES       := $(addprefix $(kernel-hidd-gfx_OBJDIR)/,$($(kernel-hidd-gfx_DEFNAME)_STARTFILES))
+kernel-hidd-gfx_ENDFILES         := $(addprefix $(kernel-hidd-gfx_OBJDIR)/,$($(kernel-hidd-gfx_DEFNAME)_ENDFILES))
+
+kernel-hidd-gfx_ARCHOBJS         := $(wildcard $(kernel-hidd-gfx_OBJDIR)/arch/*.o)
+kernel-hidd-gfx_LIBARCHOBJS      := $(wildcard $(kernel-hidd-gfx_OBJDIR)/linklib/arch/*.o)
+kernel-hidd-gfx_ARCHFILES        := $(basename $(notdir $(kernel-hidd-gfx_ARCHOBJS)))
+kernel-hidd-gfx_LIBARCHFILES     := $(basename $(notdir $(kernel-hidd-gfx_LIBARCHOBJS)))
+kernel-hidd-gfx_C_NARCHFILES     := $(call kernel-hidd-gfx_FILTERARCH,$(kernel-hidd-gfx_ARCHFILES),$(kernel-hidd-gfx_FILES))
+kernel-hidd-gfx_CXX_NARCHFILES   := $(call kernel-hidd-gfx_FILTERARCH,$(kernel-hidd-gfx_ARCHFILES),$(kernel-hidd-gfx_CXXFILES))
+kernel-hidd-gfx_OBJC_NARCHFILES  := $(call kernel-hidd-gfx_FILTERARCH,$(kernel-hidd-gfx_ARCHFILES),$(kernel-hidd-gfx_OBJCFILES))
+kernel-hidd-gfx_NLIBARCHFILES    := $(call kernel-hidd-gfx_FILTERARCH,$(kernel-hidd-gfx_LIBARCHFILES),$(kernel-hidd-gfx_LIBFILES))
+kernel-hidd-gfx_ARCHNLIBFILES    := $(call kernel-hidd-gfx_FILTERARCH,$(kernel-hidd-gfx_LIBFILES),$(kernel-hidd-gfx_LIBARCHFILES))
+
+kernel-hidd-gfx_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-hidd-gfx_OBJDIR)/include -include $(kernel-hidd-gfx_DEFLIBDEFSINC))
+ifneq (,)
+kernel-hidd-gfx_CPPFLAGS         += -I
+endif
+kernel-hidd-gfx_LINKLIBCPPFLAGS  := $(kernel-hidd-gfx_CPPFLAGS)
+kernel-hidd-gfx_CPPFLAGS         += $(strip $($(kernel-hidd-gfx_DEFNAME)_CPPFLAGS))
+kernel-hidd-gfx_LINKLIBCPPFLAGS  += $(strip $($(kernel-hidd-gfx_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-hidd-gfx_CFLAGS           := $(strip $(CFLAGS) $($(kernel-hidd-gfx_DEFNAME)_CFLAGS))
+kernel-hidd-gfx_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-hidd-gfx_DEFNAME)_LINKLIBCFLAGS))
+kernel-hidd-gfx_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-hidd-gfx_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-hidd-gfx_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-hidd-gfx_CFLAGS           := $(strip $(kernel-hidd-gfx_LTOFLAGS) $(kernel-hidd-gfx_CFLAGS))
+kernel-hidd-gfx_LINKLIBCFLAGS    := $(strip $(kernel-hidd-gfx_LTOFLAGS) $(kernel-hidd-gfx_LINKLIBCFLAGS))
+kernel-hidd-gfx_CXXFLAGS         := $(strip $(kernel-hidd-gfx_LTOFLAGS) $(kernel-hidd-gfx_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-hidd-gfx_SUBSTNULL        :=
+kernel-hidd-gfx_SUBSTSPACE       := $(kernel-hidd-gfx_SUBSTNULL) #
+kernel-hidd-gfx_SUBSTCOMMA       := ,
+kernel-hidd-gfx_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-hidd-gfx_SUBSTSPACE),$(kernel-hidd-gfx_SUBSTCOMMA),$(strip $($(kernel-hidd-gfx_DEFNAME)_STARTFILES))))
+kernel-hidd-gfx_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-hidd-gfx_CFLAGS           := $(strip $(kernel-hidd-gfx_INSTRFUNCFLAGS) $(kernel-hidd-gfx_CFLAGS))
+kernel-hidd-gfx_CXXFLAGS         := $(strip $(kernel-hidd-gfx_INSTRFUNCFLAGS) $(kernel-hidd-gfx_CXXFLAGS))
+kernel-hidd-gfx_LIBS             += $(kernel-hidd-gfx_INSTRFUNCLIBS)
+endif
+endif
+kernel-hidd-gfx_DFLAGS           := $(strip $(kernel-hidd-gfx_DFLAGS) $($(kernel-hidd-gfx_DEFNAME)_DFLAGS))
+kernel-hidd-gfx_LINKLIBDFLAGS    := $(strip $(kernel-hidd-gfx_DFLAGS) $($(kernel-hidd-gfx_DEFNAME)_LINKLIBDFLAGS))
+kernel-hidd-gfx_DXXFLAGS         := $(strip $(kernel-hidd-gfx_DXXFLAGS) $($(kernel-hidd-gfx_DEFNAME)_DXXFLAGS))
+
+ifeq (hidd,library)
+    kernel-hidd-gfx_LIBSUFFIX    := 
+else
+    kernel-hidd-gfx_LIBSUFFIX    := .hidd
+endif
+
+ifeq (,)
+kernel-hidd-gfx_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-hidd-gfx_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-hidd-gfx_LINKLIBCFILES    := $(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$($(kernel-hidd-gfx_DEFNAME)_LINKLIBFILES))
+kernel-hidd-gfx_LINKLIBAFILES    := $(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$($(kernel-hidd-gfx_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-gfx_DEFNAME)_LINKLIBFILES) $($(kernel-hidd-gfx_DEFNAME)_LINKLIBAFILES)  $(kernel-hidd-gfx_ARCHNLIBFILES)),)
+    kernel-hidd-gfx_LINKLIB      :=
+else
+    kernel-hidd-gfx_LINKLIB      := $(kernel-hidd-gfx_LIBDIR)/libgfx$(kernel-hidd-gfx_LIBSUFFIX).a
+    ifneq (gfx,$(kernel-hidd-gfx_LINKLIBNAME))
+        kernel-hidd-gfx_LINKLIB  += $(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_LINKLIBNAME)$(kernel-hidd-gfx_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-gfx_LINKLIBFILES     := $(kernel-hidd-gfx_LINKLIBCFILES) $(kernel-hidd-gfx_LINKLIBAFILES)
+
+kernel-hidd-gfx_RELLINKLIBCFILES := $(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$($(kernel-hidd-gfx_DEFNAME)_RELLINKLIBFILES))
+kernel-hidd-gfx_RELLINKLIBAFILES := $(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$($(kernel-hidd-gfx_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-hidd-gfx_DEFNAME)_RELLINKLIBFILES) $($(kernel-hidd-gfx_DEFNAME)_RELLINKLIBAFILES)  $(kernel-hidd-gfx_ARCHNLIBFILES)),)
+    kernel-hidd-gfx_RELLINKLIB   :=
+else
+    kernel-hidd-gfx_RELLINKLIB   := $(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_DEFNAME)_rel$(kernel-hidd-gfx_LIBSUFFIX).a
+    ifneq (gfx,$(kernel-hidd-gfx_LINKLIBNAME))
+        kernel-hidd-gfx_RELLINKLIB += $(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_LINKLIBNAME)_rel$(kernel-hidd-gfx_LIBSUFFIX).a
+    endif
+endif
+kernel-hidd-gfx_RELLINKLIBFILES  := $(kernel-hidd-gfx_RELLINKLIBCFILES) $(kernel-hidd-gfx_RELLINKLIBAFILES)
+endif
+
+kernel-hidd-gfx_ENDOBJS          := $(addsuffix .o,$(kernel-hidd-gfx_ENDFILES))
+kernel-hidd-gfx_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$(notdir $(kernel-hidd-gfx_NLIBARCHFILES))) $(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-gfx_ARCHNLIBFILES))) $(kernel-hidd-gfx_LINKLIBFILES)) \
+                 
+kernel-hidd-gfx_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$(notdir $(kernel-hidd-gfx_NLIBARCHFILES))) $(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/arch/,$(notdir $(kernel-hidd-gfx_ARCHNLIBFILES))) $(kernel-hidd-gfx_RELLINKLIBFILES)) \
+                 
+$(kernel-hidd-gfx_LINKLIBFILES) $(kernel-hidd-gfx_RELLINKLIBFILES) : | $(kernel-hidd-gfx_OBJDIR)/linklib
+$(kernel-hidd-gfx_LINKLIBOBJS) $(kernel-hidd-gfx_RELLINKLIBOBJS) : | $(kernel-hidd-gfx_OBJDIR)/linklib
+
+kernel-hidd-gfx_CCFILES := $(kernel-hidd-gfx_C_NARCHFILES)
+kernel-hidd-gfx_TARGETCCFILES    := $(strip $(kernel-hidd-gfx_STARTFILES) $(kernel-hidd-gfx_ENDFILES))
+kernel-hidd-gfx_LINKLIBCCFILES   := $(strip $(kernel-hidd-gfx_NLIBARCHFILES) $(kernel-hidd-gfx_LINKLIBCFILES) $(kernel-hidd-gfx_RELLINKLIBCFILES))
+kernel-hidd-gfx_LINKLIBCCGENFILES := $(strip $(kernel-hidd-gfx_LINKLIBCFILES) $(kernel-hidd-gfx_RELLINKLIBCFILES))
+
+
+kernel-hidd-gfx_CXXABSBASENAMES := $(foreach kernel-hidd-gfx_CXXBASE,$(kernel-hidd-gfx_CXX_NARCHFILES),$(if $(filter /%,$(kernel-hidd-gfx_CXXBASE)),$(kernel-hidd-gfx_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-hidd-gfx_CXXBASE))))
+
+ifneq ($(kernel-hidd-gfx_CXXABSBASENAMES),)
+
+kernel-hidd-gfx_CXXBASENAMES := $(basename $(kernel-hidd-gfx_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-hidd-gfx_MCXX_FILES  := $(strip $(foreach kernel-hidd-gfx_CXXBASE,$(kernel-hidd-gfx_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-hidd-gfx_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-hidd-gfx_EXT),$(kernel-hidd-gfx_CXXBASE)))))))
+
+ifeq (,)
+kernel-hidd-gfx_MCXX_SRCWILDCARD := %
+else
+kernel-hidd-gfx_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-gfx_OBJDIR),)
+  kernel-hidd-gfx_CXXTARGETS := $(notdir $(kernel-hidd-gfx_CXXBASENAMES:=.o))
+  kernel-hidd-gfx_CXXDTARGETS := $(notdir $(kernel-hidd-gfx_CXXBASENAMES:=.d))
+  kernel-hidd-gfx_MCXX_WILDCARD := %
+else
+  kernel-hidd-gfx_CXXTARGETS := $(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(notdir $(kernel-hidd-gfx_CXXBASENAMES:=.o)))
+  kernel-hidd-gfx_CXXDTARGETS := $(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(notdir $(kernel-hidd-gfx_CXXBASENAMES:=.d)))
+  kernel-hidd-gfx_MCXX_WILDCARD := $(kernel-hidd-gfx_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-hidd-gfx_CXXTARGETS) $(kernel-hidd-gfx_CXXDTARGETS) : | $(kernel-hidd-gfx_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-hidd-gfx_MCXX_CPPFLAGS := $(kernel-hidd-gfx_CPPFLAGS)
+kernel-hidd-gfx_CXXFLAGS := $(kernel-hidd-gfx_CXXFLAGS)
+ifeq ($(kernel-hidd-gfx_DXXFLAGS),)
+  kernel-hidd-gfx_DXXFLAGS := $(kernel-hidd-gfx_CXXFLAGS)
+else
+  kernel-hidd-gfx_DXXFLAGS := $(kernel-hidd-gfx_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-hidd-gfx_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-hidd-gfx_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-gfx_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-hidd-gfx_CXXCMD:=$(HOST_CXX)
+  kernel-hidd-gfx_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-hidd-gfx_MCXX_CPPFLAGS) $(kernel-hidd-gfx_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-gfx_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-gfx_CXXFLAGS))
+  kernel-hidd-gfx_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-hidd-gfx_DXXFLAGS))
+  kernel-hidd-gfx_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-hidd-gfx_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-hidd-gfx_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-gfx_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-gfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-hidd-gfx_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-hidd-gfx_MCXX_CPPFLAGS := $(strip $(kernel-hidd-gfx_MCXX_CPPFLAGS) $(kernel-hidd-gfx_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-gfx_CXXFLAGS := $(strip $(kernel-hidd-gfx_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-hidd-gfx_DXXFLAGS := $(kernel-hidd-gfx_DXXFLAGS)
+  kernel-hidd-gfx_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-hidd-gfx_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-hidd-gfx_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-gfx_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-gfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-hidd-gfx_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-hidd-gfx_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-hidd-gfx_MCXX_CPPFLAGS) $(kernel-hidd-gfx_MCXX_EXTRA_CPPFLAGS))
+  kernel-hidd-gfx_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-gfx_CXXFLAGS))
+  kernel-hidd-gfx_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-hidd-gfx_DXXFLAGS))
+  kernel-hidd-gfx_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-hidd-gfx_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-hidd-gfx_CXXCMD) $(kernel-hidd-gfx_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-gfx_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_CXXIQUOTE) . $(kernel-hidd-gfx_CXXIQUOTE_END) $(strip $(kernel-hidd-gfx_CXXFLAGS) $(kernel-hidd-gfx_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-hidd-gfx_CXXCMD) $(kernel-hidd-gfx_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-gfx_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_CXXIQUOTE) . $(kernel-hidd-gfx_CXXIQUOTE_END) $(strip $(kernel-hidd-gfx_CXXFLAGS) $(kernel-hidd-gfx_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-hidd-gfx_CXXCMD) $(kernel-hidd-gfx_CXXIQUOTE) $(dir $(2)) $(kernel-hidd-gfx_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_CXXIQUOTE) . $(kernel-hidd-gfx_CXXIQUOTE_END) $(strip $(kernel-hidd-gfx_CXXFLAGS) $(kernel-hidd-gfx_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-hidd-gfx_CXXCMD)" $(MKDEPEND) $(strip $(kernel-hidd-gfx_DXXFLAGS) $(kernel-hidd-gfx_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-hidd-gfx_OBJDIR),)
+  $(foreach kernel-hidd-gfx_CXXFILE,$(kernel-hidd-gfx_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-hidd-gfx_CXXFILE))),$(kernel-hidd-gfx_CXXFILE))))
+else
+  $(foreach kernel-hidd-gfx_CXXFILE,$(kernel-hidd-gfx_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(notdir $(basename $(kernel-hidd-gfx_CXXFILE)))),$(kernel-hidd-gfx_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-hidd-gfx_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-hidd-gfx_MOBJC_SRCWILDCARD := %
+else
+kernel-hidd-gfx_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-gfx_OBJDIR),)
+  kernel-hidd-gfx_MOBJC_TARGETS := $(addsuffix .o,$(kernel-hidd-gfx_OBJC_NARCHFILES))
+  kernel-hidd-gfx_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-hidd-gfx_OBJC_NARCHFILES))
+  kernel-hidd-gfx_MOBJC_WILDCARD := %
+else
+  kernel-hidd-gfx_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(kernel-hidd-gfx_OBJC_NARCHFILES)))
+  kernel-hidd-gfx_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(kernel-hidd-gfx_OBJC_NARCHFILES)))
+  kernel-hidd-gfx_MOBJC_WILDCARD := $(kernel-hidd-gfx_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-hidd-gfx_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-hidd-gfx_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-hidd-gfx_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-gfx_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-hidd-gfx_MOBJC_DIRS := $(foreach dir, $(kernel-hidd-gfx_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-gfx_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-hidd-gfx_MOBJC_DIRS),)
+    kernel-hidd-gfx_MOBJC_DIRS := $(shell echo $(kernel-hidd-gfx_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-hidd-gfx_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-hidd-gfx_CC := $(TARGET_CC)
+else
+  kernel-hidd-gfx_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-hidd-gfx_MOBJC_CPPFLAGS := $(kernel-hidd-gfx_CPPFLAGS)
+kernel-hidd-gfx_OBJCFLAGS := $(kernel-hidd-gfx_CFLAGS)
+kernel-hidd-gfx_OBJCFLAGS := $(kernel-hidd-gfx_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-hidd-gfx_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-hidd-gfx_OBJCFLAGS)))
+ifeq ($(kernel-hidd-gfx_DFLAGS),)
+  kernel-hidd-gfx_OBJCDFLAGS := $(kernel-hidd-gfx_CFLAGS)
+else
+  kernel-hidd-gfx_OBJCDFLAGS := $(kernel-hidd-gfx_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-hidd-gfx_LINK ?= $(strip $(kernel-hidd-gfx_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-hidd-gfx_STRIP ?= $(TARGET_STRIP)
+  kernel-hidd-gfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-hidd-gfx_CC) $(TARGET_SYSROOT))
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : kernel-hidd-gfx_MOBJC_CPPFLAGS:=$(strip $(kernel-hidd-gfx_MOBJC_CPPFLAGS) $(kernel-hidd-gfx_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : kernel-hidd-gfx_OBJCFLAGS:=$(strip $(kernel-hidd-gfx_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : kernel-hidd-gfx_OBJCDFLAGS:=$(kernel-hidd-gfx_OBJCDFLAGS)
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : kernel-hidd-gfx_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : kernel-hidd-gfx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-hidd-gfx_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-hidd-gfx_STRIP ?= $(HOST_STRIP)
+  kernel-hidd-gfx_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : kernel-hidd-gfx_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-hidd-gfx_MOBJC_CPPFLAGS) $(kernel-hidd-gfx_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : kernel-hidd-gfx_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gfx_OBJCFLAGS))
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : kernel-hidd-gfx_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gfx_OBJCDFLAGS))
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : kernel-hidd-gfx_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : kernel-hidd-gfx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-hidd-gfx_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-hidd-gfx_STRIP ?= $(ECHO) >/dev/null
+  kernel-hidd-gfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : kernel-hidd-gfx_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-hidd-gfx_MOBJC_CPPFLAGS) $(kernel-hidd-gfx_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : kernel-hidd-gfx_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gfx_OBJCFLAGS))
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : kernel-hidd-gfx_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gfx_OBJCDFLAGS))
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : kernel-hidd-gfx_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-hidd-gfx_MOBJC_TARGETS) $(kernel-hidd-gfx_MOBJC_DTARGETS) : kernel-hidd-gfx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-gfx_MOBJC_TARGETS) : CPPFLAGS := $(kernel-hidd-gfx_MOBJC_CPPFLAGS)
+$(kernel-hidd-gfx_MOBJC_TARGETS) : CFLAGS := $(kernel-hidd-gfx_OBJCFLAGS)
+$(kernel-hidd-gfx_MOBJC_TARGETS) : $(kernel-hidd-gfx_MOBJC_WILDCARD).o : $(kernel-hidd-gfx_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-gfx_IQUOTE) $(dir $<) $(kernel-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_IQUOTE) . $(kernel-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-gfx_IQUOTE) $(dir $<) $(kernel-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_IQUOTE) . $(kernel-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-gfx_IQUOTE) $(dir $<) $(kernel-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_IQUOTE) . $(kernel-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-gfx_MOBJC_DTARGETS) : $(kernel-hidd-gfx_MOBJC_WILDCARD).d : $(kernel-hidd-gfx_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-gfx_OBJCDFLAGS) $(kernel-hidd-gfx_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-hidd-gfx_MC_SRCWILDCARD := %
+else
+kernel-hidd-gfx_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-gfx_OBJDIR),)
+kernel-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-gfx_CCFILES))
+kernel-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-gfx_CCFILES))
+kernel-hidd-gfx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(notdir $(kernel-hidd-gfx_CCFILES))))
+    kernel-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(notdir $(kernel-hidd-gfx_CCFILES))))
+else
+ifeq (,)
+    kernel-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(kernel-hidd-gfx_CCFILES)))
+    kernel-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(kernel-hidd-gfx_CCFILES)))
+else
+    kernel-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-gfx_CCFILES))))
+    kernel-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-gfx_CCFILES))))
+endif
+endif
+kernel-hidd-gfx_MC_TGTWILDCARD := $(kernel-hidd-gfx_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-gfx_CCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-gfx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-gfx_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-gfx_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-gfx_MC_DIRS := $(foreach dir, $(kernel-hidd-gfx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-gfx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-gfx_MC_DIRS),)
+    kernel-hidd-gfx_MC_DIRS := $(shell echo $(kernel-hidd-gfx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-gfx_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-gfx_MC_CPPFLAGS := $(kernel-hidd-gfx_CPPFLAGS)
+kernel-hidd-gfx_CFLAGS := $(kernel-hidd-gfx_CFLAGS)
+ifeq ($(kernel-hidd-gfx_DFLAGS),)
+  kernel-hidd-gfx_DFLAGS := $(kernel-hidd-gfx_CFLAGS)
+else
+  kernel-hidd-gfx_DFLAGS := $(kernel-hidd-gfx_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-gfx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-gfx_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-gfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_MC_CPPFLAGS:=$(strip $(kernel-hidd-gfx_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_CFLAGS:=$(strip $(kernel-hidd-gfx_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_DFLAGS:=$(kernel-hidd-gfx_DFLAGS)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-gfx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-gfx_STRIP ?= $(HOST_STRIP)
+kernel-hidd-gfx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gfx_CFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gfx_DFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-gfx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-gfx_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-gfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gfx_CFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gfx_DFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-gfx_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-gfx_MC_CPPFLAGS)
+$(kernel-hidd-gfx_MC_TARGETS) : CFLAGS := $(kernel-hidd-gfx_CFLAGS)
+$(kernel-hidd-gfx_MC_TARGETS) : $(kernel-hidd-gfx_MC_TGTWILDCARD).o : $(kernel-hidd-gfx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-gfx_IQUOTE) $(dir $<) $(kernel-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_IQUOTE) . $(kernel-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-gfx_IQUOTE) $(dir $<) $(kernel-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_IQUOTE) . $(kernel-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-gfx_IQUOTE) $(dir $<) $(kernel-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_IQUOTE) . $(kernel-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-gfx_MC_DTARGETS) : $(kernel-hidd-gfx_MC_TGTWILDCARD).d : $(kernel-hidd-gfx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-gfx_DFLAGS) $(kernel-hidd-gfx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-gfx_MC_SRCWILDCARD := %
+else
+kernel-hidd-gfx_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-gfx_OBJDIR),)
+kernel-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-gfx_TARGETCCFILES))
+kernel-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-gfx_TARGETCCFILES))
+kernel-hidd-gfx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(notdir $(kernel-hidd-gfx_TARGETCCFILES))))
+    kernel-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(notdir $(kernel-hidd-gfx_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(kernel-hidd-gfx_TARGETCCFILES)))
+    kernel-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(kernel-hidd-gfx_TARGETCCFILES)))
+else
+    kernel-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-gfx_TARGETCCFILES))))
+    kernel-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(patsubst /%,%,$(kernel-hidd-gfx_TARGETCCFILES))))
+endif
+endif
+kernel-hidd-gfx_MC_TGTWILDCARD := $(kernel-hidd-gfx_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-gfx_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-gfx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-gfx_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-gfx_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-gfx_MC_DIRS := $(foreach dir, $(kernel-hidd-gfx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-gfx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-gfx_MC_DIRS),)
+    kernel-hidd-gfx_MC_DIRS := $(shell echo $(kernel-hidd-gfx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-gfx_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-gfx_MC_CPPFLAGS := $(kernel-hidd-gfx_CPPFLAGS) -D__AROS__
+kernel-hidd-gfx_CFLAGS := $(kernel-hidd-gfx_CFLAGS)
+ifeq ($(kernel-hidd-gfx_DFLAGS),)
+  kernel-hidd-gfx_DFLAGS := $(kernel-hidd-gfx_CFLAGS)
+else
+  kernel-hidd-gfx_DFLAGS := $(kernel-hidd-gfx_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-gfx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-gfx_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-gfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_MC_CPPFLAGS:=$(strip $(kernel-hidd-gfx_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_CFLAGS:=$(strip $(kernel-hidd-gfx_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_DFLAGS:=$(kernel-hidd-gfx_DFLAGS)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-gfx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-gfx_STRIP ?= $(HOST_STRIP)
+kernel-hidd-gfx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gfx_CFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gfx_DFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-gfx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-gfx_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-gfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gfx_CFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gfx_DFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-gfx_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-gfx_MC_CPPFLAGS)
+$(kernel-hidd-gfx_MC_TARGETS) : CFLAGS := $(kernel-hidd-gfx_CFLAGS)
+$(kernel-hidd-gfx_MC_TARGETS) : $(kernel-hidd-gfx_MC_TGTWILDCARD).o : $(kernel-hidd-gfx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-gfx_IQUOTE) $(dir $<) $(kernel-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_IQUOTE) . $(kernel-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-gfx_IQUOTE) $(dir $<) $(kernel-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_IQUOTE) . $(kernel-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-gfx_IQUOTE) $(dir $<) $(kernel-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_IQUOTE) . $(kernel-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-gfx_MC_DTARGETS) : $(kernel-hidd-gfx_MC_TGTWILDCARD).d : $(kernel-hidd-gfx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-gfx_DFLAGS) $(kernel-hidd-gfx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-hidd-gfx_MC_SRCWILDCARD := %
+else
+kernel-hidd-gfx_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-hidd-gfx_OBJDIR)/linklib,)
+kernel-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-gfx_NLIBARCHFILES))
+kernel-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-gfx_NLIBARCHFILES))
+kernel-hidd-gfx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$(notdir $(kernel-hidd-gfx_NLIBARCHFILES))))
+    kernel-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$(notdir $(kernel-hidd-gfx_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$(kernel-hidd-gfx_NLIBARCHFILES)))
+    kernel-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$(kernel-hidd-gfx_NLIBARCHFILES)))
+else
+    kernel-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-gfx_NLIBARCHFILES))))
+    kernel-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-hidd-gfx_NLIBARCHFILES))))
+endif
+endif
+kernel-hidd-gfx_MC_TGTWILDCARD := $(kernel-hidd-gfx_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-gfx_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-gfx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-gfx_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-gfx_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-gfx_MC_DIRS := $(foreach dir, $(kernel-hidd-gfx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-gfx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-gfx_MC_DIRS),)
+    kernel-hidd-gfx_MC_DIRS := $(shell echo $(kernel-hidd-gfx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-gfx_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-gfx_MC_CPPFLAGS := $(kernel-hidd-gfx_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-gfx_CFLAGS := $(kernel-hidd-gfx_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-gfx_LINKLIBDFLAGS),)
+  kernel-hidd-gfx_DFLAGS := $(kernel-hidd-gfx_LINKLIBCFLAGS)
+else
+  kernel-hidd-gfx_DFLAGS := $(kernel-hidd-gfx_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-gfx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-gfx_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-gfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_MC_CPPFLAGS:=$(strip $(kernel-hidd-gfx_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_CFLAGS:=$(strip $(kernel-hidd-gfx_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_DFLAGS:=$(kernel-hidd-gfx_DFLAGS)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-gfx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-gfx_STRIP ?= $(HOST_STRIP)
+kernel-hidd-gfx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gfx_CFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gfx_DFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-gfx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-gfx_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-gfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gfx_CFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gfx_DFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-gfx_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-gfx_MC_CPPFLAGS)
+$(kernel-hidd-gfx_MC_TARGETS) : CFLAGS := $(kernel-hidd-gfx_CFLAGS)
+$(kernel-hidd-gfx_MC_TARGETS) : $(kernel-hidd-gfx_MC_TGTWILDCARD).o : $(kernel-hidd-gfx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-gfx_IQUOTE) $(dir $<) $(kernel-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_IQUOTE) . $(kernel-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-gfx_IQUOTE) $(dir $<) $(kernel-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_IQUOTE) . $(kernel-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-gfx_IQUOTE) $(dir $<) $(kernel-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_IQUOTE) . $(kernel-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-gfx_MC_DTARGETS) : $(kernel-hidd-gfx_MC_TGTWILDCARD).d : $(kernel-hidd-gfx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-gfx_DFLAGS) $(kernel-hidd-gfx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-hidd-gfx_OBJDIR)/linklib,)
+kernel-hidd-gfx_MC_SRCWILDCARD := %
+else
+kernel-hidd-gfx_MC_SRCWILDCARD := $(kernel-hidd-gfx_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-hidd-gfx_OBJDIR)/linklib,)
+kernel-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(kernel-hidd-gfx_LINKLIBCCGENFILES))
+kernel-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(kernel-hidd-gfx_LINKLIBCCGENFILES))
+kernel-hidd-gfx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$(notdir $(kernel-hidd-gfx_LINKLIBCCGENFILES))))
+    kernel-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$(notdir $(kernel-hidd-gfx_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-hidd-gfx_OBJDIR)/linklib,)
+    kernel-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$(kernel-hidd-gfx_LINKLIBCCGENFILES)))
+    kernel-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$(kernel-hidd-gfx_LINKLIBCCGENFILES)))
+else
+    kernel-hidd-gfx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-gfx_OBJDIR)/linklib/%,%,$(kernel-hidd-gfx_LINKLIBCCGENFILES))))
+    kernel-hidd-gfx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$(patsubst $(kernel-hidd-gfx_OBJDIR)/linklib/%,%,$(kernel-hidd-gfx_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-hidd-gfx_MC_TGTWILDCARD := $(kernel-hidd-gfx_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : | $(addsuffix .c,$(kernel-hidd-gfx_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-gfx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-gfx_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-gfx_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-gfx_MC_DIRS := $(foreach dir, $(kernel-hidd-gfx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-gfx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-gfx_MC_DIRS),)
+    kernel-hidd-gfx_MC_DIRS := $(shell echo $(kernel-hidd-gfx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-hidd-gfx_MC_DIRS)
+endif
+
+endif
+
+kernel-hidd-gfx_MC_CPPFLAGS := $(kernel-hidd-gfx_LINKLIBCPPFLAGS) -D__AROS__
+kernel-hidd-gfx_CFLAGS := $(kernel-hidd-gfx_LINKLIBCFLAGS)
+ifeq ($(kernel-hidd-gfx_LINKLIBDFLAGS),)
+  kernel-hidd-gfx_DFLAGS := $(kernel-hidd-gfx_LINKLIBCFLAGS)
+else
+  kernel-hidd-gfx_DFLAGS := $(kernel-hidd-gfx_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-hidd-gfx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-hidd-gfx_STRIP ?= $(TARGET_STRIP)
+kernel-hidd-gfx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_MC_CPPFLAGS:=$(strip $(kernel-hidd-gfx_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_CFLAGS:=$(strip $(kernel-hidd-gfx_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_DFLAGS:=$(kernel-hidd-gfx_DFLAGS)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-hidd-gfx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-hidd-gfx_STRIP ?= $(HOST_STRIP)
+kernel-hidd-gfx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gfx_CFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-hidd-gfx_DFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-hidd-gfx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-hidd-gfx_STRIP ?= $(ECHO) >/dev/null
+kernel-hidd-gfx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_CPPFLAGS) $(kernel-hidd-gfx_MC_EXTRA_CPPFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gfx_CFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-hidd-gfx_DFLAGS))
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-hidd-gfx_MC_TARGETS) $(kernel-hidd-gfx_MC_DTARGETS) : kernel-hidd-gfx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-hidd-gfx_MC_TARGETS) : CPPFLAGS := $(kernel-hidd-gfx_MC_CPPFLAGS)
+$(kernel-hidd-gfx_MC_TARGETS) : CFLAGS := $(kernel-hidd-gfx_CFLAGS)
+$(kernel-hidd-gfx_MC_TARGETS) : $(kernel-hidd-gfx_MC_TGTWILDCARD).o : $(kernel-hidd-gfx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-hidd-gfx_IQUOTE) $(dir $<) $(kernel-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_IQUOTE) . $(kernel-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-hidd-gfx_IQUOTE) $(dir $<) $(kernel-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_IQUOTE) . $(kernel-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-hidd-gfx_IQUOTE) $(dir $<) $(kernel-hidd-gfx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-hidd-gfx_IQUOTE) . $(kernel-hidd-gfx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-hidd-gfx_MC_DTARGETS) : $(kernel-hidd-gfx_MC_TGTWILDCARD).d : $(kernel-hidd-gfx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-hidd-gfx_DFLAGS) $(kernel-hidd-gfx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-hidd-gfx_LINKLIBAFILES),)
+
+ifeq ($(kernel-hidd-gfx_OBJDIR)/linklib,)
+kernel-hidd-gfx-MA_TARGETS := $(addsuffix .o,$(kernel-hidd-gfx_LINKLIBAFILES) $(kernel-hidd-gfx_RELLINKLIBAFILES))
+kernel-hidd-gfx-MA_WILDCARD := %
+else
+kernel-hidd-gfx-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$(notdir $(kernel-hidd-gfx_LINKLIBAFILES) $(kernel-hidd-gfx_RELLINKLIBAFILES))))
+kernel-hidd-gfx-MA_WILDCARD := $(kernel-hidd-gfx_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-hidd-gfx-MA_TARGETS) : | $(addsuffix .S,$(kernel-hidd-gfx_LINKLIBAFILES) $(kernel-hidd-gfx_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-hidd-gfx-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-hidd-gfx-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-hidd-gfx_LINKLIBAFILES) $(kernel-hidd-gfx_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-hidd-gfx-MA_DIRS := $(foreach dir, $(kernel-hidd-gfx-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-hidd-gfx-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-hidd-gfx-MA_DIRS),)
+    kernel-hidd-gfx-MA_DIRS := $(shell echo $(kernel-hidd-gfx-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-hidd-gfx-MA_DIRS)
+endif
+
+endif
+
+kernel-hidd-gfx-MA_ASSEMBLER ?= $(kernel-hidd-gfx_ASSEMBLER)
+
+$(kernel-hidd-gfx-MA_TARGETS) : kernel-hidd-gfx-MA_CMD:= $(kernel-hidd-gfx-MA_ASSEMBLER)
+
+$(kernel-hidd-gfx-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-hidd-gfx-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-hidd-gfx-MA_TARGETS) : $(kernel-hidd-gfx-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-hidd-gfx-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-hidd-gfx-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-hidd-gfx-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-hidd-gfx_SUFFIX           := hidd
+else
+kernel-hidd-gfx_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-hidd-gfx_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-hidd-gfx_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-hidd-gfx_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-hidd-gfx_SUFFIX),handler)
+kernel-hidd-gfx_MODULE           := $(AROSDIR)/$(kernel-hidd-gfx_MODDIR)/$(kernel-hidd-gfx_DEFNAME)-$(kernel-hidd-gfx_SUFFIX)
+else
+kernel-hidd-gfx_MODULE           := $(AROSDIR)/$(kernel-hidd-gfx_MODDIR)/$(kernel-hidd-gfx_DEFNAME).$(kernel-hidd-gfx_SUFFIX)
+endif
+kernel-hidd-gfx_KOBJ             := $(KOBJSDIR)/$(kernel-hidd-gfx_DEFNAME)_$(kernel-hidd-gfx_SUFFIX).o
+else
+kernel-hidd-gfx_MODULE           :=
+kernel-hidd-gfx_KOBJ             :=
+endif
+
+kernel-hidd-gfx-quick      : kernel-hidd-gfx
+kernel-hidd-gfx            : $(kernel-hidd-gfx_MODULE) $(kernel-hidd-gfx_LINKLIB) $(kernel-hidd-gfx_RELLINKLIB)
+ifeq (M,M)
+kernel-hidd-gfx-kobj       : $(kernel-hidd-gfx_KOBJ) $(kernel-hidd-gfx_LINKLIB) $(kernel-hidd-gfx_RELLINKLIB)
+kernel-hidd-gfx-kobj-quick : $(kernel-hidd-gfx_KOBJ) $(kernel-hidd-gfx_LINKLIB) $(kernel-hidd-gfx_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-hidd-gfx-linklib    : $(kernel-hidd-gfx_LINKLIB) $(kernel-hidd-gfx_RELLINKLIB)
+endif
+
+kernel-hidd-gfx_OBJS := $(addsuffix .o,$(kernel-hidd-gfx_STARTFILES)) $(kernel-hidd-gfx_ARCHOBJS) \
+           $(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(notdir $(kernel-hidd-gfx_C_NARCHFILES:=.o) $(kernel-hidd-gfx_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (hidd,handler)
+kernel-hidd-gfx_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (gfx,con)
+    kernel-hidd-gfx_ERR          := $(notdir $(kernel-hidd-gfx_MODULE)).err
+else
+    kernel-hidd-gfx_ERR          := gfx.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-hidd-gfx_DEFNAME)_LDFLAGS) $(kernel-hidd-gfx_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-hidd-gfx_LIBS) $($(kernel-hidd-gfx_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-hidd-gfx_MODULE) : LIB_NAMES := $(kernel-hidd-gfx_LIBS) $($(kernel-hidd-gfx_DEFNAME)_LIBS)
+$(kernel-hidd-gfx_MODULE) : OBJS := $(kernel-hidd-gfx_STARTOBJS) $(kernel-hidd-gfx_OBJS) $(USER_OBJS)
+$(kernel-hidd-gfx_MODULE) : ENDTAG := $(kernel-hidd-gfx_ENDOBJS)
+$(kernel-hidd-gfx_MODULE) : ERR := $(kernel-hidd-gfx_ERR)
+$(kernel-hidd-gfx_MODULE) : OBJDIR := $(kernel-hidd-gfx_OBJDIR)
+$(kernel-hidd-gfx_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-hidd-gfx_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-hidd-gfx_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-hidd-gfx_MODULE) : $(kernel-hidd-gfx_STARTOBJS) $(kernel-hidd-gfx_OBJS) $(USER_OBJS) $(kernel-hidd-gfx_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-hidd-gfx_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-hidd-gfx_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-hidd-gfx_LC_LINKLIBNAME   := $(shell echo $(kernel-hidd-gfx_LINKLIBNAME) | tr A-Z a-z)
+kernel-hidd-gfx_LC_MODNAME       := $(shell echo gfx | tr A-Z a-z)
+ifneq ($(kernel-hidd-gfx_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_LINKLIBNAME)$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_AR:=$(AR)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_LINKLIBNAME)$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_LINKLIBNAME)$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_AR:=$(HOST_AR)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_LINKLIBNAME)$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_LINKLIBNAME)$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_AR:=$(KERNEL_AR)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_LINKLIBNAME)$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_LINKLIBNAME)$(kernel-hidd-gfx_LIBSUFFIX).a : $(kernel-hidd-gfx_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-gfx_AR) $@ $^
+	$(Q)$(kernel-hidd-gfx_RANLIB) $@
+ifneq ($(kernel-hidd-gfx_LC_MODNAME),$(kernel-hidd-gfx_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-gfx_LIBDIR)/libgfx$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_AR:=$(AR)
+$(kernel-hidd-gfx_LIBDIR)/libgfx$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-gfx_LIBDIR)/libgfx$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_AR:=$(HOST_AR)
+$(kernel-hidd-gfx_LIBDIR)/libgfx$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-gfx_LIBDIR)/libgfx$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_AR:=$(KERNEL_AR)
+$(kernel-hidd-gfx_LIBDIR)/libgfx$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-gfx_LIBDIR)/libgfx$(kernel-hidd-gfx_LIBSUFFIX).a : $(kernel-hidd-gfx_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-gfx_AR) $@ $^
+	$(Q)$(kernel-hidd-gfx_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-gfx_LINKLIB),)
+$(kernel-hidd-gfx_LINKLIB) : | $(kernel-hidd-gfx_LIBDIR)
+else
+$(kernel-hidd-gfx_LINKLIB) :: $(kernel-hidd-gfx_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-gfx_LIBDIR)
+
+endif
+
+ifneq ($(kernel-hidd-gfx_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_LINKLIBNAME)_rel$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_AR:=$(AR)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_LINKLIBNAME)_rel$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_LINKLIBNAME)_rel$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_AR:=$(HOST_AR)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_LINKLIBNAME)_rel$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_LINKLIBNAME)_rel$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_AR:=$(KERNEL_AR)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_LINKLIBNAME)_rel$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_LINKLIBNAME)_rel$(kernel-hidd-gfx_LIBSUFFIX).a : $(kernel-hidd-gfx_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-gfx_AR) $@ $^
+	$(Q)$(kernel-hidd-gfx_RANLIB) $@
+ifneq ($(kernel-hidd-gfx_LC_MODNAME),$(kernel-hidd-gfx_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_DEFNAME)_rel$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_AR:=$(AR)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_DEFNAME)_rel$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_DEFNAME)_rel$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_AR:=$(HOST_AR)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_DEFNAME)_rel$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_DEFNAME)_rel$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_AR:=$(KERNEL_AR)
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_DEFNAME)_rel$(kernel-hidd-gfx_LIBSUFFIX).a : kernel-hidd-gfx_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-hidd-gfx_LIBDIR)/lib$(kernel-hidd-gfx_DEFNAME)_rel$(kernel-hidd-gfx_LIBSUFFIX).a : $(kernel-hidd-gfx_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-hidd-gfx_AR) $@ $^
+	$(Q)$(kernel-hidd-gfx_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-hidd-gfx_RELLINKLIB),)
+$(kernel-hidd-gfx_RELLINKLIB) : | $(kernel-hidd-gfx_LIBDIR)
+else
+$(kernel-hidd-gfx_RELLINKLIB) :: $(kernel-hidd-gfx_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-gfx_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-hidd-gfx_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-hidd-gfx_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-hidd-gfx_SYMBOLS := $(kernel-hidd-gfx_KBASE)
+
+kernel-hidd-gfx_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-hidd-gfx_KOBJ_LIBS        := $(filter-out $(kernel-hidd-gfx_KLIB),$(kernel-hidd-gfx_LIBS)) $(kernel-hidd-gfx_KAUTOLIB)
+$(kernel-hidd-gfx_KOBJ) : LINKLIBS:=$(kernel-hidd-gfx_KOBJ_LIBS) $($(kernel-hidd-gfx_DEFNAME)_LIBS)
+$(kernel-hidd-gfx_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-hidd-gfx_SYMBOLS))
+$(kernel-hidd-gfx_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-hidd-gfx_KOBJ) : $(kernel-hidd-gfx_OBJS) $(USER_OBJS) $(kernel-hidd-gfx_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-hidd-gfx_DEPS             := $(addprefix $(kernel-hidd-gfx_OBJDIR)/,$(notdir $(kernel-hidd-gfx_CCFILES:=.d) $(kernel-hidd-gfx_TARGETCCFILES:=.d) $(kernel-hidd-gfx_CXXFILES:=.d))) $(addprefix $(kernel-hidd-gfx_OBJDIR)/linklib/,$(notdir $(kernel-hidd-gfx_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-hidd-gfx_DEPS),)
+  ifneq (kernel-hidd-gfx kernel-hidd-gfx-quick kernel-hidd-gfx-kobj kernel-hidd-gfx-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-hidd-gfx kernel-hidd-gfx-quick kernel-hidd-gfx-kobj kernel-hidd-gfx-kobj-quick),)
+      -include $(kernel-hidd-gfx_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-hidd-gfx_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-hidd-gfx_OBJS) $(kernel-hidd-gfx_DEPS) : | $(kernel-hidd-gfx_OBJDIR)/linklib
+
+ifneq ($(kernel-hidd-gfx_OBJS) $(kernel-hidd-gfx_DEPS) $(kernel-hidd-gfx_MODULE) $(kernel-hidd-gfx_KOBJ),)
+$(kernel-hidd-gfx_OBJS) $(kernel-hidd-gfx_DEPS) $(kernel-hidd-gfx_MODULE) $(kernel-hidd-gfx_KOBJ) : | $(kernel-hidd-gfx_OBJDIR) $(AROSDIR)/$(kernel-hidd-gfx_MODDIR) $(KOBJSDIR)
+else
+$(kernel-hidd-gfx_OBJS) $(kernel-hidd-gfx_DEPS) $(kernel-hidd-gfx_MODULE) $(kernel-hidd-gfx_KOBJ) :: $(kernel-hidd-gfx_OBJDIR) $(AROSDIR)/$(kernel-hidd-gfx_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-hidd-gfx_OBJDIR) $(AROSDIR)/$(kernel-hidd-gfx_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-hidd-gfx kernel-hidd-gfx-includes kernel-hidd-gfx-quick kernel-hidd-gfx-kobj kernel-hidd-gfx-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-hidd-gfx_DFILE_DEPS := $(kernel-hidd-gfx_LIBDEFSINC) $(kernel-hidd-gfx_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-hidd-gfx_INCDIR)/,$($(kernel-hidd-gfx_DEFNAME)_INCLUDES))
+$(kernel-hidd-gfx_DEPS) : $(kernel-hidd-gfx_DFILE_DEPS)
+endif
+
+kernel-hidd-gfx_TOCLEAN := $(kernel-hidd-gfx_OBJS) $(kernel-hidd-gfx_DEPS) \
+    $(kernel-hidd-gfx_MODULE) $(kernel-hidd-gfx_LINKLIB) $(kernel-hidd-gfx_KOBJ) \
+    $(kernel-hidd-gfx_OBJDIR)/Makefile.gfxhidd \
+    $(addprefix $(kernel-hidd-gfx_OBJDIR)/include/,$($(kernel-hidd-gfx_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-hidd-gfx_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-hidd-gfx_INCDIR)/,$($(kernel-hidd-gfx_DEFNAME)_INCLUDES)) \
+    $(kernel-hidd-gfx_OBJDIR)/gfx_geninc $(kernel-hidd-gfx_OBJDIR)/gfx_incs \
+    $(addsuffix .c,$(kernel-hidd-gfx_LINKLIBFILES)) $(kernel-hidd-gfx_LINKLIBOBJS) $(kernel-hidd-gfx_LIBDEFSINC) \
+    $(kernel-hidd-gfx_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-hidd-gfx_STARTFILES) $(kernel-hidd-gfx_ENDFILES)) \
+    $(kernel-hidd-gfx_ENDOBJS)
+kernel-hidd-gfx-clean : FILES              := $(kernel-hidd-gfx_TOCLEAN)
+kernel-hidd-gfx-clean ::
+	$(Q)$(ECHO) "Cleaning up for module gfx"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-hidd-gfx_ALLTARGETS)
+
+
+LIBNAME     := gfx
+
+INCLUDE_FILES    := $(call WILDCARD, include/*.h)
+
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq (include,)
+TMP_DIR                := include
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst include,$(GENINCDIR)/hidd,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/hidd/,$(notdir $(INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := include/
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/include/
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/hidd/,$(INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/hidd/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq (include,)
+BD_INCL_FILES2         := $(subst include,$(AROS_INCLUDES)/hidd,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/hidd/,$(notdir $(INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/hidd/,$(INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/hidd/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+#MM
+clean ::
+	-$(RM) $(OBJDIR) *.err $(LIB) *.s
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

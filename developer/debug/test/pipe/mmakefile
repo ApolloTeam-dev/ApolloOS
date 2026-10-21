@@ -1,0 +1,299 @@
+# Copyright © 2012, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES           := autopipe
+
+EXEDIR          := $(AROS_TESTS)/pipe
+
+#MM- test : test-pipe test-pipe-pure
+#MM- test-quick : test-pipe-quick
+
+#MM test-pipe : includes linklibs
+
+USER_CFLAGS += -DADATE="\"$(shell date '+%d.%m.%Y')\""
+
+
+.PHONY : test-pipe
+
+test-pipe_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-pipe_TARGETDIR := $(EXEDIR)
+test-pipe_LIBS := 
+
+test-pipe_FILES     := $(FILES)
+test-pipe_OBJS      := $(addsuffix .o,$(addprefix $(test-pipe_OBJDIR)/,$(test-pipe_FILES)))
+test-pipe_DEPS      := $(addsuffix .d,$(addprefix $(test-pipe_OBJDIR)/,$(test-pipe_FILES)))
+test-pipe_EXES      := $(addprefix $(test-pipe_TARGETDIR)/,$(test-pipe_FILES))
+
+test-pipe_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-pipe_CPPFLAGS += -I
+endif
+test-pipe_CFLAGS    := $(CFLAGS)
+test-pipe_COVERAGE := no
+ifeq (target,target)
+ifeq (no,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-pipe_COVERAGE := yes
+test-pipe_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-pipe_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-pipe_CFLAGS    := $(strip $(test-pipe_COVERAGEFLAGS) $(test-pipe_CFLAGS))
+test-pipe_LIBS += $(test-pipe_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-pipe_FUNCINSTR := yes
+test-pipe_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-pipe_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-pipe_CFLAGS    := $(strip $(test-pipe_INSTRFUNCFLAGS) $(test-pipe_CFLAGS))
+test-pipe_LIBS += $(test-pipe_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-pipe_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-pipe_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-pipe_DFLAGS := 
+else
+    test-pipe_DFLAGS := $(test-pipe_CFLAGS)
+endif
+ifeq (target,target)
+test-pipe_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-pipe_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-pipe_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-pipe_LDFLAGS += -L
+endif
+
+#MM
+test-pipe-quick : test-pipe
+
+#MM test-pipe : includes-generate-deps core-linklibs
+test-pipe : $(test-pipe_EXES)
+
+ifneq ($(filter $(TARGET),test-pipe test-pipe-quick),)
+
+ifeq (,)
+test-pipe_MC_SRCWILDCARD := %
+else
+test-pipe_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-pipe_OBJDIR),)
+test-pipe_MC_TARGETS := $(addsuffix .o,$(test-pipe_FILES))
+test-pipe_MC_DTARGETS := $(addsuffix .d,$(test-pipe_FILES))
+test-pipe_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-pipe_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-pipe_OBJDIR)/,$(notdir $(test-pipe_FILES))))
+    test-pipe_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-pipe_OBJDIR)/,$(notdir $(test-pipe_FILES))))
+else
+ifeq (,)
+    test-pipe_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-pipe_OBJDIR)/,$(test-pipe_FILES)))
+    test-pipe_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-pipe_OBJDIR)/,$(test-pipe_FILES)))
+else
+    test-pipe_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-pipe_OBJDIR)/,$(patsubst /%,%,$(test-pipe_FILES))))
+    test-pipe_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-pipe_OBJDIR)/,$(patsubst /%,%,$(test-pipe_FILES))))
+endif
+endif
+test-pipe_MC_TGTWILDCARD := $(test-pipe_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : | $(addsuffix .c,$(test-pipe_FILES))
+
+# Be sure that all .c files are found
+test-pipe_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-pipe_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-pipe_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-pipe_MC_DIRS := $(foreach dir, $(test-pipe_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-pipe_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-pipe_MC_DIRS),)
+    test-pipe_MC_DIRS := $(shell echo $(test-pipe_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-pipe_MC_DIRS)
+endif
+
+endif
+
+test-pipe_MC_CPPFLAGS := $(test-pipe_CPPFLAGS)
+test-pipe_CFLAGS := $(test-pipe_CFLAGS)
+ifeq ($(test-pipe_DFLAGS),)
+  test-pipe_DFLAGS := $(test-pipe_CFLAGS)
+else
+  test-pipe_DFLAGS := $(test-pipe_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-pipe_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-pipe_STRIP ?= $(TARGET_STRIP)
+test-pipe_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : test-pipe_MC_CPPFLAGS:=$(strip $(test-pipe_MC_CPPFLAGS) $(test-pipe_MC_EXTRA_CPPFLAGS))
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : test-pipe_CFLAGS:=$(strip $(test-pipe_CFLAGS) $(SAFETY_CFLAGS))
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : test-pipe_DFLAGS:=$(test-pipe_DFLAGS)
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : test-pipe_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : test-pipe_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-pipe_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-pipe_STRIP ?= $(HOST_STRIP)
+test-pipe_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : test-pipe_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-pipe_MC_CPPFLAGS) $(test-pipe_MC_EXTRA_CPPFLAGS))
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : test-pipe_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-pipe_CFLAGS))
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : test-pipe_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-pipe_DFLAGS))
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : test-pipe_IQUOTE:=$(HOST_IQUOTE)
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : test-pipe_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-pipe_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-pipe_STRIP ?= $(ECHO) >/dev/null
+test-pipe_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : test-pipe_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-pipe_MC_CPPFLAGS) $(test-pipe_MC_EXTRA_CPPFLAGS))
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : test-pipe_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-pipe_CFLAGS))
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : test-pipe_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-pipe_DFLAGS))
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : test-pipe_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-pipe_MC_TARGETS) $(test-pipe_MC_DTARGETS) : test-pipe_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-pipe_MC_TARGETS) : CPPFLAGS := $(test-pipe_MC_CPPFLAGS)
+$(test-pipe_MC_TARGETS) : CFLAGS := $(test-pipe_CFLAGS)
+$(test-pipe_MC_TARGETS) : $(test-pipe_MC_TGTWILDCARD).o : $(test-pipe_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-pipe_IQUOTE) $(dir $<) $(test-pipe_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-pipe_IQUOTE) . $(test-pipe_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-pipe_IQUOTE) $(dir $<) $(test-pipe_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-pipe_IQUOTE) . $(test-pipe_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-pipe_IQUOTE) $(dir $<) $(test-pipe_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-pipe_IQUOTE) . $(test-pipe_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-pipe_MC_DTARGETS) : $(test-pipe_MC_TGTWILDCARD).d : $(test-pipe_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-pipe_DFLAGS) $(test-pipe_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-pipe-link_EXTRA_LDFLAGS := 
+test-pipe-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-pipe-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (no,no)
+    test-pipe-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-pipe-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-pipe-link_DIRS := $(subst -L ,-L,$(strip $(test-pipe_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-pipe-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-pipe-link_DIRS)))
+# Add trailing /
+test-pipe-link_DIRS := $(subst //,/,$(addsuffix /,$(test-pipe-link_DIRS)))
+# Add normal linklib path
+test-pipe-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-pipe-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-pipe_LIBS) $(test-pipe-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-pipe-link_DEPLIBS := $(foreach lib,$(test-pipe-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-pipe-link_DIRS)))) \
+)
+test-pipe-link_PROGS := $(addprefix $(test-pipe_TARGETDIR)/,$(test-pipe_FILES))
+
+$(test-pipe-link_PROGS) : OBJDIR := $(test-pipe_OBJDIR)
+$(test-pipe-link_PROGS) : LDFLAGS := $(strip $(test-pipe_LDFLAGS) $(test-pipe-link_EXTRA_LDFLAGS))
+$(test-pipe-link_PROGS) : LIBS := $(addprefix -l,$(test-pipe_LIBS) $(test-pipe-link_EXTRA_LIBS) )
+$(test-pipe-link_PROGS) : $(test-pipe_TARGETDIR)/% : $(test-pipe_OBJDIR)/%.o $(test-pipe-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-pipe_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-pipe_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-pipe_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-pipe_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-pipe_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-pipe_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-pipe_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-pipe_DEPS),)
+  ifneq (test-pipe test-pipe-quick,)
+    ifneq ($(findstring $(TARGET),test-pipe test-pipe-quick),)
+      -include $(test-pipe_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-pipe_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-pipe_DEPS) $(test-pipe_OBJS) $(addprefix $(test-pipe_TARGETDIR)/,$(test-pipe_FILES)),)
+$(test-pipe_DEPS) $(test-pipe_OBJS) $(addprefix $(test-pipe_TARGETDIR)/,$(test-pipe_FILES)) : | $(test-pipe_TARGETDIR) $(test-pipe_OBJDIR)
+else
+$(test-pipe_DEPS) $(test-pipe_OBJS) $(addprefix $(test-pipe_TARGETDIR)/,$(test-pipe_FILES)) :: $(test-pipe_TARGETDIR) $(test-pipe_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-pipe_TARGETDIR) $(test-pipe_OBJDIR)
+
+
+test-pipe-clean : FILES := $(test-pipe_OBJS) $(test-pipe_EXES) $(test-pipe_DEPS)
+#MM
+test-pipe-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-pipe"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

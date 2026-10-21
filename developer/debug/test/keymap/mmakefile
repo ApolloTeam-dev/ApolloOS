@@ -1,0 +1,297 @@
+# Copyright © 2016, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := \
+ keymaptest \
+ printnativekeytable \
+
+EXEDIR := $(AROS_TESTS)/keymap
+
+#MM- test : test-keymap
+#MM- test-quick : test-keymap-quick
+
+
+.PHONY : test-keymap
+
+test-keymap_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-keymap_TARGETDIR := $(EXEDIR)
+test-keymap_LIBS := 
+
+test-keymap_FILES     := $(FILES)
+test-keymap_OBJS      := $(addsuffix .o,$(addprefix $(test-keymap_OBJDIR)/,$(test-keymap_FILES)))
+test-keymap_DEPS      := $(addsuffix .d,$(addprefix $(test-keymap_OBJDIR)/,$(test-keymap_FILES)))
+test-keymap_EXES      := $(addprefix $(test-keymap_TARGETDIR)/,$(test-keymap_FILES))
+
+test-keymap_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-keymap_CPPFLAGS += -I
+endif
+test-keymap_CFLAGS    := $(CFLAGS)
+test-keymap_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-keymap_COVERAGE := yes
+test-keymap_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-keymap_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-keymap_CFLAGS    := $(strip $(test-keymap_COVERAGEFLAGS) $(test-keymap_CFLAGS))
+test-keymap_LIBS += $(test-keymap_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-keymap_FUNCINSTR := yes
+test-keymap_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-keymap_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-keymap_CFLAGS    := $(strip $(test-keymap_INSTRFUNCFLAGS) $(test-keymap_CFLAGS))
+test-keymap_LIBS += $(test-keymap_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-keymap_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-keymap_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-keymap_DFLAGS := 
+else
+    test-keymap_DFLAGS := $(test-keymap_CFLAGS)
+endif
+ifeq (target,target)
+test-keymap_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-keymap_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-keymap_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-keymap_LDFLAGS += -L
+endif
+
+#MM
+test-keymap-quick : test-keymap
+
+#MM test-keymap : includes-generate-deps core-linklibs
+test-keymap : $(test-keymap_EXES)
+
+ifneq ($(filter $(TARGET),test-keymap test-keymap-quick),)
+
+ifeq (,)
+test-keymap_MC_SRCWILDCARD := %
+else
+test-keymap_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-keymap_OBJDIR),)
+test-keymap_MC_TARGETS := $(addsuffix .o,$(test-keymap_FILES))
+test-keymap_MC_DTARGETS := $(addsuffix .d,$(test-keymap_FILES))
+test-keymap_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-keymap_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-keymap_OBJDIR)/,$(notdir $(test-keymap_FILES))))
+    test-keymap_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-keymap_OBJDIR)/,$(notdir $(test-keymap_FILES))))
+else
+ifeq (,)
+    test-keymap_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-keymap_OBJDIR)/,$(test-keymap_FILES)))
+    test-keymap_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-keymap_OBJDIR)/,$(test-keymap_FILES)))
+else
+    test-keymap_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-keymap_OBJDIR)/,$(patsubst /%,%,$(test-keymap_FILES))))
+    test-keymap_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-keymap_OBJDIR)/,$(patsubst /%,%,$(test-keymap_FILES))))
+endif
+endif
+test-keymap_MC_TGTWILDCARD := $(test-keymap_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : | $(addsuffix .c,$(test-keymap_FILES))
+
+# Be sure that all .c files are found
+test-keymap_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-keymap_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-keymap_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-keymap_MC_DIRS := $(foreach dir, $(test-keymap_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-keymap_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-keymap_MC_DIRS),)
+    test-keymap_MC_DIRS := $(shell echo $(test-keymap_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-keymap_MC_DIRS)
+endif
+
+endif
+
+test-keymap_MC_CPPFLAGS := $(test-keymap_CPPFLAGS)
+test-keymap_CFLAGS := $(test-keymap_CFLAGS)
+ifeq ($(test-keymap_DFLAGS),)
+  test-keymap_DFLAGS := $(test-keymap_CFLAGS)
+else
+  test-keymap_DFLAGS := $(test-keymap_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-keymap_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-keymap_STRIP ?= $(TARGET_STRIP)
+test-keymap_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : test-keymap_MC_CPPFLAGS:=$(strip $(test-keymap_MC_CPPFLAGS) $(test-keymap_MC_EXTRA_CPPFLAGS))
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : test-keymap_CFLAGS:=$(strip $(test-keymap_CFLAGS) $(SAFETY_CFLAGS))
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : test-keymap_DFLAGS:=$(test-keymap_DFLAGS)
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : test-keymap_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : test-keymap_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-keymap_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-keymap_STRIP ?= $(HOST_STRIP)
+test-keymap_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : test-keymap_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-keymap_MC_CPPFLAGS) $(test-keymap_MC_EXTRA_CPPFLAGS))
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : test-keymap_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-keymap_CFLAGS))
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : test-keymap_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-keymap_DFLAGS))
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : test-keymap_IQUOTE:=$(HOST_IQUOTE)
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : test-keymap_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-keymap_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-keymap_STRIP ?= $(ECHO) >/dev/null
+test-keymap_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : test-keymap_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-keymap_MC_CPPFLAGS) $(test-keymap_MC_EXTRA_CPPFLAGS))
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : test-keymap_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-keymap_CFLAGS))
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : test-keymap_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-keymap_DFLAGS))
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : test-keymap_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-keymap_MC_TARGETS) $(test-keymap_MC_DTARGETS) : test-keymap_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-keymap_MC_TARGETS) : CPPFLAGS := $(test-keymap_MC_CPPFLAGS)
+$(test-keymap_MC_TARGETS) : CFLAGS := $(test-keymap_CFLAGS)
+$(test-keymap_MC_TARGETS) : $(test-keymap_MC_TGTWILDCARD).o : $(test-keymap_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-keymap_IQUOTE) $(dir $<) $(test-keymap_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-keymap_IQUOTE) . $(test-keymap_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-keymap_IQUOTE) $(dir $<) $(test-keymap_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-keymap_IQUOTE) . $(test-keymap_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-keymap_IQUOTE) $(dir $<) $(test-keymap_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-keymap_IQUOTE) . $(test-keymap_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-keymap_MC_DTARGETS) : $(test-keymap_MC_TGTWILDCARD).d : $(test-keymap_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-keymap_DFLAGS) $(test-keymap_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-keymap-link_EXTRA_LDFLAGS := 
+test-keymap-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-keymap-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-keymap-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-keymap-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-keymap-link_DIRS := $(subst -L ,-L,$(strip $(test-keymap_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-keymap-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-keymap-link_DIRS)))
+# Add trailing /
+test-keymap-link_DIRS := $(subst //,/,$(addsuffix /,$(test-keymap-link_DIRS)))
+# Add normal linklib path
+test-keymap-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-keymap-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-keymap_LIBS) $(test-keymap-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-keymap-link_DEPLIBS := $(foreach lib,$(test-keymap-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-keymap-link_DIRS)))) \
+)
+test-keymap-link_PROGS := $(addprefix $(test-keymap_TARGETDIR)/,$(test-keymap_FILES))
+
+$(test-keymap-link_PROGS) : OBJDIR := $(test-keymap_OBJDIR)
+$(test-keymap-link_PROGS) : LDFLAGS := $(strip $(test-keymap_LDFLAGS) $(test-keymap-link_EXTRA_LDFLAGS))
+$(test-keymap-link_PROGS) : LIBS := $(addprefix -l,$(test-keymap_LIBS) $(test-keymap-link_EXTRA_LIBS) )
+$(test-keymap-link_PROGS) : $(test-keymap_TARGETDIR)/% : $(test-keymap_OBJDIR)/%.o $(test-keymap-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-keymap_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-keymap_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-keymap_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-keymap_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-keymap_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-keymap_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-keymap_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-keymap_DEPS),)
+  ifneq (test-keymap test-keymap-quick,)
+    ifneq ($(findstring $(TARGET),test-keymap test-keymap-quick),)
+      -include $(test-keymap_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-keymap_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-keymap_DEPS) $(test-keymap_OBJS) $(addprefix $(test-keymap_TARGETDIR)/,$(test-keymap_FILES)),)
+$(test-keymap_DEPS) $(test-keymap_OBJS) $(addprefix $(test-keymap_TARGETDIR)/,$(test-keymap_FILES)) : | $(test-keymap_TARGETDIR) $(test-keymap_OBJDIR)
+else
+$(test-keymap_DEPS) $(test-keymap_OBJS) $(addprefix $(test-keymap_TARGETDIR)/,$(test-keymap_FILES)) :: $(test-keymap_TARGETDIR) $(test-keymap_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-keymap_TARGETDIR) $(test-keymap_OBJDIR)
+
+
+test-keymap-clean : FILES := $(test-keymap_OBJS) $(test-keymap_EXES) $(test-keymap_DEPS)
+#MM
+test-keymap-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-keymap"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

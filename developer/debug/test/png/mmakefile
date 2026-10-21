@@ -1,0 +1,296 @@
+# Copyright © 2012, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES           := version
+EXEDIR          := $(AROS_TESTS)/png
+
+#MM- test : test-png
+#MM- test-quick : test-png-quick
+
+#MM test-png : includes linklibs workbench-libs-png-linklib
+
+
+.PHONY : test-png
+
+test-png_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-png_TARGETDIR := $(EXEDIR)
+test-png_LIBS := png
+
+test-png_FILES     := $(FILES)
+test-png_OBJS      := $(addsuffix .o,$(addprefix $(test-png_OBJDIR)/,$(test-png_FILES)))
+test-png_DEPS      := $(addsuffix .d,$(addprefix $(test-png_OBJDIR)/,$(test-png_FILES)))
+test-png_EXES      := $(addprefix $(test-png_TARGETDIR)/,$(test-png_FILES))
+
+test-png_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-png_CPPFLAGS += -I
+endif
+test-png_CFLAGS    := $(CFLAGS)
+test-png_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-png_COVERAGE := yes
+test-png_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-png_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-png_CFLAGS    := $(strip $(test-png_COVERAGEFLAGS) $(test-png_CFLAGS))
+test-png_LIBS += $(test-png_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-png_FUNCINSTR := yes
+test-png_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-png_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-png_CFLAGS    := $(strip $(test-png_INSTRFUNCFLAGS) $(test-png_CFLAGS))
+test-png_LIBS += $(test-png_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-png_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-png_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-png_DFLAGS := 
+else
+    test-png_DFLAGS := $(test-png_CFLAGS)
+endif
+ifeq (target,target)
+test-png_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-png_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-png_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-png_LDFLAGS += -L
+endif
+
+#MM
+test-png-quick : test-png
+
+#MM test-png : includes-generate-deps core-linklibs
+test-png : $(test-png_EXES)
+
+ifneq ($(filter $(TARGET),test-png test-png-quick),)
+
+ifeq (,)
+test-png_MC_SRCWILDCARD := %
+else
+test-png_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-png_OBJDIR),)
+test-png_MC_TARGETS := $(addsuffix .o,$(test-png_FILES))
+test-png_MC_DTARGETS := $(addsuffix .d,$(test-png_FILES))
+test-png_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-png_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-png_OBJDIR)/,$(notdir $(test-png_FILES))))
+    test-png_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-png_OBJDIR)/,$(notdir $(test-png_FILES))))
+else
+ifeq (,)
+    test-png_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-png_OBJDIR)/,$(test-png_FILES)))
+    test-png_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-png_OBJDIR)/,$(test-png_FILES)))
+else
+    test-png_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-png_OBJDIR)/,$(patsubst /%,%,$(test-png_FILES))))
+    test-png_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-png_OBJDIR)/,$(patsubst /%,%,$(test-png_FILES))))
+endif
+endif
+test-png_MC_TGTWILDCARD := $(test-png_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : | $(addsuffix .c,$(test-png_FILES))
+
+# Be sure that all .c files are found
+test-png_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-png_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-png_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-png_MC_DIRS := $(foreach dir, $(test-png_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-png_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-png_MC_DIRS),)
+    test-png_MC_DIRS := $(shell echo $(test-png_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-png_MC_DIRS)
+endif
+
+endif
+
+test-png_MC_CPPFLAGS := $(test-png_CPPFLAGS)
+test-png_CFLAGS := $(test-png_CFLAGS)
+ifeq ($(test-png_DFLAGS),)
+  test-png_DFLAGS := $(test-png_CFLAGS)
+else
+  test-png_DFLAGS := $(test-png_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-png_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-png_STRIP ?= $(TARGET_STRIP)
+test-png_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : test-png_MC_CPPFLAGS:=$(strip $(test-png_MC_CPPFLAGS) $(test-png_MC_EXTRA_CPPFLAGS))
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : test-png_CFLAGS:=$(strip $(test-png_CFLAGS) $(SAFETY_CFLAGS))
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : test-png_DFLAGS:=$(test-png_DFLAGS)
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : test-png_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : test-png_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-png_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-png_STRIP ?= $(HOST_STRIP)
+test-png_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : test-png_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-png_MC_CPPFLAGS) $(test-png_MC_EXTRA_CPPFLAGS))
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : test-png_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-png_CFLAGS))
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : test-png_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-png_DFLAGS))
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : test-png_IQUOTE:=$(HOST_IQUOTE)
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : test-png_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-png_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-png_STRIP ?= $(ECHO) >/dev/null
+test-png_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : test-png_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-png_MC_CPPFLAGS) $(test-png_MC_EXTRA_CPPFLAGS))
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : test-png_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-png_CFLAGS))
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : test-png_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-png_DFLAGS))
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : test-png_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-png_MC_TARGETS) $(test-png_MC_DTARGETS) : test-png_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-png_MC_TARGETS) : CPPFLAGS := $(test-png_MC_CPPFLAGS)
+$(test-png_MC_TARGETS) : CFLAGS := $(test-png_CFLAGS)
+$(test-png_MC_TARGETS) : $(test-png_MC_TGTWILDCARD).o : $(test-png_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-png_IQUOTE) $(dir $<) $(test-png_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-png_IQUOTE) . $(test-png_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-png_IQUOTE) $(dir $<) $(test-png_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-png_IQUOTE) . $(test-png_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-png_IQUOTE) $(dir $<) $(test-png_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-png_IQUOTE) . $(test-png_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-png_MC_DTARGETS) : $(test-png_MC_TGTWILDCARD).d : $(test-png_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-png_DFLAGS) $(test-png_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-png-link_EXTRA_LDFLAGS := 
+test-png-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-png-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-png-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-png-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-png-link_DIRS := $(subst -L ,-L,$(strip $(test-png_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-png-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-png-link_DIRS)))
+# Add trailing /
+test-png-link_DIRS := $(subst //,/,$(addsuffix /,$(test-png-link_DIRS)))
+# Add normal linklib path
+test-png-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-png-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-png_LIBS) $(test-png-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-png-link_DEPLIBS := $(foreach lib,$(test-png-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-png-link_DIRS)))) \
+)
+test-png-link_PROGS := $(addprefix $(test-png_TARGETDIR)/,$(test-png_FILES))
+
+$(test-png-link_PROGS) : OBJDIR := $(test-png_OBJDIR)
+$(test-png-link_PROGS) : LDFLAGS := $(strip $(test-png_LDFLAGS) $(test-png-link_EXTRA_LDFLAGS))
+$(test-png-link_PROGS) : LIBS := $(addprefix -l,$(test-png_LIBS) $(test-png-link_EXTRA_LIBS) )
+$(test-png-link_PROGS) : $(test-png_TARGETDIR)/% : $(test-png_OBJDIR)/%.o $(test-png-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-png_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-png_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-png_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-png_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-png_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-png_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-png_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-png_DEPS),)
+  ifneq (test-png test-png-quick,)
+    ifneq ($(findstring $(TARGET),test-png test-png-quick),)
+      -include $(test-png_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-png_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-png_DEPS) $(test-png_OBJS) $(addprefix $(test-png_TARGETDIR)/,$(test-png_FILES)),)
+$(test-png_DEPS) $(test-png_OBJS) $(addprefix $(test-png_TARGETDIR)/,$(test-png_FILES)) : | $(test-png_TARGETDIR) $(test-png_OBJDIR)
+else
+$(test-png_DEPS) $(test-png_OBJS) $(addprefix $(test-png_TARGETDIR)/,$(test-png_FILES)) :: $(test-png_TARGETDIR) $(test-png_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-png_TARGETDIR) $(test-png_OBJDIR)
+
+
+test-png-clean : FILES := $(test-png_OBJS) $(test-png_EXES) $(test-png_DEPS)
+#MM
+test-png-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-png"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,86 @@
+include $(SRCDIR)/config/aros.cfg
+
+# 'fs' package includes necessary filesystems and partition.
+# These include filesystems and dos starter
+
+#MM- kernel-fs-core:		\
+#MM	kernel-fs-afs		\
+#MM	kernel-fs-cdvdfs	\
+#MM	kernel-partition
+
+#MM- kernel-fs-core-kobj:		\
+#MM	kernel-fs-afs-kobj		\
+#MM	kernel-fs-cdvdfs-kobj	\
+#MM	kernel-partition-kobj
+
+#MM- kernel-fs-xtra:		\
+#MM	kernel-fs-sfs		\
+#MM	kernel-fs-fat
+
+#MM kernel-package-fs:		\
+#MM	kernel-fs-xtra	\
+#MM	kernel-fs-core
+
+FS_LIBS     := partition
+FS_CORE_HANDLERS := afs cdrom
+FS_XTRA_HANDLERS := sfs fat
+
+
+PKG_CLASSES        := $(addprefix $(AROS_CLASSES)/,$(addsuffix .class, ))
+PKG_DEVICES        := $(addprefix $(AROS_DEVS)/,$(addsuffix .device, ))
+PKG_HANDLERS       := $(addprefix $(AROS_FS)/,$(addsuffix -handler, $(FS_CORE_HANDLERS) $(FS_XTRA_HANDLERS)))
+PKG_HIDD           := $(addprefix $(AROS_DEVS)/Drivers/,$(addsuffix .hidd, ))
+PKG_LIBS           := $(addprefix $(AROS_LIBRARIES)/,$(addsuffix .library, $(FS_LIBS)))
+PKG_RESOURCES      := $(addprefix $(AROS_DEVS)/,$(addsuffix .resource, ))
+
+PKG_CLASSES_ARCH   := $(addprefix $(AROS_CLASSES_ARCH)/,$(addsuffix .class, ))
+PKG_DEVICES_ARCH   := $(addprefix $(AROS_DEVS_ARCH)/,$(addsuffix .device, ))
+PKG_HANDLERS_ARCH  := $(addprefix $(AROS_FS_ARCH)/,$(addsuffix -handler, ))
+PKG_HIDD_ARCH      := $(addprefix $(AROS_DEVS_ARCH)/Drivers/,$(addsuffix .hidd, ))
+PKG_LIBRARIES_ARCH := $(addprefix $(AROS_LIBRARIES_ARCH)/,$(addsuffix .library, ))
+PKG_RESOURCES_ARCH := $(addprefix $(AROS_DEVS_ARCH)/,$(addsuffix .resource, ))
+
+PKG_FILES          := $(PKG_CLASSES) $(PKG_DEVICES) $(PKG_HANDLERS) $(PKG_HIDD) $(PKG_LIBS) $(PKG_RESOURCES) \
+    $(PKG_CLASSES_ARCH) $(PKG_DEVICES_ARCH) $(PKG_HANDLERS_ARCH) $(PKG_HIDD_ARCH) $(PKG_LIBRARIES_ARCH) $(PKG_RESOURCES_ARCH)
+PKG_DIR            := $(dir $(AROS_BOOT)/aros-fs.pkg)
+
+#MM
+kernel-package-fs : $(AROS_BOOT)/aros-fs.pkg
+
+#MM
+kernel-package-fs-quick : $(AROS_BOOT)/aros-fs.pkg
+
+$(AROS_BOOT)/aros-fs.pkg: $(PKG_FILES) | $(PKG_DIR)
+	$(Q)$(ECHO) Packaging $@...
+	$(Q)$(SRCDIR)/tools/package/pkg c $@ $^
+
+
+#MM- kernel-package-fs-gz : kernel-package-fs kernel-package-fs-gz-quick
+
+#MM
+kernel-package-fs-gz-quick : $(AROS_BOOT)/aros-fs.pkg.gz
+
+$(AROS_BOOT)/aros-fs.pkg.gz: $(AROS_BOOT)/aros-fs.pkg
+	$(Q)$(ECHO) Compressing $(subst $(TARGETDIR)/,,$^)...
+	$(Q)gzip -9 -f $^
+
+
+
+ifneq (setup,)
+setup : | $(PKG_DIR)
+else
+setup :: $(PKG_DIR)
+endif
+
+GLOB_MKDIRS += $(PKG_DIR)
+
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

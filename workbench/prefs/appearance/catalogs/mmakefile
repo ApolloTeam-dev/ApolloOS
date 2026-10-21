@@ -1,0 +1,75 @@
+# Copyright © 2013-2019, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+CATALOGS := czech italian french polish norwegian
+
+
+ifeq (,)
+workbench-prefs-appearance-catalogs_DESC := $(basename $(wildcard $(SRCDIR)/$(CURDIR)/*.cd))
+else
+workbench-prefs-appearance-catalogs_DESC := 
+endif
+
+workbench-prefs-appearance-catalogs_SRC := $(shell echo $(TOOLDIR)/C_h_aros | sed 's/^\(.\):\//\/\1\//')
+
+ifeq ($(CATALOGS),)
+workbench-prefs-appearance-catalogs_LNGS := $(basename $(notdir $(call WILDCARD, $(SRCDIR)/$(CURDIR)/*.ct)))
+else
+workbench-prefs-appearance-catalogs_LNGS := $(CATALOGS)
+endif
+
+workbench-prefs-appearance-catalogs_OBJS := $(addsuffix /System/Prefs/Appearance.catalog, $(addprefix $(AROS_CATALOGS)/, $(workbench-prefs-appearance-catalogs_LNGS)))
+workbench-prefs-appearance-catalogs_DIRS := $(addsuffix /System/Prefs, $(addprefix $(AROS_CATALOGS)/, $(workbench-prefs-appearance-catalogs_LNGS))) $(dir ../strings.h)
+
+#MM- workbench-prefs-appearance-catalogs-quick : workbench-prefs-appearance-catalogs
+
+#MM
+workbench-prefs-appearance-catalogs : $(workbench-prefs-appearance-catalogs_OBJS) ../strings.h
+
+
+ifneq ($(workbench-prefs-appearance-catalogs_OBJS),)
+$(workbench-prefs-appearance-catalogs_OBJS) : | $(workbench-prefs-appearance-catalogs_DIRS)
+else
+$(workbench-prefs-appearance-catalogs_OBJS) :: $(workbench-prefs-appearance-catalogs_DIRS)
+endif
+
+GLOB_MKDIRS += $(workbench-prefs-appearance-catalogs_DIRS)
+
+
+$(AROS_CATALOGS)/%/System/Prefs/Appearance.catalog : $(SRCDIR)/$(CURDIR)/%.ct $(workbench-prefs-appearance-catalogs_DESC).cd
+	$(Q)$(ECHO) "Creating   Appearance catalog for language $*."
+	$(Q)$(IF) $(TEST) "$*" = "polish"; then \
+	    $(FLEXCAT) iso88592toamigapl $(workbench-prefs-appearance-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Prefs/Appearance.catalog" || [ $$? -lt 10 ] ; \
+	elif $(TEST) "$*" = "russian"; then \
+	    $(FLEXCAT) win1251toamiga1251 $(workbench-prefs-appearance-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Prefs/Appearance.catalog" || [ $$? -lt 10 ] ; \
+	else \
+	    $(FLEXCAT) $(workbench-prefs-appearance-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Prefs/Appearance.catalog" || [ $$? -lt 10 ] ; \
+	fi
+
+ifneq (../strings.h,)
+../strings.h : workbench-prefs-appearance-catalogs_DESC := $(workbench-prefs-appearance-catalogs_DESC)
+../strings.h : workbench-prefs-appearance-catalogs_SRC := $(workbench-prefs-appearance-catalogs_SRC)
+../strings.h : $(workbench-prefs-appearance-catalogs_DESC).cd $(workbench-prefs-appearance-catalogs_SRC).sd | $(dir ../strings.h)
+	$(Q)$(ECHO) "Creating   Appearance catalog source file $@"
+	$(Q)$(FLEXCAT) $(workbench-prefs-appearance-catalogs_DESC).cd $@=$(workbench-prefs-appearance-catalogs_SRC).sd
+endif
+
+workbench-prefs-appearance-catalogs-clean : FILES := $(workbench-prefs-appearance-catalogs_OBJS) ../strings.h
+#MM
+workbench-prefs-appearance-catalogs-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-prefs-appearance-catalogs"
+	$(Q)$(RM) $(FILES)
+
+.PHONY: workbench-prefs-appearance-catalogs workbench-prefs-appearance-catalogs-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

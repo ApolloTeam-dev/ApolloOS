@@ -1,0 +1,1671 @@
+#   $Id$
+#
+#   Generate cgxbootpic.library
+#
+include $(SRCDIR)/config/aros.cfg
+
+BOOTPIC_IMAGE := bootpic
+
+#MM kernel-cgxbootpic : linklibs
+#MM- kernel-cgxbootpic-kobj : linklibs
+
+USER_INCLUDES := -I$(GENDIR)/$(CURDIR)
+
+kernel-cgxbootpic-includes: $(GENDIR)/$(CURDIR)/bootpic_image.h
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-cgxbootpic
+#MM kernel-cgxbootpic-quick
+#MM kernel-cgxbootpic-makefile
+#MM kernel-cgxbootpic-clean
+
+# ABI targets:
+#MM- includes-all : kernel-cgxbootpic-includes
+#MM- linklibs-cgxbootpic: kernel-cgxbootpic-linklib
+#MM- linklibs-cgxbootpic_rel : kernel-cgxbootpic-linklib
+#MM- includes-cgxbootpic: kernel-cgxbootpic-includes
+#MM- includes-cgxbootpic_rel : kernel-cgxbootpic-includes
+#MM- kernel-cgxbootpic : kernel-cgxbootpic-includes core-linklibs linklibs-
+#MM kernel-cgxbootpic-linklib : kernel-cgxbootpic-includes includes-
+#MM- kernel-cgxbootpic-quick : kernel-cgxbootpic-includes-quick
+#MM kernel-cgxbootpic-includes : kernel-cgxbootpic-makefile kernel-cgxbootpic-includes-dirs \
+#MM     includes-generate-deps kernel-cgxbootpic-fd
+#MM kernel-cgxbootpic-includes-quick
+#MM kernel-cgxbootpic-includes-dirs
+#MM kernel-cgxbootpic-fd
+
+# Library targets
+#MM kernel-cgxbootpic-kobj : core-linklibs linklibs-
+#MM kernel-cgxbootpic-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-cgxbootpic-kobj : kernel-cgxbootpic-includes core-linklibs linklibs-
+#MM kernel-cgxbootpic-kobj-quick : kernel-cgxbootpic-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-cgxbootpic_ALLTARGETS       := kernel-cgxbootpic kernel-cgxbootpic-quick kernel-cgxbootpic-clean
+
+ifeq (M,M)
+kernel-cgxbootpic_ALLTARGETS       += kernel-cgxbootpic-kobj kernel-cgxbootpic-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-cgxbootpic_ALLTARGETS += kernel-cgxbootpic-includes \
+                 kernel-cgxbootpic-includes-quick kernel-cgxbootpic-includes-dirs  \
+                 kernel-cgxbootpic-linklib kernel-cgxbootpic-fd
+endif
+
+.PHONY : $(kernel-cgxbootpic_ALLTARGETS) kernel-cgxbootpic-makefile
+
+ifeq (cgxbootpic,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (library,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-cgxbootpic_DEFNAME      := cgxbootpic_
+else
+    kernel-cgxbootpic_DEFNAME      := cgxbootpic
+endif
+kernel-cgxbootpic_DEFLINKLIBNAME   := $(kernel-cgxbootpic_DEFNAME)
+ifneq (,)
+    kernel-cgxbootpic_LINKLIBNAME  := 
+else
+    kernel-cgxbootpic_LINKLIBNAME  = $(kernel-cgxbootpic_DEFLINKLIBNAME)
+endif
+kernel-cgxbootpic_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-cgxbootpic_DEFCPPFLAGS  += -I
+endif
+kernel-cgxbootpic_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-cgxbootpic_DFLAGS       := 
+else
+    kernel-cgxbootpic_DFLAGS       = $(kernel-cgxbootpic_DEFDFLAGS)
+endif
+kernel-cgxbootpic_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-cgxbootpic_DXXFLAGS     := 
+else
+    kernel-cgxbootpic_DXXFLAGS     = $(kernel-cgxbootpic_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-cgxbootpic_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-cgxbootpic_DEFDFLAGS))
+kernel-cgxbootpic_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-cgxbootpic_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-cgxbootpic_FUNCINSTR := yes
+kernel-cgxbootpic_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-cgxbootpic_DEFDFLAGS))
+kernel-cgxbootpic_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-cgxbootpic_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-cgxbootpic_OBJDIR                     := 
+else
+kernel-cgxbootpic_OBJDIR                     := $(OBJDIR)/$(kernel-cgxbootpic_DEFNAME)
+endif
+ifneq (,)
+kernel-cgxbootpic_OBJDIR           := $(kernel-cgxbootpic_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-cgxbootpic-makefile         := $(kernel-cgxbootpic_OBJDIR)/Makefile.$(kernel-cgxbootpic_DEFNAME)library
+kernel-cgxbootpic-genmakefile : $(kernel-cgxbootpic-makefile)
+
+
+kernel-cgxbootpic-genmakefile_OPTS := 
+ifneq (,)
+    kernel-cgxbootpic-genmakefile_OPTS += -f 
+    kernel-cgxbootpic-genmakefile_MODNAME := cgxbootpic_
+else
+    kernel-cgxbootpic-genmakefile_MODNAME := cgxbootpic
+endif
+kernel-cgxbootpic-genmakefile_TARGET := Makefile.$(kernel-cgxbootpic-genmakefile_MODNAME)library
+kernel-cgxbootpic-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-cgxbootpic-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-cgxbootpic-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-cgxbootpic-genmakefile_OPTS += -c 
+        kernel-cgxbootpic-genmakefile_DEPS += 
+    endif 
+else
+    kernel-cgxbootpic-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/cgxbootpic.conf
+    kernel-cgxbootpic-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/cgxbootpic.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-cgxbootpic-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-cgxbootpic-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-cgxbootpic-genmakefile_OPTS += -o 
+        kernel-cgxbootpic-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-cgxbootpic-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-cgxbootpic_OBJDIR),)
+    kernel-cgxbootpic-genmakefile_OPTS += -d $(kernel-cgxbootpic_OBJDIR)
+    kernel-cgxbootpic-genmakefile_TARGET := $(kernel-cgxbootpic_OBJDIR)/$(kernel-cgxbootpic-genmakefile_TARGET)
+endif
+
+$(kernel-cgxbootpic-genmakefile_TARGET) : OPTS := $(kernel-cgxbootpic-genmakefile_OPTS)
+$(kernel-cgxbootpic-genmakefile_TARGET) : MODNAME := cgxbootpic
+$(kernel-cgxbootpic-genmakefile_TARGET) : MODTYPE := library
+$(kernel-cgxbootpic-genmakefile_TARGET) : $(kernel-cgxbootpic-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-cgxbootpic-makefile),)
+$(kernel-cgxbootpic-makefile) : | $(kernel-cgxbootpic_OBJDIR)
+else
+$(kernel-cgxbootpic-makefile) :: $(kernel-cgxbootpic_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-cgxbootpic_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-cgxbootpic_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-cgxbootpic-makefile)
+
+kernel-cgxbootpic_DEFMODDIR        := $($(kernel-cgxbootpic_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-cgxbootpic_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-cgxbootpic_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-cgxbootpic_MODDIR       := 
+else
+    kernel-cgxbootpic_MODDIR       := $(kernel-cgxbootpic_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-cgxbootpic_INCDIR           := 
+else
+kernel-cgxbootpic_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-cgxbootpic_LIBDEFSINC       := $(kernel-cgxbootpic_OBJDIR)/include/$(kernel-cgxbootpic_DEFNAME)_libdefs.h
+kernel-cgxbootpic_DEFLIBDEFSINC    := $(kernel-cgxbootpic_OBJDIR)/include/$(kernel-cgxbootpic_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-cgxbootpic-includes-quick : kernel-cgxbootpic-includes
+kernel-cgxbootpic-includes : $(addprefix $(GENINCDIR)/,$($(kernel-cgxbootpic_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-cgxbootpic_INCDIR)/,$($(kernel-cgxbootpic_DEFNAME)_INCLUDES)) \
+    $(kernel-cgxbootpic_LIBDEFSINC) $(kernel-cgxbootpic_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-cgxbootpic_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-cgxbootpic-includes_MODNAME := cgxbootpic_
+else
+    kernel-cgxbootpic-includes_MODNAME := cgxbootpic
+endif
+
+ifneq ($($(kernel-cgxbootpic-includes_MODNAME)_INCLUDES),)
+
+kernel-cgxbootpic-includes_TARGETS := $($(kernel-cgxbootpic-includes_MODNAME)_INCLUDES)
+
+kernel-cgxbootpic-includes_DEPS := $(GENMODULE)
+kernel-cgxbootpic-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-cgxbootpic-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-cgxbootpic-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-cgxbootpic-includes_OPTS += -c 
+        kernel-cgxbootpic-includes_DEPS += 
+    endif 
+else
+    kernel-cgxbootpic-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/cgxbootpic.conf
+    kernel-cgxbootpic-includes_DEPS += $(SRCDIR)/$(CURDIR)/cgxbootpic.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-cgxbootpic-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-cgxbootpic-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-cgxbootpic-includes_OPTS += -o 
+        kernel-cgxbootpic-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-cgxbootpic-includes_OPTS += -s 
+endif
+ifneq ($(kernel-cgxbootpic_OBJDIR)/include,)
+    kernel-cgxbootpic-includes_OPTS += -d $(kernel-cgxbootpic_OBJDIR)/include
+    kernel-cgxbootpic-includes_TARGETS := $(addprefix $(kernel-cgxbootpic_OBJDIR)/include/,$(kernel-cgxbootpic-includes_TARGETS))
+    kernel-cgxbootpic-includes_GENINCFLAG=$(kernel-cgxbootpic_OBJDIR)/include/.cgxbootpic.library-includes
+else
+    kernel-cgxbootpic-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.cgxbootpic.library-includes
+endif
+
+$(kernel-cgxbootpic-includes_TARGETS) : $(kernel-cgxbootpic-includes_DEPS) $(kernel-cgxbootpic-includes_GENINCFLAG)
+
+$(kernel-cgxbootpic-includes_GENINCFLAG) : OPTS := $(kernel-cgxbootpic-includes_OPTS)
+$(kernel-cgxbootpic-includes_GENINCFLAG) : MODNAME := cgxbootpic
+$(kernel-cgxbootpic-includes_GENINCFLAG) : MODTYPE := library
+$(kernel-cgxbootpic-includes_GENINCFLAG) : $(kernel-cgxbootpic-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-cgxbootpic_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-cgxbootpic_DEFNAME)_INCLUDES)) : | $(kernel-cgxbootpic_OBJDIR)/cgxbootpic_geninc
+
+$(kernel-cgxbootpic_OBJDIR)/cgxbootpic_geninc : COPYSRCDIR := $(kernel-cgxbootpic_OBJDIR)/include
+$(kernel-cgxbootpic_OBJDIR)/cgxbootpic_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-cgxbootpic_OBJDIR)/cgxbootpic_geninc : FILES := $($(kernel-cgxbootpic_DEFNAME)_INCLUDES)
+$(kernel-cgxbootpic_OBJDIR)/cgxbootpic_geninc : $(addprefix $(kernel-cgxbootpic_OBJDIR)/include/,$($(kernel-cgxbootpic_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-cgxbootpic_OBJDIR)/include
+
+$(addprefix $(kernel-cgxbootpic_INCDIR)/,$($(kernel-cgxbootpic_DEFNAME)_INCLUDES)) : | $(kernel-cgxbootpic_OBJDIR)/cgxbootpic_incs
+
+$(kernel-cgxbootpic_OBJDIR)/cgxbootpic_incs : COPYSRCDIR := $(kernel-cgxbootpic_OBJDIR)/include
+$(kernel-cgxbootpic_OBJDIR)/cgxbootpic_incs : TGTDIR := $(kernel-cgxbootpic_INCDIR)
+$(kernel-cgxbootpic_OBJDIR)/cgxbootpic_incs : FILES := $($(kernel-cgxbootpic_DEFNAME)_INCLUDES)
+$(kernel-cgxbootpic_OBJDIR)/cgxbootpic_incs : $(addprefix $(kernel-cgxbootpic_OBJDIR)/include/,$($(kernel-cgxbootpic_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-cgxbootpic_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-cgxbootpic_DEFNAME)_INCLUDES))))
+
+TMPcgxbootpic_INCDIRS := \
+    $(kernel-cgxbootpic_OBJDIR)/include $(addprefix $(kernel-cgxbootpic_OBJDIR)/include/,$(kernel-cgxbootpic_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-cgxbootpic_INCDIRS)) \
+    $(kernel-cgxbootpic_INCDIR) $(addprefix $(kernel-cgxbootpic_INCDIR)/,$(kernel-cgxbootpic_INCDIRS))
+
+ifneq (kernel-cgxbootpic-includes-dirs,)
+kernel-cgxbootpic-includes-dirs : | $(TMPcgxbootpic_INCDIRS)
+else
+kernel-cgxbootpic-includes-dirs :: $(TMPcgxbootpic_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPcgxbootpic_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-cgxbootpic-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-cgxbootpic-genlibdefs_OPTS += -f 
+    kernel-cgxbootpic-genlibdefs_MODNAME := cgxbootpic_
+else
+    kernel-cgxbootpic-genlibdefs_MODNAME := cgxbootpic
+endif
+kernel-cgxbootpic-genlibdefs_TARGET := $(kernel-cgxbootpic-genlibdefs_MODNAME)_libdefs.h
+kernel-cgxbootpic-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-cgxbootpic-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-cgxbootpic-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-cgxbootpic-genlibdefs_OPTS += -c 
+        kernel-cgxbootpic-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-cgxbootpic-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/cgxbootpic.conf
+    kernel-cgxbootpic-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/cgxbootpic.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-cgxbootpic-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-cgxbootpic-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-cgxbootpic-genlibdefs_OPTS += -o 
+        kernel-cgxbootpic-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-cgxbootpic-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-cgxbootpic_OBJDIR)/include,)
+    kernel-cgxbootpic-genlibdefs_OPTS += -d $(kernel-cgxbootpic_OBJDIR)/include
+    kernel-cgxbootpic-genlibdefs_TARGET := $(kernel-cgxbootpic_OBJDIR)/include/$(kernel-cgxbootpic-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-cgxbootpic-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-cgxbootpic-genlibdefs_TARGET) : OPTS := $(kernel-cgxbootpic-genlibdefs_OPTS)
+$(kernel-cgxbootpic-genlibdefs_TARGET) : MODNAME := cgxbootpic
+$(kernel-cgxbootpic-genlibdefs_TARGET) : MODTYPE := library
+$(kernel-cgxbootpic-genlibdefs_TARGET) : $(kernel-cgxbootpic-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-cgxbootpic_DEFLIBDEFSINC) : FILENAME := $(kernel-cgxbootpic_LIBDEFSINC)
+$(kernel-cgxbootpic_DEFLIBDEFSINC) : $(kernel-cgxbootpic_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-cgxbootpic_LIBDEFSINC) $(kernel-cgxbootpic_DEFLIBDEFSINC) : | $(kernel-cgxbootpic_OBJDIR)/include
+
+ifneq (kernel-cgxbootpic-includes-dirs,)
+kernel-cgxbootpic-includes-dirs : | $(kernel-cgxbootpic_OBJDIR)/include
+else
+kernel-cgxbootpic-includes-dirs :: $(kernel-cgxbootpic_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-cgxbootpic_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-cgxbootpic-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-cgxbootpic-genmodfiles_OPTS += -f 
+    kernel-cgxbootpic-genmodfiles_MODNAME := cgxbootpic_
+else
+    kernel-cgxbootpic-genmodfiles_MODNAME := cgxbootpic
+endif
+kernel-cgxbootpic-genmodfiles_GENTARGETS := $($(kernel-cgxbootpic-genmodfiles_MODNAME)_STARTFILES) $($(kernel-cgxbootpic-genmodfiles_MODNAME)_ENDFILES)
+kernel-cgxbootpic-genmodfiles_STUBTARGETS := $($(kernel-cgxbootpic-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-cgxbootpic-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-cgxbootpic-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-cgxbootpic-genmodfiles_GENTARGETS))
+kernel-cgxbootpic-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-cgxbootpic-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-cgxbootpic-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-cgxbootpic-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-cgxbootpic-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-cgxbootpic-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-cgxbootpic-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-cgxbootpic-genmodfiles_OPTS += -c 
+        kernel-cgxbootpic-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-cgxbootpic-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/cgxbootpic.conf
+    kernel-cgxbootpic-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/cgxbootpic.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-cgxbootpic-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-cgxbootpic-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-cgxbootpic-genmodfiles_OPTS += -o 
+        kernel-cgxbootpic-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-cgxbootpic-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-cgxbootpic_OBJDIR),)
+    kernel-cgxbootpic-genmodfiles_OPTS += -d $(kernel-cgxbootpic_OBJDIR)
+    kernel-cgxbootpic-genmodfiles_TARGETDIR := $(shell echo $(kernel-cgxbootpic_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-cgxbootpic-genmodfiles_GENTARGETS := $(addprefix $(kernel-cgxbootpic-genmodfiles_TARGETDIR)/,$(kernel-cgxbootpic-genmodfiles_GENTARGETS))
+    kernel-cgxbootpic-genmodfiles_GENFILEFLAG=$(kernel-cgxbootpic-genmodfiles_TARGETDIR)/.cgxbootpic.library-genfiles
+else
+    kernel-cgxbootpic-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.cgxbootpic.library-genfiles
+endif
+ifneq ($(kernel-cgxbootpic_OBJDIR)/linklib,)
+    kernel-cgxbootpic-genmodfiles_OPTS += -l $(kernel-cgxbootpic_OBJDIR)/linklib
+    kernel-cgxbootpic-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-cgxbootpic_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-cgxbootpic-genmodfiles_STUBTARGETS := $(addprefix $(kernel-cgxbootpic-genmodfiles_STUBTARGETDIR)/,$(kernel-cgxbootpic-genmodfiles_STUBTARGETS))
+    kernel-cgxbootpic-genmodfiles_TARGETDIRS += $(kernel-cgxbootpic_OBJDIR)/linklib
+else
+ifneq ($(kernel-cgxbootpic_OBJDIR),)
+    kernel-cgxbootpic-genmodfiles_STUBTARGETS := $(addprefix $(kernel-cgxbootpic-genmodfiles_TARGETDIR)/,$(kernel-cgxbootpic-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-cgxbootpic-genmodfiles_TARGETS := $(kernel-cgxbootpic-genmodfiles_GENTARGETS) $(kernel-cgxbootpic-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-cgxbootpic-genmodfiles_TARGETDIRS),)
+$(kernel-cgxbootpic-genmodfiles_TARGETS) : | $(kernel-cgxbootpic-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-cgxbootpic-genmodfiles_TARGETS) : $(kernel-cgxbootpic-genmodfiles_DEPS) $(kernel-cgxbootpic-genmodfiles_GENFILEFLAG)
+
+$(kernel-cgxbootpic-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-cgxbootpic-genmodfiles_OPTS)
+$(kernel-cgxbootpic-genmodfiles_GENFILEFLAG) : MODNAME := cgxbootpic
+$(kernel-cgxbootpic-genmodfiles_GENFILEFLAG) : MODTYPE := library
+$(kernel-cgxbootpic-genmodfiles_GENFILEFLAG) : $(kernel-cgxbootpic-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-cgxbootpic-genmodfiles_GENFILEFLAG) : $(kernel-cgxbootpic_DEFLIBDEFSINC) $(kernel-cgxbootpic-makefile)
+
+
+ifneq ($(kernel-cgxbootpic-genmodfiles_GENFILEFLAG),)
+$(kernel-cgxbootpic-genmodfiles_GENFILEFLAG) : | $(kernel-cgxbootpic_OBJDIR)/linklib
+else
+$(kernel-cgxbootpic-genmodfiles_GENFILEFLAG) :: $(kernel-cgxbootpic_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-cgxbootpic_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-cgxbootpic_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-cgxbootpic_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-cgxbootpic-fd : $(kernel-cgxbootpic_FDDIR)/cgxbootpic_lib.fd
+
+
+TMP_TARGET := cgxbootpic_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/cgxbootpic.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/cgxbootpic.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-cgxbootpic_FDDIR),)
+    TMP_OPTS += -d $(kernel-cgxbootpic_FDDIR)
+    TMP_TARGET := $(kernel-cgxbootpic_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := cgxbootpic
+$(TMP_TARGET) : MODTYPE := library
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-cgxbootpic_FDDIR)/cgxbootpic_lib.fd : | $(kernel-cgxbootpic_FDDIR)
+
+
+ifneq (kernel-cgxbootpic-fd-setup,)
+kernel-cgxbootpic-fd-setup : | $(kernel-cgxbootpic_FDDIR)
+else
+kernel-cgxbootpic-fd-setup :: $(kernel-cgxbootpic_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-cgxbootpic_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-cgxbootpic_FILES            := cgxbootpic_init renderbootpic
+kernel-cgxbootpic_OBJCFILES        := 
+kernel-cgxbootpic_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-cgxbootpic_LIBFILES         := 
+kernel-cgxbootpic_LIBS             := 
+
+kernel-cgxbootpic_FDIRS            := $(sort $(dir $(kernel-cgxbootpic_FILES)))
+
+kernel-cgxbootpic_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-cgxbootpic_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-cgxbootpic_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-cgxbootpic_FILTERARCH       = $(filter-out $(call kernel-cgxbootpic_MATCHARCH,$(1),$(2)),$(2))
+kernel-cgxbootpic_STARTFILES       := $(addprefix $(kernel-cgxbootpic_OBJDIR)/,$($(kernel-cgxbootpic_DEFNAME)_STARTFILES))
+kernel-cgxbootpic_ENDFILES         := $(addprefix $(kernel-cgxbootpic_OBJDIR)/,$($(kernel-cgxbootpic_DEFNAME)_ENDFILES))
+
+kernel-cgxbootpic_ARCHOBJS         := $(wildcard $(kernel-cgxbootpic_OBJDIR)/arch/*.o)
+kernel-cgxbootpic_LIBARCHOBJS      := $(wildcard $(kernel-cgxbootpic_OBJDIR)/linklib/arch/*.o)
+kernel-cgxbootpic_ARCHFILES        := $(basename $(notdir $(kernel-cgxbootpic_ARCHOBJS)))
+kernel-cgxbootpic_LIBARCHFILES     := $(basename $(notdir $(kernel-cgxbootpic_LIBARCHOBJS)))
+kernel-cgxbootpic_C_NARCHFILES     := $(call kernel-cgxbootpic_FILTERARCH,$(kernel-cgxbootpic_ARCHFILES),$(kernel-cgxbootpic_FILES))
+kernel-cgxbootpic_CXX_NARCHFILES   := $(call kernel-cgxbootpic_FILTERARCH,$(kernel-cgxbootpic_ARCHFILES),$(kernel-cgxbootpic_CXXFILES))
+kernel-cgxbootpic_OBJC_NARCHFILES  := $(call kernel-cgxbootpic_FILTERARCH,$(kernel-cgxbootpic_ARCHFILES),$(kernel-cgxbootpic_OBJCFILES))
+kernel-cgxbootpic_NLIBARCHFILES    := $(call kernel-cgxbootpic_FILTERARCH,$(kernel-cgxbootpic_LIBARCHFILES),$(kernel-cgxbootpic_LIBFILES))
+kernel-cgxbootpic_ARCHNLIBFILES    := $(call kernel-cgxbootpic_FILTERARCH,$(kernel-cgxbootpic_LIBFILES),$(kernel-cgxbootpic_LIBARCHFILES))
+
+kernel-cgxbootpic_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-cgxbootpic_OBJDIR)/include -include $(kernel-cgxbootpic_DEFLIBDEFSINC))
+ifneq (,)
+kernel-cgxbootpic_CPPFLAGS         += -I
+endif
+kernel-cgxbootpic_LINKLIBCPPFLAGS  := $(kernel-cgxbootpic_CPPFLAGS)
+kernel-cgxbootpic_CPPFLAGS         += $(strip $($(kernel-cgxbootpic_DEFNAME)_CPPFLAGS))
+kernel-cgxbootpic_LINKLIBCPPFLAGS  += $(strip $($(kernel-cgxbootpic_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-cgxbootpic_CFLAGS           := $(strip $(CFLAGS) $($(kernel-cgxbootpic_DEFNAME)_CFLAGS))
+kernel-cgxbootpic_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-cgxbootpic_DEFNAME)_LINKLIBCFLAGS))
+kernel-cgxbootpic_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-cgxbootpic_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-cgxbootpic_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-cgxbootpic_CFLAGS           := $(strip $(kernel-cgxbootpic_LTOFLAGS) $(kernel-cgxbootpic_CFLAGS))
+kernel-cgxbootpic_LINKLIBCFLAGS    := $(strip $(kernel-cgxbootpic_LTOFLAGS) $(kernel-cgxbootpic_LINKLIBCFLAGS))
+kernel-cgxbootpic_CXXFLAGS         := $(strip $(kernel-cgxbootpic_LTOFLAGS) $(kernel-cgxbootpic_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-cgxbootpic_SUBSTNULL        :=
+kernel-cgxbootpic_SUBSTSPACE       := $(kernel-cgxbootpic_SUBSTNULL) #
+kernel-cgxbootpic_SUBSTCOMMA       := ,
+kernel-cgxbootpic_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-cgxbootpic_SUBSTSPACE),$(kernel-cgxbootpic_SUBSTCOMMA),$(strip $($(kernel-cgxbootpic_DEFNAME)_STARTFILES))))
+kernel-cgxbootpic_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-cgxbootpic_CFLAGS           := $(strip $(kernel-cgxbootpic_INSTRFUNCFLAGS) $(kernel-cgxbootpic_CFLAGS))
+kernel-cgxbootpic_CXXFLAGS         := $(strip $(kernel-cgxbootpic_INSTRFUNCFLAGS) $(kernel-cgxbootpic_CXXFLAGS))
+kernel-cgxbootpic_LIBS             += $(kernel-cgxbootpic_INSTRFUNCLIBS)
+endif
+endif
+kernel-cgxbootpic_DFLAGS           := $(strip $(kernel-cgxbootpic_DFLAGS) $($(kernel-cgxbootpic_DEFNAME)_DFLAGS))
+kernel-cgxbootpic_LINKLIBDFLAGS    := $(strip $(kernel-cgxbootpic_DFLAGS) $($(kernel-cgxbootpic_DEFNAME)_LINKLIBDFLAGS))
+kernel-cgxbootpic_DXXFLAGS         := $(strip $(kernel-cgxbootpic_DXXFLAGS) $($(kernel-cgxbootpic_DEFNAME)_DXXFLAGS))
+
+ifeq (library,library)
+    kernel-cgxbootpic_LIBSUFFIX    := 
+else
+    kernel-cgxbootpic_LIBSUFFIX    := .library
+endif
+
+ifeq (,)
+kernel-cgxbootpic_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-cgxbootpic_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-cgxbootpic_LINKLIBCFILES    := $(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$($(kernel-cgxbootpic_DEFNAME)_LINKLIBFILES))
+kernel-cgxbootpic_LINKLIBAFILES    := $(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$($(kernel-cgxbootpic_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-cgxbootpic_DEFNAME)_LINKLIBFILES) $($(kernel-cgxbootpic_DEFNAME)_LINKLIBAFILES)  $(kernel-cgxbootpic_ARCHNLIBFILES)),)
+    kernel-cgxbootpic_LINKLIB      :=
+else
+    kernel-cgxbootpic_LINKLIB      := $(kernel-cgxbootpic_LIBDIR)/libcgxbootpic$(kernel-cgxbootpic_LIBSUFFIX).a
+    ifneq (cgxbootpic,$(kernel-cgxbootpic_LINKLIBNAME))
+        kernel-cgxbootpic_LINKLIB  += $(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_LINKLIBNAME)$(kernel-cgxbootpic_LIBSUFFIX).a
+    endif
+endif
+kernel-cgxbootpic_LINKLIBFILES     := $(kernel-cgxbootpic_LINKLIBCFILES) $(kernel-cgxbootpic_LINKLIBAFILES)
+
+kernel-cgxbootpic_RELLINKLIBCFILES := $(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$($(kernel-cgxbootpic_DEFNAME)_RELLINKLIBFILES))
+kernel-cgxbootpic_RELLINKLIBAFILES := $(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$($(kernel-cgxbootpic_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-cgxbootpic_DEFNAME)_RELLINKLIBFILES) $($(kernel-cgxbootpic_DEFNAME)_RELLINKLIBAFILES)  $(kernel-cgxbootpic_ARCHNLIBFILES)),)
+    kernel-cgxbootpic_RELLINKLIB   :=
+else
+    kernel-cgxbootpic_RELLINKLIB   := $(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_DEFNAME)_rel$(kernel-cgxbootpic_LIBSUFFIX).a
+    ifneq (cgxbootpic,$(kernel-cgxbootpic_LINKLIBNAME))
+        kernel-cgxbootpic_RELLINKLIB += $(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_LINKLIBNAME)_rel$(kernel-cgxbootpic_LIBSUFFIX).a
+    endif
+endif
+kernel-cgxbootpic_RELLINKLIBFILES  := $(kernel-cgxbootpic_RELLINKLIBCFILES) $(kernel-cgxbootpic_RELLINKLIBAFILES)
+endif
+
+kernel-cgxbootpic_ENDOBJS          := $(addsuffix .o,$(kernel-cgxbootpic_ENDFILES))
+kernel-cgxbootpic_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$(notdir $(kernel-cgxbootpic_NLIBARCHFILES))) $(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/arch/,$(notdir $(kernel-cgxbootpic_ARCHNLIBFILES))) $(kernel-cgxbootpic_LINKLIBFILES)) \
+                 
+kernel-cgxbootpic_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$(notdir $(kernel-cgxbootpic_NLIBARCHFILES))) $(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/arch/,$(notdir $(kernel-cgxbootpic_ARCHNLIBFILES))) $(kernel-cgxbootpic_RELLINKLIBFILES)) \
+                 
+$(kernel-cgxbootpic_LINKLIBFILES) $(kernel-cgxbootpic_RELLINKLIBFILES) : | $(kernel-cgxbootpic_OBJDIR)/linklib
+$(kernel-cgxbootpic_LINKLIBOBJS) $(kernel-cgxbootpic_RELLINKLIBOBJS) : | $(kernel-cgxbootpic_OBJDIR)/linklib
+
+kernel-cgxbootpic_CCFILES := $(kernel-cgxbootpic_C_NARCHFILES)
+kernel-cgxbootpic_TARGETCCFILES    := $(strip $(kernel-cgxbootpic_STARTFILES) $(kernel-cgxbootpic_ENDFILES))
+kernel-cgxbootpic_LINKLIBCCFILES   := $(strip $(kernel-cgxbootpic_NLIBARCHFILES) $(kernel-cgxbootpic_LINKLIBCFILES) $(kernel-cgxbootpic_RELLINKLIBCFILES))
+kernel-cgxbootpic_LINKLIBCCGENFILES := $(strip $(kernel-cgxbootpic_LINKLIBCFILES) $(kernel-cgxbootpic_RELLINKLIBCFILES))
+
+
+kernel-cgxbootpic_CXXABSBASENAMES := $(foreach kernel-cgxbootpic_CXXBASE,$(kernel-cgxbootpic_CXX_NARCHFILES),$(if $(filter /%,$(kernel-cgxbootpic_CXXBASE)),$(kernel-cgxbootpic_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-cgxbootpic_CXXBASE))))
+
+ifneq ($(kernel-cgxbootpic_CXXABSBASENAMES),)
+
+kernel-cgxbootpic_CXXBASENAMES := $(basename $(kernel-cgxbootpic_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-cgxbootpic_MCXX_FILES  := $(strip $(foreach kernel-cgxbootpic_CXXBASE,$(kernel-cgxbootpic_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-cgxbootpic_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-cgxbootpic_EXT),$(kernel-cgxbootpic_CXXBASE)))))))
+
+ifeq (,)
+kernel-cgxbootpic_MCXX_SRCWILDCARD := %
+else
+kernel-cgxbootpic_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-cgxbootpic_OBJDIR),)
+  kernel-cgxbootpic_CXXTARGETS := $(notdir $(kernel-cgxbootpic_CXXBASENAMES:=.o))
+  kernel-cgxbootpic_CXXDTARGETS := $(notdir $(kernel-cgxbootpic_CXXBASENAMES:=.d))
+  kernel-cgxbootpic_MCXX_WILDCARD := %
+else
+  kernel-cgxbootpic_CXXTARGETS := $(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(notdir $(kernel-cgxbootpic_CXXBASENAMES:=.o)))
+  kernel-cgxbootpic_CXXDTARGETS := $(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(notdir $(kernel-cgxbootpic_CXXBASENAMES:=.d)))
+  kernel-cgxbootpic_MCXX_WILDCARD := $(kernel-cgxbootpic_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-cgxbootpic_CXXTARGETS) $(kernel-cgxbootpic_CXXDTARGETS) : | $(kernel-cgxbootpic_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-cgxbootpic_MCXX_CPPFLAGS := $(kernel-cgxbootpic_CPPFLAGS)
+kernel-cgxbootpic_CXXFLAGS := $(kernel-cgxbootpic_CXXFLAGS)
+ifeq ($(kernel-cgxbootpic_DXXFLAGS),)
+  kernel-cgxbootpic_DXXFLAGS := $(kernel-cgxbootpic_CXXFLAGS)
+else
+  kernel-cgxbootpic_DXXFLAGS := $(kernel-cgxbootpic_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-cgxbootpic_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-cgxbootpic_STRIP ?= $(HOST_STRIP)
+  kernel-cgxbootpic_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-cgxbootpic_CXXCMD:=$(HOST_CXX)
+  kernel-cgxbootpic_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-cgxbootpic_MCXX_CPPFLAGS) $(kernel-cgxbootpic_MCXX_EXTRA_CPPFLAGS))
+  kernel-cgxbootpic_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-cgxbootpic_CXXFLAGS))
+  kernel-cgxbootpic_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-cgxbootpic_DXXFLAGS))
+  kernel-cgxbootpic_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-cgxbootpic_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-cgxbootpic_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-cgxbootpic_STRIP ?= $(TARGET_STRIP)
+  kernel-cgxbootpic_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-cgxbootpic_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-cgxbootpic_MCXX_CPPFLAGS := $(strip $(kernel-cgxbootpic_MCXX_CPPFLAGS) $(kernel-cgxbootpic_MCXX_EXTRA_CPPFLAGS))
+  kernel-cgxbootpic_CXXFLAGS := $(strip $(kernel-cgxbootpic_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-cgxbootpic_DXXFLAGS := $(kernel-cgxbootpic_DXXFLAGS)
+  kernel-cgxbootpic_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-cgxbootpic_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-cgxbootpic_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-cgxbootpic_STRIP ?= $(ECHO) >/dev/null
+  kernel-cgxbootpic_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-cgxbootpic_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-cgxbootpic_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-cgxbootpic_MCXX_CPPFLAGS) $(kernel-cgxbootpic_MCXX_EXTRA_CPPFLAGS))
+  kernel-cgxbootpic_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-cgxbootpic_CXXFLAGS))
+  kernel-cgxbootpic_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-cgxbootpic_DXXFLAGS))
+  kernel-cgxbootpic_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-cgxbootpic_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-cgxbootpic_CXXCMD) $(kernel-cgxbootpic_CXXIQUOTE) $(dir $(2)) $(kernel-cgxbootpic_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_CXXIQUOTE) . $(kernel-cgxbootpic_CXXIQUOTE_END) $(strip $(kernel-cgxbootpic_CXXFLAGS) $(kernel-cgxbootpic_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-cgxbootpic_CXXCMD) $(kernel-cgxbootpic_CXXIQUOTE) $(dir $(2)) $(kernel-cgxbootpic_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_CXXIQUOTE) . $(kernel-cgxbootpic_CXXIQUOTE_END) $(strip $(kernel-cgxbootpic_CXXFLAGS) $(kernel-cgxbootpic_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-cgxbootpic_CXXCMD) $(kernel-cgxbootpic_CXXIQUOTE) $(dir $(2)) $(kernel-cgxbootpic_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_CXXIQUOTE) . $(kernel-cgxbootpic_CXXIQUOTE_END) $(strip $(kernel-cgxbootpic_CXXFLAGS) $(kernel-cgxbootpic_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-cgxbootpic_CXXCMD)" $(MKDEPEND) $(strip $(kernel-cgxbootpic_DXXFLAGS) $(kernel-cgxbootpic_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-cgxbootpic_OBJDIR),)
+  $(foreach kernel-cgxbootpic_CXXFILE,$(kernel-cgxbootpic_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-cgxbootpic_CXXFILE))),$(kernel-cgxbootpic_CXXFILE))))
+else
+  $(foreach kernel-cgxbootpic_CXXFILE,$(kernel-cgxbootpic_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(notdir $(basename $(kernel-cgxbootpic_CXXFILE)))),$(kernel-cgxbootpic_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-cgxbootpic_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-cgxbootpic_MOBJC_SRCWILDCARD := %
+else
+kernel-cgxbootpic_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-cgxbootpic_OBJDIR),)
+  kernel-cgxbootpic_MOBJC_TARGETS := $(addsuffix .o,$(kernel-cgxbootpic_OBJC_NARCHFILES))
+  kernel-cgxbootpic_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-cgxbootpic_OBJC_NARCHFILES))
+  kernel-cgxbootpic_MOBJC_WILDCARD := %
+else
+  kernel-cgxbootpic_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(kernel-cgxbootpic_OBJC_NARCHFILES)))
+  kernel-cgxbootpic_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(kernel-cgxbootpic_OBJC_NARCHFILES)))
+  kernel-cgxbootpic_MOBJC_WILDCARD := $(kernel-cgxbootpic_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-cgxbootpic_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-cgxbootpic_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-cgxbootpic_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-cgxbootpic_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-cgxbootpic_MOBJC_DIRS := $(foreach dir, $(kernel-cgxbootpic_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-cgxbootpic_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-cgxbootpic_MOBJC_DIRS),)
+    kernel-cgxbootpic_MOBJC_DIRS := $(shell echo $(kernel-cgxbootpic_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-cgxbootpic_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-cgxbootpic_CC := $(TARGET_CC)
+else
+  kernel-cgxbootpic_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-cgxbootpic_MOBJC_CPPFLAGS := $(kernel-cgxbootpic_CPPFLAGS)
+kernel-cgxbootpic_OBJCFLAGS := $(kernel-cgxbootpic_CFLAGS)
+kernel-cgxbootpic_OBJCFLAGS := $(kernel-cgxbootpic_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-cgxbootpic_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-cgxbootpic_OBJCFLAGS)))
+ifeq ($(kernel-cgxbootpic_DFLAGS),)
+  kernel-cgxbootpic_OBJCDFLAGS := $(kernel-cgxbootpic_CFLAGS)
+else
+  kernel-cgxbootpic_OBJCDFLAGS := $(kernel-cgxbootpic_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-cgxbootpic_LINK ?= $(strip $(kernel-cgxbootpic_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-cgxbootpic_STRIP ?= $(TARGET_STRIP)
+  kernel-cgxbootpic_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-cgxbootpic_CC) $(TARGET_SYSROOT))
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : kernel-cgxbootpic_MOBJC_CPPFLAGS:=$(strip $(kernel-cgxbootpic_MOBJC_CPPFLAGS) $(kernel-cgxbootpic_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : kernel-cgxbootpic_OBJCFLAGS:=$(strip $(kernel-cgxbootpic_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : kernel-cgxbootpic_OBJCDFLAGS:=$(kernel-cgxbootpic_OBJCDFLAGS)
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : kernel-cgxbootpic_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : kernel-cgxbootpic_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-cgxbootpic_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-cgxbootpic_STRIP ?= $(HOST_STRIP)
+  kernel-cgxbootpic_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : kernel-cgxbootpic_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-cgxbootpic_MOBJC_CPPFLAGS) $(kernel-cgxbootpic_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : kernel-cgxbootpic_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-cgxbootpic_OBJCFLAGS))
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : kernel-cgxbootpic_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-cgxbootpic_OBJCDFLAGS))
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : kernel-cgxbootpic_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : kernel-cgxbootpic_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-cgxbootpic_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-cgxbootpic_STRIP ?= $(ECHO) >/dev/null
+  kernel-cgxbootpic_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : kernel-cgxbootpic_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-cgxbootpic_MOBJC_CPPFLAGS) $(kernel-cgxbootpic_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : kernel-cgxbootpic_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-cgxbootpic_OBJCFLAGS))
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : kernel-cgxbootpic_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-cgxbootpic_OBJCDFLAGS))
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : kernel-cgxbootpic_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-cgxbootpic_MOBJC_TARGETS) $(kernel-cgxbootpic_MOBJC_DTARGETS) : kernel-cgxbootpic_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-cgxbootpic_MOBJC_TARGETS) : CPPFLAGS := $(kernel-cgxbootpic_MOBJC_CPPFLAGS)
+$(kernel-cgxbootpic_MOBJC_TARGETS) : CFLAGS := $(kernel-cgxbootpic_OBJCFLAGS)
+$(kernel-cgxbootpic_MOBJC_TARGETS) : $(kernel-cgxbootpic_MOBJC_WILDCARD).o : $(kernel-cgxbootpic_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-cgxbootpic_IQUOTE) $(dir $<) $(kernel-cgxbootpic_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_IQUOTE) . $(kernel-cgxbootpic_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-cgxbootpic_IQUOTE) $(dir $<) $(kernel-cgxbootpic_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_IQUOTE) . $(kernel-cgxbootpic_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-cgxbootpic_IQUOTE) $(dir $<) $(kernel-cgxbootpic_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_IQUOTE) . $(kernel-cgxbootpic_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-cgxbootpic_MOBJC_DTARGETS) : $(kernel-cgxbootpic_MOBJC_WILDCARD).d : $(kernel-cgxbootpic_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-cgxbootpic_OBJCDFLAGS) $(kernel-cgxbootpic_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-cgxbootpic_MC_SRCWILDCARD := %
+else
+kernel-cgxbootpic_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-cgxbootpic_OBJDIR),)
+kernel-cgxbootpic_MC_TARGETS := $(addsuffix .o,$(kernel-cgxbootpic_CCFILES))
+kernel-cgxbootpic_MC_DTARGETS := $(addsuffix .d,$(kernel-cgxbootpic_CCFILES))
+kernel-cgxbootpic_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-cgxbootpic_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(notdir $(kernel-cgxbootpic_CCFILES))))
+    kernel-cgxbootpic_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(notdir $(kernel-cgxbootpic_CCFILES))))
+else
+ifeq (,)
+    kernel-cgxbootpic_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(kernel-cgxbootpic_CCFILES)))
+    kernel-cgxbootpic_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(kernel-cgxbootpic_CCFILES)))
+else
+    kernel-cgxbootpic_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(patsubst /%,%,$(kernel-cgxbootpic_CCFILES))))
+    kernel-cgxbootpic_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(patsubst /%,%,$(kernel-cgxbootpic_CCFILES))))
+endif
+endif
+kernel-cgxbootpic_MC_TGTWILDCARD := $(kernel-cgxbootpic_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : | $(addsuffix .c,$(kernel-cgxbootpic_CCFILES))
+
+# Be sure that all .c files are found
+kernel-cgxbootpic_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-cgxbootpic_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-cgxbootpic_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-cgxbootpic_MC_DIRS := $(foreach dir, $(kernel-cgxbootpic_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-cgxbootpic_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-cgxbootpic_MC_DIRS),)
+    kernel-cgxbootpic_MC_DIRS := $(shell echo $(kernel-cgxbootpic_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-cgxbootpic_MC_DIRS)
+endif
+
+endif
+
+kernel-cgxbootpic_MC_CPPFLAGS := $(kernel-cgxbootpic_CPPFLAGS)
+kernel-cgxbootpic_CFLAGS := $(kernel-cgxbootpic_CFLAGS)
+ifeq ($(kernel-cgxbootpic_DFLAGS),)
+  kernel-cgxbootpic_DFLAGS := $(kernel-cgxbootpic_CFLAGS)
+else
+  kernel-cgxbootpic_DFLAGS := $(kernel-cgxbootpic_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-cgxbootpic_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-cgxbootpic_STRIP ?= $(TARGET_STRIP)
+kernel-cgxbootpic_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_MC_CPPFLAGS:=$(strip $(kernel-cgxbootpic_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_EXTRA_CPPFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_CFLAGS:=$(strip $(kernel-cgxbootpic_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_DFLAGS:=$(kernel-cgxbootpic_DFLAGS)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-cgxbootpic_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-cgxbootpic_STRIP ?= $(HOST_STRIP)
+kernel-cgxbootpic_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_EXTRA_CPPFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-cgxbootpic_CFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-cgxbootpic_DFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-cgxbootpic_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-cgxbootpic_STRIP ?= $(ECHO) >/dev/null
+kernel-cgxbootpic_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_EXTRA_CPPFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-cgxbootpic_CFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-cgxbootpic_DFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-cgxbootpic_MC_TARGETS) : CPPFLAGS := $(kernel-cgxbootpic_MC_CPPFLAGS)
+$(kernel-cgxbootpic_MC_TARGETS) : CFLAGS := $(kernel-cgxbootpic_CFLAGS)
+$(kernel-cgxbootpic_MC_TARGETS) : $(kernel-cgxbootpic_MC_TGTWILDCARD).o : $(kernel-cgxbootpic_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-cgxbootpic_IQUOTE) $(dir $<) $(kernel-cgxbootpic_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_IQUOTE) . $(kernel-cgxbootpic_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-cgxbootpic_IQUOTE) $(dir $<) $(kernel-cgxbootpic_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_IQUOTE) . $(kernel-cgxbootpic_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-cgxbootpic_IQUOTE) $(dir $<) $(kernel-cgxbootpic_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_IQUOTE) . $(kernel-cgxbootpic_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-cgxbootpic_MC_DTARGETS) : $(kernel-cgxbootpic_MC_TGTWILDCARD).d : $(kernel-cgxbootpic_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-cgxbootpic_DFLAGS) $(kernel-cgxbootpic_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-cgxbootpic_MC_SRCWILDCARD := %
+else
+kernel-cgxbootpic_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-cgxbootpic_OBJDIR),)
+kernel-cgxbootpic_MC_TARGETS := $(addsuffix .o,$(kernel-cgxbootpic_TARGETCCFILES))
+kernel-cgxbootpic_MC_DTARGETS := $(addsuffix .d,$(kernel-cgxbootpic_TARGETCCFILES))
+kernel-cgxbootpic_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-cgxbootpic_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(notdir $(kernel-cgxbootpic_TARGETCCFILES))))
+    kernel-cgxbootpic_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(notdir $(kernel-cgxbootpic_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-cgxbootpic_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(kernel-cgxbootpic_TARGETCCFILES)))
+    kernel-cgxbootpic_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(kernel-cgxbootpic_TARGETCCFILES)))
+else
+    kernel-cgxbootpic_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(patsubst /%,%,$(kernel-cgxbootpic_TARGETCCFILES))))
+    kernel-cgxbootpic_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(patsubst /%,%,$(kernel-cgxbootpic_TARGETCCFILES))))
+endif
+endif
+kernel-cgxbootpic_MC_TGTWILDCARD := $(kernel-cgxbootpic_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : | $(addsuffix .c,$(kernel-cgxbootpic_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-cgxbootpic_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-cgxbootpic_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-cgxbootpic_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-cgxbootpic_MC_DIRS := $(foreach dir, $(kernel-cgxbootpic_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-cgxbootpic_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-cgxbootpic_MC_DIRS),)
+    kernel-cgxbootpic_MC_DIRS := $(shell echo $(kernel-cgxbootpic_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-cgxbootpic_MC_DIRS)
+endif
+
+endif
+
+kernel-cgxbootpic_MC_CPPFLAGS := $(kernel-cgxbootpic_CPPFLAGS) -D__AROS__
+kernel-cgxbootpic_CFLAGS := $(kernel-cgxbootpic_CFLAGS)
+ifeq ($(kernel-cgxbootpic_DFLAGS),)
+  kernel-cgxbootpic_DFLAGS := $(kernel-cgxbootpic_CFLAGS)
+else
+  kernel-cgxbootpic_DFLAGS := $(kernel-cgxbootpic_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-cgxbootpic_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-cgxbootpic_STRIP ?= $(TARGET_STRIP)
+kernel-cgxbootpic_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_MC_CPPFLAGS:=$(strip $(kernel-cgxbootpic_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_EXTRA_CPPFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_CFLAGS:=$(strip $(kernel-cgxbootpic_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_DFLAGS:=$(kernel-cgxbootpic_DFLAGS)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-cgxbootpic_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-cgxbootpic_STRIP ?= $(HOST_STRIP)
+kernel-cgxbootpic_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_EXTRA_CPPFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-cgxbootpic_CFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-cgxbootpic_DFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-cgxbootpic_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-cgxbootpic_STRIP ?= $(ECHO) >/dev/null
+kernel-cgxbootpic_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_EXTRA_CPPFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-cgxbootpic_CFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-cgxbootpic_DFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-cgxbootpic_MC_TARGETS) : CPPFLAGS := $(kernel-cgxbootpic_MC_CPPFLAGS)
+$(kernel-cgxbootpic_MC_TARGETS) : CFLAGS := $(kernel-cgxbootpic_CFLAGS)
+$(kernel-cgxbootpic_MC_TARGETS) : $(kernel-cgxbootpic_MC_TGTWILDCARD).o : $(kernel-cgxbootpic_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-cgxbootpic_IQUOTE) $(dir $<) $(kernel-cgxbootpic_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_IQUOTE) . $(kernel-cgxbootpic_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-cgxbootpic_IQUOTE) $(dir $<) $(kernel-cgxbootpic_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_IQUOTE) . $(kernel-cgxbootpic_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-cgxbootpic_IQUOTE) $(dir $<) $(kernel-cgxbootpic_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_IQUOTE) . $(kernel-cgxbootpic_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-cgxbootpic_MC_DTARGETS) : $(kernel-cgxbootpic_MC_TGTWILDCARD).d : $(kernel-cgxbootpic_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-cgxbootpic_DFLAGS) $(kernel-cgxbootpic_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-cgxbootpic_MC_SRCWILDCARD := %
+else
+kernel-cgxbootpic_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-cgxbootpic_OBJDIR)/linklib,)
+kernel-cgxbootpic_MC_TARGETS := $(addsuffix .o,$(kernel-cgxbootpic_NLIBARCHFILES))
+kernel-cgxbootpic_MC_DTARGETS := $(addsuffix .d,$(kernel-cgxbootpic_NLIBARCHFILES))
+kernel-cgxbootpic_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-cgxbootpic_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$(notdir $(kernel-cgxbootpic_NLIBARCHFILES))))
+    kernel-cgxbootpic_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$(notdir $(kernel-cgxbootpic_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-cgxbootpic_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$(kernel-cgxbootpic_NLIBARCHFILES)))
+    kernel-cgxbootpic_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$(kernel-cgxbootpic_NLIBARCHFILES)))
+else
+    kernel-cgxbootpic_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-cgxbootpic_NLIBARCHFILES))))
+    kernel-cgxbootpic_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-cgxbootpic_NLIBARCHFILES))))
+endif
+endif
+kernel-cgxbootpic_MC_TGTWILDCARD := $(kernel-cgxbootpic_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : | $(addsuffix .c,$(kernel-cgxbootpic_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-cgxbootpic_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-cgxbootpic_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-cgxbootpic_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-cgxbootpic_MC_DIRS := $(foreach dir, $(kernel-cgxbootpic_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-cgxbootpic_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-cgxbootpic_MC_DIRS),)
+    kernel-cgxbootpic_MC_DIRS := $(shell echo $(kernel-cgxbootpic_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-cgxbootpic_MC_DIRS)
+endif
+
+endif
+
+kernel-cgxbootpic_MC_CPPFLAGS := $(kernel-cgxbootpic_LINKLIBCPPFLAGS) -D__AROS__
+kernel-cgxbootpic_CFLAGS := $(kernel-cgxbootpic_LINKLIBCFLAGS)
+ifeq ($(kernel-cgxbootpic_LINKLIBDFLAGS),)
+  kernel-cgxbootpic_DFLAGS := $(kernel-cgxbootpic_LINKLIBCFLAGS)
+else
+  kernel-cgxbootpic_DFLAGS := $(kernel-cgxbootpic_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-cgxbootpic_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-cgxbootpic_STRIP ?= $(TARGET_STRIP)
+kernel-cgxbootpic_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_MC_CPPFLAGS:=$(strip $(kernel-cgxbootpic_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_EXTRA_CPPFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_CFLAGS:=$(strip $(kernel-cgxbootpic_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_DFLAGS:=$(kernel-cgxbootpic_DFLAGS)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-cgxbootpic_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-cgxbootpic_STRIP ?= $(HOST_STRIP)
+kernel-cgxbootpic_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_EXTRA_CPPFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-cgxbootpic_CFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-cgxbootpic_DFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-cgxbootpic_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-cgxbootpic_STRIP ?= $(ECHO) >/dev/null
+kernel-cgxbootpic_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_EXTRA_CPPFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-cgxbootpic_CFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-cgxbootpic_DFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-cgxbootpic_MC_TARGETS) : CPPFLAGS := $(kernel-cgxbootpic_MC_CPPFLAGS)
+$(kernel-cgxbootpic_MC_TARGETS) : CFLAGS := $(kernel-cgxbootpic_CFLAGS)
+$(kernel-cgxbootpic_MC_TARGETS) : $(kernel-cgxbootpic_MC_TGTWILDCARD).o : $(kernel-cgxbootpic_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-cgxbootpic_IQUOTE) $(dir $<) $(kernel-cgxbootpic_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_IQUOTE) . $(kernel-cgxbootpic_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-cgxbootpic_IQUOTE) $(dir $<) $(kernel-cgxbootpic_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_IQUOTE) . $(kernel-cgxbootpic_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-cgxbootpic_IQUOTE) $(dir $<) $(kernel-cgxbootpic_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_IQUOTE) . $(kernel-cgxbootpic_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-cgxbootpic_MC_DTARGETS) : $(kernel-cgxbootpic_MC_TGTWILDCARD).d : $(kernel-cgxbootpic_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-cgxbootpic_DFLAGS) $(kernel-cgxbootpic_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-cgxbootpic_OBJDIR)/linklib,)
+kernel-cgxbootpic_MC_SRCWILDCARD := %
+else
+kernel-cgxbootpic_MC_SRCWILDCARD := $(kernel-cgxbootpic_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-cgxbootpic_OBJDIR)/linklib,)
+kernel-cgxbootpic_MC_TARGETS := $(addsuffix .o,$(kernel-cgxbootpic_LINKLIBCCGENFILES))
+kernel-cgxbootpic_MC_DTARGETS := $(addsuffix .d,$(kernel-cgxbootpic_LINKLIBCCGENFILES))
+kernel-cgxbootpic_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-cgxbootpic_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$(notdir $(kernel-cgxbootpic_LINKLIBCCGENFILES))))
+    kernel-cgxbootpic_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$(notdir $(kernel-cgxbootpic_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-cgxbootpic_OBJDIR)/linklib,)
+    kernel-cgxbootpic_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$(kernel-cgxbootpic_LINKLIBCCGENFILES)))
+    kernel-cgxbootpic_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$(kernel-cgxbootpic_LINKLIBCCGENFILES)))
+else
+    kernel-cgxbootpic_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$(patsubst $(kernel-cgxbootpic_OBJDIR)/linklib/%,%,$(kernel-cgxbootpic_LINKLIBCCGENFILES))))
+    kernel-cgxbootpic_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$(patsubst $(kernel-cgxbootpic_OBJDIR)/linklib/%,%,$(kernel-cgxbootpic_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-cgxbootpic_MC_TGTWILDCARD := $(kernel-cgxbootpic_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : | $(addsuffix .c,$(kernel-cgxbootpic_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-cgxbootpic_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-cgxbootpic_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-cgxbootpic_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-cgxbootpic_MC_DIRS := $(foreach dir, $(kernel-cgxbootpic_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-cgxbootpic_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-cgxbootpic_MC_DIRS),)
+    kernel-cgxbootpic_MC_DIRS := $(shell echo $(kernel-cgxbootpic_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-cgxbootpic_MC_DIRS)
+endif
+
+endif
+
+kernel-cgxbootpic_MC_CPPFLAGS := $(kernel-cgxbootpic_LINKLIBCPPFLAGS) -D__AROS__
+kernel-cgxbootpic_CFLAGS := $(kernel-cgxbootpic_LINKLIBCFLAGS)
+ifeq ($(kernel-cgxbootpic_LINKLIBDFLAGS),)
+  kernel-cgxbootpic_DFLAGS := $(kernel-cgxbootpic_LINKLIBCFLAGS)
+else
+  kernel-cgxbootpic_DFLAGS := $(kernel-cgxbootpic_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-cgxbootpic_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-cgxbootpic_STRIP ?= $(TARGET_STRIP)
+kernel-cgxbootpic_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_MC_CPPFLAGS:=$(strip $(kernel-cgxbootpic_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_EXTRA_CPPFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_CFLAGS:=$(strip $(kernel-cgxbootpic_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_DFLAGS:=$(kernel-cgxbootpic_DFLAGS)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-cgxbootpic_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-cgxbootpic_STRIP ?= $(HOST_STRIP)
+kernel-cgxbootpic_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_EXTRA_CPPFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-cgxbootpic_CFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-cgxbootpic_DFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-cgxbootpic_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-cgxbootpic_STRIP ?= $(ECHO) >/dev/null
+kernel-cgxbootpic_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_CPPFLAGS) $(kernel-cgxbootpic_MC_EXTRA_CPPFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-cgxbootpic_CFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-cgxbootpic_DFLAGS))
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-cgxbootpic_MC_TARGETS) $(kernel-cgxbootpic_MC_DTARGETS) : kernel-cgxbootpic_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-cgxbootpic_MC_TARGETS) : CPPFLAGS := $(kernel-cgxbootpic_MC_CPPFLAGS)
+$(kernel-cgxbootpic_MC_TARGETS) : CFLAGS := $(kernel-cgxbootpic_CFLAGS)
+$(kernel-cgxbootpic_MC_TARGETS) : $(kernel-cgxbootpic_MC_TGTWILDCARD).o : $(kernel-cgxbootpic_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-cgxbootpic_IQUOTE) $(dir $<) $(kernel-cgxbootpic_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_IQUOTE) . $(kernel-cgxbootpic_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-cgxbootpic_IQUOTE) $(dir $<) $(kernel-cgxbootpic_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_IQUOTE) . $(kernel-cgxbootpic_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-cgxbootpic_IQUOTE) $(dir $<) $(kernel-cgxbootpic_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-cgxbootpic_IQUOTE) . $(kernel-cgxbootpic_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-cgxbootpic_MC_DTARGETS) : $(kernel-cgxbootpic_MC_TGTWILDCARD).d : $(kernel-cgxbootpic_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-cgxbootpic_DFLAGS) $(kernel-cgxbootpic_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-cgxbootpic_LINKLIBAFILES),)
+
+ifeq ($(kernel-cgxbootpic_OBJDIR)/linklib,)
+kernel-cgxbootpic-MA_TARGETS := $(addsuffix .o,$(kernel-cgxbootpic_LINKLIBAFILES) $(kernel-cgxbootpic_RELLINKLIBAFILES))
+kernel-cgxbootpic-MA_WILDCARD := %
+else
+kernel-cgxbootpic-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$(notdir $(kernel-cgxbootpic_LINKLIBAFILES) $(kernel-cgxbootpic_RELLINKLIBAFILES))))
+kernel-cgxbootpic-MA_WILDCARD := $(kernel-cgxbootpic_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-cgxbootpic-MA_TARGETS) : | $(addsuffix .S,$(kernel-cgxbootpic_LINKLIBAFILES) $(kernel-cgxbootpic_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-cgxbootpic-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-cgxbootpic-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-cgxbootpic_LINKLIBAFILES) $(kernel-cgxbootpic_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-cgxbootpic-MA_DIRS := $(foreach dir, $(kernel-cgxbootpic-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-cgxbootpic-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-cgxbootpic-MA_DIRS),)
+    kernel-cgxbootpic-MA_DIRS := $(shell echo $(kernel-cgxbootpic-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-cgxbootpic-MA_DIRS)
+endif
+
+endif
+
+kernel-cgxbootpic-MA_ASSEMBLER ?= $(kernel-cgxbootpic_ASSEMBLER)
+
+$(kernel-cgxbootpic-MA_TARGETS) : kernel-cgxbootpic-MA_CMD:= $(kernel-cgxbootpic-MA_ASSEMBLER)
+
+$(kernel-cgxbootpic-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-cgxbootpic-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-cgxbootpic-MA_TARGETS) : $(kernel-cgxbootpic-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-cgxbootpic-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-cgxbootpic-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-cgxbootpic-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-cgxbootpic_SUFFIX           := library
+else
+kernel-cgxbootpic_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-cgxbootpic_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-cgxbootpic_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-cgxbootpic_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-cgxbootpic_SUFFIX),handler)
+kernel-cgxbootpic_MODULE           := $(AROSDIR)/$(kernel-cgxbootpic_MODDIR)/$(kernel-cgxbootpic_DEFNAME)-$(kernel-cgxbootpic_SUFFIX)
+else
+kernel-cgxbootpic_MODULE           := $(AROSDIR)/$(kernel-cgxbootpic_MODDIR)/$(kernel-cgxbootpic_DEFNAME).$(kernel-cgxbootpic_SUFFIX)
+endif
+kernel-cgxbootpic_KOBJ             := $(KOBJSDIR)/$(kernel-cgxbootpic_DEFNAME)_$(kernel-cgxbootpic_SUFFIX).o
+else
+kernel-cgxbootpic_MODULE           :=
+kernel-cgxbootpic_KOBJ             :=
+endif
+
+kernel-cgxbootpic-quick      : kernel-cgxbootpic
+kernel-cgxbootpic            : $(kernel-cgxbootpic_MODULE) $(kernel-cgxbootpic_LINKLIB) $(kernel-cgxbootpic_RELLINKLIB)
+ifeq (M,M)
+kernel-cgxbootpic-kobj       : $(kernel-cgxbootpic_KOBJ) $(kernel-cgxbootpic_LINKLIB) $(kernel-cgxbootpic_RELLINKLIB)
+kernel-cgxbootpic-kobj-quick : $(kernel-cgxbootpic_KOBJ) $(kernel-cgxbootpic_LINKLIB) $(kernel-cgxbootpic_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-cgxbootpic-linklib    : $(kernel-cgxbootpic_LINKLIB) $(kernel-cgxbootpic_RELLINKLIB)
+endif
+
+kernel-cgxbootpic_OBJS := $(addsuffix .o,$(kernel-cgxbootpic_STARTFILES)) $(kernel-cgxbootpic_ARCHOBJS) \
+           $(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(notdir $(kernel-cgxbootpic_C_NARCHFILES:=.o) $(kernel-cgxbootpic_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (library,handler)
+kernel-cgxbootpic_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (cgxbootpic,con)
+    kernel-cgxbootpic_ERR          := $(notdir $(kernel-cgxbootpic_MODULE)).err
+else
+    kernel-cgxbootpic_ERR          := cgxbootpic.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-cgxbootpic_DEFNAME)_LDFLAGS) $(kernel-cgxbootpic_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-cgxbootpic_LIBS) $($(kernel-cgxbootpic_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-cgxbootpic_MODULE) : LIB_NAMES := $(kernel-cgxbootpic_LIBS) $($(kernel-cgxbootpic_DEFNAME)_LIBS)
+$(kernel-cgxbootpic_MODULE) : OBJS := $(kernel-cgxbootpic_STARTOBJS) $(kernel-cgxbootpic_OBJS) $(USER_OBJS)
+$(kernel-cgxbootpic_MODULE) : ENDTAG := $(kernel-cgxbootpic_ENDOBJS)
+$(kernel-cgxbootpic_MODULE) : ERR := $(kernel-cgxbootpic_ERR)
+$(kernel-cgxbootpic_MODULE) : OBJDIR := $(kernel-cgxbootpic_OBJDIR)
+$(kernel-cgxbootpic_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-cgxbootpic_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-cgxbootpic_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-cgxbootpic_MODULE) : $(kernel-cgxbootpic_STARTOBJS) $(kernel-cgxbootpic_OBJS) $(USER_OBJS) $(kernel-cgxbootpic_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-cgxbootpic_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-cgxbootpic_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-cgxbootpic_LC_LINKLIBNAME   := $(shell echo $(kernel-cgxbootpic_LINKLIBNAME) | tr A-Z a-z)
+kernel-cgxbootpic_LC_MODNAME       := $(shell echo cgxbootpic | tr A-Z a-z)
+ifneq ($(kernel-cgxbootpic_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_LINKLIBNAME)$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_AR:=$(AR)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_LINKLIBNAME)$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_LINKLIBNAME)$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_AR:=$(HOST_AR)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_LINKLIBNAME)$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_LINKLIBNAME)$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_AR:=$(KERNEL_AR)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_LINKLIBNAME)$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_LINKLIBNAME)$(kernel-cgxbootpic_LIBSUFFIX).a : $(kernel-cgxbootpic_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-cgxbootpic_AR) $@ $^
+	$(Q)$(kernel-cgxbootpic_RANLIB) $@
+ifneq ($(kernel-cgxbootpic_LC_MODNAME),$(kernel-cgxbootpic_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-cgxbootpic_LIBDIR)/libcgxbootpic$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_AR:=$(AR)
+$(kernel-cgxbootpic_LIBDIR)/libcgxbootpic$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-cgxbootpic_LIBDIR)/libcgxbootpic$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_AR:=$(HOST_AR)
+$(kernel-cgxbootpic_LIBDIR)/libcgxbootpic$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-cgxbootpic_LIBDIR)/libcgxbootpic$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_AR:=$(KERNEL_AR)
+$(kernel-cgxbootpic_LIBDIR)/libcgxbootpic$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-cgxbootpic_LIBDIR)/libcgxbootpic$(kernel-cgxbootpic_LIBSUFFIX).a : $(kernel-cgxbootpic_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-cgxbootpic_AR) $@ $^
+	$(Q)$(kernel-cgxbootpic_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-cgxbootpic_LINKLIB),)
+$(kernel-cgxbootpic_LINKLIB) : | $(kernel-cgxbootpic_LIBDIR)
+else
+$(kernel-cgxbootpic_LINKLIB) :: $(kernel-cgxbootpic_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-cgxbootpic_LIBDIR)
+
+endif
+
+ifneq ($(kernel-cgxbootpic_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_LINKLIBNAME)_rel$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_AR:=$(AR)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_LINKLIBNAME)_rel$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_LINKLIBNAME)_rel$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_AR:=$(HOST_AR)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_LINKLIBNAME)_rel$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_LINKLIBNAME)_rel$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_AR:=$(KERNEL_AR)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_LINKLIBNAME)_rel$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_LINKLIBNAME)_rel$(kernel-cgxbootpic_LIBSUFFIX).a : $(kernel-cgxbootpic_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-cgxbootpic_AR) $@ $^
+	$(Q)$(kernel-cgxbootpic_RANLIB) $@
+ifneq ($(kernel-cgxbootpic_LC_MODNAME),$(kernel-cgxbootpic_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_DEFNAME)_rel$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_AR:=$(AR)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_DEFNAME)_rel$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_DEFNAME)_rel$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_AR:=$(HOST_AR)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_DEFNAME)_rel$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_DEFNAME)_rel$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_AR:=$(KERNEL_AR)
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_DEFNAME)_rel$(kernel-cgxbootpic_LIBSUFFIX).a : kernel-cgxbootpic_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-cgxbootpic_LIBDIR)/lib$(kernel-cgxbootpic_DEFNAME)_rel$(kernel-cgxbootpic_LIBSUFFIX).a : $(kernel-cgxbootpic_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-cgxbootpic_AR) $@ $^
+	$(Q)$(kernel-cgxbootpic_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-cgxbootpic_RELLINKLIB),)
+$(kernel-cgxbootpic_RELLINKLIB) : | $(kernel-cgxbootpic_LIBDIR)
+else
+$(kernel-cgxbootpic_RELLINKLIB) :: $(kernel-cgxbootpic_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-cgxbootpic_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-cgxbootpic_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-cgxbootpic_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-cgxbootpic_SYMBOLS := $(kernel-cgxbootpic_KBASE)
+
+kernel-cgxbootpic_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-cgxbootpic_KOBJ_LIBS        := $(filter-out $(kernel-cgxbootpic_KLIB),$(kernel-cgxbootpic_LIBS)) $(kernel-cgxbootpic_KAUTOLIB)
+$(kernel-cgxbootpic_KOBJ) : LINKLIBS:=$(kernel-cgxbootpic_KOBJ_LIBS) $($(kernel-cgxbootpic_DEFNAME)_LIBS)
+$(kernel-cgxbootpic_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-cgxbootpic_SYMBOLS))
+$(kernel-cgxbootpic_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-cgxbootpic_KOBJ) : $(kernel-cgxbootpic_OBJS) $(USER_OBJS) $(kernel-cgxbootpic_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-cgxbootpic_DEPS             := $(addprefix $(kernel-cgxbootpic_OBJDIR)/,$(notdir $(kernel-cgxbootpic_CCFILES:=.d) $(kernel-cgxbootpic_TARGETCCFILES:=.d) $(kernel-cgxbootpic_CXXFILES:=.d))) $(addprefix $(kernel-cgxbootpic_OBJDIR)/linklib/,$(notdir $(kernel-cgxbootpic_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-cgxbootpic_DEPS),)
+  ifneq (kernel-cgxbootpic kernel-cgxbootpic-quick kernel-cgxbootpic-kobj kernel-cgxbootpic-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-cgxbootpic kernel-cgxbootpic-quick kernel-cgxbootpic-kobj kernel-cgxbootpic-kobj-quick),)
+      -include $(kernel-cgxbootpic_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-cgxbootpic_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-cgxbootpic_OBJS) $(kernel-cgxbootpic_DEPS) : | $(kernel-cgxbootpic_OBJDIR)/linklib
+
+ifneq ($(kernel-cgxbootpic_OBJS) $(kernel-cgxbootpic_DEPS) $(kernel-cgxbootpic_MODULE) $(kernel-cgxbootpic_KOBJ),)
+$(kernel-cgxbootpic_OBJS) $(kernel-cgxbootpic_DEPS) $(kernel-cgxbootpic_MODULE) $(kernel-cgxbootpic_KOBJ) : | $(kernel-cgxbootpic_OBJDIR) $(AROSDIR)/$(kernel-cgxbootpic_MODDIR) $(KOBJSDIR)
+else
+$(kernel-cgxbootpic_OBJS) $(kernel-cgxbootpic_DEPS) $(kernel-cgxbootpic_MODULE) $(kernel-cgxbootpic_KOBJ) :: $(kernel-cgxbootpic_OBJDIR) $(AROSDIR)/$(kernel-cgxbootpic_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-cgxbootpic_OBJDIR) $(AROSDIR)/$(kernel-cgxbootpic_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-cgxbootpic kernel-cgxbootpic-includes kernel-cgxbootpic-quick kernel-cgxbootpic-kobj kernel-cgxbootpic-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-cgxbootpic_DFILE_DEPS := $(kernel-cgxbootpic_LIBDEFSINC) $(kernel-cgxbootpic_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-cgxbootpic_INCDIR)/,$($(kernel-cgxbootpic_DEFNAME)_INCLUDES))
+$(kernel-cgxbootpic_DEPS) : $(kernel-cgxbootpic_DFILE_DEPS)
+endif
+
+kernel-cgxbootpic_TOCLEAN := $(kernel-cgxbootpic_OBJS) $(kernel-cgxbootpic_DEPS) \
+    $(kernel-cgxbootpic_MODULE) $(kernel-cgxbootpic_LINKLIB) $(kernel-cgxbootpic_KOBJ) \
+    $(kernel-cgxbootpic_OBJDIR)/Makefile.cgxbootpiclibrary \
+    $(addprefix $(kernel-cgxbootpic_OBJDIR)/include/,$($(kernel-cgxbootpic_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-cgxbootpic_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-cgxbootpic_INCDIR)/,$($(kernel-cgxbootpic_DEFNAME)_INCLUDES)) \
+    $(kernel-cgxbootpic_OBJDIR)/cgxbootpic_geninc $(kernel-cgxbootpic_OBJDIR)/cgxbootpic_incs \
+    $(addsuffix .c,$(kernel-cgxbootpic_LINKLIBFILES)) $(kernel-cgxbootpic_LINKLIBOBJS) $(kernel-cgxbootpic_LIBDEFSINC) \
+    $(kernel-cgxbootpic_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-cgxbootpic_STARTFILES) $(kernel-cgxbootpic_ENDFILES)) \
+    $(kernel-cgxbootpic_ENDOBJS)
+kernel-cgxbootpic-clean : FILES              := $(kernel-cgxbootpic_TOCLEAN)
+kernel-cgxbootpic-clean ::
+	$(Q)$(ECHO) "Cleaning up for module cgxbootpic"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-cgxbootpic_ALLTARGETS)
+
+
+$(GENDIR)/$(CURDIR)/bootpic_image.h : $(BOOTPIC_IMAGE).ilbm
+	@$(ECHO) "Creating   bootpic_image.h..."
+	@$(ILBMTOC) $< >$@
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

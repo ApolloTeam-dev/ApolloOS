@@ -1,0 +1,1666 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+USER_CPPFLAGS := -D__NOLIBBASE__
+
+USER_LDFLAGS := -static
+
+FILES := cache direntry date disk fat file lock main names notify ops packet\
+ support timer volume
+
+#MM- kernel-fs-fat : includes linklibs
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-fs-fat
+#MM kernel-fs-fat-quick
+#MM kernel-fs-fat-makefile
+#MM kernel-fs-fat-clean
+
+# ABI targets:
+#MM- includes-all : kernel-fs-fat-includes
+#MM- linklibs-fat: kernel-fs-fat-linklib
+#MM- linklibs-fat_rel : kernel-fs-fat-linklib
+#MM- includes-fat: kernel-fs-fat-includes
+#MM- includes-fat_rel : kernel-fs-fat-includes
+#MM- kernel-fs-fat : kernel-fs-fat-includes core-linklibs linklibs-
+#MM kernel-fs-fat-linklib : kernel-fs-fat-includes includes-
+#MM- kernel-fs-fat-quick : kernel-fs-fat-includes-quick
+#MM kernel-fs-fat-includes : kernel-fs-fat-makefile kernel-fs-fat-includes-dirs \
+#MM     includes-generate-deps kernel-fs-fat-fd
+#MM kernel-fs-fat-includes-quick
+#MM kernel-fs-fat-includes-dirs
+#MM kernel-fs-fat-fd
+
+# Library targets
+#MM kernel-fs-fat-kobj : core-linklibs linklibs-
+#MM kernel-fs-fat-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-fs-fat-kobj : kernel-fs-fat-includes core-linklibs linklibs-
+#MM kernel-fs-fat-kobj-quick : kernel-fs-fat-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-fs-fat_ALLTARGETS       := kernel-fs-fat kernel-fs-fat-quick kernel-fs-fat-clean
+
+ifeq (M,M)
+kernel-fs-fat_ALLTARGETS       += kernel-fs-fat-kobj kernel-fs-fat-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-fs-fat_ALLTARGETS += kernel-fs-fat-includes \
+                 kernel-fs-fat-includes-quick kernel-fs-fat-includes-dirs  \
+                 kernel-fs-fat-linklib kernel-fs-fat-fd
+endif
+
+.PHONY : $(kernel-fs-fat_ALLTARGETS) kernel-fs-fat-makefile
+
+ifeq (fat,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (handler,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-fs-fat_DEFNAME      := fat_
+else
+    kernel-fs-fat_DEFNAME      := fat
+endif
+kernel-fs-fat_DEFLINKLIBNAME   := $(kernel-fs-fat_DEFNAME)
+ifneq (,)
+    kernel-fs-fat_LINKLIBNAME  := 
+else
+    kernel-fs-fat_LINKLIBNAME  = $(kernel-fs-fat_DEFLINKLIBNAME)
+endif
+kernel-fs-fat_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-fs-fat_DEFCPPFLAGS  += -I
+endif
+kernel-fs-fat_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-fs-fat_DFLAGS       := 
+else
+    kernel-fs-fat_DFLAGS       = $(kernel-fs-fat_DEFDFLAGS)
+endif
+kernel-fs-fat_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-fs-fat_DXXFLAGS     := 
+else
+    kernel-fs-fat_DXXFLAGS     = $(kernel-fs-fat_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-fs-fat_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-fs-fat_DEFDFLAGS))
+kernel-fs-fat_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-fs-fat_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-fs-fat_FUNCINSTR := yes
+kernel-fs-fat_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-fs-fat_DEFDFLAGS))
+kernel-fs-fat_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-fs-fat_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-fs-fat_OBJDIR                     := 
+else
+kernel-fs-fat_OBJDIR                     := $(OBJDIR)/$(kernel-fs-fat_DEFNAME)
+endif
+ifneq (,)
+kernel-fs-fat_OBJDIR           := $(kernel-fs-fat_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-fs-fat-makefile         := $(kernel-fs-fat_OBJDIR)/Makefile.$(kernel-fs-fat_DEFNAME)handler
+kernel-fs-fat-genmakefile : $(kernel-fs-fat-makefile)
+
+
+kernel-fs-fat-genmakefile_OPTS := 
+ifneq (,)
+    kernel-fs-fat-genmakefile_OPTS += -f 
+    kernel-fs-fat-genmakefile_MODNAME := fat_
+else
+    kernel-fs-fat-genmakefile_MODNAME := fat
+endif
+kernel-fs-fat-genmakefile_TARGET := Makefile.$(kernel-fs-fat-genmakefile_MODNAME)handler
+kernel-fs-fat-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-fs-fat-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-fs-fat-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-fs-fat-genmakefile_OPTS += -c 
+        kernel-fs-fat-genmakefile_DEPS += 
+    endif 
+else
+    kernel-fs-fat-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/fat.conf
+    kernel-fs-fat-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/fat.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-fs-fat-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-fs-fat-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-fs-fat-genmakefile_OPTS += -o 
+        kernel-fs-fat-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-fs-fat-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-fs-fat_OBJDIR),)
+    kernel-fs-fat-genmakefile_OPTS += -d $(kernel-fs-fat_OBJDIR)
+    kernel-fs-fat-genmakefile_TARGET := $(kernel-fs-fat_OBJDIR)/$(kernel-fs-fat-genmakefile_TARGET)
+endif
+
+$(kernel-fs-fat-genmakefile_TARGET) : OPTS := $(kernel-fs-fat-genmakefile_OPTS)
+$(kernel-fs-fat-genmakefile_TARGET) : MODNAME := fat
+$(kernel-fs-fat-genmakefile_TARGET) : MODTYPE := handler
+$(kernel-fs-fat-genmakefile_TARGET) : $(kernel-fs-fat-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-fs-fat-makefile),)
+$(kernel-fs-fat-makefile) : | $(kernel-fs-fat_OBJDIR)
+else
+$(kernel-fs-fat-makefile) :: $(kernel-fs-fat_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-fs-fat_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-fs-fat_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-fs-fat-makefile)
+
+kernel-fs-fat_DEFMODDIR        := $($(kernel-fs-fat_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-fs-fat_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-fs-fat_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-fs-fat_MODDIR       := 
+else
+    kernel-fs-fat_MODDIR       := $(kernel-fs-fat_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-fs-fat_INCDIR           := 
+else
+kernel-fs-fat_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-fs-fat_LIBDEFSINC       := $(kernel-fs-fat_OBJDIR)/include/$(kernel-fs-fat_DEFNAME)_libdefs.h
+kernel-fs-fat_DEFLIBDEFSINC    := $(kernel-fs-fat_OBJDIR)/include/$(kernel-fs-fat_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-fs-fat-includes-quick : kernel-fs-fat-includes
+kernel-fs-fat-includes : $(addprefix $(GENINCDIR)/,$($(kernel-fs-fat_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-fs-fat_INCDIR)/,$($(kernel-fs-fat_DEFNAME)_INCLUDES)) \
+    $(kernel-fs-fat_LIBDEFSINC) $(kernel-fs-fat_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-fs-fat_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-fs-fat-includes_MODNAME := fat_
+else
+    kernel-fs-fat-includes_MODNAME := fat
+endif
+
+ifneq ($($(kernel-fs-fat-includes_MODNAME)_INCLUDES),)
+
+kernel-fs-fat-includes_TARGETS := $($(kernel-fs-fat-includes_MODNAME)_INCLUDES)
+
+kernel-fs-fat-includes_DEPS := $(GENMODULE)
+kernel-fs-fat-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-fs-fat-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-fs-fat-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-fs-fat-includes_OPTS += -c 
+        kernel-fs-fat-includes_DEPS += 
+    endif 
+else
+    kernel-fs-fat-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/fat.conf
+    kernel-fs-fat-includes_DEPS += $(SRCDIR)/$(CURDIR)/fat.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-fs-fat-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-fs-fat-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-fs-fat-includes_OPTS += -o 
+        kernel-fs-fat-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-fs-fat-includes_OPTS += -s 
+endif
+ifneq ($(kernel-fs-fat_OBJDIR)/include,)
+    kernel-fs-fat-includes_OPTS += -d $(kernel-fs-fat_OBJDIR)/include
+    kernel-fs-fat-includes_TARGETS := $(addprefix $(kernel-fs-fat_OBJDIR)/include/,$(kernel-fs-fat-includes_TARGETS))
+    kernel-fs-fat-includes_GENINCFLAG=$(kernel-fs-fat_OBJDIR)/include/.fat.handler-includes
+else
+    kernel-fs-fat-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.fat.handler-includes
+endif
+
+$(kernel-fs-fat-includes_TARGETS) : $(kernel-fs-fat-includes_DEPS) $(kernel-fs-fat-includes_GENINCFLAG)
+
+$(kernel-fs-fat-includes_GENINCFLAG) : OPTS := $(kernel-fs-fat-includes_OPTS)
+$(kernel-fs-fat-includes_GENINCFLAG) : MODNAME := fat
+$(kernel-fs-fat-includes_GENINCFLAG) : MODTYPE := handler
+$(kernel-fs-fat-includes_GENINCFLAG) : $(kernel-fs-fat-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-fs-fat_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-fs-fat_DEFNAME)_INCLUDES)) : | $(kernel-fs-fat_OBJDIR)/fat_geninc
+
+$(kernel-fs-fat_OBJDIR)/fat_geninc : COPYSRCDIR := $(kernel-fs-fat_OBJDIR)/include
+$(kernel-fs-fat_OBJDIR)/fat_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-fs-fat_OBJDIR)/fat_geninc : FILES := $($(kernel-fs-fat_DEFNAME)_INCLUDES)
+$(kernel-fs-fat_OBJDIR)/fat_geninc : $(addprefix $(kernel-fs-fat_OBJDIR)/include/,$($(kernel-fs-fat_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-fs-fat_OBJDIR)/include
+
+$(addprefix $(kernel-fs-fat_INCDIR)/,$($(kernel-fs-fat_DEFNAME)_INCLUDES)) : | $(kernel-fs-fat_OBJDIR)/fat_incs
+
+$(kernel-fs-fat_OBJDIR)/fat_incs : COPYSRCDIR := $(kernel-fs-fat_OBJDIR)/include
+$(kernel-fs-fat_OBJDIR)/fat_incs : TGTDIR := $(kernel-fs-fat_INCDIR)
+$(kernel-fs-fat_OBJDIR)/fat_incs : FILES := $($(kernel-fs-fat_DEFNAME)_INCLUDES)
+$(kernel-fs-fat_OBJDIR)/fat_incs : $(addprefix $(kernel-fs-fat_OBJDIR)/include/,$($(kernel-fs-fat_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-fs-fat_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-fs-fat_DEFNAME)_INCLUDES))))
+
+TMPfat_INCDIRS := \
+    $(kernel-fs-fat_OBJDIR)/include $(addprefix $(kernel-fs-fat_OBJDIR)/include/,$(kernel-fs-fat_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-fs-fat_INCDIRS)) \
+    $(kernel-fs-fat_INCDIR) $(addprefix $(kernel-fs-fat_INCDIR)/,$(kernel-fs-fat_INCDIRS))
+
+ifneq (kernel-fs-fat-includes-dirs,)
+kernel-fs-fat-includes-dirs : | $(TMPfat_INCDIRS)
+else
+kernel-fs-fat-includes-dirs :: $(TMPfat_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPfat_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-fs-fat-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-fs-fat-genlibdefs_OPTS += -f 
+    kernel-fs-fat-genlibdefs_MODNAME := fat_
+else
+    kernel-fs-fat-genlibdefs_MODNAME := fat
+endif
+kernel-fs-fat-genlibdefs_TARGET := $(kernel-fs-fat-genlibdefs_MODNAME)_libdefs.h
+kernel-fs-fat-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-fs-fat-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-fs-fat-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-fs-fat-genlibdefs_OPTS += -c 
+        kernel-fs-fat-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-fs-fat-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/fat.conf
+    kernel-fs-fat-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/fat.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-fs-fat-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-fs-fat-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-fs-fat-genlibdefs_OPTS += -o 
+        kernel-fs-fat-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-fs-fat-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-fs-fat_OBJDIR)/include,)
+    kernel-fs-fat-genlibdefs_OPTS += -d $(kernel-fs-fat_OBJDIR)/include
+    kernel-fs-fat-genlibdefs_TARGET := $(kernel-fs-fat_OBJDIR)/include/$(kernel-fs-fat-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-fs-fat-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-fs-fat-genlibdefs_TARGET) : OPTS := $(kernel-fs-fat-genlibdefs_OPTS)
+$(kernel-fs-fat-genlibdefs_TARGET) : MODNAME := fat
+$(kernel-fs-fat-genlibdefs_TARGET) : MODTYPE := handler
+$(kernel-fs-fat-genlibdefs_TARGET) : $(kernel-fs-fat-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-fs-fat_DEFLIBDEFSINC) : FILENAME := $(kernel-fs-fat_LIBDEFSINC)
+$(kernel-fs-fat_DEFLIBDEFSINC) : $(kernel-fs-fat_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-fs-fat_LIBDEFSINC) $(kernel-fs-fat_DEFLIBDEFSINC) : | $(kernel-fs-fat_OBJDIR)/include
+
+ifneq (kernel-fs-fat-includes-dirs,)
+kernel-fs-fat-includes-dirs : | $(kernel-fs-fat_OBJDIR)/include
+else
+kernel-fs-fat-includes-dirs :: $(kernel-fs-fat_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-fs-fat_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-fs-fat-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-fs-fat-genmodfiles_OPTS += -f 
+    kernel-fs-fat-genmodfiles_MODNAME := fat_
+else
+    kernel-fs-fat-genmodfiles_MODNAME := fat
+endif
+kernel-fs-fat-genmodfiles_GENTARGETS := $($(kernel-fs-fat-genmodfiles_MODNAME)_STARTFILES) $($(kernel-fs-fat-genmodfiles_MODNAME)_ENDFILES)
+kernel-fs-fat-genmodfiles_STUBTARGETS := $($(kernel-fs-fat-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-fs-fat-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-fs-fat-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-fs-fat-genmodfiles_GENTARGETS))
+kernel-fs-fat-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-fs-fat-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-fs-fat-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-fs-fat-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-fs-fat-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-fs-fat-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-fs-fat-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-fs-fat-genmodfiles_OPTS += -c 
+        kernel-fs-fat-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-fs-fat-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/fat.conf
+    kernel-fs-fat-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/fat.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-fs-fat-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-fs-fat-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-fs-fat-genmodfiles_OPTS += -o 
+        kernel-fs-fat-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-fs-fat-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-fs-fat_OBJDIR),)
+    kernel-fs-fat-genmodfiles_OPTS += -d $(kernel-fs-fat_OBJDIR)
+    kernel-fs-fat-genmodfiles_TARGETDIR := $(shell echo $(kernel-fs-fat_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-fs-fat-genmodfiles_GENTARGETS := $(addprefix $(kernel-fs-fat-genmodfiles_TARGETDIR)/,$(kernel-fs-fat-genmodfiles_GENTARGETS))
+    kernel-fs-fat-genmodfiles_GENFILEFLAG=$(kernel-fs-fat-genmodfiles_TARGETDIR)/.fat.handler-genfiles
+else
+    kernel-fs-fat-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.fat.handler-genfiles
+endif
+ifneq ($(kernel-fs-fat_OBJDIR)/linklib,)
+    kernel-fs-fat-genmodfiles_OPTS += -l $(kernel-fs-fat_OBJDIR)/linklib
+    kernel-fs-fat-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-fs-fat_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-fs-fat-genmodfiles_STUBTARGETS := $(addprefix $(kernel-fs-fat-genmodfiles_STUBTARGETDIR)/,$(kernel-fs-fat-genmodfiles_STUBTARGETS))
+    kernel-fs-fat-genmodfiles_TARGETDIRS += $(kernel-fs-fat_OBJDIR)/linklib
+else
+ifneq ($(kernel-fs-fat_OBJDIR),)
+    kernel-fs-fat-genmodfiles_STUBTARGETS := $(addprefix $(kernel-fs-fat-genmodfiles_TARGETDIR)/,$(kernel-fs-fat-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-fs-fat-genmodfiles_TARGETS := $(kernel-fs-fat-genmodfiles_GENTARGETS) $(kernel-fs-fat-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-fs-fat-genmodfiles_TARGETDIRS),)
+$(kernel-fs-fat-genmodfiles_TARGETS) : | $(kernel-fs-fat-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-fs-fat-genmodfiles_TARGETS) : $(kernel-fs-fat-genmodfiles_DEPS) $(kernel-fs-fat-genmodfiles_GENFILEFLAG)
+
+$(kernel-fs-fat-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-fs-fat-genmodfiles_OPTS)
+$(kernel-fs-fat-genmodfiles_GENFILEFLAG) : MODNAME := fat
+$(kernel-fs-fat-genmodfiles_GENFILEFLAG) : MODTYPE := handler
+$(kernel-fs-fat-genmodfiles_GENFILEFLAG) : $(kernel-fs-fat-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-fs-fat-genmodfiles_GENFILEFLAG) : $(kernel-fs-fat_DEFLIBDEFSINC) $(kernel-fs-fat-makefile)
+
+
+ifneq ($(kernel-fs-fat-genmodfiles_GENFILEFLAG),)
+$(kernel-fs-fat-genmodfiles_GENFILEFLAG) : | $(kernel-fs-fat_OBJDIR)/linklib
+else
+$(kernel-fs-fat-genmodfiles_GENFILEFLAG) :: $(kernel-fs-fat_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-fs-fat_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-fs-fat_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-fs-fat_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-fs-fat-fd : $(kernel-fs-fat_FDDIR)/fat_lib.fd
+
+
+TMP_TARGET := fat_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/fat.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/fat.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-fs-fat_FDDIR),)
+    TMP_OPTS += -d $(kernel-fs-fat_FDDIR)
+    TMP_TARGET := $(kernel-fs-fat_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := fat
+$(TMP_TARGET) : MODTYPE := handler
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-fs-fat_FDDIR)/fat_lib.fd : | $(kernel-fs-fat_FDDIR)
+
+
+ifneq (kernel-fs-fat-fd-setup,)
+kernel-fs-fat-fd-setup : | $(kernel-fs-fat_FDDIR)
+else
+kernel-fs-fat-fd-setup :: $(kernel-fs-fat_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-fs-fat_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-fs-fat_FILES            := $(FILES)
+kernel-fs-fat_OBJCFILES        := 
+kernel-fs-fat_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-fs-fat_LIBFILES         := 
+kernel-fs-fat_LIBS             := 
+
+kernel-fs-fat_FDIRS            := $(sort $(dir $(kernel-fs-fat_FILES)))
+
+kernel-fs-fat_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-fs-fat_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-fs-fat_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-fs-fat_FILTERARCH       = $(filter-out $(call kernel-fs-fat_MATCHARCH,$(1),$(2)),$(2))
+kernel-fs-fat_STARTFILES       := $(addprefix $(kernel-fs-fat_OBJDIR)/,$($(kernel-fs-fat_DEFNAME)_STARTFILES))
+kernel-fs-fat_ENDFILES         := $(addprefix $(kernel-fs-fat_OBJDIR)/,$($(kernel-fs-fat_DEFNAME)_ENDFILES))
+
+kernel-fs-fat_ARCHOBJS         := $(wildcard $(kernel-fs-fat_OBJDIR)/arch/*.o)
+kernel-fs-fat_LIBARCHOBJS      := $(wildcard $(kernel-fs-fat_OBJDIR)/linklib/arch/*.o)
+kernel-fs-fat_ARCHFILES        := $(basename $(notdir $(kernel-fs-fat_ARCHOBJS)))
+kernel-fs-fat_LIBARCHFILES     := $(basename $(notdir $(kernel-fs-fat_LIBARCHOBJS)))
+kernel-fs-fat_C_NARCHFILES     := $(call kernel-fs-fat_FILTERARCH,$(kernel-fs-fat_ARCHFILES),$(kernel-fs-fat_FILES))
+kernel-fs-fat_CXX_NARCHFILES   := $(call kernel-fs-fat_FILTERARCH,$(kernel-fs-fat_ARCHFILES),$(kernel-fs-fat_CXXFILES))
+kernel-fs-fat_OBJC_NARCHFILES  := $(call kernel-fs-fat_FILTERARCH,$(kernel-fs-fat_ARCHFILES),$(kernel-fs-fat_OBJCFILES))
+kernel-fs-fat_NLIBARCHFILES    := $(call kernel-fs-fat_FILTERARCH,$(kernel-fs-fat_LIBARCHFILES),$(kernel-fs-fat_LIBFILES))
+kernel-fs-fat_ARCHNLIBFILES    := $(call kernel-fs-fat_FILTERARCH,$(kernel-fs-fat_LIBFILES),$(kernel-fs-fat_LIBARCHFILES))
+
+kernel-fs-fat_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-fs-fat_OBJDIR)/include -include $(kernel-fs-fat_DEFLIBDEFSINC))
+ifneq (,)
+kernel-fs-fat_CPPFLAGS         += -I
+endif
+kernel-fs-fat_LINKLIBCPPFLAGS  := $(kernel-fs-fat_CPPFLAGS)
+kernel-fs-fat_CPPFLAGS         += $(strip $($(kernel-fs-fat_DEFNAME)_CPPFLAGS))
+kernel-fs-fat_LINKLIBCPPFLAGS  += $(strip $($(kernel-fs-fat_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-fs-fat_CFLAGS           := $(strip $(CFLAGS) $($(kernel-fs-fat_DEFNAME)_CFLAGS))
+kernel-fs-fat_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-fs-fat_DEFNAME)_LINKLIBCFLAGS))
+kernel-fs-fat_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-fs-fat_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-fs-fat_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-fs-fat_CFLAGS           := $(strip $(kernel-fs-fat_LTOFLAGS) $(kernel-fs-fat_CFLAGS))
+kernel-fs-fat_LINKLIBCFLAGS    := $(strip $(kernel-fs-fat_LTOFLAGS) $(kernel-fs-fat_LINKLIBCFLAGS))
+kernel-fs-fat_CXXFLAGS         := $(strip $(kernel-fs-fat_LTOFLAGS) $(kernel-fs-fat_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-fs-fat_SUBSTNULL        :=
+kernel-fs-fat_SUBSTSPACE       := $(kernel-fs-fat_SUBSTNULL) #
+kernel-fs-fat_SUBSTCOMMA       := ,
+kernel-fs-fat_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-fs-fat_SUBSTSPACE),$(kernel-fs-fat_SUBSTCOMMA),$(strip $($(kernel-fs-fat_DEFNAME)_STARTFILES))))
+kernel-fs-fat_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-fs-fat_CFLAGS           := $(strip $(kernel-fs-fat_INSTRFUNCFLAGS) $(kernel-fs-fat_CFLAGS))
+kernel-fs-fat_CXXFLAGS         := $(strip $(kernel-fs-fat_INSTRFUNCFLAGS) $(kernel-fs-fat_CXXFLAGS))
+kernel-fs-fat_LIBS             += $(kernel-fs-fat_INSTRFUNCLIBS)
+endif
+endif
+kernel-fs-fat_DFLAGS           := $(strip $(kernel-fs-fat_DFLAGS) $($(kernel-fs-fat_DEFNAME)_DFLAGS))
+kernel-fs-fat_LINKLIBDFLAGS    := $(strip $(kernel-fs-fat_DFLAGS) $($(kernel-fs-fat_DEFNAME)_LINKLIBDFLAGS))
+kernel-fs-fat_DXXFLAGS         := $(strip $(kernel-fs-fat_DXXFLAGS) $($(kernel-fs-fat_DEFNAME)_DXXFLAGS))
+
+ifeq (handler,library)
+    kernel-fs-fat_LIBSUFFIX    := 
+else
+    kernel-fs-fat_LIBSUFFIX    := .handler
+endif
+
+ifeq (,)
+kernel-fs-fat_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-fs-fat_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-fs-fat_LINKLIBCFILES    := $(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$($(kernel-fs-fat_DEFNAME)_LINKLIBFILES))
+kernel-fs-fat_LINKLIBAFILES    := $(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$($(kernel-fs-fat_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-fs-fat_DEFNAME)_LINKLIBFILES) $($(kernel-fs-fat_DEFNAME)_LINKLIBAFILES)  $(kernel-fs-fat_ARCHNLIBFILES)),)
+    kernel-fs-fat_LINKLIB      :=
+else
+    kernel-fs-fat_LINKLIB      := $(kernel-fs-fat_LIBDIR)/libfat$(kernel-fs-fat_LIBSUFFIX).a
+    ifneq (fat,$(kernel-fs-fat_LINKLIBNAME))
+        kernel-fs-fat_LINKLIB  += $(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_LINKLIBNAME)$(kernel-fs-fat_LIBSUFFIX).a
+    endif
+endif
+kernel-fs-fat_LINKLIBFILES     := $(kernel-fs-fat_LINKLIBCFILES) $(kernel-fs-fat_LINKLIBAFILES)
+
+kernel-fs-fat_RELLINKLIBCFILES := $(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$($(kernel-fs-fat_DEFNAME)_RELLINKLIBFILES))
+kernel-fs-fat_RELLINKLIBAFILES := $(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$($(kernel-fs-fat_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-fs-fat_DEFNAME)_RELLINKLIBFILES) $($(kernel-fs-fat_DEFNAME)_RELLINKLIBAFILES)  $(kernel-fs-fat_ARCHNLIBFILES)),)
+    kernel-fs-fat_RELLINKLIB   :=
+else
+    kernel-fs-fat_RELLINKLIB   := $(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_DEFNAME)_rel$(kernel-fs-fat_LIBSUFFIX).a
+    ifneq (fat,$(kernel-fs-fat_LINKLIBNAME))
+        kernel-fs-fat_RELLINKLIB += $(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_LINKLIBNAME)_rel$(kernel-fs-fat_LIBSUFFIX).a
+    endif
+endif
+kernel-fs-fat_RELLINKLIBFILES  := $(kernel-fs-fat_RELLINKLIBCFILES) $(kernel-fs-fat_RELLINKLIBAFILES)
+endif
+
+kernel-fs-fat_ENDOBJS          := $(addsuffix .o,$(kernel-fs-fat_ENDFILES))
+kernel-fs-fat_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$(notdir $(kernel-fs-fat_NLIBARCHFILES))) $(addprefix $(kernel-fs-fat_OBJDIR)/linklib/arch/,$(notdir $(kernel-fs-fat_ARCHNLIBFILES))) $(kernel-fs-fat_LINKLIBFILES)) \
+                 
+kernel-fs-fat_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$(notdir $(kernel-fs-fat_NLIBARCHFILES))) $(addprefix $(kernel-fs-fat_OBJDIR)/linklib/arch/,$(notdir $(kernel-fs-fat_ARCHNLIBFILES))) $(kernel-fs-fat_RELLINKLIBFILES)) \
+                 
+$(kernel-fs-fat_LINKLIBFILES) $(kernel-fs-fat_RELLINKLIBFILES) : | $(kernel-fs-fat_OBJDIR)/linklib
+$(kernel-fs-fat_LINKLIBOBJS) $(kernel-fs-fat_RELLINKLIBOBJS) : | $(kernel-fs-fat_OBJDIR)/linklib
+
+kernel-fs-fat_CCFILES := $(kernel-fs-fat_C_NARCHFILES)
+kernel-fs-fat_TARGETCCFILES    := $(strip $(kernel-fs-fat_STARTFILES) $(kernel-fs-fat_ENDFILES))
+kernel-fs-fat_LINKLIBCCFILES   := $(strip $(kernel-fs-fat_NLIBARCHFILES) $(kernel-fs-fat_LINKLIBCFILES) $(kernel-fs-fat_RELLINKLIBCFILES))
+kernel-fs-fat_LINKLIBCCGENFILES := $(strip $(kernel-fs-fat_LINKLIBCFILES) $(kernel-fs-fat_RELLINKLIBCFILES))
+
+
+kernel-fs-fat_CXXABSBASENAMES := $(foreach kernel-fs-fat_CXXBASE,$(kernel-fs-fat_CXX_NARCHFILES),$(if $(filter /%,$(kernel-fs-fat_CXXBASE)),$(kernel-fs-fat_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-fs-fat_CXXBASE))))
+
+ifneq ($(kernel-fs-fat_CXXABSBASENAMES),)
+
+kernel-fs-fat_CXXBASENAMES := $(basename $(kernel-fs-fat_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-fs-fat_MCXX_FILES  := $(strip $(foreach kernel-fs-fat_CXXBASE,$(kernel-fs-fat_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-fs-fat_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-fs-fat_EXT),$(kernel-fs-fat_CXXBASE)))))))
+
+ifeq (,)
+kernel-fs-fat_MCXX_SRCWILDCARD := %
+else
+kernel-fs-fat_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-fs-fat_OBJDIR),)
+  kernel-fs-fat_CXXTARGETS := $(notdir $(kernel-fs-fat_CXXBASENAMES:=.o))
+  kernel-fs-fat_CXXDTARGETS := $(notdir $(kernel-fs-fat_CXXBASENAMES:=.d))
+  kernel-fs-fat_MCXX_WILDCARD := %
+else
+  kernel-fs-fat_CXXTARGETS := $(addprefix $(kernel-fs-fat_OBJDIR)/,$(notdir $(kernel-fs-fat_CXXBASENAMES:=.o)))
+  kernel-fs-fat_CXXDTARGETS := $(addprefix $(kernel-fs-fat_OBJDIR)/,$(notdir $(kernel-fs-fat_CXXBASENAMES:=.d)))
+  kernel-fs-fat_MCXX_WILDCARD := $(kernel-fs-fat_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-fs-fat_CXXTARGETS) $(kernel-fs-fat_CXXDTARGETS) : | $(kernel-fs-fat_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-fs-fat_MCXX_CPPFLAGS := $(kernel-fs-fat_CPPFLAGS)
+kernel-fs-fat_CXXFLAGS := $(kernel-fs-fat_CXXFLAGS)
+ifeq ($(kernel-fs-fat_DXXFLAGS),)
+  kernel-fs-fat_DXXFLAGS := $(kernel-fs-fat_CXXFLAGS)
+else
+  kernel-fs-fat_DXXFLAGS := $(kernel-fs-fat_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-fs-fat_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-fs-fat_STRIP ?= $(HOST_STRIP)
+  kernel-fs-fat_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-fs-fat_CXXCMD:=$(HOST_CXX)
+  kernel-fs-fat_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-fs-fat_MCXX_CPPFLAGS) $(kernel-fs-fat_MCXX_EXTRA_CPPFLAGS))
+  kernel-fs-fat_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-fs-fat_CXXFLAGS))
+  kernel-fs-fat_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-fs-fat_DXXFLAGS))
+  kernel-fs-fat_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-fs-fat_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-fs-fat_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-fs-fat_STRIP ?= $(TARGET_STRIP)
+  kernel-fs-fat_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-fs-fat_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-fs-fat_MCXX_CPPFLAGS := $(strip $(kernel-fs-fat_MCXX_CPPFLAGS) $(kernel-fs-fat_MCXX_EXTRA_CPPFLAGS))
+  kernel-fs-fat_CXXFLAGS := $(strip $(kernel-fs-fat_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-fs-fat_DXXFLAGS := $(kernel-fs-fat_DXXFLAGS)
+  kernel-fs-fat_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-fs-fat_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-fs-fat_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-fs-fat_STRIP ?= $(ECHO) >/dev/null
+  kernel-fs-fat_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-fs-fat_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-fs-fat_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-fs-fat_MCXX_CPPFLAGS) $(kernel-fs-fat_MCXX_EXTRA_CPPFLAGS))
+  kernel-fs-fat_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-fs-fat_CXXFLAGS))
+  kernel-fs-fat_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-fs-fat_DXXFLAGS))
+  kernel-fs-fat_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-fs-fat_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-fs-fat_CXXCMD) $(kernel-fs-fat_CXXIQUOTE) $(dir $(2)) $(kernel-fs-fat_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_CXXIQUOTE) . $(kernel-fs-fat_CXXIQUOTE_END) $(strip $(kernel-fs-fat_CXXFLAGS) $(kernel-fs-fat_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-fs-fat_CXXCMD) $(kernel-fs-fat_CXXIQUOTE) $(dir $(2)) $(kernel-fs-fat_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_CXXIQUOTE) . $(kernel-fs-fat_CXXIQUOTE_END) $(strip $(kernel-fs-fat_CXXFLAGS) $(kernel-fs-fat_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-fs-fat_CXXCMD) $(kernel-fs-fat_CXXIQUOTE) $(dir $(2)) $(kernel-fs-fat_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_CXXIQUOTE) . $(kernel-fs-fat_CXXIQUOTE_END) $(strip $(kernel-fs-fat_CXXFLAGS) $(kernel-fs-fat_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-fs-fat_CXXCMD)" $(MKDEPEND) $(strip $(kernel-fs-fat_DXXFLAGS) $(kernel-fs-fat_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-fs-fat_OBJDIR),)
+  $(foreach kernel-fs-fat_CXXFILE,$(kernel-fs-fat_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-fs-fat_CXXFILE))),$(kernel-fs-fat_CXXFILE))))
+else
+  $(foreach kernel-fs-fat_CXXFILE,$(kernel-fs-fat_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-fs-fat_OBJDIR)/,$(notdir $(basename $(kernel-fs-fat_CXXFILE)))),$(kernel-fs-fat_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-fs-fat_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-fs-fat_MOBJC_SRCWILDCARD := %
+else
+kernel-fs-fat_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-fs-fat_OBJDIR),)
+  kernel-fs-fat_MOBJC_TARGETS := $(addsuffix .o,$(kernel-fs-fat_OBJC_NARCHFILES))
+  kernel-fs-fat_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-fs-fat_OBJC_NARCHFILES))
+  kernel-fs-fat_MOBJC_WILDCARD := %
+else
+  kernel-fs-fat_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-fat_OBJDIR)/,$(kernel-fs-fat_OBJC_NARCHFILES)))
+  kernel-fs-fat_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-fat_OBJDIR)/,$(kernel-fs-fat_OBJC_NARCHFILES)))
+  kernel-fs-fat_MOBJC_WILDCARD := $(kernel-fs-fat_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-fs-fat_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-fs-fat_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-fs-fat_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-fs-fat_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-fs-fat_MOBJC_DIRS := $(foreach dir, $(kernel-fs-fat_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-fs-fat_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-fs-fat_MOBJC_DIRS),)
+    kernel-fs-fat_MOBJC_DIRS := $(shell echo $(kernel-fs-fat_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-fs-fat_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-fs-fat_CC := $(TARGET_CC)
+else
+  kernel-fs-fat_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-fs-fat_MOBJC_CPPFLAGS := $(kernel-fs-fat_CPPFLAGS)
+kernel-fs-fat_OBJCFLAGS := $(kernel-fs-fat_CFLAGS)
+kernel-fs-fat_OBJCFLAGS := $(kernel-fs-fat_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-fs-fat_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-fs-fat_OBJCFLAGS)))
+ifeq ($(kernel-fs-fat_DFLAGS),)
+  kernel-fs-fat_OBJCDFLAGS := $(kernel-fs-fat_CFLAGS)
+else
+  kernel-fs-fat_OBJCDFLAGS := $(kernel-fs-fat_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-fs-fat_LINK ?= $(strip $(kernel-fs-fat_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-fs-fat_STRIP ?= $(TARGET_STRIP)
+  kernel-fs-fat_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-fs-fat_CC) $(TARGET_SYSROOT))
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : kernel-fs-fat_MOBJC_CPPFLAGS:=$(strip $(kernel-fs-fat_MOBJC_CPPFLAGS) $(kernel-fs-fat_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : kernel-fs-fat_OBJCFLAGS:=$(strip $(kernel-fs-fat_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : kernel-fs-fat_OBJCDFLAGS:=$(kernel-fs-fat_OBJCDFLAGS)
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : kernel-fs-fat_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : kernel-fs-fat_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-fs-fat_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-fs-fat_STRIP ?= $(HOST_STRIP)
+  kernel-fs-fat_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : kernel-fs-fat_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-fs-fat_MOBJC_CPPFLAGS) $(kernel-fs-fat_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : kernel-fs-fat_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-fat_OBJCFLAGS))
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : kernel-fs-fat_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-fat_OBJCDFLAGS))
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : kernel-fs-fat_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : kernel-fs-fat_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-fs-fat_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-fs-fat_STRIP ?= $(ECHO) >/dev/null
+  kernel-fs-fat_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : kernel-fs-fat_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-fs-fat_MOBJC_CPPFLAGS) $(kernel-fs-fat_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : kernel-fs-fat_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-fat_OBJCFLAGS))
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : kernel-fs-fat_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-fat_OBJCDFLAGS))
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : kernel-fs-fat_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-fs-fat_MOBJC_TARGETS) $(kernel-fs-fat_MOBJC_DTARGETS) : kernel-fs-fat_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-fs-fat_MOBJC_TARGETS) : CPPFLAGS := $(kernel-fs-fat_MOBJC_CPPFLAGS)
+$(kernel-fs-fat_MOBJC_TARGETS) : CFLAGS := $(kernel-fs-fat_OBJCFLAGS)
+$(kernel-fs-fat_MOBJC_TARGETS) : $(kernel-fs-fat_MOBJC_WILDCARD).o : $(kernel-fs-fat_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-fs-fat_IQUOTE) $(dir $<) $(kernel-fs-fat_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_IQUOTE) . $(kernel-fs-fat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-fs-fat_IQUOTE) $(dir $<) $(kernel-fs-fat_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_IQUOTE) . $(kernel-fs-fat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-fs-fat_IQUOTE) $(dir $<) $(kernel-fs-fat_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_IQUOTE) . $(kernel-fs-fat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-fs-fat_MOBJC_DTARGETS) : $(kernel-fs-fat_MOBJC_WILDCARD).d : $(kernel-fs-fat_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-fs-fat_OBJCDFLAGS) $(kernel-fs-fat_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-fs-fat_MC_SRCWILDCARD := %
+else
+kernel-fs-fat_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-fs-fat_OBJDIR),)
+kernel-fs-fat_MC_TARGETS := $(addsuffix .o,$(kernel-fs-fat_CCFILES))
+kernel-fs-fat_MC_DTARGETS := $(addsuffix .d,$(kernel-fs-fat_CCFILES))
+kernel-fs-fat_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-fs-fat_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-fat_OBJDIR)/,$(notdir $(kernel-fs-fat_CCFILES))))
+    kernel-fs-fat_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-fat_OBJDIR)/,$(notdir $(kernel-fs-fat_CCFILES))))
+else
+ifeq (,)
+    kernel-fs-fat_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-fat_OBJDIR)/,$(kernel-fs-fat_CCFILES)))
+    kernel-fs-fat_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-fat_OBJDIR)/,$(kernel-fs-fat_CCFILES)))
+else
+    kernel-fs-fat_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-fat_OBJDIR)/,$(patsubst /%,%,$(kernel-fs-fat_CCFILES))))
+    kernel-fs-fat_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-fat_OBJDIR)/,$(patsubst /%,%,$(kernel-fs-fat_CCFILES))))
+endif
+endif
+kernel-fs-fat_MC_TGTWILDCARD := $(kernel-fs-fat_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : | $(addsuffix .c,$(kernel-fs-fat_CCFILES))
+
+# Be sure that all .c files are found
+kernel-fs-fat_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-fs-fat_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-fs-fat_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-fs-fat_MC_DIRS := $(foreach dir, $(kernel-fs-fat_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-fs-fat_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-fs-fat_MC_DIRS),)
+    kernel-fs-fat_MC_DIRS := $(shell echo $(kernel-fs-fat_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-fs-fat_MC_DIRS)
+endif
+
+endif
+
+kernel-fs-fat_MC_CPPFLAGS := $(kernel-fs-fat_CPPFLAGS)
+kernel-fs-fat_CFLAGS := $(kernel-fs-fat_CFLAGS)
+ifeq ($(kernel-fs-fat_DFLAGS),)
+  kernel-fs-fat_DFLAGS := $(kernel-fs-fat_CFLAGS)
+else
+  kernel-fs-fat_DFLAGS := $(kernel-fs-fat_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-fs-fat_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-fs-fat_STRIP ?= $(TARGET_STRIP)
+kernel-fs-fat_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_MC_CPPFLAGS:=$(strip $(kernel-fs-fat_MC_CPPFLAGS) $(kernel-fs-fat_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_CFLAGS:=$(strip $(kernel-fs-fat_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_DFLAGS:=$(kernel-fs-fat_DFLAGS)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-fs-fat_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-fs-fat_STRIP ?= $(HOST_STRIP)
+kernel-fs-fat_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-fs-fat_MC_CPPFLAGS) $(kernel-fs-fat_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-fat_CFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-fat_DFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-fs-fat_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-fs-fat_STRIP ?= $(ECHO) >/dev/null
+kernel-fs-fat_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-fs-fat_MC_CPPFLAGS) $(kernel-fs-fat_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-fat_CFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-fat_DFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-fs-fat_MC_TARGETS) : CPPFLAGS := $(kernel-fs-fat_MC_CPPFLAGS)
+$(kernel-fs-fat_MC_TARGETS) : CFLAGS := $(kernel-fs-fat_CFLAGS)
+$(kernel-fs-fat_MC_TARGETS) : $(kernel-fs-fat_MC_TGTWILDCARD).o : $(kernel-fs-fat_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-fs-fat_IQUOTE) $(dir $<) $(kernel-fs-fat_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_IQUOTE) . $(kernel-fs-fat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-fs-fat_IQUOTE) $(dir $<) $(kernel-fs-fat_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_IQUOTE) . $(kernel-fs-fat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-fs-fat_IQUOTE) $(dir $<) $(kernel-fs-fat_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_IQUOTE) . $(kernel-fs-fat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-fs-fat_MC_DTARGETS) : $(kernel-fs-fat_MC_TGTWILDCARD).d : $(kernel-fs-fat_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-fs-fat_DFLAGS) $(kernel-fs-fat_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-fs-fat_MC_SRCWILDCARD := %
+else
+kernel-fs-fat_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-fs-fat_OBJDIR),)
+kernel-fs-fat_MC_TARGETS := $(addsuffix .o,$(kernel-fs-fat_TARGETCCFILES))
+kernel-fs-fat_MC_DTARGETS := $(addsuffix .d,$(kernel-fs-fat_TARGETCCFILES))
+kernel-fs-fat_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-fs-fat_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-fat_OBJDIR)/,$(notdir $(kernel-fs-fat_TARGETCCFILES))))
+    kernel-fs-fat_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-fat_OBJDIR)/,$(notdir $(kernel-fs-fat_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-fs-fat_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-fat_OBJDIR)/,$(kernel-fs-fat_TARGETCCFILES)))
+    kernel-fs-fat_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-fat_OBJDIR)/,$(kernel-fs-fat_TARGETCCFILES)))
+else
+    kernel-fs-fat_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-fat_OBJDIR)/,$(patsubst /%,%,$(kernel-fs-fat_TARGETCCFILES))))
+    kernel-fs-fat_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-fat_OBJDIR)/,$(patsubst /%,%,$(kernel-fs-fat_TARGETCCFILES))))
+endif
+endif
+kernel-fs-fat_MC_TGTWILDCARD := $(kernel-fs-fat_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : | $(addsuffix .c,$(kernel-fs-fat_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-fs-fat_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-fs-fat_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-fs-fat_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-fs-fat_MC_DIRS := $(foreach dir, $(kernel-fs-fat_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-fs-fat_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-fs-fat_MC_DIRS),)
+    kernel-fs-fat_MC_DIRS := $(shell echo $(kernel-fs-fat_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-fs-fat_MC_DIRS)
+endif
+
+endif
+
+kernel-fs-fat_MC_CPPFLAGS := $(kernel-fs-fat_CPPFLAGS) -D__AROS__
+kernel-fs-fat_CFLAGS := $(kernel-fs-fat_CFLAGS)
+ifeq ($(kernel-fs-fat_DFLAGS),)
+  kernel-fs-fat_DFLAGS := $(kernel-fs-fat_CFLAGS)
+else
+  kernel-fs-fat_DFLAGS := $(kernel-fs-fat_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-fs-fat_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-fs-fat_STRIP ?= $(TARGET_STRIP)
+kernel-fs-fat_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_MC_CPPFLAGS:=$(strip $(kernel-fs-fat_MC_CPPFLAGS) $(kernel-fs-fat_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_CFLAGS:=$(strip $(kernel-fs-fat_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_DFLAGS:=$(kernel-fs-fat_DFLAGS)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-fs-fat_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-fs-fat_STRIP ?= $(HOST_STRIP)
+kernel-fs-fat_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-fs-fat_MC_CPPFLAGS) $(kernel-fs-fat_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-fat_CFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-fat_DFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-fs-fat_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-fs-fat_STRIP ?= $(ECHO) >/dev/null
+kernel-fs-fat_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-fs-fat_MC_CPPFLAGS) $(kernel-fs-fat_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-fat_CFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-fat_DFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-fs-fat_MC_TARGETS) : CPPFLAGS := $(kernel-fs-fat_MC_CPPFLAGS)
+$(kernel-fs-fat_MC_TARGETS) : CFLAGS := $(kernel-fs-fat_CFLAGS)
+$(kernel-fs-fat_MC_TARGETS) : $(kernel-fs-fat_MC_TGTWILDCARD).o : $(kernel-fs-fat_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-fs-fat_IQUOTE) $(dir $<) $(kernel-fs-fat_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_IQUOTE) . $(kernel-fs-fat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-fs-fat_IQUOTE) $(dir $<) $(kernel-fs-fat_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_IQUOTE) . $(kernel-fs-fat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-fs-fat_IQUOTE) $(dir $<) $(kernel-fs-fat_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_IQUOTE) . $(kernel-fs-fat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-fs-fat_MC_DTARGETS) : $(kernel-fs-fat_MC_TGTWILDCARD).d : $(kernel-fs-fat_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-fs-fat_DFLAGS) $(kernel-fs-fat_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-fs-fat_MC_SRCWILDCARD := %
+else
+kernel-fs-fat_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-fs-fat_OBJDIR)/linklib,)
+kernel-fs-fat_MC_TARGETS := $(addsuffix .o,$(kernel-fs-fat_NLIBARCHFILES))
+kernel-fs-fat_MC_DTARGETS := $(addsuffix .d,$(kernel-fs-fat_NLIBARCHFILES))
+kernel-fs-fat_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-fs-fat_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$(notdir $(kernel-fs-fat_NLIBARCHFILES))))
+    kernel-fs-fat_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$(notdir $(kernel-fs-fat_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-fs-fat_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$(kernel-fs-fat_NLIBARCHFILES)))
+    kernel-fs-fat_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$(kernel-fs-fat_NLIBARCHFILES)))
+else
+    kernel-fs-fat_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-fs-fat_NLIBARCHFILES))))
+    kernel-fs-fat_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-fs-fat_NLIBARCHFILES))))
+endif
+endif
+kernel-fs-fat_MC_TGTWILDCARD := $(kernel-fs-fat_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : | $(addsuffix .c,$(kernel-fs-fat_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-fs-fat_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-fs-fat_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-fs-fat_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-fs-fat_MC_DIRS := $(foreach dir, $(kernel-fs-fat_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-fs-fat_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-fs-fat_MC_DIRS),)
+    kernel-fs-fat_MC_DIRS := $(shell echo $(kernel-fs-fat_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-fs-fat_MC_DIRS)
+endif
+
+endif
+
+kernel-fs-fat_MC_CPPFLAGS := $(kernel-fs-fat_LINKLIBCPPFLAGS) -D__AROS__
+kernel-fs-fat_CFLAGS := $(kernel-fs-fat_LINKLIBCFLAGS)
+ifeq ($(kernel-fs-fat_LINKLIBDFLAGS),)
+  kernel-fs-fat_DFLAGS := $(kernel-fs-fat_LINKLIBCFLAGS)
+else
+  kernel-fs-fat_DFLAGS := $(kernel-fs-fat_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-fs-fat_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-fs-fat_STRIP ?= $(TARGET_STRIP)
+kernel-fs-fat_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_MC_CPPFLAGS:=$(strip $(kernel-fs-fat_MC_CPPFLAGS) $(kernel-fs-fat_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_CFLAGS:=$(strip $(kernel-fs-fat_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_DFLAGS:=$(kernel-fs-fat_DFLAGS)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-fs-fat_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-fs-fat_STRIP ?= $(HOST_STRIP)
+kernel-fs-fat_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-fs-fat_MC_CPPFLAGS) $(kernel-fs-fat_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-fat_CFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-fat_DFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-fs-fat_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-fs-fat_STRIP ?= $(ECHO) >/dev/null
+kernel-fs-fat_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-fs-fat_MC_CPPFLAGS) $(kernel-fs-fat_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-fat_CFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-fat_DFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-fs-fat_MC_TARGETS) : CPPFLAGS := $(kernel-fs-fat_MC_CPPFLAGS)
+$(kernel-fs-fat_MC_TARGETS) : CFLAGS := $(kernel-fs-fat_CFLAGS)
+$(kernel-fs-fat_MC_TARGETS) : $(kernel-fs-fat_MC_TGTWILDCARD).o : $(kernel-fs-fat_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-fs-fat_IQUOTE) $(dir $<) $(kernel-fs-fat_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_IQUOTE) . $(kernel-fs-fat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-fs-fat_IQUOTE) $(dir $<) $(kernel-fs-fat_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_IQUOTE) . $(kernel-fs-fat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-fs-fat_IQUOTE) $(dir $<) $(kernel-fs-fat_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_IQUOTE) . $(kernel-fs-fat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-fs-fat_MC_DTARGETS) : $(kernel-fs-fat_MC_TGTWILDCARD).d : $(kernel-fs-fat_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-fs-fat_DFLAGS) $(kernel-fs-fat_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-fs-fat_OBJDIR)/linklib,)
+kernel-fs-fat_MC_SRCWILDCARD := %
+else
+kernel-fs-fat_MC_SRCWILDCARD := $(kernel-fs-fat_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-fs-fat_OBJDIR)/linklib,)
+kernel-fs-fat_MC_TARGETS := $(addsuffix .o,$(kernel-fs-fat_LINKLIBCCGENFILES))
+kernel-fs-fat_MC_DTARGETS := $(addsuffix .d,$(kernel-fs-fat_LINKLIBCCGENFILES))
+kernel-fs-fat_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-fs-fat_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$(notdir $(kernel-fs-fat_LINKLIBCCGENFILES))))
+    kernel-fs-fat_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$(notdir $(kernel-fs-fat_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-fs-fat_OBJDIR)/linklib,)
+    kernel-fs-fat_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$(kernel-fs-fat_LINKLIBCCGENFILES)))
+    kernel-fs-fat_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$(kernel-fs-fat_LINKLIBCCGENFILES)))
+else
+    kernel-fs-fat_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$(patsubst $(kernel-fs-fat_OBJDIR)/linklib/%,%,$(kernel-fs-fat_LINKLIBCCGENFILES))))
+    kernel-fs-fat_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$(patsubst $(kernel-fs-fat_OBJDIR)/linklib/%,%,$(kernel-fs-fat_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-fs-fat_MC_TGTWILDCARD := $(kernel-fs-fat_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : | $(addsuffix .c,$(kernel-fs-fat_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-fs-fat_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-fs-fat_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-fs-fat_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-fs-fat_MC_DIRS := $(foreach dir, $(kernel-fs-fat_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-fs-fat_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-fs-fat_MC_DIRS),)
+    kernel-fs-fat_MC_DIRS := $(shell echo $(kernel-fs-fat_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-fs-fat_MC_DIRS)
+endif
+
+endif
+
+kernel-fs-fat_MC_CPPFLAGS := $(kernel-fs-fat_LINKLIBCPPFLAGS) -D__AROS__
+kernel-fs-fat_CFLAGS := $(kernel-fs-fat_LINKLIBCFLAGS)
+ifeq ($(kernel-fs-fat_LINKLIBDFLAGS),)
+  kernel-fs-fat_DFLAGS := $(kernel-fs-fat_LINKLIBCFLAGS)
+else
+  kernel-fs-fat_DFLAGS := $(kernel-fs-fat_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-fs-fat_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-fs-fat_STRIP ?= $(TARGET_STRIP)
+kernel-fs-fat_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_MC_CPPFLAGS:=$(strip $(kernel-fs-fat_MC_CPPFLAGS) $(kernel-fs-fat_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_CFLAGS:=$(strip $(kernel-fs-fat_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_DFLAGS:=$(kernel-fs-fat_DFLAGS)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-fs-fat_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-fs-fat_STRIP ?= $(HOST_STRIP)
+kernel-fs-fat_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-fs-fat_MC_CPPFLAGS) $(kernel-fs-fat_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-fat_CFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-fs-fat_DFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-fs-fat_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-fs-fat_STRIP ?= $(ECHO) >/dev/null
+kernel-fs-fat_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-fs-fat_MC_CPPFLAGS) $(kernel-fs-fat_MC_EXTRA_CPPFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-fat_CFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-fs-fat_DFLAGS))
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-fs-fat_MC_TARGETS) $(kernel-fs-fat_MC_DTARGETS) : kernel-fs-fat_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-fs-fat_MC_TARGETS) : CPPFLAGS := $(kernel-fs-fat_MC_CPPFLAGS)
+$(kernel-fs-fat_MC_TARGETS) : CFLAGS := $(kernel-fs-fat_CFLAGS)
+$(kernel-fs-fat_MC_TARGETS) : $(kernel-fs-fat_MC_TGTWILDCARD).o : $(kernel-fs-fat_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-fs-fat_IQUOTE) $(dir $<) $(kernel-fs-fat_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_IQUOTE) . $(kernel-fs-fat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-fs-fat_IQUOTE) $(dir $<) $(kernel-fs-fat_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_IQUOTE) . $(kernel-fs-fat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-fs-fat_IQUOTE) $(dir $<) $(kernel-fs-fat_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-fs-fat_IQUOTE) . $(kernel-fs-fat_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-fs-fat_MC_DTARGETS) : $(kernel-fs-fat_MC_TGTWILDCARD).d : $(kernel-fs-fat_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-fs-fat_DFLAGS) $(kernel-fs-fat_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-fs-fat_LINKLIBAFILES),)
+
+ifeq ($(kernel-fs-fat_OBJDIR)/linklib,)
+kernel-fs-fat-MA_TARGETS := $(addsuffix .o,$(kernel-fs-fat_LINKLIBAFILES) $(kernel-fs-fat_RELLINKLIBAFILES))
+kernel-fs-fat-MA_WILDCARD := %
+else
+kernel-fs-fat-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$(notdir $(kernel-fs-fat_LINKLIBAFILES) $(kernel-fs-fat_RELLINKLIBAFILES))))
+kernel-fs-fat-MA_WILDCARD := $(kernel-fs-fat_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-fs-fat-MA_TARGETS) : | $(addsuffix .S,$(kernel-fs-fat_LINKLIBAFILES) $(kernel-fs-fat_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-fs-fat-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-fs-fat-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-fs-fat_LINKLIBAFILES) $(kernel-fs-fat_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-fs-fat-MA_DIRS := $(foreach dir, $(kernel-fs-fat-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-fs-fat-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-fs-fat-MA_DIRS),)
+    kernel-fs-fat-MA_DIRS := $(shell echo $(kernel-fs-fat-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-fs-fat-MA_DIRS)
+endif
+
+endif
+
+kernel-fs-fat-MA_ASSEMBLER ?= $(kernel-fs-fat_ASSEMBLER)
+
+$(kernel-fs-fat-MA_TARGETS) : kernel-fs-fat-MA_CMD:= $(kernel-fs-fat-MA_ASSEMBLER)
+
+$(kernel-fs-fat-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-fs-fat-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-fs-fat-MA_TARGETS) : $(kernel-fs-fat-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-fs-fat-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-fs-fat-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-fs-fat-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-fs-fat_SUFFIX           := handler
+else
+kernel-fs-fat_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-fs-fat_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-fs-fat_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-fs-fat_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-fs-fat_SUFFIX),handler)
+kernel-fs-fat_MODULE           := $(AROSDIR)/$(kernel-fs-fat_MODDIR)/$(kernel-fs-fat_DEFNAME)-$(kernel-fs-fat_SUFFIX)
+else
+kernel-fs-fat_MODULE           := $(AROSDIR)/$(kernel-fs-fat_MODDIR)/$(kernel-fs-fat_DEFNAME).$(kernel-fs-fat_SUFFIX)
+endif
+kernel-fs-fat_KOBJ             := $(KOBJSDIR)/$(kernel-fs-fat_DEFNAME)_$(kernel-fs-fat_SUFFIX).o
+else
+kernel-fs-fat_MODULE           :=
+kernel-fs-fat_KOBJ             :=
+endif
+
+kernel-fs-fat-quick      : kernel-fs-fat
+kernel-fs-fat            : $(kernel-fs-fat_MODULE) $(kernel-fs-fat_LINKLIB) $(kernel-fs-fat_RELLINKLIB)
+ifeq (M,M)
+kernel-fs-fat-kobj       : $(kernel-fs-fat_KOBJ) $(kernel-fs-fat_LINKLIB) $(kernel-fs-fat_RELLINKLIB)
+kernel-fs-fat-kobj-quick : $(kernel-fs-fat_KOBJ) $(kernel-fs-fat_LINKLIB) $(kernel-fs-fat_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-fs-fat-linklib    : $(kernel-fs-fat_LINKLIB) $(kernel-fs-fat_RELLINKLIB)
+endif
+
+kernel-fs-fat_OBJS := $(addsuffix .o,$(kernel-fs-fat_STARTFILES)) $(kernel-fs-fat_ARCHOBJS) \
+           $(addprefix $(kernel-fs-fat_OBJDIR)/,$(notdir $(kernel-fs-fat_C_NARCHFILES:=.o) $(kernel-fs-fat_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (handler,handler)
+kernel-fs-fat_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (fat,con)
+    kernel-fs-fat_ERR          := $(notdir $(kernel-fs-fat_MODULE)).err
+else
+    kernel-fs-fat_ERR          := fat.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-fs-fat_DEFNAME)_LDFLAGS) $(kernel-fs-fat_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-fs-fat_LIBS) $($(kernel-fs-fat_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-fs-fat_MODULE) : LIB_NAMES := $(kernel-fs-fat_LIBS) $($(kernel-fs-fat_DEFNAME)_LIBS)
+$(kernel-fs-fat_MODULE) : OBJS := $(kernel-fs-fat_STARTOBJS) $(kernel-fs-fat_OBJS) $(USER_OBJS)
+$(kernel-fs-fat_MODULE) : ENDTAG := $(kernel-fs-fat_ENDOBJS)
+$(kernel-fs-fat_MODULE) : ERR := $(kernel-fs-fat_ERR)
+$(kernel-fs-fat_MODULE) : OBJDIR := $(kernel-fs-fat_OBJDIR)
+$(kernel-fs-fat_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-fs-fat_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-fs-fat_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-fs-fat_MODULE) : $(kernel-fs-fat_STARTOBJS) $(kernel-fs-fat_OBJS) $(USER_OBJS) $(kernel-fs-fat_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-fs-fat_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-fs-fat_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-fs-fat_LC_LINKLIBNAME   := $(shell echo $(kernel-fs-fat_LINKLIBNAME) | tr A-Z a-z)
+kernel-fs-fat_LC_MODNAME       := $(shell echo fat | tr A-Z a-z)
+ifneq ($(kernel-fs-fat_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_LINKLIBNAME)$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_AR:=$(AR)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_LINKLIBNAME)$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_LINKLIBNAME)$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_AR:=$(HOST_AR)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_LINKLIBNAME)$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_LINKLIBNAME)$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_AR:=$(KERNEL_AR)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_LINKLIBNAME)$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_LINKLIBNAME)$(kernel-fs-fat_LIBSUFFIX).a : $(kernel-fs-fat_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-fs-fat_AR) $@ $^
+	$(Q)$(kernel-fs-fat_RANLIB) $@
+ifneq ($(kernel-fs-fat_LC_MODNAME),$(kernel-fs-fat_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-fs-fat_LIBDIR)/libfat$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_AR:=$(AR)
+$(kernel-fs-fat_LIBDIR)/libfat$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-fs-fat_LIBDIR)/libfat$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_AR:=$(HOST_AR)
+$(kernel-fs-fat_LIBDIR)/libfat$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-fs-fat_LIBDIR)/libfat$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_AR:=$(KERNEL_AR)
+$(kernel-fs-fat_LIBDIR)/libfat$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-fs-fat_LIBDIR)/libfat$(kernel-fs-fat_LIBSUFFIX).a : $(kernel-fs-fat_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-fs-fat_AR) $@ $^
+	$(Q)$(kernel-fs-fat_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-fs-fat_LINKLIB),)
+$(kernel-fs-fat_LINKLIB) : | $(kernel-fs-fat_LIBDIR)
+else
+$(kernel-fs-fat_LINKLIB) :: $(kernel-fs-fat_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-fs-fat_LIBDIR)
+
+endif
+
+ifneq ($(kernel-fs-fat_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_LINKLIBNAME)_rel$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_AR:=$(AR)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_LINKLIBNAME)_rel$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_LINKLIBNAME)_rel$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_AR:=$(HOST_AR)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_LINKLIBNAME)_rel$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_LINKLIBNAME)_rel$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_AR:=$(KERNEL_AR)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_LINKLIBNAME)_rel$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_LINKLIBNAME)_rel$(kernel-fs-fat_LIBSUFFIX).a : $(kernel-fs-fat_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-fs-fat_AR) $@ $^
+	$(Q)$(kernel-fs-fat_RANLIB) $@
+ifneq ($(kernel-fs-fat_LC_MODNAME),$(kernel-fs-fat_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_DEFNAME)_rel$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_AR:=$(AR)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_DEFNAME)_rel$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_DEFNAME)_rel$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_AR:=$(HOST_AR)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_DEFNAME)_rel$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_DEFNAME)_rel$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_AR:=$(KERNEL_AR)
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_DEFNAME)_rel$(kernel-fs-fat_LIBSUFFIX).a : kernel-fs-fat_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-fs-fat_LIBDIR)/lib$(kernel-fs-fat_DEFNAME)_rel$(kernel-fs-fat_LIBSUFFIX).a : $(kernel-fs-fat_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-fs-fat_AR) $@ $^
+	$(Q)$(kernel-fs-fat_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-fs-fat_RELLINKLIB),)
+$(kernel-fs-fat_RELLINKLIB) : | $(kernel-fs-fat_LIBDIR)
+else
+$(kernel-fs-fat_RELLINKLIB) :: $(kernel-fs-fat_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-fs-fat_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-fs-fat_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-fs-fat_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-fs-fat_SYMBOLS := $(kernel-fs-fat_KBASE)
+
+kernel-fs-fat_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-fs-fat_KOBJ_LIBS        := $(filter-out $(kernel-fs-fat_KLIB),$(kernel-fs-fat_LIBS)) $(kernel-fs-fat_KAUTOLIB)
+$(kernel-fs-fat_KOBJ) : LINKLIBS:=$(kernel-fs-fat_KOBJ_LIBS) $($(kernel-fs-fat_DEFNAME)_LIBS)
+$(kernel-fs-fat_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-fs-fat_SYMBOLS))
+$(kernel-fs-fat_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-fs-fat_KOBJ) : $(kernel-fs-fat_OBJS) $(USER_OBJS) $(kernel-fs-fat_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-fs-fat_DEPS             := $(addprefix $(kernel-fs-fat_OBJDIR)/,$(notdir $(kernel-fs-fat_CCFILES:=.d) $(kernel-fs-fat_TARGETCCFILES:=.d) $(kernel-fs-fat_CXXFILES:=.d))) $(addprefix $(kernel-fs-fat_OBJDIR)/linklib/,$(notdir $(kernel-fs-fat_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-fs-fat_DEPS),)
+  ifneq (kernel-fs-fat kernel-fs-fat-quick kernel-fs-fat-kobj kernel-fs-fat-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-fs-fat kernel-fs-fat-quick kernel-fs-fat-kobj kernel-fs-fat-kobj-quick),)
+      -include $(kernel-fs-fat_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-fs-fat_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-fs-fat_OBJS) $(kernel-fs-fat_DEPS) : | $(kernel-fs-fat_OBJDIR)/linklib
+
+ifneq ($(kernel-fs-fat_OBJS) $(kernel-fs-fat_DEPS) $(kernel-fs-fat_MODULE) $(kernel-fs-fat_KOBJ),)
+$(kernel-fs-fat_OBJS) $(kernel-fs-fat_DEPS) $(kernel-fs-fat_MODULE) $(kernel-fs-fat_KOBJ) : | $(kernel-fs-fat_OBJDIR) $(AROSDIR)/$(kernel-fs-fat_MODDIR) $(KOBJSDIR)
+else
+$(kernel-fs-fat_OBJS) $(kernel-fs-fat_DEPS) $(kernel-fs-fat_MODULE) $(kernel-fs-fat_KOBJ) :: $(kernel-fs-fat_OBJDIR) $(AROSDIR)/$(kernel-fs-fat_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-fs-fat_OBJDIR) $(AROSDIR)/$(kernel-fs-fat_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-fs-fat kernel-fs-fat-includes kernel-fs-fat-quick kernel-fs-fat-kobj kernel-fs-fat-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-fs-fat_DFILE_DEPS := $(kernel-fs-fat_LIBDEFSINC) $(kernel-fs-fat_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-fs-fat_INCDIR)/,$($(kernel-fs-fat_DEFNAME)_INCLUDES))
+$(kernel-fs-fat_DEPS) : $(kernel-fs-fat_DFILE_DEPS)
+endif
+
+kernel-fs-fat_TOCLEAN := $(kernel-fs-fat_OBJS) $(kernel-fs-fat_DEPS) \
+    $(kernel-fs-fat_MODULE) $(kernel-fs-fat_LINKLIB) $(kernel-fs-fat_KOBJ) \
+    $(kernel-fs-fat_OBJDIR)/Makefile.fathandler \
+    $(addprefix $(kernel-fs-fat_OBJDIR)/include/,$($(kernel-fs-fat_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-fs-fat_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-fs-fat_INCDIR)/,$($(kernel-fs-fat_DEFNAME)_INCLUDES)) \
+    $(kernel-fs-fat_OBJDIR)/fat_geninc $(kernel-fs-fat_OBJDIR)/fat_incs \
+    $(addsuffix .c,$(kernel-fs-fat_LINKLIBFILES)) $(kernel-fs-fat_LINKLIBOBJS) $(kernel-fs-fat_LIBDEFSINC) \
+    $(kernel-fs-fat_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-fs-fat_STARTFILES) $(kernel-fs-fat_ENDFILES)) \
+    $(kernel-fs-fat_ENDOBJS)
+kernel-fs-fat-clean : FILES              := $(kernel-fs-fat_TOCLEAN)
+kernel-fs-fat-clean ::
+	$(Q)$(ECHO) "Cleaning up for module fat"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-fs-fat_ALLTARGETS)
+
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

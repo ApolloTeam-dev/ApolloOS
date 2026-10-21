@@ -1,0 +1,58 @@
+include $(SRCDIR)/config/aros.cfg
+
+TARGET_ISA_AFLAGS:=$(ISA_MC68020_FLAGS)
+
+
+ifeq (,)
+TMP-MA_TARGETS := $(addsuffix .o,_addsubdf3 _addsubsf3 _divdf3 _divmodsi3 divsf3 _eqdf2 _eqsf2 _extend _extendsfdf2 _fixdfsi _fixsfsi _floatsidf _floatsisf _gedf2 _gesf2 _gtdf2 _gtsf2 _ledf2 _lesf2 _ltdf2 _ltsf2 _muldf3 _mulsf3 _mulsi3 _nedf2 _negdf2 _negsf2 _nesf2 _normdf _normsf _truncdfsf2 _udivmodsi3)
+TMP-MA_WILDCARD := %
+else
+TMP-MA_TARGETS := $(addsuffix .o,$(addprefix /,$(notdir _addsubdf3 _addsubsf3 _divdf3 _divmodsi3 divsf3 _eqdf2 _eqsf2 _extend _extendsfdf2 _fixdfsi _fixsfsi _floatsidf _floatsisf _gedf2 _gesf2 _gtdf2 _gtsf2 _ledf2 _lesf2 _ltdf2 _ltsf2 _muldf3 _mulsf3 _mulsi3 _nedf2 _negdf2 _negsf2 _nesf2 _normdf _normsf _truncdfsf2 _udivmodsi3)))
+TMP-MA_WILDCARD := /%
+
+# Be sure that all .s files are generated
+$(TMP-MA_TARGETS) : | $(addsuffix .s,_addsubdf3 _addsubsf3 _divdf3 _divmodsi3 divsf3 _eqdf2 _eqsf2 _extend _extendsfdf2 _fixdfsi _fixsfsi _floatsidf _floatsisf _gedf2 _gesf2 _gtdf2 _gtsf2 _ledf2 _lesf2 _ltdf2 _ltsf2 _muldf3 _mulsf3 _mulsi3 _nedf2 _negdf2 _negsf2 _nesf2 _normdf _normsf _truncdfsf2 _udivmodsi3)
+
+# Be sure that all .c files are found
+TMP-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+TMP-MA_BASEDIRS := $(shell echo $(sort $(dir _addsubdf3 _addsubsf3 _divdf3 _divmodsi3 divsf3 _eqdf2 _eqsf2 _extend _extendsfdf2 _fixdfsi _fixsfsi _floatsidf _floatsisf _gedf2 _gesf2 _gtdf2 _gtsf2 _ledf2 _lesf2 _ltdf2 _ltsf2 _muldf3 _mulsf3 _mulsi3 _nedf2 _negdf2 _negsf2 _nesf2 _normdf _normsf _truncdfsf2 _udivmodsi3)) | sed 's/\(.\):\//\/\1\//g')
+TMP-MA_DIRS := $(foreach dir, $(TMP-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(TMP-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(TMP-MA_DIRS),)
+    TMP-MA_DIRS := $(shell echo $(TMP-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(TMP-MA_DIRS)
+endif
+
+endif
+
+TMP-MA_ASSEMBLER ?= $(strip $(CC) $(TARGET_SYSROOT))
+
+$(TMP-MA_TARGETS) : TMP-MA_CMD:= $(TMP-MA_ASSEMBLER)
+
+$(TMP-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(TMP-MA_TARGETS) : AFLAGS := -mc68020
+$(TMP-MA_TARGETS) : $(TMP-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(TMP-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(TMP-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(TMP-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+#MM linklibs-gcc1-m68000
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)
+

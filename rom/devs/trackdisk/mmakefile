@@ -1,0 +1,1664 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- kernel-pc-i386-trackdisk : includes
+#MM- kernel-pc-i386-trackdisk-kobj : includes
+
+USER_CPPFLAGS := \
+               -DUSE_EXEC_DEBUG
+USER_INCLUDES := -I$(TOP)/rom/devs
+USER_LDFLAGS := -static
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-devs-trackdisk
+#MM kernel-devs-trackdisk-quick
+#MM kernel-devs-trackdisk-makefile
+#MM kernel-devs-trackdisk-clean
+
+# ABI targets:
+#MM- includes-all : kernel-devs-trackdisk-includes
+#MM- linklibs-trackdisk: kernel-devs-trackdisk-linklib
+#MM- linklibs-trackdisk_rel : kernel-devs-trackdisk-linklib
+#MM- includes-trackdisk: kernel-devs-trackdisk-includes
+#MM- includes-trackdisk_rel : kernel-devs-trackdisk-includes
+#MM- kernel-devs-trackdisk : kernel-devs-trackdisk-includes core-linklibs linklibs-hiddstubs
+#MM kernel-devs-trackdisk-linklib : kernel-devs-trackdisk-includes includes-hiddstubs
+#MM- kernel-devs-trackdisk-quick : kernel-devs-trackdisk-includes-quick
+#MM kernel-devs-trackdisk-includes : kernel-devs-trackdisk-makefile kernel-devs-trackdisk-includes-dirs \
+#MM     includes-generate-deps kernel-devs-trackdisk-fd
+#MM kernel-devs-trackdisk-includes-quick
+#MM kernel-devs-trackdisk-includes-dirs
+#MM kernel-devs-trackdisk-fd
+
+# Library targets
+#MM kernel-devs-trackdisk-kobj : core-linklibs linklibs-hiddstubs
+#MM kernel-devs-trackdisk-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-devs-trackdisk-kobj : kernel-devs-trackdisk-includes core-linklibs linklibs-hiddstubs
+#MM kernel-devs-trackdisk-kobj-quick : kernel-devs-trackdisk-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-devs-trackdisk_ALLTARGETS       := kernel-devs-trackdisk kernel-devs-trackdisk-quick kernel-devs-trackdisk-clean
+
+ifeq (M,M)
+kernel-devs-trackdisk_ALLTARGETS       += kernel-devs-trackdisk-kobj kernel-devs-trackdisk-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-devs-trackdisk_ALLTARGETS += kernel-devs-trackdisk-includes \
+                 kernel-devs-trackdisk-includes-quick kernel-devs-trackdisk-includes-dirs  \
+                 kernel-devs-trackdisk-linklib kernel-devs-trackdisk-fd
+endif
+
+.PHONY : $(kernel-devs-trackdisk_ALLTARGETS) kernel-devs-trackdisk-makefile
+
+ifeq (trackdisk,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (device,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-devs-trackdisk_DEFNAME      := trackdisk_
+else
+    kernel-devs-trackdisk_DEFNAME      := trackdisk
+endif
+kernel-devs-trackdisk_DEFLINKLIBNAME   := $(kernel-devs-trackdisk_DEFNAME)
+ifneq (,)
+    kernel-devs-trackdisk_LINKLIBNAME  := 
+else
+    kernel-devs-trackdisk_LINKLIBNAME  = $(kernel-devs-trackdisk_DEFLINKLIBNAME)
+endif
+kernel-devs-trackdisk_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-devs-trackdisk_DEFCPPFLAGS  += -I
+endif
+kernel-devs-trackdisk_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-devs-trackdisk_DFLAGS       := 
+else
+    kernel-devs-trackdisk_DFLAGS       = $(kernel-devs-trackdisk_DEFDFLAGS)
+endif
+kernel-devs-trackdisk_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-devs-trackdisk_DXXFLAGS     := 
+else
+    kernel-devs-trackdisk_DXXFLAGS     = $(kernel-devs-trackdisk_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-devs-trackdisk_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-devs-trackdisk_DEFDFLAGS))
+kernel-devs-trackdisk_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-devs-trackdisk_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-devs-trackdisk_FUNCINSTR := yes
+kernel-devs-trackdisk_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-devs-trackdisk_DEFDFLAGS))
+kernel-devs-trackdisk_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-devs-trackdisk_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-devs-trackdisk_OBJDIR                     := 
+else
+kernel-devs-trackdisk_OBJDIR                     := $(OBJDIR)/$(kernel-devs-trackdisk_DEFNAME)
+endif
+ifneq (,)
+kernel-devs-trackdisk_OBJDIR           := $(kernel-devs-trackdisk_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-devs-trackdisk-makefile         := $(kernel-devs-trackdisk_OBJDIR)/Makefile.$(kernel-devs-trackdisk_DEFNAME)device
+kernel-devs-trackdisk-genmakefile : $(kernel-devs-trackdisk-makefile)
+
+
+kernel-devs-trackdisk-genmakefile_OPTS := 
+ifneq (,)
+    kernel-devs-trackdisk-genmakefile_OPTS += -f 
+    kernel-devs-trackdisk-genmakefile_MODNAME := trackdisk_
+else
+    kernel-devs-trackdisk-genmakefile_MODNAME := trackdisk
+endif
+kernel-devs-trackdisk-genmakefile_TARGET := Makefile.$(kernel-devs-trackdisk-genmakefile_MODNAME)device
+kernel-devs-trackdisk-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-devs-trackdisk-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-devs-trackdisk-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-devs-trackdisk-genmakefile_OPTS += -c 
+        kernel-devs-trackdisk-genmakefile_DEPS += 
+    endif 
+else
+    kernel-devs-trackdisk-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/trackdisk.conf
+    kernel-devs-trackdisk-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/trackdisk.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-devs-trackdisk-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-devs-trackdisk-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-devs-trackdisk-genmakefile_OPTS += -o 
+        kernel-devs-trackdisk-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-devs-trackdisk-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-devs-trackdisk_OBJDIR),)
+    kernel-devs-trackdisk-genmakefile_OPTS += -d $(kernel-devs-trackdisk_OBJDIR)
+    kernel-devs-trackdisk-genmakefile_TARGET := $(kernel-devs-trackdisk_OBJDIR)/$(kernel-devs-trackdisk-genmakefile_TARGET)
+endif
+
+$(kernel-devs-trackdisk-genmakefile_TARGET) : OPTS := $(kernel-devs-trackdisk-genmakefile_OPTS)
+$(kernel-devs-trackdisk-genmakefile_TARGET) : MODNAME := trackdisk
+$(kernel-devs-trackdisk-genmakefile_TARGET) : MODTYPE := device
+$(kernel-devs-trackdisk-genmakefile_TARGET) : $(kernel-devs-trackdisk-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-devs-trackdisk-makefile),)
+$(kernel-devs-trackdisk-makefile) : | $(kernel-devs-trackdisk_OBJDIR)
+else
+$(kernel-devs-trackdisk-makefile) :: $(kernel-devs-trackdisk_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-devs-trackdisk_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-devs-trackdisk_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-devs-trackdisk-makefile)
+
+kernel-devs-trackdisk_DEFMODDIR        := $($(kernel-devs-trackdisk_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-devs-trackdisk_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-devs-trackdisk_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-devs-trackdisk_MODDIR       := 
+else
+    kernel-devs-trackdisk_MODDIR       := $(kernel-devs-trackdisk_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-devs-trackdisk_INCDIR           := 
+else
+kernel-devs-trackdisk_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-devs-trackdisk_LIBDEFSINC       := $(kernel-devs-trackdisk_OBJDIR)/include/$(kernel-devs-trackdisk_DEFNAME)_libdefs.h
+kernel-devs-trackdisk_DEFLIBDEFSINC    := $(kernel-devs-trackdisk_OBJDIR)/include/$(kernel-devs-trackdisk_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-devs-trackdisk-includes-quick : kernel-devs-trackdisk-includes
+kernel-devs-trackdisk-includes : $(addprefix $(GENINCDIR)/,$($(kernel-devs-trackdisk_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-devs-trackdisk_INCDIR)/,$($(kernel-devs-trackdisk_DEFNAME)_INCLUDES)) \
+    $(kernel-devs-trackdisk_LIBDEFSINC) $(kernel-devs-trackdisk_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-devs-trackdisk_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-devs-trackdisk-includes_MODNAME := trackdisk_
+else
+    kernel-devs-trackdisk-includes_MODNAME := trackdisk
+endif
+
+ifneq ($($(kernel-devs-trackdisk-includes_MODNAME)_INCLUDES),)
+
+kernel-devs-trackdisk-includes_TARGETS := $($(kernel-devs-trackdisk-includes_MODNAME)_INCLUDES)
+
+kernel-devs-trackdisk-includes_DEPS := $(GENMODULE)
+kernel-devs-trackdisk-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-devs-trackdisk-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-devs-trackdisk-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-devs-trackdisk-includes_OPTS += -c 
+        kernel-devs-trackdisk-includes_DEPS += 
+    endif 
+else
+    kernel-devs-trackdisk-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/trackdisk.conf
+    kernel-devs-trackdisk-includes_DEPS += $(SRCDIR)/$(CURDIR)/trackdisk.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-devs-trackdisk-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-devs-trackdisk-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-devs-trackdisk-includes_OPTS += -o 
+        kernel-devs-trackdisk-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-devs-trackdisk-includes_OPTS += -s 
+endif
+ifneq ($(kernel-devs-trackdisk_OBJDIR)/include,)
+    kernel-devs-trackdisk-includes_OPTS += -d $(kernel-devs-trackdisk_OBJDIR)/include
+    kernel-devs-trackdisk-includes_TARGETS := $(addprefix $(kernel-devs-trackdisk_OBJDIR)/include/,$(kernel-devs-trackdisk-includes_TARGETS))
+    kernel-devs-trackdisk-includes_GENINCFLAG=$(kernel-devs-trackdisk_OBJDIR)/include/.trackdisk.device-includes
+else
+    kernel-devs-trackdisk-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.trackdisk.device-includes
+endif
+
+$(kernel-devs-trackdisk-includes_TARGETS) : $(kernel-devs-trackdisk-includes_DEPS) $(kernel-devs-trackdisk-includes_GENINCFLAG)
+
+$(kernel-devs-trackdisk-includes_GENINCFLAG) : OPTS := $(kernel-devs-trackdisk-includes_OPTS)
+$(kernel-devs-trackdisk-includes_GENINCFLAG) : MODNAME := trackdisk
+$(kernel-devs-trackdisk-includes_GENINCFLAG) : MODTYPE := device
+$(kernel-devs-trackdisk-includes_GENINCFLAG) : $(kernel-devs-trackdisk-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-devs-trackdisk_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-devs-trackdisk_DEFNAME)_INCLUDES)) : | $(kernel-devs-trackdisk_OBJDIR)/trackdisk_geninc
+
+$(kernel-devs-trackdisk_OBJDIR)/trackdisk_geninc : COPYSRCDIR := $(kernel-devs-trackdisk_OBJDIR)/include
+$(kernel-devs-trackdisk_OBJDIR)/trackdisk_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-devs-trackdisk_OBJDIR)/trackdisk_geninc : FILES := $($(kernel-devs-trackdisk_DEFNAME)_INCLUDES)
+$(kernel-devs-trackdisk_OBJDIR)/trackdisk_geninc : $(addprefix $(kernel-devs-trackdisk_OBJDIR)/include/,$($(kernel-devs-trackdisk_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-devs-trackdisk_OBJDIR)/include
+
+$(addprefix $(kernel-devs-trackdisk_INCDIR)/,$($(kernel-devs-trackdisk_DEFNAME)_INCLUDES)) : | $(kernel-devs-trackdisk_OBJDIR)/trackdisk_incs
+
+$(kernel-devs-trackdisk_OBJDIR)/trackdisk_incs : COPYSRCDIR := $(kernel-devs-trackdisk_OBJDIR)/include
+$(kernel-devs-trackdisk_OBJDIR)/trackdisk_incs : TGTDIR := $(kernel-devs-trackdisk_INCDIR)
+$(kernel-devs-trackdisk_OBJDIR)/trackdisk_incs : FILES := $($(kernel-devs-trackdisk_DEFNAME)_INCLUDES)
+$(kernel-devs-trackdisk_OBJDIR)/trackdisk_incs : $(addprefix $(kernel-devs-trackdisk_OBJDIR)/include/,$($(kernel-devs-trackdisk_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-devs-trackdisk_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-devs-trackdisk_DEFNAME)_INCLUDES))))
+
+TMPtrackdisk_INCDIRS := \
+    $(kernel-devs-trackdisk_OBJDIR)/include $(addprefix $(kernel-devs-trackdisk_OBJDIR)/include/,$(kernel-devs-trackdisk_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-devs-trackdisk_INCDIRS)) \
+    $(kernel-devs-trackdisk_INCDIR) $(addprefix $(kernel-devs-trackdisk_INCDIR)/,$(kernel-devs-trackdisk_INCDIRS))
+
+ifneq (kernel-devs-trackdisk-includes-dirs,)
+kernel-devs-trackdisk-includes-dirs : | $(TMPtrackdisk_INCDIRS)
+else
+kernel-devs-trackdisk-includes-dirs :: $(TMPtrackdisk_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPtrackdisk_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-devs-trackdisk-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-devs-trackdisk-genlibdefs_OPTS += -f 
+    kernel-devs-trackdisk-genlibdefs_MODNAME := trackdisk_
+else
+    kernel-devs-trackdisk-genlibdefs_MODNAME := trackdisk
+endif
+kernel-devs-trackdisk-genlibdefs_TARGET := $(kernel-devs-trackdisk-genlibdefs_MODNAME)_libdefs.h
+kernel-devs-trackdisk-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-devs-trackdisk-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-devs-trackdisk-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-devs-trackdisk-genlibdefs_OPTS += -c 
+        kernel-devs-trackdisk-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-devs-trackdisk-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/trackdisk.conf
+    kernel-devs-trackdisk-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/trackdisk.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-devs-trackdisk-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-devs-trackdisk-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-devs-trackdisk-genlibdefs_OPTS += -o 
+        kernel-devs-trackdisk-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-devs-trackdisk-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-devs-trackdisk_OBJDIR)/include,)
+    kernel-devs-trackdisk-genlibdefs_OPTS += -d $(kernel-devs-trackdisk_OBJDIR)/include
+    kernel-devs-trackdisk-genlibdefs_TARGET := $(kernel-devs-trackdisk_OBJDIR)/include/$(kernel-devs-trackdisk-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-devs-trackdisk-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-devs-trackdisk-genlibdefs_TARGET) : OPTS := $(kernel-devs-trackdisk-genlibdefs_OPTS)
+$(kernel-devs-trackdisk-genlibdefs_TARGET) : MODNAME := trackdisk
+$(kernel-devs-trackdisk-genlibdefs_TARGET) : MODTYPE := device
+$(kernel-devs-trackdisk-genlibdefs_TARGET) : $(kernel-devs-trackdisk-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-devs-trackdisk_DEFLIBDEFSINC) : FILENAME := $(kernel-devs-trackdisk_LIBDEFSINC)
+$(kernel-devs-trackdisk_DEFLIBDEFSINC) : $(kernel-devs-trackdisk_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-devs-trackdisk_LIBDEFSINC) $(kernel-devs-trackdisk_DEFLIBDEFSINC) : | $(kernel-devs-trackdisk_OBJDIR)/include
+
+ifneq (kernel-devs-trackdisk-includes-dirs,)
+kernel-devs-trackdisk-includes-dirs : | $(kernel-devs-trackdisk_OBJDIR)/include
+else
+kernel-devs-trackdisk-includes-dirs :: $(kernel-devs-trackdisk_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-devs-trackdisk_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-devs-trackdisk-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-devs-trackdisk-genmodfiles_OPTS += -f 
+    kernel-devs-trackdisk-genmodfiles_MODNAME := trackdisk_
+else
+    kernel-devs-trackdisk-genmodfiles_MODNAME := trackdisk
+endif
+kernel-devs-trackdisk-genmodfiles_GENTARGETS := $($(kernel-devs-trackdisk-genmodfiles_MODNAME)_STARTFILES) $($(kernel-devs-trackdisk-genmodfiles_MODNAME)_ENDFILES)
+kernel-devs-trackdisk-genmodfiles_STUBTARGETS := $($(kernel-devs-trackdisk-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-devs-trackdisk-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-devs-trackdisk-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-devs-trackdisk-genmodfiles_GENTARGETS))
+kernel-devs-trackdisk-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-devs-trackdisk-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-devs-trackdisk-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-devs-trackdisk-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-devs-trackdisk-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-devs-trackdisk-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-devs-trackdisk-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-devs-trackdisk-genmodfiles_OPTS += -c 
+        kernel-devs-trackdisk-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-devs-trackdisk-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/trackdisk.conf
+    kernel-devs-trackdisk-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/trackdisk.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-devs-trackdisk-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-devs-trackdisk-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-devs-trackdisk-genmodfiles_OPTS += -o 
+        kernel-devs-trackdisk-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-devs-trackdisk-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-devs-trackdisk_OBJDIR),)
+    kernel-devs-trackdisk-genmodfiles_OPTS += -d $(kernel-devs-trackdisk_OBJDIR)
+    kernel-devs-trackdisk-genmodfiles_TARGETDIR := $(shell echo $(kernel-devs-trackdisk_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-devs-trackdisk-genmodfiles_GENTARGETS := $(addprefix $(kernel-devs-trackdisk-genmodfiles_TARGETDIR)/,$(kernel-devs-trackdisk-genmodfiles_GENTARGETS))
+    kernel-devs-trackdisk-genmodfiles_GENFILEFLAG=$(kernel-devs-trackdisk-genmodfiles_TARGETDIR)/.trackdisk.device-genfiles
+else
+    kernel-devs-trackdisk-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.trackdisk.device-genfiles
+endif
+ifneq ($(kernel-devs-trackdisk_OBJDIR)/linklib,)
+    kernel-devs-trackdisk-genmodfiles_OPTS += -l $(kernel-devs-trackdisk_OBJDIR)/linklib
+    kernel-devs-trackdisk-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-devs-trackdisk_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-devs-trackdisk-genmodfiles_STUBTARGETS := $(addprefix $(kernel-devs-trackdisk-genmodfiles_STUBTARGETDIR)/,$(kernel-devs-trackdisk-genmodfiles_STUBTARGETS))
+    kernel-devs-trackdisk-genmodfiles_TARGETDIRS += $(kernel-devs-trackdisk_OBJDIR)/linklib
+else
+ifneq ($(kernel-devs-trackdisk_OBJDIR),)
+    kernel-devs-trackdisk-genmodfiles_STUBTARGETS := $(addprefix $(kernel-devs-trackdisk-genmodfiles_TARGETDIR)/,$(kernel-devs-trackdisk-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-devs-trackdisk-genmodfiles_TARGETS := $(kernel-devs-trackdisk-genmodfiles_GENTARGETS) $(kernel-devs-trackdisk-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-devs-trackdisk-genmodfiles_TARGETDIRS),)
+$(kernel-devs-trackdisk-genmodfiles_TARGETS) : | $(kernel-devs-trackdisk-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-devs-trackdisk-genmodfiles_TARGETS) : $(kernel-devs-trackdisk-genmodfiles_DEPS) $(kernel-devs-trackdisk-genmodfiles_GENFILEFLAG)
+
+$(kernel-devs-trackdisk-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-devs-trackdisk-genmodfiles_OPTS)
+$(kernel-devs-trackdisk-genmodfiles_GENFILEFLAG) : MODNAME := trackdisk
+$(kernel-devs-trackdisk-genmodfiles_GENFILEFLAG) : MODTYPE := device
+$(kernel-devs-trackdisk-genmodfiles_GENFILEFLAG) : $(kernel-devs-trackdisk-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-devs-trackdisk-genmodfiles_GENFILEFLAG) : $(kernel-devs-trackdisk_DEFLIBDEFSINC) $(kernel-devs-trackdisk-makefile)
+
+
+ifneq ($(kernel-devs-trackdisk-genmodfiles_GENFILEFLAG),)
+$(kernel-devs-trackdisk-genmodfiles_GENFILEFLAG) : | $(kernel-devs-trackdisk_OBJDIR)/linklib
+else
+$(kernel-devs-trackdisk-genmodfiles_GENFILEFLAG) :: $(kernel-devs-trackdisk_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-devs-trackdisk_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-devs-trackdisk_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-devs-trackdisk_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-devs-trackdisk-fd : $(kernel-devs-trackdisk_FDDIR)/trackdisk_lib.fd
+
+
+TMP_TARGET := trackdisk_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/trackdisk.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/trackdisk.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-devs-trackdisk_FDDIR),)
+    TMP_OPTS += -d $(kernel-devs-trackdisk_FDDIR)
+    TMP_TARGET := $(kernel-devs-trackdisk_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := trackdisk
+$(TMP_TARGET) : MODTYPE := device
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-devs-trackdisk_FDDIR)/trackdisk_lib.fd : | $(kernel-devs-trackdisk_FDDIR)
+
+
+ifneq (kernel-devs-trackdisk-fd-setup,)
+kernel-devs-trackdisk-fd-setup : | $(kernel-devs-trackdisk_FDDIR)
+else
+kernel-devs-trackdisk-fd-setup :: $(kernel-devs-trackdisk_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-devs-trackdisk_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-devs-trackdisk_FILES            := trackdisk_device trackdisk_hw
+kernel-devs-trackdisk_OBJCFILES        := 
+kernel-devs-trackdisk_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-devs-trackdisk_LIBFILES         := 
+kernel-devs-trackdisk_LIBS             := hiddstubs
+
+kernel-devs-trackdisk_FDIRS            := $(sort $(dir $(kernel-devs-trackdisk_FILES)))
+
+kernel-devs-trackdisk_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-devs-trackdisk_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-devs-trackdisk_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-devs-trackdisk_FILTERARCH       = $(filter-out $(call kernel-devs-trackdisk_MATCHARCH,$(1),$(2)),$(2))
+kernel-devs-trackdisk_STARTFILES       := $(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$($(kernel-devs-trackdisk_DEFNAME)_STARTFILES))
+kernel-devs-trackdisk_ENDFILES         := $(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$($(kernel-devs-trackdisk_DEFNAME)_ENDFILES))
+
+kernel-devs-trackdisk_ARCHOBJS         := $(wildcard $(kernel-devs-trackdisk_OBJDIR)/arch/*.o)
+kernel-devs-trackdisk_LIBARCHOBJS      := $(wildcard $(kernel-devs-trackdisk_OBJDIR)/linklib/arch/*.o)
+kernel-devs-trackdisk_ARCHFILES        := $(basename $(notdir $(kernel-devs-trackdisk_ARCHOBJS)))
+kernel-devs-trackdisk_LIBARCHFILES     := $(basename $(notdir $(kernel-devs-trackdisk_LIBARCHOBJS)))
+kernel-devs-trackdisk_C_NARCHFILES     := $(call kernel-devs-trackdisk_FILTERARCH,$(kernel-devs-trackdisk_ARCHFILES),$(kernel-devs-trackdisk_FILES))
+kernel-devs-trackdisk_CXX_NARCHFILES   := $(call kernel-devs-trackdisk_FILTERARCH,$(kernel-devs-trackdisk_ARCHFILES),$(kernel-devs-trackdisk_CXXFILES))
+kernel-devs-trackdisk_OBJC_NARCHFILES  := $(call kernel-devs-trackdisk_FILTERARCH,$(kernel-devs-trackdisk_ARCHFILES),$(kernel-devs-trackdisk_OBJCFILES))
+kernel-devs-trackdisk_NLIBARCHFILES    := $(call kernel-devs-trackdisk_FILTERARCH,$(kernel-devs-trackdisk_LIBARCHFILES),$(kernel-devs-trackdisk_LIBFILES))
+kernel-devs-trackdisk_ARCHNLIBFILES    := $(call kernel-devs-trackdisk_FILTERARCH,$(kernel-devs-trackdisk_LIBFILES),$(kernel-devs-trackdisk_LIBARCHFILES))
+
+kernel-devs-trackdisk_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-devs-trackdisk_OBJDIR)/include -include $(kernel-devs-trackdisk_DEFLIBDEFSINC))
+ifneq (,)
+kernel-devs-trackdisk_CPPFLAGS         += -I
+endif
+kernel-devs-trackdisk_LINKLIBCPPFLAGS  := $(kernel-devs-trackdisk_CPPFLAGS)
+kernel-devs-trackdisk_CPPFLAGS         += $(strip $($(kernel-devs-trackdisk_DEFNAME)_CPPFLAGS))
+kernel-devs-trackdisk_LINKLIBCPPFLAGS  += $(strip $($(kernel-devs-trackdisk_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-devs-trackdisk_CFLAGS           := $(strip $(CFLAGS) $($(kernel-devs-trackdisk_DEFNAME)_CFLAGS))
+kernel-devs-trackdisk_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-devs-trackdisk_DEFNAME)_LINKLIBCFLAGS))
+kernel-devs-trackdisk_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-devs-trackdisk_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-devs-trackdisk_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-devs-trackdisk_CFLAGS           := $(strip $(kernel-devs-trackdisk_LTOFLAGS) $(kernel-devs-trackdisk_CFLAGS))
+kernel-devs-trackdisk_LINKLIBCFLAGS    := $(strip $(kernel-devs-trackdisk_LTOFLAGS) $(kernel-devs-trackdisk_LINKLIBCFLAGS))
+kernel-devs-trackdisk_CXXFLAGS         := $(strip $(kernel-devs-trackdisk_LTOFLAGS) $(kernel-devs-trackdisk_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-devs-trackdisk_SUBSTNULL        :=
+kernel-devs-trackdisk_SUBSTSPACE       := $(kernel-devs-trackdisk_SUBSTNULL) #
+kernel-devs-trackdisk_SUBSTCOMMA       := ,
+kernel-devs-trackdisk_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-devs-trackdisk_SUBSTSPACE),$(kernel-devs-trackdisk_SUBSTCOMMA),$(strip $($(kernel-devs-trackdisk_DEFNAME)_STARTFILES))))
+kernel-devs-trackdisk_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-devs-trackdisk_CFLAGS           := $(strip $(kernel-devs-trackdisk_INSTRFUNCFLAGS) $(kernel-devs-trackdisk_CFLAGS))
+kernel-devs-trackdisk_CXXFLAGS         := $(strip $(kernel-devs-trackdisk_INSTRFUNCFLAGS) $(kernel-devs-trackdisk_CXXFLAGS))
+kernel-devs-trackdisk_LIBS             += $(kernel-devs-trackdisk_INSTRFUNCLIBS)
+endif
+endif
+kernel-devs-trackdisk_DFLAGS           := $(strip $(kernel-devs-trackdisk_DFLAGS) $($(kernel-devs-trackdisk_DEFNAME)_DFLAGS))
+kernel-devs-trackdisk_LINKLIBDFLAGS    := $(strip $(kernel-devs-trackdisk_DFLAGS) $($(kernel-devs-trackdisk_DEFNAME)_LINKLIBDFLAGS))
+kernel-devs-trackdisk_DXXFLAGS         := $(strip $(kernel-devs-trackdisk_DXXFLAGS) $($(kernel-devs-trackdisk_DEFNAME)_DXXFLAGS))
+
+ifeq (device,library)
+    kernel-devs-trackdisk_LIBSUFFIX    := 
+else
+    kernel-devs-trackdisk_LIBSUFFIX    := .device
+endif
+
+ifeq (,)
+kernel-devs-trackdisk_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-devs-trackdisk_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-devs-trackdisk_LINKLIBCFILES    := $(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$($(kernel-devs-trackdisk_DEFNAME)_LINKLIBFILES))
+kernel-devs-trackdisk_LINKLIBAFILES    := $(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$($(kernel-devs-trackdisk_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-devs-trackdisk_DEFNAME)_LINKLIBFILES) $($(kernel-devs-trackdisk_DEFNAME)_LINKLIBAFILES)  $(kernel-devs-trackdisk_ARCHNLIBFILES)),)
+    kernel-devs-trackdisk_LINKLIB      :=
+else
+    kernel-devs-trackdisk_LINKLIB      := $(kernel-devs-trackdisk_LIBDIR)/libtrackdisk$(kernel-devs-trackdisk_LIBSUFFIX).a
+    ifneq (trackdisk,$(kernel-devs-trackdisk_LINKLIBNAME))
+        kernel-devs-trackdisk_LINKLIB  += $(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_LINKLIBNAME)$(kernel-devs-trackdisk_LIBSUFFIX).a
+    endif
+endif
+kernel-devs-trackdisk_LINKLIBFILES     := $(kernel-devs-trackdisk_LINKLIBCFILES) $(kernel-devs-trackdisk_LINKLIBAFILES)
+
+kernel-devs-trackdisk_RELLINKLIBCFILES := $(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$($(kernel-devs-trackdisk_DEFNAME)_RELLINKLIBFILES))
+kernel-devs-trackdisk_RELLINKLIBAFILES := $(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$($(kernel-devs-trackdisk_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-devs-trackdisk_DEFNAME)_RELLINKLIBFILES) $($(kernel-devs-trackdisk_DEFNAME)_RELLINKLIBAFILES)  $(kernel-devs-trackdisk_ARCHNLIBFILES)),)
+    kernel-devs-trackdisk_RELLINKLIB   :=
+else
+    kernel-devs-trackdisk_RELLINKLIB   := $(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_DEFNAME)_rel$(kernel-devs-trackdisk_LIBSUFFIX).a
+    ifneq (trackdisk,$(kernel-devs-trackdisk_LINKLIBNAME))
+        kernel-devs-trackdisk_RELLINKLIB += $(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_LINKLIBNAME)_rel$(kernel-devs-trackdisk_LIBSUFFIX).a
+    endif
+endif
+kernel-devs-trackdisk_RELLINKLIBFILES  := $(kernel-devs-trackdisk_RELLINKLIBCFILES) $(kernel-devs-trackdisk_RELLINKLIBAFILES)
+endif
+
+kernel-devs-trackdisk_ENDOBJS          := $(addsuffix .o,$(kernel-devs-trackdisk_ENDFILES))
+kernel-devs-trackdisk_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$(notdir $(kernel-devs-trackdisk_NLIBARCHFILES))) $(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/arch/,$(notdir $(kernel-devs-trackdisk_ARCHNLIBFILES))) $(kernel-devs-trackdisk_LINKLIBFILES)) \
+                 
+kernel-devs-trackdisk_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$(notdir $(kernel-devs-trackdisk_NLIBARCHFILES))) $(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/arch/,$(notdir $(kernel-devs-trackdisk_ARCHNLIBFILES))) $(kernel-devs-trackdisk_RELLINKLIBFILES)) \
+                 
+$(kernel-devs-trackdisk_LINKLIBFILES) $(kernel-devs-trackdisk_RELLINKLIBFILES) : | $(kernel-devs-trackdisk_OBJDIR)/linklib
+$(kernel-devs-trackdisk_LINKLIBOBJS) $(kernel-devs-trackdisk_RELLINKLIBOBJS) : | $(kernel-devs-trackdisk_OBJDIR)/linklib
+
+kernel-devs-trackdisk_CCFILES := $(kernel-devs-trackdisk_C_NARCHFILES)
+kernel-devs-trackdisk_TARGETCCFILES    := $(strip $(kernel-devs-trackdisk_STARTFILES) $(kernel-devs-trackdisk_ENDFILES))
+kernel-devs-trackdisk_LINKLIBCCFILES   := $(strip $(kernel-devs-trackdisk_NLIBARCHFILES) $(kernel-devs-trackdisk_LINKLIBCFILES) $(kernel-devs-trackdisk_RELLINKLIBCFILES))
+kernel-devs-trackdisk_LINKLIBCCGENFILES := $(strip $(kernel-devs-trackdisk_LINKLIBCFILES) $(kernel-devs-trackdisk_RELLINKLIBCFILES))
+
+
+kernel-devs-trackdisk_CXXABSBASENAMES := $(foreach kernel-devs-trackdisk_CXXBASE,$(kernel-devs-trackdisk_CXX_NARCHFILES),$(if $(filter /%,$(kernel-devs-trackdisk_CXXBASE)),$(kernel-devs-trackdisk_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-devs-trackdisk_CXXBASE))))
+
+ifneq ($(kernel-devs-trackdisk_CXXABSBASENAMES),)
+
+kernel-devs-trackdisk_CXXBASENAMES := $(basename $(kernel-devs-trackdisk_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-devs-trackdisk_MCXX_FILES  := $(strip $(foreach kernel-devs-trackdisk_CXXBASE,$(kernel-devs-trackdisk_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-devs-trackdisk_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-devs-trackdisk_EXT),$(kernel-devs-trackdisk_CXXBASE)))))))
+
+ifeq (,)
+kernel-devs-trackdisk_MCXX_SRCWILDCARD := %
+else
+kernel-devs-trackdisk_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-devs-trackdisk_OBJDIR),)
+  kernel-devs-trackdisk_CXXTARGETS := $(notdir $(kernel-devs-trackdisk_CXXBASENAMES:=.o))
+  kernel-devs-trackdisk_CXXDTARGETS := $(notdir $(kernel-devs-trackdisk_CXXBASENAMES:=.d))
+  kernel-devs-trackdisk_MCXX_WILDCARD := %
+else
+  kernel-devs-trackdisk_CXXTARGETS := $(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(notdir $(kernel-devs-trackdisk_CXXBASENAMES:=.o)))
+  kernel-devs-trackdisk_CXXDTARGETS := $(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(notdir $(kernel-devs-trackdisk_CXXBASENAMES:=.d)))
+  kernel-devs-trackdisk_MCXX_WILDCARD := $(kernel-devs-trackdisk_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-devs-trackdisk_CXXTARGETS) $(kernel-devs-trackdisk_CXXDTARGETS) : | $(kernel-devs-trackdisk_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-devs-trackdisk_MCXX_CPPFLAGS := $(kernel-devs-trackdisk_CPPFLAGS)
+kernel-devs-trackdisk_CXXFLAGS := $(kernel-devs-trackdisk_CXXFLAGS)
+ifeq ($(kernel-devs-trackdisk_DXXFLAGS),)
+  kernel-devs-trackdisk_DXXFLAGS := $(kernel-devs-trackdisk_CXXFLAGS)
+else
+  kernel-devs-trackdisk_DXXFLAGS := $(kernel-devs-trackdisk_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-devs-trackdisk_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-devs-trackdisk_STRIP ?= $(HOST_STRIP)
+  kernel-devs-trackdisk_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-devs-trackdisk_CXXCMD:=$(HOST_CXX)
+  kernel-devs-trackdisk_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-devs-trackdisk_MCXX_CPPFLAGS) $(kernel-devs-trackdisk_MCXX_EXTRA_CPPFLAGS))
+  kernel-devs-trackdisk_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-devs-trackdisk_CXXFLAGS))
+  kernel-devs-trackdisk_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-devs-trackdisk_DXXFLAGS))
+  kernel-devs-trackdisk_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-devs-trackdisk_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-devs-trackdisk_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-devs-trackdisk_STRIP ?= $(TARGET_STRIP)
+  kernel-devs-trackdisk_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-devs-trackdisk_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-devs-trackdisk_MCXX_CPPFLAGS := $(strip $(kernel-devs-trackdisk_MCXX_CPPFLAGS) $(kernel-devs-trackdisk_MCXX_EXTRA_CPPFLAGS))
+  kernel-devs-trackdisk_CXXFLAGS := $(strip $(kernel-devs-trackdisk_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-devs-trackdisk_DXXFLAGS := $(kernel-devs-trackdisk_DXXFLAGS)
+  kernel-devs-trackdisk_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-devs-trackdisk_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-devs-trackdisk_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-devs-trackdisk_STRIP ?= $(ECHO) >/dev/null
+  kernel-devs-trackdisk_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-devs-trackdisk_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-devs-trackdisk_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-devs-trackdisk_MCXX_CPPFLAGS) $(kernel-devs-trackdisk_MCXX_EXTRA_CPPFLAGS))
+  kernel-devs-trackdisk_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-devs-trackdisk_CXXFLAGS))
+  kernel-devs-trackdisk_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-devs-trackdisk_DXXFLAGS))
+  kernel-devs-trackdisk_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-devs-trackdisk_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-devs-trackdisk_CXXCMD) $(kernel-devs-trackdisk_CXXIQUOTE) $(dir $(2)) $(kernel-devs-trackdisk_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_CXXIQUOTE) . $(kernel-devs-trackdisk_CXXIQUOTE_END) $(strip $(kernel-devs-trackdisk_CXXFLAGS) $(kernel-devs-trackdisk_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-devs-trackdisk_CXXCMD) $(kernel-devs-trackdisk_CXXIQUOTE) $(dir $(2)) $(kernel-devs-trackdisk_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_CXXIQUOTE) . $(kernel-devs-trackdisk_CXXIQUOTE_END) $(strip $(kernel-devs-trackdisk_CXXFLAGS) $(kernel-devs-trackdisk_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-devs-trackdisk_CXXCMD) $(kernel-devs-trackdisk_CXXIQUOTE) $(dir $(2)) $(kernel-devs-trackdisk_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_CXXIQUOTE) . $(kernel-devs-trackdisk_CXXIQUOTE_END) $(strip $(kernel-devs-trackdisk_CXXFLAGS) $(kernel-devs-trackdisk_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-devs-trackdisk_CXXCMD)" $(MKDEPEND) $(strip $(kernel-devs-trackdisk_DXXFLAGS) $(kernel-devs-trackdisk_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-devs-trackdisk_OBJDIR),)
+  $(foreach kernel-devs-trackdisk_CXXFILE,$(kernel-devs-trackdisk_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-devs-trackdisk_CXXFILE))),$(kernel-devs-trackdisk_CXXFILE))))
+else
+  $(foreach kernel-devs-trackdisk_CXXFILE,$(kernel-devs-trackdisk_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(notdir $(basename $(kernel-devs-trackdisk_CXXFILE)))),$(kernel-devs-trackdisk_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-devs-trackdisk_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-devs-trackdisk_MOBJC_SRCWILDCARD := %
+else
+kernel-devs-trackdisk_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-devs-trackdisk_OBJDIR),)
+  kernel-devs-trackdisk_MOBJC_TARGETS := $(addsuffix .o,$(kernel-devs-trackdisk_OBJC_NARCHFILES))
+  kernel-devs-trackdisk_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-devs-trackdisk_OBJC_NARCHFILES))
+  kernel-devs-trackdisk_MOBJC_WILDCARD := %
+else
+  kernel-devs-trackdisk_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(kernel-devs-trackdisk_OBJC_NARCHFILES)))
+  kernel-devs-trackdisk_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(kernel-devs-trackdisk_OBJC_NARCHFILES)))
+  kernel-devs-trackdisk_MOBJC_WILDCARD := $(kernel-devs-trackdisk_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-devs-trackdisk_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-devs-trackdisk_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-devs-trackdisk_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-devs-trackdisk_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-devs-trackdisk_MOBJC_DIRS := $(foreach dir, $(kernel-devs-trackdisk_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-devs-trackdisk_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-devs-trackdisk_MOBJC_DIRS),)
+    kernel-devs-trackdisk_MOBJC_DIRS := $(shell echo $(kernel-devs-trackdisk_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-devs-trackdisk_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-devs-trackdisk_CC := $(TARGET_CC)
+else
+  kernel-devs-trackdisk_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-devs-trackdisk_MOBJC_CPPFLAGS := $(kernel-devs-trackdisk_CPPFLAGS)
+kernel-devs-trackdisk_OBJCFLAGS := $(kernel-devs-trackdisk_CFLAGS)
+kernel-devs-trackdisk_OBJCFLAGS := $(kernel-devs-trackdisk_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-devs-trackdisk_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-devs-trackdisk_OBJCFLAGS)))
+ifeq ($(kernel-devs-trackdisk_DFLAGS),)
+  kernel-devs-trackdisk_OBJCDFLAGS := $(kernel-devs-trackdisk_CFLAGS)
+else
+  kernel-devs-trackdisk_OBJCDFLAGS := $(kernel-devs-trackdisk_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-devs-trackdisk_LINK ?= $(strip $(kernel-devs-trackdisk_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-devs-trackdisk_STRIP ?= $(TARGET_STRIP)
+  kernel-devs-trackdisk_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-devs-trackdisk_CC) $(TARGET_SYSROOT))
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : kernel-devs-trackdisk_MOBJC_CPPFLAGS:=$(strip $(kernel-devs-trackdisk_MOBJC_CPPFLAGS) $(kernel-devs-trackdisk_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : kernel-devs-trackdisk_OBJCFLAGS:=$(strip $(kernel-devs-trackdisk_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : kernel-devs-trackdisk_OBJCDFLAGS:=$(kernel-devs-trackdisk_OBJCDFLAGS)
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : kernel-devs-trackdisk_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : kernel-devs-trackdisk_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-devs-trackdisk_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-devs-trackdisk_STRIP ?= $(HOST_STRIP)
+  kernel-devs-trackdisk_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : kernel-devs-trackdisk_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-devs-trackdisk_MOBJC_CPPFLAGS) $(kernel-devs-trackdisk_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : kernel-devs-trackdisk_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-devs-trackdisk_OBJCFLAGS))
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : kernel-devs-trackdisk_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-devs-trackdisk_OBJCDFLAGS))
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : kernel-devs-trackdisk_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : kernel-devs-trackdisk_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-devs-trackdisk_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-devs-trackdisk_STRIP ?= $(ECHO) >/dev/null
+  kernel-devs-trackdisk_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : kernel-devs-trackdisk_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-devs-trackdisk_MOBJC_CPPFLAGS) $(kernel-devs-trackdisk_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : kernel-devs-trackdisk_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-devs-trackdisk_OBJCFLAGS))
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : kernel-devs-trackdisk_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-devs-trackdisk_OBJCDFLAGS))
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : kernel-devs-trackdisk_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-devs-trackdisk_MOBJC_TARGETS) $(kernel-devs-trackdisk_MOBJC_DTARGETS) : kernel-devs-trackdisk_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-devs-trackdisk_MOBJC_TARGETS) : CPPFLAGS := $(kernel-devs-trackdisk_MOBJC_CPPFLAGS)
+$(kernel-devs-trackdisk_MOBJC_TARGETS) : CFLAGS := $(kernel-devs-trackdisk_OBJCFLAGS)
+$(kernel-devs-trackdisk_MOBJC_TARGETS) : $(kernel-devs-trackdisk_MOBJC_WILDCARD).o : $(kernel-devs-trackdisk_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-devs-trackdisk_IQUOTE) $(dir $<) $(kernel-devs-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_IQUOTE) . $(kernel-devs-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-devs-trackdisk_IQUOTE) $(dir $<) $(kernel-devs-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_IQUOTE) . $(kernel-devs-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-devs-trackdisk_IQUOTE) $(dir $<) $(kernel-devs-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_IQUOTE) . $(kernel-devs-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-devs-trackdisk_MOBJC_DTARGETS) : $(kernel-devs-trackdisk_MOBJC_WILDCARD).d : $(kernel-devs-trackdisk_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-devs-trackdisk_OBJCDFLAGS) $(kernel-devs-trackdisk_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-devs-trackdisk_MC_SRCWILDCARD := %
+else
+kernel-devs-trackdisk_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-devs-trackdisk_OBJDIR),)
+kernel-devs-trackdisk_MC_TARGETS := $(addsuffix .o,$(kernel-devs-trackdisk_CCFILES))
+kernel-devs-trackdisk_MC_DTARGETS := $(addsuffix .d,$(kernel-devs-trackdisk_CCFILES))
+kernel-devs-trackdisk_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-devs-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(notdir $(kernel-devs-trackdisk_CCFILES))))
+    kernel-devs-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(notdir $(kernel-devs-trackdisk_CCFILES))))
+else
+ifeq (,)
+    kernel-devs-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(kernel-devs-trackdisk_CCFILES)))
+    kernel-devs-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(kernel-devs-trackdisk_CCFILES)))
+else
+    kernel-devs-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(patsubst /%,%,$(kernel-devs-trackdisk_CCFILES))))
+    kernel-devs-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(patsubst /%,%,$(kernel-devs-trackdisk_CCFILES))))
+endif
+endif
+kernel-devs-trackdisk_MC_TGTWILDCARD := $(kernel-devs-trackdisk_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : | $(addsuffix .c,$(kernel-devs-trackdisk_CCFILES))
+
+# Be sure that all .c files are found
+kernel-devs-trackdisk_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-devs-trackdisk_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-devs-trackdisk_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-devs-trackdisk_MC_DIRS := $(foreach dir, $(kernel-devs-trackdisk_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-devs-trackdisk_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-devs-trackdisk_MC_DIRS),)
+    kernel-devs-trackdisk_MC_DIRS := $(shell echo $(kernel-devs-trackdisk_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-devs-trackdisk_MC_DIRS)
+endif
+
+endif
+
+kernel-devs-trackdisk_MC_CPPFLAGS := $(kernel-devs-trackdisk_CPPFLAGS)
+kernel-devs-trackdisk_CFLAGS := $(kernel-devs-trackdisk_CFLAGS)
+ifeq ($(kernel-devs-trackdisk_DFLAGS),)
+  kernel-devs-trackdisk_DFLAGS := $(kernel-devs-trackdisk_CFLAGS)
+else
+  kernel-devs-trackdisk_DFLAGS := $(kernel-devs-trackdisk_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-devs-trackdisk_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-devs-trackdisk_STRIP ?= $(TARGET_STRIP)
+kernel-devs-trackdisk_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_MC_CPPFLAGS:=$(strip $(kernel-devs-trackdisk_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_CFLAGS:=$(strip $(kernel-devs-trackdisk_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_DFLAGS:=$(kernel-devs-trackdisk_DFLAGS)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-devs-trackdisk_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-devs-trackdisk_STRIP ?= $(HOST_STRIP)
+kernel-devs-trackdisk_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-devs-trackdisk_CFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-devs-trackdisk_DFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-devs-trackdisk_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-devs-trackdisk_STRIP ?= $(ECHO) >/dev/null
+kernel-devs-trackdisk_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-devs-trackdisk_CFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-devs-trackdisk_DFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-devs-trackdisk_MC_TARGETS) : CPPFLAGS := $(kernel-devs-trackdisk_MC_CPPFLAGS)
+$(kernel-devs-trackdisk_MC_TARGETS) : CFLAGS := $(kernel-devs-trackdisk_CFLAGS)
+$(kernel-devs-trackdisk_MC_TARGETS) : $(kernel-devs-trackdisk_MC_TGTWILDCARD).o : $(kernel-devs-trackdisk_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-devs-trackdisk_IQUOTE) $(dir $<) $(kernel-devs-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_IQUOTE) . $(kernel-devs-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-devs-trackdisk_IQUOTE) $(dir $<) $(kernel-devs-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_IQUOTE) . $(kernel-devs-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-devs-trackdisk_IQUOTE) $(dir $<) $(kernel-devs-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_IQUOTE) . $(kernel-devs-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-devs-trackdisk_MC_DTARGETS) : $(kernel-devs-trackdisk_MC_TGTWILDCARD).d : $(kernel-devs-trackdisk_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-devs-trackdisk_DFLAGS) $(kernel-devs-trackdisk_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-devs-trackdisk_MC_SRCWILDCARD := %
+else
+kernel-devs-trackdisk_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-devs-trackdisk_OBJDIR),)
+kernel-devs-trackdisk_MC_TARGETS := $(addsuffix .o,$(kernel-devs-trackdisk_TARGETCCFILES))
+kernel-devs-trackdisk_MC_DTARGETS := $(addsuffix .d,$(kernel-devs-trackdisk_TARGETCCFILES))
+kernel-devs-trackdisk_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-devs-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(notdir $(kernel-devs-trackdisk_TARGETCCFILES))))
+    kernel-devs-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(notdir $(kernel-devs-trackdisk_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-devs-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(kernel-devs-trackdisk_TARGETCCFILES)))
+    kernel-devs-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(kernel-devs-trackdisk_TARGETCCFILES)))
+else
+    kernel-devs-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(patsubst /%,%,$(kernel-devs-trackdisk_TARGETCCFILES))))
+    kernel-devs-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(patsubst /%,%,$(kernel-devs-trackdisk_TARGETCCFILES))))
+endif
+endif
+kernel-devs-trackdisk_MC_TGTWILDCARD := $(kernel-devs-trackdisk_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : | $(addsuffix .c,$(kernel-devs-trackdisk_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-devs-trackdisk_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-devs-trackdisk_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-devs-trackdisk_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-devs-trackdisk_MC_DIRS := $(foreach dir, $(kernel-devs-trackdisk_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-devs-trackdisk_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-devs-trackdisk_MC_DIRS),)
+    kernel-devs-trackdisk_MC_DIRS := $(shell echo $(kernel-devs-trackdisk_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-devs-trackdisk_MC_DIRS)
+endif
+
+endif
+
+kernel-devs-trackdisk_MC_CPPFLAGS := $(kernel-devs-trackdisk_CPPFLAGS) -D__AROS__
+kernel-devs-trackdisk_CFLAGS := $(kernel-devs-trackdisk_CFLAGS)
+ifeq ($(kernel-devs-trackdisk_DFLAGS),)
+  kernel-devs-trackdisk_DFLAGS := $(kernel-devs-trackdisk_CFLAGS)
+else
+  kernel-devs-trackdisk_DFLAGS := $(kernel-devs-trackdisk_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-devs-trackdisk_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-devs-trackdisk_STRIP ?= $(TARGET_STRIP)
+kernel-devs-trackdisk_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_MC_CPPFLAGS:=$(strip $(kernel-devs-trackdisk_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_CFLAGS:=$(strip $(kernel-devs-trackdisk_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_DFLAGS:=$(kernel-devs-trackdisk_DFLAGS)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-devs-trackdisk_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-devs-trackdisk_STRIP ?= $(HOST_STRIP)
+kernel-devs-trackdisk_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-devs-trackdisk_CFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-devs-trackdisk_DFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-devs-trackdisk_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-devs-trackdisk_STRIP ?= $(ECHO) >/dev/null
+kernel-devs-trackdisk_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-devs-trackdisk_CFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-devs-trackdisk_DFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-devs-trackdisk_MC_TARGETS) : CPPFLAGS := $(kernel-devs-trackdisk_MC_CPPFLAGS)
+$(kernel-devs-trackdisk_MC_TARGETS) : CFLAGS := $(kernel-devs-trackdisk_CFLAGS)
+$(kernel-devs-trackdisk_MC_TARGETS) : $(kernel-devs-trackdisk_MC_TGTWILDCARD).o : $(kernel-devs-trackdisk_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-devs-trackdisk_IQUOTE) $(dir $<) $(kernel-devs-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_IQUOTE) . $(kernel-devs-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-devs-trackdisk_IQUOTE) $(dir $<) $(kernel-devs-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_IQUOTE) . $(kernel-devs-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-devs-trackdisk_IQUOTE) $(dir $<) $(kernel-devs-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_IQUOTE) . $(kernel-devs-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-devs-trackdisk_MC_DTARGETS) : $(kernel-devs-trackdisk_MC_TGTWILDCARD).d : $(kernel-devs-trackdisk_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-devs-trackdisk_DFLAGS) $(kernel-devs-trackdisk_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-devs-trackdisk_MC_SRCWILDCARD := %
+else
+kernel-devs-trackdisk_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-devs-trackdisk_OBJDIR)/linklib,)
+kernel-devs-trackdisk_MC_TARGETS := $(addsuffix .o,$(kernel-devs-trackdisk_NLIBARCHFILES))
+kernel-devs-trackdisk_MC_DTARGETS := $(addsuffix .d,$(kernel-devs-trackdisk_NLIBARCHFILES))
+kernel-devs-trackdisk_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-devs-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$(notdir $(kernel-devs-trackdisk_NLIBARCHFILES))))
+    kernel-devs-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$(notdir $(kernel-devs-trackdisk_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-devs-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$(kernel-devs-trackdisk_NLIBARCHFILES)))
+    kernel-devs-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$(kernel-devs-trackdisk_NLIBARCHFILES)))
+else
+    kernel-devs-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-devs-trackdisk_NLIBARCHFILES))))
+    kernel-devs-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-devs-trackdisk_NLIBARCHFILES))))
+endif
+endif
+kernel-devs-trackdisk_MC_TGTWILDCARD := $(kernel-devs-trackdisk_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : | $(addsuffix .c,$(kernel-devs-trackdisk_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-devs-trackdisk_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-devs-trackdisk_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-devs-trackdisk_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-devs-trackdisk_MC_DIRS := $(foreach dir, $(kernel-devs-trackdisk_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-devs-trackdisk_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-devs-trackdisk_MC_DIRS),)
+    kernel-devs-trackdisk_MC_DIRS := $(shell echo $(kernel-devs-trackdisk_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-devs-trackdisk_MC_DIRS)
+endif
+
+endif
+
+kernel-devs-trackdisk_MC_CPPFLAGS := $(kernel-devs-trackdisk_LINKLIBCPPFLAGS) -D__AROS__
+kernel-devs-trackdisk_CFLAGS := $(kernel-devs-trackdisk_LINKLIBCFLAGS)
+ifeq ($(kernel-devs-trackdisk_LINKLIBDFLAGS),)
+  kernel-devs-trackdisk_DFLAGS := $(kernel-devs-trackdisk_LINKLIBCFLAGS)
+else
+  kernel-devs-trackdisk_DFLAGS := $(kernel-devs-trackdisk_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-devs-trackdisk_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-devs-trackdisk_STRIP ?= $(TARGET_STRIP)
+kernel-devs-trackdisk_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_MC_CPPFLAGS:=$(strip $(kernel-devs-trackdisk_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_CFLAGS:=$(strip $(kernel-devs-trackdisk_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_DFLAGS:=$(kernel-devs-trackdisk_DFLAGS)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-devs-trackdisk_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-devs-trackdisk_STRIP ?= $(HOST_STRIP)
+kernel-devs-trackdisk_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-devs-trackdisk_CFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-devs-trackdisk_DFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-devs-trackdisk_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-devs-trackdisk_STRIP ?= $(ECHO) >/dev/null
+kernel-devs-trackdisk_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-devs-trackdisk_CFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-devs-trackdisk_DFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-devs-trackdisk_MC_TARGETS) : CPPFLAGS := $(kernel-devs-trackdisk_MC_CPPFLAGS)
+$(kernel-devs-trackdisk_MC_TARGETS) : CFLAGS := $(kernel-devs-trackdisk_CFLAGS)
+$(kernel-devs-trackdisk_MC_TARGETS) : $(kernel-devs-trackdisk_MC_TGTWILDCARD).o : $(kernel-devs-trackdisk_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-devs-trackdisk_IQUOTE) $(dir $<) $(kernel-devs-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_IQUOTE) . $(kernel-devs-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-devs-trackdisk_IQUOTE) $(dir $<) $(kernel-devs-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_IQUOTE) . $(kernel-devs-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-devs-trackdisk_IQUOTE) $(dir $<) $(kernel-devs-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_IQUOTE) . $(kernel-devs-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-devs-trackdisk_MC_DTARGETS) : $(kernel-devs-trackdisk_MC_TGTWILDCARD).d : $(kernel-devs-trackdisk_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-devs-trackdisk_DFLAGS) $(kernel-devs-trackdisk_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-devs-trackdisk_OBJDIR)/linklib,)
+kernel-devs-trackdisk_MC_SRCWILDCARD := %
+else
+kernel-devs-trackdisk_MC_SRCWILDCARD := $(kernel-devs-trackdisk_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-devs-trackdisk_OBJDIR)/linklib,)
+kernel-devs-trackdisk_MC_TARGETS := $(addsuffix .o,$(kernel-devs-trackdisk_LINKLIBCCGENFILES))
+kernel-devs-trackdisk_MC_DTARGETS := $(addsuffix .d,$(kernel-devs-trackdisk_LINKLIBCCGENFILES))
+kernel-devs-trackdisk_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-devs-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$(notdir $(kernel-devs-trackdisk_LINKLIBCCGENFILES))))
+    kernel-devs-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$(notdir $(kernel-devs-trackdisk_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-devs-trackdisk_OBJDIR)/linklib,)
+    kernel-devs-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$(kernel-devs-trackdisk_LINKLIBCCGENFILES)))
+    kernel-devs-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$(kernel-devs-trackdisk_LINKLIBCCGENFILES)))
+else
+    kernel-devs-trackdisk_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$(patsubst $(kernel-devs-trackdisk_OBJDIR)/linklib/%,%,$(kernel-devs-trackdisk_LINKLIBCCGENFILES))))
+    kernel-devs-trackdisk_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$(patsubst $(kernel-devs-trackdisk_OBJDIR)/linklib/%,%,$(kernel-devs-trackdisk_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-devs-trackdisk_MC_TGTWILDCARD := $(kernel-devs-trackdisk_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : | $(addsuffix .c,$(kernel-devs-trackdisk_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-devs-trackdisk_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-devs-trackdisk_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-devs-trackdisk_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-devs-trackdisk_MC_DIRS := $(foreach dir, $(kernel-devs-trackdisk_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-devs-trackdisk_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-devs-trackdisk_MC_DIRS),)
+    kernel-devs-trackdisk_MC_DIRS := $(shell echo $(kernel-devs-trackdisk_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-devs-trackdisk_MC_DIRS)
+endif
+
+endif
+
+kernel-devs-trackdisk_MC_CPPFLAGS := $(kernel-devs-trackdisk_LINKLIBCPPFLAGS) -D__AROS__
+kernel-devs-trackdisk_CFLAGS := $(kernel-devs-trackdisk_LINKLIBCFLAGS)
+ifeq ($(kernel-devs-trackdisk_LINKLIBDFLAGS),)
+  kernel-devs-trackdisk_DFLAGS := $(kernel-devs-trackdisk_LINKLIBCFLAGS)
+else
+  kernel-devs-trackdisk_DFLAGS := $(kernel-devs-trackdisk_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-devs-trackdisk_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-devs-trackdisk_STRIP ?= $(TARGET_STRIP)
+kernel-devs-trackdisk_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_MC_CPPFLAGS:=$(strip $(kernel-devs-trackdisk_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_CFLAGS:=$(strip $(kernel-devs-trackdisk_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_DFLAGS:=$(kernel-devs-trackdisk_DFLAGS)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-devs-trackdisk_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-devs-trackdisk_STRIP ?= $(HOST_STRIP)
+kernel-devs-trackdisk_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-devs-trackdisk_CFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-devs-trackdisk_DFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-devs-trackdisk_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-devs-trackdisk_STRIP ?= $(ECHO) >/dev/null
+kernel-devs-trackdisk_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_CPPFLAGS) $(kernel-devs-trackdisk_MC_EXTRA_CPPFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-devs-trackdisk_CFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-devs-trackdisk_DFLAGS))
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-devs-trackdisk_MC_TARGETS) $(kernel-devs-trackdisk_MC_DTARGETS) : kernel-devs-trackdisk_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-devs-trackdisk_MC_TARGETS) : CPPFLAGS := $(kernel-devs-trackdisk_MC_CPPFLAGS)
+$(kernel-devs-trackdisk_MC_TARGETS) : CFLAGS := $(kernel-devs-trackdisk_CFLAGS)
+$(kernel-devs-trackdisk_MC_TARGETS) : $(kernel-devs-trackdisk_MC_TGTWILDCARD).o : $(kernel-devs-trackdisk_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-devs-trackdisk_IQUOTE) $(dir $<) $(kernel-devs-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_IQUOTE) . $(kernel-devs-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-devs-trackdisk_IQUOTE) $(dir $<) $(kernel-devs-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_IQUOTE) . $(kernel-devs-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-devs-trackdisk_IQUOTE) $(dir $<) $(kernel-devs-trackdisk_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-devs-trackdisk_IQUOTE) . $(kernel-devs-trackdisk_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-devs-trackdisk_MC_DTARGETS) : $(kernel-devs-trackdisk_MC_TGTWILDCARD).d : $(kernel-devs-trackdisk_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-devs-trackdisk_DFLAGS) $(kernel-devs-trackdisk_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-devs-trackdisk_LINKLIBAFILES),)
+
+ifeq ($(kernel-devs-trackdisk_OBJDIR)/linklib,)
+kernel-devs-trackdisk-MA_TARGETS := $(addsuffix .o,$(kernel-devs-trackdisk_LINKLIBAFILES) $(kernel-devs-trackdisk_RELLINKLIBAFILES))
+kernel-devs-trackdisk-MA_WILDCARD := %
+else
+kernel-devs-trackdisk-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$(notdir $(kernel-devs-trackdisk_LINKLIBAFILES) $(kernel-devs-trackdisk_RELLINKLIBAFILES))))
+kernel-devs-trackdisk-MA_WILDCARD := $(kernel-devs-trackdisk_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-devs-trackdisk-MA_TARGETS) : | $(addsuffix .S,$(kernel-devs-trackdisk_LINKLIBAFILES) $(kernel-devs-trackdisk_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-devs-trackdisk-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-devs-trackdisk-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-devs-trackdisk_LINKLIBAFILES) $(kernel-devs-trackdisk_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-devs-trackdisk-MA_DIRS := $(foreach dir, $(kernel-devs-trackdisk-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-devs-trackdisk-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-devs-trackdisk-MA_DIRS),)
+    kernel-devs-trackdisk-MA_DIRS := $(shell echo $(kernel-devs-trackdisk-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-devs-trackdisk-MA_DIRS)
+endif
+
+endif
+
+kernel-devs-trackdisk-MA_ASSEMBLER ?= $(kernel-devs-trackdisk_ASSEMBLER)
+
+$(kernel-devs-trackdisk-MA_TARGETS) : kernel-devs-trackdisk-MA_CMD:= $(kernel-devs-trackdisk-MA_ASSEMBLER)
+
+$(kernel-devs-trackdisk-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-devs-trackdisk-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-devs-trackdisk-MA_TARGETS) : $(kernel-devs-trackdisk-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-devs-trackdisk-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-devs-trackdisk-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-devs-trackdisk-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-devs-trackdisk_SUFFIX           := device
+else
+kernel-devs-trackdisk_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-devs-trackdisk_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-devs-trackdisk_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-devs-trackdisk_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-devs-trackdisk_SUFFIX),handler)
+kernel-devs-trackdisk_MODULE           := $(AROSDIR)/$(kernel-devs-trackdisk_MODDIR)/$(kernel-devs-trackdisk_DEFNAME)-$(kernel-devs-trackdisk_SUFFIX)
+else
+kernel-devs-trackdisk_MODULE           := $(AROSDIR)/$(kernel-devs-trackdisk_MODDIR)/$(kernel-devs-trackdisk_DEFNAME).$(kernel-devs-trackdisk_SUFFIX)
+endif
+kernel-devs-trackdisk_KOBJ             := $(KOBJSDIR)/$(kernel-devs-trackdisk_DEFNAME)_$(kernel-devs-trackdisk_SUFFIX).o
+else
+kernel-devs-trackdisk_MODULE           :=
+kernel-devs-trackdisk_KOBJ             :=
+endif
+
+kernel-devs-trackdisk-quick      : kernel-devs-trackdisk
+kernel-devs-trackdisk            : $(kernel-devs-trackdisk_MODULE) $(kernel-devs-trackdisk_LINKLIB) $(kernel-devs-trackdisk_RELLINKLIB)
+ifeq (M,M)
+kernel-devs-trackdisk-kobj       : $(kernel-devs-trackdisk_KOBJ) $(kernel-devs-trackdisk_LINKLIB) $(kernel-devs-trackdisk_RELLINKLIB)
+kernel-devs-trackdisk-kobj-quick : $(kernel-devs-trackdisk_KOBJ) $(kernel-devs-trackdisk_LINKLIB) $(kernel-devs-trackdisk_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-devs-trackdisk-linklib    : $(kernel-devs-trackdisk_LINKLIB) $(kernel-devs-trackdisk_RELLINKLIB)
+endif
+
+kernel-devs-trackdisk_OBJS := $(addsuffix .o,$(kernel-devs-trackdisk_STARTFILES)) $(kernel-devs-trackdisk_ARCHOBJS) \
+           $(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(notdir $(kernel-devs-trackdisk_C_NARCHFILES:=.o) $(kernel-devs-trackdisk_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (device,handler)
+kernel-devs-trackdisk_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (trackdisk,con)
+    kernel-devs-trackdisk_ERR          := $(notdir $(kernel-devs-trackdisk_MODULE)).err
+else
+    kernel-devs-trackdisk_ERR          := trackdisk.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-devs-trackdisk_DEFNAME)_LDFLAGS) $(kernel-devs-trackdisk_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-devs-trackdisk_LIBS) $($(kernel-devs-trackdisk_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-devs-trackdisk_MODULE) : LIB_NAMES := $(kernel-devs-trackdisk_LIBS) $($(kernel-devs-trackdisk_DEFNAME)_LIBS)
+$(kernel-devs-trackdisk_MODULE) : OBJS := $(kernel-devs-trackdisk_STARTOBJS) $(kernel-devs-trackdisk_OBJS) $(USER_OBJS)
+$(kernel-devs-trackdisk_MODULE) : ENDTAG := $(kernel-devs-trackdisk_ENDOBJS)
+$(kernel-devs-trackdisk_MODULE) : ERR := $(kernel-devs-trackdisk_ERR)
+$(kernel-devs-trackdisk_MODULE) : OBJDIR := $(kernel-devs-trackdisk_OBJDIR)
+$(kernel-devs-trackdisk_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-devs-trackdisk_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-devs-trackdisk_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-devs-trackdisk_MODULE) : $(kernel-devs-trackdisk_STARTOBJS) $(kernel-devs-trackdisk_OBJS) $(USER_OBJS) $(kernel-devs-trackdisk_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-devs-trackdisk_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-devs-trackdisk_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-devs-trackdisk_LC_LINKLIBNAME   := $(shell echo $(kernel-devs-trackdisk_LINKLIBNAME) | tr A-Z a-z)
+kernel-devs-trackdisk_LC_MODNAME       := $(shell echo trackdisk | tr A-Z a-z)
+ifneq ($(kernel-devs-trackdisk_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_LINKLIBNAME)$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_AR:=$(AR)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_LINKLIBNAME)$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_LINKLIBNAME)$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_AR:=$(HOST_AR)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_LINKLIBNAME)$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_LINKLIBNAME)$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_AR:=$(KERNEL_AR)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_LINKLIBNAME)$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_LINKLIBNAME)$(kernel-devs-trackdisk_LIBSUFFIX).a : $(kernel-devs-trackdisk_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-devs-trackdisk_AR) $@ $^
+	$(Q)$(kernel-devs-trackdisk_RANLIB) $@
+ifneq ($(kernel-devs-trackdisk_LC_MODNAME),$(kernel-devs-trackdisk_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-devs-trackdisk_LIBDIR)/libtrackdisk$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_AR:=$(AR)
+$(kernel-devs-trackdisk_LIBDIR)/libtrackdisk$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-devs-trackdisk_LIBDIR)/libtrackdisk$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_AR:=$(HOST_AR)
+$(kernel-devs-trackdisk_LIBDIR)/libtrackdisk$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-devs-trackdisk_LIBDIR)/libtrackdisk$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_AR:=$(KERNEL_AR)
+$(kernel-devs-trackdisk_LIBDIR)/libtrackdisk$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-devs-trackdisk_LIBDIR)/libtrackdisk$(kernel-devs-trackdisk_LIBSUFFIX).a : $(kernel-devs-trackdisk_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-devs-trackdisk_AR) $@ $^
+	$(Q)$(kernel-devs-trackdisk_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-devs-trackdisk_LINKLIB),)
+$(kernel-devs-trackdisk_LINKLIB) : | $(kernel-devs-trackdisk_LIBDIR)
+else
+$(kernel-devs-trackdisk_LINKLIB) :: $(kernel-devs-trackdisk_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-devs-trackdisk_LIBDIR)
+
+endif
+
+ifneq ($(kernel-devs-trackdisk_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_LINKLIBNAME)_rel$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_AR:=$(AR)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_LINKLIBNAME)_rel$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_LINKLIBNAME)_rel$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_AR:=$(HOST_AR)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_LINKLIBNAME)_rel$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_LINKLIBNAME)_rel$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_AR:=$(KERNEL_AR)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_LINKLIBNAME)_rel$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_LINKLIBNAME)_rel$(kernel-devs-trackdisk_LIBSUFFIX).a : $(kernel-devs-trackdisk_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-devs-trackdisk_AR) $@ $^
+	$(Q)$(kernel-devs-trackdisk_RANLIB) $@
+ifneq ($(kernel-devs-trackdisk_LC_MODNAME),$(kernel-devs-trackdisk_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_DEFNAME)_rel$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_AR:=$(AR)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_DEFNAME)_rel$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_DEFNAME)_rel$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_AR:=$(HOST_AR)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_DEFNAME)_rel$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_DEFNAME)_rel$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_AR:=$(KERNEL_AR)
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_DEFNAME)_rel$(kernel-devs-trackdisk_LIBSUFFIX).a : kernel-devs-trackdisk_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-devs-trackdisk_LIBDIR)/lib$(kernel-devs-trackdisk_DEFNAME)_rel$(kernel-devs-trackdisk_LIBSUFFIX).a : $(kernel-devs-trackdisk_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-devs-trackdisk_AR) $@ $^
+	$(Q)$(kernel-devs-trackdisk_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-devs-trackdisk_RELLINKLIB),)
+$(kernel-devs-trackdisk_RELLINKLIB) : | $(kernel-devs-trackdisk_LIBDIR)
+else
+$(kernel-devs-trackdisk_RELLINKLIB) :: $(kernel-devs-trackdisk_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-devs-trackdisk_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-devs-trackdisk_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-devs-trackdisk_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-devs-trackdisk_SYMBOLS := $(kernel-devs-trackdisk_KBASE)
+
+kernel-devs-trackdisk_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-devs-trackdisk_KOBJ_LIBS        := $(filter-out $(kernel-devs-trackdisk_KLIB),$(kernel-devs-trackdisk_LIBS)) $(kernel-devs-trackdisk_KAUTOLIB)
+$(kernel-devs-trackdisk_KOBJ) : LINKLIBS:=$(kernel-devs-trackdisk_KOBJ_LIBS) $($(kernel-devs-trackdisk_DEFNAME)_LIBS)
+$(kernel-devs-trackdisk_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-devs-trackdisk_SYMBOLS))
+$(kernel-devs-trackdisk_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-devs-trackdisk_KOBJ) : $(kernel-devs-trackdisk_OBJS) $(USER_OBJS) $(kernel-devs-trackdisk_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-devs-trackdisk_DEPS             := $(addprefix $(kernel-devs-trackdisk_OBJDIR)/,$(notdir $(kernel-devs-trackdisk_CCFILES:=.d) $(kernel-devs-trackdisk_TARGETCCFILES:=.d) $(kernel-devs-trackdisk_CXXFILES:=.d))) $(addprefix $(kernel-devs-trackdisk_OBJDIR)/linklib/,$(notdir $(kernel-devs-trackdisk_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-devs-trackdisk_DEPS),)
+  ifneq (kernel-devs-trackdisk kernel-devs-trackdisk-quick kernel-devs-trackdisk-kobj kernel-devs-trackdisk-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-devs-trackdisk kernel-devs-trackdisk-quick kernel-devs-trackdisk-kobj kernel-devs-trackdisk-kobj-quick),)
+      -include $(kernel-devs-trackdisk_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-devs-trackdisk_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-devs-trackdisk_OBJS) $(kernel-devs-trackdisk_DEPS) : | $(kernel-devs-trackdisk_OBJDIR)/linklib
+
+ifneq ($(kernel-devs-trackdisk_OBJS) $(kernel-devs-trackdisk_DEPS) $(kernel-devs-trackdisk_MODULE) $(kernel-devs-trackdisk_KOBJ),)
+$(kernel-devs-trackdisk_OBJS) $(kernel-devs-trackdisk_DEPS) $(kernel-devs-trackdisk_MODULE) $(kernel-devs-trackdisk_KOBJ) : | $(kernel-devs-trackdisk_OBJDIR) $(AROSDIR)/$(kernel-devs-trackdisk_MODDIR) $(KOBJSDIR)
+else
+$(kernel-devs-trackdisk_OBJS) $(kernel-devs-trackdisk_DEPS) $(kernel-devs-trackdisk_MODULE) $(kernel-devs-trackdisk_KOBJ) :: $(kernel-devs-trackdisk_OBJDIR) $(AROSDIR)/$(kernel-devs-trackdisk_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-devs-trackdisk_OBJDIR) $(AROSDIR)/$(kernel-devs-trackdisk_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-devs-trackdisk kernel-devs-trackdisk-includes kernel-devs-trackdisk-quick kernel-devs-trackdisk-kobj kernel-devs-trackdisk-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-devs-trackdisk_DFILE_DEPS := $(kernel-devs-trackdisk_LIBDEFSINC) $(kernel-devs-trackdisk_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-devs-trackdisk_INCDIR)/,$($(kernel-devs-trackdisk_DEFNAME)_INCLUDES))
+$(kernel-devs-trackdisk_DEPS) : $(kernel-devs-trackdisk_DFILE_DEPS)
+endif
+
+kernel-devs-trackdisk_TOCLEAN := $(kernel-devs-trackdisk_OBJS) $(kernel-devs-trackdisk_DEPS) \
+    $(kernel-devs-trackdisk_MODULE) $(kernel-devs-trackdisk_LINKLIB) $(kernel-devs-trackdisk_KOBJ) \
+    $(kernel-devs-trackdisk_OBJDIR)/Makefile.trackdiskdevice \
+    $(addprefix $(kernel-devs-trackdisk_OBJDIR)/include/,$($(kernel-devs-trackdisk_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-devs-trackdisk_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-devs-trackdisk_INCDIR)/,$($(kernel-devs-trackdisk_DEFNAME)_INCLUDES)) \
+    $(kernel-devs-trackdisk_OBJDIR)/trackdisk_geninc $(kernel-devs-trackdisk_OBJDIR)/trackdisk_incs \
+    $(addsuffix .c,$(kernel-devs-trackdisk_LINKLIBFILES)) $(kernel-devs-trackdisk_LINKLIBOBJS) $(kernel-devs-trackdisk_LIBDEFSINC) \
+    $(kernel-devs-trackdisk_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-devs-trackdisk_STARTFILES) $(kernel-devs-trackdisk_ENDFILES)) \
+    $(kernel-devs-trackdisk_ENDOBJS)
+kernel-devs-trackdisk-clean : FILES              := $(kernel-devs-trackdisk_TOCLEAN)
+kernel-devs-trackdisk-clean ::
+	$(Q)$(ECHO) "Cleaning up for module trackdisk"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-devs-trackdisk_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

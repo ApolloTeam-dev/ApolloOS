@@ -1,0 +1,75 @@
+# Copyright © 2004, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+CATALOGS:=
+
+
+ifeq (,)
+arostcp-libs-muimiamipanel-catalogs_DESC := $(basename $(wildcard $(SRCDIR)/$(CURDIR)/*.cd))
+else
+arostcp-libs-muimiamipanel-catalogs_DESC := 
+endif
+
+arostcp-libs-muimiamipanel-catalogs_SRC := $(shell echo $(TOOLDIR)/C_h_aros | sed 's/^\(.\):\//\/\1\//')
+
+ifeq ($(CATALOGS),)
+arostcp-libs-muimiamipanel-catalogs_LNGS := $(basename $(notdir $(call WILDCARD, $(SRCDIR)/$(CURDIR)/*.ct)))
+else
+arostcp-libs-muimiamipanel-catalogs_LNGS := $(CATALOGS)
+endif
+
+arostcp-libs-muimiamipanel-catalogs_OBJS := $(addsuffix /System/System/MUI.MiamiPanel.catalog, $(addprefix $(AROS_CATALOGS)/, $(arostcp-libs-muimiamipanel-catalogs_LNGS)))
+arostcp-libs-muimiamipanel-catalogs_DIRS := $(addsuffix /System/System, $(addprefix $(AROS_CATALOGS)/, $(arostcp-libs-muimiamipanel-catalogs_LNGS))) $(dir ../strings.h)
+
+#MM- arostcp-libs-muimiamipanel-catalogs-quick : arostcp-libs-muimiamipanel-catalogs
+
+#MM
+arostcp-libs-muimiamipanel-catalogs : $(arostcp-libs-muimiamipanel-catalogs_OBJS) ../strings.h
+
+
+ifneq ($(arostcp-libs-muimiamipanel-catalogs_OBJS),)
+$(arostcp-libs-muimiamipanel-catalogs_OBJS) : | $(arostcp-libs-muimiamipanel-catalogs_DIRS)
+else
+$(arostcp-libs-muimiamipanel-catalogs_OBJS) :: $(arostcp-libs-muimiamipanel-catalogs_DIRS)
+endif
+
+GLOB_MKDIRS += $(arostcp-libs-muimiamipanel-catalogs_DIRS)
+
+
+$(AROS_CATALOGS)/%/System/System/MUI.MiamiPanel.catalog : $(SRCDIR)/$(CURDIR)/%.ct $(arostcp-libs-muimiamipanel-catalogs_DESC).cd
+	$(Q)$(ECHO) "Creating   MUI.MiamiPanel catalog for language $*."
+	$(Q)$(IF) $(TEST) "$*" = "polish"; then \
+	    $(FLEXCAT) iso88592toamigapl $(arostcp-libs-muimiamipanel-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/System/MUI.MiamiPanel.catalog" || [ $$? -lt 10 ] ; \
+	elif $(TEST) "$*" = "russian"; then \
+	    $(FLEXCAT) win1251toamiga1251 $(arostcp-libs-muimiamipanel-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/System/MUI.MiamiPanel.catalog" || [ $$? -lt 10 ] ; \
+	else \
+	    $(FLEXCAT) $(arostcp-libs-muimiamipanel-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/System/MUI.MiamiPanel.catalog" || [ $$? -lt 10 ] ; \
+	fi
+
+ifneq (../strings.h,)
+../strings.h : arostcp-libs-muimiamipanel-catalogs_DESC := $(arostcp-libs-muimiamipanel-catalogs_DESC)
+../strings.h : arostcp-libs-muimiamipanel-catalogs_SRC := $(arostcp-libs-muimiamipanel-catalogs_SRC)
+../strings.h : $(arostcp-libs-muimiamipanel-catalogs_DESC).cd $(arostcp-libs-muimiamipanel-catalogs_SRC).sd | $(dir ../strings.h)
+	$(Q)$(ECHO) "Creating   MUI.MiamiPanel catalog source file $@"
+	$(Q)$(FLEXCAT) $(arostcp-libs-muimiamipanel-catalogs_DESC).cd $@=$(arostcp-libs-muimiamipanel-catalogs_SRC).sd
+endif
+
+arostcp-libs-muimiamipanel-catalogs-clean : FILES := $(arostcp-libs-muimiamipanel-catalogs_OBJS) ../strings.h
+#MM
+arostcp-libs-muimiamipanel-catalogs-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget arostcp-libs-muimiamipanel-catalogs"
+	$(Q)$(RM) $(FILES)
+
+.PHONY: arostcp-libs-muimiamipanel-catalogs arostcp-libs-muimiamipanel-catalogs-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

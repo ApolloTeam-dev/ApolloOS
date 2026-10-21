@@ -1,0 +1,586 @@
+#   $Id$
+
+#   AROS metamakefile for openurl
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES:= libinit \
+        init    \
+        utils   \
+        api     \
+        handler \
+        prefs   \
+        stubs-aros \
+        debug
+
+USER_INCLUDES := -I$(SRCDIR)/$(CURDIR)/../include
+USER_CFLAGS := -DAROS_ABI_V1
+USER_LDFLAGS := -static
+
+#MM- external-openurl-lib : linklibs external-openurl-includes
+
+
+# Define metamake targets and their dependencies
+#MM external-openurl-lib : core-linklibs includes-generate-deps
+#MM external-openurl-lib-kobj : core-linklibs includes-generate-deps
+#MM external-openurl-lib-kobj-quick
+#MM external-openurl-lib-quick
+#MM external-openurl-lib-clean
+
+external-openurl-lib_ALLTARGETS := external-openurl-lib external-openurl-lib-clean external-openurl-lib-quick external-openurl-lib-kobj
+
+.PHONY : $(external-openurl-lib_ALLTARGETS)
+
+ifeq (openurl,)
+$(error using %build_module_simple: modname may not be empty)
+endif
+ifeq (library,)
+$(error using %build_module_simple: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+external-openurl-lib_DEFLINKLIBNAME := openurl
+external-openurl-lib_CFLAGS := $(CFLAGS)
+external-openurl-lib_CXXFLAGS := $(CXXFLAGS)
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+external-openurl-lib_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(external-openurl-lib_CFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+external-openurl-lib_FUNCINSTR := yes
+external-openurl-lib_CFLAGS    := $(strip $(FUNCINSTR_FLAGS) $(external-openurl-lib_CFLAGS))
+endif
+endif
+ifneq (,)
+    external-openurl-lib_DFLAGS := 
+else
+    external-openurl-lib_DFLAGS := $(external-openurl-lib_CFLAGS)
+endif
+external-openurl-lib_DEFDXXFLAGS := 
+OBJDIR ?= $(GENDIR)/$(CURDIR)
+external-openurl-lib_MODDIR := 
+ifeq ($(external-openurl-lib_MODDIR),)
+  ifeq (library,library)
+    external-openurl-lib_MODDIR  := $(AROS_LIBRARIES)
+  endif
+  ifeq (library,gadget)
+    external-openurl-lib_MODDIR  := $(AROS_GADGETS)
+  endif
+  ifeq (library,datatype)
+    external-openurl-lib_MODDIR  := $(AROS_DATATYPES)
+  endif
+  ifeq (library,handler)
+    external-openurl-lib_MODDIR  := $(AROS_FS)
+  endif
+  ifeq (library,device)
+    external-openurl-lib_MODDIR  := $(AROS_DEVS)
+  endif
+  ifeq (library,resource)
+    external-openurl-lib_MODDIR  := $(AROS_RESOURCES)
+  endif
+  ifeq (library,hook)
+    external-openurl-lib_MODDIR  := $(AROS_RESOURCES)
+  endif
+  ifeq (library,mui)
+    external-openurl-lib_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (library,mcc)
+    external-openurl-lib_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (library,mcp)
+    external-openurl-lib_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (library,usbclass)
+    external-openurl-lib_MODDIR  := $(AROS_CLASSES)/USB
+  endif
+  ifeq (library,hidd)
+    external-openurl-lib_MODDIR  := $(AROS_DRIVERS)
+  endif
+  ifeq (library,printer)
+    external-openurl-lib_MODDIR  := $(AROS_PRINTERS)
+  endif
+endif
+ifeq ($(external-openurl-lib_MODDIR),)
+  $(error Don't know where to put the file for modtype library. Specify moduledir=)
+endif
+
+external-openurl-lib_ARCHOBJS   := $(wildcard $(OBJDIR)/arch/*.o)
+external-openurl-lib_ARCHFILES  := $(basename $(notdir $(external-openurl-lib_ARCHOBJS)))
+external-openurl-lib_C_NARCHFILES := $(filter-out $(external-openurl-lib_ARCHFILES),$(FILES))
+external-openurl-lib_CXX_NARCHFILES := $(filter-out $(external-openurl-lib_ARCHFILES),$(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT)))))
+external-openurl-lib_OBJC_NARCHFILES := $(filter-out $(external-openurl-lib_ARCHFILES),)
+
+
+external-openurl-lib_CXXABSBASENAMES := $(foreach external-openurl-lib_CXXBASE,$(external-openurl-lib_CXX_NARCHFILES),$(if $(filter /%,$(external-openurl-lib_CXXBASE)),$(external-openurl-lib_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(external-openurl-lib_CXXBASE))))
+
+ifneq ($(external-openurl-lib_CXXABSBASENAMES),)
+
+external-openurl-lib_CXXBASENAMES := $(basename $(external-openurl-lib_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+external-openurl-lib_MCXX_FILES  := $(strip $(foreach external-openurl-lib_CXXBASE,$(external-openurl-lib_CXXABSBASENAMES), $(firstword $(wildcard $(foreach external-openurl-lib_EXT, $(AROS_CXXEXTS),$(addsuffix .$(external-openurl-lib_EXT),$(external-openurl-lib_CXXBASE)))))))
+
+ifeq (,)
+external-openurl-lib_MCXX_SRCWILDCARD := %
+else
+external-openurl-lib_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+  external-openurl-lib_CXXTARGETS := $(notdir $(external-openurl-lib_CXXBASENAMES:=.o))
+  external-openurl-lib_CXXDTARGETS := $(notdir $(external-openurl-lib_CXXBASENAMES:=.d))
+  external-openurl-lib_MCXX_WILDCARD := %
+else
+  external-openurl-lib_CXXTARGETS := $(addprefix $(OBJDIR)/,$(notdir $(external-openurl-lib_CXXBASENAMES:=.o)))
+  external-openurl-lib_CXXDTARGETS := $(addprefix $(OBJDIR)/,$(notdir $(external-openurl-lib_CXXBASENAMES:=.d)))
+  external-openurl-lib_MCXX_WILDCARD := $(OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(external-openurl-lib_CXXTARGETS) $(external-openurl-lib_CXXDTARGETS) : | $(external-openurl-lib_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+external-openurl-lib_MCXX_CPPFLAGS := $(CPPFLAGS)
+external-openurl-lib_CXXFLAGS := $(external-openurl-lib_CXXFLAGS)
+ifeq ($(external-openurl-lib_DXXFLAGS),)
+  external-openurl-lib_DXXFLAGS := $(external-openurl-lib_CXXFLAGS)
+else
+  external-openurl-lib_DXXFLAGS := $(external-openurl-lib_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  external-openurl-lib_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  external-openurl-lib_STRIP ?= $(HOST_STRIP)
+  external-openurl-lib_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  external-openurl-lib_CXXCMD:=$(HOST_CXX)
+  external-openurl-lib_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(external-openurl-lib_MCXX_CPPFLAGS) $(external-openurl-lib_MCXX_EXTRA_CPPFLAGS))
+  external-openurl-lib_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(external-openurl-lib_CXXFLAGS))
+  external-openurl-lib_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(external-openurl-lib_DXXFLAGS))
+  external-openurl-lib_CXXIQUOTE:=$(HOST_IQUOTE)
+  external-openurl-lib_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  external-openurl-lib_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  external-openurl-lib_STRIP ?= $(TARGET_STRIP)
+  external-openurl-lib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  external-openurl-lib_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  external-openurl-lib_MCXX_CPPFLAGS := $(strip $(external-openurl-lib_MCXX_CPPFLAGS) $(external-openurl-lib_MCXX_EXTRA_CPPFLAGS))
+  external-openurl-lib_CXXFLAGS := $(strip $(external-openurl-lib_CXXFLAGS) $(SAFETY_CFLAGS))
+  external-openurl-lib_DXXFLAGS := $(external-openurl-lib_DXXFLAGS)
+  external-openurl-lib_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  external-openurl-lib_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  external-openurl-lib_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  external-openurl-lib_STRIP ?= $(ECHO) >/dev/null
+  external-openurl-lib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  external-openurl-lib_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  external-openurl-lib_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(external-openurl-lib_MCXX_CPPFLAGS) $(external-openurl-lib_MCXX_EXTRA_CPPFLAGS))
+  external-openurl-lib_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(external-openurl-lib_CXXFLAGS))
+  external-openurl-lib_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(external-openurl-lib_DXXFLAGS))
+  external-openurl-lib_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  external-openurl-lib_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(external-openurl-lib_CXXCMD) $(external-openurl-lib_CXXIQUOTE) $(dir $(2)) $(external-openurl-lib_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-lib_CXXIQUOTE) . $(external-openurl-lib_CXXIQUOTE_END) $(strip $(external-openurl-lib_CXXFLAGS) $(external-openurl-lib_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(external-openurl-lib_CXXCMD) $(external-openurl-lib_CXXIQUOTE) $(dir $(2)) $(external-openurl-lib_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-lib_CXXIQUOTE) . $(external-openurl-lib_CXXIQUOTE_END) $(strip $(external-openurl-lib_CXXFLAGS) $(external-openurl-lib_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(external-openurl-lib_CXXCMD) $(external-openurl-lib_CXXIQUOTE) $(dir $(2)) $(external-openurl-lib_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-lib_CXXIQUOTE) . $(external-openurl-lib_CXXIQUOTE_END) $(strip $(external-openurl-lib_CXXFLAGS) $(external-openurl-lib_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(external-openurl-lib_CXXCMD)" $(MKDEPEND) $(strip $(external-openurl-lib_DXXFLAGS) $(external-openurl-lib_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(OBJDIR),)
+  $(foreach external-openurl-lib_CXXFILE,$(external-openurl-lib_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(external-openurl-lib_CXXFILE))),$(external-openurl-lib_CXXFILE))))
+else
+  $(foreach external-openurl-lib_CXXFILE,$(external-openurl-lib_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(OBJDIR)/,$(notdir $(basename $(external-openurl-lib_CXXFILE)))),$(external-openurl-lib_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(external-openurl-lib_OBJC_NARCHFILES),)
+
+ifeq (,)
+external-openurl-lib_MOBJC_SRCWILDCARD := %
+else
+external-openurl-lib_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+  external-openurl-lib_MOBJC_TARGETS := $(addsuffix .o,$(external-openurl-lib_OBJC_NARCHFILES))
+  external-openurl-lib_MOBJC_DTARGETS := $(addsuffix .d,$(external-openurl-lib_OBJC_NARCHFILES))
+  external-openurl-lib_MOBJC_WILDCARD := %
+else
+  external-openurl-lib_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(external-openurl-lib_OBJC_NARCHFILES)))
+  external-openurl-lib_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(external-openurl-lib_OBJC_NARCHFILES)))
+  external-openurl-lib_MOBJC_WILDCARD := $(OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : | $(addsuffix .m,$(external-openurl-lib_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  external-openurl-lib_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  external-openurl-lib_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(external-openurl-lib_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  external-openurl-lib_MOBJC_DIRS := $(foreach dir, $(external-openurl-lib_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(external-openurl-lib_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(external-openurl-lib_MOBJC_DIRS),)
+    external-openurl-lib_MOBJC_DIRS := $(shell echo $(external-openurl-lib_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(external-openurl-lib_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  external-openurl-lib_CC := $(TARGET_CC)
+else
+  external-openurl-lib_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+external-openurl-lib_MOBJC_CPPFLAGS := $(CPPFLAGS)
+external-openurl-lib_OBJCFLAGS := $(external-openurl-lib_CFLAGS)
+external-openurl-lib_OBJCFLAGS := $(external-openurl-lib_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+external-openurl-lib_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(external-openurl-lib_OBJCFLAGS)))
+ifeq ($(external-openurl-lib_DFLAGS),)
+  external-openurl-lib_OBJCDFLAGS := $(external-openurl-lib_CFLAGS)
+else
+  external-openurl-lib_OBJCDFLAGS := $(external-openurl-lib_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  external-openurl-lib_LINK ?= $(strip $(external-openurl-lib_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  external-openurl-lib_STRIP ?= $(TARGET_STRIP)
+  external-openurl-lib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : CMD:=$(strip $(external-openurl-lib_CC) $(TARGET_SYSROOT))
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : external-openurl-lib_MOBJC_CPPFLAGS:=$(strip $(external-openurl-lib_MOBJC_CPPFLAGS) $(external-openurl-lib_MOBJC_EXTRA_CPPFLAGS))
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : external-openurl-lib_OBJCFLAGS:=$(strip $(external-openurl-lib_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : external-openurl-lib_OBJCDFLAGS:=$(external-openurl-lib_OBJCDFLAGS)
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : external-openurl-lib_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : external-openurl-lib_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  external-openurl-lib_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  external-openurl-lib_STRIP ?= $(HOST_STRIP)
+  external-openurl-lib_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : external-openurl-lib_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(external-openurl-lib_MOBJC_CPPFLAGS) $(external-openurl-lib_MOBJC_EXTRA_CPPFLAGS))
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : external-openurl-lib_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(external-openurl-lib_OBJCFLAGS))
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : external-openurl-lib_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(external-openurl-lib_OBJCDFLAGS))
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : external-openurl-lib_IQUOTE:=$(HOST_IQUOTE)
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : external-openurl-lib_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  external-openurl-lib_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  external-openurl-lib_STRIP ?= $(ECHO) >/dev/null
+  external-openurl-lib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : external-openurl-lib_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(external-openurl-lib_MOBJC_CPPFLAGS) $(external-openurl-lib_MOBJC_EXTRA_CPPFLAGS))
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : external-openurl-lib_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-openurl-lib_OBJCFLAGS))
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : external-openurl-lib_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-openurl-lib_OBJCDFLAGS))
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : external-openurl-lib_IQUOTE:=$(KERNEL_IQUOTE)
+  $(external-openurl-lib_MOBJC_TARGETS) $(external-openurl-lib_MOBJC_DTARGETS) : external-openurl-lib_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(external-openurl-lib_MOBJC_TARGETS) : CPPFLAGS := $(external-openurl-lib_MOBJC_CPPFLAGS)
+$(external-openurl-lib_MOBJC_TARGETS) : CFLAGS := $(external-openurl-lib_OBJCFLAGS)
+$(external-openurl-lib_MOBJC_TARGETS) : $(external-openurl-lib_MOBJC_WILDCARD).o : $(external-openurl-lib_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(external-openurl-lib_IQUOTE) $(dir $<) $(external-openurl-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-lib_IQUOTE) . $(external-openurl-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(external-openurl-lib_IQUOTE) $(dir $<) $(external-openurl-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-lib_IQUOTE) . $(external-openurl-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(external-openurl-lib_IQUOTE) $(dir $<) $(external-openurl-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-lib_IQUOTE) . $(external-openurl-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(external-openurl-lib_MOBJC_DTARGETS) : $(external-openurl-lib_MOBJC_WILDCARD).d : $(external-openurl-lib_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(external-openurl-lib_OBJCDFLAGS) $(external-openurl-lib_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+external-openurl-lib_MC_SRCWILDCARD := %
+else
+external-openurl-lib_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+external-openurl-lib_MC_TARGETS := $(addsuffix .o,$(external-openurl-lib_C_NARCHFILES))
+external-openurl-lib_MC_DTARGETS := $(addsuffix .d,$(external-openurl-lib_C_NARCHFILES))
+external-openurl-lib_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    external-openurl-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(notdir $(external-openurl-lib_C_NARCHFILES))))
+    external-openurl-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(notdir $(external-openurl-lib_C_NARCHFILES))))
+else
+ifeq (,)
+    external-openurl-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(external-openurl-lib_C_NARCHFILES)))
+    external-openurl-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(external-openurl-lib_C_NARCHFILES)))
+else
+    external-openurl-lib_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(patsubst /%,%,$(external-openurl-lib_C_NARCHFILES))))
+    external-openurl-lib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(patsubst /%,%,$(external-openurl-lib_C_NARCHFILES))))
+endif
+endif
+external-openurl-lib_MC_TGTWILDCARD := $(OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : | $(addsuffix .c,$(external-openurl-lib_C_NARCHFILES))
+
+# Be sure that all .c files are found
+external-openurl-lib_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+external-openurl-lib_MC_BASEDIRS := $(shell echo $(sort $(dir $(external-openurl-lib_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+external-openurl-lib_MC_DIRS := $(foreach dir, $(external-openurl-lib_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(external-openurl-lib_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(external-openurl-lib_MC_DIRS),)
+    external-openurl-lib_MC_DIRS := $(shell echo $(external-openurl-lib_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(external-openurl-lib_MC_DIRS)
+endif
+
+endif
+
+external-openurl-lib_MC_CPPFLAGS := $(CPPFLAGS)
+external-openurl-lib_CFLAGS := $(external-openurl-lib_CFLAGS)
+ifeq ($(external-openurl-lib_DFLAGS),)
+  external-openurl-lib_DFLAGS := $(external-openurl-lib_CFLAGS)
+else
+  external-openurl-lib_DFLAGS := $(external-openurl-lib_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+external-openurl-lib_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+external-openurl-lib_STRIP ?= $(TARGET_STRIP)
+external-openurl-lib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : external-openurl-lib_MC_CPPFLAGS:=$(strip $(external-openurl-lib_MC_CPPFLAGS) $(external-openurl-lib_MC_EXTRA_CPPFLAGS))
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : external-openurl-lib_CFLAGS:=$(strip $(external-openurl-lib_CFLAGS) $(SAFETY_CFLAGS))
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : external-openurl-lib_DFLAGS:=$(external-openurl-lib_DFLAGS)
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : external-openurl-lib_IQUOTE:=$(CFLAGS_IQUOTE)
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : external-openurl-lib_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+external-openurl-lib_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+external-openurl-lib_STRIP ?= $(HOST_STRIP)
+external-openurl-lib_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : external-openurl-lib_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(external-openurl-lib_MC_CPPFLAGS) $(external-openurl-lib_MC_EXTRA_CPPFLAGS))
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : external-openurl-lib_CFLAGS:=$(strip $(HOST_CFLAGS) $(external-openurl-lib_CFLAGS))
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : external-openurl-lib_DFLAGS:=$(strip $(HOST_CFLAGS) $(external-openurl-lib_DFLAGS))
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : external-openurl-lib_IQUOTE:=$(HOST_IQUOTE)
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : external-openurl-lib_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+external-openurl-lib_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+external-openurl-lib_STRIP ?= $(ECHO) >/dev/null
+external-openurl-lib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : external-openurl-lib_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(external-openurl-lib_MC_CPPFLAGS) $(external-openurl-lib_MC_EXTRA_CPPFLAGS))
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : external-openurl-lib_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-openurl-lib_CFLAGS))
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : external-openurl-lib_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(external-openurl-lib_DFLAGS))
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : external-openurl-lib_IQUOTE:=$(KERNEL_IQUOTE)
+$(external-openurl-lib_MC_TARGETS) $(external-openurl-lib_MC_DTARGETS) : external-openurl-lib_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(external-openurl-lib_MC_TARGETS) : CPPFLAGS := $(external-openurl-lib_MC_CPPFLAGS)
+$(external-openurl-lib_MC_TARGETS) : CFLAGS := $(external-openurl-lib_CFLAGS)
+$(external-openurl-lib_MC_TARGETS) : $(external-openurl-lib_MC_TGTWILDCARD).o : $(external-openurl-lib_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(external-openurl-lib_IQUOTE) $(dir $<) $(external-openurl-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-lib_IQUOTE) . $(external-openurl-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(external-openurl-lib_IQUOTE) $(dir $<) $(external-openurl-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-lib_IQUOTE) . $(external-openurl-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(external-openurl-lib_IQUOTE) $(dir $<) $(external-openurl-lib_IQUOTE) $(SRCDIR)/$(CURDIR) $(external-openurl-lib_IQUOTE) . $(external-openurl-lib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(external-openurl-lib_MC_DTARGETS) : $(external-openurl-lib_MC_TGTWILDCARD).d : $(external-openurl-lib_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(external-openurl-lib_DFLAGS) $(external-openurl-lib_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+# Handlers use dash instead of dot in their names
+ifeq (library,handler)
+external-openurl-lib_MODULE := $(external-openurl-lib_MODDIR)/openurl-library
+else
+ifeq (library,printer)
+external-openurl-lib_MODULE := $(external-openurl-lib_MODDIR)/openurl
+else
+external-openurl-lib_MODULE := $(external-openurl-lib_MODDIR)/openurl.library
+endif
+endif
+external-openurl-lib_KOBJ   := $(KOBJSDIR)/openurl_library.o
+
+external-openurl-lib-quick : external-openurl-lib
+external-openurl-lib-kobj-quick : $(external-openurl-lib_KOBJ)
+external-openurl-lib       : $(external-openurl-lib_MODULE)
+external-openurl-lib-kobj  : $(external-openurl-lib_KOBJ)
+
+# The module is linked from all the compiled .o files
+external-openurl-lib_OBJS       := $(external-openurl-lib_ARCHOBJS) $(addprefix $(OBJDIR)/, $(addsuffix .o,$(notdir $(external-openurl-lib_C_NARCHFILES))))
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (openurl,con)
+    external-openurl-lib_ERR := $(notdir $(external-openurl-lib_MODULE)).err
+else
+    external-openurl-lib_ERR := openurl.err
+endif
+
+
+TMP_LDFLAGS  := $(strip $(LDFLAGS) $(openurl_LDFLAGS))
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(openurl_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(external-openurl-lib_MODULE) : LIB_NAMES := $(openurl_LIBS)
+$(external-openurl-lib_MODULE) : OBJS := $(external-openurl-lib_OBJS)
+$(external-openurl-lib_MODULE) : ENDTAG := 
+$(external-openurl-lib_MODULE) : ERR := $(external-openurl-lib_ERR)
+$(external-openurl-lib_MODULE) : OBJDIR := $(OBJDIR)
+$(external-openurl-lib_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(external-openurl-lib_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(external-openurl-lib_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(external-openurl-lib_MODULE) : $(external-openurl-lib_OBJS)  $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(strip $(AROS_CC) $(TARGET_SYSROOT)) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(strip $(AROS_CC) $(TARGET_SYSROOT)) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+
+# Link kernel object file
+external-openurl-lib_KAUTOLIB := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+external-openurl-lib_KBASE := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+    UtilityBase ExpansionBase KeymapBase KernelBase
+
+external-openurl-lib_SYMBOLS := $(external-openurl-lib_KBASE)
+
+external-openurl-lib_KLIB := hiddstubs amiga arossupport autoinit libinit
+external-openurl-lib_KOBJ_LIBS := $(filter-out $(external-openurl-lib_KLIB),) $(external-openurl-lib_KAUTOLIB)
+$(external-openurl-lib_KOBJ) : LINKLIBS:=$(external-openurl-lib_KOBJ_LIBS)
+$(external-openurl-lib_KOBJ) : FILTBASES:=$(addprefix -L ,$(external-openurl-lib_SYMBOLS))
+$(external-openurl-lib_KOBJ) : USER_LDFLAGS := $(USER_LDFLAGS)
+$(external-openurl-lib_KOBJ) : $(external-openurl-lib_OBJS) $(external-openurl-lib_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+
+
+## Dependency fine-tuning
+##
+external-openurl-lib_DEPS       := $(addprefix $(OBJDIR)/, $(addsuffix .d,$(FILES)))
+ifneq ($(external-openurl-lib_DEPS),)
+  ifneq (external-openurl-lib external-openurl-lib-quick external-openurl-lib-kobj,)
+    ifneq ($(findstring $(TARGET),external-openurl-lib external-openurl-lib-quick external-openurl-lib-kobj),)
+      -include $(external-openurl-lib_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(external-openurl-lib_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(external-openurl-lib_OBJS) $(external-openurl-lib_DEPS) $(external-openurl-lib_MODULE) $(external-openurl-lib_KOBJ),)
+$(external-openurl-lib_OBJS) $(external-openurl-lib_DEPS) $(external-openurl-lib_MODULE) $(external-openurl-lib_KOBJ) : | $(OBJDIR) $(external-openurl-lib_MODDIR) $(KOBJSDIR)
+else
+$(external-openurl-lib_OBJS) $(external-openurl-lib_DEPS) $(external-openurl-lib_MODULE) $(external-openurl-lib_KOBJ) :: $(OBJDIR) $(external-openurl-lib_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(OBJDIR) $(external-openurl-lib_MODDIR) $(KOBJSDIR)
+
+
+external-openurl-lib-clean : FILES := $(external-openurl-lib_OBJS) $(external-openurl-lib_MODULE) $(external-openurl-lib_KOBJ) $(external-openurl-lib_DEPS)
+external-openurl-lib-clean ::
+	$(Q)$(ECHO) "Cleaning up for module openurl"
+	$(Q)$(RM) $(FILES)
+
+#MM external-openurl-clean : external-openurl-lib-clean
+
+#MM
+external-libs-openurl-clean :
+	$(RM) $(GENDIR)/workbench/libs/openurl
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

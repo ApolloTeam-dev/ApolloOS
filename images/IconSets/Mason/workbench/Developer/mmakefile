@@ -1,0 +1,57 @@
+# $Id$
+#
+# Makefile for Mason's workbench icons
+
+include $(SRCDIR)/config/aros.cfg
+
+ICONS     := Debug
+ICONDIR   := $(AROSDIR)/Developer
+
+#MM- iconset-Mason-wbench-icons-aros : iconset-Mason-wbench-icons-aros-developer
+
+
+BD_OBJS := $(addprefix  $(ICONDIR)/, $(addsuffix .info,$(ICONS)))
+
+#MM
+iconset-Mason-wbench-icons-aros-developer : $(BD_OBJS)
+
+ifeq (,)
+
+$(ICONDIR)/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/%.png
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+else
+
+$(ICONDIR)/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+endif
+
+
+ifneq ($(BD_OBJS),)
+$(BD_OBJS) : | $(ICONDIR)
+else
+$(BD_OBJS) :: $(ICONDIR)
+endif
+
+GLOB_MKDIRS += $(ICONDIR)
+
+
+iconset-Mason-wbench-icons-aros-developer-clean : FILES := $(BD_OBJS)
+#MM
+iconset-Mason-wbench-icons-aros-developer-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: iconset-Mason-wbench-icons-aros-developer iconset-Mason-wbench-icons-aros-developer-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

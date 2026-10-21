@@ -1,0 +1,53 @@
+include $(SRCDIR)/config/aros.cfg
+
+#MM- linklibs : linklibs-openurl
+
+OPENURL_LIB := $(AROS_LIB)/libopenurl.a
+
+#MM- linklibs-openurl: includes linklibs-openurl-quick
+#MM linklibs-openurl-quick : linklibs-openurl-setup 
+
+#MM
+linklibs-openurl-quick : $(OPENURL_LIB)
+
+FILES = autoinit-aros
+
+OBJS := $(foreach f,$(FILES),$(OBJDIR)/$(f).o)
+
+$(OPENURL_LIB) : $(OBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(AR) $@ $^
+	$(Q)$(RANLIB) $@
+
+$(OBJDIR)/%.o : %.c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(strip $(TARGET_CC) $(TARGET_SYSROOT)) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(strip $(TARGET_CC) $(TARGET_SYSROOT)) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(strip $(TARGET_CC) $(TARGET_SYSROOT)) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+#MM
+linklibs-openurl-setup :
+	$(Q)$(FOR) dir in $(OBJDIR) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(FOR) dir in $(AROS_LIB) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

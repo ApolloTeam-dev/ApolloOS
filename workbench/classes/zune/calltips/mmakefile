@@ -1,0 +1,1720 @@
+# Copyright © 2014, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+USER_CFLAGS := $(PARANOIA_CFLAGS)
+USER_LDFLAGS := -static
+
+FILES         := Calltips
+INCLUDE_FILES := Calltips_mcc.h
+
+#MM- workbench-classes-zune : workbench-classes-zune-calltips
+
+#MM workbench-classes-zune-calltips : includes
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM workbench-classes-zune-calltips
+#MM workbench-classes-zune-calltips-quick
+#MM workbench-classes-zune-calltips-makefile
+#MM workbench-classes-zune-calltips-clean
+
+# ABI targets:
+#MM- includes-all : workbench-classes-zune-calltips-includes
+#MM- linklibs-Calltips: workbench-classes-zune-calltips-linklib
+#MM- linklibs-Calltips_rel : workbench-classes-zune-calltips-linklib
+#MM- includes-Calltips: workbench-classes-zune-calltips-includes
+#MM- includes-Calltips_rel : workbench-classes-zune-calltips-includes
+#MM- workbench-classes-zune-calltips : workbench-classes-zune-calltips-includes core-linklibs linklibs-
+#MM workbench-classes-zune-calltips-linklib : workbench-classes-zune-calltips-includes includes-
+#MM- workbench-classes-zune-calltips-quick : workbench-classes-zune-calltips-includes-quick
+#MM workbench-classes-zune-calltips-includes : workbench-classes-zune-calltips-makefile workbench-classes-zune-calltips-includes-dirs \
+#MM     includes-generate-deps workbench-classes-zune-calltips-fd
+#MM workbench-classes-zune-calltips-includes-quick
+#MM workbench-classes-zune-calltips-includes-dirs
+#MM workbench-classes-zune-calltips-fd
+
+# Library targets
+#MM workbench-classes-zune-calltips-kobj : core-linklibs linklibs-
+#MM workbench-classes-zune-calltips-kobj-quick : 
+
+# Library with ABI targets:
+#MM workbench-classes-zune-calltips-kobj : workbench-classes-zune-calltips-includes core-linklibs linklibs-
+#MM workbench-classes-zune-calltips-kobj-quick : workbench-classes-zune-calltips-includes-quick
+
+# All MetaMake targets defined by this macro
+workbench-classes-zune-calltips_ALLTARGETS       := workbench-classes-zune-calltips workbench-classes-zune-calltips-quick workbench-classes-zune-calltips-clean
+
+ifeq (M,M)
+workbench-classes-zune-calltips_ALLTARGETS       += workbench-classes-zune-calltips-kobj workbench-classes-zune-calltips-kobj-quick
+endif
+
+ifeq (M,M)
+workbench-classes-zune-calltips_ALLTARGETS += workbench-classes-zune-calltips-includes \
+                 workbench-classes-zune-calltips-includes-quick workbench-classes-zune-calltips-includes-dirs  \
+                 workbench-classes-zune-calltips-linklib workbench-classes-zune-calltips-fd
+endif
+
+.PHONY : $(workbench-classes-zune-calltips_ALLTARGETS) workbench-classes-zune-calltips-makefile
+
+ifeq (Calltips,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (mcc,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    workbench-classes-zune-calltips_DEFNAME      := Calltips_
+else
+    workbench-classes-zune-calltips_DEFNAME      := Calltips
+endif
+workbench-classes-zune-calltips_DEFLINKLIBNAME   := $(workbench-classes-zune-calltips_DEFNAME)
+ifneq (,)
+    workbench-classes-zune-calltips_LINKLIBNAME  := 
+else
+    workbench-classes-zune-calltips_LINKLIBNAME  = $(workbench-classes-zune-calltips_DEFLINKLIBNAME)
+endif
+workbench-classes-zune-calltips_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    workbench-classes-zune-calltips_DEFCPPFLAGS  += -I
+endif
+workbench-classes-zune-calltips_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    workbench-classes-zune-calltips_DFLAGS       := 
+else
+    workbench-classes-zune-calltips_DFLAGS       = $(workbench-classes-zune-calltips_DEFDFLAGS)
+endif
+workbench-classes-zune-calltips_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    workbench-classes-zune-calltips_DXXFLAGS     := 
+else
+    workbench-classes-zune-calltips_DXXFLAGS     = $(workbench-classes-zune-calltips_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+workbench-classes-zune-calltips_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(workbench-classes-zune-calltips_DEFDFLAGS))
+workbench-classes-zune-calltips_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(workbench-classes-zune-calltips_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-classes-zune-calltips_FUNCINSTR := yes
+workbench-classes-zune-calltips_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(workbench-classes-zune-calltips_DEFDFLAGS))
+workbench-classes-zune-calltips_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(workbench-classes-zune-calltips_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+workbench-classes-zune-calltips_OBJDIR                     := 
+else
+workbench-classes-zune-calltips_OBJDIR                     := $(OBJDIR)/$(workbench-classes-zune-calltips_DEFNAME)
+endif
+ifneq (,)
+workbench-classes-zune-calltips_OBJDIR           := $(workbench-classes-zune-calltips_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+workbench-classes-zune-calltips-makefile         := $(workbench-classes-zune-calltips_OBJDIR)/Makefile.$(workbench-classes-zune-calltips_DEFNAME)mcc
+workbench-classes-zune-calltips-genmakefile : $(workbench-classes-zune-calltips-makefile)
+
+
+workbench-classes-zune-calltips-genmakefile_OPTS := 
+ifneq (,)
+    workbench-classes-zune-calltips-genmakefile_OPTS += -f 
+    workbench-classes-zune-calltips-genmakefile_MODNAME := Calltips_
+else
+    workbench-classes-zune-calltips-genmakefile_MODNAME := Calltips
+endif
+workbench-classes-zune-calltips-genmakefile_TARGET := Makefile.$(workbench-classes-zune-calltips-genmakefile_MODNAME)mcc
+workbench-classes-zune-calltips-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-classes-zune-calltips-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-classes-zune-calltips-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-classes-zune-calltips-genmakefile_OPTS += -c 
+        workbench-classes-zune-calltips-genmakefile_DEPS += 
+    endif 
+else
+    workbench-classes-zune-calltips-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/Calltips.conf
+    workbench-classes-zune-calltips-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/Calltips.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-classes-zune-calltips-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-classes-zune-calltips-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-classes-zune-calltips-genmakefile_OPTS += -o 
+        workbench-classes-zune-calltips-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-classes-zune-calltips-genmakefile_OPTS += -s 
+endif
+ifneq ($(workbench-classes-zune-calltips_OBJDIR),)
+    workbench-classes-zune-calltips-genmakefile_OPTS += -d $(workbench-classes-zune-calltips_OBJDIR)
+    workbench-classes-zune-calltips-genmakefile_TARGET := $(workbench-classes-zune-calltips_OBJDIR)/$(workbench-classes-zune-calltips-genmakefile_TARGET)
+endif
+
+$(workbench-classes-zune-calltips-genmakefile_TARGET) : OPTS := $(workbench-classes-zune-calltips-genmakefile_OPTS)
+$(workbench-classes-zune-calltips-genmakefile_TARGET) : MODNAME := Calltips
+$(workbench-classes-zune-calltips-genmakefile_TARGET) : MODTYPE := mcc
+$(workbench-classes-zune-calltips-genmakefile_TARGET) : $(workbench-classes-zune-calltips-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(workbench-classes-zune-calltips-makefile),)
+$(workbench-classes-zune-calltips-makefile) : | $(workbench-classes-zune-calltips_OBJDIR)
+else
+$(workbench-classes-zune-calltips-makefile) :: $(workbench-classes-zune-calltips_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-classes-zune-calltips_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(workbench-classes-zune-calltips_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(workbench-classes-zune-calltips-makefile)
+
+workbench-classes-zune-calltips_DEFMODDIR        := $($(workbench-classes-zune-calltips_DEFNAME)_MODDIR)
+ifeq (no,yes)
+workbench-classes-zune-calltips_DEFMODDIR        := $(AROS_DIR_ARCH)/$(workbench-classes-zune-calltips_DEFMODDIR)
+endif
+ifneq (,)
+    workbench-classes-zune-calltips_MODDIR       := 
+else
+    workbench-classes-zune-calltips_MODDIR       := $(workbench-classes-zune-calltips_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+workbench-classes-zune-calltips_INCDIR           := 
+else
+workbench-classes-zune-calltips_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+workbench-classes-zune-calltips_LIBDEFSINC       := $(workbench-classes-zune-calltips_OBJDIR)/include/$(workbench-classes-zune-calltips_DEFNAME)_libdefs.h
+workbench-classes-zune-calltips_DEFLIBDEFSINC    := $(workbench-classes-zune-calltips_OBJDIR)/include/$(workbench-classes-zune-calltips_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+workbench-classes-zune-calltips-includes-quick : workbench-classes-zune-calltips-includes
+workbench-classes-zune-calltips-includes : $(addprefix $(GENINCDIR)/,$($(workbench-classes-zune-calltips_DEFNAME)_INCLUDES)) \
+    $(addprefix $(workbench-classes-zune-calltips_INCDIR)/,$($(workbench-classes-zune-calltips_DEFNAME)_INCLUDES)) \
+    $(workbench-classes-zune-calltips_LIBDEFSINC) $(workbench-classes-zune-calltips_DEFLIBDEFSINC)
+
+ifneq ($($(workbench-classes-zune-calltips_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    workbench-classes-zune-calltips-includes_MODNAME := Calltips_
+else
+    workbench-classes-zune-calltips-includes_MODNAME := Calltips
+endif
+
+ifneq ($($(workbench-classes-zune-calltips-includes_MODNAME)_INCLUDES),)
+
+workbench-classes-zune-calltips-includes_TARGETS := $($(workbench-classes-zune-calltips-includes_MODNAME)_INCLUDES)
+
+workbench-classes-zune-calltips-includes_DEPS := $(GENMODULE)
+workbench-classes-zune-calltips-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-classes-zune-calltips-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-classes-zune-calltips-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-classes-zune-calltips-includes_OPTS += -c 
+        workbench-classes-zune-calltips-includes_DEPS += 
+    endif 
+else
+    workbench-classes-zune-calltips-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/Calltips.conf
+    workbench-classes-zune-calltips-includes_DEPS += $(SRCDIR)/$(CURDIR)/Calltips.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-classes-zune-calltips-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-classes-zune-calltips-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-classes-zune-calltips-includes_OPTS += -o 
+        workbench-classes-zune-calltips-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-classes-zune-calltips-includes_OPTS += -s 
+endif
+ifneq ($(workbench-classes-zune-calltips_OBJDIR)/include,)
+    workbench-classes-zune-calltips-includes_OPTS += -d $(workbench-classes-zune-calltips_OBJDIR)/include
+    workbench-classes-zune-calltips-includes_TARGETS := $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/include/,$(workbench-classes-zune-calltips-includes_TARGETS))
+    workbench-classes-zune-calltips-includes_GENINCFLAG=$(workbench-classes-zune-calltips_OBJDIR)/include/.Calltips.mcc-includes
+else
+    workbench-classes-zune-calltips-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.Calltips.mcc-includes
+endif
+
+$(workbench-classes-zune-calltips-includes_TARGETS) : $(workbench-classes-zune-calltips-includes_DEPS) $(workbench-classes-zune-calltips-includes_GENINCFLAG)
+
+$(workbench-classes-zune-calltips-includes_GENINCFLAG) : OPTS := $(workbench-classes-zune-calltips-includes_OPTS)
+$(workbench-classes-zune-calltips-includes_GENINCFLAG) : MODNAME := Calltips
+$(workbench-classes-zune-calltips-includes_GENINCFLAG) : MODTYPE := mcc
+$(workbench-classes-zune-calltips-includes_GENINCFLAG) : $(workbench-classes-zune-calltips-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(workbench-classes-zune-calltips_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(workbench-classes-zune-calltips_DEFNAME)_INCLUDES)) : | $(workbench-classes-zune-calltips_OBJDIR)/Calltips_geninc
+
+$(workbench-classes-zune-calltips_OBJDIR)/Calltips_geninc : COPYSRCDIR := $(workbench-classes-zune-calltips_OBJDIR)/include
+$(workbench-classes-zune-calltips_OBJDIR)/Calltips_geninc : TGTDIR := $(GENINCDIR)
+$(workbench-classes-zune-calltips_OBJDIR)/Calltips_geninc : FILES := $($(workbench-classes-zune-calltips_DEFNAME)_INCLUDES)
+$(workbench-classes-zune-calltips_OBJDIR)/Calltips_geninc : $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/include/,$($(workbench-classes-zune-calltips_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(workbench-classes-zune-calltips_OBJDIR)/include
+
+$(addprefix $(workbench-classes-zune-calltips_INCDIR)/,$($(workbench-classes-zune-calltips_DEFNAME)_INCLUDES)) : | $(workbench-classes-zune-calltips_OBJDIR)/Calltips_incs
+
+$(workbench-classes-zune-calltips_OBJDIR)/Calltips_incs : COPYSRCDIR := $(workbench-classes-zune-calltips_OBJDIR)/include
+$(workbench-classes-zune-calltips_OBJDIR)/Calltips_incs : TGTDIR := $(workbench-classes-zune-calltips_INCDIR)
+$(workbench-classes-zune-calltips_OBJDIR)/Calltips_incs : FILES := $($(workbench-classes-zune-calltips_DEFNAME)_INCLUDES)
+$(workbench-classes-zune-calltips_OBJDIR)/Calltips_incs : $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/include/,$($(workbench-classes-zune-calltips_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+workbench-classes-zune-calltips_INCDIRS := $(filter-out ./,$(sort $(dir $($(workbench-classes-zune-calltips_DEFNAME)_INCLUDES))))
+
+TMPCalltips_INCDIRS := \
+    $(workbench-classes-zune-calltips_OBJDIR)/include $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/include/,$(workbench-classes-zune-calltips_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(workbench-classes-zune-calltips_INCDIRS)) \
+    $(workbench-classes-zune-calltips_INCDIR) $(addprefix $(workbench-classes-zune-calltips_INCDIR)/,$(workbench-classes-zune-calltips_INCDIRS))
+
+ifneq (workbench-classes-zune-calltips-includes-dirs,)
+workbench-classes-zune-calltips-includes-dirs : | $(TMPCalltips_INCDIRS)
+else
+workbench-classes-zune-calltips-includes-dirs :: $(TMPCalltips_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPCalltips_INCDIRS)
+
+
+endif
+
+endif
+
+
+workbench-classes-zune-calltips-genlibdefs_OPTS := 
+ifneq (,)
+    workbench-classes-zune-calltips-genlibdefs_OPTS += -f 
+    workbench-classes-zune-calltips-genlibdefs_MODNAME := Calltips_
+else
+    workbench-classes-zune-calltips-genlibdefs_MODNAME := Calltips
+endif
+workbench-classes-zune-calltips-genlibdefs_TARGET := $(workbench-classes-zune-calltips-genlibdefs_MODNAME)_libdefs.h
+workbench-classes-zune-calltips-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-classes-zune-calltips-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-classes-zune-calltips-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-classes-zune-calltips-genlibdefs_OPTS += -c 
+        workbench-classes-zune-calltips-genlibdefs_DEPS += 
+    endif 
+else
+    workbench-classes-zune-calltips-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/Calltips.conf
+    workbench-classes-zune-calltips-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/Calltips.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-classes-zune-calltips-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-classes-zune-calltips-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-classes-zune-calltips-genlibdefs_OPTS += -o 
+        workbench-classes-zune-calltips-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-classes-zune-calltips-genlibdefs_OPTS += -s 
+endif
+ifneq ($(workbench-classes-zune-calltips_OBJDIR)/include,)
+    workbench-classes-zune-calltips-genlibdefs_OPTS += -d $(workbench-classes-zune-calltips_OBJDIR)/include
+    workbench-classes-zune-calltips-genlibdefs_TARGET := $(workbench-classes-zune-calltips_OBJDIR)/include/$(workbench-classes-zune-calltips-genlibdefs_TARGET)
+endif
+ifneq (,)
+    workbench-classes-zune-calltips-genlibdefs_OPTS += -v 
+endif
+
+$(workbench-classes-zune-calltips-genlibdefs_TARGET) : OPTS := $(workbench-classes-zune-calltips-genlibdefs_OPTS)
+$(workbench-classes-zune-calltips-genlibdefs_TARGET) : MODNAME := Calltips
+$(workbench-classes-zune-calltips-genlibdefs_TARGET) : MODTYPE := mcc
+$(workbench-classes-zune-calltips-genlibdefs_TARGET) : $(workbench-classes-zune-calltips-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(workbench-classes-zune-calltips_DEFLIBDEFSINC) : FILENAME := $(workbench-classes-zune-calltips_LIBDEFSINC)
+$(workbench-classes-zune-calltips_DEFLIBDEFSINC) : $(workbench-classes-zune-calltips_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(workbench-classes-zune-calltips_LIBDEFSINC) $(workbench-classes-zune-calltips_DEFLIBDEFSINC) : | $(workbench-classes-zune-calltips_OBJDIR)/include
+
+ifneq (workbench-classes-zune-calltips-includes-dirs,)
+workbench-classes-zune-calltips-includes-dirs : | $(workbench-classes-zune-calltips_OBJDIR)/include
+else
+workbench-classes-zune-calltips-includes-dirs :: $(workbench-classes-zune-calltips_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(workbench-classes-zune-calltips_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+workbench-classes-zune-calltips-genmodfiles_OPTS :=
+ifneq (,)
+    workbench-classes-zune-calltips-genmodfiles_OPTS += -f 
+    workbench-classes-zune-calltips-genmodfiles_MODNAME := Calltips_
+else
+    workbench-classes-zune-calltips-genmodfiles_MODNAME := Calltips
+endif
+workbench-classes-zune-calltips-genmodfiles_GENTARGETS := $($(workbench-classes-zune-calltips-genmodfiles_MODNAME)_STARTFILES) $($(workbench-classes-zune-calltips-genmodfiles_MODNAME)_ENDFILES)
+workbench-classes-zune-calltips-genmodfiles_STUBTARGETS := $($(workbench-classes-zune-calltips-genmodfiles_MODNAME)_LINKLIBFILES) $($(workbench-classes-zune-calltips-genmodfiles_MODNAME)_RELLINKLIBFILES)
+workbench-classes-zune-calltips-genmodfiles_GENTARGETS := $(addsuffix .c,$(workbench-classes-zune-calltips-genmodfiles_GENTARGETS))
+workbench-classes-zune-calltips-genmodfiles_STUBTARGETS := $(addsuffix .c,$(workbench-classes-zune-calltips-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(workbench-classes-zune-calltips-genmodfiles_MODNAME)_LINKLIBAFILES) $($(workbench-classes-zune-calltips-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+workbench-classes-zune-calltips-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-classes-zune-calltips-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        workbench-classes-zune-calltips-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-classes-zune-calltips-genmodfiles_OPTS += -c 
+        workbench-classes-zune-calltips-genmodfiles_DEPS += 
+    endif 
+else
+    workbench-classes-zune-calltips-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/Calltips.conf
+    workbench-classes-zune-calltips-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/Calltips.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        workbench-classes-zune-calltips-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        workbench-classes-zune-calltips-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        workbench-classes-zune-calltips-genmodfiles_OPTS += -o 
+        workbench-classes-zune-calltips-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    workbench-classes-zune-calltips-genmodfiles_OPTS += -s 
+endif
+ifneq ($(workbench-classes-zune-calltips_OBJDIR),)
+    workbench-classes-zune-calltips-genmodfiles_OPTS += -d $(workbench-classes-zune-calltips_OBJDIR)
+    workbench-classes-zune-calltips-genmodfiles_TARGETDIR := $(shell echo $(workbench-classes-zune-calltips_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    workbench-classes-zune-calltips-genmodfiles_GENTARGETS := $(addprefix $(workbench-classes-zune-calltips-genmodfiles_TARGETDIR)/,$(workbench-classes-zune-calltips-genmodfiles_GENTARGETS))
+    workbench-classes-zune-calltips-genmodfiles_GENFILEFLAG=$(workbench-classes-zune-calltips-genmodfiles_TARGETDIR)/.Calltips.mcc-genfiles
+else
+    workbench-classes-zune-calltips-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.Calltips.mcc-genfiles
+endif
+ifneq ($(workbench-classes-zune-calltips_OBJDIR)/linklib,)
+    workbench-classes-zune-calltips-genmodfiles_OPTS += -l $(workbench-classes-zune-calltips_OBJDIR)/linklib
+    workbench-classes-zune-calltips-genmodfiles_STUBTARGETDIR := $(shell echo $(workbench-classes-zune-calltips_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    workbench-classes-zune-calltips-genmodfiles_STUBTARGETS := $(addprefix $(workbench-classes-zune-calltips-genmodfiles_STUBTARGETDIR)/,$(workbench-classes-zune-calltips-genmodfiles_STUBTARGETS))
+    workbench-classes-zune-calltips-genmodfiles_TARGETDIRS += $(workbench-classes-zune-calltips_OBJDIR)/linklib
+else
+ifneq ($(workbench-classes-zune-calltips_OBJDIR),)
+    workbench-classes-zune-calltips-genmodfiles_STUBTARGETS := $(addprefix $(workbench-classes-zune-calltips-genmodfiles_TARGETDIR)/,$(workbench-classes-zune-calltips-genmodfiles_STUBTARGETS))
+endif
+endif
+
+workbench-classes-zune-calltips-genmodfiles_TARGETS := $(workbench-classes-zune-calltips-genmodfiles_GENTARGETS) $(workbench-classes-zune-calltips-genmodfiles_STUBTARGETS)
+ifneq ($(workbench-classes-zune-calltips-genmodfiles_TARGETDIRS),)
+$(workbench-classes-zune-calltips-genmodfiles_TARGETS) : | $(workbench-classes-zune-calltips-genmodfiles_TARGETDIRS)
+endif
+
+$(workbench-classes-zune-calltips-genmodfiles_TARGETS) : $(workbench-classes-zune-calltips-genmodfiles_DEPS) $(workbench-classes-zune-calltips-genmodfiles_GENFILEFLAG)
+
+$(workbench-classes-zune-calltips-genmodfiles_GENFILEFLAG) : OPTS := $(workbench-classes-zune-calltips-genmodfiles_OPTS)
+$(workbench-classes-zune-calltips-genmodfiles_GENFILEFLAG) : MODNAME := Calltips
+$(workbench-classes-zune-calltips-genmodfiles_GENFILEFLAG) : MODTYPE := mcc
+$(workbench-classes-zune-calltips-genmodfiles_GENFILEFLAG) : $(workbench-classes-zune-calltips-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(workbench-classes-zune-calltips-genmodfiles_GENFILEFLAG) : $(workbench-classes-zune-calltips_DEFLIBDEFSINC) $(workbench-classes-zune-calltips-makefile)
+
+
+ifneq ($(workbench-classes-zune-calltips-genmodfiles_GENFILEFLAG),)
+$(workbench-classes-zune-calltips-genmodfiles_GENFILEFLAG) : | $(workbench-classes-zune-calltips_OBJDIR)/linklib
+else
+$(workbench-classes-zune-calltips-genmodfiles_GENFILEFLAG) :: $(workbench-classes-zune-calltips_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(workbench-classes-zune-calltips_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+workbench-classes-zune-calltips_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+workbench-classes-zune-calltips_FDDIR            := /../$(AROS_DIR_FD)
+endif
+workbench-classes-zune-calltips-fd : $(workbench-classes-zune-calltips_FDDIR)/Calltips_lib.fd
+
+
+TMP_TARGET := Calltips_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/Calltips.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/Calltips.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(workbench-classes-zune-calltips_FDDIR),)
+    TMP_OPTS += -d $(workbench-classes-zune-calltips_FDDIR)
+    TMP_TARGET := $(workbench-classes-zune-calltips_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := Calltips
+$(TMP_TARGET) : MODTYPE := mcc
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(workbench-classes-zune-calltips_FDDIR)/Calltips_lib.fd : | $(workbench-classes-zune-calltips_FDDIR)
+
+
+ifneq (workbench-classes-zune-calltips-fd-setup,)
+workbench-classes-zune-calltips-fd-setup : | $(workbench-classes-zune-calltips_FDDIR)
+else
+workbench-classes-zune-calltips-fd-setup :: $(workbench-classes-zune-calltips_FDDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-classes-zune-calltips_FDDIR)
+
+endif
+
+## Compilation
+##
+workbench-classes-zune-calltips_FILES            := $(basename $(call WILDCARD, *.c))
+workbench-classes-zune-calltips_OBJCFILES        := 
+workbench-classes-zune-calltips_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+workbench-classes-zune-calltips_LIBFILES         := 
+workbench-classes-zune-calltips_LIBS             := 
+
+workbench-classes-zune-calltips_FDIRS            := $(sort $(dir $(workbench-classes-zune-calltips_FILES)))
+
+workbench-classes-zune-calltips_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+workbench-classes-zune-calltips_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call workbench-classes-zune-calltips_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+workbench-classes-zune-calltips_FILTERARCH       = $(filter-out $(call workbench-classes-zune-calltips_MATCHARCH,$(1),$(2)),$(2))
+workbench-classes-zune-calltips_STARTFILES       := $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$($(workbench-classes-zune-calltips_DEFNAME)_STARTFILES))
+workbench-classes-zune-calltips_ENDFILES         := $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$($(workbench-classes-zune-calltips_DEFNAME)_ENDFILES))
+
+workbench-classes-zune-calltips_ARCHOBJS         := $(wildcard $(workbench-classes-zune-calltips_OBJDIR)/arch/*.o)
+workbench-classes-zune-calltips_LIBARCHOBJS      := $(wildcard $(workbench-classes-zune-calltips_OBJDIR)/linklib/arch/*.o)
+workbench-classes-zune-calltips_ARCHFILES        := $(basename $(notdir $(workbench-classes-zune-calltips_ARCHOBJS)))
+workbench-classes-zune-calltips_LIBARCHFILES     := $(basename $(notdir $(workbench-classes-zune-calltips_LIBARCHOBJS)))
+workbench-classes-zune-calltips_C_NARCHFILES     := $(call workbench-classes-zune-calltips_FILTERARCH,$(workbench-classes-zune-calltips_ARCHFILES),$(workbench-classes-zune-calltips_FILES))
+workbench-classes-zune-calltips_CXX_NARCHFILES   := $(call workbench-classes-zune-calltips_FILTERARCH,$(workbench-classes-zune-calltips_ARCHFILES),$(workbench-classes-zune-calltips_CXXFILES))
+workbench-classes-zune-calltips_OBJC_NARCHFILES  := $(call workbench-classes-zune-calltips_FILTERARCH,$(workbench-classes-zune-calltips_ARCHFILES),$(workbench-classes-zune-calltips_OBJCFILES))
+workbench-classes-zune-calltips_NLIBARCHFILES    := $(call workbench-classes-zune-calltips_FILTERARCH,$(workbench-classes-zune-calltips_LIBARCHFILES),$(workbench-classes-zune-calltips_LIBFILES))
+workbench-classes-zune-calltips_ARCHNLIBFILES    := $(call workbench-classes-zune-calltips_FILTERARCH,$(workbench-classes-zune-calltips_LIBFILES),$(workbench-classes-zune-calltips_LIBARCHFILES))
+
+workbench-classes-zune-calltips_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(workbench-classes-zune-calltips_OBJDIR)/include -include $(workbench-classes-zune-calltips_DEFLIBDEFSINC))
+ifneq (,)
+workbench-classes-zune-calltips_CPPFLAGS         += -I
+endif
+workbench-classes-zune-calltips_LINKLIBCPPFLAGS  := $(workbench-classes-zune-calltips_CPPFLAGS)
+workbench-classes-zune-calltips_CPPFLAGS         += $(strip $($(workbench-classes-zune-calltips_DEFNAME)_CPPFLAGS))
+workbench-classes-zune-calltips_LINKLIBCPPFLAGS  += $(strip $($(workbench-classes-zune-calltips_DEFNAME)_LINKLIBCPPFLAGS))
+workbench-classes-zune-calltips_CFLAGS           := $(strip $(CFLAGS) $($(workbench-classes-zune-calltips_DEFNAME)_CFLAGS))
+workbench-classes-zune-calltips_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(workbench-classes-zune-calltips_DEFNAME)_LINKLIBCFLAGS))
+workbench-classes-zune-calltips_CXXFLAGS         := $(strip $(CXXFLAGS) $($(workbench-classes-zune-calltips_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+workbench-classes-zune-calltips_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+workbench-classes-zune-calltips_CFLAGS           := $(strip $(workbench-classes-zune-calltips_LTOFLAGS) $(workbench-classes-zune-calltips_CFLAGS))
+workbench-classes-zune-calltips_LINKLIBCFLAGS    := $(strip $(workbench-classes-zune-calltips_LTOFLAGS) $(workbench-classes-zune-calltips_LINKLIBCFLAGS))
+workbench-classes-zune-calltips_CXXFLAGS         := $(strip $(workbench-classes-zune-calltips_LTOFLAGS) $(workbench-classes-zune-calltips_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-classes-zune-calltips_SUBSTNULL        :=
+workbench-classes-zune-calltips_SUBSTSPACE       := $(workbench-classes-zune-calltips_SUBSTNULL) #
+workbench-classes-zune-calltips_SUBSTCOMMA       := ,
+workbench-classes-zune-calltips_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(workbench-classes-zune-calltips_SUBSTSPACE),$(workbench-classes-zune-calltips_SUBSTCOMMA),$(strip $($(workbench-classes-zune-calltips_DEFNAME)_STARTFILES))))
+workbench-classes-zune-calltips_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-classes-zune-calltips_CFLAGS           := $(strip $(workbench-classes-zune-calltips_INSTRFUNCFLAGS) $(workbench-classes-zune-calltips_CFLAGS))
+workbench-classes-zune-calltips_CXXFLAGS         := $(strip $(workbench-classes-zune-calltips_INSTRFUNCFLAGS) $(workbench-classes-zune-calltips_CXXFLAGS))
+workbench-classes-zune-calltips_LIBS             += $(workbench-classes-zune-calltips_INSTRFUNCLIBS)
+endif
+endif
+workbench-classes-zune-calltips_DFLAGS           := $(strip $(workbench-classes-zune-calltips_DFLAGS) $($(workbench-classes-zune-calltips_DEFNAME)_DFLAGS))
+workbench-classes-zune-calltips_LINKLIBDFLAGS    := $(strip $(workbench-classes-zune-calltips_DFLAGS) $($(workbench-classes-zune-calltips_DEFNAME)_LINKLIBDFLAGS))
+workbench-classes-zune-calltips_DXXFLAGS         := $(strip $(workbench-classes-zune-calltips_DXXFLAGS) $($(workbench-classes-zune-calltips_DEFNAME)_DXXFLAGS))
+
+ifeq (mcc,library)
+    workbench-classes-zune-calltips_LIBSUFFIX    := 
+else
+    workbench-classes-zune-calltips_LIBSUFFIX    := .mcc
+endif
+
+ifeq (,)
+workbench-classes-zune-calltips_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+workbench-classes-zune-calltips_LIBDIR           := 
+endif
+
+ifeq (M,M)
+workbench-classes-zune-calltips_LINKLIBCFILES    := $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$($(workbench-classes-zune-calltips_DEFNAME)_LINKLIBFILES))
+workbench-classes-zune-calltips_LINKLIBAFILES    := $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$($(workbench-classes-zune-calltips_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(workbench-classes-zune-calltips_DEFNAME)_LINKLIBFILES) $($(workbench-classes-zune-calltips_DEFNAME)_LINKLIBAFILES)  $(workbench-classes-zune-calltips_ARCHNLIBFILES)),)
+    workbench-classes-zune-calltips_LINKLIB      :=
+else
+    workbench-classes-zune-calltips_LINKLIB      := $(workbench-classes-zune-calltips_LIBDIR)/libCalltips$(workbench-classes-zune-calltips_LIBSUFFIX).a
+    ifneq (Calltips,$(workbench-classes-zune-calltips_LINKLIBNAME))
+        workbench-classes-zune-calltips_LINKLIB  += $(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_LINKLIBNAME)$(workbench-classes-zune-calltips_LIBSUFFIX).a
+    endif
+endif
+workbench-classes-zune-calltips_LINKLIBFILES     := $(workbench-classes-zune-calltips_LINKLIBCFILES) $(workbench-classes-zune-calltips_LINKLIBAFILES)
+
+workbench-classes-zune-calltips_RELLINKLIBCFILES := $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$($(workbench-classes-zune-calltips_DEFNAME)_RELLINKLIBFILES))
+workbench-classes-zune-calltips_RELLINKLIBAFILES := $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$($(workbench-classes-zune-calltips_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(workbench-classes-zune-calltips_DEFNAME)_RELLINKLIBFILES) $($(workbench-classes-zune-calltips_DEFNAME)_RELLINKLIBAFILES)  $(workbench-classes-zune-calltips_ARCHNLIBFILES)),)
+    workbench-classes-zune-calltips_RELLINKLIB   :=
+else
+    workbench-classes-zune-calltips_RELLINKLIB   := $(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_DEFNAME)_rel$(workbench-classes-zune-calltips_LIBSUFFIX).a
+    ifneq (Calltips,$(workbench-classes-zune-calltips_LINKLIBNAME))
+        workbench-classes-zune-calltips_RELLINKLIB += $(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_LINKLIBNAME)_rel$(workbench-classes-zune-calltips_LIBSUFFIX).a
+    endif
+endif
+workbench-classes-zune-calltips_RELLINKLIBFILES  := $(workbench-classes-zune-calltips_RELLINKLIBCFILES) $(workbench-classes-zune-calltips_RELLINKLIBAFILES)
+endif
+
+workbench-classes-zune-calltips_ENDOBJS          := $(addsuffix .o,$(workbench-classes-zune-calltips_ENDFILES))
+workbench-classes-zune-calltips_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$(notdir $(workbench-classes-zune-calltips_NLIBARCHFILES))) $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/arch/,$(notdir $(workbench-classes-zune-calltips_ARCHNLIBFILES))) $(workbench-classes-zune-calltips_LINKLIBFILES)) \
+                 
+workbench-classes-zune-calltips_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$(notdir $(workbench-classes-zune-calltips_NLIBARCHFILES))) $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/arch/,$(notdir $(workbench-classes-zune-calltips_ARCHNLIBFILES))) $(workbench-classes-zune-calltips_RELLINKLIBFILES)) \
+                 
+$(workbench-classes-zune-calltips_LINKLIBFILES) $(workbench-classes-zune-calltips_RELLINKLIBFILES) : | $(workbench-classes-zune-calltips_OBJDIR)/linklib
+$(workbench-classes-zune-calltips_LINKLIBOBJS) $(workbench-classes-zune-calltips_RELLINKLIBOBJS) : | $(workbench-classes-zune-calltips_OBJDIR)/linklib
+
+workbench-classes-zune-calltips_CCFILES := $(workbench-classes-zune-calltips_C_NARCHFILES)
+workbench-classes-zune-calltips_TARGETCCFILES    := $(strip $(workbench-classes-zune-calltips_STARTFILES) $(workbench-classes-zune-calltips_ENDFILES))
+workbench-classes-zune-calltips_LINKLIBCCFILES   := $(strip $(workbench-classes-zune-calltips_NLIBARCHFILES) $(workbench-classes-zune-calltips_LINKLIBCFILES) $(workbench-classes-zune-calltips_RELLINKLIBCFILES))
+workbench-classes-zune-calltips_LINKLIBCCGENFILES := $(strip $(workbench-classes-zune-calltips_LINKLIBCFILES) $(workbench-classes-zune-calltips_RELLINKLIBCFILES))
+
+
+workbench-classes-zune-calltips_CXXABSBASENAMES := $(foreach workbench-classes-zune-calltips_CXXBASE,$(workbench-classes-zune-calltips_CXX_NARCHFILES),$(if $(filter /%,$(workbench-classes-zune-calltips_CXXBASE)),$(workbench-classes-zune-calltips_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-classes-zune-calltips_CXXBASE))))
+
+ifneq ($(workbench-classes-zune-calltips_CXXABSBASENAMES),)
+
+workbench-classes-zune-calltips_CXXBASENAMES := $(basename $(workbench-classes-zune-calltips_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-classes-zune-calltips_MCXX_FILES  := $(strip $(foreach workbench-classes-zune-calltips_CXXBASE,$(workbench-classes-zune-calltips_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-classes-zune-calltips_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-classes-zune-calltips_EXT),$(workbench-classes-zune-calltips_CXXBASE)))))))
+
+ifeq (,)
+workbench-classes-zune-calltips_MCXX_SRCWILDCARD := %
+else
+workbench-classes-zune-calltips_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-classes-zune-calltips_OBJDIR),)
+  workbench-classes-zune-calltips_CXXTARGETS := $(notdir $(workbench-classes-zune-calltips_CXXBASENAMES:=.o))
+  workbench-classes-zune-calltips_CXXDTARGETS := $(notdir $(workbench-classes-zune-calltips_CXXBASENAMES:=.d))
+  workbench-classes-zune-calltips_MCXX_WILDCARD := %
+else
+  workbench-classes-zune-calltips_CXXTARGETS := $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(notdir $(workbench-classes-zune-calltips_CXXBASENAMES:=.o)))
+  workbench-classes-zune-calltips_CXXDTARGETS := $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(notdir $(workbench-classes-zune-calltips_CXXBASENAMES:=.d)))
+  workbench-classes-zune-calltips_MCXX_WILDCARD := $(workbench-classes-zune-calltips_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-classes-zune-calltips_CXXTARGETS) $(workbench-classes-zune-calltips_CXXDTARGETS) : | $(workbench-classes-zune-calltips_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-classes-zune-calltips_MCXX_CPPFLAGS := $(workbench-classes-zune-calltips_CPPFLAGS)
+workbench-classes-zune-calltips_CXXFLAGS := $(workbench-classes-zune-calltips_CXXFLAGS)
+ifeq ($(workbench-classes-zune-calltips_DXXFLAGS),)
+  workbench-classes-zune-calltips_DXXFLAGS := $(workbench-classes-zune-calltips_CXXFLAGS)
+else
+  workbench-classes-zune-calltips_DXXFLAGS := $(workbench-classes-zune-calltips_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-classes-zune-calltips_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-classes-zune-calltips_STRIP ?= $(HOST_STRIP)
+  workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-classes-zune-calltips_CXXCMD:=$(HOST_CXX)
+  workbench-classes-zune-calltips_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-classes-zune-calltips_MCXX_CPPFLAGS) $(workbench-classes-zune-calltips_MCXX_EXTRA_CPPFLAGS))
+  workbench-classes-zune-calltips_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-classes-zune-calltips_CXXFLAGS))
+  workbench-classes-zune-calltips_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-classes-zune-calltips_DXXFLAGS))
+  workbench-classes-zune-calltips_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-classes-zune-calltips_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-classes-zune-calltips_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-classes-zune-calltips_STRIP ?= $(TARGET_STRIP)
+  workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-classes-zune-calltips_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-classes-zune-calltips_MCXX_CPPFLAGS := $(strip $(workbench-classes-zune-calltips_MCXX_CPPFLAGS) $(workbench-classes-zune-calltips_MCXX_EXTRA_CPPFLAGS))
+  workbench-classes-zune-calltips_CXXFLAGS := $(strip $(workbench-classes-zune-calltips_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-classes-zune-calltips_DXXFLAGS := $(workbench-classes-zune-calltips_DXXFLAGS)
+  workbench-classes-zune-calltips_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-classes-zune-calltips_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-classes-zune-calltips_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-classes-zune-calltips_STRIP ?= $(ECHO) >/dev/null
+  workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-classes-zune-calltips_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-classes-zune-calltips_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-classes-zune-calltips_MCXX_CPPFLAGS) $(workbench-classes-zune-calltips_MCXX_EXTRA_CPPFLAGS))
+  workbench-classes-zune-calltips_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-classes-zune-calltips_CXXFLAGS))
+  workbench-classes-zune-calltips_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-classes-zune-calltips_DXXFLAGS))
+  workbench-classes-zune-calltips_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-classes-zune-calltips_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-classes-zune-calltips_CXXCMD) $(workbench-classes-zune-calltips_CXXIQUOTE) $(dir $(2)) $(workbench-classes-zune-calltips_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_CXXIQUOTE) . $(workbench-classes-zune-calltips_CXXIQUOTE_END) $(strip $(workbench-classes-zune-calltips_CXXFLAGS) $(workbench-classes-zune-calltips_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-classes-zune-calltips_CXXCMD) $(workbench-classes-zune-calltips_CXXIQUOTE) $(dir $(2)) $(workbench-classes-zune-calltips_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_CXXIQUOTE) . $(workbench-classes-zune-calltips_CXXIQUOTE_END) $(strip $(workbench-classes-zune-calltips_CXXFLAGS) $(workbench-classes-zune-calltips_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-classes-zune-calltips_CXXCMD) $(workbench-classes-zune-calltips_CXXIQUOTE) $(dir $(2)) $(workbench-classes-zune-calltips_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_CXXIQUOTE) . $(workbench-classes-zune-calltips_CXXIQUOTE_END) $(strip $(workbench-classes-zune-calltips_CXXFLAGS) $(workbench-classes-zune-calltips_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-classes-zune-calltips_CXXCMD)" $(MKDEPEND) $(strip $(workbench-classes-zune-calltips_DXXFLAGS) $(workbench-classes-zune-calltips_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-classes-zune-calltips_OBJDIR),)
+  $(foreach workbench-classes-zune-calltips_CXXFILE,$(workbench-classes-zune-calltips_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-classes-zune-calltips_CXXFILE))),$(workbench-classes-zune-calltips_CXXFILE))))
+else
+  $(foreach workbench-classes-zune-calltips_CXXFILE,$(workbench-classes-zune-calltips_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(notdir $(basename $(workbench-classes-zune-calltips_CXXFILE)))),$(workbench-classes-zune-calltips_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-classes-zune-calltips_OBJC_NARCHFILES),)
+
+ifeq (,)
+workbench-classes-zune-calltips_MOBJC_SRCWILDCARD := %
+else
+workbench-classes-zune-calltips_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-classes-zune-calltips_OBJDIR),)
+  workbench-classes-zune-calltips_MOBJC_TARGETS := $(addsuffix .o,$(workbench-classes-zune-calltips_OBJC_NARCHFILES))
+  workbench-classes-zune-calltips_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-classes-zune-calltips_OBJC_NARCHFILES))
+  workbench-classes-zune-calltips_MOBJC_WILDCARD := %
+else
+  workbench-classes-zune-calltips_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(workbench-classes-zune-calltips_OBJC_NARCHFILES)))
+  workbench-classes-zune-calltips_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(workbench-classes-zune-calltips_OBJC_NARCHFILES)))
+  workbench-classes-zune-calltips_MOBJC_WILDCARD := $(workbench-classes-zune-calltips_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-classes-zune-calltips_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  workbench-classes-zune-calltips_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-classes-zune-calltips_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-classes-zune-calltips_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-classes-zune-calltips_MOBJC_DIRS := $(foreach dir, $(workbench-classes-zune-calltips_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-classes-zune-calltips_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-classes-zune-calltips_MOBJC_DIRS),)
+    workbench-classes-zune-calltips_MOBJC_DIRS := $(shell echo $(workbench-classes-zune-calltips_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-classes-zune-calltips_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-classes-zune-calltips_CC := $(TARGET_CC)
+else
+  workbench-classes-zune-calltips_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-classes-zune-calltips_MOBJC_CPPFLAGS := $(workbench-classes-zune-calltips_CPPFLAGS)
+workbench-classes-zune-calltips_OBJCFLAGS := $(workbench-classes-zune-calltips_CFLAGS)
+workbench-classes-zune-calltips_OBJCFLAGS := $(workbench-classes-zune-calltips_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-classes-zune-calltips_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-classes-zune-calltips_OBJCFLAGS)))
+ifeq ($(workbench-classes-zune-calltips_DFLAGS),)
+  workbench-classes-zune-calltips_OBJCDFLAGS := $(workbench-classes-zune-calltips_CFLAGS)
+else
+  workbench-classes-zune-calltips_OBJCDFLAGS := $(workbench-classes-zune-calltips_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-classes-zune-calltips_LINK ?= $(strip $(workbench-classes-zune-calltips_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-classes-zune-calltips_STRIP ?= $(TARGET_STRIP)
+  workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-classes-zune-calltips_CC) $(TARGET_SYSROOT))
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : workbench-classes-zune-calltips_MOBJC_CPPFLAGS:=$(strip $(workbench-classes-zune-calltips_MOBJC_CPPFLAGS) $(workbench-classes-zune-calltips_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : workbench-classes-zune-calltips_OBJCFLAGS:=$(strip $(workbench-classes-zune-calltips_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : workbench-classes-zune-calltips_OBJCDFLAGS:=$(workbench-classes-zune-calltips_OBJCDFLAGS)
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-classes-zune-calltips_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-classes-zune-calltips_STRIP ?= $(HOST_STRIP)
+  workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : workbench-classes-zune-calltips_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-classes-zune-calltips_MOBJC_CPPFLAGS) $(workbench-classes-zune-calltips_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : workbench-classes-zune-calltips_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-classes-zune-calltips_OBJCFLAGS))
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : workbench-classes-zune-calltips_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-classes-zune-calltips_OBJCDFLAGS))
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-classes-zune-calltips_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-classes-zune-calltips_STRIP ?= $(ECHO) >/dev/null
+  workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : workbench-classes-zune-calltips_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-classes-zune-calltips_MOBJC_CPPFLAGS) $(workbench-classes-zune-calltips_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : workbench-classes-zune-calltips_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-classes-zune-calltips_OBJCFLAGS))
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : workbench-classes-zune-calltips_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-classes-zune-calltips_OBJCDFLAGS))
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-classes-zune-calltips_MOBJC_TARGETS) $(workbench-classes-zune-calltips_MOBJC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-classes-zune-calltips_MOBJC_TARGETS) : CPPFLAGS := $(workbench-classes-zune-calltips_MOBJC_CPPFLAGS)
+$(workbench-classes-zune-calltips_MOBJC_TARGETS) : CFLAGS := $(workbench-classes-zune-calltips_OBJCFLAGS)
+$(workbench-classes-zune-calltips_MOBJC_TARGETS) : $(workbench-classes-zune-calltips_MOBJC_WILDCARD).o : $(workbench-classes-zune-calltips_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-classes-zune-calltips_IQUOTE) $(dir $<) $(workbench-classes-zune-calltips_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_IQUOTE) . $(workbench-classes-zune-calltips_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-classes-zune-calltips_IQUOTE) $(dir $<) $(workbench-classes-zune-calltips_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_IQUOTE) . $(workbench-classes-zune-calltips_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-classes-zune-calltips_IQUOTE) $(dir $<) $(workbench-classes-zune-calltips_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_IQUOTE) . $(workbench-classes-zune-calltips_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-classes-zune-calltips_MOBJC_DTARGETS) : $(workbench-classes-zune-calltips_MOBJC_WILDCARD).d : $(workbench-classes-zune-calltips_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-classes-zune-calltips_OBJCDFLAGS) $(workbench-classes-zune-calltips_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-classes-zune-calltips_MC_SRCWILDCARD := %
+else
+workbench-classes-zune-calltips_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-classes-zune-calltips_OBJDIR),)
+workbench-classes-zune-calltips_MC_TARGETS := $(addsuffix .o,$(workbench-classes-zune-calltips_CCFILES))
+workbench-classes-zune-calltips_MC_DTARGETS := $(addsuffix .d,$(workbench-classes-zune-calltips_CCFILES))
+workbench-classes-zune-calltips_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-classes-zune-calltips_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(notdir $(workbench-classes-zune-calltips_CCFILES))))
+    workbench-classes-zune-calltips_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(notdir $(workbench-classes-zune-calltips_CCFILES))))
+else
+ifeq (,)
+    workbench-classes-zune-calltips_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(workbench-classes-zune-calltips_CCFILES)))
+    workbench-classes-zune-calltips_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(workbench-classes-zune-calltips_CCFILES)))
+else
+    workbench-classes-zune-calltips_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(patsubst /%,%,$(workbench-classes-zune-calltips_CCFILES))))
+    workbench-classes-zune-calltips_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(patsubst /%,%,$(workbench-classes-zune-calltips_CCFILES))))
+endif
+endif
+workbench-classes-zune-calltips_MC_TGTWILDCARD := $(workbench-classes-zune-calltips_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : | $(addsuffix .c,$(workbench-classes-zune-calltips_CCFILES))
+
+# Be sure that all .c files are found
+workbench-classes-zune-calltips_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-classes-zune-calltips_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-classes-zune-calltips_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-classes-zune-calltips_MC_DIRS := $(foreach dir, $(workbench-classes-zune-calltips_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-classes-zune-calltips_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-classes-zune-calltips_MC_DIRS),)
+    workbench-classes-zune-calltips_MC_DIRS := $(shell echo $(workbench-classes-zune-calltips_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-classes-zune-calltips_MC_DIRS)
+endif
+
+endif
+
+workbench-classes-zune-calltips_MC_CPPFLAGS := $(workbench-classes-zune-calltips_CPPFLAGS)
+workbench-classes-zune-calltips_CFLAGS := $(workbench-classes-zune-calltips_CFLAGS)
+ifeq ($(workbench-classes-zune-calltips_DFLAGS),)
+  workbench-classes-zune-calltips_DFLAGS := $(workbench-classes-zune-calltips_CFLAGS)
+else
+  workbench-classes-zune-calltips_DFLAGS := $(workbench-classes-zune-calltips_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-classes-zune-calltips_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-classes-zune-calltips_STRIP ?= $(TARGET_STRIP)
+workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_MC_CPPFLAGS:=$(strip $(workbench-classes-zune-calltips_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_EXTRA_CPPFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_CFLAGS:=$(strip $(workbench-classes-zune-calltips_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_DFLAGS:=$(workbench-classes-zune-calltips_DFLAGS)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-classes-zune-calltips_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-classes-zune-calltips_STRIP ?= $(HOST_STRIP)
+workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_EXTRA_CPPFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-classes-zune-calltips_CFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-classes-zune-calltips_DFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-classes-zune-calltips_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-classes-zune-calltips_STRIP ?= $(ECHO) >/dev/null
+workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_EXTRA_CPPFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-classes-zune-calltips_CFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-classes-zune-calltips_DFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-classes-zune-calltips_MC_TARGETS) : CPPFLAGS := $(workbench-classes-zune-calltips_MC_CPPFLAGS)
+$(workbench-classes-zune-calltips_MC_TARGETS) : CFLAGS := $(workbench-classes-zune-calltips_CFLAGS)
+$(workbench-classes-zune-calltips_MC_TARGETS) : $(workbench-classes-zune-calltips_MC_TGTWILDCARD).o : $(workbench-classes-zune-calltips_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-classes-zune-calltips_IQUOTE) $(dir $<) $(workbench-classes-zune-calltips_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_IQUOTE) . $(workbench-classes-zune-calltips_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-classes-zune-calltips_IQUOTE) $(dir $<) $(workbench-classes-zune-calltips_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_IQUOTE) . $(workbench-classes-zune-calltips_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-classes-zune-calltips_IQUOTE) $(dir $<) $(workbench-classes-zune-calltips_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_IQUOTE) . $(workbench-classes-zune-calltips_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-classes-zune-calltips_MC_DTARGETS) : $(workbench-classes-zune-calltips_MC_TGTWILDCARD).d : $(workbench-classes-zune-calltips_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-classes-zune-calltips_DFLAGS) $(workbench-classes-zune-calltips_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+workbench-classes-zune-calltips_MC_SRCWILDCARD := %
+else
+workbench-classes-zune-calltips_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-classes-zune-calltips_OBJDIR),)
+workbench-classes-zune-calltips_MC_TARGETS := $(addsuffix .o,$(workbench-classes-zune-calltips_TARGETCCFILES))
+workbench-classes-zune-calltips_MC_DTARGETS := $(addsuffix .d,$(workbench-classes-zune-calltips_TARGETCCFILES))
+workbench-classes-zune-calltips_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-classes-zune-calltips_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(notdir $(workbench-classes-zune-calltips_TARGETCCFILES))))
+    workbench-classes-zune-calltips_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(notdir $(workbench-classes-zune-calltips_TARGETCCFILES))))
+else
+ifeq (,)
+    workbench-classes-zune-calltips_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(workbench-classes-zune-calltips_TARGETCCFILES)))
+    workbench-classes-zune-calltips_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(workbench-classes-zune-calltips_TARGETCCFILES)))
+else
+    workbench-classes-zune-calltips_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(patsubst /%,%,$(workbench-classes-zune-calltips_TARGETCCFILES))))
+    workbench-classes-zune-calltips_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(patsubst /%,%,$(workbench-classes-zune-calltips_TARGETCCFILES))))
+endif
+endif
+workbench-classes-zune-calltips_MC_TGTWILDCARD := $(workbench-classes-zune-calltips_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : | $(addsuffix .c,$(workbench-classes-zune-calltips_TARGETCCFILES))
+
+# Be sure that all .c files are found
+workbench-classes-zune-calltips_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-classes-zune-calltips_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-classes-zune-calltips_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-classes-zune-calltips_MC_DIRS := $(foreach dir, $(workbench-classes-zune-calltips_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-classes-zune-calltips_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-classes-zune-calltips_MC_DIRS),)
+    workbench-classes-zune-calltips_MC_DIRS := $(shell echo $(workbench-classes-zune-calltips_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-classes-zune-calltips_MC_DIRS)
+endif
+
+endif
+
+workbench-classes-zune-calltips_MC_CPPFLAGS := $(workbench-classes-zune-calltips_CPPFLAGS) -D__AROS__
+workbench-classes-zune-calltips_CFLAGS := $(workbench-classes-zune-calltips_CFLAGS)
+ifeq ($(workbench-classes-zune-calltips_DFLAGS),)
+  workbench-classes-zune-calltips_DFLAGS := $(workbench-classes-zune-calltips_CFLAGS)
+else
+  workbench-classes-zune-calltips_DFLAGS := $(workbench-classes-zune-calltips_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-classes-zune-calltips_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-classes-zune-calltips_STRIP ?= $(TARGET_STRIP)
+workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_MC_CPPFLAGS:=$(strip $(workbench-classes-zune-calltips_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_EXTRA_CPPFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_CFLAGS:=$(strip $(workbench-classes-zune-calltips_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_DFLAGS:=$(workbench-classes-zune-calltips_DFLAGS)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-classes-zune-calltips_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-classes-zune-calltips_STRIP ?= $(HOST_STRIP)
+workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_EXTRA_CPPFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-classes-zune-calltips_CFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-classes-zune-calltips_DFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-classes-zune-calltips_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-classes-zune-calltips_STRIP ?= $(ECHO) >/dev/null
+workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_EXTRA_CPPFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-classes-zune-calltips_CFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-classes-zune-calltips_DFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-classes-zune-calltips_MC_TARGETS) : CPPFLAGS := $(workbench-classes-zune-calltips_MC_CPPFLAGS)
+$(workbench-classes-zune-calltips_MC_TARGETS) : CFLAGS := $(workbench-classes-zune-calltips_CFLAGS)
+$(workbench-classes-zune-calltips_MC_TARGETS) : $(workbench-classes-zune-calltips_MC_TGTWILDCARD).o : $(workbench-classes-zune-calltips_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-classes-zune-calltips_IQUOTE) $(dir $<) $(workbench-classes-zune-calltips_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_IQUOTE) . $(workbench-classes-zune-calltips_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-classes-zune-calltips_IQUOTE) $(dir $<) $(workbench-classes-zune-calltips_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_IQUOTE) . $(workbench-classes-zune-calltips_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-classes-zune-calltips_IQUOTE) $(dir $<) $(workbench-classes-zune-calltips_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_IQUOTE) . $(workbench-classes-zune-calltips_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-classes-zune-calltips_MC_DTARGETS) : $(workbench-classes-zune-calltips_MC_TGTWILDCARD).d : $(workbench-classes-zune-calltips_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-classes-zune-calltips_DFLAGS) $(workbench-classes-zune-calltips_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+workbench-classes-zune-calltips_MC_SRCWILDCARD := %
+else
+workbench-classes-zune-calltips_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-classes-zune-calltips_OBJDIR)/linklib,)
+workbench-classes-zune-calltips_MC_TARGETS := $(addsuffix .o,$(workbench-classes-zune-calltips_NLIBARCHFILES))
+workbench-classes-zune-calltips_MC_DTARGETS := $(addsuffix .d,$(workbench-classes-zune-calltips_NLIBARCHFILES))
+workbench-classes-zune-calltips_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-classes-zune-calltips_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$(notdir $(workbench-classes-zune-calltips_NLIBARCHFILES))))
+    workbench-classes-zune-calltips_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$(notdir $(workbench-classes-zune-calltips_NLIBARCHFILES))))
+else
+ifeq (,)
+    workbench-classes-zune-calltips_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$(workbench-classes-zune-calltips_NLIBARCHFILES)))
+    workbench-classes-zune-calltips_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$(workbench-classes-zune-calltips_NLIBARCHFILES)))
+else
+    workbench-classes-zune-calltips_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$(patsubst /%,%,$(workbench-classes-zune-calltips_NLIBARCHFILES))))
+    workbench-classes-zune-calltips_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$(patsubst /%,%,$(workbench-classes-zune-calltips_NLIBARCHFILES))))
+endif
+endif
+workbench-classes-zune-calltips_MC_TGTWILDCARD := $(workbench-classes-zune-calltips_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : | $(addsuffix .c,$(workbench-classes-zune-calltips_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+workbench-classes-zune-calltips_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-classes-zune-calltips_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-classes-zune-calltips_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-classes-zune-calltips_MC_DIRS := $(foreach dir, $(workbench-classes-zune-calltips_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-classes-zune-calltips_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-classes-zune-calltips_MC_DIRS),)
+    workbench-classes-zune-calltips_MC_DIRS := $(shell echo $(workbench-classes-zune-calltips_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-classes-zune-calltips_MC_DIRS)
+endif
+
+endif
+
+workbench-classes-zune-calltips_MC_CPPFLAGS := $(workbench-classes-zune-calltips_LINKLIBCPPFLAGS) -D__AROS__
+workbench-classes-zune-calltips_CFLAGS := $(workbench-classes-zune-calltips_LINKLIBCFLAGS)
+ifeq ($(workbench-classes-zune-calltips_LINKLIBDFLAGS),)
+  workbench-classes-zune-calltips_DFLAGS := $(workbench-classes-zune-calltips_LINKLIBCFLAGS)
+else
+  workbench-classes-zune-calltips_DFLAGS := $(workbench-classes-zune-calltips_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-classes-zune-calltips_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-classes-zune-calltips_STRIP ?= $(TARGET_STRIP)
+workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_MC_CPPFLAGS:=$(strip $(workbench-classes-zune-calltips_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_EXTRA_CPPFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_CFLAGS:=$(strip $(workbench-classes-zune-calltips_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_DFLAGS:=$(workbench-classes-zune-calltips_DFLAGS)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-classes-zune-calltips_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-classes-zune-calltips_STRIP ?= $(HOST_STRIP)
+workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_EXTRA_CPPFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-classes-zune-calltips_CFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-classes-zune-calltips_DFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-classes-zune-calltips_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-classes-zune-calltips_STRIP ?= $(ECHO) >/dev/null
+workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_EXTRA_CPPFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-classes-zune-calltips_CFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-classes-zune-calltips_DFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-classes-zune-calltips_MC_TARGETS) : CPPFLAGS := $(workbench-classes-zune-calltips_MC_CPPFLAGS)
+$(workbench-classes-zune-calltips_MC_TARGETS) : CFLAGS := $(workbench-classes-zune-calltips_CFLAGS)
+$(workbench-classes-zune-calltips_MC_TARGETS) : $(workbench-classes-zune-calltips_MC_TGTWILDCARD).o : $(workbench-classes-zune-calltips_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-classes-zune-calltips_IQUOTE) $(dir $<) $(workbench-classes-zune-calltips_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_IQUOTE) . $(workbench-classes-zune-calltips_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-classes-zune-calltips_IQUOTE) $(dir $<) $(workbench-classes-zune-calltips_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_IQUOTE) . $(workbench-classes-zune-calltips_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-classes-zune-calltips_IQUOTE) $(dir $<) $(workbench-classes-zune-calltips_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_IQUOTE) . $(workbench-classes-zune-calltips_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-classes-zune-calltips_MC_DTARGETS) : $(workbench-classes-zune-calltips_MC_TGTWILDCARD).d : $(workbench-classes-zune-calltips_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-classes-zune-calltips_DFLAGS) $(workbench-classes-zune-calltips_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-classes-zune-calltips_OBJDIR)/linklib,)
+workbench-classes-zune-calltips_MC_SRCWILDCARD := %
+else
+workbench-classes-zune-calltips_MC_SRCWILDCARD := $(workbench-classes-zune-calltips_OBJDIR)/linklib/%
+endif
+
+ifeq ($(workbench-classes-zune-calltips_OBJDIR)/linklib,)
+workbench-classes-zune-calltips_MC_TARGETS := $(addsuffix .o,$(workbench-classes-zune-calltips_LINKLIBCCGENFILES))
+workbench-classes-zune-calltips_MC_DTARGETS := $(addsuffix .d,$(workbench-classes-zune-calltips_LINKLIBCCGENFILES))
+workbench-classes-zune-calltips_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-classes-zune-calltips_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$(notdir $(workbench-classes-zune-calltips_LINKLIBCCGENFILES))))
+    workbench-classes-zune-calltips_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$(notdir $(workbench-classes-zune-calltips_LINKLIBCCGENFILES))))
+else
+ifeq ($(workbench-classes-zune-calltips_OBJDIR)/linklib,)
+    workbench-classes-zune-calltips_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$(workbench-classes-zune-calltips_LINKLIBCCGENFILES)))
+    workbench-classes-zune-calltips_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$(workbench-classes-zune-calltips_LINKLIBCCGENFILES)))
+else
+    workbench-classes-zune-calltips_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$(patsubst $(workbench-classes-zune-calltips_OBJDIR)/linklib/%,%,$(workbench-classes-zune-calltips_LINKLIBCCGENFILES))))
+    workbench-classes-zune-calltips_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$(patsubst $(workbench-classes-zune-calltips_OBJDIR)/linklib/%,%,$(workbench-classes-zune-calltips_LINKLIBCCGENFILES))))
+endif
+endif
+workbench-classes-zune-calltips_MC_TGTWILDCARD := $(workbench-classes-zune-calltips_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : | $(addsuffix .c,$(workbench-classes-zune-calltips_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+workbench-classes-zune-calltips_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-classes-zune-calltips_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-classes-zune-calltips_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-classes-zune-calltips_MC_DIRS := $(foreach dir, $(workbench-classes-zune-calltips_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-classes-zune-calltips_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-classes-zune-calltips_MC_DIRS),)
+    workbench-classes-zune-calltips_MC_DIRS := $(shell echo $(workbench-classes-zune-calltips_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-classes-zune-calltips_MC_DIRS)
+endif
+
+endif
+
+workbench-classes-zune-calltips_MC_CPPFLAGS := $(workbench-classes-zune-calltips_LINKLIBCPPFLAGS) -D__AROS__
+workbench-classes-zune-calltips_CFLAGS := $(workbench-classes-zune-calltips_LINKLIBCFLAGS)
+ifeq ($(workbench-classes-zune-calltips_LINKLIBDFLAGS),)
+  workbench-classes-zune-calltips_DFLAGS := $(workbench-classes-zune-calltips_LINKLIBCFLAGS)
+else
+  workbench-classes-zune-calltips_DFLAGS := $(workbench-classes-zune-calltips_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-classes-zune-calltips_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-classes-zune-calltips_STRIP ?= $(TARGET_STRIP)
+workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_MC_CPPFLAGS:=$(strip $(workbench-classes-zune-calltips_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_EXTRA_CPPFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_CFLAGS:=$(strip $(workbench-classes-zune-calltips_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_DFLAGS:=$(workbench-classes-zune-calltips_DFLAGS)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-classes-zune-calltips_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-classes-zune-calltips_STRIP ?= $(HOST_STRIP)
+workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_EXTRA_CPPFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-classes-zune-calltips_CFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-classes-zune-calltips_DFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-classes-zune-calltips_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-classes-zune-calltips_STRIP ?= $(ECHO) >/dev/null
+workbench-classes-zune-calltips_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_CPPFLAGS) $(workbench-classes-zune-calltips_MC_EXTRA_CPPFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-classes-zune-calltips_CFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-classes-zune-calltips_DFLAGS))
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-classes-zune-calltips_MC_TARGETS) $(workbench-classes-zune-calltips_MC_DTARGETS) : workbench-classes-zune-calltips_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-classes-zune-calltips_MC_TARGETS) : CPPFLAGS := $(workbench-classes-zune-calltips_MC_CPPFLAGS)
+$(workbench-classes-zune-calltips_MC_TARGETS) : CFLAGS := $(workbench-classes-zune-calltips_CFLAGS)
+$(workbench-classes-zune-calltips_MC_TARGETS) : $(workbench-classes-zune-calltips_MC_TGTWILDCARD).o : $(workbench-classes-zune-calltips_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-classes-zune-calltips_IQUOTE) $(dir $<) $(workbench-classes-zune-calltips_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_IQUOTE) . $(workbench-classes-zune-calltips_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-classes-zune-calltips_IQUOTE) $(dir $<) $(workbench-classes-zune-calltips_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_IQUOTE) . $(workbench-classes-zune-calltips_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-classes-zune-calltips_IQUOTE) $(dir $<) $(workbench-classes-zune-calltips_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-classes-zune-calltips_IQUOTE) . $(workbench-classes-zune-calltips_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-classes-zune-calltips_MC_DTARGETS) : $(workbench-classes-zune-calltips_MC_TGTWILDCARD).d : $(workbench-classes-zune-calltips_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-classes-zune-calltips_DFLAGS) $(workbench-classes-zune-calltips_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(workbench-classes-zune-calltips_LINKLIBAFILES),)
+
+ifeq ($(workbench-classes-zune-calltips_OBJDIR)/linklib,)
+workbench-classes-zune-calltips-MA_TARGETS := $(addsuffix .o,$(workbench-classes-zune-calltips_LINKLIBAFILES) $(workbench-classes-zune-calltips_RELLINKLIBAFILES))
+workbench-classes-zune-calltips-MA_WILDCARD := %
+else
+workbench-classes-zune-calltips-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$(notdir $(workbench-classes-zune-calltips_LINKLIBAFILES) $(workbench-classes-zune-calltips_RELLINKLIBAFILES))))
+workbench-classes-zune-calltips-MA_WILDCARD := $(workbench-classes-zune-calltips_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(workbench-classes-zune-calltips-MA_TARGETS) : | $(addsuffix .S,$(workbench-classes-zune-calltips_LINKLIBAFILES) $(workbench-classes-zune-calltips_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+workbench-classes-zune-calltips-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-classes-zune-calltips-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-classes-zune-calltips_LINKLIBAFILES) $(workbench-classes-zune-calltips_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-classes-zune-calltips-MA_DIRS := $(foreach dir, $(workbench-classes-zune-calltips-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-classes-zune-calltips-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-classes-zune-calltips-MA_DIRS),)
+    workbench-classes-zune-calltips-MA_DIRS := $(shell echo $(workbench-classes-zune-calltips-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(workbench-classes-zune-calltips-MA_DIRS)
+endif
+
+endif
+
+workbench-classes-zune-calltips-MA_ASSEMBLER ?= $(workbench-classes-zune-calltips_ASSEMBLER)
+
+$(workbench-classes-zune-calltips-MA_TARGETS) : workbench-classes-zune-calltips-MA_CMD:= $(workbench-classes-zune-calltips-MA_ASSEMBLER)
+
+$(workbench-classes-zune-calltips-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(workbench-classes-zune-calltips-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(workbench-classes-zune-calltips-MA_TARGETS) : $(workbench-classes-zune-calltips-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-classes-zune-calltips-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-classes-zune-calltips-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-classes-zune-calltips-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+workbench-classes-zune-calltips_SUFFIX           := mcc
+else
+workbench-classes-zune-calltips_SUFFIX           := 
+endif
+
+ifeq (target,target)
+workbench-classes-zune-calltips_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-classes-zune-calltips_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-classes-zune-calltips_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(workbench-classes-zune-calltips_SUFFIX),handler)
+workbench-classes-zune-calltips_MODULE           := $(AROSDIR)/$(workbench-classes-zune-calltips_MODDIR)/$(workbench-classes-zune-calltips_DEFNAME)-$(workbench-classes-zune-calltips_SUFFIX)
+else
+workbench-classes-zune-calltips_MODULE           := $(AROSDIR)/$(workbench-classes-zune-calltips_MODDIR)/$(workbench-classes-zune-calltips_DEFNAME).$(workbench-classes-zune-calltips_SUFFIX)
+endif
+workbench-classes-zune-calltips_KOBJ             := $(KOBJSDIR)/$(workbench-classes-zune-calltips_DEFNAME)_$(workbench-classes-zune-calltips_SUFFIX).o
+else
+workbench-classes-zune-calltips_MODULE           :=
+workbench-classes-zune-calltips_KOBJ             :=
+endif
+
+workbench-classes-zune-calltips-quick      : workbench-classes-zune-calltips
+workbench-classes-zune-calltips            : $(workbench-classes-zune-calltips_MODULE) $(workbench-classes-zune-calltips_LINKLIB) $(workbench-classes-zune-calltips_RELLINKLIB)
+ifeq (M,M)
+workbench-classes-zune-calltips-kobj       : $(workbench-classes-zune-calltips_KOBJ) $(workbench-classes-zune-calltips_LINKLIB) $(workbench-classes-zune-calltips_RELLINKLIB)
+workbench-classes-zune-calltips-kobj-quick : $(workbench-classes-zune-calltips_KOBJ) $(workbench-classes-zune-calltips_LINKLIB) $(workbench-classes-zune-calltips_RELLINKLIB)
+endif
+ifeq (M,M)
+workbench-classes-zune-calltips-linklib    : $(workbench-classes-zune-calltips_LINKLIB) $(workbench-classes-zune-calltips_RELLINKLIB)
+endif
+
+workbench-classes-zune-calltips_OBJS := $(addsuffix .o,$(workbench-classes-zune-calltips_STARTFILES)) $(workbench-classes-zune-calltips_ARCHOBJS) \
+           $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(notdir $(workbench-classes-zune-calltips_C_NARCHFILES:=.o) $(workbench-classes-zune-calltips_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (mcc,handler)
+workbench-classes-zune-calltips_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (Calltips,con)
+    workbench-classes-zune-calltips_ERR          := $(notdir $(workbench-classes-zune-calltips_MODULE)).err
+else
+    workbench-classes-zune-calltips_ERR          := Calltips.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(workbench-classes-zune-calltips_DEFNAME)_LDFLAGS) $(workbench-classes-zune-calltips_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-classes-zune-calltips_LIBS) $($(workbench-classes-zune-calltips_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(workbench-classes-zune-calltips_MODULE) : LIB_NAMES := $(workbench-classes-zune-calltips_LIBS) $($(workbench-classes-zune-calltips_DEFNAME)_LIBS)
+$(workbench-classes-zune-calltips_MODULE) : OBJS := $(workbench-classes-zune-calltips_STARTOBJS) $(workbench-classes-zune-calltips_OBJS) $(USER_OBJS)
+$(workbench-classes-zune-calltips_MODULE) : ENDTAG := $(workbench-classes-zune-calltips_ENDOBJS)
+$(workbench-classes-zune-calltips_MODULE) : ERR := $(workbench-classes-zune-calltips_ERR)
+$(workbench-classes-zune-calltips_MODULE) : OBJDIR := $(workbench-classes-zune-calltips_OBJDIR)
+$(workbench-classes-zune-calltips_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(workbench-classes-zune-calltips_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(workbench-classes-zune-calltips_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(workbench-classes-zune-calltips_MODULE) : $(workbench-classes-zune-calltips_STARTOBJS) $(workbench-classes-zune-calltips_OBJS) $(USER_OBJS) $(workbench-classes-zune-calltips_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(workbench-classes-zune-calltips_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(workbench-classes-zune-calltips_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+workbench-classes-zune-calltips_LC_LINKLIBNAME   := $(shell echo $(workbench-classes-zune-calltips_LINKLIBNAME) | tr A-Z a-z)
+workbench-classes-zune-calltips_LC_MODNAME       := $(shell echo Calltips | tr A-Z a-z)
+ifneq ($(workbench-classes-zune-calltips_LINKLIB),)
+
+ifeq (target,target)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_LINKLIBNAME)$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_AR:=$(AR)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_LINKLIBNAME)$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_LINKLIBNAME)$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_AR:=$(HOST_AR)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_LINKLIBNAME)$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_LINKLIBNAME)$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_AR:=$(KERNEL_AR)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_LINKLIBNAME)$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_LINKLIBNAME)$(workbench-classes-zune-calltips_LIBSUFFIX).a : $(workbench-classes-zune-calltips_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-classes-zune-calltips_AR) $@ $^
+	$(Q)$(workbench-classes-zune-calltips_RANLIB) $@
+ifneq ($(workbench-classes-zune-calltips_LC_MODNAME),$(workbench-classes-zune-calltips_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(workbench-classes-zune-calltips_LIBDIR)/libCalltips$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_AR:=$(AR)
+$(workbench-classes-zune-calltips_LIBDIR)/libCalltips$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-classes-zune-calltips_LIBDIR)/libCalltips$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_AR:=$(HOST_AR)
+$(workbench-classes-zune-calltips_LIBDIR)/libCalltips$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-classes-zune-calltips_LIBDIR)/libCalltips$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_AR:=$(KERNEL_AR)
+$(workbench-classes-zune-calltips_LIBDIR)/libCalltips$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-classes-zune-calltips_LIBDIR)/libCalltips$(workbench-classes-zune-calltips_LIBSUFFIX).a : $(workbench-classes-zune-calltips_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-classes-zune-calltips_AR) $@ $^
+	$(Q)$(workbench-classes-zune-calltips_RANLIB) $@
+endif
+
+
+ifneq ($(workbench-classes-zune-calltips_LINKLIB),)
+$(workbench-classes-zune-calltips_LINKLIB) : | $(workbench-classes-zune-calltips_LIBDIR)
+else
+$(workbench-classes-zune-calltips_LINKLIB) :: $(workbench-classes-zune-calltips_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-classes-zune-calltips_LIBDIR)
+
+endif
+
+ifneq ($(workbench-classes-zune-calltips_RELLINKLIB),)
+
+ifeq (target,target)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_LINKLIBNAME)_rel$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_AR:=$(AR)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_LINKLIBNAME)_rel$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_LINKLIBNAME)_rel$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_AR:=$(HOST_AR)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_LINKLIBNAME)_rel$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_LINKLIBNAME)_rel$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_AR:=$(KERNEL_AR)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_LINKLIBNAME)_rel$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_LINKLIBNAME)_rel$(workbench-classes-zune-calltips_LIBSUFFIX).a : $(workbench-classes-zune-calltips_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-classes-zune-calltips_AR) $@ $^
+	$(Q)$(workbench-classes-zune-calltips_RANLIB) $@
+ifneq ($(workbench-classes-zune-calltips_LC_MODNAME),$(workbench-classes-zune-calltips_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_DEFNAME)_rel$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_AR:=$(AR)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_DEFNAME)_rel$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_DEFNAME)_rel$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_AR:=$(HOST_AR)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_DEFNAME)_rel$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_DEFNAME)_rel$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_AR:=$(KERNEL_AR)
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_DEFNAME)_rel$(workbench-classes-zune-calltips_LIBSUFFIX).a : workbench-classes-zune-calltips_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(workbench-classes-zune-calltips_LIBDIR)/lib$(workbench-classes-zune-calltips_DEFNAME)_rel$(workbench-classes-zune-calltips_LIBSUFFIX).a : $(workbench-classes-zune-calltips_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(workbench-classes-zune-calltips_AR) $@ $^
+	$(Q)$(workbench-classes-zune-calltips_RANLIB) $@
+endif
+
+
+ifneq ($(workbench-classes-zune-calltips_RELLINKLIB),)
+$(workbench-classes-zune-calltips_RELLINKLIB) : | $(workbench-classes-zune-calltips_LIBDIR)
+else
+$(workbench-classes-zune-calltips_RELLINKLIB) :: $(workbench-classes-zune-calltips_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-classes-zune-calltips_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+workbench-classes-zune-calltips_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+workbench-classes-zune-calltips_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+workbench-classes-zune-calltips_SYMBOLS := $(workbench-classes-zune-calltips_KBASE)
+
+workbench-classes-zune-calltips_KLIB             := hiddstubs amiga arossupport autoinit libinit
+workbench-classes-zune-calltips_KOBJ_LIBS        := $(filter-out $(workbench-classes-zune-calltips_KLIB),$(workbench-classes-zune-calltips_LIBS)) $(workbench-classes-zune-calltips_KAUTOLIB)
+$(workbench-classes-zune-calltips_KOBJ) : LINKLIBS:=$(workbench-classes-zune-calltips_KOBJ_LIBS) $($(workbench-classes-zune-calltips_DEFNAME)_LIBS)
+$(workbench-classes-zune-calltips_KOBJ) : FILTBASES:=$(addprefix -L ,$(workbench-classes-zune-calltips_SYMBOLS))
+$(workbench-classes-zune-calltips_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(workbench-classes-zune-calltips_KOBJ) : $(workbench-classes-zune-calltips_OBJS) $(USER_OBJS) $(workbench-classes-zune-calltips_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+workbench-classes-zune-calltips_DEPS             := $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/,$(notdir $(workbench-classes-zune-calltips_CCFILES:=.d) $(workbench-classes-zune-calltips_TARGETCCFILES:=.d) $(workbench-classes-zune-calltips_CXXFILES:=.d))) $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/linklib/,$(notdir $(workbench-classes-zune-calltips_LINKLIBCCFILES:=.d)))
+
+ifneq ($(workbench-classes-zune-calltips_DEPS),)
+  ifneq (workbench-classes-zune-calltips workbench-classes-zune-calltips-quick workbench-classes-zune-calltips-kobj workbench-classes-zune-calltips-kobj-quick,)
+    ifneq ($(findstring $(TARGET),workbench-classes-zune-calltips workbench-classes-zune-calltips-quick workbench-classes-zune-calltips-kobj workbench-classes-zune-calltips-kobj-quick),)
+      -include $(workbench-classes-zune-calltips_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-classes-zune-calltips_DEPS)
+    endif
+  endif
+endif
+
+$(workbench-classes-zune-calltips_OBJS) $(workbench-classes-zune-calltips_DEPS) : | $(workbench-classes-zune-calltips_OBJDIR)/linklib
+
+ifneq ($(workbench-classes-zune-calltips_OBJS) $(workbench-classes-zune-calltips_DEPS) $(workbench-classes-zune-calltips_MODULE) $(workbench-classes-zune-calltips_KOBJ),)
+$(workbench-classes-zune-calltips_OBJS) $(workbench-classes-zune-calltips_DEPS) $(workbench-classes-zune-calltips_MODULE) $(workbench-classes-zune-calltips_KOBJ) : | $(workbench-classes-zune-calltips_OBJDIR) $(AROSDIR)/$(workbench-classes-zune-calltips_MODDIR) $(KOBJSDIR)
+else
+$(workbench-classes-zune-calltips_OBJS) $(workbench-classes-zune-calltips_DEPS) $(workbench-classes-zune-calltips_MODULE) $(workbench-classes-zune-calltips_KOBJ) :: $(workbench-classes-zune-calltips_OBJDIR) $(AROSDIR)/$(workbench-classes-zune-calltips_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-classes-zune-calltips_OBJDIR) $(AROSDIR)/$(workbench-classes-zune-calltips_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),workbench-classes-zune-calltips workbench-classes-zune-calltips-includes workbench-classes-zune-calltips-quick workbench-classes-zune-calltips-kobj workbench-classes-zune-calltips-kobj-quick),) # Only for this target these deps are wanted
+
+workbench-classes-zune-calltips_DFILE_DEPS := $(workbench-classes-zune-calltips_LIBDEFSINC) $(workbench-classes-zune-calltips_DEFLIBDEFSINC) \
+    $(addprefix $(workbench-classes-zune-calltips_INCDIR)/,$($(workbench-classes-zune-calltips_DEFNAME)_INCLUDES))
+$(workbench-classes-zune-calltips_DEPS) : $(workbench-classes-zune-calltips_DFILE_DEPS)
+endif
+
+workbench-classes-zune-calltips_TOCLEAN := $(workbench-classes-zune-calltips_OBJS) $(workbench-classes-zune-calltips_DEPS) \
+    $(workbench-classes-zune-calltips_MODULE) $(workbench-classes-zune-calltips_LINKLIB) $(workbench-classes-zune-calltips_KOBJ) \
+    $(workbench-classes-zune-calltips_OBJDIR)/Makefile.Calltipsmcc \
+    $(addprefix $(workbench-classes-zune-calltips_OBJDIR)/include/,$($(workbench-classes-zune-calltips_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(workbench-classes-zune-calltips_DEFNAME)_INCLUDES)) \
+    $(addprefix $(workbench-classes-zune-calltips_INCDIR)/,$($(workbench-classes-zune-calltips_DEFNAME)_INCLUDES)) \
+    $(workbench-classes-zune-calltips_OBJDIR)/Calltips_geninc $(workbench-classes-zune-calltips_OBJDIR)/Calltips_incs \
+    $(addsuffix .c,$(workbench-classes-zune-calltips_LINKLIBFILES)) $(workbench-classes-zune-calltips_LINKLIBOBJS) $(workbench-classes-zune-calltips_LIBDEFSINC) \
+    $(workbench-classes-zune-calltips_DEFLIBDEFSINC) $(addsuffix .c,$(workbench-classes-zune-calltips_STARTFILES) $(workbench-classes-zune-calltips_ENDFILES)) \
+    $(workbench-classes-zune-calltips_ENDOBJS)
+workbench-classes-zune-calltips-clean : FILES              := $(workbench-classes-zune-calltips_TOCLEAN)
+workbench-classes-zune-calltips-clean ::
+	$(Q)$(ECHO) "Cleaning up for module Calltips"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(workbench-classes-zune-calltips_ALLTARGETS)
+
+
+ifeq ($(findstring target,host kernel target),)
+$(error %copy_includes: compiler argument (target) has to be host, kernel or target)
+endif
+
+ifneq (,)
+TMP_DIR                := 
+$(eval TMP_DIRREMAIN   := $$$(TMP_DIR))
+TMP_DIRFIRST           := $(subst $(TMP_DIRREMAIN),,$(TMP_DIR))
+BD_INCL_FILES          := $(subst ,$(GENINCDIR)/mui,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/mui/,$(notdir $(INCLUDE_FILES)))
+ifeq ($(TMP_DIRFIRST),/)
+BD_INC_PATH            := /
+else
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)//
+endif
+else
+BD_INCL_FILES          := $(addprefix $(GENINCDIR)/mui/,$(INCLUDE_FILES))
+BD_INC_PATH            := $(SRCDIR)/$(CURDIR)/
+endif
+
+$(BD_INCL_FILES) : $(GENINCDIR)/mui/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+
+ifeq (target,target)
+
+ifneq (,)
+BD_INCL_FILES2         := $(subst ,$(AROS_INCLUDES)/mui,$(dir $(INCLUDE_FILES)))
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/mui/,$(notdir $(INCLUDE_FILES)))
+else
+BD_INCL_FILES2         := $(addprefix $(AROS_INCLUDES)/mui/,$(INCLUDE_FILES))
+endif
+
+BD_INCL_FILES          += $(BD_INCL_FILES2)
+
+$(BD_INCL_FILES2) : $(AROS_INCLUDES)/mui/% : $(BD_INC_PATH)%
+	$(Q)$(CP) $< $@
+endif
+
+#MM
+includes-copy : $(BD_INCL_FILES)
+
+.PHONY: includes-copy
+
+
+ifneq ($(BD_INCL_FILES),)
+$(BD_INCL_FILES) : | $(dir $(BD_INCL_FILES))
+else
+$(BD_INCL_FILES) :: $(dir $(BD_INCL_FILES))
+endif
+
+GLOB_MKDIRS += $(dir $(BD_INCL_FILES))
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

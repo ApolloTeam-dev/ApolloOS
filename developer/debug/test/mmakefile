@@ -1,0 +1,345 @@
+#   $Id$
+#
+#   Makefile for AROS Test binaries & scripts.
+
+include $(SRCDIR)/config/aros.cfg
+
+COMMONTESTFILES := \
+    runtests
+
+EXEDIR := $(AROS_TESTS)
+
+USER_INCLUDES := -I$(SRCDIR)/workbench/libs
+USER_CFLAGS += -DADATE="\"$(shell date '+%d.%m.%Y')\""
+
+#MM- test : \
+#MM  test-common \
+#MM  test-crt \
+#MM  test-kernel \
+#MM  test-intuition \
+#MM  test-layers \
+#MM  test-zune \
+#MM  test-miscfiles
+
+#MM- test-quick : \
+#MM  test-common-quick \
+#MM  test-crt-quick \
+#MM  test-kernel-quick \
+#MM  test-intuition-quick \
+#MM  test-layers-quick \
+#MM  test-zune-quick \
+#MM  test-miscfiles-quick
+
+#MM- test : test-$(AROS_TARGET_ARCH) \
+#MM  test-$(AROS_TARGET_CPU) \
+#MM  test-$(AROS_TARGET_ARCH)-$(AROS_TARGET_CPU)
+
+#MM- test-quick : test-$(AROS_TARGET_ARCH)-quick \
+#MM  test-$(AROS_TARGET_CPU)-quick \
+#MM  test-$(AROS_TARGET_ARCH)-$(AROS_TARGET_CPU)-quick
+
+#MM  test-common : includes linklibs
+
+
+.PHONY : test-common
+
+test-common_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-common_TARGETDIR := $(EXEDIR)
+test-common_LIBS := 
+
+test-common_FILES     := $(COMMONTESTFILES)
+test-common_OBJS      := $(addsuffix .o,$(addprefix $(test-common_OBJDIR)/,$(test-common_FILES)))
+test-common_DEPS      := $(addsuffix .d,$(addprefix $(test-common_OBJDIR)/,$(test-common_FILES)))
+test-common_EXES      := $(addprefix $(test-common_TARGETDIR)/,$(test-common_FILES))
+
+test-common_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-common_CPPFLAGS += -I
+endif
+test-common_CFLAGS    := $(CFLAGS)
+test-common_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-common_COVERAGE := yes
+test-common_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-common_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-common_CFLAGS    := $(strip $(test-common_COVERAGEFLAGS) $(test-common_CFLAGS))
+test-common_LIBS += $(test-common_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-common_FUNCINSTR := yes
+test-common_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-common_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-common_CFLAGS    := $(strip $(test-common_INSTRFUNCFLAGS) $(test-common_CFLAGS))
+test-common_LIBS += $(test-common_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-common_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-common_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-common_DFLAGS := 
+else
+    test-common_DFLAGS := $(test-common_CFLAGS)
+endif
+ifeq (target,target)
+test-common_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-common_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-common_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-common_LDFLAGS += -L
+endif
+
+#MM
+test-common-quick : test-common
+
+#MM test-common : includes-generate-deps core-linklibs
+test-common : $(test-common_EXES)
+
+ifneq ($(filter $(TARGET),test-common test-common-quick),)
+
+ifeq (,)
+test-common_MC_SRCWILDCARD := %
+else
+test-common_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-common_OBJDIR),)
+test-common_MC_TARGETS := $(addsuffix .o,$(test-common_FILES))
+test-common_MC_DTARGETS := $(addsuffix .d,$(test-common_FILES))
+test-common_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-common_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-common_OBJDIR)/,$(notdir $(test-common_FILES))))
+    test-common_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-common_OBJDIR)/,$(notdir $(test-common_FILES))))
+else
+ifeq (,)
+    test-common_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-common_OBJDIR)/,$(test-common_FILES)))
+    test-common_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-common_OBJDIR)/,$(test-common_FILES)))
+else
+    test-common_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-common_OBJDIR)/,$(patsubst /%,%,$(test-common_FILES))))
+    test-common_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-common_OBJDIR)/,$(patsubst /%,%,$(test-common_FILES))))
+endif
+endif
+test-common_MC_TGTWILDCARD := $(test-common_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : | $(addsuffix .c,$(test-common_FILES))
+
+# Be sure that all .c files are found
+test-common_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-common_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-common_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-common_MC_DIRS := $(foreach dir, $(test-common_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-common_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-common_MC_DIRS),)
+    test-common_MC_DIRS := $(shell echo $(test-common_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-common_MC_DIRS)
+endif
+
+endif
+
+test-common_MC_CPPFLAGS := $(test-common_CPPFLAGS)
+test-common_CFLAGS := $(test-common_CFLAGS)
+ifeq ($(test-common_DFLAGS),)
+  test-common_DFLAGS := $(test-common_CFLAGS)
+else
+  test-common_DFLAGS := $(test-common_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-common_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-common_STRIP ?= $(TARGET_STRIP)
+test-common_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : test-common_MC_CPPFLAGS:=$(strip $(test-common_MC_CPPFLAGS) $(test-common_MC_EXTRA_CPPFLAGS))
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : test-common_CFLAGS:=$(strip $(test-common_CFLAGS) $(SAFETY_CFLAGS))
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : test-common_DFLAGS:=$(test-common_DFLAGS)
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : test-common_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : test-common_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-common_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-common_STRIP ?= $(HOST_STRIP)
+test-common_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : test-common_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-common_MC_CPPFLAGS) $(test-common_MC_EXTRA_CPPFLAGS))
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : test-common_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-common_CFLAGS))
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : test-common_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-common_DFLAGS))
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : test-common_IQUOTE:=$(HOST_IQUOTE)
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : test-common_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-common_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-common_STRIP ?= $(ECHO) >/dev/null
+test-common_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : test-common_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-common_MC_CPPFLAGS) $(test-common_MC_EXTRA_CPPFLAGS))
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : test-common_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-common_CFLAGS))
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : test-common_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-common_DFLAGS))
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : test-common_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-common_MC_TARGETS) $(test-common_MC_DTARGETS) : test-common_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-common_MC_TARGETS) : CPPFLAGS := $(test-common_MC_CPPFLAGS)
+$(test-common_MC_TARGETS) : CFLAGS := $(test-common_CFLAGS)
+$(test-common_MC_TARGETS) : $(test-common_MC_TGTWILDCARD).o : $(test-common_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-common_IQUOTE) $(dir $<) $(test-common_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-common_IQUOTE) . $(test-common_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-common_IQUOTE) $(dir $<) $(test-common_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-common_IQUOTE) . $(test-common_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-common_IQUOTE) $(dir $<) $(test-common_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-common_IQUOTE) . $(test-common_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-common_MC_DTARGETS) : $(test-common_MC_TGTWILDCARD).d : $(test-common_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-common_DFLAGS) $(test-common_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-common-link_EXTRA_LDFLAGS := 
+test-common-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-common-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-common-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-common-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-common-link_DIRS := $(subst -L ,-L,$(strip $(test-common_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-common-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-common-link_DIRS)))
+# Add trailing /
+test-common-link_DIRS := $(subst //,/,$(addsuffix /,$(test-common-link_DIRS)))
+# Add normal linklib path
+test-common-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-common-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-common_LIBS) $(test-common-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-common-link_DEPLIBS := $(foreach lib,$(test-common-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-common-link_DIRS)))) \
+)
+test-common-link_PROGS := $(addprefix $(test-common_TARGETDIR)/,$(test-common_FILES))
+
+$(test-common-link_PROGS) : OBJDIR := $(test-common_OBJDIR)
+$(test-common-link_PROGS) : LDFLAGS := $(strip $(test-common_LDFLAGS) $(test-common-link_EXTRA_LDFLAGS))
+$(test-common-link_PROGS) : LIBS := $(addprefix -l,$(test-common_LIBS) $(test-common-link_EXTRA_LIBS) )
+$(test-common-link_PROGS) : $(test-common_TARGETDIR)/% : $(test-common_OBJDIR)/%.o $(test-common-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-common_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-common_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-common_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-common_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-common_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-common_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-common_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-common_DEPS),)
+  ifneq (test-common test-common-quick,)
+    ifneq ($(findstring $(TARGET),test-common test-common-quick),)
+      -include $(test-common_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-common_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-common_DEPS) $(test-common_OBJS) $(addprefix $(test-common_TARGETDIR)/,$(test-common_FILES)),)
+$(test-common_DEPS) $(test-common_OBJS) $(addprefix $(test-common_TARGETDIR)/,$(test-common_FILES)) : | $(test-common_TARGETDIR) $(test-common_OBJDIR)
+else
+$(test-common_DEPS) $(test-common_OBJS) $(addprefix $(test-common_TARGETDIR)/,$(test-common_FILES)) :: $(test-common_TARGETDIR) $(test-common_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-common_TARGETDIR) $(test-common_OBJDIR)
+
+
+test-common-clean : FILES := $(test-common_OBJS) $(test-common_EXES) $(test-common_DEPS)
+#MM
+test-common-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-common"
+	$(Q)$(RM) $(FILES)
+
+
+
+test-miscfiles_SRC := $(shell echo . | sed 's/^\(.\):\//\/\1\//')
+
+
+ifneq (setup,)
+setup : | $(EXEDIR)
+else
+setup :: $(EXEDIR)
+endif
+
+GLOB_MKDIRS += $(EXEDIR)
+
+
+.PHONY : test-miscfiles
+
+#MM
+test-miscfiles : | $(EXEDIR) 
+	$(foreach file, testscript, $(shell $(CP) $(addprefix $(if $(filter /%,$(test-miscfiles_SRC)),$(test-miscfiles_SRC),$(SRCDIR)/$(CURDIR)/$(test-miscfiles_SRC))/, $(file)) $(addprefix $(EXEDIR)/, $(file))))
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

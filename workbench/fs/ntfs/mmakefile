@@ -1,0 +1,633 @@
+include $(SRCDIR)/config/aros.cfg
+
+#MM- workbench-fs-complete : workbench-fs-ntfs
+
+#MM workbench-fs-ntfs : workbench-libs-uuid-includes
+
+USER_LDFLAGS := -static
+
+FILES := startup main disk cache packet ntfs ops lock direntry charset names timer notify support
+
+DISABLEDFILES :=   file   
+
+
+.PHONY : workbench-fs-ntfs
+
+workbench-fs-ntfs_PROGNAME  := ntfs-handler
+workbench-fs-ntfs_OBJDIR    := $(GENDIR)/$(CURDIR)
+workbench-fs-ntfs_TARGETDIR := $(AROSDIR)/Storage
+workbench-fs-ntfs_LINKER    := 
+workbench-fs-ntfs_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(workbench-fs-ntfs_LINKER),)
+    workbench-fs-ntfs_LINKER := target
+endif
+
+ifneq ("$(strip $(FILES)   )","")
+    workbench-fs-ntfs_FILES     := $(FILES)
+    workbench-fs-ntfs_OBJCFILES := 
+    workbench-fs-ntfs_ASMFILES  := 
+    workbench-fs-ntfs_CXXFILES := 
+else
+    workbench-fs-ntfs_FILES     := $(workbench-fs-ntfs_PROGNAME)
+    workbench-fs-ntfs_OBJCFILES :=
+    workbench-fs-ntfs_ASMFILES  :=
+    workbench-fs-ntfs_CXXFILES :=
+endif
+
+workbench-fs-ntfs_ARCHOBJS   := $(wildcard $(workbench-fs-ntfs_OBJDIR)/arch/*.o)
+workbench-fs-ntfs_ARCHFILES  := $(basename $(notdir $(workbench-fs-ntfs_ARCHOBJS)))
+workbench-fs-ntfs_C_NARCHFILES := $(filter-out $(workbench-fs-ntfs_ARCHFILES),$(workbench-fs-ntfs_FILES))
+workbench-fs-ntfs_CXX_NARCHFILES := $(filter-out $(workbench-fs-ntfs_ARCHFILES),$(workbench-fs-ntfs_CXXFILES))
+workbench-fs-ntfs_OBJC_NARCHFILES := $(filter-out $(workbench-fs-ntfs_ARCHFILES),$(workbench-fs-ntfs_OBJCFILES))
+
+TMP_FILES := $(workbench-fs-ntfs_C_NARCHFILES) $(workbench-fs-ntfs_CXX_NARCHFILES) $(workbench-fs-ntfs_ASMFILES) $(workbench-fs-ntfs_OBJC_NARCHFILES)
+workbench-fs-ntfs_OBJS := $(addsuffix .o,$(addprefix $(workbench-fs-ntfs_OBJDIR)/,$(notdir $(TMP_FILES))))
+workbench-fs-ntfs_DEPS := $(addsuffix .d,$(addprefix $(workbench-fs-ntfs_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+workbench-fs-ntfs_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+workbench-fs-ntfs_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-fs-ntfs_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+workbench-fs-ntfs_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+workbench-fs-ntfs_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+workbench-fs-ntfs_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-fs-ntfs_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+workbench-fs-ntfs_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+workbench-fs-ntfs_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+workbench-fs-ntfs_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-fs-ntfs_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+workbench-fs-ntfs_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+workbench-fs-ntfs_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+workbench-fs-ntfs_LDFLAGS          := 
+endif
+
+workbench-fs-ntfs_COVERAGE := no
+ifeq (target,target)
+ifeq (no,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+workbench-fs-ntfs_COVERAGE := yes
+workbench-fs-ntfs_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+workbench-fs-ntfs_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+workbench-fs-ntfs_CFLAGS    := $(strip $(workbench-fs-ntfs_COVERAGEFLAGS) $(workbench-fs-ntfs_CFLAGS))
+workbench-fs-ntfs_CXXFLAGS := $(strip $(workbench-fs-ntfs_COVERAGEFLAGS) $(workbench-fs-ntfs_CXXFLAGS))
+workbench-fs-ntfs_LIBS += $(workbench-fs-ntfs_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-fs-ntfs_FUNCINSTR := yes
+workbench-fs-ntfs_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+workbench-fs-ntfs_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-fs-ntfs_CFLAGS    := $(strip $(workbench-fs-ntfs_INSTRFUNCFLAGS) $(workbench-fs-ntfs_CFLAGS))
+workbench-fs-ntfs_CXXFLAGS := $(strip $(workbench-fs-ntfs_INSTRFUNCFLAGS) $(workbench-fs-ntfs_CXXFLAGS))
+workbench-fs-ntfs_LIBS += $(workbench-fs-ntfs_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+workbench-fs-ntfs_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(workbench-fs-ntfs_CFLAGS))
+workbench-fs-ntfs_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(workbench-fs-ntfs_CXXFLAGS))
+endif
+endif
+workbench-fs-ntfs_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    workbench-fs-ntfs_DFLAGS     := 
+else
+    workbench-fs-ntfs_DFLAGS     := $(workbench-fs-ntfs_CFLAGS)
+endif
+ifneq (,)
+    workbench-fs-ntfs_DXXFLAGS     := 
+else
+    workbench-fs-ntfs_DXXFLAGS     := $(workbench-fs-ntfs_CXXFLAGS)
+endif
+ifeq (target,target)
+workbench-fs-ntfs_LDFLAGS           := $(workbench-fs-ntfs_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-fs-ntfs_LDFLAGS           := $(workbench-fs-ntfs_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-fs-ntfs_LDFLAGS           := $(workbench-fs-ntfs_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+workbench-fs-ntfs_LDFLAGS   += -L
+endif
+
+#MM
+workbench-fs-ntfs-quick : workbench-fs-ntfs
+
+#MM workbench-fs-ntfs : includes-generate-deps core-linklibs
+workbench-fs-ntfs : $(workbench-fs-ntfs_TARGETDIR)/$(workbench-fs-ntfs_PROGNAME)
+
+ifneq ($(filter $(TARGET),workbench-fs-ntfs workbench-fs-ntfs-quick workbench-fs-ntfs-gz-quick),)
+
+workbench-fs-ntfs_CXXABSBASENAMES := $(foreach workbench-fs-ntfs_CXXBASE,$(workbench-fs-ntfs_CXX_NARCHFILES),$(if $(filter /%,$(workbench-fs-ntfs_CXXBASE)),$(workbench-fs-ntfs_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-fs-ntfs_CXXBASE))))
+
+ifneq ($(workbench-fs-ntfs_CXXABSBASENAMES),)
+
+workbench-fs-ntfs_CXXBASENAMES := $(basename $(workbench-fs-ntfs_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-fs-ntfs_MCXX_FILES  := $(strip $(foreach workbench-fs-ntfs_CXXBASE,$(workbench-fs-ntfs_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-fs-ntfs_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-fs-ntfs_EXT),$(workbench-fs-ntfs_CXXBASE)))))))
+
+ifeq (,)
+workbench-fs-ntfs_MCXX_SRCWILDCARD := %
+else
+workbench-fs-ntfs_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-fs-ntfs_OBJDIR),)
+  workbench-fs-ntfs_CXXTARGETS := $(notdir $(workbench-fs-ntfs_CXXBASENAMES:=.o))
+  workbench-fs-ntfs_CXXDTARGETS := $(notdir $(workbench-fs-ntfs_CXXBASENAMES:=.d))
+  workbench-fs-ntfs_MCXX_WILDCARD := %
+else
+  workbench-fs-ntfs_CXXTARGETS := $(addprefix $(workbench-fs-ntfs_OBJDIR)/,$(notdir $(workbench-fs-ntfs_CXXBASENAMES:=.o)))
+  workbench-fs-ntfs_CXXDTARGETS := $(addprefix $(workbench-fs-ntfs_OBJDIR)/,$(notdir $(workbench-fs-ntfs_CXXBASENAMES:=.d)))
+  workbench-fs-ntfs_MCXX_WILDCARD := $(workbench-fs-ntfs_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-fs-ntfs_CXXTARGETS) $(workbench-fs-ntfs_CXXDTARGETS) : | $(workbench-fs-ntfs_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-fs-ntfs_MCXX_CPPFLAGS := $(workbench-fs-ntfs_CPPFLAGS)
+workbench-fs-ntfs_CXXFLAGS := $(workbench-fs-ntfs_CXXFLAGS)
+ifeq ($(workbench-fs-ntfs_DXXFLAGS),)
+  workbench-fs-ntfs_DXXFLAGS := $(workbench-fs-ntfs_CXXFLAGS)
+else
+  workbench-fs-ntfs_DXXFLAGS := $(workbench-fs-ntfs_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-fs-ntfs_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-fs-ntfs_STRIP ?= $(HOST_STRIP)
+  workbench-fs-ntfs_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-fs-ntfs_CXXCMD:=$(HOST_CXX)
+  workbench-fs-ntfs_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-fs-ntfs_MCXX_CPPFLAGS) $(workbench-fs-ntfs_MCXX_EXTRA_CPPFLAGS))
+  workbench-fs-ntfs_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-fs-ntfs_CXXFLAGS))
+  workbench-fs-ntfs_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-fs-ntfs_DXXFLAGS))
+  workbench-fs-ntfs_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-fs-ntfs_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-fs-ntfs_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-fs-ntfs_STRIP ?= $(TARGET_STRIP)
+  workbench-fs-ntfs_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-fs-ntfs_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-fs-ntfs_MCXX_CPPFLAGS := $(strip $(workbench-fs-ntfs_MCXX_CPPFLAGS) $(workbench-fs-ntfs_MCXX_EXTRA_CPPFLAGS))
+  workbench-fs-ntfs_CXXFLAGS := $(strip $(workbench-fs-ntfs_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-fs-ntfs_DXXFLAGS := $(workbench-fs-ntfs_DXXFLAGS)
+  workbench-fs-ntfs_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-fs-ntfs_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-fs-ntfs_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-fs-ntfs_STRIP ?= $(ECHO) >/dev/null
+  workbench-fs-ntfs_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-fs-ntfs_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-fs-ntfs_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-fs-ntfs_MCXX_CPPFLAGS) $(workbench-fs-ntfs_MCXX_EXTRA_CPPFLAGS))
+  workbench-fs-ntfs_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-fs-ntfs_CXXFLAGS))
+  workbench-fs-ntfs_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-fs-ntfs_DXXFLAGS))
+  workbench-fs-ntfs_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-fs-ntfs_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-fs-ntfs_CXXCMD) $(workbench-fs-ntfs_CXXIQUOTE) $(dir $(2)) $(workbench-fs-ntfs_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-fs-ntfs_CXXIQUOTE) . $(workbench-fs-ntfs_CXXIQUOTE_END) $(strip $(workbench-fs-ntfs_CXXFLAGS) $(workbench-fs-ntfs_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-fs-ntfs_CXXCMD) $(workbench-fs-ntfs_CXXIQUOTE) $(dir $(2)) $(workbench-fs-ntfs_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-fs-ntfs_CXXIQUOTE) . $(workbench-fs-ntfs_CXXIQUOTE_END) $(strip $(workbench-fs-ntfs_CXXFLAGS) $(workbench-fs-ntfs_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-fs-ntfs_CXXCMD) $(workbench-fs-ntfs_CXXIQUOTE) $(dir $(2)) $(workbench-fs-ntfs_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-fs-ntfs_CXXIQUOTE) . $(workbench-fs-ntfs_CXXIQUOTE_END) $(strip $(workbench-fs-ntfs_CXXFLAGS) $(workbench-fs-ntfs_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-fs-ntfs_CXXCMD)" $(MKDEPEND) $(strip $(workbench-fs-ntfs_DXXFLAGS) $(workbench-fs-ntfs_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-fs-ntfs_OBJDIR),)
+  $(foreach workbench-fs-ntfs_CXXFILE,$(workbench-fs-ntfs_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-fs-ntfs_CXXFILE))),$(workbench-fs-ntfs_CXXFILE))))
+else
+  $(foreach workbench-fs-ntfs_CXXFILE,$(workbench-fs-ntfs_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-fs-ntfs_OBJDIR)/,$(notdir $(basename $(workbench-fs-ntfs_CXXFILE)))),$(workbench-fs-ntfs_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-fs-ntfs_OBJC_NARCHFILES),)
+
+ifeq (,)
+workbench-fs-ntfs_MOBJC_SRCWILDCARD := %
+else
+workbench-fs-ntfs_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-fs-ntfs_OBJDIR),)
+  workbench-fs-ntfs_MOBJC_TARGETS := $(addsuffix .o,$(workbench-fs-ntfs_OBJC_NARCHFILES))
+  workbench-fs-ntfs_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-fs-ntfs_OBJC_NARCHFILES))
+  workbench-fs-ntfs_MOBJC_WILDCARD := %
+else
+  workbench-fs-ntfs_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-fs-ntfs_OBJDIR)/,$(workbench-fs-ntfs_OBJC_NARCHFILES)))
+  workbench-fs-ntfs_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-fs-ntfs_OBJDIR)/,$(workbench-fs-ntfs_OBJC_NARCHFILES)))
+  workbench-fs-ntfs_MOBJC_WILDCARD := $(workbench-fs-ntfs_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-fs-ntfs_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  workbench-fs-ntfs_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-fs-ntfs_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-fs-ntfs_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-fs-ntfs_MOBJC_DIRS := $(foreach dir, $(workbench-fs-ntfs_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-fs-ntfs_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-fs-ntfs_MOBJC_DIRS),)
+    workbench-fs-ntfs_MOBJC_DIRS := $(shell echo $(workbench-fs-ntfs_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-fs-ntfs_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-fs-ntfs_CC := $(TARGET_CC)
+else
+  workbench-fs-ntfs_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-fs-ntfs_MOBJC_CPPFLAGS := $(workbench-fs-ntfs_CPPFLAGS)
+workbench-fs-ntfs_OBJCFLAGS := $(workbench-fs-ntfs_CFLAGS)
+workbench-fs-ntfs_OBJCFLAGS := $(workbench-fs-ntfs_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-fs-ntfs_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-fs-ntfs_OBJCFLAGS)))
+ifeq ($(workbench-fs-ntfs_DFLAGS),)
+  workbench-fs-ntfs_OBJCDFLAGS := $(workbench-fs-ntfs_CFLAGS)
+else
+  workbench-fs-ntfs_OBJCDFLAGS := $(workbench-fs-ntfs_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-fs-ntfs_LINK ?= $(strip $(workbench-fs-ntfs_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-fs-ntfs_STRIP ?= $(TARGET_STRIP)
+  workbench-fs-ntfs_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-fs-ntfs_CC) $(TARGET_SYSROOT))
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : workbench-fs-ntfs_MOBJC_CPPFLAGS:=$(strip $(workbench-fs-ntfs_MOBJC_CPPFLAGS) $(workbench-fs-ntfs_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : workbench-fs-ntfs_OBJCFLAGS:=$(strip $(workbench-fs-ntfs_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : workbench-fs-ntfs_OBJCDFLAGS:=$(workbench-fs-ntfs_OBJCDFLAGS)
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : workbench-fs-ntfs_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : workbench-fs-ntfs_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-fs-ntfs_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-fs-ntfs_STRIP ?= $(HOST_STRIP)
+  workbench-fs-ntfs_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : workbench-fs-ntfs_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-fs-ntfs_MOBJC_CPPFLAGS) $(workbench-fs-ntfs_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : workbench-fs-ntfs_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-fs-ntfs_OBJCFLAGS))
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : workbench-fs-ntfs_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-fs-ntfs_OBJCDFLAGS))
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : workbench-fs-ntfs_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : workbench-fs-ntfs_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-fs-ntfs_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-fs-ntfs_STRIP ?= $(ECHO) >/dev/null
+  workbench-fs-ntfs_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : workbench-fs-ntfs_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-fs-ntfs_MOBJC_CPPFLAGS) $(workbench-fs-ntfs_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : workbench-fs-ntfs_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-fs-ntfs_OBJCFLAGS))
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : workbench-fs-ntfs_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-fs-ntfs_OBJCDFLAGS))
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : workbench-fs-ntfs_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-fs-ntfs_MOBJC_TARGETS) $(workbench-fs-ntfs_MOBJC_DTARGETS) : workbench-fs-ntfs_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-fs-ntfs_MOBJC_TARGETS) : CPPFLAGS := $(workbench-fs-ntfs_MOBJC_CPPFLAGS)
+$(workbench-fs-ntfs_MOBJC_TARGETS) : CFLAGS := $(workbench-fs-ntfs_OBJCFLAGS)
+$(workbench-fs-ntfs_MOBJC_TARGETS) : $(workbench-fs-ntfs_MOBJC_WILDCARD).o : $(workbench-fs-ntfs_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-fs-ntfs_IQUOTE) $(dir $<) $(workbench-fs-ntfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-fs-ntfs_IQUOTE) . $(workbench-fs-ntfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-fs-ntfs_IQUOTE) $(dir $<) $(workbench-fs-ntfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-fs-ntfs_IQUOTE) . $(workbench-fs-ntfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-fs-ntfs_IQUOTE) $(dir $<) $(workbench-fs-ntfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-fs-ntfs_IQUOTE) . $(workbench-fs-ntfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-fs-ntfs_MOBJC_DTARGETS) : $(workbench-fs-ntfs_MOBJC_WILDCARD).d : $(workbench-fs-ntfs_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-fs-ntfs_OBJCDFLAGS) $(workbench-fs-ntfs_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-fs-ntfs_MC_SRCWILDCARD := %
+else
+workbench-fs-ntfs_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-fs-ntfs_OBJDIR),)
+workbench-fs-ntfs_MC_TARGETS := $(addsuffix .o,$(workbench-fs-ntfs_C_NARCHFILES))
+workbench-fs-ntfs_MC_DTARGETS := $(addsuffix .d,$(workbench-fs-ntfs_C_NARCHFILES))
+workbench-fs-ntfs_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-fs-ntfs_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-fs-ntfs_OBJDIR)/,$(notdir $(workbench-fs-ntfs_C_NARCHFILES))))
+    workbench-fs-ntfs_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-fs-ntfs_OBJDIR)/,$(notdir $(workbench-fs-ntfs_C_NARCHFILES))))
+else
+ifeq (,)
+    workbench-fs-ntfs_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-fs-ntfs_OBJDIR)/,$(workbench-fs-ntfs_C_NARCHFILES)))
+    workbench-fs-ntfs_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-fs-ntfs_OBJDIR)/,$(workbench-fs-ntfs_C_NARCHFILES)))
+else
+    workbench-fs-ntfs_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-fs-ntfs_OBJDIR)/,$(patsubst /%,%,$(workbench-fs-ntfs_C_NARCHFILES))))
+    workbench-fs-ntfs_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-fs-ntfs_OBJDIR)/,$(patsubst /%,%,$(workbench-fs-ntfs_C_NARCHFILES))))
+endif
+endif
+workbench-fs-ntfs_MC_TGTWILDCARD := $(workbench-fs-ntfs_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : | $(addsuffix .c,$(workbench-fs-ntfs_C_NARCHFILES))
+
+# Be sure that all .c files are found
+workbench-fs-ntfs_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-fs-ntfs_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-fs-ntfs_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-fs-ntfs_MC_DIRS := $(foreach dir, $(workbench-fs-ntfs_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-fs-ntfs_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-fs-ntfs_MC_DIRS),)
+    workbench-fs-ntfs_MC_DIRS := $(shell echo $(workbench-fs-ntfs_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-fs-ntfs_MC_DIRS)
+endif
+
+endif
+
+workbench-fs-ntfs_MC_CPPFLAGS := $(workbench-fs-ntfs_CPPFLAGS)
+workbench-fs-ntfs_CFLAGS := $(workbench-fs-ntfs_CFLAGS)
+ifeq ($(workbench-fs-ntfs_DFLAGS),)
+  workbench-fs-ntfs_DFLAGS := $(workbench-fs-ntfs_CFLAGS)
+else
+  workbench-fs-ntfs_DFLAGS := $(workbench-fs-ntfs_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-fs-ntfs_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-fs-ntfs_STRIP ?= $(TARGET_STRIP)
+workbench-fs-ntfs_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : workbench-fs-ntfs_MC_CPPFLAGS:=$(strip $(workbench-fs-ntfs_MC_CPPFLAGS) $(workbench-fs-ntfs_MC_EXTRA_CPPFLAGS))
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : workbench-fs-ntfs_CFLAGS:=$(strip $(workbench-fs-ntfs_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : workbench-fs-ntfs_DFLAGS:=$(workbench-fs-ntfs_DFLAGS)
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : workbench-fs-ntfs_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : workbench-fs-ntfs_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-fs-ntfs_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-fs-ntfs_STRIP ?= $(HOST_STRIP)
+workbench-fs-ntfs_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : workbench-fs-ntfs_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-fs-ntfs_MC_CPPFLAGS) $(workbench-fs-ntfs_MC_EXTRA_CPPFLAGS))
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : workbench-fs-ntfs_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-fs-ntfs_CFLAGS))
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : workbench-fs-ntfs_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-fs-ntfs_DFLAGS))
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : workbench-fs-ntfs_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : workbench-fs-ntfs_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-fs-ntfs_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-fs-ntfs_STRIP ?= $(ECHO) >/dev/null
+workbench-fs-ntfs_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : workbench-fs-ntfs_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-fs-ntfs_MC_CPPFLAGS) $(workbench-fs-ntfs_MC_EXTRA_CPPFLAGS))
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : workbench-fs-ntfs_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-fs-ntfs_CFLAGS))
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : workbench-fs-ntfs_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-fs-ntfs_DFLAGS))
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : workbench-fs-ntfs_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-fs-ntfs_MC_TARGETS) $(workbench-fs-ntfs_MC_DTARGETS) : workbench-fs-ntfs_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-fs-ntfs_MC_TARGETS) : CPPFLAGS := $(workbench-fs-ntfs_MC_CPPFLAGS)
+$(workbench-fs-ntfs_MC_TARGETS) : CFLAGS := $(workbench-fs-ntfs_CFLAGS)
+$(workbench-fs-ntfs_MC_TARGETS) : $(workbench-fs-ntfs_MC_TGTWILDCARD).o : $(workbench-fs-ntfs_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-fs-ntfs_IQUOTE) $(dir $<) $(workbench-fs-ntfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-fs-ntfs_IQUOTE) . $(workbench-fs-ntfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-fs-ntfs_IQUOTE) $(dir $<) $(workbench-fs-ntfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-fs-ntfs_IQUOTE) . $(workbench-fs-ntfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-fs-ntfs_IQUOTE) $(dir $<) $(workbench-fs-ntfs_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-fs-ntfs_IQUOTE) . $(workbench-fs-ntfs_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-fs-ntfs_MC_DTARGETS) : $(workbench-fs-ntfs_MC_TGTWILDCARD).d : $(workbench-fs-ntfs_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-fs-ntfs_DFLAGS) $(workbench-fs-ntfs_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-fs-ntfs_OBJDIR),)
+workbench-fs-ntfs-MA_TARGETS := $(addsuffix .o,$(workbench-fs-ntfs_ASMFILES))
+workbench-fs-ntfs-MA_WILDCARD := %
+else
+workbench-fs-ntfs-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-fs-ntfs_OBJDIR)/,$(notdir $(workbench-fs-ntfs_ASMFILES))))
+workbench-fs-ntfs-MA_WILDCARD := $(workbench-fs-ntfs_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(workbench-fs-ntfs-MA_TARGETS) : | $(addsuffix .s,$(workbench-fs-ntfs_ASMFILES))
+
+# Be sure that all .c files are found
+workbench-fs-ntfs-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-fs-ntfs-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-fs-ntfs_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-fs-ntfs-MA_DIRS := $(foreach dir, $(workbench-fs-ntfs-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-fs-ntfs-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-fs-ntfs-MA_DIRS),)
+    workbench-fs-ntfs-MA_DIRS := $(shell echo $(workbench-fs-ntfs-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(workbench-fs-ntfs-MA_DIRS)
+endif
+
+endif
+
+workbench-fs-ntfs-MA_ASSEMBLER ?= $(workbench-fs-ntfs_ASSEMBLER)
+
+$(workbench-fs-ntfs-MA_TARGETS) : workbench-fs-ntfs-MA_CMD:= $(workbench-fs-ntfs-MA_ASSEMBLER)
+
+$(workbench-fs-ntfs-MA_TARGETS) : CPPFLAGS := $(workbench-fs-ntfs_CPPFLAGS)
+$(workbench-fs-ntfs-MA_TARGETS) : AFLAGS := $(workbench-fs-ntfs_AFLAGS)
+$(workbench-fs-ntfs-MA_TARGETS) : $(workbench-fs-ntfs-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-fs-ntfs-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-fs-ntfs-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-fs-ntfs-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+workbench-fs-ntfs-link_EXTRA_LDFLAGS := 
+workbench-fs-ntfs-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    workbench-fs-ntfs-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (no,no)
+    workbench-fs-ntfs-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    workbench-fs-ntfs-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+workbench-fs-ntfs-link_DIRS := $(subst -L ,-L,$(strip $(workbench-fs-ntfs_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+workbench-fs-ntfs-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(workbench-fs-ntfs-link_DIRS)))
+# Add trailing /
+workbench-fs-ntfs-link_DIRS := $(subst //,/,$(addsuffix /,$(workbench-fs-ntfs-link_DIRS)))
+# Add normal linklib path
+workbench-fs-ntfs-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+workbench-fs-ntfs-link_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-fs-ntfs_LIBS) $(workbench-fs-ntfs-link_EXTRA_LIBS)))
+ifeq (no,yes)
+    workbench-fs-ntfs-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    workbench-fs-ntfs-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+workbench-fs-ntfs-link_DEPLIBS := $(foreach lib,$(workbench-fs-ntfs-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(workbench-fs-ntfs-link_DIRS)))) \
+)
+
+$(workbench-fs-ntfs_TARGETDIR)/$(workbench-fs-ntfs_PROGNAME) : OBJDIR := $(workbench-fs-ntfs_OBJDIR)
+$(workbench-fs-ntfs_TARGETDIR)/$(workbench-fs-ntfs_PROGNAME) : OBJS := $(workbench-fs-ntfs_OBJS) $(workbench-fs-ntfs_ARCHOBJS) $(USER_OBJS)
+$(workbench-fs-ntfs_TARGETDIR)/$(workbench-fs-ntfs_PROGNAME) : LDFLAGS := $(strip $(workbench-fs-ntfs_LDFLAGS) $(workbench-fs-ntfs-link_EXTRA_LDFLAGS))
+$(workbench-fs-ntfs_TARGETDIR)/$(workbench-fs-ntfs_PROGNAME) : LIBS := $(addprefix -l,$(workbench-fs-ntfs_LIBS) $(workbench-fs-ntfs-link_EXTRA_LIBS) )
+$(workbench-fs-ntfs_TARGETDIR)/$(workbench-fs-ntfs_PROGNAME) : $(workbench-fs-ntfs_OBJS) $(workbench-fs-ntfs_ARCHOBJS) $(USER_OBJS) $(workbench-fs-ntfs-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(workbench-fs-ntfs_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(workbench-fs-ntfs_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(workbench-fs-ntfs_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-fs-ntfs_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(workbench-fs-ntfs_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(workbench-fs-ntfs_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-fs-ntfs_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(workbench-fs-ntfs_DEPS),)
+  ifneq (workbench-fs-ntfs workbench-fs-ntfs-quick,)
+    ifneq ($(findstring $(TARGET),workbench-fs-ntfs workbench-fs-ntfs-quick),)
+      -include $(workbench-fs-ntfs_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-fs-ntfs_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(workbench-fs-ntfs_OBJS) $(workbench-fs-ntfs_DEPS) $(workbench-fs-ntfs_TARGETDIR)/$(workbench-fs-ntfs_PROGNAME),)
+$(workbench-fs-ntfs_OBJS) $(workbench-fs-ntfs_DEPS) $(workbench-fs-ntfs_TARGETDIR)/$(workbench-fs-ntfs_PROGNAME) : | $(workbench-fs-ntfs_OBJDIR) $(workbench-fs-ntfs_TARGETDIR)
+else
+$(workbench-fs-ntfs_OBJS) $(workbench-fs-ntfs_DEPS) $(workbench-fs-ntfs_TARGETDIR)/$(workbench-fs-ntfs_PROGNAME) :: $(workbench-fs-ntfs_OBJDIR) $(workbench-fs-ntfs_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-fs-ntfs_OBJDIR) $(workbench-fs-ntfs_TARGETDIR)
+
+
+workbench-fs-ntfs-clean : FILES := $(workbench-fs-ntfs_OBJS) $(workbench-fs-ntfs_TARGETDIR)/$(workbench-fs-ntfs_PROGNAME) $(workbench-fs-ntfs_DEPS)
+#MM
+workbench-fs-ntfs-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-fs-ntfs"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

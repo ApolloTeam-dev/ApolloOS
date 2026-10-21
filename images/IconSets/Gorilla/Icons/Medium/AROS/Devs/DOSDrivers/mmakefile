@@ -1,0 +1,95 @@
+# Copyright © 2012-2017, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+STORAGEICONS := ICD0 ICD1 IDF0 IDF1 ISO0 PC0
+DEVSICONS    := PAR PIPE PRT SER SER0 SER1
+
+#MM- iconset-Gorilla-wbench-icons-aros-clean : iconset-Gorilla-wbench-icons-devs-dosdrivers-clean iconset-Gorilla-wbench-icons-storage-dosdrivers-clean
+#MM- iconset-Gorilla-wbench-icons-aros : iconset-Gorilla-wbench-icons-devs-dosdrivers iconset-Gorilla-wbench-icons-storage-dosdrivers
+
+
+BD_OBJS := $(addprefix  $(AROS_DEVS)/DOSDrivers/, $(addsuffix .info,$(DEVSICONS)))
+
+#MM
+iconset-Gorilla-wbench-icons-devs-dosdrivers : $(BD_OBJS)
+
+ifeq (,)
+
+$(AROS_DEVS)/DOSDrivers/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/%.png
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+else
+
+$(AROS_DEVS)/DOSDrivers/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+endif
+
+
+ifneq ($(BD_OBJS),)
+$(BD_OBJS) : | $(AROS_DEVS)/DOSDrivers
+else
+$(BD_OBJS) :: $(AROS_DEVS)/DOSDrivers
+endif
+
+GLOB_MKDIRS += $(AROS_DEVS)/DOSDrivers
+
+
+iconset-Gorilla-wbench-icons-devs-dosdrivers-clean : FILES := $(BD_OBJS)
+#MM
+iconset-Gorilla-wbench-icons-devs-dosdrivers-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: iconset-Gorilla-wbench-icons-devs-dosdrivers iconset-Gorilla-wbench-icons-devs-dosdrivers-clean
+
+
+
+BD_OBJS := $(addprefix  $(AROSDIR)/Storage/DOSDrivers/, $(addsuffix .info,$(STORAGEICONS)))
+
+#MM
+iconset-Gorilla-wbench-icons-storage-dosdrivers : $(BD_OBJS)
+
+ifeq (,)
+
+$(AROSDIR)/Storage/DOSDrivers/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/%.png
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+else
+
+$(AROSDIR)/Storage/DOSDrivers/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+endif
+
+
+ifneq ($(BD_OBJS),)
+$(BD_OBJS) : | $(AROSDIR)/Storage/DOSDrivers
+else
+$(BD_OBJS) :: $(AROSDIR)/Storage/DOSDrivers
+endif
+
+GLOB_MKDIRS += $(AROSDIR)/Storage/DOSDrivers
+
+
+iconset-Gorilla-wbench-icons-storage-dosdrivers-clean : FILES := $(BD_OBJS)
+#MM
+iconset-Gorilla-wbench-icons-storage-dosdrivers-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: iconset-Gorilla-wbench-icons-storage-dosdrivers iconset-Gorilla-wbench-icons-storage-dosdrivers-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

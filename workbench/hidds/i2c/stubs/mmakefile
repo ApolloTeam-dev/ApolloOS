@@ -1,0 +1,68 @@
+#$Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+MODNAME	:=  i2c
+MODTYPE	:=  hidd
+
+USER_CFLAGS :=	-DAROS_USE_OOP -I.
+
+FILES       :=
+STUBS	    := $(MODNAME)_stubs
+
+STUBS_SRC := $(addprefix $(SRCDIR)/$(CURDIR)/,$(addsuffix .c,$(STUBS)))
+STUBS_MEM := $(addsuffix .o,$(STUBS))
+STUBS_OBJ := $(addprefix $(OBJDIR)/,$(STUBS_MEM))
+STUBS_DEP := $(addprefix $(OBJDIR)/,$(addsuffix .d,$(STUBS)))
+HIDD_LIB := $(AROS_LIB)/libhiddstubs.a
+
+#MM- linklibs : hidd-i2c-stubs
+#MM- linklibs: hidd-i2c-stubs
+#MM hidd-i2c-stubs : includes includes-copy
+hidd-i2c-stubs : setup $(HIDD_LIB)($(STUBS_MEM))
+
+$(HIDD_LIB)($(STUBS_MEM)) : $(STUBS_OBJ)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(AR) $@ $^
+	$(Q)$(RANLIB) $@
+
+$(STUBS_OBJ) : $(STUBS_SRC) 
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(strip $(TARGET_CC) $(TARGET_SYSROOT)) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(strip $(TARGET_CC) $(TARGET_SYSROOT)) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(strip $(TARGET_CC) $(TARGET_SYSROOT)) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(STUBS_DEP) : $(STUBS_SRC)
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(strip $(AROS_CC) $(TARGET_SYSROOT))" $(MKDEPEND) $(strip $(CFLAGS) $(CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+setup ::
+	$(Q)$(FOR) dir in $(OBJDIR) $(AROS_LIB) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+
+#MM
+clean ::
+	-@$(RM) $(HIDD_LIB) $(OBJDIR)
+
+DEPS := $(DEPS) $(STUBS_DEP)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

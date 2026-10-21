@@ -1,0 +1,634 @@
+# Copyright © 2012, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES   := locale gui main
+
+EXEDIR  := $(AROS_C)
+
+#MM- workbench-c : workbench-c-r
+#MM  workbench-c-r : includes linklibs \
+#MM  workbench-c-r-catalogs
+
+
+.PHONY : workbench-c-r
+
+workbench-c-r_PROGNAME  := R
+workbench-c-r_OBJDIR    := $(GENDIR)/$(CURDIR)
+workbench-c-r_TARGETDIR := $(EXEDIR)
+workbench-c-r_LINKER    := 
+workbench-c-r_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(workbench-c-r_LINKER),)
+    workbench-c-r_LINKER := target
+endif
+
+ifneq ("$(strip $(FILES)   )","")
+    workbench-c-r_FILES     := $(FILES)
+    workbench-c-r_OBJCFILES := 
+    workbench-c-r_ASMFILES  := 
+    workbench-c-r_CXXFILES := 
+else
+    workbench-c-r_FILES     := $(workbench-c-r_PROGNAME)
+    workbench-c-r_OBJCFILES :=
+    workbench-c-r_ASMFILES  :=
+    workbench-c-r_CXXFILES :=
+endif
+
+workbench-c-r_ARCHOBJS   := $(wildcard $(workbench-c-r_OBJDIR)/arch/*.o)
+workbench-c-r_ARCHFILES  := $(basename $(notdir $(workbench-c-r_ARCHOBJS)))
+workbench-c-r_C_NARCHFILES := $(filter-out $(workbench-c-r_ARCHFILES),$(workbench-c-r_FILES))
+workbench-c-r_CXX_NARCHFILES := $(filter-out $(workbench-c-r_ARCHFILES),$(workbench-c-r_CXXFILES))
+workbench-c-r_OBJC_NARCHFILES := $(filter-out $(workbench-c-r_ARCHFILES),$(workbench-c-r_OBJCFILES))
+
+TMP_FILES := $(workbench-c-r_C_NARCHFILES) $(workbench-c-r_CXX_NARCHFILES) $(workbench-c-r_ASMFILES) $(workbench-c-r_OBJC_NARCHFILES)
+workbench-c-r_OBJS := $(addsuffix .o,$(addprefix $(workbench-c-r_OBJDIR)/,$(notdir $(TMP_FILES))))
+workbench-c-r_DEPS := $(addsuffix .d,$(addprefix $(workbench-c-r_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+workbench-c-r_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+workbench-c-r_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-c-r_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+workbench-c-r_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+workbench-c-r_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+workbench-c-r_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-c-r_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+workbench-c-r_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+workbench-c-r_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+workbench-c-r_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+workbench-c-r_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+workbench-c-r_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+workbench-c-r_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+workbench-c-r_LDFLAGS          := 
+endif
+
+workbench-c-r_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+workbench-c-r_COVERAGE := yes
+workbench-c-r_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+workbench-c-r_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+workbench-c-r_CFLAGS    := $(strip $(workbench-c-r_COVERAGEFLAGS) $(workbench-c-r_CFLAGS))
+workbench-c-r_CXXFLAGS := $(strip $(workbench-c-r_COVERAGEFLAGS) $(workbench-c-r_CXXFLAGS))
+workbench-c-r_LIBS += $(workbench-c-r_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+workbench-c-r_FUNCINSTR := yes
+workbench-c-r_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+workbench-c-r_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+workbench-c-r_CFLAGS    := $(strip $(workbench-c-r_INSTRFUNCFLAGS) $(workbench-c-r_CFLAGS))
+workbench-c-r_CXXFLAGS := $(strip $(workbench-c-r_INSTRFUNCFLAGS) $(workbench-c-r_CXXFLAGS))
+workbench-c-r_LIBS += $(workbench-c-r_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+workbench-c-r_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(workbench-c-r_CFLAGS))
+workbench-c-r_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(workbench-c-r_CXXFLAGS))
+endif
+endif
+workbench-c-r_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    workbench-c-r_DFLAGS     := 
+else
+    workbench-c-r_DFLAGS     := $(workbench-c-r_CFLAGS)
+endif
+ifneq (,)
+    workbench-c-r_DXXFLAGS     := 
+else
+    workbench-c-r_DXXFLAGS     := $(workbench-c-r_CXXFLAGS)
+endif
+ifeq (target,target)
+workbench-c-r_LDFLAGS           := $(workbench-c-r_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+workbench-c-r_LDFLAGS           := $(workbench-c-r_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+workbench-c-r_LDFLAGS           := $(workbench-c-r_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+workbench-c-r_LDFLAGS   += -L
+endif
+
+#MM
+workbench-c-r-quick : workbench-c-r
+
+#MM workbench-c-r : includes-generate-deps core-linklibs
+workbench-c-r : $(workbench-c-r_TARGETDIR)/$(workbench-c-r_PROGNAME)
+
+ifneq ($(filter $(TARGET),workbench-c-r workbench-c-r-quick workbench-c-r-gz-quick),)
+
+workbench-c-r_CXXABSBASENAMES := $(foreach workbench-c-r_CXXBASE,$(workbench-c-r_CXX_NARCHFILES),$(if $(filter /%,$(workbench-c-r_CXXBASE)),$(workbench-c-r_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(workbench-c-r_CXXBASE))))
+
+ifneq ($(workbench-c-r_CXXABSBASENAMES),)
+
+workbench-c-r_CXXBASENAMES := $(basename $(workbench-c-r_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+workbench-c-r_MCXX_FILES  := $(strip $(foreach workbench-c-r_CXXBASE,$(workbench-c-r_CXXABSBASENAMES), $(firstword $(wildcard $(foreach workbench-c-r_EXT, $(AROS_CXXEXTS),$(addsuffix .$(workbench-c-r_EXT),$(workbench-c-r_CXXBASE)))))))
+
+ifeq (,)
+workbench-c-r_MCXX_SRCWILDCARD := %
+else
+workbench-c-r_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-c-r_OBJDIR),)
+  workbench-c-r_CXXTARGETS := $(notdir $(workbench-c-r_CXXBASENAMES:=.o))
+  workbench-c-r_CXXDTARGETS := $(notdir $(workbench-c-r_CXXBASENAMES:=.d))
+  workbench-c-r_MCXX_WILDCARD := %
+else
+  workbench-c-r_CXXTARGETS := $(addprefix $(workbench-c-r_OBJDIR)/,$(notdir $(workbench-c-r_CXXBASENAMES:=.o)))
+  workbench-c-r_CXXDTARGETS := $(addprefix $(workbench-c-r_OBJDIR)/,$(notdir $(workbench-c-r_CXXBASENAMES:=.d)))
+  workbench-c-r_MCXX_WILDCARD := $(workbench-c-r_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(workbench-c-r_CXXTARGETS) $(workbench-c-r_CXXDTARGETS) : | $(workbench-c-r_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+workbench-c-r_MCXX_CPPFLAGS := $(workbench-c-r_CPPFLAGS)
+workbench-c-r_CXXFLAGS := $(workbench-c-r_CXXFLAGS)
+ifeq ($(workbench-c-r_DXXFLAGS),)
+  workbench-c-r_DXXFLAGS := $(workbench-c-r_CXXFLAGS)
+else
+  workbench-c-r_DXXFLAGS := $(workbench-c-r_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  workbench-c-r_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  workbench-c-r_STRIP ?= $(HOST_STRIP)
+  workbench-c-r_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  workbench-c-r_CXXCMD:=$(HOST_CXX)
+  workbench-c-r_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(workbench-c-r_MCXX_CPPFLAGS) $(workbench-c-r_MCXX_EXTRA_CPPFLAGS))
+  workbench-c-r_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-c-r_CXXFLAGS))
+  workbench-c-r_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(workbench-c-r_DXXFLAGS))
+  workbench-c-r_CXXIQUOTE:=$(HOST_IQUOTE)
+  workbench-c-r_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  workbench-c-r_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-c-r_STRIP ?= $(TARGET_STRIP)
+  workbench-c-r_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  workbench-c-r_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  workbench-c-r_MCXX_CPPFLAGS := $(strip $(workbench-c-r_MCXX_CPPFLAGS) $(workbench-c-r_MCXX_EXTRA_CPPFLAGS))
+  workbench-c-r_CXXFLAGS := $(strip $(workbench-c-r_CXXFLAGS) $(SAFETY_CFLAGS))
+  workbench-c-r_DXXFLAGS := $(workbench-c-r_DXXFLAGS)
+  workbench-c-r_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  workbench-c-r_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  workbench-c-r_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-c-r_STRIP ?= $(ECHO) >/dev/null
+  workbench-c-r_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  workbench-c-r_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  workbench-c-r_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(workbench-c-r_MCXX_CPPFLAGS) $(workbench-c-r_MCXX_EXTRA_CPPFLAGS))
+  workbench-c-r_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-c-r_CXXFLAGS))
+  workbench-c-r_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(workbench-c-r_DXXFLAGS))
+  workbench-c-r_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  workbench-c-r_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(workbench-c-r_CXXCMD) $(workbench-c-r_CXXIQUOTE) $(dir $(2)) $(workbench-c-r_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-c-r_CXXIQUOTE) . $(workbench-c-r_CXXIQUOTE_END) $(strip $(workbench-c-r_CXXFLAGS) $(workbench-c-r_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(workbench-c-r_CXXCMD) $(workbench-c-r_CXXIQUOTE) $(dir $(2)) $(workbench-c-r_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-c-r_CXXIQUOTE) . $(workbench-c-r_CXXIQUOTE_END) $(strip $(workbench-c-r_CXXFLAGS) $(workbench-c-r_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(workbench-c-r_CXXCMD) $(workbench-c-r_CXXIQUOTE) $(dir $(2)) $(workbench-c-r_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-c-r_CXXIQUOTE) . $(workbench-c-r_CXXIQUOTE_END) $(strip $(workbench-c-r_CXXFLAGS) $(workbench-c-r_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(workbench-c-r_CXXCMD)" $(MKDEPEND) $(strip $(workbench-c-r_DXXFLAGS) $(workbench-c-r_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(workbench-c-r_OBJDIR),)
+  $(foreach workbench-c-r_CXXFILE,$(workbench-c-r_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(workbench-c-r_CXXFILE))),$(workbench-c-r_CXXFILE))))
+else
+  $(foreach workbench-c-r_CXXFILE,$(workbench-c-r_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(workbench-c-r_OBJDIR)/,$(notdir $(basename $(workbench-c-r_CXXFILE)))),$(workbench-c-r_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(workbench-c-r_OBJC_NARCHFILES),)
+
+ifeq (,)
+workbench-c-r_MOBJC_SRCWILDCARD := %
+else
+workbench-c-r_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-c-r_OBJDIR),)
+  workbench-c-r_MOBJC_TARGETS := $(addsuffix .o,$(workbench-c-r_OBJC_NARCHFILES))
+  workbench-c-r_MOBJC_DTARGETS := $(addsuffix .d,$(workbench-c-r_OBJC_NARCHFILES))
+  workbench-c-r_MOBJC_WILDCARD := %
+else
+  workbench-c-r_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-c-r_OBJDIR)/,$(workbench-c-r_OBJC_NARCHFILES)))
+  workbench-c-r_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-c-r_OBJDIR)/,$(workbench-c-r_OBJC_NARCHFILES)))
+  workbench-c-r_MOBJC_WILDCARD := $(workbench-c-r_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : | $(addsuffix .m,$(workbench-c-r_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  workbench-c-r_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  workbench-c-r_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-c-r_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  workbench-c-r_MOBJC_DIRS := $(foreach dir, $(workbench-c-r_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-c-r_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(workbench-c-r_MOBJC_DIRS),)
+    workbench-c-r_MOBJC_DIRS := $(shell echo $(workbench-c-r_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(workbench-c-r_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  workbench-c-r_CC := $(TARGET_CC)
+else
+  workbench-c-r_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+workbench-c-r_MOBJC_CPPFLAGS := $(workbench-c-r_CPPFLAGS)
+workbench-c-r_OBJCFLAGS := $(workbench-c-r_CFLAGS)
+workbench-c-r_OBJCFLAGS := $(workbench-c-r_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+workbench-c-r_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(workbench-c-r_OBJCFLAGS)))
+ifeq ($(workbench-c-r_DFLAGS),)
+  workbench-c-r_OBJCDFLAGS := $(workbench-c-r_CFLAGS)
+else
+  workbench-c-r_OBJCDFLAGS := $(workbench-c-r_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  workbench-c-r_LINK ?= $(strip $(workbench-c-r_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  workbench-c-r_STRIP ?= $(TARGET_STRIP)
+  workbench-c-r_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : CMD:=$(strip $(workbench-c-r_CC) $(TARGET_SYSROOT))
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : workbench-c-r_MOBJC_CPPFLAGS:=$(strip $(workbench-c-r_MOBJC_CPPFLAGS) $(workbench-c-r_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : workbench-c-r_OBJCFLAGS:=$(strip $(workbench-c-r_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : workbench-c-r_OBJCDFLAGS:=$(workbench-c-r_OBJCDFLAGS)
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : workbench-c-r_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : workbench-c-r_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  workbench-c-r_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  workbench-c-r_STRIP ?= $(HOST_STRIP)
+  workbench-c-r_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : workbench-c-r_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(workbench-c-r_MOBJC_CPPFLAGS) $(workbench-c-r_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : workbench-c-r_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-c-r_OBJCFLAGS))
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : workbench-c-r_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-c-r_OBJCDFLAGS))
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : workbench-c-r_IQUOTE:=$(HOST_IQUOTE)
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : workbench-c-r_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  workbench-c-r_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  workbench-c-r_STRIP ?= $(ECHO) >/dev/null
+  workbench-c-r_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : workbench-c-r_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(workbench-c-r_MOBJC_CPPFLAGS) $(workbench-c-r_MOBJC_EXTRA_CPPFLAGS))
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : workbench-c-r_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-c-r_OBJCFLAGS))
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : workbench-c-r_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-c-r_OBJCDFLAGS))
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : workbench-c-r_IQUOTE:=$(KERNEL_IQUOTE)
+  $(workbench-c-r_MOBJC_TARGETS) $(workbench-c-r_MOBJC_DTARGETS) : workbench-c-r_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-c-r_MOBJC_TARGETS) : CPPFLAGS := $(workbench-c-r_MOBJC_CPPFLAGS)
+$(workbench-c-r_MOBJC_TARGETS) : CFLAGS := $(workbench-c-r_OBJCFLAGS)
+$(workbench-c-r_MOBJC_TARGETS) : $(workbench-c-r_MOBJC_WILDCARD).o : $(workbench-c-r_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-c-r_IQUOTE) $(dir $<) $(workbench-c-r_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-c-r_IQUOTE) . $(workbench-c-r_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-c-r_IQUOTE) $(dir $<) $(workbench-c-r_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-c-r_IQUOTE) . $(workbench-c-r_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-c-r_IQUOTE) $(dir $<) $(workbench-c-r_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-c-r_IQUOTE) . $(workbench-c-r_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-c-r_MOBJC_DTARGETS) : $(workbench-c-r_MOBJC_WILDCARD).d : $(workbench-c-r_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-c-r_OBJCDFLAGS) $(workbench-c-r_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+workbench-c-r_MC_SRCWILDCARD := %
+else
+workbench-c-r_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(workbench-c-r_OBJDIR),)
+workbench-c-r_MC_TARGETS := $(addsuffix .o,$(workbench-c-r_C_NARCHFILES))
+workbench-c-r_MC_DTARGETS := $(addsuffix .d,$(workbench-c-r_C_NARCHFILES))
+workbench-c-r_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    workbench-c-r_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-c-r_OBJDIR)/,$(notdir $(workbench-c-r_C_NARCHFILES))))
+    workbench-c-r_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-c-r_OBJDIR)/,$(notdir $(workbench-c-r_C_NARCHFILES))))
+else
+ifeq (,)
+    workbench-c-r_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-c-r_OBJDIR)/,$(workbench-c-r_C_NARCHFILES)))
+    workbench-c-r_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-c-r_OBJDIR)/,$(workbench-c-r_C_NARCHFILES)))
+else
+    workbench-c-r_MC_TARGETS := $(addsuffix .o,$(addprefix $(workbench-c-r_OBJDIR)/,$(patsubst /%,%,$(workbench-c-r_C_NARCHFILES))))
+    workbench-c-r_MC_DTARGETS := $(addsuffix .d,$(addprefix $(workbench-c-r_OBJDIR)/,$(patsubst /%,%,$(workbench-c-r_C_NARCHFILES))))
+endif
+endif
+workbench-c-r_MC_TGTWILDCARD := $(workbench-c-r_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : | $(addsuffix .c,$(workbench-c-r_C_NARCHFILES))
+
+# Be sure that all .c files are found
+workbench-c-r_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-c-r_MC_BASEDIRS := $(shell echo $(sort $(dir $(workbench-c-r_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-c-r_MC_DIRS := $(foreach dir, $(workbench-c-r_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-c-r_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-c-r_MC_DIRS),)
+    workbench-c-r_MC_DIRS := $(shell echo $(workbench-c-r_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(workbench-c-r_MC_DIRS)
+endif
+
+endif
+
+workbench-c-r_MC_CPPFLAGS := $(workbench-c-r_CPPFLAGS)
+workbench-c-r_CFLAGS := $(workbench-c-r_CFLAGS)
+ifeq ($(workbench-c-r_DFLAGS),)
+  workbench-c-r_DFLAGS := $(workbench-c-r_CFLAGS)
+else
+  workbench-c-r_DFLAGS := $(workbench-c-r_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+workbench-c-r_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+workbench-c-r_STRIP ?= $(TARGET_STRIP)
+workbench-c-r_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : workbench-c-r_MC_CPPFLAGS:=$(strip $(workbench-c-r_MC_CPPFLAGS) $(workbench-c-r_MC_EXTRA_CPPFLAGS))
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : workbench-c-r_CFLAGS:=$(strip $(workbench-c-r_CFLAGS) $(SAFETY_CFLAGS))
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : workbench-c-r_DFLAGS:=$(workbench-c-r_DFLAGS)
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : workbench-c-r_IQUOTE:=$(CFLAGS_IQUOTE)
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : workbench-c-r_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+workbench-c-r_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+workbench-c-r_STRIP ?= $(HOST_STRIP)
+workbench-c-r_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : workbench-c-r_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(workbench-c-r_MC_CPPFLAGS) $(workbench-c-r_MC_EXTRA_CPPFLAGS))
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : workbench-c-r_CFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-c-r_CFLAGS))
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : workbench-c-r_DFLAGS:=$(strip $(HOST_CFLAGS) $(workbench-c-r_DFLAGS))
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : workbench-c-r_IQUOTE:=$(HOST_IQUOTE)
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : workbench-c-r_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+workbench-c-r_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+workbench-c-r_STRIP ?= $(ECHO) >/dev/null
+workbench-c-r_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : workbench-c-r_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(workbench-c-r_MC_CPPFLAGS) $(workbench-c-r_MC_EXTRA_CPPFLAGS))
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : workbench-c-r_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-c-r_CFLAGS))
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : workbench-c-r_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(workbench-c-r_DFLAGS))
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : workbench-c-r_IQUOTE:=$(KERNEL_IQUOTE)
+$(workbench-c-r_MC_TARGETS) $(workbench-c-r_MC_DTARGETS) : workbench-c-r_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(workbench-c-r_MC_TARGETS) : CPPFLAGS := $(workbench-c-r_MC_CPPFLAGS)
+$(workbench-c-r_MC_TARGETS) : CFLAGS := $(workbench-c-r_CFLAGS)
+$(workbench-c-r_MC_TARGETS) : $(workbench-c-r_MC_TGTWILDCARD).o : $(workbench-c-r_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(workbench-c-r_IQUOTE) $(dir $<) $(workbench-c-r_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-c-r_IQUOTE) . $(workbench-c-r_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(workbench-c-r_IQUOTE) $(dir $<) $(workbench-c-r_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-c-r_IQUOTE) . $(workbench-c-r_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(workbench-c-r_IQUOTE) $(dir $<) $(workbench-c-r_IQUOTE) $(SRCDIR)/$(CURDIR) $(workbench-c-r_IQUOTE) . $(workbench-c-r_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(workbench-c-r_MC_DTARGETS) : $(workbench-c-r_MC_TGTWILDCARD).d : $(workbench-c-r_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(workbench-c-r_DFLAGS) $(workbench-c-r_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(workbench-c-r_OBJDIR),)
+workbench-c-r-MA_TARGETS := $(addsuffix .o,$(workbench-c-r_ASMFILES))
+workbench-c-r-MA_WILDCARD := %
+else
+workbench-c-r-MA_TARGETS := $(addsuffix .o,$(addprefix $(workbench-c-r_OBJDIR)/,$(notdir $(workbench-c-r_ASMFILES))))
+workbench-c-r-MA_WILDCARD := $(workbench-c-r_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(workbench-c-r-MA_TARGETS) : | $(addsuffix .s,$(workbench-c-r_ASMFILES))
+
+# Be sure that all .c files are found
+workbench-c-r-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+workbench-c-r-MA_BASEDIRS := $(shell echo $(sort $(dir $(workbench-c-r_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+workbench-c-r-MA_DIRS := $(foreach dir, $(workbench-c-r-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(workbench-c-r-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(workbench-c-r-MA_DIRS),)
+    workbench-c-r-MA_DIRS := $(shell echo $(workbench-c-r-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(workbench-c-r-MA_DIRS)
+endif
+
+endif
+
+workbench-c-r-MA_ASSEMBLER ?= $(workbench-c-r_ASSEMBLER)
+
+$(workbench-c-r-MA_TARGETS) : workbench-c-r-MA_CMD:= $(workbench-c-r-MA_ASSEMBLER)
+
+$(workbench-c-r-MA_TARGETS) : CPPFLAGS := $(workbench-c-r_CPPFLAGS)
+$(workbench-c-r-MA_TARGETS) : AFLAGS := $(workbench-c-r_AFLAGS)
+$(workbench-c-r-MA_TARGETS) : $(workbench-c-r-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(workbench-c-r-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(workbench-c-r-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(workbench-c-r-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+workbench-c-r-link_EXTRA_LDFLAGS := 
+workbench-c-r-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    workbench-c-r-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    workbench-c-r-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    workbench-c-r-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+workbench-c-r-link_DIRS := $(subst -L ,-L,$(strip $(workbench-c-r_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+workbench-c-r-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(workbench-c-r-link_DIRS)))
+# Add trailing /
+workbench-c-r-link_DIRS := $(subst //,/,$(addsuffix /,$(workbench-c-r-link_DIRS)))
+# Add normal linklib path
+workbench-c-r-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+workbench-c-r-link_LIBS := $(addprefix lib,$(addsuffix .a,$(workbench-c-r_LIBS) $(workbench-c-r-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    workbench-c-r-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    workbench-c-r-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+workbench-c-r-link_DEPLIBS := $(foreach lib,$(workbench-c-r-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(workbench-c-r-link_DIRS)))) \
+)
+
+$(workbench-c-r_TARGETDIR)/$(workbench-c-r_PROGNAME) : OBJDIR := $(workbench-c-r_OBJDIR)
+$(workbench-c-r_TARGETDIR)/$(workbench-c-r_PROGNAME) : OBJS := $(workbench-c-r_OBJS) $(workbench-c-r_ARCHOBJS) $(USER_OBJS)
+$(workbench-c-r_TARGETDIR)/$(workbench-c-r_PROGNAME) : LDFLAGS := $(strip $(workbench-c-r_LDFLAGS) $(workbench-c-r-link_EXTRA_LDFLAGS))
+$(workbench-c-r_TARGETDIR)/$(workbench-c-r_PROGNAME) : LIBS := $(addprefix -l,$(workbench-c-r_LIBS) $(workbench-c-r-link_EXTRA_LIBS) )
+$(workbench-c-r_TARGETDIR)/$(workbench-c-r_PROGNAME) : $(workbench-c-r_OBJS) $(workbench-c-r_ARCHOBJS) $(USER_OBJS) $(workbench-c-r-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(workbench-c-r_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(workbench-c-r_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(workbench-c-r_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-c-r_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(workbench-c-r_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(workbench-c-r_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(workbench-c-r_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(workbench-c-r_DEPS),)
+  ifneq (workbench-c-r workbench-c-r-quick,)
+    ifneq ($(findstring $(TARGET),workbench-c-r workbench-c-r-quick),)
+      -include $(workbench-c-r_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(workbench-c-r_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(workbench-c-r_OBJS) $(workbench-c-r_DEPS) $(workbench-c-r_TARGETDIR)/$(workbench-c-r_PROGNAME),)
+$(workbench-c-r_OBJS) $(workbench-c-r_DEPS) $(workbench-c-r_TARGETDIR)/$(workbench-c-r_PROGNAME) : | $(workbench-c-r_OBJDIR) $(workbench-c-r_TARGETDIR)
+else
+$(workbench-c-r_OBJS) $(workbench-c-r_DEPS) $(workbench-c-r_TARGETDIR)/$(workbench-c-r_PROGNAME) :: $(workbench-c-r_OBJDIR) $(workbench-c-r_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(workbench-c-r_OBJDIR) $(workbench-c-r_TARGETDIR)
+
+
+workbench-c-r-clean : FILES := $(workbench-c-r_OBJS) $(workbench-c-r_TARGETDIR)/$(workbench-c-r_PROGNAME) $(workbench-c-r_DEPS)
+#MM
+workbench-c-r-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget workbench-c-r"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,1658 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES := setpatch_init addpatch rempatch findpatch
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #MM includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-setpatch
+#MM kernel-setpatch-quick
+#MM kernel-setpatch-makefile
+#MM kernel-setpatch-clean
+
+# ABI targets:
+#MM- includes-all : kernel-setpatch-includes
+#MM- linklibs-setpatch: kernel-setpatch-linklib
+#MM- linklibs-setpatch_rel : kernel-setpatch-linklib
+#MM- includes-setpatch: kernel-setpatch-includes
+#MM- includes-setpatch_rel : kernel-setpatch-includes
+#MM- kernel-setpatch : kernel-setpatch-includes core-linklibs linklibs-
+#MM kernel-setpatch-linklib : kernel-setpatch-includes includes-
+#MM- kernel-setpatch-quick : kernel-setpatch-includes-quick
+#MM kernel-setpatch-includes : kernel-setpatch-makefile kernel-setpatch-includes-dirs \
+#MM     includes-generate-deps kernel-setpatch-fd
+#MM kernel-setpatch-includes-quick
+#MM kernel-setpatch-includes-dirs
+#MM kernel-setpatch-fd
+
+# Library targets
+#MM kernel-setpatch-kobj : core-linklibs linklibs-
+#MM kernel-setpatch-kobj-quick : 
+
+# Library with ABI targets:
+#MM kernel-setpatch-kobj : kernel-setpatch-includes core-linklibs linklibs-
+#MM kernel-setpatch-kobj-quick : kernel-setpatch-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-setpatch_ALLTARGETS       := kernel-setpatch kernel-setpatch-quick kernel-setpatch-clean
+
+ifeq (M,M)
+kernel-setpatch_ALLTARGETS       += kernel-setpatch-kobj kernel-setpatch-kobj-quick
+endif
+
+ifeq (M,M)
+kernel-setpatch_ALLTARGETS += kernel-setpatch-includes \
+                 kernel-setpatch-includes-quick kernel-setpatch-includes-dirs  \
+                 kernel-setpatch-linklib kernel-setpatch-fd
+endif
+
+.PHONY : $(kernel-setpatch_ALLTARGETS) kernel-setpatch-makefile
+
+ifeq (setpatch,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (library,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-setpatch_DEFNAME      := setpatch_
+else
+    kernel-setpatch_DEFNAME      := setpatch
+endif
+kernel-setpatch_DEFLINKLIBNAME   := $(kernel-setpatch_DEFNAME)
+ifneq (,)
+    kernel-setpatch_LINKLIBNAME  := 
+else
+    kernel-setpatch_LINKLIBNAME  = $(kernel-setpatch_DEFLINKLIBNAME)
+endif
+kernel-setpatch_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-setpatch_DEFCPPFLAGS  += -I
+endif
+kernel-setpatch_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-setpatch_DFLAGS       := 
+else
+    kernel-setpatch_DFLAGS       = $(kernel-setpatch_DEFDFLAGS)
+endif
+kernel-setpatch_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-setpatch_DXXFLAGS     := 
+else
+    kernel-setpatch_DXXFLAGS     = $(kernel-setpatch_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-setpatch_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-setpatch_DEFDFLAGS))
+kernel-setpatch_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-setpatch_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-setpatch_FUNCINSTR := yes
+kernel-setpatch_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-setpatch_DEFDFLAGS))
+kernel-setpatch_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-setpatch_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-setpatch_OBJDIR                     := 
+else
+kernel-setpatch_OBJDIR                     := $(OBJDIR)/$(kernel-setpatch_DEFNAME)
+endif
+ifneq (,)
+kernel-setpatch_OBJDIR           := $(kernel-setpatch_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-setpatch-makefile         := $(kernel-setpatch_OBJDIR)/Makefile.$(kernel-setpatch_DEFNAME)library
+kernel-setpatch-genmakefile : $(kernel-setpatch-makefile)
+
+
+kernel-setpatch-genmakefile_OPTS := 
+ifneq (,)
+    kernel-setpatch-genmakefile_OPTS += -f 
+    kernel-setpatch-genmakefile_MODNAME := setpatch_
+else
+    kernel-setpatch-genmakefile_MODNAME := setpatch
+endif
+kernel-setpatch-genmakefile_TARGET := Makefile.$(kernel-setpatch-genmakefile_MODNAME)library
+kernel-setpatch-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-setpatch-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-setpatch-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-setpatch-genmakefile_OPTS += -c 
+        kernel-setpatch-genmakefile_DEPS += 
+    endif 
+else
+    kernel-setpatch-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/setpatch.conf
+    kernel-setpatch-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/setpatch.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-setpatch-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-setpatch-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-setpatch-genmakefile_OPTS += -o 
+        kernel-setpatch-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-setpatch-genmakefile_OPTS += -s 
+endif
+ifneq ($(kernel-setpatch_OBJDIR),)
+    kernel-setpatch-genmakefile_OPTS += -d $(kernel-setpatch_OBJDIR)
+    kernel-setpatch-genmakefile_TARGET := $(kernel-setpatch_OBJDIR)/$(kernel-setpatch-genmakefile_TARGET)
+endif
+
+$(kernel-setpatch-genmakefile_TARGET) : OPTS := $(kernel-setpatch-genmakefile_OPTS)
+$(kernel-setpatch-genmakefile_TARGET) : MODNAME := setpatch
+$(kernel-setpatch-genmakefile_TARGET) : MODTYPE := library
+$(kernel-setpatch-genmakefile_TARGET) : $(kernel-setpatch-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-setpatch-makefile),)
+$(kernel-setpatch-makefile) : | $(kernel-setpatch_OBJDIR)
+else
+$(kernel-setpatch-makefile) :: $(kernel-setpatch_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-setpatch_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-setpatch_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-setpatch-makefile)
+
+kernel-setpatch_DEFMODDIR        := $($(kernel-setpatch_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-setpatch_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-setpatch_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-setpatch_MODDIR       := 
+else
+    kernel-setpatch_MODDIR       := $(kernel-setpatch_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-setpatch_INCDIR           := 
+else
+kernel-setpatch_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-setpatch_LIBDEFSINC       := $(kernel-setpatch_OBJDIR)/include/$(kernel-setpatch_DEFNAME)_libdefs.h
+kernel-setpatch_DEFLIBDEFSINC    := $(kernel-setpatch_OBJDIR)/include/$(kernel-setpatch_DEFNAME)_deflibdefs.h
+
+ifeq (M,M)
+kernel-setpatch-includes-quick : kernel-setpatch-includes
+kernel-setpatch-includes : $(addprefix $(GENINCDIR)/,$($(kernel-setpatch_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-setpatch_INCDIR)/,$($(kernel-setpatch_DEFNAME)_INCLUDES)) \
+    $(kernel-setpatch_LIBDEFSINC) $(kernel-setpatch_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-setpatch_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-setpatch-includes_MODNAME := setpatch_
+else
+    kernel-setpatch-includes_MODNAME := setpatch
+endif
+
+ifneq ($($(kernel-setpatch-includes_MODNAME)_INCLUDES),)
+
+kernel-setpatch-includes_TARGETS := $($(kernel-setpatch-includes_MODNAME)_INCLUDES)
+
+kernel-setpatch-includes_DEPS := $(GENMODULE)
+kernel-setpatch-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-setpatch-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-setpatch-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-setpatch-includes_OPTS += -c 
+        kernel-setpatch-includes_DEPS += 
+    endif 
+else
+    kernel-setpatch-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/setpatch.conf
+    kernel-setpatch-includes_DEPS += $(SRCDIR)/$(CURDIR)/setpatch.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-setpatch-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-setpatch-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-setpatch-includes_OPTS += -o 
+        kernel-setpatch-includes_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-setpatch-includes_OPTS += -s 
+endif
+ifneq ($(kernel-setpatch_OBJDIR)/include,)
+    kernel-setpatch-includes_OPTS += -d $(kernel-setpatch_OBJDIR)/include
+    kernel-setpatch-includes_TARGETS := $(addprefix $(kernel-setpatch_OBJDIR)/include/,$(kernel-setpatch-includes_TARGETS))
+    kernel-setpatch-includes_GENINCFLAG=$(kernel-setpatch_OBJDIR)/include/.setpatch.library-includes
+else
+    kernel-setpatch-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.setpatch.library-includes
+endif
+
+$(kernel-setpatch-includes_TARGETS) : $(kernel-setpatch-includes_DEPS) $(kernel-setpatch-includes_GENINCFLAG)
+
+$(kernel-setpatch-includes_GENINCFLAG) : OPTS := $(kernel-setpatch-includes_OPTS)
+$(kernel-setpatch-includes_GENINCFLAG) : MODNAME := setpatch
+$(kernel-setpatch-includes_GENINCFLAG) : MODTYPE := library
+$(kernel-setpatch-includes_GENINCFLAG) : $(kernel-setpatch-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-setpatch_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-setpatch_DEFNAME)_INCLUDES)) : | $(kernel-setpatch_OBJDIR)/setpatch_geninc
+
+$(kernel-setpatch_OBJDIR)/setpatch_geninc : COPYSRCDIR := $(kernel-setpatch_OBJDIR)/include
+$(kernel-setpatch_OBJDIR)/setpatch_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-setpatch_OBJDIR)/setpatch_geninc : FILES := $($(kernel-setpatch_DEFNAME)_INCLUDES)
+$(kernel-setpatch_OBJDIR)/setpatch_geninc : $(addprefix $(kernel-setpatch_OBJDIR)/include/,$($(kernel-setpatch_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-setpatch_OBJDIR)/include
+
+$(addprefix $(kernel-setpatch_INCDIR)/,$($(kernel-setpatch_DEFNAME)_INCLUDES)) : | $(kernel-setpatch_OBJDIR)/setpatch_incs
+
+$(kernel-setpatch_OBJDIR)/setpatch_incs : COPYSRCDIR := $(kernel-setpatch_OBJDIR)/include
+$(kernel-setpatch_OBJDIR)/setpatch_incs : TGTDIR := $(kernel-setpatch_INCDIR)
+$(kernel-setpatch_OBJDIR)/setpatch_incs : FILES := $($(kernel-setpatch_DEFNAME)_INCLUDES)
+$(kernel-setpatch_OBJDIR)/setpatch_incs : $(addprefix $(kernel-setpatch_OBJDIR)/include/,$($(kernel-setpatch_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-setpatch_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-setpatch_DEFNAME)_INCLUDES))))
+
+TMPsetpatch_INCDIRS := \
+    $(kernel-setpatch_OBJDIR)/include $(addprefix $(kernel-setpatch_OBJDIR)/include/,$(kernel-setpatch_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-setpatch_INCDIRS)) \
+    $(kernel-setpatch_INCDIR) $(addprefix $(kernel-setpatch_INCDIR)/,$(kernel-setpatch_INCDIRS))
+
+ifneq (kernel-setpatch-includes-dirs,)
+kernel-setpatch-includes-dirs : | $(TMPsetpatch_INCDIRS)
+else
+kernel-setpatch-includes-dirs :: $(TMPsetpatch_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMPsetpatch_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-setpatch-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-setpatch-genlibdefs_OPTS += -f 
+    kernel-setpatch-genlibdefs_MODNAME := setpatch_
+else
+    kernel-setpatch-genlibdefs_MODNAME := setpatch
+endif
+kernel-setpatch-genlibdefs_TARGET := $(kernel-setpatch-genlibdefs_MODNAME)_libdefs.h
+kernel-setpatch-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-setpatch-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-setpatch-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-setpatch-genlibdefs_OPTS += -c 
+        kernel-setpatch-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-setpatch-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/setpatch.conf
+    kernel-setpatch-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/setpatch.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-setpatch-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-setpatch-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-setpatch-genlibdefs_OPTS += -o 
+        kernel-setpatch-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-setpatch-genlibdefs_OPTS += -s 
+endif
+ifneq ($(kernel-setpatch_OBJDIR)/include,)
+    kernel-setpatch-genlibdefs_OPTS += -d $(kernel-setpatch_OBJDIR)/include
+    kernel-setpatch-genlibdefs_TARGET := $(kernel-setpatch_OBJDIR)/include/$(kernel-setpatch-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-setpatch-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-setpatch-genlibdefs_TARGET) : OPTS := $(kernel-setpatch-genlibdefs_OPTS)
+$(kernel-setpatch-genlibdefs_TARGET) : MODNAME := setpatch
+$(kernel-setpatch-genlibdefs_TARGET) : MODTYPE := library
+$(kernel-setpatch-genlibdefs_TARGET) : $(kernel-setpatch-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-setpatch_DEFLIBDEFSINC) : FILENAME := $(kernel-setpatch_LIBDEFSINC)
+$(kernel-setpatch_DEFLIBDEFSINC) : $(kernel-setpatch_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-setpatch_LIBDEFSINC) $(kernel-setpatch_DEFLIBDEFSINC) : | $(kernel-setpatch_OBJDIR)/include
+
+ifneq (kernel-setpatch-includes-dirs,)
+kernel-setpatch-includes-dirs : | $(kernel-setpatch_OBJDIR)/include
+else
+kernel-setpatch-includes-dirs :: $(kernel-setpatch_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-setpatch_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-setpatch-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-setpatch-genmodfiles_OPTS += -f 
+    kernel-setpatch-genmodfiles_MODNAME := setpatch_
+else
+    kernel-setpatch-genmodfiles_MODNAME := setpatch
+endif
+kernel-setpatch-genmodfiles_GENTARGETS := $($(kernel-setpatch-genmodfiles_MODNAME)_STARTFILES) $($(kernel-setpatch-genmodfiles_MODNAME)_ENDFILES)
+kernel-setpatch-genmodfiles_STUBTARGETS := $($(kernel-setpatch-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-setpatch-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-setpatch-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-setpatch-genmodfiles_GENTARGETS))
+kernel-setpatch-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-setpatch-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-setpatch-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-setpatch-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-setpatch-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-setpatch-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-setpatch-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-setpatch-genmodfiles_OPTS += -c 
+        kernel-setpatch-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-setpatch-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/setpatch.conf
+    kernel-setpatch-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/setpatch.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-setpatch-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-setpatch-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-setpatch-genmodfiles_OPTS += -o 
+        kernel-setpatch-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (,)
+    kernel-setpatch-genmodfiles_OPTS += -s 
+endif
+ifneq ($(kernel-setpatch_OBJDIR),)
+    kernel-setpatch-genmodfiles_OPTS += -d $(kernel-setpatch_OBJDIR)
+    kernel-setpatch-genmodfiles_TARGETDIR := $(shell echo $(kernel-setpatch_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-setpatch-genmodfiles_GENTARGETS := $(addprefix $(kernel-setpatch-genmodfiles_TARGETDIR)/,$(kernel-setpatch-genmodfiles_GENTARGETS))
+    kernel-setpatch-genmodfiles_GENFILEFLAG=$(kernel-setpatch-genmodfiles_TARGETDIR)/.setpatch.library-genfiles
+else
+    kernel-setpatch-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.setpatch.library-genfiles
+endif
+ifneq ($(kernel-setpatch_OBJDIR)/linklib,)
+    kernel-setpatch-genmodfiles_OPTS += -l $(kernel-setpatch_OBJDIR)/linklib
+    kernel-setpatch-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-setpatch_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-setpatch-genmodfiles_STUBTARGETS := $(addprefix $(kernel-setpatch-genmodfiles_STUBTARGETDIR)/,$(kernel-setpatch-genmodfiles_STUBTARGETS))
+    kernel-setpatch-genmodfiles_TARGETDIRS += $(kernel-setpatch_OBJDIR)/linklib
+else
+ifneq ($(kernel-setpatch_OBJDIR),)
+    kernel-setpatch-genmodfiles_STUBTARGETS := $(addprefix $(kernel-setpatch-genmodfiles_TARGETDIR)/,$(kernel-setpatch-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-setpatch-genmodfiles_TARGETS := $(kernel-setpatch-genmodfiles_GENTARGETS) $(kernel-setpatch-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-setpatch-genmodfiles_TARGETDIRS),)
+$(kernel-setpatch-genmodfiles_TARGETS) : | $(kernel-setpatch-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-setpatch-genmodfiles_TARGETS) : $(kernel-setpatch-genmodfiles_DEPS) $(kernel-setpatch-genmodfiles_GENFILEFLAG)
+
+$(kernel-setpatch-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-setpatch-genmodfiles_OPTS)
+$(kernel-setpatch-genmodfiles_GENFILEFLAG) : MODNAME := setpatch
+$(kernel-setpatch-genmodfiles_GENFILEFLAG) : MODTYPE := library
+$(kernel-setpatch-genmodfiles_GENFILEFLAG) : $(kernel-setpatch-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-setpatch-genmodfiles_GENFILEFLAG) : $(kernel-setpatch_DEFLIBDEFSINC) $(kernel-setpatch-makefile)
+
+
+ifneq ($(kernel-setpatch-genmodfiles_GENFILEFLAG),)
+$(kernel-setpatch-genmodfiles_GENFILEFLAG) : | $(kernel-setpatch_OBJDIR)/linklib
+else
+$(kernel-setpatch-genmodfiles_GENFILEFLAG) :: $(kernel-setpatch_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-setpatch_OBJDIR)/linklib
+
+
+ifeq (M,M)
+## Create FD file
+ifeq (,)
+kernel-setpatch_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-setpatch_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-setpatch-fd : $(kernel-setpatch_FDDIR)/setpatch_lib.fd
+
+
+TMP_TARGET := setpatch_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/setpatch.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/setpatch.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (,)
+    TMP_OPTS += -s 
+endif
+ifneq ($(kernel-setpatch_FDDIR),)
+    TMP_OPTS += -d $(kernel-setpatch_FDDIR)
+    TMP_TARGET := $(kernel-setpatch_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := setpatch
+$(TMP_TARGET) : MODTYPE := library
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-setpatch_FDDIR)/setpatch_lib.fd : | $(kernel-setpatch_FDDIR)
+
+
+ifneq (kernel-setpatch-fd-setup,)
+kernel-setpatch-fd-setup : | $(kernel-setpatch_FDDIR)
+else
+kernel-setpatch-fd-setup :: $(kernel-setpatch_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-setpatch_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-setpatch_FILES            := $(FILES)
+kernel-setpatch_OBJCFILES        := 
+kernel-setpatch_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-setpatch_LIBFILES         := 
+kernel-setpatch_LIBS             := 
+
+kernel-setpatch_FDIRS            := $(sort $(dir $(kernel-setpatch_FILES)))
+
+kernel-setpatch_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-setpatch_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-setpatch_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-setpatch_FILTERARCH       = $(filter-out $(call kernel-setpatch_MATCHARCH,$(1),$(2)),$(2))
+kernel-setpatch_STARTFILES       := $(addprefix $(kernel-setpatch_OBJDIR)/,$($(kernel-setpatch_DEFNAME)_STARTFILES))
+kernel-setpatch_ENDFILES         := $(addprefix $(kernel-setpatch_OBJDIR)/,$($(kernel-setpatch_DEFNAME)_ENDFILES))
+
+kernel-setpatch_ARCHOBJS         := $(wildcard $(kernel-setpatch_OBJDIR)/arch/*.o)
+kernel-setpatch_LIBARCHOBJS      := $(wildcard $(kernel-setpatch_OBJDIR)/linklib/arch/*.o)
+kernel-setpatch_ARCHFILES        := $(basename $(notdir $(kernel-setpatch_ARCHOBJS)))
+kernel-setpatch_LIBARCHFILES     := $(basename $(notdir $(kernel-setpatch_LIBARCHOBJS)))
+kernel-setpatch_C_NARCHFILES     := $(call kernel-setpatch_FILTERARCH,$(kernel-setpatch_ARCHFILES),$(kernel-setpatch_FILES))
+kernel-setpatch_CXX_NARCHFILES   := $(call kernel-setpatch_FILTERARCH,$(kernel-setpatch_ARCHFILES),$(kernel-setpatch_CXXFILES))
+kernel-setpatch_OBJC_NARCHFILES  := $(call kernel-setpatch_FILTERARCH,$(kernel-setpatch_ARCHFILES),$(kernel-setpatch_OBJCFILES))
+kernel-setpatch_NLIBARCHFILES    := $(call kernel-setpatch_FILTERARCH,$(kernel-setpatch_LIBARCHFILES),$(kernel-setpatch_LIBFILES))
+kernel-setpatch_ARCHNLIBFILES    := $(call kernel-setpatch_FILTERARCH,$(kernel-setpatch_LIBFILES),$(kernel-setpatch_LIBARCHFILES))
+
+kernel-setpatch_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-setpatch_OBJDIR)/include -include $(kernel-setpatch_DEFLIBDEFSINC))
+ifneq (,)
+kernel-setpatch_CPPFLAGS         += -I
+endif
+kernel-setpatch_LINKLIBCPPFLAGS  := $(kernel-setpatch_CPPFLAGS)
+kernel-setpatch_CPPFLAGS         += $(strip $($(kernel-setpatch_DEFNAME)_CPPFLAGS))
+kernel-setpatch_LINKLIBCPPFLAGS  += $(strip $($(kernel-setpatch_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-setpatch_CFLAGS           := $(strip $(CFLAGS) $($(kernel-setpatch_DEFNAME)_CFLAGS))
+kernel-setpatch_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-setpatch_DEFNAME)_LINKLIBCFLAGS))
+kernel-setpatch_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-setpatch_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-setpatch_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-setpatch_CFLAGS           := $(strip $(kernel-setpatch_LTOFLAGS) $(kernel-setpatch_CFLAGS))
+kernel-setpatch_LINKLIBCFLAGS    := $(strip $(kernel-setpatch_LTOFLAGS) $(kernel-setpatch_LINKLIBCFLAGS))
+kernel-setpatch_CXXFLAGS         := $(strip $(kernel-setpatch_LTOFLAGS) $(kernel-setpatch_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-setpatch_SUBSTNULL        :=
+kernel-setpatch_SUBSTSPACE       := $(kernel-setpatch_SUBSTNULL) #
+kernel-setpatch_SUBSTCOMMA       := ,
+kernel-setpatch_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-setpatch_SUBSTSPACE),$(kernel-setpatch_SUBSTCOMMA),$(strip $($(kernel-setpatch_DEFNAME)_STARTFILES))))
+kernel-setpatch_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-setpatch_CFLAGS           := $(strip $(kernel-setpatch_INSTRFUNCFLAGS) $(kernel-setpatch_CFLAGS))
+kernel-setpatch_CXXFLAGS         := $(strip $(kernel-setpatch_INSTRFUNCFLAGS) $(kernel-setpatch_CXXFLAGS))
+kernel-setpatch_LIBS             += $(kernel-setpatch_INSTRFUNCLIBS)
+endif
+endif
+kernel-setpatch_DFLAGS           := $(strip $(kernel-setpatch_DFLAGS) $($(kernel-setpatch_DEFNAME)_DFLAGS))
+kernel-setpatch_LINKLIBDFLAGS    := $(strip $(kernel-setpatch_DFLAGS) $($(kernel-setpatch_DEFNAME)_LINKLIBDFLAGS))
+kernel-setpatch_DXXFLAGS         := $(strip $(kernel-setpatch_DXXFLAGS) $($(kernel-setpatch_DEFNAME)_DXXFLAGS))
+
+ifeq (library,library)
+    kernel-setpatch_LIBSUFFIX    := 
+else
+    kernel-setpatch_LIBSUFFIX    := .library
+endif
+
+ifeq (,)
+kernel-setpatch_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-setpatch_LIBDIR           := 
+endif
+
+ifeq (M,M)
+kernel-setpatch_LINKLIBCFILES    := $(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$($(kernel-setpatch_DEFNAME)_LINKLIBFILES))
+kernel-setpatch_LINKLIBAFILES    := $(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$($(kernel-setpatch_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-setpatch_DEFNAME)_LINKLIBFILES) $($(kernel-setpatch_DEFNAME)_LINKLIBAFILES)  $(kernel-setpatch_ARCHNLIBFILES)),)
+    kernel-setpatch_LINKLIB      :=
+else
+    kernel-setpatch_LINKLIB      := $(kernel-setpatch_LIBDIR)/libsetpatch$(kernel-setpatch_LIBSUFFIX).a
+    ifneq (setpatch,$(kernel-setpatch_LINKLIBNAME))
+        kernel-setpatch_LINKLIB  += $(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_LINKLIBNAME)$(kernel-setpatch_LIBSUFFIX).a
+    endif
+endif
+kernel-setpatch_LINKLIBFILES     := $(kernel-setpatch_LINKLIBCFILES) $(kernel-setpatch_LINKLIBAFILES)
+
+kernel-setpatch_RELLINKLIBCFILES := $(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$($(kernel-setpatch_DEFNAME)_RELLINKLIBFILES))
+kernel-setpatch_RELLINKLIBAFILES := $(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$($(kernel-setpatch_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-setpatch_DEFNAME)_RELLINKLIBFILES) $($(kernel-setpatch_DEFNAME)_RELLINKLIBAFILES)  $(kernel-setpatch_ARCHNLIBFILES)),)
+    kernel-setpatch_RELLINKLIB   :=
+else
+    kernel-setpatch_RELLINKLIB   := $(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_DEFNAME)_rel$(kernel-setpatch_LIBSUFFIX).a
+    ifneq (setpatch,$(kernel-setpatch_LINKLIBNAME))
+        kernel-setpatch_RELLINKLIB += $(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_LINKLIBNAME)_rel$(kernel-setpatch_LIBSUFFIX).a
+    endif
+endif
+kernel-setpatch_RELLINKLIBFILES  := $(kernel-setpatch_RELLINKLIBCFILES) $(kernel-setpatch_RELLINKLIBAFILES)
+endif
+
+kernel-setpatch_ENDOBJS          := $(addsuffix .o,$(kernel-setpatch_ENDFILES))
+kernel-setpatch_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$(notdir $(kernel-setpatch_NLIBARCHFILES))) $(addprefix $(kernel-setpatch_OBJDIR)/linklib/arch/,$(notdir $(kernel-setpatch_ARCHNLIBFILES))) $(kernel-setpatch_LINKLIBFILES)) \
+                 
+kernel-setpatch_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$(notdir $(kernel-setpatch_NLIBARCHFILES))) $(addprefix $(kernel-setpatch_OBJDIR)/linklib/arch/,$(notdir $(kernel-setpatch_ARCHNLIBFILES))) $(kernel-setpatch_RELLINKLIBFILES)) \
+                 
+$(kernel-setpatch_LINKLIBFILES) $(kernel-setpatch_RELLINKLIBFILES) : | $(kernel-setpatch_OBJDIR)/linklib
+$(kernel-setpatch_LINKLIBOBJS) $(kernel-setpatch_RELLINKLIBOBJS) : | $(kernel-setpatch_OBJDIR)/linklib
+
+kernel-setpatch_CCFILES := $(kernel-setpatch_C_NARCHFILES)
+kernel-setpatch_TARGETCCFILES    := $(strip $(kernel-setpatch_STARTFILES) $(kernel-setpatch_ENDFILES))
+kernel-setpatch_LINKLIBCCFILES   := $(strip $(kernel-setpatch_NLIBARCHFILES) $(kernel-setpatch_LINKLIBCFILES) $(kernel-setpatch_RELLINKLIBCFILES))
+kernel-setpatch_LINKLIBCCGENFILES := $(strip $(kernel-setpatch_LINKLIBCFILES) $(kernel-setpatch_RELLINKLIBCFILES))
+
+
+kernel-setpatch_CXXABSBASENAMES := $(foreach kernel-setpatch_CXXBASE,$(kernel-setpatch_CXX_NARCHFILES),$(if $(filter /%,$(kernel-setpatch_CXXBASE)),$(kernel-setpatch_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-setpatch_CXXBASE))))
+
+ifneq ($(kernel-setpatch_CXXABSBASENAMES),)
+
+kernel-setpatch_CXXBASENAMES := $(basename $(kernel-setpatch_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-setpatch_MCXX_FILES  := $(strip $(foreach kernel-setpatch_CXXBASE,$(kernel-setpatch_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-setpatch_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-setpatch_EXT),$(kernel-setpatch_CXXBASE)))))))
+
+ifeq (,)
+kernel-setpatch_MCXX_SRCWILDCARD := %
+else
+kernel-setpatch_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-setpatch_OBJDIR),)
+  kernel-setpatch_CXXTARGETS := $(notdir $(kernel-setpatch_CXXBASENAMES:=.o))
+  kernel-setpatch_CXXDTARGETS := $(notdir $(kernel-setpatch_CXXBASENAMES:=.d))
+  kernel-setpatch_MCXX_WILDCARD := %
+else
+  kernel-setpatch_CXXTARGETS := $(addprefix $(kernel-setpatch_OBJDIR)/,$(notdir $(kernel-setpatch_CXXBASENAMES:=.o)))
+  kernel-setpatch_CXXDTARGETS := $(addprefix $(kernel-setpatch_OBJDIR)/,$(notdir $(kernel-setpatch_CXXBASENAMES:=.d)))
+  kernel-setpatch_MCXX_WILDCARD := $(kernel-setpatch_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-setpatch_CXXTARGETS) $(kernel-setpatch_CXXDTARGETS) : | $(kernel-setpatch_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-setpatch_MCXX_CPPFLAGS := $(kernel-setpatch_CPPFLAGS)
+kernel-setpatch_CXXFLAGS := $(kernel-setpatch_CXXFLAGS)
+ifeq ($(kernel-setpatch_DXXFLAGS),)
+  kernel-setpatch_DXXFLAGS := $(kernel-setpatch_CXXFLAGS)
+else
+  kernel-setpatch_DXXFLAGS := $(kernel-setpatch_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-setpatch_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-setpatch_STRIP ?= $(HOST_STRIP)
+  kernel-setpatch_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-setpatch_CXXCMD:=$(HOST_CXX)
+  kernel-setpatch_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-setpatch_MCXX_CPPFLAGS) $(kernel-setpatch_MCXX_EXTRA_CPPFLAGS))
+  kernel-setpatch_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-setpatch_CXXFLAGS))
+  kernel-setpatch_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-setpatch_DXXFLAGS))
+  kernel-setpatch_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-setpatch_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-setpatch_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-setpatch_STRIP ?= $(TARGET_STRIP)
+  kernel-setpatch_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-setpatch_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-setpatch_MCXX_CPPFLAGS := $(strip $(kernel-setpatch_MCXX_CPPFLAGS) $(kernel-setpatch_MCXX_EXTRA_CPPFLAGS))
+  kernel-setpatch_CXXFLAGS := $(strip $(kernel-setpatch_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-setpatch_DXXFLAGS := $(kernel-setpatch_DXXFLAGS)
+  kernel-setpatch_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-setpatch_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-setpatch_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-setpatch_STRIP ?= $(ECHO) >/dev/null
+  kernel-setpatch_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-setpatch_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-setpatch_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-setpatch_MCXX_CPPFLAGS) $(kernel-setpatch_MCXX_EXTRA_CPPFLAGS))
+  kernel-setpatch_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-setpatch_CXXFLAGS))
+  kernel-setpatch_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-setpatch_DXXFLAGS))
+  kernel-setpatch_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-setpatch_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-setpatch_CXXCMD) $(kernel-setpatch_CXXIQUOTE) $(dir $(2)) $(kernel-setpatch_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_CXXIQUOTE) . $(kernel-setpatch_CXXIQUOTE_END) $(strip $(kernel-setpatch_CXXFLAGS) $(kernel-setpatch_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-setpatch_CXXCMD) $(kernel-setpatch_CXXIQUOTE) $(dir $(2)) $(kernel-setpatch_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_CXXIQUOTE) . $(kernel-setpatch_CXXIQUOTE_END) $(strip $(kernel-setpatch_CXXFLAGS) $(kernel-setpatch_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-setpatch_CXXCMD) $(kernel-setpatch_CXXIQUOTE) $(dir $(2)) $(kernel-setpatch_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_CXXIQUOTE) . $(kernel-setpatch_CXXIQUOTE_END) $(strip $(kernel-setpatch_CXXFLAGS) $(kernel-setpatch_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-setpatch_CXXCMD)" $(MKDEPEND) $(strip $(kernel-setpatch_DXXFLAGS) $(kernel-setpatch_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-setpatch_OBJDIR),)
+  $(foreach kernel-setpatch_CXXFILE,$(kernel-setpatch_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-setpatch_CXXFILE))),$(kernel-setpatch_CXXFILE))))
+else
+  $(foreach kernel-setpatch_CXXFILE,$(kernel-setpatch_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-setpatch_OBJDIR)/,$(notdir $(basename $(kernel-setpatch_CXXFILE)))),$(kernel-setpatch_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-setpatch_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-setpatch_MOBJC_SRCWILDCARD := %
+else
+kernel-setpatch_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-setpatch_OBJDIR),)
+  kernel-setpatch_MOBJC_TARGETS := $(addsuffix .o,$(kernel-setpatch_OBJC_NARCHFILES))
+  kernel-setpatch_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-setpatch_OBJC_NARCHFILES))
+  kernel-setpatch_MOBJC_WILDCARD := %
+else
+  kernel-setpatch_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-setpatch_OBJDIR)/,$(kernel-setpatch_OBJC_NARCHFILES)))
+  kernel-setpatch_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-setpatch_OBJDIR)/,$(kernel-setpatch_OBJC_NARCHFILES)))
+  kernel-setpatch_MOBJC_WILDCARD := $(kernel-setpatch_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-setpatch_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-setpatch_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-setpatch_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-setpatch_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-setpatch_MOBJC_DIRS := $(foreach dir, $(kernel-setpatch_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-setpatch_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-setpatch_MOBJC_DIRS),)
+    kernel-setpatch_MOBJC_DIRS := $(shell echo $(kernel-setpatch_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-setpatch_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-setpatch_CC := $(TARGET_CC)
+else
+  kernel-setpatch_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-setpatch_MOBJC_CPPFLAGS := $(kernel-setpatch_CPPFLAGS)
+kernel-setpatch_OBJCFLAGS := $(kernel-setpatch_CFLAGS)
+kernel-setpatch_OBJCFLAGS := $(kernel-setpatch_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-setpatch_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-setpatch_OBJCFLAGS)))
+ifeq ($(kernel-setpatch_DFLAGS),)
+  kernel-setpatch_OBJCDFLAGS := $(kernel-setpatch_CFLAGS)
+else
+  kernel-setpatch_OBJCDFLAGS := $(kernel-setpatch_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-setpatch_LINK ?= $(strip $(kernel-setpatch_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-setpatch_STRIP ?= $(TARGET_STRIP)
+  kernel-setpatch_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-setpatch_CC) $(TARGET_SYSROOT))
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : kernel-setpatch_MOBJC_CPPFLAGS:=$(strip $(kernel-setpatch_MOBJC_CPPFLAGS) $(kernel-setpatch_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : kernel-setpatch_OBJCFLAGS:=$(strip $(kernel-setpatch_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : kernel-setpatch_OBJCDFLAGS:=$(kernel-setpatch_OBJCDFLAGS)
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : kernel-setpatch_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : kernel-setpatch_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-setpatch_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-setpatch_STRIP ?= $(HOST_STRIP)
+  kernel-setpatch_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : kernel-setpatch_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-setpatch_MOBJC_CPPFLAGS) $(kernel-setpatch_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : kernel-setpatch_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-setpatch_OBJCFLAGS))
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : kernel-setpatch_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-setpatch_OBJCDFLAGS))
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : kernel-setpatch_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : kernel-setpatch_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-setpatch_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-setpatch_STRIP ?= $(ECHO) >/dev/null
+  kernel-setpatch_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : kernel-setpatch_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-setpatch_MOBJC_CPPFLAGS) $(kernel-setpatch_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : kernel-setpatch_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-setpatch_OBJCFLAGS))
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : kernel-setpatch_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-setpatch_OBJCDFLAGS))
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : kernel-setpatch_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-setpatch_MOBJC_TARGETS) $(kernel-setpatch_MOBJC_DTARGETS) : kernel-setpatch_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-setpatch_MOBJC_TARGETS) : CPPFLAGS := $(kernel-setpatch_MOBJC_CPPFLAGS)
+$(kernel-setpatch_MOBJC_TARGETS) : CFLAGS := $(kernel-setpatch_OBJCFLAGS)
+$(kernel-setpatch_MOBJC_TARGETS) : $(kernel-setpatch_MOBJC_WILDCARD).o : $(kernel-setpatch_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-setpatch_IQUOTE) $(dir $<) $(kernel-setpatch_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_IQUOTE) . $(kernel-setpatch_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-setpatch_IQUOTE) $(dir $<) $(kernel-setpatch_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_IQUOTE) . $(kernel-setpatch_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-setpatch_IQUOTE) $(dir $<) $(kernel-setpatch_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_IQUOTE) . $(kernel-setpatch_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-setpatch_MOBJC_DTARGETS) : $(kernel-setpatch_MOBJC_WILDCARD).d : $(kernel-setpatch_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-setpatch_OBJCDFLAGS) $(kernel-setpatch_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-setpatch_MC_SRCWILDCARD := %
+else
+kernel-setpatch_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-setpatch_OBJDIR),)
+kernel-setpatch_MC_TARGETS := $(addsuffix .o,$(kernel-setpatch_CCFILES))
+kernel-setpatch_MC_DTARGETS := $(addsuffix .d,$(kernel-setpatch_CCFILES))
+kernel-setpatch_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-setpatch_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-setpatch_OBJDIR)/,$(notdir $(kernel-setpatch_CCFILES))))
+    kernel-setpatch_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-setpatch_OBJDIR)/,$(notdir $(kernel-setpatch_CCFILES))))
+else
+ifeq (,)
+    kernel-setpatch_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-setpatch_OBJDIR)/,$(kernel-setpatch_CCFILES)))
+    kernel-setpatch_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-setpatch_OBJDIR)/,$(kernel-setpatch_CCFILES)))
+else
+    kernel-setpatch_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-setpatch_OBJDIR)/,$(patsubst /%,%,$(kernel-setpatch_CCFILES))))
+    kernel-setpatch_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-setpatch_OBJDIR)/,$(patsubst /%,%,$(kernel-setpatch_CCFILES))))
+endif
+endif
+kernel-setpatch_MC_TGTWILDCARD := $(kernel-setpatch_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : | $(addsuffix .c,$(kernel-setpatch_CCFILES))
+
+# Be sure that all .c files are found
+kernel-setpatch_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-setpatch_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-setpatch_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-setpatch_MC_DIRS := $(foreach dir, $(kernel-setpatch_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-setpatch_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-setpatch_MC_DIRS),)
+    kernel-setpatch_MC_DIRS := $(shell echo $(kernel-setpatch_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-setpatch_MC_DIRS)
+endif
+
+endif
+
+kernel-setpatch_MC_CPPFLAGS := $(kernel-setpatch_CPPFLAGS)
+kernel-setpatch_CFLAGS := $(kernel-setpatch_CFLAGS)
+ifeq ($(kernel-setpatch_DFLAGS),)
+  kernel-setpatch_DFLAGS := $(kernel-setpatch_CFLAGS)
+else
+  kernel-setpatch_DFLAGS := $(kernel-setpatch_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-setpatch_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-setpatch_STRIP ?= $(TARGET_STRIP)
+kernel-setpatch_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_MC_CPPFLAGS:=$(strip $(kernel-setpatch_MC_CPPFLAGS) $(kernel-setpatch_MC_EXTRA_CPPFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_CFLAGS:=$(strip $(kernel-setpatch_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_DFLAGS:=$(kernel-setpatch_DFLAGS)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-setpatch_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-setpatch_STRIP ?= $(HOST_STRIP)
+kernel-setpatch_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-setpatch_MC_CPPFLAGS) $(kernel-setpatch_MC_EXTRA_CPPFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-setpatch_CFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-setpatch_DFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-setpatch_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-setpatch_STRIP ?= $(ECHO) >/dev/null
+kernel-setpatch_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-setpatch_MC_CPPFLAGS) $(kernel-setpatch_MC_EXTRA_CPPFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-setpatch_CFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-setpatch_DFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-setpatch_MC_TARGETS) : CPPFLAGS := $(kernel-setpatch_MC_CPPFLAGS)
+$(kernel-setpatch_MC_TARGETS) : CFLAGS := $(kernel-setpatch_CFLAGS)
+$(kernel-setpatch_MC_TARGETS) : $(kernel-setpatch_MC_TGTWILDCARD).o : $(kernel-setpatch_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-setpatch_IQUOTE) $(dir $<) $(kernel-setpatch_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_IQUOTE) . $(kernel-setpatch_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-setpatch_IQUOTE) $(dir $<) $(kernel-setpatch_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_IQUOTE) . $(kernel-setpatch_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-setpatch_IQUOTE) $(dir $<) $(kernel-setpatch_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_IQUOTE) . $(kernel-setpatch_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-setpatch_MC_DTARGETS) : $(kernel-setpatch_MC_TGTWILDCARD).d : $(kernel-setpatch_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-setpatch_DFLAGS) $(kernel-setpatch_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-setpatch_MC_SRCWILDCARD := %
+else
+kernel-setpatch_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-setpatch_OBJDIR),)
+kernel-setpatch_MC_TARGETS := $(addsuffix .o,$(kernel-setpatch_TARGETCCFILES))
+kernel-setpatch_MC_DTARGETS := $(addsuffix .d,$(kernel-setpatch_TARGETCCFILES))
+kernel-setpatch_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-setpatch_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-setpatch_OBJDIR)/,$(notdir $(kernel-setpatch_TARGETCCFILES))))
+    kernel-setpatch_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-setpatch_OBJDIR)/,$(notdir $(kernel-setpatch_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-setpatch_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-setpatch_OBJDIR)/,$(kernel-setpatch_TARGETCCFILES)))
+    kernel-setpatch_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-setpatch_OBJDIR)/,$(kernel-setpatch_TARGETCCFILES)))
+else
+    kernel-setpatch_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-setpatch_OBJDIR)/,$(patsubst /%,%,$(kernel-setpatch_TARGETCCFILES))))
+    kernel-setpatch_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-setpatch_OBJDIR)/,$(patsubst /%,%,$(kernel-setpatch_TARGETCCFILES))))
+endif
+endif
+kernel-setpatch_MC_TGTWILDCARD := $(kernel-setpatch_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : | $(addsuffix .c,$(kernel-setpatch_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-setpatch_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-setpatch_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-setpatch_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-setpatch_MC_DIRS := $(foreach dir, $(kernel-setpatch_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-setpatch_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-setpatch_MC_DIRS),)
+    kernel-setpatch_MC_DIRS := $(shell echo $(kernel-setpatch_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-setpatch_MC_DIRS)
+endif
+
+endif
+
+kernel-setpatch_MC_CPPFLAGS := $(kernel-setpatch_CPPFLAGS) -D__AROS__
+kernel-setpatch_CFLAGS := $(kernel-setpatch_CFLAGS)
+ifeq ($(kernel-setpatch_DFLAGS),)
+  kernel-setpatch_DFLAGS := $(kernel-setpatch_CFLAGS)
+else
+  kernel-setpatch_DFLAGS := $(kernel-setpatch_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-setpatch_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-setpatch_STRIP ?= $(TARGET_STRIP)
+kernel-setpatch_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_MC_CPPFLAGS:=$(strip $(kernel-setpatch_MC_CPPFLAGS) $(kernel-setpatch_MC_EXTRA_CPPFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_CFLAGS:=$(strip $(kernel-setpatch_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_DFLAGS:=$(kernel-setpatch_DFLAGS)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-setpatch_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-setpatch_STRIP ?= $(HOST_STRIP)
+kernel-setpatch_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-setpatch_MC_CPPFLAGS) $(kernel-setpatch_MC_EXTRA_CPPFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-setpatch_CFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-setpatch_DFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-setpatch_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-setpatch_STRIP ?= $(ECHO) >/dev/null
+kernel-setpatch_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-setpatch_MC_CPPFLAGS) $(kernel-setpatch_MC_EXTRA_CPPFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-setpatch_CFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-setpatch_DFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-setpatch_MC_TARGETS) : CPPFLAGS := $(kernel-setpatch_MC_CPPFLAGS)
+$(kernel-setpatch_MC_TARGETS) : CFLAGS := $(kernel-setpatch_CFLAGS)
+$(kernel-setpatch_MC_TARGETS) : $(kernel-setpatch_MC_TGTWILDCARD).o : $(kernel-setpatch_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-setpatch_IQUOTE) $(dir $<) $(kernel-setpatch_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_IQUOTE) . $(kernel-setpatch_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-setpatch_IQUOTE) $(dir $<) $(kernel-setpatch_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_IQUOTE) . $(kernel-setpatch_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-setpatch_IQUOTE) $(dir $<) $(kernel-setpatch_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_IQUOTE) . $(kernel-setpatch_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-setpatch_MC_DTARGETS) : $(kernel-setpatch_MC_TGTWILDCARD).d : $(kernel-setpatch_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-setpatch_DFLAGS) $(kernel-setpatch_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-setpatch_MC_SRCWILDCARD := %
+else
+kernel-setpatch_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-setpatch_OBJDIR)/linklib,)
+kernel-setpatch_MC_TARGETS := $(addsuffix .o,$(kernel-setpatch_NLIBARCHFILES))
+kernel-setpatch_MC_DTARGETS := $(addsuffix .d,$(kernel-setpatch_NLIBARCHFILES))
+kernel-setpatch_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-setpatch_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$(notdir $(kernel-setpatch_NLIBARCHFILES))))
+    kernel-setpatch_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$(notdir $(kernel-setpatch_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-setpatch_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$(kernel-setpatch_NLIBARCHFILES)))
+    kernel-setpatch_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$(kernel-setpatch_NLIBARCHFILES)))
+else
+    kernel-setpatch_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-setpatch_NLIBARCHFILES))))
+    kernel-setpatch_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-setpatch_NLIBARCHFILES))))
+endif
+endif
+kernel-setpatch_MC_TGTWILDCARD := $(kernel-setpatch_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : | $(addsuffix .c,$(kernel-setpatch_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-setpatch_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-setpatch_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-setpatch_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-setpatch_MC_DIRS := $(foreach dir, $(kernel-setpatch_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-setpatch_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-setpatch_MC_DIRS),)
+    kernel-setpatch_MC_DIRS := $(shell echo $(kernel-setpatch_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-setpatch_MC_DIRS)
+endif
+
+endif
+
+kernel-setpatch_MC_CPPFLAGS := $(kernel-setpatch_LINKLIBCPPFLAGS) -D__AROS__
+kernel-setpatch_CFLAGS := $(kernel-setpatch_LINKLIBCFLAGS)
+ifeq ($(kernel-setpatch_LINKLIBDFLAGS),)
+  kernel-setpatch_DFLAGS := $(kernel-setpatch_LINKLIBCFLAGS)
+else
+  kernel-setpatch_DFLAGS := $(kernel-setpatch_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-setpatch_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-setpatch_STRIP ?= $(TARGET_STRIP)
+kernel-setpatch_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_MC_CPPFLAGS:=$(strip $(kernel-setpatch_MC_CPPFLAGS) $(kernel-setpatch_MC_EXTRA_CPPFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_CFLAGS:=$(strip $(kernel-setpatch_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_DFLAGS:=$(kernel-setpatch_DFLAGS)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-setpatch_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-setpatch_STRIP ?= $(HOST_STRIP)
+kernel-setpatch_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-setpatch_MC_CPPFLAGS) $(kernel-setpatch_MC_EXTRA_CPPFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-setpatch_CFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-setpatch_DFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-setpatch_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-setpatch_STRIP ?= $(ECHO) >/dev/null
+kernel-setpatch_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-setpatch_MC_CPPFLAGS) $(kernel-setpatch_MC_EXTRA_CPPFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-setpatch_CFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-setpatch_DFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-setpatch_MC_TARGETS) : CPPFLAGS := $(kernel-setpatch_MC_CPPFLAGS)
+$(kernel-setpatch_MC_TARGETS) : CFLAGS := $(kernel-setpatch_CFLAGS)
+$(kernel-setpatch_MC_TARGETS) : $(kernel-setpatch_MC_TGTWILDCARD).o : $(kernel-setpatch_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-setpatch_IQUOTE) $(dir $<) $(kernel-setpatch_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_IQUOTE) . $(kernel-setpatch_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-setpatch_IQUOTE) $(dir $<) $(kernel-setpatch_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_IQUOTE) . $(kernel-setpatch_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-setpatch_IQUOTE) $(dir $<) $(kernel-setpatch_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_IQUOTE) . $(kernel-setpatch_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-setpatch_MC_DTARGETS) : $(kernel-setpatch_MC_TGTWILDCARD).d : $(kernel-setpatch_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-setpatch_DFLAGS) $(kernel-setpatch_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-setpatch_OBJDIR)/linklib,)
+kernel-setpatch_MC_SRCWILDCARD := %
+else
+kernel-setpatch_MC_SRCWILDCARD := $(kernel-setpatch_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-setpatch_OBJDIR)/linklib,)
+kernel-setpatch_MC_TARGETS := $(addsuffix .o,$(kernel-setpatch_LINKLIBCCGENFILES))
+kernel-setpatch_MC_DTARGETS := $(addsuffix .d,$(kernel-setpatch_LINKLIBCCGENFILES))
+kernel-setpatch_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-setpatch_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$(notdir $(kernel-setpatch_LINKLIBCCGENFILES))))
+    kernel-setpatch_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$(notdir $(kernel-setpatch_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-setpatch_OBJDIR)/linklib,)
+    kernel-setpatch_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$(kernel-setpatch_LINKLIBCCGENFILES)))
+    kernel-setpatch_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$(kernel-setpatch_LINKLIBCCGENFILES)))
+else
+    kernel-setpatch_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$(patsubst $(kernel-setpatch_OBJDIR)/linklib/%,%,$(kernel-setpatch_LINKLIBCCGENFILES))))
+    kernel-setpatch_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$(patsubst $(kernel-setpatch_OBJDIR)/linklib/%,%,$(kernel-setpatch_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-setpatch_MC_TGTWILDCARD := $(kernel-setpatch_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : | $(addsuffix .c,$(kernel-setpatch_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-setpatch_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-setpatch_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-setpatch_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-setpatch_MC_DIRS := $(foreach dir, $(kernel-setpatch_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-setpatch_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-setpatch_MC_DIRS),)
+    kernel-setpatch_MC_DIRS := $(shell echo $(kernel-setpatch_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-setpatch_MC_DIRS)
+endif
+
+endif
+
+kernel-setpatch_MC_CPPFLAGS := $(kernel-setpatch_LINKLIBCPPFLAGS) -D__AROS__
+kernel-setpatch_CFLAGS := $(kernel-setpatch_LINKLIBCFLAGS)
+ifeq ($(kernel-setpatch_LINKLIBDFLAGS),)
+  kernel-setpatch_DFLAGS := $(kernel-setpatch_LINKLIBCFLAGS)
+else
+  kernel-setpatch_DFLAGS := $(kernel-setpatch_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-setpatch_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-setpatch_STRIP ?= $(TARGET_STRIP)
+kernel-setpatch_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_MC_CPPFLAGS:=$(strip $(kernel-setpatch_MC_CPPFLAGS) $(kernel-setpatch_MC_EXTRA_CPPFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_CFLAGS:=$(strip $(kernel-setpatch_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_DFLAGS:=$(kernel-setpatch_DFLAGS)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-setpatch_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-setpatch_STRIP ?= $(HOST_STRIP)
+kernel-setpatch_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-setpatch_MC_CPPFLAGS) $(kernel-setpatch_MC_EXTRA_CPPFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-setpatch_CFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-setpatch_DFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-setpatch_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-setpatch_STRIP ?= $(ECHO) >/dev/null
+kernel-setpatch_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-setpatch_MC_CPPFLAGS) $(kernel-setpatch_MC_EXTRA_CPPFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-setpatch_CFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-setpatch_DFLAGS))
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-setpatch_MC_TARGETS) $(kernel-setpatch_MC_DTARGETS) : kernel-setpatch_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-setpatch_MC_TARGETS) : CPPFLAGS := $(kernel-setpatch_MC_CPPFLAGS)
+$(kernel-setpatch_MC_TARGETS) : CFLAGS := $(kernel-setpatch_CFLAGS)
+$(kernel-setpatch_MC_TARGETS) : $(kernel-setpatch_MC_TGTWILDCARD).o : $(kernel-setpatch_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-setpatch_IQUOTE) $(dir $<) $(kernel-setpatch_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_IQUOTE) . $(kernel-setpatch_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-setpatch_IQUOTE) $(dir $<) $(kernel-setpatch_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_IQUOTE) . $(kernel-setpatch_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-setpatch_IQUOTE) $(dir $<) $(kernel-setpatch_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-setpatch_IQUOTE) . $(kernel-setpatch_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-setpatch_MC_DTARGETS) : $(kernel-setpatch_MC_TGTWILDCARD).d : $(kernel-setpatch_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-setpatch_DFLAGS) $(kernel-setpatch_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-setpatch_LINKLIBAFILES),)
+
+ifeq ($(kernel-setpatch_OBJDIR)/linklib,)
+kernel-setpatch-MA_TARGETS := $(addsuffix .o,$(kernel-setpatch_LINKLIBAFILES) $(kernel-setpatch_RELLINKLIBAFILES))
+kernel-setpatch-MA_WILDCARD := %
+else
+kernel-setpatch-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$(notdir $(kernel-setpatch_LINKLIBAFILES) $(kernel-setpatch_RELLINKLIBAFILES))))
+kernel-setpatch-MA_WILDCARD := $(kernel-setpatch_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-setpatch-MA_TARGETS) : | $(addsuffix .S,$(kernel-setpatch_LINKLIBAFILES) $(kernel-setpatch_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-setpatch-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-setpatch-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-setpatch_LINKLIBAFILES) $(kernel-setpatch_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-setpatch-MA_DIRS := $(foreach dir, $(kernel-setpatch-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-setpatch-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-setpatch-MA_DIRS),)
+    kernel-setpatch-MA_DIRS := $(shell echo $(kernel-setpatch-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-setpatch-MA_DIRS)
+endif
+
+endif
+
+kernel-setpatch-MA_ASSEMBLER ?= $(kernel-setpatch_ASSEMBLER)
+
+$(kernel-setpatch-MA_TARGETS) : kernel-setpatch-MA_CMD:= $(kernel-setpatch-MA_ASSEMBLER)
+
+$(kernel-setpatch-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-setpatch-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-setpatch-MA_TARGETS) : $(kernel-setpatch-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-setpatch-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-setpatch-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-setpatch-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (,)
+kernel-setpatch_SUFFIX           := library
+else
+kernel-setpatch_SUFFIX           := 
+endif
+
+ifeq (target,target)
+kernel-setpatch_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-setpatch_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-setpatch_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-setpatch_SUFFIX),handler)
+kernel-setpatch_MODULE           := $(AROSDIR)/$(kernel-setpatch_MODDIR)/$(kernel-setpatch_DEFNAME)-$(kernel-setpatch_SUFFIX)
+else
+kernel-setpatch_MODULE           := $(AROSDIR)/$(kernel-setpatch_MODDIR)/$(kernel-setpatch_DEFNAME).$(kernel-setpatch_SUFFIX)
+endif
+kernel-setpatch_KOBJ             := $(KOBJSDIR)/$(kernel-setpatch_DEFNAME)_$(kernel-setpatch_SUFFIX).o
+else
+kernel-setpatch_MODULE           :=
+kernel-setpatch_KOBJ             :=
+endif
+
+kernel-setpatch-quick      : kernel-setpatch
+kernel-setpatch            : $(kernel-setpatch_MODULE) $(kernel-setpatch_LINKLIB) $(kernel-setpatch_RELLINKLIB)
+ifeq (M,M)
+kernel-setpatch-kobj       : $(kernel-setpatch_KOBJ) $(kernel-setpatch_LINKLIB) $(kernel-setpatch_RELLINKLIB)
+kernel-setpatch-kobj-quick : $(kernel-setpatch_KOBJ) $(kernel-setpatch_LINKLIB) $(kernel-setpatch_RELLINKLIB)
+endif
+ifeq (M,M)
+kernel-setpatch-linklib    : $(kernel-setpatch_LINKLIB) $(kernel-setpatch_RELLINKLIB)
+endif
+
+kernel-setpatch_OBJS := $(addsuffix .o,$(kernel-setpatch_STARTFILES)) $(kernel-setpatch_ARCHOBJS) \
+           $(addprefix $(kernel-setpatch_OBJDIR)/,$(notdir $(kernel-setpatch_C_NARCHFILES:=.o) $(kernel-setpatch_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (library,handler)
+kernel-setpatch_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (setpatch,con)
+    kernel-setpatch_ERR          := $(notdir $(kernel-setpatch_MODULE)).err
+else
+    kernel-setpatch_ERR          := setpatch.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-setpatch_DEFNAME)_LDFLAGS) $(kernel-setpatch_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-setpatch_LIBS) $($(kernel-setpatch_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-setpatch_MODULE) : LIB_NAMES := $(kernel-setpatch_LIBS) $($(kernel-setpatch_DEFNAME)_LIBS)
+$(kernel-setpatch_MODULE) : OBJS := $(kernel-setpatch_STARTOBJS) $(kernel-setpatch_OBJS) $(USER_OBJS)
+$(kernel-setpatch_MODULE) : ENDTAG := $(kernel-setpatch_ENDOBJS)
+$(kernel-setpatch_MODULE) : ERR := $(kernel-setpatch_ERR)
+$(kernel-setpatch_MODULE) : OBJDIR := $(kernel-setpatch_OBJDIR)
+$(kernel-setpatch_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-setpatch_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-setpatch_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-setpatch_MODULE) : $(kernel-setpatch_STARTOBJS) $(kernel-setpatch_OBJS) $(USER_OBJS) $(kernel-setpatch_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-setpatch_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-setpatch_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (M,M)
+# Link static lib
+kernel-setpatch_LC_LINKLIBNAME   := $(shell echo $(kernel-setpatch_LINKLIBNAME) | tr A-Z a-z)
+kernel-setpatch_LC_MODNAME       := $(shell echo setpatch | tr A-Z a-z)
+ifneq ($(kernel-setpatch_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_LINKLIBNAME)$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_AR:=$(AR)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_LINKLIBNAME)$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_LINKLIBNAME)$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_AR:=$(HOST_AR)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_LINKLIBNAME)$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_LINKLIBNAME)$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_AR:=$(KERNEL_AR)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_LINKLIBNAME)$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_LINKLIBNAME)$(kernel-setpatch_LIBSUFFIX).a : $(kernel-setpatch_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-setpatch_AR) $@ $^
+	$(Q)$(kernel-setpatch_RANLIB) $@
+ifneq ($(kernel-setpatch_LC_MODNAME),$(kernel-setpatch_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-setpatch_LIBDIR)/libsetpatch$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_AR:=$(AR)
+$(kernel-setpatch_LIBDIR)/libsetpatch$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-setpatch_LIBDIR)/libsetpatch$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_AR:=$(HOST_AR)
+$(kernel-setpatch_LIBDIR)/libsetpatch$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-setpatch_LIBDIR)/libsetpatch$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_AR:=$(KERNEL_AR)
+$(kernel-setpatch_LIBDIR)/libsetpatch$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-setpatch_LIBDIR)/libsetpatch$(kernel-setpatch_LIBSUFFIX).a : $(kernel-setpatch_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-setpatch_AR) $@ $^
+	$(Q)$(kernel-setpatch_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-setpatch_LINKLIB),)
+$(kernel-setpatch_LINKLIB) : | $(kernel-setpatch_LIBDIR)
+else
+$(kernel-setpatch_LINKLIB) :: $(kernel-setpatch_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-setpatch_LIBDIR)
+
+endif
+
+ifneq ($(kernel-setpatch_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_LINKLIBNAME)_rel$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_AR:=$(AR)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_LINKLIBNAME)_rel$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_LINKLIBNAME)_rel$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_AR:=$(HOST_AR)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_LINKLIBNAME)_rel$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_LINKLIBNAME)_rel$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_AR:=$(KERNEL_AR)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_LINKLIBNAME)_rel$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_LINKLIBNAME)_rel$(kernel-setpatch_LIBSUFFIX).a : $(kernel-setpatch_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-setpatch_AR) $@ $^
+	$(Q)$(kernel-setpatch_RANLIB) $@
+ifneq ($(kernel-setpatch_LC_MODNAME),$(kernel-setpatch_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_DEFNAME)_rel$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_AR:=$(AR)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_DEFNAME)_rel$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_DEFNAME)_rel$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_AR:=$(HOST_AR)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_DEFNAME)_rel$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_DEFNAME)_rel$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_AR:=$(KERNEL_AR)
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_DEFNAME)_rel$(kernel-setpatch_LIBSUFFIX).a : kernel-setpatch_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-setpatch_LIBDIR)/lib$(kernel-setpatch_DEFNAME)_rel$(kernel-setpatch_LIBSUFFIX).a : $(kernel-setpatch_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-setpatch_AR) $@ $^
+	$(Q)$(kernel-setpatch_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-setpatch_RELLINKLIB),)
+$(kernel-setpatch_RELLINKLIB) : | $(kernel-setpatch_LIBDIR)
+else
+$(kernel-setpatch_RELLINKLIB) :: $(kernel-setpatch_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-setpatch_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-setpatch_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-setpatch_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-setpatch_SYMBOLS := $(kernel-setpatch_KBASE)
+
+kernel-setpatch_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-setpatch_KOBJ_LIBS        := $(filter-out $(kernel-setpatch_KLIB),$(kernel-setpatch_LIBS)) $(kernel-setpatch_KAUTOLIB)
+$(kernel-setpatch_KOBJ) : LINKLIBS:=$(kernel-setpatch_KOBJ_LIBS) $($(kernel-setpatch_DEFNAME)_LIBS)
+$(kernel-setpatch_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-setpatch_SYMBOLS))
+$(kernel-setpatch_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-setpatch_KOBJ) : $(kernel-setpatch_OBJS) $(USER_OBJS) $(kernel-setpatch_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-setpatch_DEPS             := $(addprefix $(kernel-setpatch_OBJDIR)/,$(notdir $(kernel-setpatch_CCFILES:=.d) $(kernel-setpatch_TARGETCCFILES:=.d) $(kernel-setpatch_CXXFILES:=.d))) $(addprefix $(kernel-setpatch_OBJDIR)/linklib/,$(notdir $(kernel-setpatch_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-setpatch_DEPS),)
+  ifneq (kernel-setpatch kernel-setpatch-quick kernel-setpatch-kobj kernel-setpatch-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-setpatch kernel-setpatch-quick kernel-setpatch-kobj kernel-setpatch-kobj-quick),)
+      -include $(kernel-setpatch_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-setpatch_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-setpatch_OBJS) $(kernel-setpatch_DEPS) : | $(kernel-setpatch_OBJDIR)/linklib
+
+ifneq ($(kernel-setpatch_OBJS) $(kernel-setpatch_DEPS) $(kernel-setpatch_MODULE) $(kernel-setpatch_KOBJ),)
+$(kernel-setpatch_OBJS) $(kernel-setpatch_DEPS) $(kernel-setpatch_MODULE) $(kernel-setpatch_KOBJ) : | $(kernel-setpatch_OBJDIR) $(AROSDIR)/$(kernel-setpatch_MODDIR) $(KOBJSDIR)
+else
+$(kernel-setpatch_OBJS) $(kernel-setpatch_DEPS) $(kernel-setpatch_MODULE) $(kernel-setpatch_KOBJ) :: $(kernel-setpatch_OBJDIR) $(AROSDIR)/$(kernel-setpatch_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-setpatch_OBJDIR) $(AROSDIR)/$(kernel-setpatch_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-setpatch kernel-setpatch-includes kernel-setpatch-quick kernel-setpatch-kobj kernel-setpatch-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-setpatch_DFILE_DEPS := $(kernel-setpatch_LIBDEFSINC) $(kernel-setpatch_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-setpatch_INCDIR)/,$($(kernel-setpatch_DEFNAME)_INCLUDES))
+$(kernel-setpatch_DEPS) : $(kernel-setpatch_DFILE_DEPS)
+endif
+
+kernel-setpatch_TOCLEAN := $(kernel-setpatch_OBJS) $(kernel-setpatch_DEPS) \
+    $(kernel-setpatch_MODULE) $(kernel-setpatch_LINKLIB) $(kernel-setpatch_KOBJ) \
+    $(kernel-setpatch_OBJDIR)/Makefile.setpatchlibrary \
+    $(addprefix $(kernel-setpatch_OBJDIR)/include/,$($(kernel-setpatch_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-setpatch_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-setpatch_INCDIR)/,$($(kernel-setpatch_DEFNAME)_INCLUDES)) \
+    $(kernel-setpatch_OBJDIR)/setpatch_geninc $(kernel-setpatch_OBJDIR)/setpatch_incs \
+    $(addsuffix .c,$(kernel-setpatch_LINKLIBFILES)) $(kernel-setpatch_LINKLIBOBJS) $(kernel-setpatch_LIBDEFSINC) \
+    $(kernel-setpatch_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-setpatch_STARTFILES) $(kernel-setpatch_ENDFILES)) \
+    $(kernel-setpatch_ENDOBJS)
+kernel-setpatch-clean : FILES              := $(kernel-setpatch_TOCLEAN)
+kernel-setpatch-clean ::
+	$(Q)$(ECHO) "Cleaning up for module setpatch"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-setpatch_ALLTARGETS)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

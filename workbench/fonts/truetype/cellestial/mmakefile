@@ -1,0 +1,46 @@
+# Copyright © 2020, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- fonts-truetype : fonts-truetype-cellestial
+#MM- fonts-truetype-quick : fonts-truetype-cellestial
+#MM- fonts-truetype-cellestial : fonts-truetype-cellestial-ttf fonts-truetype-cellestial-amifonts
+
+
+fonts-truetype-cellestial-ttf_SRC := $(shell echo . | sed 's/^\(.\):\//\/\1\//')
+
+
+ifneq (setup,)
+setup : | $(AROSDIR)/Fonts/TrueType
+else
+setup :: $(AROSDIR)/Fonts/TrueType
+endif
+
+GLOB_MKDIRS += $(AROSDIR)/Fonts/TrueType
+
+
+.PHONY : fonts-truetype-cellestial-ttf
+
+#MM
+fonts-truetype-cellestial-ttf : | $(AROSDIR)/Fonts/TrueType 
+	$(foreach file, $(call WILDCARD, *.ttf), $(shell $(CP) $(addprefix $(if $(filter /%,$(fonts-truetype-cellestial-ttf_SRC)),$(fonts-truetype-cellestial-ttf_SRC),$(SRCDIR)/$(CURDIR)/$(fonts-truetype-cellestial-ttf_SRC))/, $(file)) $(addprefix $(AROSDIR)/Fonts/TrueType/, $(file))))
+
+
+#MM
+fonts-truetype-cellestial-amifonts :
+	@cd $(SRCDIR)/$(CURDIR); for file in *.font *.otag; do \
+            if [ ! -e "$(AROSDIR)/Fonts/$$file" ]; then \
+                $(ECHO) Copying "$$file"...; \
+                $(CP) "$$file" $(AROSDIR)/Fonts; \
+            fi; \
+        done
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

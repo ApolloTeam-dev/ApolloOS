@@ -1,0 +1,1377 @@
+#   $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- test : test-sdi-libraries
+
+#MM- test-sdi-libraries : test-sdi-libraries-test
+
+#MM test-sdi-libraries-test : includes linklibs \
+#MM test-sdi-libraries-library test-sdi-libraries-linklib
+
+#MM test-sdi-libraries-library : includes
+
+#MM test-sdi-libraries-linklib : includes
+
+EXEDIR        := $(AROS_TESTS)/sdi
+
+FILES         := example_lib stubs-aros
+USER_INCLUDES := -idirafter $(SRCDIR)/$(CURDIR)/../..
+USER_CFLAGS   := -DAROS_ABI_V1
+USER_LDFLAGS := -static
+
+
+# Define metamake targets and their dependencies
+#MM test-sdi-libraries-library : core-linklibs includes-generate-deps
+#MM test-sdi-libraries-library-kobj : core-linklibs includes-generate-deps
+#MM test-sdi-libraries-library-kobj-quick
+#MM test-sdi-libraries-library-quick
+#MM test-sdi-libraries-library-clean
+
+test-sdi-libraries-library_ALLTARGETS := test-sdi-libraries-library test-sdi-libraries-library-clean test-sdi-libraries-library-quick test-sdi-libraries-library-kobj
+
+.PHONY : $(test-sdi-libraries-library_ALLTARGETS)
+
+ifeq (example,)
+$(error using %build_module_simple: modname may not be empty)
+endif
+ifeq (library,)
+$(error using %build_module_simple: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+test-sdi-libraries-library_DEFLINKLIBNAME := example
+test-sdi-libraries-library_CFLAGS := $(CFLAGS)
+test-sdi-libraries-library_CXXFLAGS := $(CXXFLAGS)
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+test-sdi-libraries-library_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(test-sdi-libraries-library_CFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-sdi-libraries-library_FUNCINSTR := yes
+test-sdi-libraries-library_CFLAGS    := $(strip $(FUNCINSTR_FLAGS) $(test-sdi-libraries-library_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-sdi-libraries-library_DFLAGS := 
+else
+    test-sdi-libraries-library_DFLAGS := $(test-sdi-libraries-library_CFLAGS)
+endif
+test-sdi-libraries-library_DEFDXXFLAGS := 
+OBJDIR ?= $(GENDIR)/$(CURDIR)
+test-sdi-libraries-library_MODDIR := $(EXEDIR)
+ifeq ($(test-sdi-libraries-library_MODDIR),)
+  ifeq (library,library)
+    test-sdi-libraries-library_MODDIR  := $(AROS_LIBRARIES)
+  endif
+  ifeq (library,gadget)
+    test-sdi-libraries-library_MODDIR  := $(AROS_GADGETS)
+  endif
+  ifeq (library,datatype)
+    test-sdi-libraries-library_MODDIR  := $(AROS_DATATYPES)
+  endif
+  ifeq (library,handler)
+    test-sdi-libraries-library_MODDIR  := $(AROS_FS)
+  endif
+  ifeq (library,device)
+    test-sdi-libraries-library_MODDIR  := $(AROS_DEVS)
+  endif
+  ifeq (library,resource)
+    test-sdi-libraries-library_MODDIR  := $(AROS_RESOURCES)
+  endif
+  ifeq (library,hook)
+    test-sdi-libraries-library_MODDIR  := $(AROS_RESOURCES)
+  endif
+  ifeq (library,mui)
+    test-sdi-libraries-library_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (library,mcc)
+    test-sdi-libraries-library_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (library,mcp)
+    test-sdi-libraries-library_MODDIR  := $(AROS_CLASSES)/Zune
+  endif
+  ifeq (library,usbclass)
+    test-sdi-libraries-library_MODDIR  := $(AROS_CLASSES)/USB
+  endif
+  ifeq (library,hidd)
+    test-sdi-libraries-library_MODDIR  := $(AROS_DRIVERS)
+  endif
+  ifeq (library,printer)
+    test-sdi-libraries-library_MODDIR  := $(AROS_PRINTERS)
+  endif
+endif
+ifeq ($(test-sdi-libraries-library_MODDIR),)
+  $(error Don't know where to put the file for modtype library. Specify moduledir=)
+endif
+
+test-sdi-libraries-library_ARCHOBJS   := $(wildcard $(OBJDIR)/arch/*.o)
+test-sdi-libraries-library_ARCHFILES  := $(basename $(notdir $(test-sdi-libraries-library_ARCHOBJS)))
+test-sdi-libraries-library_C_NARCHFILES := $(filter-out $(test-sdi-libraries-library_ARCHFILES),$(FILES))
+test-sdi-libraries-library_CXX_NARCHFILES := $(filter-out $(test-sdi-libraries-library_ARCHFILES),$(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT)))))
+test-sdi-libraries-library_OBJC_NARCHFILES := $(filter-out $(test-sdi-libraries-library_ARCHFILES),)
+
+
+test-sdi-libraries-library_CXXABSBASENAMES := $(foreach test-sdi-libraries-library_CXXBASE,$(test-sdi-libraries-library_CXX_NARCHFILES),$(if $(filter /%,$(test-sdi-libraries-library_CXXBASE)),$(test-sdi-libraries-library_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(test-sdi-libraries-library_CXXBASE))))
+
+ifneq ($(test-sdi-libraries-library_CXXABSBASENAMES),)
+
+test-sdi-libraries-library_CXXBASENAMES := $(basename $(test-sdi-libraries-library_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+test-sdi-libraries-library_MCXX_FILES  := $(strip $(foreach test-sdi-libraries-library_CXXBASE,$(test-sdi-libraries-library_CXXABSBASENAMES), $(firstword $(wildcard $(foreach test-sdi-libraries-library_EXT, $(AROS_CXXEXTS),$(addsuffix .$(test-sdi-libraries-library_EXT),$(test-sdi-libraries-library_CXXBASE)))))))
+
+ifeq (,)
+test-sdi-libraries-library_MCXX_SRCWILDCARD := %
+else
+test-sdi-libraries-library_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+  test-sdi-libraries-library_CXXTARGETS := $(notdir $(test-sdi-libraries-library_CXXBASENAMES:=.o))
+  test-sdi-libraries-library_CXXDTARGETS := $(notdir $(test-sdi-libraries-library_CXXBASENAMES:=.d))
+  test-sdi-libraries-library_MCXX_WILDCARD := %
+else
+  test-sdi-libraries-library_CXXTARGETS := $(addprefix $(OBJDIR)/,$(notdir $(test-sdi-libraries-library_CXXBASENAMES:=.o)))
+  test-sdi-libraries-library_CXXDTARGETS := $(addprefix $(OBJDIR)/,$(notdir $(test-sdi-libraries-library_CXXBASENAMES:=.d)))
+  test-sdi-libraries-library_MCXX_WILDCARD := $(OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(test-sdi-libraries-library_CXXTARGETS) $(test-sdi-libraries-library_CXXDTARGETS) : | $(test-sdi-libraries-library_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+test-sdi-libraries-library_MCXX_CPPFLAGS := $(CPPFLAGS)
+test-sdi-libraries-library_CXXFLAGS := $(test-sdi-libraries-library_CXXFLAGS)
+ifeq ($(test-sdi-libraries-library_DXXFLAGS),)
+  test-sdi-libraries-library_DXXFLAGS := $(test-sdi-libraries-library_CXXFLAGS)
+else
+  test-sdi-libraries-library_DXXFLAGS := $(test-sdi-libraries-library_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  test-sdi-libraries-library_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  test-sdi-libraries-library_STRIP ?= $(HOST_STRIP)
+  test-sdi-libraries-library_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  test-sdi-libraries-library_CXXCMD:=$(HOST_CXX)
+  test-sdi-libraries-library_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(test-sdi-libraries-library_MCXX_CPPFLAGS) $(test-sdi-libraries-library_MCXX_EXTRA_CPPFLAGS))
+  test-sdi-libraries-library_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-sdi-libraries-library_CXXFLAGS))
+  test-sdi-libraries-library_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-sdi-libraries-library_DXXFLAGS))
+  test-sdi-libraries-library_CXXIQUOTE:=$(HOST_IQUOTE)
+  test-sdi-libraries-library_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  test-sdi-libraries-library_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-sdi-libraries-library_STRIP ?= $(TARGET_STRIP)
+  test-sdi-libraries-library_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  test-sdi-libraries-library_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  test-sdi-libraries-library_MCXX_CPPFLAGS := $(strip $(test-sdi-libraries-library_MCXX_CPPFLAGS) $(test-sdi-libraries-library_MCXX_EXTRA_CPPFLAGS))
+  test-sdi-libraries-library_CXXFLAGS := $(strip $(test-sdi-libraries-library_CXXFLAGS) $(SAFETY_CFLAGS))
+  test-sdi-libraries-library_DXXFLAGS := $(test-sdi-libraries-library_DXXFLAGS)
+  test-sdi-libraries-library_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  test-sdi-libraries-library_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  test-sdi-libraries-library_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-sdi-libraries-library_STRIP ?= $(ECHO) >/dev/null
+  test-sdi-libraries-library_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  test-sdi-libraries-library_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  test-sdi-libraries-library_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(test-sdi-libraries-library_MCXX_CPPFLAGS) $(test-sdi-libraries-library_MCXX_EXTRA_CPPFLAGS))
+  test-sdi-libraries-library_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-sdi-libraries-library_CXXFLAGS))
+  test-sdi-libraries-library_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-sdi-libraries-library_DXXFLAGS))
+  test-sdi-libraries-library_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  test-sdi-libraries-library_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(test-sdi-libraries-library_CXXCMD) $(test-sdi-libraries-library_CXXIQUOTE) $(dir $(2)) $(test-sdi-libraries-library_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-library_CXXIQUOTE) . $(test-sdi-libraries-library_CXXIQUOTE_END) $(strip $(test-sdi-libraries-library_CXXFLAGS) $(test-sdi-libraries-library_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(test-sdi-libraries-library_CXXCMD) $(test-sdi-libraries-library_CXXIQUOTE) $(dir $(2)) $(test-sdi-libraries-library_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-library_CXXIQUOTE) . $(test-sdi-libraries-library_CXXIQUOTE_END) $(strip $(test-sdi-libraries-library_CXXFLAGS) $(test-sdi-libraries-library_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(test-sdi-libraries-library_CXXCMD) $(test-sdi-libraries-library_CXXIQUOTE) $(dir $(2)) $(test-sdi-libraries-library_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-library_CXXIQUOTE) . $(test-sdi-libraries-library_CXXIQUOTE_END) $(strip $(test-sdi-libraries-library_CXXFLAGS) $(test-sdi-libraries-library_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(test-sdi-libraries-library_CXXCMD)" $(MKDEPEND) $(strip $(test-sdi-libraries-library_DXXFLAGS) $(test-sdi-libraries-library_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(OBJDIR),)
+  $(foreach test-sdi-libraries-library_CXXFILE,$(test-sdi-libraries-library_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(test-sdi-libraries-library_CXXFILE))),$(test-sdi-libraries-library_CXXFILE))))
+else
+  $(foreach test-sdi-libraries-library_CXXFILE,$(test-sdi-libraries-library_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(OBJDIR)/,$(notdir $(basename $(test-sdi-libraries-library_CXXFILE)))),$(test-sdi-libraries-library_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(test-sdi-libraries-library_OBJC_NARCHFILES),)
+
+ifeq (,)
+test-sdi-libraries-library_MOBJC_SRCWILDCARD := %
+else
+test-sdi-libraries-library_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+  test-sdi-libraries-library_MOBJC_TARGETS := $(addsuffix .o,$(test-sdi-libraries-library_OBJC_NARCHFILES))
+  test-sdi-libraries-library_MOBJC_DTARGETS := $(addsuffix .d,$(test-sdi-libraries-library_OBJC_NARCHFILES))
+  test-sdi-libraries-library_MOBJC_WILDCARD := %
+else
+  test-sdi-libraries-library_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(test-sdi-libraries-library_OBJC_NARCHFILES)))
+  test-sdi-libraries-library_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(test-sdi-libraries-library_OBJC_NARCHFILES)))
+  test-sdi-libraries-library_MOBJC_WILDCARD := $(OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : | $(addsuffix .m,$(test-sdi-libraries-library_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  test-sdi-libraries-library_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  test-sdi-libraries-library_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(test-sdi-libraries-library_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  test-sdi-libraries-library_MOBJC_DIRS := $(foreach dir, $(test-sdi-libraries-library_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-sdi-libraries-library_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(test-sdi-libraries-library_MOBJC_DIRS),)
+    test-sdi-libraries-library_MOBJC_DIRS := $(shell echo $(test-sdi-libraries-library_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(test-sdi-libraries-library_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  test-sdi-libraries-library_CC := $(TARGET_CC)
+else
+  test-sdi-libraries-library_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+test-sdi-libraries-library_MOBJC_CPPFLAGS := $(CPPFLAGS)
+test-sdi-libraries-library_OBJCFLAGS := $(test-sdi-libraries-library_CFLAGS)
+test-sdi-libraries-library_OBJCFLAGS := $(test-sdi-libraries-library_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+test-sdi-libraries-library_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(test-sdi-libraries-library_OBJCFLAGS)))
+ifeq ($(test-sdi-libraries-library_DFLAGS),)
+  test-sdi-libraries-library_OBJCDFLAGS := $(test-sdi-libraries-library_CFLAGS)
+else
+  test-sdi-libraries-library_OBJCDFLAGS := $(test-sdi-libraries-library_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  test-sdi-libraries-library_LINK ?= $(strip $(test-sdi-libraries-library_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-sdi-libraries-library_STRIP ?= $(TARGET_STRIP)
+  test-sdi-libraries-library_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : CMD:=$(strip $(test-sdi-libraries-library_CC) $(TARGET_SYSROOT))
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : test-sdi-libraries-library_MOBJC_CPPFLAGS:=$(strip $(test-sdi-libraries-library_MOBJC_CPPFLAGS) $(test-sdi-libraries-library_MOBJC_EXTRA_CPPFLAGS))
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : test-sdi-libraries-library_OBJCFLAGS:=$(strip $(test-sdi-libraries-library_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : test-sdi-libraries-library_OBJCDFLAGS:=$(test-sdi-libraries-library_OBJCDFLAGS)
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : test-sdi-libraries-library_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : test-sdi-libraries-library_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  test-sdi-libraries-library_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  test-sdi-libraries-library_STRIP ?= $(HOST_STRIP)
+  test-sdi-libraries-library_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : test-sdi-libraries-library_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(test-sdi-libraries-library_MOBJC_CPPFLAGS) $(test-sdi-libraries-library_MOBJC_EXTRA_CPPFLAGS))
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : test-sdi-libraries-library_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(test-sdi-libraries-library_OBJCFLAGS))
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : test-sdi-libraries-library_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(test-sdi-libraries-library_OBJCDFLAGS))
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : test-sdi-libraries-library_IQUOTE:=$(HOST_IQUOTE)
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : test-sdi-libraries-library_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  test-sdi-libraries-library_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-sdi-libraries-library_STRIP ?= $(ECHO) >/dev/null
+  test-sdi-libraries-library_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : test-sdi-libraries-library_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(test-sdi-libraries-library_MOBJC_CPPFLAGS) $(test-sdi-libraries-library_MOBJC_EXTRA_CPPFLAGS))
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : test-sdi-libraries-library_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-sdi-libraries-library_OBJCFLAGS))
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : test-sdi-libraries-library_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-sdi-libraries-library_OBJCDFLAGS))
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : test-sdi-libraries-library_IQUOTE:=$(KERNEL_IQUOTE)
+  $(test-sdi-libraries-library_MOBJC_TARGETS) $(test-sdi-libraries-library_MOBJC_DTARGETS) : test-sdi-libraries-library_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-sdi-libraries-library_MOBJC_TARGETS) : CPPFLAGS := $(test-sdi-libraries-library_MOBJC_CPPFLAGS)
+$(test-sdi-libraries-library_MOBJC_TARGETS) : CFLAGS := $(test-sdi-libraries-library_OBJCFLAGS)
+$(test-sdi-libraries-library_MOBJC_TARGETS) : $(test-sdi-libraries-library_MOBJC_WILDCARD).o : $(test-sdi-libraries-library_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-sdi-libraries-library_IQUOTE) $(dir $<) $(test-sdi-libraries-library_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-library_IQUOTE) . $(test-sdi-libraries-library_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-sdi-libraries-library_IQUOTE) $(dir $<) $(test-sdi-libraries-library_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-library_IQUOTE) . $(test-sdi-libraries-library_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-sdi-libraries-library_IQUOTE) $(dir $<) $(test-sdi-libraries-library_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-library_IQUOTE) . $(test-sdi-libraries-library_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-sdi-libraries-library_MOBJC_DTARGETS) : $(test-sdi-libraries-library_MOBJC_WILDCARD).d : $(test-sdi-libraries-library_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-sdi-libraries-library_OBJCDFLAGS) $(test-sdi-libraries-library_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+test-sdi-libraries-library_MC_SRCWILDCARD := %
+else
+test-sdi-libraries-library_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(OBJDIR),)
+test-sdi-libraries-library_MC_TARGETS := $(addsuffix .o,$(test-sdi-libraries-library_C_NARCHFILES))
+test-sdi-libraries-library_MC_DTARGETS := $(addsuffix .d,$(test-sdi-libraries-library_C_NARCHFILES))
+test-sdi-libraries-library_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-sdi-libraries-library_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(notdir $(test-sdi-libraries-library_C_NARCHFILES))))
+    test-sdi-libraries-library_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(notdir $(test-sdi-libraries-library_C_NARCHFILES))))
+else
+ifeq (,)
+    test-sdi-libraries-library_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(test-sdi-libraries-library_C_NARCHFILES)))
+    test-sdi-libraries-library_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(test-sdi-libraries-library_C_NARCHFILES)))
+else
+    test-sdi-libraries-library_MC_TARGETS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(patsubst /%,%,$(test-sdi-libraries-library_C_NARCHFILES))))
+    test-sdi-libraries-library_MC_DTARGETS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(patsubst /%,%,$(test-sdi-libraries-library_C_NARCHFILES))))
+endif
+endif
+test-sdi-libraries-library_MC_TGTWILDCARD := $(OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : | $(addsuffix .c,$(test-sdi-libraries-library_C_NARCHFILES))
+
+# Be sure that all .c files are found
+test-sdi-libraries-library_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-sdi-libraries-library_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-sdi-libraries-library_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+test-sdi-libraries-library_MC_DIRS := $(foreach dir, $(test-sdi-libraries-library_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-sdi-libraries-library_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-sdi-libraries-library_MC_DIRS),)
+    test-sdi-libraries-library_MC_DIRS := $(shell echo $(test-sdi-libraries-library_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-sdi-libraries-library_MC_DIRS)
+endif
+
+endif
+
+test-sdi-libraries-library_MC_CPPFLAGS := $(CPPFLAGS)
+test-sdi-libraries-library_CFLAGS := $(test-sdi-libraries-library_CFLAGS)
+ifeq ($(test-sdi-libraries-library_DFLAGS),)
+  test-sdi-libraries-library_DFLAGS := $(test-sdi-libraries-library_CFLAGS)
+else
+  test-sdi-libraries-library_DFLAGS := $(test-sdi-libraries-library_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-sdi-libraries-library_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-sdi-libraries-library_STRIP ?= $(TARGET_STRIP)
+test-sdi-libraries-library_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : test-sdi-libraries-library_MC_CPPFLAGS:=$(strip $(test-sdi-libraries-library_MC_CPPFLAGS) $(test-sdi-libraries-library_MC_EXTRA_CPPFLAGS))
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : test-sdi-libraries-library_CFLAGS:=$(strip $(test-sdi-libraries-library_CFLAGS) $(SAFETY_CFLAGS))
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : test-sdi-libraries-library_DFLAGS:=$(test-sdi-libraries-library_DFLAGS)
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : test-sdi-libraries-library_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : test-sdi-libraries-library_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-sdi-libraries-library_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-sdi-libraries-library_STRIP ?= $(HOST_STRIP)
+test-sdi-libraries-library_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : test-sdi-libraries-library_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-sdi-libraries-library_MC_CPPFLAGS) $(test-sdi-libraries-library_MC_EXTRA_CPPFLAGS))
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : test-sdi-libraries-library_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-sdi-libraries-library_CFLAGS))
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : test-sdi-libraries-library_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-sdi-libraries-library_DFLAGS))
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : test-sdi-libraries-library_IQUOTE:=$(HOST_IQUOTE)
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : test-sdi-libraries-library_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-sdi-libraries-library_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-sdi-libraries-library_STRIP ?= $(ECHO) >/dev/null
+test-sdi-libraries-library_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : test-sdi-libraries-library_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-sdi-libraries-library_MC_CPPFLAGS) $(test-sdi-libraries-library_MC_EXTRA_CPPFLAGS))
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : test-sdi-libraries-library_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-sdi-libraries-library_CFLAGS))
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : test-sdi-libraries-library_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-sdi-libraries-library_DFLAGS))
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : test-sdi-libraries-library_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-sdi-libraries-library_MC_TARGETS) $(test-sdi-libraries-library_MC_DTARGETS) : test-sdi-libraries-library_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-sdi-libraries-library_MC_TARGETS) : CPPFLAGS := $(test-sdi-libraries-library_MC_CPPFLAGS)
+$(test-sdi-libraries-library_MC_TARGETS) : CFLAGS := $(test-sdi-libraries-library_CFLAGS)
+$(test-sdi-libraries-library_MC_TARGETS) : $(test-sdi-libraries-library_MC_TGTWILDCARD).o : $(test-sdi-libraries-library_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-sdi-libraries-library_IQUOTE) $(dir $<) $(test-sdi-libraries-library_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-library_IQUOTE) . $(test-sdi-libraries-library_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-sdi-libraries-library_IQUOTE) $(dir $<) $(test-sdi-libraries-library_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-library_IQUOTE) . $(test-sdi-libraries-library_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-sdi-libraries-library_IQUOTE) $(dir $<) $(test-sdi-libraries-library_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-library_IQUOTE) . $(test-sdi-libraries-library_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-sdi-libraries-library_MC_DTARGETS) : $(test-sdi-libraries-library_MC_TGTWILDCARD).d : $(test-sdi-libraries-library_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-sdi-libraries-library_DFLAGS) $(test-sdi-libraries-library_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+# Handlers use dash instead of dot in their names
+ifeq (library,handler)
+test-sdi-libraries-library_MODULE := $(test-sdi-libraries-library_MODDIR)/example-library
+else
+ifeq (library,printer)
+test-sdi-libraries-library_MODULE := $(test-sdi-libraries-library_MODDIR)/example
+else
+test-sdi-libraries-library_MODULE := $(test-sdi-libraries-library_MODDIR)/example.library
+endif
+endif
+test-sdi-libraries-library_KOBJ   := $(KOBJSDIR)/example_library.o
+
+test-sdi-libraries-library-quick : test-sdi-libraries-library
+test-sdi-libraries-library-kobj-quick : $(test-sdi-libraries-library_KOBJ)
+test-sdi-libraries-library       : $(test-sdi-libraries-library_MODULE)
+test-sdi-libraries-library-kobj  : $(test-sdi-libraries-library_KOBJ)
+
+# The module is linked from all the compiled .o files
+test-sdi-libraries-library_OBJS       := $(test-sdi-libraries-library_ARCHOBJS) $(addprefix $(OBJDIR)/, $(addsuffix .o,$(notdir $(test-sdi-libraries-library_C_NARCHFILES))))
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (example,con)
+    test-sdi-libraries-library_ERR := $(notdir $(test-sdi-libraries-library_MODULE)).err
+else
+    test-sdi-libraries-library_ERR := example.err
+endif
+
+
+TMP_LDFLAGS  := $(strip $(LDFLAGS) $(example_LDFLAGS))
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(example_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(test-sdi-libraries-library_MODULE) : LIB_NAMES := $(example_LIBS)
+$(test-sdi-libraries-library_MODULE) : OBJS := $(test-sdi-libraries-library_OBJS)
+$(test-sdi-libraries-library_MODULE) : ENDTAG := 
+$(test-sdi-libraries-library_MODULE) : ERR := $(test-sdi-libraries-library_ERR)
+$(test-sdi-libraries-library_MODULE) : OBJDIR := $(OBJDIR)
+$(test-sdi-libraries-library_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(test-sdi-libraries-library_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(test-sdi-libraries-library_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(test-sdi-libraries-library_MODULE) : $(test-sdi-libraries-library_OBJS)  $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(strip $(AROS_CC) $(TARGET_SYSROOT)) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(strip $(AROS_CC) $(TARGET_SYSROOT)) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+
+# Link kernel object file
+test-sdi-libraries-library_KAUTOLIB := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+test-sdi-libraries-library_KBASE := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+    UtilityBase ExpansionBase KeymapBase KernelBase
+
+test-sdi-libraries-library_SYMBOLS := $(test-sdi-libraries-library_KBASE)
+
+test-sdi-libraries-library_KLIB := hiddstubs amiga arossupport autoinit libinit
+test-sdi-libraries-library_KOBJ_LIBS := $(filter-out $(test-sdi-libraries-library_KLIB),) $(test-sdi-libraries-library_KAUTOLIB)
+$(test-sdi-libraries-library_KOBJ) : LINKLIBS:=$(test-sdi-libraries-library_KOBJ_LIBS)
+$(test-sdi-libraries-library_KOBJ) : FILTBASES:=$(addprefix -L ,$(test-sdi-libraries-library_SYMBOLS))
+$(test-sdi-libraries-library_KOBJ) : USER_LDFLAGS := $(USER_LDFLAGS)
+$(test-sdi-libraries-library_KOBJ) : $(test-sdi-libraries-library_OBJS) $(test-sdi-libraries-library_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+
+
+## Dependency fine-tuning
+##
+test-sdi-libraries-library_DEPS       := $(addprefix $(OBJDIR)/, $(addsuffix .d,$(FILES)))
+ifneq ($(test-sdi-libraries-library_DEPS),)
+  ifneq (test-sdi-libraries-library test-sdi-libraries-library-quick test-sdi-libraries-library-kobj,)
+    ifneq ($(findstring $(TARGET),test-sdi-libraries-library test-sdi-libraries-library-quick test-sdi-libraries-library-kobj),)
+      -include $(test-sdi-libraries-library_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-sdi-libraries-library_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-sdi-libraries-library_OBJS) $(test-sdi-libraries-library_DEPS) $(test-sdi-libraries-library_MODULE) $(test-sdi-libraries-library_KOBJ),)
+$(test-sdi-libraries-library_OBJS) $(test-sdi-libraries-library_DEPS) $(test-sdi-libraries-library_MODULE) $(test-sdi-libraries-library_KOBJ) : | $(OBJDIR) $(test-sdi-libraries-library_MODDIR) $(KOBJSDIR)
+else
+$(test-sdi-libraries-library_OBJS) $(test-sdi-libraries-library_DEPS) $(test-sdi-libraries-library_MODULE) $(test-sdi-libraries-library_KOBJ) :: $(OBJDIR) $(test-sdi-libraries-library_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(OBJDIR) $(test-sdi-libraries-library_MODDIR) $(KOBJSDIR)
+
+
+test-sdi-libraries-library-clean : FILES := $(test-sdi-libraries-library_OBJS) $(test-sdi-libraries-library_MODULE) $(test-sdi-libraries-library_KOBJ) $(test-sdi-libraries-library_DEPS)
+test-sdi-libraries-library-clean ::
+	$(Q)$(ECHO) "Cleaning up for module example"
+	$(Q)$(RM) $(FILES)
+
+
+FILES         := example_linklib
+USER_INCLUDES := -idirafter $(SRCDIR)/$(CURDIR)/include
+USER_CFLAGS   :=
+
+
+# assign and generate the local variables used in this macro
+test-sdi-libraries-linklib_LIBNAME           := example
+test-sdi-libraries-linklib_LINKLIB           := $(EXEDIR)/libexample.a
+
+test-sdi-libraries-linklib_FILES             ?= $(FILES)
+test-sdi-libraries-linklib_ASMFILES          := 
+test-sdi-libraries-linklib_OBJCFILES         := 
+test-sdi-libraries-linklib_CXXFILES          := 
+
+test-sdi-libraries-linklib_OBJDIR            ?= $(GENDIR)/$(CURDIR)
+test-sdi-libraries-linklib_ARCHOBJS          := $(wildcard $(test-sdi-libraries-linklib_OBJDIR)/arch/*.o)
+ifeq (no,no)
+    test-sdi-libraries-linklib_ARCHFILES     := $(basename $(notdir $(test-sdi-libraries-linklib_ARCHOBJS)))
+else
+    test-sdi-libraries-linklib_ARCHFILES     := $(basename $(patsubst $(test-sdi-libraries-linklib_OBJDIR)/%,%,$(test-sdi-libraries-linklib_ARCHOBJS)))
+endif
+test-sdi-libraries-linklib_C_NARCHFILES      := $(filter-out $(test-sdi-libraries-linklib_ARCHFILES),$(test-sdi-libraries-linklib_FILES))
+test-sdi-libraries-linklib_C_FILES           ?= $(test-sdi-libraries-linklib_C_NARCHFILES)
+test-sdi-libraries-linklib_CXX_NARCHFILES    := $(filter-out $(test-sdi-libraries-linklib_ARCHFILES),$(test-sdi-libraries-linklib_CXXFILES))
+test-sdi-libraries-linklib_CXX_FILES         ?= $(test-sdi-libraries-linklib_CXX_NARCHFILES)
+test-sdi-libraries-linklib_OBJC_NARCHFILES   := $(filter-out $(test-sdi-libraries-linklib_ARCHFILES),$(test-sdi-libraries-linklib_OBJCFILES))
+test-sdi-libraries-linklib_OBJC_FILES        ?= $(test-sdi-libraries-linklib_OBJC_NARCHFILES)
+
+ifeq (no,no)
+    test-sdi-libraries-linklib_OBJ_FILES     ?= $(addprefix $(test-sdi-libraries-linklib_OBJDIR)/,$(notdir $(test-sdi-libraries-linklib_C_NARCHFILES:=.o) $(test-sdi-libraries-linklib_CXX_NARCHFILES:=.o) $(test-sdi-libraries-linklib_ASMFILES:=.o) $(test-sdi-libraries-linklib_OBJC_NARCHFILES:=.o)))
+else
+    test-sdi-libraries-linklib_OBJ_FILES     ?= $(addprefix $(test-sdi-libraries-linklib_OBJDIR)/,$(test-sdi-libraries-linklib_C_NARCHFILES:=.o) $(test-sdi-libraries-linklib_CXX_NARCHFILES:=.o) $(test-sdi-libraries-linklib_ASMFILES:=.o) $(test-sdi-libraries-linklib_OBJC_NARCHFILES:=.o))
+endif
+test-sdi-libraries-linklib_OBJS              ?= $(test-sdi-libraries-linklib_ARCHOBJS) $(test-sdi-libraries-linklib_OBJ_FILES) 
+test-sdi-libraries-linklib_DEPS              := $(patsubst %.o,%.d,$(test-sdi-libraries-linklib_OBJS))
+
+test-sdi-libraries-linklib_CPPFLAGS          := $(CPPFLAGS)
+ifneq (,)
+    test-sdi-libraries-linklib_CPPFLAGS      += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-sdi-libraries-linklib_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+test-sdi-libraries-linklib_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+test-sdi-libraries-linklib_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+test-sdi-libraries-linklib_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-sdi-libraries-linklib_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+test-sdi-libraries-linklib_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+test-sdi-libraries-linklib_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+test-sdi-libraries-linklib_CXXFLAGS          := 
+endif
+
+ifeq ($(TARGET_LTO),yes)
+ifeq (target,target)
+        test-sdi-libraries-linklib_CFLAGS    := $(strip $(LTO_CFLAGS) $(test-sdi-libraries-linklib_CFLAGS))
+        test-sdi-libraries-linklib_CXXFLAGS  := $(strip $(LTO_CFLAGS) $(test-sdi-libraries-linklib_CXXFLAGS))
+endif
+endif
+test-sdi-libraries-linklib_AFLAGS            := $(AFLAGS)
+test-sdi-libraries-linklib_DFLAGS            := 
+ifneq (,)
+    test-sdi-libraries-linklib_DFLAGS        := 
+else
+    test-sdi-libraries-linklib_DFLAGS        := $(test-sdi-libraries-linklib_CFLAGS)
+endif
+test-sdi-libraries-linklib_DXXFLAGS          := 
+ifneq (,)
+    test-sdi-libraries-linklib_DXXFLAGS      := 
+else
+    test-sdi-libraries-linklib_DXXFLAGS      := $(test-sdi-libraries-linklib_CXXFLAGS)
+endif
+
+.PHONY : test-sdi-libraries-linklib test-sdi-libraries-linklib-clean test-sdi-libraries-linklib-quick
+
+#MM
+test-sdi-libraries-linklib-quick : test-sdi-libraries-linklib
+
+#MM test-sdi-libraries-linklib : includes-generate-deps
+test-sdi-libraries-linklib : $(test-sdi-libraries-linklib_LINKLIB)
+
+ifneq ($(filter $(TARGET),test-sdi-libraries-linklib test-sdi-libraries-linklib-quick),)
+
+
+test-sdi-libraries-linklib_CXXABSBASENAMES := $(foreach test-sdi-libraries-linklib_CXXBASE,$(test-sdi-libraries-linklib_CXX_FILES),$(if $(filter /%,$(test-sdi-libraries-linklib_CXXBASE)),$(test-sdi-libraries-linklib_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(test-sdi-libraries-linklib_CXXBASE))))
+
+ifneq ($(test-sdi-libraries-linklib_CXXABSBASENAMES),)
+
+test-sdi-libraries-linklib_CXXBASENAMES := $(basename $(test-sdi-libraries-linklib_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+test-sdi-libraries-linklib_MCXX_FILES  := $(strip $(foreach test-sdi-libraries-linklib_CXXBASE,$(test-sdi-libraries-linklib_CXXABSBASENAMES), $(firstword $(wildcard $(foreach test-sdi-libraries-linklib_EXT, $(AROS_CXXEXTS),$(addsuffix .$(test-sdi-libraries-linklib_EXT),$(test-sdi-libraries-linklib_CXXBASE)))))))
+
+ifeq (,)
+test-sdi-libraries-linklib_MCXX_SRCWILDCARD := %
+else
+test-sdi-libraries-linklib_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-sdi-libraries-linklib_OBJDIR),)
+  test-sdi-libraries-linklib_CXXTARGETS := $(notdir $(test-sdi-libraries-linklib_CXXBASENAMES:=.o))
+  test-sdi-libraries-linklib_CXXDTARGETS := $(notdir $(test-sdi-libraries-linklib_CXXBASENAMES:=.d))
+  test-sdi-libraries-linklib_MCXX_WILDCARD := %
+else
+  test-sdi-libraries-linklib_CXXTARGETS := $(addprefix $(test-sdi-libraries-linklib_OBJDIR)/,$(notdir $(test-sdi-libraries-linklib_CXXBASENAMES:=.o)))
+  test-sdi-libraries-linklib_CXXDTARGETS := $(addprefix $(test-sdi-libraries-linklib_OBJDIR)/,$(notdir $(test-sdi-libraries-linklib_CXXBASENAMES:=.d)))
+  test-sdi-libraries-linklib_MCXX_WILDCARD := $(test-sdi-libraries-linklib_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(test-sdi-libraries-linklib_CXXTARGETS) $(test-sdi-libraries-linklib_CXXDTARGETS) : | $(test-sdi-libraries-linklib_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+test-sdi-libraries-linklib_MCXX_CPPFLAGS := $(test-sdi-libraries-linklib_CPPFLAGS)
+test-sdi-libraries-linklib_CXXFLAGS := $(test-sdi-libraries-linklib_CXXFLAGS)
+ifeq ($(test-sdi-libraries-linklib_DXXFLAGS),)
+  test-sdi-libraries-linklib_DXXFLAGS := $(test-sdi-libraries-linklib_CXXFLAGS)
+else
+  test-sdi-libraries-linklib_DXXFLAGS := $(test-sdi-libraries-linklib_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  test-sdi-libraries-linklib_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  test-sdi-libraries-linklib_STRIP ?= $(HOST_STRIP)
+  test-sdi-libraries-linklib_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  test-sdi-libraries-linklib_CXXCMD:=$(HOST_CXX)
+  test-sdi-libraries-linklib_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(test-sdi-libraries-linklib_MCXX_CPPFLAGS) $(test-sdi-libraries-linklib_MCXX_EXTRA_CPPFLAGS))
+  test-sdi-libraries-linklib_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-sdi-libraries-linklib_CXXFLAGS))
+  test-sdi-libraries-linklib_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-sdi-libraries-linklib_DXXFLAGS))
+  test-sdi-libraries-linklib_CXXIQUOTE:=$(HOST_IQUOTE)
+  test-sdi-libraries-linklib_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  test-sdi-libraries-linklib_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-sdi-libraries-linklib_STRIP ?= $(TARGET_STRIP)
+  test-sdi-libraries-linklib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  test-sdi-libraries-linklib_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  test-sdi-libraries-linklib_MCXX_CPPFLAGS := $(strip $(test-sdi-libraries-linklib_MCXX_CPPFLAGS) $(test-sdi-libraries-linklib_MCXX_EXTRA_CPPFLAGS))
+  test-sdi-libraries-linklib_CXXFLAGS := $(strip $(test-sdi-libraries-linklib_CXXFLAGS) $(SAFETY_CFLAGS))
+  test-sdi-libraries-linklib_DXXFLAGS := $(test-sdi-libraries-linklib_DXXFLAGS)
+  test-sdi-libraries-linklib_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  test-sdi-libraries-linklib_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  test-sdi-libraries-linklib_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-sdi-libraries-linklib_STRIP ?= $(ECHO) >/dev/null
+  test-sdi-libraries-linklib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  test-sdi-libraries-linklib_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  test-sdi-libraries-linklib_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(test-sdi-libraries-linklib_MCXX_CPPFLAGS) $(test-sdi-libraries-linklib_MCXX_EXTRA_CPPFLAGS))
+  test-sdi-libraries-linklib_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-sdi-libraries-linklib_CXXFLAGS))
+  test-sdi-libraries-linklib_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-sdi-libraries-linklib_DXXFLAGS))
+  test-sdi-libraries-linklib_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  test-sdi-libraries-linklib_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(test-sdi-libraries-linklib_CXXCMD) $(test-sdi-libraries-linklib_CXXIQUOTE) $(dir $(2)) $(test-sdi-libraries-linklib_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-linklib_CXXIQUOTE) . $(test-sdi-libraries-linklib_CXXIQUOTE_END) $(strip $(test-sdi-libraries-linklib_CXXFLAGS) $(test-sdi-libraries-linklib_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(test-sdi-libraries-linklib_CXXCMD) $(test-sdi-libraries-linklib_CXXIQUOTE) $(dir $(2)) $(test-sdi-libraries-linklib_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-linklib_CXXIQUOTE) . $(test-sdi-libraries-linklib_CXXIQUOTE_END) $(strip $(test-sdi-libraries-linklib_CXXFLAGS) $(test-sdi-libraries-linklib_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(test-sdi-libraries-linklib_CXXCMD) $(test-sdi-libraries-linklib_CXXIQUOTE) $(dir $(2)) $(test-sdi-libraries-linklib_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-linklib_CXXIQUOTE) . $(test-sdi-libraries-linklib_CXXIQUOTE_END) $(strip $(test-sdi-libraries-linklib_CXXFLAGS) $(test-sdi-libraries-linklib_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(test-sdi-libraries-linklib_CXXCMD)" $(MKDEPEND) $(strip $(test-sdi-libraries-linklib_DXXFLAGS) $(test-sdi-libraries-linklib_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(test-sdi-libraries-linklib_OBJDIR),)
+  $(foreach test-sdi-libraries-linklib_CXXFILE,$(test-sdi-libraries-linklib_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(test-sdi-libraries-linklib_CXXFILE))),$(test-sdi-libraries-linklib_CXXFILE))))
+else
+  $(foreach test-sdi-libraries-linklib_CXXFILE,$(test-sdi-libraries-linklib_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(test-sdi-libraries-linklib_OBJDIR)/,$(notdir $(basename $(test-sdi-libraries-linklib_CXXFILE)))),$(test-sdi-libraries-linklib_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(test-sdi-libraries-linklib_OBJC_FILES),)
+
+ifeq (,)
+test-sdi-libraries-linklib_MOBJC_SRCWILDCARD := %
+else
+test-sdi-libraries-linklib_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-sdi-libraries-linklib_OBJDIR),)
+  test-sdi-libraries-linklib_MOBJC_TARGETS := $(addsuffix .o,$(test-sdi-libraries-linklib_OBJC_FILES))
+  test-sdi-libraries-linklib_MOBJC_DTARGETS := $(addsuffix .d,$(test-sdi-libraries-linklib_OBJC_FILES))
+  test-sdi-libraries-linklib_MOBJC_WILDCARD := %
+else
+  test-sdi-libraries-linklib_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(test-sdi-libraries-linklib_OBJDIR)/,$(test-sdi-libraries-linklib_OBJC_FILES)))
+  test-sdi-libraries-linklib_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(test-sdi-libraries-linklib_OBJDIR)/,$(test-sdi-libraries-linklib_OBJC_FILES)))
+  test-sdi-libraries-linklib_MOBJC_WILDCARD := $(test-sdi-libraries-linklib_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : | $(addsuffix .m,$(test-sdi-libraries-linklib_OBJC_FILES))
+
+  # Be sure that all .m files are found
+  test-sdi-libraries-linklib_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  test-sdi-libraries-linklib_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(test-sdi-libraries-linklib_OBJC_FILES))) | sed 's/\(.\):\//\/\1\//g')
+  test-sdi-libraries-linklib_MOBJC_DIRS := $(foreach dir, $(test-sdi-libraries-linklib_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-sdi-libraries-linklib_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(test-sdi-libraries-linklib_MOBJC_DIRS),)
+    test-sdi-libraries-linklib_MOBJC_DIRS := $(shell echo $(test-sdi-libraries-linklib_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(test-sdi-libraries-linklib_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  test-sdi-libraries-linklib_CC := $(TARGET_CC)
+else
+  test-sdi-libraries-linklib_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+test-sdi-libraries-linklib_MOBJC_CPPFLAGS := $(test-sdi-libraries-linklib_CPPFLAGS)
+test-sdi-libraries-linklib_OBJCFLAGS := $(test-sdi-libraries-linklib_CFLAGS)
+test-sdi-libraries-linklib_OBJCFLAGS := $(test-sdi-libraries-linklib_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+test-sdi-libraries-linklib_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(test-sdi-libraries-linklib_OBJCFLAGS)))
+ifeq ($(test-sdi-libraries-linklib_DFLAGS),)
+  test-sdi-libraries-linklib_OBJCDFLAGS := $(test-sdi-libraries-linklib_CFLAGS)
+else
+  test-sdi-libraries-linklib_OBJCDFLAGS := $(test-sdi-libraries-linklib_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  test-sdi-libraries-linklib_LINK ?= $(strip $(test-sdi-libraries-linklib_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-sdi-libraries-linklib_STRIP ?= $(TARGET_STRIP)
+  test-sdi-libraries-linklib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : CMD:=$(strip $(test-sdi-libraries-linklib_CC) $(TARGET_SYSROOT))
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : test-sdi-libraries-linklib_MOBJC_CPPFLAGS:=$(strip $(test-sdi-libraries-linklib_MOBJC_CPPFLAGS) $(test-sdi-libraries-linklib_MOBJC_EXTRA_CPPFLAGS))
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : test-sdi-libraries-linklib_OBJCFLAGS:=$(strip $(test-sdi-libraries-linklib_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : test-sdi-libraries-linklib_OBJCDFLAGS:=$(test-sdi-libraries-linklib_OBJCDFLAGS)
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : test-sdi-libraries-linklib_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : test-sdi-libraries-linklib_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  test-sdi-libraries-linklib_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  test-sdi-libraries-linklib_STRIP ?= $(HOST_STRIP)
+  test-sdi-libraries-linklib_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : test-sdi-libraries-linklib_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(test-sdi-libraries-linklib_MOBJC_CPPFLAGS) $(test-sdi-libraries-linklib_MOBJC_EXTRA_CPPFLAGS))
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : test-sdi-libraries-linklib_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(test-sdi-libraries-linklib_OBJCFLAGS))
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : test-sdi-libraries-linklib_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(test-sdi-libraries-linklib_OBJCDFLAGS))
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : test-sdi-libraries-linklib_IQUOTE:=$(HOST_IQUOTE)
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : test-sdi-libraries-linklib_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  test-sdi-libraries-linklib_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-sdi-libraries-linklib_STRIP ?= $(ECHO) >/dev/null
+  test-sdi-libraries-linklib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : test-sdi-libraries-linklib_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(test-sdi-libraries-linklib_MOBJC_CPPFLAGS) $(test-sdi-libraries-linklib_MOBJC_EXTRA_CPPFLAGS))
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : test-sdi-libraries-linklib_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-sdi-libraries-linklib_OBJCFLAGS))
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : test-sdi-libraries-linklib_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-sdi-libraries-linklib_OBJCDFLAGS))
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : test-sdi-libraries-linklib_IQUOTE:=$(KERNEL_IQUOTE)
+  $(test-sdi-libraries-linklib_MOBJC_TARGETS) $(test-sdi-libraries-linklib_MOBJC_DTARGETS) : test-sdi-libraries-linklib_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-sdi-libraries-linklib_MOBJC_TARGETS) : CPPFLAGS := $(test-sdi-libraries-linklib_MOBJC_CPPFLAGS)
+$(test-sdi-libraries-linklib_MOBJC_TARGETS) : CFLAGS := $(test-sdi-libraries-linklib_OBJCFLAGS)
+$(test-sdi-libraries-linklib_MOBJC_TARGETS) : $(test-sdi-libraries-linklib_MOBJC_WILDCARD).o : $(test-sdi-libraries-linklib_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-sdi-libraries-linklib_IQUOTE) $(dir $<) $(test-sdi-libraries-linklib_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-linklib_IQUOTE) . $(test-sdi-libraries-linklib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-sdi-libraries-linklib_IQUOTE) $(dir $<) $(test-sdi-libraries-linklib_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-linklib_IQUOTE) . $(test-sdi-libraries-linklib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-sdi-libraries-linklib_IQUOTE) $(dir $<) $(test-sdi-libraries-linklib_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-linklib_IQUOTE) . $(test-sdi-libraries-linklib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-sdi-libraries-linklib_MOBJC_DTARGETS) : $(test-sdi-libraries-linklib_MOBJC_WILDCARD).d : $(test-sdi-libraries-linklib_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-sdi-libraries-linklib_OBJCDFLAGS) $(test-sdi-libraries-linklib_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+test-sdi-libraries-linklib_MC_SRCWILDCARD := %
+else
+test-sdi-libraries-linklib_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-sdi-libraries-linklib_OBJDIR),)
+test-sdi-libraries-linklib_MC_TARGETS := $(addsuffix .o,$(test-sdi-libraries-linklib_C_FILES))
+test-sdi-libraries-linklib_MC_DTARGETS := $(addsuffix .d,$(test-sdi-libraries-linklib_C_FILES))
+test-sdi-libraries-linklib_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-sdi-libraries-linklib_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-sdi-libraries-linklib_OBJDIR)/,$(notdir $(test-sdi-libraries-linklib_C_FILES))))
+    test-sdi-libraries-linklib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-sdi-libraries-linklib_OBJDIR)/,$(notdir $(test-sdi-libraries-linklib_C_FILES))))
+else
+ifeq (,)
+    test-sdi-libraries-linklib_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-sdi-libraries-linklib_OBJDIR)/,$(test-sdi-libraries-linklib_C_FILES)))
+    test-sdi-libraries-linklib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-sdi-libraries-linklib_OBJDIR)/,$(test-sdi-libraries-linklib_C_FILES)))
+else
+    test-sdi-libraries-linklib_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-sdi-libraries-linklib_OBJDIR)/,$(patsubst /%,%,$(test-sdi-libraries-linklib_C_FILES))))
+    test-sdi-libraries-linklib_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-sdi-libraries-linklib_OBJDIR)/,$(patsubst /%,%,$(test-sdi-libraries-linklib_C_FILES))))
+endif
+endif
+test-sdi-libraries-linklib_MC_TGTWILDCARD := $(test-sdi-libraries-linklib_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : | $(addsuffix .c,$(test-sdi-libraries-linklib_C_FILES))
+
+# Be sure that all .c files are found
+test-sdi-libraries-linklib_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-sdi-libraries-linklib_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-sdi-libraries-linklib_C_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-sdi-libraries-linklib_MC_DIRS := $(foreach dir, $(test-sdi-libraries-linklib_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-sdi-libraries-linklib_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-sdi-libraries-linklib_MC_DIRS),)
+    test-sdi-libraries-linklib_MC_DIRS := $(shell echo $(test-sdi-libraries-linklib_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-sdi-libraries-linklib_MC_DIRS)
+endif
+
+endif
+
+test-sdi-libraries-linklib_MC_CPPFLAGS := $(test-sdi-libraries-linklib_CPPFLAGS)
+test-sdi-libraries-linklib_CFLAGS := $(test-sdi-libraries-linklib_CFLAGS)
+ifeq ($(test-sdi-libraries-linklib_DFLAGS),)
+  test-sdi-libraries-linklib_DFLAGS := $(test-sdi-libraries-linklib_CFLAGS)
+else
+  test-sdi-libraries-linklib_DFLAGS := $(test-sdi-libraries-linklib_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-sdi-libraries-linklib_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-sdi-libraries-linklib_STRIP ?= $(TARGET_STRIP)
+test-sdi-libraries-linklib_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : test-sdi-libraries-linklib_MC_CPPFLAGS:=$(strip $(test-sdi-libraries-linklib_MC_CPPFLAGS) $(test-sdi-libraries-linklib_MC_EXTRA_CPPFLAGS))
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : test-sdi-libraries-linklib_CFLAGS:=$(strip $(test-sdi-libraries-linklib_CFLAGS) $(SAFETY_CFLAGS))
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : test-sdi-libraries-linklib_DFLAGS:=$(test-sdi-libraries-linklib_DFLAGS)
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : test-sdi-libraries-linklib_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : test-sdi-libraries-linklib_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-sdi-libraries-linklib_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-sdi-libraries-linklib_STRIP ?= $(HOST_STRIP)
+test-sdi-libraries-linklib_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : test-sdi-libraries-linklib_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-sdi-libraries-linklib_MC_CPPFLAGS) $(test-sdi-libraries-linklib_MC_EXTRA_CPPFLAGS))
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : test-sdi-libraries-linklib_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-sdi-libraries-linklib_CFLAGS))
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : test-sdi-libraries-linklib_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-sdi-libraries-linklib_DFLAGS))
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : test-sdi-libraries-linklib_IQUOTE:=$(HOST_IQUOTE)
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : test-sdi-libraries-linklib_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-sdi-libraries-linklib_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-sdi-libraries-linklib_STRIP ?= $(ECHO) >/dev/null
+test-sdi-libraries-linklib_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : test-sdi-libraries-linklib_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-sdi-libraries-linklib_MC_CPPFLAGS) $(test-sdi-libraries-linklib_MC_EXTRA_CPPFLAGS))
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : test-sdi-libraries-linklib_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-sdi-libraries-linklib_CFLAGS))
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : test-sdi-libraries-linklib_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-sdi-libraries-linklib_DFLAGS))
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : test-sdi-libraries-linklib_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-sdi-libraries-linklib_MC_TARGETS) $(test-sdi-libraries-linklib_MC_DTARGETS) : test-sdi-libraries-linklib_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-sdi-libraries-linklib_MC_TARGETS) : CPPFLAGS := $(test-sdi-libraries-linklib_MC_CPPFLAGS)
+$(test-sdi-libraries-linklib_MC_TARGETS) : CFLAGS := $(test-sdi-libraries-linklib_CFLAGS)
+$(test-sdi-libraries-linklib_MC_TARGETS) : $(test-sdi-libraries-linklib_MC_TGTWILDCARD).o : $(test-sdi-libraries-linklib_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-sdi-libraries-linklib_IQUOTE) $(dir $<) $(test-sdi-libraries-linklib_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-linklib_IQUOTE) . $(test-sdi-libraries-linklib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-sdi-libraries-linklib_IQUOTE) $(dir $<) $(test-sdi-libraries-linklib_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-linklib_IQUOTE) . $(test-sdi-libraries-linklib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-sdi-libraries-linklib_IQUOTE) $(dir $<) $(test-sdi-libraries-linklib_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-linklib_IQUOTE) . $(test-sdi-libraries-linklib_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-sdi-libraries-linklib_MC_DTARGETS) : $(test-sdi-libraries-linklib_MC_TGTWILDCARD).d : $(test-sdi-libraries-linklib_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-sdi-libraries-linklib_DFLAGS) $(test-sdi-libraries-linklib_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(test-sdi-libraries-linklib_OBJDIR),)
+test-sdi-libraries-linklib-MA_TARGETS := $(addsuffix .o,$(test-sdi-libraries-linklib_ASMFILES))
+test-sdi-libraries-linklib-MA_WILDCARD := %
+else
+test-sdi-libraries-linklib-MA_TARGETS := $(addsuffix .o,$(addprefix $(test-sdi-libraries-linklib_OBJDIR)/,$(notdir $(test-sdi-libraries-linklib_ASMFILES))))
+test-sdi-libraries-linklib-MA_WILDCARD := $(test-sdi-libraries-linklib_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(test-sdi-libraries-linklib-MA_TARGETS) : | $(addsuffix .s,$(test-sdi-libraries-linklib_ASMFILES))
+
+# Be sure that all .c files are found
+test-sdi-libraries-linklib-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-sdi-libraries-linklib-MA_BASEDIRS := $(shell echo $(sort $(dir $(test-sdi-libraries-linklib_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+test-sdi-libraries-linklib-MA_DIRS := $(foreach dir, $(test-sdi-libraries-linklib-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-sdi-libraries-linklib-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-sdi-libraries-linklib-MA_DIRS),)
+    test-sdi-libraries-linklib-MA_DIRS := $(shell echo $(test-sdi-libraries-linklib-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(test-sdi-libraries-linklib-MA_DIRS)
+endif
+
+endif
+
+test-sdi-libraries-linklib-MA_ASSEMBLER ?= $(test-sdi-libraries-linklib_ASSEMBLER)
+
+$(test-sdi-libraries-linklib-MA_TARGETS) : test-sdi-libraries-linklib-MA_CMD:= $(test-sdi-libraries-linklib-MA_ASSEMBLER)
+
+$(test-sdi-libraries-linklib-MA_TARGETS) : CPPFLAGS := $(test-sdi-libraries-linklib_CPPFLAGS)
+$(test-sdi-libraries-linklib-MA_TARGETS) : AFLAGS := $(test-sdi-libraries-linklib_AFLAGS)
+$(test-sdi-libraries-linklib-MA_TARGETS) : $(test-sdi-libraries-linklib-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(test-sdi-libraries-linklib-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(test-sdi-libraries-linklib-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(test-sdi-libraries-linklib-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+ifeq (target,target)
+$(EXEDIR)/libexample.a : test-sdi-libraries-linklib_AR:=$(AR)
+$(EXEDIR)/libexample.a : test-sdi-libraries-linklib_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(EXEDIR)/libexample.a : test-sdi-libraries-linklib_AR:=$(HOST_AR)
+$(EXEDIR)/libexample.a : test-sdi-libraries-linklib_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(EXEDIR)/libexample.a : test-sdi-libraries-linklib_AR:=$(KERNEL_AR)
+$(EXEDIR)/libexample.a : test-sdi-libraries-linklib_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(EXEDIR)/libexample.a : $(test-sdi-libraries-linklib_OBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(test-sdi-libraries-linklib_AR) $@ $^
+	$(Q)$(test-sdi-libraries-linklib_RANLIB) $@
+endif
+
+ifneq ($(test-sdi-libraries-linklib_DEPS),)
+  ifneq (test-sdi-libraries-linklib test-sdi-libraries-linklib-quick,)
+    ifneq ($(findstring $(TARGET),test-sdi-libraries-linklib test-sdi-libraries-linklib-quick),)
+      -include $(test-sdi-libraries-linklib_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-sdi-libraries-linklib_DEPS)
+    endif
+  endif
+endif
+
+
+
+ifneq ($(test-sdi-libraries-linklib_OBJS) $(test-sdi-libraries-linklib_DEPS) $(test-sdi-libraries-linklib_LINKLIB),)
+$(test-sdi-libraries-linklib_OBJS) $(test-sdi-libraries-linklib_DEPS) $(test-sdi-libraries-linklib_LINKLIB) : | $(test-sdi-libraries-linklib_OBJDIR) $(EXEDIR)
+else
+$(test-sdi-libraries-linklib_OBJS) $(test-sdi-libraries-linklib_DEPS) $(test-sdi-libraries-linklib_LINKLIB) :: $(test-sdi-libraries-linklib_OBJDIR) $(EXEDIR)
+endif
+
+GLOB_MKDIRS += $(test-sdi-libraries-linklib_OBJDIR) $(EXEDIR)
+
+
+test-sdi-libraries-linklib-clean : FILES := $(test-sdi-libraries-linklib_OBJS) $(test-sdi-libraries-linklib_LINKLIB) $(test-sdi-libraries-linklib_DEPS)
+#MM
+test-sdi-libraries-linklib-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-sdi-libraries-linklib"
+	$(Q)$(RM) $(FILES)
+
+
+
+FILES         := example_libtest
+USER_INCLUDES := -I$(SRCDIR)/$(CURDIR)/include
+USER_CFLAGS   :=
+USER_LDFLAGS  := -L$(EXEDIR)
+
+
+.PHONY : test-sdi-libraries-test
+
+test-sdi-libraries-test_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-sdi-libraries-test_TARGETDIR := $(EXEDIR)
+test-sdi-libraries-test_LIBS := example
+
+test-sdi-libraries-test_FILES     := $(FILES)
+test-sdi-libraries-test_OBJS      := $(addsuffix .o,$(addprefix $(test-sdi-libraries-test_OBJDIR)/,$(test-sdi-libraries-test_FILES)))
+test-sdi-libraries-test_DEPS      := $(addsuffix .d,$(addprefix $(test-sdi-libraries-test_OBJDIR)/,$(test-sdi-libraries-test_FILES)))
+test-sdi-libraries-test_EXES      := $(addprefix $(test-sdi-libraries-test_TARGETDIR)/,$(test-sdi-libraries-test_FILES))
+
+test-sdi-libraries-test_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-sdi-libraries-test_CPPFLAGS += -I
+endif
+test-sdi-libraries-test_CFLAGS    := $(CFLAGS)
+test-sdi-libraries-test_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-sdi-libraries-test_COVERAGE := yes
+test-sdi-libraries-test_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-sdi-libraries-test_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-sdi-libraries-test_CFLAGS    := $(strip $(test-sdi-libraries-test_COVERAGEFLAGS) $(test-sdi-libraries-test_CFLAGS))
+test-sdi-libraries-test_LIBS += $(test-sdi-libraries-test_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-sdi-libraries-test_FUNCINSTR := yes
+test-sdi-libraries-test_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-sdi-libraries-test_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-sdi-libraries-test_CFLAGS    := $(strip $(test-sdi-libraries-test_INSTRFUNCFLAGS) $(test-sdi-libraries-test_CFLAGS))
+test-sdi-libraries-test_LIBS += $(test-sdi-libraries-test_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-sdi-libraries-test_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-sdi-libraries-test_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-sdi-libraries-test_DFLAGS := 
+else
+    test-sdi-libraries-test_DFLAGS := $(test-sdi-libraries-test_CFLAGS)
+endif
+ifeq (target,target)
+test-sdi-libraries-test_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-sdi-libraries-test_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-sdi-libraries-test_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-sdi-libraries-test_LDFLAGS += -L
+endif
+
+#MM
+test-sdi-libraries-test-quick : test-sdi-libraries-test
+
+#MM test-sdi-libraries-test : includes-generate-deps core-linklibs
+test-sdi-libraries-test : $(test-sdi-libraries-test_EXES)
+
+ifneq ($(filter $(TARGET),test-sdi-libraries-test test-sdi-libraries-test-quick),)
+
+ifeq (,)
+test-sdi-libraries-test_MC_SRCWILDCARD := %
+else
+test-sdi-libraries-test_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-sdi-libraries-test_OBJDIR),)
+test-sdi-libraries-test_MC_TARGETS := $(addsuffix .o,$(test-sdi-libraries-test_FILES))
+test-sdi-libraries-test_MC_DTARGETS := $(addsuffix .d,$(test-sdi-libraries-test_FILES))
+test-sdi-libraries-test_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-sdi-libraries-test_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-sdi-libraries-test_OBJDIR)/,$(notdir $(test-sdi-libraries-test_FILES))))
+    test-sdi-libraries-test_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-sdi-libraries-test_OBJDIR)/,$(notdir $(test-sdi-libraries-test_FILES))))
+else
+ifeq (,)
+    test-sdi-libraries-test_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-sdi-libraries-test_OBJDIR)/,$(test-sdi-libraries-test_FILES)))
+    test-sdi-libraries-test_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-sdi-libraries-test_OBJDIR)/,$(test-sdi-libraries-test_FILES)))
+else
+    test-sdi-libraries-test_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-sdi-libraries-test_OBJDIR)/,$(patsubst /%,%,$(test-sdi-libraries-test_FILES))))
+    test-sdi-libraries-test_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-sdi-libraries-test_OBJDIR)/,$(patsubst /%,%,$(test-sdi-libraries-test_FILES))))
+endif
+endif
+test-sdi-libraries-test_MC_TGTWILDCARD := $(test-sdi-libraries-test_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : | $(addsuffix .c,$(test-sdi-libraries-test_FILES))
+
+# Be sure that all .c files are found
+test-sdi-libraries-test_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-sdi-libraries-test_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-sdi-libraries-test_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-sdi-libraries-test_MC_DIRS := $(foreach dir, $(test-sdi-libraries-test_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-sdi-libraries-test_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-sdi-libraries-test_MC_DIRS),)
+    test-sdi-libraries-test_MC_DIRS := $(shell echo $(test-sdi-libraries-test_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-sdi-libraries-test_MC_DIRS)
+endif
+
+endif
+
+test-sdi-libraries-test_MC_CPPFLAGS := $(test-sdi-libraries-test_CPPFLAGS)
+test-sdi-libraries-test_CFLAGS := $(test-sdi-libraries-test_CFLAGS)
+ifeq ($(test-sdi-libraries-test_DFLAGS),)
+  test-sdi-libraries-test_DFLAGS := $(test-sdi-libraries-test_CFLAGS)
+else
+  test-sdi-libraries-test_DFLAGS := $(test-sdi-libraries-test_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-sdi-libraries-test_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-sdi-libraries-test_STRIP ?= $(TARGET_STRIP)
+test-sdi-libraries-test_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : test-sdi-libraries-test_MC_CPPFLAGS:=$(strip $(test-sdi-libraries-test_MC_CPPFLAGS) $(test-sdi-libraries-test_MC_EXTRA_CPPFLAGS))
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : test-sdi-libraries-test_CFLAGS:=$(strip $(test-sdi-libraries-test_CFLAGS) $(SAFETY_CFLAGS))
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : test-sdi-libraries-test_DFLAGS:=$(test-sdi-libraries-test_DFLAGS)
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : test-sdi-libraries-test_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : test-sdi-libraries-test_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-sdi-libraries-test_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-sdi-libraries-test_STRIP ?= $(HOST_STRIP)
+test-sdi-libraries-test_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : test-sdi-libraries-test_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-sdi-libraries-test_MC_CPPFLAGS) $(test-sdi-libraries-test_MC_EXTRA_CPPFLAGS))
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : test-sdi-libraries-test_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-sdi-libraries-test_CFLAGS))
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : test-sdi-libraries-test_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-sdi-libraries-test_DFLAGS))
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : test-sdi-libraries-test_IQUOTE:=$(HOST_IQUOTE)
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : test-sdi-libraries-test_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-sdi-libraries-test_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-sdi-libraries-test_STRIP ?= $(ECHO) >/dev/null
+test-sdi-libraries-test_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : test-sdi-libraries-test_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-sdi-libraries-test_MC_CPPFLAGS) $(test-sdi-libraries-test_MC_EXTRA_CPPFLAGS))
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : test-sdi-libraries-test_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-sdi-libraries-test_CFLAGS))
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : test-sdi-libraries-test_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-sdi-libraries-test_DFLAGS))
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : test-sdi-libraries-test_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-sdi-libraries-test_MC_TARGETS) $(test-sdi-libraries-test_MC_DTARGETS) : test-sdi-libraries-test_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-sdi-libraries-test_MC_TARGETS) : CPPFLAGS := $(test-sdi-libraries-test_MC_CPPFLAGS)
+$(test-sdi-libraries-test_MC_TARGETS) : CFLAGS := $(test-sdi-libraries-test_CFLAGS)
+$(test-sdi-libraries-test_MC_TARGETS) : $(test-sdi-libraries-test_MC_TGTWILDCARD).o : $(test-sdi-libraries-test_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-sdi-libraries-test_IQUOTE) $(dir $<) $(test-sdi-libraries-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-test_IQUOTE) . $(test-sdi-libraries-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-sdi-libraries-test_IQUOTE) $(dir $<) $(test-sdi-libraries-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-test_IQUOTE) . $(test-sdi-libraries-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-sdi-libraries-test_IQUOTE) $(dir $<) $(test-sdi-libraries-test_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-sdi-libraries-test_IQUOTE) . $(test-sdi-libraries-test_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-sdi-libraries-test_MC_DTARGETS) : $(test-sdi-libraries-test_MC_TGTWILDCARD).d : $(test-sdi-libraries-test_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-sdi-libraries-test_DFLAGS) $(test-sdi-libraries-test_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-sdi-libraries-test-link_EXTRA_LDFLAGS := 
+test-sdi-libraries-test-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-sdi-libraries-test-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-sdi-libraries-test-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-sdi-libraries-test-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-sdi-libraries-test-link_DIRS := $(subst -L ,-L,$(strip $(test-sdi-libraries-test_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-sdi-libraries-test-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-sdi-libraries-test-link_DIRS)))
+# Add trailing /
+test-sdi-libraries-test-link_DIRS := $(subst //,/,$(addsuffix /,$(test-sdi-libraries-test-link_DIRS)))
+# Add normal linklib path
+test-sdi-libraries-test-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-sdi-libraries-test-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-sdi-libraries-test_LIBS) $(test-sdi-libraries-test-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-sdi-libraries-test-link_DEPLIBS := $(foreach lib,$(test-sdi-libraries-test-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-sdi-libraries-test-link_DIRS)))) \
+)
+test-sdi-libraries-test-link_PROGS := $(addprefix $(test-sdi-libraries-test_TARGETDIR)/,$(test-sdi-libraries-test_FILES))
+
+$(test-sdi-libraries-test-link_PROGS) : OBJDIR := $(test-sdi-libraries-test_OBJDIR)
+$(test-sdi-libraries-test-link_PROGS) : LDFLAGS := $(strip $(test-sdi-libraries-test_LDFLAGS) $(test-sdi-libraries-test-link_EXTRA_LDFLAGS))
+$(test-sdi-libraries-test-link_PROGS) : LIBS := $(addprefix -l,$(test-sdi-libraries-test_LIBS) $(test-sdi-libraries-test-link_EXTRA_LIBS) )
+$(test-sdi-libraries-test-link_PROGS) : $(test-sdi-libraries-test_TARGETDIR)/% : $(test-sdi-libraries-test_OBJDIR)/%.o $(test-sdi-libraries-test-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-sdi-libraries-test_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-sdi-libraries-test_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-sdi-libraries-test_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-sdi-libraries-test_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-sdi-libraries-test_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-sdi-libraries-test_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-sdi-libraries-test_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-sdi-libraries-test_DEPS),)
+  ifneq (test-sdi-libraries-test test-sdi-libraries-test-quick,)
+    ifneq ($(findstring $(TARGET),test-sdi-libraries-test test-sdi-libraries-test-quick),)
+      -include $(test-sdi-libraries-test_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-sdi-libraries-test_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-sdi-libraries-test_DEPS) $(test-sdi-libraries-test_OBJS) $(addprefix $(test-sdi-libraries-test_TARGETDIR)/,$(test-sdi-libraries-test_FILES)),)
+$(test-sdi-libraries-test_DEPS) $(test-sdi-libraries-test_OBJS) $(addprefix $(test-sdi-libraries-test_TARGETDIR)/,$(test-sdi-libraries-test_FILES)) : | $(test-sdi-libraries-test_TARGETDIR) $(test-sdi-libraries-test_OBJDIR)
+else
+$(test-sdi-libraries-test_DEPS) $(test-sdi-libraries-test_OBJS) $(addprefix $(test-sdi-libraries-test_TARGETDIR)/,$(test-sdi-libraries-test_FILES)) :: $(test-sdi-libraries-test_TARGETDIR) $(test-sdi-libraries-test_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-sdi-libraries-test_TARGETDIR) $(test-sdi-libraries-test_OBJDIR)
+
+
+test-sdi-libraries-test-clean : FILES := $(test-sdi-libraries-test_OBJS) $(test-sdi-libraries-test_EXES) $(test-sdi-libraries-test_DEPS)
+#MM
+test-sdi-libraries-test-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-sdi-libraries-test"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

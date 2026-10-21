@@ -1,0 +1,4250 @@
+include $(SRCDIR)/config/aros.cfg
+-include $(SRCDIR)/tools/crosstools/$(AROS_TOOLCHAIN).cfg
+
+LN ?= ln
+
+# The config.guess bundled inside gmp/mpfr/mpc/isl/binutils/gcc predates Apple
+# Silicon (Nov 2020) and misdetects arm64 Macs as a 32-bit-implying "arm" host,
+# which breaks GMP's ABI sanity check ("Oops, mp_limb_t is 64 bits, but the
+# assembler code..."). Pass an explicit, correct triple to bypass it.
+ifeq ($(AROS_HOST_ARCH),darwin)
+HOST_TRIPLE_EXTRA_OPTS := --build=$(AROS_HOST_CPU)-apple-darwin --host=$(AROS_HOST_CPU)-apple-darwin
+# GMP 6.1.2's hand-written aarch64 assembly predates Apple Silicon and uses
+# ADRP/relocation forms Apple's Mach-O assembler rejects. Force the portable
+# C implementation instead.
+GMP_HOST_EXTRA_OPTS := --disable-assembly
+else
+HOST_TRIPLE_EXTRA_OPTS :=
+GMP_HOST_EXTRA_OPTS :=
+endif
+
+BINUTILS_VERSION = $(TARGET_BINUTILS_VER)
+BINUTILS_VERSION_MAJOR = $(shell echo "$(BINUTILS_VERSION)" | cut -d"." -f1)
+BINUTILS_VERSION_MINOR = $(shell echo "$(BINUTILS_VERSION)" | cut -d"." -f2)
+BINUTILS_VERSION_PATCH = $(shell echo "$(BINUTILS_VERSION)" | cut -d"." -f3)
+
+BINUTILS_EXTRA_OPTS := --target=$(AROS_TARGET_CPU)-aros
+BINUTILS_EXTRA_OPTS += $(HOST_TRIPLE_EXTRA_OPTS)
+BINUTILS_EXTRA_OPTS += -bindir=$(CROSSTOOLSDIR)
+BINUTILS_EXTRA_OPTS += --libdir=$(CROSSTOOLSDIR)/lib
+BINUTILS_EXTRA_OPTS += --with-sysroot=$(AROS_DEVELOPER)
+BINUTILS_EXTRA_OPTS += --disable-werror
+BINUTILS_EXTRA_OPTS += --disable-nls
+ifeq (yes, $(TARGET_LTO))
+BINUTILS_EXTRA_OPTS += --enable-plugins --enable-lto
+endif
+
+# Binutils 2.31 enables separate code for x86 by default
+# however we do not handle it.
+BINUTILS_NOSEPCODE=no
+ifeq ($(shell test $(BINUTILS_VERSION_MAJOR) -gt 2; echo $$?),0)
+BINUTILS_NOSEPCODE=yes
+else
+ifeq ($(shell test $(BINUTILS_VERSION_MAJOR) -gt 1; echo $$?),0)
+ifeq ($(shell test $(BINUTILS_VERSION_MINOR) -gt 30; echo $$?),0)
+BINUTILS_NOSEPCODE=yes
+endif
+endif
+endif
+ifneq ($(BINUTILS_NOSEPCODE),no)
+ifeq ($(AROS_TARGET_CPU),i386)
+BINUTILS_EXTRA_OPTS += --enable-separate-code=no
+endif
+ifeq ($(AROS_TARGET_CPU),x86_64)
+BINUTILS_EXTRA_OPTS += --enable-separate-code=no
+endif
+endif
+
+GCC_VERSION     = $(TARGET_GCC_VER)
+GCC_VERSION_MAJOR = $(shell echo "$(GCC_VERSION)" | cut -d"." -f1)
+GCC_VERSION_MINOR = $(shell echo "$(GCC_VERSION)" | cut -d"." -f2)
+GCC_VERSION_PATCH = $(shell echo "$(GCC_VERSION)" | cut -d"." -f3)
+
+GCC_LANGUAGES:=c,c++
+ifneq (no-objc,$(OBJC_TARGET))
+GCC_LANGUAGES:=$(GCC_LANGUAGES),objc
+endif
+ifneq (no-java,$(JAVA_TARGET))
+GCC_LANGUAGES:=$(GCC_LANGUAGES),java
+endif
+
+GCC_COMMON_OPTS := --target=$(AROS_TARGET_CPU)-aros
+GCC_COMMON_OPTS += $(HOST_TRIPLE_EXTRA_OPTS)
+
+# ARM requires additional flags to determine CPU type and FP model
+ifneq (,$(findstring arm,$(AROS_TARGET_CPU)))
+#GCC_COMMON_OPTS += --with-arch=$(GCC_DEFAULT_CPU)
+#GCC_COMMON_OPTS += --with-mode=$(GCC_DEFAULT_MODE)
+GCC_COMMON_OPTS += --disable-libunwind-exceptions
+GCC_COMMON_OPTS += --disable-libstdcxx-verbose
+GCC_COMMON_OPTS += --with-multilib
+ifneq (,$(findstring big-endian,$(ISA_ARM_FLAGS)))
+GCC_LIBATOMIC_MULTILIB_TARGETS := \
+arm/eb/$(GCC_DEFAULT_FPU)/v7-a/$(GCC_DEFAULT_FLOAT_ABI);@marm@mbig-endian@mfpu=$(GCC_DEFAULT_FPU)@march=$(GCC_DEFAULT_CPU)@mfloat-abi=$(GCC_DEFAULT_FLOAT_ABI)
+else
+GCC_LIBATOMIC_MULTILIB_TARGETS := \
+arm/el/$(GCC_DEFAULT_FPU)/v7-a/$(GCC_DEFAULT_FLOAT_ABI);@marm@mlittle-endian@mfpu=$(GCC_DEFAULT_FPU)@march=$(GCC_DEFAULT_CPU)@mfloat-abi=$(GCC_DEFAULT_FLOAT_ABI)
+endif
+else
+# If we are building GCC >= 5, for x86 targets, enable libmpx
+# ifeq ($(shell test $(GCC_VERSION_MAJOR) -gt 4; echo $$?),0)
+# ifeq ($(AROS_TARGET_CPU),i386)
+# GCC_COMMON_OPTS += --enable-libmpx
+# endif
+# ifeq ($(AROS_TARGET_CPU),x86_64)
+# GCC_COMMON_OPTS += --enable-libmpx
+# endif
+# endif
+GCC_COMMON_OPTS += --with-dwarf2
+endif
+
+GCC_COMMON_OPTS += --with-sysroot=$(AROS_DEVELOPER)
+GCC_COMMON_OPTS += --with-native-system-header-dir=/include
+GCC_COMMON_OPTS += --bindir=$(CROSSTOOLSDIR)
+GCC_COMMON_OPTS += --libdir=$(CROSSTOOLSDIR)/lib
+GCC_COMMON_OPTS += --enable-languages=$(strip $(GCC_LANGUAGES))
+GCC_COMMON_OPTS += --enable-long-long
+GCC_COMMON_OPTS += --enable-version-specific-runtime-libs
+GCC_COMMON_OPTS += --enable-frame-pointer
+GCC_COMMON_OPTS += --with-isl=$(CROSSTOOLSDIR)
+GCC_COMMON_OPTS += --disable-isl-version-check
+GCC_COMMON_OPTS += --disable-bootstrap 
+GCC_COMMON_OPTS += --disable-sjlj-exceptions
+GCC_COMMON_OPTS += --disable-tls
+ifneq (yes,$(TARGET_LTO))
+GCC_COMMON_OPTS += --disable-plugins
+endif
+GCC_COMMON_OPTS += --disable-nls
+GCC_COMMON_OPTS += --disable-libssp
+GCC_COMMON_OPTS += --disable-libstdcxx-pch
+GCC_COMMON_OPTS += --disable-build-with-cxx
+GCC_COMMON_OPTS += --disable-build-poststage1-with-cxx
+
+ifeq (,$(GCC_EXTRA_OPTS))
+GCC_EXTRA_OPTS += $(GCC_COMMON_OPTS)
+endif
+
+# Disable libatomic - we build it manually later...
+gcc_build_libatomic?=enable_libatomic=no
+GCC_ENV=$(gcc_build_libatomic)
+
+GCC_PATH = `LANG=en_US $(CROSSTOOLSDIR)/$(AROS_TARGET_CPU)-aros-gcc -print-search-dirs | grep "programs: =" | cut -c 12-`
+
+GDB_VERSION=7.9
+
+GDB_EXTRA_OPTS := --target=$(AROS_TARGET_CPU)-aros
+GDB_EXTRA_OPTS += --bindir=$(CROSSTOOLSDIR)
+GDB_EXTRA_OPTS += --libdir=$(CROSSTOOLSDIR)/lib
+
+# Use the correct GCC repository depending if it is a release or snapshot build...
+GNU_REPOSITORY := gnu://
+ifeq (,$(findstring -,$(GCC_VERSION)))
+GCC_REPOSITORY := $(GNU_REPOSITORY)/gcc/gcc-$(GCC_VERSION)
+else
+GCC_REPOSITORY := ftp://ftp.mirrorservice.org/sites/sourceware.org/pub/gcc/snapshots/$(GCC_VERSION)
+endif
+ISL_REPOSITORY := ftp://gcc.gnu.org/pub/gcc/infrastructure
+MPC_REPOSITORY := ftp://ftp.gnu.org/gnu/mpc http://ftp.vim.org/ftp/gnu/mpc
+
+binutils-installflag := $(CROSSTOOLSDIR)/.installflag-binutils-$(BINUTILS_VERSION)-$(AROS_TARGET_CPU)
+gmp-installflag := $(CROSSTOOLSDIR)/.installflag-gmp-$(GMP_VERSION)
+isl-installflag := $(CROSSTOOLSDIR)/.installflag-isl-$(ISL_VERSION)
+mpfr-installflag := $(CROSSTOOLSDIR)/.installflag-mpfr-$(MPFR_VERSION)
+mpc-installflag := $(CROSSTOOLSDIR)/.installflag-mpc-$(MPC_VERSION)
+gcc-installflag := $(CROSSTOOLSDIR)/.installflag-gcc-$(GCC_VERSION)-$(AROS_TARGET_CPU)
+libatomic-installflag := $(CROSSTOOLSDIR)/.installflag-libatomic-$(GCC_VERSION)-$(AROS_TARGET_CPU)
+gdb-installflag := $(CROSSTOOLSDIR)/.installflag-gdb-$(GDB_VERSION)
+
+#MM- tools-crosstools-gnu-m68k     : tools-crosstools-gcc crosstools-gcc
+#MM- tools-crosstools-gnu-i386     : tools-crosstools-gcc crosstools-gcc
+#MM- tools-crosstools-gnu-x86_64   : tools-crosstools-gcc crosstools-gcc
+#MM- tools-crosstools-gnu-ppc      : tools-crosstools-gcc crosstools-gcc
+#MM- tools-crosstools-gnu-arm      : tools-crosstools-gcc crosstools-gcc
+#MM- tools-crosstools-gnu-armeb    : tools-crosstools-gcc crosstools-gcc
+#MM- tools-crosstools-gnu-aarch64  : tools-crosstools-gcc crosstools-gcc
+
+#MM tools-crosstools-gcc : tools-crosstools-binutils tools-crosstools-collect-aros \
+#MM                        tools-crosstools-gmp \
+#MM                        tools-crosstools-isl \
+#MM                        tools-crosstools-mpfr \
+#MM                        tools-crosstools-mpc
+
+# We intentionally bypass the usual fetch_and_build macro below and call mmakefile and gcc makefile
+# targets directly. This is in order to not build the core-linklibs target during binutils and gcc
+# builds because we want these static linker libraries be generated by the cross tool chain we are building
+# right here. Additionally, we also want to maintain our own install flag files inside the directory
+# specified by --with-aros-toolchain-install. This directory may even reside outside of the usual aros
+# build directory and can be reused between complete rebuilds.
+
+## GMP ###
+
+#MM
+tools-crosstools-gmp :
+	@$(IF) ! $(TEST) -d $(CROSSTOOLSDIR) \
+	    || ! $(TEST) -f $(gmp-installflag) ; then \
+	       $(RM) $(HOSTGENDIR)/$(CURDIR)/gmp/.files-touched \
+	    && $(MAKE) -f ./mmakefile crosstools-gmp--fetch \
+	    && $(MAKE) -f ./mmakefile crosstools-gmp--build_and_install-quick \
+	    && $(TOUCH) $(gmp-installflag) ; \
+	fi
+
+
+#MM- crosstools-gmp-quick : crosstools-gmp--quick
+#MM- crosstools-gmp--quick : crosstools-gmp--fetch
+#MM- crosstools-gmp-fetch : crosstools-gmp--fetch
+#MM- crosstools-gmp-create-patch : crosstools-gmp--create-patch
+#MM- crosstools-gmp-create-patch-quick : crosstools-gmp--create-patch
+ 
+crosstools-gmp-archbase                        := gmp-$(GMP_VERSION)
+
+ifeq (host,host)
+    crosstools-gmp-portdir                     := $(HOSTDIR)/Ports/host/gmp
+else
+    crosstools-gmp-portdir                     := $(PORTSDIR)/gmp
+endif
+
+ifeq ($(CROSSTOOLSDIR),)
+    crosstools-gmp-prefix                      := $(CONTRIB_DIR)/gmp
+else
+    crosstools-gmp-prefix                      := $(CROSSTOOLSDIR)
+endif
+
+ifneq (,)
+    crosstools-gmp--archbase      := gmp--$(GMP_VERSION)
+else
+    crosstools-gmp--archbase      := gmp-$(GMP_VERSION)
+endif
+
+ifneq (,)
+    crosstools-gmp--srcdir        := 
+else
+    crosstools-gmp--srcdir        := $(crosstools-gmp-archbase)
+endif
+
+ifneq (,)
+    crosstools-gmp--builddir      := $(crosstools-gmp--srcdir)/
+else
+    crosstools-gmp--builddir      := $(crosstools-gmp--srcdir)
+endif
+
+ifeq (no,yes)
+    crosstools-gmp--patches_specs := $(crosstools-gmp--archbase)-aros.diff:$(crosstools-gmp--srcdir):-f,-p1
+else
+    crosstools-gmp--patches_specs := ::
+endif
+
+
+.PHONY: crosstools-gmp--fetch
+
+ifneq ($(TOOLDIR),)
+    crosstools-gmp--fetch-tooldir := "$(TOOLDIR)/"
+else
+    crosstools-gmp--fetch-tooldir := "$(TOOLDIR)/"
+endif
+
+ifneq ($(PORTSSOURCEDIR),)
+    crosstools-gmp--fetch-location := $(PORTSSOURCEDIR)
+else
+    crosstools-gmp--fetch-location := $(crosstools-gmp-portdir)
+endif
+
+crosstools-gmp--fetch-fetchedflag := $(crosstools-gmp--fetch-location)/.$(crosstools-gmp--archbase)-fetched
+
+#MM
+crosstools-gmp--fetch :
+	$(Q)$(ECHO) "Fetching   $(crosstools-gmp--archbase) ..."
+	$(Q)TOOLDIR="$(crosstools-gmp--fetch-tooldir)" $(FETCH) -ao ". $(GNU_REPOSITORY)/gmp" -a $(crosstools-gmp--archbase) -s "tar.bz2 tar.gz" -l $(crosstools-gmp--fetch-location) \
+	-d $(crosstools-gmp-portdir) -po "$(SRCDIR)/$(CURDIR)" -p "$(crosstools-gmp--patches_specs)"
+	$(Q)$(IF) ! $(TEST) -f $(crosstools-gmp--fetch-fetchedflag) ; then \
+		 $(TOUCH) $(crosstools-gmp--fetch-fetchedflag) ; \
+	fi
+
+#	$(Q)$(IF) ! $(TEST) -f $(crosstools-gmp--fetch-fetchedflag) ; then \
+#		$(ECHO) "Fetching   $(crosstools-gmp--archbase) ..." \
+#		&& $(FETCH) -ao ". $(GNU_REPOSITORY)/gmp" -a $(crosstools-gmp--archbase) -s "tar.bz2 tar.gz" -l $(crosstools-gmp--fetch-location) \
+#		-d $(crosstools-gmp-portdir) -po "$(SRCDIR)/$(CURDIR)" -p "$(crosstools-gmp--patches_specs)" \
+#		&& $(TOUCH) $(crosstools-gmp--fetch-fetchedflag) ; \
+#	fi
+
+
+.PHONY: crosstools-gmp--create-patch
+
+ifneq (,)
+    crosstools-gmp--create-patch-exclude := -X ./exclude.patterns
+endif
+
+ifneq ($(crosstools-gmp--srcdir),)
+    crosstools-gmp--create-patch-srcdir   := $(crosstools-gmp--srcdir)
+else
+    crosstools-gmp--create-patch-srcdir   := $(crosstools-gmp--archbase)
+endif
+
+#MM- crosstools-gmp--create-patch :  crosstools-gmp--create-patch-diff 
+#MM- crosstools-gmp--create-patch-quick :  crosstools-gmp--create-patch-diff 
+
+#MM
+crosstools-gmp--create-patch-diff:
+	$(Q)$(FETCH) -a $(crosstools-gmp--archbase) -s "tar.bz2 tar.gz" -l $(PORTSSOURCEDIR) -d $(crosstools-gmp-portdir)/tmp ; \
+	$(MV) $(crosstools-gmp-portdir)/$(crosstools-gmp--create-patch-srcdir) $(crosstools-gmp-portdir)/tmp/$(crosstools-gmp--create-patch-srcdir).aros ; \
+	cd $(crosstools-gmp-portdir)/tmp ; \
+	$(FOR) f in  ; do \
+	    $(ECHO) $$f >> ./exclude.patterns ; \
+	done ; \
+	$(ECHO) "Creating   \`$(crosstools-gmp--archbase)-aros-new.diff'" ; \
+	diff -ruN $(crosstools-gmp--create-patch-exclude) \
+	    $(crosstools-gmp--create-patch-srcdir) \
+	    $(crosstools-gmp--create-patch-srcdir).aros \
+	    >$(SRCDIR)/$(CURDIR)/$(crosstools-gmp--archbase)-aros-new.diff ; \
+	$(MV) $(crosstools-gmp-portdir)/tmp/$(crosstools-gmp--create-patch-srcdir).aros $(crosstools-gmp-portdir)/$(crosstools-gmp--create-patch-srcdir) ; \
+	$(RM) $(crosstools-gmp-portdir)/tmp
+
+#MM crosstools-gmp : crosstools-gmp-
+#MM
+crosstools-gmp:
+	$(NOP)
+
+crosstools-gmp--package-dir := $(crosstools-gmp-portdir)/$(crosstools-gmp--archbase)
+
+crosstools-gmp--package-basename := \
+    $(DISTDIR)/Packages/$(crosstools-gmp--archbase)-aros.$(AROS_TARGET_CPU)
+
+ifneq (no,no)
+    crosstools-gmp--package := $(crosstools-gmp--package-basename).tar.bz2
+endif
+
+
+ifneq ($(crosstools-gmp-prefix),)
+    crosstools-gmp--prefix := $(crosstools-gmp-prefix)
+else
+    crosstools-gmp--prefix := $(AROS_CONTRIB)
+endif
+
+ifneq (,)
+    crosstools-gmp--aros_prefix := 
+else
+    crosstools-gmp--aros_prefix := $(crosstools-gmp--prefix)
+endif
+
+BD_NIXFLAG ?= -nix
+
+ifeq (no,yes)
+    crosstools-gmp--nix    := $(BD_NIXFLAG)
+    crosstools-gmp--volpfx := /
+    crosstools-gmp--volsfx := /
+    
+    ifeq (,)
+        crosstools-gmp--nix_dir_layout := yes
+    endif
+else
+    crosstools-gmp--volsfx := :
+    
+    ifeq (,)
+        crosstools-gmp--nix_dir_layout := no
+    endif
+endif
+
+crosstools-gmp--volfunc = $(crosstools-gmp--volpfx)$(notdir $1)$(crosstools-gmp--volsfx)
+
+crosstools-gmp--install_opts := prefix=$(crosstools-gmp--prefix) \
+        exec_prefix=$(crosstools-gmp--prefix) 
+
+# Check if chosen compiler is valid
+ifeq ($(findstring host,host target kernel),)
+  $(error unknown compiler host)
+endif
+
+# Set legacy 'host' variable based on chosen compiler
+ifeq (host,host)
+    host := yes
+    ifeq ($(CURDIR),)
+        crosstools-gmp--pkgbasedir := $(HOSTGENDIR)
+    else
+        crosstools-gmp--pkgbasedir := $(HOSTGENDIR)/$(CURDIR)
+    endif
+else
+    host := no
+    ifeq ($(CURDIR),)
+        crosstools-gmp--pkgbasedir := $(GENDIR)
+    else
+        crosstools-gmp--pkgbasedir := $(GENDIR)/$(CURDIR)
+    endif
+endif
+ifneq (,)
+    ifeq ($(CURDIR),)
+        crosstools-gmp--pkgbasedir := 
+    else
+        crosstools-gmp--pkgbasedir := /$(CURDIR)
+    endif
+endif
+
+ifeq (gmp,)
+    crosstools-gmp--pkgdir := $(crosstools-gmp--pkgbasedir)
+else
+    crosstools-gmp--pkgdir := $(crosstools-gmp--pkgbasedir)/gmp
+endif
+
+crosstools-gmp--configflag := $(crosstools-gmp--pkgdir)/.configured
+crosstools-gmp--installflag := $(crosstools-gmp--pkgdir)/.installed
+
+ifeq ($(filter yes, $(crosstools-gmp--nix_dir_layout) $(host)),yes)
+    crosstools-gmp--PROGDIR      := $(crosstools-gmp--aros_prefix)/bin
+    crosstools-gmp--config_opts  := --prefix=$(crosstools-gmp--aros_prefix)
+else
+    ifeq (no,yes)
+        crosstools-gmp--config_opts := --prefix=/PROGDIR  --bindir=/PROGDIR --sbindir=/PROGDIR \
+        --libdir=/LIB --includedir=/INCLUDE --oldincludedir=/INCLUDE   
+    else
+        crosstools-gmp--config_opts  := --prefix=$(crosstools-gmp--aros_prefix)
+    endif
+
+    crosstools-gmp--PROGDIR := $(crosstools-gmp--aros_prefix)
+    
+    crosstools-gmp--install_opts := bindir=$(crosstools-gmp--prefix) \
+        sbindir=$(crosstools-gmp--prefix) \
+        libdir=$(AROS_LIB) includedir=$(AROS_INCLUDES) \
+        oldincludedir=$(AROS_INCLUDES) 
+endif
+
+ifneq ($(DEBUG),yes)
+    crosstools-gmp--s_flag = -s
+endif
+
+ifeq (yes,yes)
+    crosstools-gmp--HOST_CFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CFLAGS)
+    crosstools-gmp--KERNEL_CFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(crosstools-gmp--s_flag)
+ifeq (no,yes)
+    crosstools-gmp--TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(crosstools-gmp--s_flag)
+else
+    crosstools-gmp--TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(crosstools-gmp--nix) $(crosstools-gmp--s_flag)
+endif
+endif
+ifeq (yes,yes)
+    crosstools-gmp--HOST_CXXFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CXXFLAGS)
+    crosstools-gmp--KERNEL_CXXFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CXXFLAGS) $(crosstools-gmp--s_flag)
+ifeq (no,yes)
+    crosstools-gmp--TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(crosstools-gmp--s_flag)
+else
+    crosstools-gmp--TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(crosstools-gmp--nix) $(crosstools-gmp--s_flag)
+endif
+endif
+
+# Set up build environment, and options for configure script
+ifeq (host,host)
+    # NB: We need to pass in our crosstoolsdir, but cannot set CFLAGS since it
+    # confused configure scripts. We also cannot pass it via _FOR_BUILD
+    # since that won't get picked up during configure.
+    # We also cannot pass in the compiler including std flags so we need to use
+    # the "plain" host compiler.
+    crosstools-gmp--cfg-env :=  \
+        CPP="$(HOST_CPP)" \
+        CXXCPP="$(HOST_CPP)" \
+        CC="$(strip $(HOST_DEF_CC) $(crosstools-gmp--HOST_CFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        CXX="$(strip $(HOST_CXX) $(crosstools-gmp--HOST_CXXFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        LDFLAGS="-L$(CROSSTOOLSDIR)/lib $(USER_LDFLAGS)"
+ifeq (no,yes)
+    crosstools-gmp--cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    crosstools-gmp--cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(crosstools-gmp--KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(crosstools-gmp--KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(TARGET_AS)" \
+        OBJCOPY="$(OBJCOPY)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)" \
+        TARGET_OBJCOPY="$(TARGET_OBJCOPY)"
+endif
+ifeq (host,target)
+    crosstools-gmp--cfg-env :=  \
+        PKG_CONFIG_LIBDIR="$(AROS_DEVELOPER)/lib/pkgconfig" \
+        PKG_CONFIG_SYSROOT_DIR="$(AROSDIR)"
+    crosstools-gmp--cfg-env += CPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CXXCPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CC="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CXX="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        LD="$(strip $(TARGET_LD))"
+    crosstools-gmp--cfg-env += CFLAGS="$(crosstools-gmp--TARGET_CFLAGS) $(OPTIMIZATION_CFLAGS)" \
+        CXXFLAGS="$(crosstools-gmp--TARGET_CXXFLAGS) $(OPTIMIZATION_CFLAGS)"
+ifeq (no,yes)
+    crosstools-gmp--cfg-env += CPPFLAGS="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-gmp--cfg-env += LDFLAGS="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-gmp--nix) $(crosstools-gmp--s_flag))"
+ifeq (no,yes)
+    crosstools-gmp--cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    crosstools-gmp--cfg-env += CC_FOR_BUILD="$(strip $(HOST_DEF_CC))" \
+        CFLAGS_FOR_BUILD="$(strip $(crosstools-gmp--HOST_CFLAGS))" \
+        CXX_FOR_BUILD="$(strip $(HOST_CXX))" \
+        CXXFLAGS_FOR_BUILD="$(strip $(crosstools-gmp--HOST_CXXFLAGS))" \
+        LD_FOR_BUILD="$(strip $(HOST_LD))" \
+        LDFLAGS_FOR_BUILD="$(strip $(HOST_LDFLAGS) $(crosstools-gmp--s_flag))"
+ifeq (no,yes)
+    crosstools-gmp--cfg-env += CPPFLAGS_FOR_HOST="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-gmp--cfg-env += CC_FOR_HOST="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS) $(crosstools-gmp--nix) $(crosstools-gmp--s_flag))" \
+        CXX_FOR_HOST="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS) $(crosstools-gmp--nix) $(crosstools-gmp--s_flag))" \
+        LD_FOR_HOST="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_HOST="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-gmp--nix) $(crosstools-gmp--s_flag))"
+ifeq (no,yes)
+    crosstools-gmp--cfg-env += CPPFLAGS_FOR_TARGET="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-gmp--cfg-env += CC_FOR_TARGET="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_TARGET="$(strip $(crosstools-gmp--TARGET_CFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS))" \
+        CXX_FOR_TARGET="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_TARGET="$(strip $(crosstools-gmp--TARGET_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS))" \
+        LD_FOR_TARGET="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_TARGET="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-gmp--nix) $(crosstools-gmp--s_flag))" \
+        AR="$(strip $(AR_PLAIN))" \
+        AS="$(strip $(TARGET_AS))" \
+        OBJCOPY="$(strip $(OBJCOPY))" \
+        RANLIB="$(strip $(RANLIB))" \
+        STRIP="$(strip $(STRIP_PLAIN))"
+ifeq (no,yes)
+    crosstools-gmp--cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    crosstools-gmp--cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(crosstools-gmp--KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(crosstools-gmp--KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(strip $(TARGET_AS))" \
+        TARGET_RANLIB="$(strip $(RANLIB))" \
+        TARGET_STRIP="$(strip $(STRIP_PLAIN))" \
+        TARGET_NM="$(strip $(NM_PLAIN))"
+ifeq (yes,yes)
+    crosstools-gmp--config_opts += --target=$(AROS_TARGET_CPU)-aros
+    crosstools-gmp--config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    crosstools-gmp--config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    crosstools-gmp--config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    crosstools-gmp--config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    crosstools-gmp--config_opts += --without-x
+endif
+endif
+endif
+ifeq (host,kernel)
+    crosstools-gmp--cfg-env :=  \
+        CPP="$(KERNEL_CPP)" \
+        CXXCPP="$(KERNEL_CPP)"
+ifeq (no,yes)
+    crosstools-gmp--cfg-env += CPPFLAGS="$(strip $(KERNEL_CPPFLAGS) )"
+endif
+    crosstools-gmp--cfg-env += CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        CFLAGS="$(strip $(crosstools-gmp--KERNEL_CFLAGS) $(OPTIMIZATION_CFLAGS))" \
+        CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        CXXFLAGS="$(strip $(crosstools-gmp--KERNEL_CXXFLAGS) $(OPTIMIZATION_CFLAGS))" \
+        AS="$(KERNEL_AS)"
+ifeq (no,yes)
+    crosstools-gmp--cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    crosstools-gmp--cfg-env += CC_FOR_BUILD="$(HOST_DEF_CC)" \
+        CFLAGS_FOR_BUILD="$(crosstools-gmp--HOST_CFLAGS)" \
+        CXX_FOR_BUILD="$(HOST_CXX)" \
+        CXXFLAGS_FOR_BUILD="$(crosstools-gmp--HOST_CXXFLAGS)" \
+        RANLIB="$(RANLIB)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)"
+ifeq (yes,yes)
+    crosstools-gmp--config_opts += --target=$(AROS_TARGET_CPU)-aros
+    crosstools-gmp--config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    crosstools-gmp--config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    crosstools-gmp--config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    crosstools-gmp--config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    crosstools-gmp--config_opts += --without-x
+endif
+
+endif
+endif
+
+ifeq (no,yes)
+    BUILD_ENV := $(crosstools-gmp--cfg-env)
+endif
+
+crosstools-gmp--touchfileflag ?= $(crosstools-gmp--pkgdir)/.files-touched
+
+ifneq ("$(wildcard $(crosstools-gmp-portdir)/$(crosstools-gmp--builddir)/Makefile)","")
+# in an ideal world, we would depend on the files in the source directory,
+# so we could copy them when they change. unfortunately filenames with
+# spaces cause problems with this
+$(crosstools-gmp--pkgdir)/.local-copy:
+	$(Q)$(FOR) dir in $(crosstools-gmp--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Copying Local-Build Sources to  \`$(patsubst $(TOP)/%,%,$(abspath $(crosstools-gmp--pkgdir)))'"
+	$(Q)$(CP) -Rf "$(crosstools-gmp-portdir)/$(crosstools-gmp--builddir)/." $(crosstools-gmp--pkgdir)/ && $(TOUCH) $@
+
+$(crosstools-gmp--touchfileflag) : $(crosstools-gmp--pkgdir)/.local-copy
+
+    crosstools-gmp--cfg-srcdir=$(crosstools-gmp--pkgdir)
+else
+    crosstools-gmp--cfg-srcdir=$(crosstools-gmp-portdir)/$(crosstools-gmp--builddir)
+endif
+crosstools-gmp--make-env := -C $(crosstools-gmp--pkgdir)
+
+.PHONY : crosstools-gmp- crosstools-gmp--clean crosstools-gmp--build_and_install-quick
+
+# When building for the host, we don't need to build the
+# linklibs - this is especially true when building the
+# crosstool toolchain on 'foreign' architectures (such as
+# building PPC on x86)
+
+#MM- crosstools-gmp--host : setup includes crosstools-gmp--quick
+#MM- crosstools-gmp--target : setup includes core-linklibs crosstools-gmp--quick
+#MM- crosstools-gmp-: crosstools-gmp--host
+
+# Using -j1 in install_command may result in a warning but finally
+# it does its job. make install for gcc does not work reliably for -jN
+# where N > 1.
+ifneq (install,)
+    crosstools-gmp--install_command = \
+        $(ECHO) "Installing from build in         $(subst $(TOP)/,,$(crosstools-gmp--pkgdir))" && \
+        $(MAKE) PROGDIR="$(crosstools-gmp--PROGDIR)/" $(crosstools-gmp--install_opts) \
+        $(crosstools-gmp--make-env) install -j1
+
+    crosstools-gmp--uninstall_command = \
+    $(RM) $(crosstools-gmp--installflag) && \
+    $(MAKE) PROGDIR="$(crosstools-gmp--PROGDIR)/" \
+    $(crosstools-gmp--install_opts) $(crosstools-gmp--make-env) uninstall
+else
+    crosstools-gmp--install_command   := true
+    crosstools-gmp--uninstall_command := true
+endif
+
+#MM- crosstools-gmp--quick :  crosstools-gmp--configure  crosstools-gmp--build_and_install-quick crosstools-gmp--make-package
+
+#MM
+crosstools-gmp--build_and_install-quick :  $(crosstools-gmp--installflag)
+
+#
+# N.B.: the make test for the targets being up to date generates a benign Error 1.
+#
+$(crosstools-gmp--installflag) : $(crosstools-gmp--configflag)
+	$(Q)$(IF) ! $(BUILD_ENV) $(MAKE) PROGDIR="$(call crosstools-gmp--volfunc, PROGDIR)" -q $(crosstools-gmp--make-env); then \
+	    $(RM) $(crosstools-gmp--installflag) && \
+	    $(ECHO) "Performing build in         $(subst $(TOP)/,,$(crosstools-gmp--pkgdir))" && \
+	    $(BUILD_ENV) $(MAKE) PROGDIR="$(call crosstools-gmp--volfunc, PROGDIR)" $(crosstools-gmp--make-env) && \
+	    $(crosstools-gmp--install_command) && \
+	    $(TOUCH) $@ -r $^; \
+	fi
+
+ifneq ($(crosstools-gmp--touchfileflag),)
+$(crosstools-gmp--touchfileflag):
+	$(Q)$(FOR) dir in $(crosstools-gmp--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)find $(crosstools-gmp-portdir)/$(crosstools-gmp--builddir) -exec $(TOUCH) -c -r $(crosstools-gmp--cfg-srcdir)/configure '{}' \; && \
+	$(TOUCH) $@
+endif
+
+#MM
+crosstools-gmp--uninstall :
+	$(crosstools-gmp--uninstall_command)
+
+#MM
+crosstools-gmp--configure : $(crosstools-gmp--configflag)
+
+$(crosstools-gmp--configflag) : TMP_SRCDIR := $(shell echo $(crosstools-gmp--cfg-srcdir) | sed 's/^\(.\):\//\/\1\//')
+$(crosstools-gmp--configflag) : $(crosstools-gmp--touchfileflag) $(TOP)/$(CURDIR)/mmakefile
+	$(Q)$(RM) $@
+	$(Q)$(FOR) dir in $(crosstools-gmp--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Configuring build in         $(subst $(TOP)/,,$(crosstools-gmp--pkgdir))"
+	$(Q)cd $(crosstools-gmp--pkgdir) && \
+	find . -name config.cache -exec $(RM) '{}' \; && \
+	$(crosstools-gmp--cfg-env) $(TMP_SRCDIR)/configure $(crosstools-gmp--config_opts) --bindir=$(CROSSTOOLSDIR) --libdir=$(CROSSTOOLSDIR)/lib --disable-shared $(HOST_TRIPLE_EXTRA_OPTS) $(GMP_HOST_EXTRA_OPTS) && \
+	$(TOUCH) $@
+
+#MM
+crosstools-gmp--clean : crosstools-gmp--uninstall
+	$(Q)$(RM) $(crosstools-gmp--pkgdir)
+
+.PHONY : crosstools-gmp--make-package crosstools-gmp--create-patch
+#MM crosstools-gmp--make-package : crosstools-gmp--quick
+
+#MM
+crosstools-gmp--make-package : $(crosstools-gmp--package)
+ 
+#There seems to be a bug, either with my clock or with make, 'cause it may happen
+#that $^ and $@ have exactly the same mtime, and in that case make tries
+#to rebuild $@ again, which would fail because the directory where
+#the package got installed would not exist anymore. 
+#We work this around by using an if statement to manually check the mtimes.
+$(crosstools-gmp--package-basename).tar.bz2 :
+	$(Q)$(IF) $(TEST) $(crosstools-gmp-installflag) -nt $@ || ! $(TEST) -s $@; then \
+	    $(RM) $@ ; \
+	    $(ECHO) "Building   \`$(crosstools-gmp--package-basename).tar.bz2'" ; \
+	    $(MKDIR) -p "$(DISTDIR)/Packages" ; \
+	    $(MKDIR) -p "$(crosstools-gmp-prefix)" ; \
+	    cd $(crosstools-gmp--package-dir) ; \
+	    tar -cvf $(crosstools-gmp--package-basename).tar * ; \
+	    bzip2 -9 -f $(crosstools-gmp--package-basename).tar ; \
+	fi
+
+## ISL ###
+
+#MM
+tools-crosstools-isl :
+	@$(IF) ! $(TEST) -d $(CROSSTOOLSDIR) \
+	    || ! $(TEST) -f $(isl-installflag) ; then \
+	       $(RM) $(HOSTGENDIR)/$(CURDIR)/isl/.files-touched \
+	    && $(MAKE) -f ./mmakefile crosstools-isl--fetch \
+	    && $(MAKE) -f ./mmakefile crosstools-isl--build_and_install-quick \
+	    && $(TOUCH) $(isl-installflag) ; \
+	fi
+
+
+#MM- crosstools-isl-quick : crosstools-isl--quick
+#MM- crosstools-isl--quick : crosstools-isl--fetch
+#MM- crosstools-isl-fetch : crosstools-isl--fetch
+#MM- crosstools-isl-create-patch : crosstools-isl--create-patch
+#MM- crosstools-isl-create-patch-quick : crosstools-isl--create-patch
+ 
+crosstools-isl-archbase                        := isl-$(ISL_VERSION)
+
+ifeq (host,host)
+    crosstools-isl-portdir                     := $(HOSTDIR)/Ports/host/isl
+else
+    crosstools-isl-portdir                     := $(PORTSDIR)/isl
+endif
+
+ifeq ($(CROSSTOOLSDIR),)
+    crosstools-isl-prefix                      := $(CONTRIB_DIR)/isl
+else
+    crosstools-isl-prefix                      := $(CROSSTOOLSDIR)
+endif
+
+ifneq (,)
+    crosstools-isl--archbase      := isl--$(ISL_VERSION)
+else
+    crosstools-isl--archbase      := isl-$(ISL_VERSION)
+endif
+
+ifneq (,)
+    crosstools-isl--srcdir        := 
+else
+    crosstools-isl--srcdir        := $(crosstools-isl-archbase)
+endif
+
+ifneq (,)
+    crosstools-isl--builddir      := $(crosstools-isl--srcdir)/
+else
+    crosstools-isl--builddir      := $(crosstools-isl--srcdir)
+endif
+
+ifeq (no,yes)
+    crosstools-isl--patches_specs := $(crosstools-isl--archbase)-aros.diff:$(crosstools-isl--srcdir):-f,-p1
+else
+    crosstools-isl--patches_specs := ::
+endif
+
+
+.PHONY: crosstools-isl--fetch
+
+ifneq ($(TOOLDIR),)
+    crosstools-isl--fetch-tooldir := "$(TOOLDIR)/"
+else
+    crosstools-isl--fetch-tooldir := "$(TOOLDIR)/"
+endif
+
+ifneq ($(PORTSSOURCEDIR),)
+    crosstools-isl--fetch-location := $(PORTSSOURCEDIR)
+else
+    crosstools-isl--fetch-location := $(crosstools-isl-portdir)
+endif
+
+crosstools-isl--fetch-fetchedflag := $(crosstools-isl--fetch-location)/.$(crosstools-isl--archbase)-fetched
+
+#MM
+crosstools-isl--fetch :
+	$(Q)$(ECHO) "Fetching   $(crosstools-isl--archbase) ..."
+	$(Q)TOOLDIR="$(crosstools-isl--fetch-tooldir)" $(FETCH) -ao ". $(ISL_REPOSITORY)" -a $(crosstools-isl--archbase) -s "tar.bz2 tar.gz" -l $(crosstools-isl--fetch-location) \
+	-d $(crosstools-isl-portdir) -po "$(SRCDIR)/$(CURDIR)" -p "$(crosstools-isl--patches_specs)"
+	$(Q)$(IF) ! $(TEST) -f $(crosstools-isl--fetch-fetchedflag) ; then \
+		 $(TOUCH) $(crosstools-isl--fetch-fetchedflag) ; \
+	fi
+
+#	$(Q)$(IF) ! $(TEST) -f $(crosstools-isl--fetch-fetchedflag) ; then \
+#		$(ECHO) "Fetching   $(crosstools-isl--archbase) ..." \
+#		&& $(FETCH) -ao ". $(ISL_REPOSITORY)" -a $(crosstools-isl--archbase) -s "tar.bz2 tar.gz" -l $(crosstools-isl--fetch-location) \
+#		-d $(crosstools-isl-portdir) -po "$(SRCDIR)/$(CURDIR)" -p "$(crosstools-isl--patches_specs)" \
+#		&& $(TOUCH) $(crosstools-isl--fetch-fetchedflag) ; \
+#	fi
+
+
+.PHONY: crosstools-isl--create-patch
+
+ifneq (,)
+    crosstools-isl--create-patch-exclude := -X ./exclude.patterns
+endif
+
+ifneq ($(crosstools-isl--srcdir),)
+    crosstools-isl--create-patch-srcdir   := $(crosstools-isl--srcdir)
+else
+    crosstools-isl--create-patch-srcdir   := $(crosstools-isl--archbase)
+endif
+
+#MM- crosstools-isl--create-patch :  crosstools-isl--create-patch-diff 
+#MM- crosstools-isl--create-patch-quick :  crosstools-isl--create-patch-diff 
+
+#MM
+crosstools-isl--create-patch-diff:
+	$(Q)$(FETCH) -a $(crosstools-isl--archbase) -s "tar.bz2 tar.gz" -l $(PORTSSOURCEDIR) -d $(crosstools-isl-portdir)/tmp ; \
+	$(MV) $(crosstools-isl-portdir)/$(crosstools-isl--create-patch-srcdir) $(crosstools-isl-portdir)/tmp/$(crosstools-isl--create-patch-srcdir).aros ; \
+	cd $(crosstools-isl-portdir)/tmp ; \
+	$(FOR) f in  ; do \
+	    $(ECHO) $$f >> ./exclude.patterns ; \
+	done ; \
+	$(ECHO) "Creating   \`$(crosstools-isl--archbase)-aros-new.diff'" ; \
+	diff -ruN $(crosstools-isl--create-patch-exclude) \
+	    $(crosstools-isl--create-patch-srcdir) \
+	    $(crosstools-isl--create-patch-srcdir).aros \
+	    >$(SRCDIR)/$(CURDIR)/$(crosstools-isl--archbase)-aros-new.diff ; \
+	$(MV) $(crosstools-isl-portdir)/tmp/$(crosstools-isl--create-patch-srcdir).aros $(crosstools-isl-portdir)/$(crosstools-isl--create-patch-srcdir) ; \
+	$(RM) $(crosstools-isl-portdir)/tmp
+
+#MM crosstools-isl : crosstools-isl-
+#MM
+crosstools-isl:
+	$(NOP)
+
+crosstools-isl--package-dir := $(crosstools-isl-portdir)/$(crosstools-isl--archbase)
+
+crosstools-isl--package-basename := \
+    $(DISTDIR)/Packages/$(crosstools-isl--archbase)-aros.$(AROS_TARGET_CPU)
+
+ifneq (no,no)
+    crosstools-isl--package := $(crosstools-isl--package-basename).tar.bz2
+endif
+
+
+ifneq ($(crosstools-isl-prefix),)
+    crosstools-isl--prefix := $(crosstools-isl-prefix)
+else
+    crosstools-isl--prefix := $(AROS_CONTRIB)
+endif
+
+ifneq (,)
+    crosstools-isl--aros_prefix := 
+else
+    crosstools-isl--aros_prefix := $(crosstools-isl--prefix)
+endif
+
+BD_NIXFLAG ?= -nix
+
+ifeq (no,yes)
+    crosstools-isl--nix    := $(BD_NIXFLAG)
+    crosstools-isl--volpfx := /
+    crosstools-isl--volsfx := /
+    
+    ifeq (,)
+        crosstools-isl--nix_dir_layout := yes
+    endif
+else
+    crosstools-isl--volsfx := :
+    
+    ifeq (,)
+        crosstools-isl--nix_dir_layout := no
+    endif
+endif
+
+crosstools-isl--volfunc = $(crosstools-isl--volpfx)$(notdir $1)$(crosstools-isl--volsfx)
+
+crosstools-isl--install_opts := prefix=$(crosstools-isl--prefix) \
+        exec_prefix=$(crosstools-isl--prefix) 
+
+# Check if chosen compiler is valid
+ifeq ($(findstring host,host target kernel),)
+  $(error unknown compiler host)
+endif
+
+# Set legacy 'host' variable based on chosen compiler
+ifeq (host,host)
+    host := yes
+    ifeq ($(CURDIR),)
+        crosstools-isl--pkgbasedir := $(HOSTGENDIR)
+    else
+        crosstools-isl--pkgbasedir := $(HOSTGENDIR)/$(CURDIR)
+    endif
+else
+    host := no
+    ifeq ($(CURDIR),)
+        crosstools-isl--pkgbasedir := $(GENDIR)
+    else
+        crosstools-isl--pkgbasedir := $(GENDIR)/$(CURDIR)
+    endif
+endif
+ifneq (,)
+    ifeq ($(CURDIR),)
+        crosstools-isl--pkgbasedir := 
+    else
+        crosstools-isl--pkgbasedir := /$(CURDIR)
+    endif
+endif
+
+ifeq (isl,)
+    crosstools-isl--pkgdir := $(crosstools-isl--pkgbasedir)
+else
+    crosstools-isl--pkgdir := $(crosstools-isl--pkgbasedir)/isl
+endif
+
+crosstools-isl--configflag := $(crosstools-isl--pkgdir)/.configured
+crosstools-isl--installflag := $(crosstools-isl--pkgdir)/.installed
+
+ifeq ($(filter yes, $(crosstools-isl--nix_dir_layout) $(host)),yes)
+    crosstools-isl--PROGDIR      := $(crosstools-isl--aros_prefix)/bin
+    crosstools-isl--config_opts  := --prefix=$(crosstools-isl--aros_prefix)
+else
+    ifeq (no,yes)
+        crosstools-isl--config_opts := --prefix=/PROGDIR  --bindir=/PROGDIR --sbindir=/PROGDIR \
+        --libdir=/LIB --includedir=/INCLUDE --oldincludedir=/INCLUDE   
+    else
+        crosstools-isl--config_opts  := --prefix=$(crosstools-isl--aros_prefix)
+    endif
+
+    crosstools-isl--PROGDIR := $(crosstools-isl--aros_prefix)
+    
+    crosstools-isl--install_opts := bindir=$(crosstools-isl--prefix) \
+        sbindir=$(crosstools-isl--prefix) \
+        libdir=$(AROS_LIB) includedir=$(AROS_INCLUDES) \
+        oldincludedir=$(AROS_INCLUDES) 
+endif
+
+ifneq ($(DEBUG),yes)
+    crosstools-isl--s_flag = -s
+endif
+
+ifeq (yes,yes)
+    crosstools-isl--HOST_CFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CFLAGS)
+    crosstools-isl--KERNEL_CFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(crosstools-isl--s_flag)
+ifeq (no,yes)
+    crosstools-isl--TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(crosstools-isl--s_flag)
+else
+    crosstools-isl--TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(crosstools-isl--nix) $(crosstools-isl--s_flag)
+endif
+endif
+ifeq (yes,yes)
+    crosstools-isl--HOST_CXXFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CXXFLAGS)
+    crosstools-isl--KERNEL_CXXFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CXXFLAGS) $(crosstools-isl--s_flag)
+ifeq (no,yes)
+    crosstools-isl--TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(crosstools-isl--s_flag)
+else
+    crosstools-isl--TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(crosstools-isl--nix) $(crosstools-isl--s_flag)
+endif
+endif
+
+# Set up build environment, and options for configure script
+ifeq (host,host)
+    # NB: We need to pass in our crosstoolsdir, but cannot set CFLAGS since it
+    # confused configure scripts. We also cannot pass it via _FOR_BUILD
+    # since that won't get picked up during configure.
+    # We also cannot pass in the compiler including std flags so we need to use
+    # the "plain" host compiler.
+    crosstools-isl--cfg-env :=  \
+        CPP="$(HOST_CPP)" \
+        CXXCPP="$(HOST_CPP)" \
+        CC="$(strip $(HOST_DEF_CC) $(crosstools-isl--HOST_CFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        CXX="$(strip $(HOST_CXX) $(crosstools-isl--HOST_CXXFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        LDFLAGS="-L$(CROSSTOOLSDIR)/lib $(USER_LDFLAGS)"
+ifeq (no,yes)
+    crosstools-isl--cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    crosstools-isl--cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(crosstools-isl--KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(crosstools-isl--KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(TARGET_AS)" \
+        OBJCOPY="$(OBJCOPY)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)" \
+        TARGET_OBJCOPY="$(TARGET_OBJCOPY)"
+endif
+ifeq (host,target)
+    crosstools-isl--cfg-env :=  \
+        PKG_CONFIG_LIBDIR="$(AROS_DEVELOPER)/lib/pkgconfig" \
+        PKG_CONFIG_SYSROOT_DIR="$(AROSDIR)"
+    crosstools-isl--cfg-env += CPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CXXCPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CC="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CXX="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        LD="$(strip $(TARGET_LD))"
+    crosstools-isl--cfg-env += CFLAGS="$(crosstools-isl--TARGET_CFLAGS) $(OPTIMIZATION_CFLAGS)" \
+        CXXFLAGS="$(crosstools-isl--TARGET_CXXFLAGS) $(OPTIMIZATION_CFLAGS)"
+ifeq (no,yes)
+    crosstools-isl--cfg-env += CPPFLAGS="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-isl--cfg-env += LDFLAGS="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-isl--nix) $(crosstools-isl--s_flag))"
+ifeq (no,yes)
+    crosstools-isl--cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    crosstools-isl--cfg-env += CC_FOR_BUILD="$(strip $(HOST_DEF_CC))" \
+        CFLAGS_FOR_BUILD="$(strip $(crosstools-isl--HOST_CFLAGS))" \
+        CXX_FOR_BUILD="$(strip $(HOST_CXX))" \
+        CXXFLAGS_FOR_BUILD="$(strip $(crosstools-isl--HOST_CXXFLAGS))" \
+        LD_FOR_BUILD="$(strip $(HOST_LD))" \
+        LDFLAGS_FOR_BUILD="$(strip $(HOST_LDFLAGS) $(crosstools-isl--s_flag))"
+ifeq (no,yes)
+    crosstools-isl--cfg-env += CPPFLAGS_FOR_HOST="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-isl--cfg-env += CC_FOR_HOST="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS) $(crosstools-isl--nix) $(crosstools-isl--s_flag))" \
+        CXX_FOR_HOST="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS) $(crosstools-isl--nix) $(crosstools-isl--s_flag))" \
+        LD_FOR_HOST="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_HOST="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-isl--nix) $(crosstools-isl--s_flag))"
+ifeq (no,yes)
+    crosstools-isl--cfg-env += CPPFLAGS_FOR_TARGET="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-isl--cfg-env += CC_FOR_TARGET="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_TARGET="$(strip $(crosstools-isl--TARGET_CFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS))" \
+        CXX_FOR_TARGET="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_TARGET="$(strip $(crosstools-isl--TARGET_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS))" \
+        LD_FOR_TARGET="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_TARGET="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-isl--nix) $(crosstools-isl--s_flag))" \
+        AR="$(strip $(AR_PLAIN))" \
+        AS="$(strip $(TARGET_AS))" \
+        OBJCOPY="$(strip $(OBJCOPY))" \
+        RANLIB="$(strip $(RANLIB))" \
+        STRIP="$(strip $(STRIP_PLAIN))"
+ifeq (no,yes)
+    crosstools-isl--cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    crosstools-isl--cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(crosstools-isl--KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(crosstools-isl--KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(strip $(TARGET_AS))" \
+        TARGET_RANLIB="$(strip $(RANLIB))" \
+        TARGET_STRIP="$(strip $(STRIP_PLAIN))" \
+        TARGET_NM="$(strip $(NM_PLAIN))"
+ifeq (yes,yes)
+    crosstools-isl--config_opts += --target=$(AROS_TARGET_CPU)-aros
+    crosstools-isl--config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    crosstools-isl--config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    crosstools-isl--config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    crosstools-isl--config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    crosstools-isl--config_opts += --without-x
+endif
+endif
+endif
+ifeq (host,kernel)
+    crosstools-isl--cfg-env :=  \
+        CPP="$(KERNEL_CPP)" \
+        CXXCPP="$(KERNEL_CPP)"
+ifeq (no,yes)
+    crosstools-isl--cfg-env += CPPFLAGS="$(strip $(KERNEL_CPPFLAGS) )"
+endif
+    crosstools-isl--cfg-env += CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        CFLAGS="$(strip $(crosstools-isl--KERNEL_CFLAGS) $(OPTIMIZATION_CFLAGS))" \
+        CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        CXXFLAGS="$(strip $(crosstools-isl--KERNEL_CXXFLAGS) $(OPTIMIZATION_CFLAGS))" \
+        AS="$(KERNEL_AS)"
+ifeq (no,yes)
+    crosstools-isl--cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    crosstools-isl--cfg-env += CC_FOR_BUILD="$(HOST_DEF_CC)" \
+        CFLAGS_FOR_BUILD="$(crosstools-isl--HOST_CFLAGS)" \
+        CXX_FOR_BUILD="$(HOST_CXX)" \
+        CXXFLAGS_FOR_BUILD="$(crosstools-isl--HOST_CXXFLAGS)" \
+        RANLIB="$(RANLIB)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)"
+ifeq (yes,yes)
+    crosstools-isl--config_opts += --target=$(AROS_TARGET_CPU)-aros
+    crosstools-isl--config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    crosstools-isl--config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    crosstools-isl--config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    crosstools-isl--config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    crosstools-isl--config_opts += --without-x
+endif
+
+endif
+endif
+
+ifeq (no,yes)
+    BUILD_ENV := $(crosstools-isl--cfg-env)
+endif
+
+crosstools-isl--touchfileflag ?= $(crosstools-isl--pkgdir)/.files-touched
+
+ifneq ("$(wildcard $(crosstools-isl-portdir)/$(crosstools-isl--builddir)/Makefile)","")
+# in an ideal world, we would depend on the files in the source directory,
+# so we could copy them when they change. unfortunately filenames with
+# spaces cause problems with this
+$(crosstools-isl--pkgdir)/.local-copy:
+	$(Q)$(FOR) dir in $(crosstools-isl--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Copying Local-Build Sources to  \`$(patsubst $(TOP)/%,%,$(abspath $(crosstools-isl--pkgdir)))'"
+	$(Q)$(CP) -Rf "$(crosstools-isl-portdir)/$(crosstools-isl--builddir)/." $(crosstools-isl--pkgdir)/ && $(TOUCH) $@
+
+$(crosstools-isl--touchfileflag) : $(crosstools-isl--pkgdir)/.local-copy
+
+    crosstools-isl--cfg-srcdir=$(crosstools-isl--pkgdir)
+else
+    crosstools-isl--cfg-srcdir=$(crosstools-isl-portdir)/$(crosstools-isl--builddir)
+endif
+crosstools-isl--make-env := -C $(crosstools-isl--pkgdir)
+
+.PHONY : crosstools-isl- crosstools-isl--clean crosstools-isl--build_and_install-quick
+
+# When building for the host, we don't need to build the
+# linklibs - this is especially true when building the
+# crosstool toolchain on 'foreign' architectures (such as
+# building PPC on x86)
+
+#MM- crosstools-isl--host : setup includes crosstools-isl--quick
+#MM- crosstools-isl--target : setup includes core-linklibs crosstools-isl--quick
+#MM- crosstools-isl-: crosstools-isl--host
+
+# Using -j1 in install_command may result in a warning but finally
+# it does its job. make install for gcc does not work reliably for -jN
+# where N > 1.
+ifneq (install,)
+    crosstools-isl--install_command = \
+        $(ECHO) "Installing from build in         $(subst $(TOP)/,,$(crosstools-isl--pkgdir))" && \
+        $(MAKE) PROGDIR="$(crosstools-isl--PROGDIR)/" $(crosstools-isl--install_opts) \
+        $(crosstools-isl--make-env) install -j1
+
+    crosstools-isl--uninstall_command = \
+    $(RM) $(crosstools-isl--installflag) && \
+    $(MAKE) PROGDIR="$(crosstools-isl--PROGDIR)/" \
+    $(crosstools-isl--install_opts) $(crosstools-isl--make-env) uninstall
+else
+    crosstools-isl--install_command   := true
+    crosstools-isl--uninstall_command := true
+endif
+
+#MM- crosstools-isl--quick :  crosstools-isl--configure  crosstools-isl--build_and_install-quick crosstools-isl--make-package
+
+#MM
+crosstools-isl--build_and_install-quick :  $(crosstools-isl--installflag)
+
+#
+# N.B.: the make test for the targets being up to date generates a benign Error 1.
+#
+$(crosstools-isl--installflag) : $(crosstools-isl--configflag)
+	$(Q)$(IF) ! $(BUILD_ENV) $(MAKE) PROGDIR="$(call crosstools-isl--volfunc, PROGDIR)" -q $(crosstools-isl--make-env); then \
+	    $(RM) $(crosstools-isl--installflag) && \
+	    $(ECHO) "Performing build in         $(subst $(TOP)/,,$(crosstools-isl--pkgdir))" && \
+	    $(BUILD_ENV) $(MAKE) PROGDIR="$(call crosstools-isl--volfunc, PROGDIR)" $(crosstools-isl--make-env) && \
+	    $(crosstools-isl--install_command) && \
+	    $(TOUCH) $@ -r $^; \
+	fi
+
+ifneq ($(crosstools-isl--touchfileflag),)
+$(crosstools-isl--touchfileflag):
+	$(Q)$(FOR) dir in $(crosstools-isl--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)find $(crosstools-isl-portdir)/$(crosstools-isl--builddir) -exec $(TOUCH) -c -r $(crosstools-isl--cfg-srcdir)/configure '{}' \; && \
+	$(TOUCH) $@
+endif
+
+#MM
+crosstools-isl--uninstall :
+	$(crosstools-isl--uninstall_command)
+
+#MM
+crosstools-isl--configure : $(crosstools-isl--configflag)
+
+$(crosstools-isl--configflag) : TMP_SRCDIR := $(shell echo $(crosstools-isl--cfg-srcdir) | sed 's/^\(.\):\//\/\1\//')
+$(crosstools-isl--configflag) : $(crosstools-isl--touchfileflag) $(TOP)/$(CURDIR)/mmakefile
+	$(Q)$(RM) $@
+	$(Q)$(FOR) dir in $(crosstools-isl--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Configuring build in         $(subst $(TOP)/,,$(crosstools-isl--pkgdir))"
+	$(Q)cd $(crosstools-isl--pkgdir) && \
+	find . -name config.cache -exec $(RM) '{}' \; && \
+	$(crosstools-isl--cfg-env) $(TMP_SRCDIR)/configure $(crosstools-isl--config_opts) --bindir=$(CROSSTOOLSDIR) --libdir=$(CROSSTOOLSDIR)/lib --without-piplib --disable-shared $(HOST_TRIPLE_EXTRA_OPTS) && \
+	$(TOUCH) $@
+
+#MM
+crosstools-isl--clean : crosstools-isl--uninstall
+	$(Q)$(RM) $(crosstools-isl--pkgdir)
+
+.PHONY : crosstools-isl--make-package crosstools-isl--create-patch
+#MM crosstools-isl--make-package : crosstools-isl--quick
+
+#MM
+crosstools-isl--make-package : $(crosstools-isl--package)
+ 
+#There seems to be a bug, either with my clock or with make, 'cause it may happen
+#that $^ and $@ have exactly the same mtime, and in that case make tries
+#to rebuild $@ again, which would fail because the directory where
+#the package got installed would not exist anymore. 
+#We work this around by using an if statement to manually check the mtimes.
+$(crosstools-isl--package-basename).tar.bz2 :
+	$(Q)$(IF) $(TEST) $(crosstools-isl-installflag) -nt $@ || ! $(TEST) -s $@; then \
+	    $(RM) $@ ; \
+	    $(ECHO) "Building   \`$(crosstools-isl--package-basename).tar.bz2'" ; \
+	    $(MKDIR) -p "$(DISTDIR)/Packages" ; \
+	    $(MKDIR) -p "$(crosstools-isl-prefix)" ; \
+	    cd $(crosstools-isl--package-dir) ; \
+	    tar -cvf $(crosstools-isl--package-basename).tar * ; \
+	    bzip2 -9 -f $(crosstools-isl--package-basename).tar ; \
+	fi
+
+## MPFR ###
+
+#MM
+tools-crosstools-mpfr :
+	@$(IF) ! $(TEST) -d $(CROSSTOOLSDIR) \
+	    || ! $(TEST) -f $(mpfr-installflag) ; then \
+	       $(RM) $(HOSTGENDIR)/$(CURDIR)/mpfr/.files-touched \
+	    && $(MAKE) -f ./mmakefile crosstools-mpfr--fetch \
+	    && $(MAKE) -f ./mmakefile crosstools-mpfr--build_and_install-quick \
+	    && $(TOUCH) $(mpfr-installflag) ; \
+	fi
+
+
+#MM- crosstools-mpfr-quick : crosstools-mpfr--quick
+#MM- crosstools-mpfr--quick : crosstools-mpfr--fetch
+#MM- crosstools-mpfr-fetch : crosstools-mpfr--fetch
+#MM- crosstools-mpfr-create-patch : crosstools-mpfr--create-patch
+#MM- crosstools-mpfr-create-patch-quick : crosstools-mpfr--create-patch
+ 
+crosstools-mpfr-archbase                        := mpfr-$(MPFR_VERSION)
+
+ifeq (host,host)
+    crosstools-mpfr-portdir                     := $(HOSTDIR)/Ports/host/mpfr
+else
+    crosstools-mpfr-portdir                     := $(PORTSDIR)/mpfr
+endif
+
+ifeq ($(CROSSTOOLSDIR),)
+    crosstools-mpfr-prefix                      := $(CONTRIB_DIR)/mpfr
+else
+    crosstools-mpfr-prefix                      := $(CROSSTOOLSDIR)
+endif
+
+ifneq (,)
+    crosstools-mpfr--archbase      := mpfr--$(MPFR_VERSION)
+else
+    crosstools-mpfr--archbase      := mpfr-$(MPFR_VERSION)
+endif
+
+ifneq (,)
+    crosstools-mpfr--srcdir        := 
+else
+    crosstools-mpfr--srcdir        := $(crosstools-mpfr-archbase)
+endif
+
+ifneq (,)
+    crosstools-mpfr--builddir      := $(crosstools-mpfr--srcdir)/
+else
+    crosstools-mpfr--builddir      := $(crosstools-mpfr--srcdir)
+endif
+
+ifeq (no,yes)
+    crosstools-mpfr--patches_specs := $(crosstools-mpfr--archbase)-aros.diff:$(crosstools-mpfr--srcdir):-f,-p1
+else
+    crosstools-mpfr--patches_specs := ::
+endif
+
+
+.PHONY: crosstools-mpfr--fetch
+
+ifneq ($(TOOLDIR),)
+    crosstools-mpfr--fetch-tooldir := "$(TOOLDIR)/"
+else
+    crosstools-mpfr--fetch-tooldir := "$(TOOLDIR)/"
+endif
+
+ifneq ($(PORTSSOURCEDIR),)
+    crosstools-mpfr--fetch-location := $(PORTSSOURCEDIR)
+else
+    crosstools-mpfr--fetch-location := $(crosstools-mpfr-portdir)
+endif
+
+crosstools-mpfr--fetch-fetchedflag := $(crosstools-mpfr--fetch-location)/.$(crosstools-mpfr--archbase)-fetched
+
+#MM
+crosstools-mpfr--fetch :
+	$(Q)$(ECHO) "Fetching   $(crosstools-mpfr--archbase) ..."
+	$(Q)TOOLDIR="$(crosstools-mpfr--fetch-tooldir)" $(FETCH) -ao ". $(GNU_REPOSITORY)/mpfr" -a $(crosstools-mpfr--archbase) -s "tar.bz2 tar.gz" -l $(crosstools-mpfr--fetch-location) \
+	-d $(crosstools-mpfr-portdir) -po "$(SRCDIR)/$(CURDIR)" -p "$(crosstools-mpfr--patches_specs)"
+	$(Q)$(IF) ! $(TEST) -f $(crosstools-mpfr--fetch-fetchedflag) ; then \
+		 $(TOUCH) $(crosstools-mpfr--fetch-fetchedflag) ; \
+	fi
+
+#	$(Q)$(IF) ! $(TEST) -f $(crosstools-mpfr--fetch-fetchedflag) ; then \
+#		$(ECHO) "Fetching   $(crosstools-mpfr--archbase) ..." \
+#		&& $(FETCH) -ao ". $(GNU_REPOSITORY)/mpfr" -a $(crosstools-mpfr--archbase) -s "tar.bz2 tar.gz" -l $(crosstools-mpfr--fetch-location) \
+#		-d $(crosstools-mpfr-portdir) -po "$(SRCDIR)/$(CURDIR)" -p "$(crosstools-mpfr--patches_specs)" \
+#		&& $(TOUCH) $(crosstools-mpfr--fetch-fetchedflag) ; \
+#	fi
+
+
+.PHONY: crosstools-mpfr--create-patch
+
+ifneq (,)
+    crosstools-mpfr--create-patch-exclude := -X ./exclude.patterns
+endif
+
+ifneq ($(crosstools-mpfr--srcdir),)
+    crosstools-mpfr--create-patch-srcdir   := $(crosstools-mpfr--srcdir)
+else
+    crosstools-mpfr--create-patch-srcdir   := $(crosstools-mpfr--archbase)
+endif
+
+#MM- crosstools-mpfr--create-patch :  crosstools-mpfr--create-patch-diff 
+#MM- crosstools-mpfr--create-patch-quick :  crosstools-mpfr--create-patch-diff 
+
+#MM
+crosstools-mpfr--create-patch-diff:
+	$(Q)$(FETCH) -a $(crosstools-mpfr--archbase) -s "tar.bz2 tar.gz" -l $(PORTSSOURCEDIR) -d $(crosstools-mpfr-portdir)/tmp ; \
+	$(MV) $(crosstools-mpfr-portdir)/$(crosstools-mpfr--create-patch-srcdir) $(crosstools-mpfr-portdir)/tmp/$(crosstools-mpfr--create-patch-srcdir).aros ; \
+	cd $(crosstools-mpfr-portdir)/tmp ; \
+	$(FOR) f in  ; do \
+	    $(ECHO) $$f >> ./exclude.patterns ; \
+	done ; \
+	$(ECHO) "Creating   \`$(crosstools-mpfr--archbase)-aros-new.diff'" ; \
+	diff -ruN $(crosstools-mpfr--create-patch-exclude) \
+	    $(crosstools-mpfr--create-patch-srcdir) \
+	    $(crosstools-mpfr--create-patch-srcdir).aros \
+	    >$(SRCDIR)/$(CURDIR)/$(crosstools-mpfr--archbase)-aros-new.diff ; \
+	$(MV) $(crosstools-mpfr-portdir)/tmp/$(crosstools-mpfr--create-patch-srcdir).aros $(crosstools-mpfr-portdir)/$(crosstools-mpfr--create-patch-srcdir) ; \
+	$(RM) $(crosstools-mpfr-portdir)/tmp
+
+#MM crosstools-mpfr : crosstools-mpfr-
+#MM
+crosstools-mpfr:
+	$(NOP)
+
+crosstools-mpfr--package-dir := $(crosstools-mpfr-portdir)/$(crosstools-mpfr--archbase)
+
+crosstools-mpfr--package-basename := \
+    $(DISTDIR)/Packages/$(crosstools-mpfr--archbase)-aros.$(AROS_TARGET_CPU)
+
+ifneq (no,no)
+    crosstools-mpfr--package := $(crosstools-mpfr--package-basename).tar.bz2
+endif
+
+
+ifneq ($(crosstools-mpfr-prefix),)
+    crosstools-mpfr--prefix := $(crosstools-mpfr-prefix)
+else
+    crosstools-mpfr--prefix := $(AROS_CONTRIB)
+endif
+
+ifneq (,)
+    crosstools-mpfr--aros_prefix := 
+else
+    crosstools-mpfr--aros_prefix := $(crosstools-mpfr--prefix)
+endif
+
+BD_NIXFLAG ?= -nix
+
+ifeq (no,yes)
+    crosstools-mpfr--nix    := $(BD_NIXFLAG)
+    crosstools-mpfr--volpfx := /
+    crosstools-mpfr--volsfx := /
+    
+    ifeq (,)
+        crosstools-mpfr--nix_dir_layout := yes
+    endif
+else
+    crosstools-mpfr--volsfx := :
+    
+    ifeq (,)
+        crosstools-mpfr--nix_dir_layout := no
+    endif
+endif
+
+crosstools-mpfr--volfunc = $(crosstools-mpfr--volpfx)$(notdir $1)$(crosstools-mpfr--volsfx)
+
+crosstools-mpfr--install_opts := prefix=$(crosstools-mpfr--prefix) \
+        exec_prefix=$(crosstools-mpfr--prefix) 
+
+# Check if chosen compiler is valid
+ifeq ($(findstring host,host target kernel),)
+  $(error unknown compiler host)
+endif
+
+# Set legacy 'host' variable based on chosen compiler
+ifeq (host,host)
+    host := yes
+    ifeq ($(CURDIR),)
+        crosstools-mpfr--pkgbasedir := $(HOSTGENDIR)
+    else
+        crosstools-mpfr--pkgbasedir := $(HOSTGENDIR)/$(CURDIR)
+    endif
+else
+    host := no
+    ifeq ($(CURDIR),)
+        crosstools-mpfr--pkgbasedir := $(GENDIR)
+    else
+        crosstools-mpfr--pkgbasedir := $(GENDIR)/$(CURDIR)
+    endif
+endif
+ifneq (,)
+    ifeq ($(CURDIR),)
+        crosstools-mpfr--pkgbasedir := 
+    else
+        crosstools-mpfr--pkgbasedir := /$(CURDIR)
+    endif
+endif
+
+ifeq (mpfr,)
+    crosstools-mpfr--pkgdir := $(crosstools-mpfr--pkgbasedir)
+else
+    crosstools-mpfr--pkgdir := $(crosstools-mpfr--pkgbasedir)/mpfr
+endif
+
+crosstools-mpfr--configflag := $(crosstools-mpfr--pkgdir)/.configured
+crosstools-mpfr--installflag := $(crosstools-mpfr--pkgdir)/.installed
+
+ifeq ($(filter yes, $(crosstools-mpfr--nix_dir_layout) $(host)),yes)
+    crosstools-mpfr--PROGDIR      := $(crosstools-mpfr--aros_prefix)/bin
+    crosstools-mpfr--config_opts  := --prefix=$(crosstools-mpfr--aros_prefix)
+else
+    ifeq (no,yes)
+        crosstools-mpfr--config_opts := --prefix=/PROGDIR  --bindir=/PROGDIR --sbindir=/PROGDIR \
+        --libdir=/LIB --includedir=/INCLUDE --oldincludedir=/INCLUDE   
+    else
+        crosstools-mpfr--config_opts  := --prefix=$(crosstools-mpfr--aros_prefix)
+    endif
+
+    crosstools-mpfr--PROGDIR := $(crosstools-mpfr--aros_prefix)
+    
+    crosstools-mpfr--install_opts := bindir=$(crosstools-mpfr--prefix) \
+        sbindir=$(crosstools-mpfr--prefix) \
+        libdir=$(AROS_LIB) includedir=$(AROS_INCLUDES) \
+        oldincludedir=$(AROS_INCLUDES) 
+endif
+
+ifneq ($(DEBUG),yes)
+    crosstools-mpfr--s_flag = -s
+endif
+
+ifeq (yes,yes)
+    crosstools-mpfr--HOST_CFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CFLAGS)
+    crosstools-mpfr--KERNEL_CFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(crosstools-mpfr--s_flag)
+ifeq (no,yes)
+    crosstools-mpfr--TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(crosstools-mpfr--s_flag)
+else
+    crosstools-mpfr--TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(crosstools-mpfr--nix) $(crosstools-mpfr--s_flag)
+endif
+endif
+ifeq (yes,yes)
+    crosstools-mpfr--HOST_CXXFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CXXFLAGS)
+    crosstools-mpfr--KERNEL_CXXFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CXXFLAGS) $(crosstools-mpfr--s_flag)
+ifeq (no,yes)
+    crosstools-mpfr--TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(crosstools-mpfr--s_flag)
+else
+    crosstools-mpfr--TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(crosstools-mpfr--nix) $(crosstools-mpfr--s_flag)
+endif
+endif
+
+# Set up build environment, and options for configure script
+ifeq (host,host)
+    # NB: We need to pass in our crosstoolsdir, but cannot set CFLAGS since it
+    # confused configure scripts. We also cannot pass it via _FOR_BUILD
+    # since that won't get picked up during configure.
+    # We also cannot pass in the compiler including std flags so we need to use
+    # the "plain" host compiler.
+    crosstools-mpfr--cfg-env :=  \
+        CPP="$(HOST_CPP)" \
+        CXXCPP="$(HOST_CPP)" \
+        CC="$(strip $(HOST_DEF_CC) $(crosstools-mpfr--HOST_CFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        CXX="$(strip $(HOST_CXX) $(crosstools-mpfr--HOST_CXXFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        LDFLAGS="-L$(CROSSTOOLSDIR)/lib $(USER_LDFLAGS)"
+ifeq (no,yes)
+    crosstools-mpfr--cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    crosstools-mpfr--cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(crosstools-mpfr--KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(crosstools-mpfr--KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(TARGET_AS)" \
+        OBJCOPY="$(OBJCOPY)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)" \
+        TARGET_OBJCOPY="$(TARGET_OBJCOPY)"
+endif
+ifeq (host,target)
+    crosstools-mpfr--cfg-env :=  \
+        PKG_CONFIG_LIBDIR="$(AROS_DEVELOPER)/lib/pkgconfig" \
+        PKG_CONFIG_SYSROOT_DIR="$(AROSDIR)"
+    crosstools-mpfr--cfg-env += CPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CXXCPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CC="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CXX="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        LD="$(strip $(TARGET_LD))"
+    crosstools-mpfr--cfg-env += CFLAGS="$(crosstools-mpfr--TARGET_CFLAGS) $(OPTIMIZATION_CFLAGS)" \
+        CXXFLAGS="$(crosstools-mpfr--TARGET_CXXFLAGS) $(OPTIMIZATION_CFLAGS)"
+ifeq (no,yes)
+    crosstools-mpfr--cfg-env += CPPFLAGS="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-mpfr--cfg-env += LDFLAGS="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-mpfr--nix) $(crosstools-mpfr--s_flag))"
+ifeq (no,yes)
+    crosstools-mpfr--cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    crosstools-mpfr--cfg-env += CC_FOR_BUILD="$(strip $(HOST_DEF_CC))" \
+        CFLAGS_FOR_BUILD="$(strip $(crosstools-mpfr--HOST_CFLAGS))" \
+        CXX_FOR_BUILD="$(strip $(HOST_CXX))" \
+        CXXFLAGS_FOR_BUILD="$(strip $(crosstools-mpfr--HOST_CXXFLAGS))" \
+        LD_FOR_BUILD="$(strip $(HOST_LD))" \
+        LDFLAGS_FOR_BUILD="$(strip $(HOST_LDFLAGS) $(crosstools-mpfr--s_flag))"
+ifeq (no,yes)
+    crosstools-mpfr--cfg-env += CPPFLAGS_FOR_HOST="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-mpfr--cfg-env += CC_FOR_HOST="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS) $(crosstools-mpfr--nix) $(crosstools-mpfr--s_flag))" \
+        CXX_FOR_HOST="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS) $(crosstools-mpfr--nix) $(crosstools-mpfr--s_flag))" \
+        LD_FOR_HOST="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_HOST="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-mpfr--nix) $(crosstools-mpfr--s_flag))"
+ifeq (no,yes)
+    crosstools-mpfr--cfg-env += CPPFLAGS_FOR_TARGET="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-mpfr--cfg-env += CC_FOR_TARGET="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_TARGET="$(strip $(crosstools-mpfr--TARGET_CFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS))" \
+        CXX_FOR_TARGET="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_TARGET="$(strip $(crosstools-mpfr--TARGET_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS))" \
+        LD_FOR_TARGET="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_TARGET="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-mpfr--nix) $(crosstools-mpfr--s_flag))" \
+        AR="$(strip $(AR_PLAIN))" \
+        AS="$(strip $(TARGET_AS))" \
+        OBJCOPY="$(strip $(OBJCOPY))" \
+        RANLIB="$(strip $(RANLIB))" \
+        STRIP="$(strip $(STRIP_PLAIN))"
+ifeq (no,yes)
+    crosstools-mpfr--cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    crosstools-mpfr--cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(crosstools-mpfr--KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(crosstools-mpfr--KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(strip $(TARGET_AS))" \
+        TARGET_RANLIB="$(strip $(RANLIB))" \
+        TARGET_STRIP="$(strip $(STRIP_PLAIN))" \
+        TARGET_NM="$(strip $(NM_PLAIN))"
+ifeq (yes,yes)
+    crosstools-mpfr--config_opts += --target=$(AROS_TARGET_CPU)-aros
+    crosstools-mpfr--config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    crosstools-mpfr--config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    crosstools-mpfr--config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    crosstools-mpfr--config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    crosstools-mpfr--config_opts += --without-x
+endif
+endif
+endif
+ifeq (host,kernel)
+    crosstools-mpfr--cfg-env :=  \
+        CPP="$(KERNEL_CPP)" \
+        CXXCPP="$(KERNEL_CPP)"
+ifeq (no,yes)
+    crosstools-mpfr--cfg-env += CPPFLAGS="$(strip $(KERNEL_CPPFLAGS) )"
+endif
+    crosstools-mpfr--cfg-env += CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        CFLAGS="$(strip $(crosstools-mpfr--KERNEL_CFLAGS) $(OPTIMIZATION_CFLAGS))" \
+        CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        CXXFLAGS="$(strip $(crosstools-mpfr--KERNEL_CXXFLAGS) $(OPTIMIZATION_CFLAGS))" \
+        AS="$(KERNEL_AS)"
+ifeq (no,yes)
+    crosstools-mpfr--cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    crosstools-mpfr--cfg-env += CC_FOR_BUILD="$(HOST_DEF_CC)" \
+        CFLAGS_FOR_BUILD="$(crosstools-mpfr--HOST_CFLAGS)" \
+        CXX_FOR_BUILD="$(HOST_CXX)" \
+        CXXFLAGS_FOR_BUILD="$(crosstools-mpfr--HOST_CXXFLAGS)" \
+        RANLIB="$(RANLIB)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)"
+ifeq (yes,yes)
+    crosstools-mpfr--config_opts += --target=$(AROS_TARGET_CPU)-aros
+    crosstools-mpfr--config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    crosstools-mpfr--config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    crosstools-mpfr--config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    crosstools-mpfr--config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    crosstools-mpfr--config_opts += --without-x
+endif
+
+endif
+endif
+
+ifeq (no,yes)
+    BUILD_ENV := $(crosstools-mpfr--cfg-env)
+endif
+
+crosstools-mpfr--touchfileflag ?= $(crosstools-mpfr--pkgdir)/.files-touched
+
+ifneq ("$(wildcard $(crosstools-mpfr-portdir)/$(crosstools-mpfr--builddir)/Makefile)","")
+# in an ideal world, we would depend on the files in the source directory,
+# so we could copy them when they change. unfortunately filenames with
+# spaces cause problems with this
+$(crosstools-mpfr--pkgdir)/.local-copy:
+	$(Q)$(FOR) dir in $(crosstools-mpfr--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Copying Local-Build Sources to  \`$(patsubst $(TOP)/%,%,$(abspath $(crosstools-mpfr--pkgdir)))'"
+	$(Q)$(CP) -Rf "$(crosstools-mpfr-portdir)/$(crosstools-mpfr--builddir)/." $(crosstools-mpfr--pkgdir)/ && $(TOUCH) $@
+
+$(crosstools-mpfr--touchfileflag) : $(crosstools-mpfr--pkgdir)/.local-copy
+
+    crosstools-mpfr--cfg-srcdir=$(crosstools-mpfr--pkgdir)
+else
+    crosstools-mpfr--cfg-srcdir=$(crosstools-mpfr-portdir)/$(crosstools-mpfr--builddir)
+endif
+crosstools-mpfr--make-env := -C $(crosstools-mpfr--pkgdir)
+
+.PHONY : crosstools-mpfr- crosstools-mpfr--clean crosstools-mpfr--build_and_install-quick
+
+# When building for the host, we don't need to build the
+# linklibs - this is especially true when building the
+# crosstool toolchain on 'foreign' architectures (such as
+# building PPC on x86)
+
+#MM- crosstools-mpfr--host : setup includes crosstools-mpfr--quick
+#MM- crosstools-mpfr--target : setup includes core-linklibs crosstools-mpfr--quick
+#MM- crosstools-mpfr-: crosstools-mpfr--host
+
+# Using -j1 in install_command may result in a warning but finally
+# it does its job. make install for gcc does not work reliably for -jN
+# where N > 1.
+ifneq (install,)
+    crosstools-mpfr--install_command = \
+        $(ECHO) "Installing from build in         $(subst $(TOP)/,,$(crosstools-mpfr--pkgdir))" && \
+        $(MAKE) PROGDIR="$(crosstools-mpfr--PROGDIR)/" $(crosstools-mpfr--install_opts) \
+        $(crosstools-mpfr--make-env) install -j1
+
+    crosstools-mpfr--uninstall_command = \
+    $(RM) $(crosstools-mpfr--installflag) && \
+    $(MAKE) PROGDIR="$(crosstools-mpfr--PROGDIR)/" \
+    $(crosstools-mpfr--install_opts) $(crosstools-mpfr--make-env) uninstall
+else
+    crosstools-mpfr--install_command   := true
+    crosstools-mpfr--uninstall_command := true
+endif
+
+#MM- crosstools-mpfr--quick :  crosstools-mpfr--configure  crosstools-mpfr--build_and_install-quick crosstools-mpfr--make-package
+
+#MM
+crosstools-mpfr--build_and_install-quick :  $(crosstools-mpfr--installflag)
+
+#
+# N.B.: the make test for the targets being up to date generates a benign Error 1.
+#
+$(crosstools-mpfr--installflag) : $(crosstools-mpfr--configflag)
+	$(Q)$(IF) ! $(BUILD_ENV) $(MAKE) PROGDIR="$(call crosstools-mpfr--volfunc, PROGDIR)" -q $(crosstools-mpfr--make-env); then \
+	    $(RM) $(crosstools-mpfr--installflag) && \
+	    $(ECHO) "Performing build in         $(subst $(TOP)/,,$(crosstools-mpfr--pkgdir))" && \
+	    $(BUILD_ENV) $(MAKE) PROGDIR="$(call crosstools-mpfr--volfunc, PROGDIR)" $(crosstools-mpfr--make-env) && \
+	    $(crosstools-mpfr--install_command) && \
+	    $(TOUCH) $@ -r $^; \
+	fi
+
+ifneq ($(crosstools-mpfr--touchfileflag),)
+$(crosstools-mpfr--touchfileflag):
+	$(Q)$(FOR) dir in $(crosstools-mpfr--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)find $(crosstools-mpfr-portdir)/$(crosstools-mpfr--builddir) -exec $(TOUCH) -c -r $(crosstools-mpfr--cfg-srcdir)/configure '{}' \; && \
+	$(TOUCH) $@
+endif
+
+#MM
+crosstools-mpfr--uninstall :
+	$(crosstools-mpfr--uninstall_command)
+
+#MM
+crosstools-mpfr--configure : $(crosstools-mpfr--configflag)
+
+$(crosstools-mpfr--configflag) : TMP_SRCDIR := $(shell echo $(crosstools-mpfr--cfg-srcdir) | sed 's/^\(.\):\//\/\1\//')
+$(crosstools-mpfr--configflag) : $(crosstools-mpfr--touchfileflag) $(TOP)/$(CURDIR)/mmakefile
+	$(Q)$(RM) $@
+	$(Q)$(FOR) dir in $(crosstools-mpfr--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Configuring build in         $(subst $(TOP)/,,$(crosstools-mpfr--pkgdir))"
+	$(Q)cd $(crosstools-mpfr--pkgdir) && \
+	find . -name config.cache -exec $(RM) '{}' \; && \
+	$(crosstools-mpfr--cfg-env) $(TMP_SRCDIR)/configure $(crosstools-mpfr--config_opts) --bindir=$(CROSSTOOLSDIR) --libdir=$(CROSSTOOLSDIR)/lib --disable-shared $(HOST_TRIPLE_EXTRA_OPTS) && \
+	$(TOUCH) $@
+
+#MM
+crosstools-mpfr--clean : crosstools-mpfr--uninstall
+	$(Q)$(RM) $(crosstools-mpfr--pkgdir)
+
+.PHONY : crosstools-mpfr--make-package crosstools-mpfr--create-patch
+#MM crosstools-mpfr--make-package : crosstools-mpfr--quick
+
+#MM
+crosstools-mpfr--make-package : $(crosstools-mpfr--package)
+ 
+#There seems to be a bug, either with my clock or with make, 'cause it may happen
+#that $^ and $@ have exactly the same mtime, and in that case make tries
+#to rebuild $@ again, which would fail because the directory where
+#the package got installed would not exist anymore. 
+#We work this around by using an if statement to manually check the mtimes.
+$(crosstools-mpfr--package-basename).tar.bz2 :
+	$(Q)$(IF) $(TEST) $(crosstools-mpfr-installflag) -nt $@ || ! $(TEST) -s $@; then \
+	    $(RM) $@ ; \
+	    $(ECHO) "Building   \`$(crosstools-mpfr--package-basename).tar.bz2'" ; \
+	    $(MKDIR) -p "$(DISTDIR)/Packages" ; \
+	    $(MKDIR) -p "$(crosstools-mpfr-prefix)" ; \
+	    cd $(crosstools-mpfr--package-dir) ; \
+	    tar -cvf $(crosstools-mpfr--package-basename).tar * ; \
+	    bzip2 -9 -f $(crosstools-mpfr--package-basename).tar ; \
+	fi
+
+## MPC ###
+
+#MM
+tools-crosstools-mpc :
+	@$(IF) ! $(TEST) -d $(CROSSTOOLSDIR) \
+	    || ! $(TEST) -f $(mpc-installflag) ; then \
+	       $(RM) $(HOSTGENDIR)/$(CURDIR)/mpc/.files-touched \
+	    && $(MAKE) -f ./mmakefile crosstools-mpc--fetch \
+	    && $(MAKE) -f ./mmakefile crosstools-mpc--build_and_install-quick \
+	    && $(TOUCH) $(mpc-installflag) ; \
+	fi
+
+
+#MM- crosstools-mpc-quick : crosstools-mpc--quick
+#MM- crosstools-mpc--quick : crosstools-mpc--fetch
+#MM- crosstools-mpc-fetch : crosstools-mpc--fetch
+#MM- crosstools-mpc-create-patch : crosstools-mpc--create-patch
+#MM- crosstools-mpc-create-patch-quick : crosstools-mpc--create-patch
+ 
+crosstools-mpc-archbase                        := mpc-$(MPC_VERSION)
+
+ifeq (host,host)
+    crosstools-mpc-portdir                     := $(HOSTDIR)/Ports/host/mpc
+else
+    crosstools-mpc-portdir                     := $(PORTSDIR)/mpc
+endif
+
+ifeq ($(CROSSTOOLSDIR),)
+    crosstools-mpc-prefix                      := $(CONTRIB_DIR)/mpc
+else
+    crosstools-mpc-prefix                      := $(CROSSTOOLSDIR)
+endif
+
+ifneq (,)
+    crosstools-mpc--archbase      := mpc--$(MPC_VERSION)
+else
+    crosstools-mpc--archbase      := mpc-$(MPC_VERSION)
+endif
+
+ifneq (,)
+    crosstools-mpc--srcdir        := 
+else
+    crosstools-mpc--srcdir        := $(crosstools-mpc-archbase)
+endif
+
+ifneq (,)
+    crosstools-mpc--builddir      := $(crosstools-mpc--srcdir)/
+else
+    crosstools-mpc--builddir      := $(crosstools-mpc--srcdir)
+endif
+
+ifeq (no,yes)
+    crosstools-mpc--patches_specs := $(crosstools-mpc--archbase)-aros.diff:$(crosstools-mpc--srcdir):-f,-p1
+else
+    crosstools-mpc--patches_specs := ::
+endif
+
+
+.PHONY: crosstools-mpc--fetch
+
+ifneq ($(TOOLDIR),)
+    crosstools-mpc--fetch-tooldir := "$(TOOLDIR)/"
+else
+    crosstools-mpc--fetch-tooldir := "$(TOOLDIR)/"
+endif
+
+ifneq ($(PORTSSOURCEDIR),)
+    crosstools-mpc--fetch-location := $(PORTSSOURCEDIR)
+else
+    crosstools-mpc--fetch-location := $(crosstools-mpc-portdir)
+endif
+
+crosstools-mpc--fetch-fetchedflag := $(crosstools-mpc--fetch-location)/.$(crosstools-mpc--archbase)-fetched
+
+#MM
+crosstools-mpc--fetch :
+	$(Q)$(ECHO) "Fetching   $(crosstools-mpc--archbase) ..."
+	$(Q)TOOLDIR="$(crosstools-mpc--fetch-tooldir)" $(FETCH) -ao ". $(MPC_REPOSITORY)" -a $(crosstools-mpc--archbase) -s "tar.gz" -l $(crosstools-mpc--fetch-location) \
+	-d $(crosstools-mpc-portdir) -po "$(SRCDIR)/$(CURDIR)" -p "$(crosstools-mpc--patches_specs)"
+	$(Q)$(IF) ! $(TEST) -f $(crosstools-mpc--fetch-fetchedflag) ; then \
+		 $(TOUCH) $(crosstools-mpc--fetch-fetchedflag) ; \
+	fi
+
+#	$(Q)$(IF) ! $(TEST) -f $(crosstools-mpc--fetch-fetchedflag) ; then \
+#		$(ECHO) "Fetching   $(crosstools-mpc--archbase) ..." \
+#		&& $(FETCH) -ao ". $(MPC_REPOSITORY)" -a $(crosstools-mpc--archbase) -s "tar.gz" -l $(crosstools-mpc--fetch-location) \
+#		-d $(crosstools-mpc-portdir) -po "$(SRCDIR)/$(CURDIR)" -p "$(crosstools-mpc--patches_specs)" \
+#		&& $(TOUCH) $(crosstools-mpc--fetch-fetchedflag) ; \
+#	fi
+
+
+.PHONY: crosstools-mpc--create-patch
+
+ifneq (,)
+    crosstools-mpc--create-patch-exclude := -X ./exclude.patterns
+endif
+
+ifneq ($(crosstools-mpc--srcdir),)
+    crosstools-mpc--create-patch-srcdir   := $(crosstools-mpc--srcdir)
+else
+    crosstools-mpc--create-patch-srcdir   := $(crosstools-mpc--archbase)
+endif
+
+#MM- crosstools-mpc--create-patch :  crosstools-mpc--create-patch-diff 
+#MM- crosstools-mpc--create-patch-quick :  crosstools-mpc--create-patch-diff 
+
+#MM
+crosstools-mpc--create-patch-diff:
+	$(Q)$(FETCH) -a $(crosstools-mpc--archbase) -s "tar.gz" -l $(PORTSSOURCEDIR) -d $(crosstools-mpc-portdir)/tmp ; \
+	$(MV) $(crosstools-mpc-portdir)/$(crosstools-mpc--create-patch-srcdir) $(crosstools-mpc-portdir)/tmp/$(crosstools-mpc--create-patch-srcdir).aros ; \
+	cd $(crosstools-mpc-portdir)/tmp ; \
+	$(FOR) f in  ; do \
+	    $(ECHO) $$f >> ./exclude.patterns ; \
+	done ; \
+	$(ECHO) "Creating   \`$(crosstools-mpc--archbase)-aros-new.diff'" ; \
+	diff -ruN $(crosstools-mpc--create-patch-exclude) \
+	    $(crosstools-mpc--create-patch-srcdir) \
+	    $(crosstools-mpc--create-patch-srcdir).aros \
+	    >$(SRCDIR)/$(CURDIR)/$(crosstools-mpc--archbase)-aros-new.diff ; \
+	$(MV) $(crosstools-mpc-portdir)/tmp/$(crosstools-mpc--create-patch-srcdir).aros $(crosstools-mpc-portdir)/$(crosstools-mpc--create-patch-srcdir) ; \
+	$(RM) $(crosstools-mpc-portdir)/tmp
+
+#MM crosstools-mpc : crosstools-mpc-
+#MM
+crosstools-mpc:
+	$(NOP)
+
+crosstools-mpc--package-dir := $(crosstools-mpc-portdir)/$(crosstools-mpc--archbase)
+
+crosstools-mpc--package-basename := \
+    $(DISTDIR)/Packages/$(crosstools-mpc--archbase)-aros.$(AROS_TARGET_CPU)
+
+ifneq (no,no)
+    crosstools-mpc--package := $(crosstools-mpc--package-basename).tar.bz2
+endif
+
+
+ifneq ($(crosstools-mpc-prefix),)
+    crosstools-mpc--prefix := $(crosstools-mpc-prefix)
+else
+    crosstools-mpc--prefix := $(AROS_CONTRIB)
+endif
+
+ifneq (,)
+    crosstools-mpc--aros_prefix := 
+else
+    crosstools-mpc--aros_prefix := $(crosstools-mpc--prefix)
+endif
+
+BD_NIXFLAG ?= -nix
+
+ifeq (no,yes)
+    crosstools-mpc--nix    := $(BD_NIXFLAG)
+    crosstools-mpc--volpfx := /
+    crosstools-mpc--volsfx := /
+    
+    ifeq (,)
+        crosstools-mpc--nix_dir_layout := yes
+    endif
+else
+    crosstools-mpc--volsfx := :
+    
+    ifeq (,)
+        crosstools-mpc--nix_dir_layout := no
+    endif
+endif
+
+crosstools-mpc--volfunc = $(crosstools-mpc--volpfx)$(notdir $1)$(crosstools-mpc--volsfx)
+
+crosstools-mpc--install_opts := prefix=$(crosstools-mpc--prefix) \
+        exec_prefix=$(crosstools-mpc--prefix) 
+
+# Check if chosen compiler is valid
+ifeq ($(findstring host,host target kernel),)
+  $(error unknown compiler host)
+endif
+
+# Set legacy 'host' variable based on chosen compiler
+ifeq (host,host)
+    host := yes
+    ifeq ($(CURDIR),)
+        crosstools-mpc--pkgbasedir := $(HOSTGENDIR)
+    else
+        crosstools-mpc--pkgbasedir := $(HOSTGENDIR)/$(CURDIR)
+    endif
+else
+    host := no
+    ifeq ($(CURDIR),)
+        crosstools-mpc--pkgbasedir := $(GENDIR)
+    else
+        crosstools-mpc--pkgbasedir := $(GENDIR)/$(CURDIR)
+    endif
+endif
+ifneq (,)
+    ifeq ($(CURDIR),)
+        crosstools-mpc--pkgbasedir := 
+    else
+        crosstools-mpc--pkgbasedir := /$(CURDIR)
+    endif
+endif
+
+ifeq (mpc,)
+    crosstools-mpc--pkgdir := $(crosstools-mpc--pkgbasedir)
+else
+    crosstools-mpc--pkgdir := $(crosstools-mpc--pkgbasedir)/mpc
+endif
+
+crosstools-mpc--configflag := $(crosstools-mpc--pkgdir)/.configured
+crosstools-mpc--installflag := $(crosstools-mpc--pkgdir)/.installed
+
+ifeq ($(filter yes, $(crosstools-mpc--nix_dir_layout) $(host)),yes)
+    crosstools-mpc--PROGDIR      := $(crosstools-mpc--aros_prefix)/bin
+    crosstools-mpc--config_opts  := --prefix=$(crosstools-mpc--aros_prefix)
+else
+    ifeq (no,yes)
+        crosstools-mpc--config_opts := --prefix=/PROGDIR  --bindir=/PROGDIR --sbindir=/PROGDIR \
+        --libdir=/LIB --includedir=/INCLUDE --oldincludedir=/INCLUDE   
+    else
+        crosstools-mpc--config_opts  := --prefix=$(crosstools-mpc--aros_prefix)
+    endif
+
+    crosstools-mpc--PROGDIR := $(crosstools-mpc--aros_prefix)
+    
+    crosstools-mpc--install_opts := bindir=$(crosstools-mpc--prefix) \
+        sbindir=$(crosstools-mpc--prefix) \
+        libdir=$(AROS_LIB) includedir=$(AROS_INCLUDES) \
+        oldincludedir=$(AROS_INCLUDES) 
+endif
+
+ifneq ($(DEBUG),yes)
+    crosstools-mpc--s_flag = -s
+endif
+
+ifeq (yes,yes)
+    crosstools-mpc--HOST_CFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CFLAGS)
+    crosstools-mpc--KERNEL_CFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(crosstools-mpc--s_flag)
+ifeq (no,yes)
+    crosstools-mpc--TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(crosstools-mpc--s_flag)
+else
+    crosstools-mpc--TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(crosstools-mpc--nix) $(crosstools-mpc--s_flag)
+endif
+endif
+ifeq (yes,yes)
+    crosstools-mpc--HOST_CXXFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CXXFLAGS)
+    crosstools-mpc--KERNEL_CXXFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CXXFLAGS) $(crosstools-mpc--s_flag)
+ifeq (no,yes)
+    crosstools-mpc--TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(crosstools-mpc--s_flag)
+else
+    crosstools-mpc--TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(crosstools-mpc--nix) $(crosstools-mpc--s_flag)
+endif
+endif
+
+# Set up build environment, and options for configure script
+ifeq (host,host)
+    # NB: We need to pass in our crosstoolsdir, but cannot set CFLAGS since it
+    # confused configure scripts. We also cannot pass it via _FOR_BUILD
+    # since that won't get picked up during configure.
+    # We also cannot pass in the compiler including std flags so we need to use
+    # the "plain" host compiler.
+    crosstools-mpc--cfg-env :=  \
+        CPP="$(HOST_CPP)" \
+        CXXCPP="$(HOST_CPP)" \
+        CC="$(strip $(HOST_DEF_CC) $(crosstools-mpc--HOST_CFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        CXX="$(strip $(HOST_CXX) $(crosstools-mpc--HOST_CXXFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        LDFLAGS="-L$(CROSSTOOLSDIR)/lib $(USER_LDFLAGS)"
+ifeq (no,yes)
+    crosstools-mpc--cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    crosstools-mpc--cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(crosstools-mpc--KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(crosstools-mpc--KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(TARGET_AS)" \
+        OBJCOPY="$(OBJCOPY)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)" \
+        TARGET_OBJCOPY="$(TARGET_OBJCOPY)"
+endif
+ifeq (host,target)
+    crosstools-mpc--cfg-env :=  \
+        PKG_CONFIG_LIBDIR="$(AROS_DEVELOPER)/lib/pkgconfig" \
+        PKG_CONFIG_SYSROOT_DIR="$(AROSDIR)"
+    crosstools-mpc--cfg-env += CPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CXXCPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CC="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CXX="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        LD="$(strip $(TARGET_LD))"
+    crosstools-mpc--cfg-env += CFLAGS="$(crosstools-mpc--TARGET_CFLAGS) $(OPTIMIZATION_CFLAGS)" \
+        CXXFLAGS="$(crosstools-mpc--TARGET_CXXFLAGS) $(OPTIMIZATION_CFLAGS)"
+ifeq (no,yes)
+    crosstools-mpc--cfg-env += CPPFLAGS="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-mpc--cfg-env += LDFLAGS="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-mpc--nix) $(crosstools-mpc--s_flag))"
+ifeq (no,yes)
+    crosstools-mpc--cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    crosstools-mpc--cfg-env += CC_FOR_BUILD="$(strip $(HOST_DEF_CC))" \
+        CFLAGS_FOR_BUILD="$(strip $(crosstools-mpc--HOST_CFLAGS))" \
+        CXX_FOR_BUILD="$(strip $(HOST_CXX))" \
+        CXXFLAGS_FOR_BUILD="$(strip $(crosstools-mpc--HOST_CXXFLAGS))" \
+        LD_FOR_BUILD="$(strip $(HOST_LD))" \
+        LDFLAGS_FOR_BUILD="$(strip $(HOST_LDFLAGS) $(crosstools-mpc--s_flag))"
+ifeq (no,yes)
+    crosstools-mpc--cfg-env += CPPFLAGS_FOR_HOST="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-mpc--cfg-env += CC_FOR_HOST="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS) $(crosstools-mpc--nix) $(crosstools-mpc--s_flag))" \
+        CXX_FOR_HOST="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS) $(crosstools-mpc--nix) $(crosstools-mpc--s_flag))" \
+        LD_FOR_HOST="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_HOST="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-mpc--nix) $(crosstools-mpc--s_flag))"
+ifeq (no,yes)
+    crosstools-mpc--cfg-env += CPPFLAGS_FOR_TARGET="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-mpc--cfg-env += CC_FOR_TARGET="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_TARGET="$(strip $(crosstools-mpc--TARGET_CFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS))" \
+        CXX_FOR_TARGET="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_TARGET="$(strip $(crosstools-mpc--TARGET_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS))" \
+        LD_FOR_TARGET="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_TARGET="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-mpc--nix) $(crosstools-mpc--s_flag))" \
+        AR="$(strip $(AR_PLAIN))" \
+        AS="$(strip $(TARGET_AS))" \
+        OBJCOPY="$(strip $(OBJCOPY))" \
+        RANLIB="$(strip $(RANLIB))" \
+        STRIP="$(strip $(STRIP_PLAIN))"
+ifeq (no,yes)
+    crosstools-mpc--cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    crosstools-mpc--cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(crosstools-mpc--KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(crosstools-mpc--KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(strip $(TARGET_AS))" \
+        TARGET_RANLIB="$(strip $(RANLIB))" \
+        TARGET_STRIP="$(strip $(STRIP_PLAIN))" \
+        TARGET_NM="$(strip $(NM_PLAIN))"
+ifeq (yes,yes)
+    crosstools-mpc--config_opts += --target=$(AROS_TARGET_CPU)-aros
+    crosstools-mpc--config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    crosstools-mpc--config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    crosstools-mpc--config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    crosstools-mpc--config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    crosstools-mpc--config_opts += --without-x
+endif
+endif
+endif
+ifeq (host,kernel)
+    crosstools-mpc--cfg-env :=  \
+        CPP="$(KERNEL_CPP)" \
+        CXXCPP="$(KERNEL_CPP)"
+ifeq (no,yes)
+    crosstools-mpc--cfg-env += CPPFLAGS="$(strip $(KERNEL_CPPFLAGS) )"
+endif
+    crosstools-mpc--cfg-env += CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        CFLAGS="$(strip $(crosstools-mpc--KERNEL_CFLAGS) $(OPTIMIZATION_CFLAGS))" \
+        CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        CXXFLAGS="$(strip $(crosstools-mpc--KERNEL_CXXFLAGS) $(OPTIMIZATION_CFLAGS))" \
+        AS="$(KERNEL_AS)"
+ifeq (no,yes)
+    crosstools-mpc--cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    crosstools-mpc--cfg-env += CC_FOR_BUILD="$(HOST_DEF_CC)" \
+        CFLAGS_FOR_BUILD="$(crosstools-mpc--HOST_CFLAGS)" \
+        CXX_FOR_BUILD="$(HOST_CXX)" \
+        CXXFLAGS_FOR_BUILD="$(crosstools-mpc--HOST_CXXFLAGS)" \
+        RANLIB="$(RANLIB)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)"
+ifeq (yes,yes)
+    crosstools-mpc--config_opts += --target=$(AROS_TARGET_CPU)-aros
+    crosstools-mpc--config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    crosstools-mpc--config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    crosstools-mpc--config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    crosstools-mpc--config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    crosstools-mpc--config_opts += --without-x
+endif
+
+endif
+endif
+
+ifeq (no,yes)
+    BUILD_ENV := $(crosstools-mpc--cfg-env)
+endif
+
+crosstools-mpc--touchfileflag ?= $(crosstools-mpc--pkgdir)/.files-touched
+
+ifneq ("$(wildcard $(crosstools-mpc-portdir)/$(crosstools-mpc--builddir)/Makefile)","")
+# in an ideal world, we would depend on the files in the source directory,
+# so we could copy them when they change. unfortunately filenames with
+# spaces cause problems with this
+$(crosstools-mpc--pkgdir)/.local-copy:
+	$(Q)$(FOR) dir in $(crosstools-mpc--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Copying Local-Build Sources to  \`$(patsubst $(TOP)/%,%,$(abspath $(crosstools-mpc--pkgdir)))'"
+	$(Q)$(CP) -Rf "$(crosstools-mpc-portdir)/$(crosstools-mpc--builddir)/." $(crosstools-mpc--pkgdir)/ && $(TOUCH) $@
+
+$(crosstools-mpc--touchfileflag) : $(crosstools-mpc--pkgdir)/.local-copy
+
+    crosstools-mpc--cfg-srcdir=$(crosstools-mpc--pkgdir)
+else
+    crosstools-mpc--cfg-srcdir=$(crosstools-mpc-portdir)/$(crosstools-mpc--builddir)
+endif
+crosstools-mpc--make-env := -C $(crosstools-mpc--pkgdir)
+
+.PHONY : crosstools-mpc- crosstools-mpc--clean crosstools-mpc--build_and_install-quick
+
+# When building for the host, we don't need to build the
+# linklibs - this is especially true when building the
+# crosstool toolchain on 'foreign' architectures (such as
+# building PPC on x86)
+
+#MM- crosstools-mpc--host : setup includes crosstools-mpc--quick
+#MM- crosstools-mpc--target : setup includes core-linklibs crosstools-mpc--quick
+#MM- crosstools-mpc-: crosstools-mpc--host
+
+# Using -j1 in install_command may result in a warning but finally
+# it does its job. make install for gcc does not work reliably for -jN
+# where N > 1.
+ifneq (install,)
+    crosstools-mpc--install_command = \
+        $(ECHO) "Installing from build in         $(subst $(TOP)/,,$(crosstools-mpc--pkgdir))" && \
+        $(MAKE) PROGDIR="$(crosstools-mpc--PROGDIR)/" $(crosstools-mpc--install_opts) \
+        $(crosstools-mpc--make-env) install -j1
+
+    crosstools-mpc--uninstall_command = \
+    $(RM) $(crosstools-mpc--installflag) && \
+    $(MAKE) PROGDIR="$(crosstools-mpc--PROGDIR)/" \
+    $(crosstools-mpc--install_opts) $(crosstools-mpc--make-env) uninstall
+else
+    crosstools-mpc--install_command   := true
+    crosstools-mpc--uninstall_command := true
+endif
+
+#MM- crosstools-mpc--quick :  crosstools-mpc--configure  crosstools-mpc--build_and_install-quick crosstools-mpc--make-package
+
+#MM
+crosstools-mpc--build_and_install-quick :  $(crosstools-mpc--installflag)
+
+#
+# N.B.: the make test for the targets being up to date generates a benign Error 1.
+#
+$(crosstools-mpc--installflag) : $(crosstools-mpc--configflag)
+	$(Q)$(IF) ! $(BUILD_ENV) $(MAKE) PROGDIR="$(call crosstools-mpc--volfunc, PROGDIR)" -q $(crosstools-mpc--make-env); then \
+	    $(RM) $(crosstools-mpc--installflag) && \
+	    $(ECHO) "Performing build in         $(subst $(TOP)/,,$(crosstools-mpc--pkgdir))" && \
+	    $(BUILD_ENV) $(MAKE) PROGDIR="$(call crosstools-mpc--volfunc, PROGDIR)" $(crosstools-mpc--make-env) && \
+	    $(crosstools-mpc--install_command) && \
+	    $(TOUCH) $@ -r $^; \
+	fi
+
+ifneq ($(crosstools-mpc--touchfileflag),)
+$(crosstools-mpc--touchfileflag):
+	$(Q)$(FOR) dir in $(crosstools-mpc--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)find $(crosstools-mpc-portdir)/$(crosstools-mpc--builddir) -exec $(TOUCH) -c -r $(crosstools-mpc--cfg-srcdir)/configure '{}' \; && \
+	$(TOUCH) $@
+endif
+
+#MM
+crosstools-mpc--uninstall :
+	$(crosstools-mpc--uninstall_command)
+
+#MM
+crosstools-mpc--configure : $(crosstools-mpc--configflag)
+
+$(crosstools-mpc--configflag) : TMP_SRCDIR := $(shell echo $(crosstools-mpc--cfg-srcdir) | sed 's/^\(.\):\//\/\1\//')
+$(crosstools-mpc--configflag) : $(crosstools-mpc--touchfileflag) $(TOP)/$(CURDIR)/mmakefile
+	$(Q)$(RM) $@
+	$(Q)$(FOR) dir in $(crosstools-mpc--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Configuring build in         $(subst $(TOP)/,,$(crosstools-mpc--pkgdir))"
+	$(Q)cd $(crosstools-mpc--pkgdir) && \
+	find . -name config.cache -exec $(RM) '{}' \; && \
+	$(crosstools-mpc--cfg-env) $(TMP_SRCDIR)/configure $(crosstools-mpc--config_opts) --bindir=$(CROSSTOOLSDIR) --libdir=$(CROSSTOOLSDIR)/lib --disable-shared $(HOST_TRIPLE_EXTRA_OPTS) && \
+	$(TOUCH) $@
+
+#MM
+crosstools-mpc--clean : crosstools-mpc--uninstall
+	$(Q)$(RM) $(crosstools-mpc--pkgdir)
+
+.PHONY : crosstools-mpc--make-package crosstools-mpc--create-patch
+#MM crosstools-mpc--make-package : crosstools-mpc--quick
+
+#MM
+crosstools-mpc--make-package : $(crosstools-mpc--package)
+ 
+#There seems to be a bug, either with my clock or with make, 'cause it may happen
+#that $^ and $@ have exactly the same mtime, and in that case make tries
+#to rebuild $@ again, which would fail because the directory where
+#the package got installed would not exist anymore. 
+#We work this around by using an if statement to manually check the mtimes.
+$(crosstools-mpc--package-basename).tar.bz2 :
+	$(Q)$(IF) $(TEST) $(crosstools-mpc-installflag) -nt $@ || ! $(TEST) -s $@; then \
+	    $(RM) $@ ; \
+	    $(ECHO) "Building   \`$(crosstools-mpc--package-basename).tar.bz2'" ; \
+	    $(MKDIR) -p "$(DISTDIR)/Packages" ; \
+	    $(MKDIR) -p "$(crosstools-mpc-prefix)" ; \
+	    cd $(crosstools-mpc--package-dir) ; \
+	    tar -cvf $(crosstools-mpc--package-basename).tar * ; \
+	    bzip2 -9 -f $(crosstools-mpc--package-basename).tar ; \
+	fi
+
+## Binutils ###
+
+#MM
+tools-crosstools-binutils :
+	@$(IF) ! $(TEST) -d $(CROSSTOOLSDIR) \
+	    || ! $(TEST) -f $(binutils-installflag) ; then \
+	       $(RM) $(HOSTGENDIR)/$(CURDIR)/binutils/.files-touched \
+	    && $(MAKE) -f ./mmakefile crosstools-binutils--fetch \
+	    && $(MAKE) -f ./mmakefile crosstools-binutils--build_and_install-quick \
+	    && $(TOUCH) $(binutils-installflag) ; \
+	fi
+
+
+#MM- crosstools-binutils-quick : crosstools-binutils--quick
+#MM- crosstools-binutils--quick : crosstools-binutils--fetch
+#MM- crosstools-binutils-fetch : crosstools-binutils--fetch
+#MM- crosstools-binutils-create-patch : crosstools-binutils--create-patch
+#MM- crosstools-binutils-create-patch-quick : crosstools-binutils--create-patch
+ 
+crosstools-binutils-archbase                        := binutils-$(BINUTILS_VERSION)
+
+ifeq (host,host)
+    crosstools-binutils-portdir                     := $(HOSTDIR)/Ports/host/binutils
+else
+    crosstools-binutils-portdir                     := $(PORTSDIR)/binutils
+endif
+
+ifeq ($(CROSSTOOLSDIR),)
+    crosstools-binutils-prefix                      := $(CONTRIB_DIR)/binutils
+else
+    crosstools-binutils-prefix                      := $(CROSSTOOLSDIR)
+endif
+
+ifneq (,)
+    crosstools-binutils--archbase      := binutils--$(BINUTILS_VERSION)
+else
+    crosstools-binutils--archbase      := binutils-$(BINUTILS_VERSION)
+endif
+
+ifneq (,)
+    crosstools-binutils--srcdir        := 
+else
+    crosstools-binutils--srcdir        := $(crosstools-binutils-archbase)
+endif
+
+ifneq (,)
+    crosstools-binutils--builddir      := $(crosstools-binutils--srcdir)/
+else
+    crosstools-binutils--builddir      := $(crosstools-binutils--srcdir)
+endif
+
+ifeq (yes,yes)
+    crosstools-binutils--patches_specs := $(crosstools-binutils--archbase)-aros.diff:$(crosstools-binutils--srcdir):-f,-p1
+else
+    crosstools-binutils--patches_specs := ::
+endif
+
+
+.PHONY: crosstools-binutils--fetch
+
+ifneq ($(TOOLDIR),)
+    crosstools-binutils--fetch-tooldir := "$(TOOLDIR)/"
+else
+    crosstools-binutils--fetch-tooldir := "$(TOOLDIR)/"
+endif
+
+ifneq ($(PORTSSOURCEDIR),)
+    crosstools-binutils--fetch-location := $(PORTSSOURCEDIR)
+else
+    crosstools-binutils--fetch-location := $(crosstools-binutils-portdir)
+endif
+
+crosstools-binutils--fetch-fetchedflag := $(crosstools-binutils--fetch-location)/.$(crosstools-binutils--archbase)-fetched
+
+#MM
+crosstools-binutils--fetch :
+	$(Q)$(ECHO) "Fetching   $(crosstools-binutils--archbase) ..."
+	$(Q)TOOLDIR="$(crosstools-binutils--fetch-tooldir)" $(FETCH) -ao ". $(GNU_REPOSITORY)/binutils" -a $(crosstools-binutils--archbase) -s "tar.bz2 tar.gz" -l $(crosstools-binutils--fetch-location) \
+	-d $(crosstools-binutils-portdir) -po "$(SRCDIR)/$(CURDIR)" -p "$(crosstools-binutils--patches_specs)"
+	$(Q)$(IF) ! $(TEST) -f $(crosstools-binutils--fetch-fetchedflag) ; then \
+		 $(TOUCH) $(crosstools-binutils--fetch-fetchedflag) ; \
+	fi
+
+#	$(Q)$(IF) ! $(TEST) -f $(crosstools-binutils--fetch-fetchedflag) ; then \
+#		$(ECHO) "Fetching   $(crosstools-binutils--archbase) ..." \
+#		&& $(FETCH) -ao ". $(GNU_REPOSITORY)/binutils" -a $(crosstools-binutils--archbase) -s "tar.bz2 tar.gz" -l $(crosstools-binutils--fetch-location) \
+#		-d $(crosstools-binutils-portdir) -po "$(SRCDIR)/$(CURDIR)" -p "$(crosstools-binutils--patches_specs)" \
+#		&& $(TOUCH) $(crosstools-binutils--fetch-fetchedflag) ; \
+#	fi
+
+
+.PHONY: crosstools-binutils--create-patch
+
+ifneq (,)
+    crosstools-binutils--create-patch-exclude := -X ./exclude.patterns
+endif
+
+ifneq ($(crosstools-binutils--srcdir),)
+    crosstools-binutils--create-patch-srcdir   := $(crosstools-binutils--srcdir)
+else
+    crosstools-binutils--create-patch-srcdir   := $(crosstools-binutils--archbase)
+endif
+
+#MM- crosstools-binutils--create-patch :  crosstools-binutils--create-patch-diff 
+#MM- crosstools-binutils--create-patch-quick :  crosstools-binutils--create-patch-diff 
+
+#MM
+crosstools-binutils--create-patch-diff:
+	$(Q)$(FETCH) -a $(crosstools-binutils--archbase) -s "tar.bz2 tar.gz" -l $(PORTSSOURCEDIR) -d $(crosstools-binutils-portdir)/tmp ; \
+	$(MV) $(crosstools-binutils-portdir)/$(crosstools-binutils--create-patch-srcdir) $(crosstools-binutils-portdir)/tmp/$(crosstools-binutils--create-patch-srcdir).aros ; \
+	cd $(crosstools-binutils-portdir)/tmp ; \
+	$(FOR) f in  ; do \
+	    $(ECHO) $$f >> ./exclude.patterns ; \
+	done ; \
+	$(ECHO) "Creating   \`$(crosstools-binutils--archbase)-aros-new.diff'" ; \
+	diff -ruN $(crosstools-binutils--create-patch-exclude) \
+	    $(crosstools-binutils--create-patch-srcdir) \
+	    $(crosstools-binutils--create-patch-srcdir).aros \
+	    >$(SRCDIR)/$(CURDIR)/$(crosstools-binutils--archbase)-aros-new.diff ; \
+	$(MV) $(crosstools-binutils-portdir)/tmp/$(crosstools-binutils--create-patch-srcdir).aros $(crosstools-binutils-portdir)/$(crosstools-binutils--create-patch-srcdir) ; \
+	$(RM) $(crosstools-binutils-portdir)/tmp
+
+#MM crosstools-binutils : crosstools-binutils-
+#MM
+crosstools-binutils:
+	$(NOP)
+
+crosstools-binutils--package-dir := $(crosstools-binutils-portdir)/$(crosstools-binutils--archbase)
+
+crosstools-binutils--package-basename := \
+    $(DISTDIR)/Packages/$(crosstools-binutils--archbase)-aros.$(AROS_TARGET_CPU)
+
+ifneq (no,no)
+    crosstools-binutils--package := $(crosstools-binutils--package-basename).tar.bz2
+endif
+
+
+ifneq ($(crosstools-binutils-prefix),)
+    crosstools-binutils--prefix := $(crosstools-binutils-prefix)
+else
+    crosstools-binutils--prefix := $(AROS_CONTRIB)
+endif
+
+ifneq (,)
+    crosstools-binutils--aros_prefix := 
+else
+    crosstools-binutils--aros_prefix := $(crosstools-binutils--prefix)
+endif
+
+BD_NIXFLAG ?= -nix
+
+ifeq (no,yes)
+    crosstools-binutils--nix    := $(BD_NIXFLAG)
+    crosstools-binutils--volpfx := /
+    crosstools-binutils--volsfx := /
+    
+    ifeq (,)
+        crosstools-binutils--nix_dir_layout := yes
+    endif
+else
+    crosstools-binutils--volsfx := :
+    
+    ifeq (,)
+        crosstools-binutils--nix_dir_layout := no
+    endif
+endif
+
+crosstools-binutils--volfunc = $(crosstools-binutils--volpfx)$(notdir $1)$(crosstools-binutils--volsfx)
+
+crosstools-binutils--install_opts := prefix=$(crosstools-binutils--prefix) \
+        exec_prefix=$(crosstools-binutils--prefix) 
+
+# Check if chosen compiler is valid
+ifeq ($(findstring host,host target kernel),)
+  $(error unknown compiler host)
+endif
+
+# Set legacy 'host' variable based on chosen compiler
+ifeq (host,host)
+    host := yes
+    ifeq ($(CURDIR),)
+        crosstools-binutils--pkgbasedir := $(HOSTGENDIR)
+    else
+        crosstools-binutils--pkgbasedir := $(HOSTGENDIR)/$(CURDIR)
+    endif
+else
+    host := no
+    ifeq ($(CURDIR),)
+        crosstools-binutils--pkgbasedir := $(GENDIR)
+    else
+        crosstools-binutils--pkgbasedir := $(GENDIR)/$(CURDIR)
+    endif
+endif
+ifneq (,)
+    ifeq ($(CURDIR),)
+        crosstools-binutils--pkgbasedir := 
+    else
+        crosstools-binutils--pkgbasedir := /$(CURDIR)
+    endif
+endif
+
+ifeq (binutils,)
+    crosstools-binutils--pkgdir := $(crosstools-binutils--pkgbasedir)
+else
+    crosstools-binutils--pkgdir := $(crosstools-binutils--pkgbasedir)/binutils
+endif
+
+crosstools-binutils--configflag := $(crosstools-binutils--pkgdir)/.configured
+crosstools-binutils--installflag := $(crosstools-binutils--pkgdir)/.installed
+
+ifeq ($(filter yes, $(crosstools-binutils--nix_dir_layout) $(host)),yes)
+    crosstools-binutils--PROGDIR      := $(crosstools-binutils--aros_prefix)/bin
+    crosstools-binutils--config_opts  := --prefix=$(crosstools-binutils--aros_prefix)
+else
+    ifeq (no,yes)
+        crosstools-binutils--config_opts := --prefix=/PROGDIR  --bindir=/PROGDIR --sbindir=/PROGDIR \
+        --libdir=/LIB --includedir=/INCLUDE --oldincludedir=/INCLUDE   
+    else
+        crosstools-binutils--config_opts  := --prefix=$(crosstools-binutils--aros_prefix)
+    endif
+
+    crosstools-binutils--PROGDIR := $(crosstools-binutils--aros_prefix)
+    
+    crosstools-binutils--install_opts := bindir=$(crosstools-binutils--prefix) \
+        sbindir=$(crosstools-binutils--prefix) \
+        libdir=$(AROS_LIB) includedir=$(AROS_INCLUDES) \
+        oldincludedir=$(AROS_INCLUDES) 
+endif
+
+ifneq ($(DEBUG),yes)
+    crosstools-binutils--s_flag = -s
+endif
+
+ifeq (yes,yes)
+    crosstools-binutils--HOST_CFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CFLAGS)
+    crosstools-binutils--KERNEL_CFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(crosstools-binutils--s_flag)
+ifeq (no,yes)
+    crosstools-binutils--TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(crosstools-binutils--s_flag)
+else
+    crosstools-binutils--TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(crosstools-binutils--nix) $(crosstools-binutils--s_flag)
+endif
+endif
+ifeq (yes,yes)
+    crosstools-binutils--HOST_CXXFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CXXFLAGS)
+    crosstools-binutils--KERNEL_CXXFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CXXFLAGS) $(crosstools-binutils--s_flag)
+ifeq (no,yes)
+    crosstools-binutils--TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(crosstools-binutils--s_flag)
+else
+    crosstools-binutils--TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(crosstools-binutils--nix) $(crosstools-binutils--s_flag)
+endif
+endif
+
+# Set up build environment, and options for configure script
+ifeq (host,host)
+    # NB: We need to pass in our crosstoolsdir, but cannot set CFLAGS since it
+    # confused configure scripts. We also cannot pass it via _FOR_BUILD
+    # since that won't get picked up during configure.
+    # We also cannot pass in the compiler including std flags so we need to use
+    # the "plain" host compiler.
+    crosstools-binutils--cfg-env :=  \
+        CPP="$(HOST_CPP)" \
+        CXXCPP="$(HOST_CPP)" \
+        CC="$(strip $(HOST_DEF_CC) $(crosstools-binutils--HOST_CFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        CXX="$(strip $(HOST_CXX) $(crosstools-binutils--HOST_CXXFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        LDFLAGS="-L$(CROSSTOOLSDIR)/lib $(USER_LDFLAGS)"
+ifeq (no,yes)
+    crosstools-binutils--cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    crosstools-binutils--cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(crosstools-binutils--KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(crosstools-binutils--KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(TARGET_AS)" \
+        OBJCOPY="$(OBJCOPY)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)" \
+        TARGET_OBJCOPY="$(TARGET_OBJCOPY)"
+endif
+ifeq (host,target)
+    crosstools-binutils--cfg-env :=  \
+        PKG_CONFIG_LIBDIR="$(AROS_DEVELOPER)/lib/pkgconfig" \
+        PKG_CONFIG_SYSROOT_DIR="$(AROSDIR)"
+    crosstools-binutils--cfg-env += CPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CXXCPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CC="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CXX="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        LD="$(strip $(TARGET_LD))"
+    crosstools-binutils--cfg-env += CFLAGS="$(crosstools-binutils--TARGET_CFLAGS) $(OPTIMIZATION_CFLAGS)" \
+        CXXFLAGS="$(crosstools-binutils--TARGET_CXXFLAGS) $(OPTIMIZATION_CFLAGS)"
+ifeq (no,yes)
+    crosstools-binutils--cfg-env += CPPFLAGS="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-binutils--cfg-env += LDFLAGS="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-binutils--nix) $(crosstools-binutils--s_flag))"
+ifeq (no,yes)
+    crosstools-binutils--cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    crosstools-binutils--cfg-env += CC_FOR_BUILD="$(strip $(HOST_DEF_CC))" \
+        CFLAGS_FOR_BUILD="$(strip $(crosstools-binutils--HOST_CFLAGS))" \
+        CXX_FOR_BUILD="$(strip $(HOST_CXX))" \
+        CXXFLAGS_FOR_BUILD="$(strip $(crosstools-binutils--HOST_CXXFLAGS))" \
+        LD_FOR_BUILD="$(strip $(HOST_LD))" \
+        LDFLAGS_FOR_BUILD="$(strip $(HOST_LDFLAGS) $(crosstools-binutils--s_flag))"
+ifeq (no,yes)
+    crosstools-binutils--cfg-env += CPPFLAGS_FOR_HOST="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-binutils--cfg-env += CC_FOR_HOST="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS) $(crosstools-binutils--nix) $(crosstools-binutils--s_flag))" \
+        CXX_FOR_HOST="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS) $(crosstools-binutils--nix) $(crosstools-binutils--s_flag))" \
+        LD_FOR_HOST="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_HOST="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-binutils--nix) $(crosstools-binutils--s_flag))"
+ifeq (no,yes)
+    crosstools-binutils--cfg-env += CPPFLAGS_FOR_TARGET="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-binutils--cfg-env += CC_FOR_TARGET="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_TARGET="$(strip $(crosstools-binutils--TARGET_CFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS))" \
+        CXX_FOR_TARGET="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_TARGET="$(strip $(crosstools-binutils--TARGET_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS))" \
+        LD_FOR_TARGET="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_TARGET="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-binutils--nix) $(crosstools-binutils--s_flag))" \
+        AR="$(strip $(AR_PLAIN))" \
+        AS="$(strip $(TARGET_AS))" \
+        OBJCOPY="$(strip $(OBJCOPY))" \
+        RANLIB="$(strip $(RANLIB))" \
+        STRIP="$(strip $(STRIP_PLAIN))"
+ifeq (no,yes)
+    crosstools-binutils--cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    crosstools-binutils--cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(crosstools-binutils--KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(crosstools-binutils--KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(strip $(TARGET_AS))" \
+        TARGET_RANLIB="$(strip $(RANLIB))" \
+        TARGET_STRIP="$(strip $(STRIP_PLAIN))" \
+        TARGET_NM="$(strip $(NM_PLAIN))"
+ifeq (yes,yes)
+    crosstools-binutils--config_opts += --target=$(AROS_TARGET_CPU)-aros
+    crosstools-binutils--config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    crosstools-binutils--config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    crosstools-binutils--config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    crosstools-binutils--config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    crosstools-binutils--config_opts += --without-x
+endif
+endif
+endif
+ifeq (host,kernel)
+    crosstools-binutils--cfg-env :=  \
+        CPP="$(KERNEL_CPP)" \
+        CXXCPP="$(KERNEL_CPP)"
+ifeq (no,yes)
+    crosstools-binutils--cfg-env += CPPFLAGS="$(strip $(KERNEL_CPPFLAGS) )"
+endif
+    crosstools-binutils--cfg-env += CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        CFLAGS="$(strip $(crosstools-binutils--KERNEL_CFLAGS) $(OPTIMIZATION_CFLAGS))" \
+        CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        CXXFLAGS="$(strip $(crosstools-binutils--KERNEL_CXXFLAGS) $(OPTIMIZATION_CFLAGS))" \
+        AS="$(KERNEL_AS)"
+ifeq (no,yes)
+    crosstools-binutils--cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    crosstools-binutils--cfg-env += CC_FOR_BUILD="$(HOST_DEF_CC)" \
+        CFLAGS_FOR_BUILD="$(crosstools-binutils--HOST_CFLAGS)" \
+        CXX_FOR_BUILD="$(HOST_CXX)" \
+        CXXFLAGS_FOR_BUILD="$(crosstools-binutils--HOST_CXXFLAGS)" \
+        RANLIB="$(RANLIB)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)"
+ifeq (yes,yes)
+    crosstools-binutils--config_opts += --target=$(AROS_TARGET_CPU)-aros
+    crosstools-binutils--config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    crosstools-binutils--config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    crosstools-binutils--config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    crosstools-binutils--config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    crosstools-binutils--config_opts += --without-x
+endif
+
+endif
+endif
+
+ifeq (no,yes)
+    BUILD_ENV := $(crosstools-binutils--cfg-env)
+endif
+
+crosstools-binutils--touchfileflag ?= $(crosstools-binutils--pkgdir)/.files-touched
+
+ifneq ("$(wildcard $(crosstools-binutils-portdir)/$(crosstools-binutils--builddir)/Makefile)","")
+# in an ideal world, we would depend on the files in the source directory,
+# so we could copy them when they change. unfortunately filenames with
+# spaces cause problems with this
+$(crosstools-binutils--pkgdir)/.local-copy:
+	$(Q)$(FOR) dir in $(crosstools-binutils--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Copying Local-Build Sources to  \`$(patsubst $(TOP)/%,%,$(abspath $(crosstools-binutils--pkgdir)))'"
+	$(Q)$(CP) -Rf "$(crosstools-binutils-portdir)/$(crosstools-binutils--builddir)/." $(crosstools-binutils--pkgdir)/ && $(TOUCH) $@
+
+$(crosstools-binutils--touchfileflag) : $(crosstools-binutils--pkgdir)/.local-copy
+
+    crosstools-binutils--cfg-srcdir=$(crosstools-binutils--pkgdir)
+else
+    crosstools-binutils--cfg-srcdir=$(crosstools-binutils-portdir)/$(crosstools-binutils--builddir)
+endif
+crosstools-binutils--make-env := -C $(crosstools-binutils--pkgdir)
+
+.PHONY : crosstools-binutils- crosstools-binutils--clean crosstools-binutils--build_and_install-quick
+
+# When building for the host, we don't need to build the
+# linklibs - this is especially true when building the
+# crosstool toolchain on 'foreign' architectures (such as
+# building PPC on x86)
+
+#MM- crosstools-binutils--host : setup includes crosstools-binutils--quick
+#MM- crosstools-binutils--target : setup includes core-linklibs crosstools-binutils--quick
+#MM- crosstools-binutils-: crosstools-binutils--host
+
+# Using -j1 in install_command may result in a warning but finally
+# it does its job. make install for gcc does not work reliably for -jN
+# where N > 1.
+ifneq (install,)
+    crosstools-binutils--install_command = \
+        $(ECHO) "Installing from build in         $(subst $(TOP)/,,$(crosstools-binutils--pkgdir))" && \
+        $(MAKE) PROGDIR="$(crosstools-binutils--PROGDIR)/" $(crosstools-binutils--install_opts) \
+        $(crosstools-binutils--make-env) install -j1
+
+    crosstools-binutils--uninstall_command = \
+    $(RM) $(crosstools-binutils--installflag) && \
+    $(MAKE) PROGDIR="$(crosstools-binutils--PROGDIR)/" \
+    $(crosstools-binutils--install_opts) $(crosstools-binutils--make-env) uninstall
+else
+    crosstools-binutils--install_command   := true
+    crosstools-binutils--uninstall_command := true
+endif
+
+#MM- crosstools-binutils--quick :  crosstools-binutils--configure  crosstools-binutils--build_and_install-quick crosstools-binutils--make-package
+
+#MM
+crosstools-binutils--build_and_install-quick :  $(crosstools-binutils--installflag)
+
+#
+# N.B.: the make test for the targets being up to date generates a benign Error 1.
+#
+$(crosstools-binutils--installflag) : $(crosstools-binutils--configflag)
+	$(Q)$(IF) ! $(BUILD_ENV) $(MAKE) PROGDIR="$(call crosstools-binutils--volfunc, PROGDIR)" -q $(crosstools-binutils--make-env); then \
+	    $(RM) $(crosstools-binutils--installflag) && \
+	    $(ECHO) "Performing build in         $(subst $(TOP)/,,$(crosstools-binutils--pkgdir))" && \
+	    $(BUILD_ENV) $(MAKE) PROGDIR="$(call crosstools-binutils--volfunc, PROGDIR)" $(crosstools-binutils--make-env) && \
+	    $(crosstools-binutils--install_command) && \
+	    $(TOUCH) $@ -r $^; \
+	fi
+
+ifneq ($(crosstools-binutils--touchfileflag),)
+$(crosstools-binutils--touchfileflag):
+	$(Q)$(FOR) dir in $(crosstools-binutils--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)find $(crosstools-binutils-portdir)/$(crosstools-binutils--builddir) -exec $(TOUCH) -c -r $(crosstools-binutils--cfg-srcdir)/configure '{}' \; && \
+	$(TOUCH) $@
+endif
+
+#MM
+crosstools-binutils--uninstall :
+	$(crosstools-binutils--uninstall_command)
+
+#MM
+crosstools-binutils--configure : $(crosstools-binutils--configflag)
+
+$(crosstools-binutils--configflag) : TMP_SRCDIR := $(shell echo $(crosstools-binutils--cfg-srcdir) | sed 's/^\(.\):\//\/\1\//')
+$(crosstools-binutils--configflag) : $(crosstools-binutils--touchfileflag) $(TOP)/$(CURDIR)/mmakefile
+	$(Q)$(RM) $@
+	$(Q)$(FOR) dir in $(crosstools-binutils--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Configuring build in         $(subst $(TOP)/,,$(crosstools-binutils--pkgdir))"
+	$(Q)cd $(crosstools-binutils--pkgdir) && \
+	find . -name config.cache -exec $(RM) '{}' \; && \
+	$(crosstools-binutils--cfg-env) $(TMP_SRCDIR)/configure $(crosstools-binutils--config_opts) $(BINUTILS_EXTRA_OPTS) && \
+	$(TOUCH) $@
+
+#MM
+crosstools-binutils--clean : crosstools-binutils--uninstall
+	$(Q)$(RM) $(crosstools-binutils--pkgdir)
+
+.PHONY : crosstools-binutils--make-package crosstools-binutils--create-patch
+#MM crosstools-binutils--make-package : crosstools-binutils--quick
+
+#MM
+crosstools-binutils--make-package : $(crosstools-binutils--package)
+ 
+#There seems to be a bug, either with my clock or with make, 'cause it may happen
+#that $^ and $@ have exactly the same mtime, and in that case make tries
+#to rebuild $@ again, which would fail because the directory where
+#the package got installed would not exist anymore. 
+#We work this around by using an if statement to manually check the mtimes.
+$(crosstools-binutils--package-basename).tar.bz2 :
+	$(Q)$(IF) $(TEST) $(crosstools-binutils-installflag) -nt $@ || ! $(TEST) -s $@; then \
+	    $(RM) $@ ; \
+	    $(ECHO) "Building   \`$(crosstools-binutils--package-basename).tar.bz2'" ; \
+	    $(MKDIR) -p "$(DISTDIR)/Packages" ; \
+	    $(MKDIR) -p "$(crosstools-binutils-prefix)" ; \
+	    cd $(crosstools-binutils--package-dir) ; \
+	    tar -cvf $(crosstools-binutils--package-basename).tar * ; \
+	    bzip2 -9 -f $(crosstools-binutils--package-basename).tar ; \
+	fi
+
+## GCC ###
+
+HOST_CFLAGS := $(HOST_CFLAGS) $(HOST_GNU89_INLINE)
+
+#MM
+tools-crosstools-gcc :
+	@$(IF) ! $(TEST) -f $(gcc-installflag) ; then \
+	    $(MAKE) -C $(HOSTGENDIR)/$(CURDIR)/gcc all-gcc \
+	    && $(MAKE) -j1 -C $(HOSTGENDIR)/$(CURDIR)/gcc install-gcc \
+	    && $(TOUCH) $(gcc-installflag) ; \
+	fi
+	@$(IF) $(TEST) -f $(gcc-installflag); then \
+	    $(SED) -i -e "s|@aros_target_cc_path@|$(GCC_PATH)|g" $(TOOLDIR)/$(AROS_TARGET_CPU)-$(AROS_TARGET_ARCH)$(AROS_TARGET_SUFFIX)-aros-ld ; \
+	fi
+
+
+#MM tools-crosstools-gcc : includes-copy
+#MM crosstools-gcc : includes-copy
+
+#MM tools-crosstools-gcc : crosstools-gcc--fetch crosstools-gcc--configure
+
+#MM tools-crosstools-gcc-libatomic : crosstools-gcc--fetch gnu-gcc-autolibs
+#MM- linklibs-gnu-libatomic : tools-crosstools-gcc-libatomic
+
+#MM- gnu-gcc-autolibs :          \
+#MM	linklibs-startup         \
+#MM	linklibs-mui             \
+#MM	linklibs-arossupport     \
+#MM	linklibs-amiga           \
+#MM	linklibs-posixc          \
+#MM	linklibs-stdcio          \
+#MM	linklibs-stdc            \
+#MM	linklibs-codesets        \
+#MM	linklibs-keymap          \
+#MM	linklibs-expansion       \
+#MM	linklibs-commodities     \
+#MM	linklibs-diskfont        \
+#MM	linklibs-asl             \
+#MM	linklibs-muimaster       \
+#MM	linklibs-datatypes       \
+#MM	linklibs-cybergraphics   \
+#MM	linklibs-workbench       \
+#MM	linklibs-icon            \
+#MM	linklibs-intuition       \
+#MM	linklibs-gadtools        \
+#MM	linklibs-layers          \
+#MM	linklibs-aros            \
+#MM	linklibs-partition       \
+#MM	linklibs-iffparse        \
+#MM	linklibs-graphics        \
+#MM	linklibs-locale          \
+#MM	linklibs-dos             \
+#MM	linklibs-utility         \
+#MM	linklibs-oop             \
+#MM	linklibs-exec            \
+#MM	linklibs-autoinit        \
+#MM	linklibs-libinit         \
+#MM	linklibs-pthread
+
+
+#MM- crosstools-gcc-quick : crosstools-gcc--quick
+#MM- crosstools-gcc--quick : crosstools-gcc--fetch
+#MM- crosstools-gcc-fetch : crosstools-gcc--fetch
+#MM- crosstools-gcc-create-patch : crosstools-gcc--create-patch
+#MM- crosstools-gcc-create-patch-quick : crosstools-gcc--create-patch
+ 
+crosstools-gcc-archbase                        := gcc-$(GCC_VERSION)
+
+ifeq (host,host)
+    crosstools-gcc-portdir                     := $(HOSTDIR)/Ports/host/gcc
+else
+    crosstools-gcc-portdir                     := $(PORTSDIR)/gcc
+endif
+
+ifeq ($(CROSSTOOLSDIR),)
+    crosstools-gcc-prefix                      := $(CONTRIB_DIR)/gcc
+else
+    crosstools-gcc-prefix                      := $(CROSSTOOLSDIR)
+endif
+
+ifneq (,)
+    crosstools-gcc--archbase      := gcc--$(GCC_VERSION)
+else
+    crosstools-gcc--archbase      := gcc-$(GCC_VERSION)
+endif
+
+ifneq (,)
+    crosstools-gcc--srcdir        := 
+else
+    crosstools-gcc--srcdir        := $(crosstools-gcc-archbase)
+endif
+
+ifneq (,)
+    crosstools-gcc--builddir      := $(crosstools-gcc--srcdir)/
+else
+    crosstools-gcc--builddir      := $(crosstools-gcc--srcdir)
+endif
+
+ifeq (yes,yes)
+    crosstools-gcc--patches_specs := $(crosstools-gcc--archbase)-aros.diff:$(crosstools-gcc--srcdir):-f,-p1
+else
+    crosstools-gcc--patches_specs := ::
+endif
+
+
+.PHONY: crosstools-gcc--fetch
+
+ifneq ($(TOOLDIR),)
+    crosstools-gcc--fetch-tooldir := "$(TOOLDIR)/"
+else
+    crosstools-gcc--fetch-tooldir := "$(TOOLDIR)/"
+endif
+
+ifneq ($(PORTSSOURCEDIR),)
+    crosstools-gcc--fetch-location := $(PORTSSOURCEDIR)
+else
+    crosstools-gcc--fetch-location := $(crosstools-gcc-portdir)
+endif
+
+crosstools-gcc--fetch-fetchedflag := $(crosstools-gcc--fetch-location)/.$(crosstools-gcc--archbase)-fetched
+
+#MM
+crosstools-gcc--fetch :
+	$(Q)$(ECHO) "Fetching   $(crosstools-gcc--archbase) ..."
+	$(Q)TOOLDIR="$(crosstools-gcc--fetch-tooldir)" $(FETCH) -ao ". $(GCC_REPOSITORY)" -a $(crosstools-gcc--archbase) -s "tar.bz2 tar.gz tar.xz" -l $(crosstools-gcc--fetch-location) \
+	-d $(crosstools-gcc-portdir) -po "$(SRCDIR)/$(CURDIR)" -p "$(crosstools-gcc--patches_specs)"
+	$(Q)$(IF) ! $(TEST) -f $(crosstools-gcc--fetch-fetchedflag) ; then \
+		 $(TOUCH) $(crosstools-gcc--fetch-fetchedflag) ; \
+	fi
+
+#	$(Q)$(IF) ! $(TEST) -f $(crosstools-gcc--fetch-fetchedflag) ; then \
+#		$(ECHO) "Fetching   $(crosstools-gcc--archbase) ..." \
+#		&& $(FETCH) -ao ". $(GCC_REPOSITORY)" -a $(crosstools-gcc--archbase) -s "tar.bz2 tar.gz tar.xz" -l $(crosstools-gcc--fetch-location) \
+#		-d $(crosstools-gcc-portdir) -po "$(SRCDIR)/$(CURDIR)" -p "$(crosstools-gcc--patches_specs)" \
+#		&& $(TOUCH) $(crosstools-gcc--fetch-fetchedflag) ; \
+#	fi
+
+
+.PHONY: crosstools-gcc--create-patch
+
+ifneq (,)
+    crosstools-gcc--create-patch-exclude := -X ./exclude.patterns
+endif
+
+ifneq ($(crosstools-gcc--srcdir),)
+    crosstools-gcc--create-patch-srcdir   := $(crosstools-gcc--srcdir)
+else
+    crosstools-gcc--create-patch-srcdir   := $(crosstools-gcc--archbase)
+endif
+
+#MM- crosstools-gcc--create-patch :  crosstools-gcc--create-patch-diff 
+#MM- crosstools-gcc--create-patch-quick :  crosstools-gcc--create-patch-diff 
+
+#MM
+crosstools-gcc--create-patch-diff:
+	$(Q)$(FETCH) -a $(crosstools-gcc--archbase) -s "tar.bz2 tar.gz tar.xz" -l $(PORTSSOURCEDIR) -d $(crosstools-gcc-portdir)/tmp ; \
+	$(MV) $(crosstools-gcc-portdir)/$(crosstools-gcc--create-patch-srcdir) $(crosstools-gcc-portdir)/tmp/$(crosstools-gcc--create-patch-srcdir).aros ; \
+	cd $(crosstools-gcc-portdir)/tmp ; \
+	$(FOR) f in  ; do \
+	    $(ECHO) $$f >> ./exclude.patterns ; \
+	done ; \
+	$(ECHO) "Creating   \`$(crosstools-gcc--archbase)-aros-new.diff'" ; \
+	diff -ruN $(crosstools-gcc--create-patch-exclude) \
+	    $(crosstools-gcc--create-patch-srcdir) \
+	    $(crosstools-gcc--create-patch-srcdir).aros \
+	    >$(SRCDIR)/$(CURDIR)/$(crosstools-gcc--archbase)-aros-new.diff ; \
+	$(MV) $(crosstools-gcc-portdir)/tmp/$(crosstools-gcc--create-patch-srcdir).aros $(crosstools-gcc-portdir)/$(crosstools-gcc--create-patch-srcdir) ; \
+	$(RM) $(crosstools-gcc-portdir)/tmp
+
+#MM crosstools-gcc : crosstools-gcc-
+#MM
+crosstools-gcc:
+	$(NOP)
+
+crosstools-gcc--package-dir := $(crosstools-gcc-portdir)/$(crosstools-gcc--archbase)
+
+crosstools-gcc--package-basename := \
+    $(DISTDIR)/Packages/$(crosstools-gcc--archbase)-aros.$(AROS_TARGET_CPU)
+
+ifneq (no,no)
+    crosstools-gcc--package := $(crosstools-gcc--package-basename).tar.bz2
+endif
+
+
+ifneq ($(crosstools-gcc-prefix),)
+    crosstools-gcc--prefix := $(crosstools-gcc-prefix)
+else
+    crosstools-gcc--prefix := $(AROS_CONTRIB)
+endif
+
+ifneq (,)
+    crosstools-gcc--aros_prefix := 
+else
+    crosstools-gcc--aros_prefix := $(crosstools-gcc--prefix)
+endif
+
+BD_NIXFLAG ?= -nix
+
+ifeq (no,yes)
+    crosstools-gcc--nix    := $(BD_NIXFLAG)
+    crosstools-gcc--volpfx := /
+    crosstools-gcc--volsfx := /
+    
+    ifeq (,)
+        crosstools-gcc--nix_dir_layout := yes
+    endif
+else
+    crosstools-gcc--volsfx := :
+    
+    ifeq (,)
+        crosstools-gcc--nix_dir_layout := no
+    endif
+endif
+
+crosstools-gcc--volfunc = $(crosstools-gcc--volpfx)$(notdir $1)$(crosstools-gcc--volsfx)
+
+crosstools-gcc--install_opts := prefix=$(crosstools-gcc--prefix) \
+        exec_prefix=$(crosstools-gcc--prefix) 
+
+# Check if chosen compiler is valid
+ifeq ($(findstring host,host target kernel),)
+  $(error unknown compiler host)
+endif
+
+# Set legacy 'host' variable based on chosen compiler
+ifeq (host,host)
+    host := yes
+    ifeq ($(CURDIR),)
+        crosstools-gcc--pkgbasedir := $(HOSTGENDIR)
+    else
+        crosstools-gcc--pkgbasedir := $(HOSTGENDIR)/$(CURDIR)
+    endif
+else
+    host := no
+    ifeq ($(CURDIR),)
+        crosstools-gcc--pkgbasedir := $(GENDIR)
+    else
+        crosstools-gcc--pkgbasedir := $(GENDIR)/$(CURDIR)
+    endif
+endif
+ifneq (,)
+    ifeq ($(CURDIR),)
+        crosstools-gcc--pkgbasedir := 
+    else
+        crosstools-gcc--pkgbasedir := /$(CURDIR)
+    endif
+endif
+
+ifeq (gcc,)
+    crosstools-gcc--pkgdir := $(crosstools-gcc--pkgbasedir)
+else
+    crosstools-gcc--pkgdir := $(crosstools-gcc--pkgbasedir)/gcc
+endif
+
+crosstools-gcc--configflag := $(crosstools-gcc--pkgdir)/.configured
+crosstools-gcc--installflag := $(crosstools-gcc--pkgdir)/.installed
+
+ifeq ($(filter yes, $(crosstools-gcc--nix_dir_layout) $(host)),yes)
+    crosstools-gcc--PROGDIR      := $(crosstools-gcc--aros_prefix)/bin
+    crosstools-gcc--config_opts  := --prefix=$(crosstools-gcc--aros_prefix)
+else
+    ifeq (no,yes)
+        crosstools-gcc--config_opts := --prefix=/PROGDIR  --bindir=/PROGDIR --sbindir=/PROGDIR \
+        --libdir=/LIB --includedir=/INCLUDE --oldincludedir=/INCLUDE   
+    else
+        crosstools-gcc--config_opts  := --prefix=$(crosstools-gcc--aros_prefix)
+    endif
+
+    crosstools-gcc--PROGDIR := $(crosstools-gcc--aros_prefix)
+    
+    crosstools-gcc--install_opts := bindir=$(crosstools-gcc--prefix) \
+        sbindir=$(crosstools-gcc--prefix) \
+        libdir=$(AROS_LIB) includedir=$(AROS_INCLUDES) \
+        oldincludedir=$(AROS_INCLUDES) 
+endif
+
+ifneq ($(DEBUG),yes)
+    crosstools-gcc--s_flag = -s
+endif
+
+ifeq (no,yes)
+    crosstools-gcc--HOST_CFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CFLAGS)
+    crosstools-gcc--KERNEL_CFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(crosstools-gcc--s_flag)
+ifeq (no,yes)
+    crosstools-gcc--TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(crosstools-gcc--s_flag)
+else
+    crosstools-gcc--TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(crosstools-gcc--nix) $(crosstools-gcc--s_flag)
+endif
+endif
+ifeq (no,yes)
+    crosstools-gcc--HOST_CXXFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CXXFLAGS)
+    crosstools-gcc--KERNEL_CXXFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CXXFLAGS) $(crosstools-gcc--s_flag)
+ifeq (no,yes)
+    crosstools-gcc--TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(crosstools-gcc--s_flag)
+else
+    crosstools-gcc--TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(crosstools-gcc--nix) $(crosstools-gcc--s_flag)
+endif
+endif
+
+# Set up build environment, and options for configure script
+ifeq (host,host)
+    # NB: We need to pass in our crosstoolsdir, but cannot set CFLAGS since it
+    # confused configure scripts. We also cannot pass it via _FOR_BUILD
+    # since that won't get picked up during configure.
+    # We also cannot pass in the compiler including std flags so we need to use
+    # the "plain" host compiler.
+    crosstools-gcc--cfg-env := $(GCC_ENV) \
+        CPP="$(HOST_CPP)" \
+        CXXCPP="$(HOST_CPP)" \
+        CC="$(strip $(HOST_DEF_CC) $(crosstools-gcc--HOST_CFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        CXX="$(strip $(HOST_CXX) $(crosstools-gcc--HOST_CXXFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        LDFLAGS="-L$(CROSSTOOLSDIR)/lib $(USER_LDFLAGS)"
+ifeq (no,yes)
+    crosstools-gcc--cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    crosstools-gcc--cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(crosstools-gcc--KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(crosstools-gcc--KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(TARGET_AS)" \
+        OBJCOPY="$(OBJCOPY)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)" \
+        TARGET_OBJCOPY="$(TARGET_OBJCOPY)"
+endif
+ifeq (host,target)
+    crosstools-gcc--cfg-env := $(GCC_ENV) \
+        PKG_CONFIG_LIBDIR="$(AROS_DEVELOPER)/lib/pkgconfig" \
+        PKG_CONFIG_SYSROOT_DIR="$(AROSDIR)"
+    crosstools-gcc--cfg-env += CPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CXXCPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CC="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CXX="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        LD="$(strip $(TARGET_LD))"
+    crosstools-gcc--cfg-env += CFLAGS="$(crosstools-gcc--TARGET_CFLAGS) $(OPTIMIZATION_CFLAGS)" \
+        CXXFLAGS="$(crosstools-gcc--TARGET_CXXFLAGS) $(OPTIMIZATION_CFLAGS)"
+ifeq (no,yes)
+    crosstools-gcc--cfg-env += CPPFLAGS="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-gcc--cfg-env += LDFLAGS="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-gcc--nix) $(crosstools-gcc--s_flag))"
+ifeq (no,yes)
+    crosstools-gcc--cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    crosstools-gcc--cfg-env += CC_FOR_BUILD="$(strip $(HOST_DEF_CC))" \
+        CFLAGS_FOR_BUILD="$(strip $(crosstools-gcc--HOST_CFLAGS))" \
+        CXX_FOR_BUILD="$(strip $(HOST_CXX))" \
+        CXXFLAGS_FOR_BUILD="$(strip $(crosstools-gcc--HOST_CXXFLAGS))" \
+        LD_FOR_BUILD="$(strip $(HOST_LD))" \
+        LDFLAGS_FOR_BUILD="$(strip $(HOST_LDFLAGS) $(crosstools-gcc--s_flag))"
+ifeq (no,yes)
+    crosstools-gcc--cfg-env += CPPFLAGS_FOR_HOST="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-gcc--cfg-env += CC_FOR_HOST="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS) $(crosstools-gcc--nix) $(crosstools-gcc--s_flag))" \
+        CXX_FOR_HOST="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS) $(crosstools-gcc--nix) $(crosstools-gcc--s_flag))" \
+        LD_FOR_HOST="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_HOST="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-gcc--nix) $(crosstools-gcc--s_flag))"
+ifeq (no,yes)
+    crosstools-gcc--cfg-env += CPPFLAGS_FOR_TARGET="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-gcc--cfg-env += CC_FOR_TARGET="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_TARGET="$(strip $(crosstools-gcc--TARGET_CFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS))" \
+        CXX_FOR_TARGET="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_TARGET="$(strip $(crosstools-gcc--TARGET_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS))" \
+        LD_FOR_TARGET="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_TARGET="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-gcc--nix) $(crosstools-gcc--s_flag))" \
+        AR="$(strip $(AR_PLAIN))" \
+        AS="$(strip $(TARGET_AS))" \
+        OBJCOPY="$(strip $(OBJCOPY))" \
+        RANLIB="$(strip $(RANLIB))" \
+        STRIP="$(strip $(STRIP_PLAIN))"
+ifeq (no,yes)
+    crosstools-gcc--cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    crosstools-gcc--cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(crosstools-gcc--KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(crosstools-gcc--KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(strip $(TARGET_AS))" \
+        TARGET_RANLIB="$(strip $(RANLIB))" \
+        TARGET_STRIP="$(strip $(STRIP_PLAIN))" \
+        TARGET_NM="$(strip $(NM_PLAIN))"
+ifeq (yes,yes)
+    crosstools-gcc--config_opts += --target=$(AROS_TARGET_CPU)-aros
+    crosstools-gcc--config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    crosstools-gcc--config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    crosstools-gcc--config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    crosstools-gcc--config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    crosstools-gcc--config_opts += --without-x
+endif
+endif
+endif
+ifeq (host,kernel)
+    crosstools-gcc--cfg-env := $(GCC_ENV) \
+        CPP="$(KERNEL_CPP)" \
+        CXXCPP="$(KERNEL_CPP)"
+ifeq (no,yes)
+    crosstools-gcc--cfg-env += CPPFLAGS="$(strip $(KERNEL_CPPFLAGS) )"
+endif
+    crosstools-gcc--cfg-env += CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        CFLAGS="$(strip $(crosstools-gcc--KERNEL_CFLAGS) $(OPTIMIZATION_CFLAGS))" \
+        CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        CXXFLAGS="$(strip $(crosstools-gcc--KERNEL_CXXFLAGS) $(OPTIMIZATION_CFLAGS))" \
+        AS="$(KERNEL_AS)"
+ifeq (no,yes)
+    crosstools-gcc--cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    crosstools-gcc--cfg-env += CC_FOR_BUILD="$(HOST_DEF_CC)" \
+        CFLAGS_FOR_BUILD="$(crosstools-gcc--HOST_CFLAGS)" \
+        CXX_FOR_BUILD="$(HOST_CXX)" \
+        CXXFLAGS_FOR_BUILD="$(crosstools-gcc--HOST_CXXFLAGS)" \
+        RANLIB="$(RANLIB)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)"
+ifeq (yes,yes)
+    crosstools-gcc--config_opts += --target=$(AROS_TARGET_CPU)-aros
+    crosstools-gcc--config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    crosstools-gcc--config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    crosstools-gcc--config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    crosstools-gcc--config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    crosstools-gcc--config_opts += --without-x
+endif
+
+endif
+endif
+
+ifeq (no,yes)
+    BUILD_ENV := $(crosstools-gcc--cfg-env)
+endif
+
+crosstools-gcc--touchfileflag ?= $(crosstools-gcc--pkgdir)/.files-touched
+
+ifneq ("$(wildcard $(crosstools-gcc-portdir)/$(crosstools-gcc--builddir)/Makefile)","")
+# in an ideal world, we would depend on the files in the source directory,
+# so we could copy them when they change. unfortunately filenames with
+# spaces cause problems with this
+$(crosstools-gcc--pkgdir)/.local-copy:
+	$(Q)$(FOR) dir in $(crosstools-gcc--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Copying Local-Build Sources to  \`$(patsubst $(TOP)/%,%,$(abspath $(crosstools-gcc--pkgdir)))'"
+	$(Q)$(CP) -Rf "$(crosstools-gcc-portdir)/$(crosstools-gcc--builddir)/." $(crosstools-gcc--pkgdir)/ && $(TOUCH) $@
+
+$(crosstools-gcc--touchfileflag) : $(crosstools-gcc--pkgdir)/.local-copy
+
+    crosstools-gcc--cfg-srcdir=$(crosstools-gcc--pkgdir)
+else
+    crosstools-gcc--cfg-srcdir=$(crosstools-gcc-portdir)/$(crosstools-gcc--builddir)
+endif
+crosstools-gcc--make-env := -C $(crosstools-gcc--pkgdir)
+
+.PHONY : crosstools-gcc- crosstools-gcc--clean crosstools-gcc--build_and_install-quick
+
+# When building for the host, we don't need to build the
+# linklibs - this is especially true when building the
+# crosstool toolchain on 'foreign' architectures (such as
+# building PPC on x86)
+
+#MM- crosstools-gcc--host : setup includes crosstools-gcc--quick
+#MM- crosstools-gcc--target : setup includes core-linklibs crosstools-gcc--quick
+#MM- crosstools-gcc-: crosstools-gcc--host
+
+# Using -j1 in install_command may result in a warning but finally
+# it does its job. make install for gcc does not work reliably for -jN
+# where N > 1.
+ifneq (install,)
+    crosstools-gcc--install_command = \
+        $(ECHO) "Installing from build in         $(subst $(TOP)/,,$(crosstools-gcc--pkgdir))" && \
+        $(MAKE) PROGDIR="$(crosstools-gcc--PROGDIR)/" $(crosstools-gcc--install_opts) \
+        $(crosstools-gcc--make-env) install -j1
+
+    crosstools-gcc--uninstall_command = \
+    $(RM) $(crosstools-gcc--installflag) && \
+    $(MAKE) PROGDIR="$(crosstools-gcc--PROGDIR)/" \
+    $(crosstools-gcc--install_opts) $(crosstools-gcc--make-env) uninstall
+else
+    crosstools-gcc--install_command   := true
+    crosstools-gcc--uninstall_command := true
+endif
+
+#MM- crosstools-gcc--quick :  crosstools-gcc--configure  crosstools-gcc--build_and_install-quick crosstools-gcc--make-package
+
+#MM
+crosstools-gcc--build_and_install-quick :  $(crosstools-gcc--installflag)
+
+#
+# N.B.: the make test for the targets being up to date generates a benign Error 1.
+#
+$(crosstools-gcc--installflag) : $(crosstools-gcc--configflag)
+	$(Q)$(IF) ! $(BUILD_ENV) $(MAKE) PROGDIR="$(call crosstools-gcc--volfunc, PROGDIR)" -q $(crosstools-gcc--make-env); then \
+	    $(RM) $(crosstools-gcc--installflag) && \
+	    $(ECHO) "Performing build in         $(subst $(TOP)/,,$(crosstools-gcc--pkgdir))" && \
+	    $(BUILD_ENV) $(MAKE) PROGDIR="$(call crosstools-gcc--volfunc, PROGDIR)" $(crosstools-gcc--make-env) && \
+	    $(crosstools-gcc--install_command) && \
+	    $(TOUCH) $@ -r $^; \
+	fi
+
+ifneq ($(crosstools-gcc--touchfileflag),)
+$(crosstools-gcc--touchfileflag):
+	$(Q)$(FOR) dir in $(crosstools-gcc--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)find $(crosstools-gcc-portdir)/$(crosstools-gcc--builddir) -exec $(TOUCH) -c -r $(crosstools-gcc--cfg-srcdir)/configure '{}' \; && \
+	$(TOUCH) $@
+endif
+
+#MM
+crosstools-gcc--uninstall :
+	$(crosstools-gcc--uninstall_command)
+
+#MM
+crosstools-gcc--configure : $(crosstools-gcc--configflag)
+
+$(crosstools-gcc--configflag) : TMP_SRCDIR := $(shell echo $(crosstools-gcc--cfg-srcdir) | sed 's/^\(.\):\//\/\1\//')
+$(crosstools-gcc--configflag) : $(crosstools-gcc--touchfileflag) $(TOP)/$(CURDIR)/mmakefile
+	$(Q)$(RM) $@
+	$(Q)$(FOR) dir in $(crosstools-gcc--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Configuring build in         $(subst $(TOP)/,,$(crosstools-gcc--pkgdir))"
+	$(Q)cd $(crosstools-gcc--pkgdir) && \
+	find . -name config.cache -exec $(RM) '{}' \; && \
+	$(crosstools-gcc--cfg-env) $(TMP_SRCDIR)/configure $(crosstools-gcc--config_opts) $(GCC_EXTRA_OPTS) && \
+	$(TOUCH) $@
+
+#MM
+crosstools-gcc--clean : crosstools-gcc--uninstall
+	$(Q)$(RM) $(crosstools-gcc--pkgdir)
+
+.PHONY : crosstools-gcc--make-package crosstools-gcc--create-patch
+#MM crosstools-gcc--make-package : crosstools-gcc--quick
+
+#MM
+crosstools-gcc--make-package : $(crosstools-gcc--package)
+ 
+#There seems to be a bug, either with my clock or with make, 'cause it may happen
+#that $^ and $@ have exactly the same mtime, and in that case make tries
+#to rebuild $@ again, which would fail because the directory where
+#the package got installed would not exist anymore. 
+#We work this around by using an if statement to manually check the mtimes.
+$(crosstools-gcc--package-basename).tar.bz2 :
+	$(Q)$(IF) $(TEST) $(crosstools-gcc-installflag) -nt $@ || ! $(TEST) -s $@; then \
+	    $(RM) $@ ; \
+	    $(ECHO) "Building   \`$(crosstools-gcc--package-basename).tar.bz2'" ; \
+	    $(MKDIR) -p "$(DISTDIR)/Packages" ; \
+	    $(MKDIR) -p "$(crosstools-gcc-prefix)" ; \
+	    cd $(crosstools-gcc--package-dir) ; \
+	    tar -cvf $(crosstools-gcc--package-basename).tar * ; \
+	    bzip2 -9 -f $(crosstools-gcc--package-basename).tar ; \
+	fi
+
+## GDB ###
+
+#MM
+tools-crosstools-gdb :
+	@$(IF) ! $(TEST) -d $(CROSSTOOLSDIR) \
+	    || ! $(TEST) -f $(gdb-installflag) ; then \
+	       $(RM) $(HOSTGENDIR)/$(CURDIR)/gdb/.files-touched \
+	    && $(MAKE) -f ./mmakefile crosstools-gdb--fetch \
+	    && $(MAKE) -f ./mmakefile crosstools-gdb--build_and_install-quick \
+	    && $(TOUCH) $(gdb-installflag) ; \
+	fi
+
+
+#MM- crosstools-gdb-quick : crosstools-gdb--quick
+#MM- crosstools-gdb--quick : crosstools-gdb--fetch
+#MM- crosstools-gdb-fetch : crosstools-gdb--fetch
+#MM- crosstools-gdb-create-patch : crosstools-gdb--create-patch
+#MM- crosstools-gdb-create-patch-quick : crosstools-gdb--create-patch
+ 
+crosstools-gdb-archbase                        := gdb-$(GDB_VERSION)
+
+ifeq (host,host)
+    crosstools-gdb-portdir                     := $(HOSTDIR)/Ports/host/gdb
+else
+    crosstools-gdb-portdir                     := $(PORTSDIR)/gdb
+endif
+
+ifeq ($(CROSSTOOLSDIR),)
+    crosstools-gdb-prefix                      := $(CONTRIB_DIR)/gdb
+else
+    crosstools-gdb-prefix                      := $(CROSSTOOLSDIR)
+endif
+
+ifneq (,)
+    crosstools-gdb--archbase      := gdb--$(GDB_VERSION)
+else
+    crosstools-gdb--archbase      := gdb-$(GDB_VERSION)
+endif
+
+ifneq (,)
+    crosstools-gdb--srcdir        := 
+else
+    crosstools-gdb--srcdir        := $(crosstools-gdb-archbase)
+endif
+
+ifneq (,)
+    crosstools-gdb--builddir      := $(crosstools-gdb--srcdir)/
+else
+    crosstools-gdb--builddir      := $(crosstools-gdb--srcdir)
+endif
+
+ifeq (yes,yes)
+    crosstools-gdb--patches_specs := $(crosstools-gdb--archbase)-aros.diff:$(crosstools-gdb--srcdir):-f,-p1
+else
+    crosstools-gdb--patches_specs := ::
+endif
+
+
+.PHONY: crosstools-gdb--fetch
+
+ifneq ($(TOOLDIR),)
+    crosstools-gdb--fetch-tooldir := "$(TOOLDIR)/"
+else
+    crosstools-gdb--fetch-tooldir := "$(TOOLDIR)/"
+endif
+
+ifneq ($(PORTSSOURCEDIR),)
+    crosstools-gdb--fetch-location := $(PORTSSOURCEDIR)
+else
+    crosstools-gdb--fetch-location := $(crosstools-gdb-portdir)
+endif
+
+crosstools-gdb--fetch-fetchedflag := $(crosstools-gdb--fetch-location)/.$(crosstools-gdb--archbase)-fetched
+
+#MM
+crosstools-gdb--fetch :
+	$(Q)$(ECHO) "Fetching   $(crosstools-gdb--archbase) ..."
+	$(Q)TOOLDIR="$(crosstools-gdb--fetch-tooldir)" $(FETCH) -ao ". $(GNU_REPOSITORY)/gdb" -a $(crosstools-gdb--archbase) -s "tar.bz2 tar.gz" -l $(crosstools-gdb--fetch-location) \
+	-d $(crosstools-gdb-portdir) -po "$(SRCDIR)/$(CURDIR)" -p "$(crosstools-gdb--patches_specs)"
+	$(Q)$(IF) ! $(TEST) -f $(crosstools-gdb--fetch-fetchedflag) ; then \
+		 $(TOUCH) $(crosstools-gdb--fetch-fetchedflag) ; \
+	fi
+
+#	$(Q)$(IF) ! $(TEST) -f $(crosstools-gdb--fetch-fetchedflag) ; then \
+#		$(ECHO) "Fetching   $(crosstools-gdb--archbase) ..." \
+#		&& $(FETCH) -ao ". $(GNU_REPOSITORY)/gdb" -a $(crosstools-gdb--archbase) -s "tar.bz2 tar.gz" -l $(crosstools-gdb--fetch-location) \
+#		-d $(crosstools-gdb-portdir) -po "$(SRCDIR)/$(CURDIR)" -p "$(crosstools-gdb--patches_specs)" \
+#		&& $(TOUCH) $(crosstools-gdb--fetch-fetchedflag) ; \
+#	fi
+
+
+.PHONY: crosstools-gdb--create-patch
+
+ifneq (,)
+    crosstools-gdb--create-patch-exclude := -X ./exclude.patterns
+endif
+
+ifneq ($(crosstools-gdb--srcdir),)
+    crosstools-gdb--create-patch-srcdir   := $(crosstools-gdb--srcdir)
+else
+    crosstools-gdb--create-patch-srcdir   := $(crosstools-gdb--archbase)
+endif
+
+#MM- crosstools-gdb--create-patch :  crosstools-gdb--create-patch-diff 
+#MM- crosstools-gdb--create-patch-quick :  crosstools-gdb--create-patch-diff 
+
+#MM
+crosstools-gdb--create-patch-diff:
+	$(Q)$(FETCH) -a $(crosstools-gdb--archbase) -s "tar.bz2 tar.gz" -l $(PORTSSOURCEDIR) -d $(crosstools-gdb-portdir)/tmp ; \
+	$(MV) $(crosstools-gdb-portdir)/$(crosstools-gdb--create-patch-srcdir) $(crosstools-gdb-portdir)/tmp/$(crosstools-gdb--create-patch-srcdir).aros ; \
+	cd $(crosstools-gdb-portdir)/tmp ; \
+	$(FOR) f in  ; do \
+	    $(ECHO) $$f >> ./exclude.patterns ; \
+	done ; \
+	$(ECHO) "Creating   \`$(crosstools-gdb--archbase)-aros-new.diff'" ; \
+	diff -ruN $(crosstools-gdb--create-patch-exclude) \
+	    $(crosstools-gdb--create-patch-srcdir) \
+	    $(crosstools-gdb--create-patch-srcdir).aros \
+	    >$(SRCDIR)/$(CURDIR)/$(crosstools-gdb--archbase)-aros-new.diff ; \
+	$(MV) $(crosstools-gdb-portdir)/tmp/$(crosstools-gdb--create-patch-srcdir).aros $(crosstools-gdb-portdir)/$(crosstools-gdb--create-patch-srcdir) ; \
+	$(RM) $(crosstools-gdb-portdir)/tmp
+
+#MM crosstools-gdb : crosstools-gdb-
+#MM
+crosstools-gdb:
+	$(NOP)
+
+crosstools-gdb--package-dir := $(crosstools-gdb-portdir)/$(crosstools-gdb--archbase)
+
+crosstools-gdb--package-basename := \
+    $(DISTDIR)/Packages/$(crosstools-gdb--archbase)-aros.$(AROS_TARGET_CPU)
+
+ifneq (no,no)
+    crosstools-gdb--package := $(crosstools-gdb--package-basename).tar.bz2
+endif
+
+
+ifneq ($(crosstools-gdb-prefix),)
+    crosstools-gdb--prefix := $(crosstools-gdb-prefix)
+else
+    crosstools-gdb--prefix := $(AROS_CONTRIB)
+endif
+
+ifneq (,)
+    crosstools-gdb--aros_prefix := 
+else
+    crosstools-gdb--aros_prefix := $(crosstools-gdb--prefix)
+endif
+
+BD_NIXFLAG ?= -nix
+
+ifeq (no,yes)
+    crosstools-gdb--nix    := $(BD_NIXFLAG)
+    crosstools-gdb--volpfx := /
+    crosstools-gdb--volsfx := /
+    
+    ifeq (,)
+        crosstools-gdb--nix_dir_layout := yes
+    endif
+else
+    crosstools-gdb--volsfx := :
+    
+    ifeq (,)
+        crosstools-gdb--nix_dir_layout := no
+    endif
+endif
+
+crosstools-gdb--volfunc = $(crosstools-gdb--volpfx)$(notdir $1)$(crosstools-gdb--volsfx)
+
+crosstools-gdb--install_opts := prefix=$(crosstools-gdb--prefix) \
+        exec_prefix=$(crosstools-gdb--prefix) 
+
+# Check if chosen compiler is valid
+ifeq ($(findstring host,host target kernel),)
+  $(error unknown compiler host)
+endif
+
+# Set legacy 'host' variable based on chosen compiler
+ifeq (host,host)
+    host := yes
+    ifeq ($(CURDIR),)
+        crosstools-gdb--pkgbasedir := $(HOSTGENDIR)
+    else
+        crosstools-gdb--pkgbasedir := $(HOSTGENDIR)/$(CURDIR)
+    endif
+else
+    host := no
+    ifeq ($(CURDIR),)
+        crosstools-gdb--pkgbasedir := $(GENDIR)
+    else
+        crosstools-gdb--pkgbasedir := $(GENDIR)/$(CURDIR)
+    endif
+endif
+ifneq (,)
+    ifeq ($(CURDIR),)
+        crosstools-gdb--pkgbasedir := 
+    else
+        crosstools-gdb--pkgbasedir := /$(CURDIR)
+    endif
+endif
+
+ifeq (gdb,)
+    crosstools-gdb--pkgdir := $(crosstools-gdb--pkgbasedir)
+else
+    crosstools-gdb--pkgdir := $(crosstools-gdb--pkgbasedir)/gdb
+endif
+
+crosstools-gdb--configflag := $(crosstools-gdb--pkgdir)/.configured
+crosstools-gdb--installflag := $(crosstools-gdb--pkgdir)/.installed
+
+ifeq ($(filter yes, $(crosstools-gdb--nix_dir_layout) $(host)),yes)
+    crosstools-gdb--PROGDIR      := $(crosstools-gdb--aros_prefix)/bin
+    crosstools-gdb--config_opts  := --prefix=$(crosstools-gdb--aros_prefix)
+else
+    ifeq (no,yes)
+        crosstools-gdb--config_opts := --prefix=/PROGDIR  --bindir=/PROGDIR --sbindir=/PROGDIR \
+        --libdir=/LIB --includedir=/INCLUDE --oldincludedir=/INCLUDE   
+    else
+        crosstools-gdb--config_opts  := --prefix=$(crosstools-gdb--aros_prefix)
+    endif
+
+    crosstools-gdb--PROGDIR := $(crosstools-gdb--aros_prefix)
+    
+    crosstools-gdb--install_opts := bindir=$(crosstools-gdb--prefix) \
+        sbindir=$(crosstools-gdb--prefix) \
+        libdir=$(AROS_LIB) includedir=$(AROS_INCLUDES) \
+        oldincludedir=$(AROS_INCLUDES) 
+endif
+
+ifneq ($(DEBUG),yes)
+    crosstools-gdb--s_flag = -s
+endif
+
+ifeq (yes,yes)
+    crosstools-gdb--HOST_CFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CFLAGS)
+    crosstools-gdb--KERNEL_CFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(crosstools-gdb--s_flag)
+ifeq (no,yes)
+    crosstools-gdb--TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(crosstools-gdb--s_flag)
+else
+    crosstools-gdb--TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(crosstools-gdb--nix) $(crosstools-gdb--s_flag)
+endif
+endif
+ifeq (yes,yes)
+    crosstools-gdb--HOST_CXXFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CXXFLAGS)
+    crosstools-gdb--KERNEL_CXXFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CXXFLAGS) $(crosstools-gdb--s_flag)
+ifeq (no,yes)
+    crosstools-gdb--TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(crosstools-gdb--s_flag)
+else
+    crosstools-gdb--TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(crosstools-gdb--nix) $(crosstools-gdb--s_flag)
+endif
+endif
+
+# Set up build environment, and options for configure script
+ifeq (host,host)
+    # NB: We need to pass in our crosstoolsdir, but cannot set CFLAGS since it
+    # confused configure scripts. We also cannot pass it via _FOR_BUILD
+    # since that won't get picked up during configure.
+    # We also cannot pass in the compiler including std flags so we need to use
+    # the "plain" host compiler.
+    crosstools-gdb--cfg-env :=  \
+        CPP="$(HOST_CPP)" \
+        CXXCPP="$(HOST_CPP)" \
+        CC="$(strip $(HOST_DEF_CC) $(crosstools-gdb--HOST_CFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        CXX="$(strip $(HOST_CXX) $(crosstools-gdb--HOST_CXXFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        LDFLAGS="-L$(CROSSTOOLSDIR)/lib $(USER_LDFLAGS)"
+ifeq (yes,yes)
+    crosstools-gdb--cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    crosstools-gdb--cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(crosstools-gdb--KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(crosstools-gdb--KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(TARGET_AS)" \
+        OBJCOPY="$(OBJCOPY)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)" \
+        TARGET_OBJCOPY="$(TARGET_OBJCOPY)"
+endif
+ifeq (host,target)
+    crosstools-gdb--cfg-env :=  \
+        PKG_CONFIG_LIBDIR="$(AROS_DEVELOPER)/lib/pkgconfig" \
+        PKG_CONFIG_SYSROOT_DIR="$(AROSDIR)"
+    crosstools-gdb--cfg-env += CPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CXXCPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CC="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CXX="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        LD="$(strip $(TARGET_LD))"
+    crosstools-gdb--cfg-env += CFLAGS="$(crosstools-gdb--TARGET_CFLAGS) $(OPTIMIZATION_CFLAGS)" \
+        CXXFLAGS="$(crosstools-gdb--TARGET_CXXFLAGS) $(OPTIMIZATION_CFLAGS)"
+ifeq (yes,yes)
+    crosstools-gdb--cfg-env += CPPFLAGS="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-gdb--cfg-env += LDFLAGS="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-gdb--nix) $(crosstools-gdb--s_flag))"
+ifeq (yes,yes)
+    crosstools-gdb--cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    crosstools-gdb--cfg-env += CC_FOR_BUILD="$(strip $(HOST_DEF_CC))" \
+        CFLAGS_FOR_BUILD="$(strip $(crosstools-gdb--HOST_CFLAGS))" \
+        CXX_FOR_BUILD="$(strip $(HOST_CXX))" \
+        CXXFLAGS_FOR_BUILD="$(strip $(crosstools-gdb--HOST_CXXFLAGS))" \
+        LD_FOR_BUILD="$(strip $(HOST_LD))" \
+        LDFLAGS_FOR_BUILD="$(strip $(HOST_LDFLAGS) $(crosstools-gdb--s_flag))"
+ifeq (yes,yes)
+    crosstools-gdb--cfg-env += CPPFLAGS_FOR_HOST="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-gdb--cfg-env += CC_FOR_HOST="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS) $(crosstools-gdb--nix) $(crosstools-gdb--s_flag))" \
+        CXX_FOR_HOST="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS) $(crosstools-gdb--nix) $(crosstools-gdb--s_flag))" \
+        LD_FOR_HOST="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_HOST="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-gdb--nix) $(crosstools-gdb--s_flag))"
+ifeq (yes,yes)
+    crosstools-gdb--cfg-env += CPPFLAGS_FOR_TARGET="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    crosstools-gdb--cfg-env += CC_FOR_TARGET="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_TARGET="$(strip $(crosstools-gdb--TARGET_CFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS))" \
+        CXX_FOR_TARGET="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_TARGET="$(strip $(crosstools-gdb--TARGET_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS))" \
+        LD_FOR_TARGET="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_TARGET="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(crosstools-gdb--nix) $(crosstools-gdb--s_flag))" \
+        AR="$(strip $(AR_PLAIN))" \
+        AS="$(strip $(TARGET_AS))" \
+        OBJCOPY="$(strip $(OBJCOPY))" \
+        RANLIB="$(strip $(RANLIB))" \
+        STRIP="$(strip $(STRIP_PLAIN))"
+ifeq (yes,yes)
+    crosstools-gdb--cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    crosstools-gdb--cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(crosstools-gdb--KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(crosstools-gdb--KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(strip $(TARGET_AS))" \
+        TARGET_RANLIB="$(strip $(RANLIB))" \
+        TARGET_STRIP="$(strip $(STRIP_PLAIN))" \
+        TARGET_NM="$(strip $(NM_PLAIN))"
+ifeq (yes,yes)
+    crosstools-gdb--config_opts += --target=$(AROS_TARGET_CPU)-aros
+    crosstools-gdb--config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    crosstools-gdb--config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    crosstools-gdb--config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    crosstools-gdb--config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    crosstools-gdb--config_opts += --without-x
+endif
+endif
+endif
+ifeq (host,kernel)
+    crosstools-gdb--cfg-env :=  \
+        CPP="$(KERNEL_CPP)" \
+        CXXCPP="$(KERNEL_CPP)"
+ifeq (yes,yes)
+    crosstools-gdb--cfg-env += CPPFLAGS="$(strip $(KERNEL_CPPFLAGS) )"
+endif
+    crosstools-gdb--cfg-env += CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        CFLAGS="$(strip $(crosstools-gdb--KERNEL_CFLAGS) $(OPTIMIZATION_CFLAGS))" \
+        CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        CXXFLAGS="$(strip $(crosstools-gdb--KERNEL_CXXFLAGS) $(OPTIMIZATION_CFLAGS))" \
+        AS="$(KERNEL_AS)"
+ifeq (yes,yes)
+    crosstools-gdb--cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    crosstools-gdb--cfg-env += CC_FOR_BUILD="$(HOST_DEF_CC)" \
+        CFLAGS_FOR_BUILD="$(crosstools-gdb--HOST_CFLAGS)" \
+        CXX_FOR_BUILD="$(HOST_CXX)" \
+        CXXFLAGS_FOR_BUILD="$(crosstools-gdb--HOST_CXXFLAGS)" \
+        RANLIB="$(RANLIB)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)"
+ifeq (yes,yes)
+    crosstools-gdb--config_opts += --target=$(AROS_TARGET_CPU)-aros
+    crosstools-gdb--config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    crosstools-gdb--config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    crosstools-gdb--config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    crosstools-gdb--config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    crosstools-gdb--config_opts += --without-x
+endif
+
+endif
+endif
+
+ifeq (no,yes)
+    BUILD_ENV := $(crosstools-gdb--cfg-env)
+endif
+
+crosstools-gdb--touchfileflag ?= $(crosstools-gdb--pkgdir)/.files-touched
+
+ifneq ("$(wildcard $(crosstools-gdb-portdir)/$(crosstools-gdb--builddir)/Makefile)","")
+# in an ideal world, we would depend on the files in the source directory,
+# so we could copy them when they change. unfortunately filenames with
+# spaces cause problems with this
+$(crosstools-gdb--pkgdir)/.local-copy:
+	$(Q)$(FOR) dir in $(crosstools-gdb--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Copying Local-Build Sources to  \`$(patsubst $(TOP)/%,%,$(abspath $(crosstools-gdb--pkgdir)))'"
+	$(Q)$(CP) -Rf "$(crosstools-gdb-portdir)/$(crosstools-gdb--builddir)/." $(crosstools-gdb--pkgdir)/ && $(TOUCH) $@
+
+$(crosstools-gdb--touchfileflag) : $(crosstools-gdb--pkgdir)/.local-copy
+
+    crosstools-gdb--cfg-srcdir=$(crosstools-gdb--pkgdir)
+else
+    crosstools-gdb--cfg-srcdir=$(crosstools-gdb-portdir)/$(crosstools-gdb--builddir)
+endif
+crosstools-gdb--make-env := -C $(crosstools-gdb--pkgdir)
+
+.PHONY : crosstools-gdb- crosstools-gdb--clean crosstools-gdb--build_and_install-quick
+
+# When building for the host, we don't need to build the
+# linklibs - this is especially true when building the
+# crosstool toolchain on 'foreign' architectures (such as
+# building PPC on x86)
+
+#MM- crosstools-gdb--host : setup includes crosstools-gdb--quick
+#MM- crosstools-gdb--target : setup includes core-linklibs crosstools-gdb--quick
+#MM- crosstools-gdb-: crosstools-gdb--host
+
+# Using -j1 in install_command may result in a warning but finally
+# it does its job. make install for gcc does not work reliably for -jN
+# where N > 1.
+ifneq (install,)
+    crosstools-gdb--install_command = \
+        $(ECHO) "Installing from build in         $(subst $(TOP)/,,$(crosstools-gdb--pkgdir))" && \
+        $(MAKE) PROGDIR="$(crosstools-gdb--PROGDIR)/" $(crosstools-gdb--install_opts) \
+        $(crosstools-gdb--make-env) install -j1
+
+    crosstools-gdb--uninstall_command = \
+    $(RM) $(crosstools-gdb--installflag) && \
+    $(MAKE) PROGDIR="$(crosstools-gdb--PROGDIR)/" \
+    $(crosstools-gdb--install_opts) $(crosstools-gdb--make-env) uninstall
+else
+    crosstools-gdb--install_command   := true
+    crosstools-gdb--uninstall_command := true
+endif
+
+#MM- crosstools-gdb--quick :  crosstools-gdb--configure  crosstools-gdb--build_and_install-quick crosstools-gdb--make-package
+
+#MM
+crosstools-gdb--build_and_install-quick :  $(crosstools-gdb--installflag)
+
+#
+# N.B.: the make test for the targets being up to date generates a benign Error 1.
+#
+$(crosstools-gdb--installflag) : $(crosstools-gdb--configflag)
+	$(Q)$(IF) ! $(BUILD_ENV) $(MAKE) PROGDIR="$(call crosstools-gdb--volfunc, PROGDIR)" -q $(crosstools-gdb--make-env); then \
+	    $(RM) $(crosstools-gdb--installflag) && \
+	    $(ECHO) "Performing build in         $(subst $(TOP)/,,$(crosstools-gdb--pkgdir))" && \
+	    $(BUILD_ENV) $(MAKE) PROGDIR="$(call crosstools-gdb--volfunc, PROGDIR)" $(crosstools-gdb--make-env) && \
+	    $(crosstools-gdb--install_command) && \
+	    $(TOUCH) $@ -r $^; \
+	fi
+
+ifneq ($(crosstools-gdb--touchfileflag),)
+$(crosstools-gdb--touchfileflag):
+	$(Q)$(FOR) dir in $(crosstools-gdb--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)find $(crosstools-gdb-portdir)/$(crosstools-gdb--builddir) -exec $(TOUCH) -c -r $(crosstools-gdb--cfg-srcdir)/configure '{}' \; && \
+	$(TOUCH) $@
+endif
+
+#MM
+crosstools-gdb--uninstall :
+	$(crosstools-gdb--uninstall_command)
+
+#MM
+crosstools-gdb--configure : $(crosstools-gdb--configflag)
+
+$(crosstools-gdb--configflag) : TMP_SRCDIR := $(shell echo $(crosstools-gdb--cfg-srcdir) | sed 's/^\(.\):\//\/\1\//')
+$(crosstools-gdb--configflag) : $(crosstools-gdb--touchfileflag) $(TOP)/$(CURDIR)/mmakefile
+	$(Q)$(RM) $@
+	$(Q)$(FOR) dir in $(crosstools-gdb--pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Configuring build in         $(subst $(TOP)/,,$(crosstools-gdb--pkgdir))"
+	$(Q)cd $(crosstools-gdb--pkgdir) && \
+	find . -name config.cache -exec $(RM) '{}' \; && \
+	$(crosstools-gdb--cfg-env) $(TMP_SRCDIR)/configure $(crosstools-gdb--config_opts) $(GDB_EXTRA_OPTS) && \
+	$(TOUCH) $@
+
+#MM
+crosstools-gdb--clean : crosstools-gdb--uninstall
+	$(Q)$(RM) $(crosstools-gdb--pkgdir)
+
+.PHONY : crosstools-gdb--make-package crosstools-gdb--create-patch
+#MM crosstools-gdb--make-package : crosstools-gdb--quick
+
+#MM
+crosstools-gdb--make-package : $(crosstools-gdb--package)
+ 
+#There seems to be a bug, either with my clock or with make, 'cause it may happen
+#that $^ and $@ have exactly the same mtime, and in that case make tries
+#to rebuild $@ again, which would fail because the directory where
+#the package got installed would not exist anymore. 
+#We work this around by using an if statement to manually check the mtimes.
+$(crosstools-gdb--package-basename).tar.bz2 :
+	$(Q)$(IF) $(TEST) $(crosstools-gdb-installflag) -nt $@ || ! $(TEST) -s $@; then \
+	    $(RM) $@ ; \
+	    $(ECHO) "Building   \`$(crosstools-gdb--package-basename).tar.bz2'" ; \
+	    $(MKDIR) -p "$(DISTDIR)/Packages" ; \
+	    $(MKDIR) -p "$(crosstools-gdb-prefix)" ; \
+	    cd $(crosstools-gdb--package-dir) ; \
+	    tar -cvf $(crosstools-gdb--package-basename).tar * ; \
+	    bzip2 -9 -f $(crosstools-gdb--package-basename).tar ; \
+	fi
+
+# libatomic
+
+LIBATOMIC_OBJDIR := $(HOSTGENDIR)/$(CURDIR)/gcc/$(AROS_TARGET_CPU)-aros/libatomic
+LIBATOMIC_SRCDIR := $(HOSTDIR)/Ports/host/gcc/gcc-$(GCC_VERSION)/libatomic
+ifeq ($(AROS_TARGET_CPU),m68k)
+ISA_FLAGS:=$(ISA_FLOAT_FLAGS)
+endif
+
+ifneq (,)
+    tools-crosstools-gcc-libatomic-prefix := 
+else
+    tools-crosstools-gcc-libatomic-prefix := $(AROS_CONTRIB)
+endif
+
+ifneq (,)
+    tools-crosstools-gcc-libatomic-aros_prefix := 
+else
+    tools-crosstools-gcc-libatomic-aros_prefix := $(tools-crosstools-gcc-libatomic-prefix)
+endif
+
+BD_NIXFLAG ?= -nix
+
+ifeq (no,yes)
+    tools-crosstools-gcc-libatomic-nix    := $(BD_NIXFLAG)
+    tools-crosstools-gcc-libatomic-volpfx := /
+    tools-crosstools-gcc-libatomic-volsfx := /
+    
+    ifeq (,)
+        tools-crosstools-gcc-libatomic-nix_dir_layout := yes
+    endif
+else
+    tools-crosstools-gcc-libatomic-volsfx := :
+    
+    ifeq (,)
+        tools-crosstools-gcc-libatomic-nix_dir_layout := no
+    endif
+endif
+
+tools-crosstools-gcc-libatomic-volfunc = $(tools-crosstools-gcc-libatomic-volpfx)$(notdir $1)$(tools-crosstools-gcc-libatomic-volsfx)
+
+tools-crosstools-gcc-libatomic-install_opts := prefix=$(tools-crosstools-gcc-libatomic-prefix) \
+        exec_prefix=$(tools-crosstools-gcc-libatomic-prefix) 
+
+# Check if chosen compiler is valid
+ifeq ($(findstring target,host target kernel),)
+  $(error unknown compiler target)
+endif
+
+# Set legacy 'host' variable based on chosen compiler
+ifeq (target,host)
+    host := yes
+    ifeq (,)
+        tools-crosstools-gcc-libatomic-pkgbasedir := $(HOSTGENDIR)
+    else
+        tools-crosstools-gcc-libatomic-pkgbasedir := $(HOSTGENDIR)/
+    endif
+else
+    host := no
+    ifeq (,)
+        tools-crosstools-gcc-libatomic-pkgbasedir := $(GENDIR)
+    else
+        tools-crosstools-gcc-libatomic-pkgbasedir := $(GENDIR)/
+    endif
+endif
+ifneq ($(LIBATOMIC_OBJDIR),)
+    ifeq (,)
+        tools-crosstools-gcc-libatomic-pkgbasedir := $(LIBATOMIC_OBJDIR)
+    else
+        tools-crosstools-gcc-libatomic-pkgbasedir := $(LIBATOMIC_OBJDIR)/
+    endif
+endif
+
+ifeq (,)
+    tools-crosstools-gcc-libatomic-pkgdir := $(tools-crosstools-gcc-libatomic-pkgbasedir)
+else
+    tools-crosstools-gcc-libatomic-pkgdir := $(tools-crosstools-gcc-libatomic-pkgbasedir)/
+endif
+
+tools-crosstools-gcc-libatomic-configflag := $(tools-crosstools-gcc-libatomic-pkgdir)/.configured
+tools-crosstools-gcc-libatomic-installflag := $(tools-crosstools-gcc-libatomic-pkgdir)/.installed
+
+ifeq ($(filter yes, $(tools-crosstools-gcc-libatomic-nix_dir_layout) $(host)),yes)
+    tools-crosstools-gcc-libatomic-PROGDIR      := $(tools-crosstools-gcc-libatomic-aros_prefix)/bin
+    tools-crosstools-gcc-libatomic-config_opts  := --prefix=$(tools-crosstools-gcc-libatomic-aros_prefix)
+else
+    ifeq (no,yes)
+        tools-crosstools-gcc-libatomic-config_opts := --prefix=/PROGDIR  --bindir=/PROGDIR --sbindir=/PROGDIR \
+        --libdir=/LIB --includedir=/INCLUDE --oldincludedir=/INCLUDE   
+    else
+        tools-crosstools-gcc-libatomic-config_opts  := --prefix=$(tools-crosstools-gcc-libatomic-aros_prefix)
+    endif
+
+    tools-crosstools-gcc-libatomic-PROGDIR := $(tools-crosstools-gcc-libatomic-aros_prefix)
+    
+    tools-crosstools-gcc-libatomic-install_opts := bindir=$(tools-crosstools-gcc-libatomic-prefix) \
+        sbindir=$(tools-crosstools-gcc-libatomic-prefix) \
+        libdir=$(AROS_LIB) includedir=$(AROS_INCLUDES) \
+        oldincludedir=$(AROS_INCLUDES) 
+endif
+
+ifneq ($(DEBUG),yes)
+    tools-crosstools-gcc-libatomic-s_flag = -s
+endif
+
+ifeq (yes,yes)
+    tools-crosstools-gcc-libatomic-HOST_CFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CFLAGS)
+    tools-crosstools-gcc-libatomic-KERNEL_CFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(tools-crosstools-gcc-libatomic-s_flag)
+ifeq (no,yes)
+    tools-crosstools-gcc-libatomic-TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(tools-crosstools-gcc-libatomic-s_flag)
+else
+    tools-crosstools-gcc-libatomic-TARGET_CFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) $(tools-crosstools-gcc-libatomic-nix) $(tools-crosstools-gcc-libatomic-s_flag)
+endif
+endif
+ifeq (yes,yes)
+    tools-crosstools-gcc-libatomic-HOST_CXXFLAGS=$(HOST_ISA_CFLAGS) $(HOST_CXXFLAGS)
+    tools-crosstools-gcc-libatomic-KERNEL_CXXFLAGS=$(KERNEL_ISA_CFLAGS) $(KERNEL_CXXFLAGS) $(tools-crosstools-gcc-libatomic-s_flag)
+ifeq (no,yes)
+    tools-crosstools-gcc-libatomic-TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(tools-crosstools-gcc-libatomic-s_flag)
+else
+    tools-crosstools-gcc-libatomic-TARGET_CXXFLAGS=$(TARGET_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) $(tools-crosstools-gcc-libatomic-nix) $(tools-crosstools-gcc-libatomic-s_flag)
+endif
+endif
+
+# Set up build environment, and options for configure script
+ifeq (target,host)
+    # NB: We need to pass in our crosstoolsdir, but cannot set CFLAGS since it
+    # confused configure scripts. We also cannot pass it via _FOR_BUILD
+    # since that won't get picked up during configure.
+    # We also cannot pass in the compiler including std flags so we need to use
+    # the "plain" host compiler.
+    tools-crosstools-gcc-libatomic-cfg-env :=  \
+        CPP="$(HOST_CPP)" \
+        CXXCPP="$(HOST_CPP)" \
+        CC="$(strip $(HOST_DEF_CC) $(tools-crosstools-gcc-libatomic-HOST_CFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        CXX="$(strip $(HOST_CXX) $(tools-crosstools-gcc-libatomic-HOST_CXXFLAGS) -I$(CROSSTOOLSDIR)/include)" \
+        LDFLAGS="-L$(CROSSTOOLSDIR)/lib $(USER_LDFLAGS)"
+ifeq (yes,yes)
+    tools-crosstools-gcc-libatomic-cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    tools-crosstools-gcc-libatomic-cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(tools-crosstools-gcc-libatomic-KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(tools-crosstools-gcc-libatomic-KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(TARGET_AS)" \
+        OBJCOPY="$(OBJCOPY)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)" \
+        TARGET_OBJCOPY="$(TARGET_OBJCOPY)"
+endif
+ifeq (target,target)
+    tools-crosstools-gcc-libatomic-cfg-env :=  \
+        PKG_CONFIG_LIBDIR="$(AROS_DEVELOPER)/lib/pkgconfig" \
+        PKG_CONFIG_SYSROOT_DIR="$(AROSDIR)"
+    tools-crosstools-gcc-libatomic-cfg-env += CPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CXXCPP="$(strip $(TARGET_CPP) $(TARGET_SYSROOT))" \
+        CC="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CXX="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        LD="$(strip $(TARGET_LD))"
+    tools-crosstools-gcc-libatomic-cfg-env += CFLAGS="$(tools-crosstools-gcc-libatomic-TARGET_CFLAGS) $(OPTIMIZATION_CFLAGS)" \
+        CXXFLAGS="$(tools-crosstools-gcc-libatomic-TARGET_CXXFLAGS) $(OPTIMIZATION_CFLAGS)"
+ifeq (yes,yes)
+    tools-crosstools-gcc-libatomic-cfg-env += CPPFLAGS="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    tools-crosstools-gcc-libatomic-cfg-env += LDFLAGS="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(tools-crosstools-gcc-libatomic-nix) $(tools-crosstools-gcc-libatomic-s_flag))"
+ifeq (yes,yes)
+    tools-crosstools-gcc-libatomic-cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    tools-crosstools-gcc-libatomic-cfg-env += CC_FOR_BUILD="$(strip $(HOST_DEF_CC))" \
+        CFLAGS_FOR_BUILD="$(strip $(tools-crosstools-gcc-libatomic-HOST_CFLAGS))" \
+        CXX_FOR_BUILD="$(strip $(HOST_CXX))" \
+        CXXFLAGS_FOR_BUILD="$(strip $(tools-crosstools-gcc-libatomic-HOST_CXXFLAGS))" \
+        LD_FOR_BUILD="$(strip $(HOST_LD))" \
+        LDFLAGS_FOR_BUILD="$(strip $(HOST_LDFLAGS) $(tools-crosstools-gcc-libatomic-s_flag))"
+ifeq (yes,yes)
+    tools-crosstools-gcc-libatomic-cfg-env += CPPFLAGS_FOR_HOST="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    tools-crosstools-gcc-libatomic-cfg-env += CC_FOR_HOST="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CFLAGS) $(USER_CFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS) $(tools-crosstools-gcc-libatomic-nix) $(tools-crosstools-gcc-libatomic-s_flag))" \
+        CXX_FOR_HOST="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_HOST="$(strip $(HOST_ISA_CFLAGS) $(USER_INCLUDES) $(BASE_CXXFLAGS) $(USER_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS) $(tools-crosstools-gcc-libatomic-nix) $(tools-crosstools-gcc-libatomic-s_flag))" \
+        LD_FOR_HOST="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_HOST="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(tools-crosstools-gcc-libatomic-nix) $(tools-crosstools-gcc-libatomic-s_flag))"
+ifeq (yes,yes)
+    tools-crosstools-gcc-libatomic-cfg-env += CPPFLAGS_FOR_TARGET="$(strip $(BASE_CPPFLAGS) $(USER_CPPFLAGS) )"
+endif
+    tools-crosstools-gcc-libatomic-cfg-env += CC_FOR_TARGET="$(strip $(TARGET_CC) $(TARGET_SYSROOT))" \
+        CFLAGS_FOR_TARGET="$(strip $(tools-crosstools-gcc-libatomic-TARGET_CFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS))" \
+        CXX_FOR_TARGET="$(strip $(TARGET_CXX) $(TARGET_SYSROOT))" \
+        CXXFLAGS_FOR_TARGET="$(strip $(tools-crosstools-gcc-libatomic-TARGET_CXXFLAGS) -L$(AROS_DEVELOPER)/lib $(OPTIMIZATION_CFLAGS))" \
+        LD_FOR_TARGET="$(strip $(TARGET_LD))" \
+        LDFLAGS_FOR_TARGET="$(strip -L$(AROS_DEVELOPER)/lib $(USER_LDFLAGS) $(tools-crosstools-gcc-libatomic-nix) $(tools-crosstools-gcc-libatomic-s_flag))" \
+        AR="$(strip $(AR_PLAIN))" \
+        AS="$(strip $(TARGET_AS))" \
+        OBJCOPY="$(strip $(OBJCOPY))" \
+        RANLIB="$(strip $(RANLIB))" \
+        STRIP="$(strip $(STRIP_PLAIN))"
+ifeq (yes,yes)
+    tools-crosstools-gcc-libatomic-cfg-env += TARGET_CPPFLAGS="$(KERNEL_CPPFLAGS)"
+endif
+    tools-crosstools-gcc-libatomic-cfg-env += TARGET_CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        TARGET_CFLAGS="$(strip $(tools-crosstools-gcc-libatomic-KERNEL_CFLAGS))" \
+        TARGET_CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        TARGET_CXXFLAGS="$(strip $(tools-crosstools-gcc-libatomic-KERNEL_CXXFLAGS))" \
+        TARGET_AS="$(strip $(TARGET_AS))" \
+        TARGET_RANLIB="$(strip $(RANLIB))" \
+        TARGET_STRIP="$(strip $(STRIP_PLAIN))" \
+        TARGET_NM="$(strip $(NM_PLAIN))"
+ifeq (yes,yes)
+    tools-crosstools-gcc-libatomic-config_opts += --target=$(AROS_TARGET_CPU)-aros
+    tools-crosstools-gcc-libatomic-config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    tools-crosstools-gcc-libatomic-config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    tools-crosstools-gcc-libatomic-config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    tools-crosstools-gcc-libatomic-config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    tools-crosstools-gcc-libatomic-config_opts += --without-x
+endif
+endif
+endif
+ifeq (target,kernel)
+    tools-crosstools-gcc-libatomic-cfg-env :=  \
+        CPP="$(KERNEL_CPP)" \
+        CXXCPP="$(KERNEL_CPP)"
+ifeq (yes,yes)
+    tools-crosstools-gcc-libatomic-cfg-env += CPPFLAGS="$(strip $(KERNEL_CPPFLAGS) )"
+endif
+    tools-crosstools-gcc-libatomic-cfg-env += CC="$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))" \
+        CFLAGS="$(strip $(tools-crosstools-gcc-libatomic-KERNEL_CFLAGS) $(OPTIMIZATION_CFLAGS))" \
+        CXX="$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))" \
+        CXXFLAGS="$(strip $(tools-crosstools-gcc-libatomic-KERNEL_CXXFLAGS) $(OPTIMIZATION_CFLAGS))" \
+        AS="$(KERNEL_AS)"
+ifeq (yes,yes)
+    tools-crosstools-gcc-libatomic-cfg-env += CPPFLAGS_FOR_BUILD="$(HOST_CPPFLAGS)"
+endif
+    tools-crosstools-gcc-libatomic-cfg-env += CC_FOR_BUILD="$(HOST_DEF_CC)" \
+        CFLAGS_FOR_BUILD="$(tools-crosstools-gcc-libatomic-HOST_CFLAGS)" \
+        CXX_FOR_BUILD="$(HOST_CXX)" \
+        CXXFLAGS_FOR_BUILD="$(tools-crosstools-gcc-libatomic-HOST_CXXFLAGS)" \
+        RANLIB="$(RANLIB)" \
+        TARGET_RANLIB="$(RANLIB)" \
+        TARGET_STRIP="$(STRIP_PLAIN)" \
+        TARGET_NM="$(NM_PLAIN)"
+ifeq (yes,yes)
+    tools-crosstools-gcc-libatomic-config_opts += --target=$(AROS_TARGET_CPU)-aros
+    tools-crosstools-gcc-libatomic-config_opts += --build=$(AROS_HOST_CPU)-$(AROS_HOST_ARCH)
+    tools-crosstools-gcc-libatomic-config_opts += --host=$(AROS_TARGET_CPU)-aros
+endif
+ifeq (yes,yes)
+    tools-crosstools-gcc-libatomic-config_opts += --without-pic --disable-shared
+ifeq (yes,yes)
+# disable native language support
+    tools-crosstools-gcc-libatomic-config_opts += --disable-nls
+endif
+ifeq (yes,yes)
+# disable X window system
+    tools-crosstools-gcc-libatomic-config_opts += --without-x
+endif
+
+endif
+endif
+
+ifeq (no,yes)
+    BUILD_ENV := $(tools-crosstools-gcc-libatomic-cfg-env)
+endif
+
+tools-crosstools-gcc-libatomic-touchfileflag ?= $(tools-crosstools-gcc-libatomic-pkgdir)/.files-touched
+
+ifneq ("$(wildcard $(LIBATOMIC_SRCDIR)/Makefile)","")
+# in an ideal world, we would depend on the files in the source directory,
+# so we could copy them when they change. unfortunately filenames with
+# spaces cause problems with this
+$(tools-crosstools-gcc-libatomic-pkgdir)/.local-copy:
+	$(Q)$(FOR) dir in $(tools-crosstools-gcc-libatomic-pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Copying Local-Build Sources to  \`$(patsubst $(TOP)/%,%,$(abspath $(tools-crosstools-gcc-libatomic-pkgdir)))'"
+	$(Q)$(CP) -Rf "$(LIBATOMIC_SRCDIR)/." $(tools-crosstools-gcc-libatomic-pkgdir)/ && $(TOUCH) $@
+
+$(tools-crosstools-gcc-libatomic-touchfileflag) : $(tools-crosstools-gcc-libatomic-pkgdir)/.local-copy
+
+    tools-crosstools-gcc-libatomic-cfg-srcdir=$(tools-crosstools-gcc-libatomic-pkgdir)
+else
+    tools-crosstools-gcc-libatomic-cfg-srcdir=$(LIBATOMIC_SRCDIR)
+endif
+tools-crosstools-gcc-libatomic-make-env := -C $(tools-crosstools-gcc-libatomic-pkgdir)
+
+.PHONY : tools-crosstools-gcc-libatomic tools-crosstools-gcc-libatomic-clean tools-crosstools-gcc-libatomic-build_and_install-quick
+
+# When building for the host, we don't need to build the
+# linklibs - this is especially true when building the
+# crosstool toolchain on 'foreign' architectures (such as
+# building PPC on x86)
+
+#MM- tools-crosstools-gcc-libatomic-host : setup includes tools-crosstools-gcc-libatomic-quick
+#MM- tools-crosstools-gcc-libatomic-target : setup includes core-linklibs tools-crosstools-gcc-libatomic-quick
+#MM- tools-crosstools-gcc-libatomic: tools-crosstools-gcc-libatomic-target
+
+# Using -j1 in install_command may result in a warning but finally
+# it does its job. make install for gcc does not work reliably for -jN
+# where N > 1.
+ifneq (install,)
+    tools-crosstools-gcc-libatomic-install_command = \
+        $(ECHO) "Installing from build in         $(subst $(TOP)/,,$(tools-crosstools-gcc-libatomic-pkgdir))" && \
+        $(MAKE) PROGDIR="$(tools-crosstools-gcc-libatomic-PROGDIR)/" $(tools-crosstools-gcc-libatomic-install_opts) \
+        $(tools-crosstools-gcc-libatomic-make-env) install -j1
+
+    tools-crosstools-gcc-libatomic-uninstall_command = \
+    $(RM) $(tools-crosstools-gcc-libatomic-installflag) && \
+    $(MAKE) PROGDIR="$(tools-crosstools-gcc-libatomic-PROGDIR)/" \
+    $(tools-crosstools-gcc-libatomic-install_opts) $(tools-crosstools-gcc-libatomic-make-env) uninstall
+else
+    tools-crosstools-gcc-libatomic-install_command   := true
+    tools-crosstools-gcc-libatomic-uninstall_command := true
+endif
+
+#MM- tools-crosstools-gcc-libatomic-quick :  tools-crosstools-gcc-libatomic-configure  tools-crosstools-gcc-libatomic-build_and_install-quick 
+
+#MM
+tools-crosstools-gcc-libatomic-build_and_install-quick :  $(tools-crosstools-gcc-libatomic-installflag)
+
+#
+# N.B.: the make test for the targets being up to date generates a benign Error 1.
+#
+$(tools-crosstools-gcc-libatomic-installflag) : $(tools-crosstools-gcc-libatomic-configflag)
+	$(Q)$(IF) ! $(BUILD_ENV) $(MAKE) PROGDIR="$(call tools-crosstools-gcc-libatomic-volfunc, PROGDIR)" -q $(tools-crosstools-gcc-libatomic-make-env); then \
+	    $(RM) $(tools-crosstools-gcc-libatomic-installflag) && \
+	    $(ECHO) "Performing build in         $(subst $(TOP)/,,$(tools-crosstools-gcc-libatomic-pkgdir))" && \
+	    $(BUILD_ENV) $(MAKE) PROGDIR="$(call tools-crosstools-gcc-libatomic-volfunc, PROGDIR)" $(tools-crosstools-gcc-libatomic-make-env) && \
+	    $(tools-crosstools-gcc-libatomic-install_command) && \
+	    $(TOUCH) $@ -r $^; \
+	fi
+
+ifneq ($(tools-crosstools-gcc-libatomic-touchfileflag),)
+$(tools-crosstools-gcc-libatomic-touchfileflag):
+	$(Q)$(FOR) dir in $(tools-crosstools-gcc-libatomic-pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)find $(LIBATOMIC_SRCDIR) -exec $(TOUCH) -c -r $(tools-crosstools-gcc-libatomic-cfg-srcdir)/configure '{}' \; && \
+	$(TOUCH) $@
+endif
+
+#MM
+tools-crosstools-gcc-libatomic-uninstall :
+	$(tools-crosstools-gcc-libatomic-uninstall_command)
+
+#MM
+tools-crosstools-gcc-libatomic-configure : $(tools-crosstools-gcc-libatomic-configflag)
+
+$(tools-crosstools-gcc-libatomic-configflag) : TMP_SRCDIR := $(shell echo $(tools-crosstools-gcc-libatomic-cfg-srcdir) | sed 's/^\(.\):\//\/\1\//')
+$(tools-crosstools-gcc-libatomic-configflag) : $(tools-crosstools-gcc-libatomic-touchfileflag) $(TOP)/$(CURDIR)/mmakefile
+	$(Q)$(RM) $@
+	$(Q)$(FOR) dir in $(tools-crosstools-gcc-libatomic-pkgdir) ; do \
+		$(IF) $(TEST) ! -d $$dir ; then $(MKDIR) $$dir ; else $(NOP) ; fi ; \
+	done
+	$(Q)$(ECHO) "Configuring build in         $(subst $(TOP)/,,$(tools-crosstools-gcc-libatomic-pkgdir))"
+	$(Q)cd $(tools-crosstools-gcc-libatomic-pkgdir) && \
+	find . -name config.cache -exec $(RM) '{}' \; && \
+	$(tools-crosstools-gcc-libatomic-cfg-env) $(TMP_SRCDIR)/configure $(tools-crosstools-gcc-libatomic-config_opts)  && \
+	$(TOUCH) $@
+
+#MM
+tools-crosstools-gcc-libatomic-clean : tools-crosstools-gcc-libatomic-uninstall
+	$(Q)$(RM) $(tools-crosstools-gcc-libatomic-pkgdir)
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

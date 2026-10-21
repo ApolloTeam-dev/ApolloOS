@@ -1,0 +1,76 @@
+# Copyright © 2018, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+# croatian portuguese
+CATALOGS:= italian russian spanish
+
+
+ifeq ($(SRCDIR)/$(CURDIR)/security,)
+kernel-security-catalogs_DESC := $(basename $(wildcard $(SRCDIR)/$(CURDIR)/*.cd))
+else
+kernel-security-catalogs_DESC := $(SRCDIR)/$(CURDIR)/security
+endif
+
+kernel-security-catalogs_SRC := $(shell echo $(TOOLDIR)/C_h_aros | sed 's/^\(.\):\//\/\1\//')
+
+ifeq ($(CATALOGS),)
+kernel-security-catalogs_LNGS := $(basename $(notdir $(call WILDCARD, $(SRCDIR)/$(CURDIR)/*.ct)))
+else
+kernel-security-catalogs_LNGS := $(CATALOGS)
+endif
+
+kernel-security-catalogs_OBJS := $(addsuffix /System/Security.catalog, $(addprefix $(AROS_CATALOGS)/, $(kernel-security-catalogs_LNGS)))
+kernel-security-catalogs_DIRS := $(addsuffix /System, $(addprefix $(AROS_CATALOGS)/, $(kernel-security-catalogs_LNGS))) $(dir ../strings.h)
+
+#MM- kernel-security-catalogs-quick : kernel-security-catalogs
+
+#MM
+kernel-security-catalogs : $(kernel-security-catalogs_OBJS) ../strings.h
+
+
+ifneq ($(kernel-security-catalogs_OBJS),)
+$(kernel-security-catalogs_OBJS) : | $(kernel-security-catalogs_DIRS)
+else
+$(kernel-security-catalogs_OBJS) :: $(kernel-security-catalogs_DIRS)
+endif
+
+GLOB_MKDIRS += $(kernel-security-catalogs_DIRS)
+
+
+$(AROS_CATALOGS)/%/System/Security.catalog : $(SRCDIR)/$(CURDIR)/%.ct $(kernel-security-catalogs_DESC).cd
+	$(Q)$(ECHO) "Creating   Security catalog for language $*."
+	$(Q)$(IF) $(TEST) "$*" = "polish"; then \
+	    $(FLEXCAT) iso88592toamigapl $(kernel-security-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Security.catalog" || [ $$? -lt 10 ] ; \
+	elif $(TEST) "$*" = "russian"; then \
+	    $(FLEXCAT) win1251toamiga1251 $(kernel-security-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Security.catalog" || [ $$? -lt 10 ] ; \
+	else \
+	    $(FLEXCAT) $(kernel-security-catalogs_DESC).cd $< CATALOG="$(AROS_CATALOGS)/$*/System/Security.catalog" || [ $$? -lt 10 ] ; \
+	fi
+
+ifneq (../strings.h,)
+../strings.h : kernel-security-catalogs_DESC := $(kernel-security-catalogs_DESC)
+../strings.h : kernel-security-catalogs_SRC := $(kernel-security-catalogs_SRC)
+../strings.h : $(kernel-security-catalogs_DESC).cd $(kernel-security-catalogs_SRC).sd | $(dir ../strings.h)
+	$(Q)$(ECHO) "Creating   Security catalog source file $@"
+	$(Q)$(FLEXCAT) $(kernel-security-catalogs_DESC).cd $@=$(kernel-security-catalogs_SRC).sd
+endif
+
+kernel-security-catalogs-clean : FILES := $(kernel-security-catalogs_OBJS) ../strings.h
+#MM
+kernel-security-catalogs-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget kernel-security-catalogs"
+	$(Q)$(RM) $(FILES)
+
+.PHONY: kernel-security-catalogs kernel-security-catalogs-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

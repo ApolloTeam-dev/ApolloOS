@@ -1,0 +1,19 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+STORAGE_FILES := \
+    storage_init
+
+#%build_module mmake=kernel-storage \
+#  modname=storage modtype=resource \
+#  files="$(STORAGE_FILES)"
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

@@ -1,0 +1,115 @@
+# This mmakefile relies on existing and working C++ compiler. Additionally the build fails on ARM CPU.
+# Because of this I did not add it to the build by default.
+# This target needs to be built manually.
+
+include $(SRCDIR)/config/aros.cfg
+
+# Select target C++ compiler
+ifeq ($(TARGET_CXX),)
+  TARGET_CXX := $(CROSSTOOLSDIR)/$(AROS_TARGET_CPU)-aros-g++
+else
+  TARGET_CXX := $(TARGET_CXX) -specs=$(GENDIR)/config/specs
+endif
+
+# Remove C-only flags
+CXX_FLAGS := $(CFLAGS) -isystem $(AROS_DEVELOPER)/include
+CXX_FLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(CXX_FLAGS)))
+CXX_FLAGS := $(subst -fno-exceptions,, $(CXX_FLAGS))
+
+USER_LDFLAGS := -L$(AROS_DEVELOPER)/lib
+
+EXEDIR := $(AROS_TESTS)/cplusplus
+OBJDIR := $(GENDIR)/$(CURDIR)
+
+FILES := exception headertest
+
+EXES := $(addprefix $(EXEDIR)/,$(notdir $(FILES)))
+OBJS := $(addsuffix .o,$(addprefix $(OBJDIR)/,$(notdir $(FILES))))
+DEPS := $(addsuffix .d,$(addprefix $(OBJDIR)/,$(notdir $(FILES))))
+
+#MM
+test-cxx :: $(EXEDIR) $(EXES)
+
+$(EXEDIR):
+	@$(MKDIR) $@
+
+$(EXES) : $(EXEDIR)/% : $(OBJDIR)/%.o
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(GENDIR)/$(CURDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(TARGET_CXX) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(TARGET_CXX) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(TARGET_CXX) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(GENDIR)/$(CURDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(GENDIR)/$(CURDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+$(OBJDIR$)/%.o : %.cpp
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(TARGET_CXX) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(CXX_FLAGS) $(TARGET_CFLAGS) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(TARGET_CXX) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(CXX_FLAGS) $(TARGET_CFLAGS) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(TARGET_CXX) $(CFLAGS_IQUOTE) $(dir $<) $(CFLAGS_IQUOTE) $(SRCDIR)/$(CURDIR) $(CFLAGS_IQUOTE) . $(CFLAGS_IQUOTE_END) $(CXX_FLAGS) $(TARGET_CFLAGS) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(OBJDIR)/%.d : %.cpp
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(TARGET_CXX)" $(MKDEPEND) $(CXX_FLAGS) $(TARGET_CFLAGS) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(DEPS),)
+  ifneq (test-cxx-quick,)
+    ifneq ($(findstring $(TARGET),test-cxx-quick),)
+      -include $(DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(DEPS)
+    endif
+  endif
+endif
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

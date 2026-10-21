@@ -1,0 +1,55 @@
+# Copyright © 2004, The AROS Development Team. All rights reserved.
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+ICONS := Amiga Downloads-2 Downloads Linux Windows
+
+#MM- themes-GorillaSmall-icons-clean : themes-GorillaSmall-icons-drawers-clean
+#MM- themes-GorillaSmall-icons : themes-GorillaSmall-icons-drawers
+
+BD_OBJS := $(addprefix  $(AROS_CONTRIB)/Icons/Gorilla/Drawers/, $(addsuffix .info,$(ICONS)))
+
+#MM
+themes-GorillaSmall-icons-drawers : $(BD_OBJS)
+
+ifeq (,)
+
+$(AROS_CONTRIB)/Icons/Gorilla/Drawers/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/%.png
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+else
+
+$(AROS_CONTRIB)/Icons/Gorilla/Drawers/%.info : $(SRCDIR)/$(CURDIR)/%.info.src $(SRCDIR)/$(CURDIR)/
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(ILBMTOICON) $+ $@
+
+endif
+
+
+ifneq ($(BD_OBJS),)
+$(BD_OBJS) : | $(AROS_CONTRIB)/Icons/Gorilla/Drawers
+else
+$(BD_OBJS) :: $(AROS_CONTRIB)/Icons/Gorilla/Drawers
+endif
+
+GLOB_MKDIRS += $(AROS_CONTRIB)/Icons/Gorilla/Drawers
+
+
+themes-GorillaSmall-icons-drawers-clean : FILES := $(BD_OBJS)
+#MM
+themes-GorillaSmall-icons-drawers-clean ::
+	$(Q)$(RM) $(FILES)
+
+.PHONY: themes-GorillaSmall-icons-drawers themes-GorillaSmall-icons-drawers-clean
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

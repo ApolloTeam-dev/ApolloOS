@@ -1,0 +1,2278 @@
+#   $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+USER_CPPFLAGS := -DMUIMASTER_YES_INLINE_STDARG
+USER_LDFLAGS := -static
+
+FILES :=    arosx.class arosx.class.config.gui arosx.library debug
+
+#MM- kernel-usb-classes-arosx : kernel-usb-usbclass kernel-usb-poseidon-includes kernel-usb-classes-arosx-library
+
+
+
+# We will employ a terrifying, but unavoidable, hack here.
+# genmf has no concept of conditionals (ie %ifeq), and MetaMake
+# ignores GNU Make ifeq() statements, but will process any #MM
+# headed lines in the file.
+# 
+# So, to make the following #MM lines conditional on whether we want
+# to build the ABI, Library, or both, we define build_abi= and 
+# build_library as 'M' to enable, or '' to disable, which allows genmf
+# to do the following conversions:
+# 
+#  #M includes-foo: foo-include
+#    becomes, when build_abi=M
+#  #MM includes-foo: foo-include   <= Processed by MetaMake
+#    but, when build_abi= ...
+#  #M includes-foo: foo-includes   <= ignored by MetaMake! Yes!
+# 
+# Taking full blame for this: Jason S. McMullan <jason.mcmullan@gmail.com>
+
+# Define metamake targets and their dependencies
+#MM kernel-usb-classes-arosx
+#MM kernel-usb-classes-arosx-quick
+#MM kernel-usb-classes-arosx-makefile
+#MM kernel-usb-classes-arosx-clean
+
+# ABI targets:
+#M- includes-all : kernel-usb-classes-arosx-includes
+#M- linklibs-arosx: kernel-usb-classes-arosx-linklib
+#M- linklibs-arosx_rel : kernel-usb-classes-arosx-linklib
+#M- includes-arosx: kernel-usb-classes-arosx-includes
+#M- includes-arosx_rel : kernel-usb-classes-arosx-includes
+#M- kernel-usb-classes-arosx : kernel-usb-classes-arosx-includes core-linklibs linklibs-
+#M kernel-usb-classes-arosx-linklib : kernel-usb-classes-arosx-includes includes-
+#M- kernel-usb-classes-arosx-quick : kernel-usb-classes-arosx-includes-quick
+#M kernel-usb-classes-arosx-includes : kernel-usb-classes-arosx-makefile kernel-usb-classes-arosx-includes-dirs \
+#M     includes-generate-deps kernel-usb-classes-arosx-fd
+#M kernel-usb-classes-arosx-includes-quick
+#M kernel-usb-classes-arosx-includes-dirs
+#M kernel-usb-classes-arosx-fd
+
+# Library targets
+#MM kernel-usb-classes-arosx-kobj : core-linklibs linklibs-
+#MM kernel-usb-classes-arosx-kobj-quick : 
+
+# Library with ABI targets:
+#M kernel-usb-classes-arosx-kobj : kernel-usb-classes-arosx-includes core-linklibs linklibs-
+#M kernel-usb-classes-arosx-kobj-quick : kernel-usb-classes-arosx-includes-quick
+
+# All MetaMake targets defined by this macro
+kernel-usb-classes-arosx_ALLTARGETS       := kernel-usb-classes-arosx kernel-usb-classes-arosx-quick kernel-usb-classes-arosx-clean
+
+ifeq (M,M)
+kernel-usb-classes-arosx_ALLTARGETS       += kernel-usb-classes-arosx-kobj kernel-usb-classes-arosx-kobj-quick
+endif
+
+ifeq (,M)
+kernel-usb-classes-arosx_ALLTARGETS += kernel-usb-classes-arosx-includes \
+                 kernel-usb-classes-arosx-includes-quick kernel-usb-classes-arosx-includes-dirs  \
+                 kernel-usb-classes-arosx-linklib kernel-usb-classes-arosx-fd
+endif
+
+.PHONY : $(kernel-usb-classes-arosx_ALLTARGETS) kernel-usb-classes-arosx-makefile
+
+ifeq (arosx,)
+$(error using %build_module: modname may not be empty)
+endif
+ifeq (usbclass,)
+$(error using %build_module: $(MODTYPE) has to be defined with the type of the module)
+endif
+
+# Default values for variables and arguments
+ifneq (,)
+    kernel-usb-classes-arosx_DEFNAME      := arosx_
+else
+    kernel-usb-classes-arosx_DEFNAME      := arosx
+endif
+kernel-usb-classes-arosx_DEFLINKLIBNAME   := $(kernel-usb-classes-arosx_DEFNAME)
+ifneq (,)
+    kernel-usb-classes-arosx_LINKLIBNAME  := 
+else
+    kernel-usb-classes-arosx_LINKLIBNAME  = $(kernel-usb-classes-arosx_DEFLINKLIBNAME)
+endif
+kernel-usb-classes-arosx_DEFCPPFLAGS      := $(CPPFLAGS)
+ifneq (,)
+    kernel-usb-classes-arosx_DEFCPPFLAGS  += -I
+endif
+kernel-usb-classes-arosx_DEFDFLAGS        := $(CFLAGS)
+ifneq (,)
+    kernel-usb-classes-arosx_DFLAGS       := 
+else
+    kernel-usb-classes-arosx_DFLAGS       = $(kernel-usb-classes-arosx_DEFDFLAGS)
+endif
+kernel-usb-classes-arosx_DEFDXXFLAGS      := $(CXXFLAGS)
+ifneq (,)
+    kernel-usb-classes-arosx_DXXFLAGS     := 
+else
+    kernel-usb-classes-arosx_DXXFLAGS     = $(kernel-usb-classes-arosx_DEFDXXFLAGS)
+endif
+
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-usb-classes-arosx_DEFDFLAGS        := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-usb-classes-arosx_DEFDFLAGS))
+kernel-usb-classes-arosx_DEFDXXFLAGS      := $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH) $(kernel-usb-classes-arosx_DEFDXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-usb-classes-arosx_FUNCINSTR := yes
+kernel-usb-classes-arosx_DEFDFLAGS        := $(strip $(FUNCINSTR_FLAGS) $(kernel-usb-classes-arosx_DEFDFLAGS))
+kernel-usb-classes-arosx_DEFDXXFLAGS      := $(strip $(FUNCINSTR_FLAGS) $(kernel-usb-classes-arosx_DEFDXXFLAGS))
+endif
+endif
+
+OBJDIR                              ?= $(GENDIR)/$(CURDIR)
+ifneq (,)
+kernel-usb-classes-arosx_OBJDIR                     := 
+else
+kernel-usb-classes-arosx_OBJDIR                     := $(OBJDIR)/$(kernel-usb-classes-arosx_DEFNAME)
+endif
+ifneq (,)
+kernel-usb-classes-arosx_OBJDIR           := $(kernel-usb-classes-arosx_OBJDIR)
+endif
+
+## Create genmodule include Makefile for the module
+##
+kernel-usb-classes-arosx-makefile         := $(kernel-usb-classes-arosx_OBJDIR)/Makefile.$(kernel-usb-classes-arosx_DEFNAME)usbclass
+kernel-usb-classes-arosx-genmakefile : $(kernel-usb-classes-arosx-makefile)
+
+
+kernel-usb-classes-arosx-genmakefile_OPTS := 
+ifneq (,)
+    kernel-usb-classes-arosx-genmakefile_OPTS += -f 
+    kernel-usb-classes-arosx-genmakefile_MODNAME := arosx_
+else
+    kernel-usb-classes-arosx-genmakefile_MODNAME := arosx
+endif
+kernel-usb-classes-arosx-genmakefile_TARGET := Makefile.$(kernel-usb-classes-arosx-genmakefile_MODNAME)usbclass
+kernel-usb-classes-arosx-genmakefile_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-usb-classes-arosx-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-usb-classes-arosx-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-usb-classes-arosx-genmakefile_OPTS += -c 
+        kernel-usb-classes-arosx-genmakefile_DEPS += 
+    endif 
+else
+    kernel-usb-classes-arosx-genmakefile_OPTS += -c $(SRCDIR)/$(CURDIR)/arosx.conf
+    kernel-usb-classes-arosx-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/arosx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-usb-classes-arosx-genmakefile_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-usb-classes-arosx-genmakefile_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-usb-classes-arosx-genmakefile_OPTS += -o 
+        kernel-usb-classes-arosx-genmakefile_DEPS += 
+    endif 
+endif
+ifneq (class,)
+    kernel-usb-classes-arosx-genmakefile_OPTS += -s class
+endif
+ifneq ($(kernel-usb-classes-arosx_OBJDIR),)
+    kernel-usb-classes-arosx-genmakefile_OPTS += -d $(kernel-usb-classes-arosx_OBJDIR)
+    kernel-usb-classes-arosx-genmakefile_TARGET := $(kernel-usb-classes-arosx_OBJDIR)/$(kernel-usb-classes-arosx-genmakefile_TARGET)
+endif
+
+$(kernel-usb-classes-arosx-genmakefile_TARGET) : OPTS := $(kernel-usb-classes-arosx-genmakefile_OPTS)
+$(kernel-usb-classes-arosx-genmakefile_TARGET) : MODNAME := arosx
+$(kernel-usb-classes-arosx-genmakefile_TARGET) : MODTYPE := usbclass
+$(kernel-usb-classes-arosx-genmakefile_TARGET) : $(kernel-usb-classes-arosx-genmakefile_DEPS)
+	$(Q)$(GENMODULE) $(OPTS) writemakefile $(MODNAME) $(MODTYPE)
+
+
+ifneq ($(kernel-usb-classes-arosx-makefile),)
+$(kernel-usb-classes-arosx-makefile) : | $(kernel-usb-classes-arosx_OBJDIR)
+else
+$(kernel-usb-classes-arosx-makefile) :: $(kernel-usb-classes-arosx_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-usb-classes-arosx_OBJDIR)
+
+
+# Do not parse these statements if metatarget is not appropriate
+ifneq ($(filter $(TARGET),$(kernel-usb-classes-arosx_ALLTARGETS)),)
+
+# suppress makes warning that the Makefile doesnt yet exist
+# on early passes (it will generate the file as needed though)
+# when we include it.
+-include $(kernel-usb-classes-arosx-makefile)
+
+kernel-usb-classes-arosx_DEFMODDIR        := $($(kernel-usb-classes-arosx_DEFNAME)_MODDIR)
+ifeq (no,yes)
+kernel-usb-classes-arosx_DEFMODDIR        := $(AROS_DIR_ARCH)/$(kernel-usb-classes-arosx_DEFMODDIR)
+endif
+ifneq (,)
+    kernel-usb-classes-arosx_MODDIR       := 
+else
+    kernel-usb-classes-arosx_MODDIR       := $(kernel-usb-classes-arosx_DEFMODDIR)
+endif
+
+## include files generation
+##
+ifneq (,)
+kernel-usb-classes-arosx_INCDIR           := 
+else
+kernel-usb-classes-arosx_INCDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_INCLUDE)
+endif
+kernel-usb-classes-arosx_LIBDEFSINC       := $(kernel-usb-classes-arosx_OBJDIR)/include/$(kernel-usb-classes-arosx_DEFNAME)_libdefs.h
+kernel-usb-classes-arosx_DEFLIBDEFSINC    := $(kernel-usb-classes-arosx_OBJDIR)/include/$(kernel-usb-classes-arosx_DEFNAME)_deflibdefs.h
+
+ifeq (,M)
+kernel-usb-classes-arosx-includes-quick : kernel-usb-classes-arosx-includes
+kernel-usb-classes-arosx-includes : $(addprefix $(GENINCDIR)/,$($(kernel-usb-classes-arosx_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-usb-classes-arosx_INCDIR)/,$($(kernel-usb-classes-arosx_DEFNAME)_INCLUDES)) \
+    $(kernel-usb-classes-arosx_LIBDEFSINC) $(kernel-usb-classes-arosx_DEFLIBDEFSINC)
+
+ifneq ($($(kernel-usb-classes-arosx_DEFNAME)_INCLUDES),)
+
+ifneq (,)
+    kernel-usb-classes-arosx-includes_MODNAME := arosx_
+else
+    kernel-usb-classes-arosx-includes_MODNAME := arosx
+endif
+
+ifneq ($($(kernel-usb-classes-arosx-includes_MODNAME)_INCLUDES),)
+
+kernel-usb-classes-arosx-includes_TARGETS := $($(kernel-usb-classes-arosx-includes_MODNAME)_INCLUDES)
+
+kernel-usb-classes-arosx-includes_DEPS := $(GENMODULE)
+kernel-usb-classes-arosx-includes_OPTS :=
+
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-usb-classes-arosx-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-usb-classes-arosx-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-usb-classes-arosx-includes_OPTS += -c 
+        kernel-usb-classes-arosx-includes_DEPS += 
+    endif 
+else
+    kernel-usb-classes-arosx-includes_OPTS += -c $(SRCDIR)/$(CURDIR)/arosx.conf
+    kernel-usb-classes-arosx-includes_DEPS += $(SRCDIR)/$(CURDIR)/arosx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-usb-classes-arosx-includes_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-usb-classes-arosx-includes_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-usb-classes-arosx-includes_OPTS += -o 
+        kernel-usb-classes-arosx-includes_DEPS += 
+    endif 
+endif
+ifneq (class,)
+    kernel-usb-classes-arosx-includes_OPTS += -s class
+endif
+ifneq ($(kernel-usb-classes-arosx_OBJDIR)/include,)
+    kernel-usb-classes-arosx-includes_OPTS += -d $(kernel-usb-classes-arosx_OBJDIR)/include
+    kernel-usb-classes-arosx-includes_TARGETS := $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/include/,$(kernel-usb-classes-arosx-includes_TARGETS))
+    kernel-usb-classes-arosx-includes_GENINCFLAG=$(kernel-usb-classes-arosx_OBJDIR)/include/.arosx.usbclass-includes
+else
+    kernel-usb-classes-arosx-includes_GENINCFLAG=$(GENDIR)/$(CURDIR)/.arosx.usbclass-includes
+endif
+
+$(kernel-usb-classes-arosx-includes_TARGETS) : $(kernel-usb-classes-arosx-includes_DEPS) $(kernel-usb-classes-arosx-includes_GENINCFLAG)
+
+$(kernel-usb-classes-arosx-includes_GENINCFLAG) : OPTS := $(kernel-usb-classes-arosx-includes_OPTS)
+$(kernel-usb-classes-arosx-includes_GENINCFLAG) : MODNAME := arosx
+$(kernel-usb-classes-arosx-includes_GENINCFLAG) : MODTYPE := usbclass
+$(kernel-usb-classes-arosx-includes_GENINCFLAG) : $(kernel-usb-classes-arosx-includes_DEPS)
+	$(Q)$(ECHO) "Generating $(MODNAME).$(MODTYPE) includes"
+	$(Q)$(GENMODULE) $(OPTS) writeincludes $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+endif
+
+
+TMP_SRCDIR := $(kernel-usb-classes-arosx_OBJDIR)/include
+
+$(addprefix $(GENINCDIR)/,$($(kernel-usb-classes-arosx_DEFNAME)_INCLUDES)) : | $(kernel-usb-classes-arosx_OBJDIR)/arosx_geninc
+
+$(kernel-usb-classes-arosx_OBJDIR)/arosx_geninc : COPYSRCDIR := $(kernel-usb-classes-arosx_OBJDIR)/include
+$(kernel-usb-classes-arosx_OBJDIR)/arosx_geninc : TGTDIR := $(GENINCDIR)
+$(kernel-usb-classes-arosx_OBJDIR)/arosx_geninc : FILES := $($(kernel-usb-classes-arosx_DEFNAME)_INCLUDES)
+$(kernel-usb-classes-arosx_OBJDIR)/arosx_geninc : $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/include/,$($(kernel-usb-classes-arosx_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+
+TMP_SRCDIR := $(kernel-usb-classes-arosx_OBJDIR)/include
+
+$(addprefix $(kernel-usb-classes-arosx_INCDIR)/,$($(kernel-usb-classes-arosx_DEFNAME)_INCLUDES)) : | $(kernel-usb-classes-arosx_OBJDIR)/arosx_incs
+
+$(kernel-usb-classes-arosx_OBJDIR)/arosx_incs : COPYSRCDIR := $(kernel-usb-classes-arosx_OBJDIR)/include
+$(kernel-usb-classes-arosx_OBJDIR)/arosx_incs : TGTDIR := $(kernel-usb-classes-arosx_INCDIR)
+$(kernel-usb-classes-arosx_OBJDIR)/arosx_incs : FILES := $($(kernel-usb-classes-arosx_DEFNAME)_INCLUDES)
+$(kernel-usb-classes-arosx_OBJDIR)/arosx_incs : $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/include/,$($(kernel-usb-classes-arosx_DEFNAME)_INCLUDES))
+	$(Q)for f in $(FILES); do \
+		$(IF) ! $(CMP) -s $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; then \
+			$(CP) $(COPYSRCDIR)/$$f $(TGTDIR)/$$f ; \
+		fi ; \
+	done
+	$(Q)$(TOUCH) $@
+
+kernel-usb-classes-arosx_INCDIRS := $(filter-out ./,$(sort $(dir $($(kernel-usb-classes-arosx_DEFNAME)_INCLUDES))))
+
+TMParosx_INCDIRS := \
+    $(kernel-usb-classes-arosx_OBJDIR)/include $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/include/,$(kernel-usb-classes-arosx_INCDIRS)) \
+    $(GENINCDIR) $(addprefix $(GENINCDIR)/,$(kernel-usb-classes-arosx_INCDIRS)) \
+    $(kernel-usb-classes-arosx_INCDIR) $(addprefix $(kernel-usb-classes-arosx_INCDIR)/,$(kernel-usb-classes-arosx_INCDIRS))
+
+ifneq (kernel-usb-classes-arosx-includes-dirs,)
+kernel-usb-classes-arosx-includes-dirs : | $(TMParosx_INCDIRS)
+else
+kernel-usb-classes-arosx-includes-dirs :: $(TMParosx_INCDIRS)
+endif
+
+GLOB_MKDIRS += $(TMParosx_INCDIRS)
+
+
+endif
+
+endif
+
+
+kernel-usb-classes-arosx-genlibdefs_OPTS := 
+ifneq (,)
+    kernel-usb-classes-arosx-genlibdefs_OPTS += -f 
+    kernel-usb-classes-arosx-genlibdefs_MODNAME := arosx_
+else
+    kernel-usb-classes-arosx-genlibdefs_MODNAME := arosx
+endif
+kernel-usb-classes-arosx-genlibdefs_TARGET := $(kernel-usb-classes-arosx-genlibdefs_MODNAME)_libdefs.h
+kernel-usb-classes-arosx-genlibdefs_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-usb-classes-arosx-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-usb-classes-arosx-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-usb-classes-arosx-genlibdefs_OPTS += -c 
+        kernel-usb-classes-arosx-genlibdefs_DEPS += 
+    endif 
+else
+    kernel-usb-classes-arosx-genlibdefs_OPTS += -c $(SRCDIR)/$(CURDIR)/arosx.conf
+    kernel-usb-classes-arosx-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/arosx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-usb-classes-arosx-genlibdefs_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-usb-classes-arosx-genlibdefs_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-usb-classes-arosx-genlibdefs_OPTS += -o 
+        kernel-usb-classes-arosx-genlibdefs_DEPS += 
+    endif 
+endif
+ifneq (class,)
+    kernel-usb-classes-arosx-genlibdefs_OPTS += -s class
+endif
+ifneq ($(kernel-usb-classes-arosx_OBJDIR)/include,)
+    kernel-usb-classes-arosx-genlibdefs_OPTS += -d $(kernel-usb-classes-arosx_OBJDIR)/include
+    kernel-usb-classes-arosx-genlibdefs_TARGET := $(kernel-usb-classes-arosx_OBJDIR)/include/$(kernel-usb-classes-arosx-genlibdefs_TARGET)
+endif
+ifneq (,)
+    kernel-usb-classes-arosx-genlibdefs_OPTS += -v 
+endif
+
+$(kernel-usb-classes-arosx-genlibdefs_TARGET) : OPTS := $(kernel-usb-classes-arosx-genlibdefs_OPTS)
+$(kernel-usb-classes-arosx-genlibdefs_TARGET) : MODNAME := arosx
+$(kernel-usb-classes-arosx-genlibdefs_TARGET) : MODTYPE := usbclass
+$(kernel-usb-classes-arosx-genlibdefs_TARGET) : $(kernel-usb-classes-arosx-genlibdefs_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writelibdefs $(MODNAME) $(MODTYPE)
+
+$(kernel-usb-classes-arosx_DEFLIBDEFSINC) : FILENAME := $(kernel-usb-classes-arosx_LIBDEFSINC)
+$(kernel-usb-classes-arosx_DEFLIBDEFSINC) : $(kernel-usb-classes-arosx_LIBDEFSINC)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(ECHO) "#define LC_LIBDEFS_FILE \"$(FILENAME)\"" >$@
+
+$(kernel-usb-classes-arosx_LIBDEFSINC) $(kernel-usb-classes-arosx_DEFLIBDEFSINC) : | $(kernel-usb-classes-arosx_OBJDIR)/include
+
+ifneq (kernel-usb-classes-arosx-includes-dirs,)
+kernel-usb-classes-arosx-includes-dirs : | $(kernel-usb-classes-arosx_OBJDIR)/include
+else
+kernel-usb-classes-arosx-includes-dirs :: $(kernel-usb-classes-arosx_OBJDIR)/include
+endif
+
+GLOB_MKDIRS += $(kernel-usb-classes-arosx_OBJDIR)/include
+
+
+## Extra genmodule src files generation
+## 
+
+kernel-usb-classes-arosx-genmodfiles_OPTS :=
+ifneq (,)
+    kernel-usb-classes-arosx-genmodfiles_OPTS += -f 
+    kernel-usb-classes-arosx-genmodfiles_MODNAME := arosx_
+else
+    kernel-usb-classes-arosx-genmodfiles_MODNAME := arosx
+endif
+kernel-usb-classes-arosx-genmodfiles_GENTARGETS := $($(kernel-usb-classes-arosx-genmodfiles_MODNAME)_STARTFILES) $($(kernel-usb-classes-arosx-genmodfiles_MODNAME)_ENDFILES)
+kernel-usb-classes-arosx-genmodfiles_STUBTARGETS := $($(kernel-usb-classes-arosx-genmodfiles_MODNAME)_LINKLIBFILES) $($(kernel-usb-classes-arosx-genmodfiles_MODNAME)_RELLINKLIBFILES)
+kernel-usb-classes-arosx-genmodfiles_GENTARGETS := $(addsuffix .c,$(kernel-usb-classes-arosx-genmodfiles_GENTARGETS))
+kernel-usb-classes-arosx-genmodfiles_STUBTARGETS := $(addsuffix .c,$(kernel-usb-classes-arosx-genmodfiles_STUBTARGETS)) \
+               $(addsuffix .S, $($(kernel-usb-classes-arosx-genmodfiles_MODNAME)_LINKLIBAFILES) $($(kernel-usb-classes-arosx-genmodfiles_MODNAME)_RELLINKLIBAFILES))
+
+kernel-usb-classes-arosx-genmodfiles_DEPS := $(GENMODULE)
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-usb-classes-arosx-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        kernel-usb-classes-arosx-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-usb-classes-arosx-genmodfiles_OPTS += -c 
+        kernel-usb-classes-arosx-genmodfiles_DEPS += 
+    endif 
+else
+    kernel-usb-classes-arosx-genmodfiles_OPTS += -c $(SRCDIR)/$(CURDIR)/arosx.conf
+    kernel-usb-classes-arosx-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/arosx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        kernel-usb-classes-arosx-genmodfiles_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        kernel-usb-classes-arosx-genmodfiles_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        kernel-usb-classes-arosx-genmodfiles_OPTS += -o 
+        kernel-usb-classes-arosx-genmodfiles_DEPS += 
+    endif 
+endif
+ifneq (class,)
+    kernel-usb-classes-arosx-genmodfiles_OPTS += -s class
+endif
+ifneq ($(kernel-usb-classes-arosx_OBJDIR),)
+    kernel-usb-classes-arosx-genmodfiles_OPTS += -d $(kernel-usb-classes-arosx_OBJDIR)
+    kernel-usb-classes-arosx-genmodfiles_TARGETDIR := $(shell echo $(kernel-usb-classes-arosx_OBJDIR) | sed 's/^\(.\):\//\/\1\//')
+    kernel-usb-classes-arosx-genmodfiles_GENTARGETS := $(addprefix $(kernel-usb-classes-arosx-genmodfiles_TARGETDIR)/,$(kernel-usb-classes-arosx-genmodfiles_GENTARGETS))
+    kernel-usb-classes-arosx-genmodfiles_GENFILEFLAG=$(kernel-usb-classes-arosx-genmodfiles_TARGETDIR)/.arosx.usbclass-genfiles
+else
+    kernel-usb-classes-arosx-genmodfiles_GENFILEFLAG=$(GENDIR)/$(CURDIR)/.arosx.usbclass-genfiles
+endif
+ifneq ($(kernel-usb-classes-arosx_OBJDIR)/linklib,)
+    kernel-usb-classes-arosx-genmodfiles_OPTS += -l $(kernel-usb-classes-arosx_OBJDIR)/linklib
+    kernel-usb-classes-arosx-genmodfiles_STUBTARGETDIR := $(shell echo $(kernel-usb-classes-arosx_OBJDIR)/linklib | sed 's/^\(.\):\//\/\1\//')
+    kernel-usb-classes-arosx-genmodfiles_STUBTARGETS := $(addprefix $(kernel-usb-classes-arosx-genmodfiles_STUBTARGETDIR)/,$(kernel-usb-classes-arosx-genmodfiles_STUBTARGETS))
+    kernel-usb-classes-arosx-genmodfiles_TARGETDIRS += $(kernel-usb-classes-arosx_OBJDIR)/linklib
+else
+ifneq ($(kernel-usb-classes-arosx_OBJDIR),)
+    kernel-usb-classes-arosx-genmodfiles_STUBTARGETS := $(addprefix $(kernel-usb-classes-arosx-genmodfiles_TARGETDIR)/,$(kernel-usb-classes-arosx-genmodfiles_STUBTARGETS))
+endif
+endif
+
+kernel-usb-classes-arosx-genmodfiles_TARGETS := $(kernel-usb-classes-arosx-genmodfiles_GENTARGETS) $(kernel-usb-classes-arosx-genmodfiles_STUBTARGETS)
+ifneq ($(kernel-usb-classes-arosx-genmodfiles_TARGETDIRS),)
+$(kernel-usb-classes-arosx-genmodfiles_TARGETS) : | $(kernel-usb-classes-arosx-genmodfiles_TARGETDIRS)
+endif
+
+$(kernel-usb-classes-arosx-genmodfiles_TARGETS) : $(kernel-usb-classes-arosx-genmodfiles_DEPS) $(kernel-usb-classes-arosx-genmodfiles_GENFILEFLAG)
+
+$(kernel-usb-classes-arosx-genmodfiles_GENFILEFLAG) : OPTS := $(kernel-usb-classes-arosx-genmodfiles_OPTS)
+$(kernel-usb-classes-arosx-genmodfiles_GENFILEFLAG) : MODNAME := arosx
+$(kernel-usb-classes-arosx-genmodfiles_GENFILEFLAG) : MODTYPE := usbclass
+$(kernel-usb-classes-arosx-genmodfiles_GENFILEFLAG) : $(kernel-usb-classes-arosx-genmodfiles_DEPS)
+	$(Q)$(ECHO) "Generating support files for module $(MODNAME$(BDID))"
+	$(Q)$(IF) $(TEST) "" = "lib.conf" && $(TEST) -f lib.conf; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/lib.conf may probably be removed"; \
+	fi
+	$(Q)$(IF) $(TEST) -f libdefs.h; then \
+		$(ECHO) "WARNING !!! $(CURDIR)/libdefs.h may probably be removed"; \
+	fi
+	$(Q)$(GENMODULE) $(OPTS) writefiles $(MODNAME) $(MODTYPE)
+	$(Q)$(TOUCH) $@
+
+$(kernel-usb-classes-arosx-genmodfiles_GENFILEFLAG) : $(kernel-usb-classes-arosx_DEFLIBDEFSINC) $(kernel-usb-classes-arosx-makefile)
+
+
+ifneq ($(kernel-usb-classes-arosx-genmodfiles_GENFILEFLAG),)
+$(kernel-usb-classes-arosx-genmodfiles_GENFILEFLAG) : | $(kernel-usb-classes-arosx_OBJDIR)/linklib
+else
+$(kernel-usb-classes-arosx-genmodfiles_GENFILEFLAG) :: $(kernel-usb-classes-arosx_OBJDIR)/linklib
+endif
+
+GLOB_MKDIRS += $(kernel-usb-classes-arosx_OBJDIR)/linklib
+
+
+ifeq (,M)
+## Create FD file
+ifeq (,)
+kernel-usb-classes-arosx_FDDIR            := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_SDK)/$(AROS_DIR_FD)
+else
+kernel-usb-classes-arosx_FDDIR            := /../$(AROS_DIR_FD)
+endif
+kernel-usb-classes-arosx-fd : $(kernel-usb-classes-arosx_FDDIR)/arosx_lib.fd
+
+
+TMP_TARGET := arosx_lib.fd
+TMP_DEPS := $(GENMODULE)
+TMP_OPTS := 
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -c 
+        TMP_DEPS += 
+    endif 
+else
+    TMP_OPTS += -c $(SRCDIR)/$(CURDIR)/arosx.conf
+    TMP_DEPS += $(SRCDIR)/$(CURDIR)/arosx.conf
+endif
+ifneq (,)
+    ifeq ($(dir ),./)
+        TMP_OPTS += -o $(SRCDIR)/$(CURDIR)/
+        TMP_DEPS += $(SRCDIR)/$(CURDIR)/
+    else
+        TMP_OPTS += -o 
+        TMP_DEPS += 
+    endif 
+endif
+ifneq (class,)
+    TMP_OPTS += -s class
+endif
+ifneq ($(kernel-usb-classes-arosx_FDDIR),)
+    TMP_OPTS += -d $(kernel-usb-classes-arosx_FDDIR)
+    TMP_TARGET := $(kernel-usb-classes-arosx_FDDIR)/$(TMP_TARGET)
+endif
+
+$(TMP_TARGET) : OPTS := $(TMP_OPTS)
+$(TMP_TARGET) : MODNAME := arosx
+$(TMP_TARGET) : MODTYPE := usbclass
+$(TMP_TARGET) : $(TMP_DEPS)
+	$(Q)$(ECHO) "Generating $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(GENMODULE) $(OPTS) writefd $(MODNAME) $(MODTYPE)
+
+$(kernel-usb-classes-arosx_FDDIR)/arosx_lib.fd : | $(kernel-usb-classes-arosx_FDDIR)
+
+
+ifneq (kernel-usb-classes-arosx-fd-setup,)
+kernel-usb-classes-arosx-fd-setup : | $(kernel-usb-classes-arosx_FDDIR)
+else
+kernel-usb-classes-arosx-fd-setup :: $(kernel-usb-classes-arosx_FDDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-usb-classes-arosx_FDDIR)
+
+endif
+
+## Compilation
+##
+kernel-usb-classes-arosx_FILES            := $(FILES)
+kernel-usb-classes-arosx_OBJCFILES        := 
+kernel-usb-classes-arosx_CXXFILES         := $(basename $(call WILDCARD $(foreach CXX_EXT, $(AROS_CXXEXTS), *.$(CXX_EXT))))
+
+kernel-usb-classes-arosx_LIBFILES         := 
+kernel-usb-classes-arosx_LIBS             := 
+
+kernel-usb-classes-arosx_FDIRS            := $(sort $(dir $(kernel-usb-classes-arosx_FILES)))
+
+kernel-usb-classes-arosx_FILEMATCH        = $(and $(findstring $(1),$(2)),$(findstring $(2),$(1)))
+kernel-usb-classes-arosx_MATCHARCH        = $(foreach matchfile,$(2),$(foreach archfile,$(1),$(if $(call kernel-usb-classes-arosx_FILEMATCH,$(archfile),$(notdir $(matchfile))),$(matchfile),)))
+kernel-usb-classes-arosx_FILTERARCH       = $(filter-out $(call kernel-usb-classes-arosx_MATCHARCH,$(1),$(2)),$(2))
+kernel-usb-classes-arosx_STARTFILES       := $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$($(kernel-usb-classes-arosx_DEFNAME)_STARTFILES))
+kernel-usb-classes-arosx_ENDFILES         := $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$($(kernel-usb-classes-arosx_DEFNAME)_ENDFILES))
+
+kernel-usb-classes-arosx_ARCHOBJS         := $(wildcard $(kernel-usb-classes-arosx_OBJDIR)/arch/*.o)
+kernel-usb-classes-arosx_LIBARCHOBJS      := $(wildcard $(kernel-usb-classes-arosx_OBJDIR)/linklib/arch/*.o)
+kernel-usb-classes-arosx_ARCHFILES        := $(basename $(notdir $(kernel-usb-classes-arosx_ARCHOBJS)))
+kernel-usb-classes-arosx_LIBARCHFILES     := $(basename $(notdir $(kernel-usb-classes-arosx_LIBARCHOBJS)))
+kernel-usb-classes-arosx_C_NARCHFILES     := $(call kernel-usb-classes-arosx_FILTERARCH,$(kernel-usb-classes-arosx_ARCHFILES),$(kernel-usb-classes-arosx_FILES))
+kernel-usb-classes-arosx_CXX_NARCHFILES   := $(call kernel-usb-classes-arosx_FILTERARCH,$(kernel-usb-classes-arosx_ARCHFILES),$(kernel-usb-classes-arosx_CXXFILES))
+kernel-usb-classes-arosx_OBJC_NARCHFILES  := $(call kernel-usb-classes-arosx_FILTERARCH,$(kernel-usb-classes-arosx_ARCHFILES),$(kernel-usb-classes-arosx_OBJCFILES))
+kernel-usb-classes-arosx_NLIBARCHFILES    := $(call kernel-usb-classes-arosx_FILTERARCH,$(kernel-usb-classes-arosx_LIBARCHFILES),$(kernel-usb-classes-arosx_LIBFILES))
+kernel-usb-classes-arosx_ARCHNLIBFILES    := $(call kernel-usb-classes-arosx_FILTERARCH,$(kernel-usb-classes-arosx_LIBFILES),$(kernel-usb-classes-arosx_LIBARCHFILES))
+
+kernel-usb-classes-arosx_CPPFLAGS         := $(strip $(CPPFLAGS) -I$(kernel-usb-classes-arosx_OBJDIR)/include -include $(kernel-usb-classes-arosx_DEFLIBDEFSINC))
+ifneq (,)
+kernel-usb-classes-arosx_CPPFLAGS         += -I
+endif
+kernel-usb-classes-arosx_LINKLIBCPPFLAGS  := $(kernel-usb-classes-arosx_CPPFLAGS)
+kernel-usb-classes-arosx_CPPFLAGS         += $(strip $($(kernel-usb-classes-arosx_DEFNAME)_CPPFLAGS))
+kernel-usb-classes-arosx_LINKLIBCPPFLAGS  += $(strip $($(kernel-usb-classes-arosx_DEFNAME)_LINKLIBCPPFLAGS))
+kernel-usb-classes-arosx_CFLAGS           := $(strip $(CFLAGS) $($(kernel-usb-classes-arosx_DEFNAME)_CFLAGS))
+kernel-usb-classes-arosx_LINKLIBCFLAGS    := $(strip $(CFLAGS) $($(kernel-usb-classes-arosx_DEFNAME)_LINKLIBCFLAGS))
+kernel-usb-classes-arosx_CXXFLAGS         := $(strip $(CXXFLAGS) $($(kernel-usb-classes-arosx_DEFNAME)_CXXFLAGS))
+ifeq (target,target)
+ifeq ($(TARGET_LTO),yes)
+kernel-usb-classes-arosx_LTOFLAGS         ?= $(strip $(LTO_BINARY_CFLAGS) $(CFLAGS_NO_STRICT_ALIASING) $(NOWARN_LTO_TYPE_MISMATCH))
+kernel-usb-classes-arosx_CFLAGS           := $(strip $(kernel-usb-classes-arosx_LTOFLAGS) $(kernel-usb-classes-arosx_CFLAGS))
+kernel-usb-classes-arosx_LINKLIBCFLAGS    := $(strip $(kernel-usb-classes-arosx_LTOFLAGS) $(kernel-usb-classes-arosx_LINKLIBCFLAGS))
+kernel-usb-classes-arosx_CXXFLAGS         := $(strip $(kernel-usb-classes-arosx_LTOFLAGS) $(kernel-usb-classes-arosx_CXXFLAGS))
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+kernel-usb-classes-arosx_SUBSTNULL        :=
+kernel-usb-classes-arosx_SUBSTSPACE       := $(kernel-usb-classes-arosx_SUBSTNULL) #
+kernel-usb-classes-arosx_SUBSTCOMMA       := ,
+kernel-usb-classes-arosx_INSTRFUNCFLAGS   ?= $(strip $(FUNCINSTR_FLAGS) -finstrument-functions-exclude-file-list=$(subst $(kernel-usb-classes-arosx_SUBSTSPACE),$(kernel-usb-classes-arosx_SUBSTCOMMA),$(strip $($(kernel-usb-classes-arosx_DEFNAME)_STARTFILES))))
+kernel-usb-classes-arosx_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+kernel-usb-classes-arosx_CFLAGS           := $(strip $(kernel-usb-classes-arosx_INSTRFUNCFLAGS) $(kernel-usb-classes-arosx_CFLAGS))
+kernel-usb-classes-arosx_CXXFLAGS         := $(strip $(kernel-usb-classes-arosx_INSTRFUNCFLAGS) $(kernel-usb-classes-arosx_CXXFLAGS))
+kernel-usb-classes-arosx_LIBS             += $(kernel-usb-classes-arosx_INSTRFUNCLIBS)
+endif
+endif
+kernel-usb-classes-arosx_DFLAGS           := $(strip $(kernel-usb-classes-arosx_DFLAGS) $($(kernel-usb-classes-arosx_DEFNAME)_DFLAGS))
+kernel-usb-classes-arosx_LINKLIBDFLAGS    := $(strip $(kernel-usb-classes-arosx_DFLAGS) $($(kernel-usb-classes-arosx_DEFNAME)_LINKLIBDFLAGS))
+kernel-usb-classes-arosx_DXXFLAGS         := $(strip $(kernel-usb-classes-arosx_DXXFLAGS) $($(kernel-usb-classes-arosx_DEFNAME)_DXXFLAGS))
+
+ifeq (usbclass,library)
+    kernel-usb-classes-arosx_LIBSUFFIX    := 
+else
+    kernel-usb-classes-arosx_LIBSUFFIX    := .usbclass
+endif
+
+ifeq (,)
+kernel-usb-classes-arosx_LIBDIR           := $(AROSDIR)/$(AROS_DIR_DEVELOPER)/$(AROS_DIR_LIB)
+else
+kernel-usb-classes-arosx_LIBDIR           := 
+endif
+
+ifeq (,M)
+kernel-usb-classes-arosx_LINKLIBCFILES    := $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$($(kernel-usb-classes-arosx_DEFNAME)_LINKLIBFILES))
+kernel-usb-classes-arosx_LINKLIBAFILES    := $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$($(kernel-usb-classes-arosx_DEFNAME)_LINKLIBAFILES))
+ifeq ($(strip $($(kernel-usb-classes-arosx_DEFNAME)_LINKLIBFILES) $($(kernel-usb-classes-arosx_DEFNAME)_LINKLIBAFILES)  $(kernel-usb-classes-arosx_ARCHNLIBFILES)),)
+    kernel-usb-classes-arosx_LINKLIB      :=
+else
+    kernel-usb-classes-arosx_LINKLIB      := $(kernel-usb-classes-arosx_LIBDIR)/libarosx$(kernel-usb-classes-arosx_LIBSUFFIX).a
+    ifneq (arosx,$(kernel-usb-classes-arosx_LINKLIBNAME))
+        kernel-usb-classes-arosx_LINKLIB  += $(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_LINKLIBNAME)$(kernel-usb-classes-arosx_LIBSUFFIX).a
+    endif
+endif
+kernel-usb-classes-arosx_LINKLIBFILES     := $(kernel-usb-classes-arosx_LINKLIBCFILES) $(kernel-usb-classes-arosx_LINKLIBAFILES)
+
+kernel-usb-classes-arosx_RELLINKLIBCFILES := $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$($(kernel-usb-classes-arosx_DEFNAME)_RELLINKLIBFILES))
+kernel-usb-classes-arosx_RELLINKLIBAFILES := $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$($(kernel-usb-classes-arosx_DEFNAME)_RELLINKLIBAFILES))
+ifeq ($(strip $($(kernel-usb-classes-arosx_DEFNAME)_RELLINKLIBFILES) $($(kernel-usb-classes-arosx_DEFNAME)_RELLINKLIBAFILES)  $(kernel-usb-classes-arosx_ARCHNLIBFILES)),)
+    kernel-usb-classes-arosx_RELLINKLIB   :=
+else
+    kernel-usb-classes-arosx_RELLINKLIB   := $(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_DEFNAME)_rel$(kernel-usb-classes-arosx_LIBSUFFIX).a
+    ifneq (arosx,$(kernel-usb-classes-arosx_LINKLIBNAME))
+        kernel-usb-classes-arosx_RELLINKLIB += $(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_LINKLIBNAME)_rel$(kernel-usb-classes-arosx_LIBSUFFIX).a
+    endif
+endif
+kernel-usb-classes-arosx_RELLINKLIBFILES  := $(kernel-usb-classes-arosx_RELLINKLIBCFILES) $(kernel-usb-classes-arosx_RELLINKLIBAFILES)
+endif
+
+kernel-usb-classes-arosx_ENDOBJS          := $(addsuffix .o,$(kernel-usb-classes-arosx_ENDFILES))
+kernel-usb-classes-arosx_LINKLIBOBJS      := $(addsuffix .o,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$(notdir $(kernel-usb-classes-arosx_NLIBARCHFILES))) $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/arch/,$(notdir $(kernel-usb-classes-arosx_ARCHNLIBFILES))) $(kernel-usb-classes-arosx_LINKLIBFILES)) \
+                 
+kernel-usb-classes-arosx_RELLINKLIBOBJS   := $(addsuffix .o,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$(notdir $(kernel-usb-classes-arosx_NLIBARCHFILES))) $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/arch/,$(notdir $(kernel-usb-classes-arosx_ARCHNLIBFILES))) $(kernel-usb-classes-arosx_RELLINKLIBFILES)) \
+                 
+$(kernel-usb-classes-arosx_LINKLIBFILES) $(kernel-usb-classes-arosx_RELLINKLIBFILES) : | $(kernel-usb-classes-arosx_OBJDIR)/linklib
+$(kernel-usb-classes-arosx_LINKLIBOBJS) $(kernel-usb-classes-arosx_RELLINKLIBOBJS) : | $(kernel-usb-classes-arosx_OBJDIR)/linklib
+
+kernel-usb-classes-arosx_CCFILES := $(kernel-usb-classes-arosx_C_NARCHFILES)
+kernel-usb-classes-arosx_TARGETCCFILES    := $(strip $(kernel-usb-classes-arosx_STARTFILES) $(kernel-usb-classes-arosx_ENDFILES))
+kernel-usb-classes-arosx_LINKLIBCCFILES   := $(strip $(kernel-usb-classes-arosx_NLIBARCHFILES) $(kernel-usb-classes-arosx_LINKLIBCFILES) $(kernel-usb-classes-arosx_RELLINKLIBCFILES))
+kernel-usb-classes-arosx_LINKLIBCCGENFILES := $(strip $(kernel-usb-classes-arosx_LINKLIBCFILES) $(kernel-usb-classes-arosx_RELLINKLIBCFILES))
+
+
+kernel-usb-classes-arosx_CXXABSBASENAMES := $(foreach kernel-usb-classes-arosx_CXXBASE,$(kernel-usb-classes-arosx_CXX_NARCHFILES),$(if $(filter /%,$(kernel-usb-classes-arosx_CXXBASE)),$(kernel-usb-classes-arosx_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(kernel-usb-classes-arosx_CXXBASE))))
+
+ifneq ($(kernel-usb-classes-arosx_CXXABSBASENAMES),)
+
+kernel-usb-classes-arosx_CXXBASENAMES := $(basename $(kernel-usb-classes-arosx_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+kernel-usb-classes-arosx_MCXX_FILES  := $(strip $(foreach kernel-usb-classes-arosx_CXXBASE,$(kernel-usb-classes-arosx_CXXABSBASENAMES), $(firstword $(wildcard $(foreach kernel-usb-classes-arosx_EXT, $(AROS_CXXEXTS),$(addsuffix .$(kernel-usb-classes-arosx_EXT),$(kernel-usb-classes-arosx_CXXBASE)))))))
+
+ifeq (,)
+kernel-usb-classes-arosx_MCXX_SRCWILDCARD := %
+else
+kernel-usb-classes-arosx_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-usb-classes-arosx_OBJDIR),)
+  kernel-usb-classes-arosx_CXXTARGETS := $(notdir $(kernel-usb-classes-arosx_CXXBASENAMES:=.o))
+  kernel-usb-classes-arosx_CXXDTARGETS := $(notdir $(kernel-usb-classes-arosx_CXXBASENAMES:=.d))
+  kernel-usb-classes-arosx_MCXX_WILDCARD := %
+else
+  kernel-usb-classes-arosx_CXXTARGETS := $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(notdir $(kernel-usb-classes-arosx_CXXBASENAMES:=.o)))
+  kernel-usb-classes-arosx_CXXDTARGETS := $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(notdir $(kernel-usb-classes-arosx_CXXBASENAMES:=.d)))
+  kernel-usb-classes-arosx_MCXX_WILDCARD := $(kernel-usb-classes-arosx_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(kernel-usb-classes-arosx_CXXTARGETS) $(kernel-usb-classes-arosx_CXXDTARGETS) : | $(kernel-usb-classes-arosx_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+kernel-usb-classes-arosx_MCXX_CPPFLAGS := $(kernel-usb-classes-arosx_CPPFLAGS)
+kernel-usb-classes-arosx_CXXFLAGS := $(kernel-usb-classes-arosx_CXXFLAGS)
+ifeq ($(kernel-usb-classes-arosx_DXXFLAGS),)
+  kernel-usb-classes-arosx_DXXFLAGS := $(kernel-usb-classes-arosx_CXXFLAGS)
+else
+  kernel-usb-classes-arosx_DXXFLAGS := $(kernel-usb-classes-arosx_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  kernel-usb-classes-arosx_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  kernel-usb-classes-arosx_STRIP ?= $(HOST_STRIP)
+  kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  kernel-usb-classes-arosx_CXXCMD:=$(HOST_CXX)
+  kernel-usb-classes-arosx_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(kernel-usb-classes-arosx_MCXX_CPPFLAGS) $(kernel-usb-classes-arosx_MCXX_EXTRA_CPPFLAGS))
+  kernel-usb-classes-arosx_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-usb-classes-arosx_CXXFLAGS))
+  kernel-usb-classes-arosx_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(kernel-usb-classes-arosx_DXXFLAGS))
+  kernel-usb-classes-arosx_CXXIQUOTE:=$(HOST_IQUOTE)
+  kernel-usb-classes-arosx_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  kernel-usb-classes-arosx_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-usb-classes-arosx_STRIP ?= $(TARGET_STRIP)
+  kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  kernel-usb-classes-arosx_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  kernel-usb-classes-arosx_MCXX_CPPFLAGS := $(strip $(kernel-usb-classes-arosx_MCXX_CPPFLAGS) $(kernel-usb-classes-arosx_MCXX_EXTRA_CPPFLAGS))
+  kernel-usb-classes-arosx_CXXFLAGS := $(strip $(kernel-usb-classes-arosx_CXXFLAGS) $(SAFETY_CFLAGS))
+  kernel-usb-classes-arosx_DXXFLAGS := $(kernel-usb-classes-arosx_DXXFLAGS)
+  kernel-usb-classes-arosx_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  kernel-usb-classes-arosx_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  kernel-usb-classes-arosx_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-usb-classes-arosx_STRIP ?= $(ECHO) >/dev/null
+  kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  kernel-usb-classes-arosx_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  kernel-usb-classes-arosx_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(kernel-usb-classes-arosx_MCXX_CPPFLAGS) $(kernel-usb-classes-arosx_MCXX_EXTRA_CPPFLAGS))
+  kernel-usb-classes-arosx_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-usb-classes-arosx_CXXFLAGS))
+  kernel-usb-classes-arosx_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(kernel-usb-classes-arosx_DXXFLAGS))
+  kernel-usb-classes-arosx_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  kernel-usb-classes-arosx_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(kernel-usb-classes-arosx_CXXCMD) $(kernel-usb-classes-arosx_CXXIQUOTE) $(dir $(2)) $(kernel-usb-classes-arosx_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_CXXIQUOTE) . $(kernel-usb-classes-arosx_CXXIQUOTE_END) $(strip $(kernel-usb-classes-arosx_CXXFLAGS) $(kernel-usb-classes-arosx_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(kernel-usb-classes-arosx_CXXCMD) $(kernel-usb-classes-arosx_CXXIQUOTE) $(dir $(2)) $(kernel-usb-classes-arosx_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_CXXIQUOTE) . $(kernel-usb-classes-arosx_CXXIQUOTE_END) $(strip $(kernel-usb-classes-arosx_CXXFLAGS) $(kernel-usb-classes-arosx_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(kernel-usb-classes-arosx_CXXCMD) $(kernel-usb-classes-arosx_CXXIQUOTE) $(dir $(2)) $(kernel-usb-classes-arosx_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_CXXIQUOTE) . $(kernel-usb-classes-arosx_CXXIQUOTE_END) $(strip $(kernel-usb-classes-arosx_CXXFLAGS) $(kernel-usb-classes-arosx_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(kernel-usb-classes-arosx_CXXCMD)" $(MKDEPEND) $(strip $(kernel-usb-classes-arosx_DXXFLAGS) $(kernel-usb-classes-arosx_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(kernel-usb-classes-arosx_OBJDIR),)
+  $(foreach kernel-usb-classes-arosx_CXXFILE,$(kernel-usb-classes-arosx_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(kernel-usb-classes-arosx_CXXFILE))),$(kernel-usb-classes-arosx_CXXFILE))))
+else
+  $(foreach kernel-usb-classes-arosx_CXXFILE,$(kernel-usb-classes-arosx_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(notdir $(basename $(kernel-usb-classes-arosx_CXXFILE)))),$(kernel-usb-classes-arosx_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(kernel-usb-classes-arosx_OBJC_NARCHFILES),)
+
+ifeq (,)
+kernel-usb-classes-arosx_MOBJC_SRCWILDCARD := %
+else
+kernel-usb-classes-arosx_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-usb-classes-arosx_OBJDIR),)
+  kernel-usb-classes-arosx_MOBJC_TARGETS := $(addsuffix .o,$(kernel-usb-classes-arosx_OBJC_NARCHFILES))
+  kernel-usb-classes-arosx_MOBJC_DTARGETS := $(addsuffix .d,$(kernel-usb-classes-arosx_OBJC_NARCHFILES))
+  kernel-usb-classes-arosx_MOBJC_WILDCARD := %
+else
+  kernel-usb-classes-arosx_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(kernel-usb-classes-arosx_OBJC_NARCHFILES)))
+  kernel-usb-classes-arosx_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(kernel-usb-classes-arosx_OBJC_NARCHFILES)))
+  kernel-usb-classes-arosx_MOBJC_WILDCARD := $(kernel-usb-classes-arosx_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : | $(addsuffix .m,$(kernel-usb-classes-arosx_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  kernel-usb-classes-arosx_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  kernel-usb-classes-arosx_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-usb-classes-arosx_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  kernel-usb-classes-arosx_MOBJC_DIRS := $(foreach dir, $(kernel-usb-classes-arosx_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-usb-classes-arosx_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(kernel-usb-classes-arosx_MOBJC_DIRS),)
+    kernel-usb-classes-arosx_MOBJC_DIRS := $(shell echo $(kernel-usb-classes-arosx_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(kernel-usb-classes-arosx_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  kernel-usb-classes-arosx_CC := $(TARGET_CC)
+else
+  kernel-usb-classes-arosx_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+kernel-usb-classes-arosx_MOBJC_CPPFLAGS := $(kernel-usb-classes-arosx_CPPFLAGS)
+kernel-usb-classes-arosx_OBJCFLAGS := $(kernel-usb-classes-arosx_CFLAGS)
+kernel-usb-classes-arosx_OBJCFLAGS := $(kernel-usb-classes-arosx_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+kernel-usb-classes-arosx_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(kernel-usb-classes-arosx_OBJCFLAGS)))
+ifeq ($(kernel-usb-classes-arosx_DFLAGS),)
+  kernel-usb-classes-arosx_OBJCDFLAGS := $(kernel-usb-classes-arosx_CFLAGS)
+else
+  kernel-usb-classes-arosx_OBJCDFLAGS := $(kernel-usb-classes-arosx_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  kernel-usb-classes-arosx_LINK ?= $(strip $(kernel-usb-classes-arosx_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  kernel-usb-classes-arosx_STRIP ?= $(TARGET_STRIP)
+  kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : CMD:=$(strip $(kernel-usb-classes-arosx_CC) $(TARGET_SYSROOT))
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : kernel-usb-classes-arosx_MOBJC_CPPFLAGS:=$(strip $(kernel-usb-classes-arosx_MOBJC_CPPFLAGS) $(kernel-usb-classes-arosx_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : kernel-usb-classes-arosx_OBJCFLAGS:=$(strip $(kernel-usb-classes-arosx_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : kernel-usb-classes-arosx_OBJCDFLAGS:=$(kernel-usb-classes-arosx_OBJCDFLAGS)
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  kernel-usb-classes-arosx_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  kernel-usb-classes-arosx_STRIP ?= $(HOST_STRIP)
+  kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : kernel-usb-classes-arosx_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(kernel-usb-classes-arosx_MOBJC_CPPFLAGS) $(kernel-usb-classes-arosx_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : kernel-usb-classes-arosx_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-classes-arosx_OBJCFLAGS))
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : kernel-usb-classes-arosx_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-classes-arosx_OBJCDFLAGS))
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE:=$(HOST_IQUOTE)
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  kernel-usb-classes-arosx_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  kernel-usb-classes-arosx_STRIP ?= $(ECHO) >/dev/null
+  kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : kernel-usb-classes-arosx_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(kernel-usb-classes-arosx_MOBJC_CPPFLAGS) $(kernel-usb-classes-arosx_MOBJC_EXTRA_CPPFLAGS))
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : kernel-usb-classes-arosx_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-classes-arosx_OBJCFLAGS))
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : kernel-usb-classes-arosx_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-classes-arosx_OBJCDFLAGS))
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE:=$(KERNEL_IQUOTE)
+  $(kernel-usb-classes-arosx_MOBJC_TARGETS) $(kernel-usb-classes-arosx_MOBJC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-usb-classes-arosx_MOBJC_TARGETS) : CPPFLAGS := $(kernel-usb-classes-arosx_MOBJC_CPPFLAGS)
+$(kernel-usb-classes-arosx_MOBJC_TARGETS) : CFLAGS := $(kernel-usb-classes-arosx_OBJCFLAGS)
+$(kernel-usb-classes-arosx_MOBJC_TARGETS) : $(kernel-usb-classes-arosx_MOBJC_WILDCARD).o : $(kernel-usb-classes-arosx_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-usb-classes-arosx_IQUOTE) $(dir $<) $(kernel-usb-classes-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_IQUOTE) . $(kernel-usb-classes-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-usb-classes-arosx_IQUOTE) $(dir $<) $(kernel-usb-classes-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_IQUOTE) . $(kernel-usb-classes-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-usb-classes-arosx_IQUOTE) $(dir $<) $(kernel-usb-classes-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_IQUOTE) . $(kernel-usb-classes-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-usb-classes-arosx_MOBJC_DTARGETS) : $(kernel-usb-classes-arosx_MOBJC_WILDCARD).d : $(kernel-usb-classes-arosx_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-usb-classes-arosx_OBJCDFLAGS) $(kernel-usb-classes-arosx_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+kernel-usb-classes-arosx_MC_SRCWILDCARD := %
+else
+kernel-usb-classes-arosx_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-usb-classes-arosx_OBJDIR),)
+kernel-usb-classes-arosx_MC_TARGETS := $(addsuffix .o,$(kernel-usb-classes-arosx_CCFILES))
+kernel-usb-classes-arosx_MC_DTARGETS := $(addsuffix .d,$(kernel-usb-classes-arosx_CCFILES))
+kernel-usb-classes-arosx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-usb-classes-arosx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(notdir $(kernel-usb-classes-arosx_CCFILES))))
+    kernel-usb-classes-arosx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(notdir $(kernel-usb-classes-arosx_CCFILES))))
+else
+ifeq (,)
+    kernel-usb-classes-arosx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(kernel-usb-classes-arosx_CCFILES)))
+    kernel-usb-classes-arosx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(kernel-usb-classes-arosx_CCFILES)))
+else
+    kernel-usb-classes-arosx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(patsubst /%,%,$(kernel-usb-classes-arosx_CCFILES))))
+    kernel-usb-classes-arosx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(patsubst /%,%,$(kernel-usb-classes-arosx_CCFILES))))
+endif
+endif
+kernel-usb-classes-arosx_MC_TGTWILDCARD := $(kernel-usb-classes-arosx_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : | $(addsuffix .c,$(kernel-usb-classes-arosx_CCFILES))
+
+# Be sure that all .c files are found
+kernel-usb-classes-arosx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-usb-classes-arosx_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-usb-classes-arosx_CCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-usb-classes-arosx_MC_DIRS := $(foreach dir, $(kernel-usb-classes-arosx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-usb-classes-arosx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-usb-classes-arosx_MC_DIRS),)
+    kernel-usb-classes-arosx_MC_DIRS := $(shell echo $(kernel-usb-classes-arosx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-usb-classes-arosx_MC_DIRS)
+endif
+
+endif
+
+kernel-usb-classes-arosx_MC_CPPFLAGS := $(kernel-usb-classes-arosx_CPPFLAGS)
+kernel-usb-classes-arosx_CFLAGS := $(kernel-usb-classes-arosx_CFLAGS)
+ifeq ($(kernel-usb-classes-arosx_DFLAGS),)
+  kernel-usb-classes-arosx_DFLAGS := $(kernel-usb-classes-arosx_CFLAGS)
+else
+  kernel-usb-classes-arosx_DFLAGS := $(kernel-usb-classes-arosx_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-usb-classes-arosx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-usb-classes-arosx_STRIP ?= $(TARGET_STRIP)
+kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_MC_CPPFLAGS:=$(strip $(kernel-usb-classes-arosx_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_CFLAGS:=$(strip $(kernel-usb-classes-arosx_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_DFLAGS:=$(kernel-usb-classes-arosx_DFLAGS)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-usb-classes-arosx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-usb-classes-arosx_STRIP ?= $(HOST_STRIP)
+kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-classes-arosx_CFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-classes-arosx_DFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-usb-classes-arosx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-usb-classes-arosx_STRIP ?= $(ECHO) >/dev/null
+kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-classes-arosx_CFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-classes-arosx_DFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-usb-classes-arosx_MC_TARGETS) : CPPFLAGS := $(kernel-usb-classes-arosx_MC_CPPFLAGS)
+$(kernel-usb-classes-arosx_MC_TARGETS) : CFLAGS := $(kernel-usb-classes-arosx_CFLAGS)
+$(kernel-usb-classes-arosx_MC_TARGETS) : $(kernel-usb-classes-arosx_MC_TGTWILDCARD).o : $(kernel-usb-classes-arosx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-usb-classes-arosx_IQUOTE) $(dir $<) $(kernel-usb-classes-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_IQUOTE) . $(kernel-usb-classes-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-usb-classes-arosx_IQUOTE) $(dir $<) $(kernel-usb-classes-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_IQUOTE) . $(kernel-usb-classes-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-usb-classes-arosx_IQUOTE) $(dir $<) $(kernel-usb-classes-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_IQUOTE) . $(kernel-usb-classes-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-usb-classes-arosx_MC_DTARGETS) : $(kernel-usb-classes-arosx_MC_TGTWILDCARD).d : $(kernel-usb-classes-arosx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-usb-classes-arosx_DFLAGS) $(kernel-usb-classes-arosx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-usb-classes-arosx_MC_SRCWILDCARD := %
+else
+kernel-usb-classes-arosx_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-usb-classes-arosx_OBJDIR),)
+kernel-usb-classes-arosx_MC_TARGETS := $(addsuffix .o,$(kernel-usb-classes-arosx_TARGETCCFILES))
+kernel-usb-classes-arosx_MC_DTARGETS := $(addsuffix .d,$(kernel-usb-classes-arosx_TARGETCCFILES))
+kernel-usb-classes-arosx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-usb-classes-arosx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(notdir $(kernel-usb-classes-arosx_TARGETCCFILES))))
+    kernel-usb-classes-arosx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(notdir $(kernel-usb-classes-arosx_TARGETCCFILES))))
+else
+ifeq (,)
+    kernel-usb-classes-arosx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(kernel-usb-classes-arosx_TARGETCCFILES)))
+    kernel-usb-classes-arosx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(kernel-usb-classes-arosx_TARGETCCFILES)))
+else
+    kernel-usb-classes-arosx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(patsubst /%,%,$(kernel-usb-classes-arosx_TARGETCCFILES))))
+    kernel-usb-classes-arosx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(patsubst /%,%,$(kernel-usb-classes-arosx_TARGETCCFILES))))
+endif
+endif
+kernel-usb-classes-arosx_MC_TGTWILDCARD := $(kernel-usb-classes-arosx_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : | $(addsuffix .c,$(kernel-usb-classes-arosx_TARGETCCFILES))
+
+# Be sure that all .c files are found
+kernel-usb-classes-arosx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-usb-classes-arosx_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-usb-classes-arosx_TARGETCCFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-usb-classes-arosx_MC_DIRS := $(foreach dir, $(kernel-usb-classes-arosx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-usb-classes-arosx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-usb-classes-arosx_MC_DIRS),)
+    kernel-usb-classes-arosx_MC_DIRS := $(shell echo $(kernel-usb-classes-arosx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-usb-classes-arosx_MC_DIRS)
+endif
+
+endif
+
+kernel-usb-classes-arosx_MC_CPPFLAGS := $(kernel-usb-classes-arosx_CPPFLAGS) -D__AROS__
+kernel-usb-classes-arosx_CFLAGS := $(kernel-usb-classes-arosx_CFLAGS)
+ifeq ($(kernel-usb-classes-arosx_DFLAGS),)
+  kernel-usb-classes-arosx_DFLAGS := $(kernel-usb-classes-arosx_CFLAGS)
+else
+  kernel-usb-classes-arosx_DFLAGS := $(kernel-usb-classes-arosx_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-usb-classes-arosx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-usb-classes-arosx_STRIP ?= $(TARGET_STRIP)
+kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_MC_CPPFLAGS:=$(strip $(kernel-usb-classes-arosx_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_CFLAGS:=$(strip $(kernel-usb-classes-arosx_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_DFLAGS:=$(kernel-usb-classes-arosx_DFLAGS)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-usb-classes-arosx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-usb-classes-arosx_STRIP ?= $(HOST_STRIP)
+kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-classes-arosx_CFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-classes-arosx_DFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-usb-classes-arosx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-usb-classes-arosx_STRIP ?= $(ECHO) >/dev/null
+kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-classes-arosx_CFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-classes-arosx_DFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-usb-classes-arosx_MC_TARGETS) : CPPFLAGS := $(kernel-usb-classes-arosx_MC_CPPFLAGS)
+$(kernel-usb-classes-arosx_MC_TARGETS) : CFLAGS := $(kernel-usb-classes-arosx_CFLAGS)
+$(kernel-usb-classes-arosx_MC_TARGETS) : $(kernel-usb-classes-arosx_MC_TGTWILDCARD).o : $(kernel-usb-classes-arosx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-usb-classes-arosx_IQUOTE) $(dir $<) $(kernel-usb-classes-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_IQUOTE) . $(kernel-usb-classes-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-usb-classes-arosx_IQUOTE) $(dir $<) $(kernel-usb-classes-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_IQUOTE) . $(kernel-usb-classes-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-usb-classes-arosx_IQUOTE) $(dir $<) $(kernel-usb-classes-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_IQUOTE) . $(kernel-usb-classes-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-usb-classes-arosx_MC_DTARGETS) : $(kernel-usb-classes-arosx_MC_TGTWILDCARD).d : $(kernel-usb-classes-arosx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-usb-classes-arosx_DFLAGS) $(kernel-usb-classes-arosx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq (,)
+kernel-usb-classes-arosx_MC_SRCWILDCARD := %
+else
+kernel-usb-classes-arosx_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(kernel-usb-classes-arosx_OBJDIR)/linklib,)
+kernel-usb-classes-arosx_MC_TARGETS := $(addsuffix .o,$(kernel-usb-classes-arosx_NLIBARCHFILES))
+kernel-usb-classes-arosx_MC_DTARGETS := $(addsuffix .d,$(kernel-usb-classes-arosx_NLIBARCHFILES))
+kernel-usb-classes-arosx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-usb-classes-arosx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$(notdir $(kernel-usb-classes-arosx_NLIBARCHFILES))))
+    kernel-usb-classes-arosx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$(notdir $(kernel-usb-classes-arosx_NLIBARCHFILES))))
+else
+ifeq (,)
+    kernel-usb-classes-arosx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$(kernel-usb-classes-arosx_NLIBARCHFILES)))
+    kernel-usb-classes-arosx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$(kernel-usb-classes-arosx_NLIBARCHFILES)))
+else
+    kernel-usb-classes-arosx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-usb-classes-arosx_NLIBARCHFILES))))
+    kernel-usb-classes-arosx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$(patsubst /%,%,$(kernel-usb-classes-arosx_NLIBARCHFILES))))
+endif
+endif
+kernel-usb-classes-arosx_MC_TGTWILDCARD := $(kernel-usb-classes-arosx_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : | $(addsuffix .c,$(kernel-usb-classes-arosx_NLIBARCHFILES))
+
+# Be sure that all .c files are found
+kernel-usb-classes-arosx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-usb-classes-arosx_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-usb-classes-arosx_NLIBARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-usb-classes-arosx_MC_DIRS := $(foreach dir, $(kernel-usb-classes-arosx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-usb-classes-arosx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-usb-classes-arosx_MC_DIRS),)
+    kernel-usb-classes-arosx_MC_DIRS := $(shell echo $(kernel-usb-classes-arosx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-usb-classes-arosx_MC_DIRS)
+endif
+
+endif
+
+kernel-usb-classes-arosx_MC_CPPFLAGS := $(kernel-usb-classes-arosx_LINKLIBCPPFLAGS) -D__AROS__
+kernel-usb-classes-arosx_CFLAGS := $(kernel-usb-classes-arosx_LINKLIBCFLAGS)
+ifeq ($(kernel-usb-classes-arosx_LINKLIBDFLAGS),)
+  kernel-usb-classes-arosx_DFLAGS := $(kernel-usb-classes-arosx_LINKLIBCFLAGS)
+else
+  kernel-usb-classes-arosx_DFLAGS := $(kernel-usb-classes-arosx_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-usb-classes-arosx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-usb-classes-arosx_STRIP ?= $(TARGET_STRIP)
+kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_MC_CPPFLAGS:=$(strip $(kernel-usb-classes-arosx_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_CFLAGS:=$(strip $(kernel-usb-classes-arosx_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_DFLAGS:=$(kernel-usb-classes-arosx_DFLAGS)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-usb-classes-arosx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-usb-classes-arosx_STRIP ?= $(HOST_STRIP)
+kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-classes-arosx_CFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-classes-arosx_DFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-usb-classes-arosx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-usb-classes-arosx_STRIP ?= $(ECHO) >/dev/null
+kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-classes-arosx_CFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-classes-arosx_DFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-usb-classes-arosx_MC_TARGETS) : CPPFLAGS := $(kernel-usb-classes-arosx_MC_CPPFLAGS)
+$(kernel-usb-classes-arosx_MC_TARGETS) : CFLAGS := $(kernel-usb-classes-arosx_CFLAGS)
+$(kernel-usb-classes-arosx_MC_TARGETS) : $(kernel-usb-classes-arosx_MC_TGTWILDCARD).o : $(kernel-usb-classes-arosx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-usb-classes-arosx_IQUOTE) $(dir $<) $(kernel-usb-classes-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_IQUOTE) . $(kernel-usb-classes-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-usb-classes-arosx_IQUOTE) $(dir $<) $(kernel-usb-classes-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_IQUOTE) . $(kernel-usb-classes-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-usb-classes-arosx_IQUOTE) $(dir $<) $(kernel-usb-classes-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_IQUOTE) . $(kernel-usb-classes-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-usb-classes-arosx_MC_DTARGETS) : $(kernel-usb-classes-arosx_MC_TGTWILDCARD).d : $(kernel-usb-classes-arosx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-usb-classes-arosx_DFLAGS) $(kernel-usb-classes-arosx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(kernel-usb-classes-arosx_OBJDIR)/linklib,)
+kernel-usb-classes-arosx_MC_SRCWILDCARD := %
+else
+kernel-usb-classes-arosx_MC_SRCWILDCARD := $(kernel-usb-classes-arosx_OBJDIR)/linklib/%
+endif
+
+ifeq ($(kernel-usb-classes-arosx_OBJDIR)/linklib,)
+kernel-usb-classes-arosx_MC_TARGETS := $(addsuffix .o,$(kernel-usb-classes-arosx_LINKLIBCCGENFILES))
+kernel-usb-classes-arosx_MC_DTARGETS := $(addsuffix .d,$(kernel-usb-classes-arosx_LINKLIBCCGENFILES))
+kernel-usb-classes-arosx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    kernel-usb-classes-arosx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$(notdir $(kernel-usb-classes-arosx_LINKLIBCCGENFILES))))
+    kernel-usb-classes-arosx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$(notdir $(kernel-usb-classes-arosx_LINKLIBCCGENFILES))))
+else
+ifeq ($(kernel-usb-classes-arosx_OBJDIR)/linklib,)
+    kernel-usb-classes-arosx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$(kernel-usb-classes-arosx_LINKLIBCCGENFILES)))
+    kernel-usb-classes-arosx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$(kernel-usb-classes-arosx_LINKLIBCCGENFILES)))
+else
+    kernel-usb-classes-arosx_MC_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$(patsubst $(kernel-usb-classes-arosx_OBJDIR)/linklib/%,%,$(kernel-usb-classes-arosx_LINKLIBCCGENFILES))))
+    kernel-usb-classes-arosx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$(patsubst $(kernel-usb-classes-arosx_OBJDIR)/linklib/%,%,$(kernel-usb-classes-arosx_LINKLIBCCGENFILES))))
+endif
+endif
+kernel-usb-classes-arosx_MC_TGTWILDCARD := $(kernel-usb-classes-arosx_OBJDIR)/linklib/%
+
+# Be sure that all .c files are generated
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : | $(addsuffix .c,$(kernel-usb-classes-arosx_LINKLIBCCGENFILES))
+
+# Be sure that all .c files are found
+kernel-usb-classes-arosx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-usb-classes-arosx_MC_BASEDIRS := $(shell echo $(sort $(dir $(kernel-usb-classes-arosx_LINKLIBCCGENFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-usb-classes-arosx_MC_DIRS := $(foreach dir, $(kernel-usb-classes-arosx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-usb-classes-arosx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-usb-classes-arosx_MC_DIRS),)
+    kernel-usb-classes-arosx_MC_DIRS := $(shell echo $(kernel-usb-classes-arosx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(kernel-usb-classes-arosx_MC_DIRS)
+endif
+
+endif
+
+kernel-usb-classes-arosx_MC_CPPFLAGS := $(kernel-usb-classes-arosx_LINKLIBCPPFLAGS) -D__AROS__
+kernel-usb-classes-arosx_CFLAGS := $(kernel-usb-classes-arosx_LINKLIBCFLAGS)
+ifeq ($(kernel-usb-classes-arosx_LINKLIBDFLAGS),)
+  kernel-usb-classes-arosx_DFLAGS := $(kernel-usb-classes-arosx_LINKLIBCFLAGS)
+else
+  kernel-usb-classes-arosx_DFLAGS := $(kernel-usb-classes-arosx_LINKLIBDFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+kernel-usb-classes-arosx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+kernel-usb-classes-arosx_STRIP ?= $(TARGET_STRIP)
+kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_MC_CPPFLAGS:=$(strip $(kernel-usb-classes-arosx_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_CFLAGS:=$(strip $(kernel-usb-classes-arosx_CFLAGS) $(SAFETY_CFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_DFLAGS:=$(kernel-usb-classes-arosx_DFLAGS)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+kernel-usb-classes-arosx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+kernel-usb-classes-arosx_STRIP ?= $(HOST_STRIP)
+kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_CFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-classes-arosx_CFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_DFLAGS:=$(strip $(HOST_CFLAGS) $(kernel-usb-classes-arosx_DFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE:=$(HOST_IQUOTE)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+kernel-usb-classes-arosx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+kernel-usb-classes-arosx_STRIP ?= $(ECHO) >/dev/null
+kernel-usb-classes-arosx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_CPPFLAGS) $(kernel-usb-classes-arosx_MC_EXTRA_CPPFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-classes-arosx_CFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(kernel-usb-classes-arosx_DFLAGS))
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE:=$(KERNEL_IQUOTE)
+$(kernel-usb-classes-arosx_MC_TARGETS) $(kernel-usb-classes-arosx_MC_DTARGETS) : kernel-usb-classes-arosx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(kernel-usb-classes-arosx_MC_TARGETS) : CPPFLAGS := $(kernel-usb-classes-arosx_MC_CPPFLAGS)
+$(kernel-usb-classes-arosx_MC_TARGETS) : CFLAGS := $(kernel-usb-classes-arosx_CFLAGS)
+$(kernel-usb-classes-arosx_MC_TARGETS) : $(kernel-usb-classes-arosx_MC_TGTWILDCARD).o : $(kernel-usb-classes-arosx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(kernel-usb-classes-arosx_IQUOTE) $(dir $<) $(kernel-usb-classes-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_IQUOTE) . $(kernel-usb-classes-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(kernel-usb-classes-arosx_IQUOTE) $(dir $<) $(kernel-usb-classes-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_IQUOTE) . $(kernel-usb-classes-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(kernel-usb-classes-arosx_IQUOTE) $(dir $<) $(kernel-usb-classes-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(kernel-usb-classes-arosx_IQUOTE) . $(kernel-usb-classes-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(kernel-usb-classes-arosx_MC_DTARGETS) : $(kernel-usb-classes-arosx_MC_TGTWILDCARD).d : $(kernel-usb-classes-arosx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(kernel-usb-classes-arosx_DFLAGS) $(kernel-usb-classes-arosx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifneq ($(kernel-usb-classes-arosx_LINKLIBAFILES),)
+
+ifeq ($(kernel-usb-classes-arosx_OBJDIR)/linklib,)
+kernel-usb-classes-arosx-MA_TARGETS := $(addsuffix .o,$(kernel-usb-classes-arosx_LINKLIBAFILES) $(kernel-usb-classes-arosx_RELLINKLIBAFILES))
+kernel-usb-classes-arosx-MA_WILDCARD := %
+else
+kernel-usb-classes-arosx-MA_TARGETS := $(addsuffix .o,$(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$(notdir $(kernel-usb-classes-arosx_LINKLIBAFILES) $(kernel-usb-classes-arosx_RELLINKLIBAFILES))))
+kernel-usb-classes-arosx-MA_WILDCARD := $(kernel-usb-classes-arosx_OBJDIR)/linklib/%
+
+# Be sure that all .s files are generated
+$(kernel-usb-classes-arosx-MA_TARGETS) : | $(addsuffix .S,$(kernel-usb-classes-arosx_LINKLIBAFILES) $(kernel-usb-classes-arosx_RELLINKLIBAFILES))
+
+# Be sure that all .c files are found
+kernel-usb-classes-arosx-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+kernel-usb-classes-arosx-MA_BASEDIRS := $(shell echo $(sort $(dir $(kernel-usb-classes-arosx_LINKLIBAFILES) $(kernel-usb-classes-arosx_RELLINKLIBAFILES))) | sed 's/\(.\):\//\/\1\//g')
+kernel-usb-classes-arosx-MA_DIRS := $(foreach dir, $(kernel-usb-classes-arosx-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(kernel-usb-classes-arosx-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(kernel-usb-classes-arosx-MA_DIRS),)
+    kernel-usb-classes-arosx-MA_DIRS := $(shell echo $(kernel-usb-classes-arosx-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.S $(kernel-usb-classes-arosx-MA_DIRS)
+endif
+
+endif
+
+kernel-usb-classes-arosx-MA_ASSEMBLER ?= $(kernel-usb-classes-arosx_ASSEMBLER)
+
+$(kernel-usb-classes-arosx-MA_TARGETS) : kernel-usb-classes-arosx-MA_CMD:= $(kernel-usb-classes-arosx-MA_ASSEMBLER)
+
+$(kernel-usb-classes-arosx-MA_TARGETS) : CPPFLAGS := $(CPPFLAGS)
+$(kernel-usb-classes-arosx-MA_TARGETS) : AFLAGS := $(AFLAGS)
+$(kernel-usb-classes-arosx-MA_TARGETS) : $(kernel-usb-classes-arosx-MA_WILDCARD).o : %.S
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(kernel-usb-classes-arosx-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(kernel-usb-classes-arosx-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(kernel-usb-classes-arosx-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+endif
+
+## Linking
+##
+ifeq (class,)
+kernel-usb-classes-arosx_SUFFIX           := usbclass
+else
+kernel-usb-classes-arosx_SUFFIX           := class
+endif
+
+ifeq (target,target)
+kernel-usb-classes-arosx_ISA_LDFLAGS           := $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+kernel-usb-classes-arosx_ISA_LDFLAGS           := $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+kernel-usb-classes-arosx_ISA_LDFLAGS           := $(KERNEL_ISA_OBJCFLAGS)
+endif
+
+ifeq (M,M)
+# Handlers use dash instead of dot in their names
+ifeq ($(kernel-usb-classes-arosx_SUFFIX),handler)
+kernel-usb-classes-arosx_MODULE           := $(AROSDIR)/$(kernel-usb-classes-arosx_MODDIR)/$(kernel-usb-classes-arosx_DEFNAME)-$(kernel-usb-classes-arosx_SUFFIX)
+else
+kernel-usb-classes-arosx_MODULE           := $(AROSDIR)/$(kernel-usb-classes-arosx_MODDIR)/$(kernel-usb-classes-arosx_DEFNAME).$(kernel-usb-classes-arosx_SUFFIX)
+endif
+kernel-usb-classes-arosx_KOBJ             := $(KOBJSDIR)/$(kernel-usb-classes-arosx_DEFNAME)_$(kernel-usb-classes-arosx_SUFFIX).o
+else
+kernel-usb-classes-arosx_MODULE           :=
+kernel-usb-classes-arosx_KOBJ             :=
+endif
+
+kernel-usb-classes-arosx-quick      : kernel-usb-classes-arosx
+kernel-usb-classes-arosx            : $(kernel-usb-classes-arosx_MODULE) $(kernel-usb-classes-arosx_LINKLIB) $(kernel-usb-classes-arosx_RELLINKLIB)
+ifeq (M,M)
+kernel-usb-classes-arosx-kobj       : $(kernel-usb-classes-arosx_KOBJ) $(kernel-usb-classes-arosx_LINKLIB) $(kernel-usb-classes-arosx_RELLINKLIB)
+kernel-usb-classes-arosx-kobj-quick : $(kernel-usb-classes-arosx_KOBJ) $(kernel-usb-classes-arosx_LINKLIB) $(kernel-usb-classes-arosx_RELLINKLIB)
+endif
+ifeq (,M)
+kernel-usb-classes-arosx-linklib    : $(kernel-usb-classes-arosx_LINKLIB) $(kernel-usb-classes-arosx_RELLINKLIB)
+endif
+
+kernel-usb-classes-arosx_OBJS := $(addsuffix .o,$(kernel-usb-classes-arosx_STARTFILES)) $(kernel-usb-classes-arosx_ARCHOBJS) \
+           $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(notdir $(kernel-usb-classes-arosx_C_NARCHFILES:=.o) $(kernel-usb-classes-arosx_CXXFILES:=.o)))
+
+ifeq (yes,yes)
+# Handlers always have entry point
+ifneq (usbclass,handler)
+kernel-usb-classes-arosx_STARTOBJS        := $(addsuffix .o,$(addprefix $(GENDIR)/,$(RESIDENT_BEGIN)))
+endif
+endif
+
+# Under Windows con* is a reserved name, it refers to console. Files with such names can't be created.
+# This breaks con-handler build. Here we work around this
+ifeq (arosx,con)
+    kernel-usb-classes-arosx_ERR          := $(notdir $(kernel-usb-classes-arosx_MODULE)).err
+else
+    kernel-usb-classes-arosx_ERR          := arosx.err
+endif
+
+ifeq (M,M)
+# The module is linked from all the compiled .o files
+
+TMP_LDFLAGS  := $(LDFLAGS) $($(kernel-usb-classes-arosx_DEFNAME)_LDFLAGS) $(kernel-usb-classes-arosx_ISA_LDFLAGS)
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+TMP_DIRS := $(subst -L ,-L,$(strip $(TMP_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+TMP_DIRS := $(patsubst -L%,%,$(filter -L%,$(TMP_DIRS)))
+# Add trailing /
+TMP_DIRS := $(subst //,/,$(addsuffix /,$(TMP_DIRS)))
+# Add normal linklib path
+TMP_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+TMP_LIBS := $(addprefix lib,$(addsuffix .a,$(kernel-usb-classes-arosx_LIBS) $($(kernel-usb-classes-arosx_DEFNAME)_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+TMP_DEPLIBS := $(foreach lib,$(TMP_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(TMP_DIRS)))) \
+)
+
+$(kernel-usb-classes-arosx_MODULE) : LIB_NAMES := $(kernel-usb-classes-arosx_LIBS) $($(kernel-usb-classes-arosx_DEFNAME)_LIBS)
+$(kernel-usb-classes-arosx_MODULE) : OBJS := $(kernel-usb-classes-arosx_STARTOBJS) $(kernel-usb-classes-arosx_OBJS) $(USER_OBJS)
+$(kernel-usb-classes-arosx_MODULE) : ENDTAG := $(kernel-usb-classes-arosx_ENDOBJS)
+$(kernel-usb-classes-arosx_MODULE) : ERR := $(kernel-usb-classes-arosx_ERR)
+$(kernel-usb-classes-arosx_MODULE) : OBJDIR := $(kernel-usb-classes-arosx_OBJDIR)
+$(kernel-usb-classes-arosx_MODULE) : LDFLAGS := $(TMP_LDFLAGS)
+ifeq (,)
+$(kernel-usb-classes-arosx_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES))
+else
+# Warning: the -L/usr/lib here can result in modules
+# linking against host libs instead of AROS libs (e.g stdc++) !!
+$(kernel-usb-classes-arosx_MODULE) : LIBS := $(addprefix -l,$(LIB_NAMES)) \
+                    -L/usr/lib $(addprefix -l,)
+endif 
+$(kernel-usb-classes-arosx_MODULE) : $(kernel-usb-classes-arosx_STARTOBJS) $(kernel-usb-classes-arosx_OBJS) $(USER_OBJS) $(kernel-usb-classes-arosx_ENDOBJS) $(TMP_DEPLIBS) $(USER_DEPLIBS)
+	$(Q)$(ECHO) "Building   $(subst $(TARGETDIR)/,,$@) ..."
+	$(Q)$(IF) $(kernel-usb-classes-arosx_LINK) $(NOSTARTUP_LDFLAGS) \
+		$(GENMAP) $(OBJDIR)/$(MODULE).map \
+		$(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) \
+		-o $@ 2>&1 > $(OBJDIR)/$(ERR) 2>&1 ; \
+	then \
+		cat $(OBJDIR)/$(ERR); \
+	else \
+		echo "$(kernel-usb-classes-arosx_LINK) $(NOSTARTUP_LDFLAGS) $(GENMAP) $(OBJDIR)/$(MODULE).map $(OBJS) $(LIBS) $(LDFLAGS) $(ENDTAG) -o $@"; \
+		cat $(OBJDIR)/$(ERR); \
+		exit 1; \
+	fi
+	$(Q)$(IF) $(TEST) ! -s $(OBJDIR)/$(ERR) ; then $(RM) $(OBJDIR)/$(ERR) ; fi
+	$(Q)$(IF) $(TEST) "$(STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(STRIP) $@ --only-keep-debug -o $@.dbg ; \
+		fi ; \
+		$(STRIP) $@ ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $@.dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$@.dbg $@ ; \
+			fi ; \
+		fi ; \
+	fi
+
+endif
+
+ifeq (,M)
+# Link static lib
+kernel-usb-classes-arosx_LC_LINKLIBNAME   := $(shell echo $(kernel-usb-classes-arosx_LINKLIBNAME) | tr A-Z a-z)
+kernel-usb-classes-arosx_LC_MODNAME       := $(shell echo arosx | tr A-Z a-z)
+ifneq ($(kernel-usb-classes-arosx_LINKLIB),)
+
+ifeq (target,target)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_LINKLIBNAME)$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_AR:=$(AR)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_LINKLIBNAME)$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_LINKLIBNAME)$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_AR:=$(HOST_AR)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_LINKLIBNAME)$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_LINKLIBNAME)$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_AR:=$(KERNEL_AR)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_LINKLIBNAME)$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_LINKLIBNAME)$(kernel-usb-classes-arosx_LIBSUFFIX).a : $(kernel-usb-classes-arosx_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-usb-classes-arosx_AR) $@ $^
+	$(Q)$(kernel-usb-classes-arosx_RANLIB) $@
+ifneq ($(kernel-usb-classes-arosx_LC_MODNAME),$(kernel-usb-classes-arosx_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-usb-classes-arosx_LIBDIR)/libarosx$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_AR:=$(AR)
+$(kernel-usb-classes-arosx_LIBDIR)/libarosx$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-usb-classes-arosx_LIBDIR)/libarosx$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_AR:=$(HOST_AR)
+$(kernel-usb-classes-arosx_LIBDIR)/libarosx$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-usb-classes-arosx_LIBDIR)/libarosx$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_AR:=$(KERNEL_AR)
+$(kernel-usb-classes-arosx_LIBDIR)/libarosx$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-usb-classes-arosx_LIBDIR)/libarosx$(kernel-usb-classes-arosx_LIBSUFFIX).a : $(kernel-usb-classes-arosx_LINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-usb-classes-arosx_AR) $@ $^
+	$(Q)$(kernel-usb-classes-arosx_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-usb-classes-arosx_LINKLIB),)
+$(kernel-usb-classes-arosx_LINKLIB) : | $(kernel-usb-classes-arosx_LIBDIR)
+else
+$(kernel-usb-classes-arosx_LINKLIB) :: $(kernel-usb-classes-arosx_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-usb-classes-arosx_LIBDIR)
+
+endif
+
+ifneq ($(kernel-usb-classes-arosx_RELLINKLIB),)
+
+ifeq (target,target)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_LINKLIBNAME)_rel$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_AR:=$(AR)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_LINKLIBNAME)_rel$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_LINKLIBNAME)_rel$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_AR:=$(HOST_AR)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_LINKLIBNAME)_rel$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_LINKLIBNAME)_rel$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_AR:=$(KERNEL_AR)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_LINKLIBNAME)_rel$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_LINKLIBNAME)_rel$(kernel-usb-classes-arosx_LIBSUFFIX).a : $(kernel-usb-classes-arosx_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-usb-classes-arosx_AR) $@ $^
+	$(Q)$(kernel-usb-classes-arosx_RANLIB) $@
+ifneq ($(kernel-usb-classes-arosx_LC_MODNAME),$(kernel-usb-classes-arosx_LC_LINKLIBNAME))
+
+ifeq (target,target)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_DEFNAME)_rel$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_AR:=$(AR)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_DEFNAME)_rel$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_RANLIB:=$(RANLIB)
+endif
+ifeq (target,host)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_DEFNAME)_rel$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_AR:=$(HOST_AR)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_DEFNAME)_rel$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_RANLIB:=$(HOST_RANLIB)
+endif
+ifeq (target,kernel)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_DEFNAME)_rel$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_AR:=$(KERNEL_AR)
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_DEFNAME)_rel$(kernel-usb-classes-arosx_LIBSUFFIX).a : kernel-usb-classes-arosx_RANLIB:=$(KERNEL_RANLIB)
+endif
+
+$(kernel-usb-classes-arosx_LIBDIR)/lib$(kernel-usb-classes-arosx_DEFNAME)_rel$(kernel-usb-classes-arosx_LIBSUFFIX).a : $(kernel-usb-classes-arosx_RELLINKLIBOBJS)
+	$(Q)$(ECHO) "Creating   $(subst $(TARGETDIR)/,,$@)..."
+	$(Q)$(kernel-usb-classes-arosx_AR) $@ $^
+	$(Q)$(kernel-usb-classes-arosx_RANLIB) $@
+endif
+
+
+ifneq ($(kernel-usb-classes-arosx_RELLINKLIB),)
+$(kernel-usb-classes-arosx_RELLINKLIB) : | $(kernel-usb-classes-arosx_LIBDIR)
+else
+$(kernel-usb-classes-arosx_RELLINKLIB) :: $(kernel-usb-classes-arosx_LIBDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-usb-classes-arosx_LIBDIR)
+
+endif
+endif
+
+ifeq (M,M)
+# Link kernel object file
+kernel-usb-classes-arosx_KAUTOLIB         := dos intuition layers graphics oop utility expansion keymap
+
+# Make these symbols local
+kernel-usb-classes-arosx_KBASE            := DOSBase IntuitionBase LayersBase GfxBase OOPBase \
+	    UtilityBase ExpansionBase KeymapBase KernelBase
+
+kernel-usb-classes-arosx_SYMBOLS := $(kernel-usb-classes-arosx_KBASE)
+
+kernel-usb-classes-arosx_KLIB             := hiddstubs amiga arossupport autoinit libinit
+kernel-usb-classes-arosx_KOBJ_LIBS        := $(filter-out $(kernel-usb-classes-arosx_KLIB),$(kernel-usb-classes-arosx_LIBS)) $(kernel-usb-classes-arosx_KAUTOLIB)
+$(kernel-usb-classes-arosx_KOBJ) : LINKLIBS:=$(kernel-usb-classes-arosx_KOBJ_LIBS) $($(kernel-usb-classes-arosx_DEFNAME)_LIBS)
+$(kernel-usb-classes-arosx_KOBJ) : FILTBASES:=$(addprefix -L ,$(kernel-usb-classes-arosx_SYMBOLS))
+$(kernel-usb-classes-arosx_KOBJ) : USER_LDFLAGS:=$(USER_LDFLAGS)
+$(kernel-usb-classes-arosx_KOBJ) : $(kernel-usb-classes-arosx_OBJS) $(USER_OBJS) $(kernel-usb-classes-arosx_ENDOBJS)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$@)"
+	$(Q)$(AROS_LD) -Ur -o $@ $^ $(USER_LDFLAGS) -L$(AROS_LIB) $(addprefix -l,$(LINKLIBS))
+	$(Q)$(OBJCOPY) $@ $(FILTBASES) `$(NM_PLAIN) $@ | $(AWK) '($$3 ~ /^__.*_(LIST|END)__\r?$$/) || ($$3 ~ /^__aros_lib.*\r?$$/) {print "-L " $$3;}'`
+endif
+
+## Dependency fine-tuning
+##
+kernel-usb-classes-arosx_DEPS             := $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/,$(notdir $(kernel-usb-classes-arosx_CCFILES:=.d) $(kernel-usb-classes-arosx_TARGETCCFILES:=.d) $(kernel-usb-classes-arosx_CXXFILES:=.d))) $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/linklib/,$(notdir $(kernel-usb-classes-arosx_LINKLIBCCFILES:=.d)))
+
+ifneq ($(kernel-usb-classes-arosx_DEPS),)
+  ifneq (kernel-usb-classes-arosx kernel-usb-classes-arosx-quick kernel-usb-classes-arosx-kobj kernel-usb-classes-arosx-kobj-quick,)
+    ifneq ($(findstring $(TARGET),kernel-usb-classes-arosx kernel-usb-classes-arosx-quick kernel-usb-classes-arosx-kobj kernel-usb-classes-arosx-kobj-quick),)
+      -include $(kernel-usb-classes-arosx_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(kernel-usb-classes-arosx_DEPS)
+    endif
+  endif
+endif
+
+$(kernel-usb-classes-arosx_OBJS) $(kernel-usb-classes-arosx_DEPS) : | $(kernel-usb-classes-arosx_OBJDIR)/linklib
+
+ifneq ($(kernel-usb-classes-arosx_OBJS) $(kernel-usb-classes-arosx_DEPS) $(kernel-usb-classes-arosx_MODULE) $(kernel-usb-classes-arosx_KOBJ),)
+$(kernel-usb-classes-arosx_OBJS) $(kernel-usb-classes-arosx_DEPS) $(kernel-usb-classes-arosx_MODULE) $(kernel-usb-classes-arosx_KOBJ) : | $(kernel-usb-classes-arosx_OBJDIR) $(AROSDIR)/$(kernel-usb-classes-arosx_MODDIR) $(KOBJSDIR)
+else
+$(kernel-usb-classes-arosx_OBJS) $(kernel-usb-classes-arosx_DEPS) $(kernel-usb-classes-arosx_MODULE) $(kernel-usb-classes-arosx_KOBJ) :: $(kernel-usb-classes-arosx_OBJDIR) $(AROSDIR)/$(kernel-usb-classes-arosx_MODDIR) $(KOBJSDIR)
+endif
+
+GLOB_MKDIRS += $(kernel-usb-classes-arosx_OBJDIR) $(AROSDIR)/$(kernel-usb-classes-arosx_MODDIR) $(KOBJSDIR)
+
+
+# Some include files need to be generated before the .c can be parsed.
+ifneq ($(filter $(TARGET),kernel-usb-classes-arosx kernel-usb-classes-arosx-includes kernel-usb-classes-arosx-quick kernel-usb-classes-arosx-kobj kernel-usb-classes-arosx-kobj-quick),) # Only for this target these deps are wanted
+
+kernel-usb-classes-arosx_DFILE_DEPS := $(kernel-usb-classes-arosx_LIBDEFSINC) $(kernel-usb-classes-arosx_DEFLIBDEFSINC) \
+    $(addprefix $(kernel-usb-classes-arosx_INCDIR)/,$($(kernel-usb-classes-arosx_DEFNAME)_INCLUDES))
+$(kernel-usb-classes-arosx_DEPS) : $(kernel-usb-classes-arosx_DFILE_DEPS)
+endif
+
+kernel-usb-classes-arosx_TOCLEAN := $(kernel-usb-classes-arosx_OBJS) $(kernel-usb-classes-arosx_DEPS) \
+    $(kernel-usb-classes-arosx_MODULE) $(kernel-usb-classes-arosx_LINKLIB) $(kernel-usb-classes-arosx_KOBJ) \
+    $(kernel-usb-classes-arosx_OBJDIR)/Makefile.arosxusbclass \
+    $(addprefix $(kernel-usb-classes-arosx_OBJDIR)/include/,$($(kernel-usb-classes-arosx_DEFNAME)_INCLUDES)) \
+    $(addprefix $(GENINCDIR)/,$($(kernel-usb-classes-arosx_DEFNAME)_INCLUDES)) \
+    $(addprefix $(kernel-usb-classes-arosx_INCDIR)/,$($(kernel-usb-classes-arosx_DEFNAME)_INCLUDES)) \
+    $(kernel-usb-classes-arosx_OBJDIR)/arosx_geninc $(kernel-usb-classes-arosx_OBJDIR)/arosx_incs \
+    $(addsuffix .c,$(kernel-usb-classes-arosx_LINKLIBFILES)) $(kernel-usb-classes-arosx_LINKLIBOBJS) $(kernel-usb-classes-arosx_LIBDEFSINC) \
+    $(kernel-usb-classes-arosx_DEFLIBDEFSINC) $(addsuffix .c,$(kernel-usb-classes-arosx_STARTFILES) $(kernel-usb-classes-arosx_ENDFILES)) \
+    $(kernel-usb-classes-arosx_ENDOBJS)
+kernel-usb-classes-arosx-clean : FILES              := $(kernel-usb-classes-arosx_TOCLEAN)
+kernel-usb-classes-arosx-clean ::
+	$(Q)$(ECHO) "Cleaning up for module arosx"
+	$(Q)$(RM) $(FILES)
+
+endif # $(TARGET) in $(kernel-usb-classes-arosx_ALLTARGETS)
+
+
+TARGETDIR := $(AROS_TESTS)/arosx
+
+
+.PHONY : test-library-arosx
+
+test-library-arosx_PROGNAME  := arosx_test
+test-library-arosx_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-library-arosx_TARGETDIR := $(TARGETDIR)
+test-library-arosx_LINKER    := 
+test-library-arosx_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(test-library-arosx_LINKER),)
+    test-library-arosx_LINKER := target
+endif
+
+ifneq ("$(strip    )","")
+    test-library-arosx_FILES     := 
+    test-library-arosx_OBJCFILES := 
+    test-library-arosx_ASMFILES  := 
+    test-library-arosx_CXXFILES := 
+else
+    test-library-arosx_FILES     := $(test-library-arosx_PROGNAME)
+    test-library-arosx_OBJCFILES :=
+    test-library-arosx_ASMFILES  :=
+    test-library-arosx_CXXFILES :=
+endif
+
+test-library-arosx_ARCHOBJS   := $(wildcard $(test-library-arosx_OBJDIR)/arch/*.o)
+test-library-arosx_ARCHFILES  := $(basename $(notdir $(test-library-arosx_ARCHOBJS)))
+test-library-arosx_C_NARCHFILES := $(filter-out $(test-library-arosx_ARCHFILES),$(test-library-arosx_FILES))
+test-library-arosx_CXX_NARCHFILES := $(filter-out $(test-library-arosx_ARCHFILES),$(test-library-arosx_CXXFILES))
+test-library-arosx_OBJC_NARCHFILES := $(filter-out $(test-library-arosx_ARCHFILES),$(test-library-arosx_OBJCFILES))
+
+TMP_FILES := $(test-library-arosx_C_NARCHFILES) $(test-library-arosx_CXX_NARCHFILES) $(test-library-arosx_ASMFILES) $(test-library-arosx_OBJC_NARCHFILES)
+test-library-arosx_OBJS := $(addsuffix .o,$(addprefix $(test-library-arosx_OBJDIR)/,$(notdir $(TMP_FILES))))
+test-library-arosx_DEPS := $(addsuffix .d,$(addprefix $(test-library-arosx_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+test-library-arosx_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+test-library-arosx_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-library-arosx_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+test-library-arosx_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+test-library-arosx_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+test-library-arosx_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-library-arosx_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+test-library-arosx_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+test-library-arosx_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+test-library-arosx_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+test-library-arosx_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+test-library-arosx_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+test-library-arosx_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+test-library-arosx_LDFLAGS          := 
+endif
+
+test-library-arosx_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-library-arosx_COVERAGE := yes
+test-library-arosx_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-library-arosx_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-library-arosx_CFLAGS    := $(strip $(test-library-arosx_COVERAGEFLAGS) $(test-library-arosx_CFLAGS))
+test-library-arosx_CXXFLAGS := $(strip $(test-library-arosx_COVERAGEFLAGS) $(test-library-arosx_CXXFLAGS))
+test-library-arosx_LIBS += $(test-library-arosx_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-library-arosx_FUNCINSTR := yes
+test-library-arosx_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-library-arosx_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-library-arosx_CFLAGS    := $(strip $(test-library-arosx_INSTRFUNCFLAGS) $(test-library-arosx_CFLAGS))
+test-library-arosx_CXXFLAGS := $(strip $(test-library-arosx_INSTRFUNCFLAGS) $(test-library-arosx_CXXFLAGS))
+test-library-arosx_LIBS += $(test-library-arosx_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-library-arosx_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-library-arosx_CFLAGS))
+test-library-arosx_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(test-library-arosx_CXXFLAGS))
+endif
+endif
+test-library-arosx_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    test-library-arosx_DFLAGS     := 
+else
+    test-library-arosx_DFLAGS     := $(test-library-arosx_CFLAGS)
+endif
+ifneq (,)
+    test-library-arosx_DXXFLAGS     := 
+else
+    test-library-arosx_DXXFLAGS     := $(test-library-arosx_CXXFLAGS)
+endif
+ifeq (target,target)
+test-library-arosx_LDFLAGS           := $(test-library-arosx_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-library-arosx_LDFLAGS           := $(test-library-arosx_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-library-arosx_LDFLAGS           := $(test-library-arosx_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+test-library-arosx_LDFLAGS   += -L
+endif
+
+#MM
+test-library-arosx-quick : test-library-arosx
+
+#MM test-library-arosx : includes-generate-deps core-linklibs
+test-library-arosx : $(test-library-arosx_TARGETDIR)/$(test-library-arosx_PROGNAME)
+
+ifneq ($(filter $(TARGET),test-library-arosx test-library-arosx-quick test-library-arosx-gz-quick),)
+
+test-library-arosx_CXXABSBASENAMES := $(foreach test-library-arosx_CXXBASE,$(test-library-arosx_CXX_NARCHFILES),$(if $(filter /%,$(test-library-arosx_CXXBASE)),$(test-library-arosx_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(test-library-arosx_CXXBASE))))
+
+ifneq ($(test-library-arosx_CXXABSBASENAMES),)
+
+test-library-arosx_CXXBASENAMES := $(basename $(test-library-arosx_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+test-library-arosx_MCXX_FILES  := $(strip $(foreach test-library-arosx_CXXBASE,$(test-library-arosx_CXXABSBASENAMES), $(firstword $(wildcard $(foreach test-library-arosx_EXT, $(AROS_CXXEXTS),$(addsuffix .$(test-library-arosx_EXT),$(test-library-arosx_CXXBASE)))))))
+
+ifeq (,)
+test-library-arosx_MCXX_SRCWILDCARD := %
+else
+test-library-arosx_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-library-arosx_OBJDIR),)
+  test-library-arosx_CXXTARGETS := $(notdir $(test-library-arosx_CXXBASENAMES:=.o))
+  test-library-arosx_CXXDTARGETS := $(notdir $(test-library-arosx_CXXBASENAMES:=.d))
+  test-library-arosx_MCXX_WILDCARD := %
+else
+  test-library-arosx_CXXTARGETS := $(addprefix $(test-library-arosx_OBJDIR)/,$(notdir $(test-library-arosx_CXXBASENAMES:=.o)))
+  test-library-arosx_CXXDTARGETS := $(addprefix $(test-library-arosx_OBJDIR)/,$(notdir $(test-library-arosx_CXXBASENAMES:=.d)))
+  test-library-arosx_MCXX_WILDCARD := $(test-library-arosx_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(test-library-arosx_CXXTARGETS) $(test-library-arosx_CXXDTARGETS) : | $(test-library-arosx_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+test-library-arosx_MCXX_CPPFLAGS := $(test-library-arosx_CPPFLAGS)
+test-library-arosx_CXXFLAGS := $(test-library-arosx_CXXFLAGS)
+ifeq ($(test-library-arosx_DXXFLAGS),)
+  test-library-arosx_DXXFLAGS := $(test-library-arosx_CXXFLAGS)
+else
+  test-library-arosx_DXXFLAGS := $(test-library-arosx_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  test-library-arosx_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  test-library-arosx_STRIP ?= $(HOST_STRIP)
+  test-library-arosx_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  test-library-arosx_CXXCMD:=$(HOST_CXX)
+  test-library-arosx_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(test-library-arosx_MCXX_CPPFLAGS) $(test-library-arosx_MCXX_EXTRA_CPPFLAGS))
+  test-library-arosx_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-library-arosx_CXXFLAGS))
+  test-library-arosx_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(test-library-arosx_DXXFLAGS))
+  test-library-arosx_CXXIQUOTE:=$(HOST_IQUOTE)
+  test-library-arosx_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  test-library-arosx_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-library-arosx_STRIP ?= $(TARGET_STRIP)
+  test-library-arosx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  test-library-arosx_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  test-library-arosx_MCXX_CPPFLAGS := $(strip $(test-library-arosx_MCXX_CPPFLAGS) $(test-library-arosx_MCXX_EXTRA_CPPFLAGS))
+  test-library-arosx_CXXFLAGS := $(strip $(test-library-arosx_CXXFLAGS) $(SAFETY_CFLAGS))
+  test-library-arosx_DXXFLAGS := $(test-library-arosx_DXXFLAGS)
+  test-library-arosx_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  test-library-arosx_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  test-library-arosx_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-library-arosx_STRIP ?= $(ECHO) >/dev/null
+  test-library-arosx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  test-library-arosx_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  test-library-arosx_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(test-library-arosx_MCXX_CPPFLAGS) $(test-library-arosx_MCXX_EXTRA_CPPFLAGS))
+  test-library-arosx_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-library-arosx_CXXFLAGS))
+  test-library-arosx_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(test-library-arosx_DXXFLAGS))
+  test-library-arosx_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  test-library-arosx_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(test-library-arosx_CXXCMD) $(test-library-arosx_CXXIQUOTE) $(dir $(2)) $(test-library-arosx_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-library-arosx_CXXIQUOTE) . $(test-library-arosx_CXXIQUOTE_END) $(strip $(test-library-arosx_CXXFLAGS) $(test-library-arosx_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(test-library-arosx_CXXCMD) $(test-library-arosx_CXXIQUOTE) $(dir $(2)) $(test-library-arosx_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-library-arosx_CXXIQUOTE) . $(test-library-arosx_CXXIQUOTE_END) $(strip $(test-library-arosx_CXXFLAGS) $(test-library-arosx_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(test-library-arosx_CXXCMD) $(test-library-arosx_CXXIQUOTE) $(dir $(2)) $(test-library-arosx_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(test-library-arosx_CXXIQUOTE) . $(test-library-arosx_CXXIQUOTE_END) $(strip $(test-library-arosx_CXXFLAGS) $(test-library-arosx_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(test-library-arosx_CXXCMD)" $(MKDEPEND) $(strip $(test-library-arosx_DXXFLAGS) $(test-library-arosx_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(test-library-arosx_OBJDIR),)
+  $(foreach test-library-arosx_CXXFILE,$(test-library-arosx_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(test-library-arosx_CXXFILE))),$(test-library-arosx_CXXFILE))))
+else
+  $(foreach test-library-arosx_CXXFILE,$(test-library-arosx_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(test-library-arosx_OBJDIR)/,$(notdir $(basename $(test-library-arosx_CXXFILE)))),$(test-library-arosx_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(test-library-arosx_OBJC_NARCHFILES),)
+
+ifeq (,)
+test-library-arosx_MOBJC_SRCWILDCARD := %
+else
+test-library-arosx_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-library-arosx_OBJDIR),)
+  test-library-arosx_MOBJC_TARGETS := $(addsuffix .o,$(test-library-arosx_OBJC_NARCHFILES))
+  test-library-arosx_MOBJC_DTARGETS := $(addsuffix .d,$(test-library-arosx_OBJC_NARCHFILES))
+  test-library-arosx_MOBJC_WILDCARD := %
+else
+  test-library-arosx_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(test-library-arosx_OBJDIR)/,$(test-library-arosx_OBJC_NARCHFILES)))
+  test-library-arosx_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(test-library-arosx_OBJDIR)/,$(test-library-arosx_OBJC_NARCHFILES)))
+  test-library-arosx_MOBJC_WILDCARD := $(test-library-arosx_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : | $(addsuffix .m,$(test-library-arosx_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  test-library-arosx_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  test-library-arosx_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(test-library-arosx_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  test-library-arosx_MOBJC_DIRS := $(foreach dir, $(test-library-arosx_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-library-arosx_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(test-library-arosx_MOBJC_DIRS),)
+    test-library-arosx_MOBJC_DIRS := $(shell echo $(test-library-arosx_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(test-library-arosx_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  test-library-arosx_CC := $(TARGET_CC)
+else
+  test-library-arosx_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+test-library-arosx_MOBJC_CPPFLAGS := $(test-library-arosx_CPPFLAGS)
+test-library-arosx_OBJCFLAGS := $(test-library-arosx_CFLAGS)
+test-library-arosx_OBJCFLAGS := $(test-library-arosx_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+test-library-arosx_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(test-library-arosx_OBJCFLAGS)))
+ifeq ($(test-library-arosx_DFLAGS),)
+  test-library-arosx_OBJCDFLAGS := $(test-library-arosx_CFLAGS)
+else
+  test-library-arosx_OBJCDFLAGS := $(test-library-arosx_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  test-library-arosx_LINK ?= $(strip $(test-library-arosx_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  test-library-arosx_STRIP ?= $(TARGET_STRIP)
+  test-library-arosx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : CMD:=$(strip $(test-library-arosx_CC) $(TARGET_SYSROOT))
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : test-library-arosx_MOBJC_CPPFLAGS:=$(strip $(test-library-arosx_MOBJC_CPPFLAGS) $(test-library-arosx_MOBJC_EXTRA_CPPFLAGS))
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : test-library-arosx_OBJCFLAGS:=$(strip $(test-library-arosx_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : test-library-arosx_OBJCDFLAGS:=$(test-library-arosx_OBJCDFLAGS)
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : test-library-arosx_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : test-library-arosx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  test-library-arosx_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  test-library-arosx_STRIP ?= $(HOST_STRIP)
+  test-library-arosx_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : test-library-arosx_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(test-library-arosx_MOBJC_CPPFLAGS) $(test-library-arosx_MOBJC_EXTRA_CPPFLAGS))
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : test-library-arosx_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(test-library-arosx_OBJCFLAGS))
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : test-library-arosx_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(test-library-arosx_OBJCDFLAGS))
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : test-library-arosx_IQUOTE:=$(HOST_IQUOTE)
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : test-library-arosx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  test-library-arosx_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  test-library-arosx_STRIP ?= $(ECHO) >/dev/null
+  test-library-arosx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : test-library-arosx_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(test-library-arosx_MOBJC_CPPFLAGS) $(test-library-arosx_MOBJC_EXTRA_CPPFLAGS))
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : test-library-arosx_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-library-arosx_OBJCFLAGS))
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : test-library-arosx_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-library-arosx_OBJCDFLAGS))
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : test-library-arosx_IQUOTE:=$(KERNEL_IQUOTE)
+  $(test-library-arosx_MOBJC_TARGETS) $(test-library-arosx_MOBJC_DTARGETS) : test-library-arosx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-library-arosx_MOBJC_TARGETS) : CPPFLAGS := $(test-library-arosx_MOBJC_CPPFLAGS)
+$(test-library-arosx_MOBJC_TARGETS) : CFLAGS := $(test-library-arosx_OBJCFLAGS)
+$(test-library-arosx_MOBJC_TARGETS) : $(test-library-arosx_MOBJC_WILDCARD).o : $(test-library-arosx_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-library-arosx_IQUOTE) $(dir $<) $(test-library-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-library-arosx_IQUOTE) . $(test-library-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-library-arosx_IQUOTE) $(dir $<) $(test-library-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-library-arosx_IQUOTE) . $(test-library-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-library-arosx_IQUOTE) $(dir $<) $(test-library-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-library-arosx_IQUOTE) . $(test-library-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-library-arosx_MOBJC_DTARGETS) : $(test-library-arosx_MOBJC_WILDCARD).d : $(test-library-arosx_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-library-arosx_OBJCDFLAGS) $(test-library-arosx_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+test-library-arosx_MC_SRCWILDCARD := %
+else
+test-library-arosx_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-library-arosx_OBJDIR),)
+test-library-arosx_MC_TARGETS := $(addsuffix .o,$(test-library-arosx_C_NARCHFILES))
+test-library-arosx_MC_DTARGETS := $(addsuffix .d,$(test-library-arosx_C_NARCHFILES))
+test-library-arosx_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-library-arosx_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-library-arosx_OBJDIR)/,$(notdir $(test-library-arosx_C_NARCHFILES))))
+    test-library-arosx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-library-arosx_OBJDIR)/,$(notdir $(test-library-arosx_C_NARCHFILES))))
+else
+ifeq (,)
+    test-library-arosx_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-library-arosx_OBJDIR)/,$(test-library-arosx_C_NARCHFILES)))
+    test-library-arosx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-library-arosx_OBJDIR)/,$(test-library-arosx_C_NARCHFILES)))
+else
+    test-library-arosx_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-library-arosx_OBJDIR)/,$(patsubst /%,%,$(test-library-arosx_C_NARCHFILES))))
+    test-library-arosx_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-library-arosx_OBJDIR)/,$(patsubst /%,%,$(test-library-arosx_C_NARCHFILES))))
+endif
+endif
+test-library-arosx_MC_TGTWILDCARD := $(test-library-arosx_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : | $(addsuffix .c,$(test-library-arosx_C_NARCHFILES))
+
+# Be sure that all .c files are found
+test-library-arosx_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-library-arosx_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-library-arosx_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+test-library-arosx_MC_DIRS := $(foreach dir, $(test-library-arosx_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-library-arosx_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-library-arosx_MC_DIRS),)
+    test-library-arosx_MC_DIRS := $(shell echo $(test-library-arosx_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-library-arosx_MC_DIRS)
+endif
+
+endif
+
+test-library-arosx_MC_CPPFLAGS := $(test-library-arosx_CPPFLAGS)
+test-library-arosx_CFLAGS := $(test-library-arosx_CFLAGS)
+ifeq ($(test-library-arosx_DFLAGS),)
+  test-library-arosx_DFLAGS := $(test-library-arosx_CFLAGS)
+else
+  test-library-arosx_DFLAGS := $(test-library-arosx_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-library-arosx_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-library-arosx_STRIP ?= $(TARGET_STRIP)
+test-library-arosx_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : test-library-arosx_MC_CPPFLAGS:=$(strip $(test-library-arosx_MC_CPPFLAGS) $(test-library-arosx_MC_EXTRA_CPPFLAGS))
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : test-library-arosx_CFLAGS:=$(strip $(test-library-arosx_CFLAGS) $(SAFETY_CFLAGS))
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : test-library-arosx_DFLAGS:=$(test-library-arosx_DFLAGS)
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : test-library-arosx_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : test-library-arosx_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-library-arosx_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-library-arosx_STRIP ?= $(HOST_STRIP)
+test-library-arosx_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : test-library-arosx_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-library-arosx_MC_CPPFLAGS) $(test-library-arosx_MC_EXTRA_CPPFLAGS))
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : test-library-arosx_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-library-arosx_CFLAGS))
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : test-library-arosx_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-library-arosx_DFLAGS))
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : test-library-arosx_IQUOTE:=$(HOST_IQUOTE)
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : test-library-arosx_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-library-arosx_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-library-arosx_STRIP ?= $(ECHO) >/dev/null
+test-library-arosx_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : test-library-arosx_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-library-arosx_MC_CPPFLAGS) $(test-library-arosx_MC_EXTRA_CPPFLAGS))
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : test-library-arosx_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-library-arosx_CFLAGS))
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : test-library-arosx_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-library-arosx_DFLAGS))
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : test-library-arosx_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-library-arosx_MC_TARGETS) $(test-library-arosx_MC_DTARGETS) : test-library-arosx_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-library-arosx_MC_TARGETS) : CPPFLAGS := $(test-library-arosx_MC_CPPFLAGS)
+$(test-library-arosx_MC_TARGETS) : CFLAGS := $(test-library-arosx_CFLAGS)
+$(test-library-arosx_MC_TARGETS) : $(test-library-arosx_MC_TGTWILDCARD).o : $(test-library-arosx_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-library-arosx_IQUOTE) $(dir $<) $(test-library-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-library-arosx_IQUOTE) . $(test-library-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-library-arosx_IQUOTE) $(dir $<) $(test-library-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-library-arosx_IQUOTE) . $(test-library-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-library-arosx_IQUOTE) $(dir $<) $(test-library-arosx_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-library-arosx_IQUOTE) . $(test-library-arosx_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-library-arosx_MC_DTARGETS) : $(test-library-arosx_MC_TGTWILDCARD).d : $(test-library-arosx_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-library-arosx_DFLAGS) $(test-library-arosx_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(test-library-arosx_OBJDIR),)
+test-library-arosx-MA_TARGETS := $(addsuffix .o,$(test-library-arosx_ASMFILES))
+test-library-arosx-MA_WILDCARD := %
+else
+test-library-arosx-MA_TARGETS := $(addsuffix .o,$(addprefix $(test-library-arosx_OBJDIR)/,$(notdir $(test-library-arosx_ASMFILES))))
+test-library-arosx-MA_WILDCARD := $(test-library-arosx_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(test-library-arosx-MA_TARGETS) : | $(addsuffix .s,$(test-library-arosx_ASMFILES))
+
+# Be sure that all .c files are found
+test-library-arosx-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-library-arosx-MA_BASEDIRS := $(shell echo $(sort $(dir $(test-library-arosx_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+test-library-arosx-MA_DIRS := $(foreach dir, $(test-library-arosx-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-library-arosx-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-library-arosx-MA_DIRS),)
+    test-library-arosx-MA_DIRS := $(shell echo $(test-library-arosx-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(test-library-arosx-MA_DIRS)
+endif
+
+endif
+
+test-library-arosx-MA_ASSEMBLER ?= $(test-library-arosx_ASSEMBLER)
+
+$(test-library-arosx-MA_TARGETS) : test-library-arosx-MA_CMD:= $(test-library-arosx-MA_ASSEMBLER)
+
+$(test-library-arosx-MA_TARGETS) : CPPFLAGS := $(test-library-arosx_CPPFLAGS)
+$(test-library-arosx-MA_TARGETS) : AFLAGS := $(test-library-arosx_AFLAGS)
+$(test-library-arosx-MA_TARGETS) : $(test-library-arosx-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(test-library-arosx-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(test-library-arosx-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(test-library-arosx-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+test-library-arosx-link_EXTRA_LDFLAGS := 
+test-library-arosx-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-library-arosx-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-library-arosx-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-library-arosx-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+test-library-arosx-link_DIRS := $(subst -L ,-L,$(strip $(test-library-arosx_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-library-arosx-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-library-arosx-link_DIRS)))
+# Add trailing /
+test-library-arosx-link_DIRS := $(subst //,/,$(addsuffix /,$(test-library-arosx-link_DIRS)))
+# Add normal linklib path
+test-library-arosx-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-library-arosx-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-library-arosx_LIBS) $(test-library-arosx-link_EXTRA_LIBS)))
+ifeq (yes,yes)
+    test-library-arosx-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    test-library-arosx-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+test-library-arosx-link_DEPLIBS := $(foreach lib,$(test-library-arosx-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-library-arosx-link_DIRS)))) \
+)
+
+$(test-library-arosx_TARGETDIR)/$(test-library-arosx_PROGNAME) : OBJDIR := $(test-library-arosx_OBJDIR)
+$(test-library-arosx_TARGETDIR)/$(test-library-arosx_PROGNAME) : OBJS := $(test-library-arosx_OBJS) $(test-library-arosx_ARCHOBJS) $(USER_OBJS)
+$(test-library-arosx_TARGETDIR)/$(test-library-arosx_PROGNAME) : LDFLAGS := $(strip $(test-library-arosx_LDFLAGS) $(test-library-arosx-link_EXTRA_LDFLAGS))
+$(test-library-arosx_TARGETDIR)/$(test-library-arosx_PROGNAME) : LIBS := $(addprefix -l,$(test-library-arosx_LIBS) $(test-library-arosx-link_EXTRA_LIBS) )
+$(test-library-arosx_TARGETDIR)/$(test-library-arosx_PROGNAME) : $(test-library-arosx_OBJS) $(test-library-arosx_ARCHOBJS) $(USER_OBJS) $(test-library-arosx-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-library-arosx_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-library-arosx_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-library-arosx_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-library-arosx_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-library-arosx_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-library-arosx_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-library-arosx_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-library-arosx_DEPS),)
+  ifneq (test-library-arosx test-library-arosx-quick,)
+    ifneq ($(findstring $(TARGET),test-library-arosx test-library-arosx-quick),)
+      -include $(test-library-arosx_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-library-arosx_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-library-arosx_OBJS) $(test-library-arosx_DEPS) $(test-library-arosx_TARGETDIR)/$(test-library-arosx_PROGNAME),)
+$(test-library-arosx_OBJS) $(test-library-arosx_DEPS) $(test-library-arosx_TARGETDIR)/$(test-library-arosx_PROGNAME) : | $(test-library-arosx_OBJDIR) $(test-library-arosx_TARGETDIR)
+else
+$(test-library-arosx_OBJS) $(test-library-arosx_DEPS) $(test-library-arosx_TARGETDIR)/$(test-library-arosx_PROGNAME) :: $(test-library-arosx_OBJDIR) $(test-library-arosx_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(test-library-arosx_OBJDIR) $(test-library-arosx_TARGETDIR)
+
+
+test-library-arosx-clean : FILES := $(test-library-arosx_OBJS) $(test-library-arosx_TARGETDIR)/$(test-library-arosx_PROGNAME) $(test-library-arosx_DEPS)
+#MM
+test-library-arosx-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-library-arosx"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

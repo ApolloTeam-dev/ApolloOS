@@ -1,0 +1,34 @@
+#   $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- workbench-devs-networks-prism2 : workbench-devs-networks-prism2-firmware
+
+
+workbench-devs-networks-prism2-firmware_SRC := $(shell echo . | sed 's/^\(.\):\//\/\1\//')
+
+
+ifneq (setup,)
+setup : | $(AROS_DEVS)/Firmware
+else
+setup :: $(AROS_DEVS)/Firmware
+endif
+
+GLOB_MKDIRS += $(AROS_DEVS)/Firmware
+
+
+.PHONY : workbench-devs-networks-prism2-firmware
+
+#MM
+workbench-devs-networks-prism2-firmware : | $(AROS_DEVS)/Firmware 
+	$(foreach file, HermesI HermesII, $(shell $(CP) $(addprefix $(if $(filter /%,$(workbench-devs-networks-prism2-firmware_SRC)),$(workbench-devs-networks-prism2-firmware_SRC),$(SRCDIR)/$(CURDIR)/$(workbench-devs-networks-prism2-firmware_SRC))/, $(file)) $(addprefix $(AROS_DEVS)/Firmware/, $(file))))
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

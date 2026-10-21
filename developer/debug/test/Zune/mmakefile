@@ -1,0 +1,319 @@
+# $Id$
+#
+# Makefile for Zune test programs
+
+include $(SRCDIR)/config/aros.cfg
+
+FILES  := test             \
+          virttest         \
+          gradient         \
+          volumelist       \
+          dirlist          \
+          disable          \
+          dtpic            \
+          font             \
+          string           \
+          numericbutton    \
+          poplist          \
+          popscreen        \
+          crawling         \
+          levelmeter       \
+          knob             \
+          texticonlist     \
+          loginwindow      \
+          busy             \
+          hideshow         \
+          settings         \
+          dynlist          \
+          listinsertactive \
+          mui4test
+
+USER_CFLAGS := -I $(SRCDIR)/workbench/system/Wanderer/Classes
+
+EXEDIR := $(AROS_TESTS)/Zune
+
+#MM test-zune : includes linklibs workbench-classes-zune-busy
+
+
+.PHONY : test-zune
+
+test-zune_OBJDIR    := $(GENDIR)/$(CURDIR)
+test-zune_TARGETDIR := $(EXEDIR)
+test-zune_LIBS := 
+
+test-zune_FILES     := $(FILES)
+test-zune_OBJS      := $(addsuffix .o,$(addprefix $(test-zune_OBJDIR)/,$(test-zune_FILES)))
+test-zune_DEPS      := $(addsuffix .d,$(addprefix $(test-zune_OBJDIR)/,$(test-zune_FILES)))
+test-zune_EXES      := $(addprefix $(test-zune_TARGETDIR)/,$(test-zune_FILES))
+
+test-zune_CPPFLAGS := $(CPPFLAGS)
+ifneq (,)
+    test-zune_CPPFLAGS += -I
+endif
+test-zune_CFLAGS    := $(CFLAGS)
+test-zune_COVERAGE := no
+ifeq (target,target)
+ifeq (yes,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+test-zune_COVERAGE := yes
+test-zune_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+test-zune_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+test-zune_CFLAGS    := $(strip $(test-zune_COVERAGEFLAGS) $(test-zune_CFLAGS))
+test-zune_LIBS += $(test-zune_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+test-zune_FUNCINSTR := yes
+test-zune_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+test-zune_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+test-zune_CFLAGS    := $(strip $(test-zune_INSTRFUNCFLAGS) $(test-zune_CFLAGS))
+test-zune_LIBS += $(test-zune_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+test-zune_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(test-zune_CFLAGS))
+endif
+endif
+ifneq (,)
+    test-zune_DFLAGS := 
+else
+    test-zune_DFLAGS := $(test-zune_CFLAGS)
+endif
+ifeq (target,target)
+test-zune_LDFLAGS           := $(LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+test-zune_LDFLAGS           := $(LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+test-zune_LDFLAGS           := $(LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+    test-zune_LDFLAGS += -L
+endif
+
+#MM
+test-zune-quick : test-zune
+
+#MM test-zune : includes-generate-deps core-linklibs
+test-zune : $(test-zune_EXES)
+
+ifneq ($(filter $(TARGET),test-zune test-zune-quick),)
+
+ifeq (,)
+test-zune_MC_SRCWILDCARD := %
+else
+test-zune_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(test-zune_OBJDIR),)
+test-zune_MC_TARGETS := $(addsuffix .o,$(test-zune_FILES))
+test-zune_MC_DTARGETS := $(addsuffix .d,$(test-zune_FILES))
+test-zune_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    test-zune_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-zune_OBJDIR)/,$(notdir $(test-zune_FILES))))
+    test-zune_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-zune_OBJDIR)/,$(notdir $(test-zune_FILES))))
+else
+ifeq (,)
+    test-zune_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-zune_OBJDIR)/,$(test-zune_FILES)))
+    test-zune_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-zune_OBJDIR)/,$(test-zune_FILES)))
+else
+    test-zune_MC_TARGETS := $(addsuffix .o,$(addprefix $(test-zune_OBJDIR)/,$(patsubst /%,%,$(test-zune_FILES))))
+    test-zune_MC_DTARGETS := $(addsuffix .d,$(addprefix $(test-zune_OBJDIR)/,$(patsubst /%,%,$(test-zune_FILES))))
+endif
+endif
+test-zune_MC_TGTWILDCARD := $(test-zune_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : | $(addsuffix .c,$(test-zune_FILES))
+
+# Be sure that all .c files are found
+test-zune_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+test-zune_MC_BASEDIRS := $(shell echo $(sort $(dir $(test-zune_FILES))) | sed 's/\(.\):\//\/\1\//g')
+test-zune_MC_DIRS := $(foreach dir, $(test-zune_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(test-zune_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(test-zune_MC_DIRS),)
+    test-zune_MC_DIRS := $(shell echo $(test-zune_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(test-zune_MC_DIRS)
+endif
+
+endif
+
+test-zune_MC_CPPFLAGS := $(test-zune_CPPFLAGS)
+test-zune_CFLAGS := $(test-zune_CFLAGS)
+ifeq ($(test-zune_DFLAGS),)
+  test-zune_DFLAGS := $(test-zune_CFLAGS)
+else
+  test-zune_DFLAGS := $(test-zune_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+test-zune_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+test-zune_STRIP ?= $(TARGET_STRIP)
+test-zune_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : test-zune_MC_CPPFLAGS:=$(strip $(test-zune_MC_CPPFLAGS) $(test-zune_MC_EXTRA_CPPFLAGS))
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : test-zune_CFLAGS:=$(strip $(test-zune_CFLAGS) $(SAFETY_CFLAGS))
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : test-zune_DFLAGS:=$(test-zune_DFLAGS)
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : test-zune_IQUOTE:=$(CFLAGS_IQUOTE)
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : test-zune_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+test-zune_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+test-zune_STRIP ?= $(HOST_STRIP)
+test-zune_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : test-zune_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(test-zune_MC_CPPFLAGS) $(test-zune_MC_EXTRA_CPPFLAGS))
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : test-zune_CFLAGS:=$(strip $(HOST_CFLAGS) $(test-zune_CFLAGS))
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : test-zune_DFLAGS:=$(strip $(HOST_CFLAGS) $(test-zune_DFLAGS))
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : test-zune_IQUOTE:=$(HOST_IQUOTE)
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : test-zune_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+test-zune_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+test-zune_STRIP ?= $(ECHO) >/dev/null
+test-zune_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : test-zune_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(test-zune_MC_CPPFLAGS) $(test-zune_MC_EXTRA_CPPFLAGS))
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : test-zune_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-zune_CFLAGS))
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : test-zune_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(test-zune_DFLAGS))
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : test-zune_IQUOTE:=$(KERNEL_IQUOTE)
+$(test-zune_MC_TARGETS) $(test-zune_MC_DTARGETS) : test-zune_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(test-zune_MC_TARGETS) : CPPFLAGS := $(test-zune_MC_CPPFLAGS)
+$(test-zune_MC_TARGETS) : CFLAGS := $(test-zune_CFLAGS)
+$(test-zune_MC_TARGETS) : $(test-zune_MC_TGTWILDCARD).o : $(test-zune_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(test-zune_IQUOTE) $(dir $<) $(test-zune_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-zune_IQUOTE) . $(test-zune_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(test-zune_IQUOTE) $(dir $<) $(test-zune_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-zune_IQUOTE) . $(test-zune_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(test-zune_IQUOTE) $(dir $<) $(test-zune_IQUOTE) $(SRCDIR)/$(CURDIR) $(test-zune_IQUOTE) . $(test-zune_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(test-zune_MC_DTARGETS) : $(test-zune_MC_TGTWILDCARD).d : $(test-zune_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(test-zune_DFLAGS) $(test-zune_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+
+test-zune-link_EXTRA_LDFLAGS := 
+test-zune-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    test-zune-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (yes,no)
+    test-zune-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    test-zune-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files the programs depend on.
+# In LDFLAGS remove white space between -L and directory
+test-zune-link_DIRS := $(subst -L ,-L,$(strip $(test-zune_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+test-zune-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(test-zune-link_DIRS)))
+# Add trailing /
+test-zune-link_DIRS := $(subst //,/,$(addsuffix /,$(test-zune-link_DIRS)))
+# Add normal linklib path
+test-zune-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+test-zune-link_LIBS := $(addprefix lib,$(addsuffix .a,$(test-zune_LIBS) $(test-zune-link_EXTRA_LIBS)))
+# search for the linklibs in the given path, ignore ones not found
+test-zune-link_DEPLIBS := $(foreach lib,$(test-zune-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(test-zune-link_DIRS)))) \
+)
+test-zune-link_PROGS := $(addprefix $(test-zune_TARGETDIR)/,$(test-zune_FILES))
+
+$(test-zune-link_PROGS) : OBJDIR := $(test-zune_OBJDIR)
+$(test-zune-link_PROGS) : LDFLAGS := $(strip $(test-zune_LDFLAGS) $(test-zune-link_EXTRA_LDFLAGS))
+$(test-zune-link_PROGS) : LIBS := $(addprefix -l,$(test-zune_LIBS) $(test-zune-link_EXTRA_LIBS) )
+$(test-zune-link_PROGS) : $(test-zune_TARGETDIR)/% : $(test-zune_OBJDIR)/%.o $(test-zune-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(test-zune_LINK) $< -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(test-zune_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(test-zune_LINK) $< -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-zune_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(test-zune_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(test-zune_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(test-zune_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $<)))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(test-zune_DEPS),)
+  ifneq (test-zune test-zune-quick,)
+    ifneq ($(findstring $(TARGET),test-zune test-zune-quick),)
+      -include $(test-zune_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(test-zune_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(test-zune_DEPS) $(test-zune_OBJS) $(addprefix $(test-zune_TARGETDIR)/,$(test-zune_FILES)),)
+$(test-zune_DEPS) $(test-zune_OBJS) $(addprefix $(test-zune_TARGETDIR)/,$(test-zune_FILES)) : | $(test-zune_TARGETDIR) $(test-zune_OBJDIR)
+else
+$(test-zune_DEPS) $(test-zune_OBJS) $(addprefix $(test-zune_TARGETDIR)/,$(test-zune_FILES)) :: $(test-zune_TARGETDIR) $(test-zune_OBJDIR)
+endif
+
+GLOB_MKDIRS += $(test-zune_TARGETDIR) $(test-zune_OBJDIR)
+
+
+test-zune-clean : FILES := $(test-zune_OBJS) $(test-zune_EXES) $(test-zune_DEPS)
+#MM
+test-zune-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget test-zune"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

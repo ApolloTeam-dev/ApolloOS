@@ -1,0 +1,632 @@
+#   $Id$
+#
+#   Makefile for KEcho.
+
+include $(SRCDIR)/config/aros.cfg
+
+USER_CFLAGS := -DADATE="\"$(shell date "+%d.%m.%Y")\""
+
+#MM- debug-tools : debug-tools-kecho
+#MM debug-tools-kecho : includes linklibs
+
+
+.PHONY : debug-tools-kecho
+
+debug-tools-kecho_PROGNAME  := KEcho
+debug-tools-kecho_OBJDIR    := $(GENDIR)/$(CURDIR)
+debug-tools-kecho_TARGETDIR := $(AROS_DEBUG)
+debug-tools-kecho_LINKER    := 
+debug-tools-kecho_LIBS := 
+# If not supplied, linker is equal to compiler
+ifeq ($(debug-tools-kecho_LINKER),)
+    debug-tools-kecho_LINKER := target
+endif
+
+ifneq ("$(strip KEcho   )","")
+    debug-tools-kecho_FILES     := KEcho
+    debug-tools-kecho_OBJCFILES := 
+    debug-tools-kecho_ASMFILES  := 
+    debug-tools-kecho_CXXFILES := 
+else
+    debug-tools-kecho_FILES     := $(debug-tools-kecho_PROGNAME)
+    debug-tools-kecho_OBJCFILES :=
+    debug-tools-kecho_ASMFILES  :=
+    debug-tools-kecho_CXXFILES :=
+endif
+
+debug-tools-kecho_ARCHOBJS   := $(wildcard $(debug-tools-kecho_OBJDIR)/arch/*.o)
+debug-tools-kecho_ARCHFILES  := $(basename $(notdir $(debug-tools-kecho_ARCHOBJS)))
+debug-tools-kecho_C_NARCHFILES := $(filter-out $(debug-tools-kecho_ARCHFILES),$(debug-tools-kecho_FILES))
+debug-tools-kecho_CXX_NARCHFILES := $(filter-out $(debug-tools-kecho_ARCHFILES),$(debug-tools-kecho_CXXFILES))
+debug-tools-kecho_OBJC_NARCHFILES := $(filter-out $(debug-tools-kecho_ARCHFILES),$(debug-tools-kecho_OBJCFILES))
+
+TMP_FILES := $(debug-tools-kecho_C_NARCHFILES) $(debug-tools-kecho_CXX_NARCHFILES) $(debug-tools-kecho_ASMFILES) $(debug-tools-kecho_OBJC_NARCHFILES)
+debug-tools-kecho_OBJS := $(addsuffix .o,$(addprefix $(debug-tools-kecho_OBJDIR)/,$(notdir $(TMP_FILES))))
+debug-tools-kecho_DEPS := $(addsuffix .d,$(addprefix $(debug-tools-kecho_OBJDIR)/,$(notdir $(TMP_FILES))))
+
+debug-tools-kecho_CPPFLAGS :=  $(CPPFLAGS)
+ifneq (,)
+debug-tools-kecho_CPPFLAGS    += -I
+endif
+
+ifeq ("","")
+ifeq (target,target)
+debug-tools-kecho_CFLAGS            := $(CFLAGS)
+endif
+ifeq (target,host)
+debug-tools-kecho_CFLAGS            := $(HOST_CFLAGS)
+endif
+ifeq (target,kernel)
+debug-tools-kecho_CFLAGS            := $(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS))
+endif
+else
+debug-tools-kecho_CFLAGS            := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+debug-tools-kecho_CXXFLAGS            := $(CXXFLAGS)
+endif
+ifeq (target,host)
+debug-tools-kecho_CXXFLAGS            := $(HOST_CXXFLAGS)
+endif
+ifeq (target,kernel)
+debug-tools-kecho_CXXFLAGS            := $(strip $(KERNEL_ISA_CXXFLAGS) $(KERNEL_CXXFLAGS))
+endif
+else
+debug-tools-kecho_CXXFLAGS          := 
+endif
+
+ifeq ("","")
+ifeq (target,target)
+debug-tools-kecho_LDFLAGS            := $(LDFLAGS)
+endif
+ifeq (target,host)
+debug-tools-kecho_LDFLAGS            := $(HOST_LDFLAGS)
+endif
+ifeq (target,kernel)
+debug-tools-kecho_LDFLAGS            := $(strip $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+endif
+else
+debug-tools-kecho_LDFLAGS          := 
+endif
+
+debug-tools-kecho_COVERAGE := no
+ifeq (target,target)
+ifeq (no,yes)
+ifeq ($(TARGET_COVERAGEINSTR),yes)
+debug-tools-kecho_COVERAGE := yes
+debug-tools-kecho_COVERAGEFLAGS   ?= $(COVERAGEINSTR_FLAGS)
+debug-tools-kecho_COVERAGELIBS    ?= $(COVERAGEINSTR_LIBS)
+debug-tools-kecho_CFLAGS    := $(strip $(debug-tools-kecho_COVERAGEFLAGS) $(debug-tools-kecho_CFLAGS))
+debug-tools-kecho_CXXFLAGS := $(strip $(debug-tools-kecho_COVERAGEFLAGS) $(debug-tools-kecho_CXXFLAGS))
+debug-tools-kecho_LIBS += $(debug-tools-kecho_COVERAGELIBS)
+endif
+ifeq ($(TARGET_FUNCINSTR),yes)
+debug-tools-kecho_FUNCINSTR := yes
+debug-tools-kecho_INSTRFUNCFLAGS   ?= $(FUNCINSTR_FLAGS)
+debug-tools-kecho_INSTRFUNCLIBS    ?= $(FUNCINSTR_LIBS)
+debug-tools-kecho_CFLAGS    := $(strip $(debug-tools-kecho_INSTRFUNCFLAGS) $(debug-tools-kecho_CFLAGS))
+debug-tools-kecho_CXXFLAGS := $(strip $(debug-tools-kecho_INSTRFUNCFLAGS) $(debug-tools-kecho_CXXFLAGS))
+debug-tools-kecho_LIBS += $(debug-tools-kecho_INSTRFUNCLIBS)
+endif
+endif
+ifeq ($(TARGET_LTO),yes)
+debug-tools-kecho_CFLAGS    := $(strip $(LTO_BINARY_CFLAGS) $(debug-tools-kecho_CFLAGS))
+debug-tools-kecho_CXXFLAGS := $(strip $(LTO_BINARY_CFLAGS) $(debug-tools-kecho_CXXFLAGS))
+endif
+endif
+debug-tools-kecho_AFLAGS    := $(AFLAGS)
+ifneq (,)
+    debug-tools-kecho_DFLAGS     := 
+else
+    debug-tools-kecho_DFLAGS     := $(debug-tools-kecho_CFLAGS)
+endif
+ifneq (,)
+    debug-tools-kecho_DXXFLAGS     := 
+else
+    debug-tools-kecho_DXXFLAGS     := $(debug-tools-kecho_CXXFLAGS)
+endif
+ifeq (target,target)
+debug-tools-kecho_LDFLAGS           := $(debug-tools-kecho_LDFLAGS) $(TARGET_ISA_OBJCFLAGS)
+endif
+ifeq (target,host)
+debug-tools-kecho_LDFLAGS           := $(debug-tools-kecho_LDFLAGS) $(HOST_ISA_OBJCFLAGS)
+endif
+ifeq (target,kernel)
+debug-tools-kecho_LDFLAGS           := $(debug-tools-kecho_LDFLAGS) $(KERNEL_ISA_OBJCFLAGS)
+endif
+ifneq (,)
+debug-tools-kecho_LDFLAGS   += -L
+endif
+
+#MM
+debug-tools-kecho-quick : debug-tools-kecho
+
+#MM debug-tools-kecho : includes-generate-deps core-linklibs
+debug-tools-kecho : $(debug-tools-kecho_TARGETDIR)/$(debug-tools-kecho_PROGNAME)
+
+ifneq ($(filter $(TARGET),debug-tools-kecho debug-tools-kecho-quick debug-tools-kecho-gz-quick),)
+
+debug-tools-kecho_CXXABSBASENAMES := $(foreach debug-tools-kecho_CXXBASE,$(debug-tools-kecho_CXX_NARCHFILES),$(if $(filter /%,$(debug-tools-kecho_CXXBASE)),$(debug-tools-kecho_CXXBASE),$(abspath $(SRCDIR)/$(CURDIR)/$(debug-tools-kecho_CXXBASE))))
+
+ifneq ($(debug-tools-kecho_CXXABSBASENAMES),)
+
+debug-tools-kecho_CXXBASENAMES := $(basename $(debug-tools-kecho_CXXABSBASENAMES))
+
+# Identify the "real" c++ files from the passed in basenames
+debug-tools-kecho_MCXX_FILES  := $(strip $(foreach debug-tools-kecho_CXXBASE,$(debug-tools-kecho_CXXABSBASENAMES), $(firstword $(wildcard $(foreach debug-tools-kecho_EXT, $(AROS_CXXEXTS),$(addsuffix .$(debug-tools-kecho_EXT),$(debug-tools-kecho_CXXBASE)))))))
+
+ifeq (,)
+debug-tools-kecho_MCXX_SRCWILDCARD := %
+else
+debug-tools-kecho_MCXX_SRCWILDCARD := /%
+endif
+
+ifeq ($(debug-tools-kecho_OBJDIR),)
+  debug-tools-kecho_CXXTARGETS := $(notdir $(debug-tools-kecho_CXXBASENAMES:=.o))
+  debug-tools-kecho_CXXDTARGETS := $(notdir $(debug-tools-kecho_CXXBASENAMES:=.d))
+  debug-tools-kecho_MCXX_WILDCARD := %
+else
+  debug-tools-kecho_CXXTARGETS := $(addprefix $(debug-tools-kecho_OBJDIR)/,$(notdir $(debug-tools-kecho_CXXBASENAMES:=.o)))
+  debug-tools-kecho_CXXDTARGETS := $(addprefix $(debug-tools-kecho_OBJDIR)/,$(notdir $(debug-tools-kecho_CXXBASENAMES:=.d)))
+  debug-tools-kecho_MCXX_WILDCARD := $(debug-tools-kecho_OBJDIR)/%
+
+  # Be sure that all source files are generated
+  $(debug-tools-kecho_CXXTARGETS) $(debug-tools-kecho_CXXDTARGETS) : | $(debug-tools-kecho_MCXX_FILES)
+endif
+
+# Adjust compiler flags to suit C++
+debug-tools-kecho_MCXX_CPPFLAGS := $(debug-tools-kecho_CPPFLAGS)
+debug-tools-kecho_CXXFLAGS := $(debug-tools-kecho_CXXFLAGS)
+ifeq ($(debug-tools-kecho_DXXFLAGS),)
+  debug-tools-kecho_DXXFLAGS := $(debug-tools-kecho_CXXFLAGS)
+else
+  debug-tools-kecho_DXXFLAGS := $(debug-tools-kecho_DXXFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,host)
+  debug-tools-kecho_LINK ?= $(strip $(HOST_CXX) $(HOST_LDFLAGS))
+  debug-tools-kecho_STRIP ?= $(HOST_STRIP)
+  debug-tools-kecho_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  debug-tools-kecho_CXXCMD:=$(HOST_CXX)
+  debug-tools-kecho_MCXX_CPPFLAGS := $(strip $(HOST_MCXX_CPPFLAGS) $(debug-tools-kecho_MCXX_CPPFLAGS) $(debug-tools-kecho_MCXX_EXTRA_CPPFLAGS))
+  debug-tools-kecho_CXXFLAGS := $(strip $(HOST_CXXFLAGS) $(debug-tools-kecho_CXXFLAGS))
+  debug-tools-kecho_DXXFLAGS := $(strip $(HOST_CXXFLAGS) $(debug-tools-kecho_DXXFLAGS))
+  debug-tools-kecho_CXXIQUOTE:=$(HOST_IQUOTE)
+  debug-tools-kecho_CXXIQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,target)
+  debug-tools-kecho_LINK ?= $(strip $(AROS_CXX) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  debug-tools-kecho_STRIP ?= $(TARGET_STRIP)
+  debug-tools-kecho_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  debug-tools-kecho_CXXCMD:=$(strip $(AROS_CXX) $(TARGET_SYSROOT))
+  debug-tools-kecho_MCXX_CPPFLAGS := $(strip $(debug-tools-kecho_MCXX_CPPFLAGS) $(debug-tools-kecho_MCXX_EXTRA_CPPFLAGS))
+  debug-tools-kecho_CXXFLAGS := $(strip $(debug-tools-kecho_CXXFLAGS) $(SAFETY_CFLAGS))
+  debug-tools-kecho_DXXFLAGS := $(debug-tools-kecho_DXXFLAGS)
+  debug-tools-kecho_CXXIQUOTE:=$(CFLAGS_IQUOTE)
+  debug-tools-kecho_CXXIQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_CXX ?= $(KERNEL_CC)
+  debug-tools-kecho_LINK ?= $(strip $(KERNEL_CXX) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  debug-tools-kecho_STRIP ?= $(ECHO) >/dev/null
+  debug-tools-kecho_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  debug-tools-kecho_CXXCMD:=$(strip $(KERNEL_CXX) $(KERNEL_SYSROOT))
+  debug-tools-kecho_CXXFLAGS := $(strip $(KERNEL_MCXX_CPPFLAGS) $(debug-tools-kecho_MCXX_CPPFLAGS) $(debug-tools-kecho_MCXX_EXTRA_CPPFLAGS))
+  debug-tools-kecho_CXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(debug-tools-kecho_CXXFLAGS))
+  debug-tools-kecho_DXXFLAGS := $(strip $(KERNEL_CXXFLAGS) $(debug-tools-kecho_DXXFLAGS))
+  debug-tools-kecho_CXXIQUOTE:=$(KERNEL_IQUOTE)
+  debug-tools-kecho_CXXIQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+define cxx_multi_recipe_template
+ $(1).o : $(2)
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))"
+	$(Q)$(IF) $(debug-tools-kecho_CXXCMD) $(debug-tools-kecho_CXXIQUOTE) $(dir $(2)) $(debug-tools-kecho_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-kecho_CXXIQUOTE) . $(debug-tools-kecho_CXXIQUOTE_END) $(strip $(debug-tools-kecho_CXXFLAGS) $(debug-tools-kecho_MCXX_CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))"\" -c $(2) -o $(1).o > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(2): $(debug-tools-kecho_CXXCMD) $(debug-tools-kecho_CXXIQUOTE) $(dir $(2)) $(debug-tools-kecho_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-kecho_CXXIQUOTE) . $(debug-tools-kecho_CXXIQUOTE_END) $(strip $(debug-tools-kecho_CXXFLAGS) $(debug-tools-kecho_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(debug-tools-kecho_CXXCMD) $(debug-tools-kecho_CXXIQUOTE) $(dir $(2)) $(debug-tools-kecho_CXXIQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-kecho_CXXIQUOTE) . $(debug-tools-kecho_CXXIQUOTE_END) $(strip $(debug-tools-kecho_CXXFLAGS) $(debug-tools-kecho_MCXX_CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $(2))))\" -c $(2) -o $(1).o" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+ $(1).d : $(2)
+	$(Q)$(IF) $(TEST) ! -d $(dir $(1).d) ; then $(MKDIR) $(dir $(1).d) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$(2)),$(if $(filter $(SRCDIR)/%,$(abspath $(2))),$(patsubst $(SRCDIR)/%,%,$(abspath $(2))),$(patsubst $(TOP)/%,%,$(abspath $(2)))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$(2))))..."
+	$(Q)AROS_CC="$(debug-tools-kecho_CXXCMD)" $(MKDEPEND) $(strip $(debug-tools-kecho_DXXFLAGS) $(debug-tools-kecho_MCXX_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $(2) -o $(1).d
+endef
+ifeq ($(debug-tools-kecho_OBJDIR),)
+  $(foreach debug-tools-kecho_CXXFILE,$(debug-tools-kecho_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(notdir $(basename $(debug-tools-kecho_CXXFILE))),$(debug-tools-kecho_CXXFILE))))
+else
+  $(foreach debug-tools-kecho_CXXFILE,$(debug-tools-kecho_MCXX_FILES),$(eval $(call cxx_multi_recipe_template,$(addprefix $(debug-tools-kecho_OBJDIR)/,$(notdir $(basename $(debug-tools-kecho_CXXFILE)))),$(debug-tools-kecho_CXXFILE))))
+endif
+
+endif
+
+
+ifneq ($(debug-tools-kecho_OBJC_NARCHFILES),)
+
+ifeq (,)
+debug-tools-kecho_MOBJC_SRCWILDCARD := %
+else
+debug-tools-kecho_MOBJC_SRCWILDCARD := /%
+endif
+
+ifeq ($(debug-tools-kecho_OBJDIR),)
+  debug-tools-kecho_MOBJC_TARGETS := $(addsuffix .o,$(debug-tools-kecho_OBJC_NARCHFILES))
+  debug-tools-kecho_MOBJC_DTARGETS := $(addsuffix .d,$(debug-tools-kecho_OBJC_NARCHFILES))
+  debug-tools-kecho_MOBJC_WILDCARD := %
+else
+  debug-tools-kecho_MOBJC_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-kecho_OBJDIR)/,$(debug-tools-kecho_OBJC_NARCHFILES)))
+  debug-tools-kecho_MOBJC_DTARGETS := $(addsuffix .d,$(addprefix $(debug-tools-kecho_OBJDIR)/,$(debug-tools-kecho_OBJC_NARCHFILES)))
+  debug-tools-kecho_MOBJC_WILDCARD := $(debug-tools-kecho_OBJDIR)/%
+
+  # Be sure that all .m files are generated
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : | $(addsuffix .m,$(debug-tools-kecho_OBJC_NARCHFILES))
+
+  # Be sure that all .m files are found
+  debug-tools-kecho_MOBJC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+  debug-tools-kecho_MOBJC_BASEDIRS := $(shell echo $(sort $(dir $(debug-tools-kecho_OBJC_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+  debug-tools-kecho_MOBJC_DIRS := $(foreach dir, $(debug-tools-kecho_MOBJC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(debug-tools-kecho_MOBJC_SRCDIR)/$(CURDIR)/$(dir)))
+  ifneq ($(debug-tools-kecho_MOBJC_DIRS),)
+    debug-tools-kecho_MOBJC_DIRS := $(shell echo $(debug-tools-kecho_MOBJC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.m $(debug-tools-kecho_MOBJC_DIRS)
+  endif
+endif
+
+# Define the use of cross compiler
+ifeq ($(TARGET_OBJC),)
+  debug-tools-kecho_CC := $(TARGET_CC)
+else
+  debug-tools-kecho_CC := $(TARGET_OBJC)
+endif
+
+# Adjust compiler flags to suit ObjC
+debug-tools-kecho_MOBJC_CPPFLAGS := $(debug-tools-kecho_CPPFLAGS)
+debug-tools-kecho_OBJCFLAGS := $(debug-tools-kecho_CFLAGS)
+debug-tools-kecho_OBJCFLAGS := $(debug-tools-kecho_OBJCFLAGS) -isystem $(AROS_DEVELOPER)/include
+debug-tools-kecho_OBJCFLAGS := $(subst -Wno-pointer-sign,, $(subst -Werror-implicit-function-declaration,, $(debug-tools-kecho_OBJCFLAGS)))
+ifeq ($(debug-tools-kecho_DFLAGS),)
+  debug-tools-kecho_OBJCDFLAGS := $(debug-tools-kecho_CFLAGS)
+else
+  debug-tools-kecho_OBJCDFLAGS := $(debug-tools-kecho_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+  debug-tools-kecho_LINK ?= $(strip $(debug-tools-kecho_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+  debug-tools-kecho_STRIP ?= $(TARGET_STRIP)
+  debug-tools-kecho_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : CMD:=$(strip $(debug-tools-kecho_CC) $(TARGET_SYSROOT))
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : debug-tools-kecho_MOBJC_CPPFLAGS:=$(strip $(debug-tools-kecho_MOBJC_CPPFLAGS) $(debug-tools-kecho_MOBJC_EXTRA_CPPFLAGS))
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : debug-tools-kecho_OBJCFLAGS:=$(strip $(debug-tools-kecho_OBJCFLAGS) $(SAFETY_CFLAGS))
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : debug-tools-kecho_OBJCDFLAGS:=$(debug-tools-kecho_OBJCDFLAGS)
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : debug-tools-kecho_IQUOTE:=$(CFLAGS_IQUOTE)
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : debug-tools-kecho_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+  debug-tools-kecho_LINK ?= $(strip $(HOST_OBJC) $(HOST_LDFLAGS))
+  debug-tools-kecho_STRIP ?= $(HOST_STRIP)
+  debug-tools-kecho_ASSEMBLER ?= $(strip $(HOST_CC) $(HOST_SYSROOT))
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : CMD:=$(HOST_OBJC)
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : debug-tools-kecho_MOBJC_CPPFLAGS:=$(strip $(HOST_MOBJC_CPPFLAGS) $(debug-tools-kecho_MOBJC_CPPFLAGS) $(debug-tools-kecho_MOBJC_EXTRA_CPPFLAGS))
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : debug-tools-kecho_OBJCFLAGS:=$(strip $(HOST_CFLAGS) $(debug-tools-kecho_OBJCFLAGS))
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : debug-tools-kecho_OBJCDFLAGS:=$(strip $(HOST_CFLAGS) $(debug-tools-kecho_OBJCDFLAGS))
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : debug-tools-kecho_IQUOTE:=$(HOST_IQUOTE)
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : debug-tools-kecho_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+  KERNEL_OBJC ?= $(KERNEL_CC)
+  debug-tools-kecho_LINK ?= $(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+  debug-tools-kecho_STRIP ?= $(ECHO) >/dev/null
+  debug-tools-kecho_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : CMD:=$(strip $(KERNEL_OBJC) $(KERNEL_SYSROOT))
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : debug-tools-kecho_MOBJC_CPPFLAGS:=$(strip $(KERNEL_MOBJC_CPPFLAGS) $(debug-tools-kecho_MOBJC_CPPFLAGS) $(debug-tools-kecho_MOBJC_EXTRA_CPPFLAGS))
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : debug-tools-kecho_OBJCFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(debug-tools-kecho_OBJCFLAGS))
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : debug-tools-kecho_OBJCDFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(debug-tools-kecho_OBJCDFLAGS))
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : debug-tools-kecho_IQUOTE:=$(KERNEL_IQUOTE)
+  $(debug-tools-kecho_MOBJC_TARGETS) $(debug-tools-kecho_MOBJC_DTARGETS) : debug-tools-kecho_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(debug-tools-kecho_MOBJC_TARGETS) : CPPFLAGS := $(debug-tools-kecho_MOBJC_CPPFLAGS)
+$(debug-tools-kecho_MOBJC_TARGETS) : CFLAGS := $(debug-tools-kecho_OBJCFLAGS)
+$(debug-tools-kecho_MOBJC_TARGETS) : $(debug-tools-kecho_MOBJC_WILDCARD).o : $(debug-tools-kecho_MOBJC_SRCWILDCARD).m
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(debug-tools-kecho_IQUOTE) $(dir $<) $(debug-tools-kecho_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-kecho_IQUOTE) . $(debug-tools-kecho_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(debug-tools-kecho_IQUOTE) $(dir $<) $(debug-tools-kecho_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-kecho_IQUOTE) . $(debug-tools-kecho_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(debug-tools-kecho_IQUOTE) $(dir $<) $(debug-tools-kecho_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-kecho_IQUOTE) . $(debug-tools-kecho_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(debug-tools-kecho_MOBJC_DTARGETS) : $(debug-tools-kecho_MOBJC_WILDCARD).d : $(debug-tools-kecho_MOBJC_SRCWILDCARD).m
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(debug-tools-kecho_OBJCDFLAGS) $(debug-tools-kecho_MOBJC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+endif
+
+
+ifeq (,)
+debug-tools-kecho_MC_SRCWILDCARD := %
+else
+debug-tools-kecho_MC_SRCWILDCARD := /%
+endif
+
+ifeq ($(debug-tools-kecho_OBJDIR),)
+debug-tools-kecho_MC_TARGETS := $(addsuffix .o,$(debug-tools-kecho_C_NARCHFILES))
+debug-tools-kecho_MC_DTARGETS := $(addsuffix .d,$(debug-tools-kecho_C_NARCHFILES))
+debug-tools-kecho_MC_TGTWILDCARD := %
+else
+ifeq (no,no)
+    debug-tools-kecho_MC_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-kecho_OBJDIR)/,$(notdir $(debug-tools-kecho_C_NARCHFILES))))
+    debug-tools-kecho_MC_DTARGETS := $(addsuffix .d,$(addprefix $(debug-tools-kecho_OBJDIR)/,$(notdir $(debug-tools-kecho_C_NARCHFILES))))
+else
+ifeq (,)
+    debug-tools-kecho_MC_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-kecho_OBJDIR)/,$(debug-tools-kecho_C_NARCHFILES)))
+    debug-tools-kecho_MC_DTARGETS := $(addsuffix .d,$(addprefix $(debug-tools-kecho_OBJDIR)/,$(debug-tools-kecho_C_NARCHFILES)))
+else
+    debug-tools-kecho_MC_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-kecho_OBJDIR)/,$(patsubst /%,%,$(debug-tools-kecho_C_NARCHFILES))))
+    debug-tools-kecho_MC_DTARGETS := $(addsuffix .d,$(addprefix $(debug-tools-kecho_OBJDIR)/,$(patsubst /%,%,$(debug-tools-kecho_C_NARCHFILES))))
+endif
+endif
+debug-tools-kecho_MC_TGTWILDCARD := $(debug-tools-kecho_OBJDIR)/%
+
+# Be sure that all .c files are generated
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : | $(addsuffix .c,$(debug-tools-kecho_C_NARCHFILES))
+
+# Be sure that all .c files are found
+debug-tools-kecho_MC_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+debug-tools-kecho_MC_BASEDIRS := $(shell echo $(sort $(dir $(debug-tools-kecho_C_NARCHFILES))) | sed 's/\(.\):\//\/\1\//g')
+debug-tools-kecho_MC_DIRS := $(foreach dir, $(debug-tools-kecho_MC_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(debug-tools-kecho_MC_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(debug-tools-kecho_MC_DIRS),)
+    debug-tools-kecho_MC_DIRS := $(shell echo $(debug-tools-kecho_MC_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.c $(debug-tools-kecho_MC_DIRS)
+endif
+
+endif
+
+debug-tools-kecho_MC_CPPFLAGS := $(debug-tools-kecho_CPPFLAGS)
+debug-tools-kecho_CFLAGS := $(debug-tools-kecho_CFLAGS)
+ifeq ($(debug-tools-kecho_DFLAGS),)
+  debug-tools-kecho_DFLAGS := $(debug-tools-kecho_CFLAGS)
+else
+  debug-tools-kecho_DFLAGS := $(debug-tools-kecho_DFLAGS)
+endif
+
+ifeq ($(findstring target,host kernel target),)
+  $(error unknown compiler target)
+endif
+ifeq (target,target)
+debug-tools-kecho_LINK ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT) $(TARGET_LDFLAGS))
+debug-tools-kecho_STRIP ?= $(TARGET_STRIP)
+debug-tools-kecho_ASSEMBLER ?= $(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : CMD:=$(strip $(TARGET_CC) $(TARGET_SYSROOT))
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : debug-tools-kecho_MC_CPPFLAGS:=$(strip $(debug-tools-kecho_MC_CPPFLAGS) $(debug-tools-kecho_MC_EXTRA_CPPFLAGS))
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : debug-tools-kecho_CFLAGS:=$(strip $(debug-tools-kecho_CFLAGS) $(SAFETY_CFLAGS))
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : debug-tools-kecho_DFLAGS:=$(debug-tools-kecho_DFLAGS)
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : debug-tools-kecho_IQUOTE:=$(CFLAGS_IQUOTE)
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : debug-tools-kecho_IQUOTE_END:=$(CFLAGS_IQUOTE_END)
+endif
+ifeq (target,host)
+debug-tools-kecho_LINK ?= $(strip $(HOST_CC) $(HOST_LDFLAGS))
+debug-tools-kecho_STRIP ?= $(HOST_STRIP)
+debug-tools-kecho_ASSEMBLER ?= $(strip $HOST_CC) $(HOST_SYSROOT))
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : CMD:=$(HOST_CC)
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : debug-tools-kecho_MC_CPPFLAGS:=$(strip $(HOST_MC_CPPFLAGS) $(debug-tools-kecho_MC_CPPFLAGS) $(debug-tools-kecho_MC_EXTRA_CPPFLAGS))
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : debug-tools-kecho_CFLAGS:=$(strip $(HOST_CFLAGS) $(debug-tools-kecho_CFLAGS))
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : debug-tools-kecho_DFLAGS:=$(strip $(HOST_CFLAGS) $(debug-tools-kecho_DFLAGS))
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : debug-tools-kecho_IQUOTE:=$(HOST_IQUOTE)
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : debug-tools-kecho_IQUOTE_END:=$(HOST_IQUOTE_END)
+endif
+ifeq (target,kernel)
+debug-tools-kecho_LINK ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT) $(USER_LDFLAGS) $(KERNEL_LDFLAGS))
+debug-tools-kecho_STRIP ?= $(ECHO) >/dev/null
+debug-tools-kecho_ASSEMBLER ?= $(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : CMD:=$(strip $(KERNEL_CC) $(KERNEL_SYSROOT))
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : debug-tools-kecho_MC_CPPFLAGS:=$(strip $(KERNEL_MC_CPPFLAGS) $(debug-tools-kecho_MC_CPPFLAGS) $(debug-tools-kecho_MC_EXTRA_CPPFLAGS))
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : debug-tools-kecho_CFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(debug-tools-kecho_CFLAGS))
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : debug-tools-kecho_DFLAGS:=$(strip $(KERNEL_ISA_CFLAGS) $(KERNEL_CFLAGS) $(debug-tools-kecho_DFLAGS))
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : debug-tools-kecho_IQUOTE:=$(KERNEL_IQUOTE)
+$(debug-tools-kecho_MC_TARGETS) $(debug-tools-kecho_MC_DTARGETS) : debug-tools-kecho_IQUOTE_END:=$(KERNEL_IQUOTE_END)
+endif
+
+$(debug-tools-kecho_MC_TARGETS) : CPPFLAGS := $(debug-tools-kecho_MC_CPPFLAGS)
+$(debug-tools-kecho_MC_TARGETS) : CFLAGS := $(debug-tools-kecho_CFLAGS)
+$(debug-tools-kecho_MC_TARGETS) : $(debug-tools-kecho_MC_TGTWILDCARD).o : $(debug-tools-kecho_MC_SRCWILDCARD).c
+	$(Q)$(ECHO) "Compiling  $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))"
+	$(Q)$(IF) $(CMD) $(debug-tools-kecho_IQUOTE) $(dir $<) $(debug-tools-kecho_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-kecho_IQUOTE) . $(debug-tools-kecho_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__="\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))"\" -c $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$<: $(CMD) $(debug-tools-kecho_IQUOTE) $(dir $<) $(debug-tools-kecho_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-kecho_IQUOTE) . $(debug-tools-kecho_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" >> $(GENDIR)/errors ; \
+			tee < $(GENDIR)/cerrors -a $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Compile failed: $(CMD) $(debug-tools-kecho_IQUOTE) $(dir $<) $(debug-tools-kecho_IQUOTE) $(SRCDIR)/$(CURDIR) $(debug-tools-kecho_IQUOTE) . $(debug-tools-kecho_IQUOTE_END) $(strip $(CFLAGS) $(CPPFLAGS)) -D__SRCFILENAME__=\"$(subst $(TOP)/,,$(subst $(SRCDIR)/,,$(abspath $<)))\" -c $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+$(debug-tools-kecho_MC_DTARGETS) : $(debug-tools-kecho_MC_TGTWILDCARD).d : $(debug-tools-kecho_MC_SRCWILDCARD).c
+	$(Q)$(IF) $(TEST) ! -d $(dir $@) ; then $(MKDIR) $(dir $@) ; else $(NOP) ; fi
+	$(Q)$(ECHO) "Makedepend $(if $(filter /%,$<),$(if $(filter $(SRCDIR)/%,$(abspath $<)),$(patsubst $(SRCDIR)/%,%,$(abspath $<)),$(patsubst $(TOP)/%,%,$(abspath $<))),$(patsubst $(SRCDIR)/%,%,$(abspath $(SRCDIR)/$(CURDIR)/$<)))..."
+	$(Q)AROS_CC="$(CMD)" $(MKDEPEND) $(strip $(debug-tools-kecho_DFLAGS) $(debug-tools-kecho_MC_CPPFLAGS)) -I$(TOP)/$(CURDIR) -I$(SRCDIR)/$(CURDIR) $< -o $@
+
+ifeq ($(debug-tools-kecho_OBJDIR),)
+debug-tools-kecho-MA_TARGETS := $(addsuffix .o,$(debug-tools-kecho_ASMFILES))
+debug-tools-kecho-MA_WILDCARD := %
+else
+debug-tools-kecho-MA_TARGETS := $(addsuffix .o,$(addprefix $(debug-tools-kecho_OBJDIR)/,$(notdir $(debug-tools-kecho_ASMFILES))))
+debug-tools-kecho-MA_WILDCARD := $(debug-tools-kecho_OBJDIR)/%
+
+# Be sure that all .s files are generated
+$(debug-tools-kecho-MA_TARGETS) : | $(addsuffix .s,$(debug-tools-kecho_ASMFILES))
+
+# Be sure that all .c files are found
+debug-tools-kecho-MA_SRCDIR := $(shell echo $(SRCDIR) | sed 's/^\(.\):\//\/\1\//')
+debug-tools-kecho-MA_BASEDIRS := $(shell echo $(sort $(dir $(debug-tools-kecho_ASMFILES))) | sed 's/\(.\):\//\/\1\//g')
+debug-tools-kecho-MA_DIRS := $(foreach dir, $(debug-tools-kecho-MA_BASEDIRS), $(if $(filter /%,$(dir)),$(dir),$(debug-tools-kecho-MA_SRCDIR)/$(CURDIR)/$(dir)))
+ifneq ($(debug-tools-kecho-MA_DIRS),)
+    debug-tools-kecho-MA_DIRS := $(shell echo $(debug-tools-kecho-MA_DIRS) | sed 's/\(.\):\//\/\1\//g')
+    vpath %.s $(debug-tools-kecho-MA_DIRS)
+endif
+
+endif
+
+debug-tools-kecho-MA_ASSEMBLER ?= $(debug-tools-kecho_ASSEMBLER)
+
+$(debug-tools-kecho-MA_TARGETS) : debug-tools-kecho-MA_CMD:= $(debug-tools-kecho-MA_ASSEMBLER)
+
+$(debug-tools-kecho-MA_TARGETS) : CPPFLAGS := $(debug-tools-kecho_CPPFLAGS)
+$(debug-tools-kecho-MA_TARGETS) : AFLAGS := $(debug-tools-kecho_AFLAGS)
+$(debug-tools-kecho-MA_TARGETS) : $(debug-tools-kecho-MA_WILDCARD).o : %.s
+	$(Q)$(ECHO) "Assembling $(notdir $<)..."
+	$(Q)$(IF) $(debug-tools-kecho-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@ > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+			$(ECHO) "$(notdir $<): $(debug-tools-kecho-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" >> $(GENDIR)/errors ; \
+			$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+	else \
+		$(ECHO) "Assemble failed: $(debug-tools-kecho-MA_CMD) $(strip $(AFLAGS) $(CPPFLAGS)) $< -o $@" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+
+
+debug-tools-kecho-link_EXTRA_LDFLAGS := 
+debug-tools-kecho-link_EXTRA_LIBS :=
+ifeq (no,yes)
+    debug-tools-kecho-link_EXTRA_LDFLAGS += $(NIX_LDFLAGS)
+endif
+ifeq (no,no)
+    debug-tools-kecho-link_EXTRA_LDFLAGS += $(NOSTARTUP_LDFLAGS)
+endif
+ifeq (no,yes)
+    debug-tools-kecho-link_EXTRA_LDFLAGS += $(DETACH_LDFLAGS)
+endif
+
+# Make a list of the lib files this program depends on.
+# In LDFLAGS remove white space between -L and directory
+debug-tools-kecho-link_DIRS := $(subst -L ,-L,$(strip $(debug-tools-kecho_LDFLAGS)))
+# Filter out only the libdirs and remove -L
+debug-tools-kecho-link_DIRS := $(patsubst -L%,%,$(filter -L%,$(debug-tools-kecho-link_DIRS)))
+# Add trailing /
+debug-tools-kecho-link_DIRS := $(subst //,/,$(addsuffix /,$(debug-tools-kecho-link_DIRS)))
+# Add normal linklib path
+debug-tools-kecho-link_DIRS += $(AROS_LIB)/
+# add lib and .a to static linklib names
+debug-tools-kecho-link_LIBS := $(addprefix lib,$(addsuffix .a,$(debug-tools-kecho_LIBS) $(debug-tools-kecho-link_EXTRA_LIBS)))
+ifeq (no,yes)
+    debug-tools-kecho-link_LIBS += startup.o
+endif
+ifeq (no,yes)
+    debug-tools-kecho-link_LIBS += detach.o
+endif
+# search for the linklibs in the given path, ignore ones not found
+debug-tools-kecho-link_DEPLIBS := $(foreach lib,$(debug-tools-kecho-link_LIBS), \
+    $(firstword $(wildcard $(addsuffix $(lib),$(debug-tools-kecho-link_DIRS)))) \
+)
+
+$(debug-tools-kecho_TARGETDIR)/$(debug-tools-kecho_PROGNAME) : OBJDIR := $(debug-tools-kecho_OBJDIR)
+$(debug-tools-kecho_TARGETDIR)/$(debug-tools-kecho_PROGNAME) : OBJS := $(debug-tools-kecho_OBJS) $(debug-tools-kecho_ARCHOBJS) $(USER_OBJS)
+$(debug-tools-kecho_TARGETDIR)/$(debug-tools-kecho_PROGNAME) : LDFLAGS := $(strip $(debug-tools-kecho_LDFLAGS) $(debug-tools-kecho-link_EXTRA_LDFLAGS))
+$(debug-tools-kecho_TARGETDIR)/$(debug-tools-kecho_PROGNAME) : LIBS := $(addprefix -l,$(debug-tools-kecho_LIBS) $(debug-tools-kecho-link_EXTRA_LIBS) )
+$(debug-tools-kecho_TARGETDIR)/$(debug-tools-kecho_PROGNAME) : $(debug-tools-kecho_OBJS) $(debug-tools-kecho_ARCHOBJS) $(USER_OBJS) $(debug-tools-kecho-link_DEPLIBS)
+	$(Q)$(eval LINKTARGET=$@)
+	$(Q)$(ECHO) "Linking    $(subst $(TARGETDIR)/,,$(LINKTARGET))..."
+	$(Q)$(eval LINKTMPFILE=$(OBJDIR)/$(notdir $(LINKTARGET)))
+	$(Q)$(IF) $(debug-tools-kecho_LINK) $(OBJS) -o $(LINKTMPFILE) $(LDFLAGS) $(LIBS) 2>&1 > $(GENDIR)/cerrors 2>&1 ; then \
+		$(IF) $(TEST) -s $(GENDIR)/cerrors ; then \
+				$(ECHO) "$(LINKTARGET): $(debug-tools-kecho_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" >> $(GENDIR)/errors ; \
+				$(CAT) $(GENDIR)/cerrors >> $(GENDIR)/errors ; \
+		else \
+			$(NOP) ; \
+		fi ; \
+		$(CP) $(LINKTMPFILE) $(LINKTARGET) ; \
+	else \
+		$(ECHO) "Link failed: $(debug-tools-kecho_LINK) $(OBJS) -o $(LINKTARGET) $(LDFLAGS) $(LIBS)" 1>&2 ; \
+		tee < $(GENDIR)/cerrors -a $(GENDIR)/errors 1>&2 ; \
+		exit 1 ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(debug-tools-kecho_STRIP)" != ""; then \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(debug-tools-kecho_STRIP) $(LINKTARGET) --only-keep-debug -o $(LINKTARGET).dbg ; \
+		fi ; \
+		$(debug-tools-kecho_STRIP) $(LINKTARGET) ; \
+		$(IF) $(TEST) "$(DEBUG)" = "yes"; then \
+			$(IF) $(TEST) -s $(LINKTARGET).dbg ; then \
+				$(OBJCOPY) --add-gnu-debuglink=$(LINKTARGET).dbg $(LINKTARGET) ; \
+			fi ; \
+		fi ; \
+	fi
+	$(Q)$(IF) $(TEST) "$(debug-tools-kecho_COVERAGE)" = "yes"; then \
+		LINKBASEFILES="$(strip $(notdir $(basename $(OBJS))))" ; \
+		$(FOR) covext in $(TARGET_COVERAGEINSTR_EXTS) ; do \
+			$(FOR) file in $$LINKBASEFILES ; do \
+				COVERAGEFILE=`echo $$file$$covext` ; \
+				$(IF) $(TEST) -s $(OBJDIR)/$$COVERAGEFILE ; then \
+					$(CP) $(OBJDIR)/$$COVERAGEFILE $(dir $(LINKTARGET))$$COVERAGEFILE ; \
+				fi ; \
+			done ; \
+		done ; \
+	fi
+
+endif
+
+ifneq ($(debug-tools-kecho_DEPS),)
+  ifneq (debug-tools-kecho debug-tools-kecho-quick,)
+    ifneq ($(findstring $(TARGET),debug-tools-kecho debug-tools-kecho-quick),)
+      -include $(debug-tools-kecho_DEPS)
+    endif
+  else
+    ifeq (,$(filter clean% %clean %clean% setup% includes% %setup,$(TARGET)))
+      -include $(debug-tools-kecho_DEPS)
+    endif
+  endif
+endif
+
+
+ifneq ($(debug-tools-kecho_OBJS) $(debug-tools-kecho_DEPS) $(debug-tools-kecho_TARGETDIR)/$(debug-tools-kecho_PROGNAME),)
+$(debug-tools-kecho_OBJS) $(debug-tools-kecho_DEPS) $(debug-tools-kecho_TARGETDIR)/$(debug-tools-kecho_PROGNAME) : | $(debug-tools-kecho_OBJDIR) $(debug-tools-kecho_TARGETDIR)
+else
+$(debug-tools-kecho_OBJS) $(debug-tools-kecho_DEPS) $(debug-tools-kecho_TARGETDIR)/$(debug-tools-kecho_PROGNAME) :: $(debug-tools-kecho_OBJDIR) $(debug-tools-kecho_TARGETDIR)
+endif
+
+GLOB_MKDIRS += $(debug-tools-kecho_OBJDIR) $(debug-tools-kecho_TARGETDIR)
+
+
+debug-tools-kecho-clean : FILES := $(debug-tools-kecho_OBJS) $(debug-tools-kecho_TARGETDIR)/$(debug-tools-kecho_PROGNAME) $(debug-tools-kecho_DEPS)
+#MM
+debug-tools-kecho-clean ::
+	$(Q)$(ECHO) "Cleaning up for metatarget debug-tools-kecho"
+	$(Q)$(RM) $(FILES)
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)

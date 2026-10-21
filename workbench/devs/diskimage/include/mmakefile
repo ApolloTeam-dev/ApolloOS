@@ -1,0 +1,37 @@
+# $Id$
+
+include $(SRCDIR)/config/aros.cfg
+
+#MM- workbench-devs-diskimage : includes-copy 
+
+#MM- includes-copy : workbench-devs-diskimage-includes-devices
+
+FILES2 := diskimage.h
+
+workbench-devs-diskimage-includes-devices_SRC := $(shell echo devices | sed 's/^\(.\):\//\/\1\//')
+
+
+ifneq (setup,)
+setup : | $(AROS_INCLUDES)/devices
+else
+setup :: $(AROS_INCLUDES)/devices
+endif
+
+GLOB_MKDIRS += $(AROS_INCLUDES)/devices
+
+
+.PHONY : workbench-devs-diskimage-includes-devices
+
+#MM
+workbench-devs-diskimage-includes-devices : | $(AROS_INCLUDES)/devices 
+	$(foreach file, $(FILES2), $(shell $(CP) $(addprefix $(if $(filter /%,$(workbench-devs-diskimage-includes-devices_SRC)),$(workbench-devs-diskimage-includes-devices_SRC),$(SRCDIR)/$(CURDIR)/$(workbench-devs-diskimage-includes-devices_SRC))/, $(file)) $(addprefix $(AROS_INCLUDES)/devices/, $(file))))
+
+
+# Delete generated makefiles
+#MM
+clean ::
+	$(Q)$(RM) $(TOP)/$(CURDIR)/mmakefile $(TOP)/$(CURDIR)/mmakefile.bak
+
+include $(SRCDIR)/config/make.tail
+
+BDID := $(BDTARGETID)
