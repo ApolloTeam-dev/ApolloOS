@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2007, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2007, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -61,13 +61,18 @@
     if (screen == NULL)
 	return NULL;
 
-    vi = AllocVec(sizeof(struct VisualInfo), MEMF_ANY);
+    vi = AllocVec(sizeof(struct VisualInfo), MEMF_ANY|MEMF_CLEAR);
     if (!vi)
         return NULL;
 
     vi->vi_screen = screen;
+	vi->vi_screenfont = OpenFont(screen->Font);
     vi->vi_dri = GetScreenDrawInfo(screen);
-
+    if(vi->vi_dri)
+    {
+    	vi->vi_textpen = vi->vi_dri->dri_Pens[TEXTPEN];
+    	vi->vi_backpen = vi->vi_dri->dri_Pens[BACKGROUNDPEN];
+    }
     return vi;
 
     AROS_LIBFUNC_EXIT

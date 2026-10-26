@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2013, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2013, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc: Read the current vertical position of the beam
@@ -17,7 +17,21 @@ AROS_LH0(LONG, VBeamPos,
 {
     AROS_LIBFUNC_INIT
 
-    volatile struct Custom *custom = (struct Custom*)0xdff000;
+	ULONG result;
+
+    asm volatile(
+        "move.l  0x00dff004, %[result] \n"
+        "asr.l   #8, %[result]         \n"
+        "and.l   #0x7ff, %[result]     \n"
+        : [result] "=d" (result)
+        :
+        : "cc"
+    );
+
+    return result;
+	
+    /*
+	volatile struct Custom *custom = (struct Custom*)0xdff000;
     UWORD v1, v2;
     
     for (;;) {
@@ -28,6 +42,7 @@ AROS_LH0(LONG, VBeamPos,
     }
 
     return v1 | ((v2 & 7) << 8);
+	*/
 
     AROS_LIBFUNC_EXIT
 } /* VBeamPos */

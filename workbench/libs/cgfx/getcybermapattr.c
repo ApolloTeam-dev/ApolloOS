@@ -1,5 +1,5 @@
 /*
-    Copyright © 1995-2020, The AROS Development Team. All rights reserved.
+    Copyright Â© 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
 
     Desc:
@@ -71,80 +71,97 @@
     
     OOP_Object *bm_obj = NULL;
     OOP_Object *pf = NULL;
+	ULONG w, h, bs, ms;
     
-    IPTR retval = 0;
+    IPTR retval = -1;
     
     if (IS_HIDD_BM(bitMap))
     {
-	bm_obj = HIDD_BM_OBJ(bitMap);
-	OOP_GetAttr(bm_obj, aHidd_BitMap_PixFmt, (IPTR *)&pf);
+		bm_obj = HIDD_BM_OBJ(bitMap);
+		OOP_GetAttr(bm_obj, aHidd_BitMap_PixFmt, (IPTR *)&pf);
     }
 
     switch (attribute) {
-    case CYBRMATTR_XMOD:
-	if (bm_obj)
-	    OOP_GetAttr(bm_obj, aHidd_BitMap_BytesPerRow, &retval);
-	else
-	    retval = bitMap->BytesPerRow;
-	break;
+    	case CYBRMATTR_XMOD:
+			if (bm_obj)
+	   			OOP_GetAttr(bm_obj, aHidd_BitMap_BytesPerRow, &retval);
+			else
+	  			retval = bitMap->BytesPerRow;
+		break;
 
-    case CYBRMATTR_BPPIX:
-	if (pf)
-	    OOP_GetAttr(pf, aHidd_PixFmt_BytesPerPixel, &retval);
-	break;
+    	case CYBRMATTR_BPPIX:
+			if (pf)
+	  			OOP_GetAttr(pf, aHidd_PixFmt_BytesPerPixel, &retval);
+		break;
 
-    case CYBRMATTR_PIXFMT:
-    case CYBRMATTR_PIXFMT_ALPHA:
-	if (pf)
-	{
-	    OOP_GetAttr(pf, aHidd_PixFmt_CgxPixFmt, &retval);
+    	case CYBRMATTR_PIXFMT:
+    	case CYBRMATTR_PIXFMT_ALPHA:
+			if (pf)
+			{
+	    		OOP_GetAttr(pf, aHidd_PixFmt_CgxPixFmt, &retval);
 
-	    /* Backwards compatibility kludge. To be removed.
-	       Used only by Cairo, do not use CYBRMATTR_PIXFMT_ALPHA
-	       anywhere else. */
-	    if (attribute == CYBRMATTR_PIXFMT_ALPHA)
-            {
-                IPTR stdpf;
+	    		/* Backwards compatibility kludge. To be removed.
+	      			Used only by Cairo, do not use CYBRMATTR_PIXFMT_ALPHA
+	       			anywhere else. 
+					Warning:
+					On non AROS systems, this is the same Tag descriptor ID as CYBRMATTR_COLORMAP.
+				*/
+	    		if (attribute == CYBRMATTR_PIXFMT_ALPHA)
+            	{
+                	IPTR stdpf;
 
-                OOP_GetAttr(pf, aHidd_PixFmt_StdPixFmt, &stdpf);
-	        if ((stdpf >= vHidd_StdPixFmt_0RGB32) && (stdpf >= vHidd_StdPixFmt_0BGR32))
-		    retval += 91; // TODO: This is not safe - use the actual values.
-            }
+                	OOP_GetAttr(pf, aHidd_PixFmt_StdPixFmt, &stdpf);
+	        		if ((stdpf >= vHidd_StdPixFmt_0RGB32) && (stdpf >= vHidd_StdPixFmt_0BGR32))
+		    			retval += 91; // TODO: This is not safe - use the actual values.
+            	}
 
-	    D(bug("[GetCyberMapAttr] Pixel format is %d\n", retval));
-	}
-	else
-	    retval = -1;
-	break;
+	    		D(bug("[GetCyberMapAttr] Pixel format is %d\n", retval));
+			}
+			else
+	   			retval = -1;
+		break;
 
-    case CYBRMATTR_WIDTH:
-	retval = GetBitMapAttr(bitMap, BMA_WIDTH);
-	break;
+    	case CYBRMATTR_WIDTH:
+			retval = GetBitMapAttr(bitMap, BMA_WIDTH);
+		break;
 	
-    case CYBRMATTR_HEIGHT:
-	retval = GetBitMapAttr(bitMap, BMA_HEIGHT);
-	break;
+    	case CYBRMATTR_HEIGHT:
+			retval = GetBitMapAttr(bitMap, BMA_HEIGHT);
+		break;
 	
-    case CYBRMATTR_DEPTH:
-	retval = GetBitMapAttr(bitMap, BMA_DEPTH);
-	break;
+    	case CYBRMATTR_DEPTH:
+			retval = GetBitMapAttr(bitMap, BMA_DEPTH);
+		break;
 	
-    case CYBRMATTR_ISCYBERGFX:
-	retval = bm_obj ? TRUE : FALSE;
-	break;
+   	 case CYBRMATTR_ISCYBERGFX:
+			retval = bm_obj ? TRUE : FALSE;
+		break;
 
-    case CYBRMATTR_ISLINEARMEM:
-	if (bm_obj)
-	    OOP_GetAttr(bm_obj, aHidd_BitMap_IsLinearMem, &retval);
-	else
-	    retval = TRUE;
-	break;
+    	case CYBRMATTR_ISLINEARMEM:
+			if (bm_obj)
+	   			OOP_GetAttr(bm_obj, aHidd_BitMap_IsLinearMem, &retval);
+			else
+	    		retval = TRUE;
+		break;
+
+    	case CYBRMATTR_DISPADR:
+    		retval = (IPTR)bitMap->Planes[0];
+    		if(retval == -1 || retval == 0)
+    		{
+    			if(bm_obj)
+    			{
+    				if(HIDD_BM_ObtainDirectAccess(bm_obj, &retval, &w, &h, &bs, &ms))
+        				UnLockBitMap(bitMap);
+    			}
+    		}
+   			if(retval == 0) retval = -1;
+   		break;
 
 #if defined(CYBRMATTR_COLORMAP)
     case CYBRMATTR_COLORMAP:
 #endif
     default:
-	D(bug("!!! UNKNOWN ATTRIBUTE PASSED TO GetCyberMapAttr()\n"));
+		D(bug("!!! UNKNOWN ATTRIBUTE PASSED TO GetCyberMapAttr()\n"));
 	break;
     } /* switch (attribute) */
 
