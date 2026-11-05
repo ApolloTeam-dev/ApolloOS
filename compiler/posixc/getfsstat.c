@@ -9,6 +9,8 @@
 #include <errno.h>
 #include <sys/mount.h>
 #include <proto/dos.h>
+
+#include "__dos64.h"
 #include <dos/dos.h>
 #include <proto/exec.h>
 #include "__upath.h"
@@ -75,7 +77,7 @@ short getnixfilesystemtype(LONG id_DiskType)
     STRPTR name;
     BPTR lock;
     struct DosList *dlist;
-    struct InfoData data;
+    struct InfoData64 data;
     int fscount = 0; /* number of filesystems */
     LONG ioerr = 0;
 
@@ -112,7 +114,7 @@ short getnixfilesystemtype(LONG id_DiskType)
 	/* Get filesystem data from lock */
 	if((lock = Lock(name, SHARED_LOCK)))
 	{
-	    if(Info(lock, &data))
+            if(__dos64_info(lock, &data))
 	    {
 		/* Fill statfs structure */
 		buf[fscount - 1].f_type = getnixfilesystemtype(
@@ -120,11 +122,11 @@ short getnixfilesystemtype(LONG id_DiskType)
 	        buf[fscount - 1].f_flags = 0;
 	        buf[fscount - 1].f_fsize = data.id_BytesPerBlock;
 	        buf[fscount - 1].f_bsize = data.id_BytesPerBlock;
-	        buf[fscount - 1].f_blocks = data.id_NumBlocks;
-	        buf[fscount - 1].f_bfree = data.id_NumBlocks - 
-		    data.id_NumBlocksUsed;
-	        buf[fscount - 1].f_bavail = data.id_NumBlocks - 
-		    data.id_NumBlocksUsed;
+	        buf[fscount - 1].f_blocks = data.id_NumBlocks64;
+	        buf[fscount - 1].f_bfree = data.id_NumBlocks64 - 
+		    data.id_NumBlocksUsed64;
+	        buf[fscount - 1].f_bavail = data.id_NumBlocks64 - 
+		    data.id_NumBlocksUsed64;
 	        buf[fscount - 1].f_files = 0;
 	        buf[fscount - 1].f_ffree = 0;
 	        buf[fscount - 1].f_fsid.val[0] = 0;

@@ -12,6 +12,8 @@
     NAME */
 #include <stdio.h>
 
+#include "__stdio.h"
+
 	int fsetpos64 (
 
 /*  SYNOPSIS */
@@ -53,7 +55,7 @@
 	return -1;
     }
 
-    retval = fseek (stream, *pos, SEEK_SET);
+    retval = __fseeko64 (stream, (off64_t)*pos, SEEK_SET);
 
     return retval;
 } /* fsetpos64 */

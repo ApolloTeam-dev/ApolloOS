@@ -8,6 +8,8 @@
 #include <sys/mount.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
+
+#include "__dos64.h"
 #include <dos/dos.h>
 #include "__upath.h"
 
@@ -51,7 +53,7 @@ short getnixfilesystemtype(LONG id_DiskType);
 {
     BPTR lock;
     LONG ioerr = 0;
-    struct InfoData data;
+    struct InfoData64 data;
     const char *apath;
     
     if (path == NULL)
@@ -70,16 +72,16 @@ short getnixfilesystemtype(LONG id_DiskType);
     /* Get filesystem data from lock */
     if(((lock = Lock(apath, SHARED_LOCK))))
     {
-	if(Info(lock, &data))
+        if(__dos64_info(lock, &data))
 	{
 	    /* Fill statfs structure */
 	    buf->f_type = getnixfilesystemtype(data.id_DiskType);
 	    buf->f_flags = 0;
 	    buf->f_fsize = data.id_BytesPerBlock;
 	    buf->f_bsize = data.id_BytesPerBlock;
-	    buf->f_blocks = data.id_NumBlocks;
-	    buf->f_bfree = data.id_NumBlocks - data.id_NumBlocksUsed;
-	    buf->f_bavail = data.id_NumBlocks - data.id_NumBlocksUsed;
+	    buf->f_blocks = data.id_NumBlocks64;
+	    buf->f_bfree = data.id_NumBlocks64 - data.id_NumBlocksUsed64;
+	    buf->f_bavail = data.id_NumBlocks64 - data.id_NumBlocksUsed64;
 	    buf->f_files = 0;
 	    buf->f_ffree = 0;
 	    buf->f_fsid.val[0] = 0;

@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <time.h>
 
+#include "__dos64.h"
 #include "__stat.h"
 
 #include <sys/stat.h>
@@ -29,7 +30,7 @@ static mode_t __prot_a2u(ULONG protect);
 static uid_t  __id_a2u(UWORD id);
 static void hashlittle2(const void *key, size_t length, 
 		                   uint32_t *pc, uint32_t *pb);
-static void __fill_statbuffer(
+static int __fill_statbuffer(
     struct stat          *sb,
     char                 *buffer,
     struct FileInfoBlock *fib,
@@ -45,12 +46,13 @@ static void __fill_stat64buffer(
 int __stat(BPTR lock, struct stat *sb, BOOL filehandle)
 {
     struct FileInfoBlock *fib;
+    int res;
     UBYTE *buffer;
     int buffersize = 256;
     int fallback_to_defaults = 0;
     BOOL Examined;
 
-    fib = AllocDosObject(DOS_FIB, NULL);
+    fib = AllocVec(sizeof(struct FileInfoBlock), MEMF_PUBLIC | MEMF_CLEAR);
 
     if (!fib)
     {
@@ -60,8 +62,8 @@ int __stat(BPTR lock, struct stat *sb, BOOL filehandle)
     }
 
     Examined = filehandle
-             ? ExamineFH(lock, fib)
-             : Examine(lock, fib);
+             ? __dos64_examine(lock, fib, __DOS64_EXAMINE_FH)
+             : __dos64_examine(lock, fib, __DOS64_EXAMINE);
     if (!Examined)
     {
 	if(IoErr() == ERROR_NOT_IMPLEMENTED ||
@@ -72,7 +74,7 @@ int __stat(BPTR lock, struct stat *sb, BOOL filehandle)
 	else
 	{
             errno = __stdc_ioerr2errno(IoErr());
-            FreeDosObject(DOS_FIB, fib);
+            FreeVec(fib);
             return -1;
 	}
     }
@@ -86,7 +88,7 @@ int __stat(BPTR lock, struct stat *sb, BOOL filehandle)
         if(!(buffer = AllocVec(buffersize, MEMF_ANY)))
         {
             errno = ENOMEM;
-            FreeDosObject(DOS_FIB, fib);
+            FreeVec(fib);
             return -1;
         }
 
@@ -109,7 +111,7 @@ int __stat(BPTR lock, struct stat *sb, BOOL filehandle)
         else if(IoErr() != ERROR_LINE_TOO_LONG)
         {
             errno = __stdc_ioerr2errno(IoErr());
-            FreeDosObject(DOS_FIB, fib);
+            FreeVec(fib);
             FreeVec(buffer);
             return -1;
         }
@@ -123,18 +125,18 @@ int __stat(BPTR lock, struct stat *sb, BOOL filehandle)
     if (filehandle)
     {
         BPTR filelock = DupLockFromFH(lock);
-        __fill_statbuffer(sb, (char*) buffer, fib, fallback_to_defaults, filelock);
+        res = __fill_statbuffer(sb, (char*) buffer, fib, fallback_to_defaults, filelock);
         UnLock(filelock);
     }
     else
     {
-        __fill_statbuffer(sb, (char*) buffer, fib, fallback_to_defaults, lock);
+        res = __fill_statbuffer(sb, (char*) buffer, fib, fallback_to_defaults, lock);
     }
 
     FreeVec(buffer);
-    FreeDosObject(DOS_FIB, fib);
+    FreeVec(fib);
 
-    return 0;
+    return res;
 }
 
 int __stat64(BPTR lock, struct stat64 *sb, BOOL filehandle)
@@ -145,7 +147,7 @@ int __stat64(BPTR lock, struct stat64 *sb, BOOL filehandle)
     int fallback_to_defaults = 0;
     BOOL Examined;
 
-    fib = AllocDosObject(DOS_FIB, NULL);
+    fib = AllocVec(sizeof(struct FileInfoBlock), MEMF_PUBLIC | MEMF_CLEAR);
 
     if (!fib)
     {
@@ -155,8 +157,8 @@ int __stat64(BPTR lock, struct stat64 *sb, BOOL filehandle)
     }
 
     Examined = filehandle
-             ? ExamineFH(lock, fib)
-             : Examine(lock, fib);
+             ? __dos64_examine(lock, fib, __DOS64_EXAMINE_FH)
+             : __dos64_examine(lock, fib, __DOS64_EXAMINE);
     if (!Examined)
     {
 	if(IoErr() == ERROR_NOT_IMPLEMENTED ||
@@ -167,7 +169,7 @@ int __stat64(BPTR lock, struct stat64 *sb, BOOL filehandle)
 	else
 	{
             errno = __stdc_ioerr2errno(IoErr());
-            FreeDosObject(DOS_FIB, fib);
+            FreeVec(fib);
             return -1;
 	}
     }
@@ -181,7 +183,7 @@ int __stat64(BPTR lock, struct stat64 *sb, BOOL filehandle)
         if(!(buffer = AllocVec(buffersize, MEMF_ANY)))
         {
             errno = ENOMEM;
-            FreeDosObject(DOS_FIB, fib);
+            FreeVec(fib);
             return -1;
         }
 
@@ -204,7 +206,7 @@ int __stat64(BPTR lock, struct stat64 *sb, BOOL filehandle)
         else if(IoErr() != ERROR_LINE_TOO_LONG)
         {
             errno = __stdc_ioerr2errno(IoErr());
-            FreeDosObject(DOS_FIB, fib);
+            FreeVec(fib);
             FreeVec(buffer);
             return -1;
         }
@@ -227,7 +229,7 @@ int __stat64(BPTR lock, struct stat64 *sb, BOOL filehandle)
     }
 
     FreeVec(buffer);
-    FreeDosObject(DOS_FIB, fib);
+    FreeVec(fib);
 
     return 0;
 }
@@ -313,7 +315,7 @@ int __stat_from_path(const char *path, struct stat *sb)
     strcpy(filepart, split);
     *split = '\0';
 
-    if (   !(fib = AllocDosObject(DOS_FIB, NULL))
+    if (   !(fib = AllocVec(sizeof(struct FileInfoBlock), MEMF_PUBLIC | MEMF_CLEAR))
         || !(lock = Lock(abspath, SHARED_LOCK)))
     {
         errno = __stdc_ioerr2errno(IoErr());
@@ -321,7 +323,7 @@ int __stat_from_path(const char *path, struct stat *sb)
     }
 
     /* examine parent directory of object to stat */
-    if (!Examine(lock, fib))
+    if (!__dos64_examine(lock, fib, __DOS64_EXAMINE))
     {
         if (IoErr() == ERROR_NOT_IMPLEMENTED ||
             IoErr() == ERROR_ACTION_NOT_KNOWN)
@@ -339,14 +341,13 @@ int __stat_from_path(const char *path, struct stat *sb)
         /* examine entries of parent directory until we find the object to stat */
         do
         {
-            loop = ExNext(lock, fib);
+            loop = __dos64_examine(lock, fib, __DOS64_EXAMINE_NEXT);
 
             if (loop)
             {
                 if (stricmp(fib->fib_FileName, filepart) == 0)
                 {
-                    __fill_statbuffer(sb, abspath, fib, 0, lock);
-                    res = 0;
+                    res = __fill_statbuffer(sb, abspath, fib, 0, lock);
                     break;
                 }
 
@@ -373,7 +374,7 @@ out:
     FreeVec(filepart);
 
     if (fib)
-        FreeDosObject(DOS_FIB, fib);
+        FreeVec(fib);
 
     return res;
 }
@@ -459,7 +460,7 @@ int __stat64_from_path(const char *path, struct stat64 *sb)
     strcpy(filepart, split);
     *split = '\0';
 
-    if (   !(fib = AllocDosObject(DOS_FIB, NULL))
+    if (   !(fib = AllocVec(sizeof(struct FileInfoBlock), MEMF_PUBLIC | MEMF_CLEAR))
         || !(lock = Lock(abspath, SHARED_LOCK)))
     {
         errno = __stdc_ioerr2errno(IoErr());
@@ -467,7 +468,7 @@ int __stat64_from_path(const char *path, struct stat64 *sb)
     }
 
     /* examine parent directory of object to stat */
-    if (!Examine(lock, fib))
+    if (!__dos64_examine(lock, fib, __DOS64_EXAMINE))
     {
         if (IoErr() == ERROR_NOT_IMPLEMENTED ||
             IoErr() == ERROR_ACTION_NOT_KNOWN)
@@ -485,7 +486,7 @@ int __stat64_from_path(const char *path, struct stat64 *sb)
         /* examine entries of parent directory until we find the object to stat */
         do
         {
-            loop = ExNext(lock, fib);
+            loop = __dos64_examine(lock, fib, __DOS64_EXAMINE_NEXT);
 
             if (loop)
             {
@@ -519,7 +520,7 @@ out:
     FreeVec(filepart);
 
     if (fib)
-        FreeDosObject(DOS_FIB, fib);
+        FreeVec(fib);
 
     return res;
 }
@@ -795,7 +796,7 @@ static void hashlittle2(
   *pc=c; *pb=b;
 }
 
-static void __fill_statbuffer(
+static int __fill_statbuffer(
     struct stat          *sb,
     char                 *buffer,
     struct FileInfoBlock *fib,
@@ -805,14 +806,21 @@ static void __fill_statbuffer(
     uint64_t hash;
     uint32_t pc = 1, pb = 1; /* initial hash values */
 
+    /* The size does not fit the 32 bit st_size */
+    if (!fallback_to_defaults && fib->fib_Size64 > 0x7FFFFFFF)
+    {
+        errno = EOVERFLOW;
+        return -1;
+    }
+
     hashlittle2(buffer, strlen((char*) buffer), &pc, &pb);
     hash = pc + (((uint64_t)pb)<<32);
 
     if(fallback_to_defaults)
     {
 	/* Empty file, not protected, as old as it can be... */
-	fib->fib_Size = 0;
-	fib->fib_NumBlocks = 0;
+	fib->fib_Size64 = 0;
+	fib->fib_NumBlocks64 = 0;
 	fib->fib_Date.ds_Days = 0;
 	fib->fib_Date.ds_Minute = 0;
 	fib->fib_Date.ds_Tick = 0;
@@ -826,7 +834,7 @@ static void __fill_statbuffer(
     sb->st_dev     = (dev_t) (lock ? ((struct FileLock *)BADDR(lock))->fl_Volume : BNULL);
     sb->st_ino     = hash;    /* hash value will be truncated if st_ino size is
                                  smaller than uint64_t, but it's ok */
-    sb->st_size    = (off_t)fib->fib_Size;
+    sb->st_size    = (off_t)fib->fib_Size64;
     /* FIXME: Update to properly handle the struct timespec fields
        st_atim, st_mtim and st_ctim */
     sb->st_atime   =
@@ -851,9 +859,9 @@ static void __fill_statbuffer(
             sb->st_blksize = 1024;
         }
     }
-    if(fib->fib_Size > 0 && sb->st_blksize > 0)
+    if(fib->fib_Size64 > 0 && sb->st_blksize > 0)
 	sb->st_blocks = 
-	    (1 + ((long) fib->fib_Size - 1) / sb->st_blksize) * 
+            (1 + ((QUAD) fib->fib_Size64 - 1) / sb->st_blksize) *
 	    (sb->st_blksize / 512);
     else
 	sb->st_blocks  = 0;
@@ -883,6 +891,8 @@ static void __fill_statbuffer(
             sb->st_nlink = 1;
             sb->st_mode |= S_IFREG;
     }
+
+    return 0;
 }
 
 static void __fill_stat64buffer(
@@ -901,8 +911,8 @@ static void __fill_stat64buffer(
     if(fallback_to_defaults)
     {
 	/* Empty file, not protected, as old as it can be... */
-	fib->fib_Size = 0;
-	fib->fib_NumBlocks = 0;
+	fib->fib_Size64 = 0;
+	fib->fib_NumBlocks64 = 0;
 	fib->fib_Date.ds_Days = 0;
 	fib->fib_Date.ds_Minute = 0;
 	fib->fib_Date.ds_Tick = 0;
@@ -916,7 +926,7 @@ static void __fill_stat64buffer(
     sb->st_dev     = (dev_t) (lock ? ((struct FileLock *)BADDR(lock))->fl_Volume : BNULL);
     sb->st_ino     = hash;    /* hash value will be truncated if st_ino size is
                                  smaller than uint64_t, but it's ok */
-    sb->st_size    = (off_t)fib->fib_Size;
+    sb->st_size    = (off64_t)fib->fib_Size64;
     /* FIXME: Update to properly handle the struct timespec fields
        st_atim, st_mtim and st_ctim */
     sb->st_atime   =
@@ -941,9 +951,9 @@ static void __fill_stat64buffer(
             sb->st_blksize = 1024;
         }
     }
-    if(fib->fib_Size > 0 && sb->st_blksize > 0)
+    if(fib->fib_Size64 > 0 && sb->st_blksize > 0)
 	sb->st_blocks = 
-	    (1 + ((long) fib->fib_Size - 1) / sb->st_blksize) * 
+            (1 + ((QUAD) fib->fib_Size64 - 1) / sb->st_blksize) *
 	    (sb->st_blksize / 512);
     else
 	sb->st_blocks  = 0;
