@@ -9,6 +9,7 @@
 #include <errno.h>
 
 #include "__stdio.h"
+#include "__stdcio_dos64.h"
 
 #define DEBUG 0
 #include <aros/debug.h>
@@ -46,18 +47,23 @@
 
 ******************************************************************************/
 {
-    LONG cnt;
+    QUAD cnt;
     BPTR fh = stream->fh;
 
     D(bug("[stdcio/ftell()] Entering\n"));
 
     Flush (fh);
-    cnt = Seek (fh, 0, OFFSET_CURRENT);
+    cnt = __stdcio_getpos64 (stream);
 
     if (cnt == -1)
         errno = __stdc_ioerr2errno (IoErr ());
+    else if (cnt != (QUAD)(long)cnt)
+    {
+        errno = EOVERFLOW;
+        cnt = -1;
+    }
 
-    D(bug("[stdcio/ftell()] Leaving cnt=%d\n", cnt));
+    D(bug("[stdcio/ftell()] Leaving cnt=%ld\n", (long)cnt));
 
     return (long int)cnt;
 } /* ftell */

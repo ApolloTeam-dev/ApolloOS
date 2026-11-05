@@ -167,12 +167,42 @@ static void REGARGS Ghost (struct RastPort *rp, UWORD pen, UWORD x, UWORD y, UWO
 
 /****************************************************************************************/
 
+/* Decimal string of a 64 bit value, end aligned in buf */
+static char *UQuadToStr (UQUAD value, char *buf, int buflen)
+{
+    buf[--buflen] = '\0';
+
+    /* 32 bit division while the value fits, 64 bit only above 4 GiB */
+    if ((ULONG)(value >> 32) == 0)
+    {
+	ULONG lo = (ULONG)value;
+
+	do
+	{
+	    buf[--buflen] = '0' + (char)(lo % 10);
+	    lo /= 10;
+	} while (lo);
+    }
+    else
+    {
+	do
+	{
+	    buf[--buflen] = '0' + (char)(value % 10);
+	    value /= 10;
+	} while (value);
+    }
+
+    return (buf + buflen);
+}
+
+/****************************************************************************************/
+
 void REGARGS PrintEntry (GlobData *glob, int i)
 {
     struct TextExtent 	extent;
     struct ReqEntry 	*entry;
     struct RastPort 	*reqrp = glob->reqrp;
-    char 		sizestr[16], tempstr[108], *volname = NULL, *str;
+    char 		sizestr[24], tempstr[108], *volname = NULL, *str;
     int 		apen = 0, bpen = 0, top, len = 0, sizelen = 0, sizelenpix = 0, type, rectpen, left, entrytop;
     LONG 		size;
 
@@ -198,7 +228,17 @@ void REGARGS PrintEntry (GlobData *glob, int i)
 	    /* FIXME: AROS LocaleLibrary does not yet patch RawDoFmt. So "%lD" (uppercase D) does not work yet here!  */
             useLocFmt = FALSE;
 #endif
-	    DofmtArgs (sizestr, useLocFmt ? " %lD" : " %ld", size);
+	    if (type == glob->file_id)
+	    {
+		/* RawDoFmt cannot print 64 bit */
+		char numstr[24];
+
+		sizestr[0] = ' ';
+		strcpy (sizestr + 1, UQuadToStr (((UQUAD)entry->re_SizeHi << 32) | (ULONG)size,
+						 numstr, sizeof (numstr)));
+	    }
+	    else
+		DofmtArgs (sizestr, useLocFmt ? " %lD" : " %ld", size);
 
 	    if (type == FONT)
 	    {
@@ -442,6 +482,7 @@ struct ReqEntry *REGARGS AddEntry (GlobData *glob, struct BufferData *buff,
 	if( ctype <= MAX_FILE_DIRECTORY )
 	{
 	    lastname->re_Size = size;
+	    lastname->re_SizeHi = 0;
 	    return( lastname );
 	}
 
@@ -461,6 +502,7 @@ struct ReqEntry *REGARGS AddEntry (GlobData *glob, struct BufferData *buff,
 
     newentry->re_Name = str;
     newentry->re_Size = size;
+    newentry->re_SizeHi = 0;
     newentry->re_Type = ctype;
     newentry->re_Next = lastname->re_Next;
     lastname->re_Next = ( struct Node * ) newentry;
@@ -785,9 +827,17 @@ AddDisk(
 	    if( deventry->task &&
 		    DoPkt1( deventry->task, ACTION_DISK_INFO, (SIPTR)MKBADDR( infodata ) ) )
 	    {
-		size = ( infodata->id_NumBlocksUsed * 100 +
-			 infodata->id_NumBlocks / 2 ) /
-		    infodata->id_NumBlocks;
+		ULONG used = infodata->id_NumBlocksUsed;
+		ULONG total = infodata->id_NumBlocks;
+
+		/* scale down so that used * 100 fits 32 bits */
+		while( total > 40000000 )
+		{
+		    used >>= 1;
+		    total >>= 1;
+		}
+
+		size = ( used * 100 + total / 2 ) / total;
 	    }
 	}
 

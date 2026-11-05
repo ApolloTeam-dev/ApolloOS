@@ -18,6 +18,9 @@ struct StdCIOIntBase
 {
     struct StdCIOBase StdCIOBase;
 
+    /* __stdcio_dos64.c: optional dos64.library, for 64-bit file I/O */
+    struct Library *StdCIODOS64Base;
+
     /* getenv.c */
     LONG varsize;
     char *envvar;

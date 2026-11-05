@@ -3,12 +3,14 @@ include $(SRCDIR)/config/aros.cfg
 #MM- AROS : compiler-posixc
 
 POSIXC := \
+    __dos64 \
     __env \
     __exec \
     __fdesc \
     __fopen \
     __fseeko \
     __ftello \
+    __optionallibs \
     __posixc_assert \
     __posixc_environ \
     __posixc_init \

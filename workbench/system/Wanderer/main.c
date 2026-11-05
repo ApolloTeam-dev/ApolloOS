@@ -88,6 +88,9 @@ struct CyberGfxIFace    *ICyberGfx;
 Object         *_WandererIntern_AppObj = NULL;
 Class          *_WandererIntern_CLASS = NULL;
 
+/* dos64.library, NULL when it is not installed */
+struct Library *DOS64Base = NULL;
+
 /* Don't output errors to the console, open requesters instead */
 int                  __forceerrorrequester = 1;
 
@@ -412,6 +415,8 @@ int main(void)
         return retval;
 #endif
 
+    DOS64Base = OpenLibrary("dos64.library", 51);
+
     D(
         struct Task *me = (struct Task *)FindTask(NULL);
 
@@ -434,6 +439,9 @@ int main(void)
     }
 
     D(bug("[Wanderer] %s: Exiting .. \n", __PRETTY_FUNCTION__));
+
+    if (DOS64Base != NULL)
+        CloseLibrary(DOS64Base);
 
 #ifndef __AROS__
     deInitLibs();

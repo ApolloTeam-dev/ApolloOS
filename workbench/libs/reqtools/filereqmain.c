@@ -96,6 +96,33 @@ ExpandLink( GlobData *glob )
 
 /****************************************************************************************/
 
+/* The real size of the current fib file, size is the clamped 32 bit one */
+static UQUAD FileSize64( GlobData *glob, UQUAD size )
+{
+    if( DOS64Base != NULL )
+    {
+	struct FileInfoBlock *fib64 = AllocDosObject64( DOS64_FIB, NULL );
+
+	*glob->winaddr = ( APTR ) -1;
+
+	if( fib64 )
+	{
+	    BPTR oldcd = CurrentDir( glob->lock );
+
+	    if( ExamineName64( glob->fib.fib_FileName, fib64, NULL ) )
+		size = fib64->fib_Size64;
+	    CurrentDir( oldcd );
+	    FreeDosObject64( DOS64_FIB, fib64 );
+	}
+
+	*glob->winaddr = glob->reqwin;
+    }
+
+    return( size );
+}
+
+/****************************************************************************************/
+
 IPTR ASM SAVEDS PropReqHandler (
     REGPARAM(a1, struct RealHandlerInfo *, glob),
     REGPARAM(d0, ULONG, sigs),
@@ -506,14 +533,15 @@ IPTR ASM SAVEDS PropReqHandler (
     {
 	if ((glob->exnext = ExNext (glob->lock, &glob->fib)))
 	{
-	    ULONG size = glob->fib.fib_Size;
+	    UQUAD size = ( ULONG ) glob->fib.fib_Size;
+	    struct ReqEntry *newentry;
 
 	    ctype = glob->fib.fib_EntryType;
 
 	    /* Try to examine links */
 	    if( ( glob->fib.fib_EntryType == ST_SOFTLINK ) && ExpandLink( glob ) )
 	    {
-		size = glob->linkfib.fib_Size;
+		size = ( ULONG ) glob->linkfib.fib_Size;
 		ctype = glob->linkfib.fib_EntryType;
 	    }
 
@@ -541,7 +569,13 @@ IPTR ASM SAVEDS PropReqHandler (
 
 	    ctype = ( ctype > 0 ) ? glob->directory_id : glob->file_id;
 
-	    if( !AddEntry( glob, buff, glob->fib.fib_FileName, size, ctype ) )
+	    /* a clamped size of a file: ask dos64.library for the real one */
+	    if( ctype == glob->file_id && size == 0xFFFFFFFF )
+		size = FileSize64( glob, size );
+
+	    if( ( newentry = AddEntry( glob, buff, glob->fib.fib_FileName, ( ULONG ) size, ctype ) ) )
+		newentry->re_SizeHi = ( ULONG )( size >> 32 );
+	    else
 		glob->exnext = FALSE;
 
 skipfile:

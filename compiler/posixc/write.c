@@ -11,6 +11,7 @@
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include "__fdesc.h"
+#include "__dos64.h"
 
 /*****************************************************************************
 
@@ -56,7 +57,7 @@
 	return -1;
     }
 
-    cnt = Write (fdesc->fcb->handle, (void *)buf, count);
+    cnt = __dos64_write (fdesc->fcb, (void *)buf, count);
 
     if (cnt == -1)
 	errno = __stdc_ioerr2errno (IoErr ());

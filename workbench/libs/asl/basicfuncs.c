@@ -1042,25 +1042,41 @@ AROS_UFH2 (void, puttostr,
 
 /*****************************************************************************************/
 
-/* This is used for printing out fib_Size, which is why
- * is takes a IPTR instead of a ULONG
- */
-char *PooledUIntegerToString(IPTR value, APTR pool, struct AslBase_intern *AslBase)
+/* Decimal string of a 64 bit value, cloned into the pool */
+char *PooledUIntegerToString(UQUAD value, APTR pool, struct AslBase_intern *AslBase)
 {
-    char buffer[30];
-    char *str = buffer;
+    char buffer[24];
+    char *str = buffer + sizeof(buffer) - 1;
     char *clone;
     WORD len;
 
-    /* Create the text */
+    *str = '\0';
 
-    RawDoFmt("%iu", (RAWARG)&value, (VOID_FUNC)AROS_ASMSYMNAME(puttostr), &str);
+    /* 32 bit division while the value fits, 64 bit only above 4 GiB */
+    if ((ULONG)(value >> 32) == 0)
+    {
+        ULONG lo = (ULONG)value;
 
-    len = strlen(buffer) + 1;
+        do
+        {
+            *--str = '0' + (char)(lo % 10);
+            lo /= 10;
+        } while (lo);
+    }
+    else
+    {
+        do
+        {
+            *--str = '0' + (char)(value % 10);
+            value /= 10;
+        } while (value);
+    }
+
+    len = strlen(str) + 1;
 
     if ((clone = AllocPooled(pool, len)))
     {
-        CopyMem(buffer, clone, len);
+        CopyMem(str, clone, len);
     }
 
     return clone;

@@ -4427,7 +4427,7 @@ Action_ExamineAll(
 
 		case ED_OWNER:
 
-			ec.ec_MinSize = sizeof(struct ExAllData);
+			ec.ec_MinSize = offsetof(struct ExAllData,ed_Size64);
 			break;
 	}
 

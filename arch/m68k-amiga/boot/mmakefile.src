@@ -32,6 +32,7 @@ include $(SRCDIR)/config/aros.cfg
 #MM     kernel-diag-kobj \
 #MM     kernel-disk-kobj \
 #MM     kernel-dos-kobj \
+#MM     kernel-dos64-kobj \
 #MM     kernel-dosboot-kobj \
 #MM     kernel-expansion-kobj \
 #MM     kernel-filesystem-kobj \
@@ -165,7 +166,7 @@ AFILES  := ext_entry
 
 # APOLLOROM = V4 -> Native V4
 ifeq ($(APOLLOROM),V4)
-	KLIBS   := keymap graphics layers intuition gadtools workbench mathffp mathieeesingbas freeanim lowlevel setpatch
+	KLIBS   := keymap graphics layers intuition gadtools workbench mathffp mathieeesingbas freeanim lowlevel setpatch dos64
 	KDEVS   := sagasd ata trackdisk
 	KHNDLRS := con
 	KHIDDS  := bus storage system 
