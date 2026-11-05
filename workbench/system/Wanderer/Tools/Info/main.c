@@ -13,11 +13,13 @@
 #include <proto/muimaster.h>
 #include <proto/workbench.h>
 #include <proto/dos.h>
+#include <proto/dos64.h>
 #include <proto/alib.h>
 #include <proto/icon.h>
 
 #include <dos/dos.h>
 #include <dos/datetime.h>
+#include <dos/dos64.h>
 #include <exec/memory.h>
 #include <libraries/asl.h>
 #include <libraries/commodities.h>
@@ -85,6 +87,47 @@ BOOL file_altered = FALSE;
 BOOL icon_altered = FALSE;
 char loadedcomment[MAXCOMMENTLENGTH];
 
+/* dos64.library, NULL when it is not installed */
+struct Library *DOS64Base;
+
+/* The size of a file whose 32 bit size was clamped */
+static UQUAD fileSize64(CONST_STRPTR name, UQUAD size)
+{
+    if (DOS64Base != NULL)
+    {
+        struct FileInfoBlock *fib = AllocDosObject64(DOS64_FIB, NULL);
+
+        if (fib != NULL)
+        {
+            if (ExamineName64(name, fib, NULL))
+                size = fib->fib_Size64;
+            FreeDosObject64(DOS64_FIB, fib);
+        }
+    }
+
+    return size;
+}
+
+/* The size of a directory entry, the real one when the 32 bit size was clamped */
+static UQUAD entrySize64(CONST_STRPTR directory, CONST_STRPTR name, UQUAD size)
+{
+    if ((size == 0xFFFFFFFF) && (DOS64Base != NULL))
+    {
+        ULONG pathlen = strlen(directory) + strlen(name) + 2;
+        STRPTR path = AllocVec(pathlen, MEMF_CLEAR);
+
+        if (path != NULL)
+        {
+            strcpy(path, directory);
+            AddPart(path, name, pathlen);
+            size = fileSize64(path, size);
+            FreeVec(path);
+        }
+    }
+
+    return size;
+}
+
 void getReadableSize(UBYTE *buf, UQUAD size, BOOL accurate)
 {
     UQUAD d;
@@ -99,31 +142,23 @@ void getReadableSize(UBYTE *buf, UQUAD size, BOOL accurate)
         0
     };
 
-    /*if (size >= (1024 * 1024 * 1024 * 1024 * 1024 * 1024))
-    {
-        //Exabytes
-        array.val = size >> 60;
-        d = (size * 10 + ((1024 * 1024 * 1024 * 1024 * 1024 * 1024) / 2)) / (1024 * 1024 * 1024 * 1024 * 1024 * 1024);
-        array.dec = d % 10;
-        ch = "EiB";
-    }
-    else if (size >= (1024 * 1024 * 1024 * 1024 * 1024))
+    if (size >= ((UQUAD)1 << 50))
     {
         //Petabytes
         array.val = size >> 50;
-        d = (size * 10 + ((1024 * 1024 * 1024 * 1024 * 1024) / 2)) / (1024 * 1024 * 1024 * 1024 * 1024);
+        d = (size * 10 + (((UQUAD)1 << 50) / 2)) / ((UQUAD)1 << 50);
         array.dec = d % 10;
         ch = "PiB";
     }
-    else if (size >= (1024 * 1024 * 1024 * 1024))
+    else if (size >= ((UQUAD)1 << 40))
     {
         //Terabytes
         array.val = size >> 40;
-        d = (size * 10 + ((1024 * 1024 * 1024 * 1024) / 2)) / (1024 * 1024 * 1024 * 1024);
+        d = (size * 10 + (((UQUAD)1 << 40) / 2)) / ((UQUAD)1 << 40);
         array.dec = d % 10;
         ch = "TiB";
-    }*/
-    if (size >= (1024 * 1024 * 1024))
+    }
+    else if (size >= (1024 * 1024 * 1024))
     {
         //Gigabytes
         array.val = size >> 30;
@@ -215,7 +250,7 @@ D(bug("[WBInfo] calculateDirectorySize('%s')\n", directory));
         {
             if (ead->ed_Type == ST_FILE)
             {
-                directorySize += ead->ed_Size;
+                directorySize += entrySize64(directory, (CONST_STRPTR)ead->ed_Name, ead->ed_Size);
                 /* Refresh size only every 25% grow */
                 if ((((base + directorySize) * 100) / (*lastrefreshsize)) > 125) /* 25 % */
                 {
@@ -720,6 +755,7 @@ int main(int argc, char **argv)
     char stack[16];
     char deftool[MAX_PATH_LEN];
     char size[64];
+    UQUAD fsize;
     char date[LEN_DATSTRING];
     char time[LEN_DATSTRING];
     char  dow[LEN_DATSTRING];
@@ -743,7 +779,9 @@ int main(int argc, char **argv)
 	char pathname[1024];
 
     int retval = RETURN_OK;
-    
+
+    DOS64Base = OpenLibrary("dos64.library", 51);
+
     if (argc != 0)
     {
         /* start from wanderer only */
@@ -844,7 +882,10 @@ D(bug("[WBInfo] scan file\n"));
         sprintf(datetime, "%s %s", time, date);
 
         /* fill size */
-        getReadableSize(size, ap->ap_Info.fib_Size, TRUE);
+        fsize = (ULONG)ap->ap_Info.fib_Size;
+        if (fsize == 0xFFFFFFFF)
+            fsize = fileSize64(name, fsize);
+        getReadableSize(size, fsize, TRUE);
 
         /* fill protection */
         protection = ap->ap_Info.fib_Protection;
@@ -1453,5 +1494,7 @@ funcmain_exit:
     FreeVec(ap);
     FreeVec(file);
     FreeVec(name);
+    if (DOS64Base != NULL)
+        CloseLibrary(DOS64Base);
     return retval;
 }

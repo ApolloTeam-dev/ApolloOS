@@ -19,6 +19,7 @@
 #include <proto/dos.h>
 #include <proto/exec.h>
 #include <proto/intuition.h>
+#include <proto/dos64.h>
 
 #include "asl_intern.h"
 #include LC_LIBDEFS_FILE
@@ -165,6 +166,9 @@ const struct IntFontReq def_fontreq =
 
 };
 
+/* dos64.library, NULL when it is not installed */
+struct Library *DOS64Base;
+
 /* coolimages may fail to open */
 LONG CoolImagesBase_version = -1;
 
@@ -184,12 +188,26 @@ static int InitBase(LIBBASETYPEPTR LIBBASE)
 
     InitReqInfo(LIBBASE);
 
+    DOS64Base = OpenLibrary("dos64.library", 51);
+
+    return TRUE;
+}
+
+static int ExpungeBase(LIBBASETYPEPTR LIBBASE)
+{
+    if (DOS64Base != NULL)
+    {
+        CloseLibrary(DOS64Base);
+        DOS64Base = NULL;
+    }
+
     return TRUE;
 }
 
 /*****************************************************************************************/
 
 ADD2INITLIB(InitBase, 0);
+ADD2EXPUNGELIB(ExpungeBase, 0);
 
 /*****************************************************************************************/
 

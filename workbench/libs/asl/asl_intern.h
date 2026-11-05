@@ -318,7 +318,7 @@ char *PooledCloneStringLen(const char *name1, ULONG len1, const char *name2, ULO
 char *VecCloneString(const char *name1, const char *name2, struct AslBase_intern *AslBase);
 char *VecPooledCloneString(const char *name1, const char *name2, APTR pool,
                            struct AslBase_intern *AslBase);
-char *PooledUIntegerToString(IPTR value, APTR pool, struct AslBase_intern *AslBase);
+char *PooledUIntegerToString(UQUAD value, APTR pool, struct AslBase_intern *AslBase);
 void CloseWindowSafely(struct Window *window, struct AslBase_intern *AslBase);
 
 AROS_UFP3(ULONG, StringEditFunc,

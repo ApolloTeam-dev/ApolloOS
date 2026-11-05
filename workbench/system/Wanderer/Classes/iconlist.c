@@ -58,6 +58,9 @@
 #include <proto/icon.h>
 #include <proto/layers.h>
 #include <proto/dos.h>
+#include <dos/dos64.h>
+#include <proto/dos64.h>
+#include <aros/symbolsets.h>
 #include <proto/iffparse.h>
 
 #if defined(__AROS__)
@@ -109,6 +112,9 @@
                           && _between(_mtop(obj) ,(y),_mbottom(obj)))
 
 extern struct Library   *MUIMasterBase;
+
+/* dos64.library, NULL when it is not installed */
+struct Library          *DOS64Base;
 
 static struct Hook      __iconlist_UpdateLabels_hook;
 
@@ -348,8 +354,48 @@ const UBYTE MSG_MEM_M[] = "MB";
 const UBYTE MSG_MEM_K[] = "KB";
 const UBYTE MSG_MEM_B[] = "Bytes";
 
+///IconList__FileSize64()
+/* The size of a file whose 32 bit size was clamped */
+static UQUAD IconList__FileSize64(CONST_STRPTR name, UQUAD size)
+{
+    if (DOS64Base != NULL)
+    {
+        struct FileInfoBlock *fib64 = AllocDosObject64(DOS64_FIB, NULL);
+
+        if (fib64 != NULL)
+        {
+            if (ExamineName64(name, fib64, NULL))
+                size = fib64->fib_Size64;
+            FreeDosObject64(DOS64_FIB, fib64);
+        }
+    }
+
+    return size;
+}
+
+/* Open and close the optional dos64.library with the class */
+static int IconList__OpenDOS64(struct Library *lh)
+{
+    DOS64Base = OpenLibrary("dos64.library", 51);
+    return TRUE;
+}
+
+static int IconList__CloseDOS64(struct Library *lh)
+{
+    if (DOS64Base != NULL)
+    {
+        CloseLibrary(DOS64Base);
+        DOS64Base = NULL;
+    }
+    return TRUE;
+}
+
+ADD2INITLIB(IconList__OpenDOS64, 0)
+ADD2EXPUNGELIB(IconList__CloseDOS64, 0)
+///
+
 ///FmtSizeToString()
-static void FmtSizeToString(UBYTE *buf, ULONG num)
+static void FmtSizeToString(UBYTE *buf, UQUAD num)
 {
     UQUAD       d;
     const UBYTE       *ch;
@@ -359,38 +405,38 @@ static void FmtSizeToString(UBYTE *buf, ULONG num)
         ULONG    dec;
     } array =
     {
-        num,
+        (ULONG)num,
         0
     };
 
     if (num >= 1073741824)
     {
         //Gigabytes
-        array.val = num >> 30;
-        d = ((UQUAD)num * 10 + 536870912) / 1073741824;
-        array.dec = d % 10;
+        array.val = (ULONG)(num >> 30);
+        d = (num * 10 + 536870912) / 1073741824;
+        array.dec = (ULONG)(d % 10);
         ch = MSG_MEM_G;
     }
     else if (num >= 1048576)
     {
         //Megabytes
-        array.val = num >> 20;
-        d = ((UQUAD)num * 10 + 524288) / 1048576;
-        array.dec = d % 10;
+        array.val = (ULONG)(num >> 20);
+        d = (num * 10 + 524288) / 1048576;
+        array.dec = (ULONG)(d % 10);
         ch = MSG_MEM_M;
     }
     else if (num >= 1024)
     {
         //Kilobytes
-        array.val = num >> 10;
+        array.val = (ULONG)(num >> 10);
         d = (num * 10 + 512) / 1024;
-        array.dec = d % 10;
+        array.dec = (ULONG)(d % 10);
         ch = MSG_MEM_K;
     }
     else
     {
         //Bytes
-        array.val = num;
+        array.val = (ULONG)num;
         array.dec = 0;
         d = 0;
         ch = MSG_MEM_B;
@@ -4421,13 +4467,18 @@ IPTR IconList__MUIM_IconList_CreateEntry(struct IClass *CLASS, Object *obj, stru
         {
             CopyMem(message->fib, entry->ie_FileInfoBlock, sizeof(struct FileInfoBlock));
 
+            entry->ie_FileSize64 = (ULONG)entry->ie_FileInfoBlock->fib_Size;
+
             if (entry->ie_FileInfoBlock->fib_DirEntryType > 0)
             {
                 strcpy(entry->ie_TxtBuf_SIZE, "Drawer");
             }
             else
             {
-                FmtSizeToString(entry->ie_TxtBuf_SIZE, entry->ie_FileInfoBlock->fib_Size);
+                /* 0xFFFFFFFF is the clamp, ask dos64 for the real size */
+                if (entry->ie_FileSize64 == 0xFFFFFFFF)
+                    entry->ie_FileSize64 = IconList__FileSize64(message->filename, entry->ie_FileSize64);
+                FmtSizeToString(entry->ie_TxtBuf_SIZE, entry->ie_FileSize64);
             }
 
             dt.dat_Stamp    = entry->ie_FileInfoBlock->fib_Date;
@@ -7509,7 +7560,10 @@ IPTR IconList__MUIM_IconList_Sort(struct IClass *CLASS, Object *obj, struct MUIP
                         else if (data->icld_SortFlags & MUIV_IconList_Sort_BySize)
                         {
                             /* Sort by Size .. */
-                            i = entry->ie_FileInfoBlock->fib_Size - icon1->ie_FileInfoBlock->fib_Size;
+                            if (entry->ie_FileSize64 > icon1->ie_FileSize64)
+                                i = 1;
+                            else if (entry->ie_FileSize64 < icon1->ie_FileSize64)
+                                i = -1;
                         }
                         else if ((data->icld_SortFlags & MUIV_IconList_Sort_ByType) && ((entry->ie_IconListEntry.type == ST_FILE) || (entry->ie_IconListEntry.type == ST_USERDIR)))
                         {

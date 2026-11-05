@@ -14,7 +14,7 @@ struct Dirlist_DATA
     STRPTR acceptpattern;
     STRPTR rejectpattern;
     STRPTR directory;
-    IPTR numbytes;
+    UQUAD numbytes;
     ULONG numdrawers;
     ULONG numfiles;    
     BOOL drawersonly;
@@ -26,7 +26,7 @@ struct Dirlist_DATA
     BYTE sortdirs;
     BYTE sorttype;
     BYTE status;
-    UBYTE size_string[20];
+    UBYTE size_string[24];
     UBYTE date_string[20];
     UBYTE time_string[20];
     UBYTE prot_string[8];
@@ -36,6 +36,7 @@ struct Dirlist_DATA
 struct Dirlist_Entry
 {
     struct FileInfoBlock fib;
+    UQUAD size;
 };
 
 #endif /* _DIRLIST_PRIVATE_H_ */
