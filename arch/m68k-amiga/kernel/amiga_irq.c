@@ -128,6 +128,8 @@ static inline UWORD custom_r(ULONG reg)
     UWORD intenar = custom_r(INTENAR); \
     if (!(intenar & INTF_INTEN)) \
     	return TRUE; \
+    /* Interrupted context had a Disable() outstanding (see EXIT) */ \
+    const BOOL in_disable = (SysBase->IDNestCnt >= 0); \
     UWORD mask = intenar & custom_r(INTREQR) & (irq_mask); \
     do {
 
@@ -148,8 +150,13 @@ static inline UWORD custom_r(ULONG reg)
      * re-enabled the hardware itself (demos do: Disable(), set INTENA, \
      * AddIntServer(), spin on a VBL counter), and its Enable() then leaves \
      * INTEN clear for good. Interrupt handling must be transparent to the \
-     * interrupted code, so put the bit back */ \
-    custom_w(INTENA, INTF_SETCLR | INTF_INTEN); \
+     * interrupted code, so put the bit back - but only in that case. \
+     * Doing it unconditionally also fires when the interrupt lands just \
+     * as the interrupted code enters Disable() (INTENA written, IDNestCnt \
+     * not yet raised), turning interrupts back on inside its critical \
+     * section. */ \
+    if (in_disable && !(custom_r(INTENAR) & INTF_INTEN)) \
+        custom_w(INTENA, INTF_SETCLR | INTF_INTEN); \
     /* Call Exec/ExitIntr */	\
     return TRUE;
 
