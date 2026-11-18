@@ -62,6 +62,19 @@ void cpu_Switch(regs_t *regs)
     /* Update tc_SPReg */
     task->tc_SPReg = (APTR)regs->a[7];
 
+    /*
+     * core_Switch() Remove()s/Enqueue()s ThisTask on TaskReady/TaskWait.
+     * Only Wait() gets here with a Disable() held. The Schedule() path
+     * (Permit(), Enable(), Reschedule(), ExitIntr preemption) arrives
+     * with INTEN set and the CPU at IPL 0 (Supervisor() does not raise
+     * it) or at the level of the interrupt that is exiting, so a higher
+     * level interrupt calling Signal() could edit the same list half-way
+     * through the Enqueue() and lose a task from both lists. Mask
+     * interrupts from here on; cpu_Dispatch() does the same before
+     * core_Dispatch() and the RTE to the new task restores its SR.
+     */
+    asm volatile ("ori.w #0x0700,%%sr\n" : : : "memory");
+
     core_Switch();
 }
 
