@@ -234,10 +234,19 @@ static int Init(LIBBASETYPEPTR LowLevelBase)
 static int Expunge(LIBBASETYPEPTR LowLevelBase)
 {
     D(bug("[lowlevel] %s()\n", __func__);)
+
+    /*
+     * The input handler's is_Data is the base. Removing the handler needs a
+     * DoIO(), which an expunge under Forbid() must not do, so stay.
+     */
+    if (LowLevelBase->ll_InputHandler)
+        return FALSE;
+
     LowLevelTimerClose(LowLevelBase);
     LowLevelInputClose(LowLevelBase);
     if (LowLevelBase->ll_UtilityBase)
         CloseLibrary(LowLevelBase->ll_UtilityBase);
+    return TRUE;
 }
 
 ADD2INITLIB(Init, 0);
