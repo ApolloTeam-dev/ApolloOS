@@ -18,23 +18,23 @@ static BOOL bufferExpand(Buffer *out, LONG size, APTR SysBase)
 
     if (newLength > out->mem)
     {
-	ULONG newSize = BUF_SIZE;
-	STRPTR tmp;
+        ULONG newSize = BUF_SIZE;
+        STRPTR tmp;
 
-	while (newSize < newLength)
-	    newSize += BUF_SIZE;
+        while (newSize < newLength)
+            newSize += BUF_SIZE;
 
-	if ((tmp = AllocMem(newSize + 1, MEMF_ANY)) == NULL)
-	    return FALSE;
+        if ((tmp = AllocMem(newSize + 1, MEMF_ANY)) == NULL)
+            return FALSE;
 
-	if (out->len > 0)
-	    CopyMem(out->buf, tmp, out->len);
+        if (out->len > 0)
+            CopyMem(out->buf, tmp, out->len);
 
-	if (out->mem > 0)
-	    FreeMem(out->buf, out->mem);
+        if (out->mem > 0)
+            FreeMem(out->buf, out->mem);
 
-	out->buf = tmp;
-	out->mem = newSize;
+        out->buf = tmp;
+        out->mem = newSize;
     }
     return TRUE;
 }
@@ -79,7 +79,7 @@ LONG bufferCopy(Buffer *in, Buffer *out, ULONG size, APTR SysBase)
 void bufferFree(Buffer *b, APTR SysBase)
 {
     if (b->mem <= 0)
-	return;
+        return;
 
     FreeMem(b->buf, b->mem + 1);
 
@@ -104,8 +104,8 @@ LONG bufferReadItem(STRPTR buf, ULONG size, Buffer *in, APTR DOSBase)
      */
     if (in->cur == in->len - 1)
     {
-    	D(bug("[bufferReadItem] Getting last character\n"));
-    	in->cur++;
+        D(bug("[bufferReadItem] Getting last character\n"));
+        in->cur++;
     }
 
     return ret;
@@ -114,7 +114,7 @@ LONG bufferReadItem(STRPTR buf, ULONG size, Buffer *in, APTR DOSBase)
 void bufferReset(Buffer *b)
 {
     if (b->mem > 0)
-	b->buf[0] = '\0';
+        b->buf[0] = '\0';
 
     b->len = 0;
     b->cur = 0;
