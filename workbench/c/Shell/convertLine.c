@@ -54,10 +54,12 @@ static LONG convertLoop(LONG (*convertItem)(ShellState *, Buffer *, Buffer *, BO
     return 0;
 }
 
-static LONG convertLoopRedir(ShellState *ss, Buffer *in, Buffer *out)
+static LONG convertLoopRedir(ShellState *ss, Buffer *in, Buffer *out,
+                             BOOL runCommand)
 {
     LONG c, p = 0, error, n = in->len;
     BOOL quoted = FALSE;
+    BOOL quietSwitch = FALSE;
 
     bufferReset(out);
 
@@ -65,6 +67,25 @@ static LONG convertLoopRedir(ShellState *ss, Buffer *in, Buffer *out)
     {
         DB2(bug("[convertLoopRedir] cur %u (%c)\n", in->cur, in->buf[in->cur]));
         c = in->buf[in->cur];
+
+        /* Run's leading redirections apply to Run itself. From the child
+         * command onward, retain the text for the background CLI to parse.
+         * QUIET is Run's optional switch, not the child command's name. */
+        if (runCommand && !quoted && c != ' ' && c != '\t' &&
+            c != '\r' && c != '\n' && c != '<' && c != '>')
+        {
+            if (!quietSwitch && n - in->cur >= 5 &&
+                strncasecmp(in->buf + in->cur, "QUIET", 5) == 0 &&
+                (n - in->cur == 5 ||
+                 strchr(" \t\r\n", in->buf[in->cur + 5]) != NULL))
+            {
+                bufferCopy(in, out, 5, SysBase);
+                quietSwitch = TRUE;
+                c = 0;
+                continue;
+            }
+            return bufferCopy(in, out, n - in->cur, SysBase);
+        }
 
         if (p == '*')
         {
@@ -209,7 +230,8 @@ static LONG readCommand(ShellState *ss, Buffer *in, Buffer *out)
    file. The first item of the command line is the command to be executed.
    This may be an alias, that is there is a Local LV_ALIAS variable that
    should be substituted for the command text. Aliasing only applies to
-   commands and not to options, for instance. Variables (set by SetEnv or Set)
+   commands and not to options, for instance. Run retains redirections after
+   its child command for the background CLI. Variables (set by SetEnv or Set)
    may be referenced by prepending a '$' to the variable name. */
 LONG convertLine(ShellState *ss, Buffer *in, Buffer *out, BOOL *haveCommand)
 {
@@ -275,7 +297,8 @@ LONG convertLine(ShellState *ss, Buffer *in, Buffer *out, BOOL *haveCommand)
 
     /* PASS 5: redirections */
     D(bug("[convertLine] Pass 5: cur %d len %d (%s)\n", in->cur, in->len, in->buf));
-    error = convertLoopRedir(ss, in, out);
+    error = convertLoopRedir(ss, in, out,
+                            strcasecmp(FilePart(ss->command + 2), "Run") == 0);
     if (error)
     {
         D(bug("[convertLine] Pass 5: Error %lu parsing redirect\n", error));

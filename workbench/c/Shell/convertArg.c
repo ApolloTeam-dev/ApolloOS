@@ -25,7 +25,7 @@ LONG convertArg(ShellState *ss, Buffer *in, Buffer *out, BOOL *quoted)
     }
 
     if (!*quoted && *p == '<' && *q == '>') /* Run <>NIL: ... */
-        return convertRedir(ss, in, out);
+        return bufferCopy(in, out, 1, SysBase); /* Defer I/O to the redirection pass. */
 
     for (; *q != ss->ket && *q != ss->dollar && *q != '\0'; ++q)
     {
@@ -35,7 +35,7 @@ LONG convertArg(ShellState *ss, Buffer *in, Buffer *out, BOOL *quoted)
             case '"':
             case ' ':
                 if (*p == '<') /* input redirection */
-                    return convertRedir(ss, in, out);
+                    return bufferCopy(in, out, 1, SysBase);
 
                 bufferAppend(s, q - s, out, SysBase);
                 return 0;
