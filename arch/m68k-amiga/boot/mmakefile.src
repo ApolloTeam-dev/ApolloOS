@@ -142,7 +142,7 @@ ifeq ($(APOLLOROM),UAE)
 	KDEVS   := timer input keyboard console gameport audio
 	KHNDLRS := con afs ram
 	KHIDDS  := amigakbd amigamouse amigavideo ata_gayle gfx hiddclass keyboard mouse p96gfx
-	KRSRCS  := kernel processor task lddemon dosboot cia potgo disk FileSystem 
+	KRSRCS  := battclock kernel processor task lddemon dosboot cia potgo disk FileSystem
 	KHOOKS  := diag romboot
 endif
 
