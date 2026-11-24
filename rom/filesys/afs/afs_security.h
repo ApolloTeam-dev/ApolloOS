@@ -20,7 +20,7 @@ struct DosPacket;
 #define AFS_ACCESS_EXECUTE      4
 #define AFS_ACCESS_DELETE       8
 
-#ifdef __AROS__
+#if defined(__AROS__) && AFS_SECURITY
 #include "os.h"
 #include "afshandler.h"
 #include "volumes.h"

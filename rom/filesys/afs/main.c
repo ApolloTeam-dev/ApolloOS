@@ -392,8 +392,10 @@ LONG AFS_work(struct ExecBase *SysBase)
             if (volume->cachepending && dp->dp_Type != ACTION_END
                     && dp->dp_Type != ACTION_FREE_LOCK
                     && dp->dp_Type != ACTION_IS_FILESYSTEM
+#if AFS_SECURITY
                     && dp->dp_Type != ACTION_IS_SECFS
                     && dp->dp_Type != ACTION_GET_SECFS_VERSION
+#endif
                     && dp->dp_Type != ACTION_DISK_INFO) {
                 replypkt2(dp, DOSFALSE, ERROR_NO_DISK);
                 continue;
@@ -418,12 +420,14 @@ LONG AFS_work(struct ExecBase *SysBase)
             case ACTION_IS_FILESYSTEM:
                 ok = TRUE;
                 break;
+#if AFS_SECURITY
             case ACTION_IS_SECFS:
                 ok = afsSecIsActive(handler) ? DOSTRUE : DOSFALSE;
                 break;
             case ACTION_GET_SECFS_VERSION:
                 ok = secFS_API_VERSION;
                 break;
+#endif
             case ACTION_INHIBIT:
                 res2 = inhibit(handler, volume, dp->dp_Arg1);
                 goto res2_reply;

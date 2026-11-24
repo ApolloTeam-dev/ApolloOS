@@ -3,6 +3,8 @@
 include $(SRCDIR)/config/aros.cfg
 
 AFS_INLINE_REQUESTERS ?= 1
+# muFS permissions need security.library, which ApolloOS does not have
+AFS_SECURITY ?= 0
 -include $(SRCDIR)/arch/$(CPU)-$(ARCH)/filesys/afs/make.opts
 
 FILES := main \
@@ -30,6 +32,7 @@ endif
 USER_CPPFLAGS := \
                -DUSE_EXEC_DEBUG \
 	       -DAFS_INLINE_REQUESTERS=$(AFS_INLINE_REQUESTERS) \
+	       -DAFS_SECURITY=$(AFS_SECURITY) \
 	       -D__INTUITION_NOLIBBASE__ \
 	       -DADATE="\"$(shell date '+%d.%m.%Y')\""
 USER_LDFLAGS := -static

@@ -7,7 +7,7 @@
           access decisions, creator inheritance for new objects).
 */
 
-#ifdef __AROS__
+#if defined(__AROS__) && AFS_SECURITY
 
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -214,4 +214,4 @@ ULONG afsSecSetOwner(struct AFSBase *afsbase, struct AfsHandle *dirah, CONST_STR
     return writeHeader(afsbase, dirah->volume, bb);
 }
 
-#endif /* __AROS__ */
+#endif /* __AROS__ && AFS_SECURITY */
