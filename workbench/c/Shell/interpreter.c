@@ -3,6 +3,7 @@
     $Id$
  */
 
+#include <proto/dos.h>
 #include <proto/exec.h>
 
 #include "Shell.h"
@@ -19,17 +20,19 @@ void initDefaultInterpreterState(ShellState *ss)
 
     for (i =  0; i < MAXARGS; ++i)
     {
-	struct SArg *a = ss->args + i;
+        struct SArg *a = ss->args + i;
 
-	a->namelen  = 0;
-	a->name[0]  = '\0';
-	a->len      = 0;
-	a->def      = 0;
-	a->deflen   = 0;
-	a->type     = NORMAL;
+        a->namelen  = 0;
+        a->name[0]  = '\0';
+        a->len      = 0;
+        a->def      = 0;
+        a->deflen   = 0;
+        a->type     = NORMAL;
 
-	ss->arg[i]  = 0;
+        ss->arg[i]  = 0;
     }
+
+    ss->arg_rd = NULL;
 
     ss->bra    = '<';
     ss->ket    = '>';
@@ -45,10 +48,10 @@ LONG pushInterpreterState(ShellState *ss)
 
     if (tmp_ss)
     {
-	*tmp_ss = *ss;
-	initDefaultInterpreterState(ss);
-	ss->stack = tmp_ss;
-	return 0;
+        *tmp_ss = *ss;
+        initDefaultInterpreterState(ss);
+        ss->stack = tmp_ss;
+        return 0;
     }
 
     return ERROR_NO_FREE_STORE;
@@ -62,17 +65,20 @@ void popInterpreterState(ShellState *ss)
 
     for (i = 0; i < ss->argcount; ++i)
     {
-	a = ss->args + i;
+        a = ss->args + i;
 
-	if (a->def)
-	    FreeMem((APTR) a->def, a->deflen + 1);
+        if (a->def)
+            FreeMem((APTR) a->def, a->deflen + 1);
     }
+
+    if (ss->arg_rd)
+        FreeDosObject(DOS_RDARGS, ss->arg_rd);
 
     if (tmp_ss)
     {
-	*ss = *tmp_ss;
-	FreeMem(tmp_ss, sizeof(*ss));
+        *ss = *tmp_ss;
+        FreeMem(tmp_ss, sizeof(*ss));
     }
     else
-	initDefaultInterpreterState(ss);
+        initDefaultInterpreterState(ss);
 }

@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 1995-2011, The AROS Development Team. All rights reserved.
+    Copyright (C) 1995-2020, The AROS Development Team. All rights reserved.
     $Id$
  */
 
@@ -17,15 +17,21 @@ static BOOL checkPipe(STRPTR pchar, STRPTR mchar, STRPTR in, LONG inlen)
 {
    LONG c, n;
    BOOL quoted = FALSE;
+    BOOL escaped = FALSE;
    int mcharn = strlen(mchar), pcharn = strlen(pchar);
    
    for (n = 0; n < inlen; n++)
    {
         c = in[n];
-        if (c == '"')
+        if (c == '"' && !escaped)
         {
             quoted = !quoted;
         }
+
+        if (c == '*' && !escaped)
+            escaped = TRUE;
+        else
+            escaped = FALSE;
 
         if (quoted)
             continue;
@@ -45,6 +51,7 @@ LONG readLine(ShellState *ss, struct CommandLineInterface *cli, Buffer *out, WOR
     STRPTR buf = out->buf; /* pre-allocated by caller */
     BOOL comment = FALSE;
     BOOL quoted = FALSE;
+    BOOL escaped = FALSE;
     LONG c, i, j, len;
     TEXT pchar[3], mchar[3];
 
@@ -62,41 +69,47 @@ LONG readLine(ShellState *ss, struct CommandLineInterface *cli, Buffer *out, WOR
 
     for (i = 0, j = 0; i < LINE_MAX; ++i)
     {
-	c = FGetC(fh);
+        c = FGetC(fh);
 
-	if (c == ENDSTREAMCH)
-	    break;
+        if (c == ENDSTREAMCH)
+            break;
 
-        if (c == '"')
+        if (c == '"' && !escaped)
              quoted = !quoted;
  
+        if (c == '*' && !escaped)
+            escaped = TRUE;
+        else
+            escaped = FALSE;
+ 
         if (!quoted && c == ';' && c != mchar[0] ) /* comment line */
-	{
-	    comment = TRUE;
-	    continue;
-	}
-	else if (c == '\n') /* end of line */
-	{
-	    comment = FALSE;
+        {
+            comment = TRUE;
+            continue;
+        }
+        else if (c == '\n') /* end of line */
+        {
+            comment = FALSE;
 
-	    /* '+' continuation */
-	    if (j > 0 && buf[j-1]=='+') {
-	        buf[j-1]=c;
-	        continue;
+            /* '+' continuation */
+            /* requires "<space>+", validated with AmigaOS 3.1/2.1 Shell */
+            if (j > 1 && buf[j-1] == '+' && buf[j-2] == ' ') {
+                buf[j-1] = c;
+                continue;
             }
-	}
-	else if (comment)
-	    continue;
+        }
+        else if (comment)
+            continue;
 
-	buf[j++] = c;
+        buf[j++] = c;
 
-	if (c == '\n') /* end of line */
-	    break;
+        if (c == '\n') /* end of line */
+            break;
     }
 
     if (i >= LINE_MAX) {
         D(bug("[Shell] ERROR_LINE_TOO_LONG\n"));
-	return ERROR_LINE_TOO_LONG;
+        return ERROR_LINE_TOO_LONG;
     }
 
     buf[j] = '\0';
@@ -110,4 +123,3 @@ LONG readLine(ShellState *ss, struct CommandLineInterface *cli, Buffer *out, WOR
     D(bug("[Shell] readLine %d%s: %s", j, *moreLeft ?  "" : "'", buf));
     return 0;
 }
-

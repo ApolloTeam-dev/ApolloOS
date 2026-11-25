@@ -7,7 +7,7 @@
 #define SHELL_H 1
 
 #include <dos/dosextens.h>
-#include <dos/dos.h>	/* for BPTR		*/
+#include <dos/dos.h>    /* for BPTR             */
 
 #include "buffer.h"
 
@@ -30,7 +30,7 @@
 
 struct SArg
 {
-    TEXT   name[MAXARGLEN];
+    TEXT   name[MAXARGLEN + 1];
     LONG   namelen;
     LONG   len;
     IPTR   def;
@@ -40,28 +40,28 @@ struct SArg
 
 typedef struct _ShellState
 {
-    BPTR	newIn;
-    BPTR	newOut;
-    BPTR	oldIn;
-    BPTR	oldOut;
+    BPTR        newIn;
+    BPTR        newOut;
+    BPTR        oldIn;
+    BPTR        oldOut;
 
-    TEXT	command[FILE_MAX + 2];	/* command buffer */
+    TEXT        command[FILE_MAX + 2];  /* command buffer */
 
-    BPTR	oldHomeDir;	/* shared lock on program file's directory */
+    BPTR        oldHomeDir;     /* shared lock on program file's directory */
 
-    LONG	cliNumber;
+    LONG        cliNumber;
 
-    LONG	argcount;	/* script args count */
-    struct SArg	args[MAXARGS];	/* args definitions */
-    IPTR	arg[MAXARGS];	/* args values */
-    struct RDArgs *arg_rd;	/* Current RDArgs return state */
+    LONG        argcount;       /* script args count */
+    struct SArg args[MAXARGS];  /* args definitions */
+    IPTR        arg[MAXARGS];   /* args values */
+    struct RDArgs *arg_rd;      /* Current RDArgs return state */
 
-    TEXT	bra, ket, dollar, dot;
+    TEXT        bra, ket, dollar, dot;
     TEXT        mchar0, pchar0;
 
     struct _ShellState *stack;
 
-    ULONG	flags;		/* DOS/CliInit*() flags cache */
+    ULONG       flags;          /* DOS/CliInit*() flags cache */
 
     APTR        ss_DOSBase;
     APTR        ss_SysBase;
@@ -76,10 +76,10 @@ typedef struct _ShellState
  *           redirections, incorporating embedded commands, taking care of
  *           variable references and aliases.
  *
- * Input:    ShellState		*ss           --  this state
- *	     Buffer		*in           --  input string
- *           Buffer		*out          --  output command string
- *           BOOL		*haveCommand  --  true if line have command
+ * Input:    ShellState         *ss           --  this state
+ *           Buffer             *in           --  input string
+ *           Buffer             *out          --  output command string
+ *           BOOL               *haveCommand  --  true if line have command
  *
  * Output:   LONG  --  error code or 0 if everything went OK
  */
@@ -107,10 +107,10 @@ LONG readLine(ShellState *ss, struct CommandLineInterface *cli, Buffer *out, BOO
  *
  * Action:   Parse a command line and do consistency checks
  *
- * Input:    ShellState		     *ss    --  this state
- *           Buffer		     *in    --  the input buffer
- *           Buffer		     *out   --  the result will be stored here
- *           BOOL		      echo  --  true if command echoed
+ * Input:    ShellState              *ss    --  this state
+ *           Buffer                  *in    --  the input buffer
+ *           Buffer                  *out   --  the result will be stored here
+ *           BOOL                     echo  --  true if command echoed
  *
  * Output:   LONG --  DOS error code
  */
@@ -121,7 +121,7 @@ LONG checkLine(ShellState *ss, Buffer *in, Buffer *out, BOOL echo);
  * Action:   Deallocate file resources used for redirecion and reinstall
  *           standard input and output streams.
  *
- * Input:    ShellState	*ss  --  this state
+ * Input:    ShellState *ss  --  this state
  *
  * Output:   --
  */
@@ -132,7 +132,7 @@ void releaseFiles(ShellState *ss);
  * Action:   Execute a commandfile and then perform standard shell user
  *           interaction.
  *
- * Input:    ShellState	    *is           --  this state
+ * Input:    ShellState     *is           --  this state
  *
  * Output:   LONG  --  error code
  */
@@ -143,7 +143,7 @@ LONG interact(ShellState *ss);
  *
  * Action:   Release resources allocated in the state
  *
- * Input:    ShellState	    *ss  --  this state
+ * Input:    ShellState     *ss  --  this state
  *
  * Output:   --
  */
@@ -153,7 +153,7 @@ void Redirection_release(ShellState *ss);
  *
  * Action:   Initialize a state structure
  *
- * Input:    ShellState	    *ss  --  this state
+ * Input:    ShellState     *ss  --  this state
  *
  * Output:   LONG  --  DOS error code
  */
@@ -176,7 +176,7 @@ void setPath(ShellState *ss, BPTR lock);
  *
  * Action:   Print the prompt to indicate that user input is viable.
  *
- * Input:    ShellState	    *ss  --  this state
+ * Input:    ShellState     *ss  --  this state
  *
  * Output:   --
  */
