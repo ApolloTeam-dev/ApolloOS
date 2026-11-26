@@ -5,6 +5,7 @@ extern struct ReqToolsBase  	*ReqToolsBase;
 extern struct Device 		*ConsoleDevice;
 extern struct IOStdReq		iorequest;
 extern Class			*ButtonImgClass;
+extern struct Library		*DOS64Base;	/* NULL when not installed */
 
 /* On AROS don't define the libbases because that will prevent autoinit */
 #if !defined(__RT_DEFINEVARS) || !defined(__AROS__)

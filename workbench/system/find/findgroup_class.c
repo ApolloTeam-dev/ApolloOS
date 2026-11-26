@@ -4,6 +4,7 @@
 */
 
 #include <proto/dos.h>
+#include <proto/dos64.h>
 #include <proto/muimaster.h>
 #include <proto/intuition.h>
 #include <proto/asl.h>
@@ -18,6 +19,8 @@
 //#define DEBUG 1
 #include <aros/debug.h>
 #include <zune/customclasses.h>
+
+#include <dos/dos64.h>
 
 #include <stdio.h>
 
@@ -46,12 +49,47 @@ struct Listentry
     STRPTR fullname;
     ULONG namebuflen;
     struct FileInfoBlock fib;
+    UQUAD size;
 };
 
 static struct Hook list_display_hook, list_constr_hook, list_destr_hook, list_compare_hook;
 
 
 // =======================================================================================
+
+// Decimal string of a UQUAD, end-aligned in the buffer
+static TEXT *UQUAD2string(UQUAD value, TEXT *buffer, int buflen)
+{
+    buffer[--buflen] = '\0';
+
+    do
+    {
+        buffer[--buflen] = '0' + (value % 10);
+        value /= 10;
+    } while (value);
+
+    return buffer + buflen;
+}
+
+// The size of a file; a clamped 32 bit size is asked again from dos64
+static UQUAD file_size(CONST_STRPTR name, struct FileInfoBlock *fib)
+{
+    UQUAD size = (ULONG)fib->fib_Size;
+
+    if (size == 0xFFFFFFFF && DOS64Base != NULL)
+    {
+        struct FileInfoBlock *fib64 = AllocDosObject64(DOS64_FIB, NULL);
+
+        if (fib64 != NULL)
+        {
+            if (ExamineName64(name, fib64, NULL))
+                size = fib64->fib_Size64;
+            FreeDosObject64(DOS64_FIB, fib64);
+        }
+    }
+
+    return size;
+}
 
 static void display_doserror(Object *app, ULONG error)
 {
@@ -170,6 +208,7 @@ AROS_UFH3(APTR, list_constr_func,
             CopyMem(li->fullname, newentry->fullname, buflen);
         }
         newentry->fib = li->fib;
+        newentry->size = li->size;
     }
     return newentry;
 
@@ -202,9 +241,10 @@ AROS_UFH3S(LONG, list_display_func,
 
     if (li)
     {
-        static TEXT protbuf[8], sizebuf[20];
+        static TEXT protbuf[8], sizebuf[24];
         static TEXT datebuf[20], timebuf[20];
         struct DateTime dt;
+        TEXT *sizestr;
 
         // Protection bits
         protbuf[0] = li->fib.fib_Protection & FIBF_SCRIPT  ? 's' : '-';
@@ -219,7 +259,7 @@ AROS_UFH3S(LONG, list_display_func,
         protbuf[7] = '\0';
 
         // Size
-        snprintf(sizebuf, sizeof sizebuf, "%lu", (long unsigned int)li->fib.fib_Size);
+        sizestr = UQUAD2string(li->size, sizebuf, sizeof sizebuf);
 
         // Date
         datebuf[0] = '\0';
@@ -233,7 +273,7 @@ AROS_UFH3S(LONG, list_display_func,
         DateToStr(&dt);
 
         *array++ = li->fullname;
-        *array++ = sizebuf;
+        *array++ = sizestr;
         *array++ = protbuf;
         *array++ = datebuf;
         *array++ = timebuf;
@@ -723,6 +763,7 @@ IPTR FindGroup__MUIM_Process_Process(Class *CLASS, Object *self, struct MUIP_Pro
                         {
                             entry->fullname = StrDup(anchorpath->ap_Buf);
                             CopyMem(&anchorpath->ap_Info, &entry->fib,  sizeof (entry->fib));
+                            entry->size = file_size(anchorpath->ap_Buf, &entry->fib);
 
                             // we must use PushMethod because we are in a sub process
                             methodid2 = DoMethod(_app(self), MUIM_Application_PushMethod,

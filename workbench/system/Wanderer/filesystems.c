@@ -402,6 +402,28 @@ static BOOL deleteFile(char *file)
 }
 ///
 
+///fileSize64()
+/* The size of a file, the real one when the 32 bit size was clamped */
+static UQUAD fileSize64(CONST_STRPTR name, ULONG size)
+{
+    UQUAD full = size;
+
+    if ((size == 0xFFFFFFFF) && (DOS64Base != NULL))
+    {
+        struct FileInfoBlock *fib64 = AllocDosObject64(DOS64_FIB, NULL);
+
+        if (fib64 != NULL)
+        {
+            if (ExamineName64(name, fib64, NULL))
+                full = fib64->fib_Size64;
+            FreeDosObject64(DOS64_FIB, fib64);
+        }
+    }
+
+    return full;
+}
+///
+
 ///copyFile()
 static BOOL copyFile(APTR pool, char *file, char *destpath,
     struct FileInfoBlock *fileinfo, struct Hook *displayHook,
@@ -411,7 +433,7 @@ static BOOL copyFile(APTR pool, char *file, char *destpath,
     char   *to;
     LONG   clen, wlen;
     LONG bufferlen = COPYLEN;
-    LONG         filelen = 0;
+    UQUAD        filelen = 0;
     BOOL   quit = TRUE;
     BPTR   in, out;
     BYTE   *buffer;
@@ -421,8 +443,8 @@ static BOOL copyFile(APTR pool, char *file, char *destpath,
     if (display != NULL) display->actlen = 0;
     if (fileinfo) 
     {
-        filelen = fileinfo->fib_Size;
-        if (fileinfo->fib_Size <= COPYLEN) bufferlen = fileinfo->fib_Size;
+        filelen = fileSize64(file, (ULONG) fileinfo->fib_Size);
+        if (filelen <= COPYLEN) bufferlen = (LONG) filelen;
         if (bufferlen < 8192) bufferlen = 8192;
         fib = fileinfo;
     }
@@ -440,8 +462,8 @@ static BOOL copyFile(APTR pool, char *file, char *destpath,
                     return TRUE;
                 }
                 UnLock(nLock);
-                filelen = fib->fib_Size;
-                if (fib->fib_Size <= COPYLEN) bufferlen = fib->fib_Size;
+                filelen = fileSize64(file, (ULONG) fib->fib_Size);
+                if (filelen <= COPYLEN) bufferlen = (LONG) filelen;
                 if (bufferlen < 8192) bufferlen = 8192;
             }
         }
@@ -643,7 +665,7 @@ static BOOL actionDir(APTR pool, ULONG flags, char *source, char *dest,
                                         askDisplay.spath = FIB->fib_FileName;
                                         askDisplay.file = NULL;
                                         askDisplay.type = 0;
-                                        askDisplay.filelen = FIB->fib_Size;
+                                        askDisplay.filelen = (ULONG) FIB->fib_Size;
                                         if (dmode != OPMODE_ALL) dmode = CallHook(opModes->askhook, (Object *) &askDisplay, NULL);
                                         if ((dmode == OPMODE_ALL) || (dmode == OPMODE_YES))
                                         {
@@ -709,7 +731,7 @@ static BOOL actionDir(APTR pool, ULONG flags, char *source, char *dest,
                                 if (dHook) 
                                 {
                                     display.file = FIB->fib_FileName;
-                                    display.filelen = FIB->fib_Size;
+                                    display.filelen = fileSize64(FIB->fib_FileName, (ULONG) FIB->fib_Size);
                                     display.spath = source;
                                     display.dpath = dest;
                                     display.flags = (flags &= ~ACTION_UPDATE);
@@ -788,7 +810,7 @@ static BOOL actionDir(APTR pool, ULONG flags, char *source, char *dest,
                                         askDisplay.spath = source;
                                         askDisplay.file = FIB->fib_FileName;
                                         askDisplay.type = 0;
-                                        askDisplay.filelen = FIB->fib_Size;
+                                        askDisplay.filelen = (ULONG) FIB->fib_Size;
                                         if (dmode != OPMODE_ALL) dmode = CallHook(opModes->askhook, (Object *) &askDisplay, NULL);
                                         if ((dmode == OPMODE_ALL) || (dmode == OPMODE_YES))
                                         {

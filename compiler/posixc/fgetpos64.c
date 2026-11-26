@@ -12,6 +12,8 @@
     NAME */
 #include <stdio.h>
 
+#include "__stdio.h"
+
 	int fgetpos64 (
 
 /*  SYNOPSIS */
@@ -51,7 +53,7 @@
 	return -1;
     }
 
-    *pos = ftell (stream);
+    *pos = __ftello64 (stream);
 
     if ( *pos < 0L )
     {

@@ -1,6 +1,5 @@
 /*
-    Copyright © 1995-2010, The AROS Development Team. All rights reserved.
-    $Id$
+    Copyright (C) 1995-2026, The AROS Development Team. All rights reserved.
 */
 
 /*
@@ -58,6 +57,7 @@ typedef enum
 	vr_BlockUsedTwice,
 	vr_Aborted,
 	vr_BlockOutsideDisk,
+	vr_WriteError,
 } ValidationResult;
 
 typedef enum
@@ -111,7 +111,7 @@ ValidationResult collect_directory_blocks(DiskStructure *ds, ULONG ext);
 /*
  * record bitmap back to disk
  */
-void record_bitmap(DiskStructure* ds);
+ValidationResult record_bitmap(DiskStructure* ds);
 
 /*
  * call to allocate bitmap in disk structure.
@@ -130,7 +130,6 @@ BitmapResult bm_mark_block(DiskStructure *ds, ULONG block);
  * 
  */
 void bm_add_bitmap_block(DiskStructure *ds, ULONG blk);
-void bm_add_bitmap_extension_block(DiskStructure *ds, ULONG blk);
 
 #endif /* __AROS__ */
 #endif /* VALIDATOR_H */

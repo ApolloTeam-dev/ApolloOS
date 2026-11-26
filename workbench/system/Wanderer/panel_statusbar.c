@@ -103,7 +103,7 @@ const UBYTE MSG_MEM_K[] = "KB";
 const UBYTE MSG_MEM_B[] = "Bytes";
 
 ///FmtSizeToString()
-static void FmtSizeToString(UBYTE *buf, ULONG num)
+static void FmtSizeToString(UBYTE *buf, UQUAD num)
 {
   UQUAD d;
   const UBYTE *ch;
@@ -113,38 +113,38 @@ static void FmtSizeToString(UBYTE *buf, ULONG num)
     ULONG dec;
   } array =
   {
-    num,
+    (ULONG)num,
     0
   };
 
   if (num >= 1073741824)
   {
     //Gigabytes
-    array.val = num >> 30;
-    d = ((UQUAD)num * 10 + 536870912) / 1073741824;
-    array.dec = d % 10;
+    array.val = (ULONG)(num >> 30);
+    d = (num * 10 + 536870912) / 1073741824;
+    array.dec = (ULONG)(d % 10);
     ch = MSG_MEM_G;
   }
   else if (num >= 1048576)
   {
     //Megabytes
-    array.val = num >> 20;
-    d = ((UQUAD)num * 10 + 524288) / 1048576;
-    array.dec = d % 10;
+    array.val = (ULONG)(num >> 20);
+    d = (num * 10 + 524288) / 1048576;
+    array.dec = (ULONG)(d % 10);
     ch = MSG_MEM_M;
   }
   else if (num >= 1024)
   {
     //Kilobytes
-    array.val = num >> 10;
+    array.val = (ULONG)(num >> 10);
     d = (num * 10 + 512) / 1024;
-    array.dec = d % 10;
+    array.dec = (ULONG)(d % 10);
     ch = MSG_MEM_K;
   }
   else
   {
     //Bytes
-    array.val = num;
+    array.val = (ULONG)num;
     array.dec = 0;
     d = 0;
     ch = MSG_MEM_B;
@@ -204,7 +204,7 @@ HOOKPROTO(panelStatusBar__HookFunc_UpdateStatusFunc, void, APTR *obj, APTR param
         UBYTE size_str[256];
 
         int files = 0, dirs = 0, hidden = 0;
-        ULONG size = 0;
+        UQUAD size = 0;
 
         GET(data->iwd_IconListObj, MUIA_Family_List, &iconList);
         if (iconList)
@@ -222,7 +222,7 @@ HOOKPROTO(panelStatusBar__HookFunc_UpdateStatusFunc, void, APTR *obj, APTR param
                         files += 1;
                         if (icon->ie_FileInfoBlock)
                         {
-                            size += icon->ie_FileInfoBlock->fib_Size;
+                            size += icon->ie_FileSize64;
 D(bug("[IW.statusbar] %s: '%s' FIB Size = %d bytes\n", __PRETTY_FUNCTION__, icon->ie_IconNode.ln_Name, icon->ie_FileInfoBlock->fib_Size));
                         }
                     }

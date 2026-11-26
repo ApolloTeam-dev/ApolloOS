@@ -28,6 +28,7 @@ struct __sFILE
 #define __STDCIO_STDIO_DONTCLOSE   0x0040L
 #define __STDCIO_STDIO_DONTFREE    0x0080L
 #define __STDCIO_STDIO_FLUSHONREAD 0x0100L
+#define __STDCIO_STDIO_FS64        0x0200L   /* Filesystem handles 64-bit packets */
 #define __STDCIO_STDIO_RDWR      __STDCIO_STDIO_WRITE | __STDCIO_STDIO_READ
 
 #endif /* ___STDIO_H */

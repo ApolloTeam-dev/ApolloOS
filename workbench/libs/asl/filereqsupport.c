@@ -9,11 +9,13 @@
 #include <proto/intuition.h>
 #include <proto/graphics.h>
 #include <proto/utility.h>
+#include <proto/dos64.h>
 #include <exec/memory.h>
 #include <dos/dos.h>
 #include <dos/exall.h>
 #include <dos/dosasl.h>
 #include <dos/datetime.h>
+#include <dos/dos64.h>
 #include <dos/filehandler.h>
 #include <intuition/gadgetclass.h>
 #include <stdio.h>
@@ -40,6 +42,29 @@
 static WORD FRCompareDirectoryNodes(struct IntFileReq *ifreq, struct ASLLVFileReqNode *node1,
                                     struct ASLLVFileReqNode *node2, struct AslBase_intern *AslBase);
 
+
+/*****************************************************************************************/
+
+/* The real size of a file whose 32 bit size was clamped, name is relative to dirlock */
+static UQUAD FRFileSize64(BPTR dirlock, CONST_STRPTR name, UQUAD size)
+{
+    if (DOS64Base != NULL)
+    {
+        struct FileInfoBlock *fib64 = AllocDosObject64(DOS64_FIB, NULL);
+
+        if (fib64 != NULL)
+        {
+            BPTR oldcd = CurrentDir(dirlock);
+
+            if (ExamineName64(name, fib64, NULL))
+                size = fib64->fib_Size64;
+            CurrentDir(oldcd);
+            FreeDosObject64(DOS64_FIB, fib64);
+        }
+    }
+
+    return size;
+}
 
 /*****************************************************************************************/
 
@@ -517,6 +542,11 @@ BOOL FRGetDirectory(STRPTR path, struct LayoutData *ld, struct AslBase_intern *A
                         struct DateTime dt;
                         char            datebuffer[LEN_DATSTRING];
                         char            timebuffer[LEN_DATSTRING];
+                        UQUAD           size = (ULONG)fib->fib_Size;
+
+                        /* a clamped size of a file: ask dos64.library for the real one */
+                        if (fib->fib_DirEntryType <= 0 && size == 0xFFFFFFFF)
+                            size = FRFileSize64(lock, fib->fib_FileName, size);
 
                         if (fib->fib_FileName[0])
                         {
@@ -531,7 +561,7 @@ BOOL FRGetDirectory(STRPTR path, struct LayoutData *ld, struct AslBase_intern *A
                             node->text[1] = GetString(MSG_FILEREQ_LV_DRAWER, GetIR(ifreq)->ir_Catalog, AslBase);
                             node->dontfreetext |= (1 << 1);
                         } else {
-                            node->text[1] = PooledUIntegerToString(fib->fib_Size,
+                            node->text[1] = PooledUIntegerToString(size,
                                                                   ld->ld_IntReq->ir_MemPool,
                                                                   AslBase);
 
@@ -561,7 +591,7 @@ BOOL FRGetDirectory(STRPTR path, struct LayoutData *ld, struct AslBase_intern *A
 
                         node->userdata = ld;
                         node->date     = fib->fib_Date;
-                        node->filesize = fib->fib_Size;
+                        node->filesize = size;
                         node->type     = ASLLV_FRNTYPE_DIRECTORY;
                         node->subtype  = fib->fib_DirEntryType;
 

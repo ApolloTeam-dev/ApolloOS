@@ -106,6 +106,7 @@ struct IconEntry
 
     struct DiskObject           *ie_DiskObj;                     /* The icons disk objects */
     struct FileInfoBlock        *ie_FileInfoBlock;
+    UQUAD                       ie_FileSize64;                  /* Full file size, FIB size is clamped to 32 bits */
 
     LONG                        ie_IconX,                       /* Top Left Co-ords of Icons "AREA" */
                                 ie_IconY,

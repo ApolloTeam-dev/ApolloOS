@@ -205,6 +205,10 @@ SAVEDS ASM struct ReqToolsBase *RTFuncs_Open(REGPARAM(a6, struct ReqToolsBase *,
     if(LocaleBase == NULL)
 	return NULL;
 
+    /* optional */
+    if(DOS64Base == NULL)
+	DOS64Base = OpenLibrary("dos64.library", 51);
+
     D(bug("reqtools.library: Inside libopen func. Libraries opened successfully.\n"));
 
     if (ConsoleDevice == NULL)
@@ -308,6 +312,7 @@ SAVEDS ASM BPTR RTFuncs_Expunge(REGPARAM(a6, struct ReqToolsBase *, RTBase))
     CloseLibrary((struct Library *)LocaleBase);
     CloseLibrary(GadToolsBase);
     CloseLibrary(LayersBase);
+    if (DOS64Base) CloseLibrary(DOS64Base);
 
     D(bug("reqtools.library: Inside libexpunge func. Freeing libbase.\n"));
 

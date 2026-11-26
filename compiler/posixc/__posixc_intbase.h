@@ -31,6 +31,9 @@ struct PosixCIntBase
 {
     struct PosixCBase PosixCBase;
 
+    /* __optionallibs.c */
+    struct Library           *PosixCDOS64Base;      /* dos64.library, for 64-bit file I/O */
+
     /* common */
     APTR internalpool;
     int32_t flags;

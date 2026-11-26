@@ -9,6 +9,7 @@
 #include <proto/intuition.h>
 #include <proto/utility.h>
 #include <proto/dos.h>
+#include <proto/dos64.h>
 #include <proto/icon.h>
 #include <proto/alib.h>
 
@@ -37,11 +38,16 @@ static struct DiskObject *dobj;
 static struct RDArgs *rda;
 static IPTR args[ARG_COUNT];
 
+// dos64.library, NULL when it is not installed
+struct Library *DOS64Base;
+
 int main(int argc, char **argv)
 {
     STRPTR path = NULL;
     STRPTR pattern = NULL;
     STRPTR contents = NULL;
+
+    DOS64Base = OpenLibrary("dos64.library", 51);
 
     dobj = GetDiskObject("PROGDIR:Find");
 
@@ -115,5 +121,6 @@ static void cleanup_exit(CONST_STRPTR str)
 
     if (dobj) FreeDiskObject(dobj);
     if (rda) FreeArgs(rda);
+    if (DOS64Base) CloseLibrary(DOS64Base);
     exit(0);
 }

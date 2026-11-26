@@ -156,7 +156,7 @@
             {
                 ac->an_Lock = DupLock(origdir);
 
-                if (!ac->an_Lock)
+                if (!ac->an_Lock && origdir)
                 {
                     error = IoErr();
                     goto done;

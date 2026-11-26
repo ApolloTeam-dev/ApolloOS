@@ -26,6 +26,8 @@
 #include <libraries/mui.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
+#include <dos/dos64.h>
+#include <proto/dos64.h>
 #if defined(__AMIGA__) && !defined(__PPC__)
 #define NO_INLINE_STDARG
 #endif
@@ -74,9 +76,9 @@ struct dCopyStruct
     char  *file;
     APTR            userdata;
     ULONG           flags;
-    ULONG           filelen;
+    UQUAD           filelen;
     ULONG           actlen;
-    ULONG           totallen;
+    UQUAD           totallen;
     UWORD           type;
     unsigned int    difftime;
 };

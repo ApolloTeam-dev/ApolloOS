@@ -8,12 +8,16 @@
 #include <exec/memory.h>
 #include <dos/exall.h>
 #include <dos/datetime.h>
+#include <dos/dos64.h>
 #include <clib/alib_protos.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
+#include <proto/dos64.h>
 #include <proto/intuition.h>
 #include <proto/utility.h>
 #include <proto/muimaster.h>
+
+#include <aros/symbolsets.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -26,6 +30,90 @@
 #include "locale.h"
 
 extern struct Library *MUIMasterBase;
+
+/* dos64.library, NULL when it is not installed */
+struct Library *DOS64Base;
+
+static int Dirlist_OpenDOS64(void)
+{
+    DOS64Base = OpenLibrary("dos64.library", 51);
+
+    return TRUE;
+}
+
+static void Dirlist_CloseDOS64(void)
+{
+    if (DOS64Base != NULL)
+        CloseLibrary(DOS64Base);
+    DOS64Base = NULL;
+}
+
+ADD2INIT(Dirlist_OpenDOS64, 0);
+ADD2EXIT(Dirlist_CloseDOS64, 0);
+
+/* Decimal string of a UQUAD, end-aligned in the buffer */
+static UBYTE *UQUAD2string(UQUAD value, UBYTE *buffer, int buflen)
+{
+    UWORD w[4];
+    BOOL more;
+
+    /* long division by 10 on 16 bit words, no 64 bit divide (libgcc) */
+    w[0] = (UWORD)(value >> 48);
+    w[1] = (UWORD)(value >> 32);
+    w[2] = (UWORD)(value >> 16);
+    w[3] = (UWORD)value;
+
+    buffer[--buflen] = '\0';
+
+    do
+    {
+        ULONG rem = 0;
+        int i;
+
+        more = FALSE;
+        for (i = 0; i < 4; i++)
+        {
+            ULONG cur = (rem << 16) | w[i];
+
+            w[i] = (UWORD)(cur / 10);
+            rem = cur % 10;
+            if (w[i] != 0)
+                more = TRUE;
+        }
+        buffer[--buflen] = '0' + (UBYTE)rem;
+    } while (more);
+
+    return buffer + buflen;
+}
+
+/* The saturated NumBytes attribute value */
+static IPTR NumBytesAttr(UQUAD numbytes)
+{
+    return (numbytes > (IPTR)-1) ? (IPTR)-1 : (IPTR)numbytes;
+}
+
+/* The size of a file; a clamped 32 bit size is asked again from dos64 */
+static UQUAD FileSize(BPTR dirlock, struct FileInfoBlock *fib)
+{
+    UQUAD size = (ULONG)fib->fib_Size;
+
+    if (size == 0xFFFFFFFF && DOS64Base != NULL)
+    {
+        struct FileInfoBlock *fib64 = AllocDosObject64(DOS64_FIB, NULL);
+
+        if (fib64 != NULL)
+        {
+            BPTR olddir = CurrentDir(dirlock);
+
+            if (ExamineName64(fib->fib_FileName, fib64, NULL))
+                size = fib64->fib_Size64;
+            CurrentDir(olddir);
+            FreeDosObject64(DOS64_FIB, fib64);
+        }
+    }
+
+    return size;
+}
 
 AROS_UFH3S(APTR, construct_func,
     AROS_UFHA(struct Hook *, hook, A0),
@@ -79,9 +167,8 @@ AROS_UFH3S(LONG, display_func,
         }
         else
         {
-            snprintf(data->size_string, sizeof(data->size_string), "%ld",
-                (long)entry->fib.fib_Size);
-            *array++ = data->size_string;
+            *array++ = UQUAD2string(entry->size, data->size_string,
+                sizeof(data->size_string));
         }
 
         dt.dat_Stamp = entry->fib.fib_Date;
@@ -178,6 +265,8 @@ static void ReadDirectory(Object *obj, struct Dirlist_DATA *data)
     struct FileInfoBlock *fib;
     BPTR lock;
 
+    data->numbytes = 0;
+
     if ((fib = AllocDosObject(DOS_FIB, NULL)))
     {
         if ((lock = Lock(data->directory, SHARED_LOCK)))
@@ -222,6 +311,8 @@ static void ReadDirectory(Object *obj, struct Dirlist_DATA *data)
                     }
                     else
                     {
+                        struct Dirlist_Entry entry;
+
                         if (isdir && data->filesonly)
                             continue;
                         if (!isdir && data->drawersonly)
@@ -256,6 +347,9 @@ static void ReadDirectory(Object *obj, struct Dirlist_DATA *data)
                             }
                         }
 
+                        entry.fib = *fib;
+                        entry.size = 0;
+
                         if (isdir)
                         {
                             set(obj, MUIA_Dirlist_NumDrawers,
@@ -263,13 +357,15 @@ static void ReadDirectory(Object *obj, struct Dirlist_DATA *data)
                         }
                         else
                         {
+                            entry.size = FileSize(lock, fib);
+                            data->numbytes += entry.size;
                             set(obj, MUIA_Dirlist_NumFiles,
                                 ++data->numfiles);
                             set(obj, MUIA_Dirlist_NumBytes,
-                                data->numbytes + fib->fib_Size);
+                                NumBytesAttr(data->numbytes));
                         }
 
-                        DoMethod(obj, MUIM_List_InsertSingle, (IPTR) fib,
+                        DoMethod(obj, MUIM_List_InsertSingle, (IPTR) &entry,
                             MUIV_List_Insert_Bottom);
 
                     }           /* no filterhook */
@@ -418,7 +514,7 @@ IPTR Dirlist__OM_GET(struct IClass *cl, Object *obj, struct opGet *msg)
         return 1;
 
     case MUIA_Dirlist_NumBytes:
-        STORE = data->numbytes;
+        STORE = NumBytesAttr(data->numbytes);
         return 1;
 
     case MUIA_Dirlist_NumFiles:

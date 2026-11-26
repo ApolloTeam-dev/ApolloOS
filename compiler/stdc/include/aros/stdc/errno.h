@@ -57,6 +57,7 @@
 
 /* Codes used for error conversion of DOS error codes */
 #define	EACCES		13		/* Permission denied */
+#define	EOVERFLOW	84		/* Value too large to be stored in data type */
 #define ENOTBLK         15              /* Not a Block device */
 #define	EBUSY		16		/* Device busy */
 #define	EEXIST		17		/* File exists */

@@ -24,6 +24,8 @@
 #include <proto/exec.h>
 #include <proto/intuition.h>
 #include <proto/dos.h>
+#include <proto/dos64.h>
+#include <dos/dos64.h>
 #include <proto/diskfont.h>
 #include <proto/layers.h>
 #include <proto/wb.h>
@@ -133,6 +135,7 @@ struct ReqEntry
 {
     struct Node	re_Node;
     LONG	re_Size;
+    ULONG	re_SizeHi;	/* upper 32 bits of a file size */
     UBYTE	re_Flags,
 		re_Style;
     UBYTE	re_SizeLenPix,

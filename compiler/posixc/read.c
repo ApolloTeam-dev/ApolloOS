@@ -11,6 +11,7 @@
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include "__fdesc.h"
+#include "__dos64.h"
 
 /*****************************************************************************
 
@@ -64,7 +65,7 @@
         return -1;
     }
 
-    cnt = Read (fdesc->fcb->handle, buf, count);
+    cnt = __dos64_read (fdesc->fcb, buf, count);
 
     if (cnt == -1)
         errno = __stdc_ioerr2errno (IoErr ());

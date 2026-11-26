@@ -10,6 +10,7 @@
 #include <proto/dos.h>
 #include "__stdio.h"
 #include "__fdesc.h"
+#include "__dos64.h"
 
 /*****************************************************************************
 
@@ -44,7 +45,7 @@
 
 ******************************************************************************/
 {
-    long cnt;
+    QUAD cnt;
     BPTR fh;
     fdesc *fdesc = __getfdesc(stream->fd);
 
@@ -57,10 +58,15 @@
     fh = fdesc->fcb->handle;
 
     Flush (fh);
-    cnt = Seek (fh, 0, OFFSET_CURRENT);
+    cnt = __dos64_getpos (fdesc->fcb);
 
     if (cnt == -1)
 	errno = __stdc_ioerr2errno (IoErr ());
+    else if (cnt != (QUAD)(long)cnt)
+    {
+        errno = EOVERFLOW;
+        cnt = -1;
+    }
 
-    return cnt;
+    return (long)cnt;
 } /* ftell */

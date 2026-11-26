@@ -1181,7 +1181,7 @@ static ULONG FillInData(struct ExAllData *buffer, LONG type,
 			break;
 
 		case ED_OWNER:
-#if defined(__MORPHOS__)
+#if defined(__MORPHOS__) || defined(__AROS__)
 			size = offsetof(struct ExAllData, ed_Size64);
 			break;
 
@@ -1220,7 +1220,7 @@ static ULONG FillInData(struct ExAllData *buffer, LONG type,
 	buffer->ed_Next = NULL;
 	switch (type)
 	{
-#if defined(__MORPHOS__)
+#if defined(__MORPHOS__) || defined(__AROS__)
 		case ED_SIZE64:
 #if ROLLOVER
 			if (direntry->type == ST_ROLLOVERFILE)
@@ -1292,7 +1292,7 @@ BOOL ExamineAll(lockentry_t *object, UBYTE *buffer, ULONG buflen,
 	}
 
 	/* check type field */
-#if defined(__MORPHOS__)
+#if defined(__MORPHOS__) || defined(__AROS__)
 	if (type > ED_SIZE64 || type < ED_NAME)
 #else
 	if (type > ED_OWNER || type < ED_NAME)
@@ -4164,7 +4164,7 @@ static ULONG FillInDDEData(struct ExAllData *buffer, LONG type,
 			size = offsetof(struct ExAllData, ed_OwnerUID);
 			break;
 		case ED_OWNER:
-#if defined(__MORPHOS__)
+#if defined(__MORPHOS__) || defined(__AROS__)
 			size = offsetof(struct ExAllData, ed_Size64);
 			break;
 		case ED_SIZE64:
@@ -4196,7 +4196,7 @@ static ULONG FillInDDEData(struct ExAllData *buffer, LONG type,
 	buffer->ed_Next = NULL;
 	switch (type)
 	{
-#if defined(__MORPHOS__)
+#if defined(__MORPHOS__) || defined(__AROS__)
 		case ED_SIZE64:
 			buffer->ed_Size64 = GetDDFileSize(dde, g);
 #endif
